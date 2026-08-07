@@ -1,0 +1,145 @@
+.loadingWrapper {
+  min-height: 75vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  position: relative;
+  overflow: hidden;
+}
+
+.ambientGlow {
+  position: absolute;
+  width: 320px;
+  height: 320px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(201, 169, 106, 0.15) 0%, rgba(30, 77, 61, 0.08) 50%, transparent 70%);
+  filter: blur(40px);
+  animation: pulseGlow 4s ease-in-out infinite alternate;
+  pointer-events: none;
+}
+
+@keyframes pulseGlow {
+  0% { transform: scale(0.9); opacity: 0.5; }
+  100% { transform: scale(1.15); opacity: 0.9; }
+}
+
+.loadingCard {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  padding: 44px 54px;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-radius: 24px;
+  border: 1px solid rgba(201, 169, 106, 0.3);
+  box-shadow: 0 20px 50px -10px rgba(30, 77, 61, 0.12), 0 0 30px rgba(201, 169, 106, 0.1);
+}
+
+.logoHaloWrap {
+  position: relative;
+  width: 76px;
+  height: 76px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.haloRing {
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  border-top-color: #C9A96A;
+  border-right-color: #1E4D3D;
+  border-bottom-color: #C9A96A;
+  animation: spin 1.2s cubic-bezier(0.68, -0.55, 0.27, 1.55) infinite;
+}
+
+.haloGlow {
+  position: absolute;
+  inset: -2px;
+  border-radius: 50%;
+  box-shadow: 0 0 16px rgba(201, 169, 106, 0.5);
+  animation: breathe 2s ease-in-out infinite alternate;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes breathe {
+  0% { opacity: 0.3; }
+  100% { opacity: 0.9; }
+}
+
+.logoBadge {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #1E4D3D 0%, #0F2D24 100%);
+  color: #C9A96A;
+  font-family: var(--font-serif);
+  font-size: 22px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px solid #C9A96A;
+  box-shadow: 0 6px 16px rgba(30, 77, 61, 0.25);
+}
+
+.textWrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.brandTitle {
+  font-family: var(--font-serif);
+  font-size: 22px;
+  font-weight: 800;
+  color: #1E4D3D;
+  letter-spacing: 0.02em;
+}
+
+.brandSubtitle {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: #C9A96A;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.sparkleIcon {
+  color: #C9A96A;
+}
+
+.progressBar {
+  width: 160px;
+  height: 3px;
+  background: rgba(30, 77, 61, 0.1);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-top: 4px;
+}
+
+.progressFill {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, #1E4D3D 0%, #C9A96A 50%, #1E4D3D 100%);
+  animation: pulseProgress 1.5s ease-in-out infinite;
+}
+
+@keyframes pulseProgress {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}

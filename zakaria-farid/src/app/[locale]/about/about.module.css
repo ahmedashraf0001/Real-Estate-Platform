@@ -1,0 +1,502 @@
+.root {
+  padding-top: 72px;
+  min-height: 100vh;
+  background: var(--color-bg);
+  color: var(--color-text);
+  overflow-x: hidden;
+}
+
+/* ─── Hero Section ───────────────────────────── */
+.heroSection {
+  position: relative;
+  min-height: 520px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 100px 0 80px;
+  color: #fff;
+  background: #081410;
+  overflow: hidden;
+}
+
+.heroBgWrap {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+
+.heroBgImg {
+  object-fit: cover;
+  opacity: 0.38;
+}
+
+.heroOverlay {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at center, rgba(8, 20, 16, 0.4) 0%, rgba(8, 20, 16, 0.92) 100%),
+              linear-gradient(180deg, rgba(8, 20, 16, 0.6) 0%, #081410 100%);
+}
+
+.heroContent {
+  position: relative;
+  z-index: 1;
+  text-align: center;
+  max-width: 860px;
+  margin: 0 auto;
+}
+
+.heroBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #C9A96A;
+  background: rgba(201, 169, 106, 0.12);
+  backdrop-filter: blur(12px);
+  padding: 8px 20px;
+  border-radius: 30px;
+  border: 1px solid rgba(201, 169, 106, 0.35);
+  margin-bottom: 24px;
+}
+
+.heroTitle {
+  font-family: var(--font-serif);
+  font-size: 52px;
+  font-weight: 700;
+  line-height: 64px;
+  color: #fff;
+  margin: 0 0 20px;
+}
+
+@media (max-width: 768px) {
+  .heroTitle {
+    font-size: 36px;
+    line-height: 46px;
+  }
+}
+
+.goldGradientText {
+  background: linear-gradient(135deg, #FFF 0%, #C9A96A 60%, #E8D3A7 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.heroSub {
+  font-size: 18px;
+  line-height: 30px;
+  color: rgba(255, 255, 255, 0.85);
+  max-width: 720px;
+  margin: 0 auto 36px;
+}
+
+/* Floating Metrics Bar */
+.metricsBar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 32px;
+  background: rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  padding: 16px 36px;
+  border-radius: 40px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  display: inline-flex;
+}
+
+@media (max-width: 640px) {
+  .metricsBar {
+    flex-direction: column;
+    gap: 16px;
+    border-radius: 20px;
+  }
+}
+
+.metricItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.metricVal {
+  font-family: var(--font-serif);
+  font-size: 26px;
+  font-weight: 700;
+  color: #C9A96A;
+}
+
+.metricLabel {
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.metricDivider {
+  width: 1px;
+  height: 24px;
+  background: rgba(255, 255, 255, 0.15);
+}
+
+/* ─── Story Section ──────────────────────────── */
+.storySection {
+  padding: 100px 0;
+  background: var(--color-bg);
+}
+
+.storyGrid {
+  display: grid;
+  grid-template-columns: 1fr 1.1fr;
+  gap: 60px;
+  align-items: center;
+}
+
+@media (max-width: 900px) {
+  .storyGrid {
+    grid-template-columns: 1fr;
+    gap: 40px;
+  }
+}
+
+.storyImageWrap {
+  position: relative;
+  width: 100%;
+  height: 480px;
+  border-radius: 24px;
+  overflow: hidden;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.12);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.storyImg {
+  object-fit: cover;
+}
+
+.storyImageOverlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, transparent 50%, rgba(12, 28, 22, 0.85) 100%);
+}
+
+.storyBadgeFloat {
+  position: absolute;
+  bottom: 24px;
+  left: 24px;
+  right: 24px;
+  background: rgba(12, 28, 22, 0.85);
+  backdrop-filter: blur(12px);
+  padding: 16px 20px;
+  border-radius: 16px;
+  border: 1px solid rgba(201, 169, 106, 0.3);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: #fff;
+}
+
+.storyBadgeIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: rgba(201, 169, 106, 0.2);
+  color: #C9A96A;
+  flex-shrink: 0;
+}
+
+.storyBadgeText {
+  font-size: 13.5px;
+  font-weight: 600;
+  line-height: 20px;
+  margin: 0;
+}
+
+.storyContent {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.sectionTag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-primary);
+}
+
+.storyHeading {
+  font-family: var(--font-serif);
+  font-size: 38px;
+  font-weight: 700;
+  line-height: 48px;
+  color: var(--color-primary);
+  margin: 0;
+}
+
+.storyParagraph {
+  font-size: 16px;
+  line-height: 28px;
+  color: var(--color-text-muted);
+  margin: 0;
+}
+
+.ownerGuaranteeList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.guaranteeItem {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.guaranteeIcon {
+  color: #C9A96A;
+  flex-shrink: 0;
+}
+
+/* ─── Pillars Grid Section ───────────────────── */
+.pillarsSection {
+  background: #081410;
+  color: #fff;
+  padding: 100px 0;
+  position: relative;
+}
+
+.pillarsHeader {
+  text-align: center;
+  max-width: 640px;
+  margin: 0 auto 60px;
+}
+
+.pillarsTitle {
+  font-family: var(--font-serif);
+  font-size: 38px;
+  font-weight: 700;
+  color: #fff;
+  margin: 0 0 12px;
+}
+
+.pillarsSub {
+  font-size: 15px;
+  color: rgba(255, 255, 255, 0.7);
+  margin: 0;
+}
+
+.pillarsGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 24px;
+}
+
+@media (max-width: 1024px) {
+  .pillarsGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .pillarsGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.pillarCard {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(201, 169, 106, 0.2);
+  border-radius: 20px;
+  padding: 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  transition: transform 0.3s ease, border-color 0.3s ease, background 0.3s ease;
+}
+
+.pillarCard:hover {
+  transform: translateY(-4px);
+  border-color: #C9A96A;
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.pillarIconBox {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: rgba(201, 169, 106, 0.15);
+  color: #C9A96A;
+  border: 1px solid rgba(201, 169, 106, 0.3);
+}
+
+.pillarTitle {
+  font-family: var(--font-serif);
+  font-size: 20px;
+  font-weight: 700;
+  color: #fff;
+  margin: 0;
+}
+
+.pillarDesc {
+  font-size: 14px;
+  line-height: 22px;
+  color: rgba(255, 255, 255, 0.7);
+  margin: 0;
+}
+
+/* ─── Locations & Final Call ──────────────────── */
+.locationsSection {
+  padding: 90px 0;
+  background: var(--color-surface);
+}
+
+.locHeader {
+  text-align: center;
+  margin-bottom: 40px;
+}
+
+.locHeading {
+  font-family: var(--font-serif);
+  font-size: 32px;
+  font-weight: 700;
+  color: var(--color-primary);
+  margin: 0 0 8px;
+}
+
+.locSub {
+  font-size: 15px;
+  color: var(--color-text-muted);
+  margin: 0;
+}
+
+.locationsGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 60px;
+}
+
+@media (max-width: 900px) {
+  .locationsGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.locCard {
+  background: var(--color-bg);
+  padding: 22px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--color-text);
+  box-shadow: 0 4px 16px -2px rgba(0, 0, 0, 0.03);
+}
+
+.locIcon {
+  color: var(--color-primary);
+  flex-shrink: 0;
+}
+
+/* Direct Call CTA Card */
+.ctaBanner {
+  background: linear-gradient(135deg, #1E4D3D 0%, #081410 100%);
+  padding: 48px 56px;
+  border-radius: 24px;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 32px;
+  box-shadow: 0 20px 50px rgba(30, 77, 61, 0.25);
+  border: 1px solid rgba(201, 169, 106, 0.35);
+}
+
+@media (max-width: 768px) {
+  .ctaBanner {
+    flex-direction: column;
+    text-align: center;
+    padding: 32px 24px;
+  }
+}
+
+.ctaText h3 {
+  font-family: var(--font-serif);
+  font-size: 28px;
+  font-weight: 700;
+  color: #fff;
+  margin: 0 0 8px;
+}
+
+.ctaText p {
+  font-size: 15px;
+  color: rgba(255, 255, 255, 0.8);
+  margin: 0;
+}
+
+.ctaActions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-shrink: 0;
+}
+
+.ctaBtnPrimary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 28px;
+  background: #C9A96A;
+  color: #081410;
+  border-radius: 30px;
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: none;
+  transition: transform 0.2s ease, background 0.2s ease;
+}
+
+.ctaBtnPrimary:hover {
+  background: #d6b87b;
+  transform: translateY(-2px);
+}
+
+.ctaBtnSecondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 24px;
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  border-radius: 30px;
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  transition: background 0.2s ease;
+}
+
+.ctaBtnSecondary:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.arrowRtl {
+  transform: rotate(180deg);
+}

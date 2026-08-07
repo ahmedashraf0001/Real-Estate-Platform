@@ -1,0 +1,408 @@
+'use client';
+
+import { useState, useCallback, useEffect, useRef } from 'react';
+import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents, ZoomControl } from 'react-leaflet';
+import { divIcon } from 'leaflet';
+import { renderToStaticMarkup } from 'react-dom/server';
+import Image from 'next/image';
+import Link from 'next/link';
+import 'leaflet/dist/leaflet.css';
+import type { Property } from '@/lib/supabase/types';
+import { formatPrice } from '@/lib/utils/formatting';
+import {
+  Search, X, Bed, Bath, Maximize2, MapPin, SlidersHorizontal,
+  ChevronRight, Building2, Home, RotateCcw
+} from 'lucide-react';
+import styles from './MapExplorer.module.css';
+
+// ─── Custom Marker Icon (Pill or Compact Dot) ──────────────────────────────────
+function makeMarkerIcon(price: number, locale: string, active: boolean, compact: boolean) {
+  if (compact) {
+    const size = active ? 22 : 16;
+    const html = renderToStaticMarkup(
+      <div
+        style={{
+          width: size,
+          height: size,
+          borderRadius: '50%',
+          background: active ? '#C9A96A' : '#1E4D3D',
+          border: '3px solid #fff',
+          boxShadow: active
+            ? '0 0 0 4px rgba(201,169,106,0.4), 0 4px 12px rgba(0,0,0,0.3)'
+            : '0 0 0 2px rgba(30,77,61,0.25), 0 3px 10px rgba(0,0,0,0.2)',
+          transition: 'all 0.2s',
+          cursor: 'pointer',
+        }}
+      />
+    );
+
+    const anchor = active ? 11 : 8;
+    return divIcon({
+      html,
+      className: '',
+      iconSize: [size, size],
+      iconAnchor: [anchor, anchor],
+      popupAnchor: [0, -(anchor + 4)],
+    });
+  }
+
+  const formattedPrice = new Intl.NumberFormat(locale === 'ar' ? 'ar-EG' : 'en-US', {
+    notation: 'compact',
+    maximumFractionDigits: 1,
+  }).format(price);
+
+  const priceText = `${locale === 'ar' ? 'ج.م' : 'EGP'} ${formattedPrice}`;
+
+  const html = renderToStaticMarkup(
+    <div
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: '6px',
+        background: active ? '#C9A96A' : '#1E4D3D',
+        color: active ? '#1a1209' : '#ffffff',
+        padding: active ? '7px 14px' : '6px 12px',
+        borderRadius: '24px',
+        fontSize: active ? '13px' : '12px',
+        fontWeight: 700,
+        whiteSpace: 'nowrap',
+        boxShadow: active
+          ? '0 6px 20px rgba(201,169,106,0.6), 0 0 0 3px #fff'
+          : '0 4px 14px rgba(0,0,0,0.3), 0 0 0 2px rgba(255,255,255,0.9)',
+        border: 'none',
+        transform: active ? 'scale(1.15)' : 'scale(1)',
+        transition: 'all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+        fontFamily: 'Outfit, sans-serif',
+        cursor: 'pointer',
+      }}
+    >
+      <span
+        style={{
+          width: '7px',
+          height: '7px',
+          borderRadius: '50%',
+          background: active ? '#1a1209' : '#C9A96A',
+          flexShrink: 0,
+        }}
+      />
+      <span>{priceText}</span>
+    </div>
+  );
+
+  return divIcon({
+    html,
+    className: '',
+    iconAnchor: [45, 16],
+    popupAnchor: [0, -20],
+  });
+}
+
+// ─── Map auto-fly-to ──────────────────────────────────────────────────────────
+function FlyTo({ lat, lng, onComplete }: { lat: number; lng: number; onComplete: () => void }) {
+  const map = useMap();
+  useEffect(() => {
+    map.flyTo([lat, lng], 15, { duration: 1.2 });
+    const timer = setTimeout(() => {
+      onComplete();
+    }, 1300);
+    return () => clearTimeout(timer);
+  }, [lat, lng, map, onComplete]);
+  return null;
+}
+
+function MapResizer() {
+  const map = useMap();
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      try {
+        if (map && map.getContainer()) {
+          map.invalidateSize();
+        }
+      } catch {
+        // Safe catch
+      }
+    }, 200);
+    return () => clearTimeout(timer);
+  }, [map]);
+  return null;
+}
+
+function MapController({ onZoomChange }: { onZoomChange: (zoom: number) => void }) {
+  const map = useMapEvents({
+    zoomend: () => {
+      onZoomChange(map.getZoom());
+    },
+  });
+  return null;
+}
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+type FilterType = 'all' | 'villa' | 'apartment' | 'townhouse' | 'duplex' | 'chalet';
+
+interface MapExplorerProps {
+  properties: Property[];
+  locale: string;
+}
+
+// ─── Main Component ───────────────────────────────────────────────────────────
+export default function MapExplorer({ properties, locale }: MapExplorerProps) {
+  const isAr = locale === 'ar';
+  const [search, setSearch] = useState('');
+  const [typeFilter, setTypeFilter] = useState<FilterType>('all');
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const [flyTarget, setFlyTarget] = useState<{ lat: number; lng: number } | null>(null);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [zoomLevel, setZoomLevel] = useState<number>(11);
+  const listRef = useRef<HTMLDivElement>(null);
+
+  const initialCenter: [number, number] = [30.044, 31.235];
+
+  // ─── Filtering ─────────────────────────────────────────────────────────────
+  const filtered = properties.filter((p) => {
+    const title = isAr ? p.title_ar : p.title_en;
+    const matchSearch =
+      !search ||
+      title.toLowerCase().includes(search.toLowerCase()) ||
+      p.location.toLowerCase().includes(search.toLowerCase());
+    const matchType = typeFilter === 'all' || p.type === typeFilter;
+    return matchSearch && matchType;
+  });
+
+  const typeOptions: { value: FilterType; label: string }[] = [
+    { value: 'all', label: isAr ? 'الكل' : 'All' },
+    { value: 'villa', label: isAr ? 'فيلا' : 'Villa' },
+    { value: 'apartment', label: isAr ? 'شقة' : 'Apartment' },
+    { value: 'townhouse', label: isAr ? 'تاون هاوس' : 'Townhouse' },
+    { value: 'duplex', label: isAr ? 'دوبلكس' : 'Duplex' },
+    { value: 'chalet', label: isAr ? 'شاليه' : 'Chalet' },
+  ];
+
+  // ─── Handlers ─────────────────────────────────────────────────────────────
+  const handleCardClick = useCallback((p: Property) => {
+    setActiveId(p.id);
+    if (p.latitude && p.longitude) {
+      setFlyTarget({ lat: p.latitude, lng: p.longitude });
+    }
+  }, []);
+
+  const handleMarkerClick = useCallback((p: Property) => {
+    setActiveId(p.id);
+    // scroll list to the card
+    const el = document.getElementById(`map-card-${p.id}`);
+    if (el && listRef.current) {
+      listRef.current.scrollTo({ top: el.offsetTop - 80, behavior: 'smooth' });
+    }
+  }, []);
+
+  const handleResetView = useCallback(() => {
+    setActiveId(null);
+    setFlyTarget({ lat: initialCenter[0], lng: initialCenter[1] });
+  }, [initialCenter]);
+
+  const center: [number, number] =
+    filtered.length > 0 && filtered[0].latitude && filtered[0].longitude
+      ? [filtered[0].latitude, filtered[0].longitude]
+      : [30.044, 31.235];
+
+  return (
+    <div className={styles.explorer} dir={isAr ? 'rtl' : 'ltr'}>
+      {/* ── Sidebar ─────────────────────────────────────────────────────── */}
+      <aside className={`${styles.sidebar} ${sidebarOpen ? styles.sidebarOpen : styles.sidebarClosed}`}>
+        {/* Sidebar Header */}
+        <div className={styles.sidebarHeader}>
+          <div className={styles.sidebarTitle}>
+            <MapPin size={16} strokeWidth={2} />
+            <span>{isAr ? 'استكشاف الخريطة' : 'Map Explorer'}</span>
+          </div>
+          <span className={styles.resultCount}>
+            {filtered.length} {isAr ? 'عقار' : 'listings'}
+          </span>
+        </div>
+
+        {/* Search */}
+        <div className={styles.searchBox}>
+          <Search size={15} strokeWidth={2} className={styles.searchIcon} />
+          <input
+            type="text"
+            placeholder={isAr ? 'ابحث بالاسم أو الموقع...' : 'Search by name or location...'}
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className={styles.searchInput}
+          />
+          {search && (
+            <button className={styles.clearSearch} onClick={() => setSearch('')}>
+              <X size={13} strokeWidth={2.5} />
+            </button>
+          )}
+        </div>
+
+        {/* Type filter pills */}
+        <div className={styles.filterPills}>
+          {typeOptions.map((opt) => (
+            <button
+              key={opt.value}
+              className={`${styles.pill} ${typeFilter === opt.value ? styles.pillActive : ''}`}
+              onClick={() => setTypeFilter(opt.value)}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Property list */}
+        <div className={styles.list} ref={listRef}>
+          {filtered.length === 0 ? (
+            <div className={styles.emptyState}>
+              <Home size={32} strokeWidth={1.2} />
+              <p>{isAr ? 'لا توجد عقارات تطابق البحث' : 'No properties match your search'}</p>
+            </div>
+          ) : (
+            filtered.map((p) => {
+              const title = isAr ? p.title_ar : p.title_en;
+              const cover = p.property_images?.[0];
+              const isActive = activeId === p.id;
+
+              return (
+                <div
+                  id={`map-card-${p.id}`}
+                  key={p.id}
+                  className={`${styles.card} ${isActive ? styles.cardActive : ''}`}
+                  onClick={() => handleCardClick(p)}
+                >
+                  <div className={styles.cardImg}>
+                    {cover ? (
+                      <Image src={cover.url} alt={title} fill className={styles.cardImgEl} sizes="100px" />
+                    ) : (
+                      <div className={styles.cardImgPlaceholder}>
+                        <Building2 size={20} strokeWidth={1.2} />
+                      </div>
+                    )}
+                    <span className={`badge badge-${p.listing_status === 'active' ? 'active' : p.listing_status === 'under_offer' ? 'offer' : 'sold'} ${styles.cardBadge}`}>
+                      {p.listing_status === 'active' ? (isAr ? 'متاح' : 'Available') :
+                        p.listing_status === 'under_offer' ? (isAr ? 'تحت العرض' : 'Under Offer') :
+                          (isAr ? 'مُباع' : 'Sold')}
+                    </span>
+                  </div>
+                  <div className={styles.cardBody}>
+                    <p className={styles.cardLoc}>
+                      <MapPin size={11} strokeWidth={2} />
+                      {p.location}
+                    </p>
+                    <h3 className={styles.cardTitle}>{title}</h3>
+                    <p className={styles.cardPrice}>{formatPrice(p.price_egp, locale)}</p>
+                    <div className={styles.cardStats}>
+                      <span><Bed size={12} strokeWidth={1.8} /> {p.bedrooms}</span>
+                      <span><Bath size={12} strokeWidth={1.8} /> {p.bathrooms}</span>
+                      <span><Maximize2 size={12} strokeWidth={1.8} /> {p.area_sqm}m²</span>
+                    </div>
+                  </div>
+                  <Link
+                    href={`/${locale}/properties/${p.slug}`}
+                    className={styles.cardArrow}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <ChevronRight size={16} strokeWidth={2.5} />
+                  </Link>
+                </div>
+              );
+            })
+          )}
+        </div>
+      </aside>
+
+      {/* ── Sidebar toggle on mobile ─────────────────────────────────── */}
+      <button
+        className={styles.sidebarToggle}
+        onClick={() => setSidebarOpen((o) => !o)}
+        aria-label="Toggle sidebar"
+      >
+        <SlidersHorizontal size={18} strokeWidth={2} />
+        {!sidebarOpen && (
+          <span>{filtered.length} {isAr ? 'عقار' : 'listings'}</span>
+        )}
+      </button>
+
+      {/* ── Map ─────────────────────────────────────────────────────────── */}
+      <div className={styles.mapArea}>
+        <button
+          className={styles.resetViewBtn}
+          onClick={handleResetView}
+          title={isAr ? 'إعادة ضبط الخريطة' : 'Reset Map View'}
+        >
+          <RotateCcw size={16} strokeWidth={2} />
+          <span>{isAr ? 'الافتراضي' : 'Reset View'}</span>
+        </button>
+
+        <MapContainer
+          center={center}
+          zoom={11}
+          style={{ height: '100%', width: '100%' }}
+          attributionControl={false}
+          zoomControl={false}
+        >
+          <TileLayer
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            maxZoom={19}
+          />
+          <ZoomControl position={isAr ? 'bottomleft' : 'bottomright'} />
+          <MapController onZoomChange={(z) => setZoomLevel(z)} />
+
+          {flyTarget && (
+            <FlyTo
+              lat={flyTarget.lat}
+              lng={flyTarget.lng}
+              onComplete={() => setFlyTarget(null)}
+            />
+          )}
+          <MapResizer />
+
+          {filtered.map((p) => {
+            if (!p.latitude || !p.longitude) return null;
+            const isActive = activeId === p.id;
+            const isCompact = zoomLevel >= 14;
+            const title = isAr ? p.title_ar : p.title_en;
+            const cover = p.property_images?.[0];
+
+            return (
+              <Marker
+                key={p.id}
+                position={[p.latitude, p.longitude]}
+                icon={makeMarkerIcon(p.price_egp, locale, isActive, isCompact)}
+                eventHandlers={{ click: () => handleMarkerClick(p) }}
+                zIndexOffset={isActive ? 1000 : 0}
+              >
+                <Popup className={styles.popup} maxWidth={280}>
+                  <div className={styles.popupCard}>
+                    {cover && (
+                      <div className={styles.popupImgWrap}>
+                        <Image src={cover.url} alt={title} fill className={styles.popupImg} sizes="280px" />
+                      </div>
+                    )}
+                    <div className={styles.popupBody}>
+                      <p className={styles.popupLoc}>
+                        <MapPin size={11} strokeWidth={2} />
+                        {p.location}
+                      </p>
+                      <p className={styles.popupTitle}>{title}</p>
+                      <p className={styles.popupPrice}>{formatPrice(p.price_egp, locale)}</p>
+                      <div className={styles.popupStats}>
+                        <span><Bed size={12} strokeWidth={1.8} /> {p.bedrooms}</span>
+                        <span><Bath size={12} strokeWidth={1.8} /> {p.bathrooms}</span>
+                        <span><Maximize2 size={12} strokeWidth={1.8} /> {p.area_sqm}m²</span>
+                      </div>
+                      <Link href={`/${locale}/properties/${p.slug}`} className={styles.popupBtn}>
+                        {isAr ? 'عرض العقار' : 'View Property'}
+                        <ChevronRight size={14} strokeWidth={2.5} />
+                      </Link>
+                    </div>
+                  </div>
+                </Popup>
+              </Marker>
+            );
+          })}
+        </MapContainer>
+      </div>
+    </div>
+  );
+}

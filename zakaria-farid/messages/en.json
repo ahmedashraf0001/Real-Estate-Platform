@@ -1,0 +1,138 @@
+{
+  "nav": {
+    "home": "Home",
+    "properties": "Properties",
+    "about": "About",
+    "contact": "Contact",
+    "map": "Map",
+    "admin": "Admin"
+  },
+  "hero": {
+    "headline": "Find Your Dream Property in Egypt",
+    "subheadline": "Direct from owner. No commissions. Premium locations.",
+    "cta_browse": "Browse Properties",
+    "cta_whatsapp": "Chat on WhatsApp"
+  },
+  "trust": {
+    "title1": "Direct from Owner",
+    "desc1": "No agents, no commissions — deal directly with Zakaria Farid.",
+    "title2": "Premium Locations",
+    "desc2": "Sheikh Zayed, New Cairo, and Egypt's most sought-after areas.",
+    "title3": "Verified Listings",
+    "desc3": "Every property personally verified and accurately described.",
+    "title4": "Fast Response",
+    "desc4": "Get a reply within the hour. We're here whenever you need us."
+  },
+  "featured": {
+    "title": "Featured Properties",
+    "view_all": "View All Properties"
+  },
+  "cta_band": {
+    "headline": "Ready to Find Your Home?",
+    "subheadline": "Message us now and get a response within the hour.",
+    "button": "WhatsApp Us"
+  },
+  "footer": {
+    "about_blurb": "Zakaria Farid offers premium real estate directly from the owner — no intermediaries, no commissions.",
+    "quick_links": "Quick Links",
+    "contact": "Contact",
+    "rights": "All rights reserved."
+  },
+  "properties": {
+    "title": "Properties",
+    "filters": "Filters",
+    "location": "Location",
+    "price_range": "Price Range",
+    "bedrooms": "Bedrooms",
+    "type": "Type",
+    "status": "Status",
+    "sort": "Sort",
+    "sort_newest": "Newest",
+    "sort_price_asc": "Price: Low to High",
+    "sort_price_desc": "Price: High to Low",
+    "results": "{count} results",
+    "clear_filters": "Clear All Filters",
+    "no_results_title": "No properties found",
+    "no_results_desc": "Try adjusting your filters to see more results.",
+    "any": "Any",
+    "bed": "bed",
+    "beds": "beds",
+    "bath": "bath",
+    "baths": "baths",
+    "type_villa": "Villa",
+    "type_apartment": "Apartment",
+    "type_townhouse": "Townhouse",
+    "type_duplex": "Duplex",
+    "type_chalet": "Chalet",
+    "status_active": "Available",
+    "status_under_offer": "Under Offer",
+    "status_sold": "Sold",
+    "compare": "Compare",
+    "add_to_compare": "Add to Compare",
+    "remove_from_compare": "Remove",
+    "compare_tray_title": "Compare Properties",
+    "compare_now": "Compare Now",
+    "close_compare": "Close",
+    "loading": "Loading..."
+  },
+  "property": {
+    "price": "Price",
+    "location": "Location",
+    "bedrooms": "Bedrooms",
+    "bathrooms": "Bathrooms",
+    "area": "Area",
+    "type": "Type",
+    "status": "Status",
+    "amenities": "Amenities",
+    "description": "Description",
+    "contact_agent": "Contact About This Property",
+    "call": "Call Now",
+    "whatsapp": "WhatsApp",
+    "similar": "Similar Properties",
+    "sqm": "sqm",
+    "gallery": "Gallery",
+    "share": "Share",
+    "favorite": "Save",
+    "unfavorite": "Unsave",
+    "completion_status_ready": "Ready to Move",
+    "completion_status_off_plan": "Off-Plan",
+    "finishing": "Finishing",
+    "furnishing": "Furnishing",
+    "view": "View",
+    "floor": "Floor",
+    "finishing_fully_finished": "Fully Finished",
+    "finishing_semi_finished": "Semi-Finished",
+    "finishing_core_and_shell": "Core & Shell",
+    "furnishing_furnished": "Furnished",
+    "furnishing_unfurnished": "Unfurnished"
+  },
+  "contact": {
+    "title": "Get in Touch",
+    "name": "Full Name",
+    "email": "Email Address",
+    "phone": "Phone Number",
+    "message": "Message",
+    "send": "Send Message",
+    "success": "Message sent! We'll get back to you shortly.",
+    "error": "Something went wrong. Please try again.",
+    "property_ref": "Regarding property"
+  },
+  "about": {
+    "title": "About Zakaria Farid",
+    "story": "With decades of experience in Egyptian real estate, Zakaria Farid offers a curated portfolio of premium properties directly from the owner. Every listing is personally verified and priced transparently — no hidden fees, no commissions.",
+    "stat_years": "Years Active",
+    "stat_units": "Units Delivered",
+    "stat_areas": "Areas Covered"
+  },
+  "map": {
+    "title": "Property Map",
+    "subtitle": "Explore all listings on the map",
+    "view_property": "View Property"
+  },
+  "errors": {
+    "not_found_title": "Page Not Found",
+    "not_found_desc": "The page you're looking for doesn't exist or has been moved.",
+    "back_home": "Back to Home"
+  },
+  "loading": "Loading..."
+}

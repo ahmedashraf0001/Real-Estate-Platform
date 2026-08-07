@@ -1,0 +1,29 @@
+# Dependencies
+node_modules/
+zakaria-farid/node_modules/
+.pnp
+.pnp.*
+
+# Next.js & Build
+.next/
+zakaria-farid/.next/
+out/
+build/
+*.tsbuildinfo
+next-env.d.ts
+
+# Environment variables
+.env*
+!.env.example
+
+# Debug & Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# OS & Temp
+.DS_Store
+*.pem
+capture_*.js
+*.png
