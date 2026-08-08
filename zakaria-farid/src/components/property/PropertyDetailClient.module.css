@@ -101,11 +101,33 @@
   background: #eaeaea;
 }
 
-.noImg {
+.noImgContainer {
   width: 100%;
   height: 380px;
-  background: linear-gradient(135deg, var(--color-border), #d5d5d5);
+  background: linear-gradient(135deg, #f4f5f4, #e2e4e1);
   border-radius: var(--radius-lg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  color: #777;
+  font-weight: 600;
+  font-size: 15px;
+  border: 1px dashed #cccccc;
+}
+
+/* ─── Key Facts Grid ─────────────────────────── */
+.factsGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+
+@media (min-width: 1320px) {
+  .factsGrid {
+    grid-template-columns: repeat(4, 1fr);
+  }
 }
 
 /* Show All Photos Button */
@@ -285,18 +307,7 @@
   line-height: 1;
 }
 
-/* ─── Key Facts Grid ─────────────────────────── */
-.factsGrid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 16px;
-}
 
-@media (max-width: 768px) {
-  .factsGrid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
 
 .factCard {
   display: flex;

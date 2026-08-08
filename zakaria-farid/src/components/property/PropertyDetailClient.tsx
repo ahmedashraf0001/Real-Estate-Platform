@@ -124,7 +124,12 @@ export default function PropertyDetailClient({ property, locale, similar }: Prop
   // Gallery rendering logic
   const renderGallery = () => {
     if (images.length === 0) {
-      return <div className={styles.noImg} />;
+      return (
+        <div className={styles.noImgContainer}>
+          <ImageIcon size={48} strokeWidth={1} style={{ opacity: 0.4 }} />
+          <span>{isAr ? 'لا توجد صور متاحة لهذا العقار' : 'No photos available for this property'}</span>
+        </div>
+      );
     }
 
     if (images.length === 1) {
