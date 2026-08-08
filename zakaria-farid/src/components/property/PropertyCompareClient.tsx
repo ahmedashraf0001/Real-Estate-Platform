@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import {
-  Bed, Bath, Maximize2, MapPin, Check, ArrowLeft,
+  Bed, Bath, Maximize2, MapPin, Check, ArrowLeft, Download,
   Eye, Building2, Layers, Star, Sparkles, MessageCircle, ArrowRight,
   DollarSign, Award, CheckCircle2, ShieldCheck, Home, Sofa, Wrench, X, ChevronLeft, ChevronRight, Images, ZoomIn
 } from 'lucide-react';
@@ -22,11 +22,18 @@ interface PropertyCompareClientProps {
 
 export default function PropertyCompareClient({ properties, locale }: PropertyCompareClientProps) {
   const isAr = locale === 'ar';
+  const [showDock, setShowDock] = useState(true);
 
   // Gallery Modal State
   const [activeGalleryProp, setActiveGalleryProp] = useState<Property | null>(null);
   const [galleryTab, setGalleryTab] = useState<'overview' | 'sections'>('overview');
   const [activePhotoIdx, setActivePhotoIdx] = useState(0);
+
+  const handlePrintPdf = () => {
+    if (typeof window !== 'undefined') {
+      window.print();
+    }
+  };
 
   // Find best metrics across compare set
   const minPrice = Math.min(...properties.map((p) => Number(p.price_egp)));
@@ -352,10 +359,22 @@ export default function PropertyCompareClient({ properties, locale }: PropertyCo
       {/* Page Header Banner */}
       <div className={styles.pageHeader}>
         <div className={`container ${styles.headerInner}`}>
-          <Link href={`/${locale}/properties`} className={styles.backBtn}>
-            <ArrowLeft size={15} strokeWidth={2.5} className={isAr ? styles.arrowRtl : ''} />
-            {isAr ? 'العودة إلى محفظة العقارات' : 'Back to Portfolio'}
-          </Link>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap', marginBottom: '16px' }}>
+            <Link href={`/${locale}/properties`} className={styles.backBtn}>
+              <ArrowLeft size={15} strokeWidth={2.5} className={isAr ? styles.arrowRtl : ''} />
+              {isAr ? 'العودة إلى محفظة العقارات' : 'Back to Portfolio'}
+            </Link>
+
+            <button
+              type="button"
+              onClick={handlePrintPdf}
+              className={styles.headerWaBtn}
+              style={{ background: '#1E4D3D', border: '1px solid rgba(201, 169, 106, 0.4)' }}
+            >
+              <Download size={15} />
+              <span>{isAr ? 'تحميل جدول المقارنة (PDF)' : 'Download Comparison PDF'}</span>
+            </button>
+          </div>
 
           <div>
             <div className={styles.labelBadge}>
@@ -578,28 +597,40 @@ export default function PropertyCompareClient({ properties, locale }: PropertyCo
       </div>
 
       {/* Sticky Quick Action Dock */}
-      <div className={styles.stickyDock}>
-        <div className={`container ${styles.dockInner}`}>
-          <div className={styles.dockInfo}>
-            <Sparkles size={16} style={{ color: '#C9A96A' }} />
-            <span className={styles.dockTitle}>
-              {isAr ? 'هل اخترت عقارك المناسب؟ استفسر مباشرة من المالك:' : 'Found your ideal estate? Inquire direct from owner:'}
-            </span>
-          </div>
+      {showDock && (
+        <div className={styles.stickyDock}>
+          <div className={`container ${styles.dockInner}`}>
+            <div className={styles.dockInfo}>
+              <Sparkles size={16} style={{ color: '#C9A96A' }} />
+              <span className={styles.dockTitle}>
+                {isAr ? 'هل اخترت عقارك المناسب؟ استفسر مباشرة من المالك:' : 'Found your ideal estate? Inquire direct from owner:'}
+              </span>
+            </div>
 
-          <div className={styles.dockButtons}>
-            <a
-              href={whatsappUrl(WHATSAPP_NUMBER, isAr ? 'مرحباً، أود الاستفسار عن العقارات المقارنة' : 'Hello, I would like to inquire about the compared properties')}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={styles.dockBtnPrimary}
-            >
-              <MessageCircle size={15} />
-              {isAr ? 'تواصل مع المالك عبر واتساب' : 'Direct WhatsApp Inquiry'}
-            </a>
+            <div className={styles.dockButtons}>
+              <a
+                href={whatsappUrl(WHATSAPP_NUMBER, isAr ? 'مرحباً، أود الاستفسار عن العقارات المقارنة' : 'Hello, I would like to inquire about the compared properties')}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={styles.dockBtnPrimary}
+              >
+                <MessageCircle size={15} />
+                {isAr ? 'تواصل مع المالك عبر واتساب' : 'Direct WhatsApp Inquiry'}
+              </a>
+
+              <button
+                type="button"
+                className={styles.closeDockBtn}
+                onClick={() => setShowDock(false)}
+                title={isAr ? 'إغلاق الشريط' : 'Dismiss Bar'}
+                aria-label="Dismiss Bar"
+              >
+                <X size={16} />
+              </button>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* ─── Gallery Lightbox Modal ───────────────────────────────── */}
       {activeGalleryProp && (

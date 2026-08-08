@@ -1,17 +1,17 @@
 .root {
   padding-top: 0;
   min-height: 100vh;
-  background: #0a1914;
+  background: var(--color-bg);
   color: var(--color-text);
 }
 
 /* Hero Header */
 .heroSection {
-  background: linear-gradient(180deg, #0a1914 0%, #122820 100%);
-  padding: 110px 0 70px;
-  color: #fff;
+  background: linear-gradient(135deg, #1E4D3D 0%, #0F2D24 100%);
+  padding: 120px 0 80px;
+  color: #ffffff;
   text-align: center;
-  border-bottom: 1px solid rgba(201, 169, 106, 0.2);
+  border-bottom: 3px solid #C9A96A;
 }
 
 .heroBadge {
@@ -23,7 +23,7 @@
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: #C9A96A;
-  background: rgba(201, 169, 106, 0.12);
+  background: rgba(201, 169, 106, 0.15);
   padding: 6px 16px;
   border-radius: 20px;
   border: 1px solid rgba(201, 169, 106, 0.3);
@@ -32,23 +32,25 @@
 
 .heroTitle {
   font-family: var(--font-serif);
-  font-size: 42px;
-  font-weight: 700;
-  line-height: 52px;
+  font-size: 44px;
+  font-weight: 800;
+  line-height: 54px;
+  color: #ffffff;
   margin: 0 0 14px;
 }
 
 .heroSub {
   font-size: 16px;
   line-height: 26px;
-  color: rgba(255, 255, 255, 0.75);
-  max-width: 600px;
+  color: rgba(255, 255, 255, 0.85);
+  max-width: 620px;
   margin: 0 auto;
 }
 
 /* Contact Body Layout */
 .contactSection {
   padding: 70px 0 90px;
+  background: var(--color-bg);
 }
 
 .contactGrid {
@@ -56,7 +58,7 @@
   grid-template-columns: 1fr 1.3fr;
   gap: 48px;
   align-items: start;
-  max-width: 1080px;
+  max-width: 1180px;
   margin: 0 auto;
 }
 
@@ -74,16 +76,16 @@
 
 .infoHeading {
   font-family: var(--font-serif);
-  font-size: 28px;
-  font-weight: 700;
-  color: var(--color-primary);
+  font-size: 32px;
+  font-weight: 800;
+  color: #1E4D3D;
   margin: 0 0 8px;
 }
 
 .infoSub {
   font-size: 15px;
   line-height: 24px;
-  color: var(--color-text-muted);
+  color: #64748B;
   margin: 0;
 }
 
@@ -94,11 +96,11 @@
 }
 
 .contactCard {
-  background: var(--color-surface);
-  padding: 20px 24px;
-  border-radius: var(--radius-md);
-  border: 1px solid rgba(0, 0, 0, 0.06);
-  box-shadow: 0 4px 16px -2px rgba(0, 0, 0, 0.03);
+  background: #ffffff;
+  padding: 22px 26px;
+  border-radius: 18px;
+  border: 1px solid rgba(201, 169, 106, 0.25);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.04);
   display: flex;
   align-items: center;
   gap: 16px;
@@ -108,8 +110,8 @@
 }
 
 .contactCard:hover {
-  box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.06);
-  border-color: rgba(201, 169, 106, 0.4);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+  border-color: #C9A96A;
   transform: translateY(-2px);
 }
 
@@ -119,10 +121,11 @@
   justify-content: center;
   width: 48px;
   height: 48px;
-  border-radius: 12px;
+  border-radius: 14px;
   background: rgba(30, 77, 61, 0.1);
-  color: var(--color-primary);
+  color: #1E4D3D;
   flex-shrink: 0;
+  border: 1px solid rgba(30, 77, 61, 0.15);
 }
 
 .iconBoxWa {
@@ -131,10 +134,11 @@
   justify-content: center;
   width: 48px;
   height: 48px;
-  border-radius: 12px;
-  background: rgba(37, 211, 102, 0.1);
-  color: #25D366;
+  border-radius: 14px;
+  background: rgba(16, 185, 129, 0.1);
+  color: #10B981;
   flex-shrink: 0;
+  border: 1px solid rgba(16, 185, 129, 0.2);
 }
 
 .iconBoxLoc {
@@ -143,10 +147,11 @@
   justify-content: center;
   width: 48px;
   height: 48px;
-  border-radius: 12px;
+  border-radius: 14px;
   background: rgba(201, 169, 106, 0.15);
-  color: #C9A96A;
+  color: #a67c33;
   flex-shrink: 0;
+  border: 1px solid rgba(201, 169, 106, 0.25);
 }
 
 .cardMetaLabel {
@@ -180,9 +185,9 @@
 
 /* Form Container */
 .formCard {
-  background: var(--color-surface);
-  border-radius: 20px;
+  background: #ffffff;
+  border-radius: 24px;
   padding: 36px;
-  border: 1px solid rgba(0, 0, 0, 0.06);
-  box-shadow: 0 12px 40px -4px rgba(0, 0, 0, 0.04);
+  border: 1px solid rgba(201, 169, 106, 0.3);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.06);
 }

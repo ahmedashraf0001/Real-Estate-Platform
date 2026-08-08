@@ -146,11 +146,11 @@
 
 /* ─── Card Body ──────────────────────────────── */
 .body {
-  padding: 14px;
+  padding: 18px 20px 22px 20px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  gap: 10px;
+  gap: 12px;
   flex: 1;
 }
 
@@ -198,11 +198,11 @@
   display: flex;
   align-items: center;
   justify-content: flex-start;
-  padding: 7px 10px;
-  border-radius: 10px;
+  padding: 10px 14px;
+  border-radius: 12px;
   background: #f9f8f5;
-  border: 1px solid rgba(201, 169, 106, 0.18);
-  gap: 8px;
+  border: 1px solid rgba(201, 169, 106, 0.22);
+  gap: 12px;
   overflow-x: auto;
   scrollbar-width: none;
 }
@@ -214,8 +214,9 @@
 .specItem {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  font-size: 11.5px;
+  gap: 6px;
+  font-size: 12px;
+  line-height: 1;
   white-space: nowrap;
   flex-shrink: 0;
 }
@@ -226,17 +227,19 @@
 }
 
 .specText {
-  font-size: 11.5px;
+  font-size: 12px;
   font-weight: 700;
   color: var(--color-primary);
+  line-height: 1;
   white-space: nowrap;
 }
 
 .specDivider {
   width: 1px;
-  height: 14px;
-  background: rgba(201, 169, 106, 0.25);
+  height: 12px;
+  background: rgba(201, 169, 106, 0.3);
   flex-shrink: 0;
+  align-self: center;
 }
 
 .finishingItem {

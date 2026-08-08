@@ -139,22 +139,6 @@ export default function FeaturedProperties({ properties, locale }: FeaturedPrope
             </AnimatePresence>
           </motion.div>
         )}
-
-        {/* ── Bottom CTA ─────────────────────────── */}
-        {properties.length > 0 && (
-          <motion.div
-            className={styles.bottomCta}
-            initial={{ opacity: 0, y: 16 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.5, delay: 0.15 }}
-          >
-            <Link href={`/${locale}/properties`} className={styles.browseBtn}>
-              {isAr ? 'تصفح جميع العقارات المتاحة' : 'Browse All Luxury Listings'}
-              <ArrowRight size={16} strokeWidth={2} />
-            </Link>
-          </motion.div>
-        )}
       </div>
     </section>
   );

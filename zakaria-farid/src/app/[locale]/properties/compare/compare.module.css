@@ -534,6 +534,25 @@
   transform: translateY(-1px);
 }
 
+.closeDockBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.15);
+  color: #ffffff;
+  border: none;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.15s ease;
+}
+
+.closeDockBtn:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: scale(1.05);
+}
+
 /* ─── Gallery Lightbox Modal ─────────────────── */
 .modalBackdrop {
   position: fixed;

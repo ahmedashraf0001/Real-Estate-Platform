@@ -5,7 +5,7 @@ import { useRef } from 'react';
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { motion, useScroll, useTransform } from 'framer-motion';
-import { ArrowRight, MessageCircle, Sparkles, Award, Building2, ShieldCheck, Star } from 'lucide-react';
+import { ArrowRight, MapPin, MessageCircle, Sparkles, Award, Building2, ShieldCheck, Star } from 'lucide-react';
 import { whatsappUrl, WHATSAPP_NUMBER } from '@/lib/utils/formatting';
 import SmartSearchDock from '@/components/search/SmartSearchDock';
 import styles from './HeroSection.module.css';
@@ -52,40 +52,31 @@ export default function HeroSection({ locale }: HeroSectionProps) {
 
   return (
     <section ref={targetRef} className={styles.hero}>
-      {/* Scroll-Driven Parallax Background with Ken Burns */}
-      <motion.div style={{ scale: bgScale }} className={styles.bgImg} aria-hidden="true">
+      {/* Background Image with Parallax & Dark Overlay */}
+      <motion.div style={{ scale: bgScale }} className={styles.bgImg}>
         <Image
-          src="https://images.unsplash.com/photo-1613977257363-707ba9348227?w=1920&q=85&auto=format&fit=crop"
-          alt="Sunlit Luxury Villa"
+          src="/images/about-hero.png"
+          alt="Zakaria Farid Luxury Estates"
           fill
           priority
           sizes="100vw"
           className={styles.bgImgFile}
         />
       </motion.div>
-      <div className={styles.overlay} aria-hidden="true" />
-      <div className={styles.gridOverlay} aria-hidden="true" />
+      <div className={styles.overlay} />
 
-      {/* Floating particles */}
-      <div className={styles.particles} aria-hidden="true">
-        {[...Array(6)].map((_, i) => (
-          <div key={i} className={styles.particle} style={{ '--i': i } as React.CSSProperties} />
-        ))}
-      </div>
-
-      <motion.div style={{ y: contentY }} className={`container ${styles.content}`}>
+      {/* Content */}
+      <motion.div style={{ y: contentY, opacity }} className={`container ${styles.content}`}>
         <div className={styles.inner}>
-          {/* Label */}
+          {/* Eyebrow Pill */}
           <div className={styles.labelWrap}>
-            <span className={styles.labelDot} />
-            <span className={styles.labelText}>Zakaria Farid Real Estate</span>
+            <Sparkles size={12} className={styles.labelDot} />
+            <span className={styles.labelText}>{isAr ? 'زكريا فريد للعقارات الفاخرة' : 'Zakaria Farid Real Estate'}</span>
           </div>
 
           {/* Headline */}
           <h1 className={styles.headline}>
-            <span className={styles.maskedText}>
-              {t('headline')}
-            </span>
+            {t('headline')}
           </h1>
 
           {/* Sub */}
@@ -104,15 +95,10 @@ export default function HeroSection({ locale }: HeroSectionProps) {
               {t('cta_browse')}
               <ArrowRight size={15} strokeWidth={2} className={isAr ? styles.arrowRtl : ''} />
             </Link>
-            <a
-              href={whatsappUrl(WHATSAPP_NUMBER, isAr ? 'مرحباً، أود الاستفسار عن عقار' : 'Hello, I am interested in a property.')}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={styles.btnWhatsapp}
-            >
-              <MessageCircle size={15} strokeWidth={1.5} />
-              {t('cta_whatsapp')}
-            </a>
+            <Link href={`/${locale}/map`} className={styles.btnSecondary} style={{ background: 'rgba(255, 255, 255, 0.15)', borderColor: 'rgba(255, 255, 255, 0.3)' }}>
+              <MapPin size={15} strokeWidth={2} />
+              <span>{isAr ? 'استكشف الخريطة التفاعلية' : 'Explore Interactive Map'}</span>
+            </Link>
           </div>
         </div>
 

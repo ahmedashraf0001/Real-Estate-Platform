@@ -509,7 +509,7 @@
   width: 100%;
   padding: 9px 16px;
   background: #1E4D3D;
-  color: #fff;
+  color: #ffffff !important;
   border-radius: 8px;
   font-size: 13px;
   font-weight: 700;
@@ -519,6 +519,7 @@
 
 .popupBtn:hover {
   background: #163d30;
+  color: #ffffff !important;
 }
 
 /* ─── Override Leaflet popup chrome ──────────────────── */
