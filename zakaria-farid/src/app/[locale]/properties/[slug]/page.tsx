@@ -22,7 +22,7 @@ const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale, slug } = await params;
-  const property = await getPropertyBySlug(slug);
+  const property = await getPropertyBySlug(slug).catch(() => null);
   if (!property) return { title: 'Property Not Found' };
 
   const title = (locale === 'ar' ? property.title_ar : property.title_en) || 'Property';
@@ -53,7 +53,7 @@ export default async function PropertyDetailPage({ params }: Props) {
   const { locale, slug } = await params;
   const t = await getTranslations({ locale, namespace: 'property' });
 
-  const property = await getPropertyBySlug(slug);
+  const property = await getPropertyBySlug(slug).catch(() => null);
   if (!property) notFound();
 
   // Similar properties (same type, different slug, max 3)
