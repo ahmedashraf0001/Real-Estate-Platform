@@ -6,11 +6,16 @@ import { routing } from './i18n/routing';
 const intlMiddleware = createMiddleware(routing);
 
 // ─── Routes that must NEVER be blocked by maintenance mode ───────────────────
-// Admin dashboard, API routes, and static assets all pass straight through.
+// Admin dashboard, specific admin-critical API routes, and static assets pass through.
+// NOTE: /api/search is intentionally NOT exempted — it powers the public-facing search
+// dock (SmartSearchDock.tsx) and has no function the admin dashboard depends on during
+// maintenance. Only /api/leads (lead submission) and /api/properties (admin CRUD) are
+// admin-critical and exempted.
 function isExempt(pathname: string): boolean {
   return (
     pathname.startsWith('/admin') ||
-    pathname.startsWith('/api') ||
+    pathname.startsWith('/api/leads') ||
+    pathname.startsWith('/api/properties') ||
     pathname.startsWith('/_next') ||
     pathname.startsWith('/_vercel') ||
     pathname.startsWith('/fonts') ||
@@ -37,9 +42,16 @@ export default async function middleware(req: NextRequest) {
   const maintenanceMode = process.env.MAINTENANCE_MODE === 'true';
 
   if (maintenanceMode) {
-    // Detect preferred language from Accept-Language header to show correct copy.
+    // Detect language using two signals, in priority order:
+    // 1. URL path locale prefix (/ar/... → Arabic). This is the most reliable signal
+    //    because it reflects the user's deliberate locale choice, and it works correctly
+    //    for crawlers and tools that send no Accept-Language header.
+    // 2. Accept-Language header as a secondary fallback for the root or ambiguous paths.
+    const pathLocale = pathname.split('/')[1]; // e.g. 'ar' from '/ar/properties/...'
     const acceptLang = req.headers.get('accept-language') || '';
-    const prefersArabic = acceptLang.toLowerCase().includes('ar');
+    const prefersArabic =
+      pathLocale === 'ar' || // path prefix wins — explicit locale in URL
+      (!pathLocale || pathLocale === 'en' ? acceptLang.toLowerCase().includes('ar') : false);
     const lang = prefersArabic ? 'ar' : 'en';
 
     // Rewrite the request IN-PLACE to the maintenance page (no URL change in
