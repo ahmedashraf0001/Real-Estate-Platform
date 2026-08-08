@@ -26,8 +26,10 @@ Set these in the Pages project → **Settings** → **Builds & deployments**:
 |---|---|
 | Build command | `npx @opennextjs/cloudflare build` |
 | Build output directory | `.open-next/assets` |
-| Root directory | `zakaria-farid` *(if monorepo — adjust to actual subfolder)* |
+| **Root directory (REQUIRED)** | **`zakaria-farid`** *(Cloudflare must build inside `zakaria-farid` subfolder where Next.js app lives)* |
 | Node.js version | `22.x` *(set `NODE_VERSION=22` in Environment Variables to avoid Supabase package engine warnings)* |
+
+> ⚠️ **CRITICAL**: In Cloudflare Pages project **Settings** → **Builds & deployments** → **Build configuration**, you **MUST** set **Root directory** to `zakaria-farid`. If left blank (`/`), Cloudflare tries to build the repository root where `Next.js` dependencies are missing.
 
 ### 1.3 Compatibility Flags (CRITICAL — do not skip)
 In the Pages project → **Settings** → **Functions** → **Compatibility flags**:

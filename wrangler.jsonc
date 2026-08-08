@@ -1,0 +1,13 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "zakaria-farid",
+  "main": "zakaria-farid/.open-next/worker.js",
+  "compatibility_date": "2026-08-08",
+  "compatibility_flags": [
+    "nodejs_compat"
+  ],
+  "assets": {
+    "directory": "zakaria-farid/.open-next/assets",
+    "binding": "ASSETS"
+  }
+}
