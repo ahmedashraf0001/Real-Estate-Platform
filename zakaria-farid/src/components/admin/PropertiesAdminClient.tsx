@@ -91,7 +91,7 @@ export default function PropertiesAdminClient({ initialProperties, adminLocale }
       setProperties((current) =>
         current.map((p) =>
           p.id === propertyId
-            ? { ...p, is_archived: shouldArchive, listing_status: shouldArchive ? 'archived' : 'active' }
+            ? { ...p, is_archived: shouldArchive }
             : p
         )
       );

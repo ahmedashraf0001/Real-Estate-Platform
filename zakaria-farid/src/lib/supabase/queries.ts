@@ -67,8 +67,6 @@ export async function getAllProperties(params?: {
   if (searchType) query = query.eq('type', searchType);
   if (params?.listing_status) {
     query = query.eq('listing_status', params.listing_status);
-  } else {
-    query = query.neq('listing_status', 'archived');
   }
 
   if (params?.sort === 'price_asc') query = query.order('price_egp', { ascending: true });
