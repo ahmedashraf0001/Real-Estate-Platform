@@ -133,11 +133,23 @@ export async function submitLead(lead: Omit<Lead, 'id' | 'created_at' | 'propert
 
 export async function getAllLeads(): Promise<Lead[]> {
   const supabase = await createClient();
-  const { data, error } = await supabase
+  let { data, error } = await supabase
     .from('leads')
     .select(`*, property:properties(id, title_en, title_ar, slug)`)
     .order('stage_updated_at', { ascending: false })
     .order('created_at', { ascending: false });
+
+  if (error) {
+    // Fallback if stage_updated_at column does not exist
+    const fallback = await supabase
+      .from('leads')
+      .select(`*, property:properties(id, title_en, title_ar, slug)`)
+      .order('created_at', { ascending: false });
+
+    data = fallback.data;
+    error = fallback.error;
+  }
+
   if (error) throw error;
   return (data as Lead[]) ?? [];
 }
