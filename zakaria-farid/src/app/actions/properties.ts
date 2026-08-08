@@ -7,17 +7,28 @@ import { revalidatePath } from 'next/cache';
 // Creates an admin client using the service role key — bypasses RLS entirely.
 // Falls back to null if the key is not set (e.g. Cloudflare Workers secrets not configured yet),
 // so the caller can fall back to the session client which still works for authenticated admins.
-function createAdminClient() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+async function getAdminClient() {
+  let url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  let serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-  if (!serviceKey) {
-    console.warn('[Admin] SUPABASE_SERVICE_ROLE_KEY is not set — falling back to session client. Set it via: npx wrangler secret put SUPABASE_SERVICE_ROLE_KEY');
+  if (!serviceKey || !url) {
+    try {
+      const { getCloudflareContext } = await import('@opennextjs/cloudflare');
+      const ctx = await getCloudflareContext({ async: true });
+      if (ctx?.env) {
+        url = url || (ctx.env as any).NEXT_PUBLIC_SUPABASE_URL;
+        serviceKey = serviceKey || (ctx.env as any).SUPABASE_SERVICE_ROLE_KEY;
+      }
+    } catch {
+      // Not in Cloudflare environment
+    }
+  }
+
+  if (!url || !serviceKey) {
+    console.warn('[Admin] SUPABASE_SERVICE_ROLE_KEY is not set — falling back to session client.');
     return null;
   }
 
-  // Use the JS client directly with the service role key
-  // This bypasses all RLS policies
   const { createClient } = require('@supabase/supabase-js');
   return createClient(url, serviceKey, {
     auth: {
@@ -44,7 +55,8 @@ export async function saveProperty(
 
     // Now use the admin client to actually write to the database
     // Falls back to session client if SUPABASE_SERVICE_ROLE_KEY is not configured
-    const supabase = createAdminClient() ?? (await createBrowserServer());
+    const adminSupabase = await getAdminClient();
+    const supabase = adminSupabase ?? (await createBrowserServer());
 
     if (isEditing && propertyId) {
       let { error } = await supabase.from('properties').update(payload).eq('id', propertyId);

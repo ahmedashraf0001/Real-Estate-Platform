@@ -11,7 +11,7 @@ async function getAdminClient() {
   if (!serviceKey || !url) {
     try {
       const { getCloudflareContext } = await import('@opennextjs/cloudflare');
-      const ctx = await getCloudflareContext();
+      const ctx = await getCloudflareContext({ async: true });
       if (ctx?.env) {
         url = url || (ctx.env as any).NEXT_PUBLIC_SUPABASE_URL;
         serviceKey = serviceKey || (ctx.env as any).SUPABASE_SERVICE_ROLE_KEY;
