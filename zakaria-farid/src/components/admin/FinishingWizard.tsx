@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useMemo, useRef } from 'react';
+import { toast } from 'sonner';
 import { ChevronRight, Plus, Check, ImagePlus, X, Loader2, Trash2, Sparkles, SlidersHorizontal, RotateCcw, RotateCw } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import {
@@ -324,27 +325,45 @@ export default function FinishingWizard({
     updateZones(addOptionalZone(zoneInstances, zoneTemplateId, gs, parentZoneInstanceId));
   }
 
-  async function handleZoneImageUpload(zoneId: string, files: FileList) {
+  async function handleZoneImageUpload(zoneId: string, files: FileList | File[]) {
     setUploadingZoneId(zoneId);
     try {
       const supabase = createClient();
-      let updated = zoneInstances;
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
+      const fileArray = Array.from(files);
+      if (fileArray.length === 0) return;
+
+      const uploadPromises = fileArray.map(async (file, idx) => {
         const ext = file.name.split('.').pop() ?? 'jpg';
-        const path = `zone-photos/${zoneId}-${Date.now()}-${i}.${ext}`;
+        const uniqueId = `${Date.now()}-${idx}-${Math.random().toString(36).substring(2, 7)}`;
+        const path = `zone-photos/${zoneId}-${uniqueId}.${ext}`;
         const { error: uploadError } = await supabase.storage
           .from('property-images')
           .upload(path, file, { cacheControl: '3600', upsert: true });
-        if (uploadError) { console.error('Upload error:', uploadError); continue; }
+
+        if (uploadError) {
+          console.error('Zone photo upload error:', uploadError);
+          return null;
+        }
+
         const { data: { publicUrl } } = supabase.storage
           .from('property-images')
           .getPublicUrl(path);
-        updated = addZoneImage(updated, zoneId, publicUrl);
+        return publicUrl;
+      });
+
+      const uploadedUrls = (await Promise.all(uploadPromises)).filter((url): url is string => url !== null);
+
+      if (uploadedUrls.length > 0) {
+        let updated = zoneInstances;
+        for (const url of uploadedUrls) {
+          updated = addZoneImage(updated, zoneId, url);
+        }
+        updateZones(updated);
+        toast.success(isAr ? `تم رفع ${uploadedUrls.length} صورة بنجاح` : `Uploaded ${uploadedUrls.length} photos`);
       }
-      updateZones(updated);
     } catch (err) {
       console.error('Zone image upload failed:', err);
+      toast.error(isAr ? 'فشل رفع الصور' : 'Failed to upload zone photos');
     } finally {
       setUploadingZoneId(null);
     }

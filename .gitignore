@@ -27,3 +27,7 @@ yarn-error.log*
 *.pem
 capture_*.js
 *.png
+!public/images/*.png
+!public/*.png
+!zakaria-farid/public/images/*.png
+!zakaria-farid/public/*.png

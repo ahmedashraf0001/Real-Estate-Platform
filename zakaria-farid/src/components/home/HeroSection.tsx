@@ -1,10 +1,10 @@
 'use client';
 
 import Image from 'next/image';
-import { useRef } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
-import { motion, useScroll, useTransform } from 'framer-motion';
+import { motion, useScroll, useTransform, AnimatePresence } from 'framer-motion';
 import { ArrowRight, MapPin, MessageCircle, Sparkles, Award, Building2, ShieldCheck, Star } from 'lucide-react';
 import { whatsappUrl, WHATSAPP_NUMBER } from '@/lib/utils/formatting';
 import SmartSearchDock from '@/components/search/SmartSearchDock';
@@ -14,10 +14,27 @@ interface HeroSectionProps {
   locale: string;
 }
 
+const HERO_SLIDES = [
+  { src: '/images/about-hero.png', alt: 'Ultra-Luxury Mansion' },
+  { src: 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?q=85&w=1920&auto=format&fit=crop', alt: 'Modern Estate Villa with Swimming Pool' },
+  { src: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?q=85&w=1920&auto=format&fit=crop', alt: 'Grand Standalone Villa Night View' },
+  { src: '/images/sunlit-hero-villa.png', alt: 'Sunlit Waterfront Estate' },
+  { src: 'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?q=85&w=1920&auto=format&fit=crop', alt: 'Modern Interior Living Space' },
+  { src: '/images/about-interior.png', alt: 'Luxury Master Suite Lounge' },
+];
+
 export default function HeroSection({ locale }: HeroSectionProps) {
   const t = useTranslations('hero');
   const isAr = locale === 'ar';
   const targetRef = useRef<HTMLDivElement>(null);
+  const [activeSlide, setActiveSlide] = useState(0);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setActiveSlide((prev) => (prev + 1) % HERO_SLIDES.length);
+    }, 5500);
+    return () => clearInterval(timer);
+  }, []);
 
   const { scrollYProgress } = useScroll({
     target: targetRef,
@@ -52,16 +69,27 @@ export default function HeroSection({ locale }: HeroSectionProps) {
 
   return (
     <section ref={targetRef} className={styles.hero}>
-      {/* Background Image with Parallax & Dark Overlay */}
+      {/* Background Image Slideshow with Smooth Crossfade & Ken Burns Scale */}
       <motion.div style={{ scale: bgScale }} className={styles.bgImg}>
-        <Image
-          src="/images/about-hero.png"
-          alt="Zakaria Farid Luxury Estates"
-          fill
-          priority
-          sizes="100vw"
-          className={styles.bgImgFile}
-        />
+        <AnimatePresence mode="popLayout">
+          <motion.div
+            key={activeSlide}
+            initial={{ opacity: 0, scale: 1.06 }}
+            animate={{ opacity: 1, scale: 1.02 }}
+            exit={{ opacity: 0, scale: 1 }}
+            transition={{ duration: 1.6, ease: [0.16, 1, 0.3, 1] }}
+            style={{ position: 'absolute', inset: 0 }}
+          >
+            <Image
+              src={HERO_SLIDES[activeSlide].src}
+              alt={HERO_SLIDES[activeSlide].alt}
+              fill
+              priority={activeSlide === 0}
+              sizes="100vw"
+              className={styles.bgImgFile}
+            />
+          </motion.div>
+        </AnimatePresence>
       </motion.div>
       <div className={styles.overlay} />
 

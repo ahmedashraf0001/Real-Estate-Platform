@@ -378,109 +378,132 @@ function RevampedZonePopUpModal({
     ? `مرحباً، أستفسر عن تفاصيل تشطيب ${activeDisplayName} في ${propertyTitle}`
     : `Hello, I'd like to ask about the ${activeDisplayName} finishing details in "${propertyTitle}"`;
 
+  const nextPhoto = () => {
+    if (zonePhotos.length === 0) return;
+    setActivePhotoIdx((prev) => (prev + 1) % zonePhotos.length);
+  };
+
+  const prevPhoto = () => {
+    if (zonePhotos.length === 0) return;
+    setActivePhotoIdx((prev) => (prev - 1 + zonePhotos.length) % zonePhotos.length);
+  };
+
   return (
     <div className={styles.modalOverlay} onClick={onClose}>
-      <div className={styles.revampedModalDialog} onClick={e => e.stopPropagation()} dir={isAr ? 'rtl' : 'ltr'}>
-        
-        {/* Revamped Hero Header */}
-        <div className={styles.revampedHeroHeader}>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={currentHeroPhoto} alt={groupName} className={styles.revampedHeroImg} />
-          <div className={styles.revampedHeroOverlay} />
-          
-          <button className={styles.revampedCloseBtn} onClick={onClose} aria-label="Close">
-            <X size={20} />
-          </button>
+      <div className={styles.splitModalDialog} onClick={e => e.stopPropagation()} dir={isAr ? 'rtl' : 'ltr'}>
+        <button className={styles.revampedCloseBtn} onClick={onClose} aria-label="Close">
+          <X size={20} />
+        </button>
 
-          {/* Multi-Photo Dots/Thumbnails overlay if active zone has multiple uploaded photos */}
-          {zonePhotos.length > 1 && (
-            <div className={styles.modalPhotoDotsOverlay}>
-              {zonePhotos.map((_, pIdx) => (
-                <button
-                  key={pIdx}
-                  type="button"
-                  className={`${styles.modalPhotoDot} ${pIdx === activePhotoIdx ? styles.modalPhotoDotActive : ''}`}
-                  onClick={() => setActivePhotoIdx(pIdx)}
-                  aria-label={`Photo ${pIdx + 1}`}
-                />
-              ))}
-            </div>
-          )}
+        {/* ── Left Side: Interactive Photo Gallery Slider ── */}
+        <div className={styles.modalGalleryCol}>
+          <div className={styles.mainHeroPhotoWrap}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={currentHeroPhoto} alt={groupName} className={styles.mainHeroImg} />
+            <div className={styles.mainHeroOverlay} />
 
-          <div className={styles.revampedHeroContent}>
-            <div className={styles.heroBadgeRow}>
+            {zonePhotos.length > 1 && (
+              <>
+                <button type="button" className={`${styles.galleryNavArrow} ${styles.navLeft}`} onClick={prevPhoto} aria-label="Previous photo">
+                  {isAr ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}
+                </button>
+                <button type="button" className={`${styles.galleryNavArrow} ${styles.navRight}`} onClick={nextPhoto} aria-label="Next photo">
+                  {isAr ? <ChevronLeft size={20} /> : <ChevronRight size={20} />}
+                </button>
+              </>
+            )}
+
+            <div className={styles.galleryBadgeOverlay}>
               <span className={`${styles.finishBadge} ${styles[cfg.cls]}`}>
                 <span className={styles.badgeEmoji}>{cfg.icon}</span>
                 <span className={styles.badgeText}>{isAr ? cfg.ar : cfg.en}</span>
               </span>
-              {group.isGroup && (
-                <span className={styles.instanceCountPill}>
-                  <Layers size={13} />
-                  <span>{isAr ? `${group.count} مناطق` : `${group.count} Units` }</span>
-                </span>
-              )}
             </div>
-
-            <h2 className={styles.revampedModalTitle}>{groupName}</h2>
-            <p className={styles.revampedModalSub}>
-              {isAr ? 'مواصفات المقايسة والتشطيب الفعلي' : 'Official execution specs & trade attributes'}
-            </p>
           </div>
-        </div>
 
-        {/* Multi-instance Segmented Tabs for Grouped Repeatable Cards */}
-        {group.isGroup && (
-          <div className={styles.instanceTabsBar}>
-            {group.instances.map((zone, idx) => {
-              const l = getZoneTemplateLabels(zone.zone_template_id);
-              const name = l ? (isAr ? l.ar : l.en) : zone.zone_template_id;
-              const tabLabel = zone.instance_label ?? `${name} ${idx + 1}`;
-
-              return (
+          {/* Thumbnails Row below main photo */}
+          {zonePhotos.length > 1 && (
+            <div className={styles.galleryThumbnailsRow}>
+              {zonePhotos.map((photoUrl, pIdx) => (
                 <button
-                  key={zone.id}
-                  className={`${styles.instanceTabBtn} ${idx === activeInstanceIdx ? styles.instanceTabActive : ''}`}
-                  onClick={() => setActiveInstanceIdx(idx)}
+                  key={pIdx}
+                  type="button"
+                  className={`${styles.galleryThumbBtn} ${pIdx === activePhotoIdx ? styles.galleryThumbActive : ''}`}
+                  onClick={() => setActivePhotoIdx(pIdx)}
                 >
-                  {tabLabel}
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={photoUrl} alt={`Thumbnail ${pIdx + 1}`} className={styles.thumbImg} />
                 </button>
-              );
-            })}
-          </div>
-        )}
-
-        {/* Modal Scrollable Body */}
-        <div className={styles.revampedModalBody}>
-          <div className={styles.specSectionHeader}>
-            <Sliders size={16} className={styles.specHeaderIcon} />
-            <span>{isAr ? `مواصفات ${activeDisplayName}` : `${activeDisplayName} Execution Specs` }</span>
-          </div>
-
-          {activeZone.trades.length > 0 ? (
-            <div className={styles.tradesGridContainer}>
-              {activeZone.trades.map(trade => (
-                <TradeCardItem key={trade.id} trade={trade} locale={locale} />
               ))}
-            </div>
-          ) : (
-            <div className={styles.noTradesCard}>
-              <Info size={24} className={styles.noTradesIcon} />
-              <p>{isAr ? 'لم تُسجَّل مقايسات تفصيلية لهذة المنطقة' : 'No trade specifications recorded for this zone yet'}</p>
             </div>
           )}
         </div>
 
-        {/* Floating Action Bar */}
-        <div className={styles.revampedModalFooter}>
-          <a
-            href={whatsappUrl(WHATSAPP_NUMBER, waMsg)}
-            target="_blank"
-            rel="noopener noreferrer"
-            className={styles.revampedWaBtn}
-          >
-            <MessageCircle size={18} strokeWidth={1.5} />
-            <span>{isAr ? `استفسر عن ${activeDisplayName}` : `Inquire about ${activeDisplayName}`}</span>
-          </a>
+        {/* ── Right Side: Scrollable Specs & Inquire Action ── */}
+        <div className={styles.modalInfoCol}>
+          <div className={styles.modalInfoHeader}>
+            <div className={styles.modalTitleWrap}>
+              <h2 className={styles.modalTitleText}>{groupName}</h2>
+              <p className={styles.modalSubtitleText}>
+                {isAr ? 'مواصفات المقايسة والتشطيب الفعلي' : 'Official execution specs & trade attributes'}
+              </p>
+            </div>
+          </div>
+
+          {/* Multi-instance Segmented Tabs for Grouped Repeatable Cards */}
+          {group.isGroup && (
+            <div className={styles.instanceTabsBar}>
+              {group.instances.map((zone, idx) => {
+                const l = getZoneTemplateLabels(zone.zone_template_id);
+                const name = l ? (isAr ? l.ar : l.en) : zone.zone_template_id;
+                const tabLabel = zone.instance_label ?? `${name} ${idx + 1}`;
+
+                return (
+                  <button
+                    key={zone.id}
+                    className={`${styles.instanceTabBtn} ${idx === activeInstanceIdx ? styles.instanceTabActive : ''}`}
+                    onClick={() => setActiveInstanceIdx(idx)}
+                  >
+                    {tabLabel}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Modal Scrollable Trade Specs Grid */}
+          <div className={styles.modalScrollableContent}>
+            <div className={styles.specSectionHeader}>
+              <Sliders size={16} className={styles.specHeaderIcon} />
+              <span>{isAr ? `مواصفات ${activeDisplayName}` : `${activeDisplayName} Execution Specs` }</span>
+            </div>
+
+            {activeZone.trades.length > 0 ? (
+              <div className={styles.tradesGridContainer}>
+                {activeZone.trades.map(trade => (
+                  <TradeCardItem key={trade.id} trade={trade} locale={locale} />
+                ))}
+              </div>
+            ) : (
+              <div className={styles.noTradesCard}>
+                <Info size={24} className={styles.noTradesIcon} />
+                <p>{isAr ? 'لم تُسجَّل مقايسات تفصيلية لهذة المنطقة' : 'No trade specifications recorded for this zone yet'}</p>
+              </div>
+            )}
+          </div>
+
+          {/* Bottom Action Bar */}
+          <div className={styles.revampedModalFooter}>
+            <a
+              href={whatsappUrl(WHATSAPP_NUMBER, waMsg)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={styles.revampedWaBtn}
+            >
+              <MessageCircle size={18} strokeWidth={1.5} />
+              <span>{isAr ? `استفسر عن ${activeDisplayName}` : `Inquire about ${activeDisplayName}`}</span>
+            </a>
+          </div>
         </div>
 
       </div>
@@ -941,7 +964,11 @@ export default function FinishingDetailsDisplay({ zones, propertyTitle, locale, 
               const displayGroups = groupRepeatableZoneInstances(exteriorInstances, propertyImages);
               if (displayGroups.length === 0) return null;
               return (
-                <div style={{ marginBottom: 28 }}>
+                <div className={styles.floorSection} style={{ marginBottom: 28 }}>
+                  <div className={styles.floorHeader}>
+                    <TreePine size={18} className={styles.floorIcon} />
+                    <span className={styles.floorLabel}>{isAr ? 'الحدائق والمساحات الخارجية' : 'Outdoor & Landscaping'}</span>
+                  </div>
                   <ZoneCarousel
                     groups={displayGroups}
                     dominantTier={dominantTier}

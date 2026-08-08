@@ -1,11 +1,14 @@
 .loadingWrapper {
-  height: calc(100vh - 120px);
-  max-height: calc(100vh - 120px);
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  width: 100vw;
+  height: 100vh;
+  background: var(--color-bg);
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 20px;
-  position: relative;
   overflow: hidden;
 }
 

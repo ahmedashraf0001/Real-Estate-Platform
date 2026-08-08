@@ -125,12 +125,53 @@ interface AdminPropertyFormProps {
 export default function AdminPropertyForm({ property, isAr = false }: AdminPropertyFormProps) {
   const isEditing = !!property;
   const router = useRouter();
-  const [currentStep, setCurrentStep] = useState<number>(1);
+
+  const [currentStep, setCurrentStep] = useState<number>(() => {
+    if (typeof window !== 'undefined') {
+      const sp = new URLSearchParams(window.location.search);
+      const s = sp.get('step');
+      if (s) return Number(s);
+    }
+    return 1;
+  });
+
   const [saving, setSaving] = useState(false);
   const [uploadingImages, setUploadingImages] = useState(false);
-  const [isSaved, setIsSaved] = useState(false);
-  const [savedSlug, setSavedSlug] = useState<string | null>(null);
+  const [isSaved, setIsSaved] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      const sp = new URLSearchParams(window.location.search);
+      return sp.get('saved') === 'true';
+    }
+    return false;
+  });
+  const [savedSlug, setSavedSlug] = useState<string | null>(property?.slug ?? null);
   const [savedResult, setSavedResult] = useState<{ id?: string; slug?: string } | null>(null);
+
+  const goToStep = (stepNum: number) => {
+    setCurrentStep(stepNum);
+    setIsSaved(false);
+    if (typeof window !== 'undefined') {
+      const url = new URL(window.location.href);
+      url.searchParams.set('step', String(stepNum));
+      url.searchParams.delete('saved');
+      window.history.replaceState({}, '', url.toString());
+    }
+  };
+
+  const handleNextStep = async () => {
+    if (currentStep === 1) {
+      const valid = await trigger(['title', 'price_egp', 'area_sqm']);
+      if (!valid) return;
+    } else if (currentStep === 2) {
+      const valid = await trigger(['location']);
+      if (!valid) return;
+    }
+    goToStep(Math.min(currentStep + 1, 4));
+  };
+
+  const handlePrevStep = () => {
+    goToStep(Math.max(currentStep - 1, 1));
+  };
   const [previewUrls, setPreviewUrls] = useState<string[]>(
     property?.property_images?.map((img) => img.url) ?? []
   );
@@ -183,21 +224,6 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
     { num: 3, title_en: 'Layered Specs', title_ar: 'مواصفات الطبقات والتشطيب' },
     { num: 4, title_en: 'Review & Publish', title_ar: 'المراجعة والنشر' },
   ];
-
-  const handleNextStep = async () => {
-    if (currentStep === 1) {
-      const valid = await trigger(['title', 'price_egp', 'area_sqm']);
-      if (!valid) return;
-    } else if (currentStep === 2) {
-      const valid = await trigger(['location']);
-      if (!valid) return;
-    }
-    setCurrentStep((prev) => Math.min(prev + 1, 4));
-  };
-
-  const handlePrevStep = () => {
-    setCurrentStep((prev) => Math.max(prev - 1, 1));
-  };
 
   const selectedType = watch('type');
   const bedroomsCount = watch('bedrooms') || 2;
@@ -378,6 +404,13 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
       toast.success(isAr ? (isEditing ? 'تم تحديث العقار بنجاح!' : 'تم إنشاء العقار بنجاح!') : (isEditing ? 'Property updated!' : 'Property created!'));
       setSavedSlug(res.slug || property?.slug || null);
       setIsSaved(true);
+      setCurrentStep(4);
+      if (typeof window !== 'undefined') {
+        const url = new URL(window.location.href);
+        url.searchParams.set('step', '4');
+        url.searchParams.set('saved', 'true');
+        window.history.replaceState({}, '', url.toString());
+      }
     } catch (err: any) {
       console.error('Save error:', err?.message || err, err);
       toast.error(isAr ? 'فشل الحفظ. يرجى المحاولة مرة أخرى.' : 'Save failed: ' + (err?.message || 'Please try again.'));
