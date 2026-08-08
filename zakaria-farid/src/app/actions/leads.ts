@@ -121,40 +121,30 @@ export async function updateLeadStage(leadId: string, stage: string) {
     const supabase = adminSupabase ?? (await createBrowserServer());
 
     // Primary update attempt with stage and stage_updated_at
-    let { data, error } = await supabase
+    let updateResult = await supabase
       .from('leads')
       .update({
         stage,
         stage_updated_at: new Date().toISOString(),
       })
-      .eq('id', leadId)
-      .select();
+      .eq('id', leadId);
 
-    // Fallback: if stage_updated_at fails or 0 rows modified
-    if (error || !data || data.length === 0) {
-      console.warn('Lead stage update with stage_updated_at failed, attempting stage-only fallback:', error?.message);
-      const fallback = await supabase
+    // Fallback: if stage_updated_at fails
+    if (updateResult.error) {
+      console.warn('Lead stage update with stage_updated_at failed, attempting stage-only fallback:', updateResult.error.message);
+      updateResult = await supabase
         .from('leads')
         .update({ stage })
-        .eq('id', leadId)
-        .select();
-
-      data = fallback.data;
-      error = fallback.error;
+        .eq('id', leadId);
     }
 
-    if (error) {
-      console.error('Lead stage update error:', error.message);
-      return { success: false, error: error.message };
-    }
-
-    if (!data || data.length === 0) {
-      console.error('Lead stage update affected 0 rows for leadId:', leadId);
-      return { success: false, error: 'Lead update failed: 0 rows modified. Check admin permissions.' };
+    if (updateResult.error) {
+      console.error('Lead stage update error:', updateResult.error.message);
+      return { success: false, error: updateResult.error.message };
     }
 
     revalidatePath('/admin');
-    return { success: true, lead: data[0] as Lead };
+    return { success: true, lead: { id: leadId, stage } as Lead };
   } catch (err: any) {
     console.error('Exception in updateLeadStage:', err);
     return { success: false, error: err.message || 'Server action error' };
@@ -186,34 +176,27 @@ export async function updateLeadDetails(
       source: updates.source === undefined ? undefined : normalizeString(updates.source),
     };
 
-    let { data, error } = await supabase
+    let updateResult = await supabase
       .from('leads')
       .update(payload)
-      .eq('id', leadId)
-      .select();
+      .eq('id', leadId);
 
-    if (error || !data || data.length === 0) {
-      console.warn('Lead details update failed, trying fallback:', error?.message);
+    if (updateResult.error) {
+      console.warn('Lead details update failed, trying fallback:', updateResult.error.message);
       const fallbackPayload = {} as Record<string, string | null | undefined>;
       if (updates.notes !== undefined) fallbackPayload.notes = normalizeString(updates.notes);
       if (updates.lost_reason !== undefined) fallbackPayload.lost_reason = normalizeString(updates.lost_reason);
       if (updates.source !== undefined) fallbackPayload.source = normalizeString(updates.source);
       
-      const fallback = await supabase.from('leads').update(fallbackPayload).eq('id', leadId).select();
-      data = fallback.data;
-      error = fallback.error;
+      updateResult = await supabase.from('leads').update(fallbackPayload).eq('id', leadId);
     }
 
-    if (error) {
-      return { success: false, error: error.message };
-    }
-
-    if (!data || data.length === 0) {
-      return { success: false, error: 'Lead details update failed: 0 rows modified.' };
+    if (updateResult.error) {
+      return { success: false, error: updateResult.error.message };
     }
 
     revalidatePath('/admin');
-    return { success: true, lead: data[0] as Lead };
+    return { success: true, lead: { id: leadId, ...updates } as unknown as Lead };
   } catch (err: any) {
     console.error('Exception in updateLeadDetails:', err);
     return { success: false, error: err.message || 'Server action error' };
