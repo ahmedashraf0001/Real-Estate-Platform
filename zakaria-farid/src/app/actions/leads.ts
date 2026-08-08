@@ -10,6 +10,19 @@ async function getAdminClient() {
 
   if (!serviceKey || !url) {
     try {
+      const cfSymbol = Symbol.for('__cloudflare-context__');
+      const cfCtx = (globalThis as any)[cfSymbol];
+      if (cfCtx?.env) {
+        url = url || cfCtx.env.NEXT_PUBLIC_SUPABASE_URL;
+        serviceKey = serviceKey || cfCtx.env.SUPABASE_SERVICE_ROLE_KEY;
+      }
+    } catch {
+      // ignore
+    }
+  }
+
+  if (!serviceKey || !url) {
+    try {
       const cf = await import('@opennextjs/cloudflare');
       let ctx: any = null;
       try {
