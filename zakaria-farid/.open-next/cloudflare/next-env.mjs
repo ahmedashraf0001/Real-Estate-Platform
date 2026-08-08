@@ -1,0 +1,3 @@
+export const production = {"NEXT_PUBLIC_SUPABASE_URL":"https://lybkeycbiposjkjkyjlh.supabase.co","NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY":"sb_publishable_5Mdq_Z4t3Wnt80h-UqltlA_2DLtS3Cc","SUPABASE_SERVICE_ROLE_KEY":"sb_secret_euJWBvU0hgJFcdrlPyCR9Q_gjO6trMU","NEXT_PUBLIC_WHATSAPP_NUMBER":"201009970776"};
+export const development = {"NEXT_PUBLIC_SUPABASE_URL":"https://lybkeycbiposjkjkyjlh.supabase.co","NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY":"sb_publishable_5Mdq_Z4t3Wnt80h-UqltlA_2DLtS3Cc","SUPABASE_SERVICE_ROLE_KEY":"sb_secret_euJWBvU0hgJFcdrlPyCR9Q_gjO6trMU","NEXT_PUBLIC_WHATSAPP_NUMBER":"201009970776"};
+export const test = {};
