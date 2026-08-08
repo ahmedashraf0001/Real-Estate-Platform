@@ -75,6 +75,5 @@ export default async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  // Match all paths except Next.js internals and static files handled above.
   matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
 };

@@ -24,12 +24,10 @@ Set these in the Pages project → **Settings** → **Builds & deployments**:
 
 | Setting | Value |
 |---|---|
-| Build command | `npx opennextjs-cloudflare build` |
-| Build output directory | `.open-next/cloudflare` |
+| Build command | `npx @opennextjs/cloudflare build` |
+| Build output directory | `.open-next/assets` |
 | Root directory | `zakaria-farid` *(if monorepo — adjust to actual subfolder)* |
-| Node.js version | `20.x` or higher |
-
-> **Verify this against the `@opennextjs/cloudflare` adapter's current docs at deploy time** — the build command has changed across versions.
+| Node.js version | `22.x` *(set `NODE_VERSION=22` in Environment Variables to avoid Supabase package engine warnings)* |
 
 ### 1.3 Compatibility Flags (CRITICAL — do not skip)
 In the Pages project → **Settings** → **Functions** → **Compatibility flags**:
