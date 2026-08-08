@@ -124,7 +124,7 @@
   gap: 16px;
 }
 
-@media (min-width: 1320px) {
+@media (min-width: 900px) {
   .factsGrid {
     grid-template-columns: repeat(4, 1fr);
   }
@@ -167,11 +167,24 @@
 /* ─── Layout ────────────────────────────────── */
 .layout {
   display: grid;
-  grid-template-columns: 1fr 380px;
+  grid-template-columns: 1fr 360px;
   gap: var(--space-8);
   padding-top: var(--space-4);
   padding-bottom: var(--space-8);
   align-items: start;
+}
+
+@media (max-width: 1024px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .layout {
+    grid-template-columns: 1fr;
+    gap: var(--space-4);
+  }
 }
 
 .content { 

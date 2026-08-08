@@ -37,7 +37,7 @@ export default function MapPreview({ locale, properties = [] }: { locale: string
 
   return (
     <section className={styles.section} dir={isAr ? 'rtl' : 'ltr'}>
-      <div className="container">
+      <div className={styles.sectionInner}>
         <motion.div
           className={styles.cardContainer}
           initial={{ opacity: 0, y: 30 }}

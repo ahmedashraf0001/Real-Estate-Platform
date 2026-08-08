@@ -5,14 +5,15 @@ import { createClient as createBrowserServer } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
 
 // Creates an admin client using the service role key — bypasses RLS entirely.
-// This is safe because this code only runs server-side and the key is never
-// exposed to the browser.
+// Falls back to null if the key is not set (e.g. Cloudflare Workers secrets not configured yet),
+// so the caller can fall back to the session client which still works for authenticated admins.
 function createAdminClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
   if (!serviceKey) {
-    throw new Error('SUPABASE_SERVICE_ROLE_KEY is not set. Please add it to .env.local');
+    console.warn('[Admin] SUPABASE_SERVICE_ROLE_KEY is not set — falling back to session client. Set it via: npx wrangler secret put SUPABASE_SERVICE_ROLE_KEY');
+    return null;
   }
 
   // Use the JS client directly with the service role key
@@ -42,7 +43,8 @@ export async function saveProperty(
     }
 
     // Now use the admin client to actually write to the database
-    const supabase = createAdminClient();
+    // Falls back to session client if SUPABASE_SERVICE_ROLE_KEY is not configured
+    const supabase = createAdminClient() ?? (await createBrowserServer());
 
     if (isEditing && propertyId) {
       let { error } = await supabase.from('properties').update(payload).eq('id', propertyId);

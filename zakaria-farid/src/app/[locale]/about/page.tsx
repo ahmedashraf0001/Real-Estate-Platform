@@ -101,7 +101,7 @@ export default async function AboutPage({ params }: Props) {
       <section className={styles.heroSection}>
         <div className={styles.heroBgWrap}>
           <Image
-            src="/images/about-hero.png"
+            src="https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=1920&q=85&auto=format&fit=crop"
             alt="Zakaria Farid Real Estate"
             fill
             sizes="100vw"
@@ -164,7 +164,7 @@ export default async function AboutPage({ params }: Props) {
             {/* Left Column: Image Card */}
             <div className={styles.storyImageWrap}>
               <Image
-                src="/images/about-interior.png"
+                src="https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?w=900&q=85&auto=format&fit=crop"
                 alt="Luxury Real Estate Design"
                 fill
                 sizes="(max-width: 900px) 100vw, 50vw"

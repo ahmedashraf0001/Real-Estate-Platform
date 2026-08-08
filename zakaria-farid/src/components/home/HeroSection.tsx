@@ -55,7 +55,7 @@ export default function HeroSection({ locale }: HeroSectionProps) {
       {/* Scroll-Driven Parallax Background with Ken Burns */}
       <motion.div style={{ scale: bgScale }} className={styles.bgImg} aria-hidden="true">
         <Image
-          src="/images/sunlit-hero-villa.png"
+          src="https://images.unsplash.com/photo-1613977257363-707ba9348227?w=1920&q=85&auto=format&fit=crop"
           alt="Sunlit Luxury Villa"
           fill
           priority
