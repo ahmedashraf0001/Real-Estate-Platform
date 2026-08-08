@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import Link from 'next/link';
-import { Plus, Pencil, Eye, Building2, Archive, RotateCcw, Trash2 } from 'lucide-react';
+import { Plus, Pencil, Eye, Building2, Archive, RotateCcw, Trash2, Search, SlidersHorizontal, ArrowUpDown, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatPrice } from '@/lib/utils/formatting';
 import { toggleArchiveProperty, deletePropertyPermanently } from '@/app/actions/properties';
@@ -17,6 +17,9 @@ export default function PropertiesAdminClient({ initialProperties, adminLocale }
   const isAr = adminLocale === 'ar';
   const [properties, setProperties] = useState<Property[]>(initialProperties);
   const [activeTab, setActiveTab] = useState<'active' | 'archived'>('active');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedType, setSelectedType] = useState('all');
+  const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'price_asc' | 'price_desc' | 'area_desc'>('newest');
   const [isProcessing, setIsProcessing] = useState(false);
 
   const STATUS_BADGE: Record<string, string> = {
@@ -51,7 +54,36 @@ export default function PropertiesAdminClient({ initialProperties, adminLocale }
     [properties]
   );
 
-  const displayedProperties = activeTab === 'active' ? activeProps : archivedProps;
+  const displayedProperties = useMemo(() => {
+    const base = activeTab === 'active' ? activeProps : archivedProps;
+    return base
+      .filter((p) => {
+        if (selectedType !== 'all' && p.type !== selectedType) return false;
+        if (!searchQuery.trim()) return true;
+        const q = searchQuery.toLowerCase().trim();
+        const titleEn = (p.title_en || '').toLowerCase();
+        const titleAr = (p.title_ar || '').toLowerCase();
+        const location = (p.location || '').toLowerCase();
+        const type = (p.type || '').toLowerCase();
+        const price = String(p.price_egp || '');
+        return titleEn.includes(q) || titleAr.includes(q) || location.includes(q) || type.includes(q) || price.includes(q);
+      })
+      .sort((a, b) => {
+        if (sortBy === 'oldest') {
+          return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+        }
+        if (sortBy === 'price_asc') {
+          return a.price_egp - b.price_egp;
+        }
+        if (sortBy === 'price_desc') {
+          return b.price_egp - a.price_egp;
+        }
+        if (sortBy === 'area_desc') {
+          return (b.area_sqm || 0) - (a.area_sqm || 0);
+        }
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      });
+  }, [activeTab, activeProps, archivedProps, searchQuery, selectedType, sortBy]);
 
   const handleToggleArchive = async (propertyId: string, shouldArchive: boolean) => {
     setIsProcessing(true);
@@ -165,6 +197,101 @@ export default function PropertiesAdminClient({ initialProperties, adminLocale }
           <Plus size={16} strokeWidth={2} />
           {isAr ? 'إضافة عقار' : 'Add Property'}
         </Link>
+      </div>
+
+      {/* Search & Filter Toolbar */}
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '12px',
+        flexWrap: 'wrap',
+        background: 'var(--color-surface)',
+        padding: '12px 16px',
+        borderRadius: 'var(--radius-md)',
+        border: '1px solid var(--color-border)',
+        boxShadow: 'var(--shadow-sm)'
+      }}>
+        {/* Text Search */}
+        <div style={{ flex: '1 1 240px', position: 'relative', display: 'flex', alignItems: 'center' }}>
+          <Search size={15} style={{ position: 'absolute', [isAr ? 'right' : 'left']: '12px', color: 'var(--color-text-muted)', pointerEvents: 'none' }} />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder={isAr ? 'البحث بالعنوان، الموقع، السعر...' : 'Search by title, location, price...'}
+            style={{
+              width: '100%',
+              padding: '8px 36px 8px 36px',
+              fontSize: '13px',
+              border: '1px solid var(--color-border)',
+              borderRadius: '8px',
+              outline: 'none',
+              background: 'var(--color-background)',
+              color: 'var(--color-text)',
+              boxSizing: 'border-box'
+            }}
+          />
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={() => setSearchQuery('')}
+              style={{ position: 'absolute', [isAr ? 'left' : 'right']: '10px', background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--color-text-muted)' }}
+            >
+              <X size={14} />
+            </button>
+          )}
+        </div>
+
+        {/* Property Type Filter */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <SlidersHorizontal size={14} style={{ color: 'var(--color-text-muted)' }} />
+          <select
+            value={selectedType}
+            onChange={(e) => setSelectedType(e.target.value)}
+            style={{
+              padding: '8px 12px',
+              fontSize: '12.5px',
+              fontWeight: 600,
+              border: '1px solid var(--color-border)',
+              borderRadius: '8px',
+              background: 'var(--color-background)',
+              color: 'var(--color-text)',
+              cursor: 'pointer'
+            }}
+          >
+            <option value="all">{isAr ? 'جميع الأنواع' : 'All Types'}</option>
+            <option value="villa">{isAr ? 'فيلا' : 'Villa'}</option>
+            <option value="apartment">{isAr ? 'شقة' : 'Apartment'}</option>
+            <option value="townhouse">{isAr ? 'تاون هاوس' : 'Townhouse'}</option>
+            <option value="duplex">{isAr ? 'دوبلكس' : 'Duplex'}</option>
+            <option value="chalet">{isAr ? 'شاليه' : 'Chalet'}</option>
+          </select>
+        </div>
+
+        {/* Sort Dropdown */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <ArrowUpDown size={14} style={{ color: 'var(--color-text-muted)' }} />
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value as any)}
+            style={{
+              padding: '8px 12px',
+              fontSize: '12.5px',
+              fontWeight: 600,
+              border: '1px solid var(--color-border)',
+              borderRadius: '8px',
+              background: 'var(--color-background)',
+              color: 'var(--color-text)',
+              cursor: 'pointer'
+            }}
+          >
+            <option value="newest">{isAr ? 'الأحدث أولاً' : 'Newest First'}</option>
+            <option value="oldest">{isAr ? 'الأقدم أولاً' : 'Oldest First'}</option>
+            <option value="price_asc">{isAr ? 'السعر: من الأقل للأعلى' : 'Price: Low to High'}</option>
+            <option value="price_desc">{isAr ? 'السعر: من الأعلى للأقل' : 'Price: High to Low'}</option>
+            <option value="area_desc">{isAr ? 'المساحة: الأكبر أولاً' : 'Area: Largest First'}</option>
+          </select>
+        </div>
       </div>
 
       {/* Properties Grid Cards */}

@@ -4,7 +4,8 @@ import Link from 'next/link';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   MessageCircle, Plus, Save, Sparkles, Clock, AlertTriangle,
-  Building2, ArrowRight, Phone, Mail, FileText, ChevronRight, X, ArrowUpRight, CheckCircle2, User
+  Building2, ArrowRight, Phone, Mail, FileText, ChevronRight, X, ArrowUpRight, CheckCircle2, User,
+  Search, ArrowUpDown, SlidersHorizontal
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { createLead, deleteLeadPermanently, toggleArchiveLead, updateLeadDetails, updateLeadStage } from '@/app/actions/leads';
@@ -51,6 +52,8 @@ export default function LeadPipeline({ initialLeads, properties, adminLocale }: 
   const isAr = adminLocale === 'ar';
   const [leads, setLeads] = useState(initialLeads);
   const [activeTab, setActiveTab] = useState<'pipeline' | 'archived'>('pipeline');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'name_asc' | 'recently_updated'>('newest');
   const [selectedLeadId, setSelectedLeadId] = useState<string | null>(initialLeads[0]?.id ?? null);
   const [draggedLeadId, setDraggedLeadId] = useState<string | null>(null);
   const [draggedOverStage, setDraggedOverStage] = useState<string | null>(null);
@@ -81,6 +84,57 @@ export default function LeadPipeline({ initialLeads, properties, adminLocale }: 
     [leads]
   );
 
+  const filteredActiveLeads = useMemo(() => {
+    return activeLeads
+      .filter((lead) => {
+        if (!searchQuery.trim()) return true;
+        const q = searchQuery.toLowerCase().trim();
+        const name = (lead.name || '').toLowerCase();
+        const phone = (lead.phone || '').toLowerCase();
+        const email = (lead.email || '').toLowerCase();
+        const notes = (lead.notes || '').toLowerCase();
+        const propTitleEn = (lead.property?.title_en || '').toLowerCase();
+        const propTitleAr = (lead.property?.title_ar || '').toLowerCase();
+        return name.includes(q) || phone.includes(q) || email.includes(q) || notes.includes(q) || propTitleEn.includes(q) || propTitleAr.includes(q);
+      })
+      .sort((a, b) => {
+        if (sortBy === 'oldest') {
+          return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+        }
+        if (sortBy === 'name_asc') {
+          return a.name.localeCompare(b.name);
+        }
+        if (sortBy === 'recently_updated') {
+          const timeA = new Date(a.stage_updated_at || a.created_at).getTime();
+          const timeB = new Date(b.stage_updated_at || b.created_at).getTime();
+          return timeB - timeA;
+        }
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      });
+  }, [activeLeads, searchQuery, sortBy]);
+
+  const filteredArchivedLeads = useMemo(() => {
+    return archivedLeads
+      .filter((lead) => {
+        if (!searchQuery.trim()) return true;
+        const q = searchQuery.toLowerCase().trim();
+        const name = (lead.name || '').toLowerCase();
+        const phone = (lead.phone || '').toLowerCase();
+        const email = (lead.email || '').toLowerCase();
+        const notes = (lead.notes || '').toLowerCase();
+        return name.includes(q) || phone.includes(q) || email.includes(q) || notes.includes(q);
+      })
+      .sort((a, b) => {
+        if (sortBy === 'oldest') {
+          return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+        }
+        if (sortBy === 'name_asc') {
+          return a.name.localeCompare(b.name);
+        }
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      });
+  }, [archivedLeads, searchQuery, sortBy]);
+
   const selectedLead = useMemo(
     () => leads.find((lead) => lead.id === selectedLeadId) ?? null,
     [leads, selectedLeadId]
@@ -100,9 +154,9 @@ export default function LeadPipeline({ initialLeads, properties, adminLocale }: 
     () =>
       STAGE_CONFIG.map((stage) => ({
         ...stage,
-        items: activeLeads.filter((lead) => (lead.stage || 'new') === stage.key),
+        items: filteredActiveLeads.filter((lead) => (lead.stage || 'new') === stage.key),
       })),
-    [activeLeads]
+    [filteredActiveLeads]
   );
 
   const handleToggleArchive = async (leadId: string, shouldArchive: boolean) => {
@@ -358,21 +412,89 @@ export default function LeadPipeline({ initialLeads, properties, adminLocale }: 
         </button>
       </div>
 
+      {/* Search & Sort Toolbar */}
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '12px',
+        flexWrap: 'wrap',
+        background: '#FFFFFF',
+        padding: '12px 18px',
+        borderRadius: '14px',
+        border: '1px solid #E2E8F0',
+        boxShadow: '0 2px 6px rgba(0,0,0,0.02)'
+      }}>
+        {/* Text Search */}
+        <div style={{ flex: '1 1 260px', position: 'relative', display: 'flex', alignItems: 'center' }}>
+          <Search size={15} style={{ position: 'absolute', [isAr ? 'right' : 'left']: '12px', color: '#94A3B8', pointerEvents: 'none' }} />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder={isAr ? 'البحث باسم العميل، الهاتف، البريد، أو العقار...' : 'Search by client name, phone, email, notes, property...'}
+            style={{
+              width: '100%',
+              padding: '8px 36px 8px 36px',
+              fontSize: '13px',
+              border: '1px solid #CBD5E1',
+              borderRadius: '8px',
+              outline: 'none',
+              background: '#F8FAFC',
+              color: '#1E293B',
+              boxSizing: 'border-box'
+            }}
+          />
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={() => setSearchQuery('')}
+              style={{ position: 'absolute', [isAr ? 'left' : 'right']: '10px', background: 'transparent', border: 'none', cursor: 'pointer', color: '#94A3B8' }}
+            >
+              <X size={14} />
+            </button>
+          )}
+        </div>
+
+        {/* Sort Dropdown */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <ArrowUpDown size={14} style={{ color: '#64748B' }} />
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value as any)}
+            style={{
+              padding: '8px 12px',
+              fontSize: '12.5px',
+              fontWeight: 600,
+              border: '1px solid #CBD5E1',
+              borderRadius: '8px',
+              background: '#FFFFFF',
+              color: '#1E293B',
+              cursor: 'pointer'
+            }}
+          >
+            <option value="newest">{isAr ? 'الأحدث أولاً' : 'Newest First'}</option>
+            <option value="oldest">{isAr ? 'الأقدم أولاً' : 'Oldest First'}</option>
+            <option value="name_asc">{isAr ? 'الاسم (أ - ي)' : 'Client Name (A-Z)'}</option>
+            <option value="recently_updated">{isAr ? 'المُحدَّث مؤخراً' : 'Recently Updated'}</option>
+          </select>
+        </div>
+      </div>
+
       {/* Conditional Content: Active Pipeline vs Archived Leads */}
       {activeTab === 'archived' ? (
         <div style={{ background: '#FFFFFF', borderRadius: '16px', border: '1px solid #E2E8F0', padding: '24px', width: '100%', boxSizing: 'border-box' }}>
           <h2 style={{ fontSize: '18px', fontWeight: 800, color: '#1E4D3D', margin: '0 0 16px', fontFamily: isAr ? 'var(--font-serif)' : "'Plus Jakarta Sans', sans-serif" }}>
-            {isAr ? 'الطلبات المؤرشفة' : 'Archived Leads'} ({archivedLeads.length})
+            {isAr ? 'الطلبات المؤرشفة' : 'Archived Leads'} ({filteredArchivedLeads.length})
           </h2>
 
-          {archivedLeads.length === 0 ? (
+          {filteredArchivedLeads.length === 0 ? (
             <div style={{ padding: '48px', textAlign: 'center', color: '#94A3B8', border: '1px dashed #CBD5E1', borderRadius: '12px' }}>
               <Archive size={32} style={{ margin: '0 auto 12px', display: 'block', color: '#94A3B8' }} />
               <p style={{ margin: 0, fontSize: '14px', fontWeight: 600 }}>{isAr ? 'لا توجد طلبات مؤرشفة' : 'No archived leads found.'}</p>
             </div>
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '16px' }}>
-              {archivedLeads.map((lead) => (
+              {filteredArchivedLeads.map((lead) => (
                 <div key={lead.id} style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '12px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                     <div>
