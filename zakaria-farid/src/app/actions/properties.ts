@@ -158,3 +158,77 @@ export async function saveProperty(
     return { success: false, error: error.message || 'Unknown database error' };
   }
 }
+
+export async function toggleArchiveProperty(propertyId: string, isArchived: boolean) {
+  try {
+    const sessionClient = await createBrowserServer();
+    const { data: { user } } = await sessionClient.auth.getUser();
+
+    if (!user) {
+      return { success: false, error: 'Unauthorized: Please log in first.' };
+    }
+
+    const adminSupabase = await getAdminClient();
+    const supabase = adminSupabase ?? (await createBrowserServer());
+
+    // Try updating is_archived and listing_status
+    let updateResult = await supabase
+      .from('properties')
+      .update({
+        is_archived: isArchived,
+        listing_status: isArchived ? 'archived' : 'active',
+      })
+      .eq('id', propertyId);
+
+    // Fallback if is_archived column is missing: update listing_status only
+    if (updateResult.error && updateResult.error.message.includes('is_archived')) {
+      console.warn('is_archived column missing on properties, updating listing_status only');
+      updateResult = await supabase
+        .from('properties')
+        .update({ listing_status: isArchived ? 'archived' : 'active' })
+        .eq('id', propertyId);
+    }
+
+    if (updateResult.error) {
+      return { success: false, error: updateResult.error.message };
+    }
+
+    revalidatePath('/admin');
+    revalidatePath('/');
+    return { success: true, propertyId, isArchived };
+  } catch (error: any) {
+    console.error('toggleArchiveProperty error:', error);
+    return { success: false, error: error.message || 'Error updating property archive state' };
+  }
+}
+
+export async function deletePropertyPermanently(propertyId: string) {
+  try {
+    const sessionClient = await createBrowserServer();
+    const { data: { user } } = await sessionClient.auth.getUser();
+
+    if (!user) {
+      return { success: false, error: 'Unauthorized: Please log in first.' };
+    }
+
+    const adminSupabase = await getAdminClient();
+    const supabase = adminSupabase ?? (await createBrowserServer());
+
+    // First delete child rows in property_images and property_amenities
+    await supabase.from('property_images').delete().eq('property_id', propertyId);
+    await supabase.from('property_amenities').delete().eq('property_id', propertyId);
+
+    const { error } = await supabase.from('properties').delete().eq('id', propertyId);
+
+    if (error) {
+      return { success: false, error: error.message };
+    }
+
+    revalidatePath('/admin');
+    revalidatePath('/');
+    return { success: true, propertyId };
+  } catch (error: any) {
+    console.error('deletePropertyPermanently error:', error);
+    return { success: false, error: error.message || 'Error deleting property' };
+  }
+}

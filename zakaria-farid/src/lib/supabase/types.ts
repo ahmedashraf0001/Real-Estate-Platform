@@ -2,7 +2,7 @@ import type { ZoneInstance } from '@/lib/layering';
 
 export type PropertyType = 'villa' | 'apartment' | 'townhouse' | 'duplex' | 'chalet';
 export type CompletionStatus = 'ready' | 'off_plan';
-export type ListingStatus = 'active' | 'under_offer' | 'sold';
+export type ListingStatus = 'active' | 'under_offer' | 'sold' | 'archived';
 
 export interface PropertyImage {
   id: string;
@@ -56,6 +56,7 @@ export interface Property {
   completion_status: CompletionStatus;
   listing_status: ListingStatus;
   is_featured: boolean;
+  is_archived?: boolean | null;
   created_at: string;
   view?: string | null;
   floor_number?: number | null;
@@ -77,6 +78,7 @@ export interface Lead {
   stage_updated_at?: string | null;
   source?: string | null;
   entry_method?: string | null;
+  is_archived?: boolean | null;
   created_at: string;
   property?: Pick<Property, 'id' | 'title_en' | 'title_ar' | 'slug'>;
 }

@@ -65,7 +65,11 @@ export async function getAllProperties(params?: {
   if (params?.max_price) query = query.lte('price_egp', params.max_price);
   if (params?.bedrooms) query = query.eq('bedrooms', params.bedrooms);
   if (searchType) query = query.eq('type', searchType);
-  if (params?.listing_status) query = query.eq('listing_status', params.listing_status);
+  if (params?.listing_status) {
+    query = query.eq('listing_status', params.listing_status);
+  } else {
+    query = query.neq('listing_status', 'archived');
+  }
 
   if (params?.sort === 'price_asc') query = query.order('price_egp', { ascending: true });
   else if (params?.sort === 'price_desc') query = query.order('price_egp', { ascending: false });
@@ -73,7 +77,9 @@ export async function getAllProperties(params?: {
 
   const { data, error } = await query;
   if (error) throw error;
-  return (data as Property[]) ?? [];
+  // Filter out any property with is_archived === true
+  const filtered = ((data as Property[]) ?? []).filter((p) => p.is_archived !== true && p.listing_status !== 'archived');
+  return filtered;
 }
 
 export function ensureSpecLayers(property: Property): Property {

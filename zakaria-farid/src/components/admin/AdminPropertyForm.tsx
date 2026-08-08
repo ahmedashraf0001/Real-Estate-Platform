@@ -109,7 +109,7 @@ const schema = z.object({
   latitude: z.coerce.number().optional(),
   longitude: z.coerce.number().optional(),
   completion_status: z.enum(['ready', 'off_plan']),
-  listing_status: z.enum(['active', 'under_offer', 'sold']),
+  listing_status: z.enum(['active', 'under_offer', 'sold', 'archived']),
   is_featured: z.boolean(),
   view: z.string().optional().nullable().or(z.literal('')),
   floor_number: z.coerce.number().int().optional().nullable().or(z.literal('')),

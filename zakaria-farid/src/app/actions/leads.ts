@@ -232,3 +232,68 @@ export async function updateLeadDetails(
     return { success: false, error: err.message || 'Server action error' };
   }
 }
+
+export async function toggleArchiveLead(leadId: string, isArchived: boolean) {
+  try {
+    const sessionClient = await createBrowserServer();
+    const { data: { user } } = await sessionClient.auth.getUser();
+
+    if (!user) {
+      return { success: false, error: 'Unauthorized: Please sign in as admin.' };
+    }
+
+    const adminSupabase = await getAdminClient();
+    const supabase = adminSupabase ?? (await createBrowserServer());
+
+    // Try updating is_archived field
+    let updateResult = await supabase
+      .from('leads')
+      .update({ is_archived: isArchived }, { count: 'exact' })
+      .eq('id', leadId);
+
+    // Fallback if is_archived column doesn't exist yet: update stage to 'archived'
+    if (updateResult.error && updateResult.error.message.includes('is_archived')) {
+      console.warn('is_archived column missing, falling back to setting stage to archived');
+      updateResult = await supabase
+        .from('leads')
+        .update({ stage: isArchived ? 'archived' : 'new' }, { count: 'exact' })
+        .eq('id', leadId);
+    }
+
+    if (updateResult.error) {
+      return { success: false, error: updateResult.error.message };
+    }
+
+    revalidatePath('/admin');
+    return { success: true, leadId, isArchived };
+  } catch (err: any) {
+    console.error('Exception in toggleArchiveLead:', err);
+    return { success: false, error: err.message || 'Server action error' };
+  }
+}
+
+export async function deleteLeadPermanently(leadId: string) {
+  try {
+    const sessionClient = await createBrowserServer();
+    const { data: { user } } = await sessionClient.auth.getUser();
+
+    if (!user) {
+      return { success: false, error: 'Unauthorized: Please sign in as admin.' };
+    }
+
+    const adminSupabase = await getAdminClient();
+    const supabase = adminSupabase ?? (await createBrowserServer());
+
+    const { error } = await supabase.from('leads').delete().eq('id', leadId);
+
+    if (error) {
+      return { success: false, error: error.message };
+    }
+
+    revalidatePath('/admin');
+    return { success: true, leadId };
+  } catch (err: any) {
+    console.error('Exception in deleteLeadPermanently:', err);
+    return { success: false, error: err.message || 'Server action error' };
+  }
+}
