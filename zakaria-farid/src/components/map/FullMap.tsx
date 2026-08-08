@@ -9,6 +9,7 @@ import Link from 'next/link';
 import 'leaflet/dist/leaflet.css';
 import type { Property } from '@/lib/supabase/types';
 import { formatPrice } from '@/lib/utils/formatting';
+import { matchesSmartQuery } from '@/lib/utils/searchUtils';
 import {
   Search, X, Bed, Bath, Maximize2, MapPin, SlidersHorizontal,
   ChevronRight, Building2, Home, RotateCcw
@@ -159,11 +160,7 @@ export default function MapExplorer({ properties, locale }: MapExplorerProps) {
 
   // ─── Filtering ─────────────────────────────────────────────────────────────
   const filtered = properties.filter((p) => {
-    const title = isAr ? p.title_ar : p.title_en;
-    const matchSearch =
-      !search ||
-      title.toLowerCase().includes(search.toLowerCase()) ||
-      p.location.toLowerCase().includes(search.toLowerCase());
+    const matchSearch = matchesSmartQuery(p, search);
     const matchType = typeFilter === 'all' || p.type === typeFilter;
     return matchSearch && matchType;
   });
@@ -224,7 +221,7 @@ export default function MapExplorer({ properties, locale }: MapExplorerProps) {
           <Search size={15} strokeWidth={2} className={styles.searchIcon} />
           <input
             type="text"
-            placeholder={isAr ? 'ابحث بالاسم أو الموقع...' : 'Search by name or location...'}
+            placeholder={isAr ? 'ابحث بالموقع، الكمبوند أو نوع العقار...' : 'Search by location, compound, or type...'}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className={styles.searchInput}

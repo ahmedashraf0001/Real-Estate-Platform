@@ -24,6 +24,17 @@ export default function MapPreview({ locale, properties = [] }: { locale: string
   const isAr = locale === 'ar';
   const [selectedRegion, setSelectedRegion] = useState(REGIONS[0]);
 
+  const getRegionCount = (regId: string) => {
+    if (regId === 'all') return properties.length;
+    return properties.filter((p) => {
+      const loc = (p.location || '').toLowerCase();
+      if (regId === 'zayed') return loc.includes('zayed') || loc.includes('beverly') || loc.includes('westown');
+      if (regId === 'new_cairo') return loc.includes('cairo') || loc.includes('fifth');
+      if (regId === 'north_coast') return loc.includes('north') || loc.includes('sidi');
+      return false;
+    }).length;
+  };
+
   return (
     <section className={styles.section} dir={isAr ? 'rtl' : 'ltr'}>
       <div className="container">
@@ -60,6 +71,7 @@ export default function MapPreview({ locale, properties = [] }: { locale: string
               <div className={styles.regionPillGrid}>
                 {REGIONS.map((reg) => {
                   const isActive = selectedRegion.id === reg.id;
+                  const count = getRegionCount(reg.id);
                   return (
                     <button
                       key={reg.id}
@@ -68,7 +80,7 @@ export default function MapPreview({ locale, properties = [] }: { locale: string
                       onClick={() => setSelectedRegion(reg)}
                     >
                       <MapPin size={12} />
-                      <span>{isAr ? reg.ar : reg.en}</span>
+                      <span>{isAr ? reg.ar : reg.en} {count > 0 ? `(${count})` : ''}</span>
                     </button>
                   );
                 })}

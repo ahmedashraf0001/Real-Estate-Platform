@@ -1,5 +1,5 @@
 import { getTranslations } from 'next-intl/server';
-import { getFeaturedProperties } from '@/lib/supabase/queries';
+import { getFeaturedProperties, getAllProperties } from '@/lib/supabase/queries';
 import HeroSection from '@/components/home/HeroSection';
 import TrustPillars from '@/components/home/TrustPillars';
 import FeaturedProperties from '@/components/home/FeaturedProperties';
@@ -26,7 +26,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function HomePage({ params }: Props) {
   const { locale } = await params;
-  const featuredProperties = await getFeaturedProperties().catch(() => []);
+  const [featuredProperties, allProperties] = await Promise.all([
+    getFeaturedProperties().catch(() => []),
+    getAllProperties().catch(() => []),
+  ]);
 
   return (
     <div className={styles.snapContainer}>
@@ -40,7 +43,7 @@ export default async function HomePage({ params }: Props) {
         <FeaturedProperties properties={featuredProperties} locale={locale} />
       </section>
       <section className={styles.snapSection}>
-        <MapPreview locale={locale} properties={featuredProperties} />
+        <MapPreview locale={locale} properties={allProperties.length > 0 ? allProperties : featuredProperties} />
       </section>
       <section className={styles.snapSection}>
         <CtaBand locale={locale} />

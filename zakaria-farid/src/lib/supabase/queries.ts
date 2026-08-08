@@ -1,6 +1,7 @@
 import { createClient } from './server';
 import type { Property, Lead, SpecLayer, SpecLayerItem } from './types';
 import { buildZoneInstances, type PropertyTypeId, type GlobalFinishingState } from '@/lib/layering';
+import { parseSmartQuery } from '@/lib/utils/searchUtils';
 
 // ─── Properties ───────────────────────────────────────────────────
 
@@ -31,11 +32,38 @@ export async function getAllProperties(params?: {
     .from('properties')
     .select(`*, property_images(id, url, alt_text_en, alt_text_ar, sort_order)`);
 
-  if (params?.location) query = query.ilike('location', `%${params.location}%`);
+  const rawLocation = params?.location?.trim();
+  let searchType = params?.type;
+
+  if (rawLocation) {
+    const parsed = parseSmartQuery(rawLocation);
+
+    // Auto-detect property type if present in query string and not explicitly selected
+    if (!searchType && parsed.detectedType) {
+      searchType = parsed.detectedType;
+    }
+
+    const conditionsSet = new Set<string>();
+    parsed.searchTerms.forEach((term) => {
+      const sanitized = term.replace(/[,()%]/g, ' ').trim();
+      if (sanitized.length >= 2) {
+        conditionsSet.add(`location.ilike.%${sanitized}%`);
+        conditionsSet.add(`title_en.ilike.%${sanitized}%`);
+        conditionsSet.add(`title_ar.ilike.%${sanitized}%`);
+        conditionsSet.add(`description_en.ilike.%${sanitized}%`);
+        conditionsSet.add(`description_ar.ilike.%${sanitized}%`);
+      }
+    });
+
+    if (conditionsSet.size > 0) {
+      query = query.or(Array.from(conditionsSet).join(','));
+    }
+  }
+
   if (params?.min_price) query = query.gte('price_egp', params.min_price);
   if (params?.max_price) query = query.lte('price_egp', params.max_price);
   if (params?.bedrooms) query = query.eq('bedrooms', params.bedrooms);
-  if (params?.type) query = query.eq('type', params.type);
+  if (searchType) query = query.eq('type', searchType);
   if (params?.listing_status) query = query.eq('listing_status', params.listing_status);
 
   if (params?.sort === 'price_asc') query = query.order('price_egp', { ascending: true });

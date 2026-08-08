@@ -1,11 +1,13 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { parseSmartQuery } from '@/lib/utils/searchUtils';
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const rawQ = searchParams.get('q')?.trim() || '';
-  const typeParam = searchParams.get('type')?.trim();
+  let typeParam = searchParams.get('type')?.trim();
   const mode = searchParams.get('mode');
+  const locale = searchParams.get('locale') || 'en';
 
   const supabase = await createClient();
 
@@ -43,9 +45,10 @@ export async function GET(request: Request) {
     return NextResponse.json({ suggestions: [], results: [] });
   }
 
-  // Clean query string (strip syntax delimiters)
-  const sanitizedQ = rawQ ? rawQ.replace(/[,()]/g, ' ').replace(/\s+/g, ' ').trim() : '';
-  const words = sanitizedQ ? sanitizedQ.split(' ').filter((w) => w.length >= 2) : [];
+  const parsed = parseSmartQuery(rawQ);
+  if (!typeParam && parsed.detectedType) {
+    typeParam = parsed.detectedType;
+  }
 
   let query = supabase
     .from('properties')
@@ -64,32 +67,26 @@ export async function GET(request: Request) {
     `)
     .eq('listing_status', 'active');
 
-  // Enforce property type filtering if type dropdown is selected
   if (typeParam) {
     query = query.eq('type', typeParam);
   }
 
-  // Apply location / title conditions if search text is typed
-  if (sanitizedQ) {
-    const conditions: string[] = [
-      `title_en.ilike.%${sanitizedQ}%`,
-      `title_ar.ilike.%${sanitizedQ}%`,
-      `location.ilike.%${sanitizedQ}%`
-    ];
+  if (parsed.searchTerms.length > 0) {
+    const conditionsSet = new Set<string>();
+    parsed.searchTerms.forEach((term) => {
+      const sanitized = term.replace(/[,()%]/g, ' ').trim();
+      if (sanitized.length >= 2) {
+        conditionsSet.add(`location.ilike.%${sanitized}%`);
+        conditionsSet.add(`title_en.ilike.%${sanitized}%`);
+        conditionsSet.add(`title_ar.ilike.%${sanitized}%`);
+        conditionsSet.add(`description_en.ilike.%${sanitized}%`);
+        conditionsSet.add(`description_ar.ilike.%${sanitized}%`);
+      }
+    });
 
-    if (words.length > 1) {
-      words.forEach((word) => {
-        if (word.length >= 3) {
-          conditions.push(
-            `location.ilike.%${word}%`,
-            `title_en.ilike.%${word}%`,
-            `title_ar.ilike.%${word}%`
-          );
-        }
-      });
+    if (conditionsSet.size > 0) {
+      query = query.or(Array.from(conditionsSet).join(','));
     }
-
-    query = query.or(conditions.join(','));
   }
 
   const { data, error } = await query
@@ -102,3 +99,4 @@ export async function GET(request: Request) {
 
   return NextResponse.json({ suggestions: [], results: data ?? [] });
 }
+

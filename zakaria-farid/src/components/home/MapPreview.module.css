@@ -1,17 +1,17 @@
 .section {
-  padding: 64px 0;
-  background: var(--color-bg);
+  padding: 96px 0;
+  background: #ffffff;
 }
 
 .cardContainer {
   background: radial-gradient(circle at 15% 25%, #0d251d 0%, #06130e 100%);
   border-radius: 28px;
-  padding: 44px;
+  padding: 52px;
   border: 1px solid rgba(201, 169, 106, 0.3);
   box-shadow: 0 24px 60px -10px rgba(0, 0, 0, 0.35);
   display: grid;
   grid-template-columns: 1fr 1.35fr;
-  gap: 40px;
+  gap: 48px;
   align-items: center;
   position: relative;
   overflow: hidden;

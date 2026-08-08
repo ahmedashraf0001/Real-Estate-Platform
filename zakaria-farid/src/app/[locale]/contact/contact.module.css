@@ -1,14 +1,14 @@
 .root {
-  padding-top: 72px;
+  padding-top: 0;
   min-height: 100vh;
-  background: var(--color-bg);
+  background: #0a1914;
   color: var(--color-text);
 }
 
 /* Hero Header */
 .heroSection {
   background: linear-gradient(180deg, #0a1914 0%, #122820 100%);
-  padding: 80px 0 70px;
+  padding: 110px 0 70px;
   color: #fff;
   text-align: center;
   border-bottom: 1px solid rgba(201, 169, 106, 0.2);

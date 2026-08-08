@@ -131,38 +131,22 @@
   font-weight: 700;
   line-height: 1.35;
   color: #fff;
-  margin-bottom: 14px;
-  padding: 4px 14px 10px 14px;
-  margin-left: -14px;
-  margin-right: -14px;
+  margin-bottom: 16px;
   overflow: visible;
 }
 
 .maskedText {
   display: inline-block;
-  padding: 8px 20px 14px 20px;
-  margin: -8px -20px -14px -20px;
-  background: linear-gradient(
-    110deg,
-    #ffffff 0%,
-    #ffffff 38%,
-    #C9A96A 50%,
-    #fff8e7 62%,
-    #ffffff 100%
-  );
-  background-size: 240% 100%;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  animation: shineMask 5s linear infinite;
-  overflow: visible;
+  color: #ffffff;
+  text-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
 }
 
 .sub {
-  font-size: 16px;
+  font-size: 17px;
   line-height: 1.7;
-  color: rgba(255, 255, 255, 0.85);
-  margin-bottom: 22px;
-  max-width: 540px;
+  color: rgba(255, 255, 255, 0.92);
+  margin-bottom: 28px;
+  max-width: 580px;
 }
 
 /* ─── Search Bar Dock ───────────────────────── */

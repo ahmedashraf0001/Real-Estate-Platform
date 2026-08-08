@@ -1,7 +1,7 @@
 /* ─── Section ───────────────────────────────── */
 .section {
-  padding: 56px 0;
-  background: #f9f8f6;
+  padding: 96px 0 88px;
+  background: #ffffff;
   position: relative;
   overflow: hidden;
 }
@@ -9,8 +9,8 @@
 /* ─── Header ────────────────────────────────── */
 .header {
   text-align: center;
-  max-width: 650px;
-  margin: 0 auto 36px;
+  max-width: 680px;
+  margin: 0 auto 48px;
   display: flex;
   flex-direction: column;
   align-items: center;

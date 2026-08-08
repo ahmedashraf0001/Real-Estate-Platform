@@ -1,10 +1,11 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import { divIcon } from 'leaflet';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { MapPin, ArrowUpRight, Building2 } from 'lucide-react';
+import { MapPin, ArrowUpRight } from 'lucide-react';
+import Image from 'next/image';
 import Link from 'next/link';
 import 'leaflet/dist/leaflet.css';
 import { formatPrice } from '@/lib/utils/formatting';
@@ -28,36 +29,50 @@ function MapController({ center, zoom }: { center: [number, number]; zoom: numbe
   return null;
 }
 
-function makePricePin(price?: number, isFeatured?: boolean) {
-  const priceText = price ? (price >= 1000000 ? `${(price / 1000000).toFixed(0)}M` : `${(price / 1000).toFixed(0)}k`) : 'EGP';
-  
+function makePricePin(price: number, locale: string) {
+  const formattedPrice = new Intl.NumberFormat(locale === 'ar' ? 'ar-EG' : 'en-US', {
+    notation: 'compact',
+    maximumFractionDigits: 1,
+  }).format(price);
+
+  const priceText = `${locale === 'ar' ? 'ج.م' : 'EGP'} ${formattedPrice}`;
+
   const html = renderToStaticMarkup(
-    <div style={{
-      display: 'inline-flex',
-      alignItems: 'center',
-      gap: '4px',
-      background: '#091712',
-      color: '#FFFFFF',
-      border: '1.5px solid #C9A96A',
-      borderRadius: '20px',
-      padding: '4px 10px',
-      boxShadow: '0 4px 14px rgba(0,0,0,0.4)',
-      fontSize: '11px',
-      fontWeight: 800,
-      fontFamily: 'Outfit, sans-serif',
-      whiteSpace: 'nowrap'
-    }}>
-      <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#C9A96A' }} />
-      <span>{priceText} EGP</span>
+    <div
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: '6px',
+        background: '#1E4D3D',
+        color: '#ffffff',
+        padding: '6px 12px',
+        borderRadius: '24px',
+        fontSize: '12px',
+        fontWeight: 700,
+        whiteSpace: 'nowrap',
+        boxShadow: '0 4px 14px rgba(0,0,0,0.3), 0 0 0 2px rgba(255,255,255,0.9)',
+        fontFamily: 'Outfit, sans-serif',
+        cursor: 'pointer',
+      }}
+    >
+      <span
+        style={{
+          width: '7px',
+          height: '7px',
+          borderRadius: '50%',
+          background: '#C9A96A',
+          flexShrink: 0,
+        }}
+      />
+      <span>{priceText}</span>
     </div>
   );
 
   return divIcon({
     html,
     className: '',
-    iconSize: [80, 26],
-    iconAnchor: [40, 13],
-    popupAnchor: [0, -14],
+    iconAnchor: [45, 16],
+    popupAnchor: [0, -20],
   });
 }
 
@@ -90,8 +105,8 @@ export default function MiniMap({ properties = [], center = [30.044, 30.983], zo
       attributionControl={false}
     >
       <TileLayer
-        url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
-        attribution='&copy; <a href="https://carto.com/">CARTO</a>'
+        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         maxZoom={19}
       />
 
@@ -99,31 +114,37 @@ export default function MiniMap({ properties = [], center = [30.044, 30.983], zo
         const lat = p.latitude || 30.044;
         const lng = p.longitude || 30.983;
         const title = isAr && p.title_ar ? p.title_ar : p.title_en;
+        const cover = p.property_images?.[0];
 
         return (
-          <Marker key={p.id} position={[lat, lng]} icon={makePricePin(p.price_egp, p.is_featured)}>
-            <Popup>
-              <div style={{ fontFamily: 'Outfit, sans-serif', padding: '4px', minWidth: '180px' }}>
-                <span style={{ fontSize: '9px', fontWeight: 800, color: '#C9A96A', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'block' }}>
+          <Marker key={p.id} position={[lat, lng]} icon={makePricePin(p.price_egp, locale)}>
+            <Popup maxWidth={260}>
+              <div style={{ fontFamily: 'Outfit, sans-serif', padding: '2px', minWidth: '200px' }}>
+                {cover && (
+                  <div style={{ position: 'relative', width: '100%', height: '110px', borderRadius: '10px', overflow: 'hidden', marginBottom: '8px' }}>
+                    <Image src={cover.url} alt={title} fill style={{ objectFit: 'cover' }} sizes="240px" />
+                  </div>
+                )}
+                <span style={{ fontSize: '10px', fontWeight: 800, color: '#C9A96A', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'block' }}>
                   {p.type || 'ESTATE'}
                 </span>
-                <strong style={{ fontWeight: 800, fontSize: '12px', color: '#091712', display: 'block', margin: '2px 0 4px', lineHeight: 1.3 }}>
+                <strong style={{ fontWeight: 800, fontSize: '13px', color: '#091712', display: 'block', margin: '2px 0 4px', lineHeight: 1.3 }}>
                   {title}
                 </strong>
-                <p style={{ fontSize: '10px', color: '#64748B', margin: '0 0 6px', display: 'flex', alignItems: 'center', gap: '3px' }}>
-                  <MapPin size={10} color="#1E4D3D" />
+                <p style={{ fontSize: '11px', color: '#64748B', margin: '0 0 6px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <MapPin size={11} color="#1E4D3D" />
                   <span>{p.location}</span>
                 </p>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid #E2E8F0', paddingTop: '6px', marginTop: '4px' }}>
-                  <span style={{ fontWeight: 800, fontSize: '13px', color: '#1E4D3D' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid #E2E8F0', paddingTop: '8px', marginTop: '6px' }}>
+                  <span style={{ fontWeight: 800, fontSize: '14px', color: '#1E4D3D' }}>
                     {formatPrice(p.price_egp, locale)}
                   </span>
                   <Link
                     href={`/${locale}/properties/${p.slug}`}
-                    style={{ fontSize: '10px', fontWeight: 700, color: '#1E4D3D', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '2px' }}
+                    style={{ fontSize: '11px', fontWeight: 700, color: '#1E4D3D', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '2px' }}
                   >
                     <span>{isAr ? 'التفاصيل' : 'Details'}</span>
-                    <ArrowUpRight size={11} />
+                    <ArrowUpRight size={13} />
                   </Link>
                 </div>
               </div>

@@ -63,62 +63,33 @@ export default function HeroSection({ locale }: HeroSectionProps) {
         ))}
       </div>
 
-      <motion.div style={{ y: contentY, opacity }} className={`container ${styles.content}`}>
-        <motion.div
-          className={styles.inner}
-          initial={{ opacity: 0, y: 40 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.9, ease: 'easeOut' }}
-        >
+      <motion.div style={{ y: contentY }} className={`container ${styles.content}`}>
+        <div className={styles.inner}>
           {/* Label */}
-          <motion.div
-            className={styles.labelWrap}
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.2, duration: 0.6 }}
-          >
+          <div className={styles.labelWrap}>
             <span className={styles.labelDot} />
             <span className={styles.labelText}>Zakaria Farid Real Estate</span>
-          </motion.div>
+          </div>
 
-          {/* Masked React Bits Shimmer Headline */}
-          <motion.h1
-            className={styles.headline}
-            initial={{ opacity: 0, y: 24 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.35, duration: 0.7, ease: 'easeOut' }}
-          >
+          {/* Headline */}
+          <h1 className={styles.headline}>
             <span className={styles.maskedText}>
               {t('headline')}
             </span>
-          </motion.h1>
+          </h1>
 
           {/* Sub */}
-          <motion.p
-            className={styles.sub}
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.5, duration: 0.6 }}
-          >
+          <p className={styles.sub}>
             {t('subheadline')}
-          </motion.p>
+          </p>
 
           {/* Real-Time Smart Search Dock */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.65, duration: 0.6 }}
-          >
+          <div>
             <SmartSearchDock locale={locale} />
-          </motion.div>
+          </div>
 
           {/* CTA Buttons */}
-          <motion.div
-            className={styles.actions}
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.8, duration: 0.5 }}
-          >
+          <div className={styles.actions}>
             <Link href={`/${locale}/properties`} className={styles.btnSecondary}>
               {t('cta_browse')}
               <ArrowRight size={15} strokeWidth={2} className={isAr ? styles.arrowRtl : ''} />
@@ -132,16 +103,11 @@ export default function HeroSection({ locale }: HeroSectionProps) {
               <MessageCircle size={15} strokeWidth={1.5} />
               {t('cta_whatsapp')}
             </a>
-          </motion.div>
-        </motion.div>
+          </div>
+        </div>
 
         {/* Stats bar */}
-        <motion.div
-          className={styles.statsBar}
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 1.0, duration: 0.7 }}
-        >
+        <div className={styles.statsBar}>
           {[
             { value: '20+', label: isAr ? 'سنة خبرة واستثمار' : 'Years Mastery', icon: Award },
             { value: '150+', label: isAr ? 'وحدة تم تسليمها' : 'Estates Delivered', icon: Building2 },
@@ -158,7 +124,7 @@ export default function HeroSection({ locale }: HeroSectionProps) {
               </div>
             </div>
           ))}
-        </motion.div>
+        </div>
       </motion.div>
 
       {/* React Bits Infinite Scrolling Marquee Ticker */}

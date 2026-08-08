@@ -4,6 +4,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { Award, Building2, MapPin, MessageCircle, ArrowRight, CheckCircle2, Sparkles, ShieldCheck, PhoneCall, Key, FileCheck } from 'lucide-react';
 import { WHATSAPP_NUMBER, whatsappUrl } from '@/lib/utils/formatting';
+import { getAllProperties } from '@/lib/supabase/queries';
 import styles from './about.module.css';
 
 type Props = { params: Promise<{ locale: string }> };
@@ -21,6 +22,47 @@ export default async function AboutPage({ params }: Props) {
   const { locale } = await params;
   const t = await getTranslations({ locale, namespace: 'about' });
   const isAr = locale === 'ar';
+
+  const properties = await getAllProperties().catch(() => []);
+
+  // Dynamically extract real locations and active property counts from site offers
+  const locationCountsMap = new Map<string, number>();
+  properties.forEach((p) => {
+    if (p.location) {
+      const locName = p.location.trim();
+      locationCountsMap.set(locName, (locationCountsMap.get(locName) || 0) + 1);
+    }
+  });
+
+  const dynamicLocations = Array.from(locationCountsMap.entries()).map(([locName, count]) => {
+    const norm = locName.toLowerCase();
+    let name_en = locName;
+    let name_ar = locName;
+
+    if (norm.includes('zayed')) {
+      name_en = 'Sheikh Zayed';
+      name_ar = 'الشيخ زايد';
+    } else if (norm.includes('cairo') || norm.includes('fifth')) {
+      name_en = 'Fifth Settlement, New Cairo';
+      name_ar = 'التجمع الخامس، القاهرة الجديدة';
+    } else if (norm.includes('north') || norm.includes('sidi')) {
+      name_en = 'North Coast (Sidi Abdel Rahman)';
+      name_ar = 'الساحل الشمالي (سيدي عبد الرحمن)';
+    }
+
+    return {
+      name_en: `${name_en} (${count} ${count === 1 ? 'Listing' : 'Listings'})`,
+      name_ar: `${name_ar} (${count} ${count === 1 ? 'عقار متاح' : 'عقارات متاحة'})`,
+      rawLoc: locName,
+      count,
+    };
+  });
+
+  const locationsList = dynamicLocations.length > 0 ? dynamicLocations : [
+    { name_en: 'Sheikh Zayed & 6th October', name_ar: 'الشيخ زايد و٦ أكتوبر', rawLoc: 'Sheikh Zayed', count: 0 },
+    { name_en: 'Fifth Settlement, New Cairo', name_ar: 'التجمع الخامس، القاهرة الجديدة', rawLoc: 'New Cairo', count: 0 },
+    { name_en: 'North Coast (Sidi Abdel Rahman)', name_ar: 'الساحل الشمالي (سيدي عبد الرحمن)', rawLoc: 'North Coast', count: 0 },
+  ];
 
   const pillars = [
     {
@@ -51,13 +93,6 @@ export default async function AboutPage({ params }: Props) {
       desc_en: 'Tailored finishing consultation, architectural customization, and long-term owner support.',
       desc_ar: 'استشارات تشطيب هندسية، تعديلات معمارية مخصصة، ودعم استشاري دائم بعد الاستلام.',
     },
-  ];
-
-  const locations = [
-    { name_en: 'Sheikh Zayed & 6th October', name_ar: 'الشيخ زايد و٦ أكتوبر' },
-    { name_en: 'Fifth Settlement, New Cairo', name_ar: 'التجمع الخامس، القاهرة الجديدة' },
-    { name_en: 'North Coast (Sidi Abdel Rahman)', name_ar: 'الساحل الشمالي (سيدي عبد الرحمن)' },
-    { name_en: 'New Administrative Capital', name_ar: 'العاصمة الإدارية الجديدة' },
   ];
 
   return (
@@ -223,11 +258,15 @@ export default async function AboutPage({ params }: Props) {
           </div>
 
           <div className={styles.locationsGrid}>
-            {locations.map((loc, idx) => (
-              <div key={idx} className={styles.locCard}>
+            {locationsList.map((loc, idx) => (
+              <Link
+                key={idx}
+                href={`/${locale}/properties?location=${encodeURIComponent(loc.rawLoc)}`}
+                className={styles.locCard}
+              >
                 <MapPin size={20} className={styles.locIcon} />
                 <span className={styles.locName}>{isAr ? loc.name_ar : loc.name_en}</span>
-              </div>
+              </Link>
             ))}
           </div>
 
