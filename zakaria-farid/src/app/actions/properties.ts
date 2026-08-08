@@ -171,19 +171,20 @@ export async function toggleArchiveProperty(propertyId: string, isArchived: bool
     const adminSupabase = await getAdminClient();
     const supabase = adminSupabase ?? (await createBrowserServer());
 
-    // Update is_archived boolean column directly (without touching listing_status Postgres enum)
+    // Primary: update is_archived boolean column directly
     let updateResult = await supabase
       .from('properties')
       .update({ is_archived: isArchived })
       .eq('id', propertyId);
 
-    // Fallback if is_archived column is missing on properties table in Supabase DB
+    // Fallback if is_archived column is missing on properties table in Supabase DB:
+    // Fall back to listing_status = 'sold' (when archiving) or 'active' (when restoring)
     if (updateResult.error && updateResult.error.message.includes('is_archived')) {
-      console.warn('is_archived column missing on properties table in Supabase DB');
-      return {
-        success: false,
-        error: 'The is_archived column is missing in your Supabase DB. Please run this in your Supabase SQL Editor:\nALTER TABLE properties ADD COLUMN IF NOT EXISTS is_archived BOOLEAN DEFAULT FALSE;'
-      };
+      console.warn('is_archived column missing on properties table, falling back to listing_status: sold/active');
+      updateResult = await supabase
+        .from('properties')
+        .update({ listing_status: isArchived ? 'sold' : 'active' })
+        .eq('id', propertyId);
     }
 
     if (updateResult.error) {
