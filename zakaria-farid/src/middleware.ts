@@ -14,16 +14,7 @@ const intlMiddleware = createMiddleware(routing);
 function isExempt(pathname: string): boolean {
   return (
     pathname.startsWith('/admin') ||
-    pathname.startsWith('/api/leads') ||
-    pathname.startsWith('/api/properties') ||
-    pathname.startsWith('/_next') ||
-    pathname.startsWith('/_vercel') ||
-    pathname.startsWith('/fonts') ||
-    pathname.startsWith('/images') ||
-    pathname.startsWith('/icons') ||
-    pathname.startsWith('/favicon') ||
-    pathname.startsWith('/maintenance') || // the page itself must load its own assets
-    /\.[a-z0-9]+$/i.test(pathname)         // any file with an extension (css, js, png…)
+    pathname.startsWith('/maintenance')
   );
 }
 
@@ -75,5 +66,5 @@ export default async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
+  matcher: ['/((?!api|_next|_vercel|.*\\..*).*)'],
 };

@@ -25,17 +25,18 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const property = await getPropertyBySlug(slug);
   if (!property) return { title: 'Property Not Found' };
 
-  const title = locale === 'ar' ? property.title_ar : property.title_en;
-  const description = locale === 'ar' ? property.description_ar : property.description_en;
+  const title = (locale === 'ar' ? property.title_ar : property.title_en) || 'Property';
+  const rawDesc = locale === 'ar' ? property.description_ar : property.description_en;
+  const description = rawDesc ? rawDesc.slice(0, 160) : '';
   const coverImage = property.property_images?.[0]?.url;
 
   return {
     metadataBase: new URL(baseUrl),
     title,
-    description: description.slice(0, 160),
+    description,
     openGraph: {
       title,
-      description: description.slice(0, 160),
+      description,
       images: coverImage ? [{ url: coverImage, width: 1200, height: 630, alt: title }] : [],
     },
     alternates: {
