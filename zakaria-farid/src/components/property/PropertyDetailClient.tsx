@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { useTranslations } from 'next-intl';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -51,6 +51,10 @@ export default function PropertyDetailClient({ property, locale, similar }: Prop
   const t = useTranslations('property');
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [activeImg, setActiveImg] = useState(0);
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+  }, []);
 
   // Interactive Spec Modal State
   const [activeSpecModal, setActiveSpecModal] = useState<SpecLayer | null>(null);
