@@ -3900,7 +3900,7 @@
       "format": "cjs"
     },
     ".open-next/server-functions/default/node_modules/next/dist/server/load-manifest.external.js": {
-      "bytes": 135302,
+      "bytes": 134855,
       "imports": [
         {
           "path": "path",
@@ -4832,7 +4832,7 @@
       "imports": [],
       "format": "cjs"
     },
-    ".open-next/server-functions/default/.next/server/chunks/ssr/node_modules_1z-fyyd._.js": {
+    ".open-next/server-functions/default/.next/server/chunks/ssr/node_modules_100ay33._.js": {
       "bytes": 6745,
       "imports": [],
       "format": "cjs"
@@ -5596,8 +5596,8 @@
       "imports": [],
       "format": "cjs"
     },
-    ".open-next/server-functions/default/.next/server/chunks/ssr/[root-of-the-server]__18lhh3c._.js": {
-      "bytes": 7153,
+    ".open-next/server-functions/default/.next/server/chunks/ssr/[root-of-the-server]__1xphs7v._.js": {
+      "bytes": 6583,
       "imports": [
         {
           "path": ".open-next/server-functions/default/node_modules/next/dist/shared/lib/no-fallback-error.external.js",
@@ -5612,8 +5612,8 @@
       "imports": [],
       "format": "cjs"
     },
-    ".open-next/server-functions/default/.next/server/chunks/ssr/_1lwtxoc._.js": {
-      "bytes": 18479,
+    ".open-next/server-functions/default/.next/server/chunks/ssr/_1fdflc1._.js": {
+      "bytes": 14578,
       "imports": [],
       "format": "cjs"
     },
@@ -5622,8 +5622,8 @@
       "imports": [],
       "format": "cjs"
     },
-    ".open-next/server-functions/default/.next/server/chunks/ssr/src_components_0ynbbip._.js": {
-      "bytes": 76527,
+    ".open-next/server-functions/default/.next/server/chunks/ssr/src_components_0o3fd3m._.js": {
+      "bytes": 83016,
       "imports": [],
       "format": "cjs"
     },
@@ -5938,9 +5938,9 @@
           "original": "C:/Users/lyr1csan/Documents/Real Estate/zakaria-farid/.open-next/server-functions/default/.next/server/chunks/ssr/_18a86hl._.js"
         },
         {
-          "path": ".open-next/server-functions/default/.next/server/chunks/ssr/node_modules_1z-fyyd._.js",
+          "path": ".open-next/server-functions/default/.next/server/chunks/ssr/node_modules_100ay33._.js",
           "kind": "require-call",
-          "original": "C:/Users/lyr1csan/Documents/Real Estate/zakaria-farid/.open-next/server-functions/default/.next/server/chunks/ssr/node_modules_1z-fyyd._.js"
+          "original": "C:/Users/lyr1csan/Documents/Real Estate/zakaria-farid/.open-next/server-functions/default/.next/server/chunks/ssr/node_modules_100ay33._.js"
         },
         {
           "path": ".open-next/server-functions/default/.next/server/chunks/ssr/node_modules_react-hook-form_dist_index_esm_mjs_0sajker._.js",
@@ -6273,9 +6273,9 @@
           "original": "C:/Users/lyr1csan/Documents/Real Estate/zakaria-farid/.open-next/server-functions/default/.next/server/chunks/ssr/src_components_property_1-9iv7q._.js"
         },
         {
-          "path": ".open-next/server-functions/default/.next/server/chunks/ssr/[root-of-the-server]__18lhh3c._.js",
+          "path": ".open-next/server-functions/default/.next/server/chunks/ssr/[root-of-the-server]__1xphs7v._.js",
           "kind": "require-call",
-          "original": "C:/Users/lyr1csan/Documents/Real Estate/zakaria-farid/.open-next/server-functions/default/.next/server/chunks/ssr/[root-of-the-server]__18lhh3c._.js"
+          "original": "C:/Users/lyr1csan/Documents/Real Estate/zakaria-farid/.open-next/server-functions/default/.next/server/chunks/ssr/[root-of-the-server]__1xphs7v._.js"
         },
         {
           "path": ".open-next/server-functions/default/.next/server/chunks/ssr/_1cnqjj5._.js",
@@ -6283,9 +6283,9 @@
           "original": "C:/Users/lyr1csan/Documents/Real Estate/zakaria-farid/.open-next/server-functions/default/.next/server/chunks/ssr/_1cnqjj5._.js"
         },
         {
-          "path": ".open-next/server-functions/default/.next/server/chunks/ssr/_1lwtxoc._.js",
+          "path": ".open-next/server-functions/default/.next/server/chunks/ssr/_1fdflc1._.js",
           "kind": "require-call",
-          "original": "C:/Users/lyr1csan/Documents/Real Estate/zakaria-farid/.open-next/server-functions/default/.next/server/chunks/ssr/_1lwtxoc._.js"
+          "original": "C:/Users/lyr1csan/Documents/Real Estate/zakaria-farid/.open-next/server-functions/default/.next/server/chunks/ssr/_1fdflc1._.js"
         },
         {
           "path": ".open-next/server-functions/default/.next/server/chunks/ssr/_next-internal_server_app_[locale]_properties_[slug]_page_actions_0uq6lav.js",
@@ -6293,9 +6293,9 @@
           "original": "C:/Users/lyr1csan/Documents/Real Estate/zakaria-farid/.open-next/server-functions/default/.next/server/chunks/ssr/_next-internal_server_app_[locale]_properties_[slug]_page_actions_0uq6lav.js"
         },
         {
-          "path": ".open-next/server-functions/default/.next/server/chunks/ssr/src_components_0ynbbip._.js",
+          "path": ".open-next/server-functions/default/.next/server/chunks/ssr/src_components_0o3fd3m._.js",
           "kind": "require-call",
-          "original": "C:/Users/lyr1csan/Documents/Real Estate/zakaria-farid/.open-next/server-functions/default/.next/server/chunks/ssr/src_components_0ynbbip._.js"
+          "original": "C:/Users/lyr1csan/Documents/Real Estate/zakaria-farid/.open-next/server-functions/default/.next/server/chunks/ssr/src_components_0o3fd3m._.js"
         },
         {
           "path": ".open-next/server-functions/default/.next/server/chunks/ssr/[root-of-the-server]__12a3qan._.js",
@@ -6574,9 +6574,9 @@
           "original": "C:/Users/lyr1csan/Documents/Real Estate/zakaria-farid/.open-next/server-functions/default/.next/server/chunks/ssr/_18a86hl._.js"
         },
         {
-          "path": ".open-next/server-functions/default/.next/server/chunks/ssr/node_modules_1z-fyyd._.js",
+          "path": ".open-next/server-functions/default/.next/server/chunks/ssr/node_modules_100ay33._.js",
           "kind": "require-call",
-          "original": "C:/Users/lyr1csan/Documents/Real Estate/zakaria-farid/.open-next/server-functions/default/.next/server/chunks/ssr/node_modules_1z-fyyd._.js"
+          "original": "C:/Users/lyr1csan/Documents/Real Estate/zakaria-farid/.open-next/server-functions/default/.next/server/chunks/ssr/node_modules_100ay33._.js"
         },
         {
           "path": ".open-next/server-functions/default/.next/server/chunks/ssr/node_modules_react-hook-form_dist_index_esm_mjs_0sajker._.js",
@@ -6909,9 +6909,9 @@
           "original": "C:/Users/lyr1csan/Documents/Real Estate/zakaria-farid/.open-next/server-functions/default/.next/server/chunks/ssr/src_components_property_1-9iv7q._.js"
         },
         {
-          "path": ".open-next/server-functions/default/.next/server/chunks/ssr/[root-of-the-server]__18lhh3c._.js",
+          "path": ".open-next/server-functions/default/.next/server/chunks/ssr/[root-of-the-server]__1xphs7v._.js",
           "kind": "require-call",
-          "original": "C:/Users/lyr1csan/Documents/Real Estate/zakaria-farid/.open-next/server-functions/default/.next/server/chunks/ssr/[root-of-the-server]__18lhh3c._.js"
+          "original": "C:/Users/lyr1csan/Documents/Real Estate/zakaria-farid/.open-next/server-functions/default/.next/server/chunks/ssr/[root-of-the-server]__1xphs7v._.js"
         },
         {
           "path": ".open-next/server-functions/default/.next/server/chunks/ssr/_1cnqjj5._.js",
@@ -6919,9 +6919,9 @@
           "original": "C:/Users/lyr1csan/Documents/Real Estate/zakaria-farid/.open-next/server-functions/default/.next/server/chunks/ssr/_1cnqjj5._.js"
         },
         {
-          "path": ".open-next/server-functions/default/.next/server/chunks/ssr/_1lwtxoc._.js",
+          "path": ".open-next/server-functions/default/.next/server/chunks/ssr/_1fdflc1._.js",
           "kind": "require-call",
-          "original": "C:/Users/lyr1csan/Documents/Real Estate/zakaria-farid/.open-next/server-functions/default/.next/server/chunks/ssr/_1lwtxoc._.js"
+          "original": "C:/Users/lyr1csan/Documents/Real Estate/zakaria-farid/.open-next/server-functions/default/.next/server/chunks/ssr/_1fdflc1._.js"
         },
         {
           "path": ".open-next/server-functions/default/.next/server/chunks/ssr/_next-internal_server_app_[locale]_properties_[slug]_page_actions_0uq6lav.js",
@@ -6929,9 +6929,9 @@
           "original": "C:/Users/lyr1csan/Documents/Real Estate/zakaria-farid/.open-next/server-functions/default/.next/server/chunks/ssr/_next-internal_server_app_[locale]_properties_[slug]_page_actions_0uq6lav.js"
         },
         {
-          "path": ".open-next/server-functions/default/.next/server/chunks/ssr/src_components_0ynbbip._.js",
+          "path": ".open-next/server-functions/default/.next/server/chunks/ssr/src_components_0o3fd3m._.js",
           "kind": "require-call",
-          "original": "C:/Users/lyr1csan/Documents/Real Estate/zakaria-farid/.open-next/server-functions/default/.next/server/chunks/ssr/src_components_0ynbbip._.js"
+          "original": "C:/Users/lyr1csan/Documents/Real Estate/zakaria-farid/.open-next/server-functions/default/.next/server/chunks/ssr/src_components_0o3fd3m._.js"
         },
         {
           "path": ".open-next/server-functions/default/.next/server/chunks/ssr/[root-of-the-server]__12a3qan._.js",
@@ -10019,7 +10019,7 @@
           "bytesInOutput": 462
         },
         ".open-next/server-functions/default/node_modules/next/dist/server/load-manifest.external.js": {
-          "bytesInOutput": 112195
+          "bytesInOutput": 111794
         },
         ".open-next/cloudflare-templates/shims/throw.js": {
           "bytesInOutput": 215
@@ -10222,7 +10222,7 @@
         ".open-next/server-functions/default/.next/server/chunks/ssr/_18a86hl._.js": {
           "bytesInOutput": 611466
         },
-        ".open-next/server-functions/default/.next/server/chunks/ssr/node_modules_1z-fyyd._.js": {
+        ".open-next/server-functions/default/.next/server/chunks/ssr/node_modules_100ay33._.js": {
           "bytesInOutput": 6940
         },
         ".open-next/server-functions/default/.next/server/chunks/ssr/node_modules_react-hook-form_dist_index_esm_mjs_0sajker._.js": {
@@ -10423,20 +10423,20 @@
         ".open-next/server-functions/default/.next/server/chunks/ssr/src_components_property_1-9iv7q._.js": {
           "bytesInOutput": 17325
         },
-        ".open-next/server-functions/default/.next/server/chunks/ssr/[root-of-the-server]__18lhh3c._.js": {
-          "bytesInOutput": 7313
+        ".open-next/server-functions/default/.next/server/chunks/ssr/[root-of-the-server]__1xphs7v._.js": {
+          "bytesInOutput": 6739
         },
         ".open-next/server-functions/default/.next/server/chunks/ssr/_1cnqjj5._.js": {
           "bytesInOutput": 36979
         },
-        ".open-next/server-functions/default/.next/server/chunks/ssr/_1lwtxoc._.js": {
-          "bytesInOutput": 19548
+        ".open-next/server-functions/default/.next/server/chunks/ssr/_1fdflc1._.js": {
+          "bytesInOutput": 15412
         },
         ".open-next/server-functions/default/.next/server/chunks/ssr/_next-internal_server_app_[locale]_properties_[slug]_page_actions_0uq6lav.js": {
           "bytesInOutput": 299
         },
-        ".open-next/server-functions/default/.next/server/chunks/ssr/src_components_0ynbbip._.js": {
-          "bytesInOutput": 81951
+        ".open-next/server-functions/default/.next/server/chunks/ssr/src_components_0o3fd3m._.js": {
+          "bytesInOutput": 90376
         },
         ".open-next/server-functions/default/.next/server/chunks/ssr/[root-of-the-server]__12a3qan._.js": {
           "bytesInOutput": 8299
@@ -10676,7 +10676,7 @@
           "bytesInOutput": 65148
         }
       },
-      "bytes": 6114955
+      "bytes": 6118269
     }
   }
 }

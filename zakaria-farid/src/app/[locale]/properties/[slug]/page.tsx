@@ -99,7 +99,6 @@ export default async function PropertyDetailPage({ params }: Props) {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
       <PropertyDetailClient property={property} locale={locale} similar={similar} />
-      <MobileLeadBar propertyTitle={title} locale={locale} />
     </>
   );
 }

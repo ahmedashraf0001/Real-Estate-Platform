@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { useTranslations } from 'next-intl';
 import { motion, AnimatePresence } from 'framer-motion';
+import { toast } from 'sonner';
 import {
   Bed, Bath, Maximize2, MapPin, CheckCircle2, Phone, MessageCircle,
   ChevronLeft, ChevronRight, X, Grid, Paintbrush, Sofa, Eye, Building2,
@@ -13,6 +14,7 @@ import { formatPrice, formatNumber, whatsappUrl, WHATSAPP_NUMBER } from '@/lib/u
 import ContactForm from '@/components/forms/ContactForm';
 import PropertyCard from './PropertyCard';
 import DynamicMiniMap from '@/components/map/DynamicMiniMap';
+import MobileLeadBar from '@/components/layout/MobileLeadBar';
 import type { Property, SpecLayer } from '@/lib/supabase/types';
 import type { ZoneInstance } from '@/lib/layering/instances';
 import FinishingDetailsDisplay from './FinishingDetailsDisplay';
@@ -61,11 +63,99 @@ export default function PropertyDetailClient({ property, locale, similar }: Prop
   const [activeItemIndex, setActiveItemIndex] = useState<number>(0);
   const [activeModalPhotoIndex, setActiveModalPhotoIndex] = useState<number>(0);
 
+  // Lead Prompt Modal State
+  const [leadModalAction, setLeadModalAction] = useState<'call' | 'whatsapp' | 'viewing' | null>(null);
+  const [leadName, setLeadName] = useState('');
+  const [leadPhone, setLeadPhone] = useState('');
+  const [leadNotes, setLeadNotes] = useState('');
+  const [isSubmittingLead, setIsSubmittingLead] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const savedName = sessionStorage.getItem('zf_lead_name');
+      const savedPhone = sessionStorage.getItem('zf_lead_phone');
+      if (savedName) setLeadName(savedName);
+      if (savedPhone) setLeadPhone(savedPhone);
+    }
+  }, []);
+
+  const handleOpenLeadModal = (action: 'call' | 'whatsapp' | 'viewing') => {
+    setLeadModalAction(action);
+  };
+
+  const handleCloseLeadModal = () => {
+    setLeadModalAction(null);
+  };
+
   const images = property.property_images ?? [];
   const title = locale === 'ar' ? property.title_ar : property.title_en;
   const description = locale === 'ar' ? property.description_ar : property.description_en;
 
   const isAr = locale === 'ar';
+
+  const waMessage = isAr
+    ? `مرحباً، أنا مهتم بـ: ${title}`
+    : `Hello, I am interested in: ${title}`;
+
+  const handleLeadFormSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!leadName.trim() || !leadPhone.trim()) {
+      toast.error(isAr ? 'يرجى إدخال الاسم ورقم الهاتف' : 'Please enter your name and phone number');
+      return;
+    }
+
+    setIsSubmittingLead(true);
+    try {
+      const sourceMap = {
+        call: 'Direct Phone Call Inquiry',
+        whatsapp: 'WhatsApp Direct Consultation',
+        viewing: 'Schedule Private Viewing Request',
+      };
+
+      const actionSource = leadModalAction ? sourceMap[leadModalAction] : 'Direct Property Inquiry';
+      const notesContent = `Inquiry for property: ${title} (${property.location}). ${leadNotes ? `User Note: ${leadNotes}` : ''}`;
+
+      const res = await fetch('/api/leads', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: leadName.trim(),
+          phone: leadPhone.trim(),
+          property_id: property.id,
+          source: actionSource,
+          notes: notesContent,
+        }),
+      });
+
+      if (!res.ok) throw new Error('Lead submission failed');
+
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem('zf_lead_name', leadName.trim());
+        sessionStorage.setItem('zf_lead_phone', leadPhone.trim());
+      }
+
+      const currentAction = leadModalAction;
+      setLeadModalAction(null);
+
+      if (currentAction === 'call') {
+        toast.success(isAr ? 'جاري توجيه اتصالك...' : 'Initiating phone call...');
+        window.location.href = `tel:+${WHATSAPP_NUMBER}`;
+      } else if (currentAction === 'whatsapp') {
+        toast.success(isAr ? 'جاري فتح محادثة الواتساب...' : 'Opening WhatsApp chat...');
+        window.open(whatsappUrl(WHATSAPP_NUMBER, waMessage), '_blank');
+      } else if (currentAction === 'viewing') {
+        toast.success(
+          isAr
+            ? 'تم استلام طلب المعاينة بنجاح! سيتواصل معك زكريا فريد قريباً.'
+            : 'Viewing request received! Zakaria Farid will contact you shortly.'
+        );
+      }
+    } catch {
+      toast.error(isAr ? 'حدث خطأ، يرجى المحاولة مرة أخرى' : 'An error occurred, please try again.');
+    } finally {
+      setIsSubmittingLead(false);
+    }
+  };
 
   let displayLocation = property.location;
   if (isAr) {
@@ -99,10 +189,6 @@ export default function PropertyDetailClient({ property, locale, similar }: Prop
 
   function prevImg() { setActiveImg((i) => (i - 1 + images.length) % images.length); }
   function nextImg() { setActiveImg((i) => (i + 1) % images.length); }
-
-  const waMessage = isAr
-    ? `مرحباً، أنا مهتم بـ: ${title}`
-    : `Hello, I am interested in: ${title}`;
 
   const openSpecModal = (layer: SpecLayer) => {
     setActiveSpecModal(layer);
@@ -433,27 +519,37 @@ export default function PropertyDetailClient({ property, locale, similar }: Prop
             </div>
 
             <div className={styles.sidebarActionHeading}>
-              {isAr ? 'حجز معاينة أو استفسار' : 'Schedule Viewing & Inquire'}
+              {isAr ? 'تواصل وتحديد موعد معاينة' : 'Schedule Viewing & Inquire'}
             </div>
 
-            <div className={styles.sidebarBtns}>
-              <a href={`tel:+${WHATSAPP_NUMBER}`} className={`btn btn-outline ${styles.callBtn}`}>
-                <Phone size={16} strokeWidth={1.5} />
-                {t('call')}
-              </a>
-              <a
-                href={whatsappUrl(WHATSAPP_NUMBER, waMessage)}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={`btn ${styles.waBtn}`}
+            <div className={styles.sidebarBtnsStacked}>
+              <button
+                type="button"
+                onClick={() => handleOpenLeadModal('call')}
+                className={styles.callBtnFull}
               >
-                <MessageCircle size={16} strokeWidth={1.5} />
-                {t('whatsapp')}
-              </a>
-            </div>
+                <Phone size={17} strokeWidth={1.5} />
+                <span>{isAr ? 'اتصل الآن' : 'Call Now'}</span>
+              </button>
 
-            <hr className="divider" />
-            <ContactForm propertyId={property.id} propertyTitle={title} locale={locale} compact />
+              <button
+                type="button"
+                onClick={() => handleOpenLeadModal('whatsapp')}
+                className={styles.waBtnFull}
+              >
+                <MessageCircle size={17} strokeWidth={1.5} />
+                <span>{isAr ? 'محادثة الواتساب المباشرة' : 'WhatsApp Consultation'}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleOpenLeadModal('viewing')}
+                className={styles.viewingBtnFull}
+              >
+                <Sparkles size={17} strokeWidth={1.5} />
+                <span>{isAr ? 'حجز موعد معاينة خاصة' : 'Schedule Private Viewing'}</span>
+              </button>
+            </div>
           </div>
         </aside>
       </div>
@@ -655,6 +751,114 @@ export default function PropertyDetailClient({ property, locale, similar }: Prop
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* ─── Lead Capture Action Prompt Modal ─────────────── */}
+      <AnimatePresence>
+        {leadModalAction && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className={styles.leadModalBackdrop}
+            onClick={handleCloseLeadModal}
+          >
+            <motion.div
+              initial={{ scale: 0.94, y: 20, opacity: 0 }}
+              animate={{ scale: 1, y: 0, opacity: 1 }}
+              exit={{ scale: 0.94, y: 20, opacity: 0 }}
+              transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+              className={styles.leadModalCard}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className={styles.leadModalHeader}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <div className={styles.leadModalIconBox}>
+                    {leadModalAction === 'call' && <Phone size={22} />}
+                    {leadModalAction === 'whatsapp' && <MessageCircle size={22} />}
+                    {leadModalAction === 'viewing' && <Sparkles size={22} />}
+                  </div>
+                  <div>
+                    <h3 className={styles.leadModalTitle}>
+                      {leadModalAction === 'call' && (isAr ? 'اتصال مباشر بشركة الفَريد' : 'Direct Phone Inquiry')}
+                      {leadModalAction === 'whatsapp' && (isAr ? 'استشارة واتساب مخصصة' : 'WhatsApp Consultation')}
+                      {leadModalAction === 'viewing' && (isAr ? 'حجز موعد معاينة خاصة' : 'Schedule Private Viewing')}
+                    </h3>
+                    <p className={styles.leadModalSub}>
+                      {isAr ? 'يرجى إدخال اسمك ورقم هاتفك للمتابعة المباشرة مع زكريا فريد' : 'Enter your name and phone number to connect directly with Zakaria Farid.'}
+                    </p>
+                  </div>
+                </div>
+                <button type="button" className={styles.leadModalCloseBtn} onClick={handleCloseLeadModal}>
+                  <X size={20} />
+                </button>
+              </div>
+
+              <form onSubmit={handleLeadFormSubmit} className={styles.leadForm}>
+                <div className={styles.leadFormField}>
+                  <label className={styles.leadFormLabel}>{isAr ? 'الاسم بالكامل *' : 'Full Name *'}</label>
+                  <input
+                    required
+                    type="text"
+                    value={leadName}
+                    onChange={(e) => setLeadName(e.target.value)}
+                    placeholder={isAr ? 'أدخل اسمك بالكامل' : 'e.g. Hossam Hassan'}
+                    className={styles.leadFormInput}
+                  />
+                </div>
+
+                <div className={styles.leadFormField}>
+                  <label className={styles.leadFormLabel}>{isAr ? 'رقم الهاتف / الواتساب *' : 'Phone Number *'}</label>
+                  <input
+                    required
+                    type="tel"
+                    value={leadPhone}
+                    onChange={(e) => setLeadPhone(e.target.value)}
+                    placeholder={isAr ? '+20 1xx xxx xxxx' : '+20 1xx xxx xxxx'}
+                    className={styles.leadFormInput}
+                  />
+                </div>
+
+                {leadModalAction === 'viewing' && (
+                  <div className={styles.leadFormField}>
+                    <label className={styles.leadFormLabel}>{isAr ? 'موعد المعاينة المفضل أو ملاحظات إضافية' : 'Preferred Date / Special Requests'}</label>
+                    <textarea
+                      rows={2}
+                      value={leadNotes}
+                      onChange={(e) => setLeadNotes(e.target.value)}
+                      placeholder={isAr ? 'مثال: يوم السبت في تمام الساعة ٥ مساءً' : 'e.g. Saturday afternoon at 4 PM...'}
+                      className={styles.leadFormInput}
+                      style={{ fontFamily: 'inherit' }}
+                    />
+                  </div>
+                )}
+
+                <button
+                  type="submit"
+                  disabled={isSubmittingLead}
+                  className={styles.leadSubmitBtn}
+                >
+                  {isSubmittingLead ? (
+                    <span>{isAr ? 'جاري حفظ البيانات...' : 'Processing...'}</span>
+                  ) : (
+                    <>
+                      {leadModalAction === 'call' && <Phone size={16} />}
+                      {leadModalAction === 'whatsapp' && <MessageCircle size={16} />}
+                      {leadModalAction === 'viewing' && <Sparkles size={16} />}
+                      <span>
+                        {leadModalAction === 'call' && (isAr ? 'حفظ والاتصال الآن' : 'Save & Call Now')}
+                        {leadModalAction === 'whatsapp' && (isAr ? 'حفظ وفتح الواتساب' : 'Save & Open WhatsApp')}
+                        {leadModalAction === 'viewing' && (isAr ? 'تأكيد طلب المعاينة' : 'Confirm Viewing Request')}
+                      </span>
+                    </>
+                  )}
+                </button>
+              </form>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <MobileLeadBar propertyTitle={title} locale={locale} onOpenLeadModal={handleOpenLeadModal} />
     </div>
   );
 }

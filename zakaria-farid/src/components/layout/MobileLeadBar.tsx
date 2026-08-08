@@ -7,28 +7,32 @@ import styles from './MobileLeadBar.module.css';
 interface MobileLeadBarProps {
   propertyTitle?: string;
   locale?: string;
+  onOpenLeadModal?: (action: 'call' | 'whatsapp') => void;
 }
 
-export default function MobileLeadBar({ propertyTitle }: MobileLeadBarProps) {
+export default function MobileLeadBar({ propertyTitle, onOpenLeadModal }: MobileLeadBarProps) {
   const waMessage = propertyTitle
     ? `Hello, I am interested in the property: ${propertyTitle}`
     : 'Hello, I am interested in a property.';
 
   return (
     <div className={styles.bar}>
-      <a href={`tel:+${WHATSAPP_NUMBER}`} className={`${styles.btn} ${styles.call}`}>
+      <button
+        type="button"
+        onClick={() => onOpenLeadModal ? onOpenLeadModal('call') : (window.location.href = `tel:+${WHATSAPP_NUMBER}`)}
+        className={`${styles.btn} ${styles.call}`}
+      >
         <Phone size={18} strokeWidth={1.5} />
         <span>Call</span>
-      </a>
-      <a
-        href={whatsappUrl(WHATSAPP_NUMBER, waMessage)}
-        target="_blank"
-        rel="noopener noreferrer"
+      </button>
+      <button
+        type="button"
+        onClick={() => onOpenLeadModal ? onOpenLeadModal('whatsapp') : window.open(whatsappUrl(WHATSAPP_NUMBER, waMessage), '_blank')}
         className={`${styles.btn} ${styles.wa}`}
       >
         <MessageCircle size={18} strokeWidth={1.5} />
         <span>WhatsApp</span>
-      </a>
+      </button>
     </div>
   );
 }
