@@ -10,13 +10,18 @@ async function getAdminClient() {
 
   if (!serviceKey || !url) {
     try {
-      const { getCloudflareContext } = await import('@opennextjs/cloudflare');
-      const ctx = await getCloudflareContext({ async: true });
-      if (ctx?.env) {
-        url = url || (ctx.env as any).NEXT_PUBLIC_SUPABASE_URL;
-        serviceKey = serviceKey || (ctx.env as any).SUPABASE_SERVICE_ROLE_KEY;
+      const cf = await import('@opennextjs/cloudflare');
+      let ctx: any = null;
+      try {
+        ctx = await cf.getCloudflareContext({ async: true });
+      } catch {
+        ctx = (cf as any).getCloudflareContext?.();
       }
-    } catch {
+      if (ctx?.env) {
+        url = url || ctx.env.NEXT_PUBLIC_SUPABASE_URL;
+        serviceKey = serviceKey || ctx.env.SUPABASE_SERVICE_ROLE_KEY;
+      }
+    } catch (e) {
       // Not in Cloudflare environment
     }
   }
@@ -63,36 +68,33 @@ export async function createLead(payload: {
     const supabase = adminSupabase ?? (await createBrowserServer());
 
     const insertPayload = {
-      name: payload.name.trim(),
-      phone: payload.phone.trim(),
+      name: payload.name,
+      phone: payload.phone,
       email: normalizeString(payload.email),
       message: normalizeString(payload.message),
-      property_id: payload.property_id || null,
+      property_id: normalizeString(payload.property_id),
       notes: normalizeString(payload.notes),
-      source: normalizeString(payload.source) ?? 'manual',
-      entry_method: normalizeString(payload.entry_method) ?? 'manual',
-      stage: 'new',
-      stage_updated_at: new Date().toISOString(),
+      source: normalizeString(payload.source),
+      entry_method: normalizeString(payload.entry_method) || 'admin_manual',
     };
 
     let { data, error } = await supabase.from('leads').insert(insertPayload).select();
 
-    if (error || !data || data.length === 0) {
-      console.warn('createLead full insert failed, trying basic fallback:', error?.message);
+    if (error) {
+      console.warn('createLead insert failed, trying minimal payload:', error.message);
       const fallbackPayload = {
-        name: insertPayload.name,
-        phone: insertPayload.phone,
-        email: insertPayload.email,
-        message: insertPayload.message,
-        property_id: insertPayload.property_id,
-      } as Record<string, unknown>;
-
+        name: payload.name,
+        phone: payload.phone,
+        email: normalizeString(payload.email),
+        message: normalizeString(payload.message),
+      };
       const fallback = await supabase.from('leads').insert(fallbackPayload).select();
       data = fallback.data;
       error = fallback.error;
     }
 
     if (error) {
+      console.error('Error creating lead:', error.message);
       return { success: false, error: error.message };
     }
 
@@ -123,24 +125,35 @@ export async function updateLeadStage(leadId: string, stage: string) {
     // Primary update attempt with stage and stage_updated_at
     let updateResult = await supabase
       .from('leads')
-      .update({
-        stage,
-        stage_updated_at: new Date().toISOString(),
-      })
+      .update(
+        {
+          stage,
+          stage_updated_at: new Date().toISOString(),
+        },
+        { count: 'exact' }
+      )
       .eq('id', leadId);
 
     // Fallback: if stage_updated_at fails
-    if (updateResult.error) {
-      console.warn('Lead stage update with stage_updated_at failed, attempting stage-only fallback:', updateResult.error.message);
+    if (updateResult.error || (updateResult.count !== null && updateResult.count === 0)) {
+      console.warn('Lead stage update with stage_updated_at failed or updated 0 rows, attempting stage-only fallback');
       updateResult = await supabase
         .from('leads')
-        .update({ stage })
+        .update({ stage }, { count: 'exact' })
         .eq('id', leadId);
     }
 
     if (updateResult.error) {
       console.error('Lead stage update error:', updateResult.error.message);
       return { success: false, error: updateResult.error.message };
+    }
+
+    if (updateResult.count === 0) {
+      console.error('Lead stage update modified 0 rows for leadId:', leadId);
+      return {
+        success: false,
+        error: 'Lead update failed: 0 rows modified in Supabase. Please ensure SUPABASE_SERVICE_ROLE_KEY is set in Cloudflare secrets or enable RLS UPDATE policy on leads table.',
+      };
     }
 
     revalidatePath('/admin');
@@ -178,21 +191,25 @@ export async function updateLeadDetails(
 
     let updateResult = await supabase
       .from('leads')
-      .update(payload)
+      .update(payload, { count: 'exact' })
       .eq('id', leadId);
 
-    if (updateResult.error) {
-      console.warn('Lead details update failed, trying fallback:', updateResult.error.message);
+    if (updateResult.error || (updateResult.count !== null && updateResult.count === 0)) {
+      console.warn('Lead details update failed or updated 0 rows, trying fallback');
       const fallbackPayload = {} as Record<string, string | null | undefined>;
       if (updates.notes !== undefined) fallbackPayload.notes = normalizeString(updates.notes);
       if (updates.lost_reason !== undefined) fallbackPayload.lost_reason = normalizeString(updates.lost_reason);
       if (updates.source !== undefined) fallbackPayload.source = normalizeString(updates.source);
       
-      updateResult = await supabase.from('leads').update(fallbackPayload).eq('id', leadId);
+      updateResult = await supabase.from('leads').update(fallbackPayload, { count: 'exact' }).eq('id', leadId);
     }
 
     if (updateResult.error) {
       return { success: false, error: updateResult.error.message };
+    }
+
+    if (updateResult.count === 0) {
+      return { success: false, error: 'Lead details update failed: 0 rows modified in Supabase.' };
     }
 
     revalidatePath('/admin');

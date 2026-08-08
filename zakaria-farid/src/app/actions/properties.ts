@@ -13,11 +13,16 @@ async function getAdminClient() {
 
   if (!serviceKey || !url) {
     try {
-      const { getCloudflareContext } = await import('@opennextjs/cloudflare');
-      const ctx = await getCloudflareContext({ async: true });
+      const cf = await import('@opennextjs/cloudflare');
+      let ctx: any = null;
+      try {
+        ctx = await cf.getCloudflareContext({ async: true });
+      } catch {
+        ctx = (cf as any).getCloudflareContext?.();
+      }
       if (ctx?.env) {
-        url = url || (ctx.env as any).NEXT_PUBLIC_SUPABASE_URL;
-        serviceKey = serviceKey || (ctx.env as any).SUPABASE_SERVICE_ROLE_KEY;
+        url = url || ctx.env.NEXT_PUBLIC_SUPABASE_URL;
+        serviceKey = serviceKey || ctx.env.SUPABASE_SERVICE_ROLE_KEY;
       }
     } catch {
       // Not in Cloudflare environment
