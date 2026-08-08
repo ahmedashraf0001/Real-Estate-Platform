@@ -1,4 +1,5 @@
 import { createClient } from './server';
+import { getPublicSupabase } from './public';
 import type { Property, Lead, SpecLayer, SpecLayerItem } from './types';
 import { buildZoneInstances, type PropertyTypeId, type GlobalFinishingState } from '@/lib/layering';
 import { parseSmartQuery } from '@/lib/utils/searchUtils';
@@ -6,7 +7,7 @@ import { parseSmartQuery } from '@/lib/utils/searchUtils';
 // ─── Properties ───────────────────────────────────────────────────
 
 export async function getFeaturedProperties(): Promise<Property[]> {
-  const supabase = await createClient();
+  const supabase = getPublicSupabase();
   const { data, error } = await supabase
     .from('properties')
     .select(`*, property_images(*)`)
@@ -27,7 +28,7 @@ export async function getAllProperties(params?: {
   listing_status?: string;
   sort?: 'newest' | 'price_asc' | 'price_desc';
 }): Promise<Property[]> {
-  const supabase = await createClient();
+  const supabase = getPublicSupabase();
   let query = supabase
     .from('properties')
     .select(`*, property_images(id, url, alt_text_en, alt_text_ar, sort_order)`);
@@ -92,7 +93,7 @@ export function ensureSpecLayers(property: Property): Property {
 }
 
 export async function getPropertyBySlug(slug: string): Promise<Property | null> {
-  const supabase = await createClient();
+  const supabase = getPublicSupabase();
   const { data, error } = await supabase
     .from('properties')
     .select(`*, property_images(*), property_amenities(*)`)
@@ -103,14 +104,14 @@ export async function getPropertyBySlug(slug: string): Promise<Property | null> 
 }
 
 export async function getAllPropertySlugs(): Promise<{ slug: string }[]> {
-  const supabase = await createClient();
+  const supabase = getPublicSupabase();
   const { data } = await supabase.from('properties').select('slug');
   return data ?? [];
 }
 
 export async function getPropertiesByIds(ids: string[]): Promise<Property[]> {
   if (!ids.length) return [];
-  const supabase = await createClient();
+  const supabase = getPublicSupabase();
   const { data, error } = await supabase
     .from('properties')
     .select(`*, property_images(*), property_amenities(*)`)

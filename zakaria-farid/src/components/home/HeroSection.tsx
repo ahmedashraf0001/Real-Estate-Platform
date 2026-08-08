@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import { useRef } from 'react';
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
@@ -52,7 +53,16 @@ export default function HeroSection({ locale }: HeroSectionProps) {
   return (
     <section ref={targetRef} className={styles.hero}>
       {/* Scroll-Driven Parallax Background with Ken Burns */}
-      <motion.div style={{ scale: bgScale }} className={styles.bgImg} aria-hidden="true" />
+      <motion.div style={{ scale: bgScale }} className={styles.bgImg} aria-hidden="true">
+        <Image
+          src="/images/sunlit-hero-villa.png"
+          alt="Sunlit Luxury Villa"
+          fill
+          priority
+          sizes="100vw"
+          className={styles.bgImgFile}
+        />
+      </motion.div>
       <div className={styles.overlay} aria-hidden="true" />
       <div className={styles.gridOverlay} aria-hidden="true" />
 
