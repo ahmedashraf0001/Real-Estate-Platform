@@ -3,17 +3,31 @@
 import { revalidatePath } from 'next/cache';
 import { createClient as createBrowserServer } from '@/lib/supabase/server';
 import type { Lead } from '@/lib/supabase/types';
-import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 
-function createAdminClient() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+async function getAdminClient() {
+  let url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  let serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!serviceKey || !url) {
+    try {
+      const { getCloudflareContext } = await import('@opennextjs/cloudflare');
+      const ctx = await getCloudflareContext();
+      if (ctx?.env) {
+        url = url || (ctx.env as any).NEXT_PUBLIC_SUPABASE_URL;
+        serviceKey = serviceKey || (ctx.env as any).SUPABASE_SERVICE_ROLE_KEY;
+      }
+    } catch {
+      // Not in Cloudflare environment
+    }
+  }
 
   if (!url || !serviceKey) {
+    console.warn('[AdminClient] SUPABASE_SERVICE_ROLE_KEY or NEXT_PUBLIC_SUPABASE_URL missing!');
     return null;
   }
 
-  return createSupabaseClient(url, serviceKey, {
+  const { createClient } = require('@supabase/supabase-js');
+  return createClient(url, serviceKey, {
     auth: {
       persistSession: false,
       autoRefreshToken: false,
@@ -45,7 +59,8 @@ export async function createLead(payload: {
       return { success: false, error: 'Unauthorized' };
     }
 
-    const supabase = createAdminClient() ?? (await createBrowserServer());
+    const adminSupabase = await getAdminClient();
+    const supabase = adminSupabase ?? (await createBrowserServer());
 
     const insertPayload = {
       name: payload.name.trim(),
@@ -62,8 +77,8 @@ export async function createLead(payload: {
 
     let { data, error } = await supabase.from('leads').insert(insertPayload).select();
 
-    if (error) {
-      console.warn('createLead full insert failed, trying basic fallback:', error.message);
+    if (error || !data || data.length === 0) {
+      console.warn('createLead full insert failed, trying basic fallback:', error?.message);
       const fallbackPayload = {
         name: insertPayload.name,
         phone: insertPayload.phone,
@@ -81,9 +96,12 @@ export async function createLead(payload: {
       return { success: false, error: error.message };
     }
 
+    if (!data || data.length === 0) {
+      return { success: false, error: 'Lead creation failed: 0 rows inserted.' };
+    }
+
     revalidatePath('/admin');
-    const lead = data && data.length > 0 ? (data[0] as Lead) : null;
-    return { success: true, lead };
+    return { success: true, lead: data[0] as Lead };
   } catch (err: any) {
     console.error('Exception in createLead:', err);
     return { success: false, error: err.message || 'Server action error' };
@@ -96,10 +114,11 @@ export async function updateLeadStage(leadId: string, stage: string) {
     const { data: { user } } = await sessionClient.auth.getUser();
 
     if (!user) {
-      return { success: false, error: 'Unauthorized' };
+      return { success: false, error: 'Unauthorized: Please sign in as admin.' };
     }
 
-    const supabase = createAdminClient() ?? (await createBrowserServer());
+    const adminSupabase = await getAdminClient();
+    const supabase = adminSupabase ?? (await createBrowserServer());
 
     // Primary update attempt with stage and stage_updated_at
     let { data, error } = await supabase
@@ -111,9 +130,9 @@ export async function updateLeadStage(leadId: string, stage: string) {
       .eq('id', leadId)
       .select();
 
-    // Fallback: if error occurred, try updating just stage (e.g. stage_updated_at column missing)
-    if (error) {
-      console.warn('Lead stage update with stage_updated_at failed, attempting stage-only fallback:', error.message);
+    // Fallback: if stage_updated_at fails or 0 rows modified
+    if (error || !data || data.length === 0) {
+      console.warn('Lead stage update with stage_updated_at failed, attempting stage-only fallback:', error?.message);
       const fallback = await supabase
         .from('leads')
         .update({ stage })
@@ -125,13 +144,17 @@ export async function updateLeadStage(leadId: string, stage: string) {
     }
 
     if (error) {
-      console.error('Lead stage update failed completely:', error.message);
+      console.error('Lead stage update error:', error.message);
       return { success: false, error: error.message };
     }
 
+    if (!data || data.length === 0) {
+      console.error('Lead stage update affected 0 rows for leadId:', leadId);
+      return { success: false, error: 'Lead update failed: 0 rows modified. Check admin permissions.' };
+    }
+
     revalidatePath('/admin');
-    const lead = data && data.length > 0 ? (data[0] as Lead) : null;
-    return { success: true, lead };
+    return { success: true, lead: data[0] as Lead };
   } catch (err: any) {
     console.error('Exception in updateLeadStage:', err);
     return { success: false, error: err.message || 'Server action error' };
@@ -151,10 +174,11 @@ export async function updateLeadDetails(
     const { data: { user } } = await sessionClient.auth.getUser();
 
     if (!user) {
-      return { success: false, error: 'Unauthorized' };
+      return { success: false, error: 'Unauthorized: Please sign in as admin.' };
     }
 
-    const supabase = createAdminClient() ?? (await createBrowserServer());
+    const adminSupabase = await getAdminClient();
+    const supabase = adminSupabase ?? (await createBrowserServer());
 
     const payload = {
       notes: updates.notes === undefined ? undefined : normalizeString(updates.notes),
@@ -168,8 +192,8 @@ export async function updateLeadDetails(
       .eq('id', leadId)
       .select();
 
-    if (error) {
-      console.warn('Lead details update failed, trying fallback:', error.message);
+    if (error || !data || data.length === 0) {
+      console.warn('Lead details update failed, trying fallback:', error?.message);
       const fallbackPayload = {} as Record<string, string | null | undefined>;
       if (updates.notes !== undefined) fallbackPayload.notes = normalizeString(updates.notes);
       if (updates.lost_reason !== undefined) fallbackPayload.lost_reason = normalizeString(updates.lost_reason);
@@ -184,9 +208,12 @@ export async function updateLeadDetails(
       return { success: false, error: error.message };
     }
 
+    if (!data || data.length === 0) {
+      return { success: false, error: 'Lead details update failed: 0 rows modified.' };
+    }
+
     revalidatePath('/admin');
-    const lead = data && data.length > 0 ? (data[0] as Lead) : null;
-    return { success: true, lead };
+    return { success: true, lead: data[0] as Lead };
   } catch (err: any) {
     console.error('Exception in updateLeadDetails:', err);
     return { success: false, error: err.message || 'Server action error' };

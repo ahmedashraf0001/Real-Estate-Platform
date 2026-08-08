@@ -127,10 +127,11 @@ export default function LeadPipeline({ initialLeads, properties, adminLocale }: 
 
       const stageLabel = STAGE_CONFIG.find(s => s.key === nextStage);
       const msg = isAr ? `تم نقل الطلب إلى: ${stageLabel?.ar}` : `Moved lead to ${stageLabel?.en}`;
-      toast.success(msg);
 
       const result = await updateLeadStage(leadId, nextStage);
-      if (!result.success) {
+      if (result.success) {
+        toast.success(msg);
+      } else {
         setLeads(initialLeads);
         toast.error(result.error || 'Unable to update stage.');
       }
