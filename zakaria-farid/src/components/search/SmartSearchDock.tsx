@@ -177,6 +177,28 @@ export default function SmartSearchDock({ locale, onFilterChange, initialQuery =
           </div>
         </div>
       )}
+
+      {/* Active Filter Pills Bar */}
+      {(query || selectedType) && (
+        <div className={styles.activeFiltersBar}>
+          <span className={styles.activeFiltersLabel}>{isAr ? 'التصفيات النشطة:' : 'Active Filters:'}</span>
+          {query && (
+            <span className={styles.activeFilterPill}>
+              <span>{query}</span>
+              <button type="button" onClick={() => { setQuery(''); triggerSearch('', selectedType); }}><X size={12} /></button>
+            </span>
+          )}
+          {selectedType && (
+            <span className={styles.activeFilterPill}>
+              <span>{typeLabels[selectedType] || selectedType}</span>
+              <button type="button" onClick={() => { setSelectedType(''); triggerSearch(query, ''); }}><X size={12} /></button>
+            </span>
+          )}
+          <button type="button" className={styles.clearAllBtn} onClick={() => { setQuery(''); setSelectedType(''); triggerSearch('', ''); }}>
+            {isAr ? 'إعادة ضبط' : 'Clear All'}
+          </button>
+        </div>
+      )}
     </div>
   );
 }

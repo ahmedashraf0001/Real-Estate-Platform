@@ -115,7 +115,7 @@ export default async function AboutPage({ params }: Props) {
           <div className={styles.heroContent}>
             <div className={styles.heroBadge}>
               <Sparkles size={14} />
-              <span>{isAr ? 'زكريا فريد للاستثمار العقاري' : 'Zakaria Farid Real Estate Mastery'}</span>
+              <span>{isAr ? 'زكريا فريد للعقارات الفاخرة' : 'Zakaria Farid Real Estate Mastery'}</span>
             </div>
             
             <h1 className={styles.heroTitle}>
@@ -197,7 +197,7 @@ export default async function AboutPage({ params }: Props) {
 
               <p className={styles.storyParagraph}>
                 {isAr
-                  ? 'على مدى أكثر من عقدين من الزمان، ارتبط اسم زكريا فريد بتقديم أرقى الوحدات السكنية والفيلات في أهم المجتمعات السكنية في مصر. نؤمن بأن اقتناء العقار يجب أن يكون تجربة سلسة، شفافة، ومباشرة تمنحك القيمة الحقيقية للاستثمار.'
+                  ? 'على مدى أكثر من عقدين من الزمان، ارتبط اسم زكريا فريد بتقديم أرقى الوحدات السكنية والفيلات في أهم المجتمعات السكنية في مصر. نؤمن بأن اقتناء العقار يجب أن يكون تجربة سلسة، شفافة، ومباشرة تمنحك القيمة الحقيقية لملكيتك.'
                   : 'For over two decades, Zakaria Farid has curated an extraordinary portfolio of standalone villas, penthouses, and beachfront chalets in Egypt’s prime residential developments. We believe acquiring real estate should be an inspiring, transparent experience—free of redundant intermediaries.'}
               </p>
 

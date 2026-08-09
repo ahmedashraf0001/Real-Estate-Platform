@@ -24,6 +24,7 @@ interface HeaderProps {
 export default function Header({ locale }: HeaderProps) {
   const t = useTranslations('nav');
   const pathname = usePathname();
+  const isAr = locale === 'ar';
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const isHome = pathname === `/${locale}` || pathname === `/${locale}/`;
@@ -56,8 +57,8 @@ export default function Header({ locale }: HeaderProps) {
         <div className={`container ${styles.inner}`}>
           {/* Logo */}
           <Link href={`/${locale}`} className={styles.logo}>
-            <span className={styles.logoIcon}>ZF</span>
-            <span className={styles.logoText}>Zakaria Farid</span>
+            <span className={styles.logoIcon}>{isAr ? 'ز' : 'ZF'}</span>
+            <span className={styles.logoText}>{isAr ? 'زكريا فريد' : 'Zakaria Farid'}</span>
           </Link>
 
           {/* Desktop nav */}

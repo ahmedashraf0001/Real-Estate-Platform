@@ -45,28 +45,6 @@ export default function HeroSection({ locale }: HeroSectionProps) {
   const contentY = useTransform(scrollYProgress, [0, 1], [0, 80]);
   const opacity = useTransform(scrollYProgress, [0, 0.8], [1, 0]);
 
-  const tickerItems = isAr
-    ? [
-        'الشيخ زايد',
-        'القاهرة الجديدة (التجمع الخامس)',
-        '٠٪ عمولات وساطة',
-        'من المالك مباشرة',
-        'سيدي عبد الرحمن (الساحل الشمالي)',
-        'بيفرلي هيلز ويست تاون',
-        'فيلات وشاليهات فاخرة',
-        'عقود موثقة ومسجلة',
-      ]
-    : [
-        'SHEIKH ZAYED',
-        'NEW CAIRO (5TH SETTLEMENT)',
-        '0% BROKER COMMISSION',
-        'DIRECT FROM OWNER',
-        'NORTH COAST SIDI ABDEL RAHMAN',
-        'BEVERLY HILLS & WESTOWN',
-        'LUXURY VILLAS & CHALETS',
-        'VERIFIED LEGAL TITLES',
-      ];
-
   return (
     <section ref={targetRef} className={styles.hero}>
       {/* Background Image Slideshow with Smooth Crossfade & Ken Burns Scale */}
@@ -133,9 +111,9 @@ export default function HeroSection({ locale }: HeroSectionProps) {
         {/* Stats bar */}
         <div className={styles.statsBar}>
           {[
-            { value: '20+', label: isAr ? 'سنة خبرة واستثمار' : 'Years Mastery', icon: Award },
-            { value: '150+', label: isAr ? 'وحدة تم تسليمها' : 'Estates Delivered', icon: Building2 },
-            { value: '0%', label: isAr ? 'عمولة وساطة' : 'Broker Commission', icon: ShieldCheck },
+            { value: '20+', label: isAr ? 'سنة خبرة وتطوير' : 'Years Mastery', icon: Award },
+            { value: '150+', label: isAr ? 'وحدة تم تسليمها' : 'Estates Delivered', icon: ShieldCheck },
+            { value: '0%', label: isAr ? 'عمولة وساطة' : 'Broker Commission', icon: Building2 },
             { value: '5★', label: isAr ? 'تقييم العملاء المميزين' : 'VIP Client Rating', icon: Star },
           ].map(({ value, label, icon: Icon }) => (
             <div key={label} className={styles.stat}>
@@ -150,18 +128,6 @@ export default function HeroSection({ locale }: HeroSectionProps) {
           ))}
         </div>
       </motion.div>
-
-      {/* React Bits Infinite Scrolling Marquee Ticker */}
-      <div className={styles.tickerWrap}>
-        <div className={styles.tickerTrack}>
-          {[...tickerItems, ...tickerItems].map((item, idx) => (
-            <div key={idx} className={styles.tickerItem}>
-              <Sparkles size={12} className={styles.tickerStar} />
-              <span>{item}</span>
-            </div>
-          ))}
-        </div>
-      </div>
     </section>
   );
 }

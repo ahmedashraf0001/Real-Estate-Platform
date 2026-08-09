@@ -11,6 +11,8 @@ import { Toaster } from 'sonner';
 import type { Metadata } from 'next';
 import Script from 'next/script';
 
+import { getAccentColor } from '@/app/actions/settings';
+
 type Props = {
   children: React.ReactNode;
   params: Promise<{ locale: string }>;
@@ -47,6 +49,7 @@ export default async function LocaleLayout({ children, params }: Props) {
   }
 
   const messages = await getMessages();
+  const accentColor = await getAccentColor();
   const dir = locale === 'ar' ? 'rtl' : 'ltr';
 
   return (
@@ -54,6 +57,7 @@ export default async function LocaleLayout({ children, params }: Props) {
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <style dangerouslySetInnerHTML={{ __html: `:root { --color-accent: ${accentColor} !important; --color-border-accent: ${accentColor} !important; }` }} />
       </head>
       <body>
         {process.env.NODE_ENV === 'production' && (

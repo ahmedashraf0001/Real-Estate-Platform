@@ -16,37 +16,8 @@ import {
 } from 'lucide-react';
 import styles from './MapExplorer.module.css';
 
-// ─── Custom Marker Icon (Pill or Compact Dot) ──────────────────────────────────
+// ─── Custom Marker Icon (Branded Gold/Emerald Location Pin Badge) ────────────
 function makeMarkerIcon(price: number, locale: string, active: boolean, compact: boolean) {
-  if (compact) {
-    const size = active ? 22 : 16;
-    const html = renderToStaticMarkup(
-      <div
-        style={{
-          width: size,
-          height: size,
-          borderRadius: '50%',
-          background: active ? '#C9A96A' : '#1E4D3D',
-          border: '3px solid #fff',
-          boxShadow: active
-            ? '0 0 0 4px rgba(201,169,106,0.4), 0 4px 12px rgba(0,0,0,0.3)'
-            : '0 0 0 2px rgba(30,77,61,0.25), 0 3px 10px rgba(0,0,0,0.2)',
-          transition: 'all 0.2s',
-          cursor: 'pointer',
-        }}
-      />
-    );
-
-    const anchor = active ? 11 : 8;
-    return divIcon({
-      html,
-      className: '',
-      iconSize: [size, size],
-      iconAnchor: [anchor, anchor],
-      popupAnchor: [0, -(anchor + 4)],
-    });
-  }
-
   const formattedPrice = new Intl.NumberFormat(locale === 'ar' ? 'ar-EG' : 'en-US', {
     notation: 'compact',
     maximumFractionDigits: 1,
@@ -61,31 +32,26 @@ function makeMarkerIcon(price: number, locale: string, active: boolean, compact:
         alignItems: 'center',
         gap: '6px',
         background: active ? '#C9A96A' : '#1E4D3D',
-        color: active ? '#1a1209' : '#ffffff',
+        color: active ? '#102A21' : '#FFFFFF',
         padding: active ? '7px 14px' : '6px 12px',
-        borderRadius: '24px',
+        borderRadius: '20px',
         fontSize: active ? '13px' : '12px',
-        fontWeight: 700,
+        fontWeight: 800,
         whiteSpace: 'nowrap',
         boxShadow: active
-          ? '0 6px 20px rgba(201,169,106,0.6), 0 0 0 3px #fff'
-          : '0 4px 14px rgba(0,0,0,0.3), 0 0 0 2px rgba(255,255,255,0.9)',
+          ? '0 8px 24px rgba(201,169,106,0.65), 0 0 0 3px #FFFFFF'
+          : '0 4px 16px rgba(0,0,0,0.3), 0 0 0 2px rgba(255,255,255,0.95)',
         border: 'none',
-        transform: active ? 'scale(1.15)' : 'scale(1)',
+        transform: active ? 'scale(1.18)' : 'scale(1)',
         transition: 'all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
-        fontFamily: 'Outfit, sans-serif',
+        fontFamily: "'Outfit', 'Cairo', sans-serif",
         cursor: 'pointer',
       }}
     >
-      <span
-        style={{
-          width: '7px',
-          height: '7px',
-          borderRadius: '50%',
-          background: active ? '#1a1209' : '#C9A96A',
-          flexShrink: 0,
-        }}
-      />
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/>
+        <circle cx="12" cy="10" r="3"/>
+      </svg>
       <span>{priceText}</span>
     </div>
   );
@@ -93,8 +59,8 @@ function makeMarkerIcon(price: number, locale: string, active: boolean, compact:
   return divIcon({
     html,
     className: '',
-    iconAnchor: [45, 16],
-    popupAnchor: [0, -20],
+    iconAnchor: [48, 16],
+    popupAnchor: [0, -22],
   });
 }
 

@@ -39,7 +39,7 @@ export default function AdminSidebar({ adminLocale }: AdminSidebarProps) {
   return (
     <>
       <div className={styles.mobileHeader}>
-        <div className={styles.logoIcon}>ZF</div>
+        <div className={styles.logoIcon}>{isAr ? 'ز' : 'ZF'}</div>
         <button className={styles.hamburgerBtn} onClick={() => setIsOpen(!isOpen)} aria-label="Toggle Menu">
           {isOpen ? <X size={24} /> : <Menu size={24} />}
         </button>
@@ -52,7 +52,7 @@ export default function AdminSidebar({ adminLocale }: AdminSidebarProps) {
       <aside className={`${styles.sidebar} ${isOpen ? styles.sidebarOpen : ''}`}>
       {/* Logo */}
       <div className={styles.logo}>
-        <div className={styles.logoIcon}>ZF</div>
+        <div className={styles.logoIcon}>{isAr ? 'ز' : 'ZF'}</div>
         <div>
           <p className={styles.logoTitle}>زكريا فريد</p>
           <p className={styles.logoSub}>{isAr ? 'لوحة الإدارة' : 'Admin Panel'}</p>

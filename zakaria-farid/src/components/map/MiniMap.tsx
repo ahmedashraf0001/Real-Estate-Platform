@@ -44,26 +44,21 @@ function makePricePin(price: number, locale: string) {
         alignItems: 'center',
         gap: '6px',
         background: '#1E4D3D',
-        color: '#ffffff',
+        color: '#FFFFFF',
         padding: '6px 12px',
-        borderRadius: '24px',
+        borderRadius: '20px',
         fontSize: '12px',
-        fontWeight: 700,
+        fontWeight: 800,
         whiteSpace: 'nowrap',
-        boxShadow: '0 4px 14px rgba(0,0,0,0.3), 0 0 0 2px rgba(255,255,255,0.9)',
-        fontFamily: 'Outfit, sans-serif',
+        boxShadow: '0 4px 16px rgba(0,0,0,0.3), 0 0 0 2px rgba(255,255,255,0.95)',
+        fontFamily: "'Outfit', 'Cairo', sans-serif",
         cursor: 'pointer',
       }}
     >
-      <span
-        style={{
-          width: '7px',
-          height: '7px',
-          borderRadius: '50%',
-          background: '#C9A96A',
-          flexShrink: 0,
-        }}
-      />
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/>
+        <circle cx="12" cy="10" r="3"/>
+      </svg>
       <span>{priceText}</span>
     </div>
   );

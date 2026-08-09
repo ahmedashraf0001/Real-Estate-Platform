@@ -3,7 +3,7 @@
    Fonts, tokens, resets, base styles, utilities
 ───────────────────────────────────────────────────────────────── */
 
-@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Outfit:wght@300;400;500;600;700;800&family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,400&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Amiri:ital,wght@0,400;0,700;1,400&family=Cairo:wght@300;400;500;600;700;800;900&family=Outfit:wght@300;400;500;600;700;800&family=Playfair+Display:ital,wght@0,500;0,600;0,700;0,800;1,400&display=swap');
 
 /* ─── Thmanyah Sans — UI / body text ─────────── */
 @font-face {
@@ -144,8 +144,8 @@
   --color-status-sold-bg:       #F7EDEB;
 
   /* Typography */
-  --font-serif:   'ThmanyahSerifDisplay', 'Cormorant Garamond', Georgia, serif;
-  --font-sans:    'Outfit', system-ui, -apple-system, sans-serif;
+  --font-serif:   'Playfair Display', 'Amiri', Georgia, serif;
+  --font-sans:    'Outfit', 'Cairo', system-ui, -apple-system, sans-serif;
   /* Type Scale (8px base) */
   --text-display:     56px;
   --text-display-lh:  64px;
@@ -203,8 +203,8 @@
 }
 
 [dir="rtl"] {
-  --font-sans:  'ThmanyahSans', system-ui, -apple-system, sans-serif;
-  --font-serif: 'ThmanyahSerifDisplay', Georgia, serif;
+  --font-serif: 'Amiri', 'Playfair Display', Georgia, serif;
+  --font-sans:  'Cairo', 'Outfit', system-ui, -apple-system, sans-serif;
 }
 
 /* ─── Reset & Base ──────────────────────────────────────────────── */

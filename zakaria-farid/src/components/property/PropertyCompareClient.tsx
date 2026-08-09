@@ -482,7 +482,7 @@ export default function PropertyCompareClient({ properties, locale }: PropertyCo
                 <td colSpan={properties.length + 1}>
                   <div className={styles.sectionTitle}>
                     <DollarSign size={18} className={styles.sectionTitleIcon} />
-                    <span>{isAr ? '١. المؤشرات المالية والقيمة الاستثمارية' : '1. Financial & Investment Metrics'}</span>
+                    <span>{isAr ? '١. المؤشرات المالية وقيمة العقار' : '1. Financial & Property Value Metrics'}</span>
                   </div>
                 </td>
               </tr>

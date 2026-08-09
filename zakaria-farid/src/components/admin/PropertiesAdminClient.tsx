@@ -8,6 +8,8 @@ import { formatPrice } from '@/lib/utils/formatting';
 import { toggleArchiveProperty, deletePropertyPermanently } from '@/app/actions/properties';
 import type { Property } from '@/lib/supabase/types';
 
+import AdminSettingsCard from './AdminSettingsCard';
+
 interface PropertiesAdminClientProps {
   initialProperties: Property[];
   adminLocale: string;
@@ -140,6 +142,9 @@ export default function PropertiesAdminClient({ initialProperties, adminLocale }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }} dir={isAr ? 'rtl' : 'ltr'}>
+      {/* Site Appearance Settings */}
+      <AdminSettingsCard initialColor="#C9A96A" isAr={isAr} />
+
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
         <div>

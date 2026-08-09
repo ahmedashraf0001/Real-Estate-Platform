@@ -344,46 +344,6 @@
   white-space: nowrap;
 }
 
-/* ─── React Bits Infinite Marquee Ticker ─────── */
-.tickerWrap {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  width: 100%;
-  max-width: 100%;
-  overflow: hidden;
-  z-index: 5;
-  background: rgba(8, 20, 16, 0.65);
-  backdrop-filter: blur(16px);
-  border-top: 1px solid rgba(201, 169, 106, 0.25);
-  padding: 10px 0;
-}
-
-.tickerTrack {
-  display: flex;
-  white-space: nowrap;
-  gap: 36px;
-  width: max-content;
-  animation: marquee 28s linear infinite;
-}
-
-.tickerItem {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 11.5px;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.88);
-}
-
-.tickerStar {
-  color: #C9A96A;
-  flex-shrink: 0;
-}
-
 .arrowRtl {
   transform: rotate(180deg);
 }
@@ -398,7 +358,6 @@
 }
 [dir="rtl"] .searchInput  { text-align: right; }
 [dir="rtl"] .searchSelect { text-align: right; }
-[dir="rtl"] .tickerTrack  { animation-direction: reverse; }
 
 /* ─── RTL Typography fixes for Thmanyah font ─ */
 [dir="rtl"] .headline {

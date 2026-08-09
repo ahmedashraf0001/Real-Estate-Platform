@@ -31,8 +31,8 @@ export default function Footer({ locale }: FooterProps) {
         {/* Col 1: Brand */}
         <div className={styles.brandCol}>
           <div className={styles.logoRow}>
-            <div className={styles.logoIcon}>ZF</div>
-            <span className={styles.logoText}>Zakaria Farid</span>
+            <div className={styles.logoIcon}>{isAr ? 'ز' : 'ZF'}</div>
+            <span className={styles.logoText}>{isAr ? 'زكريا فريد' : 'Zakaria Farid'}</span>
           </div>
           <p className={styles.blurb}>{t('about_blurb')}</p>
 
