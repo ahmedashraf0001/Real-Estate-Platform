@@ -29,44 +29,35 @@ function MapController({ center, zoom }: { center: [number, number]; zoom: numbe
   return null;
 }
 
-function makePricePin(price: number, locale: string) {
-  const formattedPrice = new Intl.NumberFormat(locale === 'ar' ? 'ar-EG' : 'en-US', {
-    notation: 'compact',
-    maximumFractionDigits: 1,
-  }).format(price);
-
-  const priceText = `${locale === 'ar' ? 'ج.م' : 'EGP'} ${formattedPrice}`;
-
+function makePricePin() {
   const html = renderToStaticMarkup(
     <div
       style={{
-        display: 'inline-flex',
+        display: 'flex',
         alignItems: 'center',
-        gap: '6px',
+        justifyContent: 'center',
+        width: '32px',
+        height: '32px',
+        borderRadius: '50%',
         background: '#1E4D3D',
         color: '#FFFFFF',
-        padding: '6px 12px',
-        borderRadius: '20px',
-        fontSize: '12px',
-        fontWeight: 800,
-        whiteSpace: 'nowrap',
-        boxShadow: '0 4px 16px rgba(0,0,0,0.3), 0 0 0 2px rgba(255,255,255,0.95)',
-        fontFamily: "'Outfit', 'Cairo', sans-serif",
+        boxShadow: '0 4px 16px rgba(0,0,0,0.35), 0 0 0 3px rgba(255,255,255,0.95)',
+        border: 'none',
         cursor: 'pointer',
       }}
     >
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
         <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/>
         <circle cx="12" cy="10" r="3"/>
       </svg>
-      <span>{priceText}</span>
     </div>
   );
 
   return divIcon({
     html,
     className: '',
-    iconAnchor: [45, 16],
+    iconSize: [32, 32],
+    iconAnchor: [16, 16],
     popupAnchor: [0, -20],
   });
 }
@@ -112,7 +103,7 @@ export default function MiniMap({ properties = [], center = [30.044, 30.983], zo
         const cover = p.property_images?.[0];
 
         return (
-          <Marker key={p.id} position={[lat, lng]} icon={makePricePin(p.price_egp, locale)}>
+          <Marker key={p.id} position={[lat, lng]} icon={makePricePin()}>
             <Popup maxWidth={260}>
               <div style={{ fontFamily: 'Outfit, sans-serif', padding: '2px', minWidth: '200px' }}>
                 {cover && (

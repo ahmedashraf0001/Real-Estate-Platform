@@ -128,6 +128,9 @@ export default function HeroSection({ locale }: HeroSectionProps) {
           ))}
         </div>
       </motion.div>
+
+      {/* Smooth Transition Gradient to rest of home page */}
+      <div className={styles.bottomFadeTransition} />
     </section>
   );
 }

@@ -16,51 +16,43 @@ import {
 } from 'lucide-react';
 import styles from './MapExplorer.module.css';
 
-// ─── Custom Marker Icon (Branded Gold/Emerald Location Pin Badge) ────────────
-function makeMarkerIcon(price: number, locale: string, active: boolean, compact: boolean) {
-  const formattedPrice = new Intl.NumberFormat(locale === 'ar' ? 'ar-EG' : 'en-US', {
-    notation: 'compact',
-    maximumFractionDigits: 1,
-  }).format(price);
-
-  const priceText = `${locale === 'ar' ? 'ج.م' : 'EGP'} ${formattedPrice}`;
-
+// ─── Custom Marker Icon (Clean Branded Luxury Location Pin Badge) ────────────
+function makeMarkerIcon(active: boolean) {
+  const size = active ? 38 : 32;
   const html = renderToStaticMarkup(
     <div
       style={{
-        display: 'inline-flex',
+        display: 'flex',
         alignItems: 'center',
-        gap: '6px',
+        justifyContent: 'center',
+        width: `${size}px`,
+        height: `${size}px`,
+        borderRadius: '50%',
         background: active ? '#C9A96A' : '#1E4D3D',
         color: active ? '#102A21' : '#FFFFFF',
-        padding: active ? '7px 14px' : '6px 12px',
-        borderRadius: '20px',
-        fontSize: active ? '13px' : '12px',
-        fontWeight: 800,
-        whiteSpace: 'nowrap',
         boxShadow: active
-          ? '0 8px 24px rgba(201,169,106,0.65), 0 0 0 3px #FFFFFF'
-          : '0 4px 16px rgba(0,0,0,0.3), 0 0 0 2px rgba(255,255,255,0.95)',
+          ? '0 8px 24px rgba(201,169,106,0.65), 0 0 0 4px #FFFFFF'
+          : '0 4px 16px rgba(0,0,0,0.35), 0 0 0 3px rgba(255,255,255,0.95)',
         border: 'none',
-        transform: active ? 'scale(1.18)' : 'scale(1)',
+        transform: active ? 'scale(1.15)' : 'scale(1)',
         transition: 'all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
-        fontFamily: "'Outfit', 'Cairo', sans-serif",
         cursor: 'pointer',
       }}
     >
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <svg width={active ? '18' : '15'} height={active ? '18' : '15'} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
         <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/>
         <circle cx="12" cy="10" r="3"/>
       </svg>
-      <span>{priceText}</span>
     </div>
   );
 
+  const anchor = Math.round(size / 2);
   return divIcon({
     html,
     className: '',
-    iconAnchor: [48, 16],
-    popupAnchor: [0, -22],
+    iconSize: [size, size],
+    iconAnchor: [anchor, anchor],
+    popupAnchor: [0, -anchor - 4],
   });
 }
 
@@ -331,7 +323,7 @@ export default function MapExplorer({ properties, locale }: MapExplorerProps) {
               <Marker
                 key={p.id}
                 position={[p.latitude, p.longitude]}
-                icon={makeMarkerIcon(p.price_egp, locale, isActive, isCompact)}
+                icon={makeMarkerIcon(isActive)}
                 eventHandlers={{ click: () => handleMarkerClick(p) }}
                 zIndexOffset={isActive ? 1000 : 0}
               >
