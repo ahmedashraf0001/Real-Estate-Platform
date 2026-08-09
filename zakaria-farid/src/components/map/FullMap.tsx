@@ -16,43 +16,44 @@ import {
 } from 'lucide-react';
 import styles from './MapExplorer.module.css';
 
-// ─── Custom Marker Icon (Clean Branded Luxury Location Pin Badge) ────────────
+// ─── Custom Marker Icon (Teardrop Pinpoint Marker) ────────────
 function makeMarkerIcon(active: boolean) {
-  const size = active ? 38 : 32;
+  const width = active ? 36 : 30;
+  const height = active ? 46 : 38;
+  const fill = active ? '#C9A96A' : '#1E4D3D';
+  const stroke = active ? '#FFFFFF' : '#C9A96A';
+
   const html = renderToStaticMarkup(
     <div
       style={{
+        filter: active ? 'drop-shadow(0 8px 18px rgba(201,169,106,0.65))' : 'drop-shadow(0 4px 12px rgba(0,0,0,0.35))',
+        cursor: 'pointer',
+        transform: active ? 'scale(1.12)' : 'scale(1)',
+        transition: 'all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        width: `${size}px`,
-        height: `${size}px`,
-        borderRadius: '50%',
-        background: active ? '#C9A96A' : '#1E4D3D',
-        color: active ? '#102A21' : '#FFFFFF',
-        boxShadow: active
-          ? '0 8px 24px rgba(201,169,106,0.65), 0 0 0 4px #FFFFFF'
-          : '0 4px 16px rgba(0,0,0,0.35), 0 0 0 3px rgba(255,255,255,0.95)',
-        border: 'none',
-        transform: active ? 'scale(1.15)' : 'scale(1)',
-        transition: 'all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
-        cursor: 'pointer',
       }}
     >
-      <svg width={active ? '18' : '15'} height={active ? '18' : '15'} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/>
-        <circle cx="12" cy="10" r="3"/>
+      <svg width={width} height={height} viewBox="0 0 36 46" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path
+          d="M18 0C8.05887 0 0 8.05887 0 18C0 31.5 18 46 18 46C18 46 36 31.5 36 18C36 8.05887 27.9411 0 18 0Z"
+          fill={fill}
+          stroke={stroke}
+          strokeWidth="2.5"
+        />
+        <circle cx="18" cy="17" r="7" fill={active ? '#102A21' : '#FFFFFF'} />
+        <circle cx="18" cy="17" r="3.5" fill={active ? '#C9A96A' : '#1E4D3D'} />
       </svg>
     </div>
   );
 
-  const anchor = Math.round(size / 2);
   return divIcon({
     html,
     className: '',
-    iconSize: [size, size],
-    iconAnchor: [anchor, anchor],
-    popupAnchor: [0, -anchor - 4],
+    iconSize: [width, height],
+    iconAnchor: [width / 2, height],
+    popupAnchor: [0, -height + 4],
   });
 }
 

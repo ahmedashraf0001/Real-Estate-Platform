@@ -5,7 +5,7 @@ import { useRef, useState, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { motion, useScroll, useTransform, AnimatePresence } from 'framer-motion';
-import { ArrowRight, MapPin, MessageCircle, Sparkles, Award, Building2, ShieldCheck, Star } from 'lucide-react';
+import { ArrowRight, MapPin, MessageCircle, Sparkles, Award, Building2, ShieldCheck, Star, ChevronDown } from 'lucide-react';
 import { whatsappUrl, WHATSAPP_NUMBER } from '@/lib/utils/formatting';
 import SmartSearchDock from '@/components/search/SmartSearchDock';
 import styles from './HeroSection.module.css';
@@ -129,8 +129,29 @@ export default function HeroSection({ locale }: HeroSectionProps) {
         </div>
       </motion.div>
 
-      {/* Smooth Transition Gradient to rest of home page */}
-      <div className={styles.bottomFadeTransition} />
+      {/* Animated Scroll Down Indicator */}
+      <motion.button
+        type="button"
+        aria-label="Scroll Down"
+        className={styles.scrollDownBtn}
+        onClick={() => {
+          const el = document.getElementById('trust-section');
+          if (el) {
+            el.scrollIntoView({ behavior: 'smooth' });
+          } else {
+            window.scrollTo({ top: window.innerHeight * 0.9, behavior: 'smooth' });
+          }
+        }}
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: [0, 6, 0] }}
+        transition={{
+          y: { repeat: Infinity, duration: 2, ease: 'easeInOut' },
+          opacity: { duration: 0.8 },
+        }}
+      >
+        <span className={styles.scrollText}>{isAr ? 'اسحب للأسفل' : 'Scroll Down'}</span>
+        <ChevronDown size={16} className={styles.scrollIcon} />
+      </motion.button>
     </section>
   );
 }

@@ -51,7 +51,7 @@ export default function TrustPillars({ locale }: { locale: string }) {
   const isAr = locale === 'ar';
 
   return (
-    <section className={styles.section}>
+    <section id="trust-section" className={styles.section}>
       <div className="container">
         {/* Section Header */}
         <motion.div

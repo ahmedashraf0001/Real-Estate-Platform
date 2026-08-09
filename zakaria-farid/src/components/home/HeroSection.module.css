@@ -60,24 +60,6 @@
   z-index: 1;
 }
 
-/* Smooth Luxury Transition Gradient to rest of homepage */
-.bottomFadeTransition {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 160px;
-  background: linear-gradient(
-    to bottom,
-    rgba(15, 43, 34, 0) 0%,
-    rgba(15, 43, 34, 0.35) 30%,
-    rgba(247, 247, 247, 0.75) 75%,
-    var(--color-bg, #F7F7F7) 100%
-  );
-  pointer-events: none;
-  z-index: 2;
-}
-
 .gridOverlay {
   position: absolute;
   inset: 0;
@@ -364,6 +346,47 @@
 
 .arrowRtl {
   transform: rotate(180deg);
+}
+
+/* ─── Scroll Down Indicator Button ─────────────────────── */
+.scrollDownBtn {
+  position: absolute;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  background: rgba(12, 28, 22, 0.7);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(201, 169, 106, 0.3);
+  padding: 6px 14px;
+  border-radius: 20px;
+  color: #C9A96A;
+  cursor: pointer;
+  z-index: 10;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+  transition: all 0.2s ease;
+}
+
+.scrollDownBtn:hover {
+  background: rgba(12, 28, 22, 0.95);
+  border-color: #C9A96A;
+  color: #FFFFFF;
+}
+
+.scrollText {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-family: var(--font-sans);
+}
+
+.scrollIcon {
+  color: #C9A96A;
 }
 
 /* ─── RTL ───────────────────────────────────── */

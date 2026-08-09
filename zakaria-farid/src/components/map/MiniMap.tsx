@@ -30,25 +30,27 @@ function MapController({ center, zoom }: { center: [number, number]; zoom: numbe
 }
 
 function makePricePin() {
+  const width = 30;
+  const height = 38;
   const html = renderToStaticMarkup(
     <div
       style={{
+        filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.35))',
+        cursor: 'pointer',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        width: '32px',
-        height: '32px',
-        borderRadius: '50%',
-        background: '#1E4D3D',
-        color: '#FFFFFF',
-        boxShadow: '0 4px 16px rgba(0,0,0,0.35), 0 0 0 3px rgba(255,255,255,0.95)',
-        border: 'none',
-        cursor: 'pointer',
       }}
     >
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/>
-        <circle cx="12" cy="10" r="3"/>
+      <svg width={width} height={height} viewBox="0 0 36 46" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path
+          d="M18 0C8.05887 0 0 8.05887 0 18C0 31.5 18 46 18 46C18 46 36 31.5 36 18C36 8.05887 27.9411 0 18 0Z"
+          fill="#1E4D3D"
+          stroke="#C9A96A"
+          strokeWidth="2.5"
+        />
+        <circle cx="18" cy="17" r="7" fill="#FFFFFF" />
+        <circle cx="18" cy="17" r="3.5" fill="#1E4D3D" />
       </svg>
     </div>
   );
@@ -56,9 +58,9 @@ function makePricePin() {
   return divIcon({
     html,
     className: '',
-    iconSize: [32, 32],
-    iconAnchor: [16, 16],
-    popupAnchor: [0, -20],
+    iconSize: [width, height],
+    iconAnchor: [width / 2, height],
+    popupAnchor: [0, -height + 4],
   });
 }
 
