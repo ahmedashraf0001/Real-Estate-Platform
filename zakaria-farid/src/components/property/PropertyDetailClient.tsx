@@ -18,6 +18,8 @@ import MobileLeadBar from '@/components/layout/MobileLeadBar';
 import type { Property, SpecLayer } from '@/lib/supabase/types';
 import type { ZoneInstance } from '@/lib/layering/instances';
 import FinishingDetailsDisplay from './FinishingDetailsDisplay';
+import UnitDetailModal from './UnitDetailModal';
+import InteractiveSitePlan from './InteractiveSitePlan';
 import styles from './PropertyDetailClient.module.css';
 
 interface PropertyDetailClientProps {
@@ -53,6 +55,7 @@ export default function PropertyDetailClient({ property, locale, similar }: Prop
   const t = useTranslations('property');
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [activeImg, setActiveImg] = useState(0);
+  const [unitModalOpen, setUnitModalOpen] = useState(false);
 
   useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
@@ -857,6 +860,23 @@ export default function PropertyDetailClient({ property, locale, similar }: Prop
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* ─── Interactive Master Site Plan (RBI Spec) ────── */}
+      <InteractiveSitePlan
+        propertyTitle={title}
+        locale={locale}
+        onOpenUnitModal={() => setUnitModalOpen(true)}
+      />
+
+      {/* ─── Unit Detail Floor Plan Modal ─────────────── */}
+      <UnitDetailModal
+        isOpen={unitModalOpen}
+        onClose={() => setUnitModalOpen(false)}
+        propertyTitle={title}
+        price={property.price_egp}
+        locale={locale}
+        areaSqm={property.area_sqm}
+      />
 
       <MobileLeadBar propertyTitle={title} locale={locale} onOpenLeadModal={handleOpenLeadModal} />
     </div>
