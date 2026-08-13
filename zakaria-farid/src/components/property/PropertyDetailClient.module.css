@@ -1,7 +1,8 @@
 .root { 
-  padding-top: 100px; 
+  padding-top: 96px; 
   min-height: 100vh; 
-  background: var(--color-bg);
+  background: var(--color-midnight);
+  color: var(--color-text-on-dark);
 }
 
 /* ─── Gallery Wrapper ───────────────────────── */

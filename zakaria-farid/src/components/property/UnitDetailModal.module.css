@@ -1,0 +1,264 @@
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-modal);
+  background: rgba(15, 17, 21, 0.75);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.modal {
+  width: 100%;
+  max-width: 1040px;
+  background: var(--color-ivory);
+  color: var(--color-text-on-light);
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  box-shadow: var(--shadow-modal);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 24px 32px;
+  background: var(--color-cocoa);
+  color: var(--color-ivory);
+}
+
+.headerMeta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.unitCode {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  color: var(--color-camel-light);
+}
+
+.unitTitle {
+  font-family: var(--font-serif);
+  font-size: 22px;
+  font-weight: 700;
+
+}
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.iconBtn, .closeBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(249, 240, 236, 0.12);
+  color: var(--color-ivory);
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.iconBtn:hover, .closeBtn:hover {
+  background: var(--color-camel);
+}
+
+.bodyGrid {
+  display: grid;
+  grid-template-columns: 380px 1fr;
+  gap: 0;
+  min-height: 520px;
+}
+
+.colLeft {
+  padding: 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  border-right: 1px solid rgba(30, 32, 38, 0.1);
+}
+
+.priceWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.priceLabel {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: var(--color-camel);
+}
+
+.priceVal {
+  font-family: var(--font-serif);
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--color-midnight);
+}
+
+.paymentToggle {
+  display: flex;
+  background: rgba(30, 32, 38, 0.06);
+  padding: 3px;
+  border-radius: var(--radius-md);
+  gap: 2px;
+}
+
+.payTab {
+  flex: 1;
+  padding: 8px 4px;
+  font-size: 11px;
+  font-weight: 700;
+  border-radius: var(--radius-sm);
+  border: none;
+  background: transparent;
+  color: var(--color-midnight);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.payTabActive {
+  background: var(--color-camel);
+  color: var(--color-ivory);
+}
+
+.specList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(30, 32, 38, 0.1);
+}
+
+.specRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 13px;
+}
+
+.specRow span {
+  color: var(--color-text-muted-light);
+}
+
+.specRow strong {
+  color: var(--color-midnight);
+}
+
+.tagGroup {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.tagPill {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+  background: rgba(172, 128, 84, 0.12);
+  color: var(--color-camel);
+}
+
+.colRight {
+  padding: 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  background: #ffffff;
+}
+
+.planTabs {
+  display: flex;
+  gap: 8px;
+  border-bottom: 1px solid rgba(30, 32, 38, 0.1);
+  padding-bottom: 12px;
+}
+
+.tabBtn {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 6px 12px;
+  border-radius: var(--radius-sm);
+  border: none;
+  background: transparent;
+  color: var(--color-text-muted-light);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.tabBtnActive {
+  color: var(--color-camel);
+  background: rgba(172, 128, 84, 0.1);
+}
+
+.planCanvas {
+  position: relative;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-ivory);
+  border-radius: var(--radius-lg);
+  border: 1px solid rgba(30, 32, 38, 0.08);
+  padding: 20px;
+}
+
+.svgCanvas {
+  width: 100%;
+  height: 100%;
+  max-height: 360px;
+}
+
+.canvasControls {
+  position: absolute;
+  bottom: 16px;
+  right: 16px;
+  display: flex;
+  gap: 8px;
+}
+
+.compassBtn, .expandBtn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  border-radius: var(--radius-full);
+  background: var(--color-midnight);
+  color: var(--color-ivory);
+  font-size: 11px;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+}
+
+/* RTL */
+[dir="rtl"] .colLeft {
+  border-right: none;
+  border-left: 1px solid rgba(30, 32, 38, 0.1);
+}
+
+/* Responsive */
+@media (max-width: 860px) {
+  .bodyGrid {
+    grid-template-columns: 1fr;
+  }
+  .colLeft {
+    border: none;
+    border-bottom: 1px solid rgba(30, 32, 38, 0.1);
+  }
+}

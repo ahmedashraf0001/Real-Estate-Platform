@@ -1,0 +1,78 @@
+.section {
+  background: var(--color-ivory);
+  color: var(--color-text-on-light);
+  padding: 100px 0;
+  border-bottom: 1px solid rgba(30, 32, 38, 0.08);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1.3fr;
+  gap: 64px;
+  align-items: start;
+}
+
+.colLeft {
+  display: flex;
+  flex-direction: column;
+}
+
+.title {
+  font-family: var(--font-serif);
+  font-size: clamp(28px, 3.2vw, 42px);
+  font-weight: 700;
+  line-height: 1.25;
+  color: var(--color-midnight);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.colRight {
+  display: flex;
+  flex-direction: column;
+  gap: 36px;
+}
+
+.leadText {
+  font-size: 17px;
+  line-height: 1.75;
+  color: var(--color-text-muted-light);
+  font-weight: 400;
+}
+
+.briefGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 24px;
+  padding-top: 24px;
+  border-top: 1px solid rgba(30, 32, 38, 0.12);
+}
+
+.briefItem {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.briefLabel {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-camel);
+}
+
+.briefVal {
+  font-family: var(--font-serif);
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--color-midnight);
+}
+
+/* ─── Responsive ──────────────────────────────── */
+@media (max-width: 900px) {
+  .grid {
+    grid-template-columns: 1fr;
+    gap: 36px;
+  }
+}

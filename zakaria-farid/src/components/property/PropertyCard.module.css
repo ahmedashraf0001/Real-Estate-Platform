@@ -1,10 +1,10 @@
 /* ─── Card Container ─────────────────────────── */
 .card {
   position: relative;
-  border-radius: 20px;
-  background: #ffffff;
-  border: 1px solid rgba(201, 169, 106, 0.22);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.04);
+  border-radius: var(--radius-lg);
+  background: var(--color-midnight-surface);
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-card);
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -16,13 +16,13 @@
 
 .card:hover {
   transform: translateY(-6px);
-  border-color: #C9A96A;
-  box-shadow: 0 20px 45px rgba(0, 0, 0, 0.08), 0 0 25px rgba(201, 169, 106, 0.12);
+  border-color: var(--color-camel);
+  box-shadow: var(--shadow-card-hover);
 }
 
 .cardList {
   flex-direction: row;
-  height: 230px;
+  height: 240px;
 }
 
 /* ─── Image Header ───────────────────────────── */
@@ -30,10 +30,12 @@
   position: relative;
   width: 100%;
   padding-bottom: 54%;
-  background: #f0eedf;
+  background: var(--color-cocoa);
   display: block;
   overflow: hidden;
   flex-shrink: 0;
+  border-top-left-radius: var(--radius-lg);
+  border-top-right-radius: var(--radius-lg);
 }
 
 .imgWrapperList {
@@ -41,6 +43,8 @@
   min-width: 320px;
   padding-bottom: 0;
   height: 100%;
+  border-top-right-radius: 0;
+  border-bottom-left-radius: var(--radius-lg);
 }
 
 .img {
@@ -58,7 +62,7 @@
   left: 0;
   right: 0;
   height: 70px;
-  background: linear-gradient(to bottom, rgba(10, 25, 20, 0.6) 0%, transparent 100%);
+  background: linear-gradient(to bottom, rgba(15, 17, 21, 0.7) 0%, transparent 100%);
   pointer-events: none;
   z-index: 1;
 }
@@ -87,33 +91,29 @@
   align-items: center;
   gap: 5px;
   padding: 5px 12px;
-  border-radius: 20px;
-  background: rgba(30, 77, 61, 0.88);
-  color: #ffffff;
+  border-radius: var(--radius-full);
+  background: var(--color-camel);
+  color: var(--color-ivory);
   font-size: 11px;
   font-weight: 700;
-  letter-spacing: 0.02em;
-  backdrop-filter: blur(8px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  letter-spacing: 0.04em;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
 }
 
 .statusIcon {
-  color: #C9A96A;
+  color: var(--color-ivory);
   flex-shrink: 0;
 }
 
 .typeTag {
   padding: 5px 12px;
-  border-radius: 20px;
-  background: rgba(255, 255, 255, 0.92);
-  color: #1E4D3D;
+  border-radius: var(--radius-full);
+  background: var(--color-ivory);
+  color: var(--color-midnight);
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.04em;
-  backdrop-filter: blur(8px);
-  border: 1px solid rgba(201, 169, 106, 0.3);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
 .saveBtn {
@@ -123,34 +123,34 @@
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.92);
-  color: #6b7280;
-  border: none;
+  background: rgba(30, 32, 38, 0.75);
+  color: var(--color-ivory);
+  border: 1px solid rgba(249, 240, 236, 0.2);
   cursor: pointer;
   backdrop-filter: blur(8px);
   transition: transform 0.2s ease, color 0.2s ease, background 0.2s ease;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
   flex-shrink: 0;
 }
 
 .saveBtn:hover {
   transform: scale(1.1);
   color: #ef4444;
-  background: #ffffff;
+  background: var(--color-midnight-surface);
 }
 
 .saveBtnActive {
   color: #ef4444;
-  background: #ffffff;
+  background: var(--color-midnight-surface);
 }
 
 /* ─── Card Body ──────────────────────────────── */
 .body {
-  padding: 18px 20px 22px 20px;
+  padding: 20px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  gap: 12px;
+  gap: 14px;
   flex: 1;
 }
 
@@ -165,21 +165,23 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 12.5px;
-  font-weight: 600;
-  color: #a67c33;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--color-camel);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 
 .pinIcon {
-  color: #a67c33;
+  color: var(--color-camel);
   flex-shrink: 0;
 }
 
 .title {
   font-family: var(--font-serif);
-  font-size: 16.5px;
+  font-size: 17px;
   font-weight: 700;
-  color: var(--color-primary);
+  color: var(--color-ivory);
   line-height: 1.3;
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -190,7 +192,7 @@
 }
 
 .title:hover {
-  color: #C9A96A;
+  color: var(--color-camel);
 }
 
 /* ─── Specs Bar ──────────────────────────────── */
@@ -199,9 +201,9 @@
   align-items: center;
   justify-content: flex-start;
   padding: 10px 14px;
-  border-radius: 12px;
-  background: #f9f8f5;
-  border: 1px solid rgba(201, 169, 106, 0.22);
+  border-radius: var(--radius-md);
+  background: rgba(249, 240, 236, 0.04);
+  border: 1px solid var(--color-border);
   gap: 12px;
   overflow-x: auto;
   scrollbar-width: none;
@@ -222,14 +224,14 @@
 }
 
 .specIcon {
-  color: var(--color-primary);
+  color: var(--color-camel);
   flex-shrink: 0;
 }
 
 .specText {
   font-size: 12px;
   font-weight: 700;
-  color: var(--color-primary);
+  color: var(--color-ivory);
   line-height: 1;
   white-space: nowrap;
 }
@@ -237,25 +239,9 @@
 .specDivider {
   width: 1px;
   height: 12px;
-  background: rgba(201, 169, 106, 0.3);
+  background: var(--color-border);
   flex-shrink: 0;
   align-self: center;
-}
-
-.finishingItem {
-  margin-inline-start: auto;
-}
-
-.specIconGold {
-  color: #a67c33;
-  flex-shrink: 0;
-}
-
-.finishingText {
-  font-size: 12px;
-  font-weight: 700;
-  color: #a67c33;
-  white-space: nowrap;
 }
 
 /* ─── Card Footer ────────────────────────────── */
@@ -264,8 +250,8 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding-top: 12px;
-  border-top: 1px solid rgba(201, 169, 106, 0.15);
+  padding-top: 14px;
+  border-top: 1px solid var(--color-border);
 }
 
 .priceBlock {
@@ -277,16 +263,16 @@
 .priceLabel {
   font-size: 10px;
   font-weight: 700;
-  color: #9ca3af;
+  color: var(--color-text-muted);
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.08em;
 }
 
 .priceValue {
-  font-family: var(--font-sans);
-  font-size: 16px;
-  font-weight: 800;
-  color: var(--color-primary);
+  font-family: var(--font-serif);
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--color-camel);
   line-height: 1;
   white-space: nowrap;
 }
@@ -303,45 +289,45 @@
   justify-content: center;
   width: 36px;
   height: 36px;
-  border-radius: 10px;
-  border: 1px solid rgba(201, 169, 106, 0.25);
-  background: #ffffff;
-  color: #6b7280;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background: transparent;
+  color: var(--color-ivory);
   cursor: pointer;
   transition: all 0.2s ease;
   flex-shrink: 0;
 }
 
 .compareBtn:hover {
-  border-color: var(--color-primary);
-  color: var(--color-primary);
-  background: rgba(30, 77, 61, 0.05);
+  border-color: var(--color-camel);
+  color: var(--color-camel);
+  background: rgba(172, 128, 84, 0.1);
 }
 
 .compareBtnActive {
-  border-color: #C9A96A;
-  color: #a67c33;
-  background: rgba(201, 169, 106, 0.12);
+  border-color: var(--color-camel);
+  color: var(--color-ivory);
+  background: var(--color-camel);
 }
 
 .detailsBtn {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  padding: 7px 12px;
-  border-radius: 9px;
-  background: var(--color-primary);
-  color: #ffffff;
-  font-size: 11.5px;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: var(--radius-md);
+  background: var(--color-camel);
+  color: var(--color-ivory);
+  font-size: 12px;
   font-weight: 700;
   text-decoration: none;
-  transition: background 0.2s ease, transform 0.15s ease;
+  transition: all 0.2s ease;
   white-space: nowrap;
   flex-shrink: 0;
 }
 
 .detailsBtn:hover {
-  background: var(--color-primary-hover);
+  background: var(--color-camel-hover);
   transform: translateY(-1px);
 }
 

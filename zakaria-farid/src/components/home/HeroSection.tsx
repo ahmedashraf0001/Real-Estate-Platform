@@ -28,11 +28,12 @@ export default function HeroSection({ locale }: HeroSectionProps) {
   const isAr = locale === 'ar';
   const targetRef = useRef<HTMLDivElement>(null);
   const [activeSlide, setActiveSlide] = useState(0);
+  const [spotlightIdx, setSpotlightIdx] = useState(0);
 
   useEffect(() => {
     const timer = setInterval(() => {
       setActiveSlide((prev) => (prev + 1) % HERO_SLIDES.length);
-    }, 5500);
+    }, 6000);
     return () => clearInterval(timer);
   }, []);
 
@@ -41,21 +42,21 @@ export default function HeroSection({ locale }: HeroSectionProps) {
     offset: ['start start', 'end start'],
   });
 
-  const bgScale = useTransform(scrollYProgress, [0, 1], [1, 1.15]);
-  const contentY = useTransform(scrollYProgress, [0, 1], [0, 80]);
-  const opacity = useTransform(scrollYProgress, [0, 0.8], [1, 0]);
+  const bgScale = useTransform(scrollYProgress, [0, 1], [1, 1.12]);
+  const contentY = useTransform(scrollYProgress, [0, 1], [0, 60]);
+  const opacity = useTransform(scrollYProgress, [0, 0.85], [1, 0]);
 
   return (
     <section ref={targetRef} className={styles.hero}>
-      {/* Background Image Slideshow with Smooth Crossfade & Ken Burns Scale */}
+      {/* Background Image Slideshow */}
       <motion.div style={{ scale: bgScale }} className={styles.bgImg}>
         <AnimatePresence mode="popLayout">
           <motion.div
             key={activeSlide}
-            initial={{ opacity: 0, scale: 1.06 }}
-            animate={{ opacity: 1, scale: 1.02 }}
-            exit={{ opacity: 0, scale: 1 }}
-            transition={{ duration: 1.6, ease: [0.16, 1, 0.3, 1] }}
+            initial={{ opacity: 0, scale: 1.05 }}
+            animate={{ opacity: 1, scale: 1.01 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 1.8, ease: [0.16, 1, 0.3, 1] }}
             style={{ position: 'absolute', inset: 0 }}
           >
             <Image
@@ -74,68 +75,94 @@ export default function HeroSection({ locale }: HeroSectionProps) {
       {/* Content */}
       <motion.div style={{ y: contentY, opacity }} className={`container ${styles.content}`}>
         <div className={styles.inner}>
-          {/* Eyebrow Pill */}
-          <div className={styles.labelWrap}>
-            <Sparkles size={12} className={styles.labelDot} />
-            <span className={styles.labelText}>{isAr ? 'زكريا فريد للعقارات الفاخرة' : 'Zakaria Farid Real Estate'}</span>
+          {/* Rotating Decorative Circle Element */}
+          <div className={styles.rotatingBadgeWrap}>
+            <motion.div
+              animate={{ rotate: 360 }}
+              transition={{ repeat: Infinity, duration: 20, ease: 'linear' }}
+              className={styles.rotatingBadge}
+            >
+              <svg viewBox="0 0 100 100" width="80" height="80">
+                <path
+                  id="circlePath"
+                  d="M 50, 50 m -37, 0 a 37,37 0 1,1 74,0 a 37,37 0 1,1 -74,0"
+                  fill="none"
+                />
+                <text fill="#AC8054" fontSize="9.5" fontWeight="700" letterSpacing="1.8">
+                  <textPath href="#circlePath">
+                    {isAr ? '• زكريا فريد للعقارات الفاخرة • التميز' : '• ZAKARIA FARID • REAL ESTATE • ART'}
+                  </textPath>
+                </text>
+              </svg>
+            </motion.div>
           </div>
 
           {/* Headline */}
           <h1 className={styles.headline}>
-            {t('headline')}
+            {isAr ? (
+              <>
+                الفخامة في <span className={styles.camelWord}>أرقى العقارات</span> المباشرة
+              </>
+            ) : (
+              <>
+                THE ART OF <span className={styles.camelWord}>LUXURY REAL ESTATE</span>
+              </>
+            )}
           </h1>
 
-          {/* Sub */}
+          {/* Subheadline */}
           <p className={styles.sub}>
             {t('subheadline')}
           </p>
 
-          {/* Real-Time Smart Search Dock */}
-          <div>
+          {/* Search Dock sitting below fold */}
+          <div className={styles.searchDockWrap}>
             <SmartSearchDock locale={locale} />
-          </div>
-
-          {/* CTA Buttons */}
-          <div className={styles.actions}>
-            <Link href={`/${locale}/properties`} className={styles.btnSecondary}>
-              {t('cta_browse')}
-              <ArrowRight size={15} strokeWidth={2} className={isAr ? styles.arrowRtl : ''} />
-            </Link>
-            <Link href={`/${locale}/map`} className={styles.btnSecondary} style={{ background: 'rgba(255, 255, 255, 0.15)', borderColor: 'rgba(255, 255, 255, 0.3)' }}>
-              <MapPin size={15} strokeWidth={2} />
-              <span>{isAr ? 'استكشف الخريطة التفاعلية' : 'Explore Interactive Map'}</span>
-            </Link>
           </div>
         </div>
 
-        {/* Stats bar */}
-        <div className={styles.statsBar}>
-          {[
-            { value: '20+', label: isAr ? 'سنة خبرة وتطوير' : 'Years Mastery', icon: Award },
-            { value: '150+', label: isAr ? 'وحدة تم تسليمها' : 'Estates Delivered', icon: ShieldCheck },
-            { value: '0%', label: isAr ? 'عمولة وساطة' : 'Broker Commission', icon: Building2 },
-            { value: '5★', label: isAr ? 'تقييم العملاء المميزين' : 'VIP Client Rating', icon: Star },
-          ].map(({ value, label, icon: Icon }) => (
-            <div key={label} className={styles.stat}>
-              <div className={styles.statIconWrap}>
-                <Icon size={18} strokeWidth={1.5} />
-              </div>
-              <div className={styles.statMeta}>
-                <span className={styles.statValue}>{value}</span>
-                <span className={styles.statLabel}>{label}</span>
-              </div>
-            </div>
-          ))}
+        {/* Floating Spotlight Card (Bottom Right) */}
+        <div className={styles.spotlightCard}>
+          <div className={styles.spotlightImgWrap}>
+            <Image
+              src={HERO_SLIDES[spotlightIdx].src}
+              alt="Featured Spotlight"
+              fill
+              style={{ objectFit: 'cover' }}
+            />
+          </div>
+          <div className={styles.spotlightMeta}>
+            <span className={styles.spotlightBadge}>{isAr ? 'مشروع مميز' : 'FEATURED ESTATE'}</span>
+            <p className={styles.spotlightTitle}>
+              {isAr ? 'فيلا مائية فاخرة بالشيخ زايد' : 'Waterfront Villa · Sheikh Zayed'}
+            </p>
+          </div>
+          <div className={styles.spotlightNav}>
+            <button
+              onClick={() => setSpotlightIdx((prev) => (prev - 1 + HERO_SLIDES.length) % HERO_SLIDES.length)}
+              className={styles.spotlightArrow}
+              aria-label="Previous"
+            >
+              ‹
+            </button>
+            <button
+              onClick={() => setSpotlightIdx((prev) => (prev + 1) % HERO_SLIDES.length)}
+              className={styles.spotlightArrow}
+              aria-label="Next"
+            >
+              ›
+            </button>
+          </div>
         </div>
       </motion.div>
 
-      {/* Animated Scroll Down Indicator */}
+      {/* Line-Art Animated Scroll Chevron */}
       <motion.button
         type="button"
         aria-label="Scroll Down"
         className={styles.scrollDownBtn}
         onClick={() => {
-          const el = document.getElementById('trust-section');
+          const el = document.getElementById('brand-about-section') || document.getElementById('trust-section');
           if (el) {
             el.scrollIntoView({ behavior: 'smooth' });
           } else {
@@ -149,7 +176,7 @@ export default function HeroSection({ locale }: HeroSectionProps) {
           opacity: { duration: 0.8 },
         }}
       >
-        <span className={styles.scrollText}>{isAr ? 'اسحب للأسفل' : 'Scroll Down'}</span>
+        <span className={styles.scrollText}>{isAr ? 'اسحب للأسفل' : 'SCROLL DOWN'}</span>
         <ChevronDown size={16} className={styles.scrollIcon} />
       </motion.button>
     </section>

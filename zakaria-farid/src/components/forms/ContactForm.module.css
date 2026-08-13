@@ -2,24 +2,31 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
+  background: var(--color-ivory);
+  color: var(--color-text-on-light);
+  padding: 28px;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  border: 1px solid rgba(30, 32, 38, 0.1);
 }
 
 .compact {
   gap: var(--space-2);
+  padding: 20px;
 }
 
 .propertyRef {
   font-size: 13px;
-  color: var(--color-text-muted);
+  color: var(--color-text-muted-light);
   padding: 10px 12px;
-  background: var(--color-bg);
+  background: rgba(30, 32, 38, 0.05);
   border-radius: var(--radius-sm);
-  border-left: 3px solid var(--color-accent);
+  border-left: 3px solid var(--color-camel);
 }
 
 [dir="rtl"] .propertyRef {
   border-left: none;
-  border-right: 3px solid var(--color-accent);
+  border-right: 3px solid var(--color-camel);
 }
 
 .field {

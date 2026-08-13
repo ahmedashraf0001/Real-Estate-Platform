@@ -70,7 +70,7 @@ export default function Header({ locale }: HeaderProps) {
                 <Link
                   key={key}
                   href={fullHref}
-                  className={`${styles.navLink} ${isActive ? styles.navLinkActive : ''}`}
+                  className={`${styles.navLink} ${isActive ? styles.navLinkPill : ''}`}
                 >
                   {t(key)}
                 </Link>
@@ -90,7 +90,7 @@ export default function Header({ locale }: HeaderProps) {
               className={styles.waBtn}
               aria-label="WhatsApp"
             >
-              <MessageCircle size={17} strokeWidth={1.5} />
+              <MessageCircle size={16} strokeWidth={1.8} />
               <span className={styles.waBtnText}>{locale === 'ar' ? 'واتساب' : 'WhatsApp'}</span>
             </a>
             {/* Mobile menu toggle */}

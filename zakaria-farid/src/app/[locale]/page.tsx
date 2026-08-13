@@ -1,7 +1,8 @@
 import { getTranslations } from 'next-intl/server';
 import { getFeaturedProperties, getAllProperties } from '@/lib/supabase/queries';
 import HeroSection from '@/components/home/HeroSection';
-import TrustPillars from '@/components/home/TrustPillars';
+import BrandAboutSection from '@/components/home/BrandAboutSection';
+import BrandStatsSection from '@/components/home/BrandStatsSection';
 import FeaturedProperties from '@/components/home/FeaturedProperties';
 import MapPreview from '@/components/home/MapPreview';
 import CtaBand from '@/components/home/CtaBand';
@@ -37,7 +38,10 @@ export default async function HomePage({ params }: Props) {
         <HeroSection locale={locale} />
       </section>
       <section className={styles.snapSection}>
-        <TrustPillars locale={locale} />
+        <BrandAboutSection locale={locale} />
+      </section>
+      <section className={styles.snapSection}>
+        <BrandStatsSection locale={locale} />
       </section>
       <section className={styles.snapSection}>
         <FeaturedProperties properties={featuredProperties} locale={locale} />

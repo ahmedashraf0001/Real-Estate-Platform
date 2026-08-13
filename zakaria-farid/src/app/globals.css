@@ -116,36 +116,50 @@
   font-display: swap;
 }
 
-/* ─── CSS Custom Properties ─────────────────────────────────────── */
+/* ─── CSS Custom Properties (RBI Design System) ─────────────────── */
 :root {
-  /* Colors */
-  --color-bg:             #F7F7F7;
-  --color-bg-dark:        #2D2D2D;
-  --color-surface:        #FFFFFF;
-  --color-surface-dark:   #3A3A3A;
-  --color-primary:        #1E4D3D;
-  --color-primary-hover:  #163d30;
-  --color-accent:         #C9A96A;
-  --color-accent-rgb:     201, 169, 106;
-  --color-accent-light:   #E8D2A6;
-  --color-text:           #1A1A1A;
-  --color-text-muted:     #6B6B6B;
-  --color-text-light:     #F7F7F7;
-  --color-border:         #E2E2E2;
-  --color-border-accent:  #C9A96A;
-  --color-overlay:        rgba(0, 0, 0, 0.45);
+  /* RBI Core Color Tokens */
+  --color-ivory:            #F9F0EC;      /* light section backgrounds, highlights */
+  --color-camel:            #AC8054;      /* accent elements, headings, CTAs */
+  --color-camel-hover:      #966D43;
+  --color-camel-light:      #C99B6D;
+  --color-cocoa:            #593F36;      /* accentuated blocks, project backgrounds */
+  --color-cocoa-hover:      #48322B;
+  --color-midnight:         #1E2026;      /* base dark background */
+  --color-midnight-surface: #272A32;
 
-  /* Status colors (low-saturation per addendum §3) */
-  --color-status-active:        #4A7C59;
-  --color-status-active-bg:     #EAF3EC;
-  --color-status-offer:         #B07D2A;
-  --color-status-offer-bg:      #FDF4E3;
-  --color-status-sold:          #8B4A40;
-  --color-status-sold-bg:       #F7EDEB;
+  /* Theme Mapping */
+  --color-bg:               var(--color-midnight);
+  --color-surface:          var(--color-midnight-surface);
+  --color-primary:          var(--color-camel);
+  --color-primary-hover:    var(--color-camel-hover);
+  --color-accent:           var(--color-camel);
+  --color-accent-rgb:       172, 128, 84;
+  --color-accent-light:     var(--color-camel-light);
+
+  --color-text:             var(--color-text-on-dark);
+  --color-text-on-dark:     #F9F0EC;
+  --color-text-on-light:    #1E2026;
+  --color-text-muted:       rgba(249, 240, 236, 0.6);   /* muted text on dark */
+  --color-text-muted-light: rgba(30, 32, 38, 0.55);   /* muted text on light */
+
+  --color-border:           rgba(249, 240, 236, 0.15);
+  --color-border-light:     rgba(30, 32, 38, 0.15);
+  --color-border-accent:    var(--color-camel);
+  --color-overlay:           rgba(15, 17, 21, 0.75);
+
+  /* Status Colors */
+  --color-status-active:    #AC8054;
+  --color-status-active-bg: #F9F0EC;
+  --color-status-offer:     #C99B6D;
+  --color-status-offer-bg:  #F9F0EC;
+  --color-status-sold:      #593F36;
+  --color-status-sold-bg:   #F9F0EC;
 
   /* Typography */
   --font-serif:   'Playfair Display', 'Amiri', Georgia, serif;
   --font-sans:    'Outfit', 'Cairo', system-ui, -apple-system, sans-serif;
+
   /* Type Scale (8px base) */
   --text-display:     56px;
   --text-display-lh:  64px;
@@ -176,18 +190,18 @@
   --radius-sm:   6px;
   --radius-md:   12px;
   --radius-lg:   20px;
+  --radius-xl:   32px;
   --radius-full: 9999px;
 
-  /* Shadows (two-layer soft shadow per addendum §3) */
+  /* Shadows (Soft solid cards per RBI spec) */
   --shadow-card:
-    0 2px 4px rgba(0, 0, 0, 0.06),
-    0 8px 24px rgba(0, 0, 0, 0.08);
+    0 2px 4px rgba(30, 32, 38, 0.06),
+    0 8px 24px rgba(30, 32, 38, 0.10);
   --shadow-card-hover:
-    0 4px 8px rgba(0, 0, 0, 0.08),
-    0 16px 40px rgba(0, 0, 0, 0.12);
+    0 4px 12px rgba(30, 32, 38, 0.12),
+    0 16px 36px rgba(30, 32, 38, 0.18);
   --shadow-modal:
-    0 8px 16px rgba(0, 0, 0, 0.10),
-    0 24px 64px rgba(0, 0, 0, 0.16);
+    0 12px 32px rgba(0, 0, 0, 0.35);
 
   /* Transitions */
   --transition-fast:   150ms ease;
@@ -371,43 +385,43 @@ ul, ol {
   white-space: nowrap;
 }
 
-.btn-primary {
-  background: var(--color-primary);
-  color: #fff;
+.btn-primary, .btn-camel {
+  background: var(--color-camel);
+  color: var(--color-ivory);
 }
-.btn-primary:hover {
-  background: var(--color-primary-hover);
+.btn-primary:hover, .btn-camel:hover {
+  background: var(--color-camel-hover);
   transform: translateY(-1px);
-  box-shadow: 0 4px 16px rgba(30, 77, 61, 0.3);
+  box-shadow: 0 4px 16px rgba(172, 128, 84, 0.35);
 }
 
 .btn-accent {
-  background: var(--color-accent);
-  color: var(--color-bg-dark);
+  background: var(--color-cocoa);
+  color: var(--color-ivory);
 }
 .btn-accent:hover {
-  background: #b8944e;
+  background: var(--color-cocoa-hover);
   transform: translateY(-1px);
 }
 
 .btn-outline {
   background: transparent;
-  border: 1.5px solid var(--color-primary);
-  color: var(--color-primary);
+  border: 1.5px solid var(--color-camel);
+  color: var(--color-camel);
 }
 .btn-outline:hover {
-  background: var(--color-primary);
-  color: #fff;
+  background: var(--color-camel);
+  color: var(--color-ivory);
 }
 
 .btn-ghost {
-  background: rgba(255,255,255,0.12);
-  color: #fff;
-  border: 1.5px solid rgba(255,255,255,0.25);
-  backdrop-filter: blur(8px);
+  background: transparent;
+  color: var(--color-ivory);
+  border: 1.5px solid rgba(249, 240, 236, 0.3);
 }
 .btn-ghost:hover {
-  background: rgba(255,255,255,0.2);
+  background: rgba(249, 240, 236, 0.1);
+  border-color: var(--color-ivory);
 }
 
 .btn-sm {

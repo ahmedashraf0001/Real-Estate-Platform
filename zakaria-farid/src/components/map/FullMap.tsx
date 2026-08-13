@@ -16,44 +16,45 @@ import {
 } from 'lucide-react';
 import styles from './MapExplorer.module.css';
 
-// ─── Custom Marker Icon (Teardrop Pinpoint Marker) ────────────
+// ─── Custom Marker Icon (RBI Minimal Circular Camel Pin) ────────────
 function makeMarkerIcon(active: boolean) {
-  const width = active ? 36 : 30;
-  const height = active ? 46 : 38;
-  const fill = active ? '#C9A96A' : '#1E4D3D';
-  const stroke = active ? '#FFFFFF' : '#C9A96A';
-
+  const size = active ? 36 : 28;
   const html = renderToStaticMarkup(
     <div
       style={{
-        filter: active ? 'drop-shadow(0 8px 18px rgba(201,169,106,0.65))' : 'drop-shadow(0 4px 12px rgba(0,0,0,0.35))',
-        cursor: 'pointer',
-        transform: active ? 'scale(1.12)' : 'scale(1)',
-        transition: 'all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
+        width: `${size}px`,
+        height: `${size}px`,
+        borderRadius: '50%',
+        background: '#AC8054',
+        boxShadow: active
+          ? '0 6px 20px rgba(172,128,84,0.6), 0 0 0 3px #F9F0EC'
+          : '0 4px 12px rgba(0,0,0,0.4), 0 0 0 2px rgba(249,240,236,0.9)',
+        transform: active ? 'scale(1.15)' : 'scale(1)',
+        transition: 'all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+        cursor: 'pointer',
       }}
     >
-      <svg width={width} height={height} viewBox="0 0 36 46" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path
-          d="M18 0C8.05887 0 0 8.05887 0 18C0 31.5 18 46 18 46C18 46 36 31.5 36 18C36 8.05887 27.9411 0 18 0Z"
-          fill={fill}
-          stroke={stroke}
-          strokeWidth="2.5"
-        />
-        <circle cx="18" cy="17" r="7" fill={active ? '#102A21' : '#FFFFFF'} />
-        <circle cx="18" cy="17" r="3.5" fill={active ? '#C9A96A' : '#1E4D3D'} />
-      </svg>
+      <div
+        style={{
+          width: active ? '14px' : '10px',
+          height: active ? '14px' : '10px',
+          borderRadius: '50%',
+          background: '#1E2026',
+        }}
+      />
     </div>
   );
 
+  const anchor = Math.round(size / 2);
   return divIcon({
     html,
     className: '',
-    iconSize: [width, height],
-    iconAnchor: [width / 2, height],
-    popupAnchor: [0, -height + 4],
+    iconSize: [size, size],
+    iconAnchor: [anchor, anchor],
+    popupAnchor: [0, -anchor - 4],
   });
 }
 

@@ -1,8 +1,8 @@
 .root {
   padding-top: 0;
   min-height: 100vh;
-  background: var(--color-bg, #F9F8F5);
-  color: var(--color-text);
+  background: var(--color-midnight);
+  color: var(--color-text-on-dark);
   overflow-x: hidden;
 }
 
@@ -13,9 +13,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 120px 0 80px;
-  color: #fff;
-  background: var(--color-primary, #1E4D3D);
+  padding: 140px 0 80px;
+  color: var(--color-ivory);
+  background: var(--color-midnight);
   overflow: hidden;
 }
 
