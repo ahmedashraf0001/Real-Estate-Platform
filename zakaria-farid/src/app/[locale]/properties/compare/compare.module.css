@@ -7,7 +7,7 @@
 /* ─── Page Header ────────────────────────────── */
 .pageHeader {
   position: relative;
-  background: linear-gradient(135deg, #091914 0%, #1E4D3D 50%, #0F2D24 100%);
+  background: linear-gradient(135deg, #091914 0%, #0A0C10 50%, #11141B 100%);
   padding: 130px 0 50px;
   margin-bottom: 36px;
   border-bottom: 1px solid rgba(201, 169, 106, 0.3);
@@ -25,7 +25,7 @@
   gap: 8px;
   font-size: 13px;
   font-weight: 700;
-  color: #C9A96A;
+  color: #DDA752;
   text-decoration: none;
   background: rgba(201, 169, 106, 0.12);
   border: 1px solid rgba(201, 169, 106, 0.3);
@@ -36,8 +36,8 @@
 }
 
 .backBtn:hover {
-  background: #C9A96A;
-  color: #0F2D24;
+  background: #DDA752;
+  color: #11141B;
 }
 
 .labelBadge {
@@ -48,7 +48,7 @@
   font-weight: 800;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: #C9A96A;
+  color: #DDA752;
 }
 
 .pageTitle {
@@ -99,7 +99,7 @@
   font-family: var(--font-serif);
   font-size: 16px;
   font-weight: 800;
-  color: #1E4D3D;
+  color: #0A0C10;
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
@@ -152,7 +152,7 @@
   left: 12px;
   background: rgba(15, 45, 36, 0.88);
   backdrop-filter: blur(8px);
-  color: #C9A96A;
+  color: #DDA752;
   font-size: 10px;
   font-weight: 800;
   text-transform: uppercase;
@@ -193,8 +193,8 @@
 }
 
 .propImgWrap:hover .galleryBadge {
-  background: #C9A96A;
-  color: #0F2D24;
+  background: #DDA752;
+  color: #11141B;
 }
 
 .propMeta {
@@ -214,7 +214,7 @@
 }
 
 .propTitle:hover {
-  color: #1E4D3D;
+  color: #0A0C10;
 }
 
 .propLoc {
@@ -231,7 +231,7 @@
   font-family: var(--font-serif);
   font-size: 20px;
   font-weight: 800;
-  color: #1E4D3D;
+  color: #0A0C10;
   margin-top: 4px;
 }
 
@@ -249,7 +249,7 @@
   padding: 9px 12px;
   border-radius: 10px;
   background: #F1F5F9;
-  color: #1E4D3D;
+  color: #0A0C10;
   border: 1px solid #CBD5E1;
   font-size: 11.5px;
   font-weight: 700;
@@ -259,7 +259,7 @@
 
 .headerGalleryBtn:hover {
   background: #E2E8F0;
-  border-color: #1E4D3D;
+  border-color: #0A0C10;
 }
 
 .headerViewBtn {
@@ -270,7 +270,7 @@
   gap: 6px;
   padding: 9px 12px;
   border-radius: 10px;
-  background: #1E4D3D;
+  background: #0A0C10;
   color: #FFFFFF;
   font-size: 12px;
   font-weight: 700;
@@ -305,10 +305,10 @@
 
 /* ─── Prominent Section Headers ───────────────── */
 .sectionHeaderRow td {
-  background: linear-gradient(135deg, #1E4D3D 0%, #0F2D24 100%);
+  background: linear-gradient(135deg, #0A0C10 0%, #11141B 100%);
   padding: 16px 24px;
-  border-top: 3px solid #C9A96A;
-  border-bottom: 2px solid #0F2D24;
+  border-top: 3px solid #DDA752;
+  border-bottom: 2px solid #11141B;
 }
 
 .sectionTitle {
@@ -323,7 +323,7 @@
 }
 
 .sectionTitleIcon {
-  color: #C9A96A;
+  color: #DDA752;
 }
 
 /* ─── Matrix Rows ─────────────────────────────── */
@@ -374,7 +374,7 @@
   height: 30px;
   border-radius: 8px;
   background: rgba(30, 77, 61, 0.1);
-  color: #1E4D3D;
+  color: #0A0C10;
   flex-shrink: 0;
 }
 
@@ -398,7 +398,7 @@
   font-family: var(--font-serif);
   font-size: 19px;
   font-weight: 800;
-  color: #1E4D3D;
+  color: #0A0C10;
 }
 
 .bestValueBadge {
@@ -471,7 +471,7 @@
 }
 
 .amenityChip svg {
-  color: #1E4D3D;
+  color: #0A0C10;
 }
 
 /* ─── Sticky Bottom Action Bar ───────────────── */
@@ -575,7 +575,7 @@
 
 .modalContent {
   position: relative;
-  background: #0F2D24;
+  background: #11141B;
   border: 1px solid rgba(201, 169, 106, 0.4);
   box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6);
   border-radius: 24px;
@@ -601,7 +601,7 @@
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: #C9A96A;
+  color: #DDA752;
   background: rgba(201, 169, 106, 0.15);
   padding: 3px 10px;
   border-radius: 20px;
@@ -668,9 +668,9 @@
 }
 
 .tabActive {
-  background: #C9A96A;
-  border-color: #C9A96A;
-  color: #0F2D24;
+  background: #DDA752;
+  border-color: #DDA752;
+  color: #11141B;
 }
 
 .tabCountPill {
@@ -752,8 +752,8 @@
 }
 
 .navArrow:hover {
-  background: #C9A96A;
-  color: #0F2D24;
+  background: #DDA752;
+  color: #11141B;
 }
 
 .navArrowLeft { left: 16px; }
@@ -783,7 +783,7 @@
 }
 
 .thumbActive {
-  border-color: #C9A96A;
+  border-color: #DDA752;
   opacity: 1;
   transform: scale(1.05);
 }

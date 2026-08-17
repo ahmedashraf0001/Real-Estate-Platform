@@ -60,6 +60,8 @@ export interface Property {
   created_at: string;
   view?: string | null;
   floor_number?: number | null;
+  finishing?: string | null;
+  furnishing?: string | null;
   spec_layers?: ZoneInstance[] | SpecLayer[] | any;
   property_images?: PropertyImage[];
   property_amenities?: PropertyAmenity[];

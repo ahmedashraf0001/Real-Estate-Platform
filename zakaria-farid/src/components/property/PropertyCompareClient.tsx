@@ -285,7 +285,7 @@ export default function PropertyCompareClient({ properties, locale }: PropertyCo
             border: '1px solid rgba(30, 77, 61, 0.2)',
             padding: '4px 10px',
             borderRadius: '12px',
-            color: '#1E4D3D',
+            color: '#0A0C10',
             fontSize: '12px',
             fontWeight: 700
           }}>
@@ -301,7 +301,7 @@ export default function PropertyCompareClient({ properties, locale }: PropertyCo
       getValue: (p: Property) => {
         const insights = getSpecInsights(p);
         return insights.totalZones > 0 ? (
-          <span style={{ fontWeight: 700, color: '#1E4D3D' }}>
+          <span style={{ fontWeight: 700, color: '#0A0C10' }}>
             {insights.totalZones} {isAr ? 'مناطق مسجلة تفصيلياً' : 'Configured Zones'}
           </span>
         ) : (
@@ -369,7 +369,7 @@ export default function PropertyCompareClient({ properties, locale }: PropertyCo
               type="button"
               onClick={handlePrintPdf}
               className={styles.headerWaBtn}
-              style={{ background: '#1E4D3D', border: '1px solid rgba(201, 169, 106, 0.4)' }}
+              style={{ background: '#0A0C10', border: '1px solid rgba(201, 169, 106, 0.4)' }}
             >
               <Download size={15} />
               <span>{isAr ? 'تحميل جدول المقارنة (PDF)' : 'Download Comparison PDF'}</span>
@@ -601,7 +601,7 @@ export default function PropertyCompareClient({ properties, locale }: PropertyCo
         <div className={styles.stickyDock}>
           <div className={`container ${styles.dockInner}`}>
             <div className={styles.dockInfo}>
-              <Sparkles size={16} style={{ color: '#C9A96A' }} />
+              <Sparkles size={16} style={{ color: '#DDA752' }} />
               <span className={styles.dockTitle}>
                 {isAr ? 'هل اخترت عقارك المناسب؟ استفسر مباشرة من المالك:' : 'Found your ideal estate? Inquire direct from owner:'}
               </span>
@@ -644,7 +644,7 @@ export default function PropertyCompareClient({ properties, locale }: PropertyCo
                   {isAr ? activeGalleryProp.title_ar : activeGalleryProp.title_en}
                 </h3>
                 <p className={styles.modalSub}>
-                  <MapPin size={12} /> {activeGalleryProp.location} • <strong style={{ color: '#C9A96A' }}>{formatPrice(activeGalleryProp.price_egp, locale)}</strong>
+                  <MapPin size={12} /> {activeGalleryProp.location} • <strong style={{ color: '#DDA752' }}>{formatPrice(activeGalleryProp.price_egp, locale)}</strong>
                 </p>
               </div>
 
@@ -700,7 +700,7 @@ export default function PropertyCompareClient({ properties, locale }: PropertyCo
 
                 {currentPhoto.label && (
                   <div className={styles.photoCaptionTag}>
-                    <Sparkles size={12} style={{ color: '#C9A96A' }} />
+                    <Sparkles size={12} style={{ color: '#DDA752' }} />
                     <span>{currentPhoto.label}</span>
                   </div>
                 )}

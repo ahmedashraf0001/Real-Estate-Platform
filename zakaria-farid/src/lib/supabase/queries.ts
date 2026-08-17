@@ -3,20 +3,27 @@ import { getPublicSupabase } from './public';
 import type { Property, Lead, SpecLayer, SpecLayerItem } from './types';
 import { buildZoneInstances, type PropertyTypeId, type GlobalFinishingState } from '@/lib/layering';
 import { parseSmartQuery } from '@/lib/utils/searchUtils';
+import { FALLBACK_PROPERTIES } from '@/lib/data/fallbackProperties';
 
 // ─── Properties ───────────────────────────────────────────────────
 
 export async function getFeaturedProperties(): Promise<Property[]> {
-  const supabase = getPublicSupabase();
-  const { data, error } = await supabase
-    .from('properties')
-    .select(`*, property_images(*)`)
-    .eq('is_featured', true)
-    .eq('listing_status', 'active')
-    .order('created_at', { ascending: false })
-    .limit(6);
-  if (error) throw error;
-  return (data as Property[]) ?? [];
+  try {
+    const supabase = getPublicSupabase();
+    const { data, error } = await supabase
+      .from('properties')
+      .select(`*, property_images(*)`)
+      .eq('is_featured', true)
+      .eq('listing_status', 'active')
+      .order('created_at', { ascending: false })
+      .limit(6);
+    if (!error && data && data.length > 0) {
+      return (data as Property[]);
+    }
+  } catch (err) {
+    // fallback below
+  }
+  return FALLBACK_PROPERTIES.filter((p) => p.is_featured);
 }
 
 export async function getAllProperties(params?: {
@@ -28,56 +35,75 @@ export async function getAllProperties(params?: {
   listing_status?: string;
   sort?: 'newest' | 'price_asc' | 'price_desc';
 }): Promise<Property[]> {
-  const supabase = getPublicSupabase();
-  let query = supabase
-    .from('properties')
-    .select(`*, property_images(id, url, alt_text_en, alt_text_ar, sort_order)`);
+  try {
+    const supabase = getPublicSupabase();
+    let query = supabase
+      .from('properties')
+      .select(`*, property_images(id, url, alt_text_en, alt_text_ar, sort_order)`);
 
-  const rawLocation = params?.location?.trim();
-  let searchType = params?.type;
+    const rawLocation = params?.location?.trim();
+    let searchType = params?.type;
 
-  if (rawLocation) {
-    const parsed = parseSmartQuery(rawLocation);
+    if (rawLocation) {
+      const parsed = parseSmartQuery(rawLocation);
 
-    // Auto-detect property type if present in query string and not explicitly selected
-    if (!searchType && parsed.detectedType) {
-      searchType = parsed.detectedType;
-    }
-
-    const conditionsSet = new Set<string>();
-    parsed.searchTerms.forEach((term) => {
-      const sanitized = term.replace(/[,()%]/g, ' ').trim();
-      if (sanitized.length >= 2) {
-        conditionsSet.add(`location.ilike.%${sanitized}%`);
-        conditionsSet.add(`title_en.ilike.%${sanitized}%`);
-        conditionsSet.add(`title_ar.ilike.%${sanitized}%`);
-        conditionsSet.add(`description_en.ilike.%${sanitized}%`);
-        conditionsSet.add(`description_ar.ilike.%${sanitized}%`);
+      if (!searchType && parsed.detectedType) {
+        searchType = parsed.detectedType;
       }
-    });
 
-    if (conditionsSet.size > 0) {
-      query = query.or(Array.from(conditionsSet).join(','));
+      const conditionsSet = new Set<string>();
+      parsed.searchTerms.forEach((term) => {
+        const sanitized = term.replace(/[,()%]/g, ' ').trim();
+        if (sanitized.length >= 2) {
+          conditionsSet.add(`location.ilike.%${sanitized}%`);
+          conditionsSet.add(`title_en.ilike.%${sanitized}%`);
+          conditionsSet.add(`title_ar.ilike.%${sanitized}%`);
+          conditionsSet.add(`description_en.ilike.%${sanitized}%`);
+          conditionsSet.add(`description_ar.ilike.%${sanitized}%`);
+        }
+      });
+
+      if (conditionsSet.size > 0) {
+        query = query.or(Array.from(conditionsSet).join(','));
+      }
     }
+
+    if (params?.min_price) query = query.gte('price_egp', params.min_price);
+    if (params?.max_price) query = query.lte('price_egp', params.max_price);
+    if (params?.bedrooms) query = query.eq('bedrooms', params.bedrooms);
+    if (searchType) query = query.eq('type', searchType);
+    if (params?.listing_status) {
+      query = query.eq('listing_status', params.listing_status);
+    }
+
+    if (params?.sort === 'price_asc') query = query.order('price_egp', { ascending: true });
+    else if (params?.sort === 'price_desc') query = query.order('price_egp', { ascending: false });
+    else query = query.order('created_at', { ascending: false });
+
+    const { data, error } = await query;
+    if (!error && data && data.length > 0) {
+      const filtered = ((data as Property[]) ?? []).filter((p) => p.is_archived !== true && p.listing_status !== 'archived');
+      return filtered;
+    }
+  } catch (err) {
+    // fallback below
   }
 
-  if (params?.min_price) query = query.gte('price_egp', params.min_price);
-  if (params?.max_price) query = query.lte('price_egp', params.max_price);
-  if (params?.bedrooms) query = query.eq('bedrooms', params.bedrooms);
-  if (searchType) query = query.eq('type', searchType);
-  if (params?.listing_status) {
-    query = query.eq('listing_status', params.listing_status);
+  // Filter fallback properties
+  let fallback = [...FALLBACK_PROPERTIES];
+  if (params?.type) {
+    fallback = fallback.filter(p => p.type === params.type);
   }
-
-  if (params?.sort === 'price_asc') query = query.order('price_egp', { ascending: true });
-  else if (params?.sort === 'price_desc') query = query.order('price_egp', { ascending: false });
-  else query = query.order('created_at', { ascending: false });
-
-  const { data, error } = await query;
-  if (error) throw error;
-  // Filter out any property with is_archived === true
-  const filtered = ((data as Property[]) ?? []).filter((p) => p.is_archived !== true && p.listing_status !== 'archived');
-  return filtered;
+  if (params?.bedrooms) {
+    fallback = fallback.filter(p => p.bedrooms === params.bedrooms);
+  }
+  if (params?.min_price) {
+    fallback = fallback.filter(p => p.price_egp >= params.min_price!);
+  }
+  if (params?.max_price) {
+    fallback = fallback.filter(p => p.price_egp <= params.max_price!);
+  }
+  return fallback;
 }
 
 export function ensureSpecLayers(property: Property): Property {
@@ -97,33 +123,58 @@ export function ensureSpecLayers(property: Property): Property {
 }
 
 export async function getPropertyBySlug(slug: string): Promise<Property | null> {
-  const supabase = getPublicSupabase();
-  const { data, error } = await supabase
-    .from('properties')
-    .select(`*, property_images(*), property_amenities(*)`)
-    .eq('slug', slug)
-    .single();
-  if (error || !data) return null;
-  return ensureSpecLayers(data as Property);
+  try {
+    const supabase = getPublicSupabase();
+    const { data, error } = await supabase
+      .from('properties')
+      .select(`*, property_images(*), property_amenities(*)`)
+      .eq('slug', slug)
+      .single();
+    if (!error && data) {
+      return ensureSpecLayers(data as Property);
+    }
+  } catch (err) {
+    // fallback below
+  }
+
+  const foundFallback = FALLBACK_PROPERTIES.find(p => p.slug === slug || p.id === slug);
+  if (foundFallback) {
+    return ensureSpecLayers(foundFallback);
+  }
+  return null;
 }
 
 export async function getAllPropertySlugs(): Promise<{ slug: string }[]> {
-  const supabase = getPublicSupabase();
-  const { data } = await supabase.from('properties').select('slug');
-  return data ?? [];
+  try {
+    const supabase = getPublicSupabase();
+    const { data } = await supabase.from('properties').select('slug');
+    if (data && data.length > 0) {
+      return data;
+    }
+  } catch (err) {
+    // fallback below
+  }
+  return FALLBACK_PROPERTIES.map(p => ({ slug: p.slug }));
 }
 
 export async function getPropertiesByIds(ids: string[]): Promise<Property[]> {
   if (!ids.length) return [];
-  const supabase = getPublicSupabase();
-  const { data, error } = await supabase
-    .from('properties')
-    .select(`*, property_images(*), property_amenities(*)`)
-    .in('id', ids);
-  if (error) throw error;
-  // Return in the same order as ids array
-  const map = new Map((data as Property[]).map((p) => [p.id, ensureSpecLayers(p)]));
-  return ids.map((id) => map.get(id)).filter(Boolean) as Property[];
+  try {
+    const supabase = getPublicSupabase();
+    const { data, error } = await supabase
+      .from('properties')
+      .select(`*, property_images(*), property_amenities(*)`)
+      .in('id', ids);
+    if (!error && data && data.length > 0) {
+      const map = new Map((data as Property[]).map((p) => [p.id, ensureSpecLayers(p)]));
+      return ids.map((id) => map.get(id)).filter(Boolean) as Property[];
+    }
+  } catch (err) {
+    // fallback below
+  }
+
+  const map = new Map(FALLBACK_PROPERTIES.map((p) => [p.id, ensureSpecLayers(p)]));
+  return ids.map((id) => map.get(id) || FALLBACK_PROPERTIES.find(f => f.slug === id)).filter(Boolean) as Property[];
 }
 
 

@@ -738,31 +738,31 @@ function RevampedDownloadableSpecSheet({
           <meta charset="utf-8">
           <title>${propertyTitle} — Official Finishing Specification Report</title>
           <style>
-            @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap');
-            body { font-family: 'Outfit', system-ui, -apple-system, sans-serif; padding: 30px; color: #1A1A1A; line-height: 1.5; background: #FFFFFF; }
-            h1, h2, h3, h4 { font-family: Georgia, serif; color: #1E4D3D; margin-top: 0; }
+            @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+            body { font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif; padding: 30px; color: #1A1A1A; line-height: 1.5; background: #FFFFFF; }
+            h1, h2, h3, h4 { font-family: 'Plus Jakarta Sans', sans-serif; color: #0A0C10; margin-top: 0; font-weight: 800; }
             .badgeFull { background: #E8F5E9; color: #2E7D32; padding: 4px 12px; border-radius: 20px; font-size: 13px; font-weight: bold; display: inline-flex; align-items: center; gap: 6px; }
             .badgeSemi { background: #FFF3E0; color: #E65100; padding: 4px 12px; border-radius: 20px; font-size: 13px; font-weight: bold; display: inline-flex; align-items: center; gap: 6px; }
             .badgeBrick { background: #FFEBEE; color: #C62828; padding: 4px 12px; border-radius: 20px; font-size: 13px; font-weight: bold; display: inline-flex; align-items: center; gap: 6px; }
             .badgeMixed { background: #EDE7F6; color: #512DA8; padding: 4px 12px; border-radius: 20px; font-size: 13px; font-weight: bold; display: inline-flex; align-items: center; gap: 6px; }
             button, svg, [class*="reportActionBtns"], [class*="reportTopBar"] { display: none !important; }
             div[class*="reportDocHeader"] { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #C9A96A; padding-bottom: 16px; margin-bottom: 20px; }
-            div[class*="reportDocTitle"] { font-size: 24px; font-weight: bold; color: #1E4D3D; margin: 4px 0; }
+            div[class*="reportDocTitle"] { font-size: 24px; font-weight: bold; color: #DDA752; margin: 4px 0; }
             div[class*="reportDocTag"] { font-size: 11px; font-weight: bold; letter-spacing: 1px; color: #C9A96A; }
             div[class*="reportKpiBanner"] { display: flex; justify-content: space-around; background: #F8F9F8; border: 1px solid #C9A96A; border-radius: 12px; padding: 16px; margin-bottom: 24px; }
             div[class*="reportKpiItem"] { text-align: center; }
-            span[class*="reportKpiVal"] { font-size: 24px; font-weight: bold; color: #1E4D3D; display: block; }
+            span[class*="reportKpiVal"] { font-size: 24px; font-weight: bold; color: #DDA752; display: block; }
             span[class*="reportKpiLabel"] { font-size: 12px; color: #666; }
             div[class*="reportZoneCard"] { border: 1px solid #E0E0E0; border-radius: 12px; padding: 16px; margin-bottom: 16px; page-break-inside: avoid; background: #FFFFFF; }
             div[class*="reportZoneHead"] { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #F0F0F0; padding-bottom: 10px; margin-bottom: 12px; }
-            h4[class*="reportZoneName"] { font-size: 18px; font-weight: bold; color: #1E4D3D; margin: 0; }
+            h4[class*="reportZoneName"] { font-size: 18px; font-weight: bold; color: #DDA752; margin: 0; }
             div[class*="reportTradesGrid"] { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
             div[class*="reportTradeBox"] { background: #FBFBFA; border: 1px solid #EEEEEE; border-radius: 8px; padding: 12px; }
             div[class*="reportTradeHeader"] { display: flex; justify-content: space-between; align-items: center; font-weight: bold; font-size: 13px; margin-bottom: 6px; }
-            span[class*="reportTradeStatusTag"] { background: #E8F5E9; color: #1E4D3D; padding: 2px 8px; border-radius: 10px; font-size: 11px; }
+            span[class*="reportTradeStatusTag"] { background: #E8F5E9; color: #DDA752; padding: 2px 8px; border-radius: 10px; font-size: 11px; }
             div[class*="reportAttrGrid"] { border-top: 1px dashed #E0E0E0; padding-top: 6px; margin-top: 6px; }
             div[class*="reportAttrRow"] { display: flex; justify-content: space-between; font-size: 11px; color: #555; }
-            span[class*="reportAttrVal"] { font-weight: bold; color: #1E4D3D; }
+            span[class*="reportAttrVal"] { font-weight: bold; color: #DDA752; }
           </style>
         </head>
         <body>

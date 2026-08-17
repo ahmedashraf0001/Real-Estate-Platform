@@ -7,18 +7,23 @@ export default function AdminLoading() {
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      width: '100%'
+      width: '100%',
+      fontFamily: "'Plus Jakarta Sans', sans-serif",
     }}>
+      <style>{`
+        @keyframes spin-gold { to { transform: rotate(360deg); } }
+      `}</style>
+
       <div style={{
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
         gap: '16px',
-        background: '#FFFFFF',
+        background: 'rgba(22, 23, 28, 0.95)',
         padding: '36px 48px',
         borderRadius: '20px',
-        border: '1px solid rgba(201, 169, 106, 0.3)',
-        boxShadow: '0 12px 32px rgba(30, 77, 61, 0.08)'
+        border: '1px solid rgba(221, 167, 82, 0.2)',
+        boxShadow: '0 12px 32px rgba(0, 0, 0, 0.5)',
       }}>
         <div style={{ position: 'relative', width: '54px', height: '54px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <div style={{
@@ -26,32 +31,32 @@ export default function AdminLoading() {
             inset: 0,
             borderRadius: '50%',
             border: '2px solid transparent',
-            borderTopColor: '#C9A96A',
-            borderRightColor: '#1E4D3D',
-            animation: 'spin 1s linear infinite'
+            borderTopColor: '#DDA752',
+            borderRightColor: 'rgba(221,167,82,0.3)',
+            animation: 'spin-gold 1s linear infinite',
           }} />
           <div style={{
             width: '42px',
             height: '42px',
             borderRadius: '50%',
-            background: '#1E4D3D',
-            color: '#C9A96A',
+            background: 'linear-gradient(135deg, #DDA752 0%, #C48D3A 100%)',
+            color: '#0A0C10',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            fontFamily: "'Playfair Display', serif",
-            fontWeight: 800,
-            fontSize: '15px'
+            fontFamily: "'Plus Jakarta Sans', sans-serif",
+            fontWeight: 900,
+            fontSize: '15px',
           }}>
             ZF
           </div>
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
-          <span style={{ fontSize: '13px', fontWeight: 700, color: '#1E4D3D', letterSpacing: '0.04em' }}>
+          <span style={{ fontSize: '13px', fontWeight: 700, color: '#FFFFFF', letterSpacing: '0.04em' }}>
             Preparing Dashboard…
           </span>
-          <span style={{ fontSize: '11px', color: '#C9A96A', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
+          <span style={{ fontSize: '11px', color: '#DDA752', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
             <Sparkles size={11} />
             Zakaria Farid Real Estate
           </span>

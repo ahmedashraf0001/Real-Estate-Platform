@@ -1,8 +1,7 @@
 import { notFound } from 'next/navigation';
-import { getTranslations } from 'next-intl/server';
 import { getPropertyBySlug, getAllProperties } from '@/lib/supabase/queries';
-import PropertyDetailClient from '@/components/property/PropertyDetailClient';
-import MobileLeadBar from '@/components/layout/MobileLeadBar';
+import { adaptProperty, adaptProperties } from '@/lib/utils/propertyAdapter';
+import { PropertyDetailView } from '@/components/property/PropertyDetailView';
 import type { Metadata } from 'next';
 
 type Props = {
@@ -25,14 +24,14 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const property = await getPropertyBySlug(slug).catch(() => null);
   if (!property) return { title: 'Property Not Found' };
 
-  const title = (locale === 'ar' ? property.title_ar : property.title_en) || 'Property';
+  const title = (locale === 'ar' ? property.title_ar : property.title_en) || 'Luxury Masterpiece';
   const rawDesc = locale === 'ar' ? property.description_ar : property.description_en;
-  const description = rawDesc ? rawDesc.slice(0, 160) : '';
+  const description = rawDesc ? rawDesc.replace(/<[^>]*>/g, '').slice(0, 160) : '';
   const coverImage = property.property_images?.[0]?.url;
 
   return {
     metadataBase: new URL(baseUrl),
-    title,
+    title: `${title} | Zakaria Farid`,
     description,
     openGraph: {
       title,
@@ -51,23 +50,26 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function PropertyDetailPage({ params }: Props) {
   const { locale, slug } = await params;
-  const t = await getTranslations({ locale, namespace: 'property' });
 
   const property = await getPropertyBySlug(slug).catch(() => null);
   if (!property) notFound();
 
-  // Similar properties (same type, different slug, max 3)
+  // Similar properties
   const allProperties = await getAllProperties({ type: property.type }).catch(() => []);
   const similar = allProperties.filter((p) => p.slug !== slug).slice(0, 3);
 
+  const uiProperty = adaptProperty(property, locale as 'en' | 'ar');
+  const uiSimilar = adaptProperties(similar, locale as 'en' | 'ar');
+
   const title = locale === 'ar' ? property.title_ar : property.title_en;
+  const cleanDescription = (locale === 'ar' ? property.description_ar : property.description_en)?.replace(/<[^>]*>/g, '') || '';
 
   // JSON-LD structured data
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'RealEstateListing',
     name: title,
-    description: locale === 'ar' ? property.description_ar : property.description_en,
+    description: cleanDescription,
     url: `https://zakariafarid.com/${locale}/properties/${slug}`,
     image: property.property_images?.map((img) => img.url) ?? [],
     offers: {
@@ -98,7 +100,11 @@ export default async function PropertyDetailPage({ params }: Props) {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-      <PropertyDetailClient property={property} locale={locale} similar={similar} />
+      <PropertyDetailView
+        property={uiProperty}
+        similarProperties={uiSimilar}
+        locale={locale}
+      />
     </>
   );
 }

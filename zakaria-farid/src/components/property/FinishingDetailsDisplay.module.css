@@ -15,7 +15,7 @@
   font-size: var(--text-h2, 30px);
   line-height: 1.25;
   font-weight: 700;
-  color: var(--color-primary, #1E4D3D);
+  color: var(--color-primary, #DDA752);
   margin-bottom: 8px;
   letter-spacing: -0.01em;
 }
@@ -62,7 +62,7 @@
 .carouselDotActive {
   width: 28px;
   border-radius: 10px;
-  background: var(--color-primary, #1E4D3D);
+  background: var(--color-primary, #DDA752);
 }
 
 .carouselNavBtns {
@@ -77,7 +77,7 @@
   border-radius: 50%;
   background: #FFFFFF;
   border: 1px solid rgba(201, 169, 106, 0.35);
-  color: var(--color-primary, #1E4D3D);
+  color: var(--color-primary, #DDA752);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -87,9 +87,9 @@
 }
 
 .carouselNavBtn:hover {
-  background: var(--color-primary, #1E4D3D);
+  background: var(--color-primary, #DDA752);
   color: #FFFFFF;
-  border-color: var(--color-primary, #1E4D3D);
+  border-color: var(--color-primary, #DDA752);
   transform: translateY(-2px);
   box-shadow: 0 6px 18px rgba(30, 77, 61, 0.2);
 }
@@ -155,7 +155,7 @@
   height: 220px;
   min-height: 220px;
   overflow: hidden;
-  background: #1E4D3D;
+background: #DDA752;
 }
 
 .luxuryCardPhoto {
@@ -193,7 +193,7 @@
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.9);
   backdrop-filter: blur(10px);
-  color: var(--color-primary, #1E4D3D);
+  color: var(--color-primary, #DDA752);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -252,11 +252,11 @@
   gap: 6px;
   font-size: 0.78rem;
   font-weight: 600;
-  color: var(--color-primary, #1E4D3D);
+  color: var(--color-primary, #DDA752);
 }
 
 .goldIcon {
-  color: var(--color-accent, #C9A96A);
+  color: var(--color-accent, #DDA752);
 }
 
 .luxuryTradeIconsMini {
@@ -270,7 +270,7 @@
   height: 22px;
   border-radius: 50%;
   background: rgba(30, 77, 61, 0.08);
-  color: var(--color-primary, #1E4D3D);
+  color: var(--color-primary, #DDA752);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -284,7 +284,7 @@
   border-radius: 12px;
   background: #F8F9F8;
   border: 1px solid rgba(201, 169, 106, 0.25);
-  color: var(--color-primary, #1E4D3D);
+  color: var(--color-primary, #DDA752);
   font-family: var(--font-sans, 'Outfit', sans-serif);
   font-size: 0.82rem;
   font-weight: 700;
@@ -292,9 +292,9 @@
 }
 
 .luxuryZoneCard:hover .luxuryActionTrigger {
-  background: var(--color-primary, #1E4D3D);
+  background: var(--color-primary, #DDA752);
   color: #FFFFFF;
-  border-color: var(--color-primary, #1E4D3D);
+  border-color: var(--color-primary, #DDA752);
 }
 
 .triggerArrow {
@@ -321,26 +321,26 @@
   gap: 10px;
   padding: 12px 18px;
   background: linear-gradient(90deg, rgba(30, 77, 61, 0.07) 0%, rgba(201, 169, 106, 0.12) 100%);
-  border-left: 4px solid var(--color-accent, #C9A96A);
+  border-left: 4px solid var(--color-accent, #DDA752);
   border-radius: var(--radius-md, 10px);
   margin-bottom: 18px;
 }
 
 [dir='rtl'] .floorHeader {
   border-left: none;
-  border-right: 4px solid var(--color-accent, #C9A96A);
+  border-right: 4px solid var(--color-accent, #DDA752);
   background: linear-gradient(270deg, rgba(30, 77, 61, 0.07) 0%, rgba(201, 169, 106, 0.12) 100%);
 }
 
 .floorIcon {
-  color: var(--color-primary, #1E4D3D);
+  color: var(--color-primary, #DDA752);
 }
 
 .floorLabel {
   font-family: var(--font-serif, 'ThmanyahSerifDisplay', Georgia, serif);
   font-size: 1.18rem;
   font-weight: 700;
-  color: var(--color-primary, #1E4D3D);
+  color: var(--color-primary, #DDA752);
   letter-spacing: 0.02em;
 }
 
@@ -368,11 +368,11 @@
 .zoneCard:hover {
   transform: translateY(-4px);
   box-shadow: 0 16px 36px rgba(30, 77, 61, 0.12), 0 4px 12px rgba(201, 169, 106, 0.15);
-  border-color: var(--color-accent, #C9A96A);
+  border-color: var(--color-accent, #DDA752);
 }
 
 .zoneCardOpen {
-  border-color: var(--color-primary, #1E4D3D);
+  border-color: var(--color-primary, #DDA752);
   box-shadow: 0 16px 36px rgba(30, 77, 61, 0.12);
   background: var(--color-surface, #FFFFFF);
 }
@@ -382,7 +382,7 @@
   position: relative;
   width: 100%;
   height: 135px;
-  background: #1E4D3D;
+background: #DDA752;
   overflow: hidden;
 }
 
@@ -418,7 +418,7 @@
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.9);
   backdrop-filter: blur(8px);
-  color: var(--color-primary, #1E4D3D);
+  color: var(--color-primary, #DDA752);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -452,7 +452,7 @@
   height: 42px;
   border-radius: var(--radius-sm, 8px);
   background: rgba(30, 77, 61, 0.06);
-  color: var(--color-primary, #1E4D3D);
+  color: var(--color-primary, #DDA752);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -497,7 +497,7 @@
   font-family: var(--font-sans, 'Outfit', sans-serif);
   font-size: 0.78rem;
   font-weight: 600;
-  color: var(--color-primary, #1E4D3D);
+  color: var(--color-primary, #DDA752);
 }
 
 .chevron {
@@ -530,7 +530,7 @@
 /* Badge Variants */
 .badgeFull {
   background: #EAF3EC;
-  color: #1E4D3D;
+color: #DDA752;
   border: 1px solid rgba(30, 77, 61, 0.2);
 }
 
@@ -585,7 +585,7 @@
   font-family: var(--font-serif, 'ThmanyahSerifDisplay', Georgia, serif);
   font-size: 0.95rem;
   font-weight: 700;
-  color: var(--color-primary, #1E4D3D);
+  color: var(--color-primary, #DDA752);
   margin-top: 4px;
 }
 
@@ -627,7 +627,7 @@
 }
 
 .tradeIcon {
-  color: var(--color-primary, #1E4D3D);
+  color: var(--color-primary, #DDA752);
   display: flex;
   align-items: center;
 }
@@ -664,7 +664,7 @@
 }
 
 .dotFilled {
-  background: var(--color-accent, #C9A96A);
+  background: var(--color-accent, #DDA752);
 }
 
 .dotEmpty {
@@ -717,7 +717,7 @@
   font-size: 0.8rem;
   font-weight: 600;
   color: #FFFFFF;
-  background: var(--color-primary, #1E4D3D);
+  background: var(--color-primary, #DDA752);
   text-decoration: none;
   transition: all var(--transition-fast, 150ms ease);
   margin-top: 4px;
@@ -745,9 +745,9 @@
   font-family: var(--font-serif, 'ThmanyahSerifDisplay', Georgia, serif);
   font-size: 0.95rem;
   font-weight: 700;
-  color: var(--color-primary, #1E4D3D);
+  color: var(--color-primary, #DDA752);
   background: var(--color-surface, #FFFFFF);
-  border: 1px solid var(--color-border-accent, #C9A96A);
+  border: 1px solid var(--color-border-accent, #DDA752);
   box-shadow: var(--shadow-card, 0 2px 8px rgba(0,0,0,0.06));
   cursor: pointer;
   transition: all var(--transition-base, 250ms ease);
@@ -755,7 +755,7 @@
 
 .fullSpecBtn:hover {
   background: rgba(201, 169, 106, 0.08);
-  border-color: var(--color-primary, #1E4D3D);
+  border-color: var(--color-primary, #DDA752);
   transform: translateY(-2px);
   box-shadow: var(--shadow-card-hover, 0 8px 24px rgba(0,0,0,0.1));
 }
@@ -806,7 +806,7 @@
   font-family: var(--font-serif, 'ThmanyahSerifDisplay', Georgia, serif);
   font-size: 1.2rem;
   font-weight: 700;
-  color: var(--color-primary, #1E4D3D);
+  color: var(--color-primary, #DDA752);
   margin-bottom: 4px;
 }
 
@@ -846,7 +846,7 @@
   font-family: var(--font-serif, 'ThmanyahSerifDisplay', Georgia, serif);
   font-size: 1.05rem;
   font-weight: 700;
-  color: var(--color-primary, #1E4D3D);
+  color: var(--color-primary, #DDA752);
   margin-bottom: 8px;
 }
 
@@ -916,12 +916,12 @@
 
 .reportTopBar {
   padding: 16px 24px;
-  background: #1E4D3D;
+background: #DDA752;
   color: #FFFFFF;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  border-bottom: 2px solid #C9A96A;
+border-bottom: 2px solid #DDA752;
   flex-shrink: 0;
 }
 
@@ -948,8 +948,8 @@
   border-radius: 9999px;
   font-size: 0.85rem;
   font-weight: 700;
-  color: #1E4D3D;
-  background: #C9A96A;
+color: #DDA752;
+background: #DDA752;
   border: none;
   cursor: pointer;
   transition: all 200ms ease;
@@ -1009,14 +1009,14 @@
   font-size: 0.72rem;
   font-weight: 800;
   letter-spacing: 1.5px;
-  color: var(--color-accent, #C9A96A);
+  color: var(--color-accent, #DDA752);
 }
 
 .reportDocTitle {
   font-family: var(--font-serif, 'ThmanyahSerifDisplay', Georgia, serif);
   font-size: 2rem;
   font-weight: 700;
-  color: var(--color-primary, #1E4D3D);
+  color: var(--color-primary, #DDA752);
   line-height: 1.2;
 }
 
@@ -1065,7 +1065,7 @@
   font-family: var(--font-serif, 'ThmanyahSerifDisplay', Georgia, serif);
   font-size: 1.8rem;
   font-weight: 700;
-  color: var(--color-primary, #1E4D3D);
+  color: var(--color-primary, #DDA752);
 }
 
 .reportKpiLabel {
@@ -1094,12 +1094,12 @@
 
 .reportZoneChild {
   margin-top: 12px;
-  border-left: 3px solid var(--color-accent, #C9A96A);
+  border-left: 3px solid var(--color-accent, #DDA752);
 }
 
 [dir='rtl'] .reportZoneChild {
   border-left: none;
-  border-right: 3px solid var(--color-accent, #C9A96A);
+  border-right: 3px solid var(--color-accent, #DDA752);
 }
 
 .reportZoneHead {
@@ -1121,7 +1121,7 @@
   height: 34px;
   border-radius: 10px;
   background: rgba(30, 77, 61, 0.08);
-  color: var(--color-primary, #1E4D3D);
+  color: var(--color-primary, #DDA752);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1131,7 +1131,7 @@
   font-family: var(--font-serif, 'ThmanyahSerifDisplay', Georgia, serif);
   font-size: 1.2rem;
   font-weight: 700;
-  color: var(--color-primary, #1E4D3D);
+  color: var(--color-primary, #DDA752);
 }
 
 .reportZoneSubLabel {
@@ -1165,7 +1165,7 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  color: var(--color-primary, #1E4D3D);
+  color: var(--color-primary, #DDA752);
 }
 
 .reportTradeTitle {
@@ -1180,7 +1180,7 @@
   padding: 2px 8px;
   border-radius: 12px;
   background: rgba(30, 77, 61, 0.08);
-  color: var(--color-primary, #1E4D3D);
+  color: var(--color-primary, #DDA752);
   white-space: nowrap;
 }
 
@@ -1204,7 +1204,7 @@
 
 .reportAttrVal {
   font-weight: 700;
-  color: var(--color-primary, #1E4D3D);
+  color: var(--color-primary, #DDA752);
 }
 
 .reportNoTrades {
@@ -1362,7 +1362,7 @@
 
 .galleryNavArrow:hover {
   background: rgba(201, 169, 106, 0.9);
-  color: #1E4D3D;
+color: #DDA752;
   transform: translateY(-50%) scale(1.1);
 }
 
@@ -1412,7 +1412,7 @@
 
 .galleryThumbActive {
   opacity: 1;
-  border-color: #C9A96A;
+border-color: #DDA752;
   transform: scale(1.05);
 }
 
@@ -1439,7 +1439,7 @@
   font-family: var(--font-serif, Georgia, serif);
   font-size: 24px;
   font-weight: 800;
-  color: #1E4D3D;
+color: #DDA752;
   margin: 0 0 4px;
 }
 
@@ -1467,7 +1467,7 @@
   position: relative;
   width: 100%;
   height: 230px;
-  background: var(--color-primary, #1E4D3D);
+  background: var(--color-primary, #DDA752);
   flex-shrink: 0;
 }
 
@@ -1630,7 +1630,7 @@
 }
 
 .instanceTabActive {
-  background: var(--color-primary, #1E4D3D);
+  background: var(--color-primary, #DDA752);
   color: #FFFFFF;
   box-shadow: 0 2px 8px rgba(30, 77, 61, 0.25);
 }
@@ -1653,13 +1653,13 @@
   font-family: var(--font-serif, 'ThmanyahSerifDisplay', Georgia, serif);
   font-size: 1.15rem;
   font-weight: 700;
-  color: var(--color-primary, #1E4D3D);
+  color: var(--color-primary, #DDA752);
   border-bottom: 2px solid rgba(201, 169, 106, 0.35);
   padding-bottom: 8px;
 }
 
 .specHeaderIcon {
-  color: var(--color-accent, #C9A96A);
+  color: var(--color-accent, #DDA752);
 }
 
 .tradesGridContainer {
@@ -1705,7 +1705,7 @@
   height: 32px;
   border-radius: 8px;
   background: rgba(30, 77, 61, 0.08);
-  color: var(--color-primary, #1E4D3D);
+  color: var(--color-primary, #DDA752);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1728,14 +1728,14 @@
   padding: 4px 12px;
   border-radius: 20px;
   background: rgba(30, 77, 61, 0.07);
-  color: var(--color-primary, #1E4D3D);
+  color: var(--color-primary, #DDA752);
   border: 1px solid rgba(30, 77, 61, 0.15);
   white-space: nowrap;
   flex-shrink: 0;
 }
 
 .checkIcon {
-  color: var(--color-accent, #C9A96A);
+  color: var(--color-accent, #DDA752);
 }
 
 .tradeProgressLineWrap {
@@ -1769,7 +1769,7 @@
 }
 
 .revampedAttrVal {
-  color: var(--color-primary, #1E4D3D);
+  color: var(--color-primary, #DDA752);
   font-weight: 700;
 }
 
@@ -1788,7 +1788,7 @@
 }
 
 .noTradesIcon {
-  color: var(--color-accent, #C9A96A);
+  color: var(--color-accent, #DDA752);
   opacity: 0.6;
 }
 
@@ -1815,7 +1815,7 @@
   font-size: 0.9rem;
   font-weight: 700;
   color: #FFFFFF;
-  background: var(--color-primary, #1E4D3D);
+  background: var(--color-primary, #DDA752);
   text-decoration: none;
   transition: all 200ms ease;
   box-shadow: 0 4px 16px rgba(30, 77, 61, 0.25);

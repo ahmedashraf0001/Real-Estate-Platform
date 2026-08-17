@@ -3,10 +3,8 @@ import { getMessages, getTranslations } from 'next-intl/server';
 import { notFound } from 'next/navigation';
 import '@/app/globals.css';
 import { routing } from '@/i18n/routing';
-import TopLoaderBar from '@/components/layout/TopLoaderBar';
-import Header from '@/components/layout/Header';
-import Footer from '@/components/layout/Footer';
-import ConditionalFooter from '@/components/layout/ConditionalFooter';
+import { LenisProvider } from '@/components/LenisProvider';
+import { ClientAppShell } from '@/components/ClientAppShell';
 import { Toaster } from 'sonner';
 import type { Metadata } from 'next';
 import Script from 'next/script';
@@ -50,10 +48,20 @@ export default async function LocaleLayout({ children, params }: Props) {
   const dir = locale === 'ar' ? 'rtl' : 'ltr';
 
   return (
-    <html lang={locale} dir={dir} data-scroll-behavior="smooth">
+    <html lang={locale} dir={dir} data-theme="dark">
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=Cairo:wght@300;400;500;600;700;800;900&display=swap"
+          rel="stylesheet"
+        />
+        <link
+          rel="stylesheet"
+          href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+          integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+          crossOrigin=""
+        />
       </head>
       <body>
         {process.env.NODE_ENV === 'production' && (
@@ -65,15 +73,16 @@ export default async function LocaleLayout({ children, params }: Props) {
           />
         )}
         <NextIntlClientProvider messages={messages}>
-          <TopLoaderBar />
-          <Header locale={locale} />
-          <main>{children}</main>
-          <ConditionalFooter locale={locale} />
+          <LenisProvider locale={locale}>
+            <ClientAppShell locale={locale}>
+              {children}
+            </ClientAppShell>
+          </LenisProvider>
           <Toaster
             position="bottom-right"
             toastOptions={{
               style: {
-                fontFamily: 'var(--font-sans)',
+                fontFamily: 'var(--font-body)',
                 borderRadius: 'var(--radius-md)',
               },
             }}

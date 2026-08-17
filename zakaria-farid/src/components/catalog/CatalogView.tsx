@@ -1,0 +1,2968 @@
+'use client';
+import { useRouter } from 'next/navigation';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
+import { PropertyCard } from '@/components/property/PropertyCard';
+import { MarketChart } from '@/components/MarketChart';
+import { CompareDrawer } from '@/components/property/CompareDrawer';
+import { FALLBACK_PROPERTIES } from '@/lib/data/fallbackProperties';
+import { adaptProperties } from '@/lib/utils/propertyAdapter';
+import { Property } from '@/types';
+import {
+  SlidersHorizontal,
+  ChevronDown,
+  Bell,
+  TrendingUp,
+  Search,
+  MapPin,
+  Building2,
+  Banknote,
+  Bed,
+  Check,
+  X,
+  LayoutGrid,
+  List,
+  Sparkles,
+  Scale,
+  ChevronLeft,
+  ChevronRight,
+  RotateCcw,
+  Waves,
+  Car,
+  Palmtree,
+  Crown,
+  Calendar,
+  ArrowUpRight,
+  Shield,
+  MessageSquare
+} from 'lucide-react';
+import { motion, AnimatePresence, Variants } from 'framer-motion';
+
+interface CatalogViewProps {
+  properties?: Property[];
+  locale?: string;
+  initialFilters?: {
+    location?: string;
+    propertyType?: string;
+    priceTier?: string;
+    minPrice?: string;
+    maxPrice?: string;
+  };
+  onSelectProperty?: (id: string) => void;
+  onOpenInquiry?: (title?: string) => void;
+}
+
+export type SortOption = 'highest' | 'lowest' | 'newest' | 'largest';
+export type ViewMode = 'grid' | 'compact' | 'list';
+
+const SORT_OPTIONS: { id: SortOption; label: string; shortLabel: string }[] = [
+  { id: 'highest', label: 'Highest Guide Price', shortLabel: 'Highest Price' },
+  { id: 'lowest', label: 'Lowest Guide Price', shortLabel: 'Lowest Price' },
+  { id: 'newest', label: 'Newest Delivery Year', shortLabel: 'Newest Delivery' },
+  { id: 'largest', label: 'Largest Built-Up Area', shortLabel: 'Largest Area' },
+];
+
+const DESTINATION_PILLS = [
+  { id: 'All', label: 'All Destinations' },
+  { id: 'New Cairo', label: 'New Cairo' },
+  { id: 'Sheikh Zayed', label: 'Sheikh Zayed' },
+  { id: 'North Coast', label: 'North Coast (Sahel)' },
+  { id: 'Gouna', label: 'El Gouna' },
+  { id: 'Ain Sokhna', label: 'Ain Sokhna' },
+  { id: 'Madinaty', label: 'Madinaty' },
+];
+
+const LOCATION_FILTER_OPTIONS = [
+  { value: 'All', label: 'All Destinations', shortLabel: 'All Cities' },
+  { value: 'New Cairo', label: 'New Cairo (Fifth Settlement)', shortLabel: 'New Cairo' },
+  { value: 'Sheikh Zayed', label: 'Sheikh Zayed (October)', shortLabel: 'Sheikh Zayed' },
+  { value: 'North Coast', label: 'North Coast (Sahel)', shortLabel: 'North Coast' },
+  { value: 'Ain Sokhna', label: 'Ain Sokhna (Red Sea)', shortLabel: 'Ain Sokhna' },
+  { value: 'Gouna', label: 'El Gouna (Lagoon)', shortLabel: 'El Gouna' },
+  { value: 'Madinaty', label: 'Madinaty (East Cairo)', shortLabel: 'Madinaty' },
+];
+
+const TYPE_FILTER_OPTIONS = [
+  { value: 'All', label: 'All Typologies', shortLabel: 'All Types' },
+  { value: 'Standalone Villa', label: 'Standalone Villa', shortLabel: 'Standalone' },
+  { value: 'Penthouse', label: 'Sky Penthouse', shortLabel: 'Penthouse' },
+  { value: 'Mansion', label: 'Grand Mansion', shortLabel: 'Mansion' },
+  { value: 'Villas & Penthouses', label: 'Villas & Penthouses', shortLabel: 'Villas/Penthouses' },
+];
+
+const PRICE_FILTER_OPTIONS = [
+  { value: 'All', label: 'All Price Tiers', shortLabel: 'All Tiers' },
+  { value: 'Under 25M EGP', label: 'Under 25M EGP', shortLabel: '< 25M EGP' },
+  { value: '25M - 50M+ EGP', label: '25M – 50M+ EGP', shortLabel: '25M–50M EGP' },
+  { value: '50M+ EGP', label: 'Ultra-Luxury (50M+ EGP)', shortLabel: '50M+ EGP' },
+];
+
+const BEDROOM_FILTER_OPTIONS = [
+  { value: 'All', label: 'All Bedrooms', shortLabel: 'All Beds' },
+  { value: '3', label: '3 Bedrooms', shortLabel: '3 Beds' },
+  { value: '4+', label: '4+ Bedrooms', shortLabel: '4+ Beds' },
+  { value: '5+', label: '5+ Bedrooms', shortLabel: '5+ Beds' },
+];
+
+const cardsContainerVariants: Variants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.04,
+      delayChildren: 0.02
+    }
+  },
+  exit: {
+    opacity: 0,
+    y: -8,
+    transition: {
+      duration: 0.15,
+      ease: [0.16, 1, 0.3, 1]
+    }
+  }
+};
+
+export const CatalogView: React.FC<CatalogViewProps> = ({
+  properties: propProperties,
+  locale = 'en',
+  initialFilters,
+  onSelectProperty: propOnSelectProperty,
+  onOpenInquiry: propOnOpenInquiry
+}) => {
+  const router = useRouter();
+  const onSelectProperty = propOnSelectProperty || ((id: string) => router.push('/' + locale + '/properties/' + id));
+  const onOpenInquiry = propOnOpenInquiry || ((title?: string) => {
+    window.location.href = 'https://wa.me/201009998888?text=' + encodeURIComponent('Hello, I am inquiring about ' + (title || 'sovereign acquisitions'));
+  });
+  // Use server-passed real DB properties; fall back to adapted FALLBACK_PROPERTIES
+  const adaptedFallback = React.useMemo(() => adaptProperties(FALLBACK_PROPERTIES, locale as 'en' | 'ar'), [locale]);
+  const allPropertiesList: Property[] = (propProperties && propProperties.length > 0) ? (propProperties as Property[]) : adaptedFallback;
+  const [viewMode, setViewMode] = useState<ViewMode>('grid');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [location, setLocation] = useState(initialFilters?.location || 'All');
+  const [propertyType, setPropertyType] = useState(initialFilters?.propertyType || 'All');
+  const [priceTier, setPriceTier] = useState(initialFilters?.priceTier || 'All');
+  const [bedrooms, setBedrooms] = useState('All');
+  const [sortBy, setSortBy] = useState<SortOption>('highest');
+  const [isAdvancedModalOpen, setIsAdvancedModalOpen] = useState(false);
+  const [selectedAmenity, setSelectedAmenity] = useState<string>('All');
+  const [selectedDelivery, setSelectedDelivery] = useState<string>('All');
+  const [isSortOpen, setIsSortOpen] = useState(false);
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
+  const [openDropdown, setOpenDropdown] = useState<'location' | 'type' | 'price' | 'beds' | null>(null);
+  const [dropdownPlacement, setDropdownPlacement] = useState<'down' | 'up'>('down');
+  const sortRef = useRef<HTMLDivElement>(null);
+  const toolbarRef = useRef<HTMLDivElement>(null);
+
+  const handleToggleDropdown = (type: 'location' | 'type' | 'price' | 'beds', e: React.MouseEvent<HTMLButtonElement>) => {
+    if (openDropdown === type) {
+      setOpenDropdown(null);
+      return;
+    }
+    const rect = e.currentTarget.getBoundingClientRect();
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const requiredSpace = 260;
+    if (spaceBelow < requiredSpace && rect.top > spaceBelow) {
+      setDropdownPlacement('up');
+    } else {
+      setDropdownPlacement('down');
+    }
+    setOpenDropdown(type);
+  };
+  const [emailAlertSaved, setEmailAlertSaved] = useState(false);
+  const [searchSaved, setSearchSaved] = useState(false);
+  const [compareIds, setCompareIds] = useState<string[]>([]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent | TouchEvent) => {
+      const target = event.target as Element;
+      if (sortRef.current && !sortRef.current.contains(target as Node)) {
+        setIsSortOpen(false);
+      }
+      if (openDropdown) {
+        const closestDropdown = target.closest?.('.custom-filter-dropdown');
+        if (!closestDropdown) {
+          setOpenDropdown(null);
+        }
+      }
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setOpenDropdown(null);
+        setIsSortOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('touchstart', handleClickOutside);
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [openDropdown]);
+
+  useEffect(() => {
+    if (isAdvancedModalOpen) {
+      if (typeof window !== 'undefined' && window.__masrLenis) {
+        window.__masrLenis.stop();
+      }
+      const originalHtmlOverflow = document.documentElement.style.overflow;
+      const originalBodyOverflow = document.body.style.overflow;
+      document.documentElement.style.overflow = 'hidden';
+      document.body.style.overflow = 'hidden';
+      return () => {
+        if (typeof window !== 'undefined' && window.__masrLenis) {
+          window.__masrLenis.start();
+        }
+        document.documentElement.style.overflow = originalHtmlOverflow || '';
+        document.body.style.overflow = originalBodyOverflow || '';
+      };
+    }
+  }, [isAdvancedModalOpen]);
+
+  const toggleCompare = (id: string) => {
+    setCompareIds((prev) => {
+      if (prev.includes(id)) {
+        return prev.filter((item) => item !== id);
+      }
+      if (prev.length >= 3) {
+        return [...prev.slice(1), id];
+      }
+      return [...prev, id];
+    });
+  };
+
+  const removeCompare = (id: string) => {
+    setCompareIds((prev) => prev.filter((item) => item !== id));
+  };
+
+  const clearCompare = () => {
+    setCompareIds([]);
+  };
+
+  const selectedCompareProperties = useMemo(() => {
+    return allPropertiesList.filter((p: Property) => compareIds.includes(p.id));
+  }, [compareIds, allPropertiesList]);
+
+  const hasActiveFilters =
+    searchQuery.trim() !== '' ||
+    location !== 'All' ||
+    propertyType !== 'All' ||
+    priceTier !== 'All' ||
+    bedrooms !== 'All' ||
+    selectedAmenity !== 'All' ||
+    selectedDelivery !== 'All';
+
+  const resetAllFilters = () => {
+    setSearchQuery('');
+    setLocation('All');
+    setPropertyType('All');
+    setPriceTier('All');
+    setBedrooms('All');
+    setSelectedAmenity('All');
+    setSelectedDelivery('All');
+  };
+
+  // Filter and Sort Logic — uses adapted DB field names (price = price_egp, beds = bedrooms, sqm = area_sqm, etc.)
+  const filteredProperties = useMemo(() => {
+    return allPropertiesList.filter((p: Property) => {
+      // Free-Text Keyword Search
+      if (searchQuery.trim()) {
+        const query = searchQuery.toLowerCase().trim();
+        const matches =
+          (p.title || p.title_en || '').toLowerCase().includes(query) ||
+          (p.district || '').toLowerCase().includes(query) ||
+          (p.location || '').toLowerCase().includes(query) ||
+          (p.estateName || '').toLowerCase().includes(query) ||
+          (p.propertyType || p.type || '').toLowerCase().includes(query) ||
+          (p.narrative || p.description_en || '').toLowerCase().includes(query) ||
+          (p.amenities || []).some((a: any) => (a.title || '').toLowerCase().includes(query)) ||
+          (p.property_amenities || []).some((a: any) => (a.amenity_en || '').toLowerCase().includes(query));
+        if (!matches) return false;
+      }
+
+      // Location Filter
+      if (location !== 'All') {
+        const locationMatches =
+          (p.district || '').toLowerCase().includes(location.toLowerCase()) ||
+          (p.location || '').toLowerCase().includes(location.toLowerCase());
+        if (!locationMatches) return false;
+      }
+
+      // Property Type Filter — matches both adapted propertyType and raw DB type
+      if (propertyType !== 'All') {
+        const pt = p.propertyType || '';
+        const rawType = p.type || '';
+        if (propertyType === 'Villas & Penthouses') {
+          if (!['Standalone Villa', 'Penthouse', 'Mansion', 'villa', 'townhouse', 'duplex'].includes(pt) &&
+              !['villa', 'townhouse', 'duplex'].includes(rawType)) return false;
+        } else if (pt !== propertyType && rawType !== propertyType.toLowerCase()) {
+          return false;
+        }
+      }
+
+      // Price Tier Filter — use adapted price (= price_egp) or raw price_egp
+      const priceVal = p.price || p.price_egp || 0;
+      if (priceTier !== 'All') {
+        if (priceTier === 'Under 25M EGP' && priceVal >= 25000000) return false;
+        if (priceTier === '25M - 50M+ EGP' && (priceVal < 25000000 || priceVal > 50000000)) return false;
+        if (priceTier === '50M+ EGP' && priceVal < 50000000) return false;
+      }
+
+      // Bedrooms Filter — use adapted beds or raw bedrooms field
+      const bedsVal = p.beds || (p as any).bedrooms || 0;
+      if (bedrooms !== 'All') {
+        if (bedrooms === '4+' && bedsVal < 4) return false;
+        if (bedrooms === '5+' && bedsVal < 5) return false;
+        if (bedrooms === '3' && bedsVal !== 3) return false;
+      }
+
+      // Lifestyle Amenities Filter
+      if (selectedAmenity !== 'All') {
+        const hasAmenity =
+          (p.amenities || []).some((a: any) => (a.title || '').toLowerCase().includes(selectedAmenity.toLowerCase())) ||
+          (p.property_amenities || []).some((a: any) => (a.amenity_en || '').toLowerCase().includes(selectedAmenity.toLowerCase()));
+        if (!hasAmenity) return false;
+      }
+
+      // Delivery Status Filter — map to completion_status from DB
+      if (selectedDelivery !== 'All') {
+        const isReady = p.completion_status === 'ready';
+        const isOffPlan = p.completion_status === 'off_plan';
+        if (selectedDelivery === 'Immediate' && !isReady) return false;
+        if (selectedDelivery === '2025' && !isOffPlan) return false;
+        if (selectedDelivery === '2026+' && !isOffPlan) return false;
+      }
+
+      return true;
+    }).sort((a: Property, b: Property) => {
+      const aPrice = a.price || a.price_egp || 0;
+      const bPrice = b.price || b.price_egp || 0;
+      const aSqm = a.sqm || (a as any).area_sqm || 0;
+      const bSqm = b.sqm || (b as any).area_sqm || 0;
+      if (sortBy === 'highest') return bPrice - aPrice;
+      if (sortBy === 'lowest') return aPrice - bPrice;
+      if (sortBy === 'newest') return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
+      if (sortBy === 'largest') return bSqm - aSqm;
+      return 0;
+    });
+  }, [allPropertiesList, searchQuery, location, propertyType, priceTier, bedrooms, selectedAmenity, selectedDelivery, sortBy]);
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 6;
+  const totalPages = Math.ceil(filteredProperties.length / itemsPerPage) || 1;
+  const paginatedProperties = useMemo(() => {
+    const start = (currentPage - 1) * itemsPerPage;
+    return filteredProperties.slice(start, start + itemsPerPage);
+  }, [filteredProperties, currentPage]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, location, propertyType, priceTier, bedrooms, sortBy]);
+
+  return (
+    <div className="catalog-view">
+      {/* 1. Dedicated Header & Filter Banner */}
+      <div className="catalog-header-banner">
+        <div className="catalog-header-glow" />
+        <div className="container relative-container">
+          <div className="catalog-header">
+            <motion.div
+              initial={{ opacity: 0, y: 10, filter: 'blur(6px)' }}
+              animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+              transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
+            >
+              <span className="eyebrow">CURATED REAL ESTATE DIRECTORY</span>
+            </motion.div>
+
+            <motion.h1
+              className="catalog-main-title"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, delay: 0.05, ease: [0.16, 1, 0.3, 1] }}
+            >
+              <span className="header-scan-glow">Egypt's Prime Listings</span>
+            </motion.h1>
+          </div>
+
+          {/* Quick Destination Jump Pills */}
+          <motion.div
+            className="catalog-destination-pills"
+            role="tablist"
+            aria-label="Destination Quick Jump"
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.05 }}
+          >
+            {DESTINATION_PILLS.map((dest) => {
+              const isActive = location === dest.id || (dest.id === 'All' && location === 'All');
+              return (
+                <button
+                  key={dest.id}
+                  className={`dest-jump-pill ${isActive ? 'active' : ''}`}
+                  onClick={() => setLocation(dest.id)}
+                  role="tab"
+                  aria-selected={isActive}
+                >
+                  <span>{dest.label}</span>
+                  {isActive && (
+                    <motion.div
+                      className="dest-jump-pill-active"
+                      layoutId="activeCatalogDestPill"
+                      transition={{ type: 'spring', stiffness: 450, damping: 32 }}
+                    />
+                  )}
+                </button>
+              );
+            })}
+          </motion.div>
+
+          {/* The Sovereign Architectural Omnibar (Unified Master Console) */}
+          <motion.div
+            className={`catalog-master-omnibar ${isSearchFocused || searchQuery.trim().length > 0 ? 'search-active' : ''}`}
+            ref={toolbarRef}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.08 }}
+          >
+            {/* Slot 1: Integrated Keyword Search */}
+            <div className="omnibar-search-slot">
+              <label className="omnibar-slot-label">SEARCH</label>
+              <div className="omnibar-search-inner">
+                <Search size={15} className="slot-icon" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onFocus={() => {
+                    setIsSearchFocused(true);
+                    setOpenDropdown(null);
+                  }}
+                  onBlur={() => setIsSearchFocused(false)}
+                  placeholder={
+                    isSearchFocused
+                      ? "Search estates, compounds, architects, amenities (e.g. Sodic, Sea Cliff)..."
+                      : "Estates, compounds, amenities..."
+                  }
+                  className="omnibar-search-input"
+                />
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery('')}
+                    className="omnibar-clear-btn"
+                    title="Clear search"
+                    type="button"
+                  >
+                    <X size={13} />
+                  </button>
+                )}
+              </div>
+            </div>
+
+            <div className="omnibar-divider" />
+
+            {/* Slot 2: Location Dropdown */}
+            <div className="omnibar-filter-slot custom-filter-dropdown">
+              <label className="omnibar-slot-label">LOCATION</label>
+              <button
+                type="button"
+                className={`omnibar-trigger-btn ${openDropdown === 'location' ? 'open' : ''} ${location !== 'All' ? 'has-value' : ''}`}
+                onClick={(e) => handleToggleDropdown('location', e)}
+                aria-haspopup="listbox"
+                aria-expanded={openDropdown === 'location'}
+              >
+                <div className="trigger-left">
+                  <MapPin size={15} className="slot-icon" />
+                  <span className="trigger-value">
+                    {LOCATION_FILTER_OPTIONS.find((o) => o.value === location)?.shortLabel || 'All Cities'}
+                  </span>
+                </div>
+                <ChevronDown size={13} className={`slot-chevron ${openDropdown === 'location' ? 'rotate' : ''}`} />
+              </button>
+
+              <AnimatePresence>
+                {openDropdown === 'location' && (
+                  <motion.div
+                    className={`filter-custom-menu placement-${dropdownPlacement}`}
+                    data-lenis-prevent="true"
+                    initial={{ opacity: 0, y: dropdownPlacement === 'up' ? -8 : 8, scale: 0.96 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: dropdownPlacement === 'up' ? -8 : 8, scale: 0.96 }}
+                    transition={{ duration: 0.15, ease: 'easeOut' }}
+                  >
+                    {LOCATION_FILTER_OPTIONS.map((opt: any) => (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        className={`filter-menu-option ${location === opt.value ? 'selected' : ''}`}
+                        onClick={() => {
+                          setLocation(opt.value);
+                          setOpenDropdown(null);
+                        }}
+                      >
+                        <span className="option-label">{opt.label}</span>
+                        {location === opt.value && <Check size={14} className="option-check" />}
+                      </button>
+                    ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
+            <div className="omnibar-divider" />
+
+            {/* Slot 3: Property Type Dropdown */}
+            <div className="omnibar-filter-slot custom-filter-dropdown">
+              <label className="omnibar-slot-label">PROPERTY TYPE</label>
+              <button
+                type="button"
+                className={`omnibar-trigger-btn ${openDropdown === 'type' ? 'open' : ''} ${propertyType !== 'All' ? 'has-value' : ''}`}
+                onClick={(e) => handleToggleDropdown('type', e)}
+                aria-haspopup="listbox"
+                aria-expanded={openDropdown === 'type'}
+              >
+                <div className="trigger-left">
+                  <Building2 size={15} className="slot-icon" />
+                  <span className="trigger-value">
+                    {TYPE_FILTER_OPTIONS.find((o) => o.value === propertyType)?.shortLabel || 'All Types'}
+                  </span>
+                </div>
+                <ChevronDown size={13} className={`slot-chevron ${openDropdown === 'type' ? 'rotate' : ''}`} />
+              </button>
+
+              <AnimatePresence>
+                {openDropdown === 'type' && (
+                  <motion.div
+                    className={`filter-custom-menu placement-${dropdownPlacement}`}
+                    data-lenis-prevent="true"
+                    initial={{ opacity: 0, y: dropdownPlacement === 'up' ? -8 : 8, scale: 0.96 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: dropdownPlacement === 'up' ? -8 : 8, scale: 0.96 }}
+                    transition={{ duration: 0.15, ease: 'easeOut' }}
+                  >
+                    {TYPE_FILTER_OPTIONS.map((opt: any) => (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        className={`filter-menu-option ${propertyType === opt.value ? 'selected' : ''}`}
+                        onClick={() => {
+                          setPropertyType(opt.value);
+                          setOpenDropdown(null);
+                        }}
+                      >
+                        <span className="option-label">{opt.label}</span>
+                        {propertyType === opt.value && <Check size={14} className="option-check" />}
+                      </button>
+                    ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
+            <div className="omnibar-divider" />
+
+            {/* Slot 4: Price Tier Dropdown */}
+            <div className="omnibar-filter-slot custom-filter-dropdown">
+              <label className="omnibar-slot-label">PRICE TIER</label>
+              <button
+                type="button"
+                className={`omnibar-trigger-btn ${openDropdown === 'price' ? 'open' : ''} ${priceTier !== 'All' ? 'has-value' : ''}`}
+                onClick={(e) => handleToggleDropdown('price', e)}
+                aria-haspopup="listbox"
+                aria-expanded={openDropdown === 'price'}
+              >
+                <div className="trigger-left">
+                  <Banknote size={15} className="slot-icon" />
+                  <span className="trigger-value">
+                    {PRICE_FILTER_OPTIONS.find((o) => o.value === priceTier)?.shortLabel || 'All Tiers'}
+                  </span>
+                </div>
+                <ChevronDown size={13} className={`slot-chevron ${openDropdown === 'price' ? 'rotate' : ''}`} />
+              </button>
+
+              <AnimatePresence>
+                {openDropdown === 'price' && (
+                  <motion.div
+                    className={`filter-custom-menu placement-${dropdownPlacement}`}
+                    data-lenis-prevent="true"
+                    initial={{ opacity: 0, y: dropdownPlacement === 'up' ? -8 : 8, scale: 0.96 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: dropdownPlacement === 'up' ? -8 : 8, scale: 0.96 }}
+                    transition={{ duration: 0.15, ease: 'easeOut' }}
+                  >
+                    {PRICE_FILTER_OPTIONS.map((opt: any) => (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        className={`filter-menu-option ${priceTier === opt.value ? 'selected' : ''}`}
+                        onClick={() => {
+                          setPriceTier(opt.value);
+                          setOpenDropdown(null);
+                        }}
+                      >
+                        <span className="option-label">{opt.label}</span>
+                        {priceTier === opt.value && <Check size={14} className="option-check" />}
+                      </button>
+                    ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
+            <div className="omnibar-divider" />
+
+            {/* Slot 5: Bedrooms Dropdown */}
+            <div className="omnibar-filter-slot custom-filter-dropdown">
+              <label className="omnibar-slot-label">BEDROOMS</label>
+              <button
+                type="button"
+                className={`omnibar-trigger-btn ${openDropdown === 'beds' ? 'open' : ''} ${bedrooms !== 'All' ? 'has-value' : ''}`}
+                onClick={(e) => handleToggleDropdown('beds', e)}
+                aria-haspopup="listbox"
+                aria-expanded={openDropdown === 'beds'}
+              >
+                <div className="trigger-left">
+                  <Bed size={15} className="slot-icon" />
+                  <span className="trigger-value">
+                    {BEDROOM_FILTER_OPTIONS.find((o) => o.value === bedrooms)?.shortLabel || 'All Bedrooms'}
+                  </span>
+                </div>
+                <ChevronDown size={13} className={`slot-chevron ${openDropdown === 'beds' ? 'rotate' : ''}`} />
+              </button>
+
+              <AnimatePresence>
+                {openDropdown === 'beds' && (
+                  <motion.div
+                    className={`filter-custom-menu placement-${dropdownPlacement}`}
+                    data-lenis-prevent="true"
+                    initial={{ opacity: 0, y: dropdownPlacement === 'up' ? -8 : 8, scale: 0.96 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: dropdownPlacement === 'up' ? -8 : 8, scale: 0.96 }}
+                    transition={{ duration: 0.15, ease: 'easeOut' }}
+                  >
+                    {BEDROOM_FILTER_OPTIONS.map((opt: any) => (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        className={`filter-menu-option ${bedrooms === opt.value ? 'selected' : ''}`}
+                        onClick={() => {
+                          setBedrooms(opt.value);
+                          setOpenDropdown(null);
+                        }}
+                      >
+                        <span className="option-label">{opt.label}</span>
+                        {bedrooms === opt.value && <Check size={14} className="option-check" />}
+                      </button>
+                    ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
+            <div className="omnibar-divider" />
+
+            {/* Slot 6: Action Controls */}
+            <div className="omnibar-actions-slot">
+              {hasActiveFilters && (
+                <button
+                  className="omnibar-reset-btn"
+                  title="Reset All Filters"
+                  onClick={resetAllFilters}
+                  type="button"
+                >
+                  <RotateCcw size={13} />
+                  <span>Reset</span>
+                </button>
+              )}
+
+              <button
+                className={`omnibar-filter-btn ${isAdvancedModalOpen ? 'active' : ''} ${(selectedDelivery !== 'All' || selectedAmenity !== 'All') ? 'has-extra-filters' : ''}`}
+                title="Advanced Architectural Filters"
+                onClick={() => setIsAdvancedModalOpen(true)}
+                type="button"
+              >
+                <SlidersHorizontal size={17} />
+                {(selectedDelivery !== 'All' || selectedAmenity !== 'All') && (
+                  <span className="omnibar-filter-badge" />
+                )}
+              </button>
+            </div>
+          </motion.div>
+
+          {/* Active Dismissible Filter Tags */}
+          <AnimatePresence>
+            {hasActiveFilters && (
+              <motion.div
+                className="active-filter-tags-row"
+                initial={{ opacity: 0, y: -8, height: 0 }}
+                animate={{ opacity: 1, y: 0, height: 'auto' }}
+                exit={{ opacity: 0, y: -8, height: 0 }}
+                transition={{ duration: 0.25 }}
+              >
+                <span className="active-tags-heading">Active Filters:</span>
+
+                {searchQuery.trim() && (
+                  <span className="filter-tag">
+                    <span className="tag-text">"{searchQuery}"</span>
+                    <button onClick={() => setSearchQuery('')} className="tag-remove-btn" title="Remove keyword search">
+                      <X size={12} />
+                    </button>
+                  </span>
+                )}
+
+                {location !== 'All' && (
+                  <span className="filter-tag">
+                    <MapPin size={12} className="tag-gold-icon" />
+                    <span className="tag-text">{location}</span>
+                    <button onClick={() => setLocation('All')} className="tag-remove-btn" title="Remove location filter">
+                      <X size={12} />
+                    </button>
+                  </span>
+                )}
+
+                {propertyType !== 'All' && (
+                  <span className="filter-tag">
+                    <Building2 size={12} className="tag-gold-icon" />
+                    <span className="tag-text">{propertyType}</span>
+                    <button onClick={() => setPropertyType('All')} className="tag-remove-btn" title="Remove type filter">
+                      <X size={12} />
+                    </button>
+                  </span>
+                )}
+
+                {priceTier !== 'All' && (
+                  <span className="filter-tag">
+                    <Banknote size={12} className="tag-gold-icon" />
+                    <span className="tag-text">{priceTier}</span>
+                    <button onClick={() => setPriceTier('All')} className="tag-remove-btn" title="Remove price filter">
+                      <X size={12} />
+                    </button>
+                  </span>
+                )}
+
+                {bedrooms !== 'All' && (
+                  <span className="filter-tag">
+                    <Bed size={12} className="tag-gold-icon" />
+                    <span className="tag-text">{bedrooms} Beds</span>
+                    <button onClick={() => setBedrooms('All')} className="tag-remove-btn" title="Remove beds filter">
+                      <X size={12} />
+                    </button>
+                  </span>
+                )}
+
+                {selectedDelivery !== 'All' && (
+                  <span className="filter-tag">
+                    <Calendar size={12} className="tag-gold-icon" />
+                    <span className="tag-text">Delivery: {selectedDelivery}</span>
+                    <button onClick={() => setSelectedDelivery('All')} className="tag-remove-btn" title="Remove delivery filter">
+                      <X size={12} />
+                    </button>
+                  </span>
+                )}
+
+                {selectedAmenity !== 'All' && (
+                  <span className="filter-tag">
+                    <Sparkles size={12} className="tag-gold-icon" />
+                    <span className="tag-text">Amenity: {selectedAmenity}</span>
+                    <button onClick={() => setSelectedAmenity('All')} className="tag-remove-btn" title="Remove amenity filter">
+                      <X size={12} />
+                    </button>
+                  </span>
+                )}
+
+                <button onClick={resetAllFilters} className="clear-all-tags-btn">
+                  Clear All
+                </button>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      </div>
+
+      {/* 2. Catalog Content Body */}
+      <div className="container">
+        {/* Results Bar */}
+        <div className="results-meta-bar">
+          <div className="results-count-badge">
+            <span className="results-live-dot" />
+            <div className="results-count-text">
+              <span>Showing</span>
+              <strong className="gold-count">{filteredProperties.length}</strong>
+              <span>of</span>
+              <strong className="total-count">{allPropertiesList.length}</strong>
+              <span>Masterpieces</span>
+            </div>
+          </div>
+
+          <div className="results-controls">
+            {/* View Mode & Density Switcher */}
+            <div className="view-mode-toggle" role="group" aria-label="Layout Density Switcher">
+              <button
+                className={`view-mode-btn ${viewMode === 'grid' ? 'active' : ''}`}
+                onClick={() => setViewMode('grid')}
+                title="Spacious Gallery (2-Col)"
+                aria-pressed={viewMode === 'grid'}
+                type="button"
+              >
+                <LayoutGrid size={14} />
+                <span className="view-mode-text">Spacious</span>
+                {viewMode === 'grid' && (
+                  <motion.div
+                    className="view-mode-indicator"
+                    layoutId="catalogViewModeIndicator"
+                    transition={{ type: 'spring', stiffness: 450, damping: 32 }}
+                  />
+                )}
+              </button>
+
+              <button
+                className={`view-mode-btn ${viewMode === 'compact' ? 'active' : ''}`}
+                onClick={() => setViewMode('compact')}
+                title="Compact Density Grid (3-Col)"
+                aria-pressed={viewMode === 'compact'}
+                type="button"
+              >
+                <SlidersHorizontal size={13} />
+                <span className="view-mode-text">Compact</span>
+                {viewMode === 'compact' && (
+                  <motion.div
+                    className="view-mode-indicator"
+                    layoutId="catalogViewModeIndicator"
+                    transition={{ type: 'spring', stiffness: 450, damping: 32 }}
+                  />
+                )}
+              </button>
+
+              <button
+                className={`view-mode-btn ${viewMode === 'list' ? 'active' : ''}`}
+                onClick={() => setViewMode('list')}
+                title="Architectural Row List"
+                aria-pressed={viewMode === 'list'}
+                type="button"
+              >
+                <List size={14} />
+                <span className="view-mode-text">List</span>
+                {viewMode === 'list' && (
+                  <motion.div
+                    className="view-mode-indicator"
+                    layoutId="catalogViewModeIndicator"
+                    transition={{ type: 'spring', stiffness: 450, damping: 32 }}
+                  />
+                )}
+              </button>
+            </div>
+
+            {/* Custom Gold Sort Dropdown */}
+            <div className="custom-sort-container" ref={sortRef}>
+              <span className="sort-label">Sort:</span>
+              <button
+                className={`custom-sort-trigger ${isSortOpen ? 'open' : ''}`}
+                onClick={() => setIsSortOpen(!isSortOpen)}
+                aria-haspopup="listbox"
+                aria-expanded={isSortOpen}
+                type="button"
+              >
+                <span className="current-sort-label">
+                  {SORT_OPTIONS.find((o) => o.id === sortBy)?.shortLabel}
+                </span>
+                <ChevronDown
+                  size={14}
+                  className={`sort-chevron ${isSortOpen ? 'rotate' : ''}`}
+                />
+              </button>
+
+              <AnimatePresence>
+                {isSortOpen && (
+                  <motion.div
+                    className="custom-sort-menu"
+                    initial={{ opacity: 0, y: 8, scale: 0.96 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 8, scale: 0.96 }}
+                    transition={{ duration: 0.15, ease: 'easeOut' }}
+                    role="listbox"
+                  >
+                    {SORT_OPTIONS.map((opt: any) => {
+                      const isSelected = sortBy === opt.id;
+                      return (
+                        <button
+                          key={opt.id}
+                          className={`sort-menu-item ${isSelected ? 'selected' : ''}`}
+                          onClick={() => {
+                            setSortBy(opt.id);
+                            setIsSortOpen(false);
+                          }}
+                          role="option"
+                          aria-selected={isSelected}
+                          type="button"
+                        >
+                          <span>{opt.label}</span>
+                          {isSelected && <Check size={14} className="sort-item-check" />}
+                        </button>
+                      );
+                    })}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          </div>
+        </div>
+
+        {/* Main Body: Grid + Sidebar */}
+        <div className="catalog-body-layout">
+          {/* Properties Grid Column */}
+          <div className="catalog-grid-col">
+            {filteredProperties.length > 0 ? (
+              <AnimatePresence mode="wait" initial={false}>
+                <motion.div
+                  key={`${viewMode}-${currentPage}`}
+                  className={`catalog-cards-${viewMode}`}
+                  variants={cardsContainerVariants}
+                  initial="hidden"
+                  animate="visible"
+                  exit="exit"
+                >
+                  {paginatedProperties.map((property: any, idx: number) => (
+                    <PropertyCard
+                      key={property.id}
+                      property={property}
+                      index={idx}
+                      onSelect={onSelectProperty}
+                      viewMode={viewMode}
+                      onToggleCompare={toggleCompare}
+                      isCompared={compareIds.includes(property.id)}
+                    />
+                  ))}
+                </motion.div>
+              </AnimatePresence>
+            ) : (
+              <div className="no-results-box">
+                <Search size={40} className="no-results-icon" />
+                <h3>No architectural matches found</h3>
+                <p>Try broadening your filters or clearing price tier constraints.</p>
+                <button
+                  className="btn-gold-outline reset-filters-btn"
+                  onClick={resetAllFilters}
+                >
+                  Reset All Filters
+                </button>
+              </div>
+            )}
+
+            {/* Dynamic Luxury Pagination Bar */}
+            {filteredProperties.length > 0 && (
+              <div className="catalog-pagination-wrap">
+                <div className="catalog-pagination">
+                  <button
+                    className="page-btn nav-arr"
+                    disabled={currentPage === 1}
+                    onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                    title="Previous Page"
+                    type="button"
+                  >
+                    <ChevronLeft size={16} />
+                  </button>
+
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => (
+                    <button
+                      key={pageNum}
+                      className={`page-btn ${currentPage === pageNum ? 'active' : ''}`}
+                      onClick={() => setCurrentPage(pageNum)}
+                      type="button"
+                    >
+                      {pageNum}
+                    </button>
+                  ))}
+
+                  <button
+                    className="page-btn nav-arr"
+                    disabled={currentPage === totalPages}
+                    onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+                    title="Next Page"
+                    type="button"
+                  >
+                    <ChevronRight size={16} />
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Sidebar Insights Widgets */}
+          <aside className="catalog-sidebar">
+            {/* Interactive Data Visualization Widget */}
+            <MarketChart />
+
+            {/* Alert Subscription Card */}
+            <div className="sidebar-widget alert-widget">
+              <div className="widget-header-row">
+                <div className="widget-icon-wrap">
+                  <Bell size={18} className="alert-bell-icon" />
+                </div>
+                <div className="vip-concierge-badge">
+                  <Sparkles size={11} className="vip-sparkle" />
+                  <span>VIP DOSSIER</span>
+                </div>
+              </div>
+              <h3 className="widget-title">Private Portfolio Alerts</h3>
+              <p className="widget-desc">
+                Receive curated off-market architectural dossiers matching your exact acquisition parameters.
+              </p>
+              <div className="widget-actions">
+                <button
+                  className={`btn-gold widget-cta ${searchSaved ? 'saved' : ''}`}
+                  onClick={() => setSearchSaved(!searchSaved)}
+                >
+                  {searchSaved ? <><Check size={16} /> Portfolio Saved</> : 'Save Search Criteria'}
+                </button>
+                <button
+                  className={`widget-secondary-btn ${emailAlertSaved ? 'enabled' : ''}`}
+                  onClick={() => setEmailAlertSaved(!emailAlertSaved)}
+                >
+                  {emailAlertSaved ? <><Check size={16} /> VIP Alerts Active</> : 'Enable Dossier Alerts'}
+                </button>
+              </div>
+            </div>
+          </aside>
+        </div>
+      </div>
+
+      {/* 3. Sleek Architectural Advisory Bar */}
+      <section className="catalog-ender-section">
+        <div className="container">
+          <motion.div 
+            className="catalog-ender-strip"
+            initial={{ opacity: 0, y: 16 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: '-40px' }}
+            transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
+          >
+            <div className="catalog-ender-left">
+              <div className="catalog-ender-eyebrow">
+                <Sparkles size={13} className="ender-sparkle-icon" />
+                <span>PRIVATE CLIENT ADVISORY</span>
+              </div>
+              <h3 className="catalog-ender-heading">
+                Haven't found the right estate?
+              </h3>
+              <p className="catalog-ender-sub">
+                Contact our private team for unlisted properties and bespoke custom commissions.
+              </p>
+            </div>
+
+            <div className="catalog-ender-right">
+              <button 
+                type="button"
+                className="btn-gold catalog-ender-btn"
+                onClick={() => onOpenInquiry ? onOpenInquiry('Bespoke Architectural Property Inquiry') : null}
+              >
+                <span>Request Custom Search</span>
+                <ArrowUpRight size={15} />
+              </button>
+
+              <a 
+                href="https://wa.me/201000000000?text=Hello%2C%20I%20am%20looking%20for%20a%20luxury%20property." 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="catalog-ender-wa-pill"
+              >
+                <MessageSquare size={14} />
+                <span>WhatsApp</span>
+              </a>
+            </div>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* Advanced Architectural Filters Modal */}
+      <AnimatePresence>
+        {isAdvancedModalOpen && (
+          <motion.div
+            className="advanced-filter-backdrop"
+            onClick={() => setIsAdvancedModalOpen(false)}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.18, ease: 'easeOut' }}
+            data-lenis-prevent="true"
+          >
+            <motion.div
+              className="advanced-filter-modal"
+              onClick={(e) => e.stopPropagation()}
+              initial={{ opacity: 0, scale: 0.95, y: 15 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 15 }}
+              transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
+              data-lenis-prevent="true"
+            >
+              <div className="adv-modal-header">
+                <div className="adv-header-left">
+                  <div className="adv-icon-badge">
+                    <SlidersHorizontal size={18} className="adv-gold-icon" />
+                  </div>
+                  <div>
+                    <span className="adv-eyebrow">PORTFOLIO CRITERIA</span>
+                    <h3 className="adv-title">Advanced Architectural Filters</h3>
+                  </div>
+                </div>
+                <button
+                  className="adv-close-btn"
+                  onClick={() => setIsAdvancedModalOpen(false)}
+                  title="Close Filters"
+                  type="button"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              <div className="adv-modal-body" data-lenis-prevent="true" onWheel={(e) => e.stopPropagation()}>
+                {/* Section 1: Delivery Status */}
+                <div className="adv-filter-group">
+                  <label className="adv-group-label">DELIVERY STATUS & TIMELINE</label>
+                  <div className="adv-chips-row">
+                    {[
+                      { id: 'All', label: 'All Timelines' },
+                      { id: 'Immediate', label: 'Immediate Handover' },
+                      { id: '2025', label: '2025 Handover' },
+                      { id: '2026+', label: '2026+ Construction' },
+                    ].map((item) => (
+                      <button
+                        key={item.id}
+                        type="button"
+                        className={`adv-chip-btn ${selectedDelivery === item.id ? 'active' : ''}`}
+                        onClick={() => setSelectedDelivery(item.id)}
+                      >
+                        {item.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Section 2: Signature Luxury Amenities */}
+                <div className="adv-filter-group">
+                  <label className="adv-group-label">SIGNATURE AMENITIES & LIFESTYLE</label>
+                  <div className="adv-chips-row">
+                    {[
+                      { id: 'All', label: 'All Amenities', icon: null },
+                      { id: 'Pool', label: 'Private Infinity Pool', icon: Waves },
+                      { id: 'Beach', label: 'Beachfront Access', icon: Waves },
+                      { id: 'Garage', label: 'Subterranean Garage', icon: Car },
+                      { id: 'Lagoon', label: 'Private Lagoon Island', icon: Palmtree },
+                      { id: 'Hospitality', label: '5-Star Concierge', icon: Crown },
+                    ].map((item) => {
+                      const IconComp = item.icon;
+                      return (
+                        <button
+                          key={item.id}
+                          type="button"
+                          className={`adv-chip-btn ${selectedAmenity === item.id ? 'active' : ''}`}
+                          onClick={() => setSelectedAmenity(item.id)}
+                        >
+                          {IconComp && <IconComp size={14} className="chip-gold-icon" />}
+                          <span>{item.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+
+              <div className="adv-modal-footer">
+                <button
+                  type="button"
+                  className="adv-reset-btn"
+                  onClick={resetAllFilters}
+                >
+                  <RotateCcw size={14} />
+                  <span>Reset All</span>
+                </button>
+
+                <button
+                  type="button"
+                  className="btn-gold adv-apply-btn"
+                  onClick={() => setIsAdvancedModalOpen(false)}
+                >
+                  <span>Show {filteredProperties.length} Matches</span>
+                  <Check size={16} />
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Estate Comparison Drawer & Modal */}
+      <CompareDrawer
+        selectedProperties={selectedCompareProperties}
+        onRemove={removeCompare}
+        onClear={clearCompare}
+        onSelectProperty={onSelectProperty}
+      />
+
+      <style>{`
+        .catalog-view {
+          padding-top: 0;
+          padding-bottom: 6rem;
+          background: var(--bg-primary);
+          min-height: 100vh;
+          transition: background var(--transition-smooth);
+        }
+
+        /* 1. Header Banner Container */
+        .catalog-header-banner {
+          position: relative;
+          background: transparent;
+          padding-top: 145px;
+          padding-bottom: 0;
+          margin-bottom: 0.75rem;
+        }
+
+        .catalog-header-glow {
+          position: absolute;
+          top: 60px;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          width: 90%;
+          max-width: 1100px;
+          height: 380px;
+          background: radial-gradient(
+            ellipse at center,
+            rgba(221, 167, 82, 0.08) 0%,
+            rgba(221, 167, 82, 0.015) 45%,
+            transparent 70%
+          );
+          pointer-events: none;
+          filter: blur(55px);
+          z-index: 1;
+        }
+
+        .relative-container {
+          position: relative;
+          z-index: 2;
+        }
+
+        .catalog-header {
+          margin-bottom: 1.5rem;
+        }
+
+        .title-mask-container {
+          overflow: hidden;
+          padding-bottom: 6px;
+          display: block;
+        }
+
+        .catalog-main-title {
+          font-family: var(--font-heading);
+          font-size: clamp(2.25rem, 4vw, 3.25rem);
+          font-weight: 800;
+          letter-spacing: -0.025em;
+          line-height: 1.15;
+          margin: 0.4rem 0 0;
+          color: var(--text-primary);
+        }
+
+        /* Destination Jump Pills */
+        .catalog-destination-pills {
+          display: flex;
+          align-items: center;
+          gap: 0.75rem;
+          flex-wrap: wrap;
+          margin-bottom: 1.5rem;
+        }
+
+        .dest-jump-pill {
+          position: relative;
+          border-radius: 9999px;
+          padding: 0.5rem 1.25rem;
+          font-family: var(--font-heading);
+          font-size: 0.8125rem;
+          font-weight: 600;
+          cursor: pointer;
+          transition: color 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        [data-theme="dark"] .dest-jump-pill {
+          background: rgba(255, 255, 255, 0.05);
+          border: 1px solid rgba(255, 255, 255, 0.12);
+          color: #94A3B8;
+        }
+
+        [data-theme="dark"] .dest-jump-pill:hover {
+          color: #ffffff;
+          border-color: rgba(221, 167, 82, 0.45);
+          background: rgba(255, 255, 255, 0.09);
+        }
+
+        [data-theme="dark"] .dest-jump-pill.active {
+          color: #ffffff;
+          font-weight: 700;
+          border-color: rgba(221, 167, 82, 0.65);
+        }
+
+        [data-theme="dark"] .dest-jump-pill-active {
+          position: absolute;
+          inset: 0;
+          background: linear-gradient(
+            135deg,
+            rgba(221, 167, 82, 0.32) 0%,
+            rgba(20, 24, 34, 0.85) 100%
+          );
+          border: 1px solid #DDA752;
+          border-radius: 9999px;
+          z-index: -1;
+          box-shadow: 0 4px 14px rgba(221, 167, 82, 0.25);
+        }
+
+        [data-theme="light"] .dest-jump-pill {
+          background: #FFFFFF;
+          border: 1px solid rgba(184, 133, 48, 0.20);
+          color: var(--text-secondary);
+          box-shadow: 0 2px 8px rgba(30, 24, 16, 0.04);
+        }
+
+        [data-theme="light"] .dest-jump-pill:hover {
+          background: #FFFFFF;
+          color: var(--gold-dark);
+          border-color: var(--gold-primary);
+          box-shadow: 0 4px 14px rgba(184, 133, 48, 0.16);
+        }
+
+        [data-theme="light"] .dest-jump-pill.active {
+          color: #0A0C10;
+          font-weight: 700;
+          border-color: transparent;
+        }
+
+        [data-theme="light"] .dest-jump-pill-active {
+          position: absolute;
+          inset: 0;
+          background: linear-gradient(135deg, #F5E5BE 0%, #D4AF37 50%, #C59A45 100%);
+          border: 1px solid rgba(255, 255, 255, 0.6);
+          border-radius: 9999px;
+          z-index: -1;
+          box-shadow: 0 4px 14px rgba(197, 154, 69, 0.25), inset 0 1px 1px #FFFFFF;
+        }
+
+        /* The Sovereign Architectural Omnibar (Unified Master Console) */
+        .catalog-master-omnibar {
+          display: flex;
+          align-items: center;
+          min-height: 68px;
+          border-radius: 20px;
+          padding: 0.6rem 1.1rem;
+          gap: 0.85rem;
+          margin-bottom: 1.75rem;
+          transition: all var(--transition-smooth);
+        }
+
+        [data-theme="dark"] .catalog-master-omnibar {
+          background: linear-gradient(
+            135deg,
+            rgba(255, 255, 255, 0.22) 0%,
+            rgba(255, 255, 255, 0.06) 25%,
+            rgba(18, 24, 38, 0.42) 60%,
+            rgba(10, 14, 24, 0.65) 100%
+          );
+          backdrop-filter: blur(20px) saturate(210%) contrast(108%) brightness(108%);
+          -webkit-backdrop-filter: blur(20px) saturate(210%) contrast(108%) brightness(108%);
+          border: 1px solid rgba(255, 255, 255, 0.28);
+          box-shadow: 
+            0 20px 48px rgba(0, 0, 0, 0.38),
+            0 4px 14px rgba(0, 0, 0, 0.18),
+            inset 0 1.5px 2px rgba(255, 255, 255, 0.65),
+            inset 0 -1px 1px rgba(255, 255, 255, 0.12);
+        }
+
+        [data-theme="light"] .catalog-master-omnibar {
+          background: linear-gradient(
+            135deg,
+            rgba(255, 255, 255, 0.65) 0%,
+            rgba(255, 255, 255, 0.30) 35%,
+            rgba(255, 255, 255, 0.48) 100%
+          );
+          backdrop-filter: blur(20px) saturate(210%) contrast(108%) brightness(108%);
+          -webkit-backdrop-filter: blur(20px) saturate(210%) contrast(108%) brightness(108%);
+          border: 1px solid rgba(255, 255, 255, 0.75);
+          box-shadow: 
+            0 18px 44px rgba(15, 23, 42, 0.08), 
+            inset 0 1.5px 2px #FFFFFF,
+            inset 0 -1px 1px rgba(255, 255, 255, 0.25);
+        }
+
+        .omnibar-search-slot {
+          flex: 1.35;
+          min-width: 210px;
+          display: flex;
+          flex-direction: column;
+          gap: 3px;
+          padding: 0.35rem 0.75rem;
+          border-radius: 14px;
+          border: 1px solid transparent;
+          transition: flex 480ms cubic-bezier(0.16, 1, 0.3, 1),
+                      min-width 480ms cubic-bezier(0.16, 1, 0.3, 1),
+                      background 320ms ease,
+                      border-color 320ms ease,
+                      box-shadow 480ms cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .catalog-master-omnibar.search-active .omnibar-search-slot {
+          flex: 2.35;
+          min-width: 320px;
+        }
+
+        [data-theme="dark"] .omnibar-search-slot:hover {
+          background: rgba(255, 255, 255, 0.04);
+        }
+
+        [data-theme="dark"] .catalog-master-omnibar.search-active .omnibar-search-slot {
+          background: rgba(255, 255, 255, 0.08);
+          border-color: rgba(221, 167, 82, 0.45);
+          box-shadow: 0 4px 22px rgba(0, 0, 0, 0.4), 0 0 16px rgba(221, 167, 82, 0.16);
+        }
+
+        [data-theme="light"] .omnibar-search-slot:hover {
+          background: rgba(255, 255, 255, 0.35);
+        }
+
+        [data-theme="light"] .catalog-master-omnibar.search-active .omnibar-search-slot {
+          background: rgba(255, 255, 255, 0.65);
+          border-color: rgba(184, 134, 11, 0.38);
+          box-shadow: 0 4px 20px rgba(184, 134, 11, 0.12), inset 0 1px 2px #FFFFFF;
+        }
+
+        .omnibar-search-inner {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          width: 100%;
+        }
+
+        .omnibar-search-slot .slot-icon {
+          transition: transform 450ms cubic-bezier(0.34, 1.56, 0.64, 1), color 300ms ease;
+          flex-shrink: 0;
+        }
+
+        .catalog-master-omnibar.search-active .omnibar-search-slot .slot-icon {
+          transform: scale(1.12) translateY(-0.5px);
+          color: var(--gold-primary);
+        }
+
+        [data-theme="light"] .catalog-master-omnibar.search-active .omnibar-search-slot .slot-icon {
+          color: #B8860B;
+        }
+
+        .omnibar-search-input {
+          flex: 1;
+          background: transparent;
+          border: none;
+          outline: none;
+          color: var(--text-primary);
+          font-size: 0.85rem;
+          font-weight: 500;
+          font-family: inherit;
+          min-width: 0;
+        }
+
+        [data-theme="dark"] .omnibar-search-input::placeholder {
+          color: rgba(255, 255, 255, 0.4);
+          font-size: 0.825rem;
+        }
+
+        [data-theme="light"] .omnibar-search-input::placeholder {
+          color: #64748B;
+          font-size: 0.825rem;
+        }
+
+        .omnibar-clear-btn {
+          width: 20px;
+          height: 20px;
+          border-radius: 50%;
+          border: none;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          transition: all var(--transition-fast);
+          flex-shrink: 0;
+        }
+
+        [data-theme="dark"] .omnibar-clear-btn {
+          background: rgba(255, 255, 255, 0.1);
+          color: #C7D2DF;
+        }
+
+        [data-theme="light"] .omnibar-clear-btn {
+          background: rgba(0, 0, 0, 0.06);
+          color: #64748B;
+        }
+
+        .omnibar-clear-btn:hover {
+          background: var(--gold-primary);
+          color: #0A0C10;
+        }
+
+        .omnibar-divider {
+          width: 1px;
+          height: 34px;
+          flex-shrink: 0;
+          transition: opacity 400ms cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        [data-theme="dark"] .omnibar-divider {
+          background: rgba(255, 255, 255, 0.12);
+        }
+
+        [data-theme="light"] .omnibar-divider {
+          background: rgba(0, 0, 0, 0.08);
+        }
+
+        .catalog-master-omnibar.search-active .omnibar-divider {
+          opacity: 0.45;
+        }
+
+        .omnibar-filter-slot {
+          flex: 1;
+          min-width: 120px;
+          display: flex;
+          flex-direction: column;
+          gap: 3px;
+          padding: 0.25rem 0.55rem;
+          border-radius: 12px;
+          transition: flex 480ms cubic-bezier(0.16, 1, 0.3, 1),
+                      min-width 480ms cubic-bezier(0.16, 1, 0.3, 1),
+                      padding 480ms cubic-bezier(0.16, 1, 0.3, 1),
+                      opacity 350ms ease;
+        }
+
+        .catalog-master-omnibar.search-active .omnibar-filter-slot {
+          flex: 0.85;
+          min-width: 100px;
+          padding: 0.25rem 0.4rem;
+        }
+
+        .omnibar-slot-label {
+          font-family: var(--font-heading);
+          font-size: 0.625rem;
+          font-weight: 800;
+          letter-spacing: 0.12em;
+          text-transform: uppercase;
+          transition: font-size 0.35s ease, letter-spacing 0.35s ease;
+        }
+
+        [data-theme="dark"] .omnibar-slot-label {
+          color: #E8C87A;
+        }
+
+        [data-theme="light"] .omnibar-slot-label {
+          color: #B8860B;
+        }
+
+        .custom-filter-dropdown {
+          position: relative;
+        }
+
+        .omnibar-trigger-btn {
+          width: 100%;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 6px;
+          background: transparent;
+          border: none;
+          padding: 0.1rem 0;
+          color: var(--text-primary);
+          font-family: inherit;
+          cursor: pointer;
+          border-radius: 8px;
+          transition: all var(--transition-fast);
+          text-align: left;
+        }
+
+        .trigger-left {
+          display: flex;
+          align-items: center;
+          gap: 7px;
+          min-width: 0;
+          overflow: hidden;
+        }
+
+        .slot-icon {
+          color: var(--gold-primary);
+          flex-shrink: 0;
+        }
+
+        .trigger-value {
+          font-size: 0.85rem;
+          font-weight: 600;
+          color: var(--text-primary);
+          transition: color var(--transition-fast);
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+
+        .omnibar-trigger-btn:hover .trigger-value,
+        .omnibar-trigger-btn.open .trigger-value,
+        .omnibar-trigger-btn.has-value .trigger-value {
+          color: var(--gold-primary);
+        }
+
+        .slot-chevron {
+          color: var(--text-muted);
+          transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), color var(--transition-fast);
+          flex-shrink: 0;
+        }
+
+        .slot-chevron.rotate {
+          transform: rotate(180deg);
+          color: var(--gold-primary);
+        }
+
+        .omnibar-trigger-btn:hover .slot-chevron {
+          color: var(--gold-primary);
+        }
+
+        .omnibar-actions-slot {
+          display: flex;
+          align-items: center;
+          gap: 0.65rem;
+          padding-left: 0.35rem;
+          flex-shrink: 0;
+        }
+
+        .omnibar-reset-btn {
+          display: inline-flex;
+          align-items: center;
+          gap: 5px;
+          padding: 0.5rem 0.95rem;
+          border-radius: 9999px;
+          font-size: 0.78rem;
+          font-weight: 700;
+          cursor: pointer;
+          transition: all var(--transition-fast);
+        }
+
+        [data-theme="dark"] .omnibar-reset-btn {
+          background: rgba(255, 255, 255, 0.08);
+          border: 1px solid rgba(255, 255, 255, 0.16);
+          color: #ffffff;
+        }
+
+        [data-theme="light"] .omnibar-reset-btn {
+          background: rgba(0, 0, 0, 0.05);
+          border: 1px solid rgba(0, 0, 0, 0.12);
+          color: #0D1117;
+        }
+
+        .omnibar-reset-btn:hover {
+          border-color: var(--gold-primary);
+          color: var(--gold-primary);
+        }
+
+        .omnibar-filter-btn {
+          position: relative;
+          width: 44px;
+          height: 44px;
+          border-radius: 14px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          background: linear-gradient(135deg, #F5E5BE 0%, #D4AF37 45%, #C59A45 100%);
+          color: #0A0C10;
+          border: 1px solid rgba(255, 255, 255, 0.6);
+          box-shadow: 0 4px 14px rgba(197, 154, 69, 0.28), inset 0 1px 1px #FFFFFF;
+          transition: all var(--transition-smooth);
+        }
+
+        .omnibar-filter-btn:hover {
+          background: linear-gradient(135deg, #FFF0C8 0%, #E5BE7A 45%, #D4AF37 100%);
+          box-shadow: 0 6px 20px rgba(197, 154, 69, 0.42);
+          transform: translateY(-2px);
+        }
+
+        .omnibar-filter-badge {
+          position: absolute;
+          top: 6px;
+          right: 6px;
+          width: 8px;
+          height: 8px;
+          border-radius: 50%;
+          background: #0A0C10;
+          border: 1.5px solid #FFFFFF;
+        }
+
+        /* Dropdown Menu */
+        .filter-custom-menu {
+          position: absolute;
+          left: 0;
+          min-width: 235px;
+          max-height: 240px;
+          overflow-y: auto;
+          overscroll-behavior: contain;
+          backdrop-filter: blur(28px) saturate(200%);
+          -webkit-backdrop-filter: blur(28px) saturate(200%);
+          border-radius: 16px;
+          padding: 6px;
+          z-index: 1000;
+          display: flex;
+          flex-direction: column;
+          gap: 3px;
+          scrollbar-width: thin;
+          scrollbar-color: rgba(221, 167, 82, 0.35) transparent;
+        }
+
+        .filter-custom-menu.placement-down {
+          top: calc(100% + 10px);
+          bottom: auto;
+          transform-origin: top center;
+        }
+
+        .filter-custom-menu.placement-up {
+          bottom: calc(100% + 10px);
+          top: auto;
+          transform-origin: bottom center;
+        }
+
+        .filter-custom-menu::-webkit-scrollbar {
+          width: 5px;
+        }
+
+        .filter-custom-menu::-webkit-scrollbar-track {
+          background: transparent;
+          margin: 6px 0;
+        }
+
+        .filter-custom-menu::-webkit-scrollbar-thumb {
+          background: rgba(221, 167, 82, 0.3);
+          border-radius: 9999px;
+        }
+
+        .filter-custom-menu::-webkit-scrollbar-thumb:hover {
+          background: var(--gold-primary);
+        }
+
+        [data-theme="dark"] .filter-custom-menu {
+          background: linear-gradient(
+            145deg,
+            rgba(255, 255, 255, 0.12) 0%,
+            rgba(20, 24, 34, 0.96) 40%,
+            rgba(10, 14, 22, 0.98) 100%
+          );
+          border: 1px solid rgba(255, 255, 255, 0.18);
+          box-shadow: 
+            0 16px 40px rgba(0, 0, 0, 0.7),
+            0 0 20px rgba(221, 167, 82, 0.12),
+            inset 0 1px 0 rgba(255, 255, 255, 0.35);
+        }
+
+        [data-theme="light"] .filter-custom-menu {
+          background: rgba(255, 255, 255, 0.96);
+          border: 1px solid rgba(0, 0, 0, 0.1);
+          box-shadow: 0 20px 50px rgba(0, 0, 0, 0.12), inset 0 1px 1px #FFFFFF;
+        }
+
+        .filter-menu-option {
+          width: 100%;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 12px;
+          padding: 0.55rem 0.85rem;
+          background: transparent;
+          border: none;
+          border-radius: 10px;
+          color: var(--text-secondary);
+          font-family: inherit;
+          font-size: 0.8125rem;
+          font-weight: 500;
+          cursor: pointer;
+          text-align: left;
+          transition: all var(--transition-fast);
+        }
+
+        [data-theme="dark"] .filter-menu-option:hover {
+          background: rgba(221, 167, 82, 0.12);
+          color: #ffffff;
+        }
+
+        [data-theme="dark"] .filter-menu-option.selected {
+          background: rgba(221, 167, 82, 0.22);
+          color: #E8C87A;
+          font-weight: 700;
+        }
+
+        [data-theme="light"] .filter-menu-option:hover {
+          background: rgba(0, 0, 0, 0.04);
+          color: #0D1117;
+        }
+
+        [data-theme="light"] .filter-menu-option.selected {
+          background: rgba(197, 154, 69, 0.12);
+          color: #8A6114;
+          font-weight: 700;
+        }
+
+        .option-label {
+          white-space: nowrap;
+        }
+
+        .option-check {
+          color: var(--gold-primary);
+          flex-shrink: 0;
+        }
+
+        /* Active Filter Tags */
+        .active-filter-tags-row {
+          display: flex;
+          align-items: center;
+          flex-wrap: wrap;
+          gap: 0.65rem;
+          margin-top: 0.85rem;
+          padding: 0.25rem 0.25rem;
+        }
+
+        .active-tags-heading {
+          font-family: var(--font-heading);
+          font-size: 0.75rem;
+          font-weight: 700;
+          letter-spacing: 0.08em;
+          text-transform: uppercase;
+          color: var(--text-secondary);
+          margin-right: 0.35rem;
+        }
+
+        .filter-tag {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          backdrop-filter: blur(12px);
+          border-radius: 9999px;
+          padding: 0.35rem 0.75rem;
+          font-size: 0.8125rem;
+          font-weight: 600;
+          animation: tagFadeIn 0.2s ease-out;
+        }
+
+        [data-theme="dark"] .filter-tag {
+          background: linear-gradient(
+            135deg,
+            rgba(221, 167, 82, 0.15) 0%,
+            rgba(20, 24, 34, 0.6) 100%
+          );
+          border: 1px solid rgba(221, 167, 82, 0.35);
+          color: #ffffff;
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+        }
+
+        [data-theme="light"] .filter-tag {
+          background: rgba(255, 255, 255, 0.9);
+          border: 1px solid var(--gold-border);
+          color: var(--text-primary);
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        }
+
+        @keyframes tagFadeIn {
+          from { opacity: 0; transform: scale(0.92); }
+          to { opacity: 1; transform: scale(1); }
+        }
+
+        .tag-text {
+          color: var(--text-primary);
+        }
+
+        .tag-remove-btn {
+          width: 18px;
+          height: 18px;
+          border-radius: 50%;
+          background: rgba(255, 255, 255, 0.12);
+          color: var(--text-secondary);
+          border: none;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          transition: all var(--transition-fast);
+          margin-left: 2px;
+        }
+
+        .tag-remove-btn:hover {
+          background: var(--gold-primary);
+          color: #0A0C10;
+        }
+
+        .clear-all-tags-btn {
+          background: transparent;
+          border: none;
+          color: var(--gold-primary);
+          font-size: 0.8125rem;
+          font-weight: 700;
+          text-decoration: underline;
+          text-underline-offset: 3px;
+          cursor: pointer;
+          padding: 0.35rem 0.65rem;
+          transition: opacity var(--transition-fast);
+        }
+
+        .clear-all-tags-btn:hover {
+          opacity: 0.75;
+        }
+
+        /* Responsive Omnibar */
+        @media (max-width: 1100px) {
+          .catalog-master-omnibar {
+            flex-wrap: wrap;
+            padding: 0.85rem;
+            gap: 0.75rem;
+          }
+
+          .omnibar-search-slot {
+            flex: 1 1 65%;
+          }
+
+          .omnibar-actions-slot {
+            flex: 0 0 auto;
+            margin-left: auto;
+          }
+
+          .omnibar-divider {
+            display: none;
+          }
+
+          .omnibar-filter-slot {
+            flex: 1 1 calc(50% - 0.75rem);
+            background: rgba(0, 0, 0, 0.03);
+            padding: 0.5rem 0.75rem;
+          }
+
+          [data-theme="dark"] .omnibar-filter-slot {
+            background: rgba(255, 255, 255, 0.04);
+          }
+        }
+
+        @media (max-width: 640px) {
+          .omnibar-search-slot {
+            flex: 1 1 100%;
+          }
+
+          .omnibar-filter-slot {
+            flex: 1 1 100%;
+          }
+
+          .omnibar-actions-slot {
+            width: 100%;
+            justify-content: space-between;
+          }
+        }
+
+        /* Advanced Filters Modal Backdrop */
+        .advanced-filter-backdrop {
+          position: fixed;
+          inset: 0;
+          background: rgba(4, 6, 12, 0.55);
+          backdrop-filter: blur(8px);
+          -webkit-backdrop-filter: blur(8px);
+          z-index: 100000;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 1.5rem;
+          overflow: hidden;
+        }
+
+        .advanced-filter-modal {
+          backdrop-filter: blur(24px) saturate(210%) contrast(108%) brightness(108%);
+          -webkit-backdrop-filter: blur(24px) saturate(210%) contrast(108%) brightness(108%);
+          border-radius: 28px;
+          width: 100%;
+          max-width: 680px;
+          max-height: 90vh;
+          display: flex;
+          flex-direction: column;
+          overflow: hidden;
+        }
+
+        [data-theme="dark"] .advanced-filter-modal {
+          background: linear-gradient(
+            145deg,
+            rgba(255, 255, 255, 0.18) 0%,
+            rgba(18, 24, 38, 0.85) 40%,
+            rgba(10, 14, 24, 0.95) 100%
+          );
+          border: 1px solid rgba(255, 255, 255, 0.28);
+          box-shadow: 
+            0 32px 80px rgba(0, 0, 0, 0.75),
+            0 0 30px rgba(252, 211, 77, 0.18),
+            inset 0 1.5px 2px rgba(255, 255, 255, 0.65);
+        }
+
+        [data-theme="light"] .advanced-filter-modal {
+          background: linear-gradient(
+            145deg,
+            rgba(255, 255, 255, 0.94) 0%,
+            rgba(255, 255, 255, 0.84) 40%,
+            rgba(255, 255, 255, 0.92) 100%
+          );
+          backdrop-filter: blur(24px) saturate(210%) contrast(108%) brightness(108%);
+          -webkit-backdrop-filter: blur(24px) saturate(210%) contrast(108%) brightness(108%);
+          border: 1px solid rgba(255, 255, 255, 0.95);
+          box-shadow: 
+            0 32px 80px rgba(15, 23, 42, 0.15),
+            0 0 30px rgba(184, 133, 48, 0.14),
+            inset 0 2px 2.5px #FFFFFF;
+        }
+
+        .adv-modal-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 1.5rem 2rem;
+          border-bottom: 1px solid var(--border-subtle);
+        }
+
+        .adv-header-left {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+        }
+
+        .adv-icon-badge {
+          width: 40px;
+          height: 40px;
+          border-radius: 12px;
+          background: rgba(197, 142, 54, 0.15);
+          border: 1px solid var(--gold-border);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
+        }
+
+        .adv-gold-icon, .badge-gold-icon {
+          color: var(--gold-primary);
+        }
+
+        [data-theme="light"] .adv-gold-icon,
+        [data-theme="light"] .badge-gold-icon {
+          color: #B8860B;
+        }
+
+        .adv-eyebrow {
+          font-family: var(--font-heading);
+          font-size: 0.6875rem;
+          font-weight: 800;
+          letter-spacing: 0.14em;
+          color: var(--gold-primary);
+          text-transform: uppercase;
+          display: block;
+          margin-bottom: 2px;
+        }
+
+        [data-theme="light"] .adv-eyebrow {
+          color: #B8860B;
+        }
+
+        .adv-title, .adv-modal-title {
+          font-family: var(--font-heading);
+          font-size: 1.25rem;
+          font-weight: 800;
+          letter-spacing: -0.01em;
+          color: var(--text-primary);
+          margin: 0;
+          line-height: 1.2;
+        }
+
+        .adv-close-btn {
+          width: 36px;
+          height: 36px;
+          border-radius: 50%;
+          background: rgba(255, 255, 255, 0.1);
+          border: 1px solid var(--border-subtle);
+          color: var(--text-primary);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          transition: all var(--transition-fast);
+        }
+
+        .adv-close-btn:hover {
+          background: var(--gold-primary);
+          color: #0A0C10;
+        }
+
+        .adv-modal-body {
+          padding: 1.75rem 2rem;
+          display: flex;
+          flex-direction: column;
+          gap: 1.75rem;
+          overflow-y: auto;
+          flex: 1 1 auto;
+          min-height: 0;
+          overscroll-behavior: contain;
+        }
+
+        .adv-filter-group {
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+        }
+
+        .adv-group-label {
+          font-family: var(--font-heading);
+          font-size: 0.75rem;
+          font-weight: 800;
+          letter-spacing: 0.12em;
+          color: var(--gold-primary);
+          text-transform: uppercase;
+        }
+
+        .adv-chips-row {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+        }
+
+        .adv-chip-btn {
+          display: inline-flex;
+          align-items: center;
+          gap: 7px;
+          padding: 0.55rem 1.15rem;
+          border-radius: 9999px;
+          font-family: inherit;
+          font-size: 0.8125rem;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all var(--transition-fast);
+        }
+
+        [data-theme="dark"] .adv-chip-btn {
+          background: rgba(255, 255, 255, 0.06);
+          border: 1px solid rgba(255, 255, 255, 0.12);
+          color: #94A3B8;
+        }
+
+        [data-theme="light"] .adv-chip-btn {
+          background: rgba(0, 0, 0, 0.04);
+          border: 1px solid rgba(0, 0, 0, 0.08);
+          color: var(--text-secondary);
+        }
+
+        .chip-gold-icon, .tag-gold-icon {
+          color: var(--gold-primary);
+          flex-shrink: 0;
+        }
+
+        .adv-chip-btn:hover {
+          border-color: var(--gold-primary);
+          color: var(--text-primary);
+        }
+
+        .adv-chip-btn.active {
+          background: linear-gradient(135deg, #F5E5BE 0%, #D4AF37 50%, #C59A45 100%);
+          color: #0A0C10;
+          border: 1px solid rgba(255, 255, 255, 0.6);
+          box-shadow: 0 4px 14px rgba(197, 154, 69, 0.25), inset 0 1px 1px #FFFFFF;
+        }
+
+        .adv-chip-btn.active .chip-gold-icon {
+          color: #0A0C10;
+        }
+
+        .adv-modal-footer {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 1.25rem 2rem;
+          border-top: 1px solid var(--border-subtle);
+          background: var(--bg-surface);
+        }
+
+        .adv-reset-btn {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          background: transparent;
+          border: none;
+          color: var(--text-secondary);
+          font-family: inherit;
+          font-size: 0.8125rem;
+          font-weight: 600;
+          cursor: pointer;
+          transition: color var(--transition-fast);
+        }
+
+        .adv-reset-btn:hover {
+          color: var(--text-primary);
+        }
+
+        .adv-apply-btn {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          padding: 0.65rem 1.4rem;
+          font-size: 0.875rem;
+          font-weight: 700;
+          border-radius: 12px;
+        }
+
+        /* Results Bar */
+        .results-meta-bar {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          margin-bottom: 2rem;
+          padding-bottom: 1.25rem;
+          border-bottom: 1px solid var(--border-subtle);
+          gap: 1rem;
+          flex-wrap: wrap;
+        }
+
+        .results-count-badge {
+          display: inline-flex;
+          align-items: center;
+          gap: 10px;
+          backdrop-filter: blur(16px);
+          -webkit-backdrop-filter: blur(16px);
+          padding: 0.45rem 1.15rem;
+          border-radius: 9999px;
+        }
+
+        [data-theme="dark"] .results-count-badge {
+          background: rgba(255, 255, 255, 0.05);
+          border: 1px solid rgba(255, 255, 255, 0.12);
+          box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+        }
+
+        [data-theme="light"] .results-count-badge {
+          background: rgba(255, 255, 255, 0.88);
+          border: 1px solid rgba(0, 0, 0, 0.08);
+          box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+        }
+
+        .results-live-dot {
+          width: 7px;
+          height: 7px;
+          border-radius: 50%;
+          background: var(--gold-primary);
+          box-shadow: 0 0 10px var(--gold-primary);
+          animation: livePulse 2s infinite ease-in-out;
+          flex-shrink: 0;
+        }
+
+        .results-count-text {
+          display: inline-flex;
+          align-items: baseline;
+          gap: 0.35rem;
+          font-family: var(--font-heading);
+          font-size: 0.875rem;
+          color: var(--text-secondary);
+          line-height: 1;
+        }
+
+        .results-count-text span {
+          color: var(--text-secondary);
+        }
+
+        .results-count-text .gold-count {
+          color: var(--gold-primary);
+          font-weight: 700;
+        }
+
+        .results-count-text .total-count {
+          color: var(--text-primary);
+          font-weight: 700;
+        }
+
+        .results-controls {
+          display: flex;
+          align-items: center;
+          gap: 1.25rem;
+          flex-wrap: wrap;
+        }
+
+        .view-mode-toggle {
+          display: flex;
+          align-items: center;
+          border-radius: 12px;
+          padding: 3px;
+          gap: 2px;
+        }
+
+        [data-theme="dark"] .view-mode-toggle {
+          background: rgba(255, 255, 255, 0.06);
+          border: 1px solid rgba(255, 255, 255, 0.12);
+        }
+
+        [data-theme="light"] .view-mode-toggle {
+          background: rgba(255, 255, 255, 0.85);
+          border: 1px solid rgba(0, 0, 0, 0.08);
+        }
+
+        .view-mode-btn {
+          position: relative;
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          background: transparent;
+          border: none;
+          color: var(--text-secondary);
+          padding: 0.35rem 0.75rem;
+          border-radius: 9px;
+          font-size: 0.8125rem;
+          font-weight: 600;
+          cursor: pointer;
+          transition: color 0.2s ease;
+          z-index: 1;
+        }
+
+        [data-theme="dark"] .view-mode-btn.active {
+          color: #ffffff;
+        }
+
+        [data-theme="light"] .view-mode-btn.active {
+          color: #0A0C10;
+        }
+
+        .view-mode-indicator {
+          position: absolute;
+          inset: 0;
+          border-radius: 9px;
+          z-index: -1;
+        }
+
+        [data-theme="dark"] .view-mode-indicator {
+          background: linear-gradient(
+            135deg,
+            rgba(221, 167, 82, 0.3) 0%,
+            rgba(20, 24, 34, 0.85) 100%
+          );
+          border: 1px solid rgba(221, 167, 82, 0.55);
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+        }
+
+        [data-theme="light"] .view-mode-indicator {
+          background: linear-gradient(135deg, #F5E5BE 0%, #D4AF37 50%, #C59A45 100%);
+          border: 1px solid rgba(255, 255, 255, 0.5);
+          box-shadow: 0 2px 8px rgba(197, 154, 69, 0.25);
+        }
+
+        /* Custom Gold Sort Dropdown */
+        .custom-sort-container {
+          position: relative;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+
+        .sort-label {
+          font-size: 0.84375rem;
+          color: var(--text-secondary);
+          font-weight: 500;
+        }
+
+        .custom-sort-trigger {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          border-radius: 12px;
+          padding: 0.45rem 1rem;
+          font-size: 0.84375rem;
+          font-weight: 700;
+          cursor: pointer;
+          transition: all var(--transition-fast);
+        }
+
+        [data-theme="dark"] .custom-sort-trigger {
+          background: rgba(255, 255, 255, 0.06);
+          border: 1px solid rgba(255, 255, 255, 0.14);
+          color: #ffffff;
+        }
+
+        [data-theme="light"] .custom-sort-trigger {
+          background: rgba(255, 255, 255, 0.88);
+          border: 1px solid rgba(0, 0, 0, 0.08);
+          color: var(--text-primary);
+        }
+
+        .custom-sort-trigger:hover,
+        .custom-sort-trigger.open {
+          border-color: var(--gold-primary);
+        }
+
+        .sort-chevron {
+          color: var(--text-muted);
+          transition: transform 0.25s ease, color 0.2s ease;
+        }
+
+        .sort-chevron.rotate {
+          transform: rotate(180deg);
+          color: var(--gold-primary);
+        }
+
+        .custom-sort-menu {
+          position: absolute;
+          top: calc(100% + 8px);
+          right: 0;
+          min-width: 230px;
+          backdrop-filter: blur(28px) saturate(200%);
+          -webkit-backdrop-filter: blur(28px) saturate(200%);
+          border-radius: 16px;
+          padding: 6px;
+          z-index: 1000;
+        }
+
+        [data-theme="dark"] .custom-sort-menu {
+          background: linear-gradient(
+            135deg,
+            rgba(255, 255, 255, 0.12) 0%,
+            rgba(20, 24, 34, 0.92) 50%,
+            rgba(10, 14, 22, 0.98) 100%
+          );
+          border: 1px solid rgba(221, 167, 82, 0.4);
+          box-shadow: 
+            0 16px 36px rgba(0, 0, 0, 0.6),
+            inset 0 1px 0 rgba(221, 167, 82, 0.35);
+        }
+
+        [data-theme="light"] .custom-sort-menu {
+          background: rgba(255, 255, 255, 0.96);
+          border: 1px solid rgba(0, 0, 0, 0.1);
+          box-shadow: 0 20px 50px rgba(0, 0, 0, 0.12);
+        }
+
+        .sort-menu-item {
+          width: 100%;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 0.65rem 0.85rem;
+          font-size: 0.8125rem;
+          font-weight: 600;
+          color: var(--text-secondary);
+          background: transparent;
+          border: none;
+          border-radius: 10px;
+          cursor: pointer;
+          transition: all 0.15s ease;
+          text-align: left;
+        }
+
+        .sort-menu-item:hover {
+          background: rgba(197, 142, 54, 0.08);
+          color: var(--text-primary);
+        }
+
+        .sort-menu-item.selected {
+          background: rgba(197, 142, 54, 0.18);
+          color: var(--gold-primary);
+          font-weight: 700;
+        }
+
+        .sort-item-check {
+          color: var(--gold-primary);
+        }
+
+        .custom-sort-trigger:focus-visible,
+        .sort-menu-item:focus-visible,
+        .view-mode-btn:focus-visible,
+        .omnibar-search-input:focus-visible,
+        .omnibar-filter-btn:focus-visible,
+        .adv-filter-btn:focus-visible,
+        .adv-modal-close:focus-visible,
+        .active-tag-chip:focus-visible,
+        .clear-all-tags-btn:focus-visible,
+        .page-btn:focus-visible,
+        .reset-filters-btn:focus-visible {
+          outline: 2px solid var(--gold-primary) !important;
+          outline-offset: 2px !important;
+          box-shadow: 0 0 16px var(--gold-glow) !important;
+        }
+
+        /* Body Layout */
+        .catalog-body-layout {
+          display: grid;
+          grid-template-columns: 1fr 350px;
+          gap: 2.5rem;
+          align-items: start;
+        }
+
+        .catalog-cards-grid {
+          display: grid;
+          grid-template-columns: repeat(2, 1fr);
+          gap: 2rem;
+        }
+
+        .catalog-cards-compact {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 1.15rem;
+        }
+
+        @media (max-width: 1200px) {
+          .catalog-cards-compact {
+            grid-template-columns: repeat(2, 1fr);
+          }
+        }
+
+        .catalog-cards-list {
+          display: flex;
+          flex-direction: column;
+          gap: 1.25rem;
+        }
+
+        .no-results-box {
+          backdrop-filter: blur(24px) saturate(190%);
+          -webkit-backdrop-filter: blur(24px) saturate(190%);
+          border-radius: 20px;
+          padding: 4rem 2rem;
+          text-align: center;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 1rem;
+        }
+
+        [data-theme="dark"] .no-results-box {
+          background: linear-gradient(
+            135deg,
+            rgba(255, 255, 255, 0.08) 0%,
+            rgba(20, 24, 34, 0.45) 50%,
+            rgba(10, 14, 22, 0.65) 100%
+          );
+          border: 1px solid rgba(255, 255, 255, 0.15);
+          box-shadow: 
+            0 16px 36px rgba(0, 0, 0, 0.4),
+            inset 0 1px 0 rgba(221, 167, 82, 0.35);
+        }
+
+        [data-theme="light"] .no-results-box {
+          background: rgba(255, 255, 255, 0.90);
+          border: 1px solid rgba(0, 0, 0, 0.08);
+          box-shadow: 0 16px 36px rgba(0, 0, 0, 0.05);
+        }
+
+        .no-results-icon {
+          color: var(--gold-primary);
+          opacity: 0.9;
+        }
+
+        .reset-filters-btn {
+          margin-top: 1rem;
+        }
+
+        /* Sidebar */
+        .catalog-sidebar {
+          display: flex;
+          flex-direction: column;
+          gap: 2rem;
+          position: sticky;
+          top: 100px;
+        }
+
+        .sidebar-widget {
+          backdrop-filter: blur(20px) saturate(210%) contrast(108%) brightness(108%);
+          -webkit-backdrop-filter: blur(20px) saturate(210%) contrast(108%) brightness(108%);
+          border-radius: 20px;
+          padding: 1.65rem 1.5rem;
+        }
+
+        [data-theme="dark"] .sidebar-widget {
+          background: linear-gradient(
+            135deg,
+            rgba(255, 255, 255, 0.22) 0%,
+            rgba(255, 255, 255, 0.06) 25%,
+            rgba(18, 24, 38, 0.42) 60%,
+            rgba(10, 14, 24, 0.65) 100%
+          );
+          border: 1px solid rgba(255, 255, 255, 0.28);
+          box-shadow: 
+            0 20px 48px rgba(0, 0, 0, 0.38),
+            0 4px 14px rgba(0, 0, 0, 0.18),
+            inset 0 1.5px 2px rgba(255, 255, 255, 0.65),
+            inset 0 -1px 1px rgba(255, 255, 255, 0.12);
+        }
+
+        [data-theme="light"] .sidebar-widget {
+          background: linear-gradient(
+            135deg,
+            rgba(255, 255, 255, 0.65) 0%,
+            rgba(255, 255, 255, 0.30) 35%,
+            rgba(255, 255, 255, 0.48) 100%
+          );
+          border: 1px solid rgba(255, 255, 255, 0.75);
+          box-shadow: 
+            0 18px 44px rgba(15, 23, 42, 0.08), 
+            inset 0 1.5px 2px #FFFFFF,
+            inset 0 -1px 1px rgba(255, 255, 255, 0.25);
+        }
+
+        .alert-widget {
+          display: flex;
+          flex-direction: column;
+          gap: 1rem;
+        }
+
+        .widget-header-row {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+        }
+
+        .widget-icon-wrap {
+          width: 40px;
+          height: 40px;
+          border-radius: 12px;
+          background: rgba(221, 167, 82, 0.16);
+          border: 1px solid rgba(221, 167, 82, 0.35);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          box-shadow: 0 0 16px rgba(197, 142, 54, 0.2);
+        }
+
+        .alert-bell-icon {
+          color: #FCD34D;
+        }
+
+        [data-theme="light"] .alert-bell-icon {
+          color: #B8860B;
+        }
+
+        .vip-concierge-badge {
+          display: inline-flex;
+          align-items: center;
+          gap: 5px;
+          font-family: var(--font-heading);
+          font-size: 0.625rem;
+          font-weight: 800;
+          letter-spacing: 0.12em;
+          color: #FCD34D;
+          background: rgba(221, 167, 82, 0.12);
+          border: 1px solid rgba(221, 167, 82, 0.35);
+          padding: 0.25rem 0.65rem;
+          border-radius: 9999px;
+        }
+
+        [data-theme="light"] .vip-concierge-badge {
+          color: #B8860B;
+        }
+
+        .vip-sparkle {
+          color: #FCD34D;
+        }
+
+        .widget-title {
+          font-family: var(--font-heading);
+          font-size: 1.25rem;
+          font-weight: 700;
+          color: var(--text-primary);
+          letter-spacing: -0.01em;
+        }
+
+        .widget-desc {
+          font-size: 0.875rem;
+          color: var(--text-secondary);
+          line-height: 1.55;
+        }
+
+        .widget-actions {
+          display: flex;
+          flex-direction: column;
+          gap: 0.75rem;
+          margin-top: 0.5rem;
+        }
+
+        .widget-cta {
+          width: 100%;
+          padding: 0.8125rem 1rem;
+          font-size: 0.875rem;
+          font-weight: 700;
+          border-radius: 12px;
+        }
+
+        .widget-secondary-btn {
+          width: 100%;
+          padding: 0.8125rem 1rem;
+          font-size: 0.875rem;
+          font-weight: 600;
+          backdrop-filter: blur(12px);
+          -webkit-backdrop-filter: blur(12px);
+          border-radius: 12px;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 6px;
+          transition: all var(--transition-fast);
+        }
+
+        [data-theme="dark"] .widget-secondary-btn {
+          background: rgba(255, 255, 255, 0.06);
+          border: 1px solid rgba(255, 255, 255, 0.14);
+          color: #ffffff;
+        }
+
+        [data-theme="light"] .widget-secondary-btn {
+          background: rgba(0, 0, 0, 0.04);
+          border: 1px solid rgba(0, 0, 0, 0.08);
+          color: var(--text-primary);
+        }
+
+        .widget-secondary-btn:hover {
+          border-color: var(--gold-primary);
+          color: var(--gold-primary);
+        }
+
+        .widget-secondary-btn.enabled {
+          background: rgba(197, 142, 54, 0.2);
+          border-color: var(--gold-primary);
+          color: var(--gold-primary);
+        }
+
+        /* Luxury Dynamic Pagination Suite */
+        .catalog-pagination-wrap {
+          margin-top: 3.5rem;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 1.5rem;
+        }
+
+        .catalog-pagination {
+          display: inline-flex;
+          align-items: center;
+          gap: 0.5rem;
+          backdrop-filter: blur(20px) saturate(190%);
+          -webkit-backdrop-filter: blur(20px) saturate(190%);
+          padding: 6px;
+          border-radius: 16px;
+        }
+
+        [data-theme="dark"] .catalog-pagination {
+          background: rgba(255, 255, 255, 0.04);
+          border: 1px solid rgba(255, 255, 255, 0.12);
+          box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+        }
+
+        [data-theme="light"] .catalog-pagination {
+          background: rgba(255, 255, 255, 0.88);
+          border: 1px solid rgba(0, 0, 0, 0.08);
+          box-shadow: 0 8px 24px rgba(0, 0, 0, 0.04);
+        }
+
+        .page-btn {
+          width: 40px;
+          height: 40px;
+          border-radius: 10px;
+          background: transparent;
+          border: 1px solid transparent;
+          color: var(--text-secondary);
+          font-family: var(--font-heading);
+          font-weight: 700;
+          font-size: 0.875rem;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          transition: all var(--transition-fast);
+        }
+
+        .page-btn:hover:not(:disabled) {
+          border-color: var(--gold-primary);
+          color: var(--gold-primary);
+        }
+
+        .page-btn.active {
+          background: linear-gradient(135deg, #F5E5BE 0%, #D4AF37 50%, #C59A45 100%);
+          color: #0A0C10;
+          border: 1px solid rgba(255, 255, 255, 0.6);
+          box-shadow: 0 2px 10px rgba(197, 154, 69, 0.25), inset 0 1px 1px #FFFFFF;
+        }
+
+        /* 3. Sleek Architectural Advisory Bar */
+        .catalog-ender-section {
+          padding-top: 2.5rem;
+          padding-bottom: 1.5rem;
+        }
+
+        .catalog-ender-strip {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 2rem;
+          border-radius: 20px;
+          padding: 1.6rem 2.25rem;
+          transition: all var(--transition-smooth);
+        }
+
+        [data-theme="dark"] .catalog-ender-strip {
+          background: linear-gradient(
+            135deg,
+            rgba(255, 255, 255, 0.06) 0%,
+            rgba(20, 24, 34, 0.6) 50%,
+            rgba(10, 14, 22, 0.75) 100%
+          );
+          backdrop-filter: blur(28px) saturate(200%);
+          -webkit-backdrop-filter: blur(28px) saturate(200%);
+          border: 1px solid rgba(255, 255, 255, 0.14);
+          box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
+        }
+
+        [data-theme="light"] .catalog-ender-strip {
+          background: rgba(255, 255, 255, 0.65);
+          backdrop-filter: blur(24px) saturate(190%);
+          -webkit-backdrop-filter: blur(24px) saturate(190%);
+          border: 1px solid rgba(255, 255, 255, 0.90);
+          box-shadow: 0 12px 35px rgba(30, 24, 16, 0.06), inset 0 1.5px 2px #FFFFFF;
+        }
+
+        .catalog-ender-left {
+          display: flex;
+          flex-direction: column;
+          gap: 0.25rem;
+        }
+
+        .catalog-ender-eyebrow {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          font-family: var(--font-heading);
+          font-size: 0.6875rem;
+          font-weight: 800;
+          letter-spacing: 0.14em;
+          text-transform: uppercase;
+        }
+
+        [data-theme="dark"] .catalog-ender-eyebrow {
+          color: #F5D382;
+        }
+
+        [data-theme="light"] .catalog-ender-eyebrow {
+          color: #B8860B;
+        }
+
+        .ender-sparkle-icon {
+          color: var(--gold-primary);
+        }
+
+        .catalog-ender-heading {
+          font-family: var(--font-heading);
+          font-size: 1.35rem;
+          font-weight: 800;
+          letter-spacing: -0.015em;
+          margin: 0;
+          color: var(--text-primary);
+        }
+
+        .catalog-ender-sub {
+          font-size: 0.875rem;
+          color: var(--text-secondary);
+          margin: 0;
+          font-weight: 500;
+        }
+
+        .catalog-ender-right {
+          display: flex;
+          align-items: center;
+          gap: 0.85rem;
+          flex-shrink: 0;
+        }
+
+        .catalog-ender-btn {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          padding: 0.75rem 1.4rem;
+          font-size: 0.875rem;
+          font-weight: 700;
+          border-radius: 12px;
+          cursor: pointer;
+        }
+
+        .catalog-ender-wa-pill {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          padding: 0.75rem 1.25rem;
+          border-radius: 12px;
+          font-family: var(--font-heading);
+          font-size: 0.875rem;
+          font-weight: 700;
+          cursor: pointer;
+          text-decoration: none;
+          transition: all var(--transition-fast);
+        }
+
+        [data-theme="dark"] .catalog-ender-wa-pill {
+          background: rgba(255, 255, 255, 0.08);
+          border: 1px solid rgba(255, 255, 255, 0.16);
+          color: #FFFFFF;
+        }
+
+        [data-theme="light"] .catalog-ender-wa-pill {
+          background: rgba(255, 255, 255, 0.9);
+          border: 1px solid rgba(0, 0, 0, 0.12);
+          color: #0D1117;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+        }
+
+        .catalog-ender-wa-pill:hover {
+          transform: translateY(-2px);
+          border-color: var(--gold-primary);
+          color: var(--gold-primary);
+        }
+
+        @media (max-width: 860px) {
+          .catalog-ender-strip {
+            flex-direction: column;
+            align-items: flex-start;
+            padding: 1.5rem;
+            gap: 1.25rem;
+          }
+          .catalog-ender-right {
+            width: 100%;
+            justify-content: flex-start;
+            flex-wrap: wrap;
+          }
+        }
+
+        @media (max-width: 1024px) {
+          .catalog-body-layout {
+            grid-template-columns: 1fr;
+          }
+          .catalog-sidebar {
+            position: static;
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+          }
+        }
+
+        @media (max-width: 768px) {
+          .filter-toolbar {
+            flex-direction: column;
+            align-items: stretch;
+            gap: 1rem;
+            padding: 1.25rem;
+          }
+          .toolbar-divider {
+            width: 100%;
+            height: 1px;
+          }
+          .catalog-cards-grid {
+            grid-template-columns: 1fr;
+          }
+          .catalog-sidebar {
+            grid-template-columns: 1fr;
+          }
+        }
+      `}</style>
+    </div>
+  );
+};
