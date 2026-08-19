@@ -4,11 +4,9 @@ import type { Property } from '@/types';
 export type UIProperty = Property;
 
 const PROPERTY_TYPE_MAP: Record<string, string> = {
-  villa: 'Standalone Villa',
   apartment: 'Apartment',
-  townhouse: 'Townhouse',
-  duplex: 'Duplex',
-  chalet: 'Chalet',
+  building:  'Building (عمارة)',
+  garage:    'Garage',
 };
 
 export function adaptProperty(property: SupabaseProperty, locale: 'en' | 'ar' = 'en'): Property {

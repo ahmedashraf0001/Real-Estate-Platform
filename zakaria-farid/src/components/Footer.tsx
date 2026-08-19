@@ -1,6 +1,7 @@
 'use client';
 import React from 'react';
 import { useRouter } from 'next/navigation';
+import { BrandLogo } from '@/components/BrandLogo';
 
 interface FooterProps {
   locale?: string;
@@ -50,10 +51,11 @@ export const Footer: React.FC<FooterProps> = ({
         <div className="footer-main-grid">
           {/* Brand Column */}
           <div className="footer-brand-col">
-            <div className="footer-logo" onClick={() => onNavigate('home')}>
-              <span className="logo-gold">ZAKARIA</span>
-              <span className="logo-white">FARID</span>
-            </div>
+            <BrandLogo 
+              size="lg" 
+              showSubtitle={true}
+              onClick={() => onNavigate('home')} 
+            />
             <p className="footer-brand-desc">
               Elevating Egyptian real estate into an art form. We curate high-design, luxury architectural masterworks in the country's most sought-after destinations.
             </p>

@@ -30,6 +30,17 @@ export interface TradeInstance {
   attributes: AttributeValue[];
 }
 
+export interface ZoneSpatialLayout {
+  gridX: number;          // Column offset (0-11 in a 12-col grid)
+  gridY: number;          // Row offset (0-11 in a 12-row grid)
+  gridW: number;          // Width span (1-12)
+  gridH: number;          // Height span (1-12)
+  length_m: number;       // Real-world length in meters (e.g. 14.2)
+  width_m: number;        // Real-world width in meters (e.g. 10.2)
+  sqm?: number;           // Computed or manual SQM
+  ceiling_height?: string; // e.g. "4.4m Double-Height"
+}
+
 export interface ZoneInstance {
   id: string;
   zone_template_id: string;
@@ -39,6 +50,7 @@ export interface ZoneInstance {
   trades: TradeInstance[];
   children?: ZoneInstance[]; // for container zones (Villa floors)
   images?: string[];         // optional admin-uploaded photos for this zone (multiple)
+  spatial?: ZoneSpatialLayout; // Optional visual CAD layout & dimensions
 }
 
 
@@ -49,100 +61,79 @@ type TradeStatusMap = Record<string, string>; // trade_id_prefix → status
 
 const GLOBAL_STATE_MAP: Record<GlobalFinishingState, TradeStatusMap> = {
   red_brick: {
-    'wet.plumbing':   'NotStarted',
-    'wet.electrical': 'NotStarted',
-    'wet.walls':      'RedBrick',
-    'wet.flooring':   'SandBed',
-    'wet.hvac':       'NotStarted',
-    'liv.electrical': 'NotStarted',
-    'liv.walls':      'RedBrick',
-    'liv.flooring':   'SandBed',
-    'liv.carpentry':  'None',
-    'liv.hvac':       'NotStarted',
-    'trn.electrical': 'NotStarted',
-    'trn.walls':      'RedBrick',
-    'trn.flooring':   'SandBed',
-    'ext.landscaping':'NotStarted',
-    'ext.fence_gate': 'NotStarted',
-    'ext.pool':       'NotStarted',
-    'inf.ramp_access':'NotStarted',
-    'inf.parking':    'NotStarted',
-    'inf.drainage':   'NotStarted',
-    'inf.lobby':      'NotStarted',
-    'inf.security':   'NotStarted',
-    'inf.elevator':   'NotStarted',
-    'inf.common_finish':'NotStarted',
-    'inf.insulation': 'NotStarted',
-    'inf.water_systems':'NotStarted',
-    'inf.retail_shell':'CoreAndShell',
-    'inf.emergency':  'NotStarted',
-    'inf.fire_safety':'NotStarted',
-    'grg.ramp_construction':'NotStarted',
-    'grg.bay_finish': 'NotStarted',
+    'wet.plumbing':          'NotStarted',
+    'wet.electrical':        'NotStarted',
+    'wet.walls':             'RedBrick',
+    'wet.flooring':          'SandBed',
+    'liv.electrical':        'NotStarted',
+    'liv.walls':             'RedBrick',
+    'liv.flooring':          'SandBed',
+    'liv.carpentry':         'None',
+    'liv.hvac':              'NotStarted',
+    'trn.electrical':        'NotStarted',
+    'trn.walls':             'RedBrick',
+    'trn.flooring':          'SandBed',
+    'inf.ramp_access':       'NotStarted',
+    'inf.parking':           'NotStarted',
+    'inf.drainage':          'NotStarted',
+    'inf.lobby':             'NotStarted',
+    'inf.security':          'NotStarted',
+    'inf.elevator':          'NotStarted',
+    'inf.common_finish':     'NotStarted',
+    'inf.insulation':        'NotStarted',
+    'inf.water_systems':     'NotStarted',
+    'grg.ramp_construction': 'NotStarted',
+    'grg.bay_finish':        'NotStarted',
   },
   semi_finished: {
-    'wet.plumbing':   'RoughIn',
-    'wet.electrical': 'ConduitsOnly',
-    'wet.walls':      'Plastered',
-    'wet.flooring':   'SandBed',
-    'wet.hvac':       'NotStarted',
-    'liv.electrical': 'ConduitsOnly',
-    'liv.walls':      'Plastered',
-    'liv.flooring':   'SandBed',
-    'liv.carpentry':  'SubFrames',
-    'liv.hvac':       'NotStarted',
-    'trn.electrical': 'NotStarted',
-    'trn.walls':      'Plastered',
-    'trn.flooring':   'SandBed',
-    'ext.landscaping':'Rough',
-    'ext.fence_gate': 'Built',
-    'ext.pool':       'Shell',
-    'inf.ramp_access':'InProgress',
-    'inf.parking':    'InProgress',
-    'inf.drainage':   'Installed',
-    'inf.lobby':      'InProgress',
-    'inf.security':   'NotStarted',
-    'inf.elevator':   'Shaft',
-    'inf.common_finish':'InProgress',
-    'inf.insulation': 'Applied',
-    'inf.water_systems':'NotStarted',
-    'inf.retail_shell':'CoreAndShell',
-    'inf.emergency':  'NotStarted',
-    'inf.fire_safety':'NotStarted',
-    'grg.ramp_construction':'InProgress',
-    'grg.bay_finish': 'NotStarted',
+    'wet.plumbing':          'RoughIn',
+    'wet.electrical':        'ConduitsOnly',
+    'wet.walls':             'Plastered',
+    'wet.flooring':          'SandBed',
+    'liv.electrical':        'ConduitsOnly',
+    'liv.walls':             'Plastered',
+    'liv.flooring':          'SandBed',
+    'liv.carpentry':         'SubFrames',
+    'liv.hvac':              'NotStarted',
+    'trn.electrical':        'NotStarted',
+    'trn.walls':             'Plastered',
+    'trn.flooring':          'SandBed',
+    'inf.ramp_access':       'InProgress',
+    'inf.parking':           'InProgress',
+    'inf.drainage':          'Installed',
+    'inf.lobby':             'InProgress',
+    'inf.security':          'NotStarted',
+    'inf.elevator':          'Shaft',
+    'inf.common_finish':     'InProgress',
+    'inf.insulation':        'Applied',
+    'inf.water_systems':     'NotStarted',
+    'grg.ramp_construction': 'InProgress',
+    'grg.bay_finish':        'NotStarted',
   },
   fully_finished: {
-    'wet.plumbing':   'Finished',
-    'wet.electrical': 'Finished',
-    'wet.walls':      'Finished',
-    'wet.flooring':   'Finished',
-    'wet.hvac':       'Installed',
-    'liv.electrical': 'Finished',
-    'liv.walls':      'FinalPaint',
-    'liv.flooring':   'Finished',
-    'liv.carpentry':  'Installed',
-    'liv.hvac':       'Installed',
-    'trn.electrical': 'Finished',
-    'trn.walls':      'FinalPaint',
-    'trn.flooring':   'Finished',
-    'ext.landscaping':'Finished',
-    'ext.fence_gate': 'Finished',
-    'ext.pool':       'Finished',
-    'inf.ramp_access':'Finished',
-    'inf.parking':    'Finished',
-    'inf.drainage':   'Installed',
-    'inf.lobby':      'Finished',
-    'inf.security':   'Installed',
-    'inf.elevator':   'Installed',
-    'inf.common_finish':'Finished',
-    'inf.insulation': 'Finished',
-    'inf.water_systems':'Installed',
-    'inf.retail_shell':'Fitted',
-    'inf.emergency':  'Installed',
-    'inf.fire_safety':'Installed',
-    'grg.ramp_construction':'Finished',
-    'grg.bay_finish': 'Finished',
+    'wet.plumbing':          'Finished',
+    'wet.electrical':        'Finished',
+    'wet.walls':             'Finished',
+    'wet.flooring':          'Finished',
+    'liv.electrical':        'Finished',
+    'liv.walls':             'FinalPaint',
+    'liv.flooring':          'Finished',
+    'liv.carpentry':         'Installed',
+    'liv.hvac':              'Installed',
+    'trn.electrical':        'Finished',
+    'trn.walls':             'FinalPaint',
+    'trn.flooring':          'Finished',
+    'inf.ramp_access':       'Finished',
+    'inf.parking':           'Finished',
+    'inf.drainage':          'Installed',
+    'inf.lobby':             'Finished',
+    'inf.security':          'Installed',
+    'inf.elevator':          'Installed',
+    'inf.common_finish':     'Finished',
+    'inf.insulation':        'Finished',
+    'inf.water_systems':     'Installed',
+    'grg.ramp_construction': 'Finished',
+    'grg.bay_finish':        'Finished',
   },
 };
 
@@ -232,23 +223,17 @@ export function buildZoneInstances(
   globalState: GlobalFinishingState,
   bedroomCount = 2
 ): ZoneInstance[] {
-  // Map sub-type property types to their base zone trees per spec §3.1
-  const effectiveTypeId: PropertyTypeId =
-    typeId === 'townhouse' ? 'villa' :
-    (typeId === 'duplex' || typeId === 'chalet') ? 'apartment' :
-    typeId;
-
-  const topLevelZones = getZonesForType(effectiveTypeId).filter(z => !z.parent_zone_id);
+  const topLevelZones = getZonesForType(typeId).filter(z => !z.parent_zone_id);
   const result: ZoneInstance[] = [];
 
   for (const zone of topLevelZones) {
-    if (zone.is_optional) continue; // Optional top-level zones (villa basement) excluded by default
+    if (zone.is_optional) continue; // Optional zones excluded by default — admin adds manually
 
     if (zone.is_repeatable) {
-      // Determine count: standard bedrooms use bedroomCount param
-      const count = zone.id.includes('std_bed') ? bedroomCount : (zone.default_count ?? 1);
+      // std_bed count driven by bedrooms field; balconies default to 1
+      const count = zone.id.includes('std_bed') ? Math.max(0, bedroomCount - 1) : (zone.default_count ?? 1);
       for (let i = 0; i < count; i++) {
-        const label = count > 1 ? `${zone.label_en} ${i + 1}` : undefined;
+        const label = count > 1 ? `${zone.label_ar} ${i + 1}` : zone.label_ar;
         result.push(buildZoneInstance(zone, globalState, label, undefined, zone.sort_order + i * 0.01));
       }
     } else if (zone.is_container) {
@@ -272,9 +257,19 @@ export function applyGlobalState(
 ): ZoneInstance[] {
   return zones.map(zoneInst => {
     const zoneTpl = allZones.find(z => z.id === zoneInst.zone_template_id);
-    const trades = getTradesForZone(zoneTpl!);
-    const updatedTrades = zoneInst.trades.map(tradeInst => {
-      const tradeTpl = trades.find(t => t.id === tradeInst.trade_template_id);
+    
+    // If zone has no trades yet but matches a template, build them!
+    if ((!zoneInst.trades || zoneInst.trades.length === 0) && zoneTpl) {
+      return {
+        ...zoneInst,
+        trades: buildTradeInstances(zoneTpl, globalState),
+        children: zoneInst.children ? applyGlobalState(zoneInst.children, globalState, allZones) : undefined
+      };
+    }
+
+    const availableTrades = zoneTpl ? getTradesForZone(zoneTpl) : TRADE_TEMPLATES;
+    const updatedTrades = (zoneInst.trades || []).map(tradeInst => {
+      const tradeTpl = availableTrades.find(t => t.id === tradeInst.trade_template_id) || TRADE_TEMPLATES.find(t => t.id === tradeInst.trade_template_id);
       if (!tradeTpl) return tradeInst;
       return {
         ...tradeInst,

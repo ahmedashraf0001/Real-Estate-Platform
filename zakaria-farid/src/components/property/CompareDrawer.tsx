@@ -167,8 +167,8 @@ export const CompareDrawer: React.FC<CompareDrawerProps> = ({
                     <Scale size={20} className="badge-gold-icon" />
                   </div>
                   <div>
-                    <span className="eyebrow">ARCHITECTURAL PORTFOLIO ANALYSIS</span>
-                    <h2 className="modal-heading">Side-by-Side Estate Comparison</h2>
+                    <span className="eyebrow">PROPERTY COMPARISON</span>
+                    <h2 className="modal-heading">Side-by-Side Property Comparison</h2>
                   </div>
                 </div>
 
@@ -194,7 +194,7 @@ export const CompareDrawer: React.FC<CompareDrawerProps> = ({
                   }}
                 >
                   {/* Row 1: Estate Header & Imagery */}
-                  <div className="matrix-row-label header-label">ESTATE OVERVIEW</div>
+                  <div className="matrix-row-label header-label">PROPERTY OVERVIEW</div>
                   {selectedProperties.map((p) => (
                     <div key={`header-${p.id}`} className="matrix-card-cell header-cell">
                       <div className="cell-image-frame">

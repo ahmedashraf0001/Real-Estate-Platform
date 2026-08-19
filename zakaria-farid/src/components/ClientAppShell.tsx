@@ -6,6 +6,7 @@ import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
 import { InquiryModal } from '@/components/InquiryModal';
 import { LuxuryCursor } from '@/components/LuxuryCursor';
+import { NavigationProgress } from '@/components/NavigationProgress';
 import { preloadPropertyMapSites } from '@/lib/mapCache';
 
 interface ClientAppShellProps {
@@ -17,29 +18,33 @@ export const ClientAppShell: React.FC<ClientAppShellProps> = ({ children, locale
   const pathname = usePathname() || '';
   const isMapRoute = pathname.endsWith('/map') || pathname.includes('/map');
 
-  // Theme state with localStorage persistence
-  const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
-    if (typeof window === 'undefined') return true;
-    try {
-      const saved = localStorage.getItem('zf_theme');
-      return saved ? saved === 'dark' : true;
-    } catch {
-      return true;
-    }
-  });
+  // Theme state with safe SSR hydration
+  const [isDarkMode, setIsDarkMode] = useState<boolean>(true);
+  const [mounted, setMounted] = useState(false);
 
-  // Modal states
+  // Global Inquiry Modal state
   const [isInquiryModalOpen, setIsInquiryModalOpen] = useState(false);
   const [inquiryModalTitle, setInquiryModalTitle] = useState('Private Acquisition Inquiry');
   const [inquiryPropertyName, setInquiryPropertyName] = useState<string | undefined>(undefined);
 
   useEffect(() => {
+    setMounted(true);
+    try {
+      const saved = localStorage.getItem('zf_theme');
+      if (saved) {
+        setIsDarkMode(saved === 'dark');
+      }
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    if (!mounted) return;
     const theme = isDarkMode ? 'dark' : 'light';
     document.documentElement.setAttribute('data-theme', theme);
     try {
       localStorage.setItem('zf_theme', theme);
     } catch {}
-  }, [isDarkMode]);
+  }, [isDarkMode, mounted]);
 
   useEffect(() => {
     // Pre-cache sovereign property map sites in background during idle
@@ -57,6 +62,9 @@ export const ClientAppShell: React.FC<ClientAppShellProps> = ({ children, locale
 
   return (
     <div className="app-root">
+      {/* Luxury Top Navigation Progress Laser */}
+      <NavigationProgress />
+
       {/* Luxury Magnetic Cursor */}
       <LuxuryCursor />
 

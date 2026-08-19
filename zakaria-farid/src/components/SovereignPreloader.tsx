@@ -177,7 +177,7 @@ export const SovereignPreloader: React.FC<SovereignPreloaderProps> = ({ onComple
               transition={{ duration: 0.8, delay: 0.5 }}
             >
               <h1 className="preloader-brand-title">ZAKARIA FARID</h1>
-              <p className="preloader-brand-subtitle">ARCHITECTURAL SOVEREIGN ASSETS • EGYPT</p>
+              <p className="preloader-brand-subtitle">LUXURY REAL ESTATE • EGYPT</p>
             </motion.div>
 
             {/* Precision Loading Gauge */}
@@ -189,7 +189,7 @@ export const SovereignPreloader: React.FC<SovereignPreloaderProps> = ({ onComple
                 />
               </div>
               <div className="preloader-progress-meta">
-                <span className="preloader-status-label">CURATING PORTFOLIO</span>
+                <span className="preloader-status-label">LOADING PROPERTIES</span>
                 <span className="preloader-counter">{String(progress).padStart(2, '0')}%</span>
               </div>
             </div>

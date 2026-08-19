@@ -6,6 +6,7 @@ if (typeof window !== 'undefined') {
 }
 import { Property } from '@/types';
 import { useRouter } from 'next/navigation';
+import { triggerNavigationStart } from '@/components/NavigationProgress';
 import { FALLBACK_PROPERTIES } from '@/lib/data/fallbackProperties';
 import { adaptProperties } from '@/lib/utils/propertyAdapter';
 import { PropertyCard } from './PropertyCard';
@@ -40,7 +41,8 @@ import {
   Compass,
   LocateFixed,
   RefreshCw,
-  Clock
+  Clock,
+  Landmark
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -54,11 +56,12 @@ interface PropertyDetailViewProps {
   onOpenInquiry?: (type: string, propertyName?: string) => void;
 }
 
-const SanctumSatelliteMap: React.FC<{ lat: number; lng: number; title: string; district: string }> = ({
+const SanctumSatelliteMap: React.FC<{ lat: number; lng: number; title: string; district: string; isAr?: boolean }> = ({
   lat,
   lng,
   title,
-  district
+  district,
+  isAr = false
 }) => {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
@@ -117,7 +120,7 @@ const SanctumSatelliteMap: React.FC<{ lat: number; lng: number; title: string; d
       <div ref={mapContainerRef} className="sanctum-leaflet-container" />
       <div className="sanctum-inner-vignette" />
       <div className="sanctum-overlay-badge">
-        <span className="sanctum-badge-mode">SATELLITE ORTHO-SURVEY</span>
+        <span className="sanctum-badge-mode">{isAr ? 'عرض الأقمار الصناعية' : 'LIVE SATELLITE VIEW'}</span>
         <span className="sanctum-badge-coords">{lat.toFixed(4)}° N, {lng.toFixed(4)}° E • {district}</span>
       </div>
     </div>
@@ -139,8 +142,14 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
   const fallbackAdapted = adaptProperties(FALLBACK_PROPERTIES, locale as 'en' | 'ar');
   const rawProperty = propProperty || fallbackAdapted.find((p: Property) => p.id === effectiveId || p.slug === effectiveId) || fallbackAdapted[0];
 
-  const onBack = propOnBack || (() => router.push('/' + locale + '/properties'));
-  const onSelectProperty = propOnSelectProperty || ((id: string) => router.push('/' + locale + '/properties/' + id));
+  const onBack = propOnBack || (() => {
+    triggerNavigationStart();
+    router.push('/' + locale + '/properties');
+  });
+  const onSelectProperty = propOnSelectProperty || ((id: string) => {
+    triggerNavigationStart();
+    router.push('/' + locale + '/properties/' + id);
+  });
   const onOpenInquiry = propOnOpenInquiry || ((type: string, propertyName?: string) => {
     const phone = (rawProperty.broker?.phone || '+201009970776').replace(/[^0-9]/g, '');
     window.location.href = `https://wa.me/${phone}?text=${encodeURIComponent('Hello, I am inquiring about ' + (propertyName || rawProperty.title_en || rawProperty.title))}`;
@@ -271,35 +280,52 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
   const roadDistanceKm = directDistanceKm * 1.28;
 
   const formatDuration = (mins: number) => {
-    if (mins < 1) return '< 1 min';
-    if (mins < 60) return `${Math.round(mins)} mins`;
+    if (mins < 1) return isAr ? 'أقل من دقيقة' : '< 1 min';
+    if (mins < 60) return isAr ? `${Math.round(mins)} دقيقة` : `${Math.round(mins)} mins`;
     const hrs = Math.floor(mins / 60);
     const remainingMins = Math.round(mins % 60);
+    if (isAr) {
+      return remainingMins > 0 ? `${hrs} ساعة و ${remainingMins} دقيقة` : `${hrs} ساعات`;
+    }
     return remainingMins > 0 ? `${hrs} hr ${remainingMins} mins` : `${hrs} hrs`;
   };
 
   const travelEstimates = useMemo(() => {
+    const isNearby = roadDistanceKm <= 3.5;
     return [
       {
-        mode: 'Driving',
-        sub: `${roadDistanceKm.toFixed(1)} km via main highway`,
+        mode: isAr ? 'بالسيارة' : 'Driving',
+        sub: isAr 
+          ? `${roadDistanceKm.toFixed(1)} كم عبر الطرق السريعة` 
+          : `${roadDistanceKm.toFixed(1)} km via main highway`,
         time: formatDuration((roadDistanceKm / 65) * 60),
         icon: Car
       },
       {
-        mode: 'Metro / Transit',
-        sub: 'Public transit & express line',
-        time: formatDuration((roadDistanceKm / 80) * 60 + 6),
+        mode: isAr ? 'مواصلات / تاكسي' : 'Transit & Cab',
+        sub: isAr 
+          ? 'عبر المحاور الرئيسية والطريق الدائري' 
+          : 'Via ring road & main arterials',
+        time: formatDuration((roadDistanceKm / 45) * 60 + 8),
         icon: Train
       },
-      {
-        mode: 'Walking',
-        sub: roadDistanceKm > 15 ? 'Beyond walking range' : `${roadDistanceKm.toFixed(1)} km walking route`,
+      isNearby ? {
+        mode: isAr ? 'سيراً على الأقدام' : 'Walking',
+        sub: isAr 
+          ? `${roadDistanceKm.toFixed(1)} كم مسار مشي مباشر` 
+          : `${roadDistanceKm.toFixed(1)} km direct walking route`,
         time: formatDuration((roadDistanceKm / 4.8) * 60),
         icon: Footprints
+      } : {
+        mode: isAr ? 'أهم الخدمات والمحاور' : 'Nearby Hubs & Services',
+        sub: isAr 
+          ? 'مدارس، مراكز تجارية، ومستشفيات قريبة' 
+          : 'Minutes to local retail, schools & medical',
+        time: isAr ? '5 - 10 دقائق' : '5–10 mins',
+        icon: Landmark
       }
     ];
-  }, [roadDistanceKm]);
+  }, [roadDistanceKm, isAr]);
 
   // Real Estate JSON-LD Schema
   useEffect(() => {
@@ -383,11 +409,12 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
         
         {/* 1. Sovereign Property Header & Quick Actions */}
         <div className="property-top-header">
-          <div className="top-header-left">
+          {/* Top Breadcrumb & Badge Metadata Bar */}
+          <div className="header-meta-top-row">
             <div className="breadcrumb-bar">
               <button className="back-link-btn" onClick={onBack} type="button">
                 <ArrowLeft size={14} />
-                <span>Catalog</span>
+                <span>{isAr ? 'الكتالوج' : 'Catalog'}</span>
               </button>
               <ChevronRight size={13} className="crumb-chevron" />
               <span className="crumb-text">{property.district}</span>
@@ -402,59 +429,63 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
               </span>
               <span className="property-id-badge">
                 <ShieldCheck size={13} className="badge-gold-icon" />
-                <span>ID: MP-{property.id.toUpperCase()} • FREEHOLD REGISTERED</span>
+                <span>ID: MP-{property.id.toUpperCase()} • {isAr ? 'تسجيل ملكية حرة' : 'FREEHOLD REGISTERED'}</span>
               </span>
-            </div>
-
-            <h1 className="property-main-title">{property.title}</h1>
-
-            <div className="property-location-bar">
-              <MapPin size={15} className="location-pin" />
-              <span>{property.location}</span>
             </div>
           </div>
 
-          <div className="top-header-right">
-            <div className="property-price-card">
-              <span className="price-label">{isAr ? 'قيمة الاستحواذ المعتمدة' : 'ACQUISITION VALUE'}</span>
-              <div className="price-value">
-                {formattedPrice} <span className="price-currency">{property.currency}</span>
+          {/* Main Hero Split Row: Title & Location (Left) + Acquisition Value & Actions (Right) */}
+          <div className="header-main-hero-row">
+            <div className="top-header-left">
+              <h1 className="property-main-title">{property.title}</h1>
+              <div className="property-location-bar">
+                <MapPin size={15} className="location-pin" />
+                <span>{property.location}</span>
               </div>
-              <span className="price-tax-note">
-                {pricePerSqm ? `~ ${pricePerSqm} ${property.currency} / m² • ` : ''}
-                {isAr ? 'تسجيل عقاري موثق • ٠٪ عمولات خفية' : 'Freehold Escrow Verified • 0% Hidden Fees'}
-              </span>
             </div>
 
-            <div className="top-action-group">
-              <button 
-                className="btn-gold top-inquire-btn"
-                onClick={() => onOpenInquiry('Acquisition Inquiry', property.title)}
-                type="button"
-              >
-                <span>Inquire for Acquisition</span>
-              </button>
+            <div className="top-header-right">
+              <div className="property-price-card">
+                <span className="price-label">{isAr ? 'قيمة الاستحواذ المعتمدة' : 'ACQUISITION VALUE'}</span>
+                <div className="price-value">
+                  {formattedPrice} <span className="price-currency">{property.currency}</span>
+                </div>
+                <span className="price-tax-note">
+                  {pricePerSqm ? `~ ${pricePerSqm} ${property.currency} / m² • ` : ''}
+                  {isAr ? 'تسجيل عقاري موثق • ٠٪ عمولات خفية' : 'Freehold Escrow Verified • 0% Hidden Fees'}
+                </span>
+              </div>
 
-              <div className="header-icon-actions">
+              <div className="top-action-group">
                 <button 
-                  className={`header-icon-btn ${isBookmarked ? 'active' : ''}`}
-                  onClick={() => setIsBookmarked(!isBookmarked)}
-                  title="Save to Portfolio"
+                  className="btn-gold top-inquire-btn"
+                  onClick={() => onOpenInquiry('Acquisition Inquiry', property.title)}
                   type="button"
                 >
-                  <Bookmark size={17} />
+                  <span>{isAr ? 'طلب الاستحواذ' : 'Inquire for Acquisition'}</span>
                 </button>
-                <button 
-                  className="header-icon-btn"
-                  onClick={() => {
-                    navigator.clipboard?.writeText(window.location.href);
-                    alert('Private sovereign listing link copied to clipboard.');
-                  }}
-                  title="Share Dossier"
-                  type="button"
-                >
-                  <Share2 size={17} />
-                </button>
+
+                <div className="header-icon-actions">
+                  <button 
+                    className={`header-icon-btn ${isBookmarked ? 'active' : ''}`}
+                    onClick={() => setIsBookmarked(!isBookmarked)}
+                    title={isAr ? 'حفظ في المفضلات' : 'Save to Favorites'}
+                    type="button"
+                  >
+                    <Bookmark size={17} />
+                  </button>
+                  <button 
+                    className="header-icon-btn"
+                    onClick={() => {
+                      navigator.clipboard?.writeText(window.location.href);
+                      alert(isAr ? 'تم نسخ رابط العقار الخاص إلى الحافظة.' : 'Private sovereign listing link copied to clipboard.');
+                    }}
+                    title={isAr ? 'مشاركة الملف' : 'Share Dossier'}
+                    type="button"
+                  >
+                    <Share2 size={17} />
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -484,7 +515,7 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
           </div>
           <div className="spec-pill verified-pill">
             <ShieldCheck size={16} className="pill-icon-gold" />
-            <span><strong>Verified Sovereign Asset</strong></span>
+            <span><strong>Verified Property</strong></span>
           </div>
         </div>
 
@@ -547,11 +578,11 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
                     setIsAmbientGlow(!isAmbientGlow);
                   }}
                   type="button"
-                  title="Toggle Luxury Ambient Cinema Illumination"
+                  title={isAr ? 'تبديل الإضاءة السينمائية المحيطية' : 'Toggle Luxury Ambient Cinema Illumination'}
                 >
-                  <Sparkles size={13} className="ambient-sparkle-icon" />
-                  <span>Ambient {isAmbientGlow ? 'ON' : 'OFF'}</span>
-                  {isAmbientGlow && <span className="ambient-dot-pulse" />}
+                  <Sparkles size={15} className="ambient-sparkle-icon" />
+                  <span className="ambient-btn-label">{isAr ? `إضاءة محيطية: ${isAmbientGlow ? 'مفعلة' : 'معطلة'}` : `Ambient: ${isAmbientGlow ? 'ON' : 'OFF'}`}</span>
+                  <span className={`ambient-dot-pulse ${isAmbientGlow ? 'active' : 'off'}`} />
                 </button>
 
                 <button className="gallery-fullscreen-btn" type="button" title="Open Fullscreen Lightbox">
@@ -643,7 +674,7 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
                   <div className="lightbox-top-left">
                     <span className="lightbox-dossier-tag">
                       <ShieldCheck size={14} className="tag-gold-icon" />
-                      <span>SOVEREIGN DOSSIER ARCHIVE</span>
+                      <span>PROPERTY PHOTOS</span>
                     </span>
                     <span className="lightbox-counter-pill">
                       {String(activeImageIndex + 1).padStart(2, '0')} / {String(property.images.length).padStart(2, '0')}
@@ -765,9 +796,78 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
             {/* A. Architectural Narrative */}
             <div className="content-section">
               <div className="section-title-wrap">
-                <span className="section-eyebrow">CURATED MONOGRAPH</span>
-                <h3 className="section-subtitle">Architectural Narrative</h3>
+                <span className="section-eyebrow">{isAr ? 'الملف المعماري الحصري' : 'CURATED MONOGRAPH'}</span>
+                <h3 className="section-subtitle">{isAr ? 'وصف العقار والتفاصيل' : 'Property Description'}</h3>
               </div>
+
+              {/* Luxury Key Specification Cards Matrix */}
+              <div className="property-spec-matrix-grid">
+                {property.beds > 0 && (
+                  <div className="spec-stat-card">
+                    <div className="spec-stat-icon-wrap">
+                      <Bed size={18} className="spec-stat-icon" />
+                    </div>
+                    <div className="spec-stat-info">
+                      <span className="spec-stat-label">{isAr ? 'غرف النوم' : 'BEDROOMS'}</span>
+                      <span className="spec-stat-value">{property.beds} {isAr ? 'أجنحة خاصة' : 'Suites'}</span>
+                    </div>
+                  </div>
+                )}
+                {property.baths > 0 && (
+                  <div className="spec-stat-card">
+                    <div className="spec-stat-icon-wrap">
+                      <Bath size={18} className="spec-stat-icon" />
+                    </div>
+                    <div className="spec-stat-info">
+                      <span className="spec-stat-label">{isAr ? 'الحمامات' : 'BATHROOMS'}</span>
+                      <span className="spec-stat-value">{property.baths} {isAr ? 'حمامات فاخرة' : 'Bathrooms'}</span>
+                    </div>
+                  </div>
+                )}
+                {property.sqm > 0 && (
+                  <div className="spec-stat-card">
+                    <div className="spec-stat-icon-wrap">
+                      <Maximize2 size={18} className="spec-stat-icon" />
+                    </div>
+                    <div className="spec-stat-info">
+                      <span className="spec-stat-label">{isAr ? 'مساحة المباني' : 'BUILT-UP AREA'}</span>
+                      <span className="spec-stat-value">{property.sqm} {isAr ? 'م²' : 'SQM'}</span>
+                    </div>
+                  </div>
+                )}
+                {property.builtYear && (
+                  <div className="spec-stat-card">
+                    <div className="spec-stat-icon-wrap">
+                      <Calendar size={18} className="spec-stat-icon" />
+                    </div>
+                    <div className="spec-stat-info">
+                      <span className="spec-stat-label">{isAr ? 'سنة الإنجاز' : 'COMPLETION'}</span>
+                      <span className="spec-stat-value">{isAr ? `تسليم ${property.builtYear}` : `Built in ${property.builtYear}`}</span>
+                    </div>
+                  </div>
+                )}
+                {property.propertyType && (
+                  <div className="spec-stat-card">
+                    <div className="spec-stat-icon-wrap">
+                      <Building2 size={18} className="spec-stat-icon" />
+                    </div>
+                    <div className="spec-stat-info">
+                      <span className="spec-stat-label">{isAr ? 'نوع العقار' : 'TYPOLOGY'}</span>
+                      <span className="spec-stat-value">{isAr ? (rawProperty.type === 'villa' ? 'فيلا مستقلة' : rawProperty.type === 'apartment' ? 'شقة سكنية' : rawProperty.type === 'duplex' ? 'دوبلكس' : rawProperty.type === 'townhouse' ? 'تاون هاوس' : rawProperty.type === 'chalet' ? 'شاليه' : property.propertyType) : property.propertyType}</span>
+                    </div>
+                  </div>
+                )}
+                <div className="spec-stat-card card-highlight-gold">
+                  <div className="spec-stat-icon-wrap gold-icon-wrap">
+                    <ShieldCheck size={18} className="spec-stat-icon gold-icon" />
+                  </div>
+                  <div className="spec-stat-info">
+                    <span className="spec-stat-label gold-label">{isAr ? 'حالة التوثيق' : 'VERIFICATION'}</span>
+                    <span className="spec-stat-value gold-val">{isAr ? 'عقار موثق' : 'Verified Property'}</span>
+                  </div>
+                </div>
+              </div>
+
               <div className="narrative-text">
                 {property.narrative.split('\n\n').map((paragraph, i) => (
                   <p key={i} className="narrative-para">{paragraph}</p>
@@ -786,37 +886,85 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
               propertyImages={property.images} 
             />
 
-            {/* D. Location Sanctum */}
+            {/* D. Location & Surroundings */}
             <div className="content-section">
               <div className="section-title-wrap proximity-header-row">
                 <div>
-                  <span className="section-eyebrow">GEOSPATIAL CARTOGRAPHY</span>
-                  <h3 className="section-subtitle">Location Sanctum</h3>
+                  <span className="section-eyebrow">{isAr ? 'الموقع والمناطق المحيطة' : 'LOCATION & SURROUNDINGS'}</span>
+                  <h3 className="section-subtitle">{isAr ? 'الموقع وسهولة الوصول' : 'Location & Accessibility'}</h3>
                 </div>
 
                 <button 
                   className={`gps-locate-btn ${geoStatus === 'locating' ? 'locating' : ''}`}
                   onClick={requestLocation}
                   type="button"
-                  title="Detect exact travel distance from your current coordinates"
+                  title={isAr ? 'حساب المسافة الدقيقة من موقعك الحالي' : 'Calculate travel distance from your current coordinates'}
                 >
                   <LocateFixed size={14} className={geoStatus === 'locating' ? 'spin' : ''} />
                   <span>
                     {geoStatus === 'locating' 
-                      ? 'Triangulating GPS...' 
+                      ? (isAr ? 'جاري تحديد موقعك...' : 'Detecting Location...') 
                       : geoStatus === 'located' 
-                        ? 'Live GPS Locked' 
-                        : 'Calibrate Distance'}
+                        ? (isAr ? 'تم تحديد موقعك' : 'Live Location Set') 
+                        : (isAr ? 'احسب المسافة من موقعك' : 'Calculate Distance')}
                   </span>
                 </button>
               </div>
 
-              <SanctumSatelliteMap 
-                lat={property.mapCoordinates.lat} 
-                lng={property.mapCoordinates.lng} 
-                title={property.title} 
-                district={property.district} 
-              />
+              <div className="sanctum-map-and-transit-layout">
+                <div className="sanctum-map-col">
+                  <SanctumSatelliteMap 
+                    lat={property.mapCoordinates.lat} 
+                    lng={property.mapCoordinates.lng} 
+                    title={property.title} 
+                    district={property.district} 
+                    isAr={isAr}
+                  />
+                </div>
+
+                <div className="sanctum-transit-col">
+                  {/* Commute Times & Proximity Radar Card attached to Map */}
+                  <div className="sidebar-radar-card attached-radar-card">
+                    <div className="radar-stack-header">
+                      <div>
+                        <span className="radar-stack-eyebrow">{isAr ? 'سهولة الوصول والتنقل' : 'CONNECTIVITY & COMMUTE'}</span>
+                        <h4 className="radar-stack-title">{isAr ? 'أوقات التنقل التقريبية' : 'Commute Times'}</h4>
+                      </div>
+                      <span className="radar-stack-status">
+                        <span className="live-radar-dot" />
+                        {geoStatus === 'located' 
+                          ? (isAr ? 'موقعك المباشر' : 'Live GPS') 
+                          : (isAr ? 'من وسط القاهرة' : 'From Downtown Cairo')}
+                      </span>
+                    </div>
+
+                    <div className="radar-cards-list">
+                      {travelEstimates.map((item, i) => {
+                        const Icon = item.icon;
+                        return (
+                          <div key={i} className="proximity-card">
+                            <div className="poi-icon-box">
+                              <Icon size={17} />
+                            </div>
+                            <div className="poi-info">
+                              <div className="poi-mode-row">
+                                <span className="poi-mode-title">{item.mode}</span>
+                                <span className="poi-time-val">{item.time}</span>
+                              </div>
+                              <span className="poi-sub-detail">{item.sub}</span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    <div className="radar-stack-footer">
+                      <Compass size={13} className="compass-icon" />
+                      <span>{isAr ? `وصول مباشر وسريع عبر المحاور الرئيسية في ${property.district}` : `Direct access via ${property.district} main arterials`}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
 
           </div>
@@ -929,53 +1077,14 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
                 </div>
               )}
             </div>
-
-            {/* 3. Estimated Transit & Proximity Radar Card */}
-            <div className="sidebar-radar-card">
-              <div className="radar-stack-header">
-                <div>
-                  <span className="radar-stack-eyebrow">GEOSPATIAL PROXIMITY</span>
-                  <h4 className="radar-stack-title">Estimated Transit</h4>
-                </div>
-                <span className="radar-stack-status">
-                  <span className="live-radar-dot" />
-                  {geoStatus === 'located' ? 'Live GPS' : 'Standard'}
-                </span>
-              </div>
-
-              <div className="radar-cards-list">
-                {travelEstimates.map((item, i) => {
-                  const Icon = item.icon;
-                  return (
-                    <div key={i} className="proximity-card">
-                      <div className="poi-icon-box">
-                        <Icon size={17} />
-                      </div>
-                      <div className="poi-info">
-                        <div className="poi-mode-row">
-                          <span className="poi-mode-title">{item.mode}</span>
-                          <span className="poi-time-val">{item.time}</span>
-                        </div>
-                        <span className="poi-sub-detail">{item.sub}</span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-
-              <div className="radar-stack-footer">
-                <Compass size={13} className="compass-icon" />
-                <span>Direct access via {property.district} main arterials</span>
-              </div>
-            </div>
           </aside>
         </div>
 
         {/* 6. Similar Architectural Statements */}
         <section className="similar-section section-padding">
           <div className="similar-header">
-            <span className="eyebrow-gold">PORTFOLIO RECOMMENDATIONS</span>
-            <h2 className="similar-title">Similar Architectural Statements</h2>
+            <span className="eyebrow-gold">RECOMMENDED PROPERTIES</span>
+            <h2 className="similar-title">Similar Properties</h2>
           </div>
           <div className="similar-grid">
             {similarProperties.map((p: Property, idx: number) => (
@@ -1030,26 +1139,40 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
         /* 1. Above-the-Fold Sovereign Property Header */
         .property-top-header {
           display: flex;
+          flex-direction: column;
+          gap: 1.25rem;
+          margin-bottom: 1.75rem;
+          padding-bottom: 1.75rem;
+          border-bottom: 1px solid var(--border-subtle);
+        }
+
+        .header-meta-top-row {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          flex-wrap: wrap;
+          gap: 1rem;
+        }
+
+        .header-main-hero-row {
+          display: flex;
           align-items: flex-start;
           justify-content: space-between;
           gap: 2.5rem;
-          margin-bottom: 1.5rem;
-          padding-bottom: 1.5rem;
-          border-bottom: 1px solid var(--border-subtle);
         }
 
         .top-header-left {
           display: flex;
           flex-direction: column;
-          gap: 0.5rem;
-          flex-grow: 1;
+          gap: 0.65rem;
+          flex: 1;
+          min-width: 0;
         }
 
         .breadcrumb-bar {
           display: flex;
           align-items: center;
           gap: 8px;
-          margin-bottom: 0.5rem;
           font-size: 0.8125rem;
           color: var(--text-muted);
         }
@@ -1456,51 +1579,57 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
         .gallery-ambient-btn {
           display: inline-flex;
           align-items: center;
-          gap: 6px;
-          backdrop-filter: blur(16px);
-          -webkit-backdrop-filter: blur(16px);
+          gap: 8px;
+          backdrop-filter: blur(24px) saturate(210%);
+          -webkit-backdrop-filter: blur(24px) saturate(210%);
           border-radius: 9999px;
-          padding: 0.45rem 1rem;
+          padding: 0.55rem 1.25rem;
           font-family: var(--font-heading);
-          font-size: 0.75rem;
-          font-weight: 700;
+          font-size: 0.8125rem;
+          font-weight: 800;
+          letter-spacing: 0.04em;
           cursor: pointer;
-          transition: all var(--transition-smooth);
+          transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+          box-shadow: 0 4px 20px rgba(0, 0, 0, 0.45), 0 0 14px rgba(221, 167, 82, 0.2), inset 0 1px 1.5px rgba(255, 255, 255, 0.3);
         }
 
         [data-theme="dark"] .gallery-ambient-btn {
-          background: rgba(10, 14, 22, 0.82);
-          border: 1px solid rgba(255, 255, 255, 0.2);
-          color: #E2E8F0;
+          background: rgba(8, 12, 20, 0.92);
+          border: 1.5px solid rgba(221, 167, 82, 0.55);
+          color: #FFFFFF;
         }
 
         [data-theme="light"] .gallery-ambient-btn {
-          background: rgba(255, 255, 255, 0.90);
-          border: 1px solid rgba(0, 0, 0, 0.1);
+          background: rgba(255, 255, 255, 0.96);
+          border: 1.5px solid rgba(184, 134, 11, 0.55);
           color: #0D1117;
+          box-shadow: 0 4px 18px rgba(0, 0, 0, 0.14), inset 0 1.5px 1.5px #FFFFFF;
         }
 
         .gallery-ambient-btn:hover {
-          border-color: var(--gold-primary);
-          color: var(--gold-primary);
+          transform: translateY(-2px) scale(1.03);
+          border-color: var(--gold-primary, #DDA752);
+          box-shadow: 0 8px 24px rgba(221, 167, 82, 0.4), 0 0 16px rgba(221, 167, 82, 0.3);
         }
 
         .gallery-ambient-btn.active {
-          border-color: var(--gold-primary);
-          background: linear-gradient(135deg, rgba(221, 167, 82, 0.22) 0%, rgba(10, 14, 22, 0.85) 100%);
-          color: var(--gold-primary);
-          box-shadow: 0 0 16px rgba(252, 211, 77, 0.35);
+          border-color: var(--gold-primary, #DDA752);
+          background: linear-gradient(135deg, rgba(221, 167, 82, 0.32) 0%, rgba(10, 14, 24, 0.96) 100%);
+          color: #FFF0C2;
+          box-shadow: 0 0 22px rgba(221, 167, 82, 0.45), inset 0 1px 1.5px rgba(255, 255, 255, 0.4);
         }
 
         [data-theme="light"] .gallery-ambient-btn.active {
-          background: linear-gradient(135deg, rgba(255, 240, 200, 0.95) 0%, #FFFFFF 100%);
-          color: #B8860B;
+          background: linear-gradient(135deg, #FFF5DB 0%, #FFFFFF 100%);
           border-color: #B8860B;
+          color: #7A5200;
+          box-shadow: 0 4px 20px rgba(184, 134, 11, 0.28), inset 0 1.5px 1.5px #FFFFFF;
         }
 
         .ambient-sparkle-icon {
-          color: var(--gold-primary);
+          color: var(--gold-primary, #DDA752);
           flex-shrink: 0;
+          filter: drop-shadow(0 0 6px rgba(221, 167, 82, 0.8));
         }
 
         [data-theme="light"] .ambient-sparkle-icon {
@@ -1508,12 +1637,21 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
         }
 
         .ambient-dot-pulse {
-          width: 6px;
-          height: 6px;
+          width: 8px;
+          height: 8px;
           border-radius: 50%;
+          flex-shrink: 0;
+        }
+
+        .ambient-dot-pulse.active {
           background: #10B981;
-          box-shadow: 0 0 8px #10B981;
+          box-shadow: 0 0 10px #10B981, 0 0 4px #FFFFFF;
           animation: livePulse 2s infinite ease-in-out;
+        }
+
+        .ambient-dot-pulse.off {
+          background: #64748B;
+          opacity: 0.5;
         }
 
         .gallery-fullscreen-btn {
@@ -2137,6 +2275,177 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
           line-height: 1.75;
         }
 
+        /* Luxury Key Specification Cards Matrix */
+        .property-spec-matrix-grid {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 0.9rem;
+          margin-bottom: 2rem;
+          padding-bottom: 1.75rem;
+          border-bottom: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
+        }
+
+        .spec-stat-card {
+          display: flex;
+          align-items: center;
+          gap: 0.9rem;
+          padding: 0.9rem 1.15rem;
+          border-radius: 16px;
+          transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+          backdrop-filter: blur(16px);
+          -webkit-backdrop-filter: blur(16px);
+        }
+
+        [data-theme="dark"] .spec-stat-card {
+          background: rgba(255, 255, 255, 0.03);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25), inset 0 1px 1px rgba(255, 255, 255, 0.08);
+        }
+
+        [data-theme="dark"] .spec-stat-card:hover {
+          background: rgba(255, 255, 255, 0.06);
+          border-color: rgba(221, 167, 82, 0.4);
+          transform: translateY(-2px);
+          box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35), 0 0 12px rgba(221, 167, 82, 0.15);
+        }
+
+        [data-theme="light"] .spec-stat-card {
+          background: #FFFFFF;
+          border: 1px solid rgba(0, 0, 0, 0.07);
+          box-shadow: 0 4px 16px rgba(30, 24, 16, 0.05);
+        }
+
+        [data-theme="light"] .spec-stat-card:hover {
+          border-color: rgba(184, 134, 11, 0.4);
+          transform: translateY(-2px);
+          box-shadow: 0 8px 24px rgba(30, 24, 16, 0.08);
+        }
+
+        .spec-stat-icon-wrap {
+          width: 40px;
+          height: 40px;
+          border-radius: 12px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
+          background: rgba(221, 167, 82, 0.1);
+          border: 1px solid rgba(221, 167, 82, 0.25);
+        }
+
+        .spec-stat-icon {
+          color: var(--gold-primary, #DDA752);
+        }
+
+        [data-theme="light"] .spec-stat-icon-wrap {
+          background: rgba(184, 134, 11, 0.08);
+          border-color: rgba(184, 134, 11, 0.2);
+        }
+
+        [data-theme="light"] .spec-stat-icon {
+          color: #B8860B;
+        }
+
+        .spec-stat-info {
+          display: flex;
+          flex-direction: column;
+          gap: 2px;
+          min-width: 0;
+        }
+
+        .spec-stat-label {
+          font-family: var(--font-heading);
+          font-size: 0.65rem;
+          font-weight: 800;
+          letter-spacing: 0.1em;
+          text-transform: uppercase;
+          color: var(--gold-primary, #DDA752);
+          opacity: 0.85;
+        }
+
+        [data-theme="light"] .spec-stat-label {
+          color: #B8860B;
+        }
+
+        .spec-stat-value {
+          font-family: var(--font-heading);
+          font-size: 0.9375rem;
+          font-weight: 700;
+          color: var(--text-primary);
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+
+        /* Gold highlighted card */
+        [data-theme="dark"] .spec-stat-card.card-highlight-gold {
+          background: linear-gradient(135deg, rgba(221, 167, 82, 0.12) 0%, rgba(255, 255, 255, 0.03) 100%);
+          border-color: rgba(221, 167, 82, 0.35);
+        }
+
+        [data-theme="dark"] .spec-stat-card.card-highlight-gold .gold-val {
+          color: #FCD34D;
+        }
+
+        [data-theme="light"] .spec-stat-card.card-highlight-gold {
+          background: linear-gradient(135deg, rgba(255, 246, 224, 0.9) 0%, #FFFFFF 100%);
+          border-color: rgba(184, 134, 11, 0.35);
+        }
+
+        [data-theme="light"] .spec-stat-card.card-highlight-gold .gold-val {
+          color: #7A5200;
+        }
+
+        @media (max-width: 900px) {
+          .property-spec-matrix-grid {
+            grid-template-columns: repeat(2, 1fr);
+          }
+        }
+
+        @media (max-width: 550px) {
+          .property-spec-matrix-grid {
+            grid-template-columns: 1fr;
+          }
+        }
+
+        [data-theme="light"] .spec-feature-pill {
+          background: rgba(255, 255, 255, 0.85);
+          border: 1px solid rgba(0, 0, 0, 0.08);
+          color: #475569;
+          box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04), inset 0 1px 1px #FFFFFF;
+        }
+
+        [data-theme="light"] .spec-feature-pill:hover {
+          background: #FFFFFF;
+          border-color: rgba(212, 160, 52, 0.4);
+          color: #0D1117;
+          transform: translateY(-1px);
+          box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
+        }
+
+        [data-theme="light"] .spec-feature-pill strong {
+          color: #0D1117;
+          font-weight: 700;
+        }
+
+        [data-theme="light"] .spec-feature-pill .spec-pill-icon {
+          color: #B8860B;
+        }
+
+        [data-theme="light"] .spec-feature-pill.pill-highlight-gold {
+          background: rgba(212, 160, 52, 0.08);
+          border-color: rgba(212, 160, 52, 0.35);
+          box-shadow: 0 2px 10px rgba(212, 160, 52, 0.1), inset 0 1px 1px #FFFFFF;
+        }
+
+        [data-theme="light"] .spec-feature-pill.pill-highlight-gold strong {
+          color: #996515;
+        }
+
+        [data-theme="light"] .spec-feature-pill.pill-highlight-gold .spec-pill-icon-gold {
+          color: #B8860B;
+        }
+
         /* Specification Matrix */
         .spec-matrix-grid {
           display: grid;
@@ -2650,15 +2959,90 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
         }
 
         .sanctum-pin-tag {
-          background: rgba(10, 14, 22, 0.95);
-          border: 1px solid #DDA752;
-          border-radius: 6px;
-          padding: 3px 8px;
-          font-size: 0.6875rem;
+          background: rgba(10, 14, 22, 0.92);
+          border: 1px solid var(--gold-primary, #DDA752);
+          border-radius: 8px;
+          padding: 4px 10px;
+          font-size: 0.72rem;
           font-weight: 700;
           color: #ffffff;
           white-space: nowrap;
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
+          max-width: 260px;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          box-shadow: 0 6px 18px rgba(0, 0, 0, 0.6);
+          backdrop-filter: blur(8px);
+          -webkit-backdrop-filter: blur(8px);
+        }
+
+        .sanctum-map-frame .leaflet-control-zoom {
+          border: none !important;
+          border-radius: 10px;
+          overflow: hidden;
+          margin-bottom: 1.25rem !important;
+          margin-right: 1.25rem !important;
+          box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+        }
+
+        .sanctum-map-frame .leaflet-control-zoom a {
+          background: rgba(10, 14, 22, 0.85) !important;
+          color: var(--gold-primary, #DDA752) !important;
+          border: 1px solid rgba(221, 167, 82, 0.3) !important;
+          backdrop-filter: blur(12px);
+          -webkit-backdrop-filter: blur(12px);
+          transition: all 0.2s ease;
+        }
+
+        .sanctum-map-frame .leaflet-control-zoom a:hover {
+          background: var(--gold-primary, #DDA752) !important;
+          color: #0A0C10 !important;
+        }
+
+        [data-theme="light"] .sanctum-map-frame .leaflet-control-zoom a {
+          background: rgba(255, 255, 255, 0.92) !important;
+          color: #B8860B !important;
+          border: 1px solid rgba(184, 133, 48, 0.3) !important;
+        }
+
+        [data-theme="light"] .sanctum-map-frame .leaflet-control-zoom a:hover {
+          background: #B8860B !important;
+          color: #FFFFFF !important;
+        }
+
+        /* Location Sanctum Map & Attached Transit Sidebar */
+        .sanctum-map-and-transit-layout {
+          display: grid;
+          grid-template-columns: 1fr 340px;
+          gap: 1.5rem;
+          align-items: stretch;
+          margin-top: 1rem;
+        }
+
+        .sanctum-map-col {
+          min-width: 0;
+        }
+
+        .sanctum-transit-col {
+          min-width: 0;
+          display: flex;
+        }
+
+        .attached-radar-card {
+          width: 100%;
+          margin: 0 !important;
+          height: 100%;
+          display: flex;
+          flex-direction: column;
+        }
+
+        .attached-radar-card .radar-cards-list {
+          flex: 1;
+        }
+
+        @media (max-width: 1024px) {
+          .sanctum-map-and-transit-layout {
+            grid-template-columns: 1fr;
+          }
         }
 
         /* Sidebar Radar Card */
@@ -3325,12 +3709,18 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
         }
 
         @media (max-width: 768px) {
-          .property-top-header {
+          .header-meta-top-row {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 0.75rem;
+          }
+          .header-main-hero-row {
             flex-direction: column;
             gap: 1.5rem;
           }
           .top-header-right {
             align-items: flex-start;
+            width: 100%;
           }
           .property-price-card {
             text-align: left;

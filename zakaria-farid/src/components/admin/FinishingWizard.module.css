@@ -497,7 +497,7 @@
 .categoryTitleText {
   font-size: 14px;
   font-weight: 700;
-  color: #1E4D3D;
+  color: #DDA752;
 }
 
 .categoryCountBadge {
@@ -526,14 +526,14 @@
   font-weight: 700;
   background: #ECFDF5;
   border: 1px solid #A7F3D0;
-  color: #1E4D3D;
+  color: #DDA752;
   cursor: pointer;
   transition: all 0.15s ease;
 }
 
 .addCategoryZoneBtn:hover {
   background: #D1FAE5;
-  border-color: #1E4D3D;
+  border-color: #DDA752;
   transform: translateY(-1px);
 }
 
@@ -585,7 +585,7 @@
   gap: 6px;
   font-size: 11px;
   font-weight: 700;
-  color: #1E4D3D;
+  color: #DDA752;
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
@@ -607,8 +607,8 @@
 }
 
 .zoneCoverUploadBtn:hover:not(:disabled) {
-  border-color: #1E4D3D;
-  color: #1E4D3D;
+  border-color: #DDA752;
+  color: #DDA752;
   background: #ECFDF5;
 }
 
@@ -748,7 +748,7 @@
   font-size: 8px;
   font-weight: 800;
   color: #FFFFFF;
-  background: rgba(30, 77, 61, 0.9);
+  background: rgba(221, 167, 82, 0.9);
   padding: 1px 5px;
   border-radius: 4px;
   text-transform: uppercase;
@@ -771,8 +771,8 @@
 }
 
 .zoneThumbnailAddMore:hover:not(:disabled) {
-  border-color: #1E4D3D;
-  color: #1E4D3D;
+  border-color: #DDA752;
+  color: #DDA752;
   background: #ECFDF5;
 }
 
@@ -791,9 +791,9 @@
   border-radius: 14px;
   font-size: 10px;
   font-weight: 700;
-  background: color-mix(in srgb, #1E4D3D 10%, transparent);
-  border: 1.5px solid color-mix(in srgb, #1E4D3D 30%, transparent);
-  color: #1E4D3D;
+  background: color-mix(in srgb, #DDA752 10%, transparent);
+  border: 1.5px solid color-mix(in srgb, #DDA752 30%, transparent);
+  color: #DDA752;
   cursor: pointer;
   white-space: nowrap;
   flex-shrink: 0;
@@ -804,9 +804,9 @@
 
 .zoneAddSectionBtn:hover {
   background: #ECFDF5;
-  border-color: #1E4D3D;
+  border-color: #DDA752;
   transform: translateY(-1px);
-  box-shadow: 0 2px 6px rgba(30, 77, 61, 0.12);
+  box-shadow: 0 2px 6px rgba(221, 167, 82, 0.12);
 }
 
 /* ── "Add another section" button inside expanded zone panel ─────────────── */
@@ -822,7 +822,7 @@
   font-weight: 600;
   background: #F8FAFC;
   border: 1.5px dashed #CBD5E1;
-  color: #1E4D3D;
+  color: #DDA752;
   cursor: pointer;
   transition: all 0.18s ease;
   text-align: left;
@@ -830,10 +830,10 @@
 }
 
 .addTradeBtnInline:hover {
-  border-color: #1E4D3D;
+  border-color: #DDA752;
   background: #ECFDF5;
   transform: translateY(-1px);
-  box-shadow: 0 3px 8px rgba(30, 77, 61, 0.08);
+  box-shadow: 0 3px 8px rgba(221, 167, 82, 0.08);
 }
 
 /* ── Undo / Redo Controls ─────────────────────────────────────────────────── */
@@ -864,8 +864,8 @@
 
 .undoBtn:hover:not(:disabled),
 .redoBtn:hover:not(:disabled) {
-  border-color: #1E4D3D;
-  color: #1E4D3D;
+  border-color: #DDA752;
+  color: #DDA752;
   background: #F0FDF4;
   transform: translateY(-1px);
 }
@@ -949,18 +949,18 @@
   font-weight: 700;
   background: #FFFFFF;
   border: 1.5px dashed #CBD5E1;
-  color: #1E4D3D;
+  color: #DDA752;
   cursor: pointer;
   transition: all 0.18s ease;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
 }
 
 .addTradeBtn:hover {
-  border-color: #1E4D3D;
-  color: #1E4D3D;
+  border-color: #DDA752;
+  color: #DDA752;
   background: #ECFDF5;
   transform: translateY(-1px);
-  box-shadow: 0 3px 8px rgba(30, 77, 61, 0.08);
+  box-shadow: 0 3px 8px rgba(221, 167, 82, 0.08);
 }
 
 .tradePickerPanel {
@@ -991,7 +991,7 @@
   gap: 6px;
   font-size: 11px;
   font-weight: 700;
-  color: #1E4D3D;
+  color: #DDA752;
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
@@ -1038,9 +1038,9 @@
 }
 
 .tradePickerChip:hover {
-  border-color: #1E4D3D;
+  border-color: #DDA752;
   background: #ECFDF5;
-  color: #1E4D3D;
+  color: #DDA752;
   transform: translateY(-1px);
 }
 
@@ -1071,7 +1071,7 @@
 }
 
 .addCustomZonePanel:focus-within {
-  border-color: #1E4D3D;
+  border-color: #DDA752;
   background: #F4FBF7;
 }
 
@@ -1082,13 +1082,13 @@
 }
 
 .addCustomZoneIcon {
-  color: #1E4D3D;
+  color: #DDA752;
 }
 
 .addCustomZoneLabel {
   font-size: 12px;
   font-weight: 700;
-  color: #1E4D3D;
+  color: #DDA752;
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
@@ -1114,8 +1114,8 @@
 }
 
 .addCustomZoneInput:focus {
-  border-color: #1E4D3D;
-  box-shadow: 0 0 0 3px rgba(30, 77, 61, 0.12);
+  border-color: #DDA752;
+  box-shadow: 0 0 0 3px rgba(221, 167, 82, 0.12);
 }
 
 .addCustomZoneInput::placeholder {
@@ -1130,19 +1130,19 @@
   border-radius: 10px;
   font-size: 12px;
   font-weight: 700;
-  background: #1E4D3D;
+  background: #DDA752;
   border: none;
   color: #FFFFFF;
   cursor: pointer;
   white-space: nowrap;
   transition: all 0.18s ease;
-  box-shadow: 0 2px 4px rgba(30, 77, 61, 0.15);
+  box-shadow: 0 2px 4px rgba(221, 167, 82, 0.15);
 }
 
 .addCustomZoneBtn:hover:not(:disabled) {
-  background: #15382c;
+  background: #B8860B;
   transform: translateY(-1px);
-  box-shadow: 0 4px 10px rgba(30, 77, 61, 0.25);
+  box-shadow: 0 4px 10px rgba(221, 167, 82, 0.25);
 }
 
 .addCustomZoneBtn:disabled {
@@ -1193,11 +1193,11 @@
 }
 
 .suggestionChip:hover:not(.suggestionChipAdded) {
-  border-color: #1E4D3D;
+  border-color: #DDA752;
   background: #ECFDF5;
-  color: #1E4D3D;
+  color: #DDA752;
   transform: translateY(-1px);
-  box-shadow: 0 2px 6px rgba(30, 77, 61, 0.08);
+  box-shadow: 0 2px 6px rgba(221, 167, 82, 0.08);
 }
 
 .suggestionChipAdded {

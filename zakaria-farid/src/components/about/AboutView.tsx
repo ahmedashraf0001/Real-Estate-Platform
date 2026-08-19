@@ -27,6 +27,7 @@ export const AboutView: React.FC<AboutViewProps> = ({
   onOpenInquiry: propOnOpenInquiry,
   onNavigateToCatalog: propOnNavigateToCatalog
 }) => {
+  const isAr = locale === 'ar';
   const router = useRouter();
   const onNavigateToCatalog = propOnNavigateToCatalog || (() => router.push('/' + locale + '/properties'));
   const onOpenInquiry = propOnOpenInquiry || ((type: string) => {
@@ -36,38 +37,38 @@ export const AboutView: React.FC<AboutViewProps> = ({
 
   const stats = [
     { value: '2.5B+', unit: 'EGP', label: 'Curated Asset Volume', desc: 'Represented exclusively across Greater Cairo & Coasts' },
-    { value: '15+', unit: 'Districts', label: 'Sovereign Corridors', desc: 'From New Cairo Golden Square to Gouna Red Sea' },
-    { value: '98%', unit: 'Retention', label: 'Client Retention Rate', desc: 'Generational advisory for local and international HNWIs' },
-    { value: '10+', unit: 'Years', label: 'Architectural Heritage', desc: 'Bespoke consultancy founded in Cairo in 2016' }
+    { value: '15+', unit: 'Districts', label: 'Prime Areas', desc: 'From New Cairo to El Gouna Red Sea' },
+    { value: '98%', unit: 'Retention', label: 'Client Retention Rate', desc: 'Long-term advisory for local and international high-net-worth clients' },
+    { value: '10+', unit: 'Years', label: 'Industry Experience', desc: 'Bespoke luxury real estate consultancy founded in Cairo in 2016' }
   ];
 
   const pillars = [
     {
       id: 0,
       number: '01',
-      title: 'Structural Authenticity & Material Heritage',
-      subtitle: 'Rigorous architectural auditing of form, materials, and vistas',
-      desc: 'We do not represent generic catalog developments. Every mansion, villa, and penthouse in our portfolio undergoes a spatial audit verifying raw limestone quality, thermal cantilever glazing, and uncompromised sightline privacy.',
+      title: 'Quality & Structural Integrity',
+      subtitle: 'Rigorous inspection of materials, finishes, and property condition',
+      desc: 'We don’t list just any property. Every villa, mansion, and penthouse in our collection is inspected for build quality, premium materials, and unobstructed views.',
       icon: Layers,
-      metrics: ['Natural Stone Certification', 'Triple-Glazed Thermal Specs', 'Spatial Setback Verification']
+      metrics: ['Verified Build Quality', 'Premium Materials Check', 'Clear Sightlines & Privacy']
     },
     {
       id: 1,
       number: '02',
-      title: 'Title Verification & Sovereign Discretion',
-      subtitle: 'Institutional legal clearance and zero-leak confidentiality',
-      desc: 'Our private acquisitions office operates under strict Non-Disclosure Agreements (NDAs). Every estate is audited by leading real estate jurists to ensure clean sovereign freehold titles, transparent escrow channels, and seamless handover guarantees.',
+      title: 'Legal Verification & Transparency',
+      subtitle: 'Clean title deeds and full legal clearance on every property',
+      desc: 'Our legal team thoroughly reviews every property to confirm clean freehold ownership, zero encumbrances, transparent payment terms, and smooth handover.',
       icon: Lock,
-      metrics: ['100% Verified Freehold Titles', 'Encumbrance-Free Guarantee', 'Private Off-Market Protocols']
+      metrics: ['100% Verified Title Deeds', 'No Hidden Fees', 'Smooth Handover Guarantee']
     },
     {
       id: 2,
       number: '03',
-      title: 'Private Wealth & Asset Appreciation',
-      subtitle: 'Data-driven capital preservation and prime liquidity advocacy',
-      desc: 'Beyond bespoke architecture, we advise sovereign buyers on capital appreciation curves across Egypt’s high-growth zones—benchmarking inflation hedging, secondary market liquidity, and ultra-prime rental yields.',
+      title: 'Investment & Market Insights',
+      subtitle: 'Data-backed guidance on price trends and growth potential',
+      desc: 'We help buyers make smart investments by advising on price appreciation, rental yields, and market trends across Egypt’s top luxury real estate markets.',
       icon: TrendingUp,
-      metrics: ['Historical Appreciation Modeling', 'Currency-Hedged Valuation', 'Prime Secondary Liquidity']
+      metrics: ['Price Appreciation Data', 'Rental Yield Estimates', 'Market Liquidity Insight']
     }
   ];
 
@@ -75,26 +76,26 @@ export const AboutView: React.FC<AboutViewProps> = ({
     {
       year: '2016',
       badge: 'FOUNDING',
-      title: 'Inception of the Private Studio',
-      desc: 'Zakaria Farid launched as a private architecture consultancy and bespoke asset advisory in New Cairo, pioneering design-led buyer representation.'
+      title: 'Established in Cairo',
+      desc: 'Zakaria Farid launched as a private luxury property consultancy and buyer advisory in New Cairo, pioneering design-led real estate representation.'
     },
     {
       year: '2019',
       badge: 'EXPANSION',
-      title: 'The Sovereign Portfolio Launch',
-      desc: 'Pivoted exclusively to hand-audited standalone estates valued above 25 Million EGP, establishing in-house legal and structural vetting teams.'
+      title: 'Premium Property Portfolio',
+      desc: 'Focused exclusively on hand-selected luxury properties valued above 25 Million EGP, with in-house legal and quality inspection teams.'
     },
     {
       year: '2022',
       badge: 'INNOVATION',
-      title: 'Interactive Spatial Cartography',
-      desc: 'Pioneered full-scale interactive GIS satellite mapping and immersive digital walkthrough portals for foreign sovereign investors.'
+      title: 'Interactive Maps & Virtual Tours',
+      desc: 'Introduced full-scale interactive satellite mapping and immersive digital walkthrough portals for local and international buyers.'
     },
     {
       year: '2025',
       badge: 'MILESTONE',
       title: 'Red Sea & North Coast Expansion',
-      desc: 'Formally integrated ultra-prime coastal retreats across El Gouna, Ain Sokhna, and Ras El Hekma, crossing 2.5 Billion EGP in curated asset representation.'
+      desc: 'Formally integrated luxury coastal properties across El Gouna, Ain Sokhna, and Ras El Hekma, crossing EGP 2.5 Billion in total sales.'
     }
   ];
 
@@ -121,27 +122,42 @@ export const AboutView: React.FC<AboutViewProps> = ({
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4 }}
             >
-              <Compass size={13} className="badge-icon" />
-              <span>EST. 2016 • GREATER CAIRO • RED SEA • NORTH COAST</span>
+              <Compass size={15} className="badge-icon" />
+              <span>{isAr ? 'تأسست ٢٠١٦ • القاهرة الكبرى • البحر الأحمر • الساحل الشمالي' : 'EST. 2016 • GREATER CAIRO • RED SEA • NORTH COAST'}</span>
             </motion.div>
 
             <motion.h1 
               className="about-hero-title"
-              initial={{ opacity: 0, y: 8 }}
+              initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4, delay: 0.05, ease: [0.16, 1, 0.3, 1] }}
+              transition={{ duration: 0.45, delay: 0.05, ease: [0.16, 1, 0.3, 1] }}
             >
-              Curating Egypt’s <span className="title-gold-accent">Architectural Legacy</span>
+              <span className="title-white-line">{isAr ? 'ريادة التميز في' : 'Curating Egypt’s'}</span>
+              <span className="title-gold-accent">{isAr ? 'السوق العقاري الراقي' : 'Premier Living & Estates'}</span>
             </motion.h1>
 
-            <motion.p 
-              className="about-hero-manifesto"
-              initial={{ opacity: 0, y: 14 }}
+            {/* Sovereign Manifesto Monograph Box */}
+            <motion.div 
+              className="about-hero-manifesto-card"
+              initial={{ opacity: 0, y: 18 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.16 }}
+              transition={{ duration: 0.5, delay: 0.15, ease: [0.16, 1, 0.3, 1] }}
             >
-              "We do not facilitate transactions; we advocate for generational living art. Zakaria Farid is Egypt's premier sovereign acquisitions office—auditing, securing, and representing the nation’s most remarkable residential statements."
-            </motion.p>
+              <div className="manifesto-decorative-quote">“</div>
+              <p className="manifesto-quote-text">
+                {isAr 
+                  ? 'نحن لا نُبرم مجرد معاملات عقارية، بل نُمثّل أعلى معايير الجودة والشفافية. يلتزم مكتب زكريا فريد بتقديم الاستشارات المتخصصة وتدقيق وتأمين أفضل الفرص السكنية والاستثمارية في مصر.'
+                  : 'We do not facilitate ordinary transactions; we deliver trust, precision, and verified quality. Zakaria Farid is a premier property consultancy—auditing, securing, and representing Egypt’s finest residential and commercial opportunities.'
+                }
+              </p>
+              <div className="manifesto-footer-row">
+                <div className="manifesto-divider" />
+                <div className="manifesto-signoff">
+                  <span className="signoff-dot" />
+                  <span className="signoff-text">{isAr ? 'زكريا فريد — ميثاق الثقة والشفافية' : 'ZAKARIA FARID • CHARTER OF EXCELLENCE'}</span>
+                </div>
+              </div>
+            </motion.div>
           </div>
         </div>
       </section>
@@ -341,12 +357,12 @@ export const AboutView: React.FC<AboutViewProps> = ({
         /* 1. Hero Banner */
         .about-hero-section {
           position: relative;
-          min-height: 620px;
+          min-height: 560px;
           display: flex;
           align-items: center;
           justify-content: center;
-          padding-top: 140px;
-          padding-bottom: 5rem;
+          padding-top: 135px;
+          padding-bottom: 2.5rem;
           overflow: hidden;
           background: var(--bg-primary);
         }
@@ -371,6 +387,10 @@ export const AboutView: React.FC<AboutViewProps> = ({
           filter: brightness(0.88) contrast(1.08);
         }
 
+        [data-theme="light"] .about-hero-img {
+          filter: brightness(0.88) contrast(1.15) saturate(1.1);
+        }
+
         .about-hero-overlay {
           position: absolute;
           inset: 0;
@@ -387,13 +407,20 @@ export const AboutView: React.FC<AboutViewProps> = ({
         }
 
         [data-theme="light"] .about-hero-overlay {
-          background: linear-gradient(
-            to bottom,
-            rgba(244, 241, 234, 0.88) 0%,
-            rgba(244, 241, 234, 0.45) 35%,
-            rgba(244, 241, 234, 0.75) 75%,
-            #F4F1EA 100%
-          );
+          background: 
+            radial-gradient(
+              ellipse at 50% 35%,
+              rgba(15, 20, 30, 0.04) 0%,
+              rgba(20, 24, 32, 0.12) 60%,
+              rgba(20, 24, 32, 0.28) 100%
+            ),
+            linear-gradient(
+              to bottom,
+              rgba(244, 241, 234, 0.20) 0%,
+              transparent 25%,
+              transparent 70%,
+              #F4F1EA 100%
+            );
         }
 
         .about-hero-glow {
@@ -405,6 +432,10 @@ export const AboutView: React.FC<AboutViewProps> = ({
           height: 320px;
           background: radial-gradient(circle, rgba(252, 211, 77, 0.12) 0%, transparent 70%);
           pointer-events: none;
+        }
+
+        [data-theme="light"] .about-hero-glow {
+          display: none;
         }
 
         .about-hero-container {
@@ -425,105 +456,243 @@ export const AboutView: React.FC<AboutViewProps> = ({
         .hero-heritage-badge {
           display: inline-flex;
           align-items: center;
-          gap: 8px;
-          backdrop-filter: blur(20px) saturate(210%) contrast(108%) brightness(108%);
-          -webkit-backdrop-filter: blur(20px) saturate(210%) contrast(108%) brightness(108%);
+          gap: 10px;
+          backdrop-filter: blur(24px) saturate(210%) contrast(108%);
+          -webkit-backdrop-filter: blur(24px) saturate(210%) contrast(108%);
           border-radius: 9999px;
-          padding: 0.45rem 1.25rem;
-          font-size: 0.6875rem;
-          font-weight: 800;
-          letter-spacing: 0.14em;
-          color: var(--gold-primary);
+          padding: 0.55rem 1.35rem;
+          font-family: var(--font-heading);
+          font-size: 0.78125rem;
+          font-weight: 700;
+          letter-spacing: 0.12em;
+          color: #FFF0C2;
+          text-shadow: 0 1px 6px rgba(0, 0, 0, 0.85);
           margin-bottom: 1.5rem;
+          transition: all var(--transition-fast);
         }
 
         [data-theme="dark"] .hero-heritage-badge {
-          background: linear-gradient(
-            135deg,
-            rgba(255, 255, 255, 0.22) 0%,
-            rgba(255, 255, 255, 0.06) 30%,
-            rgba(18, 24, 38, 0.42) 65%,
-            rgba(10, 14, 24, 0.65) 100%
-          );
-          border: 1px solid rgba(255, 255, 255, 0.28);
-          box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4), inset 0 1.5px 2px rgba(255, 255, 255, 0.65);
+          background: rgba(10, 14, 24, 0.88);
+          border: 1.5px solid rgba(221, 167, 82, 0.5);
+          box-shadow: 0 8px 24px rgba(0, 0, 0, 0.55), 0 0 16px rgba(221, 167, 82, 0.22), inset 0 1px 1.5px rgba(255, 255, 255, 0.35);
+        }
+
+        [data-theme="dark"] .hero-heritage-badge:hover {
+          border-color: var(--gold-primary);
+          box-shadow: 0 8px 28px rgba(0, 0, 0, 0.6), 0 0 20px rgba(221, 167, 82, 0.35);
+          transform: translateY(-1px);
         }
 
         [data-theme="light"] .hero-heritage-badge {
-          background: linear-gradient(
-            135deg,
-            rgba(255, 255, 255, 0.65) 0%,
-            rgba(255, 255, 255, 0.30) 35%,
-            rgba(255, 255, 255, 0.48) 100%
-          );
-          backdrop-filter: blur(20px) saturate(210%) contrast(108%) brightness(108%);
-          -webkit-backdrop-filter: blur(20px) saturate(210%) contrast(108%) brightness(108%);
-          border: 1px solid rgba(255, 255, 255, 0.75);
-          box-shadow: 0 4px 16px rgba(30, 24, 16, 0.06), inset 0 1.5px 2px #FFFFFF;
-          color: var(--gold-primary);
+          background: rgba(255, 255, 255, 0.94);
+          border: 1.5px solid rgba(184, 134, 11, 0.5);
+          box-shadow: 0 4px 18px rgba(0, 0, 0, 0.12), inset 0 1.5px 2px #FFFFFF;
+          color: #7A5200;
+          text-shadow: none;
         }
 
         .badge-icon {
           flex-shrink: 0;
-          color: var(--gold-primary);
+          color: var(--gold-primary, #DDA752);
+          filter: drop-shadow(0 0 4px rgba(221, 167, 82, 0.8));
+        }
+
+        [data-theme="light"] .badge-icon {
+          color: #B8860B;
+          filter: none;
         }
 
         .about-hero-title {
           font-family: var(--font-heading);
-          font-size: clamp(2.5rem, 4.5vw, 3.85rem);
+          font-size: clamp(2.4rem, 4.5vw, 3.85rem);
           font-weight: 800;
-          letter-spacing: -0.03em;
-          line-height: 1.12;
-          margin-bottom: 1.5rem;
+          letter-spacing: -0.025em;
+          line-height: 1.18;
+          margin-bottom: 1.75rem;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 0.25rem;
+          text-align: center;
         }
 
-        [data-theme="dark"] .about-hero-title {
+        .title-white-line {
           color: #FFFFFF;
-          text-shadow: 0 2px 24px rgba(0, 0, 0, 0.9);
+          text-shadow: 0 3px 18px rgba(0, 0, 0, 0.7);
         }
 
-        [data-theme="light"] .about-hero-title {
-          color: #0D1117;
+        [data-theme="light"] .title-white-line {
+          color: #0F172A;
+          text-shadow: none;
         }
 
         .title-gold-accent {
-          color: #FCD34D;
-          text-shadow: 0 0 24px rgba(252, 211, 77, 0.45);
+          display: block;
+          text-shadow: none !important;
+          background: linear-gradient(
+            135deg, 
+            #FFFFFF 0%, 
+            #FFF2C2 20%, 
+            #F6D075 45%, 
+            #E5A93C 75%, 
+            #C48A22 100%
+          );
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          filter: drop-shadow(0 4px 14px rgba(0, 0, 0, 0.45));
         }
 
         [data-theme="light"] .title-gold-accent {
+          background: linear-gradient(
+            135deg, 
+            #B8860B 0%, 
+            #996515 50%, 
+            #7A5200 100%
+          );
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          filter: none;
+        }
+
+        /* Sovereign Manifesto Monograph Box */
+        .about-hero-manifesto-card {
+          position: relative;
+          max-width: 800px;
+          width: 100%;
+          margin-top: 0.5rem;
+          padding: 2.25rem 2.5rem 1.75rem;
+          border-radius: 24px;
+          backdrop-filter: blur(28px) saturate(210%);
+          -webkit-backdrop-filter: blur(28px) saturate(210%);
+          text-align: center;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 1.25rem;
+        }
+
+        [data-theme="dark"] .about-hero-manifesto-card {
+          background: rgba(10, 14, 24, 0.65);
+          border: 1px solid rgba(255, 255, 255, 0.14);
+          box-shadow: 
+            0 20px 48px rgba(0, 0, 0, 0.5), 
+            0 0 20px rgba(221, 167, 82, 0.08),
+            inset 0 1px 1.5px rgba(255, 255, 255, 0.25);
+        }
+
+        [data-theme="light"] .about-hero-manifesto-card {
+          background: rgba(255, 255, 255, 0.88);
+          border: 1px solid rgba(0, 0, 0, 0.08);
+          box-shadow: 
+            0 16px 40px rgba(30, 24, 16, 0.08), 
+            inset 0 1.5px 2px #FFFFFF;
+        }
+
+        .manifesto-decorative-quote {
+          position: absolute;
+          top: -16px;
+          left: 50%;
+          transform: translateX(-50%);
+          width: 36px;
+          height: 36px;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-family: Georgia, serif;
+          font-size: 1.75rem;
+          line-height: 1;
+          font-weight: 700;
+        }
+
+        [data-theme="dark"] .manifesto-decorative-quote {
+          background: #0E131F;
+          color: var(--gold-primary, #DDA752);
+          border: 1px solid rgba(221, 167, 82, 0.5);
+          box-shadow: 0 0 12px rgba(221, 167, 82, 0.3);
+        }
+
+        [data-theme="light"] .manifesto-decorative-quote {
+          background: #FFFFFF;
           color: #B8860B;
-          text-shadow: 0 0 20px rgba(184, 134, 11, 0.3);
+          border: 1px solid rgba(184, 134, 11, 0.4);
+          box-shadow: 0 4px 12px rgba(30, 24, 16, 0.08);
         }
 
-        .about-hero-sub {
-          font-size: 1.125rem;
-          color: var(--text-secondary);
-          line-height: 1.7;
-          margin: 0 auto;
-        }
-
-        .about-hero-manifesto {
+        .manifesto-quote-text {
           font-size: 1.0625rem;
-          line-height: 1.75;
-          max-width: 760px;
-          font-style: normal;
-          font-weight: 600;
+          line-height: 1.85;
+          letter-spacing: -0.01em;
+          font-weight: 500;
+          margin: 0;
+          padding-top: 0.25rem;
         }
 
-        [data-theme="dark"] .about-hero-manifesto {
+        [data-theme="dark"] .manifesto-quote-text {
           color: #E2E8F0;
-          text-shadow: 0 2px 10px rgba(0, 0, 0, 0.85);
+          text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
         }
 
-        [data-theme="light"] .about-hero-manifesto {
+        [data-theme="light"] .manifesto-quote-text {
           color: #1E293B;
-          text-shadow: none;
+        }
+
+        .manifesto-footer-row {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 0.75rem;
+          width: 100%;
+        }
+
+        .manifesto-divider {
+          width: 60px;
+          height: 1.5px;
+          background: linear-gradient(90deg, transparent, var(--gold-primary, #DDA752), transparent);
+        }
+
+        [data-theme="light"] .manifesto-divider {
+          background: linear-gradient(90deg, transparent, #B8860B, transparent);
+        }
+
+        .manifesto-signoff {
+          display: flex;
+          align-items: center;
+          gap: 7px;
+        }
+
+        .signoff-dot {
+          width: 6px;
+          height: 6px;
+          border-radius: 50%;
+          background: var(--gold-primary, #DDA752);
+          box-shadow: 0 0 6px var(--gold-primary, #DDA752);
+        }
+
+        [data-theme="light"] .signoff-dot {
+          background: #B8860B;
+          box-shadow: none;
+        }
+
+        .signoff-text {
+          font-family: var(--font-heading);
+          font-size: 0.6875rem;
+          font-weight: 800;
+          letter-spacing: 0.16em;
+          color: var(--gold-primary, #DDA752);
+          text-transform: uppercase;
+        }
+
+        [data-theme="light"] .signoff-text {
+          color: #8C6207;
         }
 
         /* 2. Stats Strip */
         .about-stats-section {
-          background: var(--bg-primary);
+          position: relative;
+          z-index: 3;
+          margin-top: -2.75rem;
+          padding-bottom: 4.5rem;
         }
 
         .stats-strip-grid {

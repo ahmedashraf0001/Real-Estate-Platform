@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useMemo, useRef } from 'react';
+import { useState, useRef } from 'react';
 import { toast } from 'sonner';
-import { ChevronRight, Plus, Check, ImagePlus, X, Loader2, Trash2, Sparkles, SlidersHorizontal, RotateCcw, RotateCw } from 'lucide-react';
+import { ChevronRight, Plus, Check, ImagePlus, X, Loader2, Trash2, SlidersHorizontal, Sparkles, RotateCcw, RotateCw } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import {
   PropertyTypeId,
@@ -29,6 +29,7 @@ import {
   removeTradeFromZone,
 } from '@/lib/layering';
 import styles from './FinishingWizard.module.css';
+
 
 // ─── Status label humaniser ─────────────────────────────────────────────────
 const STATUS_LABELS: Record<string, { en: string; ar: string }> = {
@@ -66,42 +67,22 @@ function statusLabel(status: string, isAr: boolean) {
 // ─── Sub-type options ───────────────────────────────────────────────────────
 const SUBTYPES: Record<PropertyTypeId, Array<{ id: string; en: string; ar: string }>> = {
   apartment: [
-    { id: 'standard',  en: 'Standard',  ar: 'عادي' },
-    { id: 'duplex',    en: 'Duplex',    ar: 'دوبلكس' },
-    { id: 'triplex',   en: 'Triplex',   ar: 'تريبلكس' },
-    { id: 'penthouse', en: 'Penthouse', ar: 'بنتهاوس' },
+    { id: 'standard',  en: 'Standard Apartment',      ar: 'شقة عادية' },
+    { id: 'ground',    en: 'Ground Floor (Apartment)', ar: 'شقة أرضي' },
+    { id: 'duplex',    en: 'Duplex (Two Floors)',       ar: 'دوبلكس (دورين)' },
+    { id: 'roof',      en: 'Roof Apartment (روف)',     ar: 'شقة روف' },
   ],
-  villa: [
-    { id: 'standalone',  en: 'Standalone',  ar: 'مستقلة' },
-    { id: 'twin_house',  en: 'Twin House',  ar: 'توين هاوس' },
-    { id: 'townhouse',   en: 'Townhouse',   ar: 'تاون هاوس' },
+  building: [
+    { id: 'residential', en: 'Residential Building (عمارة)', ar: 'عمارة سكنية' },
+    { id: 'mixed',       en: 'Mixed Use (سكني + تجاري)',    ar: 'سكني وتجاري' },
   ],
-  townhouse: [
-    { id: 'middle', en: 'Middle Unit', ar: 'شريحة وسطية' },
-    { id: 'corner', en: 'Corner Unit', ar: 'شريحة طرفية' },
-  ],
-  duplex: [
-    { id: 'lower_duplex', en: 'Lower Duplex (Ground+First)', ar: 'دوبلكس أرضي وأول' },
-    { id: 'upper_duplex', en: 'Upper Duplex (Third+Roof)',   ar: 'دوبلكس علوي مع روف' },
-  ],
-  chalet: [
-    { id: 'ground_chalet', en: 'Ground with Garden', ar: 'أرضي بحديقة' },
-    { id: 'upper_chalet',  en: 'First/Roof with Sea View', ar: 'علوي بروف' },
-  ],
-  building: [],
-  tower:    [],
-  garage:   [],
+  garage: [],
 };
 
 // ─── Optional zones per property type ──────────────────────────────────────
 const OPTIONAL_ZONES_FOR_TYPE: Record<PropertyTypeId, string[]> = {
-  apartment: ['apt.guest_bath', 'apt.open_terrace'],
-  villa:     ['vil.basement', 'vil.r.guest_suite', 'vil.exterior'],
-  townhouse: ['vil.basement', 'vil.r.guest_suite', 'vil.exterior'],
-  duplex:    ['apt.guest_bath', 'apt.open_terrace'],
-  chalet:    ['apt.guest_bath', 'apt.open_terrace'],
+  apartment: ['apt.guest_bath', 'apt.laundry'],
   building:  [],
-  tower:     [],
   garage:    [],
 };
 
@@ -142,60 +123,130 @@ const GLOBAL_STATES: Array<{
 
 // ─── Props ─────────────────────────────────────────────────────────────────
 
-const CATEGORY_CONFIG: Array<{
+type CategoryConfig = {
   key: string;
   en: string;
   ar: string;
   emoji: string;
   match: (id: string, label?: string) => boolean;
-}> = [
-  {
-    key: 'living',
-    en: 'Living & Reception Areas',
-    ar: 'المساحات المعيشية والاستقبال',
-    emoji: '🛋️',
-    match: (id: string, label?: string) => {
-      const text = (id + ' ' + (label ?? '')).toLowerCase();
-      return text.includes('reception') || text.includes('living') || text.includes('dining') || text.includes('corridor') || text.includes('entrance') || text.includes('foyer') || text.includes('salon') || text.includes('office') || text.includes('storage') || text.includes('مساحات') || text.includes('معيشة') || text.includes('استقبال') || text.includes('مكتب') || text.includes('مخزن');
-    },
-  },
-  {
-    key: 'bedrooms',
-    en: 'Bedrooms & Suites',
-    ar: 'غرف النوم والأجنحة',
-    emoji: '🛏️',
-    match: (id) => id.includes('bed') || id.includes('suite'),
-  },
-  {
-    key: 'baths_kitchen',
-    en: 'Bathrooms & Kitchen',
-    ar: 'الحمامات والمطبخ',
-    emoji: '🛁',
-    match: (id) => id.includes('bath') || id.includes('kitchen') || id.includes('powder'),
-  },
-  {
-    key: 'outdoor',
-    en: 'Outdoor & Terraces',
-    ar: 'البلكونات والمساحات الخارجية',
-    emoji: '🌿',
-    match: (id) => id.includes('balcony') || id.includes('terrace') || id.includes('exterior') || id.includes('roof'),
-  },
-];
+};
 
-const SMART_SUGGESTIONS: Array<{ en: string; ar: string }> = [
-  { en: 'Maid Room', ar: 'غرفة خادمة' },
-  { en: 'Driver Room', ar: 'غرفة سائق' },
-  { en: 'Laundry Room', ar: 'غرفة غسيل' },
-  { en: 'Storage Room', ar: 'مخزن' },
-  { en: 'Guest Toilet', ar: 'حمام ضيوف' },
-  { en: 'Dressing Room', ar: 'غرفة ملابس' },
-  { en: 'Private Office', ar: 'مكتب خاص' },
-  { en: 'Pantry', ar: 'بوفيه' },
-  { en: 'Rooftop Terrace', ar: 'تراس السطح' },
-  { en: 'Private Pool', ar: 'حمام سباحة' },
-  { en: 'Private Garden', ar: 'حديقة خاصة' },
-  { en: 'Jacuzzi', ar: 'جاكوزي' },
-];
+const CATEGORY_CONFIG_BY_TYPE: Record<PropertyTypeId, CategoryConfig[]> = {
+  apartment: [
+    {
+      key: 'living',
+      en: 'Living & Reception Areas',
+      ar: 'المساحات المعيشية والاستقبال',
+      emoji: '🛋️',
+      match: (id, label) => {
+        const text = (id + ' ' + (label ?? '')).toLowerCase();
+        return text.includes('reception') || text.includes('living') || text.includes('dining') ||
+          text.includes('corridor') || text.includes('entrance') || text.includes('salon') ||
+          text.includes('office') || text.includes('storage') || text.includes('laundry');
+      },
+    },
+    {
+      key: 'bedrooms',
+      en: 'Bedrooms & Suites',
+      ar: 'غرف النوم والأجنحة',
+      emoji: '🛏️',
+      match: (id) => id.includes('bed') || id.includes('suite'),
+    },
+    {
+      key: 'baths_kitchen',
+      en: 'Bathrooms & Kitchen',
+      ar: 'الحمامات والمطبخ',
+      emoji: '🛁',
+      match: (id) => id.includes('bath') || id.includes('kitchen') || id.includes('powder'),
+    },
+    {
+      key: 'outdoor',
+      en: 'Balconies & Outdoor',
+      ar: 'البلكونات والمساحات الخارجية',
+      emoji: '🌿',
+      match: (id) => id.includes('balcony') || id.includes('terrace') || id.includes('roof'),
+    },
+  ],
+  building: [
+    {
+      key: 'structure',
+      en: 'Structural & Common Areas',
+      ar: 'الهيكل والمناطق المشتركة',
+      emoji: '🏗️',
+      match: (id) =>
+        id.startsWith('bld.') || id.includes('lobby') || id.includes('stair') ||
+        id.includes('corridor') || id.includes('entrance') || id.includes('basement'),
+    },
+    {
+      key: 'infrastructure',
+      en: 'Infrastructure & Utilities',
+      ar: 'البنية التحتية والمرافق',
+      emoji: '⚙️',
+      match: (id) =>
+        id.includes('elec') || id.includes('plumb') || id.includes('water') ||
+        id.includes('tank') || id.includes('roof') || id.includes('pump'),
+    },
+    {
+      key: 'units',
+      en: 'Residential Units',
+      ar: 'الوحدات السكنية',
+      emoji: '🏠',
+      match: (id) =>
+        id.includes('apt.') || id.includes('unit') || id.includes('flat'),
+    },
+  ],
+  garage: [
+    {
+      key: 'access',
+      en: 'Access & Entry',
+      ar: 'المدخل والبوابة',
+      emoji: '🚪',
+      match: (id) =>
+        id.includes('ramp') || id.includes('gate') || id.includes('entrance') || id.includes('grg.ramp'),
+    },
+    {
+      key: 'bays',
+      en: 'Parking Bays',
+      ar: 'أماكن الانتظار',
+      emoji: '🚗',
+      match: (id) =>
+        id.includes('bay') || id.includes('parking') || id.includes('grg.bay'),
+    },
+    {
+      key: 'electrical',
+      en: 'Lighting & Electrical',
+      ar: 'الإنارة والكهرباء',
+      emoji: '💡',
+      match: (id) =>
+        id.includes('elec') || id.includes('light') || id.includes('grg.elec'),
+    },
+  ],
+};
+
+const SMART_SUGGESTIONS_BY_TYPE: Record<PropertyTypeId, Array<{ en: string; ar: string }>> = {
+  apartment: [
+    { en: 'Laundry Room',   ar: 'غرفة غسيل' },
+    { en: 'Storage Room',   ar: 'مخزن' },
+    { en: 'Guest Toilet',   ar: 'حمام ضيوف' },
+    { en: 'Dressing Room',  ar: 'غرفة ملابس' },
+    { en: 'Servant Room',   ar: 'غرفة خادمة' },
+    { en: 'Open Kitchen',   ar: 'مطبخ أمريكي' },
+    { en: 'Balcony',        ar: 'بلكونة' },
+  ],
+  building: [
+    { en: 'Generator Room',  ar: 'غرفة مولد' },
+    { en: 'Guard Room',      ar: 'غرفة حارس' },
+    { en: 'Water Pump Room', ar: 'غرفة طلمبات' },
+    { en: 'Meter Room',      ar: 'غرفة عدادات' },
+    { en: 'Storage Room',    ar: 'مخزن' },
+  ],
+  garage: [
+    { en: 'Extra Parking Bay',  ar: 'باكية إضافية' },
+    { en: 'Storage Room',       ar: 'مخزن' },
+    { en: 'Security Booth',     ar: 'كابينة أمن' },
+    { en: 'EV Charging Point',  ar: 'نقطة شحن كهربائي' },
+  ],
+};
 
 interface FinishingWizardProps {
   propertyType: PropertyTypeId;
@@ -225,6 +276,10 @@ export default function FinishingWizard({
   // Custom zone & trade picker state
   const [customZoneInput, setCustomZoneInput] = useState('');
   const [openTradePickerZoneId, setOpenTradePickerZoneId] = useState<string | null>(null);
+
+  // Resolved per-type config
+  const CATEGORY_CONFIG = CATEGORY_CONFIG_BY_TYPE[propertyType] ?? CATEGORY_CONFIG_BY_TYPE.apartment;
+  const SMART_SUGGESTIONS = SMART_SUGGESTIONS_BY_TYPE[propertyType] ?? SMART_SUGGESTIONS_BY_TYPE.apartment;
 
   // Undo / Redo history management
   const [history, setHistory] = useState<ZoneInstance[][]>([zoneInstances]);
@@ -613,7 +668,7 @@ export default function FinishingWizard({
             {/* ── Zone Photos Gallery ─────────────────────────────────── */}
             <div className={styles.zoneCoverPhotoSection}>
               <div className={styles.zoneCoverPhotoLabel}>
-                <ImagePlus size={14} style={{ color: '#1E4D3D' }} />
+                <ImagePlus size={14} style={{ color: '#DDA752' }} />
                 <span>{isAr ? 'صور الغرفة (اختياري — متعددة)' : 'Zone Photos (optional, multiple)'}</span>
                 {(zoneInst.images?.length ?? 0) > 0 && (
                   <span style={{ fontSize: '10px', fontWeight: 700, color: '#64748B', marginLeft: 'auto' }}>
@@ -820,7 +875,7 @@ export default function FinishingWizard({
       )}
 
       {/* Bedroom count (apartments + villas) */}
-      {(propertyType === 'apartment' || propertyType === 'villa') && (
+      {propertyType === 'apartment' && (
         <div className={styles.bedroomRow}>
           <span className={styles.bedroomLabel}>
             {isAr ? 'عدد غرف النوم العادية' : 'Standard Bedroom Count'}
@@ -854,6 +909,8 @@ export default function FinishingWizard({
           ))}
         </div>
       </div>
+
+      {/* Zone finishes note — CAD floor plans live in Step 3 above */}
 
       {/* Zone accordion */}
       {hasZones && (

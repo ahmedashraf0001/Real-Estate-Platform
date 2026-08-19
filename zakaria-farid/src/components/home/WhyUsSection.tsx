@@ -8,23 +8,23 @@ export const WhyUsSection: React.FC = () => {
     {
       number: '01',
       icon: ShieldCheck,
-      title: 'Forensic Structural Audit',
-      description: 'Every estate undergoes exhaustive physical and legal auditing—verifying natural limestone density, acoustic glass specs, and 100% clean freehold sovereign titles.',
+      title: 'Verified Legal & Quality Inspection',
+      description: 'Every property is thoroughly inspected and legally verified — confirming clean title deeds, structural quality, and zero hidden fees before you buy.',
       tag: 'Verified Freehold Titles'
     },
     {
       number: '02',
       icon: Compass,
-      title: 'Spatial GIS Cartography',
-      description: 'Millimeter-accurate ESRI satellite plots, sun path studies, and cinematic digital walkthroughs curated for discrete international acquisitions.',
-      tag: 'Satellite Precision'
+      title: 'Interactive Location & Maps',
+      description: 'Explore properties with detailed satellite maps, neighborhood views, and virtual walkthroughs — so you know exactly what you\'re getting before you visit.',
+      tag: 'Satellite & Street Views'
     },
     {
       number: '03',
       icon: TrendingUp,
-      title: 'Private Wealth Advisory',
-      description: 'Strategic guidance on capital preservation, prime secondary liquidity, and confidential off-market portfolio representation across Egypt’s golden corridors.',
-      tag: 'Generational Value'
+      title: 'Investment & Market Guidance',
+      description: 'Our team helps you understand property values, market trends, and growth potential across Egypt\'s top real estate zones — so you invest with confidence.',
+      tag: 'Smart Investment'
     }
   ];
 
@@ -36,9 +36,9 @@ export const WhyUsSection: React.FC = () => {
         {/* Section Header */}
         <div className="why-header">
           <span className="why-eyebrow">THE ZAKARIA FARID STANDARD</span>
-          <h2 className="why-title">Curated with Uncompromising Discretion</h2>
+          <h2 className="why-title">Why Choose Zakaria Farid</h2>
           <p className="why-subtitle">
-            Three core principles governing every architectural statement represented in our private collection.
+            Three core commitments that guide how we find, verify, and present every property in our collection.
           </p>
         </div>
 

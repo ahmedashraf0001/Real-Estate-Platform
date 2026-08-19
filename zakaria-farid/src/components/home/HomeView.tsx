@@ -12,6 +12,7 @@ import { Property } from '@/types';
 import { ArrowRight, Sparkles } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
+import { triggerNavigationStart } from '@/components/NavigationProgress';
 
 interface HomeViewProps {
   properties?: Property[];
@@ -32,8 +33,12 @@ export const HomeView: React.FC<HomeViewProps> = ({
 }) => {
   const router = useRouter();
 
-  const onSelectProperty = propOnSelectProperty || ((id: string) => router.push('/' + locale + '/properties/' + id));
+  const onSelectProperty = propOnSelectProperty || ((id: string) => {
+    triggerNavigationStart();
+    router.push('/' + locale + '/properties/' + id);
+  });
   const onNavigateToCatalog = propOnNavigateToCatalog || ((filters?: { location?: string; propertyType?: string; priceTier?: string }) => {
+    triggerNavigationStart();
     let url = '/' + locale + '/properties';
     if (filters) {
       const params = new URLSearchParams();
@@ -45,8 +50,14 @@ export const HomeView: React.FC<HomeViewProps> = ({
     }
     router.push(url);
   });
-  const onOpenMapModal = propOnOpenMapModal || (() => router.push('/' + locale + '/map'));
-  const onOpenListEstate = propOnOpenListEstate || (() => router.push('/' + locale + '/contact'));
+  const onOpenMapModal = propOnOpenMapModal || (() => {
+    triggerNavigationStart();
+    router.push('/' + locale + '/map');
+  });
+  const onOpenListEstate = propOnOpenListEstate || (() => {
+    triggerNavigationStart();
+    router.push('/' + locale + '/contact');
+  });
 
   // Use server-fetched real DB properties, fall back to adapted FALLBACK_PROPERTIES
   const fallbackAdapted = React.useMemo(() => adaptProperties(FALLBACK_PROPERTIES, locale as 'en' | 'ar'), [locale]);
@@ -57,7 +68,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
   const [activeDestination, setActiveDestination] = React.useState<'all' | 'new-cairo' | 'sahel' | 'gouna' | 'zayed'>('all');
 
   const destinationFilters: { id: 'all' | 'new-cairo' | 'sahel' | 'gouna' | 'zayed'; label: string }[] = [
-    { id: 'all', label: 'All Masterpieces' },
+    { id: 'all', label: 'All Properties' },
     { id: 'new-cairo', label: 'New Cairo' },
     { id: 'sahel', label: 'North Coast (Sahel)' },
     { id: 'gouna', label: 'El Gouna & Red Sea' },
@@ -81,7 +92,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
 
   const line1WhiteText = "Discover Egypt's "; // includes natural space
   const line1GoldText = "Finest";
-  const line2Text = "Architectural Masterpieces";
+  const line2Text = "Luxury Properties";
   const line1WhiteLen = line1WhiteText.length;
   const line1GoldLen = line1GoldText.length;
   const line1Total = line1WhiteLen + line1GoldLen;
@@ -133,7 +144,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
           <div className="hero-content">
             <motion.h1 
               className="hero-title"
-              aria-label="Discover Egypt's Finest Architectural Masterpieces"
+              aria-label="Discover Egypt's Finest Luxury Properties"
               initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
@@ -187,13 +198,13 @@ export const HomeView: React.FC<HomeViewProps> = ({
           >
             <div>
               <span className="eyebrow">CURATED SELECTION</span>
-              <h2 className="section-title">Featured Masterpieces</h2>
+              <h2 className="section-title">Featured Properties</h2>
             </div>
             <button 
               className="explore-catalog-btn"
               onClick={() => onNavigateToCatalog()}
             >
-              <span>Explore Full Catalog</span>
+              <span>Browse All Properties</span>
               <ArrowRight size={16} />
             </button>
           </motion.div>
@@ -381,18 +392,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
         }
 
         [data-theme="light"] .hero-bottom-fade {
-          background: linear-gradient(
-            to bottom,
-            rgba(250, 247, 242, 0) 0%,
-            rgba(250, 247, 242, 0.015) 15%,
-            rgba(250, 247, 242, 0.05) 30%,
-            rgba(250, 247, 242, 0.12) 45%,
-            rgba(250, 247, 242, 0.25) 60%,
-            rgba(250, 247, 242, 0.46) 72%,
-            rgba(250, 247, 242, 0.70) 82%,
-            rgba(250, 247, 242, 0.90) 92%,
-            #FAF7F2 100%
-          );
+          display: none;
         }
 
         .hero-container {
@@ -438,12 +438,22 @@ export const HomeView: React.FC<HomeViewProps> = ({
 
         .masked-text-white {
           color: #ffffff;
+          text-shadow: 0 2px 14px rgba(0, 0, 0, 0.7);
         }
 
         .masked-text-gold {
-          color: var(--gold-primary);
+          background: linear-gradient(
+            135deg, 
+            #FFFDF5 0%, 
+            #FEE8A0 25%, 
+            #FCD34D 50%, 
+            var(--gold-primary, #DDA752) 80%, 
+            #B8860B 100%
+          );
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
           font-weight: 800;
-          text-shadow: 0 0 20px var(--gold-glow);
+          filter: drop-shadow(0 2px 12px rgba(0, 0, 0, 0.85)) drop-shadow(0 0 16px rgba(221, 167, 82, 0.5));
         }
 
         .masked-text-gradient {
@@ -456,7 +466,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
           );
           -webkit-background-clip: text;
           -webkit-text-fill-color: transparent;
-          filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.6));
+          filter: drop-shadow(0 2px 10px rgba(0, 0, 0, 0.75));
         }
 
         .typewriter-cursor {

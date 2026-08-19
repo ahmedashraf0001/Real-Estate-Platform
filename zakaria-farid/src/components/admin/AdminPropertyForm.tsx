@@ -5,7 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
@@ -14,10 +14,11 @@ import imageCompression from 'browser-image-compression';
 import { Loader2, Save, Trash2, Upload, X, Layers, Image as ImageIcon, ChevronRight, ChevronLeft, Check, Eye, MapPin, Building2, Sparkles, FileText } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import FinishingWizard from './FinishingWizard';
+import CADBlueprintBuilder from './CADBlueprintBuilder';
 import DynamicMapPicker from './DynamicMapPicker';
 import styles from './AdminPropertyForm.module.css';
 import { saveProperty } from '@/app/actions/properties';
-import { getZoneTemplateLabels, getTradeTemplateLabels, getZoneBadge } from '@/lib/layering';
+import { getZoneTemplateLabels, getTradeTemplateLabels, getZoneBadge, buildZoneInstances } from '@/lib/layering';
 import type { ZoneInstance } from '@/lib/layering';
 import type { Property } from '@/lib/supabase/types';
 
@@ -104,7 +105,7 @@ const schema = z.object({
   bedrooms: z.coerce.number().int().min(0),
   bathrooms: z.coerce.number().int().min(0),
   area_sqm: z.coerce.number().positive(),
-  type: z.enum(['villa', 'apartment', 'townhouse', 'duplex', 'chalet']),
+  type: z.enum(['apartment', 'building', 'garage']),
   location: z.string().min(2),
   latitude: z.coerce.number().optional(),
   longitude: z.coerce.number().optional(),
@@ -126,26 +127,28 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
   const isEditing = !!property;
   const router = useRouter();
 
-  const [currentStep, setCurrentStep] = useState<number>(() => {
+  const [currentStep, setCurrentStep] = useState<number>(1);
+  const [saving, setSaving] = useState(false);
+  const [uploadingImages, setUploadingImages] = useState(false);
+  const [isSaved, setIsSaved] = useState<boolean>(false);
+  const [savedSlug, setSavedSlug] = useState<string | null>(property?.slug ?? null);
+  const [savedResult, setSavedResult] = useState<{ id?: string; slug?: string } | null>(null);
+
+  useEffect(() => {
     if (typeof window !== 'undefined') {
       const sp = new URLSearchParams(window.location.search);
       const s = sp.get('step');
-      if (s) return Number(s);
+      if (s) {
+        const parsed = Number(s);
+        if (parsed >= 1 && parsed <= 5) {
+          setCurrentStep(parsed);
+        }
+      }
+      if (sp.get('saved') === 'true') {
+        setIsSaved(true);
+      }
     }
-    return 1;
-  });
-
-  const [saving, setSaving] = useState(false);
-  const [uploadingImages, setUploadingImages] = useState(false);
-  const [isSaved, setIsSaved] = useState<boolean>(() => {
-    if (typeof window !== 'undefined') {
-      const sp = new URLSearchParams(window.location.search);
-      return sp.get('saved') === 'true';
-    }
-    return false;
-  });
-  const [savedSlug, setSavedSlug] = useState<string | null>(property?.slug ?? null);
-  const [savedResult, setSavedResult] = useState<{ id?: string; slug?: string } | null>(null);
+  }, []);
 
   const goToStep = (stepNum: number) => {
     setCurrentStep(stepNum);
@@ -166,7 +169,7 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
       const valid = await trigger(['location']);
       if (!valid) return;
     }
-    goToStep(Math.min(currentStep + 1, 4));
+    goToStep(Math.min(currentStep + 1, 5));
   };
 
   const handlePrevStep = () => {
@@ -186,7 +189,8 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
         return property.spec_layers as ZoneInstance[];
       }
     }
-    return [];
+    const initialType = (property ? (['apartment', 'building', 'garage'].includes(property.type) ? property.type : 'apartment') : 'apartment') as 'apartment' | 'building' | 'garage';
+    return buildZoneInstances(initialType, 'semi_finished', property?.bedrooms || 2);
   });
 
   const { register, handleSubmit, watch, setValue, trigger, formState: { errors } } = useForm<FormValues>({
@@ -197,7 +201,7 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
       bedrooms: property.bedrooms,
       bathrooms: property.bathrooms,
       area_sqm: property.area_sqm,
-      type: property.type,
+      type: (['apartment', 'building', 'garage'].includes(property.type) ? property.type : 'apartment') as 'apartment' | 'building' | 'garage',
       location: property.location,
       latitude: property.latitude ?? undefined,
       longitude: property.longitude ?? undefined,
@@ -219,17 +223,23 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
   });
 
   const steps = [
-    { num: 1, title_en: 'Basic Info & Type', title_ar: 'البيانات الأساسية ونوع العقار' },
-    { num: 2, title_en: 'Location & Media', title_ar: 'الموقع والوسائط والوصف' },
-    { num: 3, title_en: 'Layered Specs', title_ar: 'مواصفات الطبقات والتشطيب' },
-    { num: 4, title_en: 'Review & Publish', title_ar: 'المراجعة والنشر' },
+    { num: 1, title_en: 'Property Details', title_ar: 'بيانات العقار' },
+    { num: 2, title_en: 'Location & Media', title_ar: 'الموقع والوسائط' },
+    { num: 3, title_en: 'Floor Plans', title_ar: 'المخططات' },
+    { num: 4, title_en: 'Features & Finishes', title_ar: 'المزايا والتشطيب' },
+    { num: 5, title_en: 'Review & Publish', title_ar: 'المراجعة والنشر' },
   ];
 
   const selectedType = watch('type');
   const bedroomsCount = watch('bedrooms') || 2;
 
   const handleTypeChange = (newType: string) => {
-    setValue('type', newType as FormValues['type'], { shouldValidate: true });
+    const typed = newType as FormValues['type'];
+    setValue('type', typed, { shouldValidate: true });
+    // Re-initialize default zones for the new property type if we are not editing or haven't customized
+    if (!isEditing || zoneInstances.length === 0 || zoneInstances.every(z => !z.images?.length)) {
+      setZoneInstances(buildZoneInstances(typed, 'semi_finished', bedroomsCount));
+    }
   };
 
   // Tiptap editor for description
@@ -289,14 +299,14 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
           <style>
             @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap');
             body { font-family: 'Plus Jakarta Sans', system-ui, sans-serif; padding: 32px; color: #1E293B; background: #FFFFFF; line-height: 1.5; }
-            .header { border-bottom: 2px solid #C9A96A; padding-bottom: 16px; margin-bottom: 24px; display: flex; justify-content: space-between; align-items: flex-start; }
-            .brand { font-size: 11px; font-weight: 800; color: #C9A96A; text-transform: uppercase; letter-spacing: 1px; }
-            .title { font-size: 24px; font-weight: 800; color: #1E4D3D; margin: 4px 0 0; }
+            .header { border-bottom: 2px solid #DDA752; padding-bottom: 16px; margin-bottom: 24px; display: flex; justify-content: space-between; align-items: flex-start; }
+            .brand { font-size: 11px; font-weight: 800; color: #DDA752; text-transform: uppercase; letter-spacing: 1px; }
+            .title { font-size: 24px; font-weight: 800; color: #0A0E18; margin: 4px 0 0; }
             .kpiGrid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 12px; padding: 16px; margin-bottom: 24px; text-align: center; }
-            .kpiVal { font-size: 20px; font-weight: 800; color: #1E4D3D; display: block; }
+            .kpiVal { font-size: 20px; font-weight: 800; color: #DDA752; display: block; }
             .kpiLabel { font-size: 11px; color: #64748B; font-weight: 600; }
             .catCard { border: 1px solid #E2E8F0; border-radius: 12px; padding: 16px; margin-bottom: 16px; page-break-inside: avoid; }
-            .catHeader { font-size: 15px; font-weight: 800; color: #1E4D3D; border-bottom: 1px solid #F1F5F9; padding-bottom: 8px; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; }
+            .catHeader { font-size: 15px; font-weight: 800; color: #0A0E18; border-bottom: 1px solid #F1F5F9; padding-bottom: 8px; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; }
             .zoneGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 10px; }
             .zoneCard { background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 10px 12px; }
             .zoneName { font-size: 12px; font-weight: 700; color: #1E293B; margin-bottom: 4px; display: block; }
@@ -312,7 +322,7 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
               <div style="font-size: 12px; color: #64748B; margin-top: 4px;">${location} • ${selectedType}</div>
             </div>
             <div style="text-align: right;">
-              <span style="font-size: 20px; font-weight: 800; color: #1E4D3D;">${price} EGP</span>
+              <span style="font-size: 20px; font-weight: 800; color: #DDA752;">${price} EGP</span>
               <div style="font-size: 11px; color: #64748B;">${area} sqm</div>
             </div>
           </div>
@@ -324,7 +334,7 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
             <div><span class="kpiVal">100%</span><span class="kpiLabel">${isAr ? 'جاهز للنشر' : 'Ready Status'}</span></div>
           </div>
 
-          <h3 style="font-size: 16px; font-weight: 800; color: #1E4D3D; margin-bottom: 12px;">${isAr ? 'المواصفات المعمارية والتشطيبات' : 'Architectural & Finishing Specifications'}</h3>
+          <h3 style="font-size: 16px; font-weight: 800; color: #0A0E18; margin-bottom: 12px;">${isAr ? 'المواصفات المعمارية والتشطيبات' : 'Architectural & Finishing Specifications'}</h3>
 
           ${CATEGORY_BUCKETS.map(cat => {
             const catZones = zoneInstances.filter(z => cat.match(z.zone_template_id));
@@ -404,10 +414,10 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
       toast.success(isAr ? (isEditing ? 'تم تحديث العقار بنجاح!' : 'تم إنشاء العقار بنجاح!') : (isEditing ? 'Property updated!' : 'Property created!'));
       setSavedSlug(res.slug || property?.slug || null);
       setIsSaved(true);
-      setCurrentStep(4);
+      setCurrentStep(5);
       if (typeof window !== 'undefined') {
         const url = new URL(window.location.href);
-        url.searchParams.set('step', '4');
+        url.searchParams.set('step', '5');
         url.searchParams.set('saved', 'true');
         window.history.replaceState({}, '', url.toString());
       }
@@ -445,13 +455,14 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
       }
     }}>
       {/* ─── Stepper Progress Header ─── */}
+      {/* ─── Stepper Progress Header ─── */}
       <div className={styles.stepperContainer}>
         <div className={styles.stepperHeader}>
           {steps.map((st, idx) => {
             const isActive = currentStep === st.num;
             const isCompleted = currentStep > st.num;
             return (
-              <div key={st.num} style={{ display: 'flex', alignItems: 'center', flex: idx < steps.length - 1 ? 1 : 'none' }}>
+              <div key={st.num} className={styles.stepTrackItem}>
                 <button
                   type="button"
                   onClick={() => {
@@ -462,7 +473,7 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
                   className={`${styles.stepItem} ${isActive ? styles.stepItemActive : ''} ${isCompleted ? styles.stepItemCompleted : ''}`}
                 >
                   <div className={styles.stepBadge}>
-                    {isCompleted ? <Check size={16} strokeWidth={2.5} /> : st.num}
+                    {isCompleted ? <Check size={15} strokeWidth={2.5} /> : st.num}
                   </div>
                   <div className={styles.stepInfo}>
                     <span className={styles.stepNum}>{isAr ? `الخطوة ${st.num}` : `Step ${st.num}`}</span>
@@ -481,91 +492,119 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
       {/* ─── STEP 1: Basic Info & Property Type ─── */}
       {currentStep === 1 && (
         <div className={styles.section}>
-          <h2 className={styles.sectionTitle}>
-            <Building2 size={18} />
-            {isAr ? 'الخطوة ١: البيانات الأساسية ونوع العقار' : 'Step 1: Core Property Details & Type'}
-          </h2>
+          <div className={styles.sectionHeader}>
+            <div className={styles.sectionHeaderIcon}>
+              <Building2 size={20} />
+            </div>
+            <div>
+              <h2 className={styles.sectionTitle}>
+                {isAr ? 'الخطوة ١: البيانات الأساسية ونوع العقار' : 'Step 1: Core Property Details & Type'}
+              </h2>
+              <span style={{ fontSize: '12px', color: 'rgba(255, 255, 255, 0.5)', marginTop: '2px', display: 'block' }}>
+                {isAr ? 'حدد عنوان العقار، تصنيفه الهندسي، والمواصفات الأولية' : 'Define property identity, architectural categorization, and primary specs'}
+              </span>
+            </div>
+          </div>
 
           <div className={styles.field}>
-            <label className="label">{isAr ? 'عنوان العقار *' : 'Property Title *'}</label>
-            <input className={`input ${errors.title ? styles.err : ''}`} {...register('title')} placeholder={isAr ? "مثال: فيلا فاخرة للإيجار بالشيخ زايد" : "e.g. Luxury Modern Villa in Sheikh Zayed"} />
+            <label className={styles.label}>{isAr ? 'عنوان العقار *' : 'Property Title *'}</label>
+            <input 
+              type="text" 
+              className={`${styles.input} ${errors.title ? styles.err : ''}`} 
+              {...register('title')} 
+              placeholder={isAr ? "مثال: فيلا فاخرة للإيجار بالشيخ زايد" : "e.g. Luxury Modern Villa in Sheikh Zayed"} 
+            />
             {errors.title && <p className={styles.errMsg}>{errors.title.message}</p>}
           </div>
 
           <div className={styles.grid2}>
             <div className={styles.field}>
-              <label className="label">{isAr ? 'نوع العقار *' : 'Property Type *'}</label>
+              <label className={styles.label}>{isAr ? 'نوع العقار *' : 'Property Type *'}</label>
               <select
-                className="input"
+                className={styles.input}
                 value={selectedType}
                 onChange={(e) => handleTypeChange(e.target.value)}
               >
-                {['villa', 'apartment', 'townhouse', 'duplex', 'chalet'].map((t) => (
-                  <option key={t} value={t} style={{ textTransform: 'capitalize' }}>
-                    {isAr 
-                      ? (t === 'villa' ? 'فيلا (Villa)' : t === 'apartment' ? 'شقة (Apartment)' : t === 'townhouse' ? 'تاون هاوس (Townhouse)' : t === 'duplex' ? 'دوبلكس (Duplex)' : 'شاليه (Chalet)') 
-                      : t.charAt(0).toUpperCase() + t.slice(1)
-                    }
+                {([
+                  { value: 'apartment', en: 'Apartment', ar: 'شقة (Apartment)' },
+                  { value: 'building',  en: 'Building',  ar: 'عمارة (Building)' },
+                  { value: 'garage',    en: 'Garage',    ar: 'جراج (Garage)' },
+                ] as const).map((t) => (
+                  <option key={t.value} value={t.value}>
+                    {isAr ? t.ar : t.en}
                   </option>
                 ))}
               </select>
             </div>
 
             <div className={styles.field}>
-              <label className="label">{isAr ? 'السعر (ج.م) *' : 'Price (EGP) *'}</label>
-              <input type="number" className={`input ${errors.price_egp ? styles.err : ''}`} {...register('price_egp')} placeholder="e.g. 12500000" />
+              <label className={styles.label}>{isAr ? 'السعر (ج.م) *' : 'Price (EGP) *'}</label>
+              <input 
+                type="number" 
+                className={`${styles.input} ${errors.price_egp ? styles.err : ''}`} 
+                {...register('price_egp')} 
+                placeholder="e.g. 12500000" 
+              />
               {errors.price_egp && <p className={styles.errMsg}>{errors.price_egp.message}</p>}
             </div>
           </div>
 
           <div className={styles.grid3}>
             <div className={styles.field}>
-              <label className="label">{isAr ? 'المساحة (مترمربع) *' : 'Area (sqm) *'}</label>
-              <input type="number" className={`input ${errors.area_sqm ? styles.err : ''}`} {...register('area_sqm')} placeholder="e.g. 350" />
+              <label className={styles.label}>{isAr ? 'المساحة (مترمربع) *' : 'Area (sqm) *'}</label>
+              <input 
+                type="number" 
+                className={`${styles.input} ${errors.area_sqm ? styles.err : ''}`} 
+                {...register('area_sqm')} 
+                placeholder="e.g. 350" 
+              />
               {errors.area_sqm && <p className={styles.errMsg}>{errors.area_sqm.message}</p>}
             </div>
             <div className={styles.field}>
-              <label className="label">{isAr ? 'غرف النوم' : 'Bedrooms'}</label>
-              <input type="number" className="input" {...register('bedrooms')} />
+              <label className={styles.label}>{isAr ? 'غرف النوم' : 'Bedrooms'}</label>
+              <input type="number" className={styles.input} {...register('bedrooms')} />
             </div>
             <div className={styles.field}>
-              <label className="label">{isAr ? 'الحمامات' : 'Bathrooms'}</label>
-              <input type="number" className="input" {...register('bathrooms')} />
+              <label className={styles.label}>{isAr ? 'الحمامات' : 'Bathrooms'}</label>
+              <input type="number" className={styles.input} {...register('bathrooms')} />
             </div>
             <div className={styles.field}>
-              <label className="label">{isAr ? 'حالة البناء' : 'Completion Status'}</label>
-              <select className="input" {...register('completion_status')}>
+              <label className={styles.label}>{isAr ? 'حالة البناء' : 'Completion Status'}</label>
+              <select className={styles.input} {...register('completion_status')}>
                 <option value="ready">{isAr ? 'جاهز للسكن' : 'Ready to Move'}</option>
                 <option value="off_plan">{isAr ? 'قيد الإنشاء (على المخطط)' : 'Off-Plan'}</option>
               </select>
             </div>
             <div className={styles.field}>
-              <label className="label">{isAr ? 'حالة الإدراج' : 'Listing Status'}</label>
-              <select className="input" {...register('listing_status')}>
+              <label className={styles.label}>{isAr ? 'حالة الإدراج' : 'Listing Status'}</label>
+              <select className={styles.input} {...register('listing_status')}>
                 <option value="active">{isAr ? 'متاح' : 'Active'}</option>
                 <option value="under_offer">{isAr ? 'تحت العرض' : 'Under Offer'}</option>
                 <option value="sold">{isAr ? 'مُباع' : 'Sold'}</option>
               </select>
             </div>
             <div className={styles.field}>
-              <label className="label">{isAr ? 'رقم الطابق' : 'Floor Number'}</label>
-              <input type="number" className="input" {...register('floor_number')} placeholder={isAr ? "مثال: 0 (أرضي)، 2" : "e.g. 0 for Ground, 2"} />
+              <label className={styles.label}>{isAr ? 'رقم الطابق' : 'Floor Number'}</label>
+              <input type="number" className={styles.input} {...register('floor_number')} placeholder={isAr ? "مثال: 0 (أرضي)، 2" : "e.g. 0 for Ground, 2"} />
             </div>
           </div>
 
           <div className={styles.grid2}>
             <div className={styles.field}>
-              <label className="label">{isAr ? 'الإطلالة' : 'View'}</label>
-              <input type="text" className="input" {...register('view')} placeholder={isAr ? "مثال: إطلالة على المسبح، إطلالة على البحر" : "e.g. Pool view, Sea view"} />
+              <label className={styles.label}>{isAr ? 'الإطلالة' : 'View'}</label>
+              <input type="text" className={styles.input} {...register('view')} placeholder={isAr ? "مثال: إطلالة على المسبح، إطلالة على البحر" : "e.g. Pool view, Sea view"} />
             </div>
-            <div className={styles.checkRow} style={{ marginTop: '24px' }}>
-              <label className="toggle-switch">
-                <input type="checkbox" id="is_featured" {...register('is_featured')} />
-                <span className="toggle-slider"></span>
-              </label>
-              <label htmlFor="is_featured" style={{ fontWeight: 500, fontSize: 14, cursor: 'pointer' }}>
-                {isAr ? 'مميز على الصفحة الرئيسية' : 'Featured on homepage'}
-              </label>
+            <div className={styles.field}>
+              <label className={styles.label}>{isAr ? 'التمييز بالمنصة' : 'Platform Highlight'}</label>
+              <div className={styles.checkRow}>
+                <label className={styles.toggleSwitch}>
+                  <input type="checkbox" id="is_featured" {...register('is_featured')} className={styles.toggleInput} />
+                  <span className={styles.toggleSlider}></span>
+                </label>
+                <label htmlFor="is_featured" style={{ fontWeight: 600, fontSize: 13.5, cursor: 'pointer', color: 'rgba(255, 255, 255, 0.9)', userSelect: 'none' }}>
+                  {isAr ? 'عرض في العقارات المميزة بالصفحة الرئيسية' : 'Feature this property on homepage'}
+                </label>
+              </div>
             </div>
           </div>
         </div>
@@ -670,12 +709,24 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
         </div>
       )}
 
-      {/* ─── STEP 3: Detailed Layered Specs & Finishing ─── */}
+      {/* ─── STEP 3: Dedicated CAD Blueprint Studio ─── */}
       {currentStep === 3 && (
+        <div className={styles.section}>
+          <CADBlueprintBuilder
+            zoneInstances={zoneInstances}
+            onZoneInstancesChange={setZoneInstances}
+            propertyType={selectedType}
+            isAr={isAr}
+          />
+        </div>
+      )}
+
+      {/* ─── STEP 4: Detailed Layered Specs & Finishing ─── */}
+      {currentStep === 4 && (
         <div className={styles.section}>
           <h2 className={styles.sectionTitle} style={{ marginBottom: 12 }}>
             <Layers size={18} />
-            {isAr ? 'الخطوة ٣: مواصفات الطبقات والتشطيب' : 'Step 3: Detailed Layered Specs & Finishing'}
+            {isAr ? 'الخطوة ٤: مواصفات الأنظمة والتشطيبات الهندسية' : 'Step 4: Layered Engineering Systems & Finishes'}
           </h2>
 
           <FinishingWizard
@@ -688,15 +739,15 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
         </div>
       )}
 
-      {/* ─── STEP 4: Full Pre-Save Specification & Property Summary Review ─── */}
-      {currentStep === 4 && (
+      {/* ─── STEP 5: Full Pre-Save Specification & Property Summary Review ─── */}
+      {currentStep === 5 && (
         <div className={styles.section}>
           {isSaved && (
             <div style={{
-              background: '#ECFDF5',
-              border: '1px solid #A7F3D0',
-              borderRadius: '12px',
-              padding: '14px 18px',
+              background: 'rgba(16, 185, 129, 0.1)',
+              border: '1px solid rgba(16, 185, 129, 0.3)',
+              borderRadius: '16px',
+              padding: '16px 20px',
               marginBottom: '16px',
               display: 'flex',
               alignItems: 'center',
@@ -704,15 +755,15 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
               gap: '12px'
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: '#059669', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <Check size={16} strokeWidth={3} />
+                <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: '#10B981', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Check size={18} strokeWidth={3} />
                 </div>
                 <div>
-                  <strong style={{ fontSize: '13px', color: '#065F46', display: 'block', fontFamily: isAr ? 'var(--font-serif)' : "'Plus Jakarta Sans', sans-serif" }}>
-                    {isAr ? 'تم حفظ وتحديث العقار بنجاح!' : 'Property & Specs Saved Successfully!'}
+                  <strong style={{ fontSize: '14px', color: '#10B981', display: 'block', fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+                    {isAr ? 'تم حفظ وتحديث العقار والمخطط الهندسي بنجاح!' : 'Property & CAD Blueprint Saved Successfully!'}
                   </strong>
-                  <span style={{ fontSize: '11px', color: '#047857' }}>
-                    {isAr ? 'يمكنك استعراض الصفحة العامة أو العودة للوحة التحكّم.' : 'All layered specs are stored. You can inspect the public page or return to dashboard.'}
+                  <span style={{ fontSize: '12px', color: 'rgba(255, 255, 255, 0.7)' }}>
+                    {isAr ? 'كافة المواصفات والطبقات المعمارية مسجلة ومتاحة للمعاينة الحية.' : 'All layered specs and floor plans are stored. You can inspect live or return to dashboard.'}
                   </span>
                 </div>
               </div>
@@ -726,31 +777,31 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
                     style={{
                       display: 'inline-flex',
                       alignItems: 'center',
-                      gap: '5px',
-                      padding: '6px 12px',
+                      gap: '6px',
+                      padding: '8px 14px',
                       borderRadius: '8px',
-                      fontSize: '11px',
-                      fontWeight: 700,
-                      background: '#1E4D3D',
-                      color: '#FFFFFF',
+                      fontSize: '12px',
+                      fontWeight: 800,
+                      background: 'linear-gradient(135deg, #DDA752 0%, #B8860B 100%)',
+                      color: '#0A0E18',
                       textDecoration: 'none'
                     }}
                   >
-                    <Eye size={13} />
-                    <span>{isAr ? 'معاينة العامة ↗' : 'View Public ↗'}</span>
+                    <Eye size={14} />
+                    <span>{isAr ? 'معاينة الصفحة الحية ↗' : 'View Live ↗'}</span>
                   </a>
                 )}
                 <button
                   type="button"
                   onClick={() => router.push(`/admin/${isAr ? 'ar' : 'en'}/properties`)}
                   style={{
-                    padding: '6px 12px',
+                    padding: '8px 14px',
                     borderRadius: '8px',
-                    fontSize: '11px',
+                    fontSize: '12px',
                     fontWeight: 700,
-                    border: '1px solid #CBD5E1',
-                    background: '#FFFFFF',
-                    color: '#475569',
+                    border: '1px solid rgba(255, 255, 255, 0.15)',
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    color: '#FFFFFF',
                     cursor: 'pointer'
                   }}
                 >
@@ -764,7 +815,7 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
                 <h2 className={styles.sectionTitle} style={{ margin: 0 }}>
                   <Sparkles size={18} />
-                  {isAr ? 'الخطوة ٤: مراجعة ملخص العقار قبل الحفظ' : 'Step 4: Review Property & Specs Summary Before Save'}
+                  {isAr ? 'الخطوة ٥: مراجعة ملخص العقار والمخطط الهندسي' : 'Step 5: Review Property & CAD Specs Summary'}
                 </h2>
                 <button
                   type="button"
@@ -773,25 +824,24 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
                     display: 'inline-flex',
                     alignItems: 'center',
                     gap: '6px',
-                    padding: '8px 14px',
-                    borderRadius: '8px',
+                    padding: '8px 16px',
+                    borderRadius: '10px',
                     fontSize: '12px',
-                    fontWeight: 700,
-                    background: '#1E4D3D',
-                    color: '#FFFFFF',
-                    border: 'none',
+                    fontWeight: 800,
+                    background: 'rgba(221, 167, 82, 0.12)',
+                    border: '1px solid rgba(221, 167, 82, 0.3)',
+                    color: '#DDA752',
                     cursor: 'pointer',
-                    boxShadow: '0 2px 8px rgba(30,77,61,0.15)'
                   }}
                 >
                   <FileText size={14} />
-                  <span>{isAr ? 'تحميل / طباعة تقرير PDF 📄' : 'Download / Print PDF Summary 📄'}</span>
+                  <span>{isAr ? 'طباعة تقرير المواصفات PDF 📄' : 'Download Specification Dossier PDF 📄'}</span>
                 </button>
               </div>
-              <p style={{ margin: '3px 0 0', fontSize: '12px', color: '#64748B' }}>
+              <p style={{ margin: '4px 0 0', fontSize: '13px', color: 'rgba(255, 255, 255, 0.6)' }}>
                 {isAr
-                  ? 'راجع تفاصيل العقار والمواصفات المعمارية الكاملة أدناه قبل التأكيد والنشر'
-                  : 'Review all property details and full finishing specifications below before publishing.'}
+                  ? 'راجع تفاصيل العقار وأبعاد المخطط الهندسي وكافة المواصفات أدناه قبل التأكيد والنشر النهائي'
+                  : 'Review property identity, CAD floor plan metrology, and engineering specifications before live publishing.'}
               </p>
             </div>
           </div>
@@ -808,7 +858,7 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
             {/* Card 2: Type, Area & Pricing */}
             <div className={styles.reviewBox}>
               <span className={styles.reviewBoxTitle}>{isAr ? 'نوع العقار والسعر' : 'Type & Pricing'}</span>
-              <span className={styles.reviewVal} style={{ color: '#1E4D3D', fontWeight: 800, fontSize: '20px' }}>
+              <span className={styles.reviewVal} style={{ color: '#DDA752', fontWeight: 800, fontSize: '20px' }}>
                 {watch('price_egp') ? `${Number(watch('price_egp')).toLocaleString()} EGP` : '—'}
               </span>
               <span className={styles.reviewSub} style={{ textTransform: 'capitalize' }}>
@@ -821,7 +871,7 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
                   <span className={styles.reviewBoxTitle}>{isAr ? 'معاينة الصور والوسائط' : 'Media & Photo Preview'}</span>
-                  <span style={{ fontSize: '11px', fontWeight: 700, color: '#1E4D3D' }}>
+                  <span style={{ fontSize: '11px', fontWeight: 700, color: '#DDA752' }}>
                     {previewUrls.length} {isAr ? 'صور' : 'Photos'}
                   </span>
                 </div>
@@ -833,12 +883,12 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
               {previewUrls.length > 0 ? (
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px', marginTop: '10px' }}>
                   {previewUrls.slice(0, 4).map((url, i) => (
-                    <div key={i} style={{ position: 'relative', width: '100%', height: '54px', borderRadius: '8px', overflow: 'hidden', border: '1px solid #CBD5E1' }}>
+                    <div key={i} style={{ position: 'relative', width: '100%', height: '54px', borderRadius: '8px', overflow: 'hidden', border: '1px solid rgba(221, 167, 82, 0.3)' }}>
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={url} alt={`Photo ${i+1}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                       {i === 3 && previewUrls.length > 4 && (
-                        <div style={{ position: 'absolute', inset: 0, background: 'rgba(30,77,61,0.75)', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 800 }}>
-                          +${previewUrls.length - 4}
+                        <div style={{ position: 'absolute', inset: 0, background: 'rgba(10, 14, 24, 0.85)', color: '#DDA752', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 800 }}>
+                          +{previewUrls.length - 4}
                         </div>
                       )}
                     </div>
@@ -874,12 +924,12 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
           }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <FileText size={18} style={{ color: '#1E4D3D' }} />
-                <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 800, color: '#1E4D3D', fontFamily: isAr ? 'var(--font-serif)' : "'Plus Jakarta Sans', sans-serif" }}>
+                <FileText size={18} style={{ color: '#DDA752' }} />
+                <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 800, color: '#DDA752', fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
                   {isAr ? 'ملخص المواصفات والتشطيبات المسجلة' : 'Registered Finishing & Zone Summary'}
                 </h3>
               </div>
-              <span style={{ fontSize: '11px', fontWeight: 700, padding: '3px 10px', borderRadius: '10px', background: '#ECFDF5', color: '#059669', border: '1px solid #A7F3D0' }}>
+              <span style={{ fontSize: '11px', fontWeight: 700, padding: '3px 10px', borderRadius: '10px', background: 'rgba(221, 167, 82, 0.15)', color: '#DDA752', border: '1px solid rgba(221, 167, 82, 0.3)' }}>
                 {zoneInstances.length} {isAr ? 'منطقة جاهزة' : 'Zones Configured'}
               </span>
             </div>
@@ -898,22 +948,22 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
 
                   return (
                     <div key={cat.key} style={{
-                      background: '#FFFFFF',
-                      border: '1px solid #CBD5E1',
+                      background: 'rgba(255, 255, 255, 0.03)',
+                      border: '1px solid rgba(255, 255, 255, 0.08)',
                       borderRadius: '12px',
                       padding: '14px',
                       display: 'flex',
                       flexDirection: 'column',
                       gap: '10px'
                     }}>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #F1F5F9', paddingBottom: '8px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid rgba(255, 255, 255, 0.06)', paddingBottom: '8px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                           <span style={{ fontSize: '16px' }}>{cat.emoji}</span>
-                          <h4 style={{ margin: 0, fontSize: '13px', fontWeight: 800, color: '#1E4D3D', fontFamily: isAr ? 'var(--font-serif)' : "'Plus Jakarta Sans', sans-serif" }}>
+                          <h4 style={{ margin: 0, fontSize: '13px', fontWeight: 800, color: '#DDA752', fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
                             {isAr ? cat.ar : cat.en}
                           </h4>
                         </div>
-                        <span style={{ fontSize: '10px', fontWeight: 700, padding: '2px 8px', borderRadius: '8px', background: '#F1F5F9', color: '#475569' }}>
+                        <span style={{ fontSize: '10px', fontWeight: 700, padding: '2px 8px', borderRadius: '8px', background: 'rgba(221, 167, 82, 0.1)', color: '#DDA752' }}>
                           {catZones.length} {isAr ? 'مناطق' : 'Zones'}
                         </span>
                       </div>
@@ -927,8 +977,8 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
 
                           return (
                             <div key={zone.id} style={{
-                              background: '#F8FAFC',
-                              border: '1px solid #E2E8F0',
+                              background: 'rgba(255, 255, 255, 0.02)',
+                              border: '1px solid rgba(255, 255, 255, 0.06)',
                               borderRadius: '10px',
                               padding: '10px 12px',
                               display: 'flex',
@@ -936,10 +986,10 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
                               gap: '6px'
                             }}>
                               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                <strong style={{ fontSize: '12px', color: '#1E293B', fontWeight: 700, fontFamily: isAr ? 'var(--font-serif)' : "'Plus Jakarta Sans', sans-serif" }}>
+                                <strong style={{ fontSize: '12px', color: '#FFFFFF', fontWeight: 700, fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
                                   {humanName}
                                 </strong>
-                                <span style={{ fontSize: '9px', fontWeight: 800, color: '#059669', background: '#ECFDF5', border: '1px solid #A7F3D0', padding: '1px 6px', borderRadius: '6px' }}>
+                                <span style={{ fontSize: '9px', fontWeight: 800, color: '#10B981', background: 'rgba(16, 185, 129, 0.12)', border: '1px solid rgba(16, 185, 129, 0.3)', padding: '1px 6px', borderRadius: '6px' }}>
                                   {badgeText}
                                 </span>
                               </div>
@@ -953,11 +1003,11 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
                                     <span key={t.id} style={{
                                       fontSize: '9px',
                                       fontWeight: 600,
-                                      background: '#FFFFFF',
-                                      border: '1px solid #CBD5E1',
+                                      background: 'rgba(255, 255, 255, 0.04)',
+                                      border: '1px solid rgba(255, 255, 255, 0.1)',
                                       borderRadius: '6px',
                                       padding: '2px 6px',
-                                      color: '#334155'
+                                      color: 'rgba(255, 255, 255, 0.75)'
                                     }}>
                                       {tradeName}: {formatStatus(t.status, isAr)}
                                     </span>
@@ -979,22 +1029,22 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
                     {renderedBuckets}
                     {uncategorizedZones.length > 0 && (
                       <div style={{
-                        background: "#FFFFFF",
-                        border: "1px solid #CBD5E1",
+                        background: "rgba(255, 255, 255, 0.03)",
+                        border: "1px solid rgba(255, 255, 255, 0.08)",
                         borderRadius: "12px",
                         padding: "14px",
                         display: "flex",
                         flexDirection: "column",
                         gap: "10px"
                       }}>
-                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid #F1F5F9", paddingBottom: "8px" }}>
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid rgba(255, 255, 255, 0.06)", paddingBottom: "8px" }}>
                           <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
                             <span style={{ fontSize: "16px" }}>📍</span>
-                            <h4 style={{ margin: 0, fontSize: "13px", fontWeight: 800, color: "#1E4D3D", fontFamily: isAr ? "var(--font-serif)" : "'Plus Jakarta Sans', sans-serif" }}>
+                            <h4 style={{ margin: 0, fontSize: "13px", fontWeight: 800, color: "#DDA752", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
                               {isAr ? "مناطق أخرى" : "Other Areas"}
                             </h4>
                           </div>
-                          <span style={{ fontSize: "10px", fontWeight: 700, padding: "2px 8px", borderRadius: "8px", background: "#F1F5F9", color: "#475569" }}>
+                          <span style={{ fontSize: "10px", fontWeight: 700, padding: "2px 8px", borderRadius: "8px", background: "rgba(221, 167, 82, 0.1)", color: "#DDA752" }}>
                             {uncategorizedZones.length} {isAr ? "مناطق" : "Zones"}
                           </span>
                         </div>
@@ -1017,7 +1067,7 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
                                 gap: "6px"
                               }}>
                                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                                  <strong style={{ fontSize: "12px", color: "#1E293B", fontWeight: 700, fontFamily: isAr ? "var(--font-serif)" : "'Plus Jakarta Sans', sans-serif" }}>
+                                  <strong style={{ fontSize: "12px", color: "#FFFFFF", fontWeight: 700, fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
                                     {humanName}
                                   </strong>
                                   <span style={{ fontSize: "9px", fontWeight: 800, color: "#059669", background: "#ECFDF5", border: "1px solid #A7F3D0", padding: "1px 6px", borderRadius: "6px" }}>
@@ -1056,15 +1106,15 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
             </div>
           </div>
 
-          <div style={{ padding: '16px 20px', background: 'rgba(30, 77, 61, 0.04)', borderRadius: 12, border: '1.5px solid rgba(30, 77, 61, 0.2)', marginTop: 16 }}>
-            <h4 style={{ fontSize: 14, fontWeight: 800, color: '#1E4D3D', marginBottom: 4, margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div style={{ padding: '16px 20px', background: 'rgba(221, 167, 82, 0.05)', borderRadius: 14, border: '1px solid rgba(221, 167, 82, 0.25)', marginTop: 16 }}>
+            <h4 style={{ fontSize: 14, fontWeight: 800, color: '#DDA752', marginBottom: 4, margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
               <span>📌</span>
-              <span>{isAr ? 'مراجعة قبل الحفظ والتأكيد' : 'Pre-Save Specification Review'}</span>
+              <span>{isAr ? 'مراجعة المخطط والمواصفات قبل النشر' : 'Pre-Publish Architectural Verification'}</span>
             </h4>
-            <p style={{ fontSize: 12, color: '#475569', margin: '4px 0 0', lineHeight: 1.5 }}>
+            <p style={{ fontSize: 12, color: 'rgba(255, 255, 255, 0.7)', margin: '4px 0 0', lineHeight: 1.5 }}>
               {isAr
-                ? 'لم يتم حفظ العقار بعد. يمكنك مراجعة كافة المكونات المذكورة أعلاه، أو العودة للخطوات السابقة للتعديل. عند الجاهزية اضغط على "تأكيد وحفظ العقار".'
-                : 'Your property has not been saved yet. Carefully review all specifications above, or go back to previous steps to adjust. Click "Confirm & Save Property" when ready.'}
+                ? 'تم ضبط كافة أبعاد الغرف والمواصفات المعمارية. عند الضغط على زر "تأكيد ونشر العقار"، سيتم تحديث الصفحة العامة والمخطط الهندسي التفاعلي فوراً.'
+                : 'All room metrology and layered engineering systems are synchronized. Clicking "Confirm & Publish Property" will deploy updates live immediately.'}
             </p>
           </div>
         </div>
@@ -1072,45 +1122,56 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
 
       {/* ─── Stepper Bottom Navigation Bar ─── */}
       <div className={styles.saveBar}>
-        <button type="button" className="btn btn-outline btn-sm" onClick={() => router.back()}>
-          {isAr ? 'إلغاء' : 'Cancel'}
-        </button>
+        <div className={styles.saveBarStepIndicator}>
+          <span>{isAr ? `الخطوة ${currentStep} من 5` : `Step ${currentStep} of 5`}</span>
+          <span>•</span>
+          <span style={{ color: '#DDA752' }}>
+            {isAr ? steps[currentStep - 1]?.title_ar : steps[currentStep - 1]?.title_en}
+          </span>
+        </div>
 
-        {currentStep > 1 && (
-          <button type="button" className="btn btn-outline" onClick={handlePrevStep} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-            {isAr ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
-            {isAr ? 'السابق' : 'Previous'}
+        <div className={styles.saveBarControls}>
+          <button type="button" className={styles.btnPrev} onClick={() => router.back()}>
+            {isAr ? 'إلغاء' : 'Cancel'}
           </button>
-        )}
 
-        {currentStep < 4 ? (
-          <button type="button" className="btn btn-primary" onClick={handleNextStep} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-            {isAr ? 'التالي' : 'Next Step'}
-            {isAr ? <ChevronLeft size={16} /> : <ChevronRight size={16} />}
-          </button>
-        ) : (
-          <button
-            type="button"
-            className="btn btn-primary"
-            disabled={saving}
-            id="admin-property-save"
-            onClick={handleSubmit(onSubmit)}
-            style={{ minWidth: '180px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
-          >
-            {saving ? (
-              <Loader2 size={16} className={styles.spinner} />
-            ) : isSaved ? (
-              <Check size={16} strokeWidth={2.5} />
-            ) : (
-              <Save size={16} strokeWidth={1.5} />
-            )}
-            {isSaved
-              ? (isAr ? 'تم الحفظ بنجاح ✓' : 'Saved Successfully ✓')
-              : isEditing 
-                ? (isAr ? 'تأكيد وحفظ التعديلات ➔' : 'Confirm & Save Changes ➔') 
-                : (isAr ? 'تأكيد وحفظ العقار ➔' : 'Confirm & Save Property ➔')}
-          </button>
-        )}
+          {currentStep > 1 && (
+            <button type="button" className={styles.btnPrev} onClick={handlePrevStep}>
+              {isAr ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
+              <span>{isAr ? 'الخطوة السابقة' : 'Previous'}</span>
+            </button>
+          )}
+
+          {currentStep < 5 ? (
+            <button type="button" className={styles.btnNext} onClick={handleNextStep}>
+              <span>{isAr ? 'الخطوة التالية' : 'Next Step'}</span>
+              {isAr ? <ChevronLeft size={16} /> : <ChevronRight size={16} />}
+            </button>
+          ) : (
+            <button
+              type="button"
+              className={styles.btnPublish}
+              disabled={saving}
+              id="admin-property-save"
+              onClick={handleSubmit(onSubmit)}
+            >
+              {saving ? (
+                <Loader2 size={16} className={styles.spinner} />
+              ) : isSaved ? (
+                <Check size={16} strokeWidth={2.5} />
+              ) : (
+                <Save size={16} strokeWidth={1.5} />
+              )}
+              <span>
+                {isSaved
+                  ? (isAr ? 'تم النشر بنجاح ✓' : 'Published Successfully ✓')
+                  : isEditing 
+                    ? (isAr ? 'تأكيد وحفظ التعديلات ➔' : 'Confirm & Save Changes ➔') 
+                    : (isAr ? 'تأكيد ونشر العقار ➔' : 'Confirm & Publish Property ➔')}
+              </span>
+            </button>
+          )}
+        </div>
       </div>
     </form>
   );

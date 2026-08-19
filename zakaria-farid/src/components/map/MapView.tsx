@@ -1,5 +1,6 @@
 'use client';
 import { useRouter } from 'next/navigation';
+import { triggerNavigationStart } from '@/components/NavigationProgress';
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 let L: any = null;
 if (typeof window !== 'undefined') {
@@ -44,7 +45,10 @@ export const MapView: React.FC<MapViewProps> = ({
   onOpenInquiry: propOnOpenInquiry
 }) => {
   const router = useRouter();
-  const onSelectProperty = propOnSelectProperty || ((id: string) => router.push('/' + locale + '/properties/' + id));
+  const onSelectProperty = propOnSelectProperty || ((id: string) => {
+    triggerNavigationStart();
+    router.push('/' + locale + '/properties/' + id);
+  });
   const onOpenInquiry = propOnOpenInquiry || ((type?: string, propertyName?: string) => {
     window.location.href = 'https://wa.me/201009998888?text=' + encodeURIComponent('Hello, I am inquiring about ' + (propertyName || 'cartography acquisition'));
   });
@@ -147,6 +151,20 @@ export const MapView: React.FC<MapViewProps> = ({
       mapInstanceRef.current = null;
     };
   }, []);
+
+  // Sync marker active classes whenever selectedPropertyId changes
+  useEffect(() => {
+    allPropertiesList.forEach((prop: Property) => {
+      const el = document.getElementById(`marker-${prop.id}`);
+      if (el) {
+        if (selectedPropertyId === prop.id) {
+          el.classList.add('active');
+        } else {
+          el.classList.remove('active');
+        }
+      }
+    });
+  }, [selectedPropertyId, allPropertiesList]);
 
   // Switch between Dark Neon Vector Map & Real High-Res Satellite Imagery
   useEffect(() => {
@@ -521,7 +539,7 @@ export const MapView: React.FC<MapViewProps> = ({
         [data-theme="dark"] .map-selected-preview-card,
         [data-theme="dark"] .floating-sidebar-trigger,
         [data-theme="dark"] .floating-glass-directory {
-          background: rgba(10, 14, 22, 0.45) !important;
+          background: rgba(10, 14, 22, 0.55) !important;
           backdrop-filter: blur(40px) saturate(240%) !important;
           -webkit-backdrop-filter: blur(40px) saturate(240%) !important;
           border: 1px solid rgba(255, 255, 255, 0.22) !important;
@@ -536,14 +554,20 @@ export const MapView: React.FC<MapViewProps> = ({
         [data-theme="light"] .map-selected-preview-card,
         [data-theme="light"] .floating-sidebar-trigger,
         [data-theme="light"] .floating-glass-directory {
-          background: rgba(255, 255, 255, 0.58) !important;
-          backdrop-filter: blur(20px) saturate(180%) !important;
-          -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
-          border: 1px solid rgba(255, 255, 255, 0.80) !important;
+          background: linear-gradient(
+            135deg,
+            rgba(255, 255, 255, 0.62) 0%,
+            rgba(255, 255, 255, 0.28) 35%,
+            rgba(255, 255, 255, 0.45) 100%
+          ) !important;
+          backdrop-filter: blur(20px) saturate(210%) contrast(108%) brightness(108%) !important;
+          -webkit-backdrop-filter: blur(20px) saturate(210%) contrast(108%) brightness(108%) !important;
+          border: 1px solid rgba(255, 255, 255, 0.75) !important;
           box-shadow: 
-            0 16px 40px rgba(0, 0, 0, 0.10), 
-            inset 0 1.5px 1.5px #FFFFFF,
-            inset 0 -1px 1px rgba(0, 0, 0, 0.03) !important;
+            0 18px 44px rgba(15, 23, 42, 0.08), 
+            0 2px 8px rgba(15, 23, 42, 0.03),
+            inset 0 1.5px 2px #FFFFFF,
+            inset 0 -1px 1px rgba(255, 255, 255, 0.25) !important;
         }
 
         /* Keyframe entrance animations */
@@ -1184,10 +1208,12 @@ export const MapView: React.FC<MapViewProps> = ({
         }
 
         [data-theme="light"] .dir-search-input {
-          background: #FFFFFF;
-          border: 1px solid rgba(0, 0, 0, 0.12);
+          background: rgba(255, 255, 255, 0.75);
+          backdrop-filter: blur(12px);
+          -webkit-backdrop-filter: blur(12px);
+          border: 1px solid rgba(255, 255, 255, 0.85);
           color: #0D1117;
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04), inset 0 1px 1px #FFFFFF;
         }
 
         [data-theme="light"] .dir-search-input::placeholder {
@@ -1242,9 +1268,11 @@ export const MapView: React.FC<MapViewProps> = ({
         }
 
         [data-theme="light"] .floating-estate-card {
-          background: #FFFFFF;
-          border: 1px solid rgba(0, 0, 0, 0.08);
-          box-shadow: 0 4px 14px rgba(0, 0, 0, 0.05);
+          background: rgba(255, 255, 255, 0.65);
+          backdrop-filter: blur(16px);
+          -webkit-backdrop-filter: blur(16px);
+          border: 1px solid rgba(255, 255, 255, 0.85);
+          box-shadow: 0 4px 16px rgba(15, 23, 42, 0.04), inset 0 1px 1px #FFFFFF;
         }
 
         .floating-estate-card:hover {
@@ -1450,62 +1478,113 @@ export const MapView: React.FC<MapViewProps> = ({
           align-items: center;
           cursor: pointer;
           transform: translateY(-8px);
-          transition: transform var(--transition-fast);
+          transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+          position: relative;
+          z-index: 100;
         }
 
-        .leaflet-gold-pin-wrapper:hover {
-          transform: translateY(-8px) scale(1.08);
+        .leaflet-gold-pin-wrapper:hover,
+        .leaflet-gold-pin-wrapper.active {
+          transform: translateY(-8px) scale(1.15);
+          z-index: 99999 !important;
         }
 
         .pin-beacon {
           position: relative;
-          width: 24px;
-          height: 24px;
+          width: 28px;
+          height: 28px;
           display: flex;
           align-items: center;
           justify-content: center;
         }
 
         .pin-core-dot {
-          width: 12px;
-          height: 12px;
+          width: 14px;
+          height: 14px;
           border-radius: 50%;
           background: #DDA752;
-          border: 2px solid #0A0C10;
-          box-shadow: 0 0 12px #DDA752;
+          border: 2.5px solid #0A0C10;
+          box-shadow: 0 0 14px #DDA752;
           z-index: 2;
+          transition: all 0.25s ease;
+        }
+
+        .leaflet-gold-pin-wrapper:hover .pin-core-dot,
+        .leaflet-gold-pin-wrapper.active .pin-core-dot {
+          background: #FFFFFF;
+          border-color: #DDA752;
+          box-shadow: 0 0 18px #FFFFFF, 0 0 26px #DDA752;
+          transform: scale(1.25);
         }
 
         .pin-glow-ring {
           position: absolute;
           inset: 0;
           border-radius: 50%;
-          background: rgba(221, 167, 82, 0.3);
-          border: 1px solid #DDA752;
+          background: rgba(221, 167, 82, 0.35);
+          border: 1.5px solid #DDA752;
           animation: pulseRing 2.4s infinite;
         }
 
+        .leaflet-gold-pin-wrapper.active .pin-glow-ring {
+          animation: pulseRingFast 1.2s infinite;
+        }
+
         @keyframes pulseRing {
-          0% { transform: scale(0.9); opacity: 0.8; }
-          70% { transform: scale(1.8); opacity: 0; }
-          100% { transform: scale(1.8); opacity: 0; }
+          0% { transform: scale(0.9); opacity: 0.9; }
+          70% { transform: scale(2.0); opacity: 0; }
+          100% { transform: scale(2.0); opacity: 0; }
+        }
+
+        @keyframes pulseRingFast {
+          0% { transform: scale(0.9); opacity: 1; }
+          70% { transform: scale(2.5); opacity: 0; }
+          100% { transform: scale(2.5); opacity: 0; }
         }
 
         .pin-title-pill {
-          margin-top: 4px;
-          background: rgba(10, 12, 16, 0.94);
-          border: 1px solid rgba(221, 167, 82, 0.45);
+          position: absolute;
+          top: 30px;
+          left: 50%;
+          transform: translateX(-50%) translateY(-6px) scale(0.92);
+          opacity: 0;
+          pointer-events: none;
+          background: rgba(8, 12, 20, 0.94);
+          backdrop-filter: blur(24px) saturate(210%);
+          -webkit-backdrop-filter: blur(24px) saturate(210%);
+          border: 1.5px solid rgba(221, 167, 82, 0.65);
           border-radius: var(--radius-full);
-          padding: 0.2rem 0.65rem;
+          padding: 0.4rem 0.95rem;
           white-space: nowrap;
-          box-shadow: 0 6px 18px rgba(0, 0, 0, 0.7);
+          box-shadow: 0 8px 26px rgba(0, 0, 0, 0.75), 0 0 16px rgba(221, 167, 82, 0.35), inset 0 1px 1px rgba(255, 255, 255, 0.3);
+          transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+          z-index: 1000;
+        }
+
+        [data-theme="light"] .pin-title-pill {
+          background: rgba(255, 255, 255, 0.96);
+          border: 1.5px solid rgba(184, 134, 11, 0.65);
+          box-shadow: 0 8px 24px rgba(30, 24, 16, 0.18), inset 0 1.5px 1.5px #FFFFFF;
         }
 
         .pin-title-pill span {
           font-family: var(--font-heading);
-          font-size: 0.75rem;
-          font-weight: 700;
-          color: #ffffff;
+          font-size: 0.8125rem;
+          font-weight: 800;
+          color: #FFF0C2;
+          letter-spacing: 0.02em;
+        }
+
+        [data-theme="light"] .pin-title-pill span {
+          color: #0D1117;
+        }
+
+        .leaflet-gold-pin-wrapper:hover .pin-title-pill,
+        .leaflet-gold-pin-wrapper.active .pin-title-pill {
+          opacity: 1;
+          pointer-events: auto;
+          transform: translateX(-50%) translateY(0) scale(1);
+          z-index: 999999;
         }
 
         @media (max-width: 1024px) {

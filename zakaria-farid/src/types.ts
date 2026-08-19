@@ -9,7 +9,7 @@ export interface Property {
   beds: number;
   baths: number;
   sqm: number;
-  propertyType: 'Standalone Villa' | 'Penthouse' | 'Mansion' | 'Apartment' | 'Chalet' | 'Duplex' | string;
+  propertyType: 'Apartment' | 'Building (عمارة)' | 'Garage' | string;
   builtYear: number;
   featured?: boolean;
   images: string[];

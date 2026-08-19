@@ -48,7 +48,7 @@ export default async function LocaleLayout({ children, params }: Props) {
   const dir = locale === 'ar' ? 'rtl' : 'ltr';
 
   return (
-    <html lang={locale} dir={dir} data-theme="dark">
+    <html lang={locale} dir={dir} data-theme="dark" suppressHydrationWarning>
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />

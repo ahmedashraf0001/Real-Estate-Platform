@@ -1,5 +1,6 @@
 'use client';
 import { useRouter } from 'next/navigation';
+import { triggerNavigationStart } from '@/components/NavigationProgress';
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { PropertyCard } from '@/components/property/PropertyCard';
 import { MarketChart } from '@/components/MarketChart';
@@ -130,7 +131,10 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
   onOpenInquiry: propOnOpenInquiry
 }) => {
   const router = useRouter();
-  const onSelectProperty = propOnSelectProperty || ((id: string) => router.push('/' + locale + '/properties/' + id));
+  const onSelectProperty = propOnSelectProperty || ((id: string) => {
+    triggerNavigationStart();
+    router.push('/' + locale + '/properties/' + id);
+  });
   const onOpenInquiry = propOnOpenInquiry || ((title?: string) => {
     window.location.href = 'https://wa.me/201009998888?text=' + encodeURIComponent('Hello, I am inquiring about ' + (title || 'sovereign acquisitions'));
   });
@@ -1007,22 +1011,22 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
                   <span>VIP DOSSIER</span>
                 </div>
               </div>
-              <h3 className="widget-title">Private Portfolio Alerts</h3>
+              <h3 className="widget-title">Property Alerts</h3>
               <p className="widget-desc">
-                Receive curated off-market architectural dossiers matching your exact acquisition parameters.
+                Save your search and get notified when new properties matching your criteria become available.
               </p>
               <div className="widget-actions">
                 <button
                   className={`btn-gold widget-cta ${searchSaved ? 'saved' : ''}`}
                   onClick={() => setSearchSaved(!searchSaved)}
                 >
-                  {searchSaved ? <><Check size={16} /> Portfolio Saved</> : 'Save Search Criteria'}
+                  {searchSaved ? <><Check size={16} /> Search Saved</> : 'Save Search'}
                 </button>
                 <button
                   className={`widget-secondary-btn ${emailAlertSaved ? 'enabled' : ''}`}
                   onClick={() => setEmailAlertSaved(!emailAlertSaved)}
                 >
-                  {emailAlertSaved ? <><Check size={16} /> VIP Alerts Active</> : 'Enable Dossier Alerts'}
+                  {emailAlertSaved ? <><Check size={16} /> Alerts Active</> : 'Enable Email Alerts'}
                 </button>
               </div>
             </div>
@@ -1104,8 +1108,8 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
                     <SlidersHorizontal size={18} className="adv-gold-icon" />
                   </div>
                   <div>
-                    <span className="adv-eyebrow">PORTFOLIO CRITERIA</span>
-                    <h3 className="adv-title">Advanced Architectural Filters</h3>
+                    <span className="adv-eyebrow">FILTER OPTIONS</span>
+                    <h3 className="adv-title">Advanced Filters</h3>
                   </div>
                 </div>
                 <button

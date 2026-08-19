@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Moon, Sun, Menu, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { usePathname, useRouter } from 'next/navigation';
+import { BrandLogo } from '@/components/BrandLogo';
 
 interface NavbarProps {
   currentView?: 'home' | 'properties' | 'detail' | 'about' | 'contact' | 'map' | 'admin' | 'maintenance' | 'not-found';
@@ -106,6 +107,7 @@ export const Navbar: React.FC<NavbarProps> = ({
       <div className="nav-capsule-container">
         <motion.div 
           className={`nav-glass-capsule ${isBlendedMode ? 'hero-blended' : 'separated-glass'} ${isMapMode ? 'map-glass-capsule' : ''}`}
+          initial={false}
           animate={{
             x: isMapMode && isDesktop ? -200 : 0,
             maxWidth: isMapMode && isDesktop ? 1040 : 1280,
@@ -117,14 +119,11 @@ export const Navbar: React.FC<NavbarProps> = ({
             mass: 0.8
           }}
         >
-          {/* Brand Logo */}
-          <div 
-            className="brand-logo" 
+          {/* Brand Logo with Sovereign Crest */}
+          <BrandLogo 
+            size="md"
             onClick={() => onNavigate('home')}
-          >
-            <span className="logo-gold">ZAKARIA</span>
-            <span className="logo-white">FARID</span>
-          </div>
+          />
 
           {/* Desktop Navigation Links */}
           <nav className="desktop-nav">
@@ -167,6 +166,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               className={`theme-btn ${isBlendedMode ? 'blended-pill' : ''}`}
               onClick={onToggleTheme}
               title={isDarkMode ? 'Dark Mode Active' : 'Switch Mode'}
+              suppressHydrationWarning
             >
               {isDarkMode ? <Moon size={16} /> : <Sun size={16} />}
             </button>

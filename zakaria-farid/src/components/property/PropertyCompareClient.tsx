@@ -362,7 +362,7 @@ export default function PropertyCompareClient({ properties, locale }: PropertyCo
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap', marginBottom: '16px' }}>
             <Link href={`/${locale}/properties`} className={styles.backBtn}>
               <ArrowLeft size={15} strokeWidth={2.5} className={isAr ? styles.arrowRtl : ''} />
-              {isAr ? 'العودة إلى محفظة العقارات' : 'Back to Portfolio'}
+              {isAr ? 'العودة إلى العقارات' : 'Back to Properties'}
             </Link>
 
             <button
@@ -528,7 +528,7 @@ export default function PropertyCompareClient({ properties, locale }: PropertyCo
                 <td colSpan={properties.length + 1}>
                   <div className={styles.sectionTitle}>
                     <Maximize2 size={18} className={styles.sectionTitleIcon} />
-                    <span>{isAr ? '٣. المساحات والتخطيط المعماري' : '3. Layout & Architectural Dimensions'}</span>
+                    <span>{isAr ? '٣. المساحات والتخطيط' : '3. Layout & Dimensions'}</span>
                   </div>
                 </td>
               </tr>

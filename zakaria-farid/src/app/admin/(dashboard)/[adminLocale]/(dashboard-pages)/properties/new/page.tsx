@@ -10,9 +10,16 @@ export default async function NewPropertyPage({ params }: Props) {
 
   return (
     <div>
-      <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: '28px', fontWeight: 600, marginBottom: '32px' }}>
-        {isAr ? 'إضافة عقار جديد' : 'Add New Property'}
-      </h1>
+      <div style={{ marginBottom: '28px' }}>
+        <h1 style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '26px', fontWeight: 800, margin: 0, color: '#FFFFFF', letterSpacing: '-0.02em' }}>
+          {isAr ? 'إضافة عقار جديد' : 'Add New Property'}
+        </h1>
+        <p style={{ margin: '6px 0 0', color: 'rgba(255, 255, 255, 0.65)', fontSize: '13.5px' }}>
+          {isAr 
+            ? 'إضافة بيانات العقار والصور والمخططات والمواصفات' 
+            : 'Add property details, photos, floor plans, and features to list on the platform.'}
+        </p>
+      </div>
       <AdminPropertyForm isAr={isAr} />
     </div>
   );

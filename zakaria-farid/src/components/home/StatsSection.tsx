@@ -7,29 +7,29 @@ export const STATS_ITEMS = [
     numericValue: 2500,
     suffix: '+',
     formatComma: true,
-    title: 'Curated Architectural Estates',
-    desc: 'Hand-audited for structural integrity and timeless design.'
+    title: 'Properties Listed',
+    desc: 'Carefully selected luxury properties across Egypt\'s prime locations.'
   },
   {
     numericValue: 15,
     suffix: '+',
     formatComma: false,
-    title: 'Sovereign Destinations',
-    desc: 'From Gouna Red Sea lagoons to Golden Square New Cairo.'
+    title: 'Prime Locations',
+    desc: 'From El Gouna Red Sea to New Cairo and the North Coast.'
   },
   {
     numericValue: 98,
     suffix: '%',
     formatComma: false,
     title: 'Client Retention & Trust',
-    desc: 'Generational advisory for high-net-worth sovereign collectors.'
+    desc: 'Trusted by buyers and investors across Egypt and the Gulf.'
   },
   {
     numericValue: 10,
     suffix: '+ Years',
     formatComma: false,
-    title: 'Ultra-Prime Authority',
-    desc: 'Pioneering design-led luxury real estate advisory since 2016.'
+    title: 'Years of Experience',
+    desc: 'A decade of luxury real estate advisory and market expertise since 2016.'
   }
 ];
 
