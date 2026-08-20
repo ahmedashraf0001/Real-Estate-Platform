@@ -8,13 +8,11 @@ import {
   Plus,
   Minus,
   Trash2,
-  ChevronDown,
   Pencil,
   Undo2,
   Redo2,
   AlertTriangle,
   GripVertical,
-  Copy,
   Check,
   Sparkles,
 } from 'lucide-react';
@@ -37,6 +35,8 @@ interface CADBlueprintBuilderProps {
   onSelectedZoneIdChange?: (id: string | null) => void;
   /** When provided, the room list renders into this element (Figma-style sidebar) instead of the workspace column. */
   listPortalTarget?: HTMLElement | null;
+  /** Receives bedrooms/bathrooms/floor number chosen in the preset wizard so the host form can persist them. */
+  onPresetMeta?: (meta: { bedrooms: number; bathrooms: number; floorNumber: number | null }) => void;
   isAr?: boolean;
 }
 
@@ -96,108 +96,38 @@ function starterDims(templateId: string): { l: number; w: number } {
   return { l: d?.l ?? 4.0, w: d?.w ?? 3.0 };
 }
 
-// ── Starter presets (spec §2b, §4.6) ─────────────────────────────────────────
-interface StarterPreset {
-  id: string;
-  labelEn: string;
-  labelAr: string;
-  subEn: string;
-  subAr: string;
-  approxSqm: number;
-  // template ids to instantiate, in order
-  rooms: string[];
+// ── Preset-generation wizard (spec: replaces static starter presets) ─────────
+interface PresetWizardAnswers {
+  bedrooms: number;
+  bathrooms: number;
+  floorNumber: string;
+  maidRoom: boolean;
+  laundry: boolean;
+  balcony: boolean;
+  guestToilet: boolean;
+  dressing: boolean;
 }
 
-const STARTER_PRESETS: StarterPreset[] = [
-  {
-    id: 'apartment',
-    labelEn: 'Apartment', labelAr: 'شقة',
-    subEn: '2BR · 2BA', subAr: 'غرفتان · حمامان',
-    approxSqm: 96,
-    rooms: ['apt.reception', 'apt.kitchen', 'apt.master_bed', 'apt.std_bed', 'apt.master_bath', 'apt.main_bath', 'apt.balcony'],
-  },
-  {
-    id: 'villa',
-    labelEn: 'Villa', labelAr: 'فيلا',
-    subEn: '4BR · 3BA', subAr: '٤ غرف · ٣ حمامات',
-    approxSqm: 240,
-    rooms: ['apt.reception', 'apt.kitchen', 'apt.master_bed', 'apt.std_bed', 'apt.std_bed', 'apt.std_bed', 'apt.master_bath', 'apt.main_bath', 'apt.guest_bath', 'apt.corridor', 'apt.balcony', 'apt.laundry'],
-  },
-  {
-    id: 'chalet',
-    labelEn: 'Chalet', labelAr: 'شاليه',
-    subEn: '1BR · 1BA', subAr: 'غرفة · حمام',
-    approxSqm: 55,
-    rooms: ['apt.reception', 'apt.kitchen', 'apt.master_bed', 'apt.main_bath', 'apt.balcony'],
-  },
-];
-
-// Recommend the preset matching wizard Step-1 type + bedroom count.
-function recommendedPresetId(propertyType: string, bedrooms: number): string | null {
-  if (propertyType !== 'apartment') return null;
-  if (bedrooms >= 4) return 'villa';
-  if (bedrooms <= 1) return 'chalet';
-  return 'apartment';
-}
-
-// Floor plan slot configurations for continuous shared partition walls
-interface RoomSlot {
-  xF: number;
-  yF: number;
-  wF: number;
-  hF: number;
-}
-
-const FLOOR_PLAN_TEMPLATES: Record<number, RoomSlot[]> = {
-  1: [{ xF: 0.08, yF: 0.08, wF: 0.84, hF: 0.84 }],
-  2: [
-    { xF: 0.08, yF: 0.08, wF: 0.46, hF: 0.84 },
-    { xF: 0.54, yF: 0.08, wF: 0.38, hF: 0.84 },
-  ],
-  3: [
-    { xF: 0.08, yF: 0.08, wF: 0.48, hF: 0.84 },
-    { xF: 0.56, yF: 0.08, wF: 0.36, hF: 0.44 },
-    { xF: 0.56, yF: 0.52, wF: 0.36, hF: 0.40 },
-  ],
-  4: [
-    { xF: 0.08, yF: 0.08, wF: 0.32, hF: 0.84 },
-    { xF: 0.40, yF: 0.08, wF: 0.52, hF: 0.44 },
-    { xF: 0.40, yF: 0.52, wF: 0.28, hF: 0.40 },
-    { xF: 0.68, yF: 0.52, wF: 0.24, hF: 0.40 },
-  ],
-  5: [
-    { xF: 0.08, yF: 0.08, wF: 0.28, hF: 0.44 },
-    { xF: 0.36, yF: 0.08, wF: 0.56, hF: 0.44 },
-    { xF: 0.08, yF: 0.52, wF: 0.38, hF: 0.40 },
-    { xF: 0.46, yF: 0.52, wF: 0.18, hF: 0.40 },
-    { xF: 0.64, yF: 0.52, wF: 0.28, hF: 0.40 },
-  ],
-  6: [
-    { xF: 0.08, yF: 0.08, wF: 0.26, hF: 0.44 },
-    { xF: 0.34, yF: 0.08, wF: 0.30, hF: 0.44 },
-    { xF: 0.64, yF: 0.08, wF: 0.28, hF: 0.44 },
-    { xF: 0.08, yF: 0.52, wF: 0.26, hF: 0.40 },
-    { xF: 0.34, yF: 0.52, wF: 0.30, hF: 0.40 },
-    { xF: 0.64, yF: 0.52, wF: 0.28, hF: 0.40 },
-  ],
+const PRESET_WIZARD_DEFAULTS: PresetWizardAnswers = {
+  bedrooms: 2,
+  bathrooms: 2,
+  floorNumber: '',
+  maidRoom: false,
+  laundry: false,
+  balcony: true,
+  guestToilet: false,
+  dressing: false,
 };
 
-function getFloorPlanSlots(count: number): RoomSlot[] {
-  if (FLOOR_PLAN_TEMPLATES[count]) return FLOOR_PLAN_TEMPLATES[count];
-  const slots: RoomSlot[] = [];
-  const cols = count <= 9 ? 3 : 4;
-  const rows = Math.ceil(count / cols);
-  for (let i = 0; i < count; i++) {
-    const col = i % cols;
-    const row = Math.floor(i / cols);
-    slots.push({
-      xF: 0.08 + col * (0.84 / cols),
-      yF: 0.08 + row * (0.84 / rows),
-      wF: 0.84 / cols,
-      hF: 0.84 / rows,
-    });
-  }
-  return slots;
+function templatesFromAnswers(a: PresetWizardAnswers): string[] {
+  const list: string[] = ['apt.reception', 'apt.kitchen', 'apt.corridor', 'apt.master_bed', 'apt.master_bath'];
+  for (let i = 1; i < Math.max(1, a.bedrooms); i++) list.push('apt.std_bed');
+  for (let i = 1; i < Math.max(1, a.bathrooms); i++) list.push('apt.main_bath');
+  if (a.guestToilet) list.push('apt.guest_bath');
+  if (a.dressing) list.push('apt.dressing');
+  if (a.laundry) list.push('apt.laundry');
+  if (a.balcony) list.push('apt.balcony');
+  return list;
 }
 
 const WARN_BANDS: Record<string, [number, number]> = {
@@ -537,6 +467,7 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
   selectedZoneId: controlledSelectedZoneId,
   onSelectedZoneIdChange,
   listPortalTarget = null,
+  onPresetMeta,
   isAr = false,
 }) => {
   const defaultKey = propertyType === 'building' ? 'bld_ground' : propertyType === 'garage' ? 'grg_ramp' : GROUND_KEY;
@@ -551,8 +482,9 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
   const [groupAddOpen, setGroupAddOpen] = useState<string | null>(null);
   const [customZoneName, setCustomZoneName] = useState('');
   const [dismissedPresets, setDismissedPresets] = useState<Record<string, boolean>>({});
+  const [wizardOpen, setWizardOpen] = useState(false);
+  const [wizard, setWizard] = useState<PresetWizardAnswers>(PRESET_WIZARD_DEFAULTS);
   const [extraFloors, setExtraFloors] = useState<string[]>([]);
-  const [floorMenuOpen, setFloorMenuOpen] = useState(false);
   const [renamingFloorKey, setRenamingFloorKey] = useState<string | null>(null);
   const [floorDraft, setFloorDraft] = useState('');
   const [toast, setToast] = useState<{ label: string } | null>(null);
@@ -565,7 +497,6 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
 
   const rowRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
-  const floorMenuRef = useRef<HTMLDivElement>(null);
   const rootRef = useRef<HTMLDivElement>(null);
   const historyRef = useRef<{ past: ZoneInstance[][]; future: ZoneInstance[][] }>({ past: [], future: [] });
   const burstTimerRef = useRef<number | null>(null);
@@ -652,20 +583,6 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
     setSelectedZoneId(null);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [propertyType]);
-
-  useEffect(() => {
-    if (!floorMenuOpen) return;
-    const onDown = (e: MouseEvent) => {
-      if (floorMenuRef.current && !floorMenuRef.current.contains(e.target as Node)) setFloorMenuOpen(false);
-    };
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setFloorMenuOpen(false); };
-    document.addEventListener('mousedown', onDown);
-    document.addEventListener('keydown', onKey);
-    return () => {
-      document.removeEventListener('mousedown', onDown);
-      document.removeEventListener('keydown', onKey);
-    };
-  }, [floorMenuOpen]);
 
   const floorGroups = useMemo(() => {
     const groups: Record<string, { labelEn: string; labelAr: string; zones: ZoneInstance[] }> = {};
@@ -831,7 +748,7 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
   };
 
   // Single construction path shared by add-room and preset application, so the
-  // FinishingWizard coupling (trades/attributes) stays identical either way.
+  // trades/attributes coupling stays identical either way.
   const buildRoomInstance = useCallback((templateId: string, sortOrder: number, levelLabel?: string): ZoneInstance => {
     const defaults = DEFAULT_DIMENSIONS[templateId] || { l: 8.0, w: 6.0, ceiling: '3.0m Flush', titleEn: 'Curated Suite', titleAr: 'مساحة معمارية' };
     const dims = starterDims(templateId);
@@ -884,14 +801,36 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
     });
   };
 
-  const handleApplyPreset = (preset: StarterPreset) => {
-    const base = zoneInstances.length;
+  const handleGenerateFromWizard = () => {
+    const currentFloorZones = floorGroups[activeFloorKey]?.zones ?? [];
+    if (currentFloorZones.length > 0) {
+      const ok = window.confirm(isAr
+        ? 'سيستبدل التخطيط المولّد غرف هذا الطابق الحالية (الأبعاد والتشطيبات والصور). هل تريد المتابعة؟'
+        : 'The generated layout will replace this floor\'s current rooms (dimensions, finishes, photos). Continue?');
+      if (!ok) return;
+    }
     const levelLabel = propertyType === 'apartment' ? activeFloorKey : undefined;
-    const newZones = preset.rooms.map((tid, i) => buildRoomInstance(tid, base + i, levelLabel));
+    const keepIds = new Set(currentFloorZones.map(z => z.id));
+    const kept = zoneInstances.filter(z => !keepIds.has(z.id));
+    const generated = templatesFromAnswers(wizard).map((tid, i) => buildRoomInstance(tid, kept.length + i, levelLabel));
+    let next = [...kept, ...generated];
+    if (wizard.maidRoom) {
+      next = addCustomZone(next, "Maid's Room", 'semi_finished');
+      const maid = next[next.length - 1];
+      if (levelLabel && levelLabel !== GROUND_KEY) {
+        next = next.map(z => (z.id === maid.id ? { ...z, level_label: levelLabel } : z));
+      }
+    }
     pushHistory(zoneInstances);
-    onZoneInstancesChange([...zoneInstances, ...newZones]);
-    if (newZones[0]) setSelectedZoneId(newZones[0].id);
-    showToast(isAr ? `تمت إضافة ${newZones.length} غرف` : `${newZones.length} rooms added`);
+    onZoneInstancesChange(next);
+    onPresetMeta?.({
+      bedrooms: wizard.bedrooms,
+      bathrooms: wizard.bathrooms,
+      floorNumber: wizard.floorNumber === '' ? null : Number(wizard.floorNumber),
+    });
+    setWizardOpen(false);
+    if (generated[0]) setSelectedZoneId(generated[0].id);
+    showToast(isAr ? `تم توليد ${generated.length + (wizard.maidRoom ? 1 : 0)} غرف` : `${generated.length + (wizard.maidRoom ? 1 : 0)} rooms generated`);
   };
 
   const handleStartEmpty = () => {
@@ -972,59 +911,6 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
       document.removeEventListener('keydown', onKey);
     };
   }, [groupAddOpen]);
-
-  const freshIds = (zones: ZoneInstance[], levelLabel: string): ZoneInstance[] => {
-    return zones.map((z, i) => ({
-      ...z,
-      id: `zone-${Date.now()}-${Math.random().toString(36).substring(2, 6)}-${i}`,
-      level_label: levelLabel,
-      images: undefined,
-      trades: (z.trades || []).map(t => ({
-        ...t,
-        id: `trade-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
-        attributes: t.attributes.map(a => ({ ...a })),
-      })),
-      children: z.children && z.children.length > 0 ? freshIds(z.children, levelLabel) : undefined,
-      spatial: z.spatial ? { ...z.spatial } : undefined,
-    }));
-  };
-
-  const nextFloorName = () => {
-    const existing = new Set(Object.keys(floorGroups));
-    let n = 2;
-    while (existing.has(isAr ? `الطابق ${n}` : `Floor ${n}`)) n++;
-    return isAr ? `الطابق ${n}` : `Floor ${n}`;
-  };
-
-  const handleAddFloor = (mode: 'blank' | 'duplicate') => {
-    const name = nextFloorName();
-    setFloorMenuOpen(false);
-    if (mode === 'blank') {
-      setExtraFloors(prev => [...prev, name]);
-      setActiveFloorKey(name);
-      setSelectedZoneId(null);
-      setRenamingFloorKey(name);
-      setFloorDraft(name);
-      return;
-    }
-    const current = floorGroups[activeFloorKey]?.zones ?? [];
-    if (current.length === 0) {
-      setExtraFloors(prev => [...prev, name]);
-      setActiveFloorKey(name);
-      setRenamingFloorKey(name);
-      setFloorDraft(name);
-      return;
-    }
-    const base = zoneInstances.length;
-    const copies = freshIds(current, name).map((z, i) => ({ ...z, sort_order: base + i }));
-    pushHistory(zoneInstances);
-    onZoneInstancesChange([...zoneInstances, ...copies]);
-    setActiveFloorKey(name);
-    setSelectedZoneId(copies[0]?.id ?? null);
-    setRenamingFloorKey(name);
-    setFloorDraft(name);
-    showToast(isAr ? 'تم نسخ الطابق' : 'Floor duplicated');
-  };
 
   const handleRenameFloor = (oldKey: string, rawNext: string) => {
     const next = rawNext.trim().slice(0, 30);
@@ -1249,7 +1135,6 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
   };
 
   const showPresets = activeZones.length === 0 && !dismissedPresets[activeFloorKey];
-  const recommendedId = recommendedPresetId(propertyType, bedrooms);
 
   return (
     <div className="fp-root" dir={isAr ? 'rtl' : 'ltr'} ref={rootRef}>
@@ -1280,18 +1165,19 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
           >
             <Redo2 size={15} />
           </button>
-          <span className="fp-room-count">
-            {activeZones.length} {isAr ? (activeZones.length === 1 ? 'غرفة' : 'غرف') : (activeZones.length === 1 ? 'room' : 'rooms')}
-          </span>
         </div>
       </div>
 
       <div className="fp-floor-tabs">
         <div className="fp-floor-tabs-scroll" role="tablist">
-          {Object.entries(floorGroups).map(([key, group]) => {
+          {Object.entries(floorGroups).map(([key, group], _idx, entries) => {
             const isActive = activeFloorKey === key;
             const sqmBadge = floorSqm(group.zones);
             const renaming = renamingFloorKey === key;
+            const singleApartmentTab = propertyType === 'apartment' && entries.length === 1 && key === GROUND_KEY;
+            const tabLabel = singleApartmentTab
+              ? (isAr ? 'الشقة' : 'Apartment')
+              : (isAr ? group.labelAr : group.labelEn);
             return (
               <div
                 key={key}
@@ -1339,7 +1225,7 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
                     }}
                   />
                 ) : (
-                  <span>{isAr ? group.labelAr : group.labelEn}</span>
+                  <span>{tabLabel}</span>
                 )}
                 <span className="fp-floor-badge" dir="ltr">{sqmBadge} m²</span>
               </div>
@@ -1347,33 +1233,6 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
           })}
         </div>
 
-        {propertyType === 'apartment' && (
-          <div className="fp-floor-add-wrap" ref={floorMenuRef}>
-            <button
-              type="button"
-              className="fp-floor-tab fp-floor-add"
-              aria-haspopup="menu"
-              aria-expanded={floorMenuOpen}
-              onClick={() => setFloorMenuOpen(o => !o)}
-            >
-              <Plus size={14} />
-              <span>{isAr ? 'إضافة طابق' : 'Add floor'}</span>
-              <ChevronDown size={13} />
-            </button>
-            {floorMenuOpen && (
-              <div className="fp-floor-menu" role="menu">
-                <button type="button" role="menuitem" className="fp-add-item" onClick={() => handleAddFloor('blank')}>
-                  <Plus size={12} />
-                  <span>{isAr ? 'طابق فارغ' : 'Blank floor'}</span>
-                </button>
-                <button type="button" role="menuitem" className="fp-add-item" onClick={() => handleAddFloor('duplicate')}>
-                  <Copy size={12} />
-                  <span>{isAr ? 'نسخ الطابق الحالي' : 'Duplicate current floor'}</span>
-                </button>
-              </div>
-            )}
-          </div>
-        )}
       </div>
 
       <div className={`fp-workspace ${listPortalTarget ? 'no-list' : ''}`}>
@@ -1544,36 +1403,12 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
               <div className="fp-presets">
                 <div className="fp-presets-head">
                   <h4 className="fp-presets-title">{isAr ? 'ابدأ مخططك' : 'Start your floor plan'}</h4>
-                  <p className="fp-presets-desc">{isAr ? 'اختر تخطيطاً جاهزاً، أو أضف الغرف واحدة تلو الأخرى من القائمة.' : 'Pick a starter layout, or add rooms one by one from the list.'}</p>
+                  <p className="fp-presets-desc">{isAr ? 'ولّد تخطيطاً يناسب العقار عبر أسئلة سريعة، أو أضف الغرف يدوياً من القائمة.' : 'Generate a layout tailored to this property with a few quick questions, or add rooms manually from the list.'}</p>
                 </div>
-                <div className="fp-presets-grid">
-                  {STARTER_PRESETS.map((p) => {
-                    const recommended = p.id === recommendedId;
-                    return (
-                      <div key={p.id} className={`fp-preset-card ${recommended ? 'recommended' : ''}`}>
-                        {recommended && <span className="fp-preset-badge">{isAr ? 'موصى به' : 'RECOMMENDED'}</span>}
-                        <div className="fp-preset-thumb" aria-hidden="true">
-                          <svg viewBox="0 0 120 78" width="120" height="78" style={{ direction: 'ltr' }}>
-                            {getFloorPlanSlots(Math.min(p.rooms.length, 6)).map((slot, i) => (
-                              <rect key={i} x={120 * slot.xF} y={78 * slot.yF} width={120 * slot.wF} height={78 * slot.hF} fill="rgba(221,167,82,0.08)" stroke="rgba(221,167,82,0.5)" strokeWidth="1" />
-                            ))}
-                          </svg>
-                        </div>
-                        <span className="fp-preset-name">{isAr ? p.labelAr : p.labelEn}</span>
-                        <span className="fp-preset-sub">{isAr ? p.subAr : p.subEn}</span>
-                        <span className="fp-preset-sqm">~{p.approxSqm} m²</span>
-                        <button
-                          type="button"
-                          className="fp-preset-use"
-                          autoFocus={recommended}
-                          onClick={() => handleApplyPreset(p)}
-                        >
-                          {isAr ? 'استخدم هذا' : 'Use this'}
-                        </button>
-                      </div>
-                    );
-                  })}
-                </div>
+                <button type="button" className="fp-wizard-cta" autoFocus onClick={() => setWizardOpen(true)}>
+                  <Sparkles size={16} />
+                  <span>{isAr ? 'توليد تخطيط بالمعالج' : 'Generate layout with wizard'}</span>
+                </button>
                 <button type="button" className="fp-start-empty" onClick={handleStartEmpty}>
                   <span>{isAr ? 'ابدأ فارغاً' : 'Start empty'}</span>
                   <span className="fp-arrow-glyph" aria-hidden="true">→</span>
@@ -1630,7 +1465,20 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
         const listPanel = (
         <div className={`fp-list-panel ${listPortalTarget ? 'in-rail' : ''}`} dir={isAr ? 'rtl' : 'ltr'}>
           <div className="fp-global-state" role="group" aria-label={isAr ? 'حالة التشطيب الإجمالية' : 'Global finishing state'}>
-            <span className="fp-global-state-label">{isAr ? 'التشطيب' : 'FINISHING'}</span>
+            <span className="fp-global-state-head">
+              <span className="fp-global-state-label">{isAr ? 'التشطيب' : 'FINISHING'}</span>
+              {propertyType === 'apartment' && (
+                <button
+                  type="button"
+                  className="fp-wizard-trigger"
+                  title={isAr ? 'توليد تخطيط بالمعالج' : 'Generate layout with wizard'}
+                  onClick={() => setWizardOpen(true)}
+                >
+                  <Sparkles size={11} />
+                  <span>{isAr ? 'معالج' : 'Wizard'}</span>
+                </button>
+              )}
+            </span>
             <div className="fp-global-state-btns">
               {GLOBAL_STATE_OPTIONS.map(opt => (
                 <button
@@ -1802,6 +1650,85 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
 
       </div>
 
+      {wizardOpen && (
+        <div className="fp-wizard-overlay" role="dialog" aria-modal="true" aria-label={isAr ? 'معالج توليد التخطيط' : 'Layout generation wizard'}>
+          <div className="fp-wizard">
+            <div className="fp-wizard-head">
+              <span className="fp-wizard-title">
+                <Sparkles size={15} />
+                <span>{isAr ? 'معالج توليد التخطيط' : 'Layout Generation Wizard'}</span>
+              </span>
+              <button type="button" className="fp-group-btn" aria-label={isAr ? 'إغلاق' : 'Close'} onClick={() => setWizardOpen(false)}>
+                <span aria-hidden="true">✕</span>
+              </button>
+            </div>
+
+            <div className="fp-wizard-grid">
+              <label className="fp-wizard-field">
+                <span>{isAr ? 'غرف النوم' : 'Bedrooms'}</span>
+                <input
+                  type="number" min={1} max={8} dir="ltr"
+                  value={wizard.bedrooms}
+                  onChange={(e) => setWizard(w => ({ ...w, bedrooms: Math.max(1, Math.min(8, Number(e.target.value) || 1)) }))}
+                />
+              </label>
+              <label className="fp-wizard-field">
+                <span>{isAr ? 'الحمامات' : 'Bathrooms'}</span>
+                <input
+                  type="number" min={1} max={6} dir="ltr"
+                  value={wizard.bathrooms}
+                  onChange={(e) => setWizard(w => ({ ...w, bathrooms: Math.max(1, Math.min(6, Number(e.target.value) || 1)) }))}
+                />
+              </label>
+              <label className="fp-wizard-field">
+                <span>{isAr ? 'رقم الطابق' : 'Floor Number'}</span>
+                <input
+                  type="number" min={0} max={60} dir="ltr"
+                  placeholder={isAr ? '0 = أرضي' : '0 = Ground'}
+                  value={wizard.floorNumber}
+                  onChange={(e) => setWizard(w => ({ ...w, floorNumber: e.target.value }))}
+                />
+              </label>
+            </div>
+
+            <div className="fp-wizard-toggles">
+              {([
+                ['balcony', isAr ? 'بلكونة' : 'Balcony'],
+                ['guestToilet', isAr ? 'حمام ضيوف' : 'Guest toilet'],
+                ['maidRoom', isAr ? 'غرفة خادمة' : "Maid's room"],
+                ['laundry', isAr ? 'غسيل / مخزن' : 'Laundry / storage'],
+                ['dressing', isAr ? 'غرفة ملابس' : 'Dressing room'],
+              ] as Array<[keyof PresetWizardAnswers, string]>).map(([key, label]) => (
+                <button
+                  key={key}
+                  type="button"
+                  className={`fp-wizard-toggle ${wizard[key] ? 'on' : ''}`}
+                  aria-pressed={Boolean(wizard[key])}
+                  onClick={() => setWizard(w => ({ ...w, [key]: !w[key] }))}
+                >
+                  {wizard[key] ? <Check size={11} /> : <Plus size={11} />}
+                  <span>{label}</span>
+                </button>
+              ))}
+            </div>
+
+            <p className="fp-wizard-summary" dir="ltr">
+              {templatesFromAnswers(wizard).length + (wizard.maidRoom ? 1 : 0)} rooms
+            </p>
+
+            <div className="fp-wizard-actions">
+              <button type="button" className="fp-start-empty" onClick={() => setWizardOpen(false)}>
+                {isAr ? 'إلغاء' : 'Cancel'}
+              </button>
+              <button type="button" className="fp-wizard-generate" onClick={handleGenerateFromWizard}>
+                <Sparkles size={14} />
+                <span>{isAr ? 'توليد التخطيط' : 'Generate layout'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {toast && (
         <div
           className="fp-toast"
@@ -1872,18 +1799,6 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
           margin: 0.15rem 0 0;
         }
 
-        .fp-room-count {
-          font-family: monospace;
-          font-variant-numeric: tabular-nums;
-          font-size: 0.75rem;
-          font-weight: 700;
-          color: var(--fp-gold);
-          padding: 4px 12px;
-          border-radius: 9999px;
-          background: rgba(221,167,82,0.08);
-          border: 1px solid var(--fp-line);
-          white-space: nowrap;
-        }
 
         .fp-floor-tabs {
           display: flex;
@@ -2040,6 +1955,187 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
         .fp-empty-icon { color: rgba(221,167,82,0.4); margin-block-end: 0.5rem; }
         .fp-empty-title { font-size: 1.1rem; font-weight: 700; color: var(--fp-text); margin: 0; }
         .fp-empty-desc { font-size: 0.8125rem; color: var(--fp-text-dim); margin: 0; max-width: 320px; }
+
+        .fp-global-state-head {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 8px;
+        }
+
+        .fp-wizard-trigger {
+          display: inline-flex;
+          align-items: center;
+          gap: 4px;
+          padding: 3px 9px;
+          border-radius: 9999px;
+          font-size: 0.6rem;
+          font-weight: 800;
+          cursor: pointer;
+          background: rgba(221,167,82,0.10);
+          border: 1px solid rgba(221,167,82,0.35);
+          color: var(--fp-gold);
+          transition: background-color 0.15s cubic-bezier(0.2,0,0,1);
+        }
+
+        .fp-wizard-trigger:hover { background: rgba(221,167,82,0.2); }
+        .fp-wizard-trigger:focus-visible { outline: none; box-shadow: var(--fp-focus-ring); }
+
+        .fp-wizard-cta {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          min-height: 46px;
+          padding: 10px 22px;
+          border-radius: 12px;
+          font-size: 0.875rem;
+          font-weight: 800;
+          cursor: pointer;
+          background: var(--fp-gold-grad);
+          border: none;
+          color: #0A0E18;
+          transition: opacity 0.15s cubic-bezier(0.2,0,0,1);
+        }
+
+        .fp-wizard-cta:hover { opacity: 0.92; }
+        .fp-wizard-cta:focus-visible { outline: none; box-shadow: var(--fp-focus-ring); }
+
+        .fp-wizard-overlay {
+          position: fixed;
+          inset: 0;
+          z-index: 120;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 16px;
+          background: rgba(6, 9, 16, 0.72);
+          backdrop-filter: blur(6px);
+        }
+
+        .fp-wizard {
+          width: min(480px, 100%);
+          display: flex;
+          flex-direction: column;
+          gap: 16px;
+          padding: 20px;
+          border-radius: 16px;
+          background: var(--fp-surface);
+          border: 1px solid rgba(221,167,82,0.3);
+          box-shadow: 0 32px 80px rgba(0,0,0,0.6);
+        }
+
+        .fp-wizard-head {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 10px;
+        }
+
+        .fp-wizard-title {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          font-size: 0.95rem;
+          font-weight: 800;
+          color: var(--fp-gold);
+        }
+
+        .fp-wizard-grid {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 10px;
+        }
+
+        @media (max-width: 560px) {
+          .fp-wizard-grid { grid-template-columns: 1fr; }
+        }
+
+        .fp-wizard-field {
+          display: flex;
+          flex-direction: column;
+          gap: 5px;
+          font-size: 0.68rem;
+          font-weight: 700;
+          color: var(--fp-text-dim);
+        }
+
+        .fp-wizard-field input {
+          padding: 8px 10px;
+          border-radius: 9px;
+          background: rgba(255,255,255,0.04);
+          border: 1px solid var(--fp-line);
+          color: var(--fp-text);
+          font-family: monospace;
+          font-size: 0.85rem;
+          font-weight: 700;
+          outline: none;
+        }
+
+        .fp-wizard-field input:focus { border-color: var(--fp-gold); }
+
+        .fp-wizard-toggles {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 6px;
+        }
+
+        .fp-wizard-toggle {
+          display: inline-flex;
+          align-items: center;
+          gap: 5px;
+          padding: 6px 12px;
+          border-radius: 9999px;
+          font-size: 0.7rem;
+          font-weight: 700;
+          cursor: pointer;
+          background: transparent;
+          border: 1px dashed var(--fp-line);
+          color: var(--fp-text-dim);
+          transition: color 0.15s cubic-bezier(0.2,0,0,1), border-color 0.15s cubic-bezier(0.2,0,0,1), background-color 0.15s cubic-bezier(0.2,0,0,1);
+        }
+
+        .fp-wizard-toggle:hover { color: var(--fp-text); border-color: rgba(221,167,82,0.5); }
+
+        .fp-wizard-toggle.on {
+          background: rgba(221,167,82,0.12);
+          border: 1px solid var(--fp-gold);
+          color: var(--fp-gold);
+        }
+
+        .fp-wizard-summary {
+          margin: 0;
+          font-family: monospace;
+          font-variant-numeric: tabular-nums;
+          font-size: 0.72rem;
+          font-weight: 800;
+          color: var(--fp-text-dim);
+        }
+
+        .fp-wizard-actions {
+          display: flex;
+          align-items: center;
+          justify-content: flex-end;
+          gap: 10px;
+        }
+
+        .fp-wizard-generate {
+          display: inline-flex;
+          align-items: center;
+          gap: 7px;
+          min-height: 40px;
+          padding: 8px 18px;
+          border-radius: 10px;
+          font-size: 0.8rem;
+          font-weight: 800;
+          cursor: pointer;
+          background: var(--fp-gold-grad);
+          border: none;
+          color: #0A0E18;
+        }
+
+        .fp-wizard-generate:hover { opacity: 0.92; }
+        .fp-wizard-generate:focus-visible { outline: none; box-shadow: var(--fp-focus-ring); }
 
         .fp-presets-head { margin-block-end: 1rem; }
         .fp-presets-title { font-size: 1.2rem; font-weight: 800; color: var(--fp-text); margin: 0; }
@@ -2788,25 +2884,6 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
         }
 
         [data-theme="light"] .fp-floor-rename { background: #FFFFFF; }
-
-        .fp-floor-add-wrap { position: relative; flex-shrink: 0; }
-
-        .fp-floor-add { color: var(--fp-gold); }
-
-        .fp-floor-menu {
-          position: absolute;
-          inset-block-start: calc(100% + 8px);
-          inset-inline-end: 0;
-          z-index: 40;
-          min-width: 220px;
-          border-radius: 12px;
-          background: var(--fp-surface);
-          border: 1px solid var(--fp-line);
-          box-shadow: 0 18px 48px rgba(0,0,0,0.4);
-          padding: 6px;
-        }
-
-        [data-theme="light"] .fp-floor-menu { box-shadow: 0 18px 48px rgba(28,26,22,0.15); }
 
         .fp-recon {
           display: flex;
