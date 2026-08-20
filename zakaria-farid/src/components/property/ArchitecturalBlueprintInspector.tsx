@@ -22,7 +22,7 @@ import {
   Maximize2
 } from 'lucide-react';
 import { ZoneInstance, ZoneSpatialLayout, getZoneBadge, FinishBadge } from '@/lib/layering';
-import { computeMetricLayout, metricInputFromSpatial } from '@/lib/layering/floorplanLayout';
+import { computeMetricLayout, metricInputFromSpatial, openingSegments } from '@/lib/layering/floorplanLayout';
 import { FALLBACK_ZONE_METRICS, FALLBACK_ZONE_TITLES, GENERIC_ZONE_METRIC } from '@/lib/layering/zoneMetrics';
 
 type SystemKey = 'all' | 'civil' | 'electrical' | 'plumbing' | 'hvac' | 'finishes';
@@ -697,9 +697,9 @@ interface ProcessedZone {
 
 // Metric-true layout: rooms are sized by their real meter dimensions via the
 // shared engine, so this public plan always matches the admin builder preview.
-function computeArchitecturalLayout(zones: ProcessedZone[]): ProcessedZone[] {
+function computeArchitecturalLayout(zones: ProcessedZone[]): { zones: ProcessedZone[]; pxPerMeter: number } {
   const count = zones.length;
-  if (count === 0) return [];
+  if (count === 0) return { zones: [], pxPerMeter: 1 };
 
   const layout = computeMetricLayout(
     zones.map((zone) => {
@@ -714,7 +714,7 @@ function computeArchitecturalLayout(zones: ProcessedZone[]): ProcessedZone[] {
     }),
   );
 
-  return zones.map((zone, idx) => {
+  const mapped = zones.map((zone, idx) => {
     const rect = layout.rooms[idx];
     const hasSpatialDims = Boolean(zone.spatial?.length_m && zone.spatial?.width_m);
     return {
@@ -725,6 +725,7 @@ function computeArchitecturalLayout(zones: ProcessedZone[]): ProcessedZone[] {
       svgCoords: { x: rect.x, y: rect.y, w: rect.w, h: rect.h, pinX: rect.x + rect.w / 2, pinY: rect.y + rect.h / 2 },
     };
   });
+  return { zones: mapped, pxPerMeter: layout.pxPerMeter };
 }
 
 const TRADE_LABELS: Record<string, { en: string; ar: string; defaultSpecEn: string; defaultSpecAr: string }> = {
@@ -1063,13 +1064,20 @@ export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintIns
   }, [availableFloors, activeFloor]);
 
   // Filtered & Architecturally-laid-out zones for Active Floor
-  const displayedZones = useMemo(() => {
+  const displayedLayout = useMemo(() => {
     const currentFloorKey = activeFloor || (availableFloors[0]?.key ?? 'ground');
     const floorZones = processedZones.filter(z => z.floorKey === currentFloorKey);
     const baseList = floorZones.length > 0 ? floorZones : processedZones;
 
     return computeArchitecturalLayout(baseList);
   }, [processedZones, activeFloor, availableFloors]);
+
+  const displayedZones = displayedLayout.zones;
+  const layoutPxPerMeter = displayedLayout.pxPerMeter;
+  const hasRealOpenings = useMemo(
+    () => displayedZones.some(z => (z.spatial?.openings?.length ?? 0) > 0),
+    [displayedZones],
+  );
 
   // Active list of rooms on currently selected floor
   const activeRoomList = displayedZones;
@@ -1433,8 +1441,39 @@ export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintIns
                       );
                     })}
 
+                    {/* ── 4a. Real Placed Openings (Doors & Windows from the Admin Composer) ── */}
+                    {hasRealOpenings && displayedZones.flatMap((zone) =>
+                      openingSegments(zone.svgCoords, zone.spatial?.openings, layoutPxPerMeter).map(seg => {
+                        const dx = seg.x2 - seg.x1;
+                        const dy = seg.y2 - seg.y1;
+                        const len = Math.hypot(dx, dy);
+                        const nx = seg.edge === 'w' ? 1 : seg.edge === 'e' ? -1 : 0;
+                        const ny = seg.edge === 'n' ? 1 : seg.edge === 's' ? -1 : 0;
+                        const leafX = seg.x1 + nx * len;
+                        const leafY = seg.y1 + ny * len;
+                        const sweep = dx * ny - dy * nx > 0 ? 0 : 1;
+                        return (
+                          <g key={seg.id} className="cad-real-opening">
+                            {seg.kind === 'door' ? (
+                              <>
+                                <line x1={seg.x1} y1={seg.y1} x2={seg.x2} y2={seg.y2} strokeWidth={4} className="cad-opening-gap" />
+                                <line x1={seg.x1} y1={seg.y1} x2={leafX} y2={leafY} stroke="#DDA752" strokeWidth={1.5} />
+                                <path d={`M ${leafX} ${leafY} A ${len} ${len} 0 0 ${sweep} ${seg.x2} ${seg.y2}`} fill="none" stroke="rgba(221,167,82,0.55)" strokeWidth={1} strokeDasharray="3 2" />
+                              </>
+                            ) : (
+                              <>
+                                <line x1={seg.x1} y1={seg.y1} x2={seg.x2} y2={seg.y2} strokeWidth={5} className="cad-opening-gap" />
+                                <line x1={seg.x1} y1={seg.y1} x2={seg.x2} y2={seg.y2} stroke="#7FB4D8" strokeWidth={3} />
+                                <line x1={seg.x1} y1={seg.y1} x2={seg.x2} y2={seg.y2} strokeWidth={1} className="cad-opening-gap" />
+                              </>
+                            )}
+                          </g>
+                        );
+                      }),
+                    )}
+
                     {/* ── 4. Architectural Window Glazing & Patio Sliders (Embedded in Outer Walls) ── */}
-                    {displayedZones.length > 0 && (() => {
+                    {!hasRealOpenings && displayedZones.length > 0 && (() => {
                       const minX = Math.min(...displayedZones.map(z => z.svgCoords.x));
                       const maxX = Math.max(...displayedZones.map(z => z.svgCoords.x + z.svgCoords.w));
                       const minY = Math.min(...displayedZones.map(z => z.svgCoords.y));
@@ -2546,6 +2585,14 @@ export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintIns
 
         .cad-grid-pattern-line {
           stroke: rgba(221, 167, 82, 0.08);
+        }
+
+        .cad-opening-gap {
+          stroke: #080C14;
+        }
+
+        [data-theme="light"] .cad-opening-gap {
+          stroke: #F8FAFC;
         }
 
         [data-theme="light"] .cad-grid-pattern-line {
