@@ -17,6 +17,7 @@ import {
   getAttributesForTrade,
   buildZoneInstances,
   applyGlobalState,
+  applyGlobalStateToZone,
   addOptionalZone,
   updateTradeStatus,
   updateAttributeValue,
@@ -81,9 +82,9 @@ const SUBTYPES: Record<PropertyTypeId, Array<{ id: string; en: string; ar: strin
 
 // ─── Optional zones per property type ──────────────────────────────────────
 const OPTIONAL_ZONES_FOR_TYPE: Record<PropertyTypeId, string[]> = {
-  apartment: ['apt.guest_bath', 'apt.laundry'],
+  apartment: ['apt.guest_bath', 'apt.laundry', 'apt.dressing'],
   building:  [],
-  garage:    [],
+  garage:    ['grg.security_booth', 'grg.storage'],
 };
 
 // ─── Global state config ───────────────────────────────────────────────────
@@ -318,22 +319,41 @@ export default function FinishingWizard({
   const subtypes = SUBTYPES[propertyType] ?? [];
   const optionalZoneIds = OPTIONAL_ZONES_FOR_TYPE[propertyType] ?? [];
 
+  const subtypeOption = () => ({ subtype: subType as 'standard' | 'ground' | 'duplex' | 'roof' | 'residential' | 'mixed' });
+
   function handleSelectGlobalState(state: GlobalFinishingState) {
     setGlobalState(state);
     if (zoneInstances.length === 0) {
       // First time — build from scratch
-      updateZones(buildZoneInstances(propertyType, state, localBedroomCount));
+      updateZones(buildZoneInstances(propertyType, state, localBedroomCount, subtypeOption()));
     } else {
       // Re-apply to existing zones (keeps attribute values)
       updateZones(applyGlobalState(zoneInstances, state));
     }
   }
 
+  function handleSubTypeSelect(id: string) {
+    if (id === subType) return;
+    setSubType(id);
+    const rebuilt = buildZoneInstances(
+      propertyType,
+      globalState ?? 'semi_finished',
+      localBedroomCount,
+      { subtype: id as 'standard' | 'ground' | 'duplex' | 'roof' | 'residential' | 'mixed' },
+    );
+    updateZones(rebuilt);
+    toast.success(isAr ? 'تمت إعادة بناء المناطق حسب النوع الفرعي — تراجع متاح' : 'Zones rebuilt for subtype — undo available');
+  }
+
+  function handleUnitStateOverride(zoneInstanceId: string, state: GlobalFinishingState) {
+    updateZones(applyGlobalStateToZone(zoneInstances, zoneInstanceId, state));
+  }
+
   function handleBedroomChange(delta: number) {
     const newCount = Math.max(1, Math.min(8, localBedroomCount + delta));
     setLocalBedroomCount(newCount);
     if (globalState) {
-      updateZones(buildZoneInstances(propertyType, globalState, newCount));
+      updateZones(buildZoneInstances(propertyType, globalState, newCount, subtypeOption()));
     }
   }
 
@@ -816,8 +836,11 @@ export default function FinishingWizard({
       'vil.first':    '🏢',
       'vil.basement': '🏚️',
       'vil.roof':     '🌤️',
+      'apt.level':    '🏠',
+      'bld.unit':     '🚪',
     };
     const icon = floorIcons[tpl.id] ?? '🏗️';
+    const containerLabel = zoneInst.instance_label || (isAr ? tpl.label_ar : tpl.label_en);
 
     return (
       <div key={zoneInst.id} className={styles.floorBlock}>
@@ -828,10 +851,32 @@ export default function FinishingWizard({
           />
           <span className={styles.floorIcon}>{icon}</span>
           <div style={{ flex: 1 }}>
-            <span className={styles.floorLabel}>{isAr ? tpl.label_ar : tpl.label_en}</span>
-            {' '}
-            <span className={styles.floorLabelAr}>{isAr ? tpl.label_en : tpl.label_ar}</span>
+            <span className={styles.floorLabel}>{containerLabel}</span>
+            {!zoneInst.instance_label && (
+              <>
+                {' '}
+                <span className={styles.floorLabelAr}>{isAr ? tpl.label_en : tpl.label_ar}</span>
+              </>
+            )}
           </div>
+          <span
+            style={{ display: 'inline-flex', gap: 4 }}
+            onClick={(e) => e.stopPropagation()}
+            title={isAr ? 'تشطيب هذه الوحدة فقط' : 'Finishing override for this unit only'}
+          >
+            {GLOBAL_STATES.map(gs => (
+              <button
+                key={gs.id}
+                type="button"
+                className={styles.subtypeChip}
+                style={{ padding: '2px 8px', fontSize: 13 }}
+                aria-label={isAr ? `${gs.ar} — هذه الوحدة فقط` : `${gs.en} — this unit only`}
+                onClick={() => handleUnitStateOverride(zoneInst.id, gs.id)}
+              >
+                {gs.emoji}
+              </button>
+            ))}
+          </span>
           {zoneInst.children && (
             <span className={styles.tradeBadge}>
               {zoneInst.children.length} {isAr ? 'مناطق' : 'zones'}
@@ -865,7 +910,7 @@ export default function FinishingWizard({
                 key={st.id}
                 type="button"
                 className={`${styles.subtypeChip} ${subType === st.id ? styles.subtypeChipActive : ''}`}
-                onClick={() => setSubType(st.id)}
+                onClick={() => handleSubTypeSelect(st.id)}
               >
                 {isAr ? st.ar : st.en}
               </button>
