@@ -23,7 +23,7 @@ import {
 } from 'lucide-react';
 import { ZoneInstance, ZoneSpatialLayout, getZoneBadge, FinishBadge } from '@/lib/layering';
 import { computeMetricLayout, metricInputFromSpatial } from '@/lib/layering/floorplanLayout';
-import { FALLBACK_ZONE_METRICS, GENERIC_ZONE_METRIC } from '@/lib/layering/zoneMetrics';
+import { FALLBACK_ZONE_METRICS, FALLBACK_ZONE_TITLES, GENERIC_ZONE_METRIC } from '@/lib/layering/zoneMetrics';
 
 type SystemKey = 'all' | 'civil' | 'electrical' | 'plumbing' | 'hvac' | 'finishes';
 
@@ -87,61 +87,17 @@ function resolveSpaceImage(key: string, customImage?: string): string {
   return 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=85';
 }
 
-const ZONE_METRICS: Record<string, { sqm: number; ceiling: string; dims: string }> = {
-  'vil.g.reception': { sqm: 145, ceiling: '4.4m Double-Height', dims: '14.2m × 10.2m' },
-  'vil.g.entrance': { sqm: 38, ceiling: '5.2m Atrium', dims: '6.5m × 5.8m' },
-  'vil.g.dining': { sqm: 52, ceiling: '3.8m Coffered', dims: '8.0m × 6.5m' },
-  'vil.g.kitchen': { sqm: 48, ceiling: '3.6m Flush', dims: '7.5m × 6.4m' },
-  'vil.g.powder_room': { sqm: 14, ceiling: '3.4m Ambient', dims: '4.2m × 3.3m' },
-  'vil.exterior': { sqm: 520, ceiling: 'Open Sky', dims: '35.0m × 22.0m' },
-  'vil.f.master_suite': { sqm: 95, ceiling: '3.8m Tray Cove', dims: '11.5m × 8.2m' },
-  'vil.f.master_bath': { sqm: 28, ceiling: '3.6m Lightwell', dims: '6.0m × 4.6m' },
-  'vil.f.std_bed': { sqm: 42, ceiling: '3.4m Flush', dims: '7.0m × 6.0m' },
-  'vil.f.family_room': { sqm: 65, ceiling: '3.6m Linear', dims: '9.5m × 6.8m' },
-  'vil.f.main_bath': { sqm: 18, ceiling: '3.4m Flush', dims: '4.8m × 3.8m' },
-  'vil.r.guest_suite': { sqm: 58, ceiling: '3.4m Panoramic', dims: '8.5m × 6.8m' },
-  'vil.r.terrace': { sqm: 185, ceiling: 'Open Sky Pergola', dims: '18.5m × 10.0m' },
-  'vil.b.garage': { sqm: 110, ceiling: '3.2m Epoxy', dims: '14.0m × 7.8m' },
-  'vil.b.game_room': { sqm: 85, ceiling: '3.4m Acoustic', dims: '10.5m × 8.0m' },
-  'vil.b.driver_room': { sqm: 32, ceiling: '3.0m Flush', dims: '6.0m × 5.3m' },
-  // apt.* / bld.* / grg.* metrics come from the shared FALLBACK_ZONE_METRICS
-  // table so the public page and the admin edit form always agree.
-  ...Object.fromEntries(
+// All metrics come from the shared FALLBACK_ZONE_METRICS table so the public
+// page and the admin edit form always agree.
+const ZONE_METRICS: Record<string, { sqm: number; ceiling: string; dims: string }> =
+  Object.fromEntries(
     Object.entries(FALLBACK_ZONE_METRICS).map(([id, m]) => [
       id,
       { sqm: m.sqm, ceiling: m.ceiling, dims: `${m.length_m}m × ${m.width_m}m` },
     ]),
-  ),
-};
+  );
 
-const ZONE_TITLES: Record<string, { en: string; ar: string }> = {
-  'vil.exterior': { en: 'Private Grounds & Landscape', ar: 'الحدائق والمساحات الخارجية' },
-  'vil.g.entrance': { en: 'Double-Height Entrance Foyer', ar: 'بهو المدخل الرئيسي المزدوج' },
-  'vil.g.reception': { en: 'Grand Reception & Salon', ar: 'صالون الاستقبال الرئيسي الفاخر' },
-  'vil.g.dining': { en: 'Formal Dining Salon', ar: 'غرفة الطعام الملكية' },
-  'vil.g.powder_room': { en: 'Guest Powder Room & Spa', ar: 'حمام الضيوف الفاخر' },
-  'vil.g.kitchen': { en: 'Chef Show Kitchen & Pantry', ar: 'مطبخ الاستعراض الرئيسي ومخزن التحضير' },
-  'vil.f.master_suite': { en: 'Master Royal Suite', ar: 'الجناح الملكي الرئيسي' },
-  'vil.f.master_bath': { en: 'Master En-Suite Spa Bath', ar: 'حمام السبا الملحق بالجناح الرئيسي' },
-  'vil.f.std_bed': { en: 'Executive Bedroom Suite', ar: 'غرفة النوم التنفيذية' },
-  'vil.f.family_room': { en: 'Family Living & Media Lounge', ar: 'الصالة العائلية وغرفة السينما' },
-  'vil.f.main_bath': { en: 'Main Luxury Bathroom', ar: 'الحمام الرئيسي الفاخر' },
-  'vil.b.garage': { en: '4-Car Integrated Garage', ar: 'جراج سيارات خاص يتسع لـ ٤ سيارات' },
-  'vil.b.game_room': { en: 'Entertainment & Gaming Salon', ar: 'صالة الألعاب والترفيه' },
-  'vil.b.driver_room': { en: "Maid & Driver Quarters", ar: 'غرف السائق والمساعدين' },
-  'vil.b.storage': { en: 'Storage & Laundry Atelier', ar: 'غرفة الغسيل والتخزين الفاخرة' },
-  'vil.r.guest_suite': { en: 'Skyline Roof Annex / Guest Suite', ar: 'ملحق الرووف وجناح الضيوف' },
-  'vil.r.terrace': { en: 'Panoramic Sky Terrace & Pergola', ar: 'تراس السطح البانورامي مع البرجولا' },
-  'apt.reception': { en: 'Grand Reception', ar: 'الاستقبال الرئيسي' },
-  'apt.master_bed': { en: 'Master Bedroom Suite', ar: 'غرفة النوم الرئيسية' },
-  'apt.master_bath': { en: 'Master En-Suite Bathroom', ar: 'الحمام الملحق الرئيسي' },
-  'apt.std_bed': { en: 'Guest Bedroom', ar: 'غرفة النوم الإضافية' },
-  'apt.kitchen': { en: 'Designer Kitchen', ar: 'المطبخ الفاخر' },
-  'apt.main_bath': { en: 'Main Bathroom', ar: 'الحمام الرئيسي' },
-  'apt.guest_bath': { en: 'Guest Powder Room', ar: 'حمام الضيوف' },
-  'apt.balcony': { en: 'Panoramic Balcony', ar: 'الشرفة البانورامية' },
-  'apt.open_terrace': { en: 'Penthouse Open Terrace', ar: 'التراس البانورامي المفتوح' }
-};
+const ZONE_TITLES: Record<string, { en: string; ar: string }> = FALLBACK_ZONE_TITLES;
 
 interface TradeSpecItem {
   id: string;

@@ -12,6 +12,24 @@ export interface FallbackZoneMetric {
 }
 
 export const FALLBACK_ZONE_METRICS: Record<string, FallbackZoneMetric> = {
+  'vil.g.reception':   { length_m: 14.2, width_m: 10.2, sqm: 145, ceiling: '4.4m Double-Height' },
+  'vil.g.entrance':    { length_m: 6.5,  width_m: 5.8,  sqm: 38,  ceiling: '5.2m Atrium' },
+  'vil.g.dining':      { length_m: 8.0,  width_m: 6.5,  sqm: 52,  ceiling: '3.8m Coffered' },
+  'vil.g.kitchen':     { length_m: 7.5,  width_m: 6.4,  sqm: 48,  ceiling: '3.6m Flush' },
+  'vil.g.powder_room': { length_m: 4.2,  width_m: 3.3,  sqm: 14,  ceiling: '3.4m Ambient' },
+  'vil.exterior':      { length_m: 35.0, width_m: 22.0, sqm: 520, ceiling: 'Open Sky' },
+  'vil.f.master_suite': { length_m: 11.5, width_m: 8.2, sqm: 95,  ceiling: '3.8m Tray Cove' },
+  'vil.f.master_bath':  { length_m: 6.0,  width_m: 4.6, sqm: 28,  ceiling: '3.6m Lightwell' },
+  'vil.f.std_bed':      { length_m: 7.0,  width_m: 6.0, sqm: 42,  ceiling: '3.4m Flush' },
+  'vil.f.family_room':  { length_m: 9.5,  width_m: 6.8, sqm: 65,  ceiling: '3.6m Linear' },
+  'vil.f.main_bath':    { length_m: 4.8,  width_m: 3.8, sqm: 18,  ceiling: '3.4m Flush' },
+  'vil.r.guest_suite':  { length_m: 8.5,  width_m: 6.8, sqm: 58,  ceiling: '3.4m Panoramic' },
+  'vil.r.terrace':      { length_m: 18.5, width_m: 10.0, sqm: 185, ceiling: 'Open Sky Pergola' },
+  'vil.b.garage':       { length_m: 14.0, width_m: 7.8, sqm: 110, ceiling: '3.2m Epoxy' },
+  'vil.b.game_room':    { length_m: 10.5, width_m: 8.0, sqm: 85,  ceiling: '3.4m Acoustic' },
+  'vil.b.driver_room':  { length_m: 6.0,  width_m: 5.3, sqm: 32,  ceiling: '3.0m Flush' },
+  'vil.b.storage':      { length_m: 6.0,  width_m: 4.0, sqm: 24,  ceiling: '3.0m Flush' },
+
   'apt.reception':   { length_m: 11.0, width_m: 8.6, sqm: 95, ceiling: '3.6m Flush' },
   'apt.master_bed':  { length_m: 7.2,  width_m: 6.2, sqm: 45, ceiling: '3.4m Cove' },
   'apt.master_bath': { length_m: 4.0,  width_m: 3.0, sqm: 12, ceiling: '3.2m Flush' },
@@ -46,3 +64,34 @@ export const GENERIC_ZONE_METRIC: FallbackZoneMetric = {
 export function fallbackMetricFor(templateId: string): FallbackZoneMetric | null {
   return FALLBACK_ZONE_METRICS[templateId] ?? null;
 }
+
+// Bilingual display titles shared by the admin builder and the public
+// inspector, covering legacy villa-era template ids that have no ZoneTemplate.
+export const FALLBACK_ZONE_TITLES: Record<string, { en: string; ar: string }> = {
+  'vil.exterior': { en: 'Private Grounds & Landscape', ar: 'الحدائق والمساحات الخارجية' },
+  'vil.g.entrance': { en: 'Double-Height Entrance Foyer', ar: 'بهو المدخل الرئيسي المزدوج' },
+  'vil.g.reception': { en: 'Grand Reception & Salon', ar: 'صالون الاستقبال الرئيسي الفاخر' },
+  'vil.g.dining': { en: 'Formal Dining Salon', ar: 'غرفة الطعام الملكية' },
+  'vil.g.powder_room': { en: 'Guest Powder Room & Spa', ar: 'حمام الضيوف الفاخر' },
+  'vil.g.kitchen': { en: 'Chef Show Kitchen & Pantry', ar: 'مطبخ الاستعراض الرئيسي ومخزن التحضير' },
+  'vil.f.master_suite': { en: 'Master Royal Suite', ar: 'الجناح الملكي الرئيسي' },
+  'vil.f.master_bath': { en: 'Master En-Suite Spa Bath', ar: 'حمام السبا الملحق بالجناح الرئيسي' },
+  'vil.f.std_bed': { en: 'Executive Bedroom Suite', ar: 'غرفة النوم التنفيذية' },
+  'vil.f.family_room': { en: 'Family Living & Media Lounge', ar: 'الصالة العائلية وغرفة السينما' },
+  'vil.f.main_bath': { en: 'Main Luxury Bathroom', ar: 'الحمام الرئيسي الفاخر' },
+  'vil.b.garage': { en: '4-Car Integrated Garage', ar: 'جراج سيارات خاص يتسع لـ ٤ سيارات' },
+  'vil.b.game_room': { en: 'Entertainment & Gaming Salon', ar: 'صالة الألعاب والترفيه' },
+  'vil.b.driver_room': { en: 'Maid & Driver Quarters', ar: 'غرف السائق والمساعدين' },
+  'vil.b.storage': { en: 'Storage & Laundry Atelier', ar: 'غرفة الغسيل والتخزين الفاخرة' },
+  'vil.r.guest_suite': { en: 'Skyline Roof Annex / Guest Suite', ar: 'ملحق الرووف وجناح الضيوف' },
+  'vil.r.terrace': { en: 'Panoramic Sky Terrace & Pergola', ar: 'تراس السطح البانورامي مع البرجولا' },
+  'apt.reception': { en: 'Grand Reception', ar: 'الاستقبال الرئيسي' },
+  'apt.master_bed': { en: 'Master Bedroom Suite', ar: 'غرفة النوم الرئيسية' },
+  'apt.master_bath': { en: 'Master En-Suite Bathroom', ar: 'الحمام الملحق الرئيسي' },
+  'apt.std_bed': { en: 'Guest Bedroom', ar: 'غرفة النوم الإضافية' },
+  'apt.kitchen': { en: 'Designer Kitchen', ar: 'المطبخ الفاخر' },
+  'apt.main_bath': { en: 'Main Bathroom', ar: 'الحمام الرئيسي' },
+  'apt.guest_bath': { en: 'Guest Powder Room', ar: 'حمام الضيوف' },
+  'apt.balcony': { en: 'Panoramic Balcony', ar: 'الشرفة البانورامية' },
+  'apt.open_terrace': { en: 'Penthouse Open Terrace', ar: 'التراس البانورامي المفتوح' },
+};
