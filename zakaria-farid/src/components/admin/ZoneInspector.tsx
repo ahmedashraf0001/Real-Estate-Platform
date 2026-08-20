@@ -19,6 +19,7 @@ import {
   removeZoneImage,
   addTradeToZone,
   removeTradeFromZone,
+  removeZone,
 } from '@/lib/layering';
 import { FALLBACK_ZONE_TITLES, fallbackMetricFor } from '@/lib/layering/zoneMetrics';
 
@@ -26,6 +27,9 @@ interface ZoneInspectorProps {
   zoneInstances: ZoneInstance[];
   onZoneInstancesChange: (updated: ZoneInstance[]) => void;
   selectedZoneId: string | null;
+  /** Figma-style flyout mode: hidden when nothing is selected, closable, offset beside the rooms rail. */
+  nested?: boolean;
+  onClose?: () => void;
   isAr?: boolean;
 }
 
@@ -100,7 +104,7 @@ const TIER_STYLES: Record<string, { en: string; ar: string; color: string }> = {
   mixed: { en: 'Mixed', ar: 'مختلط', color: '#9FB3D9' },
 };
 
-export function ZoneInspector({ zoneInstances, onZoneInstancesChange, selectedZoneId, isAr = false }: ZoneInspectorProps) {
+export function ZoneInspector({ zoneInstances, onZoneInstancesChange, selectedZoneId, nested = false, onClose, isAr = false }: ZoneInspectorProps) {
   const [uploading, setUploading] = useState(false);
   const [addTradeOpen, setAddTradeOpen] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -111,6 +115,7 @@ export function ZoneInspector({ zoneInstances, onZoneInstancesChange, selectedZo
   );
 
   if (!zone) {
+    if (nested) return null;
     return (
       <aside className="zi-root" dir={isAr ? 'rtl' : 'ltr'}>
         <div className="zi-empty">
@@ -128,7 +133,7 @@ export function ZoneInspector({ zoneInstances, onZoneInstancesChange, selectedZo
   }
 
   return (
-    <aside className="zi-root" dir={isAr ? 'rtl' : 'ltr'}>
+    <aside className={`zi-root ${nested ? 'zi-nested' : ''}`} dir={isAr ? 'rtl' : 'ltr'}>
       <ZoneInspectorBody
         key={zone.id}
         zone={zone}
@@ -140,6 +145,7 @@ export function ZoneInspector({ zoneInstances, onZoneInstancesChange, selectedZo
         addTradeOpen={addTradeOpen}
         setAddTradeOpen={setAddTradeOpen}
         fileRef={fileRef}
+        onClose={nested ? onClose : undefined}
       />
       <InspectorStyles />
     </aside>
@@ -156,13 +162,14 @@ interface BodyProps {
   addTradeOpen: boolean;
   setAddTradeOpen: (v: boolean) => void;
   fileRef: React.RefObject<HTMLInputElement | null>;
+  onClose?: () => void;
 }
 
 const CEILINGS = ['2.6m Flush', '2.8m Flush', '3.0m Flush', '3.2m Flush', '3.5m Flush', '4.0m Flush', 'Open Sky', 'Open Roof'];
 
 function ZoneInspectorBody({
   zone, zoneInstances, onZoneInstancesChange, isAr,
-  uploading, setUploading, addTradeOpen, setAddTradeOpen, fileRef,
+  uploading, setUploading, addTradeOpen, setAddTradeOpen, fileRef, onClose,
 }: BodyProps) {
   const shared = fallbackMetricFor(zone.zone_template_id);
   const widthM = zone.spatial?.width_m ?? shared?.width_m ?? 3;
@@ -244,7 +251,35 @@ function ZoneInspectorBody({
             {isAr ? tier.ar : tier.en}
           </span>
         )}
+        {onClose && (
+          <button
+            type="button"
+            className="zi-icon-btn"
+            aria-label={isAr ? 'إغلاق' : 'Close'}
+            onClick={onClose}
+          >
+            <X size={13} />
+          </button>
+        )}
       </header>
+
+      {onClose && (
+        <button
+          type="button"
+          className="zi-delete-zone"
+          onClick={() => {
+            const ok = window.confirm(isAr
+              ? `حذف "${zoneName(zone, isAr)}" نهائياً من المخطط؟`
+              : `Delete "${zoneName(zone, isAr)}" from the floor plan?`);
+            if (!ok) return;
+            onZoneInstancesChange(removeZone(zoneInstances, zone.id));
+            onClose();
+          }}
+        >
+          <Trash2 size={12} />
+          <span>{isAr ? 'حذف الغرفة' : 'Delete room'}</span>
+        </button>
+      )}
 
       <section className="zi-section">
         <span className="zi-section-label">{isAr ? 'الأبعاد' : 'DIMENSIONS'}</span>
@@ -423,7 +458,7 @@ function InspectorStyles() {
         position: fixed;
         inset-block: 0;
         inset-inline-end: 0;
-        width: 246px;
+        width: 320px;
         height: 100dvh;
         z-index: 60;
         overflow-y: auto;
@@ -441,6 +476,45 @@ function InspectorStyles() {
       [dir="rtl"].zi-root {
         box-shadow: 12px 0 32px rgba(0,0,0,0.35);
       }
+
+      .zi-root.zi-nested {
+        inset-inline-end: 300px;
+        z-index: 59;
+        border-inline-end: 1px solid rgba(221,167,82,0.16);
+        animation: ziSlideIn 0.18s cubic-bezier(0.2,0,0,1);
+      }
+
+      @keyframes ziSlideIn {
+        from { opacity: 0; transform: translateX(8px); }
+        to { opacity: 1; transform: translateX(0); }
+      }
+
+      [dir="rtl"].zi-root.zi-nested {
+        animation-name: ziSlideInRtl;
+      }
+
+      @keyframes ziSlideInRtl {
+        from { opacity: 0; transform: translateX(-8px); }
+        to { opacity: 1; transform: translateX(0); }
+      }
+
+      .zi-delete-zone {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        padding: 6px 10px;
+        border-radius: 8px;
+        font-size: 0.66rem;
+        font-weight: 800;
+        cursor: pointer;
+        background: rgba(217,107,107,0.08);
+        border: 1px solid rgba(217,107,107,0.3);
+        color: #D96B6B;
+        transition: background-color 0.15s;
+      }
+
+      .zi-delete-zone:hover { background: rgba(217,107,107,0.16); }
 
       @media (max-width: 1023px) {
         .zi-root {

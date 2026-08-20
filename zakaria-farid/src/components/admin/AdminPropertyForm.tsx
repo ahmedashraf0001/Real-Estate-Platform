@@ -11,7 +11,7 @@ import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
 import { useDropzone } from 'react-dropzone';
 import imageCompression from 'browser-image-compression';
-import { Loader2, Save, Trash2, Upload, X, Layers, Image as ImageIcon, ChevronRight, ChevronLeft, Check, Eye, MapPin, Building2, Sparkles, FileText } from 'lucide-react';
+import { Loader2, Save, Trash2, Upload, X, Layers, Image as ImageIcon, ChevronRight, ChevronLeft, Check, Eye, MapPin, Building2, Sparkles, FileText, PanelRightClose, PanelRightOpen } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import FinishingWizard from './FinishingWizard';
 import CADBlueprintBuilder from './CADBlueprintBuilder';
@@ -301,6 +301,8 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
   const [amenityInput, setAmenityInput] = useState('');
 
   const [inspectorZoneId, setInspectorZoneId] = useState<string | null>(null);
+  const [roomsRailEl, setRoomsRailEl] = useState<HTMLDivElement | null>(null);
+  const [railOpen, setRailOpen] = useState(true);
   const [zoneInstances, setZoneInstances] = useState<ZoneInstance[]>(() => {
     if (property?.spec_layers && Array.isArray(property.spec_layers) && property.spec_layers.length > 0) {
       if ('zone_template_id' in property.spec_layers[0]) {
@@ -618,14 +620,14 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className={`${styles.form} ${currentStep === 3 ? 'form-with-inspector' : ''}`} onKeyDown={(e) => {
+    <form onSubmit={handleSubmit(onSubmit)} className={`${styles.form} ${currentStep === 3 && railOpen ? 'form-with-inspector' : ''}`} onKeyDown={(e) => {
       if (e.key === 'Enter' && e.target instanceof HTMLInputElement && e.target.type !== 'submit') {
         e.preventDefault();
       }
     }}>
       <style>{`
         .form-with-inspector {
-          padding-inline-end: 262px;
+          padding-inline-end: 308px;
         }
         @media (max-width: 1023px) {
           .form-with-inspector { padding-inline-end: 0; }
@@ -938,9 +940,9 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
         </div>
       )}
 
-      {/* ─── STEP 3: Dedicated CAD Blueprint Studio + Zone Inspector ─── */}
+      {/* ─── STEP 3: CAD Blueprint Studio + Rooms Rail + Nested Inspector ─── */}
       {currentStep === 3 && (
-        <div className={styles.section}>
+        <div className={styles.section} style={{ background: 'transparent', border: 'none', boxShadow: 'none', padding: 0, backdropFilter: 'none' }}>
           <CADBlueprintBuilder
             zoneInstances={zoneInstances}
             onZoneInstancesChange={setZoneInstances}
@@ -949,14 +951,140 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
             declaredArea={Number(watch('area_sqm')) || undefined}
             selectedZoneId={inspectorZoneId}
             onSelectedZoneIdChange={setInspectorZoneId}
+            listPortalTarget={roomsRailEl}
             isAr={isAr}
           />
-          <ZoneInspector
-            zoneInstances={zoneInstances}
-            onZoneInstancesChange={setZoneInstances}
-            selectedZoneId={inspectorZoneId}
-            isAr={isAr}
-          />
+
+          <div className={`rooms-rail ${railOpen ? '' : 'closed'}`} dir={isAr ? 'rtl' : 'ltr'}>
+            <div className="rooms-rail-head">
+              <span className="rooms-rail-title">{isAr ? 'الغرف' : 'ROOMS'}</span>
+              <button
+                type="button"
+                className="rooms-rail-toggle"
+                aria-label={isAr ? 'إخفاء اللوحة' : 'Hide panel'}
+                onClick={() => { setRailOpen(false); setInspectorZoneId(null); }}
+              >
+                <PanelRightClose size={14} />
+              </button>
+            </div>
+            <div className="rooms-rail-body" ref={setRoomsRailEl} />
+          </div>
+
+          {!railOpen && (
+            <button
+              type="button"
+              className="rooms-rail-reopen"
+              aria-label={isAr ? 'إظهار لوحة الغرف' : 'Show rooms panel'}
+              onClick={() => setRailOpen(true)}
+            >
+              <PanelRightOpen size={15} />
+              <span>{isAr ? 'الغرف' : 'Rooms'}</span>
+            </button>
+          )}
+
+          {railOpen && (
+            <ZoneInspector
+              zoneInstances={zoneInstances}
+              onZoneInstancesChange={setZoneInstances}
+              selectedZoneId={inspectorZoneId}
+              nested
+              onClose={() => setInspectorZoneId(null)}
+              isAr={isAr}
+            />
+          )}
+
+          <style>{`
+            .rooms-rail {
+              position: fixed;
+              inset-block: 0;
+              inset-inline-end: 0;
+              width: 300px;
+              height: 100dvh;
+              z-index: 60;
+              background: #0D1220;
+              border-inline-start: 1px solid rgba(221, 167, 82, 0.16);
+              box-shadow: -12px 0 32px rgba(0, 0, 0, 0.35);
+              display: flex;
+              flex-direction: column;
+              overflow: hidden;
+              transition: transform 0.2s cubic-bezier(0.2, 0, 0, 1);
+            }
+            [dir="rtl"].rooms-rail {
+              box-shadow: 12px 0 32px rgba(0, 0, 0, 0.35);
+            }
+            .rooms-rail.closed { transform: translateX(100%); pointer-events: none; }
+            [dir="rtl"].rooms-rail.closed { transform: translateX(-100%); }
+
+            .rooms-rail-head {
+              display: flex;
+              align-items: center;
+              justify-content: space-between;
+              padding: 12px 14px;
+              border-block-end: 1px solid rgba(221, 167, 82, 0.16);
+              flex-shrink: 0;
+            }
+            .rooms-rail-title {
+              font-family: 'Plus Jakarta Sans', sans-serif;
+              font-size: 11px;
+              font-weight: 800;
+              letter-spacing: 0.12em;
+              color: rgba(237, 232, 221, 0.55);
+            }
+            .rooms-rail-toggle, .rooms-rail-reopen {
+              display: inline-flex;
+              align-items: center;
+              justify-content: center;
+              gap: 6px;
+              border-radius: 8px;
+              cursor: pointer;
+              background: transparent;
+              border: 1px solid rgba(221, 167, 82, 0.2);
+              color: rgba(237, 232, 221, 0.6);
+              transition: color 0.15s, border-color 0.15s;
+            }
+            .rooms-rail-toggle { width: 26px; height: 26px; }
+            .rooms-rail-toggle:hover, .rooms-rail-reopen:hover { color: #DDA752; border-color: #DDA752; }
+
+            .rooms-rail-reopen {
+              position: fixed;
+              inset-block-start: 50%;
+              inset-inline-end: 0;
+              transform: translateY(-50%);
+              z-index: 60;
+              padding: 10px 8px;
+              border-start-end-radius: 0;
+              border-end-end-radius: 0;
+              background: #0D1220;
+              font-family: 'Plus Jakarta Sans', sans-serif;
+              font-size: 11px;
+              font-weight: 800;
+              writing-mode: vertical-rl;
+            }
+
+            .rooms-rail-body {
+              flex: 1;
+              min-height: 0;
+              display: flex;
+              flex-direction: column;
+              overflow: hidden;
+            }
+            .rooms-rail-body > .fp-list-panel { flex: 1; min-height: 0; }
+
+            @media (max-width: 1023px) {
+              .rooms-rail {
+                position: static;
+                width: auto;
+                height: auto;
+                max-height: 520px;
+                margin-top: 16px;
+                border-radius: 14px;
+                border: 1px solid rgba(221, 167, 82, 0.16);
+                box-shadow: none;
+              }
+              .rooms-rail.closed { transform: none; pointer-events: auto; }
+              .rooms-rail-toggle, .rooms-rail-reopen { display: none; }
+            }
+          `}</style>
         </div>
       )}
 
