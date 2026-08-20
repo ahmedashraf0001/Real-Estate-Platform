@@ -18,8 +18,9 @@ import {
   Copy,
   Check,
 } from 'lucide-react';
-import { ZoneInstance, ZoneSpatialLayout } from '@/lib/layering';
+import { ZoneInstance, ZoneSpatialLayout, removeZones } from '@/lib/layering';
 import { ZONE_TEMPLATES, getTradesForZone, getAttributesForTrade } from '@/lib/layering/templates';
+import { ZONE_CATEGORY_BUCKETS, ZoneCategoryBucket } from '@/lib/layering/categories';
 import { computeMetricLayout } from '@/lib/layering/floorplanLayout';
 import { fallbackMetricFor, FALLBACK_ZONE_TITLES } from '@/lib/layering/zoneMetrics';
 
@@ -568,6 +569,7 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
   }, [onSelectedZoneIdChange, isControlledSelection]);
   const [addMenuOpen, setAddMenuOpen] = useState(false);
   const [addFilter, setAddFilter] = useState('');
+  const [groupAddOpen, setGroupAddOpen] = useState<string | null>(null);
   const [dismissedPresets, setDismissedPresets] = useState<Record<string, boolean>>({});
   const [extraFloors, setExtraFloors] = useState<string[]>([]);
   const [floorMenuOpen, setFloorMenuOpen] = useState(false);
@@ -771,6 +773,29 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
     return group ? group.zones : [];
   }, [floorGroups, activeFloorKey]);
 
+  const zoneGroups = useMemo(() => {
+    const buckets = ZONE_CATEGORY_BUCKETS[propertyType] ?? ZONE_CATEGORY_BUCKETS.apartment;
+    const used = new Set<string>();
+    const groups = buckets
+      .map(bucket => ({
+        bucket,
+        zones: activeZones.filter(z => {
+          if (used.has(z.id)) return false;
+          const hit = bucket.match(z.zone_template_id, z.instance_label);
+          if (hit) used.add(z.id);
+          return hit;
+        }),
+      }))
+      .filter(g => g.zones.length > 0);
+    const other = activeZones.filter(z => !used.has(z.id));
+    return { groups, other };
+  }, [activeZones, propertyType]);
+
+  const displayZones = useMemo(
+    () => [...zoneGroups.groups.flatMap(g => g.zones), ...zoneGroups.other],
+    [zoneGroups],
+  );
+
   const currentSelectedZone = useMemo(() => {
     if (!selectedZoneId) return null;
     return activeZones.find(z => z.id === selectedZoneId) || null;
@@ -918,6 +943,33 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
     showToast(isAr ? `تم حذف ${label}` : `${label} deleted`);
   };
 
+  const handleRemoveGroup = (bucket: ZoneCategoryBucket, zones: ZoneInstance[]) => {
+    const label = isAr ? bucket.ar : bucket.en;
+    const ok = window.confirm(isAr
+      ? `حذف كل غرف قسم "${label}" (${zones.length} غرفة)؟`
+      : `Delete all ${zones.length} room(s) in "${label}"?`);
+    if (!ok) return;
+    pushHistory(zoneInstances);
+    onZoneInstancesChange(removeZones(zoneInstances, zones.map(z => z.id)));
+    if (selectedZoneId && zones.some(z => z.id === selectedZoneId)) setSelectedZoneId(null);
+    showToast(isAr ? `تم حذف قسم ${label}` : `${label} section deleted`);
+  };
+
+  useEffect(() => {
+    if (!groupAddOpen) return;
+    const onDown = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest('.fp-group-addwrap')) setGroupAddOpen(null);
+    };
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setGroupAddOpen(null); };
+    document.addEventListener('mousedown', onDown);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onDown);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [groupAddOpen]);
+
   const freshIds = (zones: ZoneInstance[], levelLabel: string): ZoneInstance[] => {
     return zones.map((z, i) => ({
       ...z,
@@ -995,7 +1047,7 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
   };
 
   const handleReorder = (zoneId: string, targetIndex: number) => {
-    const zones = floorGroups[activeFloorKey]?.zones ?? [];
+    const zones = displayZones;
     const fromIndex = zones.findIndex(z => z.id === zoneId);
     if (fromIndex === -1) return;
     const clamped = Math.max(0, Math.min(zones.length - 1, targetIndex));
@@ -1018,7 +1070,7 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
 
   const handleRowDragStart = (zoneId: string, e: React.PointerEvent) => {
     e.preventDefault();
-    const zones = floorGroups[activeFloorKey]?.zones ?? [];
+    const zones = displayZones;
     const startIndex = zones.findIndex(z => z.id === zoneId);
     if (startIndex === -1) return;
     setDragState({ id: zoneId, overIndex: startIndex });
@@ -1060,10 +1112,10 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
   }, []);
 
   const moveSelection = (dir: -1 | 1) => {
-    if (activeZones.length === 0) return;
-    const idx = currentSelectedZone ? activeZones.findIndex(z => z.id === currentSelectedZone.id) : -1;
-    const nextIdx = Math.min(activeZones.length - 1, Math.max(0, idx + dir));
-    const next = activeZones[nextIdx];
+    if (displayZones.length === 0) return;
+    const idx = currentSelectedZone ? displayZones.findIndex(z => z.id === currentSelectedZone.id) : -1;
+    const nextIdx = Math.min(displayZones.length - 1, Math.max(0, idx + dir));
+    const next = displayZones[nextIdx];
     if (next) {
       selectZone(next.id, true);
       requestAnimationFrame(() => rowRefs.current[next.id]?.focus());
@@ -1546,34 +1598,105 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
                 <p className="fp-list-empty-desc">{isAr ? 'الغرف التي تضيفها تظهر هنا وعلى المخطط.' : 'Rooms you add appear here and on the plan.'}</p>
               </div>
             ) : (
-              activeZones.map((zone, idx) => {
-                const sp = spatialOf(zone);
-                const dragging = dragState?.id === zone.id;
-                const dropBefore = dragState && dragState.id !== zone.id && dragState.overIndex === idx;
+              (() => {
+                const renderRow = (zone: ZoneInstance) => {
+                  const idx = displayZones.findIndex(z => z.id === zone.id);
+                  const sp = spatialOf(zone);
+                  const dragging = dragState?.id === zone.id;
+                  const dropBefore = dragState && dragState.id !== zone.id && dragState.overIndex === idx;
+                  return (
+                    <div key={zone.id} className={`fp-row-wrap ${dragging ? 'dragging' : ''} ${dropBefore ? 'drop-before' : ''}`}>
+                      <RoomListRow
+                        room={zone}
+                        selected={currentSelectedZone?.id === zone.id}
+                        labelName={getZoneLabel(zone)}
+                        widthM={sp.w}
+                        lengthM={sp.l}
+                        sqm={sp.sqm}
+                        ceiling={sp.ceiling}
+                        warn={warnFor(zone.zone_template_id, sp.sqm)}
+                        isAr={isAr}
+                        rowRef={(el) => { rowRefs.current[zone.id] = el; }}
+                        onSelect={() => selectZone(zone.id)}
+                        onPatch={(updates) => handleUpdateSpatial(zone.id, updates)}
+                        onRename={(next) => handleRenameRoom(zone.id, next)}
+                        onDelete={() => handleRemoveRoom(zone.id, getZoneLabel(zone))}
+                        onArrow={(dir) => moveSelection(dir)}
+                        onReorder={(dir) => handleReorder(zone.id, idx + dir)}
+                        onDragStart={(e) => handleRowDragStart(zone.id, e)}
+                      />
+                    </div>
+                  );
+                };
+
                 return (
-                  <div key={zone.id} className={`fp-row-wrap ${dragging ? 'dragging' : ''} ${dropBefore ? 'drop-before' : ''}`}>
-                    <RoomListRow
-                      room={zone}
-                      selected={currentSelectedZone?.id === zone.id}
-                      labelName={getZoneLabel(zone)}
-                      widthM={sp.w}
-                      lengthM={sp.l}
-                      sqm={sp.sqm}
-                      ceiling={sp.ceiling}
-                      warn={warnFor(zone.zone_template_id, sp.sqm)}
-                      isAr={isAr}
-                      rowRef={(el) => { rowRefs.current[zone.id] = el; }}
-                      onSelect={() => selectZone(zone.id)}
-                      onPatch={(updates) => handleUpdateSpatial(zone.id, updates)}
-                      onRename={(next) => handleRenameRoom(zone.id, next)}
-                      onDelete={() => handleRemoveRoom(zone.id, getZoneLabel(zone))}
-                      onArrow={(dir) => moveSelection(dir)}
-                      onReorder={(dir) => handleReorder(zone.id, idx + dir)}
-                      onDragStart={(e) => handleRowDragStart(zone.id, e)}
-                    />
-                  </div>
+                  <>
+                    {zoneGroups.groups.map(({ bucket, zones }) => (
+                      <div key={bucket.key} className="fp-group">
+                        <div className="fp-group-head">
+                          <span className="fp-group-title">
+                            <span aria-hidden="true">{bucket.emoji}</span>
+                            <span>{isAr ? bucket.ar : bucket.en}</span>
+                          </span>
+                          <span className="fp-group-count">{zones.length}</span>
+                          <span className="fp-group-actions">
+                            <span className="fp-group-addwrap">
+                              <button
+                                type="button"
+                                className="fp-group-btn"
+                                aria-haspopup="menu"
+                                aria-expanded={groupAddOpen === bucket.key}
+                                aria-label={isAr ? `إضافة غرفة إلى ${bucket.ar}` : `Add room to ${bucket.en}`}
+                                onClick={() => setGroupAddOpen(o => (o === bucket.key ? null : bucket.key))}
+                              >
+                                <Plus size={12} />
+                              </button>
+                              {groupAddOpen === bucket.key && (
+                                <div className="fp-group-menu" role="menu">
+                                  {bucket.addTemplates.filter(tid => DEFAULT_DIMENSIONS[tid]).map(tid => (
+                                    <button
+                                      key={tid}
+                                      type="button"
+                                      role="menuitem"
+                                      className="fp-add-item"
+                                      onClick={() => { setGroupAddOpen(null); handleAddRoom(tid); }}
+                                    >
+                                      <Plus size={12} />
+                                      <span>{isAr ? DEFAULT_DIMENSIONS[tid].titleAr : DEFAULT_DIMENSIONS[tid].titleEn}</span>
+                                    </button>
+                                  ))}
+                                </div>
+                              )}
+                            </span>
+                            <button
+                              type="button"
+                              className="fp-group-btn danger"
+                              aria-label={isAr ? `حذف قسم ${bucket.ar}` : `Delete ${bucket.en} section`}
+                              onClick={() => handleRemoveGroup(bucket, zones)}
+                            >
+                              <Trash2 size={12} />
+                            </button>
+                          </span>
+                        </div>
+                        {zones.map(renderRow)}
+                      </div>
+                    ))}
+
+                    {zoneGroups.other.length > 0 && (
+                      <div className="fp-group">
+                        <div className="fp-group-head">
+                          <span className="fp-group-title">
+                            <span aria-hidden="true">📍</span>
+                            <span>{isAr ? 'مناطق أخرى' : 'Other Areas'}</span>
+                          </span>
+                          <span className="fp-group-count">{zoneGroups.other.length}</span>
+                        </div>
+                        {zoneGroups.other.map(renderRow)}
+                      </div>
+                    )}
+                  </>
                 );
-              })
+              })()
             )}
           </div>
         </div>
@@ -2075,6 +2198,97 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
           max-height: 620px;
           overflow-y: auto;
         }
+
+        .fp-group {
+          display: flex;
+          flex-direction: column;
+        }
+
+        .fp-group-head {
+          position: sticky;
+          top: 0;
+          z-index: 10;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          padding: 8px 12px;
+          background: var(--fp-canvas-bg);
+          border-block-end: 1px solid var(--fp-line);
+        }
+
+        [data-theme="light"] .fp-group-head {
+          background: #F8FAFC;
+        }
+
+        .fp-group-title {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          min-width: 0;
+          font-size: 0.7rem;
+          font-weight: 800;
+          letter-spacing: 0.06em;
+          text-transform: uppercase;
+          color: var(--fp-gold);
+          overflow: hidden;
+          white-space: nowrap;
+          text-overflow: ellipsis;
+        }
+
+        .fp-group-count {
+          font-family: monospace;
+          font-variant-numeric: tabular-nums;
+          font-size: 0.62rem;
+          font-weight: 800;
+          padding: 1px 7px;
+          border-radius: 9999px;
+          background: rgba(221,167,82,0.12);
+          color: var(--fp-gold);
+          flex-shrink: 0;
+        }
+
+        .fp-group-actions {
+          display: inline-flex;
+          align-items: center;
+          gap: 4px;
+          margin-inline-start: auto;
+          flex-shrink: 0;
+        }
+
+        .fp-group-addwrap { position: relative; display: inline-flex; }
+
+        .fp-group-btn {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          width: 24px;
+          height: 24px;
+          border-radius: 7px;
+          background: transparent;
+          border: 1px solid var(--fp-line);
+          color: var(--fp-text-dim);
+          cursor: pointer;
+          transition: color 0.15s cubic-bezier(0.2,0,0,1), border-color 0.15s cubic-bezier(0.2,0,0,1);
+        }
+
+        .fp-group-btn:hover { color: var(--fp-gold); border-color: var(--fp-gold); }
+        .fp-group-btn.danger:hover { color: var(--fp-danger); border-color: var(--fp-danger); }
+        .fp-group-btn:focus-visible { outline: none; box-shadow: var(--fp-focus-ring); }
+
+        .fp-group-menu {
+          position: absolute;
+          inset-block-start: calc(100% + 6px);
+          inset-inline-end: 0;
+          z-index: 40;
+          min-width: 200px;
+          border-radius: 12px;
+          background: var(--fp-surface);
+          border: 1px solid var(--fp-line);
+          box-shadow: 0 18px 48px rgba(0,0,0,0.45);
+          padding: 6px;
+        }
+
+        [data-theme="light"] .fp-group-menu { box-shadow: 0 18px 48px rgba(28,26,22,0.15); }
 
         .fp-list-empty { padding: 2.5rem 1.5rem; text-align: center; }
         .fp-list-empty-title { font-size: 0.9rem; font-weight: 700; color: var(--fp-text); margin: 0; }
