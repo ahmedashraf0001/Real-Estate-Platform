@@ -18,7 +18,7 @@ import {
   Copy,
   Check,
 } from 'lucide-react';
-import { ZoneInstance, ZoneSpatialLayout, removeZones } from '@/lib/layering';
+import { ZoneInstance, ZoneSpatialLayout, removeZones, applyGlobalState, getZoneBadge, GlobalFinishingState } from '@/lib/layering';
 import { ZONE_TEMPLATES, getTradesForZone, getAttributesForTrade } from '@/lib/layering/templates';
 import { ZONE_CATEGORY_BUCKETS, ZoneCategoryBucket } from '@/lib/layering/categories';
 import { computeMetricLayout } from '@/lib/layering/floorplanLayout';
@@ -254,6 +254,12 @@ function warnFor(templateId: string, sqm: number): WarnState {
   if (sqm > band[1]) return 'high';
   return 'ok';
 }
+
+const GLOBAL_STATE_OPTIONS: Array<{ id: GlobalFinishingState; emoji: string; en: string; ar: string }> = [
+  { id: 'red_brick', emoji: '🧱', en: 'Red Brick', ar: 'طوب أحمر' },
+  { id: 'semi_finished', emoji: '🏗️', en: 'Semi', ar: 'نص تشطيب' },
+  { id: 'fully_finished', emoji: '✨', en: 'Finished', ar: 'تشطيب كامل' },
+];
 
 const GROUND_KEY = '__ground__';
 
@@ -943,6 +949,24 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
     showToast(isAr ? `تم حذف ${label}` : `${label} deleted`);
   };
 
+  const dominantState = useMemo((): GlobalFinishingState | null => {
+    function leaves(list: ZoneInstance[]): ZoneInstance[] {
+      return list.flatMap(z => (z.children && z.children.length > 0 ? leaves(z.children) : [z]));
+    }
+    const badges = leaves(zoneInstances).map(getZoneBadge).filter(b => b !== 'unknown');
+    if (badges.length === 0) return null;
+    if (badges.every(b => b === badges[0]) && badges[0] !== 'mixed') return badges[0] as GlobalFinishingState;
+    return null;
+  }, [zoneInstances]);
+
+  const handleGlobalState = (state: GlobalFinishingState) => {
+    if (zoneInstances.length === 0) return;
+    pushHistory(zoneInstances);
+    onZoneInstancesChange(applyGlobalState(zoneInstances, state));
+    const opt = GLOBAL_STATE_OPTIONS.find(o => o.id === state);
+    showToast(isAr ? `تم تطبيق حالة ${opt?.ar}` : `${opt?.en === 'Semi' ? 'Semi-Finished' : opt?.en} state applied`);
+  };
+
   const handleRemoveGroup = (bucket: ZoneCategoryBucket, zones: ZoneInstance[]) => {
     const label = isAr ? bucket.ar : bucket.en;
     const ok = window.confirm(isAr
@@ -1536,6 +1560,26 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
         {(() => {
         const listPanel = (
         <div className={`fp-list-panel ${listPortalTarget ? 'in-rail' : ''}`} dir={isAr ? 'rtl' : 'ltr'}>
+          <div className="fp-global-state" role="group" aria-label={isAr ? 'حالة التشطيب الإجمالية' : 'Global finishing state'}>
+            <span className="fp-global-state-label">{isAr ? 'التشطيب' : 'FINISHING'}</span>
+            <div className="fp-global-state-btns">
+              {GLOBAL_STATE_OPTIONS.map(opt => (
+                <button
+                  key={opt.id}
+                  type="button"
+                  className={`fp-global-state-btn ${dominantState === opt.id ? 'active' : ''}`}
+                  title={isAr
+                    ? `تطبيق حالة ${opt.ar} على كل الغرف (يحتفظ بالخصائص والصور)`
+                    : `Apply ${opt.en === 'Semi' ? 'Semi-Finished' : opt.en} to all rooms (keeps attributes & photos)`}
+                  onClick={() => handleGlobalState(opt.id)}
+                >
+                  <span aria-hidden="true">{opt.emoji}</span>
+                  <span className="fp-global-state-txt">{isAr ? opt.ar : opt.en}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
           <div className="fp-add-wrap" ref={addMenuRef}>
             <button
               type="button"
@@ -2087,6 +2131,60 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
 
         .fp-list-panel.in-rail .fp-row {
           padding: 10px 12px;
+        }
+
+        .fp-global-state {
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+          padding: 10px 12px;
+          border-block-end: 1px solid var(--fp-line);
+        }
+
+        .fp-global-state-label {
+          font-size: 0.6rem;
+          font-weight: 800;
+          letter-spacing: 0.1em;
+          color: var(--fp-text-dim);
+        }
+
+        .fp-global-state-btns {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 6px;
+        }
+
+        .fp-global-state-btn {
+          display: inline-flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 2px;
+          padding: 6px 4px;
+          border-radius: 9px;
+          font-size: 0.6rem;
+          font-weight: 700;
+          cursor: pointer;
+          background: rgba(255,255,255,0.03);
+          border: 1px solid var(--fp-line);
+          color: var(--fp-text-dim);
+          transition: color 0.15s cubic-bezier(0.2,0,0,1), border-color 0.15s cubic-bezier(0.2,0,0,1), background-color 0.15s cubic-bezier(0.2,0,0,1);
+        }
+
+        .fp-global-state-btn:hover { color: var(--fp-text); border-color: rgba(221,167,82,0.45); }
+
+        .fp-global-state-btn.active {
+          background: rgba(221,167,82,0.12);
+          border-color: var(--fp-gold);
+          color: var(--fp-gold);
+        }
+
+        .fp-global-state-btn:focus-visible { outline: none; box-shadow: var(--fp-focus-ring); }
+
+        .fp-global-state-txt {
+          max-width: 100%;
+          overflow: hidden;
+          white-space: nowrap;
+          text-overflow: ellipsis;
         }
 
         .fp-add-wrap {
