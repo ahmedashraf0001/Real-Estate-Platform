@@ -650,6 +650,8 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
                     }
                   }}
                   className={`${styles.stepItem} ${isActive ? styles.stepItemActive : ''} ${isCompleted ? styles.stepItemCompleted : ''}`}
+                  aria-current={isActive ? 'step' : undefined}
+                  title={isAr ? st.title_ar : st.title_en}
                 >
                   <div className={styles.stepBadge}>
                     {isCompleted ? <Check size={15} strokeWidth={2.5} /> : st.num}

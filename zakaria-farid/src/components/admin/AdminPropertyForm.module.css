@@ -20,6 +20,7 @@
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
   width: 100%;
   box-sizing: border-box;
+  container-type: inline-size;
 }
 
 [data-theme="light"] .stepperContainer {
@@ -69,6 +70,11 @@
 
 .stepItem:hover {
   background: rgba(255, 255, 255, 0.05);
+}
+
+.stepItem:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(221, 167, 82, 0.55);
 }
 
 .stepBadge {
@@ -171,6 +177,37 @@
 
 .stepDividerActive {
   background: linear-gradient(90deg, #DDA752 0%, rgba(221, 167, 82, 0.3) 100%);
+}
+
+[dir="rtl"] .stepDividerActive {
+  background: linear-gradient(270deg, #DDA752 0%, rgba(221, 167, 82, 0.3) 100%);
+}
+
+/* ─── Stepper responsive degradation (container-width driven, so it also
+   adapts when the rooms rail shrinks the available area) ─── */
+@container (max-width: 860px) {
+  .stepNum { display: none; }
+  .stepItem { gap: 8px; padding: 5px 8px; }
+  .stepBadge { width: 28px; height: 28px; border-radius: 9px; font-size: 11px; }
+  .stepTitle { font-size: 12px; }
+  .stepDivider { margin: 0 4px; }
+}
+
+@container (max-width: 620px) {
+  .stepItem:not(.stepItemActive) .stepInfo { display: none; }
+  .stepItemActive .stepTitle {
+    max-width: 160px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .stepperHeader { gap: 4px; }
+}
+
+@container (max-width: 420px) {
+  .stepperContainer { padding: 12px 14px; }
+  .stepBadge { width: 26px; height: 26px; }
+  .stepItemActive .stepTitle { max-width: 110px; font-size: 11.5px; }
+  .stepDivider { min-width: 6px; margin: 0 2px; }
 }
 
 /* ─── Main Section Card ───────────────────────────────── */
