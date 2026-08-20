@@ -70,6 +70,8 @@ export const ZONE_TEMPLATES: ZoneTemplate[] = [
   { id: 'apt.corridor',     property_type_id: 'apartment', label_en: 'Internal Corridor',       label_ar: 'الردهة الداخلية',            category: 'transit',     sort_order: 8 },
   { id: 'apt.guest_bath',   property_type_id: 'apartment', label_en: 'Guest Toilet',            label_ar: 'حمام الضيوف',                category: 'wet_room',    is_optional: true, sort_order: 9 },
   { id: 'apt.laundry',      property_type_id: 'apartment', label_en: 'Laundry / Storage Room',  label_ar: 'غرفة الغسيل / المخزن',      category: 'transit',     is_optional: true, sort_order: 10 },
+  { id: 'apt.dressing',     property_type_id: 'apartment', label_en: 'Dressing Room',           label_ar: 'غرفة الدريسنج',              category: 'living_space', is_optional: true, sort_order: 11 },
+  { id: 'apt.level',        property_type_id: 'apartment', label_en: 'Level',                   label_ar: 'الطابق',                     category: 'transit',     is_container: true, is_optional: true, sort_order: 12 },
 
   // ── BUILDING (عمارة) ────────────────────────────────────────────────────────
   // Floor-level groups (containers)
@@ -77,11 +79,14 @@ export const ZONE_TEMPLATES: ZoneTemplate[] = [
   { id: 'bld.ground_lobby',    property_type_id: 'building', label_en: 'Ground Floor & Entrance',    label_ar: 'الدور الأرضي والمدخل',       category: 'infrastructure', sort_order: 2 },
   { id: 'bld.typical_floors',  property_type_id: 'building', label_en: 'Typical Floors & Stairwell', label_ar: 'الأدوار المتكررة والسلم',    category: 'infrastructure', sort_order: 3 },
   { id: 'bld.roof',            property_type_id: 'building', label_en: 'Roof & Water Tanks',         label_ar: 'السطح وخزانات المياه',       category: 'infrastructure', sort_order: 4 },
+  { id: 'bld.unit',            property_type_id: 'building', label_en: 'Residential Unit',           label_ar: 'وحدة سكنية',                 category: 'infrastructure', is_container: true, is_optional: true, sort_order: 5 },
 
   // ── GARAGE (جراج) ──────────────────────────────────────────────────────────
   { id: 'grg.ramp',  property_type_id: 'garage', label_en: 'Ramp & Gate',    label_ar: 'الرامب والبوابة',  category: 'garage_unit', sort_order: 1 },
   { id: 'grg.bay',   property_type_id: 'garage', label_en: 'Parking Bay',    label_ar: 'باكية الجراج',    category: 'garage_unit', sort_order: 2 },
   { id: 'grg.elec',  property_type_id: 'garage', label_en: 'Lighting & Electrical', label_ar: 'الإنارة والكهرباء', category: 'garage_unit', sort_order: 3 },
+  { id: 'grg.security_booth', property_type_id: 'garage', label_en: 'Security Booth', label_ar: 'كابينة الحراسة والأمن', category: 'garage_unit', is_optional: true, sort_order: 4 },
+  { id: 'grg.storage',        property_type_id: 'garage', label_en: 'Storage Annex',  label_ar: 'المخزن الملحق',        category: 'garage_unit', is_optional: true, sort_order: 5 },
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────
