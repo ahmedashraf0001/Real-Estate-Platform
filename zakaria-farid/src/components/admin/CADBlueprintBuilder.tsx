@@ -490,10 +490,17 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
   const [toast, setToast] = useState<{ label: string } | null>(null);
   const [historyVersion, setHistoryVersion] = useState(0);
   const [dragState, setDragState] = useState<{ id: string; overIndex: number } | null>(null);
-  const [canvasDrag, setCanvasDrag] = useState<{ id: string; x: number; y: number; overId: string | null } | null>(null);
+  const [canvasDrag, setCanvasDrag] = useState<{
+    id: string;
+    x: number;
+    y: number;
+    overId: string | null;
+    snap?: { x: number; y: number; w: number; h: number };
+  } | null>(null);
   const svgRef = useRef<SVGSVGElement>(null);
   const suppressCanvasClickRef = useRef(false);
   const previewSlotsRef = useRef<Array<{ zone: ZoneInstance; x: number; y: number; w: number; h: number }>>([]);
+  const metricLayoutRef = useRef<ReturnType<typeof computeMetricLayout> | null>(null);
 
   const rowRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
@@ -966,14 +973,91 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
     return { x: pt.x, y: pt.y };
   };
 
+  const materializePlacement = (moves: Record<string, { x: number; y: number; w: number; h: number }>) => {
+    function rec(list: ZoneInstance[]): ZoneInstance[] {
+      return list.map(z => {
+        const base = z.children && z.children.length > 0 ? { ...z, children: rec(z.children) } : z;
+        const m = moves[z.id];
+        if (!m) return base;
+        const shared = fallbackMetricFor(z.zone_template_id);
+        const d = starterDims(z.zone_template_id);
+        const cur: ZoneSpatialLayout = base.spatial || {
+          gridX: 0,
+          gridY: 0,
+          gridW: 6,
+          gridH: 4,
+          length_m: shared?.length_m ?? d.l,
+          width_m: shared?.width_m ?? d.w,
+          sqm: shared?.sqm ?? Math.round(d.l * d.w),
+          ceiling_height: shared?.ceiling ?? DEFAULT_DIMENSIONS[z.zone_template_id]?.ceiling ?? '3.0m Flush',
+        };
+        return {
+          ...base,
+          spatial: {
+            ...cur,
+            pos_x_m: round1(m.x),
+            pos_y_m: round1(m.y),
+            width_m: round1(m.w),
+            length_m: round1(m.h),
+            sqm: round1(m.w * m.h),
+          },
+        };
+      });
+    }
+    pushHistory(zoneInstances);
+    onZoneInstancesChange(rec(zoneInstances));
+  };
+
+  const SNAP_GRID_M = 0.5;
+  const SNAP_EDGE_M = 0.3;
+
+  const snappedMeterRect = (
+    zoneId: string,
+    pointer: { x: number; y: number },
+    slots: Array<{ zone: ZoneInstance; x: number; y: number; w: number; h: number }>,
+    layout: ReturnType<typeof computeMetricLayout>,
+  ) => {
+    const slot = slots.find(s => s.zone.id === zoneId);
+    if (!slot || layout.pxPerMeter <= 0) return null;
+    const k = layout.pxPerMeter;
+    const w = slot.w / k;
+    const h = slot.h / k;
+    let x = (pointer.x - layout.bounds.x) / k - w / 2;
+    let y = (pointer.y - layout.bounds.y) / k - h / 2;
+    x = Math.max(0, Math.round(x / SNAP_GRID_M) * SNAP_GRID_M);
+    y = Math.max(0, Math.round(y / SNAP_GRID_M) * SNAP_GRID_M);
+
+    let bestDx = SNAP_EDGE_M;
+    let bestDy = SNAP_EDGE_M;
+    for (const s of slots) {
+      if (s.zone.id === zoneId) continue;
+      const ox = (s.x - layout.bounds.x) / k;
+      const oy = (s.y - layout.bounds.y) / k;
+      const ow = s.w / k;
+      const oh = s.h / k;
+      for (const cand of [ox - w, ox + ow, ox]) {
+        const d = Math.abs(cand - x);
+        if (d < bestDx && cand >= 0) { bestDx = d; x = cand; }
+      }
+      for (const cand of [oy - h, oy + oh, oy]) {
+        const d = Math.abs(cand - y);
+        if (d < bestDy && cand >= 0) { bestDy = d; y = cand; }
+      }
+    }
+    return { x, y, w, h };
+  };
+
   const handleCanvasRoomPointerDown = (zoneId: string, e: React.PointerEvent) => {
     if (e.button !== 0 || displayZones.length < 2) return;
     const startClientX = e.clientX;
     const startClientY = e.clientY;
     let moved = false;
     let latestOverId: string | null = null;
+    let latestSnap: { x: number; y: number; w: number; h: number } | null = null;
 
     const slotsAtStart = previewSlotsRef.current;
+    const layoutAtStart = metricLayoutRef.current;
+    const placementMode = propertyType === 'apartment' && layoutAtStart != null;
 
     const onMove = (ev: PointerEvent) => {
       if (!moved) {
@@ -984,6 +1068,25 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
       }
       ev.preventDefault();
       const p = clientToSvg(ev.clientX, ev.clientY);
+      if (placementMode) {
+        latestSnap = snappedMeterRect(zoneId, p, slotsAtStart, layoutAtStart);
+        const k = layoutAtStart.pxPerMeter;
+        setCanvasDrag({
+          id: zoneId,
+          x: p.x,
+          y: p.y,
+          overId: null,
+          snap: latestSnap
+            ? {
+                x: layoutAtStart.bounds.x + latestSnap.x * k,
+                y: layoutAtStart.bounds.y + latestSnap.y * k,
+                w: latestSnap.w * k,
+                h: latestSnap.h * k,
+              }
+            : undefined,
+        });
+        return;
+      }
       const over = slotsAtStart.find(s =>
         s.zone.id !== zoneId &&
         p.x >= s.x && p.x <= s.x + s.w &&
@@ -1000,6 +1103,24 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
       if (!moved) return;
       suppressCanvasClickRef.current = true;
       window.setTimeout(() => { suppressCanvasClickRef.current = false; }, 0);
+      if (placementMode) {
+        if (!latestSnap) return;
+        const k = layoutAtStart.pxPerMeter;
+        const moves: Record<string, { x: number; y: number; w: number; h: number }> = {};
+        for (const s of slotsAtStart) {
+          moves[s.zone.id] = s.zone.id === zoneId
+            ? latestSnap
+            : {
+                x: (s.x - layoutAtStart.bounds.x) / k,
+                y: (s.y - layoutAtStart.bounds.y) / k,
+                w: s.w / k,
+                h: s.h / k,
+              };
+        }
+        materializePlacement(moves);
+        showToast(isAr ? 'تم تثبيت الغرفة' : 'Room placed');
+        return;
+      }
       if (latestOverId) {
         const targetIdx = displayZones.findIndex(z => z.id === latestOverId);
         if (targetIdx !== -1) handleReorder(zoneId, targetIdx);
@@ -1068,7 +1189,7 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
     return computeMetricLayout(
       activeZones.map(z => {
         const sp = spatialOf(z);
-        return { id: z.id, widthM: sp.w, lengthM: sp.l };
+        return { id: z.id, widthM: sp.w, lengthM: sp.l, xM: z.spatial?.pos_x_m, yM: z.spatial?.pos_y_m };
       }),
     );
   }, [activeZones, spatialOf]);
@@ -1092,6 +1213,7 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
   }, [activeZones, metricLayout, spatialOf, getZoneLabel]);
 
   previewSlotsRef.current = previewSlots;
+  metricLayoutRef.current = metricLayout;
 
   const allFlatZones = useMemo(() => {
     return Object.values(floorGroups).flatMap(g => g.zones);
@@ -1365,6 +1487,20 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
                     </g>
                   );
                 })}
+
+                {canvasDrag?.snap && (
+                  <rect
+                    x={canvasDrag.snap.x}
+                    y={canvasDrag.snap.y}
+                    width={canvasDrag.snap.w}
+                    height={canvasDrag.snap.h}
+                    fill="rgba(221, 167, 82, 0.08)"
+                    stroke="#DDA752"
+                    strokeWidth="1.5"
+                    strokeDasharray="6 4"
+                    pointerEvents="none"
+                  />
+                )}
 
                 {canvasDrag && (() => {
                   const src = previewSlots.find(s => s.zone.id === canvasDrag.id);
