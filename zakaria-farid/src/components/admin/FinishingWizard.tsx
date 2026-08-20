@@ -29,6 +29,7 @@ import {
   addTradeToZone,
   removeTradeFromZone,
 } from '@/lib/layering';
+import { FALLBACK_ZONE_TITLES } from '@/lib/layering/zoneMetrics';
 import styles from './FinishingWizard.module.css';
 
 
@@ -151,21 +152,24 @@ const CATEGORY_CONFIG_BY_TYPE: Record<PropertyTypeId, CategoryConfig[]> = {
       en: 'Bedrooms & Suites',
       ar: 'غرف النوم والأجنحة',
       emoji: '🛏️',
-      match: (id) => id.includes('bed') || id.includes('suite'),
+      match: (id) => id.includes('bed') || id.includes('suite') || id.includes('dressing'),
     },
     {
       key: 'baths_kitchen',
       en: 'Bathrooms & Kitchen',
       ar: 'الحمامات والمطبخ',
       emoji: '🛁',
-      match: (id) => id.includes('bath') || id.includes('kitchen') || id.includes('powder'),
+      match: (id) => id.includes('bath') || id.includes('kitchen') || id.includes('powder') || id.includes('toilet'),
     },
     {
       key: 'outdoor',
       en: 'Balconies & Outdoor',
       ar: 'البلكونات والمساحات الخارجية',
       emoji: '🌿',
-      match: (id) => id.includes('balcony') || id.includes('terrace') || id.includes('roof'),
+      match: (id) =>
+        id.includes('balcony') || id.includes('terrace') || id.includes('roof') ||
+        id.includes('exterior') || id.includes('garden') || id.includes('grounds') ||
+        id.includes('landscap') || id.includes('pool') || id.includes('fence') || id.startsWith('ext.'),
     },
   ],
   building: [
@@ -488,20 +492,26 @@ export default function FinishingWizard({
   }
 
   // ── Helpers ──────────────────────────────────────────────────────────────
+  function inferZoneCategory(id: string): ZoneTemplate['category'] {
+    const t = id.toLowerCase();
+    if (/bath|kitchen|powder|toilet|wc/.test(t)) return 'wet_room';
+    if (/balcony|terrace|exterior|garden|grounds|landscap|pool|fence|corridor|roof/.test(t)) return 'transit';
+    return 'living_space';
+  }
+
   function getZoneTemplate(id: string): ZoneTemplate | undefined {
     const found = ZONE_TEMPLATES.find(z => z.id === id);
     if (found) return found;
-    if (id.startsWith('custom.') || !found) {
-      return {
-        id,
-        property_type_id: propertyType,
-        label_en: 'Custom Zone',
-        label_ar: 'منطقة مخصصة',
-        category: 'living_space',
-        sort_order: 99,
-      };
-    }
-    return undefined;
+    const shared = FALLBACK_ZONE_TITLES[id];
+    const pretty = id.split('.').pop()?.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || 'Custom Zone';
+    return {
+      id,
+      property_type_id: propertyType,
+      label_en: shared?.en ?? pretty,
+      label_ar: shared?.ar ?? pretty,
+      category: inferZoneCategory(id),
+      sort_order: 99,
+    };
   }
 
   function isZoneModified(zone: ZoneInstance): boolean {
@@ -649,7 +659,8 @@ export default function FinishingWizard({
     if (!tpl) return null;
     const expanded = expandedZones.has(zoneInst.id);
     const label = zoneInst.instance_label ?? (isAr ? tpl.label_ar : tpl.label_en);
-    const labelSub = isAr ? tpl.label_en : tpl.label_ar;
+    const other = isAr ? tpl.label_en : tpl.label_ar;
+    const labelSub = other !== label ? other : '';
     const summary = getZoneStatusSummary(zoneInst);
 
     return (
@@ -998,7 +1009,9 @@ export default function FinishingWizard({
           </div>
 
           {(() => {
-            const hasContainers = zoneInstances.some(z => getZoneTemplate(z.zone_template_id)?.is_container);
+            const isContainer = (z: ZoneInstance) =>
+              Boolean(getZoneTemplate(z.zone_template_id)?.is_container || (z.children && z.children.length > 0));
+            const hasContainers = zoneInstances.some(isContainer);
 
             if (hasContainers) {
               return (
@@ -1006,7 +1019,7 @@ export default function FinishingWizard({
                   {zoneInstances.map(zoneInst => {
                     const tpl = getZoneTemplate(zoneInst.zone_template_id);
                     if (!tpl) return null;
-                    return tpl.is_container
+                    return isContainer(zoneInst)
                       ? renderContainerZone(zoneInst)
                       : renderLeafZone(zoneInst);
                   })}
