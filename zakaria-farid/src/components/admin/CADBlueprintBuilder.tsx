@@ -9,7 +9,6 @@ import {
   Minus,
   Trash2,
   ChevronDown,
-  Search,
   Pencil,
   Undo2,
   Redo2,
@@ -94,30 +93,6 @@ function starterDims(templateId: string): { l: number; w: number } {
   const d = DEFAULT_DIMENSIONS[templateId];
   return { l: d?.l ?? 4.0, w: d?.w ?? 3.0 };
 }
-
-// ── Add-room menu groups (spec §4.1) — apartment templates grouped ──────────
-interface AddGroup {
-  key: string;
-  labelEn: string;
-  labelAr: string;
-  templateIds: string[];
-}
-
-const ADD_GROUPS: Record<'apartment' | 'building' | 'garage', AddGroup[]> = {
-  apartment: [
-    { key: 'living',   labelEn: 'Living',   labelAr: 'المعيشة',   templateIds: ['apt.reception', 'apt.corridor'] },
-    { key: 'sleeping', labelEn: 'Sleeping', labelAr: 'غرف النوم', templateIds: ['apt.master_bed', 'apt.std_bed'] },
-    { key: 'wet',      labelEn: 'Wet',      labelAr: 'مناطق رطبة', templateIds: ['apt.master_bath', 'apt.main_bath', 'apt.guest_bath', 'apt.kitchen'] },
-    { key: 'service',  labelEn: 'Service',  labelAr: 'خدمات',     templateIds: ['apt.laundry'] },
-    { key: 'outdoor',  labelEn: 'Outdoor',  labelAr: 'خارجي',     templateIds: ['apt.balcony'] },
-  ],
-  building: [
-    { key: 'floors', labelEn: 'Floors & Zones', labelAr: 'الأدوار والمناطق', templateIds: ['bld.basement', 'bld.ground_lobby', 'bld.typical_floors', 'bld.roof'] },
-  ],
-  garage: [
-    { key: 'garage', labelEn: 'Garage Zones', labelAr: 'مناطق الجراج', templateIds: ['grg.ramp', 'grg.bay', 'grg.elec'] },
-  ],
-};
 
 // ── Starter presets (spec §2b, §4.6) ─────────────────────────────────────────
 interface StarterPreset {
@@ -575,8 +550,6 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
     onSelectedZoneIdChange?.(id);
     if (!isControlledSelection) setInternalSelectedZoneId(id);
   }, [onSelectedZoneIdChange, isControlledSelection]);
-  const [addMenuOpen, setAddMenuOpen] = useState(false);
-  const [addFilter, setAddFilter] = useState('');
   const [groupAddOpen, setGroupAddOpen] = useState<string | null>(null);
   const [customZoneName, setCustomZoneName] = useState('');
   const [dismissedPresets, setDismissedPresets] = useState<Record<string, boolean>>({});
@@ -593,7 +566,7 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
   const previewSlotsRef = useRef<Array<{ zone: ZoneInstance; x: number; y: number; w: number; h: number }>>([]);
 
   const rowRefs = useRef<Record<string, HTMLDivElement | null>>({});
-  const addMenuRef = useRef<HTMLDivElement>(null);
+
   const floorMenuRef = useRef<HTMLDivElement>(null);
   const rootRef = useRef<HTMLDivElement>(null);
   const historyRef = useRef<{ past: ZoneInstance[][]; future: ZoneInstance[][] }>({ past: [], future: [] });
@@ -681,20 +654,6 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
     setSelectedZoneId(null);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [propertyType]);
-
-  useEffect(() => {
-    if (!addMenuOpen) return;
-    const onDown = (e: MouseEvent) => {
-      if (addMenuRef.current && !addMenuRef.current.contains(e.target as Node)) setAddMenuOpen(false);
-    };
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setAddMenuOpen(false); };
-    document.addEventListener('mousedown', onDown);
-    document.addEventListener('keydown', onKey);
-    return () => {
-      document.removeEventListener('mousedown', onDown);
-      document.removeEventListener('keydown', onKey);
-    };
-  }, [addMenuOpen]);
 
   useEffect(() => {
     if (!floorMenuOpen) return;
@@ -789,17 +748,15 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
   const zoneGroups = useMemo(() => {
     const buckets = ZONE_CATEGORY_BUCKETS[propertyType] ?? ZONE_CATEGORY_BUCKETS.apartment;
     const used = new Set<string>();
-    const groups = buckets
-      .map(bucket => ({
-        bucket,
-        zones: activeZones.filter(z => {
-          if (used.has(z.id)) return false;
-          const hit = bucket.match(z.zone_template_id, z.instance_label);
-          if (hit) used.add(z.id);
-          return hit;
-        }),
-      }))
-      .filter(g => g.zones.length > 0);
+    const groups = buckets.map(bucket => ({
+      bucket,
+      zones: activeZones.filter(z => {
+        if (used.has(z.id)) return false;
+        const hit = bucket.match(z.zone_template_id, z.instance_label);
+        if (hit) used.add(z.id);
+        return hit;
+      }),
+    }));
     const other = activeZones.filter(z => !used.has(z.id));
     return { groups, other };
   }, [activeZones, propertyType]);
@@ -916,13 +873,12 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
     };
   }, [isAr]);
 
-  const handleAddRoom = (templateId: string, keepOpen = false) => {
+  const handleAddRoom = (templateId: string) => {
     const levelLabel = propertyType === 'apartment' ? activeFloorKey : undefined;
     const newZone = buildRoomInstance(templateId, zoneInstances.length, levelLabel);
     pushHistory(zoneInstances);
     onZoneInstancesChange([...zoneInstances, newZone]);
     setSelectedZoneId(newZone.id);
-    if (!keepOpen) setAddMenuOpen(false);
     requestAnimationFrame(() => {
       const el = rowRefs.current[newZone.id];
       el?.scrollIntoView({ block: 'nearest' });
@@ -1296,23 +1252,6 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
 
   const showPresets = activeZones.length === 0 && !dismissedPresets[activeFloorKey];
   const recommendedId = recommendedPresetId(propertyType, bedrooms);
-  const activeAddGroups = ADD_GROUPS[propertyType] || ADD_GROUPS.apartment;
-
-  const filteredGroups = useMemo(() => {
-    const q = normalizeNumeric(addFilter).trim().toLowerCase();
-    return activeAddGroups
-      .map(g => ({
-        ...g,
-        templateIds: g.templateIds.filter(tid => {
-          if (!q) return true;
-          const d = DEFAULT_DIMENSIONS[tid];
-          const en = (d?.titleEn || '').toLowerCase();
-          const ar = d?.titleAr || '';
-          return en.includes(q) || ar.includes(addFilter.trim());
-        }),
-      }))
-      .filter(g => g.templateIds.length > 0);
-  }, [activeAddGroups, addFilter]);
 
   return (
     <div className="fp-root" dir={isAr ? 'rtl' : 'ltr'} ref={rootRef}>
@@ -1712,69 +1651,8 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
             </div>
           </div>
 
-          <div className="fp-add-wrap" ref={addMenuRef}>
-            <button
-              type="button"
-              className="fp-add-btn"
-              aria-haspopup="menu"
-              aria-expanded={addMenuOpen}
-              onClick={() => setAddMenuOpen(o => !o)}
-            >
-              <Plus size={15} />
-              <span>{isAr ? 'إضافة غرفة' : 'Add room'}</span>
-              <ChevronDown size={14} className="fp-add-chevron" />
-            </button>
-
-            {addMenuOpen && (
-              <div className="fp-add-menu" role="menu">
-                <div className="fp-add-search">
-                  <Search size={13} />
-                  <input
-                    type="text"
-                    className="fp-add-search-input"
-                    placeholder={isAr ? 'بحث...' : 'Search...'}
-                    value={addFilter}
-                    onChange={(e) => setAddFilter(e.target.value)}
-                    autoFocus
-                  />
-                </div>
-                <div className="fp-add-groups">
-                  {filteredGroups.length === 0 && (
-                    <p className="fp-add-empty">{isAr ? 'لا نتائج' : 'No matches'}</p>
-                  )}
-                  {filteredGroups.map(g => (
-                    <div key={g.key} className="fp-add-group">
-                      <span className="fp-add-group-head">{isAr ? g.labelAr : g.labelEn}</span>
-                      {g.templateIds.map(tid => {
-                        const d = DEFAULT_DIMENSIONS[tid];
-                        return (
-                          <button
-                            key={tid}
-                            type="button"
-                            role="menuitem"
-                            className="fp-add-item"
-                            onClick={(e) => handleAddRoom(tid, e.shiftKey)}
-                          >
-                            <Plus size={12} />
-                            <span>{isAr ? d?.titleAr : d?.titleEn}</span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-
           <div className="fp-list-scroll" role="list">
-            {activeZones.length === 0 ? (
-              <div className="fp-list-empty">
-                <p className="fp-list-empty-title">{isAr ? 'لا توجد غرف بعد.' : 'No rooms yet.'}</p>
-                <p className="fp-list-empty-desc">{isAr ? 'الغرف التي تضيفها تظهر هنا وعلى المخطط.' : 'Rooms you add appear here and on the plan.'}</p>
-              </div>
-            ) : (
-              (() => {
+            {(() => {
                 const renderRow = (zone: ZoneInstance) => {
                   const idx = displayZones.findIndex(z => z.id === zone.id);
                   const sp = spatialOf(zone);
@@ -1844,14 +1722,16 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
                                 </div>
                               )}
                             </span>
-                            <button
-                              type="button"
-                              className="fp-group-btn danger"
-                              aria-label={isAr ? `حذف قسم ${bucket.ar}` : `Delete ${bucket.en} section`}
-                              onClick={() => handleRemoveGroup(bucket, zones)}
-                            >
-                              <Trash2 size={12} />
-                            </button>
+                            {zones.length > 0 && (
+                              <button
+                                type="button"
+                                className="fp-group-btn danger"
+                                aria-label={isAr ? `حذف قسم ${bucket.ar}` : `Delete ${bucket.en} section`}
+                                onClick={() => handleRemoveGroup(bucket, zones)}
+                              >
+                                <Trash2 size={12} />
+                              </button>
+                            )}
                           </span>
                         </div>
                         {zones.map(renderRow)}
@@ -1872,8 +1752,7 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
                     )}
                   </>
                 );
-              })()
-            )}
+              })()}
           </div>
 
           <div className="fp-custom-zone">
