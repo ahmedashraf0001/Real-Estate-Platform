@@ -1287,6 +1287,34 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
     return roomsTotalSqm > declaredArea ? ('over' as const) : ('under' as const);
   }, [declaredArea, roomsTotalSqm, allFlatZones.length]);
 
+  const unreachableRooms = useMemo(() => {
+    if (propertyType !== 'apartment' || previewSlots.length < 2) return [];
+    if (!activeZones.some(z => z.spatial?.pos_x_m != null && z.spatial?.pos_y_m != null)) return [];
+    const doors = new Set(
+      previewSlots
+        .filter(s => (s.zone.spatial?.openings ?? []).some(o => o.kind === 'door'))
+        .map(s => s.zone.id),
+    );
+    if (doors.size === 0) return [];
+
+    const TOUCH = 8;
+    const OVERLAP = 6;
+    const adjacent = (a: typeof previewSlots[number], b: typeof previewSlots[number]) => {
+      const xOverlap = Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x);
+      const yOverlap = Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y);
+      const touchV = Math.abs(a.y + a.h - b.y) < TOUCH || Math.abs(b.y + b.h - a.y) < TOUCH;
+      const touchH = Math.abs(a.x + a.w - b.x) < TOUCH || Math.abs(b.x + b.w - a.x) < TOUCH;
+      return (touchV && xOverlap > OVERLAP) || (touchH && yOverlap > OVERLAP);
+    };
+
+    return previewSlots
+      .filter(s => {
+        if (doors.has(s.zone.id)) return false;
+        return !previewSlots.some(o => o.zone.id !== s.zone.id && doors.has(o.zone.id) && adjacent(s, o));
+      })
+      .map(s => ({ id: s.zone.id, title: s.title }));
+  }, [propertyType, previewSlots, activeZones]);
+
   const handleReview = () => {
     let target: ZoneInstance | null = null;
     let worstGap = 0;
@@ -1732,6 +1760,30 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
                   {isAr ? 'مراجعة' : 'Review'}
                 </button>
               )}
+            </div>
+          )}
+
+          {unreachableRooms.length > 0 && (
+            <div className="fp-recon warn fp-unreachable">
+              <div className="fp-recon-text">
+                <AlertTriangle size={14} className="fp-recon-icon" />
+                <span>
+                  {isAr
+                    ? `${unreachableRooms.length === 1 ? 'غرفة بلا مدخل' : 'غرف بلا مدخل'}: `
+                    : `${unreachableRooms.length === 1 ? 'Unreachable room' : 'Unreachable rooms'} — no door access: `}
+                  <strong>{unreachableRooms.map(r => r.title).join(isAr ? '، ' : ', ')}</strong>
+                </span>
+              </div>
+              <button
+                type="button"
+                className="fp-recon-review"
+                onClick={() => {
+                  const first = unreachableRooms[0];
+                  if (first) selectZone(first.id, true);
+                }}
+              >
+                {isAr ? 'عرض' : 'Show'}
+              </button>
             </div>
           )}
         </div>
