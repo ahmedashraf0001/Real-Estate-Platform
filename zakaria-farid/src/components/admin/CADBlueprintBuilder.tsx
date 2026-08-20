@@ -29,6 +29,9 @@ interface CADBlueprintBuilderProps {
   bedrooms?: number;
   /** Declared property area from wizard Step 1 (m²) — powers the reconciliation bar. */
   declaredArea?: number;
+  /** Optional controlled selection — lets a parent host an external inspector panel. */
+  selectedZoneId?: string | null;
+  onSelectedZoneIdChange?: (id: string | null) => void;
   isAr?: boolean;
 }
 
@@ -546,11 +549,19 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
   propertyType = 'apartment',
   bedrooms = 2,
   declaredArea,
+  selectedZoneId: controlledSelectedZoneId,
+  onSelectedZoneIdChange,
   isAr = false,
 }) => {
   const defaultKey = propertyType === 'building' ? 'bld_ground' : propertyType === 'garage' ? 'grg_ramp' : GROUND_KEY;
   const [activeFloorKey, setActiveFloorKey] = useState<string>(defaultKey);
-  const [selectedZoneId, setSelectedZoneId] = useState<string | null>(null);
+  const [internalSelectedZoneId, setInternalSelectedZoneId] = useState<string | null>(null);
+  const isControlledSelection = controlledSelectedZoneId !== undefined;
+  const selectedZoneId = isControlledSelection ? controlledSelectedZoneId : internalSelectedZoneId;
+  const setSelectedZoneId = useCallback((id: string | null) => {
+    onSelectedZoneIdChange?.(id);
+    if (!isControlledSelection) setInternalSelectedZoneId(id);
+  }, [onSelectedZoneIdChange, isControlledSelection]);
   const [addMenuOpen, setAddMenuOpen] = useState(false);
   const [addFilter, setAddFilter] = useState('');
   const [dismissedPresets, setDismissedPresets] = useState<Record<string, boolean>>({});

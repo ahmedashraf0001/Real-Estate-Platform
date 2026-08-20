@@ -15,6 +15,7 @@ import { Loader2, Save, Trash2, Upload, X, Layers, Image as ImageIcon, ChevronRi
 import { createClient } from '@/lib/supabase/client';
 import FinishingWizard from './FinishingWizard';
 import CADBlueprintBuilder from './CADBlueprintBuilder';
+import ZoneInspector from './ZoneInspector';
 import DynamicMapPicker from './DynamicMapPicker';
 import styles from './AdminPropertyForm.module.css';
 import { saveProperty } from '@/app/actions/properties';
@@ -287,6 +288,7 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
   );
   const [amenityInput, setAmenityInput] = useState('');
 
+  const [inspectorZoneId, setInspectorZoneId] = useState<string | null>(null);
   const [zoneInstances, setZoneInstances] = useState<ZoneInstance[]>(() => {
     if (property?.spec_layers && Array.isArray(property.spec_layers) && property.spec_layers.length > 0) {
       if ('zone_template_id' in property.spec_layers[0]) {
@@ -902,17 +904,38 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
         </div>
       )}
 
-      {/* ─── STEP 3: Dedicated CAD Blueprint Studio ─── */}
+      {/* ─── STEP 3: Dedicated CAD Blueprint Studio + Zone Inspector ─── */}
       {currentStep === 3 && (
         <div className={styles.section}>
-          <CADBlueprintBuilder
-            zoneInstances={zoneInstances}
-            onZoneInstancesChange={setZoneInstances}
-            propertyType={selectedType}
-            bedrooms={bedroomsCount}
-            declaredArea={Number(watch('area_sqm')) || undefined}
-            isAr={isAr}
-          />
+          <div className="step3-merged">
+            <CADBlueprintBuilder
+              zoneInstances={zoneInstances}
+              onZoneInstancesChange={setZoneInstances}
+              propertyType={selectedType}
+              bedrooms={bedroomsCount}
+              declaredArea={Number(watch('area_sqm')) || undefined}
+              selectedZoneId={inspectorZoneId}
+              onSelectedZoneIdChange={setInspectorZoneId}
+              isAr={isAr}
+            />
+            <ZoneInspector
+              zoneInstances={zoneInstances}
+              onZoneInstancesChange={setZoneInstances}
+              selectedZoneId={inspectorZoneId}
+              isAr={isAr}
+            />
+          </div>
+          <style>{`
+            .step3-merged {
+              display: grid;
+              grid-template-columns: minmax(0, 1fr) 242px;
+              gap: 16px;
+              align-items: start;
+            }
+            @media (max-width: 1023px) {
+              .step3-merged { grid-template-columns: 1fr; }
+            }
+          `}</style>
         </div>
       )}
 
