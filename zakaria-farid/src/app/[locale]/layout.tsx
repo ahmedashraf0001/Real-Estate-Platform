@@ -8,6 +8,7 @@ import { ClientAppShell } from '@/components/ClientAppShell';
 import { Toaster } from 'sonner';
 import type { Metadata } from 'next';
 import Script from 'next/script';
+import { Agentation } from 'agentation';
 
 type Props = {
   children: React.ReactNode;
@@ -88,6 +89,7 @@ export default async function LocaleLayout({ children, params }: Props) {
             }}
           />
         </NextIntlClientProvider>
+        {process.env.NODE_ENV === 'development' && <Agentation />}
       </body>
     </html>
   );
