@@ -78,13 +78,14 @@ export const ZONE_TEMPLATES: ZoneTemplate[] = [
   { id: 'bld.basement',        property_type_id: 'building', label_en: 'Basement / Parking',         label_ar: 'البدروم / الجراج',           category: 'infrastructure', is_optional: true, sort_order: 1 },
   { id: 'bld.ground_lobby',    property_type_id: 'building', label_en: 'Ground Floor & Entrance',    label_ar: 'الدور الأرضي والمدخل',       category: 'infrastructure', sort_order: 2 },
   { id: 'bld.typical_floors',  property_type_id: 'building', label_en: 'Typical Floors & Stairwell', label_ar: 'الأدوار المتكررة والسلم',    category: 'infrastructure', sort_order: 3 },
-  { id: 'bld.roof',            property_type_id: 'building', label_en: 'Roof & Water Tanks',         label_ar: 'السطح وخزانات المياه',       category: 'infrastructure', sort_order: 4 },
+  { id: 'bld.roof',            property_type_id: 'building', label_en: 'Roof',                       label_ar: 'السطح',                      category: 'infrastructure', sort_order: 4 },
   { id: 'bld.unit',            property_type_id: 'building', label_en: 'Residential Unit',           label_ar: 'وحدة سكنية',                 category: 'infrastructure', is_container: true, is_optional: true, sort_order: 5 },
 
   // ── GARAGE (جراج) ──────────────────────────────────────────────────────────
-  { id: 'grg.ramp',  property_type_id: 'garage', label_en: 'Ramp & Gate',    label_ar: 'الرامب والبوابة',  category: 'garage_unit', sort_order: 1 },
-  { id: 'grg.bay',   property_type_id: 'garage', label_en: 'Parking Bay',    label_ar: 'باكية الجراج',    category: 'garage_unit', sort_order: 2 },
-  { id: 'grg.elec',  property_type_id: 'garage', label_en: 'Lighting & Electrical', label_ar: 'الإنارة والكهرباء', category: 'garage_unit', sort_order: 3 },
+  { id: 'grg.garage', property_type_id: 'garage', label_en: 'Garage', label_ar: 'الجراج', category: 'garage_unit', sort_order: 0 },
+  { id: 'grg.ramp',  property_type_id: 'garage', label_en: 'Ramp & Gate',    label_ar: 'الرامب والبوابة',  category: 'garage_unit', is_optional: true, sort_order: 1 },
+  { id: 'grg.bay',   property_type_id: 'garage', label_en: 'Parking Bay',    label_ar: 'باكية الجراج',    category: 'garage_unit', is_optional: true, sort_order: 2 },
+  { id: 'grg.elec',  property_type_id: 'garage', label_en: 'Lighting & Electrical', label_ar: 'الإنارة والكهرباء', category: 'garage_unit', is_optional: true, sort_order: 3 },
   { id: 'grg.security_booth', property_type_id: 'garage', label_en: 'Security Booth', label_ar: 'كابينة الحراسة والأمن', category: 'garage_unit', is_optional: true, sort_order: 4 },
   { id: 'grg.storage',        property_type_id: 'garage', label_en: 'Storage Annex',  label_ar: 'المخزن الملحق',        category: 'garage_unit', is_optional: true, sort_order: 5 },
 ];
@@ -230,6 +231,30 @@ export const TRADE_TEMPLATES: TradeTemplate[] = [
 
   // ── garage_unit (جراج مستقل) ───────────────────────────────────────────────
   {
+    id: 'grg.electrical',
+    categories: ['garage_unit'],
+    label_en: 'Electrical', label_ar: 'الكهرباء',
+    status_values: ['NotStarted', 'ConduitsOnly', 'Wired', 'Finished'],
+  },
+  {
+    id: 'grg.paint',
+    categories: ['garage_unit'],
+    label_en: 'Paint', label_ar: 'الدهانات',
+    status_values: ['NotStarted', 'Primed', 'Finished'],
+  },
+  {
+    id: 'grg.flooring',
+    categories: ['garage_unit'],
+    label_en: 'Flooring', label_ar: 'الأرضيات',
+    status_values: ['NotStarted', 'Screed', 'Epoxy', 'Finished'],
+  },
+  {
+    id: 'grg.door',
+    categories: ['garage_unit'],
+    label_en: 'Garage Door', label_ar: 'باب الجراج',
+    status_values: ['NotStarted', 'FrameFixed', 'Installed'],
+  },
+  {
     id: 'grg.ramp_construction',
     categories: ['garage_unit'],
     label_en: 'Ramp & Gate Construction', label_ar: 'إنشاء الرامب والبوابة',
@@ -340,11 +365,12 @@ export const ZONE_TRADE_OVERRIDES: Record<string, string[]> = {
   'bld.basement':        ['inf.ramp_access', 'inf.parking', 'inf.drainage'],
   'bld.ground_lobby':    ['inf.lobby', 'inf.security', 'inf.elevator'],
   'bld.typical_floors':  ['inf.common_finish'],
-  'bld.roof':            ['inf.insulation', 'inf.water_systems'],
+  'bld.roof':            ['inf.insulation'],
   // Garage zones
   'grg.ramp':            ['grg.ramp_construction'],
   'grg.bay':             ['grg.bay_finish'],
   'grg.elec':            ['trn.electrical'],
+  'grg.garage':          ['grg.electrical', 'grg.paint', 'grg.flooring', 'grg.door'],
 };
 
 // ─────────────────────────────────────────────────────────────────────────────

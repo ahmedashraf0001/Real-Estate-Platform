@@ -47,6 +47,7 @@ export const FALLBACK_ZONE_METRICS: Record<string, FallbackZoneMetric> = {
   'bld.typical_floors': { length_m: 20.0, width_m: 12.0, sqm: 240, ceiling: '3.0m Flush' },
   'bld.roof':           { length_m: 20.0, width_m: 12.0, sqm: 240, ceiling: 'Open Roof' },
 
+  'grg.garage':         { length_m: 12.0, width_m: 6.0, sqm: 72, ceiling: '2.8m Low' },
   'grg.ramp':           { length_m: 6.0, width_m: 3.5, sqm: 21, ceiling: '2.8m Low' },
   'grg.bay':            { length_m: 5.5, width_m: 2.5, sqm: 14, ceiling: '2.8m Low' },
   'grg.elec':           { length_m: 2.0, width_m: 1.5, sqm: 3,  ceiling: '2.8m Low' },

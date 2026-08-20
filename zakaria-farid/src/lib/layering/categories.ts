@@ -96,28 +96,12 @@ export const ZONE_CATEGORY_BUCKETS: Record<PropertyTypeId, ZoneCategoryBucket[]>
   ],
   garage: [
     {
-      key: 'access',
-      en: 'Access & Entry',
-      ar: 'المدخل والبوابة',
-      emoji: '🚪',
-      addTemplates: ['grg.ramp', 'grg.security_booth'],
-      match: (id, label) => /ramp|gate|entrance|security/.test(text(id, label)),
-    },
-    {
-      key: 'bays',
-      en: 'Parking Bays',
-      ar: 'أماكن الانتظار',
+      key: 'garage',
+      en: 'Garage',
+      ar: 'الجراج',
       emoji: '🚗',
-      addTemplates: ['grg.bay', 'grg.storage'],
-      match: (id, label) => /bay|parking|storage/.test(text(id, label)),
-    },
-    {
-      key: 'electrical',
-      en: 'Lighting & Electrical',
-      ar: 'الإنارة والكهرباء',
-      emoji: '💡',
-      addTemplates: ['grg.elec'],
-      match: (id, label) => /elec|light/.test(text(id, label)),
+      addTemplates: ['grg.garage', 'grg.ramp', 'grg.bay', 'grg.elec', 'grg.security_booth', 'grg.storage'],
+      match: (id, label) => /grg\.|garage|ramp|gate|bay|parking|elec|light|security|storage/.test(text(id, label)),
     },
   ],
 };

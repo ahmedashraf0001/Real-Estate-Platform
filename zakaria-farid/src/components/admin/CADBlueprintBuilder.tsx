@@ -59,6 +59,7 @@ const DEFAULT_DIMENSIONS: Record<string, { l: number; w: number; ceiling: string
   'bld.typical_floors': { l: 20.0, w: 12.0, ceiling: '3.0m Flush',   titleEn: 'Typical Floor (per floor)', titleAr: 'الدور المتكرر (لكل دور)' },
   'bld.roof':           { l: 20.0, w: 12.0, ceiling: 'Open Roof',    titleEn: 'Roof & Water Tanks',        titleAr: 'السطح وخزانات المياه' },
   // ── Garage (جراج) zones ─────────────────────────────────────────────────
+  'grg.garage': { l: 12.0, w: 6.0, ceiling: '2.8m Low', titleEn: 'Garage', titleAr: 'الجراج' },
   'grg.ramp':  { l: 6.0, w: 3.5, ceiling: '2.8m Low',  titleEn: 'Ramp & Gate',    titleAr: 'الرامب والبوابة' },
   'grg.bay':   { l: 5.5, w: 2.5, ceiling: '2.8m Low',  titleEn: 'Parking Bay',    titleAr: 'باكية الجراج' },
   'grg.elec':  { l: 2.0, w: 1.5, ceiling: '2.8m Low',  titleEn: 'Electrical Box', titleAr: 'لوحة الكهرباء' },
@@ -82,6 +83,7 @@ const STARTER_DEFAULTS: Record<string, { l: number; w: number }> = {
   'bld.ground_lobby':   { l: 20.0, w: 12.0 },
   'bld.typical_floors': { l: 20.0, w: 12.0 },
   'bld.roof':           { l: 20.0, w: 12.0 },
+  'grg.garage': { l: 12.0, w: 6.0 },
   'grg.ramp':  { l: 6.0, w: 3.5 },
   'grg.bay':   { l: 5.5, w: 2.5 },
   'grg.elec':  { l: 2.0, w: 1.5 },
@@ -197,17 +199,6 @@ function getFloorPlanSlots(count: number): RoomSlot[] {
   }
   return slots;
 }
-
-const CEILING_OPTIONS: Array<{ value: string; en: string; ar: string }> = [
-  { value: '2.6m Flush', en: '2.6 m', ar: '٢.٦ م' },
-  { value: '2.8m Flush', en: '2.8 m', ar: '٢.٨ م' },
-  { value: '3.0m Flush', en: '3.0 m', ar: '٣.٠ م' },
-  { value: '3.2m Flush', en: '3.2 m', ar: '٣.٢ م' },
-  { value: '3.5m Flush', en: '3.5 m', ar: '٣.٥ م' },
-  { value: '4.0m Flush', en: '4.0 m+', ar: '٤.٠ م+' },
-  { value: 'Open Sky', en: 'Open Sky', ar: 'مفتوح' },
-  { value: 'Open Roof', en: 'Open Roof', ar: 'سطح مفتوح' },
-];
 
 const WARN_BANDS: Record<string, [number, number]> = {
   'apt.reception':   [9, 80],
@@ -505,16 +496,23 @@ const RoomListRow: React.FC<RoomListRowProps> = ({
         <div className="fp-row-line3">
           <label className="fp-ceiling">
             <span className="fp-ceiling-label">{isAr ? 'الارتفاع' : 'Ceiling'}</span>
-            <select
+            <input
+              type="text"
               className="fp-ceiling-select"
-              value={ceiling}
-              onChange={(e) => onPatch({ ceiling_height: e.target.value })}
+              dir="auto"
+              defaultValue={ceiling}
+              placeholder={isAr ? 'مثال: 3.0m' : 'e.g. 3.0m Flush'}
+              maxLength={30}
+              onBlur={(e) => { if (e.target.value.trim() && e.target.value !== ceiling) onPatch({ ceiling_height: e.target.value.trim() }); }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  const v = (e.target as HTMLInputElement).value.trim();
+                  if (v && v !== ceiling) onPatch({ ceiling_height: v });
+                }
+              }}
               onClick={(e) => e.stopPropagation()}
-            >
-              {CEILING_OPTIONS.map((o) => (
-                <option key={o.value} value={o.value}>{isAr ? o.ar : o.en}</option>
-              ))}
-            </select>
+            />
           </label>
           <button
             type="button"
@@ -856,7 +854,7 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
     return {
       id: `zone-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
       zone_template_id: templateId,
-      instance_label: isAr ? defaults.titleAr : defaults.titleEn,
+      instance_label: defaults.titleEn,
       ...(levelLabel && levelLabel !== GROUND_KEY ? { level_label: levelLabel } : {}),
       sort_order: sortOrder,
       spatial: {

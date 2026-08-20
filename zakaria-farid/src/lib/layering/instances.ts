@@ -267,8 +267,8 @@ function buildLevelContainer(
 }
 
 function buildDuplexTree(globalState: GlobalFinishingState, bedroomCount: number): ZoneInstance[] {
-  const lowerLabel = 'الدور السفلي · Lower Floor';
-  const upperLabel = 'الدور العلوي · Upper Floor';
+  const lowerLabel = 'Lower Floor';
+  const upperLabel = 'Upper Floor';
 
   const lower = buildLevelContainer(
     lowerLabel,
@@ -285,7 +285,7 @@ function buildDuplexTree(globalState: GlobalFinishingState, bedroomCount: number
     const extraBeds = Math.max(0, bedroomCount - 1);
     for (let i = 0; i < extraBeds; i++) {
       upper.children.push(
-        buildZoneInstance(stdBedTpl, globalState, `${stdBedTpl.label_ar} ${i + 2}`, upperLabel, 2 + (upperChildIds.length + i + 1) * 0.01),
+        buildZoneInstance(stdBedTpl, globalState, `${stdBedTpl.label_en} ${i + 2}`, upperLabel, 2 + (upperChildIds.length + i + 1) * 0.01),
       );
     }
   }
@@ -307,7 +307,7 @@ function buildBuildingUnits(
   const result: ZoneInstance[] = [];
 
   for (let f = 1; f <= typicalFloors; f++) {
-    const levelLabel = `الدور ${f} · Floor ${f}`;
+    const levelLabel = `Floor ${f}`;
     for (let u = 0; u < units; u++) {
       const code = `${f}${UNIT_LETTERS[u]}`;
       const children = UNIT_CHILD_TEMPLATES
@@ -316,7 +316,7 @@ function buildBuildingUnits(
       result.push({
         id: uid(),
         zone_template_id: 'bld.unit',
-        instance_label: `شقة ${code} · Flat ${code}`,
+        instance_label: `Flat ${code}`,
         level_label: levelLabel,
         sort_order: baseSortOrder + (f - 1) * units + u,
         trades: [],
@@ -356,7 +356,7 @@ export function buildZoneInstances(
       // std_bed count driven by bedrooms field; balconies default to 1
       const count = zone.id.includes('std_bed') ? Math.max(0, bedroomCount - 1) : (zone.default_count ?? 1);
       for (let i = 0; i < count; i++) {
-        const label = count > 1 ? `${zone.label_ar} ${i + 1}` : zone.label_ar;
+        const label = count > 1 ? `${zone.label_en} ${i + 1}` : zone.label_en;
         result.push(buildZoneInstance(zone, globalState, label, undefined, zone.sort_order + i * 0.01));
       }
     } else if (zone.is_container) {
@@ -367,12 +367,12 @@ export function buildZoneInstances(
   }
 
   if (typeId === 'apartment' && options.subtype === 'ground') {
-    const garden = fromTemplateId('apt.balcony', globalState, 'الحديقة الخاصة · Private Garden', undefined, 20);
+    const garden = fromTemplateId('apt.balcony', globalState, 'Private Garden', undefined, 20);
     if (garden) result.push(garden);
   }
 
   if (typeId === 'apartment' && options.subtype === 'roof') {
-    const terrace = fromTemplateId('apt.balcony', globalState, 'تراس الروف المكشوف · Roof Terrace', undefined, 20);
+    const terrace = fromTemplateId('apt.balcony', globalState, 'Roof Terrace', undefined, 20);
     if (terrace) result.push(terrace);
   }
 
