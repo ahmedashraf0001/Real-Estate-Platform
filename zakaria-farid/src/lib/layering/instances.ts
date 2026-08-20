@@ -39,6 +39,14 @@ export interface TradeInstance {
   attributes: AttributeValue[];
 }
 
+export interface ZoneOpening {
+  id: string;
+  kind: 'door' | 'window';
+  edge: 'n' | 'e' | 's' | 'w';
+  offset_m: number;       // Distance from edge start (n/s: from left, e/w: from top)
+  width_m: number;        // Opening width along the edge
+}
+
 export interface ZoneSpatialLayout {
   gridX: number;          // Column offset (0-11 in a 12-col grid)
   gridY: number;          // Row offset (0-11 in a 12-row grid)
@@ -48,6 +56,9 @@ export interface ZoneSpatialLayout {
   width_m: number;        // Real-world width in meters (e.g. 10.2)
   sqm?: number;           // Computed or manual SQM
   ceiling_height?: string; // e.g. "4.4m Double-Height"
+  pos_x_m?: number;       // Composer position in meters from unit origin (left)
+  pos_y_m?: number;       // Composer position in meters from unit origin (top)
+  openings?: ZoneOpening[]; // Doors/windows attached to this room's edges
 }
 
 export interface ZoneInstance {
