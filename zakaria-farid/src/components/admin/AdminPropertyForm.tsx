@@ -19,6 +19,7 @@ import DynamicMapPicker from './DynamicMapPicker';
 import styles from './AdminPropertyForm.module.css';
 import { saveProperty } from '@/app/actions/properties';
 import { getZoneTemplateLabels, getTradeTemplateLabels, getZoneBadge, buildZoneInstances } from '@/lib/layering';
+import { FALLBACK_ZONE_TITLES, fallbackMetricFor } from '@/lib/layering/zoneMetrics';
 import type { ZoneInstance } from '@/lib/layering';
 import type { Property } from '@/lib/supabase/types';
 
@@ -93,6 +94,106 @@ const CATEGORY_BUCKETS: Array<{
     },
   },
 ];
+
+function prettifyTemplateId(id: string): string {
+  const last = id.split('.').pop() ?? id;
+  return last.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+}
+
+function resolveZoneName(zone: ZoneInstance, isAr: boolean): string {
+  if (zone.instance_label && zone.instance_label.trim()) return zone.instance_label;
+  const labels = getZoneTemplateLabels(zone.zone_template_id);
+  if (labels) return isAr ? labels.ar : labels.en;
+  const shared = FALLBACK_ZONE_TITLES[zone.zone_template_id];
+  if (shared) return isAr ? shared.ar : shared.en;
+  return prettifyTemplateId(zone.zone_template_id);
+}
+
+function resolveTradeName(tradeTemplateId: string, isAr: boolean): string {
+  const labels = getTradeTemplateLabels(tradeTemplateId);
+  if (labels) return isAr ? labels.ar : labels.en;
+  return prettifyTemplateId(tradeTemplateId);
+}
+
+function flattenLeafZones(zones: ZoneInstance[], parentLabel?: string): Array<{ zone: ZoneInstance; levelLabel?: string }> {
+  const result: Array<{ zone: ZoneInstance; levelLabel?: string }> = [];
+  for (const z of zones) {
+    if (z.children && z.children.length > 0) {
+      const label = z.instance_label || z.level_label || parentLabel;
+      result.push(...flattenLeafZones(z.children, label));
+    } else {
+      result.push({ zone: z, levelLabel: parentLabel ?? z.level_label ?? undefined });
+    }
+  }
+  return result;
+}
+
+function zoneSqm(zone: ZoneInstance): number {
+  if (zone.spatial?.sqm && zone.spatial.sqm > 0) return zone.spatial.sqm;
+  if (zone.spatial?.length_m && zone.spatial?.width_m) return Math.round(zone.spatial.length_m * zone.spatial.width_m);
+  return fallbackMetricFor(zone.zone_template_id)?.sqm ?? 0;
+}
+
+const REVIEW_BADGES: Record<string, { en: string; ar: string; color: string; bg: string; border: string }> = {
+  fully_finished: { en: 'Fully Finished ✨', ar: 'تشطيب كامل ✨', color: '#4CC38A', bg: 'rgba(76,195,138,0.12)', border: 'rgba(76,195,138,0.35)' },
+  semi_finished:  { en: 'Semi-Finished 🏗️', ar: 'نص تشطيب 🏗️', color: '#E0A63A', bg: 'rgba(224,166,58,0.12)', border: 'rgba(224,166,58,0.35)' },
+  red_brick:      { en: 'Red Brick 🧱', ar: 'طوب أحمر 🧱', color: '#E06D5B', bg: 'rgba(224,109,91,0.12)', border: 'rgba(224,109,91,0.35)' },
+  mixed:          { en: 'Mixed 🔄', ar: 'مختلط 🔄', color: '#9FB3D9', bg: 'rgba(159,179,217,0.12)', border: 'rgba(159,179,217,0.35)' },
+};
+
+function ReviewZoneCard({ zone, levelLabel, isAr }: { zone: ZoneInstance; levelLabel?: string; isAr: boolean }) {
+  const badge = getZoneBadge(zone);
+  const badgeCfg = REVIEW_BADGES[badge];
+  const sqm = zoneSqm(zone);
+
+  return (
+    <div style={{
+      background: 'rgba(255, 255, 255, 0.02)',
+      border: '1px solid rgba(221, 167, 82, 0.14)',
+      borderRadius: '10px',
+      padding: '10px 12px',
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '6px'
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+        <strong style={{ fontSize: '12px', color: '#FFFFFF', fontWeight: 700, fontFamily: "'Plus Jakarta Sans', sans-serif", minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {resolveZoneName(zone, isAr)}
+        </strong>
+        {badgeCfg && (
+          <span style={{ flexShrink: 0, fontSize: '9px', fontWeight: 800, color: badgeCfg.color, background: badgeCfg.bg, border: `1px solid ${badgeCfg.border}`, padding: '1px 6px', borderRadius: '6px' }}>
+            {isAr ? badgeCfg.ar : badgeCfg.en}
+          </span>
+        )}
+      </div>
+
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '10px', color: 'rgba(255,255,255,0.55)', fontFamily: 'monospace' }}>
+        {sqm > 0 && <span dir="ltr">{sqm} m²</span>}
+        {levelLabel && (
+          <span style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", padding: '1px 7px', borderRadius: '999px', background: 'rgba(221,167,82,0.10)', color: '#DDA752', fontWeight: 700 }}>
+            {levelLabel}
+          </span>
+        )}
+      </div>
+
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '2px' }}>
+        {zone.trades.map((t) => (
+          <span key={t.id} style={{
+            fontSize: '9px',
+            fontWeight: 600,
+            background: 'rgba(255, 255, 255, 0.04)',
+            border: '1px solid rgba(255, 255, 255, 0.1)',
+            borderRadius: '6px',
+            padding: '2px 6px',
+            color: 'rgba(255, 255, 255, 0.75)'
+          }}>
+            {resolveTradeName(t.trade_template_id, isAr)}: {formatStatus(t.status, isAr)}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 function generateSlug(text: string) {
   const base = text.trim().toLowerCase().replace(/\s+/g, '-').replace(/[^\p{L}\p{N}-]/gu, '');
@@ -379,36 +480,33 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
 
           <h3 style="font-size: 16px; font-weight: 800; color: #0A0E18; margin-bottom: 12px;">${isAr ? 'المواصفات المعمارية والتشطيبات' : 'Architectural & Finishing Specifications'}</h3>
 
-          ${CATEGORY_BUCKETS.map(cat => {
-            const catZones = zoneInstances.filter(z => cat.match(z.zone_template_id));
-            if (catZones.length === 0) return '';
-            return `
-              <div class="catCard">
-                <div class="catHeader">
-                  <span>${cat.emoji} ${isAr ? cat.ar : cat.en}</span>
-                  <span style="font-size: 11px; color: #64748B;">${catZones.length} ${isAr ? 'مناطق' : 'Zones'}</span>
-                </div>
-                <div class="zoneGrid">
-                  ${catZones.map(zone => {
-                    const labels = getZoneTemplateLabels(zone.zone_template_id);
-                    const humanName = zone.instance_label || (labels ? (isAr ? labels.ar : labels.en) : zone.zone_template_id);
-                    return `
+          ${(() => {
+            const leaves = flattenLeafZones(zoneInstances);
+            return CATEGORY_BUCKETS.map(cat => {
+              const catLeaves = leaves.filter(({ zone }) => cat.match(zone.zone_template_id, resolveZoneName(zone, false)));
+              if (catLeaves.length === 0) return '';
+              return `
+                <div class="catCard">
+                  <div class="catHeader">
+                    <span>${cat.emoji} ${isAr ? cat.ar : cat.en}</span>
+                    <span style="font-size: 11px; color: #64748B;">${catLeaves.length} ${isAr ? 'مناطق' : 'Zones'}</span>
+                  </div>
+                  <div class="zoneGrid">
+                    ${catLeaves.map(({ zone, levelLabel }) => `
                       <div class="zoneCard">
-                        <span class="zoneName">${humanName}</span>
+                        <span class="zoneName">${resolveZoneName(zone, isAr)}${levelLabel ? ` — ${levelLabel}` : ''}</span>
                         <div>
-                          ${zone.trades.map(t => {
-                            const tLabels = getTradeTemplateLabels(t.trade_template_id);
-                            const tradeName = tLabels ? (isAr ? tLabels.ar : tLabels.en) : t.trade_template_id.split('.')[1] || t.trade_template_id;
-                            return `<span class="tradeChip">${tradeName}: <strong>${formatStatus(t.status, isAr)}</strong></span>`;
-                          }).join('')}
+                          ${zone.trades.map(t =>
+                            `<span class="tradeChip">${resolveTradeName(t.trade_template_id, isAr)}: <strong>${formatStatus(t.status, isAr)}</strong></span>`
+                          ).join('')}
                         </div>
                       </div>
-                    `;
-                  }).join('')}
+                    `).join('')}
+                  </div>
                 </div>
-              </div>
-            `;
-          }).join('')}
+              `;
+            }).join('');
+          })()}
 
           <div class="footer">
             ${isAr ? 'تقرير رسمي صادر عن منصة المهندس زكريا فريد العقارية' : 'Official Property Specification Summary — Zakaria Farid Real Estate Platform'}
@@ -1001,18 +1099,39 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
             {/* Card 4: Layered Specs Overview */}
             <div className={styles.reviewBox}>
               <span className={styles.reviewBoxTitle}>{isAr ? 'طبقات المواصفات المعمارية' : 'Layered Specs Overview'}</span>
-              <span className={styles.reviewVal}>{zoneInstances.length} {isAr ? 'منطقة مسجلة' : 'Registered Zones'}</span>
-              <span className={styles.reviewSub}>
-                {zoneInstances.reduce((acc, z) => acc + z.trades.length + (z.children?.reduce((cAcc, cz) => cAcc + cz.trades.length, 0) || 0), 0)} {isAr ? 'بند تشطيب وتجهيز معرف' : 'Defined Trade Specs'}
-              </span>
+              {(() => {
+                const leaves = flattenLeafZones(zoneInstances);
+                const totalSqm = Math.round(leaves.reduce((acc, { zone }) => acc + zoneSqm(zone), 0));
+                const declared = Number(watch('area_sqm')) || 0;
+                const ratio = declared > 0 ? totalSqm / declared : 0;
+                const matches = declared > 0 && ratio >= 0.9 && ratio <= 1.1;
+                const tradeCount = leaves.reduce((acc, { zone }) => acc + zone.trades.length, 0);
+                return (
+                  <>
+                    <span className={styles.reviewVal}>
+                      {leaves.length} {isAr ? 'غرفة' : 'Rooms'} · <span dir="ltr">{totalSqm} m²</span>
+                    </span>
+                    <span className={styles.reviewSub}>
+                      {tradeCount} {isAr ? 'بند تشطيب معرف' : 'Trade Specs'}
+                      {declared > 0 && (
+                        <span style={{ color: matches ? '#4CC38A' : '#E0A63A', fontWeight: 700 }}>
+                          {' · '}{matches
+                            ? (isAr ? 'مطابق للمساحة المعلنة ✓' : 'Matches declared area ✓')
+                            : (isAr ? `المعلن ${declared} م² ⚠` : `Declared ${declared} m² ⚠`)}
+                        </span>
+                      )}
+                    </span>
+                  </>
+                );
+              })()}
             </div>
           </div>
 
           {/* Full Pre-Save Specs Breakdown Summary Box */}
           <div style={{
             marginTop: '16px',
-            background: '#F8FAFC',
-            border: '1px solid #E2E8F0',
+            background: 'rgba(255, 255, 255, 0.02)',
+            border: '1px solid rgba(221, 167, 82, 0.16)',
             borderRadius: '14px',
             padding: '18px',
             display: 'flex',
@@ -1027,18 +1146,19 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
                 </h3>
               </div>
               <span style={{ fontSize: '11px', fontWeight: 700, padding: '3px 10px', borderRadius: '10px', background: 'rgba(221, 167, 82, 0.15)', color: '#DDA752', border: '1px solid rgba(221, 167, 82, 0.3)' }}>
-                {zoneInstances.length} {isAr ? 'منطقة جاهزة' : 'Zones Configured'}
+                {flattenLeafZones(zoneInstances).length} {isAr ? 'منطقة جاهزة' : 'Zones Configured'}
               </span>
             </div>
 
             {/* Categorized Human-Readable Zones & Trades Breakdown */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               {(() => {
+                const leaves = flattenLeafZones(zoneInstances);
                 const categorizedSet = new Set<string>();
                 const renderedBuckets = CATEGORY_BUCKETS.map((cat) => {
-                  const catZones = zoneInstances.filter((z) => {
-                    const matched = cat.match(z.zone_template_id, z.instance_label);
-                    if (matched) categorizedSet.add(z.id);
+                  const catZones = leaves.filter(({ zone }) => {
+                    const matched = cat.match(zone.zone_template_id, resolveZoneName(zone, false));
+                    if (matched) categorizedSet.add(zone.id);
                     return matched;
                   });
                   if (catZones.length === 0) return null;
@@ -1066,60 +1186,15 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
                       </div>
 
                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '10px' }}>
-                        {catZones.map((zone) => {
-                          const labels = getZoneTemplateLabels(zone.zone_template_id);
-                          const humanName = zone.instance_label || (labels ? (isAr ? labels.ar : labels.en) : (zone.zone_template_id.startsWith('custom.') ? (isAr ? 'منطقة مخصصة' : 'Custom Zone') : zone.zone_template_id));
-                          const badge = getZoneBadge ? getZoneBadge(zone) : 'fully_finished';
-                          const badgeText = badge === 'fully_finished' ? (isAr ? 'تشطيب كامل ✨' : 'Fully Finished ✨') : badge === 'semi_finished' ? (isAr ? 'نص تشطيب 🏗️' : 'Semi-Finished 🏗️') : (isAr ? 'طوب أحمر 🧱' : 'Red Brick 🧱');
-
-                          return (
-                            <div key={zone.id} style={{
-                              background: 'rgba(255, 255, 255, 0.02)',
-                              border: '1px solid rgba(255, 255, 255, 0.06)',
-                              borderRadius: '10px',
-                              padding: '10px 12px',
-                              display: 'flex',
-                              flexDirection: 'column',
-                              gap: '6px'
-                            }}>
-                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                <strong style={{ fontSize: '12px', color: '#FFFFFF', fontWeight: 700, fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-                                  {humanName}
-                                </strong>
-                                <span style={{ fontSize: '9px', fontWeight: 800, color: '#10B981', background: 'rgba(16, 185, 129, 0.12)', border: '1px solid rgba(16, 185, 129, 0.3)', padding: '1px 6px', borderRadius: '6px' }}>
-                                  {badgeText}
-                                </span>
-                              </div>
-
-                              {/* Trade Chips */}
-                              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '2px' }}>
-                                {zone.trades.map((t) => {
-                                  const tLabels = getTradeTemplateLabels(t.trade_template_id);
-                                  const tradeName = tLabels ? (isAr ? tLabels.ar : tLabels.en) : t.trade_template_id.split('.')[1] || t.trade_template_id;
-                                  return (
-                                    <span key={t.id} style={{
-                                      fontSize: '9px',
-                                      fontWeight: 600,
-                                      background: 'rgba(255, 255, 255, 0.04)',
-                                      border: '1px solid rgba(255, 255, 255, 0.1)',
-                                      borderRadius: '6px',
-                                      padding: '2px 6px',
-                                      color: 'rgba(255, 255, 255, 0.75)'
-                                    }}>
-                                      {tradeName}: {formatStatus(t.status, isAr)}
-                                    </span>
-                                  );
-                                })}
-                              </div>
-                            </div>
-                          );
-                        })}
+                        {catZones.map(({ zone, levelLabel }) => (
+                          <ReviewZoneCard key={zone.id} zone={zone} levelLabel={levelLabel} isAr={isAr} />
+                        ))}
                       </div>
                     </div>
                   );
                 });
 
-                const uncategorizedZones = zoneInstances.filter((z) => !categorizedSet.has(z.id));
+                const uncategorizedZones = leaves.filter(({ zone }) => !categorizedSet.has(zone.id));
 
                 return (
                   <>
@@ -1147,53 +1222,9 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
                         </div>
 
                         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: "10px" }}>
-                          {uncategorizedZones.map((zone) => {
-                            const labels = getZoneTemplateLabels(zone.zone_template_id);
-                            const humanName = zone.instance_label || (labels ? (isAr ? labels.ar : labels.en) : (zone.zone_template_id.startsWith("custom.") ? (isAr ? "منطقة مخصصة" : "Custom Zone") : zone.zone_template_id));
-                            const badge = getZoneBadge ? getZoneBadge(zone) : "fully_finished";
-                            const badgeText = badge === "fully_finished" ? (isAr ? "تشطيب كامل ✨" : "Fully Finished ✨") : badge === "semi_finished" ? (isAr ? "نص تشطيب 🏗️" : "Semi-Finished 🏗️") : (isAr ? "طوب أحمر 🧱" : "Red Brick 🧱");
-
-                            return (
-                              <div key={zone.id} style={{
-                                background: "#F8FAFC",
-                                border: "1px solid #E2E8F0",
-                                borderRadius: "10px",
-                                padding: "10px 12px",
-                                display: "flex",
-                                flexDirection: "column",
-                                gap: "6px"
-                              }}>
-                                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                                  <strong style={{ fontSize: "12px", color: "#FFFFFF", fontWeight: 700, fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-                                    {humanName}
-                                  </strong>
-                                  <span style={{ fontSize: "9px", fontWeight: 800, color: "#059669", background: "#ECFDF5", border: "1px solid #A7F3D0", padding: "1px 6px", borderRadius: "6px" }}>
-                                    {badgeText}
-                                  </span>
-                                </div>
-
-                                <div style={{ display: "flex", flexWrap: "wrap", gap: "4px", marginTop: "2px" }}>
-                                  {zone.trades.map((t) => {
-                                    const tLabels = getTradeTemplateLabels(t.trade_template_id);
-                                    const tradeName = tLabels ? (isAr ? tLabels.ar : tLabels.en) : t.trade_template_id.split(".")[1] || t.trade_template_id;
-                                    return (
-                                      <span key={t.id} style={{
-                                        fontSize: "9px",
-                                        fontWeight: 600,
-                                        background: "#FFFFFF",
-                                        border: "1px solid #CBD5E1",
-                                        borderRadius: "6px",
-                                        padding: "2px 6px",
-                                        color: "#334155"
-                                      }}>
-                                        {tradeName}: {formatStatus(t.status, isAr)}
-                                      </span>
-                                    );
-                                  })}
-                                </div>
-                              </div>
-                            );
-                          })}
+                          {uncategorizedZones.map(({ zone, levelLabel }) => (
+                            <ReviewZoneCard key={zone.id} zone={zone} levelLabel={levelLabel} isAr={isAr} />
+                          ))}
                         </div>
                       </div>
                     )}
