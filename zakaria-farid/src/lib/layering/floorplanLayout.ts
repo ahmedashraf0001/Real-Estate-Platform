@@ -299,3 +299,41 @@ export function metricInputFromSpatial(
   }
   return { id, widthM: 4, lengthM: 3 };
 }
+
+export interface OpeningSegment {
+  id: string;
+  kind: 'door' | 'window';
+  edge: 'n' | 'e' | 's' | 'w';
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+}
+
+/**
+ * Convert a room's stored openings (meter offsets along an edge) into px line
+ * segments on its rendered rect — shared by the admin canvas and the public
+ * inspector so doors/windows draw identically on both.
+ */
+export function openingSegments(
+  rect: { x: number; y: number; w: number; h: number },
+  openings: Array<{ id: string; kind: 'door' | 'window'; edge: 'n' | 'e' | 's' | 'w'; offset_m: number; width_m: number }> | undefined,
+  pxPerMeter: number,
+): OpeningSegment[] {
+  if (!openings || openings.length === 0 || pxPerMeter <= 0) return [];
+  const out: OpeningSegment[] = [];
+  for (const o of openings) {
+    const horizontal = o.edge === 'n' || o.edge === 's';
+    const edgeLen = horizontal ? rect.w : rect.h;
+    const wPx = Math.min(o.width_m * pxPerMeter, edgeLen);
+    const offPx = Math.max(0, Math.min(o.offset_m * pxPerMeter, edgeLen - wPx));
+    if (horizontal) {
+      const y = o.edge === 'n' ? rect.y : rect.y + rect.h;
+      out.push({ id: o.id, kind: o.kind, edge: o.edge, x1: rect.x + offPx, y1: y, x2: rect.x + offPx + wPx, y2: y });
+    } else {
+      const x = o.edge === 'w' ? rect.x : rect.x + rect.w;
+      out.push({ id: o.id, kind: o.kind, edge: o.edge, x1: x, y1: rect.y + offPx, x2: x, y2: rect.y + offPx + wPx });
+    }
+  }
+  return out;
+}

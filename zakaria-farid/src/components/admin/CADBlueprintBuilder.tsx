@@ -15,12 +15,15 @@ import {
   GripVertical,
   Check,
   Sparkles,
+  MousePointer2,
+  DoorOpen,
+  RectangleHorizontal,
 } from 'lucide-react';
-import { ZoneInstance, ZoneSpatialLayout, removeZones, applyGlobalState, getZoneBadge, GlobalFinishingState, addCustomZone } from '@/lib/layering';
+import { ZoneInstance, ZoneSpatialLayout, ZoneOpening, removeZones, applyGlobalState, getZoneBadge, GlobalFinishingState, addCustomZone } from '@/lib/layering';
 import { SMART_ZONE_SUGGESTIONS } from '@/lib/layering/categories';
 import { ZONE_TEMPLATES, getTradesForZone, getAttributesForTrade } from '@/lib/layering/templates';
 import { ZONE_CATEGORY_BUCKETS, ZoneCategoryBucket } from '@/lib/layering/categories';
-import { computeMetricLayout } from '@/lib/layering/floorplanLayout';
+import { computeMetricLayout, openingSegments } from '@/lib/layering/floorplanLayout';
 import { fallbackMetricFor, FALLBACK_ZONE_TITLES } from '@/lib/layering/zoneMetrics';
 
 interface CADBlueprintBuilderProps {
@@ -497,6 +500,7 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
     overId: string | null;
     snap?: { x: number; y: number; w: number; h: number };
   } | null>(null);
+  const [composerTool, setComposerTool] = useState<'select' | 'door' | 'window'>('select');
   const svgRef = useRef<SVGSVGElement>(null);
   const suppressCanvasClickRef = useRef(false);
   const previewSlotsRef = useRef<Array<{ zone: ZoneInstance; x: number; y: number; w: number; h: number }>>([]);
@@ -1047,8 +1051,63 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
     return { x, y, w, h };
   };
 
+  const handleComposerClick = (zoneId: string, e: React.MouseEvent) => {
+    const layout = metricLayoutRef.current;
+    const slots = previewSlotsRef.current;
+    const slot = slots.find(s => s.zone.id === zoneId);
+    if (!layout || !slot || layout.pxPerMeter <= 0 || composerTool === 'select') return;
+    const kind = composerTool;
+    const p = clientToSvg(e.clientX, e.clientY);
+    const dN = Math.abs(p.y - slot.y);
+    const dS = Math.abs(slot.y + slot.h - p.y);
+    const dW = Math.abs(p.x - slot.x);
+    const dE = Math.abs(slot.x + slot.w - p.x);
+    const min = Math.min(dN, dS, dW, dE);
+    const edge: ZoneOpening['edge'] = min === dN ? 'n' : min === dS ? 's' : min === dW ? 'w' : 'e';
+    const k = layout.pxPerMeter;
+    const horizontal = edge === 'n' || edge === 's';
+    const edgeLenM = (horizontal ? slot.w : slot.h) / k;
+    const widthM = kind === 'door' ? 0.9 : 1.2;
+    if (edgeLenM < widthM) {
+      showToast(isAr ? 'الحائط أقصر من الفتحة' : 'Wall too short for this opening');
+      return;
+    }
+    if (kind === 'window') {
+      const probe = 6;
+      const midX = horizontal ? p.x : edge === 'w' ? slot.x - probe : slot.x + slot.w + probe;
+      const midY = horizontal ? (edge === 'n' ? slot.y - probe : slot.y + slot.h + probe) : p.y;
+      const interior = slots.some(s =>
+        s.zone.id !== zoneId &&
+        midX >= s.x - 2 && midX <= s.x + s.w + 2 &&
+        midY >= s.y - 2 && midY <= s.y + s.h + 2,
+      );
+      if (interior) {
+        showToast(isAr ? 'النوافذ على الحوائط الخارجية فقط' : 'Windows go on exterior walls only');
+        return;
+      }
+    }
+    const alongM = (horizontal ? p.x - slot.x : p.y - slot.y) / k - widthM / 2;
+    const offsetM = round1(Math.max(0, Math.min(Math.round(alongM * 10) / 10, edgeLenM - widthM)));
+    const opening: ZoneOpening = {
+      id: `open-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      kind,
+      edge,
+      offset_m: offsetM,
+      width_m: widthM,
+    };
+    handleUpdateSpatial(zoneId, { openings: [...(slot.zone.spatial?.openings ?? []), opening] });
+    showToast(kind === 'door' ? (isAr ? 'تمت إضافة باب' : 'Door added') : (isAr ? 'تمت إضافة نافذة' : 'Window added'));
+  };
+
+  const handleRemoveOpening = (zoneId: string, openingId: string) => {
+    const zone = activeZones.find(z => z.id === zoneId);
+    if (!zone) return;
+    handleUpdateSpatial(zoneId, { openings: (zone.spatial?.openings ?? []).filter(o => o.id !== openingId) });
+    showToast(isAr ? 'تمت إزالة الفتحة' : 'Opening removed');
+  };
+
   const handleCanvasRoomPointerDown = (zoneId: string, e: React.PointerEvent) => {
-    if (e.button !== 0 || displayZones.length < 2) return;
+    if (e.button !== 0 || displayZones.length < 2 || composerTool !== 'select') return;
     const startClientX = e.clientX;
     const startClientY = e.clientY;
     let moved = false;
@@ -1365,6 +1424,39 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
               <Layers size={13} />
               <span>{isAr ? 'معاينة حية للمخطط' : 'LIVE FLOOR PLAN PREVIEW'}</span>
             </span>
+            {(propertyType === 'apartment' || propertyType === 'garage') && previewSlots.length > 0 && (
+              <div className="fp-tools" role="group" aria-label={isAr ? 'أدوات المخطط' : 'Composer tools'}>
+                <button
+                  type="button"
+                  className={`fp-tool-btn ${composerTool === 'select' ? 'active' : ''}`}
+                  title={isAr ? 'تحديد وتحريك' : 'Select & move'}
+                  aria-pressed={composerTool === 'select'}
+                  onClick={() => setComposerTool('select')}
+                >
+                  <MousePointer2 size={13} />
+                </button>
+                <button
+                  type="button"
+                  className={`fp-tool-btn ${composerTool === 'door' ? 'active' : ''}`}
+                  title={isAr ? 'إضافة باب — انقر على حائط' : 'Add door — click a wall'}
+                  aria-pressed={composerTool === 'door'}
+                  onClick={() => setComposerTool(t => (t === 'door' ? 'select' : 'door'))}
+                >
+                  <DoorOpen size={13} />
+                </button>
+                {propertyType === 'apartment' && (
+                  <button
+                    type="button"
+                    className={`fp-tool-btn ${composerTool === 'window' ? 'active' : ''}`}
+                    title={isAr ? 'إضافة نافذة — حوائط خارجية فقط' : 'Add window — exterior walls only'}
+                    aria-pressed={composerTool === 'window'}
+                    onClick={() => setComposerTool(t => (t === 'window' ? 'select' : 'window'))}
+                  >
+                    <RectangleHorizontal size={13} />
+                  </button>
+                )}
+              </div>
+            )}
             {previewSlots.length > 0 && (
               <span className="fp-canvas-scale" dir="ltr">
                 1m ≈ {Math.max(1, Math.round(metricLayout.pxPerMeter))}px
@@ -1421,14 +1513,18 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
                       role="button"
                       tabIndex={0}
                       aria-label={`${s.title}, ${round1(s.sqm)} ${isAr ? 'متر مربع' : 'square meters'}`}
-                      onClick={() => {
+                      onClick={(e) => {
                         if (suppressCanvasClickRef.current) return;
+                        if (composerTool !== 'select') {
+                          handleComposerClick(s.zone.id, e);
+                          return;
+                        }
                         selectZone(s.zone.id, true);
                       }}
                       onPointerDown={(e) => handleCanvasRoomPointerDown(s.zone.id, e)}
                       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); selectZone(s.zone.id, true); } }}
                       opacity={isDragSource ? 0.35 : 1}
-                      style={{ cursor: canvasDrag ? 'grabbing' : 'grab', touchAction: 'none' }}
+                      style={{ cursor: composerTool !== 'select' ? 'crosshair' : canvasDrag ? 'grabbing' : 'grab', touchAction: 'none' }}
                     >
                       {isDropTarget && (
                         <rect
@@ -1487,6 +1583,49 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
                     </g>
                   );
                 })}
+
+                {previewSlots.flatMap(s =>
+                  openingSegments(s, s.zone.spatial?.openings, metricLayout.pxPerMeter).map(seg => {
+                    const dx = seg.x2 - seg.x1;
+                    const dy = seg.y2 - seg.y1;
+                    const len = Math.hypot(dx, dy);
+                    const nx = seg.edge === 'n' ? 0 : seg.edge === 's' ? 0 : seg.edge === 'w' ? 1 : -1;
+                    const ny = seg.edge === 'n' ? 1 : seg.edge === 's' ? -1 : 0;
+                    const leafX = seg.x1 + nx * len;
+                    const leafY = seg.y1 + ny * len;
+                    const sweep = dx * ny - dy * nx > 0 ? 0 : 1;
+                    return (
+                      <g
+                        key={seg.id}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (composerTool !== 'select') handleRemoveOpening(s.zone.id, seg.id);
+                        }}
+                        style={{ cursor: composerTool !== 'select' ? 'pointer' : 'default' }}
+                      >
+                        <title>
+                          {seg.kind === 'door'
+                            ? (isAr ? 'باب — انقر للإزالة في وضع الأدوات' : 'Door — click to remove in tool mode')
+                            : (isAr ? 'نافذة — انقر للإزالة في وضع الأدوات' : 'Window — click to remove in tool mode')}
+                        </title>
+                        <line x1={seg.x1} y1={seg.y1} x2={seg.x2} y2={seg.y2} strokeWidth={10} stroke="transparent" />
+                        {seg.kind === 'door' ? (
+                          <>
+                            <line x1={seg.x1} y1={seg.y1} x2={seg.x2} y2={seg.y2} strokeWidth={4} style={{ stroke: 'var(--fp-canvas-bg, #0A0E1A)' }} />
+                            <line x1={seg.x1} y1={seg.y1} x2={leafX} y2={leafY} stroke="#DDA752" strokeWidth={1.5} />
+                            <path d={`M ${leafX} ${leafY} A ${len} ${len} 0 0 ${sweep} ${seg.x2} ${seg.y2}`} fill="none" stroke="rgba(221,167,82,0.55)" strokeWidth={1} strokeDasharray="3 2" />
+                          </>
+                        ) : (
+                          <>
+                            <line x1={seg.x1} y1={seg.y1} x2={seg.x2} y2={seg.y2} strokeWidth={5} style={{ stroke: 'var(--fp-canvas-bg, #0A0E1A)' }} />
+                            <line x1={seg.x1} y1={seg.y1} x2={seg.x2} y2={seg.y2} stroke="#7FB4D8" strokeWidth={3} />
+                            <line x1={seg.x1} y1={seg.y1} x2={seg.x2} y2={seg.y2} strokeWidth={1} style={{ stroke: 'var(--fp-canvas-bg, #0A0E1A)' }} />
+                          </>
+                        )}
+                      </g>
+                    );
+                  }),
+                )}
 
                 {canvasDrag?.snap && (
                   <rect
@@ -3004,6 +3143,38 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
           font-weight: 700;
           letter-spacing: 0.05em;
           color: var(--fp-text-dim);
+        }
+
+        .fp-tools {
+          display: flex;
+          align-items: center;
+          gap: 4px;
+          padding: 3px;
+          border-radius: 9px;
+          border: 1px solid var(--fp-line);
+          background: rgba(221,167,82,0.05);
+        }
+
+        .fp-tool-btn {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          width: 26px;
+          height: 24px;
+          border-radius: 6px;
+          border: 1px solid transparent;
+          background: transparent;
+          color: var(--fp-text-dim);
+          cursor: pointer;
+          transition: color 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+        }
+
+        .fp-tool-btn:hover { color: var(--fp-gold); }
+
+        .fp-tool-btn.active {
+          color: var(--fp-gold);
+          background: rgba(221,167,82,0.14);
+          border-color: var(--fp-line);
         }
 
         .fp-floor-rename {
