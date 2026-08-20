@@ -587,6 +587,10 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
   const [toast, setToast] = useState<{ label: string } | null>(null);
   const [historyVersion, setHistoryVersion] = useState(0);
   const [dragState, setDragState] = useState<{ id: string; overIndex: number } | null>(null);
+  const [canvasDrag, setCanvasDrag] = useState<{ id: string; x: number; y: number; overId: string | null } | null>(null);
+  const svgRef = useRef<SVGSVGElement>(null);
+  const suppressCanvasClickRef = useRef(false);
+  const previewSlotsRef = useRef<Array<{ zone: ZoneInstance; x: number; y: number; w: number; h: number }>>([]);
 
   const rowRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const addMenuRef = useRef<HTMLDivElement>(null);
@@ -1113,6 +1117,59 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
     onZoneInstancesChange(rewrite(zoneInstances));
   };
 
+  const clientToSvg = (clientX: number, clientY: number) => {
+    const svg = svgRef.current;
+    if (!svg) return { x: 0, y: 0 };
+    const ctm = svg.getScreenCTM();
+    if (!ctm) return { x: 0, y: 0 };
+    const pt = new DOMPoint(clientX, clientY).matrixTransform(ctm.inverse());
+    return { x: pt.x, y: pt.y };
+  };
+
+  const handleCanvasRoomPointerDown = (zoneId: string, e: React.PointerEvent) => {
+    if (e.button !== 0 || displayZones.length < 2) return;
+    const startClientX = e.clientX;
+    const startClientY = e.clientY;
+    let moved = false;
+    let latestOverId: string | null = null;
+
+    const slotsAtStart = previewSlotsRef.current;
+
+    const onMove = (ev: PointerEvent) => {
+      if (!moved) {
+        const dist = Math.hypot(ev.clientX - startClientX, ev.clientY - startClientY);
+        if (dist < 5) return;
+        moved = true;
+        setSelectedZoneId(zoneId);
+      }
+      ev.preventDefault();
+      const p = clientToSvg(ev.clientX, ev.clientY);
+      const over = slotsAtStart.find(s =>
+        s.zone.id !== zoneId &&
+        p.x >= s.x && p.x <= s.x + s.w &&
+        p.y >= s.y && p.y <= s.y + s.h,
+      );
+      latestOverId = over?.zone.id ?? null;
+      setCanvasDrag({ id: zoneId, x: p.x, y: p.y, overId: latestOverId });
+    };
+
+    const onUp = () => {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+      setCanvasDrag(null);
+      if (!moved) return;
+      suppressCanvasClickRef.current = true;
+      window.setTimeout(() => { suppressCanvasClickRef.current = false; }, 0);
+      if (latestOverId) {
+        const targetIdx = displayZones.findIndex(z => z.id === latestOverId);
+        if (targetIdx !== -1) handleReorder(zoneId, targetIdx);
+      }
+    };
+
+    window.addEventListener('pointermove', onMove, { passive: false });
+    window.addEventListener('pointerup', onUp);
+  };
+
   const handleRowDragStart = (zoneId: string, e: React.PointerEvent) => {
     e.preventDefault();
     const zones = displayZones;
@@ -1193,6 +1250,8 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
       };
     });
   }, [activeZones, metricLayout, spatialOf, getZoneLabel]);
+
+  previewSlotsRef.current = previewSlots;
 
   const allFlatZones = useMemo(() => {
     return Object.values(floorGroups).flatMap(g => g.zones);
@@ -1397,7 +1456,7 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
 
           <div className="fp-canvas-body">
             {previewSlots.length > 0 ? (
-              <svg viewBox="0 0 680 440" className="fp-canvas-svg" style={{ direction: 'ltr' }} xmlns="http://www.w3.org/2000/svg">
+              <svg ref={svgRef} viewBox="0 0 680 440" className="fp-canvas-svg" style={{ direction: 'ltr' }} xmlns="http://www.w3.org/2000/svg">
                 <defs>
                   <pattern id="adminCadGrid" width="10" height="10" patternUnits="userSpaceOnUse">
                     <path d="M 10 0 L 0 0 0 10" fill="none" stroke="rgba(221, 167, 82, 0.08)" strokeWidth="0.4" />
@@ -1433,6 +1492,8 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
                 {previewSlots.map((s, idx) => {
                   const isSelected = currentSelectedZone?.id === s.zone.id;
                   const isWarn = s.warn !== 'ok';
+                  const isDragSource = canvasDrag?.id === s.zone.id;
+                  const isDropTarget = canvasDrag != null && canvasDrag.overId === s.zone.id;
                   const full = s.w >= 90 && s.h >= 52;
                   const medium = !full && s.w >= 56 && s.h >= 30;
                   const tiny = !full && !medium;
@@ -1442,10 +1503,27 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
                       role="button"
                       tabIndex={0}
                       aria-label={`${s.title}, ${round1(s.sqm)} ${isAr ? 'متر مربع' : 'square meters'}`}
-                      onClick={() => selectZone(s.zone.id, true)}
+                      onClick={() => {
+                        if (suppressCanvasClickRef.current) return;
+                        selectZone(s.zone.id, true);
+                      }}
+                      onPointerDown={(e) => handleCanvasRoomPointerDown(s.zone.id, e)}
                       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); selectZone(s.zone.id, true); } }}
-                      style={{ cursor: 'pointer' }}
+                      opacity={isDragSource ? 0.35 : 1}
+                      style={{ cursor: canvasDrag ? 'grabbing' : 'grab', touchAction: 'none' }}
                     >
+                      {isDropTarget && (
+                        <rect
+                          x={s.x}
+                          y={s.y}
+                          width={s.w}
+                          height={s.h}
+                          fill="rgba(221, 167, 82, 0.12)"
+                          stroke="#DDA752"
+                          strokeWidth="2"
+                          strokeDasharray="6 4"
+                        />
+                      )}
                       <title>{`${s.title} — ${s.dims} m — ${round1(s.sqm)} m²`}</title>
                       <rect
                         x={s.x + 2}
@@ -1491,6 +1569,39 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
                     </g>
                   );
                 })}
+
+                {canvasDrag && (() => {
+                  const src = previewSlots.find(s => s.zone.id === canvasDrag.id);
+                  if (!src) return null;
+                  const gw = Math.min(src.w, 140);
+                  const gh = Math.min(src.h, 90);
+                  return (
+                    <g opacity={0.9} pointerEvents="none">
+                      <rect
+                        x={canvasDrag.x - gw / 2}
+                        y={canvasDrag.y - gh / 2}
+                        width={gw}
+                        height={gh}
+                        rx={4}
+                        fill="rgba(221, 167, 82, 0.18)"
+                        stroke="#DDA752"
+                        strokeWidth="1.5"
+                        filter="url(#adminGoldGlow)"
+                      />
+                      <text
+                        x={canvasDrag.x}
+                        y={canvasDrag.y + 3}
+                        fontSize="9"
+                        fill="#FFFFFF"
+                        textAnchor="middle"
+                        fontWeight="700"
+                        fontFamily="'Plus Jakarta Sans', sans-serif"
+                      >
+                        {src.title.length > 22 ? `${src.title.slice(0, 21)}…` : src.title}
+                      </text>
+                    </g>
+                  );
+                })()}
               </svg>
             ) : showPresets ? (
               <div className="fp-presets">
