@@ -105,7 +105,7 @@ export const AboutView: React.FC<AboutViewProps> = ({
       <section className="about-hero-section">
         <div className="about-hero-bg">
           <img 
-            src="/assets/hero-bg.png" 
+            src="/assets/hero-bg.webp" 
             alt="About Zakaria Farid" 
             className="about-hero-img"
           />
