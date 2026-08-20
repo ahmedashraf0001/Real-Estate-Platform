@@ -973,7 +973,7 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
           {!railOpen && (
             <button
               type="button"
-              className="rooms-rail-reopen"
+              className={`rooms-rail-reopen ${isAr ? 'rtl' : ''}`}
               aria-label={isAr ? 'إظهار لوحة الغرف' : 'Show rooms panel'}
               onClick={() => setRailOpen(true)}
             >
@@ -1047,18 +1047,28 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
 
             .rooms-rail-reopen {
               position: fixed;
-              inset-block-start: 50%;
-              inset-inline-end: 0;
+              top: 50%;
+              right: 0;
               transform: translateY(-50%);
-              z-index: 60;
-              padding: 10px 8px;
-              border-start-end-radius: 0;
-              border-end-end-radius: 0;
+              z-index: 90;
+              flex-direction: column;
+              padding: 12px 7px;
+              border-top-right-radius: 0;
+              border-bottom-right-radius: 0;
               background: #0D1220;
+              box-shadow: -8px 0 24px rgba(0, 0, 0, 0.4);
               font-family: 'Plus Jakarta Sans', sans-serif;
               font-size: 11px;
               font-weight: 800;
-              writing-mode: vertical-rl;
+            }
+            .rooms-rail-reopen > span { writing-mode: vertical-rl; }
+            .rooms-rail-reopen.rtl {
+              right: auto;
+              left: 0;
+              border-radius: 8px;
+              border-top-left-radius: 0;
+              border-bottom-left-radius: 0;
+              box-shadow: 8px 0 24px rgba(0, 0, 0, 0.4);
             }
 
             .rooms-rail-body {
