@@ -299,6 +299,13 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
     property?.property_amenities?.map((a) => a.amenity_en) ?? []
   );
   const [amenityInput, setAmenityInput] = useState('');
+  const [viewTags, setViewTags] = useState<string[]>(
+    (property?.view ?? '').split(/[,،]/).map(s => s.trim()).filter(Boolean)
+  );
+  const [viewInput, setViewInput] = useState('');
+  const [priceDraft, setPriceDraft] = useState<string>(
+    property?.price_egp ? String(property.price_egp) : ''
+  );
 
   const [inspectorZoneId, setInspectorZoneId] = useState<string | null>(null);
   const [roomsRailEl, setRoomsRailEl] = useState<HTMLDivElement | null>(null);
@@ -604,6 +611,42 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
     setPreviewUrls((prev) => prev.filter((u) => u !== url));
   }
 
+  function parsePriceDraft(raw: string): number | null {
+    const m = raw.trim().toLowerCase().replace(/,/g, '').match(/^(\d+(?:\.\d+)?)\s*(k|m)?$/);
+    if (!m) return null;
+    const mult = m[2] === 'm' ? 1_000_000 : m[2] === 'k' ? 1_000 : 1;
+    return Math.round(parseFloat(m[1]) * mult);
+  }
+
+  const priceParsed = parsePriceDraft(priceDraft);
+
+  function handlePriceChange(raw: string) {
+    setPriceDraft(raw);
+    const parsed = parsePriceDraft(raw);
+    if (parsed !== null) setValue('price_egp', parsed, { shouldValidate: false });
+  }
+
+  function applyPriceMagnitude(suffix: 'k' | 'm') {
+    const numericPart = priceDraft.trim().toLowerCase().replace(/,/g, '').replace(/(k|m)$/, '');
+    if (!numericPart || isNaN(parseFloat(numericPart))) return;
+    handlePriceChange(`${numericPart}${suffix}`);
+  }
+
+  function syncViewTags(tags: string[]) {
+    setViewTags(tags);
+    setValue('view', tags.join(', '));
+  }
+
+  function handleAddViewTag(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key !== 'Enter') return;
+    e.preventDefault();
+    const val = viewInput.trim();
+    if (val && !viewTags.includes(val)) {
+      syncViewTags([...viewTags, val]);
+      setViewInput('');
+    }
+  }
+
   function handleAddAmenity(e: React.KeyboardEvent<HTMLInputElement>) {
     if (e.key === 'Enter') {
       e.preventDefault();
@@ -620,7 +663,7 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className={`${styles.form} ${currentStep === 3 && railOpen ? 'form-with-inspector' : ''}`} onKeyDown={(e) => {
+    <form onSubmit={handleSubmit(onSubmit)} className={`${styles.form} ${currentStep === 3 && railOpen ? (inspectorZoneId ? 'form-with-flyout' : 'form-with-inspector') : ''}`} onKeyDown={(e) => {
       if (e.key === 'Enter' && e.target instanceof HTMLInputElement && e.target.type !== 'submit') {
         e.preventDefault();
       }
@@ -629,8 +672,11 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
         .form-with-inspector {
           padding-inline-end: 308px;
         }
+        .form-with-flyout {
+          padding-inline-end: 632px;
+        }
         @media (max-width: 1023px) {
-          .form-with-inspector { padding-inline-end: 0; }
+          .form-with-inspector, .form-with-flyout { padding-inline-end: 0; }
         }
       `}</style>
       {/* ─── Stepper Progress Header ─── */}
@@ -728,7 +774,6 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
                 >
                   {(selectedType === 'apartment' ? [
                     { value: 'standard', en: 'Standard Flat', ar: 'شقة عادية' },
-                    { value: 'ground',   en: 'Ground + Garden', ar: 'أرضي بحديقة' },
                     { value: 'duplex',   en: 'Duplex (دورين)', ar: 'دوبلكس (دورين)' },
                     { value: 'roof',     en: 'Roof Apartment', ar: 'شقة روف' },
                   ] : [
@@ -772,12 +817,45 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
 
             <div className={styles.field}>
               <label className={styles.label}>{isAr ? 'السعر (ج.م) *' : 'Price (EGP) *'}</label>
-              <input 
-                type="number" 
-                className={`${styles.input} ${errors.price_egp ? styles.err : ''}`} 
-                {...register('price_egp')} 
-                placeholder="e.g. 12500000" 
-              />
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  dir="ltr"
+                  className={`${styles.input} ${errors.price_egp ? styles.err : ''}`}
+                  value={priceDraft}
+                  onChange={(e) => handlePriceChange(e.target.value)}
+                  placeholder={isAr ? 'مثال: 850k أو 12.5m' : 'e.g. 850k or 12.5m'}
+                  style={{ flex: 1, minWidth: 0 }}
+                />
+                {(['k', 'm'] as const).map(sfx => (
+                  <button
+                    key={sfx}
+                    type="button"
+                    onClick={() => applyPriceMagnitude(sfx)}
+                    title={sfx === 'k' ? '× 1,000' : '× 1,000,000'}
+                    style={{
+                      flexShrink: 0,
+                      width: 38,
+                      height: 38,
+                      borderRadius: 10,
+                      fontWeight: 800,
+                      fontSize: 13,
+                      cursor: 'pointer',
+                      background: priceDraft.trim().toLowerCase().endsWith(sfx) ? 'rgba(221,167,82,0.18)' : 'rgba(255,255,255,0.05)',
+                      border: `1px solid ${priceDraft.trim().toLowerCase().endsWith(sfx) ? '#DDA752' : 'rgba(221,167,82,0.25)'}`,
+                      color: priceDraft.trim().toLowerCase().endsWith(sfx) ? '#DDA752' : 'rgba(255,255,255,0.65)',
+                    }}
+                  >
+                    {sfx.toUpperCase()}
+                  </button>
+                ))}
+              </div>
+              {priceParsed !== null && priceParsed > 0 && (
+                <p style={{ margin: '6px 2px 0', fontSize: 12.5, fontWeight: 700, color: '#DDA752' }} dir="ltr">
+                  = {priceParsed.toLocaleString()} EGP
+                </p>
+              )}
               {errors.price_egp && <p className={styles.errMsg}>{errors.price_egp.message}</p>}
             </div>
           </div>
@@ -794,14 +872,6 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
               {errors.area_sqm && <p className={styles.errMsg}>{errors.area_sqm.message}</p>}
             </div>
             <div className={styles.field}>
-              <label className={styles.label}>{isAr ? 'غرف النوم' : 'Bedrooms'}</label>
-              <input type="number" className={styles.input} {...register('bedrooms')} />
-            </div>
-            <div className={styles.field}>
-              <label className={styles.label}>{isAr ? 'الحمامات' : 'Bathrooms'}</label>
-              <input type="number" className={styles.input} {...register('bathrooms')} />
-            </div>
-            <div className={styles.field}>
               <label className={styles.label}>{isAr ? 'حالة البناء' : 'Completion Status'}</label>
               <select className={styles.input} {...register('completion_status')}>
                 <option value="ready">{isAr ? 'جاهز للسكن' : 'Ready to Move'}</option>
@@ -816,16 +886,29 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
                 <option value="sold">{isAr ? 'مُباع' : 'Sold'}</option>
               </select>
             </div>
-            <div className={styles.field}>
-              <label className={styles.label}>{isAr ? 'رقم الطابق' : 'Floor Number'}</label>
-              <input type="number" className={styles.input} {...register('floor_number')} placeholder={isAr ? "مثال: 0 (أرضي)، 2" : "e.g. 0 for Ground, 2"} />
-            </div>
           </div>
 
           <div className={styles.grid2}>
             <div className={styles.field}>
-              <label className={styles.label}>{isAr ? 'الإطلالة' : 'View'}</label>
-              <input type="text" className={styles.input} {...register('view')} placeholder={isAr ? "مثال: إطلالة على المسبح، إطلالة على البحر" : "e.g. Pool view, Sea view"} />
+              <label className={styles.label}>{isAr ? 'الإطلالة (اضغط Enter للإضافة)' : 'View (Press Enter to add)'}</label>
+              <div className={styles.tagsInputContainer}>
+                {viewTags.map((tag) => (
+                  <div key={tag} className={styles.tag}>
+                    {tag}
+                    <button type="button" onClick={() => syncViewTags(viewTags.filter(t => t !== tag))} className={styles.tagRemove}>
+                      <X size={12} strokeWidth={3} />
+                    </button>
+                  </div>
+                ))}
+                <input
+                  type="text"
+                  className={styles.tagsInput}
+                  placeholder={isAr ? 'مثال: إطلالة على المسبح، البحر...' : 'e.g. Pool View, Sea View...'}
+                  value={viewInput}
+                  onChange={(e) => setViewInput(e.target.value)}
+                  onKeyDown={handleAddViewTag}
+                />
+              </div>
             </div>
             <div className={styles.field}>
               <label className={styles.label}>{isAr ? 'التمييز بالمنصة' : 'Platform Highlight'}</label>
@@ -845,7 +928,24 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
 
       {/* ─── STEP 2: Location, Media & Description ─── */}
       {currentStep === 2 && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+        <div className="step2-grid">
+          <style>{`
+            .step2-grid {
+              display: grid;
+              grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+              gap: 24px;
+              align-items: start;
+            }
+            .step2-side {
+              display: flex;
+              flex-direction: column;
+              gap: 24px;
+              min-width: 0;
+            }
+            @media (max-width: 1023px) {
+              .step2-grid { grid-template-columns: 1fr; }
+            }
+          `}</style>
           {/* Location */}
           <div className={styles.section}>
             <h2 className={styles.sectionTitle}>
@@ -870,6 +970,7 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
             </div>
           </div>
 
+          <div className="step2-side">
           {/* Overview & Hero Gallery Images */}
           <div className={styles.section}>
             <h2 className={styles.sectionTitle}>
@@ -938,6 +1039,7 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
                 />
               </div>
             </div>
+          </div>
           </div>
         </div>
       )}
