@@ -420,19 +420,39 @@ function InspectorStyles() {
   return (
     <style>{`
       .zi-root {
-        position: sticky;
-        top: 16px;
-        max-height: calc(100vh - 32px);
+        position: fixed;
+        inset-block: 0;
+        inset-inline-end: 0;
+        width: 246px;
+        height: 100dvh;
+        z-index: 60;
         overflow-y: auto;
         display: flex;
         flex-direction: column;
         gap: 14px;
-        padding: 14px;
-        border-radius: 14px;
+        padding: 16px 14px;
         background: #0D1220;
-        border: 1px solid rgba(221,167,82,0.16);
+        border-inline-start: 1px solid rgba(221,167,82,0.16);
+        box-shadow: -12px 0 32px rgba(0,0,0,0.35);
         font-family: 'Plus Jakarta Sans', sans-serif;
         color: #EDE8DD;
+      }
+
+      [dir="rtl"].zi-root {
+        box-shadow: 12px 0 32px rgba(0,0,0,0.35);
+      }
+
+      @media (max-width: 1023px) {
+        .zi-root {
+          position: static;
+          width: auto;
+          height: auto;
+          max-height: none;
+          border-radius: 14px;
+          border: 1px solid rgba(221,167,82,0.16);
+          box-shadow: none;
+          margin-top: 16px;
+        }
       }
 
       .zi-empty {

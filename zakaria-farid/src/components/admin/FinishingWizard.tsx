@@ -276,6 +276,7 @@ interface FinishingWizardProps {
   bedroomCount: number;
   zoneInstances: ZoneInstance[];
   onZoneInstancesChange: (zones: ZoneInstance[]) => void;
+  initialSubType?: string;
   isAr?: boolean;
 }
 
@@ -285,9 +286,12 @@ export default function FinishingWizard({
   bedroomCount,
   zoneInstances,
   onZoneInstancesChange,
+  initialSubType,
   isAr = false,
 }: FinishingWizardProps) {
-  const [subType, setSubType] = useState<string>(SUBTYPES[propertyType]?.[0]?.id ?? 'standard');
+  const [subType, setSubType] = useState<string>(
+    initialSubType ?? SUBTYPES[propertyType]?.[0]?.id ?? 'standard',
+  );
   const [globalState, setGlobalState] = useState<GlobalFinishingState | null>(null);
   const [localBedroomCount, setLocalBedroomCount] = useState(Math.max(1, bedroomCount));
   const [expandedZones, setExpandedZones] = useState<Set<string>>(new Set());
