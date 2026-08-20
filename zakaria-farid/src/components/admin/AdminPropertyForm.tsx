@@ -927,6 +927,12 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
             propertyType={selectedType}
             bedrooms={bedroomsCount}
             declaredArea={Number(watch('area_sqm')) || undefined}
+            selectedZoneId={inspectorZoneId}
+            onSelectedZoneIdChange={(id) => {
+              setInspectorZoneId(id);
+              if (id) setRailOpen(true);
+            }}
+            listPortalTarget={roomsRailEl}
             isAr={isAr}
           />
 
