@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase/client';
 import {
   PropertyTypeId,
   ZoneTemplate,
+  TradeTemplate,
   ZoneInstance,
   TradeInstance,
   GlobalFinishingState,
@@ -64,6 +65,23 @@ function statusLabel(status: string, isAr: boolean) {
   const s = STATUS_LABELS[status];
   if (!s) return status;
   return isAr ? s.ar : s.en;
+}
+
+const LEGACY_TRADE_LABELS: Record<string, { en: string; ar: string }> = {
+  landscaping: { en: 'Landscaping', ar: 'تنسيق الحدائق' },
+  fence_gate:  { en: 'Fence & Gate', ar: 'السور والبوابة' },
+  pool:        { en: 'Swimming Pool', ar: 'حمام السباحة' },
+  pergola:     { en: 'Pergola', ar: 'البرجولا' },
+  irrigation:  { en: 'Irrigation', ar: 'الري' },
+  lighting:    { en: 'Lighting', ar: 'الإنارة' },
+  paving:      { en: 'Paving', ar: 'الأرصفة والممرات' },
+};
+
+function legacyTradeLabel(tradeTemplateId: string, isAr: boolean): string {
+  const key = tradeTemplateId.split('.').pop() ?? tradeTemplateId;
+  const known = LEGACY_TRADE_LABELS[key];
+  if (known) return isAr ? known.ar : known.en;
+  return key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
 }
 
 // ─── Sub-type options ───────────────────────────────────────────────────────
@@ -526,7 +544,10 @@ export default function FinishingWizard({
     if (!tpl) return [];
     return zone.trades.slice(0, 3).map(t => {
       const tradeTpl = TRADE_TEMPLATES.find(tr => tr.id === t.trade_template_id);
-      return { trade_en: tradeTpl?.label_en.split(' ')[0] ?? t.trade_template_id, status: t.status };
+      const label = tradeTpl
+        ? (isAr ? tradeTpl.label_ar : tradeTpl.label_en.split(' (')[0])
+        : legacyTradeLabel(t.trade_template_id, isAr);
+      return { trade_en: label, status: t.status };
     });
   }
 
@@ -588,21 +609,31 @@ export default function FinishingWizard({
 
   // ── Trade row renderer ────────────────────────────────────────────────────
   function renderTrade(zoneInst: ZoneInstance, trade: TradeInstance) {
-    const tradeTpl = TRADE_TEMPLATES.find(t => t.id === trade.trade_template_id);
-    if (!tradeTpl) return null;
+    const found = TRADE_TEMPLATES.find(t => t.id === trade.trade_template_id);
+    const genericStatuses = ['NotStarted', 'InProgress', 'Finished'];
+    const tradeTpl: TradeTemplate = found ?? {
+      id: trade.trade_template_id,
+      categories: [],
+      label_en: legacyTradeLabel(trade.trade_template_id, false),
+      label_ar: legacyTradeLabel(trade.trade_template_id, true),
+      status_values: genericStatuses.includes(trade.status) || !trade.status
+        ? genericStatuses
+        : [...genericStatuses, trade.status],
+    };
     const attrsKey = `${zoneInst.id}_${trade.id}`;
     const showAttrs = expandedAttrs.has(attrsKey);
     const attrs = getAttributesForTrade(trade.trade_template_id, zoneInst.zone_template_id);
+    const primaryLabel = isAr ? tradeTpl.label_ar : tradeTpl.label_en;
+    const secondaryLabel = isAr ? tradeTpl.label_en : tradeTpl.label_ar;
 
     return (
       <div key={trade.id} className={styles.tradeRow}>
         <div className={styles.tradeHeader}>
           <div style={{ flex: 1 }}>
-            <span className={styles.tradeLabel}>{isAr ? tradeTpl.label_ar : tradeTpl.label_en}</span>
-            {isAr
-              ? <> · <span className={styles.tradeLabelAr}>{tradeTpl.label_en}</span></>
-              : <> · <span className={styles.tradeLabelAr}>{tradeTpl.label_ar}</span></>
-            }
+            <span className={styles.tradeLabel}>{primaryLabel}</span>
+            {secondaryLabel !== primaryLabel && (
+              <> · <span className={styles.tradeLabelAr}>{secondaryLabel}</span></>
+            )}
           </div>
           {attrs.length > 0 && (
             <button type="button" className={styles.showAttrsBtn} onClick={() => toggleAttrs(attrsKey)}>
