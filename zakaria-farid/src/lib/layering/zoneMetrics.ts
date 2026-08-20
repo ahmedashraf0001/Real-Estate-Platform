@@ -68,6 +68,10 @@ export function fallbackMetricFor(templateId: string): FallbackZoneMetric | null
 // Bilingual display titles shared by the admin builder and the public
 // inspector, covering legacy villa-era template ids that have no ZoneTemplate.
 export const FALLBACK_ZONE_TITLES: Record<string, { en: string; ar: string }> = {
+  'vil.ground': { en: 'Ground Floor', ar: 'الدور الأرضي' },
+  'vil.first': { en: 'First Floor', ar: 'الدور الأول' },
+  'vil.basement': { en: 'Basement Level', ar: 'البدروم' },
+  'vil.roof': { en: 'Roof Level', ar: 'السطح' },
   'vil.exterior': { en: 'Private Grounds & Landscape', ar: 'الحدائق والمساحات الخارجية' },
   'vil.g.entrance': { en: 'Double-Height Entrance Foyer', ar: 'بهو المدخل الرئيسي المزدوج' },
   'vil.g.reception': { en: 'Grand Reception & Salon', ar: 'صالون الاستقبال الرئيسي الفاخر' },
