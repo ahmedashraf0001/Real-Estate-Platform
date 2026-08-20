@@ -1560,6 +1560,9 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
             )}
           </div>
         </div>
+        );
+        return listPortalTarget ? createPortal(listPanel, listPortalTarget) : listPanel;
+        })()}
 
       </div>
 
