@@ -129,7 +129,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
       <section className="hero-section">
         <div className="hero-bg-media">
           <img 
-            src="/assets/hero-bg.png" 
+            src="/assets/hero-bg.webp" 
             alt="Egyptian Luxury Architectural Masterpiece" 
             className="hero-image"
             loading="eager"
