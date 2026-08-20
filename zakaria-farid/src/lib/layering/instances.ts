@@ -18,6 +18,15 @@ import {
 
 export type GlobalFinishingState = 'red_brick' | 'semi_finished' | 'fully_finished';
 
+export type ApartmentSubType = 'standard' | 'ground' | 'duplex' | 'roof';
+export type BuildingSubType = 'residential' | 'mixed';
+
+export interface BuildZoneOptions {
+  subtype?: ApartmentSubType | BuildingSubType;
+  totalFloors?: number;
+  unitsPerFloor?: number;
+}
+
 export interface AttributeValue {
   attribute_template_id: string;
   value: boolean | string | number | null;
@@ -51,6 +60,18 @@ export interface ZoneInstance {
   children?: ZoneInstance[]; // for container zones (Villa floors)
   images?: string[];         // optional admin-uploaded photos for this zone (multiple)
   spatial?: ZoneSpatialLayout; // Optional visual CAD layout & dimensions
+}
+
+export interface BuildingUnitInstance {
+  id: string;
+  unit_code: string;         // e.g. "Flat 2A"
+  unit_type: 'apartment' | 'duplex' | 'commercial';
+  floor_number: number;
+  bedrooms: number;
+  bathrooms: number;
+  area_sqm: number;
+  finishing_state: GlobalFinishingState;
+  zones: ZoneInstance[];
 }
 
 
@@ -94,7 +115,7 @@ const GLOBAL_STATE_MAP: Record<GlobalFinishingState, TradeStatusMap> = {
     'liv.walls':             'Plastered',
     'liv.flooring':          'SandBed',
     'liv.carpentry':         'SubFrames',
-    'liv.hvac':              'NotStarted',
+    'liv.hvac':              'CopperPrep',
     'trn.electrical':        'NotStarted',
     'trn.walls':             'Plastered',
     'trn.flooring':          'SandBed',
@@ -212,17 +233,119 @@ function buildChildInstances(
   return result;
 }
 
+function fromTemplateId(
+  templateId: string,
+  globalState: GlobalFinishingState,
+  instanceLabel?: string,
+  levelLabel?: string,
+  sortOrder?: number
+): ZoneInstance | null {
+  const tpl = ZONE_TEMPLATES.find(z => z.id === templateId);
+  if (!tpl) return null;
+  return buildZoneInstance(tpl, globalState, instanceLabel, levelLabel, sortOrder);
+}
+
+function buildLevelContainer(
+  levelLabel: string,
+  instanceLabel: string,
+  childTemplateIds: string[],
+  globalState: GlobalFinishingState,
+  sortOrder: number
+): ZoneInstance {
+  const children = childTemplateIds
+    .map((tid, i) => fromTemplateId(tid, globalState, undefined, levelLabel, sortOrder + (i + 1) * 0.01))
+    .filter((z): z is ZoneInstance => z !== null);
+  return {
+    id: uid(),
+    zone_template_id: 'apt.level',
+    instance_label: instanceLabel,
+    level_label: levelLabel,
+    sort_order: sortOrder,
+    trades: [],
+    children,
+  };
+}
+
+function buildDuplexTree(globalState: GlobalFinishingState, bedroomCount: number): ZoneInstance[] {
+  const lowerLabel = 'الدور السفلي · Lower Floor';
+  const upperLabel = 'الدور العلوي · Upper Floor';
+
+  const lower = buildLevelContainer(
+    lowerLabel,
+    lowerLabel,
+    ['apt.reception', 'apt.kitchen', 'apt.guest_bath', 'apt.corridor', 'apt.balcony'],
+    globalState,
+    1,
+  );
+
+  const upperChildIds = ['apt.master_bed', 'apt.master_bath', 'apt.main_bath', 'apt.corridor'];
+  const upper = buildLevelContainer(upperLabel, upperLabel, upperChildIds, globalState, 2);
+  const stdBedTpl = ZONE_TEMPLATES.find(z => z.id === 'apt.std_bed');
+  if (stdBedTpl && upper.children) {
+    const extraBeds = Math.max(0, bedroomCount - 1);
+    for (let i = 0; i < extraBeds; i++) {
+      upper.children.push(
+        buildZoneInstance(stdBedTpl, globalState, `${stdBedTpl.label_ar} ${i + 2}`, upperLabel, 2 + (upperChildIds.length + i + 1) * 0.01),
+      );
+    }
+  }
+
+  return [lower, upper];
+}
+
+const UNIT_CHILD_TEMPLATES = ['apt.reception', 'apt.kitchen', 'apt.master_bed', 'apt.std_bed', 'apt.main_bath'];
+const UNIT_LETTERS = ['A', 'B', 'C', 'D', 'E', 'F'];
+
+function buildBuildingUnits(
+  globalState: GlobalFinishingState,
+  totalFloors: number,
+  unitsPerFloor: number,
+  baseSortOrder: number
+): ZoneInstance[] {
+  const typicalFloors = Math.min(14, Math.max(0, totalFloors - 1));
+  const units = Math.min(UNIT_LETTERS.length, Math.max(1, unitsPerFloor));
+  const result: ZoneInstance[] = [];
+
+  for (let f = 1; f <= typicalFloors; f++) {
+    const levelLabel = `الدور ${f} · Floor ${f}`;
+    for (let u = 0; u < units; u++) {
+      const code = `${f}${UNIT_LETTERS[u]}`;
+      const children = UNIT_CHILD_TEMPLATES
+        .map((tid, i) => fromTemplateId(tid, globalState, undefined, levelLabel, i + 1))
+        .filter((z): z is ZoneInstance => z !== null);
+      result.push({
+        id: uid(),
+        zone_template_id: 'bld.unit',
+        instance_label: `شقة ${code} · Flat ${code}`,
+        level_label: levelLabel,
+        sort_order: baseSortOrder + (f - 1) * units + u,
+        trades: [],
+        children,
+      });
+    }
+  }
+
+  return result;
+}
+
 /**
  * Build the full zone instance tree for a property.
  * @param typeId       Property type
  * @param globalState  Global finishing state to pre-populate all trade statuses
  * @param bedroomCount How many Standard Bedroom instances to create (from form)
+ * @param options      Subtype (duplex/ground/roof, residential/mixed) and
+ *                     building templating (totalFloors × unitsPerFloor)
  */
 export function buildZoneInstances(
   typeId: PropertyTypeId,
   globalState: GlobalFinishingState,
-  bedroomCount = 2
+  bedroomCount = 2,
+  options: BuildZoneOptions = {}
 ): ZoneInstance[] {
+  if (typeId === 'apartment' && options.subtype === 'duplex') {
+    return buildDuplexTree(globalState, bedroomCount);
+  }
+
   const topLevelZones = getZonesForType(typeId).filter(z => !z.parent_zone_id);
   const result: ZoneInstance[] = [];
 
@@ -243,7 +366,42 @@ export function buildZoneInstances(
     }
   }
 
+  if (typeId === 'apartment' && options.subtype === 'ground') {
+    const garden = fromTemplateId('apt.balcony', globalState, 'الحديقة الخاصة · Private Garden', undefined, 20);
+    if (garden) result.push(garden);
+  }
+
+  if (typeId === 'apartment' && options.subtype === 'roof') {
+    const terrace = fromTemplateId('apt.balcony', globalState, 'تراس الروف المكشوف · Roof Terrace', undefined, 20);
+    if (terrace) result.push(terrace);
+  }
+
+  if (typeId === 'building' && options.totalFloors && options.unitsPerFloor) {
+    result.push(...buildBuildingUnits(globalState, options.totalFloors, options.unitsPerFloor, result.length + 1));
+  }
+
   return result;
+}
+
+/**
+ * Re-apply a global finishing state to ONE zone subtree (per-unit override):
+ * e.g. mark "Flat 3A" Fully Finished while the rest of the building stays
+ * Semi-Finished. Attribute values and photos are preserved.
+ */
+export function applyGlobalStateToZone(
+  zones: ZoneInstance[],
+  zoneInstanceId: string,
+  globalState: GlobalFinishingState
+): ZoneInstance[] {
+  return zones.map(zoneInst => {
+    if (zoneInst.id === zoneInstanceId) {
+      return applyGlobalState([zoneInst], globalState)[0];
+    }
+    if (zoneInst.children && zoneInst.children.length > 0) {
+      return { ...zoneInst, children: applyGlobalStateToZone(zoneInst.children, zoneInstanceId, globalState) };
+    }
+    return zoneInst;
+  });
 }
 
 /**
@@ -259,7 +417,8 @@ export function applyGlobalState(
     const zoneTpl = allZones.find(z => z.id === zoneInst.zone_template_id);
     
     // If zone has no trades yet but matches a template, build them!
-    if ((!zoneInst.trades || zoneInst.trades.length === 0) && zoneTpl) {
+    // Containers (levels, building units) never carry trades of their own.
+    if ((!zoneInst.trades || zoneInst.trades.length === 0) && zoneTpl && !zoneTpl.is_container) {
       return {
         ...zoneInst,
         trades: buildTradeInstances(zoneTpl, globalState),
