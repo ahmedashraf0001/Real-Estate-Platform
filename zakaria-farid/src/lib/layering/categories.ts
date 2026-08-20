@@ -15,6 +15,30 @@ export interface ZoneCategoryBucket {
 
 const text = (id: string, label?: string) => `${id} ${label ?? ''}`.toLowerCase();
 
+export const SMART_ZONE_SUGGESTIONS: Record<PropertyTypeId, Array<{ en: string; ar: string }>> = {
+  apartment: [
+    { en: 'Laundry Room', ar: 'غرفة غسيل' },
+    { en: 'Storage Room', ar: 'مخزن' },
+    { en: 'Guest Toilet', ar: 'حمام ضيوف' },
+    { en: 'Dressing Room', ar: 'غرفة ملابس' },
+    { en: 'Servant Room', ar: 'غرفة خادمة' },
+    { en: 'Open Kitchen', ar: 'مطبخ أمريكي' },
+    { en: 'Balcony', ar: 'بلكونة' },
+  ],
+  building: [
+    { en: 'Generator Room', ar: 'غرفة مولد' },
+    { en: 'Guard Room', ar: 'غرفة حارس' },
+    { en: 'Water Pump Room', ar: 'غرفة طلمبات' },
+    { en: 'Meter Room', ar: 'غرفة عدادات' },
+    { en: 'Storage Room', ar: 'مخزن' },
+  ],
+  garage: [
+    { en: 'Extra Parking Bay', ar: 'باكية إضافية' },
+    { en: 'Storage Room', ar: 'مخزن' },
+    { en: 'Washing Area', ar: 'منطقة غسيل' },
+  ],
+};
+
 export const ZONE_CATEGORY_BUCKETS: Record<PropertyTypeId, ZoneCategoryBucket[]> = {
   apartment: [
     {
