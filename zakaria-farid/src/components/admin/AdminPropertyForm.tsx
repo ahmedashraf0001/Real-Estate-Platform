@@ -106,6 +106,9 @@ const schema = z.object({
   bathrooms: z.coerce.number().int().min(0),
   area_sqm: z.coerce.number().positive(),
   type: z.enum(['apartment', 'building', 'garage']),
+  subtype: z.enum(['standard', 'ground', 'duplex', 'roof', 'residential', 'mixed']).optional(),
+  total_floors: z.coerce.number().int().min(1).max(15).optional().or(z.literal('')),
+  units_per_floor: z.coerce.number().int().min(1).max(6).optional().or(z.literal('')),
   location: z.string().min(2),
   latitude: z.coerce.number().optional(),
   longitude: z.coerce.number().optional(),
@@ -212,6 +215,9 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
       floor_number: property.floor_number ?? '',
     } : {
       type: 'apartment',
+      subtype: 'standard',
+      total_floors: '',
+      units_per_floor: '',
       completion_status: 'ready',
       listing_status: 'active',
       is_featured: false,
@@ -232,13 +238,50 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
 
   const selectedType = watch('type');
   const bedroomsCount = watch('bedrooms') || 2;
+  const selectedSubtype = watch('subtype');
+  const totalFloorsRaw = watch('total_floors');
+  const unitsPerFloorRaw = watch('units_per_floor');
+
+  const canReseed = () =>
+    !isEditing || zoneInstances.length === 0 || zoneInstances.every(z => !z.images?.length);
+
+  const reseedZones = (
+    type: FormValues['type'],
+    subtype: FormValues['subtype'],
+    totalFloors?: number | '',
+    unitsPerFloor?: number | '',
+  ) => {
+    if (!canReseed()) return;
+    setZoneInstances(buildZoneInstances(type, 'semi_finished', bedroomsCount, {
+      subtype,
+      totalFloors: typeof totalFloors === 'number' ? totalFloors : undefined,
+      unitsPerFloor: typeof unitsPerFloor === 'number' ? unitsPerFloor : undefined,
+    }));
+  };
 
   const handleTypeChange = (newType: string) => {
     const typed = newType as FormValues['type'];
     setValue('type', typed, { shouldValidate: true });
-    // Re-initialize default zones for the new property type if we are not editing or haven't customized
-    if (!isEditing || zoneInstances.length === 0 || zoneInstances.every(z => !z.images?.length)) {
-      setZoneInstances(buildZoneInstances(typed, 'semi_finished', bedroomsCount));
+    const defaultSub = typed === 'apartment' ? 'standard' : typed === 'building' ? 'residential' : undefined;
+    setValue('subtype', defaultSub);
+    reseedZones(typed, defaultSub);
+  };
+
+  const handleSubtypeChange = (newSubtype: string) => {
+    const sub = newSubtype as FormValues['subtype'];
+    setValue('subtype', sub);
+    const tf = Number(totalFloorsRaw) || undefined;
+    const uf = Number(unitsPerFloorRaw) || undefined;
+    reseedZones(selectedType, sub, tf, uf);
+  };
+
+  const handleBuildingConfigChange = (field: 'total_floors' | 'units_per_floor', raw: string) => {
+    const num = raw === '' ? '' : Math.max(1, Math.min(field === 'total_floors' ? 15 : 6, Number(raw) || 1));
+    setValue(field, num as FormValues['total_floors']);
+    const tf = field === 'total_floors' ? num : totalFloorsRaw;
+    const uf = field === 'units_per_floor' ? num : unitsPerFloorRaw;
+    if (typeof tf === 'number' && typeof uf === 'number') {
+      reseedZones(selectedType, selectedSubtype, tf, uf);
     }
   };
 
@@ -537,6 +580,58 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
               </select>
             </div>
 
+            {selectedType !== 'garage' && (
+              <div className={styles.field}>
+                <label className={styles.label}>{isAr ? 'النوع الفرعي' : 'Subtype'}</label>
+                <select
+                  className={styles.input}
+                  value={selectedSubtype ?? (selectedType === 'apartment' ? 'standard' : 'residential')}
+                  onChange={(e) => handleSubtypeChange(e.target.value)}
+                >
+                  {(selectedType === 'apartment' ? [
+                    { value: 'standard', en: 'Standard Flat', ar: 'شقة عادية' },
+                    { value: 'ground',   en: 'Ground + Garden', ar: 'أرضي بحديقة' },
+                    { value: 'duplex',   en: 'Duplex (دورين)', ar: 'دوبلكس (دورين)' },
+                    { value: 'roof',     en: 'Roof Apartment', ar: 'شقة روف' },
+                  ] : [
+                    { value: 'residential', en: 'Residential', ar: 'سكني' },
+                    { value: 'mixed',       en: 'Mixed Use',   ar: 'سكني تجاري' },
+                  ]).map((s) => (
+                    <option key={s.value} value={s.value}>{isAr ? s.ar : s.en}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {selectedType === 'building' && (
+              <>
+                <div className={styles.field}>
+                  <label className={styles.label}>{isAr ? 'عدد الأدوار' : 'Total Floors'}</label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={15}
+                    className={styles.input}
+                    value={totalFloorsRaw ?? ''}
+                    onChange={(e) => handleBuildingConfigChange('total_floors', e.target.value)}
+                    placeholder={isAr ? 'مثال: 5' : 'e.g. 5'}
+                  />
+                </div>
+                <div className={styles.field}>
+                  <label className={styles.label}>{isAr ? 'وحدات لكل دور' : 'Units per Floor'}</label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={6}
+                    className={styles.input}
+                    value={unitsPerFloorRaw ?? ''}
+                    onChange={(e) => handleBuildingConfigChange('units_per_floor', e.target.value)}
+                    placeholder={isAr ? 'مثال: 2' : 'e.g. 2'}
+                  />
+                </div>
+              </>
+            )}
+
             <div className={styles.field}>
               <label className={styles.label}>{isAr ? 'السعر (ج.م) *' : 'Price (EGP) *'}</label>
               <input 
@@ -716,6 +811,8 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
             zoneInstances={zoneInstances}
             onZoneInstancesChange={setZoneInstances}
             propertyType={selectedType}
+            bedrooms={bedroomsCount}
+            declaredArea={Number(watch('area_sqm')) || undefined}
             isAr={isAr}
           />
         </div>
