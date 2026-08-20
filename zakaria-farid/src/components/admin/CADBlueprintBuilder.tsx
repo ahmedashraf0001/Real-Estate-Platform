@@ -1798,6 +1798,15 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
           border-radius: 10px;
         }
 
+        .fp-canvas-svg g[role="button"] {
+          outline: none;
+        }
+
+        .fp-canvas-svg g[role="button"]:focus-visible {
+          outline: 2px solid rgba(221, 167, 82, 0.65);
+          outline-offset: 2px;
+        }
+
         .fp-empty-box, .fp-presets {
           display: flex;
           flex-direction: column;
