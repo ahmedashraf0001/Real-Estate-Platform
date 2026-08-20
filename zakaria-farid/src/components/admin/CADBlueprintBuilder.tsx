@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
-import { createPortal } from 'react-dom';
 import {
   Building,
   Layers,
@@ -30,11 +29,6 @@ interface CADBlueprintBuilderProps {
   bedrooms?: number;
   /** Declared property area from wizard Step 1 (m²) — powers the reconciliation bar. */
   declaredArea?: number;
-  /** Optional controlled selection — lets a parent host an external inspector panel. */
-  selectedZoneId?: string | null;
-  onSelectedZoneIdChange?: (id: string | null) => void;
-  /** When provided, the room list renders into this element (Figma-style sidebar) instead of the workspace column. */
-  listPortalTarget?: HTMLElement | null;
   isAr?: boolean;
 }
 
@@ -552,20 +546,11 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
   propertyType = 'apartment',
   bedrooms = 2,
   declaredArea,
-  selectedZoneId: controlledSelectedZoneId,
-  onSelectedZoneIdChange,
-  listPortalTarget = null,
   isAr = false,
 }) => {
   const defaultKey = propertyType === 'building' ? 'bld_ground' : propertyType === 'garage' ? 'grg_ramp' : GROUND_KEY;
   const [activeFloorKey, setActiveFloorKey] = useState<string>(defaultKey);
-  const [internalSelectedZoneId, setInternalSelectedZoneId] = useState<string | null>(null);
-  const isControlledSelection = controlledSelectedZoneId !== undefined;
-  const selectedZoneId = isControlledSelection ? controlledSelectedZoneId : internalSelectedZoneId;
-  const setSelectedZoneId = useCallback((id: string | null) => {
-    onSelectedZoneIdChange?.(id);
-    if (!isControlledSelection) setInternalSelectedZoneId(id);
-  }, [onSelectedZoneIdChange, isControlledSelection]);
+  const [selectedZoneId, setSelectedZoneId] = useState<string | null>(null);
   const [addMenuOpen, setAddMenuOpen] = useState(false);
   const [addFilter, setAddFilter] = useState('');
   const [dismissedPresets, setDismissedPresets] = useState<Record<string, boolean>>({});
@@ -1283,7 +1268,7 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
         )}
       </div>
 
-      <div className={`fp-workspace ${listPortalTarget ? 'no-list' : ''}`}>
+      <div className="fp-workspace">
 
         <div className="fp-canvas-panel">
           <div className="fp-canvas-bar">
@@ -1481,9 +1466,7 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
           )}
         </div>
 
-        {(() => {
-        const listPanel = (
-        <div className={`fp-list-panel ${listPortalTarget ? 'in-rail' : ''}`} dir={isAr ? 'rtl' : 'ltr'}>
+        <div className="fp-list-panel">
           <div className="fp-add-wrap" ref={addMenuRef}>
             <button
               type="button"
@@ -1793,7 +1776,7 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
         .fp-canvas-svg {
           width: 100%;
           height: auto;
-          max-height: min(74vh, 820px);
+          max-height: 480px;
           aspect-ratio: 680 / 440;
           border-radius: 10px;
         }
@@ -1918,43 +1901,6 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
           background: var(--fp-surface);
           border: 1px solid var(--fp-line);
           overflow: hidden;
-        }
-
-        .fp-workspace.no-list {
-          grid-template-columns: 1fr;
-        }
-
-        .fp-list-panel.in-rail {
-          --fp-surface: #0D1220;
-          --fp-canvas-bg: #0A0E18;
-          --fp-line: rgba(221,167,82,0.16);
-          --fp-text: #EDE8DD;
-          --fp-text-dim: rgba(237,232,221,0.55);
-          --fp-gold: #DDA752;
-          --fp-gold-grad: linear-gradient(135deg,#DDA752,#B8860B);
-          --fp-warn: #E0A63A;
-          --fp-warn-bg: rgba(224,166,58,0.10);
-          --fp-danger: #D96B6B;
-          --fp-focus-ring: 0 0 0 2px rgba(221,167,82,0.55);
-          height: 100%;
-          border: none;
-          border-radius: 0;
-          font-family: 'Plus Jakarta Sans', sans-serif;
-          color: var(--fp-text);
-        }
-
-        .fp-list-panel.in-rail .fp-list-scroll {
-          max-height: none;
-          flex: 1;
-        }
-
-        .fp-list-panel.in-rail .fp-row-line2,
-        .fp-list-panel.in-rail .fp-row-line3 {
-          display: none;
-        }
-
-        .fp-list-panel.in-rail .fp-row {
-          padding: 10px 12px;
         }
 
         .fp-add-wrap {

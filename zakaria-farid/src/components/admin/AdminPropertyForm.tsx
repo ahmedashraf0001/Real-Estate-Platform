@@ -196,18 +196,6 @@ function ReviewZoneCard({ zone, levelLabel, isAr }: { zone: ZoneInstance; levelL
   );
 }
 
-function inferSubtype(property: Property | undefined): FormValues['subtype'] {
-  if (!property) return 'standard';
-  if (property.type === 'building') return 'residential';
-  if (property.type === 'garage') return undefined;
-  const zones = Array.isArray(property.spec_layers) ? (property.spec_layers as ZoneInstance[]) : [];
-  const text = zones.map(z => `${z.zone_template_id} ${z.instance_label ?? ''} ${z.level_label ?? ''}`).join(' ');
-  if (zones.some(z => z.zone_template_id === 'apt.level') || /Lower Floor|Upper Floor|الدور السفلي|الدور العلوي/.test(text)) return 'duplex';
-  if (/Roof Terrace|تراس الروف|شقة روف/.test(text)) return 'roof';
-  if (/Private Garden|الحديقة الخاصة/.test(text)) return 'ground';
-  return 'standard';
-}
-
 function generateSlug(text: string) {
   const base = text.trim().toLowerCase().replace(/\s+/g, '-').replace(/[^\p{L}\p{N}-]/gu, '');
   return `${base}-${Math.random().toString(36).substring(2, 8)}`;
@@ -362,14 +350,8 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
   const totalFloorsRaw = watch('total_floors');
   const unitsPerFloorRaw = watch('units_per_floor');
 
-  const confirmRebuild = () => {
-    if (zoneInstances.length === 0) return true;
-    const customized = isEditing || zoneInstances.some(z => z.images?.length || z.spatial);
-    if (!customized) return true;
-    return window.confirm(isAr
-      ? 'سيؤدي هذا إلى إعادة بناء غرف المخطط واستبدال التخصيصات الحالية (الأبعاد، التشطيبات، الصور). هل تريد المتابعة؟'
-      : 'This rebuilds the floor plan rooms and replaces current customizations (dimensions, finishes, photos). Continue?');
-  };
+  const canReseed = () =>
+    !isEditing || zoneInstances.length === 0 || zoneInstances.every(z => !z.images?.length);
 
   const reseedZones = (
     type: FormValues['type'],
@@ -377,12 +359,12 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
     totalFloors?: number | '',
     unitsPerFloor?: number | '',
   ) => {
+    if (!canReseed()) return;
     setZoneInstances(buildZoneInstances(type, 'semi_finished', bedroomsCount, {
       subtype,
       totalFloors: typeof totalFloors === 'number' ? totalFloors : undefined,
       unitsPerFloor: typeof unitsPerFloor === 'number' ? unitsPerFloor : undefined,
     }));
-    setInspectorZoneId(null);
   };
 
   const handleTypeChange = (newType: string) => {
@@ -396,8 +378,6 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
 
   const handleSubtypeChange = (newSubtype: string) => {
     const sub = newSubtype as FormValues['subtype'];
-    if (sub === selectedSubtype) return;
-    if (!confirmRebuild()) return;
     setValue('subtype', sub);
     const tf = Number(totalFloorsRaw) || undefined;
     const uf = Number(unitsPerFloorRaw) || undefined;
@@ -406,12 +386,10 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
 
   const handleBuildingConfigChange = (field: 'total_floors' | 'units_per_floor', raw: string) => {
     const num = raw === '' ? '' : Math.max(1, Math.min(field === 'total_floors' ? 15 : 6, Number(raw) || 1));
+    setValue(field, num as FormValues['total_floors']);
     const tf = field === 'total_floors' ? num : totalFloorsRaw;
     const uf = field === 'units_per_floor' ? num : unitsPerFloorRaw;
-    const willReseed = typeof tf === 'number' && typeof uf === 'number';
-    if (willReseed && !confirmRebuild()) return;
-    setValue(field, num as FormValues['total_floors']);
-    if (willReseed) {
+    if (typeof tf === 'number' && typeof uf === 'number') {
       reseedZones(selectedType, selectedSubtype, tf, uf);
     }
   };
@@ -949,9 +927,6 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
             propertyType={selectedType}
             bedrooms={bedroomsCount}
             declaredArea={Number(watch('area_sqm')) || undefined}
-            selectedZoneId={inspectorZoneId}
-            onSelectedZoneIdChange={setInspectorZoneId}
-            listPortalTarget={roomsRailEl}
             isAr={isAr}
           />
 
