@@ -17,8 +17,10 @@ import {
   GripVertical,
   Copy,
   Check,
+  Sparkles,
 } from 'lucide-react';
-import { ZoneInstance, ZoneSpatialLayout, removeZones, applyGlobalState, getZoneBadge, GlobalFinishingState } from '@/lib/layering';
+import { ZoneInstance, ZoneSpatialLayout, removeZones, applyGlobalState, getZoneBadge, GlobalFinishingState, addCustomZone } from '@/lib/layering';
+import { SMART_ZONE_SUGGESTIONS } from '@/lib/layering/categories';
 import { ZONE_TEMPLATES, getTradesForZone, getAttributesForTrade } from '@/lib/layering/templates';
 import { ZONE_CATEGORY_BUCKETS, ZoneCategoryBucket } from '@/lib/layering/categories';
 import { computeMetricLayout } from '@/lib/layering/floorplanLayout';
@@ -576,6 +578,7 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
   const [addMenuOpen, setAddMenuOpen] = useState(false);
   const [addFilter, setAddFilter] = useState('');
   const [groupAddOpen, setGroupAddOpen] = useState<string | null>(null);
+  const [customZoneName, setCustomZoneName] = useState('');
   const [dismissedPresets, setDismissedPresets] = useState<Record<string, boolean>>({});
   const [extraFloors, setExtraFloors] = useState<string[]>([]);
   const [floorMenuOpen, setFloorMenuOpen] = useState(false);
@@ -965,6 +968,24 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
     onZoneInstancesChange(applyGlobalState(zoneInstances, state));
     const opt = GLOBAL_STATE_OPTIONS.find(o => o.id === state);
     showToast(isAr ? `تم تطبيق حالة ${opt?.ar}` : `${opt?.en === 'Semi' ? 'Semi-Finished' : opt?.en} state applied`);
+  };
+
+  const handleAddCustomZone = (rawName: string) => {
+    const name = rawName.trim().slice(0, 40);
+    if (!name) return;
+    pushHistory(zoneInstances);
+    let next = addCustomZone(zoneInstances, name, 'semi_finished');
+    const newZone = next[next.length - 1];
+    if (propertyType === 'apartment' && activeFloorKey !== GROUND_KEY && newZone) {
+      next = next.map(z => (z.id === newZone.id ? { ...z, level_label: activeFloorKey } : z));
+    }
+    onZoneInstancesChange(next);
+    setCustomZoneName('');
+    if (newZone) {
+      setSelectedZoneId(newZone.id);
+      requestAnimationFrame(() => rowRefs.current[newZone.id]?.scrollIntoView({ block: 'nearest' }));
+    }
+    showToast(isAr ? `تمت إضافة "${name}"` : `"${name}" added`);
   };
 
   const handleRemoveGroup = (bucket: ZoneCategoryBucket, zones: ZoneInstance[]) => {
@@ -1743,6 +1764,49 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
               })()
             )}
           </div>
+
+          <div className="fp-custom-zone">
+            <span className="fp-custom-zone-label">
+              <Sparkles size={11} />
+              <span>{isAr ? 'إضافة منطقة مخصصة' : 'ADD CUSTOM ZONE'}</span>
+            </span>
+            <div className="fp-custom-zone-row">
+              <input
+                type="text"
+                className="fp-custom-zone-input"
+                dir="auto"
+                maxLength={40}
+                placeholder={isAr ? 'اسم المنطقة (مثل: غرفة غسيل)...' : 'Zone name (e.g. Laundry Room)...'}
+                value={customZoneName}
+                onChange={(e) => setCustomZoneName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') { e.preventDefault(); handleAddCustomZone(customZoneName); }
+                }}
+              />
+              <button
+                type="button"
+                className="fp-custom-zone-btn"
+                disabled={!customZoneName.trim()}
+                aria-label={isAr ? 'إضافة المنطقة' : 'Add zone'}
+                onClick={() => handleAddCustomZone(customZoneName)}
+              >
+                <Plus size={13} />
+              </button>
+            </div>
+            <div className="fp-custom-zone-chips">
+              {(SMART_ZONE_SUGGESTIONS[propertyType] ?? []).map(s => (
+                <button
+                  key={s.en}
+                  type="button"
+                  className="fp-custom-zone-chip"
+                  onClick={() => handleAddCustomZone(isAr ? s.ar : s.en)}
+                >
+                  <Plus size={10} />
+                  <span>{isAr ? s.ar : s.en}</span>
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
         );
         return listPortalTarget ? createPortal(listPanel, listPortalTarget) : listPanel;
@@ -2387,6 +2451,91 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
         }
 
         [data-theme="light"] .fp-group-menu { box-shadow: 0 18px 48px rgba(28,26,22,0.15); }
+
+        .fp-custom-zone {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+          padding: 10px 12px;
+          border-block-start: 1px dashed rgba(221,167,82,0.3);
+          flex-shrink: 0;
+        }
+
+        .fp-custom-zone-label {
+          display: inline-flex;
+          align-items: center;
+          gap: 5px;
+          font-size: 0.6rem;
+          font-weight: 800;
+          letter-spacing: 0.1em;
+          color: var(--fp-gold);
+        }
+
+        .fp-custom-zone-row {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+        }
+
+        .fp-custom-zone-input {
+          flex: 1;
+          min-width: 0;
+          padding: 7px 10px;
+          border-radius: 8px;
+          background: rgba(255,255,255,0.04);
+          border: 1px solid var(--fp-line);
+          color: var(--fp-text);
+          font-family: inherit;
+          font-size: 0.75rem;
+          outline: none;
+        }
+
+        [data-theme="light"] .fp-custom-zone-input { background: #F8FAFC; }
+        .fp-custom-zone-input:focus { border-color: var(--fp-gold); }
+        .fp-custom-zone-input::placeholder { color: var(--fp-text-dim); }
+
+        .fp-custom-zone-btn {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          width: 32px;
+          height: 32px;
+          border-radius: 8px;
+          background: var(--fp-gold-grad);
+          border: none;
+          color: #0A0E18;
+          cursor: pointer;
+          flex-shrink: 0;
+          transition: opacity 0.15s cubic-bezier(0.2,0,0,1);
+        }
+
+        .fp-custom-zone-btn:hover:not(:disabled) { opacity: 0.9; }
+        .fp-custom-zone-btn:disabled { opacity: 0.35; cursor: default; }
+        .fp-custom-zone-btn:focus-visible { outline: none; box-shadow: var(--fp-focus-ring); }
+
+        .fp-custom-zone-chips {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 5px;
+        }
+
+        .fp-custom-zone-chip {
+          display: inline-flex;
+          align-items: center;
+          gap: 4px;
+          padding: 4px 9px;
+          border-radius: 9999px;
+          font-size: 0.62rem;
+          font-weight: 700;
+          cursor: pointer;
+          background: transparent;
+          border: 1px dashed var(--fp-line);
+          color: var(--fp-text-dim);
+          transition: color 0.15s cubic-bezier(0.2,0,0,1), border-color 0.15s cubic-bezier(0.2,0,0,1);
+        }
+
+        .fp-custom-zone-chip:hover { color: var(--fp-gold); border-color: var(--fp-gold); }
+        .fp-custom-zone-chip:focus-visible { outline: none; box-shadow: var(--fp-focus-ring); }
 
         .fp-list-empty { padding: 2.5rem 1.5rem; text-align: center; }
         .fp-list-empty-title { font-size: 0.9rem; font-weight: 700; color: var(--fp-text); margin: 0; }
