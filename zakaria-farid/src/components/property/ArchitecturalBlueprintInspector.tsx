@@ -21,7 +21,27 @@ import {
   Minus,
   Maximize2
 } from 'lucide-react';
-import { ZoneInstance, ZoneSpatialLayout } from '@/lib/layering';
+import { ZoneInstance, ZoneSpatialLayout, getZoneBadge, FinishBadge } from '@/lib/layering';
+import { computeMetricLayout, metricInputFromSpatial } from '@/lib/layering/floorplanLayout';
+import { FALLBACK_ZONE_METRICS, GENERIC_ZONE_METRIC } from '@/lib/layering/zoneMetrics';
+
+type SystemKey = 'all' | 'civil' | 'electrical' | 'plumbing' | 'hvac' | 'finishes';
+
+const SYSTEM_FILTERS: Array<{ key: SystemKey; en: string; ar: string }> = [
+  { key: 'all',        en: 'All Systems', ar: 'كل الأنظمة' },
+  { key: 'civil',      en: 'Civil',       ar: 'إنشائي' },
+  { key: 'electrical', en: 'Electrical',  ar: 'كهرباء' },
+  { key: 'plumbing',   en: 'Plumbing',    ar: 'سباكة' },
+  { key: 'hvac',       en: 'HVAC',        ar: 'تكييف' },
+  { key: 'finishes',   en: 'Finishes',    ar: 'تشطيبات' },
+];
+
+const TIER_BADGES: Record<Exclude<FinishBadge, 'unknown'>, { en: string; ar: string; color: string; bg: string }> = {
+  fully_finished: { en: 'Fully Finished', ar: 'تشطيب كامل', color: '#4CC38A', bg: 'rgba(76, 195, 138, 0.12)' },
+  semi_finished:  { en: 'Semi-Finished',  ar: 'نص تشطيب',   color: '#E0A63A', bg: 'rgba(224, 166, 58, 0.12)' },
+  red_brick:      { en: 'Red Brick',      ar: 'طوب أحمر',    color: '#E06D5B', bg: 'rgba(224, 109, 91, 0.12)' },
+  mixed:          { en: 'Mixed Finishing', ar: 'تشطيب مختلط', color: '#9FB3D9', bg: 'rgba(159, 179, 217, 0.12)' },
+};
 
 interface ArchitecturalBlueprintInspectorProps {
   zones?: ZoneInstance[];
@@ -84,11 +104,14 @@ const ZONE_METRICS: Record<string, { sqm: number; ceiling: string; dims: string 
   'vil.b.garage': { sqm: 110, ceiling: '3.2m Epoxy', dims: '14.0m × 7.8m' },
   'vil.b.game_room': { sqm: 85, ceiling: '3.4m Acoustic', dims: '10.5m × 8.0m' },
   'vil.b.driver_room': { sqm: 32, ceiling: '3.0m Flush', dims: '6.0m × 5.3m' },
-  'apt.reception': { sqm: 95, ceiling: '3.6m Flush', dims: '11.0m × 8.6m' },
-  'apt.master_bed': { sqm: 45, ceiling: '3.4m Cove', dims: '7.2m × 6.2m' },
-  'apt.kitchen': { sqm: 28, ceiling: '3.2m Flush', dims: '5.5m × 5.0m' },
-  'apt.main_bath': { sqm: 16, ceiling: '3.2m Flush', dims: '4.5m × 3.5m' },
-  'apt.balcony': { sqm: 24, ceiling: 'Open Sky', dims: '8.0m × 3.0m' }
+  // apt.* / bld.* / grg.* metrics come from the shared FALLBACK_ZONE_METRICS
+  // table so the public page and the admin edit form always agree.
+  ...Object.fromEntries(
+    Object.entries(FALLBACK_ZONE_METRICS).map(([id, m]) => [
+      id,
+      { sqm: m.sqm, ceiling: m.ceiling, dims: `${m.length_m}m × ${m.width_m}m` },
+    ]),
+  ),
 };
 
 const ZONE_TITLES: Record<string, { en: string; ar: string }> = {
@@ -129,6 +152,15 @@ interface TradeSpecItem {
   icon: 'zap' | 'wind' | 'droplet' | 'layers';
   badge: string;
   badgeAr: string;
+}
+
+function systemOf(trade: TradeSpecItem): Exclude<SystemKey, 'all'> {
+  if (trade.icon === 'zap') return 'electrical';
+  if (trade.icon === 'droplet') return 'plumbing';
+  if (trade.icon === 'wind') return 'hvac';
+  const n = `${trade.name} ${trade.nameAr}`.toLowerCase();
+  if (/paint|finish|carpentry|joinery|door|tiling|دهان|تشطيب|نجارة|أبواب/.test(n)) return 'finishes';
+  return 'civil';
 }
 
 // Room-Specific Bespoke Engineering Systems & Materials
@@ -696,6 +728,8 @@ interface ProcessedZone {
   zoneTitle: string;
   zoneTitleAr: string;
   image: string;
+  imagesList: string[];
+  badge: FinishBadge;
   sqm: number;
   ceiling: string;
   dims: string;
@@ -704,111 +738,35 @@ interface ProcessedZone {
   trades: TradeSpecItem[];
 }
 
-// Architectural floor plan layout templates — rooms share walls (no gaps)
-// Each slot defines { x, y, w, h } as fractions of (canvasW, canvasH)
-// These mimic real floor plan proportions for n rooms on a single level
-type RoomSlot = { xF: number; yF: number; wF: number; hF: number };
 
-const FLOOR_PLAN_TEMPLATES: Record<number, RoomSlot[]> = {
-  1: [
-    { xF: 0.08, yF: 0.08, wF: 0.84, hF: 0.84 },
-  ],
-  2: [
-    { xF: 0.08, yF: 0.08, wF: 0.46, hF: 0.84 },
-    { xF: 0.54, yF: 0.08, wF: 0.38, hF: 0.84 },
-  ],
-  3: [
-    { xF: 0.08, yF: 0.08, wF: 0.48, hF: 0.84 },
-    { xF: 0.56, yF: 0.08, wF: 0.36, hF: 0.44 },
-    { xF: 0.56, yF: 0.52, wF: 0.36, hF: 0.40 },
-  ],
-  4: [
-    { xF: 0.08, yF: 0.08, wF: 0.32, hF: 0.84 },
-    { xF: 0.40, yF: 0.08, wF: 0.52, hF: 0.44 },
-    { xF: 0.40, yF: 0.52, wF: 0.28, hF: 0.40 },
-    { xF: 0.68, yF: 0.52, wF: 0.24, hF: 0.40 },
-  ],
-  5: [
-    // Luxury villa ground floor: Foyer | Reception  / Dining | Powder | Kitchen
-    { xF: 0.08, yF: 0.08, wF: 0.28, hF: 0.44 },  // Foyer (top-left)
-    { xF: 0.36, yF: 0.08, wF: 0.56, hF: 0.44 },  // Reception (top-right, large)
-    { xF: 0.08, yF: 0.52, wF: 0.38, hF: 0.40 },  // Dining (bottom-left)
-    { xF: 0.46, yF: 0.52, wF: 0.18, hF: 0.40 },  // Powder room (bottom-mid, narrow)
-    { xF: 0.64, yF: 0.52, wF: 0.28, hF: 0.40 },  // Kitchen (bottom-right)
-  ],
-  6: [
-    { xF: 0.08, yF: 0.08, wF: 0.26, hF: 0.44 },
-    { xF: 0.34, yF: 0.08, wF: 0.30, hF: 0.44 },
-    { xF: 0.64, yF: 0.08, wF: 0.28, hF: 0.44 },
-    { xF: 0.08, yF: 0.52, wF: 0.26, hF: 0.40 },
-    { xF: 0.34, yF: 0.52, wF: 0.30, hF: 0.40 },
-    { xF: 0.64, yF: 0.52, wF: 0.28, hF: 0.40 },
-  ],
-  7: [
-    { xF: 0.08, yF: 0.08, wF: 0.26, hF: 0.84 },  // Long corridor / hallway
-    { xF: 0.34, yF: 0.08, wF: 0.30, hF: 0.40 },
-    { xF: 0.64, yF: 0.08, wF: 0.28, hF: 0.40 },
-    { xF: 0.34, yF: 0.48, wF: 0.15, hF: 0.44 },
-    { xF: 0.49, yF: 0.48, wF: 0.15, hF: 0.44 },
-    { xF: 0.64, yF: 0.48, wF: 0.14, hF: 0.44 },
-    { xF: 0.78, yF: 0.08, wF: 0.14, hF: 0.84 },  // Utility shaft / stair
-  ],
-};
-
-function getFloorPlanSlots(count: number): RoomSlot[] {
-  if (FLOOR_PLAN_TEMPLATES[count]) return FLOOR_PLAN_TEMPLATES[count];
-  // For 8+ rooms use a 3-column grid but still share walls (no gaps)
-  const slots: RoomSlot[] = [];
-  const cols = count <= 9 ? 3 : 4;
-  const rows = Math.ceil(count / cols);
-  for (let i = 0; i < count; i++) {
-    const col = i % cols;
-    const row = Math.floor(i / cols);
-    slots.push({
-      xF: 0.08 + col * (0.84 / cols),
-      yF: 0.08 + row * (0.84 / rows),
-      wF: 0.84 / cols,
-      hF: 0.84 / rows,
-    });
-  }
-  return slots;
-}
-
+// Metric-true layout: rooms are sized by their real meter dimensions via the
+// shared engine, so this public plan always matches the admin builder preview.
 function computeArchitecturalLayout(zones: ProcessedZone[]): ProcessedZone[] {
   const count = zones.length;
   if (count === 0) return [];
 
-  const cW = 680;
-  const cH = 440;
-
-  const slots = getFloorPlanSlots(count);
+  const layout = computeMetricLayout(
+    zones.map((zone) => {
+      if (zone.spatial?.width_m && zone.spatial?.length_m) {
+        return metricInputFromSpatial(zone.id, zone.spatial, zone.sqm);
+      }
+      const parsed = zone.dims.match(/([\d.]+)\s*m?\s*[×x]\s*([\d.]+)\s*m?/i);
+      if (parsed) {
+        return { id: zone.id, widthM: parseFloat(parsed[2]), lengthM: parseFloat(parsed[1]) };
+      }
+      return metricInputFromSpatial(zone.id, zone.spatial, zone.sqm);
+    }),
+  );
 
   return zones.map((zone, idx) => {
-    // Admin-defined grid positions take priority
-    if (zone.spatial?.gridW && zone.spatial?.gridH) {
-      const colW = (cW * 0.84) / 12;
-      const rowH = (cH * 0.84) / 12;
-      const x = cW * 0.08 + zone.spatial.gridX * colW;
-      const y = cH * 0.08 + zone.spatial.gridY * rowH;
-      const w = zone.spatial.gridW * colW;
-      const h = zone.spatial.gridH * rowH;
-      return {
-        ...zone,
-        dims: `${zone.spatial.length_m}m × ${zone.spatial.width_m}m`,
-        sqm: zone.spatial.sqm || zone.sqm,
-        ceiling: zone.spatial.ceiling_height || zone.ceiling,
-        svgCoords: { x, y, w, h, pinX: x + w / 2, pinY: y + h / 2 },
-      };
-    }
-
-    const slot = slots[idx] || slots[slots.length - 1];
-    const x = cW * slot.xF;
-    const y = cH * slot.yF;
-    const w = cW * slot.wF;
-    const h = cH * slot.hF;
+    const rect = layout.rooms[idx];
+    const hasSpatialDims = Boolean(zone.spatial?.length_m && zone.spatial?.width_m);
     return {
       ...zone,
-      svgCoords: { x, y, w, h, pinX: x + w / 2, pinY: y + h / 2 },
+      dims: hasSpatialDims ? `${zone.spatial!.length_m}m × ${zone.spatial!.width_m}m` : zone.dims,
+      sqm: zone.spatial?.sqm || zone.sqm,
+      ceiling: zone.spatial?.ceiling_height || zone.ceiling,
+      svgCoords: { x: rect.x, y: rect.y, w: rect.w, h: rect.h, pinX: rect.x + rect.w / 2, pinY: rect.y + rect.h / 2 },
     };
   });
 }
@@ -978,6 +936,12 @@ export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintIns
   const isAr = locale === 'ar';
   const [selectedZoneId, setSelectedZoneId] = useState<string | null>(null);
   const [canvasMode, setCanvasMode] = useState<'blueprint' | 'photo'>('blueprint');
+  const [systemFilter, setSystemFilter] = useState<SystemKey>('all');
+  const [photoIndex, setPhotoIndex] = useState(0);
+
+  useEffect(() => {
+    setPhotoIndex(0);
+  }, [selectedZoneId]);
   const [hoveredZoneId, setHoveredZoneId] = useState<string | null>(null);
 
   // CAD Blueprint Interactive Zoom & Pan (Grab) State
@@ -1056,9 +1020,9 @@ export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintIns
       };
 
       const metrics = ZONE_METRICS[key] || {
-        sqm: 45 + (idx * 15),
-        ceiling: '3.6m Architectural Flush',
-        dims: '8.0m × 6.5m'
+        sqm: GENERIC_ZONE_METRIC.sqm,
+        ceiling: GENERIC_ZONE_METRIC.ceiling,
+        dims: `${GENERIC_ZONE_METRIC.length_m}m × ${GENERIC_ZONE_METRIC.width_m}m`,
       };
 
       // Determine Floor Key and Labels
@@ -1093,6 +1057,8 @@ export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintIns
         zoneTitle: titles.en,
         zoneTitleAr: titles.ar,
         image: resolveSpaceImage(key, zInst.images?.[0]),
+        imagesList: (zInst.images ?? []).filter(Boolean),
+        badge: getZoneBadge(zInst),
         sqm: zInst.spatial?.sqm || metrics.sqm,
         ceiling: zInst.spatial?.ceiling_height || metrics.ceiling,
         dims: zInst.spatial ? `${zInst.spatial.length_m}m × ${zInst.spatial.width_m}m` : metrics.dims,
@@ -1238,7 +1204,7 @@ export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintIns
   };
 
   return (
-    <div className="blueprint-studio-root">
+    <div className="blueprint-studio-root" dir={isAr ? 'rtl' : 'ltr'}>
       
       {/* 1. Header Bar */}
       <div className="studio-top-header">
@@ -1777,19 +1743,60 @@ export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintIns
                   exit={{ opacity: 0, scale: 0.98 }}
                   transition={{ duration: 0.28 }}
                 >
-                  <AnimatePresence mode="wait">
-                    <motion.img 
-                      key={currentZone.id}
-                      src={currentZone.image} 
-                      alt={currentZone.zoneTitle} 
-                      className="photo-preview-img"
-                      initial={{ opacity: 0, scale: 1.03 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      exit={{ opacity: 0, scale: 0.98 }}
-                      transition={{ duration: 0.35, ease: 'easeOut' }}
-                    />
-                  </AnimatePresence>
-                  
+                  {(() => {
+                    const gallery = currentZone.imagesList.length > 0 ? currentZone.imagesList : [currentZone.image];
+                    const safeIdx = photoIndex % gallery.length;
+                    return (
+                      <>
+                        <AnimatePresence mode="wait">
+                          <motion.img
+                            key={`${currentZone.id}-${safeIdx}`}
+                            src={gallery[safeIdx]}
+                            alt={currentZone.zoneTitle}
+                            className="photo-preview-img"
+                            initial={{ opacity: 0, scale: 1.03 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.98 }}
+                            transition={{ duration: 0.35, ease: 'easeOut' }}
+                          />
+                        </AnimatePresence>
+
+                        {gallery.length > 1 && (
+                          <div className="zone-gallery-dots" role="tablist" aria-label={isAr ? 'صور الغرفة' : 'Room photos'}>
+                            <button
+                              type="button"
+                              className="zone-gallery-arrow"
+                              aria-label={isAr ? 'الصورة السابقة' : 'Previous photo'}
+                              onClick={(e) => { e.stopPropagation(); setPhotoIndex((safeIdx - 1 + gallery.length) % gallery.length); }}
+                            >
+                              <ChevronLeft size={14} />
+                            </button>
+                            {gallery.map((_, i) => (
+                              <button
+                                key={i}
+                                type="button"
+                                role="tab"
+                                aria-selected={i === safeIdx}
+                                aria-label={`${isAr ? 'صورة' : 'Photo'} ${i + 1}`}
+                                className={`zone-gallery-dot ${i === safeIdx ? 'active' : ''}`}
+                                onClick={(e) => { e.stopPropagation(); setPhotoIndex(i); }}
+                              />
+                            ))}
+                            <button
+                              type="button"
+                              className="zone-gallery-arrow"
+                              aria-label={isAr ? 'الصورة التالية' : 'Next photo'}
+                              onClick={(e) => { e.stopPropagation(); setPhotoIndex((safeIdx + 1) % gallery.length); }}
+                            >
+                              <ChevronRight size={14} />
+                            </button>
+                            <span className="zone-gallery-counter" dir="ltr">{safeIdx + 1}/{gallery.length}</span>
+                          </div>
+                        )}
+                      </>
+                    );
+                  })()}
+
                   <div className="photo-preview-vignette" />
 
                   {/* Top Metadata Bar */}
@@ -1880,6 +1887,19 @@ export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintIns
                   <ShieldCheck size={13} />
                   <span>{isAr ? 'أصل مدقق بالكامل' : '100% Verified Specifications'}</span>
                 </span>
+
+                {currentZone.badge !== 'unknown' && (() => {
+                  const tier = TIER_BADGES[currentZone.badge];
+                  return (
+                    <span
+                      className="dossier-tier-badge"
+                      style={{ color: tier.color, background: tier.bg, borderColor: tier.color }}
+                    >
+                      <span className="tier-dot" style={{ background: tier.color }} />
+                      <span>{isAr ? tier.ar : tier.en}</span>
+                    </span>
+                  );
+                })()}
               </div>
 
               <h4 className="dossier-space-title">
@@ -1912,8 +1932,30 @@ export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintIns
               {isAr ? 'البنود والأنظمة الهندسية المعتمدة لهذا الجناح' : 'ENGINEERED SYSTEMS & MATERIAL SPECIFICATIONS'}
             </span>
 
+            <div className="system-filter-strip" role="tablist" aria-label={isAr ? 'تصفية حسب النظام' : 'Filter by system'}>
+              {SYSTEM_FILTERS.map(sf => {
+                const count = sf.key === 'all'
+                  ? currentZone.trades.length
+                  : currentZone.trades.filter(t => systemOf(t) === sf.key).length;
+                if (sf.key !== 'all' && count === 0) return null;
+                return (
+                  <button
+                    key={sf.key}
+                    type="button"
+                    role="tab"
+                    aria-selected={systemFilter === sf.key}
+                    className={`system-filter-pill ${systemFilter === sf.key ? 'active' : ''}`}
+                    onClick={() => setSystemFilter(sf.key)}
+                  >
+                    <span>{isAr ? sf.ar : sf.en}</span>
+                    <span className="system-pill-count">{count}</span>
+                  </button>
+                );
+              })}
+            </div>
+
             <div className="dossier-trades-grid">
-              {currentZone.trades.map((trade) => {
+              {currentZone.trades.filter(t => systemFilter === 'all' || systemOf(t) === systemFilter).map((trade) => {
                 const Icon = trade.icon === 'zap' ? Zap : trade.icon === 'wind' ? Wind : trade.icon === 'droplet' ? Droplet : Layers;
                 return (
                   <div key={trade.id} className="trade-spec-card">
@@ -1960,6 +2002,134 @@ export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintIns
           display: flex;
           flex-direction: column;
           gap: 1.25rem;
+        }
+
+        .dossier-tier-badge {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          padding: 4px 12px;
+          border-radius: 9999px;
+          border: 1px solid;
+          font-size: 0.7rem;
+          font-weight: 800;
+          letter-spacing: 0.04em;
+          white-space: nowrap;
+        }
+
+        .tier-dot {
+          width: 7px;
+          height: 7px;
+          border-radius: 9999px;
+          flex-shrink: 0;
+        }
+
+        .system-filter-strip {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          flex-wrap: wrap;
+          margin: 0.75rem 0 1rem;
+        }
+
+        .system-filter-pill {
+          display: inline-flex;
+          align-items: center;
+          gap: 7px;
+          padding: 6px 14px;
+          border-radius: 9999px;
+          font-size: 0.75rem;
+          font-weight: 700;
+          cursor: pointer;
+          background: rgba(255, 255, 255, 0.03);
+          border: 1px solid rgba(221, 167, 82, 0.18);
+          color: rgba(237, 232, 221, 0.6);
+          transition: color 0.15s cubic-bezier(0.2,0,0,1), border-color 0.15s cubic-bezier(0.2,0,0,1), background-color 0.15s cubic-bezier(0.2,0,0,1);
+        }
+
+        .system-filter-pill:hover { color: #EDE8DD; border-color: rgba(221, 167, 82, 0.45); }
+
+        .system-filter-pill.active {
+          background: rgba(221, 167, 82, 0.12);
+          border-color: #DDA752;
+          color: #DDA752;
+        }
+
+        .system-pill-count {
+          font-family: monospace;
+          font-variant-numeric: tabular-nums;
+          font-size: 0.65rem;
+          font-weight: 800;
+          padding: 1px 7px;
+          border-radius: 9999px;
+          background: rgba(255, 255, 255, 0.07);
+        }
+
+        .system-filter-pill.active .system-pill-count { background: rgba(221, 167, 82, 0.22); }
+
+        [data-theme="light"] .system-filter-pill {
+          background: #FFFFFF;
+          border-color: rgba(184, 134, 11, 0.25);
+          color: rgba(28, 26, 22, 0.6);
+        }
+
+        [data-theme="light"] .system-filter-pill.active {
+          background: rgba(184, 134, 11, 0.1);
+          border-color: #B8860B;
+          color: #B8860B;
+        }
+
+        .zone-gallery-dots {
+          position: absolute;
+          inset-block-end: 96px;
+          inset-inline-start: 50%;
+          transform: translateX(-50%);
+          z-index: 8;
+          display: flex;
+          align-items: center;
+          gap: 7px;
+          padding: 7px 12px;
+          border-radius: 9999px;
+          background: rgba(10, 14, 24, 0.72);
+          border: 1px solid rgba(221, 167, 82, 0.3);
+          backdrop-filter: blur(8px);
+        }
+
+        [dir="rtl"] .zone-gallery-dots { transform: translateX(50%); }
+
+        .zone-gallery-dot {
+          width: 8px;
+          height: 8px;
+          border-radius: 9999px;
+          border: none;
+          padding: 0;
+          cursor: pointer;
+          background: rgba(237, 232, 221, 0.35);
+          transition: background-color 0.15s cubic-bezier(0.2,0,0,1), transform 0.15s cubic-bezier(0.2,0,0,1);
+        }
+
+        .zone-gallery-dot.active { background: #DDA752; transform: scale(1.25); }
+
+        .zone-gallery-arrow {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          width: 22px;
+          height: 22px;
+          border-radius: 9999px;
+          border: none;
+          cursor: pointer;
+          background: rgba(221, 167, 82, 0.16);
+          color: #DDA752;
+        }
+
+        .zone-gallery-counter {
+          font-family: monospace;
+          font-variant-numeric: tabular-nums;
+          font-size: 0.65rem;
+          font-weight: 800;
+          color: rgba(237, 232, 221, 0.75);
+          padding-inline-start: 3px;
         }
 
         /* 1. Header Bar */
