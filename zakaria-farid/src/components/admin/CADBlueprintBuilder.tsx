@@ -20,7 +20,7 @@ import {
 import { ZoneInstance, ZoneSpatialLayout } from '@/lib/layering';
 import { ZONE_TEMPLATES, getTradesForZone, getAttributesForTrade } from '@/lib/layering/templates';
 import { computeMetricLayout } from '@/lib/layering/floorplanLayout';
-import { fallbackMetricFor } from '@/lib/layering/zoneMetrics';
+import { fallbackMetricFor, FALLBACK_ZONE_TITLES } from '@/lib/layering/zoneMetrics';
 
 interface CADBlueprintBuilderProps {
   zoneInstances: ZoneInstance[];
@@ -766,7 +766,10 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
     const def = DEFAULT_DIMENSIONS[z.zone_template_id];
     if (def) return isAr ? def.titleAr : def.titleEn;
     const tmpl = ZONE_TEMPLATES.find(t => t.id === z.zone_template_id);
-    return isAr ? (tmpl?.label_ar || z.zone_template_id) : (tmpl?.label_en || z.zone_template_id);
+    if (tmpl) return isAr ? tmpl.label_ar : tmpl.label_en;
+    const shared = FALLBACK_ZONE_TITLES[z.zone_template_id];
+    if (shared) return isAr ? shared.ar : shared.en;
+    return z.zone_template_id;
   }, [isAr]);
 
   const handleUpdateSpatial = (zoneId: string, updates: Partial<ZoneSpatialLayout>) => {
@@ -1176,48 +1179,65 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
       </div>
 
       <div className="fp-floor-tabs">
-        {Object.entries(floorGroups).map(([key, group]) => {
-          const isActive = activeFloorKey === key;
-          const sqmBadge = floorSqm(group.zones);
-          const renaming = renamingFloorKey === key;
-          return (
-            <button
-              key={key}
-              className={`fp-floor-tab ${isActive ? 'active' : ''}`}
-              onClick={() => {
-                setActiveFloorKey(key);
-                setSelectedZoneId(group.zones[0]?.id ?? null);
-              }}
-              onDoubleClick={() => {
-                if (propertyType !== 'apartment' || key === GROUND_KEY) return;
-                setRenamingFloorKey(key);
-                setFloorDraft(key);
-              }}
-              type="button"
-            >
-              <Building size={14} />
-              {renaming ? (
-                <input
-                  className="fp-floor-rename"
-                  dir="auto"
-                  autoFocus
-                  maxLength={30}
-                  value={floorDraft}
-                  onChange={(e) => setFloorDraft(e.target.value)}
-                  onClick={(e) => e.stopPropagation()}
-                  onBlur={() => handleRenameFloor(key, floorDraft)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') { e.preventDefault(); handleRenameFloor(key, floorDraft); }
-                    else if (e.key === 'Escape') { e.preventDefault(); setRenamingFloorKey(null); }
-                  }}
-                />
-              ) : (
-                <span>{isAr ? group.labelAr : group.labelEn}</span>
-              )}
-              <span className="fp-floor-badge" dir="ltr">{sqmBadge} m²</span>
-            </button>
-          );
-        })}
+        <div className="fp-floor-tabs-scroll" role="tablist">
+          {Object.entries(floorGroups).map(([key, group]) => {
+            const isActive = activeFloorKey === key;
+            const sqmBadge = floorSqm(group.zones);
+            const renaming = renamingFloorKey === key;
+            return (
+              <div
+                key={key}
+                role="tab"
+                tabIndex={0}
+                aria-selected={isActive}
+                className={`fp-floor-tab ${isActive ? 'active' : ''}`}
+                onClick={() => {
+                  setActiveFloorKey(key);
+                  setSelectedZoneId(group.zones[0]?.id ?? null);
+                }}
+                onDoubleClick={() => {
+                  if (propertyType !== 'apartment' || key === GROUND_KEY) return;
+                  setRenamingFloorKey(key);
+                  setFloorDraft(key);
+                }}
+                onKeyDown={(e) => {
+                  if (e.target !== e.currentTarget) return;
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    setActiveFloorKey(key);
+                    setSelectedZoneId(group.zones[0]?.id ?? null);
+                  } else if (e.key === 'F2' && propertyType === 'apartment' && key !== GROUND_KEY) {
+                    e.preventDefault();
+                    setRenamingFloorKey(key);
+                    setFloorDraft(key);
+                  }
+                }}
+              >
+                <Building size={14} />
+                {renaming ? (
+                  <input
+                    className="fp-floor-rename"
+                    dir="auto"
+                    autoFocus
+                    maxLength={30}
+                    value={floorDraft}
+                    onChange={(e) => setFloorDraft(e.target.value)}
+                    onClick={(e) => e.stopPropagation()}
+                    onBlur={() => handleRenameFloor(key, floorDraft)}
+                    onKeyDown={(e) => {
+                      e.stopPropagation();
+                      if (e.key === 'Enter') { e.preventDefault(); handleRenameFloor(key, floorDraft); }
+                      else if (e.key === 'Escape') { e.preventDefault(); setRenamingFloorKey(null); }
+                    }}
+                  />
+                ) : (
+                  <span>{isAr ? group.labelAr : group.labelEn}</span>
+                )}
+                <span className="fp-floor-badge" dir="ltr">{sqmBadge} m²</span>
+              </div>
+            );
+          })}
+        </div>
 
         {propertyType === 'apartment' && (
           <div className="fp-floor-add-wrap" ref={floorMenuRef}>
@@ -1630,11 +1650,19 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
           display: flex;
           align-items: center;
           gap: 8px;
-          overflow-x: auto;
           padding: 4px;
           border-radius: 14px;
           background: rgba(255,255,255,0.03);
           border: 1px solid var(--fp-line);
+        }
+
+        .fp-floor-tabs-scroll {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          flex: 1;
+          min-width: 0;
+          overflow-x: auto;
         }
 
         [data-theme="light"] .fp-floor-tabs {
@@ -2246,14 +2274,14 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
 
         [data-theme="light"] .fp-floor-rename { background: #FFFFFF; }
 
-        .fp-floor-add-wrap { position: relative; }
+        .fp-floor-add-wrap { position: relative; flex-shrink: 0; }
 
         .fp-floor-add { color: var(--fp-gold); }
 
         .fp-floor-menu {
           position: absolute;
-          inset-block-start: calc(100% + 4px);
-          inset-inline-start: 0;
+          inset-block-start: calc(100% + 8px);
+          inset-inline-end: 0;
           z-index: 40;
           min-width: 220px;
           border-radius: 12px;
