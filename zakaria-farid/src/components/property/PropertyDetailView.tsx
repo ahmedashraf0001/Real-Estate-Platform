@@ -788,6 +788,15 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
           )}
         </AnimatePresence>
 
+        {/* C. Interactive Architectural Blueprint & Space Specifications — full-bleed studio */}
+        <ArchitecturalBlueprintInspector 
+          zones={rawProperty.spec_layers || []} 
+          propertyTitle={property.title} 
+          locale={locale} 
+          propertyType={rawProperty.type} 
+          propertyImages={property.images} 
+        />
+
         {/* 5. Main Detail Grid: Left Body + Sticky Right Advisory Desk */}
         <div className="detail-layout">
           {/* Left Column Body */}
@@ -874,17 +883,6 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
                 ))}
               </div>
             </div>
-
-
-
-            {/* C. Interactive Architectural Blueprint & Space Specifications */}
-            <ArchitecturalBlueprintInspector 
-              zones={rawProperty.spec_layers || []} 
-              propertyTitle={property.title} 
-              locale={locale} 
-              propertyType={rawProperty.type} 
-              propertyImages={property.images} 
-            />
 
             {/* D. Location & Surroundings */}
             <div className="content-section">

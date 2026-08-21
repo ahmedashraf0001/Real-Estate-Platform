@@ -1288,6 +1288,7 @@ export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintIns
                 type="button"
               >
                 <span className="room-num-badge">0{idx + 1}</span>
+                {zone.unitLabel && <span className="room-chip-unit">{zone.unitLabel}</span>}
                 <span className="room-chip-title">{isAr ? zone.zoneTitleAr : zone.zoneTitle}</span>
                 <span className="room-chip-sqm">{zone.sqm} m²</span>
               </button>
@@ -1897,23 +1898,27 @@ export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintIns
           </div>
         </div>
 
-        {/* Bottom Full-Width Live Specifications Dossier Pane */}
+        {/* Synced Specifications Rail — live dossier for the selected space */}
         <div className="studio-dossier-pane">
-          
-          {/* Active Space Hero Header Card */}
-          <div className="dossier-space-header">
-            <div className="dossier-header-left">
+
+          {/* Zone Hero Banner */}
+          <div className="dossier-hero">
+            <img
+              src={currentZone.image}
+              alt={isAr ? currentZone.zoneTitleAr : currentZone.zoneTitle}
+              className="dossier-hero-img"
+              loading="lazy"
+            />
+            <div className="dossier-hero-scrim" />
+            <div className="dossier-hero-content">
               <div className="dossier-badge-row">
                 <span className="dossier-floor-badge">
-                  <Building size={13} />
+                  <Building size={12} />
                   <span>{isAr ? currentZone.floorLabelAr : currentZone.floorLabel}</span>
                 </span>
-
-                <span className="dossier-verified-badge">
-                  <ShieldCheck size={13} />
-                  <span>{isAr ? 'أصل مدقق بالكامل' : '100% Verified Specifications'}</span>
-                </span>
-
+                {currentZone.unitLabel && (
+                  <span className="dossier-unit-badge">{currentZone.unitLabel}</span>
+                )}
                 {currentZone.badge !== 'unknown' && (() => {
                   const tier = TIER_BADGES[currentZone.badge];
                   return (
@@ -1927,30 +1932,47 @@ export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintIns
                   );
                 })()}
               </div>
-
               <h4 className="dossier-space-title">
                 {isAr ? currentZone.zoneTitleAr : currentZone.zoneTitle}
               </h4>
             </div>
+          </div>
 
-            {/* Quick Metrics Bar */}
-            <div className="dossier-metrics-strip">
-              <div className="dossier-metric-item">
-                <span className="metric-lbl">{isAr ? 'مساحة المسطح' : 'BUILT-UP AREA'}</span>
-                <span className="metric-val">{currentZone.sqm} SQM</span>
-              </div>
-              <div className="metric-v-sep" />
-              <div className="dossier-metric-item">
-                <span className="metric-lbl">{isAr ? 'ارتفاع السقف' : 'CEILING HEIGHT'}</span>
-                <span className="metric-val">{currentZone.ceiling}</span>
-              </div>
-              <div className="metric-v-sep" />
-              <div className="dossier-metric-item">
-                <span className="metric-lbl">{isAr ? 'الأبعاد المعمارية' : 'DIMENSIONS'}</span>
-                <span className="metric-val">{currentZone.dims}</span>
-              </div>
+          {/* Metric Grid */}
+          <div className="dossier-metrics-grid">
+            <div className="dossier-metric-cell">
+              <span className="metric-lbl">{isAr ? 'مساحة المسطح' : 'BUILT-UP AREA'}</span>
+              <span className="metric-val" dir="ltr">{currentZone.sqm} m²</span>
+            </div>
+            <div className="dossier-metric-cell">
+              <span className="metric-lbl">{isAr ? 'ارتفاع السقف' : 'CEILING'}</span>
+              <span className="metric-val">{currentZone.ceiling}</span>
+            </div>
+            <div className="dossier-metric-cell">
+              <span className="metric-lbl">{isAr ? 'الأبعاد المعمارية' : 'DIMENSIONS'}</span>
+              <span className="metric-val" dir="ltr">{currentZone.dims}</span>
+            </div>
+            <div className="dossier-metric-cell">
+              <span className="metric-lbl">{isAr ? 'الفتحات' : 'OPENINGS'}</span>
+              <span className="metric-val" dir="ltr">
+                {currentZone.doorCount + currentZone.windowCount > 0
+                  ? [
+                      currentZone.doorCount > 0 ? `${currentZone.doorCount} ${isAr ? (currentZone.doorCount === 1 ? 'باب' : 'أبواب') : (currentZone.doorCount === 1 ? 'Door' : 'Doors')}` : null,
+                      currentZone.windowCount > 0 ? `${currentZone.windowCount} ${isAr ? (currentZone.windowCount === 1 ? 'نافذة' : 'نوافذ') : (currentZone.windowCount === 1 ? 'Window' : 'Windows')}` : null,
+                    ].filter(Boolean).join(' · ')
+                  : '—'}
+              </span>
             </div>
           </div>
+
+          {/* Zone Photo Filmstrip */}
+          {currentZone.imagesList.length > 1 && (
+            <div className="dossier-photo-strip">
+              {currentZone.imagesList.slice(0, 6).map((img, i) => (
+                <img key={`${currentZone.id}-ph-${i}`} src={img} alt="" className="dossier-photo-thumb" loading="lazy" />
+              ))}
+            </div>
+          )}
 
           {/* Trade Specifications Matrix Grid (2 Columns on Desktop) */}
           <div className="dossier-trades-container">
@@ -2421,12 +2443,41 @@ export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintIns
           color: var(--gold-primary, #DDA752);
         }
 
+        .room-chip-unit {
+          font-size: 0.625rem;
+          font-weight: 800;
+          letter-spacing: 0.04em;
+          padding: 0.1rem 0.45rem;
+          border-radius: 9999px;
+          background: rgba(221, 167, 82, 0.14);
+          border: 1px solid rgba(221, 167, 82, 0.3);
+          color: var(--gold-primary, #DDA752);
+          white-space: nowrap;
+        }
+
         /* 4. Panoramic Stacked Workspace Container */
         .studio-workspace-container {
           display: flex;
           flex-direction: column;
           gap: 1.5rem;
           width: 100%;
+        }
+
+        .blueprint-studio-root {
+          container-type: inline-size;
+        }
+
+        @container (min-width: 980px) {
+          .studio-workspace-container {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) 400px;
+            align-items: start;
+          }
+
+          .studio-stage-pane {
+            position: sticky;
+            top: 96px;
+          }
         }
 
         /* Top Stage Pane */
@@ -2935,37 +2986,105 @@ export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintIns
           backdrop-filter: blur(28px);
           -webkit-backdrop-filter: blur(28px);
           border: 1px solid rgba(255, 255, 255, 0.1);
-          padding: 1.75rem;
+          padding: 1.25rem;
           display: flex;
           flex-direction: column;
-          gap: 1.5rem;
+          gap: 1.25rem;
           box-shadow: 0 20px 48px rgba(0, 0, 0, 0.4);
+        }
+
+        .dossier-hero {
+          position: relative;
+          border-radius: 16px;
+          overflow: hidden;
+          aspect-ratio: 16 / 9;
+          background: rgba(221, 167, 82, 0.06);
+        }
+
+        .dossier-hero-img {
+          position: absolute;
+          inset: 0;
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+        }
+
+        .dossier-hero-scrim {
+          position: absolute;
+          inset: 0;
+          background: linear-gradient(180deg, rgba(6, 9, 16, 0.05) 30%, rgba(6, 9, 16, 0.88) 100%);
+        }
+
+        .dossier-hero-content {
+          position: absolute;
+          inset-inline: 0;
+          inset-block-end: 0;
+          padding: 0.9rem 1rem;
+          display: flex;
+          flex-direction: column;
+          gap: 0.45rem;
+        }
+
+        .dossier-hero-content .dossier-space-title {
+          color: #FFFFFF;
+        }
+
+        .dossier-unit-badge {
+          display: inline-flex;
+          align-items: center;
+          padding: 0.25rem 0.65rem;
+          border-radius: 9999px;
+          font-size: 0.6875rem;
+          font-weight: 800;
+          background: rgba(255, 255, 255, 0.12);
+          color: #FFFFFF;
+          border: 1px solid rgba(255, 255, 255, 0.25);
+          backdrop-filter: blur(6px);
+        }
+
+        .dossier-metrics-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 8px;
+        }
+
+        .dossier-metric-cell {
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+          padding: 0.7rem 0.85rem;
+          border-radius: 12px;
+          background: rgba(221, 167, 82, 0.06);
+          border: 1px solid rgba(221, 167, 82, 0.14);
+          min-width: 0;
+        }
+
+        [data-theme="light"] .dossier-metric-cell {
+          background: rgba(184, 134, 11, 0.05);
+          border-color: rgba(184, 134, 11, 0.16);
+        }
+
+        .dossier-photo-strip {
+          display: flex;
+          gap: 8px;
+          overflow-x: auto;
+          padding-bottom: 4px;
+          scrollbar-width: thin;
+        }
+
+        .dossier-photo-thumb {
+          width: 84px;
+          height: 60px;
+          object-fit: cover;
+          border-radius: 10px;
+          border: 1px solid rgba(221, 167, 82, 0.2);
+          flex-shrink: 0;
         }
 
         [data-theme="light"] .studio-dossier-pane {
           background: #FFFFFF;
           border-color: rgba(0, 0, 0, 0.08);
           box-shadow: 0 16px 40px rgba(30, 24, 16, 0.06);
-        }
-
-        .dossier-space-header {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          gap: 1.5rem;
-          padding-bottom: 1.25rem;
-          border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-          flex-wrap: wrap;
-        }
-
-        [data-theme="light"] .dossier-space-header {
-          border-bottom-color: rgba(0, 0, 0, 0.06);
-        }
-
-        .dossier-header-left {
-          display: flex;
-          flex-direction: column;
-          gap: 0.5rem;
         }
 
         .dossier-badge-row {
@@ -2975,8 +3094,7 @@ export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintIns
           flex-wrap: wrap;
         }
 
-        .dossier-floor-badge,
-        .dossier-verified-badge {
+        .dossier-floor-badge {
           display: inline-flex;
           align-items: center;
           gap: 5px;
@@ -2984,52 +3102,19 @@ export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintIns
           border-radius: 9999px;
           font-size: 0.6875rem;
           font-weight: 800;
-        }
-
-        .dossier-floor-badge {
-          background: rgba(221, 167, 82, 0.15);
-          color: var(--gold-primary, #DDA752);
-          border: 1px solid rgba(221, 167, 82, 0.35);
-        }
-
-        .dossier-verified-badge {
-          background: rgba(16, 185, 129, 0.15);
-          color: #10B981;
-          border: 1px solid rgba(16, 185, 129, 0.3);
+          background: rgba(221, 167, 82, 0.2);
+          color: #EFC98A;
+          border: 1px solid rgba(221, 167, 82, 0.45);
+          backdrop-filter: blur(6px);
         }
 
         .dossier-space-title {
           font-family: var(--font-heading);
-          font-size: 1.45rem;
+          font-size: 1.3rem;
           font-weight: 800;
           color: var(--text-primary, #FFFFFF);
           margin: 0;
           line-height: 1.25;
-        }
-
-        [data-theme="light"] .dossier-space-title {
-          color: #0F172A;
-        }
-
-        .dossier-metrics-strip {
-          display: flex;
-          align-items: center;
-          gap: 1rem;
-          padding: 0.75rem 1.25rem;
-          border-radius: 14px;
-          background: rgba(255, 255, 255, 0.03);
-          border: 1px solid rgba(255, 255, 255, 0.06);
-        }
-
-        [data-theme="light"] .dossier-metrics-strip {
-          background: #F8FAFC;
-          border-color: rgba(0, 0, 0, 0.05);
-        }
-
-        .dossier-metric-item {
-          display: flex;
-          flex-direction: column;
-          gap: 2px;
         }
 
         .metric-lbl {
@@ -3054,17 +3139,6 @@ export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintIns
           color: #0F172A;
         }
 
-        .metric-v-sep {
-          width: 1px;
-          height: 24px;
-          background: rgba(255, 255, 255, 0.08);
-        }
-
-        [data-theme="light"] .metric-v-sep {
-          background: rgba(0, 0, 0, 0.08);
-        }
-
-        /* Trades Grid (2 Columns on Desktop) */
         .dossier-trades-container {
           display: flex;
           flex-direction: column;
@@ -3086,8 +3160,8 @@ export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintIns
 
         .dossier-trades-grid {
           display: grid;
-          grid-template-columns: repeat(2, 1fr);
-          gap: 1rem;
+          grid-template-columns: 1fr;
+          gap: 0.75rem;
         }
 
         .trade-spec-card {
@@ -3212,13 +3286,6 @@ export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintIns
         }
 
         @media (max-width: 768px) {
-          .dossier-trades-grid {
-            grid-template-columns: 1fr;
-          }
-          .dossier-metrics-strip {
-            width: 100%;
-            justify-content: space-between;
-          }
           .photo-filmstrip-container {
             bottom: 0.5rem;
             left: 0.5rem;
