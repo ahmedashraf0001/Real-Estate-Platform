@@ -18,6 +18,7 @@ import {
   MousePointer2,
   DoorOpen,
   RectangleHorizontal,
+  Copy,
 } from 'lucide-react';
 import { ZoneInstance, ZoneSpatialLayout, ZoneOpening, removeZones, applyGlobalState, getZoneBadge, GlobalFinishingState, addCustomZone } from '@/lib/layering';
 import { SMART_ZONE_SUGGESTIONS } from '@/lib/layering/categories';
@@ -501,6 +502,11 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
     snap?: { x: number; y: number; w: number; h: number };
   } | null>(null);
   const [composerTool, setComposerTool] = useState<'select' | 'door' | 'window'>('select');
+  const [bldView, setBldView] = useState<
+    | { mode: 'elevation' }
+    | { mode: 'floor'; floorKey: string }
+    | { mode: 'unit'; floorKey: string; unitId: string }
+  >({ mode: 'elevation' });
   const svgRef = useRef<SVGSVGElement>(null);
   const suppressCanvasClickRef = useRef(false);
   const previewSlotsRef = useRef<Array<{ zone: ZoneInstance; x: number; y: number; w: number; h: number }>>([]);
@@ -509,6 +515,7 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
   const rowRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   const rootRef = useRef<HTMLDivElement>(null);
+  const spatialOfRef = useRef<((z: ZoneInstance) => { l: number; w: number; sqm: number; ceiling: string }) | null>(null);
   const historyRef = useRef<{ past: ZoneInstance[][]; future: ZoneInstance[][] }>({ past: [], future: [] });
   const burstTimerRef = useRef<number | null>(null);
   const toastTimerRef = useRef<number | null>(null);
@@ -592,6 +599,8 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
   useEffect(() => {
     setActiveFloorKey(defaultKey);
     setSelectedZoneId(null);
+    setBldView({ mode: 'elevation' });
+    setComposerTool('select');
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [propertyType]);
 
@@ -652,7 +661,13 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
     return groups;
   }, [zoneInstances, propertyType, extraFloors]);
 
-  const spatialOf = useCallback((z: ZoneInstance) => {
+  const spatialOf = useCallback((z: ZoneInstance): { l: number; w: number; sqm: number; ceiling: string } => {
+    if (!z.spatial && z.children && z.children.length > 0) {
+      const sqm = Math.max(1, Math.round(z.children.reduce((sum, c) => sum + spatialOfRef.current!(c).sqm, 0)));
+      const l = round1(Math.sqrt(sqm * (3 / 4)));
+      const w = round1(sqm / l);
+      return { l, w, sqm, ceiling: '3.0m Flush' };
+    }
     const shared = fallbackMetricFor(z.zone_template_id);
     const d = starterDims(z.zone_template_id);
     const l = z.spatial?.length_m ?? shared?.length_m ?? d.l;
@@ -661,18 +676,73 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
     const ceiling = z.spatial?.ceiling_height ?? shared?.ceiling ?? DEFAULT_DIMENSIONS[z.zone_template_id]?.ceiling ?? '3.0m Flush';
     return { l, w, sqm, ceiling };
   }, []);
+  spatialOfRef.current = spatialOf;
 
   const floorSqm = useCallback((zones: ZoneInstance[]) => {
     return Math.round(zones.reduce((sum, z) => sum + spatialOf(z).sqm, 0));
   }, [spatialOf]);
 
+  const buildingModel = useMemo(() => {
+    if (propertyType !== 'building') return null;
+    const basement = zoneInstances.filter(z => z.zone_template_id === 'bld.basement');
+    const ground = zoneInstances.filter(z => z.zone_template_id === 'bld.ground_lobby');
+    const roof = zoneInstances.filter(z => z.zone_template_id === 'bld.roof');
+    const units = zoneInstances.filter(z => z.zone_template_id === 'bld.unit');
+    const others = zoneInstances.filter(z => !['bld.basement', 'bld.ground_lobby', 'bld.roof', 'bld.unit'].includes(z.zone_template_id));
+
+    const floorsMap = new Map<string, ZoneInstance[]>();
+    for (const u of units) {
+      const key = u.level_label || 'Floor 1';
+      if (!floorsMap.has(key)) floorsMap.set(key, []);
+      floorsMap.get(key)!.push(u);
+    }
+    const floorNum = (k: string) => {
+      const m = k.match(/(\d+)/);
+      return m ? parseInt(m[1], 10) : 0;
+    };
+    const unitSignature = (u: ZoneInstance) => {
+      const letter = (u.instance_label || '').replace(/[^A-Za-z]/g, '').replace(/^Flat/i, '');
+      const kids = (u.children ?? [])
+        .map(c => `${c.zone_template_id}:${Math.round(spatialOf(c).sqm)}`)
+        .sort()
+        .join('|');
+      return `${letter}=${kids}`;
+    };
+    const floors = Array.from(floorsMap.entries())
+      .map(([key, us]) => ({
+        key,
+        num: floorNum(key),
+        units: [...us].sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0)),
+        sqm: Math.round(us.reduce((s, u) => s + spatialOf(u).sqm, 0)),
+        signature: us.map(unitSignature).sort().join('||'),
+      }))
+      .sort((a, b) => a.num - b.num);
+
+    return { basement, ground, roof, units, others, floors };
+  }, [propertyType, zoneInstances, spatialOf]);
+
+  const composerActive = propertyType === 'apartment' || (propertyType === 'building' && bldView.mode === 'unit');
+
   const activeZones = useMemo(() => {
+    if (propertyType === 'building') {
+      if (!buildingModel || bldView.mode === 'elevation') return [];
+      if (bldView.mode === 'floor') {
+        if (bldView.floorKey === 'bld_basement') return buildingModel.basement;
+        if (bldView.floorKey === 'bld_ground') return [...buildingModel.ground, ...buildingModel.others];
+        if (bldView.floorKey === 'bld_roof') return buildingModel.roof;
+        const fl = buildingModel.floors.find(f => f.key === bldView.floorKey);
+        return fl ? fl.units : [];
+      }
+      const unit = buildingModel.units.find(u => u.id === bldView.unitId);
+      return unit?.children ?? [];
+    }
     const group = floorGroups[activeFloorKey];
     return group ? group.zones : [];
-  }, [floorGroups, activeFloorKey]);
+  }, [floorGroups, activeFloorKey, propertyType, bldView, buildingModel]);
 
   const zoneGroups = useMemo(() => {
-    const buckets = ZONE_CATEGORY_BUCKETS[propertyType] ?? ZONE_CATEGORY_BUCKETS.apartment;
+    const bucketKey = propertyType === 'building' && bldView.mode === 'unit' ? 'apartment' : propertyType;
+    const buckets = ZONE_CATEGORY_BUCKETS[bucketKey] ?? ZONE_CATEGORY_BUCKETS.apartment;
     const used = new Set<string>();
     const groups = buckets.map(bucket => ({
       bucket,
@@ -685,7 +755,7 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
     }));
     const other = activeZones.filter(z => !used.has(z.id));
     return { groups, other };
-  }, [activeZones, propertyType]);
+  }, [activeZones, propertyType, bldView.mode]);
 
   const displayZones = useMemo(
     () => [...zoneGroups.groups.flatMap(g => g.zones), ...zoneGroups.other],
@@ -799,7 +869,63 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
     };
   }, [isAr]);
 
+  const handlePropagateUnit = () => {
+    if (bldView.mode !== 'unit' || !buildingModel) return;
+    const unit = buildingModel.units.find(u => u.id === bldView.unitId);
+    if (!unit) return;
+    const letter = (unit.instance_label || '').trim().slice(-1).toUpperCase();
+    if (!/[A-Z]/.test(letter)) return;
+
+    const cloneZones = (zones: ZoneInstance[], levelLabel?: string): ZoneInstance[] =>
+      zones.map((z, i) => ({
+        ...z,
+        id: `zone-${Date.now()}-${Math.random().toString(36).slice(2, 6)}-${i}`,
+        level_label: levelLabel ?? z.level_label,
+        trades: (z.trades || []).map(t => ({
+          ...t,
+          id: `trade-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+          attributes: t.attributes.map(a => ({ ...a })),
+        })),
+        spatial: z.spatial
+          ? { ...z.spatial, openings: z.spatial.openings?.map(o => ({ ...o, id: `open-${Date.now()}-${Math.random().toString(36).slice(2, 6)}` })) }
+          : undefined,
+        children: z.children && z.children.length > 0 ? cloneZones(z.children, levelLabel ?? z.level_label) : undefined,
+      }));
+
+    const targets = buildingModel.units.filter(u =>
+      u.id !== unit.id && (u.instance_label || '').trim().slice(-1).toUpperCase() === letter,
+    );
+    if (targets.length === 0) {
+      showToast(isAr ? 'لا توجد وحدات مطابقة' : 'No matching units found');
+      return;
+    }
+    const targetIds = new Set(targets.map(t => t.id));
+    pushHistory(zoneInstances);
+    onZoneInstancesChange(zoneInstances.map(z =>
+      targetIds.has(z.id) ? { ...z, children: cloneZones(unit.children ?? [], z.level_label) } : z,
+    ));
+    showToast(isAr
+      ? `تم التطبيق على ${targets.length} ${targets.length === 1 ? 'وحدة' : 'وحدات'}`
+      : `Applied to ${targets.length} ${targets.length === 1 ? 'unit' : 'units'}`);
+  };
+
   const handleAddRoom = (templateId: string) => {
+    if (propertyType === 'building' && bldView.mode === 'unit') {
+      const unit = buildingModel?.units.find(u => u.id === bldView.unitId);
+      if (!unit) return;
+      const newZone = buildRoomInstance(templateId, (unit.children?.length ?? 0) + 1, unit.level_label);
+      pushHistory(zoneInstances);
+      onZoneInstancesChange(zoneInstances.map(z =>
+        z.id === unit.id ? { ...z, children: [...(z.children ?? []), newZone] } : z,
+      ));
+      setSelectedZoneId(newZone.id);
+      requestAnimationFrame(() => {
+        const el = rowRefs.current[newZone.id];
+        el?.scrollIntoView({ block: 'nearest' });
+        el?.querySelector<HTMLInputElement>('.fp-stepper-input')?.focus();
+      });
+      return;
+    }
     const levelLabel = propertyType === 'apartment' ? activeFloorKey : undefined;
     const newZone = buildRoomInstance(templateId, zoneInstances.length, levelLabel);
     pushHistory(zoneInstances);
@@ -1116,7 +1242,7 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
 
     const slotsAtStart = previewSlotsRef.current;
     const layoutAtStart = metricLayoutRef.current;
-    const placementMode = propertyType === 'apartment' && layoutAtStart != null;
+    const placementMode = composerActive && layoutAtStart != null;
 
     const onMove = (ev: PointerEvent) => {
       if (!moved) {
@@ -1288,7 +1414,7 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
   }, [declaredArea, roomsTotalSqm, allFlatZones.length]);
 
   const unreachableRooms = useMemo(() => {
-    if (propertyType !== 'apartment' || previewSlots.length < 2) return [];
+    if (!composerActive || previewSlots.length < 2) return [];
     if (!activeZones.some(z => z.spatial?.pos_x_m != null && z.spatial?.pos_y_m != null)) return [];
     const doors = new Set(
       previewSlots
@@ -1313,7 +1439,7 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
         return !previewSlots.some(o => o.zone.id !== s.zone.id && doors.has(o.zone.id) && adjacent(s, o));
       })
       .map(s => ({ id: s.zone.id, title: s.title }));
-  }, [propertyType, previewSlots, activeZones]);
+  }, [composerActive, previewSlots, activeZones]);
 
   const handleReview = () => {
     let target: ZoneInstance | null = null;
@@ -1377,6 +1503,61 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
         </div>
       </div>
 
+      {propertyType === 'building' ? (
+        <div className="fp-floor-tabs">
+          <nav className="fp-crumbs" aria-label={isAr ? 'مسار المبنى' : 'Building navigation'}>
+            <button
+              type="button"
+              className={`fp-crumb ${bldView.mode === 'elevation' ? 'active' : ''}`}
+              onClick={() => {
+                setBldView({ mode: 'elevation' });
+                setSelectedZoneId(null);
+                setComposerTool('select');
+              }}
+            >
+              <Building size={13} />
+              <span>{isAr ? 'المبنى' : 'Building'}</span>
+            </button>
+            {bldView.mode !== 'elevation' && (
+              <>
+                <span className="fp-crumb-sep" aria-hidden="true">›</span>
+                <button
+                  type="button"
+                  className={`fp-crumb ${bldView.mode === 'floor' ? 'active' : ''}`}
+                  onClick={() => {
+                    setBldView({ mode: 'floor', floorKey: bldView.floorKey });
+                    setSelectedZoneId(null);
+                    setComposerTool('select');
+                  }}
+                >
+                  {bldView.floorKey === 'bld_basement'
+                    ? (isAr ? 'البدروم' : 'Basement')
+                    : bldView.floorKey === 'bld_ground'
+                      ? (isAr ? 'الدور الأرضي' : 'Ground Floor')
+                      : bldView.floorKey === 'bld_roof'
+                        ? (isAr ? 'السطح' : 'Roof')
+                        : bldView.floorKey}
+                </button>
+              </>
+            )}
+            {bldView.mode === 'unit' && (() => {
+              const unit = buildingModel?.units.find(u => u.id === bldView.unitId);
+              return (
+                <>
+                  <span className="fp-crumb-sep" aria-hidden="true">›</span>
+                  <span className="fp-crumb active" aria-current="page">{unit?.instance_label ?? (isAr ? 'وحدة' : 'Unit')}</span>
+                </>
+              );
+            })()}
+            {bldView.mode === 'unit' && (
+              <button type="button" className="fp-crumb-propagate" onClick={handlePropagateUnit}>
+                <Copy size={12} />
+                <span>{isAr ? 'تطبيق على الوحدات المطابقة' : 'Apply to matching units'}</span>
+              </button>
+            )}
+          </nav>
+        </div>
+      ) : (
       <div className="fp-floor-tabs">
         <div className="fp-floor-tabs-scroll" role="tablist">
           {Object.entries(floorGroups).map(([key, group], _idx, entries) => {
@@ -1443,6 +1624,7 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
         </div>
 
       </div>
+      )}
 
       <div className={`fp-workspace ${listPortalTarget ? 'no-list' : ''}`}>
 
@@ -1452,7 +1634,7 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
               <Layers size={13} />
               <span>{isAr ? 'معاينة حية للمخطط' : 'LIVE FLOOR PLAN PREVIEW'}</span>
             </span>
-            {(propertyType === 'apartment' || propertyType === 'garage') && previewSlots.length > 0 && (
+            {(composerActive || propertyType === 'garage') && previewSlots.length > 0 && (
               <div className="fp-tools" role="group" aria-label={isAr ? 'أدوات المخطط' : 'Composer tools'}>
                 <button
                   type="button"
@@ -1472,7 +1654,7 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
                 >
                   <DoorOpen size={13} />
                 </button>
-                {propertyType === 'apartment' && (
+                {composerActive && (
                   <button
                     type="button"
                     className={`fp-tool-btn ${composerTool === 'window' ? 'active' : ''}`}
@@ -1493,7 +1675,123 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
           </div>
 
           <div className="fp-canvas-body">
-            {previewSlots.length > 0 ? (
+            {propertyType === 'building' && bldView.mode === 'elevation' && buildingModel ? (() => {
+              const sigFirstFloor = new Map<string, string>();
+              for (const f of buildingModel.floors) {
+                if (!sigFirstFloor.has(f.signature)) sigFirstFloor.set(f.signature, f.key);
+              }
+              const rows: Array<{ key: string; label: string; sub: string; kind: 'roof' | 'floor' | 'ground' | 'basement'; sameAs?: string }> = [];
+              if (buildingModel.roof.length > 0) {
+                rows.push({
+                  key: 'bld_roof',
+                  label: isAr ? 'السطح' : 'Roof',
+                  sub: `${floorSqm(buildingModel.roof)} m²`,
+                  kind: 'roof',
+                });
+              }
+              for (const f of [...buildingModel.floors].reverse()) {
+                const first = sigFirstFloor.get(f.signature);
+                rows.push({
+                  key: f.key,
+                  label: f.key,
+                  sub: `${f.units.length} ${isAr ? (f.units.length === 1 ? 'وحدة' : 'وحدات') : (f.units.length === 1 ? 'unit' : 'units')} · ${f.sqm} m²`,
+                  kind: 'floor',
+                  sameAs: first && first !== f.key ? first : undefined,
+                });
+              }
+              if (buildingModel.ground.length > 0 || buildingModel.others.length > 0) {
+                rows.push({
+                  key: 'bld_ground',
+                  label: isAr ? 'الدور الأرضي والمدخل' : 'Ground Floor & Entrance',
+                  sub: `${floorSqm([...buildingModel.ground, ...buildingModel.others])} m²`,
+                  kind: 'ground',
+                });
+              }
+              if (buildingModel.basement.length > 0) {
+                rows.push({
+                  key: 'bld_basement',
+                  label: isAr ? 'البدروم والجراج' : 'Basement / Parking',
+                  sub: `${floorSqm(buildingModel.basement)} m²`,
+                  kind: 'basement',
+                });
+              }
+              if (rows.length === 0) {
+                return (
+                  <div className="fp-empty-box">
+                    <Building size={36} className="fp-empty-icon" />
+                    <h4 className="fp-empty-title">{isAr ? 'لا توجد طوابق بعد' : 'No floors yet'}</h4>
+                    <p className="fp-empty-desc">{isAr ? 'أضف مناطق المبنى من القائمة الجانبية.' : 'Add building zones from the side list.'}</p>
+                  </div>
+                );
+              }
+              const slabH = Math.min(52, Math.max(30, (440 - 60 - (rows.length - 1) * 6) / rows.length));
+              const totalH = rows.length * slabH + (rows.length - 1) * 6;
+              const startY = (440 - totalH) / 2;
+              return (
+                <svg viewBox="0 0 680 440" className="fp-canvas-svg" style={{ direction: 'ltr' }} xmlns="http://www.w3.org/2000/svg">
+                  <defs>
+                    <pattern id="adminElevGrid" width="10" height="10" patternUnits="userSpaceOnUse">
+                      <path d="M 10 0 L 0 0 0 10" fill="none" stroke="rgba(221, 167, 82, 0.08)" strokeWidth="0.4" />
+                    </pattern>
+                  </defs>
+                  <rect width="680" height="440" fill="url(#adminElevGrid)" />
+                  {rows.map((row, i) => {
+                    const y = startY + i * (slabH + 6);
+                    const isRoof = row.kind === 'roof';
+                    const isBasement = row.kind === 'basement';
+                    const x = isRoof ? 190 : 150;
+                    const w = isRoof ? 300 : 380;
+                    return (
+                      <g
+                        key={row.key}
+                        role="button"
+                        tabIndex={0}
+                        aria-label={`${row.label} — ${row.sub}`}
+                        onClick={() => {
+                          setBldView({ mode: 'floor', floorKey: row.key });
+                          setSelectedZoneId(null);
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            setBldView({ mode: 'floor', floorKey: row.key });
+                            setSelectedZoneId(null);
+                          }
+                        }}
+                        style={{ cursor: 'pointer' }}
+                        className="fp-elev-slab"
+                      >
+                        <rect
+                          x={x}
+                          y={y}
+                          width={w}
+                          height={slabH}
+                          rx={3}
+                          fill="rgba(221,167,82,0.06)"
+                          stroke="#DDA752"
+                          strokeWidth={isBasement ? 1.2 : 1.8}
+                          strokeDasharray={isBasement ? '6 4' : undefined}
+                        />
+                        <text x={x + 14} y={y + slabH / 2 - 4} fontSize="11" fill="#FFFFFF" fontWeight="700" fontFamily="'Plus Jakarta Sans', sans-serif">
+                          {row.label}
+                        </text>
+                        <text x={x + 14} y={y + slabH / 2 + 11} fontSize="8.5" fill="#DDA752" fontFamily="monospace" style={{ direction: 'ltr', unicodeBidi: 'isolate' }}>
+                          {row.sub}
+                        </text>
+                        {row.sameAs && (
+                          <text x={x + w - 14} y={y + slabH / 2 + 4} fontSize="8.5" fill="rgba(221,167,82,0.75)" textAnchor="end" fontFamily="monospace">
+                            {isAr ? `مطابق لـ ${row.sameAs}` : `= ${row.sameAs}`}
+                          </text>
+                        )}
+                        {row.kind === 'ground' && (
+                          <line x1={110} y1={y + slabH + 3} x2={570} y2={y + slabH + 3} stroke="rgba(221,167,82,0.5)" strokeWidth="2" />
+                        )}
+                      </g>
+                    );
+                  })}
+                </svg>
+              );
+            })() : previewSlots.length > 0 ? (
               <svg ref={svgRef} viewBox="0 0 680 440" className="fp-canvas-svg" style={{ direction: 'ltr' }} xmlns="http://www.w3.org/2000/svg">
                 <defs>
                   <pattern id="adminCadGrid" width="10" height="10" patternUnits="userSpaceOnUse">
@@ -1547,10 +1845,25 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
                           handleComposerClick(s.zone.id, e);
                           return;
                         }
+                        if (propertyType === 'building' && bldView.mode === 'floor' && s.zone.zone_template_id === 'bld.unit') {
+                          setBldView({ mode: 'unit', floorKey: bldView.floorKey, unitId: s.zone.id });
+                          setSelectedZoneId(null);
+                          return;
+                        }
                         selectZone(s.zone.id, true);
                       }}
                       onPointerDown={(e) => handleCanvasRoomPointerDown(s.zone.id, e)}
-                      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); selectZone(s.zone.id, true); } }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          if (propertyType === 'building' && bldView.mode === 'floor' && s.zone.zone_template_id === 'bld.unit') {
+                            setBldView({ mode: 'unit', floorKey: bldView.floorKey, unitId: s.zone.id });
+                            setSelectedZoneId(null);
+                            return;
+                          }
+                          selectZone(s.zone.id, true);
+                        }
+                      }}
                       opacity={isDragSource ? 0.35 : 1}
                       style={{ cursor: composerTool !== 'select' ? 'crosshair' : canvasDrag ? 'grabbing' : 'grab', touchAction: 'none' }}
                     >
@@ -1702,7 +2015,7 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
                   );
                 })()}
               </svg>
-            ) : showPresets ? (
+            ) : showPresets && propertyType === 'apartment' ? (
               <div className="fp-presets">
                 <div className="fp-presets-head">
                   <h4 className="fp-presets-title">{isAr ? 'ابدأ مخططك' : 'Start your floor plan'}</h4>
@@ -1844,7 +2157,14 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
                         warn={warnFor(zone.zone_template_id, sp.sqm)}
                         isAr={isAr}
                         rowRef={(el) => { rowRefs.current[zone.id] = el; }}
-                        onSelect={() => selectZone(zone.id)}
+                        onSelect={() => {
+                          if (propertyType === 'building' && bldView.mode === 'floor' && zone.zone_template_id === 'bld.unit') {
+                            setBldView({ mode: 'unit', floorKey: bldView.floorKey, unitId: zone.id });
+                            setSelectedZoneId(null);
+                            return;
+                          }
+                          selectZone(zone.id);
+                        }}
                         onPatch={(updates) => handleUpdateSpatial(zone.id, updates)}
                         onRename={(next) => handleRenameRoom(zone.id, next)}
                         onDelete={() => handleRemoveRoom(zone.id, getZoneLabel(zone))}
@@ -3196,6 +3516,68 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
           letter-spacing: 0.05em;
           color: var(--fp-text-dim);
         }
+
+        .fp-crumbs {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          min-height: 38px;
+          flex-wrap: wrap;
+        }
+
+        .fp-crumb {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          padding: 6px 12px;
+          border-radius: 8px;
+          border: 1px solid transparent;
+          background: transparent;
+          font-family: inherit;
+          font-size: 0.8125rem;
+          font-weight: 600;
+          color: var(--fp-text-dim);
+          cursor: pointer;
+          transition: color 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+        }
+
+        .fp-crumb:hover { color: var(--fp-gold); }
+
+        .fp-crumb.active {
+          color: var(--fp-gold);
+          background: rgba(221,167,82,0.1);
+          border-color: var(--fp-line);
+          cursor: default;
+        }
+
+        .fp-crumb-sep {
+          color: var(--fp-text-dim);
+          font-size: 0.9rem;
+          opacity: 0.6;
+        }
+
+        .fp-crumb-propagate {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          margin-inline-start: auto;
+          padding: 6px 12px;
+          border-radius: 8px;
+          border: 1px solid var(--fp-line);
+          background: rgba(221,167,82,0.08);
+          font-family: inherit;
+          font-size: 0.75rem;
+          font-weight: 700;
+          color: var(--fp-gold);
+          cursor: pointer;
+          transition: background 0.15s ease;
+        }
+
+        .fp-crumb-propagate:hover { background: rgba(221,167,82,0.16); }
+
+        .fp-elev-slab:hover rect { fill: rgba(221,167,82,0.12); }
+        .fp-elev-slab:focus-visible { outline: none; }
+        .fp-elev-slab:focus-visible rect { stroke-width: 2.6; }
 
         .fp-tools {
           display: flex;
