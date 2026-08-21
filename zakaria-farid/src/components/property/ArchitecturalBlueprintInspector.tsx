@@ -663,13 +663,19 @@ function resolveRoomTradeSpecs(zoneKey: string): TradeSpecItem[] {
   return DEFAULT_FALLBACK_SPECS;
 }
 
-function flattenZoneInstances(rawZones: ZoneInstance[]): ZoneInstance[] {
-  const result: ZoneInstance[] = [];
+interface FlatZoneEntry {
+  zone: ZoneInstance;
+  unitLabel?: string;
+}
+
+function flattenZoneEntries(rawZones: ZoneInstance[], unitLabel?: string): FlatZoneEntry[] {
+  const result: FlatZoneEntry[] = [];
   for (const z of rawZones) {
     if (z.children && z.children.length > 0) {
-      result.push(...flattenZoneInstances(z.children));
+      const nextUnit = z.zone_template_id === 'bld.unit' ? (z.instance_label || unitLabel) : unitLabel;
+      result.push(...flattenZoneEntries(z.children, nextUnit));
     } else {
-      result.push(z);
+      result.push({ zone: z, unitLabel });
     }
   }
   return result;
@@ -681,6 +687,7 @@ interface ProcessedZone {
   floorKey: string;
   floorLabel: string;
   floorLabelAr: string;
+  unitLabel?: string;
   zoneTitle: string;
   zoneTitleAr: string;
   image: string;
@@ -689,6 +696,8 @@ interface ProcessedZone {
   sqm: number;
   ceiling: string;
   dims: string;
+  doorCount: number;
+  windowCount: number;
   spatial?: ZoneSpatialLayout;
   svgCoords: { x: number; y: number; w: number; h: number; pinX: number; pinY: number };
   trades: TradeSpecItem[];
@@ -949,7 +958,7 @@ export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintIns
 
   // Process and adapt raw zones into rich spatial blueprints
   const processedZones = useMemo<ProcessedZone[]>(() => {
-    const flattened = flattenZoneInstances(zones || []);
+    const flattened = flattenZoneEntries(zones || []);
 
     const defaultTemplateKeys = propertyType === 'apartment'
       ? ['apt.reception', 'apt.master_bed', 'apt.kitchen', 'apt.main_bath', 'apt.balcony']
@@ -960,16 +969,18 @@ export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintIns
           'vil.b.garage', 'vil.b.game_room'
         ];
 
-    const sourceList = (flattened.length > 0)
+    const sourceList: FlatZoneEntry[] = (flattened.length > 0)
       ? flattened
       : defaultTemplateKeys.map((key, i) => ({
-          id: `default-${i}-${key}`,
-          zone_template_id: key,
-          sort_order: i,
-          trades: []
-        } as ZoneInstance));
+          zone: {
+            id: `default-${i}-${key}`,
+            zone_template_id: key,
+            sort_order: i,
+            trades: []
+          } as ZoneInstance,
+        }));
 
-    return sourceList.map((zInst, idx) => {
+    return sourceList.map(({ zone: zInst, unitLabel }, idx) => {
       const key = zInst.zone_template_id;
       const titles = ZONE_TITLES[key] || { 
         en: zInst.instance_label || key.split('.').pop()?.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || 'Curated Suite',
@@ -982,12 +993,18 @@ export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintIns
         dims: `${GENERIC_ZONE_METRIC.length_m}m × ${GENERIC_ZONE_METRIC.width_m}m`,
       };
 
-      // Determine Floor Key and Labels
+      // Floor derivation: admin-authored level labels win; legacy template-key
+      // patterns only classify old records saved before levels existed.
       let floorKey = 'ground';
       let floorLabel = 'Ground Level';
       let floorLabelAr = 'الطابق الأرضي';
 
-      if (key.includes('.f.') || key.includes('master') || key.includes('std_bed') || key.includes('family')) {
+      if (zInst.level_label && zInst.level_label.trim()) {
+        const lvl = zInst.level_label.trim();
+        floorKey = `lvl:${lvl}`;
+        floorLabel = lvl;
+        floorLabelAr = lvl;
+      } else if (key.includes('.f.') || key.includes('master') || key.includes('std_bed') || key.includes('family')) {
         floorKey = 'first';
         floorLabel = 'First Level';
         floorLabelAr = 'الطابق الأول';
@@ -1005,12 +1022,15 @@ export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintIns
         floorLabelAr = 'الحدائق والمحيط الخارجي';
       }
 
+      const openings = zInst.spatial?.openings ?? [];
+
       return {
         id: zInst.id || `zone-${idx}-${key}`,
         zoneKey: key,
         floorKey,
         floorLabel,
         floorLabelAr,
+        unitLabel,
         zoneTitle: titles.en,
         zoneTitleAr: titles.ar,
         image: resolveSpaceImage(key, zInst.images?.[0]),
@@ -1019,6 +1039,8 @@ export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintIns
         sqm: zInst.spatial?.sqm || metrics.sqm,
         ceiling: zInst.spatial?.ceiling_height || metrics.ceiling,
         dims: zInst.spatial ? `${zInst.spatial.length_m}m × ${zInst.spatial.width_m}m` : metrics.dims,
+        doorCount: openings.filter(o => o.kind === 'door').length,
+        windowCount: openings.filter(o => o.kind === 'window').length,
         spatial: zInst.spatial,
         svgCoords: { x: 0, y: 0, w: 0, h: 0, pinX: 0, pinY: 0 },
         trades: parseTradeInstances(zInst)
@@ -1044,11 +1066,20 @@ export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintIns
       }
     });
 
-    return Array.from(map.values()).sort((a, b) => {
-      const idxA = floorOrder.indexOf(a.key);
-      const idxB = floorOrder.indexOf(b.key);
-      return (idxA >= 0 ? idxA : 99) - (idxB >= 0 ? idxB : 99);
+    const firstSeen = new Map<string, number>();
+    processedZones.forEach((z, i) => {
+      if (!firstSeen.has(z.floorKey)) firstSeen.set(z.floorKey, i);
     });
+    const rankOf = (key: string, label: string) => {
+      const legacyIdx = floorOrder.indexOf(key);
+      if (legacyIdx >= 0) return legacyIdx;
+      const num = label.match(/(\d+)/);
+      if (/lower/i.test(label)) return 40;
+      if (/upper/i.test(label)) return 41;
+      if (num) return 50 + parseInt(num[1], 10);
+      return 90 + (firstSeen.get(key) ?? 0) / 1000;
+    };
+    return Array.from(map.values()).sort((a, b) => rankOf(a.key, a.label) - rankOf(b.key, b.label));
   }, [processedZones]);
 
   // Active Floor initialized to the first logical floor (e.g. Ground Level)
