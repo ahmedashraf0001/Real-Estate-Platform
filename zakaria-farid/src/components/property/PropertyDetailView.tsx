@@ -11,6 +11,7 @@ import { FALLBACK_PROPERTIES } from '@/lib/data/fallbackProperties';
 import { adaptProperties } from '@/lib/utils/propertyAdapter';
 import { PropertyCard } from './PropertyCard';
 import ArchitecturalBlueprintInspector from './ArchitecturalBlueprintInspector';
+import ViewingScheduler from './ViewingScheduler';
 import { createCachedTileLayer } from '@/lib/mapCache';
 import { 
   Bed, 
@@ -226,11 +227,6 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
   const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [geoStatus, setGeoStatus] = useState<'idle' | 'locating' | 'located' | 'fallback'>('idle');
 
-  // Viewing Scheduler States
-  const [viewingSlot, setViewingSlot] = useState<string>('morning');
-  const [viewingDate, setViewingDate] = useState<string>('');
-  const [viewingBooked, setViewingBooked] = useState<boolean>(false);
-
   const formattedPrice = new Intl.NumberFormat('en-US').format(property.price);
   const similarProperties = propSimilar || fallbackAdapted.filter((p: Property) => p.id !== property.id).slice(0, 3);
 
@@ -390,12 +386,6 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
       });
     }
   }, [property.images]);
-
-  const handleBookingSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!viewingDate) return;
-    setViewingBooked(true);
-  };
 
   // Price per SQM calculation
   const pricePerSqm = property.sqm && property.sqm > 0 
@@ -788,6 +778,15 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
           )}
         </AnimatePresence>
 
+        {/* C. Interactive Architectural Blueprint & Space Specifications — full-bleed studio */}
+        <ArchitecturalBlueprintInspector 
+          zones={rawProperty.spec_layers || []} 
+          propertyTitle={property.title} 
+          locale={locale} 
+          propertyType={rawProperty.type} 
+          propertyImages={property.images} 
+        />
+
         {/* 5. Main Detail Grid: Left Body + Sticky Right Advisory Desk */}
         <div className="detail-layout">
           {/* Left Column Body */}
@@ -874,17 +873,6 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
                 ))}
               </div>
             </div>
-
-
-
-            {/* C. Interactive Architectural Blueprint & Space Specifications */}
-            <ArchitecturalBlueprintInspector 
-              zones={rawProperty.spec_layers || []} 
-              propertyTitle={property.title} 
-              locale={locale} 
-              propertyType={rawProperty.type} 
-              propertyImages={property.images} 
-            />
 
             {/* D. Location & Surroundings */}
             <div className="content-section">
@@ -1000,82 +988,26 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
               </div>
             </div>
 
-            {/* Request Private Viewing Appointment Suite */}
+            {/* Book a Private Viewing — Cal.com scheduling dialog */}
             <div className="viewing-form-card" id="request-viewing-section">
               <div className="viewing-header">
-                <span className="viewing-eyebrow">CHAUFFEURED INSPECTION</span>
-                <h3 className="viewing-title">Book Private Viewing</h3>
+                <span className="viewing-eyebrow">{isAr ? 'معاينة خاصة' : 'PRIVATE VIEWING'}</span>
+                <h3 className="viewing-title">{isAr ? 'احجز معاينة للعقار' : 'Book a Property Viewing'}</h3>
                 <p className="viewing-sub">
-                  Select your preferred window for an executive chauffeured walkthrough of {property.title}.
+                  {isAr
+                    ? `اختر الموعد المناسب لك لمعاينة ${property.title} مع مستشارك العقاري.`
+                    : `Choose a time that suits you to tour ${property.title} with your property advisor.`}
                 </p>
               </div>
 
-              {!viewingBooked ? (
-                <form className="viewing-form" onSubmit={handleBookingSubmit}>
-                  
-                  {/* Curated Viewing Slot Window */}
-                  <div className="viewing-input-group">
-                    <label className="viewing-label">INSPECTION WINDOW</label>
-                    <div className="viewing-slots-stack">
-                      {[
-                        { id: 'morning', label: 'Morning Natural Light', time: '11:00 AM - 01:00 PM' },
-                        { id: 'sunset', label: 'Golden Sunset Tour', time: '05:30 PM - 07:30 PM' },
-                        { id: 'night', label: 'Architectural Lighting Walkthrough', time: '08:00 PM - 09:30 PM' }
-                      ].map((slot) => (
-                        <button
-                          key={slot.id}
-                          type="button"
-                          className={`slot-choice-btn ${viewingSlot === slot.id ? 'active' : ''}`}
-                          onClick={() => setViewingSlot(slot.id)}
-                        >
-                          <div className="slot-btn-info">
-                            <span className="slot-title">{slot.label}</span>
-                            <span className="slot-time">{slot.time}</span>
-                          </div>
-                          {viewingSlot === slot.id && <CheckCircle size={15} className="slot-check" />}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="viewing-input-group">
-                    <label className="viewing-label">PREFERRED DATE</label>
-                    <div className="viewing-input-wrap">
-                      <Calendar size={16} className="input-icon" />
-                      <input 
-                        type="date" 
-                        required
-                        value={viewingDate}
-                        onChange={(e) => setViewingDate(e.target.value)}
-                        className="viewing-input"
-                      />
-                    </div>
-                  </div>
-
-                  <button type="submit" className="book-viewing-submit-btn btn-gold">
-                    <span>Confirm Private Chauffeur & Viewing</span>
-                  </button>
-                </form>
-              ) : (
-                <div className="booking-confirmed-box">
-                  <CheckCircle size={38} className="booked-check-icon" />
-                  <h4 className="booked-title">Viewing Scheduled</h4>
-                  <p className="booked-details">
-                    Date: <strong>{viewingDate}</strong><br />
-                    Window: <strong>{viewingSlot.toUpperCase()} TOUR</strong>
-                  </p>
-                  <p className="booked-note">
-                    Your concierge will dispatch a private chauffeur to your residence 45 minutes prior to the appointment.
-                  </p>
-                  <button 
-                    className="btn-dark reset-view-btn"
-                    onClick={() => setViewingBooked(false)}
-                    type="button"
-                  >
-                    Modify Viewing Window
-                  </button>
-                </div>
-              )}
+              <ViewingScheduler
+                calLink={rawProperty.calcom_event_link || process.env.NEXT_PUBLIC_CALCOM_DEFAULT_LINK || null}
+                propertyId={rawProperty.id}
+                propertySlug={rawProperty.slug}
+                propertyTitle={property.title}
+                isAr={isAr}
+                whatsappHref={`https://wa.me/${property.broker.phone.replace(/[^0-9]/g, '')}`}
+              />
             </div>
           </aside>
         </div>

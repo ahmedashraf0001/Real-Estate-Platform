@@ -63,6 +63,7 @@ export interface Property {
   floor_number?: number | null;
   finishing?: string | null;
   furnishing?: string | null;
+  calcom_event_link?: string | null;
   spec_layers?: ZoneInstance[] | SpecLayer[] | any;
   property_images?: PropertyImage[];
   property_amenities?: PropertyAmenity[];
@@ -83,5 +84,31 @@ export interface Lead {
   entry_method?: string | null;
   is_archived?: boolean | null;
   created_at: string;
+  property?: Pick<Property, 'id' | 'title_en' | 'title_ar' | 'slug'>;
+  bookings?: Booking[];
+}
+
+export type BookingStatus =
+  | 'viewing_scheduling_request'
+  | 'cancelled'
+  | 'rescheduled'
+  | 'completed';
+
+export interface Booking {
+  id: string;
+  lead_id: string;
+  property_id: string | null;
+  calcom_uid: string;
+  agent_ref?: string | null;
+  event_type_slug?: string | null;
+  start_time: string | null;
+  end_time: string | null;
+  status: BookingStatus | string;
+  attendee_name?: string | null;
+  attendee_email?: string | null;
+  attendee_phone?: string | null;
+  metadata?: Record<string, unknown> | null;
+  created_at: string;
+  updated_at?: string | null;
   property?: Pick<Property, 'id' | 'title_en' | 'title_ar' | 'slug'>;
 }

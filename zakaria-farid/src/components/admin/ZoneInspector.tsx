@@ -165,8 +165,6 @@ interface BodyProps {
   onClose?: () => void;
 }
 
-const CEILINGS = ['2.6m Flush', '2.8m Flush', '3.0m Flush', '3.2m Flush', '3.5m Flush', '4.0m Flush', 'Open Sky', 'Open Roof'];
-
 function ZoneInspectorBody({
   zone, zoneInstances, onZoneInstancesChange, isAr,
   uploading, setUploading, addTradeOpen, setAddTradeOpen, fileRef, onClose,
@@ -315,11 +313,22 @@ function ZoneInspectorBody({
         </div>
         <label className="zi-ceiling">
           <span>{isAr ? 'الارتفاع' : 'Ceiling'}</span>
-          <select value={ceiling} onChange={e => patchSpatial({ ceiling_height: e.target.value })}>
-            {(CEILINGS.includes(ceiling) ? CEILINGS : [...CEILINGS, ceiling]).map(c => (
-              <option key={c} value={c}>{c}</option>
-            ))}
-          </select>
+          <input
+            key={`ceil-${ceiling}`}
+            type="text"
+            dir="auto"
+            maxLength={30}
+            defaultValue={ceiling}
+            placeholder="e.g. 3.0m Flush"
+            onBlur={e => { const v = e.target.value.trim(); if (v && v !== ceiling) patchSpatial({ ceiling_height: v }); }}
+            onKeyDown={e => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                const v = (e.target as HTMLInputElement).value.trim();
+                if (v && v !== ceiling) patchSpatial({ ceiling_height: v });
+              }
+            }}
+          />
         </label>
       </section>
 
@@ -602,13 +611,13 @@ function InspectorStyles() {
       .zi-dim-field:focus-within { border-color: #DDA752; }
 
       .zi-ceiling { display: flex; flex-direction: column; gap: 3px; }
-      .zi-ceiling select, .zi-add-trade select, .zi-attr select {
+      .zi-ceiling select, .zi-ceiling input, .zi-add-trade select, .zi-attr select {
         padding: 6px 8px; border-radius: 8px;
         background: #0A0E18; border: 1px solid rgba(221,167,82,0.16);
         color: #EDE8DD; font-family: inherit; font-size: 0.72rem; font-weight: 600;
         outline: none; cursor: pointer; max-width: 100%;
       }
-      .zi-ceiling select:focus, .zi-attr select:focus { border-color: #DDA752; }
+      .zi-ceiling select:focus, .zi-ceiling input:focus, .zi-attr select:focus { border-color: #DDA752; }
 
       .zi-trade {
         display: flex; flex-direction: column; gap: 6px;

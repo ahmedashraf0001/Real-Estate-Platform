@@ -22,7 +22,7 @@ import {
   Maximize2
 } from 'lucide-react';
 import { ZoneInstance, ZoneSpatialLayout, getZoneBadge, FinishBadge } from '@/lib/layering';
-import { computeMetricLayout, metricInputFromSpatial } from '@/lib/layering/floorplanLayout';
+import { computeMetricLayout, metricInputFromSpatial, openingSegments } from '@/lib/layering/floorplanLayout';
 import { FALLBACK_ZONE_METRICS, FALLBACK_ZONE_TITLES, GENERIC_ZONE_METRIC } from '@/lib/layering/zoneMetrics';
 
 type SystemKey = 'all' | 'civil' | 'electrical' | 'plumbing' | 'hvac' | 'finishes';
@@ -663,13 +663,19 @@ function resolveRoomTradeSpecs(zoneKey: string): TradeSpecItem[] {
   return DEFAULT_FALLBACK_SPECS;
 }
 
-function flattenZoneInstances(rawZones: ZoneInstance[]): ZoneInstance[] {
-  const result: ZoneInstance[] = [];
+interface FlatZoneEntry {
+  zone: ZoneInstance;
+  unitLabel?: string;
+}
+
+function flattenZoneEntries(rawZones: ZoneInstance[], unitLabel?: string): FlatZoneEntry[] {
+  const result: FlatZoneEntry[] = [];
   for (const z of rawZones) {
     if (z.children && z.children.length > 0) {
-      result.push(...flattenZoneInstances(z.children));
+      const nextUnit = z.zone_template_id === 'bld.unit' ? (z.instance_label || unitLabel) : unitLabel;
+      result.push(...flattenZoneEntries(z.children, nextUnit));
     } else {
-      result.push(z);
+      result.push({ zone: z, unitLabel });
     }
   }
   return result;
@@ -681,6 +687,7 @@ interface ProcessedZone {
   floorKey: string;
   floorLabel: string;
   floorLabelAr: string;
+  unitLabel?: string;
   zoneTitle: string;
   zoneTitleAr: string;
   image: string;
@@ -689,6 +696,8 @@ interface ProcessedZone {
   sqm: number;
   ceiling: string;
   dims: string;
+  doorCount: number;
+  windowCount: number;
   spatial?: ZoneSpatialLayout;
   svgCoords: { x: number; y: number; w: number; h: number; pinX: number; pinY: number };
   trades: TradeSpecItem[];
@@ -697,9 +706,9 @@ interface ProcessedZone {
 
 // Metric-true layout: rooms are sized by their real meter dimensions via the
 // shared engine, so this public plan always matches the admin builder preview.
-function computeArchitecturalLayout(zones: ProcessedZone[]): ProcessedZone[] {
+function computeArchitecturalLayout(zones: ProcessedZone[]): { zones: ProcessedZone[]; pxPerMeter: number } {
   const count = zones.length;
-  if (count === 0) return [];
+  if (count === 0) return { zones: [], pxPerMeter: 1 };
 
   const layout = computeMetricLayout(
     zones.map((zone) => {
@@ -714,7 +723,7 @@ function computeArchitecturalLayout(zones: ProcessedZone[]): ProcessedZone[] {
     }),
   );
 
-  return zones.map((zone, idx) => {
+  const mapped = zones.map((zone, idx) => {
     const rect = layout.rooms[idx];
     const hasSpatialDims = Boolean(zone.spatial?.length_m && zone.spatial?.width_m);
     return {
@@ -725,6 +734,7 @@ function computeArchitecturalLayout(zones: ProcessedZone[]): ProcessedZone[] {
       svgCoords: { x: rect.x, y: rect.y, w: rect.w, h: rect.h, pinX: rect.x + rect.w / 2, pinY: rect.y + rect.h / 2 },
     };
   });
+  return { zones: mapped, pxPerMeter: layout.pxPerMeter };
 }
 
 const TRADE_LABELS: Record<string, { en: string; ar: string; defaultSpecEn: string; defaultSpecAr: string }> = {
@@ -948,7 +958,7 @@ export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintIns
 
   // Process and adapt raw zones into rich spatial blueprints
   const processedZones = useMemo<ProcessedZone[]>(() => {
-    const flattened = flattenZoneInstances(zones || []);
+    const flattened = flattenZoneEntries(zones || []);
 
     const defaultTemplateKeys = propertyType === 'apartment'
       ? ['apt.reception', 'apt.master_bed', 'apt.kitchen', 'apt.main_bath', 'apt.balcony']
@@ -959,16 +969,18 @@ export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintIns
           'vil.b.garage', 'vil.b.game_room'
         ];
 
-    const sourceList = (flattened.length > 0)
+    const sourceList: FlatZoneEntry[] = (flattened.length > 0)
       ? flattened
       : defaultTemplateKeys.map((key, i) => ({
-          id: `default-${i}-${key}`,
-          zone_template_id: key,
-          sort_order: i,
-          trades: []
-        } as ZoneInstance));
+          zone: {
+            id: `default-${i}-${key}`,
+            zone_template_id: key,
+            sort_order: i,
+            trades: []
+          } as ZoneInstance,
+        }));
 
-    return sourceList.map((zInst, idx) => {
+    return sourceList.map(({ zone: zInst, unitLabel }, idx) => {
       const key = zInst.zone_template_id;
       const titles = ZONE_TITLES[key] || { 
         en: zInst.instance_label || key.split('.').pop()?.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || 'Curated Suite',
@@ -981,12 +993,18 @@ export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintIns
         dims: `${GENERIC_ZONE_METRIC.length_m}m × ${GENERIC_ZONE_METRIC.width_m}m`,
       };
 
-      // Determine Floor Key and Labels
+      // Floor derivation: admin-authored level labels win; legacy template-key
+      // patterns only classify old records saved before levels existed.
       let floorKey = 'ground';
       let floorLabel = 'Ground Level';
       let floorLabelAr = 'الطابق الأرضي';
 
-      if (key.includes('.f.') || key.includes('master') || key.includes('std_bed') || key.includes('family')) {
+      if (zInst.level_label && zInst.level_label.trim()) {
+        const lvl = zInst.level_label.trim();
+        floorKey = `lvl:${lvl}`;
+        floorLabel = lvl;
+        floorLabelAr = lvl;
+      } else if (key.includes('.f.') || key.includes('master') || key.includes('std_bed') || key.includes('family')) {
         floorKey = 'first';
         floorLabel = 'First Level';
         floorLabelAr = 'الطابق الأول';
@@ -1004,12 +1022,15 @@ export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintIns
         floorLabelAr = 'الحدائق والمحيط الخارجي';
       }
 
+      const openings = zInst.spatial?.openings ?? [];
+
       return {
         id: zInst.id || `zone-${idx}-${key}`,
         zoneKey: key,
         floorKey,
         floorLabel,
         floorLabelAr,
+        unitLabel,
         zoneTitle: titles.en,
         zoneTitleAr: titles.ar,
         image: resolveSpaceImage(key, zInst.images?.[0]),
@@ -1018,6 +1039,8 @@ export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintIns
         sqm: zInst.spatial?.sqm || metrics.sqm,
         ceiling: zInst.spatial?.ceiling_height || metrics.ceiling,
         dims: zInst.spatial ? `${zInst.spatial.length_m}m × ${zInst.spatial.width_m}m` : metrics.dims,
+        doorCount: openings.filter(o => o.kind === 'door').length,
+        windowCount: openings.filter(o => o.kind === 'window').length,
         spatial: zInst.spatial,
         svgCoords: { x: 0, y: 0, w: 0, h: 0, pinX: 0, pinY: 0 },
         trades: parseTradeInstances(zInst)
@@ -1043,11 +1066,20 @@ export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintIns
       }
     });
 
-    return Array.from(map.values()).sort((a, b) => {
-      const idxA = floorOrder.indexOf(a.key);
-      const idxB = floorOrder.indexOf(b.key);
-      return (idxA >= 0 ? idxA : 99) - (idxB >= 0 ? idxB : 99);
+    const firstSeen = new Map<string, number>();
+    processedZones.forEach((z, i) => {
+      if (!firstSeen.has(z.floorKey)) firstSeen.set(z.floorKey, i);
     });
+    const rankOf = (key: string, label: string) => {
+      const legacyIdx = floorOrder.indexOf(key);
+      if (legacyIdx >= 0) return legacyIdx;
+      const num = label.match(/(\d+)/);
+      if (/lower/i.test(label)) return 40;
+      if (/upper/i.test(label)) return 41;
+      if (num) return 50 + parseInt(num[1], 10);
+      return 90 + (firstSeen.get(key) ?? 0) / 1000;
+    };
+    return Array.from(map.values()).sort((a, b) => rankOf(a.key, a.label) - rankOf(b.key, b.label));
   }, [processedZones]);
 
   // Active Floor initialized to the first logical floor (e.g. Ground Level)
@@ -1063,13 +1095,20 @@ export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintIns
   }, [availableFloors, activeFloor]);
 
   // Filtered & Architecturally-laid-out zones for Active Floor
-  const displayedZones = useMemo(() => {
+  const displayedLayout = useMemo(() => {
     const currentFloorKey = activeFloor || (availableFloors[0]?.key ?? 'ground');
     const floorZones = processedZones.filter(z => z.floorKey === currentFloorKey);
     const baseList = floorZones.length > 0 ? floorZones : processedZones;
 
     return computeArchitecturalLayout(baseList);
   }, [processedZones, activeFloor, availableFloors]);
+
+  const displayedZones = displayedLayout.zones;
+  const layoutPxPerMeter = displayedLayout.pxPerMeter;
+  const hasRealOpenings = useMemo(
+    () => displayedZones.some(z => (z.spatial?.openings?.length ?? 0) > 0),
+    [displayedZones],
+  );
 
   // Active list of rooms on currently selected floor
   const activeRoomList = displayedZones;
@@ -1249,6 +1288,7 @@ export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintIns
                 type="button"
               >
                 <span className="room-num-badge">0{idx + 1}</span>
+                {zone.unitLabel && <span className="room-chip-unit">{zone.unitLabel}</span>}
                 <span className="room-chip-title">{isAr ? zone.zoneTitleAr : zone.zoneTitle}</span>
                 <span className="room-chip-sqm">{zone.sqm} m²</span>
               </button>
@@ -1433,8 +1473,39 @@ export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintIns
                       );
                     })}
 
+                    {/* ── 4a. Real Placed Openings (Doors & Windows from the Admin Composer) ── */}
+                    {hasRealOpenings && displayedZones.flatMap((zone) =>
+                      openingSegments(zone.svgCoords, zone.spatial?.openings, layoutPxPerMeter).map(seg => {
+                        const dx = seg.x2 - seg.x1;
+                        const dy = seg.y2 - seg.y1;
+                        const len = Math.hypot(dx, dy);
+                        const nx = seg.edge === 'w' ? 1 : seg.edge === 'e' ? -1 : 0;
+                        const ny = seg.edge === 'n' ? 1 : seg.edge === 's' ? -1 : 0;
+                        const leafX = seg.x1 + nx * len;
+                        const leafY = seg.y1 + ny * len;
+                        const sweep = dx * ny - dy * nx > 0 ? 0 : 1;
+                        return (
+                          <g key={seg.id} className="cad-real-opening">
+                            {seg.kind === 'door' ? (
+                              <>
+                                <line x1={seg.x1} y1={seg.y1} x2={seg.x2} y2={seg.y2} strokeWidth={4} className="cad-opening-gap" />
+                                <line x1={seg.x1} y1={seg.y1} x2={leafX} y2={leafY} stroke="#DDA752" strokeWidth={1.5} />
+                                <path d={`M ${leafX} ${leafY} A ${len} ${len} 0 0 ${sweep} ${seg.x2} ${seg.y2}`} fill="none" stroke="rgba(221,167,82,0.55)" strokeWidth={1} strokeDasharray="3 2" />
+                              </>
+                            ) : (
+                              <>
+                                <line x1={seg.x1} y1={seg.y1} x2={seg.x2} y2={seg.y2} strokeWidth={5} className="cad-opening-gap" />
+                                <line x1={seg.x1} y1={seg.y1} x2={seg.x2} y2={seg.y2} stroke="#7FB4D8" strokeWidth={3} />
+                                <line x1={seg.x1} y1={seg.y1} x2={seg.x2} y2={seg.y2} strokeWidth={1} className="cad-opening-gap" />
+                              </>
+                            )}
+                          </g>
+                        );
+                      }),
+                    )}
+
                     {/* ── 4. Architectural Window Glazing & Patio Sliders (Embedded in Outer Walls) ── */}
-                    {displayedZones.length > 0 && (() => {
+                    {!hasRealOpenings && displayedZones.length > 0 && (() => {
                       const minX = Math.min(...displayedZones.map(z => z.svgCoords.x));
                       const maxX = Math.max(...displayedZones.map(z => z.svgCoords.x + z.svgCoords.w));
                       const minY = Math.min(...displayedZones.map(z => z.svgCoords.y));
@@ -1827,23 +1898,27 @@ export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintIns
           </div>
         </div>
 
-        {/* Bottom Full-Width Live Specifications Dossier Pane */}
+        {/* Synced Specifications Rail — live dossier for the selected space */}
         <div className="studio-dossier-pane">
-          
-          {/* Active Space Hero Header Card */}
-          <div className="dossier-space-header">
-            <div className="dossier-header-left">
+
+          {/* Zone Hero Banner */}
+          <div className="dossier-hero">
+            <img
+              src={currentZone.image}
+              alt={isAr ? currentZone.zoneTitleAr : currentZone.zoneTitle}
+              className="dossier-hero-img"
+              loading="lazy"
+            />
+            <div className="dossier-hero-scrim" />
+            <div className="dossier-hero-content">
               <div className="dossier-badge-row">
                 <span className="dossier-floor-badge">
-                  <Building size={13} />
+                  <Building size={12} />
                   <span>{isAr ? currentZone.floorLabelAr : currentZone.floorLabel}</span>
                 </span>
-
-                <span className="dossier-verified-badge">
-                  <ShieldCheck size={13} />
-                  <span>{isAr ? 'أصل مدقق بالكامل' : '100% Verified Specifications'}</span>
-                </span>
-
+                {currentZone.unitLabel && (
+                  <span className="dossier-unit-badge">{currentZone.unitLabel}</span>
+                )}
                 {currentZone.badge !== 'unknown' && (() => {
                   const tier = TIER_BADGES[currentZone.badge];
                   return (
@@ -1857,30 +1932,47 @@ export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintIns
                   );
                 })()}
               </div>
-
               <h4 className="dossier-space-title">
                 {isAr ? currentZone.zoneTitleAr : currentZone.zoneTitle}
               </h4>
             </div>
+          </div>
 
-            {/* Quick Metrics Bar */}
-            <div className="dossier-metrics-strip">
-              <div className="dossier-metric-item">
-                <span className="metric-lbl">{isAr ? 'مساحة المسطح' : 'BUILT-UP AREA'}</span>
-                <span className="metric-val">{currentZone.sqm} SQM</span>
-              </div>
-              <div className="metric-v-sep" />
-              <div className="dossier-metric-item">
-                <span className="metric-lbl">{isAr ? 'ارتفاع السقف' : 'CEILING HEIGHT'}</span>
-                <span className="metric-val">{currentZone.ceiling}</span>
-              </div>
-              <div className="metric-v-sep" />
-              <div className="dossier-metric-item">
-                <span className="metric-lbl">{isAr ? 'الأبعاد المعمارية' : 'DIMENSIONS'}</span>
-                <span className="metric-val">{currentZone.dims}</span>
-              </div>
+          {/* Metric Grid */}
+          <div className="dossier-metrics-grid">
+            <div className="dossier-metric-cell">
+              <span className="metric-lbl">{isAr ? 'مساحة المسطح' : 'BUILT-UP AREA'}</span>
+              <span className="metric-val" dir="ltr">{currentZone.sqm} m²</span>
+            </div>
+            <div className="dossier-metric-cell">
+              <span className="metric-lbl">{isAr ? 'ارتفاع السقف' : 'CEILING'}</span>
+              <span className="metric-val">{currentZone.ceiling}</span>
+            </div>
+            <div className="dossier-metric-cell">
+              <span className="metric-lbl">{isAr ? 'الأبعاد المعمارية' : 'DIMENSIONS'}</span>
+              <span className="metric-val" dir="ltr">{currentZone.dims}</span>
+            </div>
+            <div className="dossier-metric-cell">
+              <span className="metric-lbl">{isAr ? 'الفتحات' : 'OPENINGS'}</span>
+              <span className="metric-val" dir="ltr">
+                {currentZone.doorCount + currentZone.windowCount > 0
+                  ? [
+                      currentZone.doorCount > 0 ? `${currentZone.doorCount} ${isAr ? (currentZone.doorCount === 1 ? 'باب' : 'أبواب') : (currentZone.doorCount === 1 ? 'Door' : 'Doors')}` : null,
+                      currentZone.windowCount > 0 ? `${currentZone.windowCount} ${isAr ? (currentZone.windowCount === 1 ? 'نافذة' : 'نوافذ') : (currentZone.windowCount === 1 ? 'Window' : 'Windows')}` : null,
+                    ].filter(Boolean).join(' · ')
+                  : '—'}
+              </span>
             </div>
           </div>
+
+          {/* Zone Photo Filmstrip */}
+          {currentZone.imagesList.length > 1 && (
+            <div className="dossier-photo-strip">
+              {currentZone.imagesList.slice(0, 6).map((img, i) => (
+                <img key={`${currentZone.id}-ph-${i}`} src={img} alt="" className="dossier-photo-thumb" loading="lazy" />
+              ))}
+            </div>
+          )}
 
           {/* Trade Specifications Matrix Grid (2 Columns on Desktop) */}
           <div className="dossier-trades-container">
@@ -2351,12 +2443,41 @@ export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintIns
           color: var(--gold-primary, #DDA752);
         }
 
+        .room-chip-unit {
+          font-size: 0.625rem;
+          font-weight: 800;
+          letter-spacing: 0.04em;
+          padding: 0.1rem 0.45rem;
+          border-radius: 9999px;
+          background: rgba(221, 167, 82, 0.14);
+          border: 1px solid rgba(221, 167, 82, 0.3);
+          color: var(--gold-primary, #DDA752);
+          white-space: nowrap;
+        }
+
         /* 4. Panoramic Stacked Workspace Container */
         .studio-workspace-container {
           display: flex;
           flex-direction: column;
           gap: 1.5rem;
           width: 100%;
+        }
+
+        .blueprint-studio-root {
+          container-type: inline-size;
+        }
+
+        @container (min-width: 980px) {
+          .studio-workspace-container {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) 400px;
+            align-items: start;
+          }
+
+          .studio-stage-pane {
+            position: sticky;
+            top: 96px;
+          }
         }
 
         /* Top Stage Pane */
@@ -2546,6 +2667,14 @@ export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintIns
 
         .cad-grid-pattern-line {
           stroke: rgba(221, 167, 82, 0.08);
+        }
+
+        .cad-opening-gap {
+          stroke: #080C14;
+        }
+
+        [data-theme="light"] .cad-opening-gap {
+          stroke: #F8FAFC;
         }
 
         [data-theme="light"] .cad-grid-pattern-line {
@@ -2857,37 +2986,105 @@ export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintIns
           backdrop-filter: blur(28px);
           -webkit-backdrop-filter: blur(28px);
           border: 1px solid rgba(255, 255, 255, 0.1);
-          padding: 1.75rem;
+          padding: 1.25rem;
           display: flex;
           flex-direction: column;
-          gap: 1.5rem;
+          gap: 1.25rem;
           box-shadow: 0 20px 48px rgba(0, 0, 0, 0.4);
+        }
+
+        .dossier-hero {
+          position: relative;
+          border-radius: 16px;
+          overflow: hidden;
+          aspect-ratio: 16 / 9;
+          background: rgba(221, 167, 82, 0.06);
+        }
+
+        .dossier-hero-img {
+          position: absolute;
+          inset: 0;
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+        }
+
+        .dossier-hero-scrim {
+          position: absolute;
+          inset: 0;
+          background: linear-gradient(180deg, rgba(6, 9, 16, 0.05) 30%, rgba(6, 9, 16, 0.88) 100%);
+        }
+
+        .dossier-hero-content {
+          position: absolute;
+          inset-inline: 0;
+          inset-block-end: 0;
+          padding: 0.9rem 1rem;
+          display: flex;
+          flex-direction: column;
+          gap: 0.45rem;
+        }
+
+        .dossier-hero-content .dossier-space-title {
+          color: #FFFFFF;
+        }
+
+        .dossier-unit-badge {
+          display: inline-flex;
+          align-items: center;
+          padding: 0.25rem 0.65rem;
+          border-radius: 9999px;
+          font-size: 0.6875rem;
+          font-weight: 800;
+          background: rgba(255, 255, 255, 0.12);
+          color: #FFFFFF;
+          border: 1px solid rgba(255, 255, 255, 0.25);
+          backdrop-filter: blur(6px);
+        }
+
+        .dossier-metrics-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 8px;
+        }
+
+        .dossier-metric-cell {
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+          padding: 0.7rem 0.85rem;
+          border-radius: 12px;
+          background: rgba(221, 167, 82, 0.06);
+          border: 1px solid rgba(221, 167, 82, 0.14);
+          min-width: 0;
+        }
+
+        [data-theme="light"] .dossier-metric-cell {
+          background: rgba(184, 134, 11, 0.05);
+          border-color: rgba(184, 134, 11, 0.16);
+        }
+
+        .dossier-photo-strip {
+          display: flex;
+          gap: 8px;
+          overflow-x: auto;
+          padding-bottom: 4px;
+          scrollbar-width: thin;
+        }
+
+        .dossier-photo-thumb {
+          width: 84px;
+          height: 60px;
+          object-fit: cover;
+          border-radius: 10px;
+          border: 1px solid rgba(221, 167, 82, 0.2);
+          flex-shrink: 0;
         }
 
         [data-theme="light"] .studio-dossier-pane {
           background: #FFFFFF;
           border-color: rgba(0, 0, 0, 0.08);
           box-shadow: 0 16px 40px rgba(30, 24, 16, 0.06);
-        }
-
-        .dossier-space-header {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          gap: 1.5rem;
-          padding-bottom: 1.25rem;
-          border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-          flex-wrap: wrap;
-        }
-
-        [data-theme="light"] .dossier-space-header {
-          border-bottom-color: rgba(0, 0, 0, 0.06);
-        }
-
-        .dossier-header-left {
-          display: flex;
-          flex-direction: column;
-          gap: 0.5rem;
         }
 
         .dossier-badge-row {
@@ -2897,8 +3094,7 @@ export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintIns
           flex-wrap: wrap;
         }
 
-        .dossier-floor-badge,
-        .dossier-verified-badge {
+        .dossier-floor-badge {
           display: inline-flex;
           align-items: center;
           gap: 5px;
@@ -2906,52 +3102,19 @@ export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintIns
           border-radius: 9999px;
           font-size: 0.6875rem;
           font-weight: 800;
-        }
-
-        .dossier-floor-badge {
-          background: rgba(221, 167, 82, 0.15);
-          color: var(--gold-primary, #DDA752);
-          border: 1px solid rgba(221, 167, 82, 0.35);
-        }
-
-        .dossier-verified-badge {
-          background: rgba(16, 185, 129, 0.15);
-          color: #10B981;
-          border: 1px solid rgba(16, 185, 129, 0.3);
+          background: rgba(221, 167, 82, 0.2);
+          color: #EFC98A;
+          border: 1px solid rgba(221, 167, 82, 0.45);
+          backdrop-filter: blur(6px);
         }
 
         .dossier-space-title {
           font-family: var(--font-heading);
-          font-size: 1.45rem;
+          font-size: 1.3rem;
           font-weight: 800;
           color: var(--text-primary, #FFFFFF);
           margin: 0;
           line-height: 1.25;
-        }
-
-        [data-theme="light"] .dossier-space-title {
-          color: #0F172A;
-        }
-
-        .dossier-metrics-strip {
-          display: flex;
-          align-items: center;
-          gap: 1rem;
-          padding: 0.75rem 1.25rem;
-          border-radius: 14px;
-          background: rgba(255, 255, 255, 0.03);
-          border: 1px solid rgba(255, 255, 255, 0.06);
-        }
-
-        [data-theme="light"] .dossier-metrics-strip {
-          background: #F8FAFC;
-          border-color: rgba(0, 0, 0, 0.05);
-        }
-
-        .dossier-metric-item {
-          display: flex;
-          flex-direction: column;
-          gap: 2px;
         }
 
         .metric-lbl {
@@ -2976,17 +3139,6 @@ export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintIns
           color: #0F172A;
         }
 
-        .metric-v-sep {
-          width: 1px;
-          height: 24px;
-          background: rgba(255, 255, 255, 0.08);
-        }
-
-        [data-theme="light"] .metric-v-sep {
-          background: rgba(0, 0, 0, 0.08);
-        }
-
-        /* Trades Grid (2 Columns on Desktop) */
         .dossier-trades-container {
           display: flex;
           flex-direction: column;
@@ -3008,8 +3160,8 @@ export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintIns
 
         .dossier-trades-grid {
           display: grid;
-          grid-template-columns: repeat(2, 1fr);
-          gap: 1rem;
+          grid-template-columns: 1fr;
+          gap: 0.75rem;
         }
 
         .trade-spec-card {
@@ -3134,13 +3286,6 @@ export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintIns
         }
 
         @media (max-width: 768px) {
-          .dossier-trades-grid {
-            grid-template-columns: 1fr;
-          }
-          .dossier-metrics-strip {
-            width: 100%;
-            justify-content: space-between;
-          }
           .photo-filmstrip-container {
             bottom: 0.5rem;
             left: 0.5rem;

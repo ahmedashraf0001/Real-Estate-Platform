@@ -13,7 +13,6 @@ import { useDropzone } from 'react-dropzone';
 import imageCompression from 'browser-image-compression';
 import { Loader2, Save, Trash2, Upload, X, Layers, Image as ImageIcon, ChevronRight, ChevronLeft, Check, Eye, MapPin, Building2, Sparkles, FileText, PanelRightClose, PanelRightOpen } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
-import FinishingWizard from './FinishingWizard';
 import CADBlueprintBuilder from './CADBlueprintBuilder';
 import ZoneInspector from './ZoneInspector';
 import DynamicMapPicker from './DynamicMapPicker';
@@ -257,7 +256,7 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
       const s = sp.get('step');
       if (s) {
         const parsed = Number(s);
-        if (parsed >= 1 && parsed <= 5) {
+        if (parsed >= 1 && parsed <= 4) {
           setCurrentStep(parsed);
         }
       }
@@ -286,7 +285,7 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
       const valid = await trigger(['location']);
       if (!valid) return;
     }
-    goToStep(Math.min(currentStep + 1, 5));
+    goToStep(Math.min(currentStep + 1, 4));
   };
 
   const handlePrevStep = () => {
@@ -358,9 +357,8 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
   const steps = [
     { num: 1, title_en: 'Property Details', title_ar: 'بيانات العقار' },
     { num: 2, title_en: 'Location & Media', title_ar: 'الموقع والوسائط' },
-    { num: 3, title_en: 'Floor Plans', title_ar: 'المخططات' },
-    { num: 4, title_en: 'Features & Finishes', title_ar: 'المزايا والتشطيب' },
-    { num: 5, title_en: 'Review & Publish', title_ar: 'المراجعة والنشر' },
+    { num: 3, title_en: 'Floor Plan & Finishes', title_ar: 'المخططات والتشطيب' },
+    { num: 4, title_en: 'Review & Publish', title_ar: 'المراجعة والنشر' },
   ];
 
   const selectedType = watch('type');
@@ -592,7 +590,7 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
       toast.success(isAr ? (isEditing ? 'تم تحديث العقار بنجاح!' : 'تم إنشاء العقار بنجاح!') : (isEditing ? 'Property updated!' : 'Property created!'));
       setSavedSlug(res.slug || property?.slug || null);
       setIsSaved(true);
-      setCurrentStep(5);
+      setCurrentStep(4);
       if (typeof window !== 'undefined') {
         const url = new URL(window.location.href);
         url.searchParams.set('step', '5');
@@ -1059,6 +1057,11 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
               if (id) setRailOpen(true);
             }}
             listPortalTarget={roomsRailEl}
+            onPresetMeta={({ bedrooms, bathrooms, floorNumber }) => {
+              setValue('bedrooms', bedrooms);
+              setValue('bathrooms', bathrooms);
+              if (floorNumber !== null) setValue('floor_number', floorNumber);
+            }}
             isAr={isAr}
           />
 
@@ -1205,27 +1208,8 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
         </div>
       )}
 
-      {/* ─── STEP 4: Detailed Layered Specs & Finishing ─── */}
+      {/* ─── STEP 4: Full Pre-Save Specification & Property Summary Review ─── */}
       {currentStep === 4 && (
-        <div className={styles.section}>
-          <h2 className={styles.sectionTitle} style={{ marginBottom: 12 }}>
-            <Layers size={18} />
-            {isAr ? 'الخطوة ٤: مواصفات الأنظمة والتشطيبات الهندسية' : 'Step 4: Layered Engineering Systems & Finishes'}
-          </h2>
-
-          <FinishingWizard
-            propertyType={selectedType}
-            bedroomCount={bedroomsCount}
-            zoneInstances={zoneInstances}
-            onZoneInstancesChange={setZoneInstances}
-            initialSubType={selectedSubtype}
-            isAr={isAr}
-          />
-        </div>
-      )}
-
-      {/* ─── STEP 5: Full Pre-Save Specification & Property Summary Review ─── */}
-      {currentStep === 5 && (
         <div className={styles.section}>
           {isSaved && (
             <div style={{
@@ -1300,7 +1284,7 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
                 <h2 className={styles.sectionTitle} style={{ margin: 0 }}>
                   <Sparkles size={18} />
-                  {isAr ? 'الخطوة ٥: مراجعة ملخص العقار والمخطط الهندسي' : 'Step 5: Review Property & CAD Specs Summary'}
+                  {isAr ? 'الخطوة ٤: مراجعة ملخص العقار والمخطط الهندسي' : 'Step 4: Review Property & CAD Specs Summary'}
                 </h2>
                 <button
                   type="button"
@@ -1541,7 +1525,7 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
       {/* ─── Stepper Bottom Navigation Bar ─── */}
       <div className={styles.saveBar}>
         <div className={styles.saveBarStepIndicator}>
-          <span>{isAr ? `الخطوة ${currentStep} من 5` : `Step ${currentStep} of 5`}</span>
+          <span>{isAr ? `الخطوة ${currentStep} من 4` : `Step ${currentStep} of 4`}</span>
           <span>•</span>
           <span style={{ color: '#DDA752' }}>
             {isAr ? steps[currentStep - 1]?.title_ar : steps[currentStep - 1]?.title_en}
@@ -1560,7 +1544,7 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
             </button>
           )}
 
-          {currentStep < 5 ? (
+          {currentStep < 4 ? (
             <button type="button" className={styles.btnNext} onClick={handleNextStep}>
               <span>{isAr ? 'الخطوة التالية' : 'Next Step'}</span>
               {isAr ? <ChevronLeft size={16} /> : <ChevronRight size={16} />}

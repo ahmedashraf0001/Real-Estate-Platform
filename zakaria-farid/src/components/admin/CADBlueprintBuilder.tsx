@@ -8,21 +8,23 @@ import {
   Plus,
   Minus,
   Trash2,
-  ChevronDown,
   Pencil,
   Undo2,
   Redo2,
   AlertTriangle,
   GripVertical,
-  Copy,
   Check,
   Sparkles,
+  MousePointer2,
+  DoorOpen,
+  RectangleHorizontal,
+  Copy,
 } from 'lucide-react';
-import { ZoneInstance, ZoneSpatialLayout, removeZones, applyGlobalState, getZoneBadge, GlobalFinishingState, addCustomZone } from '@/lib/layering';
+import { ZoneInstance, ZoneSpatialLayout, ZoneOpening, removeZones, applyGlobalState, getZoneBadge, GlobalFinishingState, addCustomZone } from '@/lib/layering';
 import { SMART_ZONE_SUGGESTIONS } from '@/lib/layering/categories';
 import { ZONE_TEMPLATES, getTradesForZone, getAttributesForTrade } from '@/lib/layering/templates';
 import { ZONE_CATEGORY_BUCKETS, ZoneCategoryBucket } from '@/lib/layering/categories';
-import { computeMetricLayout } from '@/lib/layering/floorplanLayout';
+import { computeMetricLayout, openingSegments } from '@/lib/layering/floorplanLayout';
 import { fallbackMetricFor, FALLBACK_ZONE_TITLES } from '@/lib/layering/zoneMetrics';
 
 interface CADBlueprintBuilderProps {
@@ -37,6 +39,8 @@ interface CADBlueprintBuilderProps {
   onSelectedZoneIdChange?: (id: string | null) => void;
   /** When provided, the room list renders into this element (Figma-style sidebar) instead of the workspace column. */
   listPortalTarget?: HTMLElement | null;
+  /** Receives bedrooms/bathrooms/floor number chosen in the preset wizard so the host form can persist them. */
+  onPresetMeta?: (meta: { bedrooms: number; bathrooms: number; floorNumber: number | null }) => void;
   isAr?: boolean;
 }
 
@@ -59,6 +63,7 @@ const DEFAULT_DIMENSIONS: Record<string, { l: number; w: number; ceiling: string
   'bld.typical_floors': { l: 20.0, w: 12.0, ceiling: '3.0m Flush',   titleEn: 'Typical Floor (per floor)', titleAr: 'الدور المتكرر (لكل دور)' },
   'bld.roof':           { l: 20.0, w: 12.0, ceiling: 'Open Roof',    titleEn: 'Roof & Water Tanks',        titleAr: 'السطح وخزانات المياه' },
   // ── Garage (جراج) zones ─────────────────────────────────────────────────
+  'grg.garage': { l: 12.0, w: 6.0, ceiling: '2.8m Low', titleEn: 'Garage', titleAr: 'الجراج' },
   'grg.ramp':  { l: 6.0, w: 3.5, ceiling: '2.8m Low',  titleEn: 'Ramp & Gate',    titleAr: 'الرامب والبوابة' },
   'grg.bay':   { l: 5.5, w: 2.5, ceiling: '2.8m Low',  titleEn: 'Parking Bay',    titleAr: 'باكية الجراج' },
   'grg.elec':  { l: 2.0, w: 1.5, ceiling: '2.8m Low',  titleEn: 'Electrical Box', titleAr: 'لوحة الكهرباء' },
@@ -82,6 +87,7 @@ const STARTER_DEFAULTS: Record<string, { l: number; w: number }> = {
   'bld.ground_lobby':   { l: 20.0, w: 12.0 },
   'bld.typical_floors': { l: 20.0, w: 12.0 },
   'bld.roof':           { l: 20.0, w: 12.0 },
+  'grg.garage': { l: 12.0, w: 6.0 },
   'grg.ramp':  { l: 6.0, w: 3.5 },
   'grg.bay':   { l: 5.5, w: 2.5 },
   'grg.elec':  { l: 2.0, w: 1.5 },
@@ -94,120 +100,39 @@ function starterDims(templateId: string): { l: number; w: number } {
   return { l: d?.l ?? 4.0, w: d?.w ?? 3.0 };
 }
 
-// ── Starter presets (spec §2b, §4.6) ─────────────────────────────────────────
-interface StarterPreset {
-  id: string;
-  labelEn: string;
-  labelAr: string;
-  subEn: string;
-  subAr: string;
-  approxSqm: number;
-  // template ids to instantiate, in order
-  rooms: string[];
+// ── Preset-generation wizard (spec: replaces static starter presets) ─────────
+interface PresetWizardAnswers {
+  bedrooms: number;
+  bathrooms: number;
+  floorNumber: string;
+  maidRoom: boolean;
+  laundry: boolean;
+  balcony: boolean;
+  guestToilet: boolean;
+  dressing: boolean;
 }
 
-const STARTER_PRESETS: StarterPreset[] = [
-  {
-    id: 'apartment',
-    labelEn: 'Apartment', labelAr: 'شقة',
-    subEn: '2BR · 2BA', subAr: 'غرفتان · حمامان',
-    approxSqm: 96,
-    rooms: ['apt.reception', 'apt.kitchen', 'apt.master_bed', 'apt.std_bed', 'apt.master_bath', 'apt.main_bath', 'apt.balcony'],
-  },
-  {
-    id: 'villa',
-    labelEn: 'Villa', labelAr: 'فيلا',
-    subEn: '4BR · 3BA', subAr: '٤ غرف · ٣ حمامات',
-    approxSqm: 240,
-    rooms: ['apt.reception', 'apt.kitchen', 'apt.master_bed', 'apt.std_bed', 'apt.std_bed', 'apt.std_bed', 'apt.master_bath', 'apt.main_bath', 'apt.guest_bath', 'apt.corridor', 'apt.balcony', 'apt.laundry'],
-  },
-  {
-    id: 'chalet',
-    labelEn: 'Chalet', labelAr: 'شاليه',
-    subEn: '1BR · 1BA', subAr: 'غرفة · حمام',
-    approxSqm: 55,
-    rooms: ['apt.reception', 'apt.kitchen', 'apt.master_bed', 'apt.main_bath', 'apt.balcony'],
-  },
-];
-
-// Recommend the preset matching wizard Step-1 type + bedroom count.
-function recommendedPresetId(propertyType: string, bedrooms: number): string | null {
-  if (propertyType !== 'apartment') return null;
-  if (bedrooms >= 4) return 'villa';
-  if (bedrooms <= 1) return 'chalet';
-  return 'apartment';
-}
-
-// Floor plan slot configurations for continuous shared partition walls
-interface RoomSlot {
-  xF: number;
-  yF: number;
-  wF: number;
-  hF: number;
-}
-
-const FLOOR_PLAN_TEMPLATES: Record<number, RoomSlot[]> = {
-  1: [{ xF: 0.08, yF: 0.08, wF: 0.84, hF: 0.84 }],
-  2: [
-    { xF: 0.08, yF: 0.08, wF: 0.46, hF: 0.84 },
-    { xF: 0.54, yF: 0.08, wF: 0.38, hF: 0.84 },
-  ],
-  3: [
-    { xF: 0.08, yF: 0.08, wF: 0.48, hF: 0.84 },
-    { xF: 0.56, yF: 0.08, wF: 0.36, hF: 0.44 },
-    { xF: 0.56, yF: 0.52, wF: 0.36, hF: 0.40 },
-  ],
-  4: [
-    { xF: 0.08, yF: 0.08, wF: 0.32, hF: 0.84 },
-    { xF: 0.40, yF: 0.08, wF: 0.52, hF: 0.44 },
-    { xF: 0.40, yF: 0.52, wF: 0.28, hF: 0.40 },
-    { xF: 0.68, yF: 0.52, wF: 0.24, hF: 0.40 },
-  ],
-  5: [
-    { xF: 0.08, yF: 0.08, wF: 0.28, hF: 0.44 },
-    { xF: 0.36, yF: 0.08, wF: 0.56, hF: 0.44 },
-    { xF: 0.08, yF: 0.52, wF: 0.38, hF: 0.40 },
-    { xF: 0.46, yF: 0.52, wF: 0.18, hF: 0.40 },
-    { xF: 0.64, yF: 0.52, wF: 0.28, hF: 0.40 },
-  ],
-  6: [
-    { xF: 0.08, yF: 0.08, wF: 0.26, hF: 0.44 },
-    { xF: 0.34, yF: 0.08, wF: 0.30, hF: 0.44 },
-    { xF: 0.64, yF: 0.08, wF: 0.28, hF: 0.44 },
-    { xF: 0.08, yF: 0.52, wF: 0.26, hF: 0.40 },
-    { xF: 0.34, yF: 0.52, wF: 0.30, hF: 0.40 },
-    { xF: 0.64, yF: 0.52, wF: 0.28, hF: 0.40 },
-  ],
+const PRESET_WIZARD_DEFAULTS: PresetWizardAnswers = {
+  bedrooms: 2,
+  bathrooms: 2,
+  floorNumber: '',
+  maidRoom: false,
+  laundry: false,
+  balcony: true,
+  guestToilet: false,
+  dressing: false,
 };
 
-function getFloorPlanSlots(count: number): RoomSlot[] {
-  if (FLOOR_PLAN_TEMPLATES[count]) return FLOOR_PLAN_TEMPLATES[count];
-  const slots: RoomSlot[] = [];
-  const cols = count <= 9 ? 3 : 4;
-  const rows = Math.ceil(count / cols);
-  for (let i = 0; i < count; i++) {
-    const col = i % cols;
-    const row = Math.floor(i / cols);
-    slots.push({
-      xF: 0.08 + col * (0.84 / cols),
-      yF: 0.08 + row * (0.84 / rows),
-      wF: 0.84 / cols,
-      hF: 0.84 / rows,
-    });
-  }
-  return slots;
+function templatesFromAnswers(a: PresetWizardAnswers): string[] {
+  const list: string[] = ['apt.reception', 'apt.kitchen', 'apt.corridor', 'apt.master_bed', 'apt.master_bath'];
+  for (let i = 1; i < Math.max(1, a.bedrooms); i++) list.push('apt.std_bed');
+  for (let i = 1; i < Math.max(1, a.bathrooms); i++) list.push('apt.main_bath');
+  if (a.guestToilet) list.push('apt.guest_bath');
+  if (a.dressing) list.push('apt.dressing');
+  if (a.laundry) list.push('apt.laundry');
+  if (a.balcony) list.push('apt.balcony');
+  return list;
 }
-
-const CEILING_OPTIONS: Array<{ value: string; en: string; ar: string }> = [
-  { value: '2.6m Flush', en: '2.6 m', ar: '٢.٦ م' },
-  { value: '2.8m Flush', en: '2.8 m', ar: '٢.٨ م' },
-  { value: '3.0m Flush', en: '3.0 m', ar: '٣.٠ م' },
-  { value: '3.2m Flush', en: '3.2 m', ar: '٣.٢ م' },
-  { value: '3.5m Flush', en: '3.5 m', ar: '٣.٥ م' },
-  { value: '4.0m Flush', en: '4.0 m+', ar: '٤.٠ م+' },
-  { value: 'Open Sky', en: 'Open Sky', ar: 'مفتوح' },
-  { value: 'Open Roof', en: 'Open Roof', ar: 'سطح مفتوح' },
-];
 
 const WARN_BANDS: Record<string, [number, number]> = {
   'apt.reception':   [9, 80],
@@ -505,16 +430,23 @@ const RoomListRow: React.FC<RoomListRowProps> = ({
         <div className="fp-row-line3">
           <label className="fp-ceiling">
             <span className="fp-ceiling-label">{isAr ? 'الارتفاع' : 'Ceiling'}</span>
-            <select
+            <input
+              type="text"
               className="fp-ceiling-select"
-              value={ceiling}
-              onChange={(e) => onPatch({ ceiling_height: e.target.value })}
+              dir="auto"
+              defaultValue={ceiling}
+              placeholder={isAr ? 'مثال: 3.0m' : 'e.g. 3.0m Flush'}
+              maxLength={30}
+              onBlur={(e) => { if (e.target.value.trim() && e.target.value !== ceiling) onPatch({ ceiling_height: e.target.value.trim() }); }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  const v = (e.target as HTMLInputElement).value.trim();
+                  if (v && v !== ceiling) onPatch({ ceiling_height: v });
+                }
+              }}
               onClick={(e) => e.stopPropagation()}
-            >
-              {CEILING_OPTIONS.map((o) => (
-                <option key={o.value} value={o.value}>{isAr ? o.ar : o.en}</option>
-              ))}
-            </select>
+            />
           </label>
           <button
             type="button"
@@ -539,6 +471,7 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
   selectedZoneId: controlledSelectedZoneId,
   onSelectedZoneIdChange,
   listPortalTarget = null,
+  onPresetMeta,
   isAr = false,
 }) => {
   const defaultKey = propertyType === 'building' ? 'bld_ground' : propertyType === 'garage' ? 'grg_ramp' : GROUND_KEY;
@@ -553,22 +486,36 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
   const [groupAddOpen, setGroupAddOpen] = useState<string | null>(null);
   const [customZoneName, setCustomZoneName] = useState('');
   const [dismissedPresets, setDismissedPresets] = useState<Record<string, boolean>>({});
+  const [wizardOpen, setWizardOpen] = useState(false);
+  const [wizard, setWizard] = useState<PresetWizardAnswers>(PRESET_WIZARD_DEFAULTS);
   const [extraFloors, setExtraFloors] = useState<string[]>([]);
-  const [floorMenuOpen, setFloorMenuOpen] = useState(false);
   const [renamingFloorKey, setRenamingFloorKey] = useState<string | null>(null);
   const [floorDraft, setFloorDraft] = useState('');
   const [toast, setToast] = useState<{ label: string } | null>(null);
   const [historyVersion, setHistoryVersion] = useState(0);
   const [dragState, setDragState] = useState<{ id: string; overIndex: number } | null>(null);
-  const [canvasDrag, setCanvasDrag] = useState<{ id: string; x: number; y: number; overId: string | null } | null>(null);
+  const [canvasDrag, setCanvasDrag] = useState<{
+    id: string;
+    x: number;
+    y: number;
+    overId: string | null;
+    snap?: { x: number; y: number; w: number; h: number };
+  } | null>(null);
+  const [composerTool, setComposerTool] = useState<'select' | 'door' | 'window'>('select');
+  const [bldView, setBldView] = useState<
+    | { mode: 'elevation' }
+    | { mode: 'floor'; floorKey: string }
+    | { mode: 'unit'; floorKey: string; unitId: string }
+  >({ mode: 'elevation' });
   const svgRef = useRef<SVGSVGElement>(null);
   const suppressCanvasClickRef = useRef(false);
   const previewSlotsRef = useRef<Array<{ zone: ZoneInstance; x: number; y: number; w: number; h: number }>>([]);
+  const metricLayoutRef = useRef<ReturnType<typeof computeMetricLayout> | null>(null);
 
   const rowRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
-  const floorMenuRef = useRef<HTMLDivElement>(null);
   const rootRef = useRef<HTMLDivElement>(null);
+  const spatialOfRef = useRef<((z: ZoneInstance) => { l: number; w: number; sqm: number; ceiling: string }) | null>(null);
   const historyRef = useRef<{ past: ZoneInstance[][]; future: ZoneInstance[][] }>({ past: [], future: [] });
   const burstTimerRef = useRef<number | null>(null);
   const toastTimerRef = useRef<number | null>(null);
@@ -652,22 +599,10 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
   useEffect(() => {
     setActiveFloorKey(defaultKey);
     setSelectedZoneId(null);
+    setBldView({ mode: 'elevation' });
+    setComposerTool('select');
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [propertyType]);
-
-  useEffect(() => {
-    if (!floorMenuOpen) return;
-    const onDown = (e: MouseEvent) => {
-      if (floorMenuRef.current && !floorMenuRef.current.contains(e.target as Node)) setFloorMenuOpen(false);
-    };
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setFloorMenuOpen(false); };
-    document.addEventListener('mousedown', onDown);
-    document.addEventListener('keydown', onKey);
-    return () => {
-      document.removeEventListener('mousedown', onDown);
-      document.removeEventListener('keydown', onKey);
-    };
-  }, [floorMenuOpen]);
 
   const floorGroups = useMemo(() => {
     const groups: Record<string, { labelEn: string; labelAr: string; zones: ZoneInstance[] }> = {};
@@ -726,7 +661,13 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
     return groups;
   }, [zoneInstances, propertyType, extraFloors]);
 
-  const spatialOf = useCallback((z: ZoneInstance) => {
+  const spatialOf = useCallback((z: ZoneInstance): { l: number; w: number; sqm: number; ceiling: string } => {
+    if (!z.spatial && z.children && z.children.length > 0) {
+      const sqm = Math.max(1, Math.round(z.children.reduce((sum, c) => sum + spatialOfRef.current!(c).sqm, 0)));
+      const l = round1(Math.sqrt(sqm * (3 / 4)));
+      const w = round1(sqm / l);
+      return { l, w, sqm, ceiling: '3.0m Flush' };
+    }
     const shared = fallbackMetricFor(z.zone_template_id);
     const d = starterDims(z.zone_template_id);
     const l = z.spatial?.length_m ?? shared?.length_m ?? d.l;
@@ -735,18 +676,73 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
     const ceiling = z.spatial?.ceiling_height ?? shared?.ceiling ?? DEFAULT_DIMENSIONS[z.zone_template_id]?.ceiling ?? '3.0m Flush';
     return { l, w, sqm, ceiling };
   }, []);
+  spatialOfRef.current = spatialOf;
 
   const floorSqm = useCallback((zones: ZoneInstance[]) => {
     return Math.round(zones.reduce((sum, z) => sum + spatialOf(z).sqm, 0));
   }, [spatialOf]);
 
+  const buildingModel = useMemo(() => {
+    if (propertyType !== 'building') return null;
+    const basement = zoneInstances.filter(z => z.zone_template_id === 'bld.basement');
+    const ground = zoneInstances.filter(z => z.zone_template_id === 'bld.ground_lobby');
+    const roof = zoneInstances.filter(z => z.zone_template_id === 'bld.roof');
+    const units = zoneInstances.filter(z => z.zone_template_id === 'bld.unit');
+    const others = zoneInstances.filter(z => !['bld.basement', 'bld.ground_lobby', 'bld.roof', 'bld.unit'].includes(z.zone_template_id));
+
+    const floorsMap = new Map<string, ZoneInstance[]>();
+    for (const u of units) {
+      const key = u.level_label || 'Floor 1';
+      if (!floorsMap.has(key)) floorsMap.set(key, []);
+      floorsMap.get(key)!.push(u);
+    }
+    const floorNum = (k: string) => {
+      const m = k.match(/(\d+)/);
+      return m ? parseInt(m[1], 10) : 0;
+    };
+    const unitSignature = (u: ZoneInstance) => {
+      const letter = (u.instance_label || '').replace(/[^A-Za-z]/g, '').replace(/^Flat/i, '');
+      const kids = (u.children ?? [])
+        .map(c => `${c.zone_template_id}:${Math.round(spatialOf(c).sqm)}`)
+        .sort()
+        .join('|');
+      return `${letter}=${kids}`;
+    };
+    const floors = Array.from(floorsMap.entries())
+      .map(([key, us]) => ({
+        key,
+        num: floorNum(key),
+        units: [...us].sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0)),
+        sqm: Math.round(us.reduce((s, u) => s + spatialOf(u).sqm, 0)),
+        signature: us.map(unitSignature).sort().join('||'),
+      }))
+      .sort((a, b) => a.num - b.num);
+
+    return { basement, ground, roof, units, others, floors };
+  }, [propertyType, zoneInstances, spatialOf]);
+
+  const composerActive = propertyType === 'apartment' || (propertyType === 'building' && bldView.mode === 'unit');
+
   const activeZones = useMemo(() => {
+    if (propertyType === 'building') {
+      if (!buildingModel || bldView.mode === 'elevation') return [];
+      if (bldView.mode === 'floor') {
+        if (bldView.floorKey === 'bld_basement') return buildingModel.basement;
+        if (bldView.floorKey === 'bld_ground') return [...buildingModel.ground, ...buildingModel.others];
+        if (bldView.floorKey === 'bld_roof') return buildingModel.roof;
+        const fl = buildingModel.floors.find(f => f.key === bldView.floorKey);
+        return fl ? fl.units : [];
+      }
+      const unit = buildingModel.units.find(u => u.id === bldView.unitId);
+      return unit?.children ?? [];
+    }
     const group = floorGroups[activeFloorKey];
     return group ? group.zones : [];
-  }, [floorGroups, activeFloorKey]);
+  }, [floorGroups, activeFloorKey, propertyType, bldView, buildingModel]);
 
   const zoneGroups = useMemo(() => {
-    const buckets = ZONE_CATEGORY_BUCKETS[propertyType] ?? ZONE_CATEGORY_BUCKETS.apartment;
+    const bucketKey = propertyType === 'building' && bldView.mode === 'unit' ? 'apartment' : propertyType;
+    const buckets = ZONE_CATEGORY_BUCKETS[bucketKey] ?? ZONE_CATEGORY_BUCKETS.apartment;
     const used = new Set<string>();
     const groups = buckets.map(bucket => ({
       bucket,
@@ -759,7 +755,7 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
     }));
     const other = activeZones.filter(z => !used.has(z.id));
     return { groups, other };
-  }, [activeZones, propertyType]);
+  }, [activeZones, propertyType, bldView.mode]);
 
   const displayZones = useMemo(
     () => [...zoneGroups.groups.flatMap(g => g.zones), ...zoneGroups.other],
@@ -833,7 +829,7 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
   };
 
   // Single construction path shared by add-room and preset application, so the
-  // FinishingWizard coupling (trades/attributes) stays identical either way.
+  // trades/attributes coupling stays identical either way.
   const buildRoomInstance = useCallback((templateId: string, sortOrder: number, levelLabel?: string): ZoneInstance => {
     const defaults = DEFAULT_DIMENSIONS[templateId] || { l: 8.0, w: 6.0, ceiling: '3.0m Flush', titleEn: 'Curated Suite', titleAr: 'مساحة معمارية' };
     const dims = starterDims(templateId);
@@ -856,7 +852,7 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
     return {
       id: `zone-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
       zone_template_id: templateId,
-      instance_label: isAr ? defaults.titleAr : defaults.titleEn,
+      instance_label: defaults.titleEn,
       ...(levelLabel && levelLabel !== GROUND_KEY ? { level_label: levelLabel } : {}),
       sort_order: sortOrder,
       spatial: {
@@ -873,7 +869,63 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
     };
   }, [isAr]);
 
+  const handlePropagateUnit = () => {
+    if (bldView.mode !== 'unit' || !buildingModel) return;
+    const unit = buildingModel.units.find(u => u.id === bldView.unitId);
+    if (!unit) return;
+    const letter = (unit.instance_label || '').trim().slice(-1).toUpperCase();
+    if (!/[A-Z]/.test(letter)) return;
+
+    const cloneZones = (zones: ZoneInstance[], levelLabel?: string): ZoneInstance[] =>
+      zones.map((z, i) => ({
+        ...z,
+        id: `zone-${Date.now()}-${Math.random().toString(36).slice(2, 6)}-${i}`,
+        level_label: levelLabel ?? z.level_label,
+        trades: (z.trades || []).map(t => ({
+          ...t,
+          id: `trade-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+          attributes: t.attributes.map(a => ({ ...a })),
+        })),
+        spatial: z.spatial
+          ? { ...z.spatial, openings: z.spatial.openings?.map(o => ({ ...o, id: `open-${Date.now()}-${Math.random().toString(36).slice(2, 6)}` })) }
+          : undefined,
+        children: z.children && z.children.length > 0 ? cloneZones(z.children, levelLabel ?? z.level_label) : undefined,
+      }));
+
+    const targets = buildingModel.units.filter(u =>
+      u.id !== unit.id && (u.instance_label || '').trim().slice(-1).toUpperCase() === letter,
+    );
+    if (targets.length === 0) {
+      showToast(isAr ? 'لا توجد وحدات مطابقة' : 'No matching units found');
+      return;
+    }
+    const targetIds = new Set(targets.map(t => t.id));
+    pushHistory(zoneInstances);
+    onZoneInstancesChange(zoneInstances.map(z =>
+      targetIds.has(z.id) ? { ...z, children: cloneZones(unit.children ?? [], z.level_label) } : z,
+    ));
+    showToast(isAr
+      ? `تم التطبيق على ${targets.length} ${targets.length === 1 ? 'وحدة' : 'وحدات'}`
+      : `Applied to ${targets.length} ${targets.length === 1 ? 'unit' : 'units'}`);
+  };
+
   const handleAddRoom = (templateId: string) => {
+    if (propertyType === 'building' && bldView.mode === 'unit') {
+      const unit = buildingModel?.units.find(u => u.id === bldView.unitId);
+      if (!unit) return;
+      const newZone = buildRoomInstance(templateId, (unit.children?.length ?? 0) + 1, unit.level_label);
+      pushHistory(zoneInstances);
+      onZoneInstancesChange(zoneInstances.map(z =>
+        z.id === unit.id ? { ...z, children: [...(z.children ?? []), newZone] } : z,
+      ));
+      setSelectedZoneId(newZone.id);
+      requestAnimationFrame(() => {
+        const el = rowRefs.current[newZone.id];
+        el?.scrollIntoView({ block: 'nearest' });
+        el?.querySelector<HTMLInputElement>('.fp-stepper-input')?.focus();
+      });
+      return;
+    }
     const levelLabel = propertyType === 'apartment' ? activeFloorKey : undefined;
     const newZone = buildRoomInstance(templateId, zoneInstances.length, levelLabel);
     pushHistory(zoneInstances);
@@ -886,14 +938,36 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
     });
   };
 
-  const handleApplyPreset = (preset: StarterPreset) => {
-    const base = zoneInstances.length;
+  const handleGenerateFromWizard = () => {
+    const currentFloorZones = floorGroups[activeFloorKey]?.zones ?? [];
+    if (currentFloorZones.length > 0) {
+      const ok = window.confirm(isAr
+        ? 'سيستبدل التخطيط المولّد غرف هذا الطابق الحالية (الأبعاد والتشطيبات والصور). هل تريد المتابعة؟'
+        : 'The generated layout will replace this floor\'s current rooms (dimensions, finishes, photos). Continue?');
+      if (!ok) return;
+    }
     const levelLabel = propertyType === 'apartment' ? activeFloorKey : undefined;
-    const newZones = preset.rooms.map((tid, i) => buildRoomInstance(tid, base + i, levelLabel));
+    const keepIds = new Set(currentFloorZones.map(z => z.id));
+    const kept = zoneInstances.filter(z => !keepIds.has(z.id));
+    const generated = templatesFromAnswers(wizard).map((tid, i) => buildRoomInstance(tid, kept.length + i, levelLabel));
+    let next = [...kept, ...generated];
+    if (wizard.maidRoom) {
+      next = addCustomZone(next, "Maid's Room", 'semi_finished');
+      const maid = next[next.length - 1];
+      if (levelLabel && levelLabel !== GROUND_KEY) {
+        next = next.map(z => (z.id === maid.id ? { ...z, level_label: levelLabel } : z));
+      }
+    }
     pushHistory(zoneInstances);
-    onZoneInstancesChange([...zoneInstances, ...newZones]);
-    if (newZones[0]) setSelectedZoneId(newZones[0].id);
-    showToast(isAr ? `تمت إضافة ${newZones.length} غرف` : `${newZones.length} rooms added`);
+    onZoneInstancesChange(next);
+    onPresetMeta?.({
+      bedrooms: wizard.bedrooms,
+      bathrooms: wizard.bathrooms,
+      floorNumber: wizard.floorNumber === '' ? null : Number(wizard.floorNumber),
+    });
+    setWizardOpen(false);
+    if (generated[0]) setSelectedZoneId(generated[0].id);
+    showToast(isAr ? `تم توليد ${generated.length + (wizard.maidRoom ? 1 : 0)} غرف` : `${generated.length + (wizard.maidRoom ? 1 : 0)} rooms generated`);
   };
 
   const handleStartEmpty = () => {
@@ -975,59 +1049,6 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
     };
   }, [groupAddOpen]);
 
-  const freshIds = (zones: ZoneInstance[], levelLabel: string): ZoneInstance[] => {
-    return zones.map((z, i) => ({
-      ...z,
-      id: `zone-${Date.now()}-${Math.random().toString(36).substring(2, 6)}-${i}`,
-      level_label: levelLabel,
-      images: undefined,
-      trades: (z.trades || []).map(t => ({
-        ...t,
-        id: `trade-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
-        attributes: t.attributes.map(a => ({ ...a })),
-      })),
-      children: z.children && z.children.length > 0 ? freshIds(z.children, levelLabel) : undefined,
-      spatial: z.spatial ? { ...z.spatial } : undefined,
-    }));
-  };
-
-  const nextFloorName = () => {
-    const existing = new Set(Object.keys(floorGroups));
-    let n = 2;
-    while (existing.has(isAr ? `الطابق ${n}` : `Floor ${n}`)) n++;
-    return isAr ? `الطابق ${n}` : `Floor ${n}`;
-  };
-
-  const handleAddFloor = (mode: 'blank' | 'duplicate') => {
-    const name = nextFloorName();
-    setFloorMenuOpen(false);
-    if (mode === 'blank') {
-      setExtraFloors(prev => [...prev, name]);
-      setActiveFloorKey(name);
-      setSelectedZoneId(null);
-      setRenamingFloorKey(name);
-      setFloorDraft(name);
-      return;
-    }
-    const current = floorGroups[activeFloorKey]?.zones ?? [];
-    if (current.length === 0) {
-      setExtraFloors(prev => [...prev, name]);
-      setActiveFloorKey(name);
-      setRenamingFloorKey(name);
-      setFloorDraft(name);
-      return;
-    }
-    const base = zoneInstances.length;
-    const copies = freshIds(current, name).map((z, i) => ({ ...z, sort_order: base + i }));
-    pushHistory(zoneInstances);
-    onZoneInstancesChange([...zoneInstances, ...copies]);
-    setActiveFloorKey(name);
-    setSelectedZoneId(copies[0]?.id ?? null);
-    setRenamingFloorKey(name);
-    setFloorDraft(name);
-    showToast(isAr ? 'تم نسخ الطابق' : 'Floor duplicated');
-  };
-
   const handleRenameFloor = (oldKey: string, rawNext: string) => {
     const next = rawNext.trim().slice(0, 30);
     setRenamingFloorKey(null);
@@ -1082,14 +1103,146 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
     return { x: pt.x, y: pt.y };
   };
 
+  const materializePlacement = (moves: Record<string, { x: number; y: number; w: number; h: number }>) => {
+    function rec(list: ZoneInstance[]): ZoneInstance[] {
+      return list.map(z => {
+        const base = z.children && z.children.length > 0 ? { ...z, children: rec(z.children) } : z;
+        const m = moves[z.id];
+        if (!m) return base;
+        const shared = fallbackMetricFor(z.zone_template_id);
+        const d = starterDims(z.zone_template_id);
+        const cur: ZoneSpatialLayout = base.spatial || {
+          gridX: 0,
+          gridY: 0,
+          gridW: 6,
+          gridH: 4,
+          length_m: shared?.length_m ?? d.l,
+          width_m: shared?.width_m ?? d.w,
+          sqm: shared?.sqm ?? Math.round(d.l * d.w),
+          ceiling_height: shared?.ceiling ?? DEFAULT_DIMENSIONS[z.zone_template_id]?.ceiling ?? '3.0m Flush',
+        };
+        return {
+          ...base,
+          spatial: {
+            ...cur,
+            pos_x_m: round1(m.x),
+            pos_y_m: round1(m.y),
+            width_m: round1(m.w),
+            length_m: round1(m.h),
+            sqm: round1(m.w * m.h),
+          },
+        };
+      });
+    }
+    pushHistory(zoneInstances);
+    onZoneInstancesChange(rec(zoneInstances));
+  };
+
+  const SNAP_GRID_M = 0.5;
+  const SNAP_EDGE_M = 0.3;
+
+  const snappedMeterRect = (
+    zoneId: string,
+    pointer: { x: number; y: number },
+    slots: Array<{ zone: ZoneInstance; x: number; y: number; w: number; h: number }>,
+    layout: ReturnType<typeof computeMetricLayout>,
+  ) => {
+    const slot = slots.find(s => s.zone.id === zoneId);
+    if (!slot || layout.pxPerMeter <= 0) return null;
+    const k = layout.pxPerMeter;
+    const w = slot.w / k;
+    const h = slot.h / k;
+    let x = (pointer.x - layout.bounds.x) / k - w / 2;
+    let y = (pointer.y - layout.bounds.y) / k - h / 2;
+    x = Math.max(0, Math.round(x / SNAP_GRID_M) * SNAP_GRID_M);
+    y = Math.max(0, Math.round(y / SNAP_GRID_M) * SNAP_GRID_M);
+
+    let bestDx = SNAP_EDGE_M;
+    let bestDy = SNAP_EDGE_M;
+    for (const s of slots) {
+      if (s.zone.id === zoneId) continue;
+      const ox = (s.x - layout.bounds.x) / k;
+      const oy = (s.y - layout.bounds.y) / k;
+      const ow = s.w / k;
+      const oh = s.h / k;
+      for (const cand of [ox - w, ox + ow, ox]) {
+        const d = Math.abs(cand - x);
+        if (d < bestDx && cand >= 0) { bestDx = d; x = cand; }
+      }
+      for (const cand of [oy - h, oy + oh, oy]) {
+        const d = Math.abs(cand - y);
+        if (d < bestDy && cand >= 0) { bestDy = d; y = cand; }
+      }
+    }
+    return { x, y, w, h };
+  };
+
+  const handleComposerClick = (zoneId: string, e: React.MouseEvent) => {
+    const layout = metricLayoutRef.current;
+    const slots = previewSlotsRef.current;
+    const slot = slots.find(s => s.zone.id === zoneId);
+    if (!layout || !slot || layout.pxPerMeter <= 0 || composerTool === 'select') return;
+    const kind = composerTool;
+    const p = clientToSvg(e.clientX, e.clientY);
+    const dN = Math.abs(p.y - slot.y);
+    const dS = Math.abs(slot.y + slot.h - p.y);
+    const dW = Math.abs(p.x - slot.x);
+    const dE = Math.abs(slot.x + slot.w - p.x);
+    const min = Math.min(dN, dS, dW, dE);
+    const edge: ZoneOpening['edge'] = min === dN ? 'n' : min === dS ? 's' : min === dW ? 'w' : 'e';
+    const k = layout.pxPerMeter;
+    const horizontal = edge === 'n' || edge === 's';
+    const edgeLenM = (horizontal ? slot.w : slot.h) / k;
+    const widthM = kind === 'door' ? 0.9 : 1.2;
+    if (edgeLenM < widthM) {
+      showToast(isAr ? 'الحائط أقصر من الفتحة' : 'Wall too short for this opening');
+      return;
+    }
+    if (kind === 'window') {
+      const probe = 6;
+      const midX = horizontal ? p.x : edge === 'w' ? slot.x - probe : slot.x + slot.w + probe;
+      const midY = horizontal ? (edge === 'n' ? slot.y - probe : slot.y + slot.h + probe) : p.y;
+      const interior = slots.some(s =>
+        s.zone.id !== zoneId &&
+        midX >= s.x - 2 && midX <= s.x + s.w + 2 &&
+        midY >= s.y - 2 && midY <= s.y + s.h + 2,
+      );
+      if (interior) {
+        showToast(isAr ? 'النوافذ على الحوائط الخارجية فقط' : 'Windows go on exterior walls only');
+        return;
+      }
+    }
+    const alongM = (horizontal ? p.x - slot.x : p.y - slot.y) / k - widthM / 2;
+    const offsetM = round1(Math.max(0, Math.min(Math.round(alongM * 10) / 10, edgeLenM - widthM)));
+    const opening: ZoneOpening = {
+      id: `open-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      kind,
+      edge,
+      offset_m: offsetM,
+      width_m: widthM,
+    };
+    handleUpdateSpatial(zoneId, { openings: [...(slot.zone.spatial?.openings ?? []), opening] });
+    showToast(kind === 'door' ? (isAr ? 'تمت إضافة باب' : 'Door added') : (isAr ? 'تمت إضافة نافذة' : 'Window added'));
+  };
+
+  const handleRemoveOpening = (zoneId: string, openingId: string) => {
+    const zone = activeZones.find(z => z.id === zoneId);
+    if (!zone) return;
+    handleUpdateSpatial(zoneId, { openings: (zone.spatial?.openings ?? []).filter(o => o.id !== openingId) });
+    showToast(isAr ? 'تمت إزالة الفتحة' : 'Opening removed');
+  };
+
   const handleCanvasRoomPointerDown = (zoneId: string, e: React.PointerEvent) => {
-    if (e.button !== 0 || displayZones.length < 2) return;
+    if (e.button !== 0 || displayZones.length < 2 || composerTool !== 'select') return;
     const startClientX = e.clientX;
     const startClientY = e.clientY;
     let moved = false;
     let latestOverId: string | null = null;
+    let latestSnap: { x: number; y: number; w: number; h: number } | null = null;
 
     const slotsAtStart = previewSlotsRef.current;
+    const layoutAtStart = metricLayoutRef.current;
+    const placementMode = composerActive && layoutAtStart != null;
 
     const onMove = (ev: PointerEvent) => {
       if (!moved) {
@@ -1100,6 +1253,25 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
       }
       ev.preventDefault();
       const p = clientToSvg(ev.clientX, ev.clientY);
+      if (placementMode) {
+        latestSnap = snappedMeterRect(zoneId, p, slotsAtStart, layoutAtStart);
+        const k = layoutAtStart.pxPerMeter;
+        setCanvasDrag({
+          id: zoneId,
+          x: p.x,
+          y: p.y,
+          overId: null,
+          snap: latestSnap
+            ? {
+                x: layoutAtStart.bounds.x + latestSnap.x * k,
+                y: layoutAtStart.bounds.y + latestSnap.y * k,
+                w: latestSnap.w * k,
+                h: latestSnap.h * k,
+              }
+            : undefined,
+        });
+        return;
+      }
       const over = slotsAtStart.find(s =>
         s.zone.id !== zoneId &&
         p.x >= s.x && p.x <= s.x + s.w &&
@@ -1116,6 +1288,24 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
       if (!moved) return;
       suppressCanvasClickRef.current = true;
       window.setTimeout(() => { suppressCanvasClickRef.current = false; }, 0);
+      if (placementMode) {
+        if (!latestSnap) return;
+        const k = layoutAtStart.pxPerMeter;
+        const moves: Record<string, { x: number; y: number; w: number; h: number }> = {};
+        for (const s of slotsAtStart) {
+          moves[s.zone.id] = s.zone.id === zoneId
+            ? latestSnap
+            : {
+                x: (s.x - layoutAtStart.bounds.x) / k,
+                y: (s.y - layoutAtStart.bounds.y) / k,
+                w: s.w / k,
+                h: s.h / k,
+              };
+        }
+        materializePlacement(moves);
+        showToast(isAr ? 'تم تثبيت الغرفة' : 'Room placed');
+        return;
+      }
       if (latestOverId) {
         const targetIdx = displayZones.findIndex(z => z.id === latestOverId);
         if (targetIdx !== -1) handleReorder(zoneId, targetIdx);
@@ -1184,7 +1374,7 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
     return computeMetricLayout(
       activeZones.map(z => {
         const sp = spatialOf(z);
-        return { id: z.id, widthM: sp.w, lengthM: sp.l };
+        return { id: z.id, widthM: sp.w, lengthM: sp.l, xM: z.spatial?.pos_x_m, yM: z.spatial?.pos_y_m };
       }),
     );
   }, [activeZones, spatialOf]);
@@ -1208,6 +1398,7 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
   }, [activeZones, metricLayout, spatialOf, getZoneLabel]);
 
   previewSlotsRef.current = previewSlots;
+  metricLayoutRef.current = metricLayout;
 
   const allFlatZones = useMemo(() => {
     return Object.values(floorGroups).flatMap(g => g.zones);
@@ -1221,6 +1412,34 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
     if (ratio >= 0.9 && ratio <= 1.1) return 'ok' as const;
     return roomsTotalSqm > declaredArea ? ('over' as const) : ('under' as const);
   }, [declaredArea, roomsTotalSqm, allFlatZones.length]);
+
+  const unreachableRooms = useMemo(() => {
+    if (!composerActive || previewSlots.length < 2) return [];
+    if (!activeZones.some(z => z.spatial?.pos_x_m != null && z.spatial?.pos_y_m != null)) return [];
+    const doors = new Set(
+      previewSlots
+        .filter(s => (s.zone.spatial?.openings ?? []).some(o => o.kind === 'door'))
+        .map(s => s.zone.id),
+    );
+    if (doors.size === 0) return [];
+
+    const TOUCH = 8;
+    const OVERLAP = 6;
+    const adjacent = (a: typeof previewSlots[number], b: typeof previewSlots[number]) => {
+      const xOverlap = Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x);
+      const yOverlap = Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y);
+      const touchV = Math.abs(a.y + a.h - b.y) < TOUCH || Math.abs(b.y + b.h - a.y) < TOUCH;
+      const touchH = Math.abs(a.x + a.w - b.x) < TOUCH || Math.abs(b.x + b.w - a.x) < TOUCH;
+      return (touchV && xOverlap > OVERLAP) || (touchH && yOverlap > OVERLAP);
+    };
+
+    return previewSlots
+      .filter(s => {
+        if (doors.has(s.zone.id)) return false;
+        return !previewSlots.some(o => o.zone.id !== s.zone.id && doors.has(o.zone.id) && adjacent(s, o));
+      })
+      .map(s => ({ id: s.zone.id, title: s.title }));
+  }, [composerActive, previewSlots, activeZones]);
 
   const handleReview = () => {
     let target: ZoneInstance | null = null;
@@ -1251,7 +1470,6 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
   };
 
   const showPresets = activeZones.length === 0 && !dismissedPresets[activeFloorKey];
-  const recommendedId = recommendedPresetId(propertyType, bedrooms);
 
   return (
     <div className="fp-root" dir={isAr ? 'rtl' : 'ltr'} ref={rootRef}>
@@ -1282,18 +1500,74 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
           >
             <Redo2 size={15} />
           </button>
-          <span className="fp-room-count">
-            {activeZones.length} {isAr ? (activeZones.length === 1 ? 'غرفة' : 'غرف') : (activeZones.length === 1 ? 'room' : 'rooms')}
-          </span>
         </div>
       </div>
 
+      {propertyType === 'building' ? (
+        <div className="fp-floor-tabs">
+          <nav className="fp-crumbs" aria-label={isAr ? 'مسار المبنى' : 'Building navigation'}>
+            <button
+              type="button"
+              className={`fp-crumb ${bldView.mode === 'elevation' ? 'active' : ''}`}
+              onClick={() => {
+                setBldView({ mode: 'elevation' });
+                setSelectedZoneId(null);
+                setComposerTool('select');
+              }}
+            >
+              <Building size={13} />
+              <span>{isAr ? 'المبنى' : 'Building'}</span>
+            </button>
+            {bldView.mode !== 'elevation' && (
+              <>
+                <span className="fp-crumb-sep" aria-hidden="true">›</span>
+                <button
+                  type="button"
+                  className={`fp-crumb ${bldView.mode === 'floor' ? 'active' : ''}`}
+                  onClick={() => {
+                    setBldView({ mode: 'floor', floorKey: bldView.floorKey });
+                    setSelectedZoneId(null);
+                    setComposerTool('select');
+                  }}
+                >
+                  {bldView.floorKey === 'bld_basement'
+                    ? (isAr ? 'البدروم' : 'Basement')
+                    : bldView.floorKey === 'bld_ground'
+                      ? (isAr ? 'الدور الأرضي' : 'Ground Floor')
+                      : bldView.floorKey === 'bld_roof'
+                        ? (isAr ? 'السطح' : 'Roof')
+                        : bldView.floorKey}
+                </button>
+              </>
+            )}
+            {bldView.mode === 'unit' && (() => {
+              const unit = buildingModel?.units.find(u => u.id === bldView.unitId);
+              return (
+                <>
+                  <span className="fp-crumb-sep" aria-hidden="true">›</span>
+                  <span className="fp-crumb active" aria-current="page">{unit?.instance_label ?? (isAr ? 'وحدة' : 'Unit')}</span>
+                </>
+              );
+            })()}
+            {bldView.mode === 'unit' && (
+              <button type="button" className="fp-crumb-propagate" onClick={handlePropagateUnit}>
+                <Copy size={12} />
+                <span>{isAr ? 'تطبيق على الوحدات المطابقة' : 'Apply to matching units'}</span>
+              </button>
+            )}
+          </nav>
+        </div>
+      ) : (
       <div className="fp-floor-tabs">
         <div className="fp-floor-tabs-scroll" role="tablist">
-          {Object.entries(floorGroups).map(([key, group]) => {
+          {Object.entries(floorGroups).map(([key, group], _idx, entries) => {
             const isActive = activeFloorKey === key;
             const sqmBadge = floorSqm(group.zones);
             const renaming = renamingFloorKey === key;
+            const singleApartmentTab = propertyType === 'apartment' && entries.length === 1 && key === GROUND_KEY;
+            const tabLabel = singleApartmentTab
+              ? (isAr ? 'الشقة' : 'Apartment')
+              : (isAr ? group.labelAr : group.labelEn);
             return (
               <div
                 key={key}
@@ -1341,7 +1615,7 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
                     }}
                   />
                 ) : (
-                  <span>{isAr ? group.labelAr : group.labelEn}</span>
+                  <span>{tabLabel}</span>
                 )}
                 <span className="fp-floor-badge" dir="ltr">{sqmBadge} m²</span>
               </div>
@@ -1349,34 +1623,8 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
           })}
         </div>
 
-        {propertyType === 'apartment' && (
-          <div className="fp-floor-add-wrap" ref={floorMenuRef}>
-            <button
-              type="button"
-              className="fp-floor-tab fp-floor-add"
-              aria-haspopup="menu"
-              aria-expanded={floorMenuOpen}
-              onClick={() => setFloorMenuOpen(o => !o)}
-            >
-              <Plus size={14} />
-              <span>{isAr ? 'إضافة طابق' : 'Add floor'}</span>
-              <ChevronDown size={13} />
-            </button>
-            {floorMenuOpen && (
-              <div className="fp-floor-menu" role="menu">
-                <button type="button" role="menuitem" className="fp-add-item" onClick={() => handleAddFloor('blank')}>
-                  <Plus size={12} />
-                  <span>{isAr ? 'طابق فارغ' : 'Blank floor'}</span>
-                </button>
-                <button type="button" role="menuitem" className="fp-add-item" onClick={() => handleAddFloor('duplicate')}>
-                  <Copy size={12} />
-                  <span>{isAr ? 'نسخ الطابق الحالي' : 'Duplicate current floor'}</span>
-                </button>
-              </div>
-            )}
-          </div>
-        )}
       </div>
+      )}
 
       <div className={`fp-workspace ${listPortalTarget ? 'no-list' : ''}`}>
 
@@ -1386,6 +1634,39 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
               <Layers size={13} />
               <span>{isAr ? 'معاينة حية للمخطط' : 'LIVE FLOOR PLAN PREVIEW'}</span>
             </span>
+            {(composerActive || propertyType === 'garage') && previewSlots.length > 0 && (
+              <div className="fp-tools" role="group" aria-label={isAr ? 'أدوات المخطط' : 'Composer tools'}>
+                <button
+                  type="button"
+                  className={`fp-tool-btn ${composerTool === 'select' ? 'active' : ''}`}
+                  title={isAr ? 'تحديد وتحريك' : 'Select & move'}
+                  aria-pressed={composerTool === 'select'}
+                  onClick={() => setComposerTool('select')}
+                >
+                  <MousePointer2 size={13} />
+                </button>
+                <button
+                  type="button"
+                  className={`fp-tool-btn ${composerTool === 'door' ? 'active' : ''}`}
+                  title={isAr ? 'إضافة باب — انقر على حائط' : 'Add door — click a wall'}
+                  aria-pressed={composerTool === 'door'}
+                  onClick={() => setComposerTool(t => (t === 'door' ? 'select' : 'door'))}
+                >
+                  <DoorOpen size={13} />
+                </button>
+                {composerActive && (
+                  <button
+                    type="button"
+                    className={`fp-tool-btn ${composerTool === 'window' ? 'active' : ''}`}
+                    title={isAr ? 'إضافة نافذة — حوائط خارجية فقط' : 'Add window — exterior walls only'}
+                    aria-pressed={composerTool === 'window'}
+                    onClick={() => setComposerTool(t => (t === 'window' ? 'select' : 'window'))}
+                  >
+                    <RectangleHorizontal size={13} />
+                  </button>
+                )}
+              </div>
+            )}
             {previewSlots.length > 0 && (
               <span className="fp-canvas-scale" dir="ltr">
                 1m ≈ {Math.max(1, Math.round(metricLayout.pxPerMeter))}px
@@ -1394,7 +1675,123 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
           </div>
 
           <div className="fp-canvas-body">
-            {previewSlots.length > 0 ? (
+            {propertyType === 'building' && bldView.mode === 'elevation' && buildingModel ? (() => {
+              const sigFirstFloor = new Map<string, string>();
+              for (const f of buildingModel.floors) {
+                if (!sigFirstFloor.has(f.signature)) sigFirstFloor.set(f.signature, f.key);
+              }
+              const rows: Array<{ key: string; label: string; sub: string; kind: 'roof' | 'floor' | 'ground' | 'basement'; sameAs?: string }> = [];
+              if (buildingModel.roof.length > 0) {
+                rows.push({
+                  key: 'bld_roof',
+                  label: isAr ? 'السطح' : 'Roof',
+                  sub: `${floorSqm(buildingModel.roof)} m²`,
+                  kind: 'roof',
+                });
+              }
+              for (const f of [...buildingModel.floors].reverse()) {
+                const first = sigFirstFloor.get(f.signature);
+                rows.push({
+                  key: f.key,
+                  label: f.key,
+                  sub: `${f.units.length} ${isAr ? (f.units.length === 1 ? 'وحدة' : 'وحدات') : (f.units.length === 1 ? 'unit' : 'units')} · ${f.sqm} m²`,
+                  kind: 'floor',
+                  sameAs: first && first !== f.key ? first : undefined,
+                });
+              }
+              if (buildingModel.ground.length > 0 || buildingModel.others.length > 0) {
+                rows.push({
+                  key: 'bld_ground',
+                  label: isAr ? 'الدور الأرضي والمدخل' : 'Ground Floor & Entrance',
+                  sub: `${floorSqm([...buildingModel.ground, ...buildingModel.others])} m²`,
+                  kind: 'ground',
+                });
+              }
+              if (buildingModel.basement.length > 0) {
+                rows.push({
+                  key: 'bld_basement',
+                  label: isAr ? 'البدروم والجراج' : 'Basement / Parking',
+                  sub: `${floorSqm(buildingModel.basement)} m²`,
+                  kind: 'basement',
+                });
+              }
+              if (rows.length === 0) {
+                return (
+                  <div className="fp-empty-box">
+                    <Building size={36} className="fp-empty-icon" />
+                    <h4 className="fp-empty-title">{isAr ? 'لا توجد طوابق بعد' : 'No floors yet'}</h4>
+                    <p className="fp-empty-desc">{isAr ? 'أضف مناطق المبنى من القائمة الجانبية.' : 'Add building zones from the side list.'}</p>
+                  </div>
+                );
+              }
+              const slabH = Math.min(52, Math.max(30, (440 - 60 - (rows.length - 1) * 6) / rows.length));
+              const totalH = rows.length * slabH + (rows.length - 1) * 6;
+              const startY = (440 - totalH) / 2;
+              return (
+                <svg viewBox="0 0 680 440" className="fp-canvas-svg" style={{ direction: 'ltr' }} xmlns="http://www.w3.org/2000/svg">
+                  <defs>
+                    <pattern id="adminElevGrid" width="10" height="10" patternUnits="userSpaceOnUse">
+                      <path d="M 10 0 L 0 0 0 10" fill="none" stroke="rgba(221, 167, 82, 0.08)" strokeWidth="0.4" />
+                    </pattern>
+                  </defs>
+                  <rect width="680" height="440" fill="url(#adminElevGrid)" />
+                  {rows.map((row, i) => {
+                    const y = startY + i * (slabH + 6);
+                    const isRoof = row.kind === 'roof';
+                    const isBasement = row.kind === 'basement';
+                    const x = isRoof ? 190 : 150;
+                    const w = isRoof ? 300 : 380;
+                    return (
+                      <g
+                        key={row.key}
+                        role="button"
+                        tabIndex={0}
+                        aria-label={`${row.label} — ${row.sub}`}
+                        onClick={() => {
+                          setBldView({ mode: 'floor', floorKey: row.key });
+                          setSelectedZoneId(null);
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            setBldView({ mode: 'floor', floorKey: row.key });
+                            setSelectedZoneId(null);
+                          }
+                        }}
+                        style={{ cursor: 'pointer' }}
+                        className="fp-elev-slab"
+                      >
+                        <rect
+                          x={x}
+                          y={y}
+                          width={w}
+                          height={slabH}
+                          rx={3}
+                          fill="rgba(221,167,82,0.06)"
+                          stroke="#DDA752"
+                          strokeWidth={isBasement ? 1.2 : 1.8}
+                          strokeDasharray={isBasement ? '6 4' : undefined}
+                        />
+                        <text x={x + 14} y={y + slabH / 2 - 4} fontSize="11" fill="#FFFFFF" fontWeight="700" fontFamily="'Plus Jakarta Sans', sans-serif">
+                          {row.label}
+                        </text>
+                        <text x={x + 14} y={y + slabH / 2 + 11} fontSize="8.5" fill="#DDA752" fontFamily="monospace" style={{ direction: 'ltr', unicodeBidi: 'isolate' }}>
+                          {row.sub}
+                        </text>
+                        {row.sameAs && (
+                          <text x={x + w - 14} y={y + slabH / 2 + 4} fontSize="8.5" fill="rgba(221,167,82,0.75)" textAnchor="end" fontFamily="monospace">
+                            {isAr ? `مطابق لـ ${row.sameAs}` : `= ${row.sameAs}`}
+                          </text>
+                        )}
+                        {row.kind === 'ground' && (
+                          <line x1={110} y1={y + slabH + 3} x2={570} y2={y + slabH + 3} stroke="rgba(221,167,82,0.5)" strokeWidth="2" />
+                        )}
+                      </g>
+                    );
+                  })}
+                </svg>
+              );
+            })() : previewSlots.length > 0 ? (
               <svg ref={svgRef} viewBox="0 0 680 440" className="fp-canvas-svg" style={{ direction: 'ltr' }} xmlns="http://www.w3.org/2000/svg">
                 <defs>
                   <pattern id="adminCadGrid" width="10" height="10" patternUnits="userSpaceOnUse">
@@ -1442,14 +1839,33 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
                       role="button"
                       tabIndex={0}
                       aria-label={`${s.title}, ${round1(s.sqm)} ${isAr ? 'متر مربع' : 'square meters'}`}
-                      onClick={() => {
+                      onClick={(e) => {
                         if (suppressCanvasClickRef.current) return;
+                        if (composerTool !== 'select') {
+                          handleComposerClick(s.zone.id, e);
+                          return;
+                        }
+                        if (propertyType === 'building' && bldView.mode === 'floor' && s.zone.zone_template_id === 'bld.unit') {
+                          setBldView({ mode: 'unit', floorKey: bldView.floorKey, unitId: s.zone.id });
+                          setSelectedZoneId(null);
+                          return;
+                        }
                         selectZone(s.zone.id, true);
                       }}
                       onPointerDown={(e) => handleCanvasRoomPointerDown(s.zone.id, e)}
-                      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); selectZone(s.zone.id, true); } }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          if (propertyType === 'building' && bldView.mode === 'floor' && s.zone.zone_template_id === 'bld.unit') {
+                            setBldView({ mode: 'unit', floorKey: bldView.floorKey, unitId: s.zone.id });
+                            setSelectedZoneId(null);
+                            return;
+                          }
+                          selectZone(s.zone.id, true);
+                        }
+                      }}
                       opacity={isDragSource ? 0.35 : 1}
-                      style={{ cursor: canvasDrag ? 'grabbing' : 'grab', touchAction: 'none' }}
+                      style={{ cursor: composerTool !== 'select' ? 'crosshair' : canvasDrag ? 'grabbing' : 'grab', touchAction: 'none' }}
                     >
                       {isDropTarget && (
                         <rect
@@ -1509,6 +1925,63 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
                   );
                 })}
 
+                {previewSlots.flatMap(s =>
+                  openingSegments(s, s.zone.spatial?.openings, metricLayout.pxPerMeter).map(seg => {
+                    const dx = seg.x2 - seg.x1;
+                    const dy = seg.y2 - seg.y1;
+                    const len = Math.hypot(dx, dy);
+                    const nx = seg.edge === 'n' ? 0 : seg.edge === 's' ? 0 : seg.edge === 'w' ? 1 : -1;
+                    const ny = seg.edge === 'n' ? 1 : seg.edge === 's' ? -1 : 0;
+                    const leafX = seg.x1 + nx * len;
+                    const leafY = seg.y1 + ny * len;
+                    const sweep = dx * ny - dy * nx > 0 ? 0 : 1;
+                    return (
+                      <g
+                        key={seg.id}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (composerTool !== 'select') handleRemoveOpening(s.zone.id, seg.id);
+                        }}
+                        style={{ cursor: composerTool !== 'select' ? 'pointer' : 'default' }}
+                      >
+                        <title>
+                          {seg.kind === 'door'
+                            ? (isAr ? 'باب — انقر للإزالة في وضع الأدوات' : 'Door — click to remove in tool mode')
+                            : (isAr ? 'نافذة — انقر للإزالة في وضع الأدوات' : 'Window — click to remove in tool mode')}
+                        </title>
+                        <line x1={seg.x1} y1={seg.y1} x2={seg.x2} y2={seg.y2} strokeWidth={10} stroke="transparent" />
+                        {seg.kind === 'door' ? (
+                          <>
+                            <line x1={seg.x1} y1={seg.y1} x2={seg.x2} y2={seg.y2} strokeWidth={4} style={{ stroke: 'var(--fp-canvas-bg, #0A0E1A)' }} />
+                            <line x1={seg.x1} y1={seg.y1} x2={leafX} y2={leafY} stroke="#DDA752" strokeWidth={1.5} />
+                            <path d={`M ${leafX} ${leafY} A ${len} ${len} 0 0 ${sweep} ${seg.x2} ${seg.y2}`} fill="none" stroke="rgba(221,167,82,0.55)" strokeWidth={1} strokeDasharray="3 2" />
+                          </>
+                        ) : (
+                          <>
+                            <line x1={seg.x1} y1={seg.y1} x2={seg.x2} y2={seg.y2} strokeWidth={5} style={{ stroke: 'var(--fp-canvas-bg, #0A0E1A)' }} />
+                            <line x1={seg.x1} y1={seg.y1} x2={seg.x2} y2={seg.y2} stroke="#7FB4D8" strokeWidth={3} />
+                            <line x1={seg.x1} y1={seg.y1} x2={seg.x2} y2={seg.y2} strokeWidth={1} style={{ stroke: 'var(--fp-canvas-bg, #0A0E1A)' }} />
+                          </>
+                        )}
+                      </g>
+                    );
+                  }),
+                )}
+
+                {canvasDrag?.snap && (
+                  <rect
+                    x={canvasDrag.snap.x}
+                    y={canvasDrag.snap.y}
+                    width={canvasDrag.snap.w}
+                    height={canvasDrag.snap.h}
+                    fill="rgba(221, 167, 82, 0.08)"
+                    stroke="#DDA752"
+                    strokeWidth="1.5"
+                    strokeDasharray="6 4"
+                    pointerEvents="none"
+                  />
+                )}
+
                 {canvasDrag && (() => {
                   const src = previewSlots.find(s => s.zone.id === canvasDrag.id);
                   if (!src) return null;
@@ -1542,40 +2015,16 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
                   );
                 })()}
               </svg>
-            ) : showPresets ? (
+            ) : showPresets && propertyType === 'apartment' ? (
               <div className="fp-presets">
                 <div className="fp-presets-head">
                   <h4 className="fp-presets-title">{isAr ? 'ابدأ مخططك' : 'Start your floor plan'}</h4>
-                  <p className="fp-presets-desc">{isAr ? 'اختر تخطيطاً جاهزاً، أو أضف الغرف واحدة تلو الأخرى من القائمة.' : 'Pick a starter layout, or add rooms one by one from the list.'}</p>
+                  <p className="fp-presets-desc">{isAr ? 'ولّد تخطيطاً يناسب العقار عبر أسئلة سريعة، أو أضف الغرف يدوياً من القائمة.' : 'Generate a layout tailored to this property with a few quick questions, or add rooms manually from the list.'}</p>
                 </div>
-                <div className="fp-presets-grid">
-                  {STARTER_PRESETS.map((p) => {
-                    const recommended = p.id === recommendedId;
-                    return (
-                      <div key={p.id} className={`fp-preset-card ${recommended ? 'recommended' : ''}`}>
-                        {recommended && <span className="fp-preset-badge">{isAr ? 'موصى به' : 'RECOMMENDED'}</span>}
-                        <div className="fp-preset-thumb" aria-hidden="true">
-                          <svg viewBox="0 0 120 78" width="120" height="78" style={{ direction: 'ltr' }}>
-                            {getFloorPlanSlots(Math.min(p.rooms.length, 6)).map((slot, i) => (
-                              <rect key={i} x={120 * slot.xF} y={78 * slot.yF} width={120 * slot.wF} height={78 * slot.hF} fill="rgba(221,167,82,0.08)" stroke="rgba(221,167,82,0.5)" strokeWidth="1" />
-                            ))}
-                          </svg>
-                        </div>
-                        <span className="fp-preset-name">{isAr ? p.labelAr : p.labelEn}</span>
-                        <span className="fp-preset-sub">{isAr ? p.subAr : p.subEn}</span>
-                        <span className="fp-preset-sqm">~{p.approxSqm} m²</span>
-                        <button
-                          type="button"
-                          className="fp-preset-use"
-                          autoFocus={recommended}
-                          onClick={() => handleApplyPreset(p)}
-                        >
-                          {isAr ? 'استخدم هذا' : 'Use this'}
-                        </button>
-                      </div>
-                    );
-                  })}
-                </div>
+                <button type="button" className="fp-wizard-cta" autoFocus onClick={() => setWizardOpen(true)}>
+                  <Sparkles size={16} />
+                  <span>{isAr ? 'توليد تخطيط بالمعالج' : 'Generate layout with wizard'}</span>
+                </button>
                 <button type="button" className="fp-start-empty" onClick={handleStartEmpty}>
                   <span>{isAr ? 'ابدأ فارغاً' : 'Start empty'}</span>
                   <span className="fp-arrow-glyph" aria-hidden="true">→</span>
@@ -1626,13 +2075,50 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
               )}
             </div>
           )}
+
+          {unreachableRooms.length > 0 && (
+            <div className="fp-recon warn fp-unreachable">
+              <div className="fp-recon-text">
+                <AlertTriangle size={14} className="fp-recon-icon" />
+                <span>
+                  {isAr
+                    ? `${unreachableRooms.length === 1 ? 'غرفة بلا مدخل' : 'غرف بلا مدخل'}: `
+                    : `${unreachableRooms.length === 1 ? 'Unreachable room' : 'Unreachable rooms'} — no door access: `}
+                  <strong>{unreachableRooms.map(r => r.title).join(isAr ? '، ' : ', ')}</strong>
+                </span>
+              </div>
+              <button
+                type="button"
+                className="fp-recon-review"
+                onClick={() => {
+                  const first = unreachableRooms[0];
+                  if (first) selectZone(first.id, true);
+                }}
+              >
+                {isAr ? 'عرض' : 'Show'}
+              </button>
+            </div>
+          )}
         </div>
 
         {(() => {
         const listPanel = (
         <div className={`fp-list-panel ${listPortalTarget ? 'in-rail' : ''}`} dir={isAr ? 'rtl' : 'ltr'}>
           <div className="fp-global-state" role="group" aria-label={isAr ? 'حالة التشطيب الإجمالية' : 'Global finishing state'}>
-            <span className="fp-global-state-label">{isAr ? 'التشطيب' : 'FINISHING'}</span>
+            <span className="fp-global-state-head">
+              <span className="fp-global-state-label">{isAr ? 'التشطيب' : 'FINISHING'}</span>
+              {propertyType === 'apartment' && (
+                <button
+                  type="button"
+                  className="fp-wizard-trigger"
+                  title={isAr ? 'توليد تخطيط بالمعالج' : 'Generate layout with wizard'}
+                  onClick={() => setWizardOpen(true)}
+                >
+                  <Sparkles size={11} />
+                  <span>{isAr ? 'معالج' : 'Wizard'}</span>
+                </button>
+              )}
+            </span>
             <div className="fp-global-state-btns">
               {GLOBAL_STATE_OPTIONS.map(opt => (
                 <button
@@ -1671,7 +2157,14 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
                         warn={warnFor(zone.zone_template_id, sp.sqm)}
                         isAr={isAr}
                         rowRef={(el) => { rowRefs.current[zone.id] = el; }}
-                        onSelect={() => selectZone(zone.id)}
+                        onSelect={() => {
+                          if (propertyType === 'building' && bldView.mode === 'floor' && zone.zone_template_id === 'bld.unit') {
+                            setBldView({ mode: 'unit', floorKey: bldView.floorKey, unitId: zone.id });
+                            setSelectedZoneId(null);
+                            return;
+                          }
+                          selectZone(zone.id);
+                        }}
                         onPatch={(updates) => handleUpdateSpatial(zone.id, updates)}
                         onRename={(next) => handleRenameRoom(zone.id, next)}
                         onDelete={() => handleRemoveRoom(zone.id, getZoneLabel(zone))}
@@ -1804,6 +2297,85 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
 
       </div>
 
+      {wizardOpen && (
+        <div className="fp-wizard-overlay" role="dialog" aria-modal="true" aria-label={isAr ? 'معالج توليد التخطيط' : 'Layout generation wizard'}>
+          <div className="fp-wizard">
+            <div className="fp-wizard-head">
+              <span className="fp-wizard-title">
+                <Sparkles size={15} />
+                <span>{isAr ? 'معالج توليد التخطيط' : 'Layout Generation Wizard'}</span>
+              </span>
+              <button type="button" className="fp-group-btn" aria-label={isAr ? 'إغلاق' : 'Close'} onClick={() => setWizardOpen(false)}>
+                <span aria-hidden="true">✕</span>
+              </button>
+            </div>
+
+            <div className="fp-wizard-grid">
+              <label className="fp-wizard-field">
+                <span>{isAr ? 'غرف النوم' : 'Bedrooms'}</span>
+                <input
+                  type="number" min={1} max={8} dir="ltr"
+                  value={wizard.bedrooms}
+                  onChange={(e) => setWizard(w => ({ ...w, bedrooms: Math.max(1, Math.min(8, Number(e.target.value) || 1)) }))}
+                />
+              </label>
+              <label className="fp-wizard-field">
+                <span>{isAr ? 'الحمامات' : 'Bathrooms'}</span>
+                <input
+                  type="number" min={1} max={6} dir="ltr"
+                  value={wizard.bathrooms}
+                  onChange={(e) => setWizard(w => ({ ...w, bathrooms: Math.max(1, Math.min(6, Number(e.target.value) || 1)) }))}
+                />
+              </label>
+              <label className="fp-wizard-field">
+                <span>{isAr ? 'رقم الطابق' : 'Floor Number'}</span>
+                <input
+                  type="number" min={0} max={60} dir="ltr"
+                  placeholder={isAr ? '0 = أرضي' : '0 = Ground'}
+                  value={wizard.floorNumber}
+                  onChange={(e) => setWizard(w => ({ ...w, floorNumber: e.target.value }))}
+                />
+              </label>
+            </div>
+
+            <div className="fp-wizard-toggles">
+              {([
+                ['balcony', isAr ? 'بلكونة' : 'Balcony'],
+                ['guestToilet', isAr ? 'حمام ضيوف' : 'Guest toilet'],
+                ['maidRoom', isAr ? 'غرفة خادمة' : "Maid's room"],
+                ['laundry', isAr ? 'غسيل / مخزن' : 'Laundry / storage'],
+                ['dressing', isAr ? 'غرفة ملابس' : 'Dressing room'],
+              ] as Array<[keyof PresetWizardAnswers, string]>).map(([key, label]) => (
+                <button
+                  key={key}
+                  type="button"
+                  className={`fp-wizard-toggle ${wizard[key] ? 'on' : ''}`}
+                  aria-pressed={Boolean(wizard[key])}
+                  onClick={() => setWizard(w => ({ ...w, [key]: !w[key] }))}
+                >
+                  {wizard[key] ? <Check size={11} /> : <Plus size={11} />}
+                  <span>{label}</span>
+                </button>
+              ))}
+            </div>
+
+            <p className="fp-wizard-summary" dir="ltr">
+              {templatesFromAnswers(wizard).length + (wizard.maidRoom ? 1 : 0)} rooms
+            </p>
+
+            <div className="fp-wizard-actions">
+              <button type="button" className="fp-start-empty" onClick={() => setWizardOpen(false)}>
+                {isAr ? 'إلغاء' : 'Cancel'}
+              </button>
+              <button type="button" className="fp-wizard-generate" onClick={handleGenerateFromWizard}>
+                <Sparkles size={14} />
+                <span>{isAr ? 'توليد التخطيط' : 'Generate layout'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {toast && (
         <div
           className="fp-toast"
@@ -1874,18 +2446,6 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
           margin: 0.15rem 0 0;
         }
 
-        .fp-room-count {
-          font-family: monospace;
-          font-variant-numeric: tabular-nums;
-          font-size: 0.75rem;
-          font-weight: 700;
-          color: var(--fp-gold);
-          padding: 4px 12px;
-          border-radius: 9999px;
-          background: rgba(221,167,82,0.08);
-          border: 1px solid var(--fp-line);
-          white-space: nowrap;
-        }
 
         .fp-floor-tabs {
           display: flex;
@@ -2042,6 +2602,187 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
         .fp-empty-icon { color: rgba(221,167,82,0.4); margin-block-end: 0.5rem; }
         .fp-empty-title { font-size: 1.1rem; font-weight: 700; color: var(--fp-text); margin: 0; }
         .fp-empty-desc { font-size: 0.8125rem; color: var(--fp-text-dim); margin: 0; max-width: 320px; }
+
+        .fp-global-state-head {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 8px;
+        }
+
+        .fp-wizard-trigger {
+          display: inline-flex;
+          align-items: center;
+          gap: 4px;
+          padding: 3px 9px;
+          border-radius: 9999px;
+          font-size: 0.6rem;
+          font-weight: 800;
+          cursor: pointer;
+          background: rgba(221,167,82,0.10);
+          border: 1px solid rgba(221,167,82,0.35);
+          color: var(--fp-gold);
+          transition: background-color 0.15s cubic-bezier(0.2,0,0,1);
+        }
+
+        .fp-wizard-trigger:hover { background: rgba(221,167,82,0.2); }
+        .fp-wizard-trigger:focus-visible { outline: none; box-shadow: var(--fp-focus-ring); }
+
+        .fp-wizard-cta {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          min-height: 46px;
+          padding: 10px 22px;
+          border-radius: 12px;
+          font-size: 0.875rem;
+          font-weight: 800;
+          cursor: pointer;
+          background: var(--fp-gold-grad);
+          border: none;
+          color: #0A0E18;
+          transition: opacity 0.15s cubic-bezier(0.2,0,0,1);
+        }
+
+        .fp-wizard-cta:hover { opacity: 0.92; }
+        .fp-wizard-cta:focus-visible { outline: none; box-shadow: var(--fp-focus-ring); }
+
+        .fp-wizard-overlay {
+          position: fixed;
+          inset: 0;
+          z-index: 120;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 16px;
+          background: rgba(6, 9, 16, 0.72);
+          backdrop-filter: blur(6px);
+        }
+
+        .fp-wizard {
+          width: min(480px, 100%);
+          display: flex;
+          flex-direction: column;
+          gap: 16px;
+          padding: 20px;
+          border-radius: 16px;
+          background: var(--fp-surface);
+          border: 1px solid rgba(221,167,82,0.3);
+          box-shadow: 0 32px 80px rgba(0,0,0,0.6);
+        }
+
+        .fp-wizard-head {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 10px;
+        }
+
+        .fp-wizard-title {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          font-size: 0.95rem;
+          font-weight: 800;
+          color: var(--fp-gold);
+        }
+
+        .fp-wizard-grid {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 10px;
+        }
+
+        @media (max-width: 560px) {
+          .fp-wizard-grid { grid-template-columns: 1fr; }
+        }
+
+        .fp-wizard-field {
+          display: flex;
+          flex-direction: column;
+          gap: 5px;
+          font-size: 0.68rem;
+          font-weight: 700;
+          color: var(--fp-text-dim);
+        }
+
+        .fp-wizard-field input {
+          padding: 8px 10px;
+          border-radius: 9px;
+          background: rgba(255,255,255,0.04);
+          border: 1px solid var(--fp-line);
+          color: var(--fp-text);
+          font-family: monospace;
+          font-size: 0.85rem;
+          font-weight: 700;
+          outline: none;
+        }
+
+        .fp-wizard-field input:focus { border-color: var(--fp-gold); }
+
+        .fp-wizard-toggles {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 6px;
+        }
+
+        .fp-wizard-toggle {
+          display: inline-flex;
+          align-items: center;
+          gap: 5px;
+          padding: 6px 12px;
+          border-radius: 9999px;
+          font-size: 0.7rem;
+          font-weight: 700;
+          cursor: pointer;
+          background: transparent;
+          border: 1px dashed var(--fp-line);
+          color: var(--fp-text-dim);
+          transition: color 0.15s cubic-bezier(0.2,0,0,1), border-color 0.15s cubic-bezier(0.2,0,0,1), background-color 0.15s cubic-bezier(0.2,0,0,1);
+        }
+
+        .fp-wizard-toggle:hover { color: var(--fp-text); border-color: rgba(221,167,82,0.5); }
+
+        .fp-wizard-toggle.on {
+          background: rgba(221,167,82,0.12);
+          border: 1px solid var(--fp-gold);
+          color: var(--fp-gold);
+        }
+
+        .fp-wizard-summary {
+          margin: 0;
+          font-family: monospace;
+          font-variant-numeric: tabular-nums;
+          font-size: 0.72rem;
+          font-weight: 800;
+          color: var(--fp-text-dim);
+        }
+
+        .fp-wizard-actions {
+          display: flex;
+          align-items: center;
+          justify-content: flex-end;
+          gap: 10px;
+        }
+
+        .fp-wizard-generate {
+          display: inline-flex;
+          align-items: center;
+          gap: 7px;
+          min-height: 40px;
+          padding: 8px 18px;
+          border-radius: 10px;
+          font-size: 0.8rem;
+          font-weight: 800;
+          cursor: pointer;
+          background: var(--fp-gold-grad);
+          border: none;
+          color: #0A0E18;
+        }
+
+        .fp-wizard-generate:hover { opacity: 0.92; }
+        .fp-wizard-generate:focus-visible { outline: none; box-shadow: var(--fp-focus-ring); }
 
         .fp-presets-head { margin-block-end: 1rem; }
         .fp-presets-title { font-size: 1.2rem; font-weight: 800; color: var(--fp-text); margin: 0; }
@@ -2776,6 +3517,100 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
           color: var(--fp-text-dim);
         }
 
+        .fp-crumbs {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          min-height: 38px;
+          flex-wrap: wrap;
+        }
+
+        .fp-crumb {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          padding: 6px 12px;
+          border-radius: 8px;
+          border: 1px solid transparent;
+          background: transparent;
+          font-family: inherit;
+          font-size: 0.8125rem;
+          font-weight: 600;
+          color: var(--fp-text-dim);
+          cursor: pointer;
+          transition: color 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+        }
+
+        .fp-crumb:hover { color: var(--fp-gold); }
+
+        .fp-crumb.active {
+          color: var(--fp-gold);
+          background: rgba(221,167,82,0.1);
+          border-color: var(--fp-line);
+          cursor: default;
+        }
+
+        .fp-crumb-sep {
+          color: var(--fp-text-dim);
+          font-size: 0.9rem;
+          opacity: 0.6;
+        }
+
+        .fp-crumb-propagate {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          margin-inline-start: auto;
+          padding: 6px 12px;
+          border-radius: 8px;
+          border: 1px solid var(--fp-line);
+          background: rgba(221,167,82,0.08);
+          font-family: inherit;
+          font-size: 0.75rem;
+          font-weight: 700;
+          color: var(--fp-gold);
+          cursor: pointer;
+          transition: background 0.15s ease;
+        }
+
+        .fp-crumb-propagate:hover { background: rgba(221,167,82,0.16); }
+
+        .fp-elev-slab:hover rect { fill: rgba(221,167,82,0.12); }
+        .fp-elev-slab:focus-visible { outline: none; }
+        .fp-elev-slab:focus-visible rect { stroke-width: 2.6; }
+
+        .fp-tools {
+          display: flex;
+          align-items: center;
+          gap: 4px;
+          padding: 3px;
+          border-radius: 9px;
+          border: 1px solid var(--fp-line);
+          background: rgba(221,167,82,0.05);
+        }
+
+        .fp-tool-btn {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          width: 26px;
+          height: 24px;
+          border-radius: 6px;
+          border: 1px solid transparent;
+          background: transparent;
+          color: var(--fp-text-dim);
+          cursor: pointer;
+          transition: color 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+        }
+
+        .fp-tool-btn:hover { color: var(--fp-gold); }
+
+        .fp-tool-btn.active {
+          color: var(--fp-gold);
+          background: rgba(221,167,82,0.14);
+          border-color: var(--fp-line);
+        }
+
         .fp-floor-rename {
           font-family: inherit;
           font-size: 0.8125rem;
@@ -2790,25 +3625,6 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
         }
 
         [data-theme="light"] .fp-floor-rename { background: #FFFFFF; }
-
-        .fp-floor-add-wrap { position: relative; flex-shrink: 0; }
-
-        .fp-floor-add { color: var(--fp-gold); }
-
-        .fp-floor-menu {
-          position: absolute;
-          inset-block-start: calc(100% + 8px);
-          inset-inline-end: 0;
-          z-index: 40;
-          min-width: 220px;
-          border-radius: 12px;
-          background: var(--fp-surface);
-          border: 1px solid var(--fp-line);
-          box-shadow: 0 18px 48px rgba(0,0,0,0.4);
-          padding: 6px;
-        }
-
-        [data-theme="light"] .fp-floor-menu { box-shadow: 0 18px 48px rgba(28,26,22,0.15); }
 
         .fp-recon {
           display: flex;

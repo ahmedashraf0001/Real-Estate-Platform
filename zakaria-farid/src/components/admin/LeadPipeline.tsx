@@ -11,7 +11,7 @@ import {
 import { toast } from 'sonner';
 import { createLead, deleteLeadPermanently, toggleArchiveLead, updateLeadDetails, updateLeadStage } from '@/app/actions/leads';
 import { Archive, RotateCcw, Trash2 } from 'lucide-react';
-import type { Lead, Property } from '@/lib/supabase/types';
+import type { Booking, Lead, Property } from '@/lib/supabase/types';
 
 interface LeadPipelineProps {
   initialLeads: Lead[];
@@ -174,6 +174,20 @@ export default function LeadPipeline({ initialLeads, properties, adminLocale }: 
         return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
       });
   }, [archivedLeads, searchQuery, sortBy]);
+
+  const viewingRequests = useMemo(() => {
+    const rows: Array<{ lead: Lead; booking: Booking }> = [];
+    for (const lead of leads) {
+      for (const booking of lead.bookings ?? []) {
+        if (booking.status === 'viewing_scheduling_request') rows.push({ lead, booking });
+      }
+    }
+    return rows.sort((a, b) => {
+      const ta = a.booking.start_time ? new Date(a.booking.start_time).getTime() : Infinity;
+      const tb = b.booking.start_time ? new Date(b.booking.start_time).getTime() : Infinity;
+      return ta - tb;
+    });
+  }, [leads]);
 
   const selectedLead = useMemo(
     () => leads.find((lead) => lead.id === selectedLeadId) ?? null,
@@ -662,6 +676,59 @@ export default function LeadPipeline({ initialLeads, properties, adminLocale }: 
           <Flame size={18} style={{ color: staleCount > 0 ? '#EF4444' : 'rgba(255, 255, 255, 0.5)', opacity: 0.85 }} />
         </button>
       </div>
+
+      {/* ─── Incoming Viewing Requests (Cal.com bookings awaiting action) ─── */}
+      {viewingRequests.length > 0 && (
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px',
+          flexWrap: 'wrap',
+          background: 'rgba(245, 158, 11, 0.07)',
+          padding: '10px 18px',
+          borderRadius: '14px',
+          border: '1px solid rgba(245, 158, 11, 0.3)',
+        }}>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '7px', fontSize: '11px', fontWeight: 800, color: '#F59E0B', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>
+            <Calendar size={14} />
+            {isAr ? `طلبات معاينة (${viewingRequests.length})` : `Viewing Requests (${viewingRequests.length})`}
+          </span>
+          <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', flex: 1, paddingBottom: '2px' }}>
+            {viewingRequests.map(({ lead, booking }) => (
+              <button
+                key={booking.id}
+                type="button"
+                onClick={() => setSelectedLeadId(lead.id)}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '6px 12px',
+                  borderRadius: '9999px',
+                  border: '1px solid rgba(245, 158, 11, 0.35)',
+                  background: 'rgba(13, 19, 34, 0.85)',
+                  color: '#FFFFFF',
+                  fontSize: '11.5px',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  whiteSpace: 'nowrap',
+                  flexShrink: 0,
+                }}
+              >
+                <span>{lead.name}</span>
+                <span style={{ color: '#F59E0B' }}>
+                  {isAr ? (booking.property?.title_ar || booking.property?.title_en || '') : (booking.property?.title_en || '')}
+                </span>
+                <span style={{ color: 'rgba(255,255,255,0.6)', fontWeight: 600 }} dir="ltr">
+                  {booking.start_time
+                    ? new Date(booking.start_time).toLocaleString(isAr ? 'ar-EG' : 'en-US', { dateStyle: 'medium', timeStyle: 'short' })
+                    : '—'}
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* ─── Search & Active Filter Bar ─── */}
       <div style={{
@@ -1452,6 +1519,62 @@ export default function LeadPipeline({ initialLeads, properties, adminLocale }: 
                 </button>
               </div>
             </div>
+
+            {/* Viewing Booking History (Cal.com) */}
+            {(selectedLead.bookings?.length ?? 0) > 0 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <label style={{ fontSize: '11px', fontWeight: 800, color: '#DDA752', letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+                  {isAr ? `سجل المعاينات (${selectedLead.bookings!.length})` : `Viewing History (${selectedLead.bookings!.length})`}
+                </label>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  {[...selectedLead.bookings!]
+                    .sort((a, b) => new Date(b.start_time ?? b.created_at).getTime() - new Date(a.start_time ?? a.created_at).getTime())
+                    .map((booking) => (
+                      <div
+                        key={booking.id}
+                        style={{
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '4px',
+                          padding: '9px 12px',
+                          borderRadius: '10px',
+                          background: 'rgba(245, 158, 11, 0.06)',
+                          border: '1px solid rgba(245, 158, 11, 0.22)',
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: 700, color: '#FFFFFF', minWidth: 0 }}>
+                            <Calendar size={12} style={{ color: '#F59E0B', flexShrink: 0 }} />
+                            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              {isAr
+                                ? (booking.property?.title_ar || booking.property?.title_en || 'عقار غير محدد')
+                                : (booking.property?.title_en || 'Unspecified property')}
+                            </span>
+                          </span>
+                          <span style={{
+                            fontSize: '10px',
+                            fontWeight: 800,
+                            padding: '2px 8px',
+                            borderRadius: '9999px',
+                            whiteSpace: 'nowrap',
+                            background: booking.status === 'viewing_scheduling_request' ? 'rgba(245, 158, 11, 0.16)' : 'rgba(148, 163, 184, 0.15)',
+                            color: booking.status === 'viewing_scheduling_request' ? '#F59E0B' : '#94A3B8',
+                          }}>
+                            {booking.status === 'viewing_scheduling_request'
+                              ? (isAr ? 'طلب معاينة' : 'Requested')
+                              : booking.status}
+                          </span>
+                        </div>
+                        <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.65)', fontWeight: 600 }} dir="ltr">
+                          {booking.start_time
+                            ? new Date(booking.start_time).toLocaleString(isAr ? 'ar-EG' : 'en-US', { dateStyle: 'full', timeStyle: 'short' })
+                            : (isAr ? 'موعد غير محدد' : 'Time not set')}
+                        </span>
+                      </div>
+                    ))}
+                </div>
+              </div>
+            )}
 
             {/* Editable Notes & Requirements */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', flex: 1 }}>
