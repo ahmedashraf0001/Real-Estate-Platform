@@ -22,7 +22,7 @@
 }
 
 .mobileTitle {
-  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-family: 'ThmanyahSans', 'Cairo', 'Plus Jakarta Sans', sans-serif;
   font-weight: 800;
   font-size: 13px;
   letter-spacing: 0.12em;
@@ -50,22 +50,22 @@
 }
 
 .sidebar {
-  width: 270px;
+  width: 260px;
   flex-shrink: 0;
-  background: linear-gradient(180deg, #0D1322 0%, #080B14 100%);
+  background: #0A0D15;
   height: 100%;
   display: flex;
   flex-direction: column;
-  border-right: 1px solid rgba(221, 167, 82, 0.14);
+  border-right: 1px solid rgba(255, 255, 255, 0.07);
   box-sizing: border-box;
   z-index: 100;
-  box-shadow: 4px 0 24px rgba(0, 0, 0, 0.4);
+  box-shadow: 4px 0 24px rgba(0, 0, 0, 0.5);
 }
 
 [dir="rtl"] .sidebar {
   border-right: none;
-  border-left: 1px solid rgba(221, 167, 82, 0.14);
-  box-shadow: -4px 0 24px rgba(0, 0, 0, 0.4);
+  border-left: 1px solid rgba(255, 255, 255, 0.07);
+  box-shadow: -4px 0 24px rgba(0, 0, 0, 0.5);
 }
 
 [data-theme="light"] .sidebar {
@@ -76,7 +76,7 @@
 
 /* Brand Header */
 .brandContainer {
-  padding: 24px 20px 18px;
+  padding: 22px 18px 16px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 
@@ -91,21 +91,20 @@
 }
 
 .logoIcon {
-  width: 40px;
-  height: 40px;
+  width: 38px;
+  height: 38px;
   border-radius: 10px;
-  background: linear-gradient(135deg, rgba(221, 167, 82, 0.25) 0%, rgba(221, 167, 82, 0.08) 100%);
-  border: 1.5px solid #DDA752;
-  color: #DDA752;
+  background: linear-gradient(135deg, rgba(229, 184, 105, 0.2) 0%, rgba(229, 184, 105, 0.05) 100%);
+  border: 1px solid rgba(229, 184, 105, 0.4);
+  color: #E5B869;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-family: 'Plus Jakarta Sans', sans-serif;
-  font-size: 14px;
+  font-family: 'ThmanyahSans', 'Cairo', 'Plus Jakarta Sans', sans-serif;
+  font-size: 13px;
   font-weight: 800;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.04em;
   flex-shrink: 0;
-  box-shadow: 0 0 16px rgba(221, 167, 82, 0.2);
 }
 
 .logoText {
@@ -115,10 +114,10 @@
 }
 
 .brandTitle {
-  font-family: 'Plus Jakarta Sans', sans-serif;
-  font-size: 14px;
+  font-family: 'ThmanyahSans', 'Cairo', 'Plus Jakarta Sans', sans-serif;
+  font-size: 13.5px;
   font-weight: 800;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.04em;
   color: #FFFFFF;
   margin: 0;
 }
@@ -133,18 +132,19 @@
   gap: 4px;
   font-size: 9px;
   font-weight: 700;
-  letter-spacing: 0.12em;
-  color: #DDA752;
+  letter-spacing: 0.1em;
+  color: #E5B869;
   text-transform: uppercase;
+  opacity: 0.85;
 }
 
 .sparkleIcon {
-  color: #DDA752;
+  color: #E5B869;
 }
 
 /* Quick Add Button */
 .quickActionBox {
-  padding: 18px 16px 10px;
+  padding: 16px 14px 8px;
 }
 
 .quickAddBtn {
@@ -153,41 +153,41 @@
   justify-content: center;
   gap: 8px;
   width: 100%;
-  padding: 11px 16px;
-  border-radius: 10px;
-  background: linear-gradient(135deg, #DDA752 0%, #B8860B 100%);
-  color: #0A0E18;
-  font-family: 'Plus Jakarta Sans', sans-serif;
-  font-size: 13px;
+  padding: 10px 14px;
+  border-radius: 9px;
+  background: linear-gradient(135deg, #E5B869 0%, #C5A059 100%);
+  color: #0A0C10;
+  font-family: 'ThmanyahSans', 'Cairo', 'Plus Jakarta Sans', sans-serif;
+  font-size: 12.5px;
   font-weight: 800;
   text-decoration: none;
-  box-shadow: 0 4px 18px rgba(221, 167, 82, 0.3);
+  box-shadow: 0 3px 14px rgba(229, 184, 105, 0.25);
   transition: all 0.2s ease;
   border: none;
 }
 
 .quickAddBtn:hover {
-  transform: translateY(-1.5px);
-  box-shadow: 0 6px 24px rgba(221, 167, 82, 0.45);
+  transform: translateY(-1px);
+  box-shadow: 0 5px 20px rgba(229, 184, 105, 0.4);
 }
 
 /* Navigation Section */
 .navSection {
   flex: 1;
-  padding: 10px 14px;
+  padding: 10px 12px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
   overflow-y: auto;
 }
 
 .sectionHeading {
-  font-family: 'Plus Jakarta Sans', sans-serif;
-  font-size: 9.5px;
+  font-family: 'ThmanyahSans', 'Cairo', 'Plus Jakarta Sans', sans-serif;
+  font-size: 9px;
   font-weight: 800;
-  letter-spacing: 0.15em;
+  letter-spacing: 0.12em;
   color: rgba(255, 255, 255, 0.35);
-  padding: 0 10px 4px;
+  padding: 0 8px 4px;
 }
 
 [data-theme="light"] .sectionHeading {
@@ -197,22 +197,22 @@
 .nav {
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 3px;
 }
 
 .navItem {
   position: relative;
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 11px 14px;
-  border-radius: 10px;
+  gap: 10px;
+  padding: 9px 12px;
+  border-radius: 8px;
   color: rgba(255, 255, 255, 0.65);
-  font-family: 'Plus Jakarta Sans', sans-serif;
-  font-size: 13px;
+  font-family: 'ThmanyahSans', 'Cairo', 'Plus Jakarta Sans', sans-serif;
+  font-size: 12.5px;
   font-weight: 600;
   text-decoration: none;
-  transition: all 0.18s ease;
+  transition: all 0.15s ease;
 }
 
 [data-theme="light"] .navItem {
@@ -220,7 +220,7 @@
 }
 
 .navItem:hover {
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.04);
   color: #FFFFFF;
 }
 
@@ -230,22 +230,23 @@
 }
 
 .navItemActive {
-  background: linear-gradient(90deg, rgba(221, 167, 82, 0.16) 0%, rgba(221, 167, 82, 0.04) 100%) !important;
-  color: #DDA752 !important;
-  border: 1px solid rgba(221, 167, 82, 0.3);
+  background: rgba(229, 184, 105, 0.08) !important;
+  color: #E5B869 !important;
+  border: 1px solid rgba(229, 184, 105, 0.25);
   font-weight: 700;
 }
 
 [data-theme="light"] .navItemActive {
-  background: linear-gradient(90deg, rgba(221, 167, 82, 0.18) 0%, rgba(221, 167, 82, 0.06) 100%) !important;
+  background: rgba(229, 184, 105, 0.12) !important;
   color: #926707 !important;
-  border-color: rgba(221, 167, 82, 0.4);
+  border-color: rgba(229, 184, 105, 0.35);
 }
 
 .navIconBox {
   display: flex;
   align-items: center;
   justify-content: center;
+  color: inherit;
 }
 
 .navLabel {
@@ -253,20 +254,19 @@
 }
 
 .activeDot {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
   border-radius: 50%;
-  background: #DDA752;
-  box-shadow: 0 0 8px #DDA752;
+  background: #E5B869;
 }
 
 /* Footer Actions */
 .footerActions {
-  padding: 16px 14px 20px;
+  padding: 14px 12px 18px;
   border-top: 1px solid rgba(255, 255, 255, 0.06);
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
 }
 
 [data-theme="light"] .footerActions {
@@ -277,28 +277,28 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  padding: 9px 12px;
-  border-radius: 8px;
-  background: rgba(221, 167, 82, 0.08);
-  border: 1px solid rgba(221, 167, 82, 0.25);
-  color: #DDA752;
-  font-size: 12px;
-  font-weight: 700;
+  gap: 6px;
+  padding: 8px 10px;
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 11.5px;
+  font-weight: 600;
   text-decoration: none;
-  transition: all 0.2s ease;
+  transition: all 0.15s ease;
 }
 
 .websiteBtn:hover {
-  background: rgba(221, 167, 82, 0.18);
-  border-color: #DDA752;
-  color: #FFFFFF;
+  background: rgba(229, 184, 105, 0.12);
+  border-color: rgba(229, 184, 105, 0.3);
+  color: #E5B869;
 }
 
 .systemControlsRow {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
 }
 
 .langBtn {
@@ -306,16 +306,16 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  padding: 8px 10px;
-  border-radius: 8px;
+  gap: 5px;
+  padding: 7px 8px;
+  border-radius: 7px;
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.08);
-  color: rgba(255, 255, 255, 0.7);
-  font-size: 11.5px;
+  color: rgba(255, 255, 255, 0.65);
+  font-size: 11px;
   font-weight: 600;
   text-decoration: none;
-  transition: all 0.2s ease;
+  transition: all 0.15s ease;
 }
 
 [data-theme="light"] .langBtn {
@@ -325,29 +325,29 @@
 }
 
 .langBtn:hover {
-  border-color: rgba(221, 167, 82, 0.4);
-  color: #DDA752;
+  border-color: rgba(229, 184, 105, 0.3);
+  color: #E5B869;
 }
 
 .signOutBtn {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  padding: 8px 12px;
-  border-radius: 8px;
-  background: rgba(239, 68, 68, 0.08);
-  border: 1px solid rgba(239, 68, 68, 0.2);
-  color: #F87171;
-  font-size: 11.5px;
+  gap: 5px;
+  padding: 7px 10px;
+  border-radius: 7px;
+  background: rgba(244, 63, 94, 0.06);
+  border: 1px solid rgba(244, 63, 94, 0.18);
+  color: #FB7185;
+  font-size: 11px;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.15s ease;
 }
 
 .signOutBtn:hover {
-  background: rgba(239, 68, 68, 0.2);
-  border-color: #EF4444;
+  background: rgba(244, 63, 94, 0.15);
+  border-color: #F43F5E;
   color: #FFFFFF;
 }
 

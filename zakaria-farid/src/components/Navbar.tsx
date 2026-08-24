@@ -1,9 +1,10 @@
 'use client';
 import React, { useState, useEffect } from 'react';
-import { Moon, Sun, Menu, X } from 'lucide-react';
+import { Moon, Sun, Menu, X, Bookmark } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { usePathname, useRouter } from 'next/navigation';
 import { BrandLogo } from '@/components/BrandLogo';
+import { useFavorites } from '@/lib/context/FavoritesContext';
 
 interface NavbarProps {
   currentView?: 'home' | 'properties' | 'detail' | 'about' | 'contact' | 'map' | 'admin' | 'maintenance' | 'not-found';
@@ -27,6 +28,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 }) => {
   const pathname = usePathname() || '';
   const router = useRouter();
+  const { favoriteIds, setIsDrawerOpen } = useFavorites();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [isDesktop, setIsDesktop] = useState(typeof window !== 'undefined' ? window.innerWidth > 992 : true);
@@ -65,6 +67,14 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   const handleToggleLang = () => {
     const nextLocale = locale === 'en' ? 'ar' : 'en';
+    if (typeof window !== 'undefined') {
+      try {
+        const currentTheme = document.documentElement.getAttribute('data-theme') || (isDarkMode ? 'dark' : 'light');
+        document.documentElement.setAttribute('data-theme', currentTheme);
+        localStorage.setItem('zf_theme', currentTheme);
+        document.cookie = `zf_theme=${currentTheme}; path=/; max-age=31536000; SameSite=Lax`;
+      } catch {}
+    }
     const parts = pathname.split('/');
     if (parts[1] === 'en' || parts[1] === 'ar') {
       parts[1] = nextLocale;
@@ -109,7 +119,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           className={`nav-glass-capsule ${isBlendedMode ? 'hero-blended' : 'separated-glass'} ${isMapMode ? 'map-glass-capsule' : ''}`}
           initial={false}
           animate={{
-            x: isMapMode && isDesktop ? -200 : 0,
+            x: isMapMode && isDesktop ? (locale === 'ar' ? 200 : -200) : 0,
             maxWidth: isMapMode && isDesktop ? 1040 : 1280,
           }}
           transition={{
@@ -122,6 +132,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           {/* Brand Logo with Sovereign Crest */}
           <BrandLogo 
             size="md"
+            locale={locale}
             onClick={() => onNavigate('home')}
           />
 
@@ -150,15 +161,29 @@ export const Navbar: React.FC<NavbarProps> = ({
 
           {/* Right Controls */}
           <div className="nav-controls">
+            {/* Saved Portfolio Shortlist Button */}
+            <button
+              className={`theme-btn bookmark-nav-btn ${isBlendedMode ? 'blended-pill' : ''} ${favoriteIds.length > 0 ? 'has-favorites' : ''}`}
+              onClick={() => setIsDrawerOpen(true)}
+              title={locale === 'ar' ? 'العقارات المحفوظة' : 'Saved Portfolio Shortlist'}
+              type="button"
+            >
+              <Bookmark size={16} fill={favoriteIds.length > 0 ? 'currentColor' : 'none'} />
+              {favoriteIds.length > 0 && (
+                <span className="nav-badge-count">{favoriteIds.length}</span>
+              )}
+            </button>
+
             {/* Language Switcher */}
             <button 
               className={`lang-btn ${isBlendedMode ? 'blended-pill' : ''}`}
               onClick={handleToggleLang}
-              title="Switch Language"
+              title={locale === 'ar' ? 'التحويل إلى English' : 'التحويل إلى العربية'}
+              aria-label={locale === 'ar' ? 'تغيير لغة المنصة' : 'Switch Platform Language'}
             >
               <span className={locale.toUpperCase() === 'EN' ? 'active-lang' : ''}>EN</span>
               <span className="lang-divider">|</span>
-              <span className={locale.toUpperCase() === 'AR' ? 'active-lang' : ''}>AR</span>
+              <span className={locale.toUpperCase() === 'AR' ? 'active-lang' : ''}>عربي</span>
             </button>
 
             {/* Theme Toggle */}
@@ -169,14 +194,6 @@ export const Navbar: React.FC<NavbarProps> = ({
               suppressHydrationWarning
             >
               {isDarkMode ? <Moon size={16} /> : <Sun size={16} />}
-            </button>
-
-            {/* Primary Inquire CTA */}
-            <button 
-              className="btn-gold nav-cta"
-              onClick={() => onOpenInquiry('General Acquisition Inquiry')}
-            >
-              {locale === 'ar' ? 'استفسر الآن' : 'Inquire Now'}
             </button>
 
             {/* Mobile Hamburger */}
@@ -193,40 +210,45 @@ export const Navbar: React.FC<NavbarProps> = ({
         {/* Mobile Drawer (Glass Pill Style) */}
         <AnimatePresence>
           {mobileMenuOpen && (
-            <motion.div 
-              className="mobile-drawer-glass"
-              initial={{ opacity: 0, y: -15, scale: 0.98 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: -15, scale: 0.98 }}
-              transition={{ duration: 0.25 }}
-            >
-              <div className="mobile-links">
-                {navLinks.map((link) => (
-                  <button
-                    key={link.id}
-                    onClick={() => onNavigate(link.id)}
-                    className={`mobile-nav-link ${currentView === link.id ? 'active' : ''}`}
-                  >
-                    {link.label}
-                  </button>
-                ))}
-                <div className="mobile-actions">
-                  <button 
-                    className="btn-gold mobile-cta-btn"
-                    onClick={() => {
-                      setMobileMenuOpen(false);
-                      onOpenInquiry('General Acquisition Inquiry');
-                    }}
-                  >
-                    {locale === 'ar' ? 'استفسر الآن' : 'Inquire Now'}
-                  </button>
+            <>
+              {/* Backdrop */}
+              <motion.div
+                className="mobile-drawer-backdrop"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={() => setMobileMenuOpen(false)}
+              />
+              <motion.div 
+                className="mobile-drawer-glass"
+                initial={{ opacity: 0, y: -12, scale: 0.98 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -12, scale: 0.98 }}
+                transition={{ duration: 0.22 }}
+                dir={locale === 'ar' ? 'rtl' : 'ltr'}
+              >
+                <div className="mobile-links">
+                  {navLinks.map((link) => (
+                    <button
+                      key={link.id}
+                      onClick={() => {
+                        onNavigate(link.id);
+                        setMobileMenuOpen(false);
+                      }}
+                      className={`mobile-nav-link ${currentView === link.id ? 'active' : ''}`}
+                      type="button"
+                    >
+                      <span>{link.label}</span>
+                      {currentView === link.id && <span className="mobile-active-dot" />}
+                    </button>
+                  ))}
                 </div>
-              </div>
-            </motion.div>
+              </motion.div>
+            </>
           )}
         </AnimatePresence>
       </div>
-<style>{`
+      <style>{`
         .navbar-wrapper {
           position: fixed;
           top: 1.25rem;
@@ -252,50 +274,42 @@ export const Navbar: React.FC<NavbarProps> = ({
           }
 
           .map-glass-capsule .desktop-nav {
-            gap: clamp(1rem, 1.5vw, 1.75rem);
-          }
-
-          .map-glass-capsule .nav-controls {
-            gap: 0.85rem;
-          }
-
-          .map-glass-capsule .nav-cta {
-            padding: 0.55rem 1.15rem;
-            font-size: 0.875rem;
+            gap: 1.25rem;
           }
         }
 
         /* 1. Base Glass Capsule */
         .nav-glass-capsule {
           pointer-events: auto;
-          width: 100%;
-          height: 66px;
-          padding: 0 1.75rem;
-          border-radius: var(--radius-full);
           display: flex;
           align-items: center;
           justify-content: space-between;
-          gap: 1rem;
-          box-sizing: border-box;
-          will-change: transform, max-width;
-          transition: 
-            padding 400ms cubic-bezier(0.16, 1, 0.3, 1),
-            background 450ms cubic-bezier(0.16, 1, 0.3, 1),
-            border-color 450ms cubic-bezier(0.16, 1, 0.3, 1),
-            box-shadow 450ms cubic-bezier(0.16, 1, 0.3, 1),
-            backdrop-filter 450ms cubic-bezier(0.16, 1, 0.3, 1);
+          width: 100%;
+          max-width: 1280px;
+          height: 66px;
+          padding: 0 1.75rem;
+          border-radius: var(--radius-full);
+          transition: background var(--transition-smooth), border-color var(--transition-smooth), box-shadow var(--transition-smooth);
         }
 
-        /* 2. Top Blended State (Blends with Hero seamlessly) */
+        /* 2. Hero Blended State */
         .nav-glass-capsule.hero-blended {
+          background: rgba(10, 14, 24, 0.35);
+          backdrop-filter: blur(12px) saturate(180%);
+          -webkit-backdrop-filter: blur(12px) saturate(180%);
+          border: 1px solid rgba(255, 255, 255, 0.15);
+          box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+        }
+
+        [data-theme="light"] .nav-glass-capsule.hero-blended {
           background: transparent;
-          border: 1px solid transparent;
+          border-color: transparent;
           backdrop-filter: blur(0px);
           -webkit-backdrop-filter: blur(0px);
           box-shadow: 0 0 0 transparent;
         }
 
-        /* 3. Scrolled / Separated State (Floating Frosted Liquid Crystal Glass Capsule) */
+        /* 3. Scrolled / Separated State */
         .nav-glass-capsule.separated-glass {
           background: var(--bg-glass);
           backdrop-filter: blur(20px) saturate(210%) contrast(108%) brightness(108%);
@@ -306,190 +320,68 @@ export const Navbar: React.FC<NavbarProps> = ({
         }
 
         [data-theme="dark"] .nav-glass-capsule.separated-glass {
-          background: linear-gradient(
-            135deg,
-            rgba(255, 255, 255, 0.22) 0%,
-            rgba(255, 255, 255, 0.06) 30%,
-            rgba(18, 24, 38, 0.42) 65%,
-            rgba(10, 14, 24, 0.65) 100%
-          );
+          background: linear-gradient(135deg, rgba(255, 255, 255, 0.22) 0%, rgba(255, 255, 255, 0.06) 30%, rgba(18, 24, 38, 0.42) 65%, rgba(10, 14, 24, 0.65) 100%);
           border: 1px solid rgba(255, 255, 255, 0.28);
-          box-shadow: 
-            0 20px 48px rgba(0, 0, 0, 0.38), 
-            inset 0 1.5px 2px rgba(255, 255, 255, 0.65),
-            inset 0 -1px 1px rgba(255, 255, 255, 0.12);
+          box-shadow: 0 20px 48px rgba(0, 0, 0, 0.38), inset 0 1.5px 2px rgba(255, 255, 255, 0.65), inset 0 -1px 1px rgba(255, 255, 255, 0.12);
         }
 
         [data-theme="light"] .nav-glass-capsule.separated-glass {
-          background: linear-gradient(
-            135deg,
-            rgba(255, 255, 255, 0.65) 0%,
-            rgba(255, 255, 255, 0.30) 35%,
-            rgba(255, 255, 255, 0.48) 100%
-          );
-          backdrop-filter: blur(20px) saturate(210%) contrast(108%) brightness(108%);
-          -webkit-backdrop-filter: blur(20px) saturate(210%) contrast(108%) brightness(108%);
-          border: 1px solid rgba(255, 255, 255, 0.75);
-          box-shadow: 
-            0 18px 44px rgba(15, 23, 42, 0.08), 
-            inset 0 1.5px 2px #FFFFFF,
-            inset 0 -1px 1px rgba(255, 255, 255, 0.25);
+          background: linear-gradient(135deg, rgba(255, 255, 255, 0.72) 0%, rgba(255, 255, 255, 0.38) 40%, rgba(255, 255, 255, 0.58) 100%);
+          backdrop-filter: blur(32px) saturate(210%) contrast(106%);
+          -webkit-backdrop-filter: blur(32px) saturate(210%) contrast(106%);
+          border: 1.5px solid rgba(255, 255, 255, 0.85);
+          box-shadow: 0 20px 48px rgba(15, 23, 42, 0.10), inset 0 1.5px 2px rgba(255, 255, 255, 0.95), inset 0 -1px 1px rgba(0, 0, 0, 0.03);
         }
 
         /* 4. Map Mode State */
         [data-theme="dark"] .nav-glass-capsule.map-glass-capsule {
-          background: linear-gradient(
-            135deg,
-            rgba(255, 255, 255, 0.22) 0%,
-            rgba(255, 255, 255, 0.06) 30%,
-            rgba(18, 24, 38, 0.45) 65%,
-            rgba(10, 14, 24, 0.70) 100%
-          ) !important;
-          backdrop-filter: blur(24px) saturate(220%) contrast(108%) brightness(108%) !important;
-          -webkit-backdrop-filter: blur(24px) saturate(220%) contrast(108%) brightness(108%) !important;
-          border: 1px solid rgba(255, 255, 255, 0.28) !important;
-          box-shadow: 
-            0 20px 50px rgba(0, 0, 0, 0.38), 
-            inset 0 1.5px 2px rgba(255, 255, 255, 0.65),
-            inset 0 -1px 1px rgba(255, 255, 255, 0.12) !important;
+          background: linear-gradient(135deg, rgba(255, 255, 255, 0.16) 0%, rgba(255, 255, 255, 0.05) 25%, rgba(18, 24, 38, 0.46) 60%, rgba(10, 14, 24, 0.62) 100%) !important;
+          backdrop-filter: blur(24px) saturate(200%) contrast(105%) brightness(105%) !important;
+          -webkit-backdrop-filter: blur(24px) saturate(200%) contrast(105%) brightness(105%) !important;
+          border: 1px solid rgba(255, 255, 255, 0.24) !important;
+          box-shadow: 0 20px 48px rgba(0, 0, 0, 0.38), inset 0 1.5px 2px rgba(255, 255, 255, 0.55), inset 0 -1px 1px rgba(255, 255, 255, 0.08) !important;
         }
 
         [data-theme="light"] .nav-glass-capsule.map-glass-capsule {
-          background: linear-gradient(
-            135deg,
-            rgba(255, 255, 255, 0.65) 0%,
-            rgba(255, 255, 255, 0.32) 35%,
-            rgba(255, 255, 255, 0.50) 100%
-          ) !important;
-          backdrop-filter: blur(20px) saturate(210%) contrast(108%) brightness(108%) !important;
-          -webkit-backdrop-filter: blur(20px) saturate(210%) contrast(108%) brightness(108%) !important;
-          border: 1px solid rgba(255, 255, 255, 0.75) !important;
-          box-shadow: 
-            0 18px 45px rgba(15, 23, 42, 0.09), 
-            inset 0 1.5px 2px #FFFFFF,
-            inset 0 -1px 1px rgba(255, 255, 255, 0.25) !important;
-        }
-
-        [data-theme="dark"] .map-glass-capsule .logo-white {
-          color: #FFFFFF !important;
-          text-shadow: 0 1px 4px rgba(0, 0, 0, 0.9);
-        }
-
-        [data-theme="dark"] .map-glass-capsule .nav-link {
-          color: #FFFFFF !important;
-          text-shadow: 0 1px 3px rgba(0, 0, 0, 0.85);
-        }
-
-        [data-theme="dark"] .map-glass-capsule .nav-link:hover,
-        [data-theme="dark"] .map-glass-capsule .nav-link.active {
-          color: #DDA752 !important;
-        }
-
-        [data-theme="dark"] .map-glass-capsule .lang-btn,
-        [data-theme="dark"] .map-glass-capsule .theme-btn {
-          background: rgba(255, 255, 255, 0.1) !important;
-          border-color: rgba(255, 255, 255, 0.25) !important;
-          color: #FFFFFF !important;
-          text-shadow: 0 1px 3px rgba(0, 0, 0, 0.85);
-        }
-
-        [data-theme="light"] .nav-glass-capsule.map-glass-capsule {
-          background: linear-gradient(
-            135deg,
-            rgba(255, 255, 255, 0.46) 0%,
-            rgba(255, 255, 255, 0.26) 100%
-          ) !important;
-          backdrop-filter: blur(14px) saturate(180%) contrast(102%) !important;
-          -webkit-backdrop-filter: blur(14px) saturate(180%) contrast(102%) !important;
-          border: 1px solid rgba(255, 255, 255, 0.60) !important;
-          box-shadow: 
-            0 16px 45px rgba(15, 23, 42, 0.09), 
-            inset 0 1.5px 1.5px #FFFFFF,
-            inset 0 -1px 1px rgba(255, 255, 255, 0.20) !important;
-        }
-
-        [data-theme="light"] .map-glass-capsule .logo-white {
-          color: #0D1117 !important;
-        }
-
-        [data-theme="light"] .map-glass-capsule .nav-link {
-          color: #0D1117 !important;
-        }
-
-        [data-theme="light"] .map-glass-capsule .nav-link:hover,
-        [data-theme="light"] .map-glass-capsule .nav-link.active {
-          color: var(--gold-primary) !important;
-        }
-
-        [data-theme="light"] .map-glass-capsule .lang-btn,
-        [data-theme="light"] .map-glass-capsule .theme-btn {
-          background: rgba(0, 0, 0, 0.05) !important;
-          border-color: rgba(0, 0, 0, 0.08) !important;
-          color: #0D1117 !important;
-        }
-
-        .brand-logo {
-          display: flex;
-          align-items: center;
-          gap: 6px;
-          font-family: var(--font-heading);
-          font-size: 1.15rem;
-          font-weight: 800;
-          letter-spacing: 0.08em;
-          cursor: pointer;
-          user-select: none;
-          flex-shrink: 0;
-        }
-
-        [data-theme="dark"] .brand-logo {
-          text-shadow: 0 1px 4px rgba(0, 0, 0, 0.9);
-        }
-
-        .logo-gold {
-          color: var(--gold-primary);
-        }
-
-        .logo-white {
-          color: var(--text-primary);
-          transition: color var(--transition-fast);
-        }
-
-        .hero-blended .logo-white {
-          color: #FFFFFF !important;
+          background: linear-gradient(135deg, rgba(255, 255, 255, 0.58) 0%, rgba(255, 255, 255, 0.32) 40%, rgba(248, 246, 240, 0.48) 100%) !important;
+          backdrop-filter: blur(22px) saturate(180%) contrast(102%) brightness(102%) !important;
+          -webkit-backdrop-filter: blur(22px) saturate(180%) contrast(102%) brightness(102%) !important;
+          border: 1px solid rgba(255, 255, 255, 0.70) !important;
+          box-shadow: 0 16px 40px rgba(15, 23, 42, 0.08), inset 0 1.5px 2px #FFFFFF, inset 0 -1px 1px rgba(255, 255, 255, 0.35) !important;
         }
 
         .desktop-nav {
           display: flex;
           align-items: center;
-          gap: clamp(1.25rem, 2vw, 2rem);
-          flex-shrink: 1;
+          gap: 1.75rem;
         }
 
         .nav-link {
           position: relative;
+          color: var(--text-secondary);
+          font-family: inherit;
           font-size: 0.9375rem;
           font-weight: 600;
-          color: var(--text-primary);
-          padding: 0.5rem 0.25rem;
           transition: color var(--transition-fast);
-        }
-
-        [data-theme="dark"] .nav-link {
-          text-shadow: 0 1px 3px rgba(0, 0, 0, 0.85);
+          padding: 0.5rem 0.25rem;
+          background: transparent;
+          border: none;
+          cursor: pointer;
         }
 
         .hero-blended .nav-link {
-          color: #FFFFFF !important;
-          text-shadow: 0 1px 3px rgba(0, 0, 0, 0.85);
+          color: rgba(255, 255, 255, 0.85);
+          text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
         }
 
-        .nav-link:hover {
-          color: var(--gold-primary);
-        }
-
+        .nav-link:hover,
         .nav-link.active {
           color: var(--gold-primary);
-          font-weight: 700;
+        }
+
+        .hero-blended .nav-link:hover,
+        .hero-blended .nav-link.active {
+          color: #E5B869;
         }
 
         .nav-indicator {
@@ -498,37 +390,30 @@ export const Navbar: React.FC<NavbarProps> = ({
           left: 0;
           right: 0;
           height: 2px;
-          background: var(--gold-primary);
+          background: linear-gradient(90deg, #E5B869 0%, #FFF0C2 50%, #B8934A 100%);
           border-radius: 2px;
-          box-shadow: 0 0 10px var(--gold-glow);
+          box-shadow: 0 0 10px rgba(229, 184, 105, 0.8);
         }
 
         .nav-controls {
           display: flex;
           align-items: center;
-          gap: 1.15rem;
-          flex-shrink: 0;
+          gap: 8px;
         }
 
         .lang-btn {
+          display: inline-flex;
+          align-items: center;
+          gap: 4px;
           font-size: 0.8125rem;
           font-weight: 700;
-          color: var(--text-primary);
-          display: flex;
-          align-items: center;
-          gap: 5px;
-          padding: 0.35rem 0.6rem;
+          padding: 0.4rem 0.75rem;
           border-radius: var(--radius-full);
+          color: var(--text-primary);
           background: var(--bg-glass-card);
           border: 1px solid var(--border-subtle);
+          cursor: pointer;
           transition: all var(--transition-fast);
-        }
-
-        [data-theme="dark"] .lang-btn {
-          background: rgba(255, 255, 255, 0.1);
-          border-color: rgba(255, 255, 255, 0.25);
-          color: #FFFFFF;
-          text-shadow: 0 1px 3px rgba(0, 0, 0, 0.85);
         }
 
         .lang-btn.blended-pill {
@@ -540,21 +425,24 @@ export const Navbar: React.FC<NavbarProps> = ({
         .lang-btn:hover {
           color: var(--gold-primary);
           border-color: var(--gold-border);
+          transform: translateY(-1px);
         }
 
         .active-lang {
           color: var(--gold-primary);
+          font-weight: 800;
         }
 
         .lang-divider {
-          opacity: 0.5;
-          font-size: 0.6875rem;
+          opacity: 0.4;
+          font-size: 0.7rem;
         }
 
-        .theme-btn {
+        .theme-btn,
+        .bookmark-nav-btn {
           width: 36px;
           height: 36px;
-          border-radius: var(--radius-full);
+          border-radius: 50%;
           display: flex;
           align-items: center;
           justify-content: center;
@@ -562,85 +450,135 @@ export const Navbar: React.FC<NavbarProps> = ({
           background: var(--bg-glass-card);
           border: 1px solid var(--border-subtle);
           transition: all var(--transition-fast);
+          position: relative;
+          cursor: pointer;
         }
 
-        [data-theme="dark"] .theme-btn {
-          background: rgba(255, 255, 255, 0.1);
-          border-color: rgba(255, 255, 255, 0.25);
-          color: #FFFFFF;
-          text-shadow: 0 1px 3px rgba(0, 0, 0, 0.85);
+        .bookmark-nav-btn.has-favorites {
+          color: var(--gold-primary);
+          border-color: var(--gold-border);
+          background: rgba(229, 184, 105, 0.12);
         }
 
-        .theme-btn.blended-pill {
-          background: rgba(0, 0, 0, 0.35);
-          border-color: rgba(255, 255, 255, 0.2);
-          color: #FFFFFF !important;
+        .nav-badge-count {
+          position: absolute;
+          top: -4px;
+          right: -4px;
+          background: linear-gradient(135deg, #FFF0C2 0%, #E5B869 50%, #B8934A 100%);
+          color: #0E121A;
+          font-size: 0.625rem;
+          font-weight: 900;
+          width: 16px;
+          height: 16px;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
         }
 
-        .theme-btn:hover {
+        .theme-btn:hover,
+        .bookmark-nav-btn:hover {
           color: var(--gold-primary);
           border-color: var(--gold-border);
           transform: translateY(-1px);
-        }
-
-        .nav-cta {
-          padding: 0.55rem 1.25rem;
-          font-size: 0.875rem;
-          border-radius: var(--radius-full);
         }
 
         .mobile-toggle {
           display: none;
           color: var(--text-primary);
           padding: 0.4rem;
+          background: transparent;
+          border: none;
+          cursor: pointer;
         }
 
         .hero-blended .mobile-toggle {
           color: #FFFFFF !important;
         }
 
-        /* Mobile Drawer Glass */
-        .mobile-drawer-glass {
+        /* Mobile Drawer Backdrop & Glass Menu */
+        .mobile-drawer-backdrop {
+          position: fixed;
+          inset: 0;
+          width: 100vw;
+          height: 100vh;
+          background: rgba(0, 0, 0, 0.45);
+          backdrop-filter: blur(4px);
+          -webkit-backdrop-filter: blur(4px);
+          z-index: 1001;
           pointer-events: auto;
-          width: 100%;
-          max-width: 1240px;
-          background: var(--bg-surface);
-          backdrop-filter: blur(28px) saturate(190%);
-          -webkit-backdrop-filter: blur(28px) saturate(190%);
-          border: 1px solid var(--border-subtle);
+        }
+
+        .mobile-drawer-glass {
+          position: fixed;
+          top: 76px;
+          left: 0.75rem;
+          right: 0.75rem;
+          width: auto;
+          max-height: calc(100vh - 96px);
+          background: var(--bg-surface, #0E121B);
+          backdrop-filter: blur(28px) saturate(200%);
+          -webkit-backdrop-filter: blur(28px) saturate(200%);
+          border: 1px solid var(--border-glass, rgba(221, 167, 82, 0.3));
           border-radius: 20px;
-          padding: 1.5rem 1.75rem 2rem;
-          margin-top: 0.75rem;
-          box-shadow: var(--shadow-lg);
+          padding: 1.25rem 1.25rem 1.5rem;
+          box-shadow: 0 20px 48px rgba(0, 0, 0, 0.6), 0 0 20px rgba(221, 167, 82, 0.15);
+          z-index: 1002;
+          pointer-events: auto;
+        }
+
+        [data-theme="light"] .mobile-drawer-glass {
+          background: rgba(255, 255, 255, 0.96);
+          border: 1px solid rgba(184, 147, 74, 0.25);
+          box-shadow: 0 20px 48px rgba(15, 23, 42, 0.15);
         }
 
         .mobile-links {
           display: flex;
           flex-direction: column;
-          gap: 1rem;
+          gap: 0.35rem;
         }
 
         .mobile-nav-link {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
           text-align: left;
-          font-size: 1.125rem;
-          font-weight: 600;
+          font-size: 1.05rem;
+          font-weight: 700;
           color: var(--text-primary);
-          padding: 0.5rem 0;
-          border-bottom: 1px solid var(--border-subtle);
+          padding: 0.75rem 1rem;
+          border-radius: 12px;
+          background: transparent;
+          border: none;
+          white-space: nowrap;
+          cursor: pointer;
+          transition: all var(--transition-fast);
+        }
+
+        .navbar-wrapper[dir="rtl"] .mobile-nav-link,
+        .mobile-drawer-glass[dir="rtl"] .mobile-nav-link,
+        [dir="rtl"] .mobile-nav-link {
+          text-align: right;
+        }
+
+        .mobile-nav-link:hover {
+          background: rgba(229, 184, 105, 0.12);
+          color: var(--gold-primary);
         }
 
         .mobile-nav-link.active {
+          background: rgba(229, 184, 105, 0.18);
           color: var(--gold-primary);
-          font-weight: 700;
         }
 
-        .mobile-actions {
-          margin-top: 1rem;
-        }
-
-        .mobile-cta-btn {
-          width: 100%;
-          border-radius: var(--radius-full);
+        .mobile-active-dot {
+          width: 7px;
+          height: 7px;
+          border-radius: 50%;
+          background: var(--gold-primary);
+          box-shadow: 0 0 8px var(--gold-primary);
         }
 
         @media (max-width: 992px) {
@@ -648,14 +586,47 @@ export const Navbar: React.FC<NavbarProps> = ({
             display: none;
           }
           .mobile-toggle {
-            display: block;
+            display: flex;
+            align-items: center;
+            justify-content: center;
           }
           .nav-cta {
             display: none;
           }
           .nav-glass-capsule {
-            height: 60px;
-            padding: 0 1.25rem;
+            height: 56px;
+            padding: 0 1rem;
+          }
+        }
+
+        @media (max-width: 640px) {
+          .navbar-wrapper {
+            top: 0.75rem;
+          }
+          .nav-capsule-container {
+            padding: 0 0.65rem;
+          }
+          .nav-glass-capsule {
+            height: 52px;
+            padding: 0 0.65rem;
+          }
+          .nav-controls {
+            gap: 4px;
+          }
+          .lang-btn {
+            padding: 0.25rem 0.5rem;
+            font-size: 0.75rem;
+          }
+          .theme-btn,
+          .bookmark-nav-btn {
+            width: 32px;
+            height: 32px;
+            padding: 0;
+          }
+          .mobile-toggle {
+            width: 32px;
+            height: 32px;
+            padding: 0;
           }
         }
       `}</style>

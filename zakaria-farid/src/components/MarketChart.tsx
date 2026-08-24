@@ -1,118 +1,71 @@
 'use client';
-import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Activity, ShieldCheck, ArrowUpRight } from 'lucide-react';
 
-interface MarketDataPoint {
-  id: string;
-  rank: string;
-  district: string;
-  subDistrict: string;
-  category: string;
-  pricePerSqm: number;
-  growth: number;
-  roi: number;
-  medianTotal: string;
-  fiveYearGain: string;
-  historical5Yr: number[];
-  insight: string;
+import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Activity, ShieldCheck, Sparkles } from 'lucide-react';
+import { 
+  MarketDistrictConfig, 
+  getStoredPlatformSettings, 
+  DEFAULT_MARKET_DISTRICTS 
+} from '@/lib/services/marketIntelligence';
+
+interface MarketChartProps {
+  locale?: string;
 }
 
-const MARKET_DATA: MarketDataPoint[] = [
-  {
-    id: 'north-coast',
-    rank: '01',
-    district: 'North Coast',
-    subDistrict: 'Ras El Hekma & Sidi Heneish',
-    category: 'Ultra-Prime Coastal',
-    pricePerSqm: 65000,
-    growth: 18.4,
-    roi: 14.2,
-    medianTotal: '55.0M EGP',
-    fiveYearGain: '+103.5%',
-    historical5Yr: [32, 38, 45, 54, 65],
-    insight: 'Driven by Ras El Hekma sovereign master developments.'
-  },
-  {
-    id: 'el-gouna',
-    rank: '02',
-    district: 'El Gouna',
-    subDistrict: 'Red Sea Riviera Lagoon Estates',
-    category: 'Resort Estates',
-    pricePerSqm: 58000,
-    growth: 16.2,
-    roi: 12.8,
-    medianTotal: '36.5M EGP',
-    fiveYearGain: '+88.2%',
-    historical5Yr: [28, 34, 41, 49, 58],
-    insight: 'High euro-denominated yield with steady European demand.'
-  },
-  {
-    id: 'new-cairo',
-    rank: '03',
-    district: 'New Cairo',
-    subDistrict: 'Golden Square & Diplomatic Gate',
-    category: 'Sovereign Metro',
-    pricePerSqm: 42000,
-    growth: 14.8,
-    roi: 11.5,
-    medianTotal: '42.5M EGP',
-    fiveYearGain: '+74.0%',
-    historical5Yr: [22, 26, 31, 36, 42],
-    insight: 'Supported by diplomatic delegations and corporate HQs.'
-  },
-  {
-    id: 'sheikh-zayed',
-    rank: '04',
-    district: 'Sheikh Zayed',
-    subDistrict: 'West Cairo Belt & New Zayed',
-    category: 'Prime Suburban',
-    pricePerSqm: 38500,
-    growth: 12.6,
-    roi: 10.4,
-    medianTotal: '29.0M EGP',
-    fiveYearGain: '+62.5%',
-    historical5Yr: [20, 24, 28, 33, 38.5],
-    insight: 'High family estate demand near elite school clusters.'
-  },
-  {
-    id: 'ain-sokhna',
-    rank: '05',
-    district: 'Ain Sokhna',
-    subDistrict: 'Galala Plateau & Marina',
-    category: 'Seaside Retreat',
-    pricePerSqm: 34000,
-    growth: 11.2,
-    roi: 9.8,
-    medianTotal: '28.0M EGP',
-    fiveYearGain: '+54.8%',
-    historical5Yr: [18, 21, 25, 29, 34],
-    insight: 'Direct expressway connectivity driving weekend liquidity.'
+export const MarketChart: React.FC<MarketChartProps> = ({ locale = 'en' }) => {
+  const isAr = locale === 'ar';
+  const [districts, setDistricts] = useState<MarketDistrictConfig[]>(
+    DEFAULT_MARKET_DISTRICTS.filter(d => d.isEnabled)
+  );
+  const [selectedDistrict, setSelectedDistrict] = useState<MarketDistrictConfig | null>(
+    districts[0] || null
+  );
+  const [mounted, setMounted] = useState(false);
+  const [isVisible, setIsVisible] = useState(true);
+
+  const loadSettings = () => {
+    const settings = getStoredPlatformSettings();
+    setIsVisible(settings.showMarketRadar !== false);
+    const active = (settings.marketDistricts || []).filter(d => d.isEnabled);
+    setDistricts(active);
+    if (active.length > 0) {
+      setSelectedDistrict(prev => (prev && active.find(d => d.id === prev.id)) ? prev : active[0]);
+    } else {
+      setSelectedDistrict(null);
+    }
+  };
+
+  useEffect(() => {
+    setMounted(true);
+    loadSettings();
+
+    const handleUpdate = () => loadSettings();
+    window.addEventListener('zf_platform_settings_updated', handleUpdate);
+    window.addEventListener('storage', handleUpdate);
+    return () => {
+      window.removeEventListener('zf_platform_settings_updated', handleUpdate);
+      window.removeEventListener('storage', handleUpdate);
+    };
+  }, []);
+
+  if (!isVisible || districts.length === 0) {
+    return null;
   }
-];
 
-type MetricType = 'price' | 'growth' | 'roi';
-
-export const MarketChart: React.FC = () => {
-  const [selectedDistrict, setSelectedDistrict] = useState<MarketDataPoint>(MARKET_DATA[0]);
-  const [metric, setMetric] = useState<MetricType>('price');
-
-  const maxPrice = 70000;
-  const maxGrowth = 20;
-  const maxRoi = 16;
-
-  const displayData = MARKET_DATA.slice(0, 4);
+  const maxPrice = Math.max(...districts.map(d => d.pricePerSqm), 70000);
 
   const renderMiniSparkline = (points: number[]) => {
-    const min = Math.min(...points);
-    const max = Math.max(...points);
+    const pts = points && points.length > 1 ? points : [30, 40, 50, 60];
+    const min = Math.min(...pts);
+    const max = Math.max(...pts);
     const range = max - min || 1;
     const width = 80;
     const height = 22;
     const padding = 2;
     
-    const coords = points.map((val, idx) => {
-      const x = padding + (idx / (points.length - 1)) * (width - padding * 2);
+    const coords = pts.map((val, idx) => {
+      const x = padding + (idx / (pts.length - 1)) * (width - padding * 2);
       const y = height - padding - ((val - min) / range) * (height - padding * 2);
       return { x, y };
     });
@@ -130,86 +83,54 @@ export const MarketChart: React.FC = () => {
     return (
       <svg viewBox={`0 0 ${width} ${height}`} className="mini-sparkline" aria-hidden="true">
         <defs>
-          <linearGradient id="miniSparkGrad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#FCD34D" stopOpacity="0.4" />
-            <stop offset="100%" stopColor="#FCD34D" stopOpacity="0.0" />
+          <linearGradient id="miniSparkGrad" x1="0%" y1="0%" x2="0%" y2="1">
+            <stop offset="0%" stopColor="#E5B869" stopOpacity="0.4" />
+            <stop offset="100%" stopColor="#E5B869" stopOpacity="0.0" />
           </linearGradient>
         </defs>
         <path d={areaD} fill="url(#miniSparkGrad)" />
-        <path d={pathD} fill="none" stroke="#FCD34D" strokeWidth="2" strokeLinecap="round" />
-        <circle cx={last.x} cy={last.y} r="2.5" fill="#FCD34D" />
+        <path d={pathD} fill="none" stroke="#E5B869" strokeWidth="2" strokeLinecap="round" />
+        <circle cx={last.x} cy={last.y} r="2.5" fill="#E5B869" />
       </svg>
     );
   };
 
   return (
-    <div className="market-chart-widget">
-      {/* 1. Header with Compact Live Indicator */}
+    <div className="market-chart-widget" dir={isAr ? 'rtl' : 'ltr'}>
+      {/* 1. Header with Eyebrow + Live indicator top row, Title full row */}
       <div className="chart-header">
-        <div className="header-left">
-          <div className="chart-icon-box">
-            <Activity size={14} />
+        <div className="header-top-row">
+          <div className="header-eyebrow-wrap">
+            <div className="chart-icon-box">
+              <Activity size={13} />
+            </div>
+            <span className="chart-eyebrow">{isAr ? 'البيانات الكلية للسوق' : 'MACRO INTELLIGENCE'}</span>
           </div>
-          <div>
-            <span className="chart-eyebrow">MACRO INTELLIGENCE</span>
-            <h3 className="chart-title">Valuation Radar</h3>
+
+          <div className="chart-live-badge">
+            <span className="chart-live-dot" />
+            <span>{isAr ? 'مباشر' : 'Live Valuation'}</span>
           </div>
         </div>
 
-        <div className="chart-live-badge">
-          <span className="chart-live-dot" />
-          <span>Live Q3</span>
-        </div>
+        <h3 className="chart-title">{isAr ? 'مؤشر أسعار المتر' : 'Valuation Radar'}</h3>
       </div>
 
-      {/* 2. Sleek Metric Switcher */}
-      <div className="metric-toggle-strip" role="tablist" aria-label="Valuation Metrics">
-        {[
-          { id: 'price', label: 'EGP / m²' },
-          { id: 'growth', label: 'YoY %' },
-          { id: 'roi', label: 'Yield %' }
-        ].map((tab) => {
-          const isActive = metric === tab.id;
-          return (
-            <button
-              key={tab.id}
-              role="tab"
-              aria-selected={isActive}
-              className={`metric-pill-btn ${isActive ? 'active' : ''}`}
-              onClick={() => setMetric(tab.id as MetricType)}
-              type="button"
-            >
-              {isActive && (
-                <motion.div
-                  layoutId="activeMetricPill"
-                  className="metric-pill-indicator"
-                  transition={{ type: 'spring', damping: 24, stiffness: 280 }}
-                />
-              )}
-              <span className="metric-pill-text">{tab.label}</span>
-            </button>
-          );
-        })}
+      {/* 2. Direct EGP / m² Header Badge (Removed unnecessary YoY & Yield tabs) */}
+      <div className="valuation-focus-bar">
+        <span className="valuation-unit-tag">
+          <Sparkles size={11} className="gold-sparkle" />
+          <span>{isAr ? 'سعر المتر المربع (EGP / m²)' : 'ESTIMATED PRICE / SQM (EGP / m²)'}</span>
+        </span>
       </div>
 
-      {/* 3. Compact District Leaderboard */}
+      {/* 3. District Leaderboard */}
       <div className="chart-rows-list">
-        {displayData.map((item) => {
-          const isSelected = selectedDistrict.id === item.id;
-          
-          let percentage = 0;
-          let displayVal = '';
-          
-          if (metric === 'price') {
-            percentage = (item.pricePerSqm / maxPrice) * 100;
-            displayVal = `${(item.pricePerSqm / 1000).toFixed(0)}k EGP`;
-          } else if (metric === 'growth') {
-            percentage = (item.growth / maxGrowth) * 100;
-            displayVal = `+${item.growth}%`;
-          } else {
-            percentage = (item.roi / maxRoi) * 100;
-            displayVal = `${item.roi}%`;
-          }
+        {districts.map((item, idx) => {
+          const isSelected = selectedDistrict?.id === item.id;
+          const percentage = (item.pricePerSqm / maxPrice) * 100;
+          const displayVal = `${(item.pricePerSqm / 1000).toFixed(0)}k EGP`;
+          const rankNum = String(idx + 1).padStart(2, '0');
 
           return (
             <div 
@@ -222,12 +143,11 @@ export const MarketChart: React.FC = () => {
             >
               <div className="row-main">
                 <div className="row-meta">
-                  <span className="row-rank-num">{item.rank}</span>
-                  <span className="row-name">{item.district}</span>
+                  <span className="row-rank-num">{rankNum}</span>
+                  <span className="row-name">{isAr ? item.districtAr : item.district}</span>
                 </div>
 
                 <div className="row-stat-wrap">
-                  {metric === 'growth' && <ArrowUpRight size={12} className="trend-arrow" />}
                   <span className="row-stat-value">{displayVal}</span>
                 </div>
               </div>
@@ -246,544 +166,506 @@ export const MarketChart: React.FC = () => {
         })}
       </div>
 
-      {/* 4. Sleek Executive Snapshot Pill (Compact, Never Overflows) */}
+      {/* 4. Sleek Executive Snapshot Pill */}
       <AnimatePresence mode="wait">
-        <motion.div 
-          className="selected-snapshot-card"
-          key={selectedDistrict.id}
-          initial={{ opacity: 0, y: 6 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -6 }}
-          transition={{ duration: 0.2 }}
-        >
-          <div className="snapshot-top">
-            <div className="snapshot-identity">
-              <span className="snapshot-category">{selectedDistrict.category}</span>
-              <span className="snapshot-name">{selectedDistrict.district}</span>
+        {selectedDistrict && (
+          <motion.div
+            key={selectedDistrict.id}
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
+            transition={{ duration: 0.2 }}
+            className="executive-snapshot-card"
+          >
+            <div className="snapshot-top-row">
+              <div className="snapshot-title-group">
+                <span className="snapshot-category">
+                  {isAr ? selectedDistrict.categoryAr : selectedDistrict.category}
+                </span>
+                <h4 className="snapshot-district-name">
+                  {isAr ? selectedDistrict.districtAr : selectedDistrict.district}
+                </h4>
+              </div>
+              <div className="snapshot-sparkline-wrap">
+                {renderMiniSparkline(selectedDistrict.historical5Yr)}
+                <span className="sparkline-growth-tag">{selectedDistrict.fiveYearGain}</span>
+              </div>
             </div>
 
-            <div className="snapshot-sparkline-box">
-              {renderMiniSparkline(selectedDistrict.historical5Yr)}
-              <span className="snapshot-spark-label">5Y: {selectedDistrict.fiveYearGain}</span>
+            <div className="snapshot-grid-two">
+              <div className="snapshot-metric-cell">
+                <span className="cell-label">{isAr ? 'متوسط قيمة الوحدة' : 'MEDIAN VALUE'}</span>
+                <span className="cell-value">{isAr ? selectedDistrict.medianTotalAr : selectedDistrict.medianTotal}</span>
+              </div>
+              <div className="snapshot-metric-cell">
+                <span className="cell-label">{isAr ? 'متوسط المتر المربع' : 'AVG PRICE / SQM'}</span>
+                <span className="cell-value">
+                  {new Intl.NumberFormat(isAr ? 'ar-EG' : 'en-US').format(selectedDistrict.pricePerSqm)} EGP
+                </span>
+              </div>
             </div>
-          </div>
 
-          <div className="snapshot-grid">
-            <div className="snapshot-stat-cell">
-              <span className="cell-lbl">MEDIAN VALUE</span>
-              <span className="cell-val">{selectedDistrict.medianTotal}</span>
+            <div className="snapshot-footer-note">
+              <ShieldCheck size={13} className="note-shield-icon" />
+              <p className="note-text">
+                {isAr ? selectedDistrict.insightAr : selectedDistrict.insight}
+              </p>
             </div>
-            <div className="snapshot-stat-cell">
-              <span className="cell-lbl">EST. NET YIELD</span>
-              <span className="cell-val gold">{selectedDistrict.roi}% / yr</span>
-            </div>
-          </div>
-
-          <p className="snapshot-brief">
-            <ShieldCheck size={13} className="brief-icon" />
-            <span>{selectedDistrict.insight}</span>
-          </p>
-        </motion.div>
+          </motion.div>
+        )}
       </AnimatePresence>
 
       <style>{`
         .market-chart-widget {
-          width: 100%;
-          box-sizing: border-box;
-          backdrop-filter: blur(20px) saturate(210%) contrast(108%) brightness(108%);
-          -webkit-backdrop-filter: blur(20px) saturate(210%) contrast(108%) brightness(108%);
-          border-radius: 20px;
-          padding: 1.25rem 1.15rem;
+          position: relative;
+          backdrop-filter: blur(28px) saturate(210%);
+          -webkit-backdrop-filter: blur(28px) saturate(210%);
+          border-radius: 22px;
+          padding: 1.6rem 1.45rem;
           display: flex;
           flex-direction: column;
-          gap: 0.95rem;
-          overflow: hidden;
+          gap: 1.15rem;
           transition: all var(--transition-smooth);
         }
 
         [data-theme="dark"] .market-chart-widget {
           background: linear-gradient(
             135deg,
-            rgba(255, 255, 255, 0.22) 0%,
-            rgba(255, 255, 255, 0.06) 25%,
-            rgba(18, 24, 38, 0.42) 60%,
-            rgba(10, 14, 24, 0.65) 100%
+            rgba(255, 255, 255, 0.18) 0%,
+            rgba(255, 255, 255, 0.04) 20%,
+            rgba(18, 24, 38, 0.60) 50%,
+            rgba(10, 14, 24, 0.88) 100%
           );
-          border: 1px solid rgba(255, 255, 255, 0.28);
+          border: 1px solid rgba(229, 184, 105, 0.25);
           box-shadow: 
-            0 20px 48px rgba(0, 0, 0, 0.38),
-            0 4px 14px rgba(0, 0, 0, 0.18),
+            0 24px 54px rgba(0, 0, 0, 0.55),
+            0 4px 18px rgba(0, 0, 0, 0.28),
             inset 0 1.5px 2px rgba(255, 255, 255, 0.65),
-            inset 0 -1px 1px rgba(255, 255, 255, 0.12);
+            inset 0 -1px 1px rgba(255, 255, 255, 0.10),
+            inset 0 0 24px rgba(229, 184, 105, 0.04);
         }
 
         [data-theme="light"] .market-chart-widget {
           background: linear-gradient(
             135deg,
-            rgba(255, 255, 255, 0.65) 0%,
-            rgba(255, 255, 255, 0.30) 35%,
-            rgba(255, 255, 255, 0.48) 100%
+            rgba(255, 255, 255, 0.92) 0%,
+            rgba(250, 248, 243, 0.82) 100%
           );
-          border: 1px solid rgba(255, 255, 255, 0.75);
+          backdrop-filter: blur(24px) saturate(180%);
+          -webkit-backdrop-filter: blur(24px) saturate(180%);
+          border: 1px solid rgba(184, 147, 74, 0.32);
           box-shadow: 
-            0 18px 44px rgba(15, 23, 42, 0.08), 
+            0 18px 44px rgba(30, 24, 16, 0.08), 
             inset 0 1.5px 2px #FFFFFF,
-            inset 0 -1px 1px rgba(255, 255, 255, 0.25);
+            inset 0 -1px 1px rgba(184, 147, 74, 0.15);
         }
 
-        /* 1. Header */
         .chart-header {
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+        }
+
+        .header-top-row {
           display: flex;
           align-items: center;
           justify-content: space-between;
-          gap: 0.5rem;
+          gap: 8px;
         }
 
-        .header-left {
+        .header-eyebrow-wrap {
           display: flex;
           align-items: center;
-          gap: 8px;
+          gap: 7px;
           min-width: 0;
         }
 
         .chart-icon-box {
-          width: 30px;
-          height: 30px;
-          border-radius: 9px;
-          background: rgba(221, 167, 82, 0.16);
-          border: 1px solid rgba(221, 167, 82, 0.35);
+          width: 26px;
+          height: 26px;
+          border-radius: 8px;
+          background: rgba(229, 184, 105, 0.15);
+          border: 1px solid rgba(229, 184, 105, 0.35);
           display: flex;
           align-items: center;
           justify-content: center;
-          color: #FCD34D;
+          color: #E5B869;
+          box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.3);
           flex-shrink: 0;
         }
 
         [data-theme="light"] .chart-icon-box {
-          color: #B8860B;
-          background: rgba(184, 134, 11, 0.12);
+          background: rgba(184, 147, 74, 0.12);
+          border-color: rgba(184, 147, 74, 0.3);
+          color: #8C6826;
         }
 
         .chart-eyebrow {
           font-family: var(--font-heading);
-          font-size: 0.58rem;
+          font-size: 0.625rem;
           font-weight: 800;
           letter-spacing: 0.12em;
-          color: #FCD34D;
+          color: #E5B869;
           text-transform: uppercase;
-          display: block;
-          line-height: 1;
-          margin-bottom: 2px;
+          white-space: nowrap;
         }
 
         [data-theme="light"] .chart-eyebrow {
-          color: #B8860B;
+          color: #8C6826;
         }
 
         .chart-title {
           font-family: var(--font-heading);
-          font-size: 0.9375rem;
+          font-size: 1.15rem;
           font-weight: 800;
-          letter-spacing: -0.01em;
-          color: var(--text-primary);
+          color: #FFFFFF;
           margin: 0;
-          line-height: 1.15;
+          letter-spacing: -0.01em;
           white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
+        }
+
+        [data-theme="light"] .chart-title {
+          color: #141210;
         }
 
         .chart-live-badge {
           display: inline-flex;
           align-items: center;
-          gap: 4px;
+          gap: 5px;
           padding: 0.2rem 0.55rem;
           border-radius: 9999px;
+          background: rgba(16, 185, 129, 0.12);
+          border: 1px solid rgba(16, 185, 129, 0.35);
+          color: #34D399;
           font-size: 0.65rem;
-          font-weight: 700;
-          color: #10B981;
-          background: rgba(16, 185, 129, 0.1);
-          border: 1px solid rgba(16, 185, 129, 0.25);
+          font-weight: 800;
+          letter-spacing: 0.02em;
+          box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.2);
           white-space: nowrap;
           flex-shrink: 0;
         }
 
         .chart-live-dot {
-          width: 5px;
-          height: 5px;
+          width: 6px;
+          height: 6px;
           border-radius: 50%;
           background: #10B981;
-          box-shadow: 0 0 6px #10B981;
-          animation: livePulse 2s infinite ease-in-out;
+          box-shadow: 0 0 10px #10B981;
         }
 
-        @keyframes livePulse {
-          0%, 100% { transform: scale(1); opacity: 1; }
-          50% { transform: scale(1.3); opacity: 0.5; }
-        }
-
-        /* 2. Metric Segmented Toggle */
-        .metric-toggle-strip {
-          display: grid;
-          grid-template-columns: repeat(3, 1fr);
-          padding: 3px;
-          border-radius: 10px;
-          gap: 3px;
-          position: relative;
-        }
-
-        [data-theme="dark"] .metric-toggle-strip {
-          background: rgba(0, 0, 0, 0.35);
-          border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        [data-theme="light"] .metric-toggle-strip {
-          background: rgba(0, 0, 0, 0.04);
-          border: 1px solid rgba(0, 0, 0, 0.06);
-        }
-
-        .metric-pill-btn {
-          position: relative;
-          padding: 0.35rem 0.25rem;
-          border: none;
-          background: transparent;
-          border-radius: 7px;
-          font-family: inherit;
-          font-size: 0.72rem;
-          font-weight: 600;
-          color: var(--text-secondary);
-          cursor: pointer;
-          transition: color var(--transition-fast);
+        .valuation-focus-bar {
           display: flex;
           align-items: center;
-          justify-content: center;
-          z-index: 1;
+          justify-content: space-between;
+          padding: 0.45rem 0.85rem;
+          border-radius: 12px;
+          background: rgba(229, 184, 105, 0.08);
+          border: 1px solid rgba(229, 184, 105, 0.25);
+          box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.15);
         }
 
-        .metric-pill-btn.active {
-          color: #0A0C10;
+        [data-theme="light"] .valuation-focus-bar {
+          background: rgba(184, 147, 74, 0.08);
+          border-color: rgba(184, 147, 74, 0.22);
+        }
+
+        .valuation-unit-tag {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          font-size: 0.6875rem;
           font-weight: 800;
+          letter-spacing: 0.08em;
+          color: #E5B869;
+          text-transform: uppercase;
         }
 
-        [data-theme="dark"] .metric-pill-btn.active {
-          color: #0A0C10;
+        [data-theme="light"] .valuation-unit-tag {
+          color: #8C6826;
         }
 
-        .metric-pill-btn:focus-visible,
-        .compact-chart-row:focus-visible {
-          outline: 2px solid var(--gold-primary) !important;
-          outline-offset: 2px !important;
-          box-shadow: 0 0 16px var(--gold-glow) !important;
+        .gold-sparkle {
+          color: #E5B869;
         }
 
-        .metric-pill-indicator {
-          position: absolute;
-          inset: 0;
-          border-radius: 7px;
-          background: linear-gradient(135deg, #FFF0C8 0%, #FCD34D 50%, #DDA752 100%);
-          box-shadow: 0 2px 8px rgba(221, 167, 82, 0.3), inset 0 1px 1px #FFFFFF;
-          z-index: -1;
+        [data-theme="light"] .gold-sparkle {
+          color: #8C6826;
         }
 
-        /* 3. Compact Rows */
         .chart-rows-list {
           display: flex;
           flex-direction: column;
-          gap: 0.35rem;
+          gap: 0.5rem;
         }
 
         .compact-chart-row {
+          padding: 0.65rem 0.85rem;
+          border-radius: 14px;
+          background: rgba(255, 255, 255, 0.04);
+          border: 1px solid rgba(255, 255, 255, 0.10);
           cursor: pointer;
-          padding: 0.45rem 0.65rem;
-          border-radius: 10px;
-          border: 1px solid transparent;
           transition: all var(--transition-fast);
           display: flex;
           flex-direction: column;
-          gap: 4px;
+          gap: 7px;
+          backdrop-filter: blur(12px);
+          box-shadow: inset 0 1px 1.5px rgba(255, 255, 255, 0.15);
         }
 
-        [data-theme="dark"] .compact-chart-row:hover {
-          background: rgba(255, 255, 255, 0.05);
-          border-color: rgba(255, 255, 255, 0.12);
+        [data-theme="light"] .compact-chart-row {
+          background: rgba(255, 255, 255, 0.7);
+          border-color: rgba(184, 147, 74, 0.16);
+          box-shadow: 0 2px 8px rgba(30, 24, 16, 0.03), inset 0 1px 1px #FFFFFF;
         }
 
-        [data-theme="dark"] .compact-chart-row.selected {
-          background: rgba(252, 211, 77, 0.1);
-          border-color: rgba(252, 211, 77, 0.35);
-          box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25), inset 0 1px 1px rgba(255, 255, 255, 0.12);
+        .compact-chart-row:hover {
+          background: rgba(229, 184, 105, 0.09);
+          border-color: rgba(229, 184, 105, 0.35);
+          transform: translateY(-1px);
         }
 
         [data-theme="light"] .compact-chart-row:hover {
-          background: rgba(255, 255, 255, 0.5);
-          border-color: rgba(184, 134, 11, 0.2);
+          background: rgba(184, 147, 74, 0.10);
+          border-color: rgba(184, 147, 74, 0.35);
+        }
+
+        .compact-chart-row.selected {
+          background: linear-gradient(135deg, rgba(229, 184, 105, 0.18) 0%, rgba(229, 184, 105, 0.06) 100%);
+          border-color: #E5B869;
+          box-shadow: 0 4px 20px rgba(229, 184, 105, 0.22), inset 0 1px 1.5px rgba(255, 255, 255, 0.4);
         }
 
         [data-theme="light"] .compact-chart-row.selected {
-          background: rgba(255, 255, 255, 0.85);
-          border-color: rgba(184, 134, 11, 0.35);
-          box-shadow: 0 4px 14px rgba(15, 23, 42, 0.05), inset 0 1px 1px #FFFFFF;
+          background: linear-gradient(135deg, rgba(184, 147, 74, 0.15) 0%, rgba(184, 147, 74, 0.05) 100%);
+          border-color: #8C6826;
+          box-shadow: 0 4px 18px rgba(140, 104, 38, 0.15), inset 0 1px 1.5px #FFFFFF;
         }
 
         .row-main {
           display: flex;
           align-items: center;
           justify-content: space-between;
-          gap: 6px;
         }
 
         .row-meta {
           display: flex;
           align-items: center;
-          gap: 6px;
-          min-width: 0;
-          overflow: hidden;
+          gap: 9px;
         }
 
         .row-rank-num {
-          font-family: var(--font-heading);
-          font-size: 0.65rem;
+          font-family: Georgia, serif;
+          font-size: 0.75rem;
           font-weight: 800;
-          color: var(--text-muted);
-          width: 14px;
-          flex-shrink: 0;
+          color: #E5B869;
+          opacity: 0.9;
         }
 
-        .compact-chart-row.selected .row-rank-num {
-          color: #FCD34D;
-        }
-
-        [data-theme="light"] .compact-chart-row.selected .row-rank-num {
-          color: #B8860B;
+        [data-theme="light"] .row-rank-num {
+          color: #8C6826;
         }
 
         .row-name {
-          font-family: var(--font-heading);
-          font-size: 0.8125rem;
+          font-size: 0.84375rem;
           font-weight: 700;
-          color: var(--text-primary);
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
+          color: #FFFFFF;
+        }
+
+        [data-theme="light"] .row-name {
+          color: #141210;
         }
 
         .row-stat-wrap {
-          display: inline-flex;
+          display: flex;
           align-items: center;
-          gap: 2px;
+          gap: 4px;
+        }
+
+        .row-stat-value {
           font-family: var(--font-heading);
-          font-size: 0.78rem;
+          font-size: 0.875rem;
           font-weight: 800;
-          color: #FCD34D;
-          flex-shrink: 0;
+          color: #E5B869;
         }
 
-        [data-theme="light"] .row-stat-wrap {
-          color: #B8860B;
-        }
-
-        .trend-arrow {
-          color: #10B981;
+        [data-theme="light"] .row-stat-value {
+          color: #8C6826;
         }
 
         .row-gauge-track {
           width: 100%;
-          height: 3px;
+          height: 4px;
+          background: rgba(255, 255, 255, 0.10);
           border-radius: 9999px;
           overflow: hidden;
         }
 
-        [data-theme="dark"] .row-gauge-track {
-          background: rgba(255, 255, 255, 0.08);
-        }
-
         [data-theme="light"] .row-gauge-track {
-          background: rgba(0, 0, 0, 0.06);
+          background: rgba(0, 0, 0, 0.08);
         }
 
         .row-gauge-fill {
           height: 100%;
-          background: linear-gradient(90deg, #A27220, #DDA752);
           border-radius: 9999px;
+          background: linear-gradient(90deg, #B8934A 0%, #E5B869 100%);
         }
 
         .row-gauge-fill.active-glow {
-          background: linear-gradient(90deg, #FCD34D 0%, #FFF4D4 100%);
-          box-shadow: 0 0 8px rgba(252, 211, 77, 0.6);
+          background: linear-gradient(90deg, #B8934A 0%, #E5B869 60%, #FFFDF5 100%);
+          box-shadow: 0 0 10px rgba(229, 184, 105, 0.8);
         }
 
-        /* 4. Compact Executive Snapshot */
-        .selected-snapshot-card {
-          border-radius: 14px;
-          padding: 0.75rem 0.85rem;
+        .executive-snapshot-card {
+          border-radius: 16px;
+          padding: 1.15rem;
+          background: linear-gradient(
+            135deg,
+            rgba(255, 255, 255, 0.10) 0%,
+            rgba(18, 24, 38, 0.55) 50%,
+            rgba(10, 14, 24, 0.78) 100%
+          );
+          border: 1px solid rgba(229, 184, 105, 0.28);
+          backdrop-filter: blur(20px);
+          -webkit-backdrop-filter: blur(20px);
+          box-shadow: 
+            0 10px 28px rgba(0, 0, 0, 0.4),
+            inset 0 1.5px 2px rgba(255, 255, 255, 0.35);
           display: flex;
           flex-direction: column;
-          gap: 0.55rem;
-          box-sizing: border-box;
-          overflow: hidden;
+          gap: 0.85rem;
         }
 
-        [data-theme="dark"] .selected-snapshot-card {
-          background: linear-gradient(
-            135deg,
-            rgba(255, 255, 255, 0.16) 0%,
-            rgba(18, 24, 38, 0.75) 50%,
-            rgba(10, 14, 24, 0.90) 100%
-          );
-          border: 1px solid rgba(252, 211, 77, 0.3);
-          box-shadow: 
-            0 12px 28px rgba(0, 0, 0, 0.35),
-            inset 0 1.5px 1.5px rgba(255, 255, 255, 0.45);
+        [data-theme="light"] .executive-snapshot-card {
+          background: #FFFFFF;
+          border: 1px solid rgba(184, 147, 74, 0.28);
+          box-shadow: 0 8px 24px rgba(30, 24, 16, 0.06), inset 0 1.5px 2px #FFFFFF;
         }
 
-        [data-theme="light"] .selected-snapshot-card {
-          background: linear-gradient(
-            135deg,
-            rgba(255, 255, 255, 0.90) 0%,
-            rgba(255, 255, 255, 0.75) 100%
-          );
-          border: 1px solid rgba(184, 134, 11, 0.28);
-          box-shadow: 
-            0 8px 24px rgba(15, 23, 42, 0.06),
-            inset 0 1.5px 1.5px #FFFFFF;
-        }
-
-        .snapshot-top {
+        .snapshot-top-row {
           display: flex;
           align-items: center;
           justify-content: space-between;
-          gap: 6px;
-        }
-
-        .snapshot-identity {
-          display: flex;
-          flex-direction: column;
-          min-width: 0;
-          overflow: hidden;
         }
 
         .snapshot-category {
-          font-family: var(--font-heading);
-          font-size: 0.55rem;
+          font-size: 0.65rem;
           font-weight: 800;
-          letter-spacing: 0.1em;
-          color: #FCD34D;
+          letter-spacing: 0.12em;
+          color: #E5B869;
           text-transform: uppercase;
+          display: block;
         }
 
         [data-theme="light"] .snapshot-category {
-          color: #B8860B;
+          color: #8C6826;
         }
 
-        .snapshot-name {
+        .snapshot-district-name {
           font-family: var(--font-heading);
+          font-size: 1.05rem;
           font-weight: 800;
-          font-size: 0.84rem;
-          color: var(--text-primary);
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
+          color: #FFFFFF;
+          margin: 3px 0 0 0;
         }
 
-        .snapshot-sparkline-box {
+        [data-theme="light"] .snapshot-district-name {
+          color: #141210;
+        }
+
+        .snapshot-sparkline-wrap {
           display: flex;
           flex-direction: column;
           align-items: flex-end;
-          gap: 1px;
-          flex-shrink: 0;
+          gap: 2px;
         }
 
         .mini-sparkline {
           width: 75px;
-          height: 18px;
+          height: 20px;
         }
 
-        .snapshot-spark-label {
-          font-size: 0.58rem;
-          font-weight: 700;
-          color: #FCD34D;
+        .sparkline-growth-tag {
+          font-size: 0.6875rem;
+          font-weight: 800;
+          color: #10B981;
         }
 
-        [data-theme="light"] .snapshot-spark-label {
-          color: #B8860B;
-        }
-
-        .snapshot-grid {
+        .snapshot-grid-two {
           display: grid;
           grid-template-columns: 1fr 1fr;
-          gap: 0.4rem;
+          gap: 10px;
+          padding-top: 0.65rem;
+          border-top: 1px solid rgba(255, 255, 255, 0.12);
         }
 
-        .snapshot-stat-cell {
+        [data-theme="light"] .snapshot-grid-two {
+          border-top-color: rgba(184, 147, 74, 0.18);
+        }
+
+        .snapshot-metric-cell {
           display: flex;
           flex-direction: column;
-          gap: 1px;
-          padding: 0.35rem 0.45rem;
-          border-radius: 8px;
+          gap: 2px;
         }
 
-        [data-theme="dark"] .snapshot-stat-cell {
-          background: rgba(255, 255, 255, 0.05);
-          border: 1px solid rgba(255, 255, 255, 0.08);
-        }
-
-        [data-theme="light"] .snapshot-stat-cell {
-          background: rgba(255, 255, 255, 0.7);
-          border: 1px solid rgba(0, 0, 0, 0.05);
-        }
-
-        .cell-lbl {
-          font-size: 0.52rem;
-          color: var(--text-secondary);
-          font-weight: 700;
-          letter-spacing: 0.06em;
+        .cell-label {
+          font-size: 0.6rem;
+          font-weight: 800;
+          letter-spacing: 0.08em;
+          color: rgba(255, 255, 255, 0.65);
           text-transform: uppercase;
         }
 
-        .cell-val {
-          font-size: 0.75rem;
-          font-weight: 800;
-          color: var(--text-primary);
+        [data-theme="light"] .cell-label {
+          color: #64748B;
+        }
+
+        .cell-value {
           font-family: var(--font-heading);
-          white-space: nowrap;
+          font-size: 0.875rem;
+          font-weight: 800;
+          color: #E5B869;
         }
 
-        .cell-val.gold {
-          color: #FCD34D;
+        [data-theme="light"] .cell-value {
+          color: #8C6826;
         }
 
-        [data-theme="light"] .cell-val.gold {
-          color: #B8860B;
-        }
-
-        .snapshot-brief {
+        .snapshot-footer-note {
           display: flex;
           align-items: flex-start;
-          gap: 5px;
-          font-size: 0.68rem;
-          color: var(--text-secondary);
-          line-height: 1.35;
-          margin: 0;
-          padding-top: 0.4rem;
-          border-top: 1px solid rgba(255, 255, 255, 0.1);
+          gap: 8px;
+          padding-top: 0.65rem;
+          border-top: 1px solid rgba(255, 255, 255, 0.08);
         }
 
-        [data-theme="light"] .snapshot-brief {
-          border-top: 1px solid rgba(0, 0, 0, 0.06);
+        [data-theme="light"] .snapshot-footer-note {
+          border-top-color: rgba(184, 147, 74, 0.15);
         }
 
-        .brief-icon {
-          color: #FCD34D;
+        .note-shield-icon {
+          color: #E5B869;
           flex-shrink: 0;
-          margin-top: 1px;
+          margin-top: 2px;
         }
 
-        [data-theme="light"] .brief-icon {
-          color: #B8860B;
+        [data-theme="light"] .note-shield-icon {
+          color: #8C6826;
+        }
+
+        .note-text {
+          font-size: 0.75rem;
+          color: rgba(255, 255, 255, 0.75);
+          line-height: 1.45;
+          margin: 0;
+        }
+
+        [data-theme="light"] .note-text {
+          color: #475569;
         }
       `}</style>
     </div>
   );
 };
 
-
+export default MarketChart;

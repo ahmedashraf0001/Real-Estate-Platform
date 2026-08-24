@@ -110,6 +110,16 @@ export const MapView: React.FC<MapViewProps> = ({
       { maxZoom: 19 }
     ).addTo(map);
 
+    createCachedTileLayer(
+      'https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}',
+      { maxZoom: 19, opacity: 0.95 }
+    ).addTo(map);
+
+    createCachedTileLayer(
+      'https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',
+      { maxZoom: 19, opacity: 0.95 }
+    ).addTo(map);
+
     tileLayerRef.current = initialSatelliteTiles;
     mapInstanceRef.current = map;
 
@@ -214,7 +224,7 @@ export const MapView: React.FC<MapViewProps> = ({
   };
 
   return (
-    <div className="map-view-page">
+    <div className="map-view-page" dir={locale === 'ar' ? 'rtl' : 'ltr'}>
       <div 
         ref={mapContainerRef} 
         className="real-leaflet-viewport" 
@@ -227,7 +237,7 @@ export const MapView: React.FC<MapViewProps> = ({
           <button 
             className="map-glass-ctrl-btn"
             onClick={handleZoomIn}
-            title="Zoom In"
+            title={locale === 'ar' ? 'تكبير الخريطة' : 'Zoom In'}
             type="button"
           >
             <Plus size={15} />
@@ -236,7 +246,7 @@ export const MapView: React.FC<MapViewProps> = ({
           <button 
             className="map-glass-ctrl-btn"
             onClick={handleZoomOut}
-            title="Zoom Out"
+            title={locale === 'ar' ? 'تصغير الخريطة' : 'Zoom Out'}
             type="button"
           >
             <Minus size={15} />
@@ -245,7 +255,7 @@ export const MapView: React.FC<MapViewProps> = ({
           <button 
             className="map-glass-ctrl-btn"
             onClick={handleResetCenter}
-            title="Reset Map Center"
+            title={locale === 'ar' ? 'إعادة ضبط المركز' : 'Reset Map Center'}
             type="button"
           >
             <Compass size={15} />
@@ -258,7 +268,7 @@ export const MapView: React.FC<MapViewProps> = ({
           type="button"
         >
           {isSatelliteMode ? <Sun size={14} className="mode-gold-icon" /> : <Moon size={14} className="mode-gold-icon" />}
-          <span>{isSatelliteMode ? 'Neon View' : 'Satellite'}</span>
+          <span>{isSatelliteMode ? (locale === 'ar' ? 'نمط النيون' : 'Neon View') : (locale === 'ar' ? 'الأقمار الصناعية' : 'Satellite')}</span>
         </button>
       </div>
 
@@ -267,6 +277,7 @@ export const MapView: React.FC<MapViewProps> = ({
         <div 
           className="map-selected-preview-card"
           data-lenis-prevent="true"
+          dir={locale === 'ar' ? 'rtl' : 'ltr'}
         >
           {/* Top Bar with Badges & Dismiss */}
           <div className="preview-top-row">
@@ -277,14 +288,14 @@ export const MapView: React.FC<MapViewProps> = ({
               </span>
               <span className="preview-id-badge">
                 <ShieldCheck size={11} className="badge-icon-gold" />
-                <span>FREEHOLD</span>
+                <span>{locale === 'ar' ? 'ملكية حرة' : 'FREEHOLD'}</span>
               </span>
             </div>
 
             <button 
               className="preview-close-btn"
               onClick={() => setSelectedPropertyId(null)}
-              title="Dismiss Preview"
+              title={locale === 'ar' ? 'إغلاق المعاينة' : 'Dismiss Preview'}
               type="button"
             >
               <X size={13} />
@@ -315,7 +326,7 @@ export const MapView: React.FC<MapViewProps> = ({
                     e.stopPropagation();
                     setPreviewImageIndex((prev) => (prev - 1 + selectedProperty.images.length) % selectedProperty.images.length);
                   }}
-                  title="Previous Image"
+                  title={locale === 'ar' ? 'الصورة السابقة' : 'Previous Image'}
                   type="button"
                 >
                   <ChevronLeft size={14} />
@@ -326,7 +337,7 @@ export const MapView: React.FC<MapViewProps> = ({
                     e.stopPropagation();
                     setPreviewImageIndex((prev) => (prev + 1) % selectedProperty.images.length);
                   }}
-                  title="Next Image"
+                  title={locale === 'ar' ? 'الصورة التالية' : 'Next Image'}
                   type="button"
                 >
                   <ChevronRight size={14} />
@@ -341,9 +352,9 @@ export const MapView: React.FC<MapViewProps> = ({
           <div className="preview-info-body">
             <div className="preview-title-block">
               <h3 className="preview-title">{selectedProperty.title}</h3>
-              <div className="preview-price">
+              <div className="preview-price" dir="ltr">
                 {new Intl.NumberFormat('en-US').format(selectedProperty.price)}{' '}
-                <span className="preview-currency">{selectedProperty.currency}</span>
+                <span className="preview-currency">{locale === 'ar' ? 'ج.م' : selectedProperty.currency}</span>
               </div>
             </div>
 
@@ -356,15 +367,15 @@ export const MapView: React.FC<MapViewProps> = ({
             <div className="preview-specs-pills">
               <div className="spec-item">
                 <Bed size={12} className="spec-icon" />
-                <span><strong>{selectedProperty.beds}</strong> Beds</span>
+                <span><strong>{selectedProperty.beds}</strong> {locale === 'ar' ? 'غرف' : 'Beds'}</span>
               </div>
               <div className="spec-item">
                 <Bath size={12} className="spec-icon" />
-                <span><strong>{selectedProperty.baths}</strong> Baths</span>
+                <span><strong>{selectedProperty.baths}</strong> {locale === 'ar' ? 'حمامات' : 'Baths'}</span>
               </div>
               <div className="spec-item">
                 <Maximize2 size={12} className="spec-icon" />
-                <span><strong>{selectedProperty.sqm}</strong> SQM</span>
+                <span><strong>{selectedProperty.sqm}</strong> {locale === 'ar' ? 'م²' : 'SQM'}</span>
               </div>
             </div>
 
@@ -375,7 +386,7 @@ export const MapView: React.FC<MapViewProps> = ({
                 className="btn-gold preview-explore-btn-full"
                 onClick={() => onSelectProperty(selectedProperty.id)}
               >
-                <span>Explore Full Dossier</span>
+                <span>{locale === 'ar' ? 'معاينة الملف الكامل للصرح' : 'Explore Full Dossier'}</span>
                 <ArrowUpRight size={14} />
               </button>
             </div>
@@ -388,11 +399,12 @@ export const MapView: React.FC<MapViewProps> = ({
         <button
           className="floating-sidebar-trigger"
           onClick={() => setIsSidebarOpen(true)}
-          title="Open Sovereign Directory"
+          title={locale === 'ar' ? 'فتح دليل الصروح' : 'Open Sovereign Directory'}
           type="button"
+          dir={locale === 'ar' ? 'rtl' : 'ltr'}
         >
           <Building2 size={16} className="trigger-gold-icon" />
-          <span>Directory ({filteredProperties.length})</span>
+          <span>{locale === 'ar' ? `دليل الصروح (${filteredProperties.length})` : `Directory (${filteredProperties.length})`}</span>
           <PanelRightOpen size={16} />
         </button>
       )}
@@ -402,17 +414,18 @@ export const MapView: React.FC<MapViewProps> = ({
         <aside 
           className="floating-glass-directory"
           data-lenis-prevent="true"
+          dir={locale === 'ar' ? 'rtl' : 'ltr'}
         >
           <div className="glass-directory-header">
             <div className="dir-header-top">
               <div>
-                <span className="dir-eyebrow">ARCHITECTURAL CARTOGRAPHY</span>
-                <h2 className="dir-title">Sovereign Directory</h2>
+                <span className="dir-eyebrow">{locale === 'ar' ? 'الخريطة المعمارية والمسح الجغرافي' : 'ARCHITECTURAL CARTOGRAPHY'}</span>
+                <h2 className="dir-title">{locale === 'ar' ? 'دليل الصروح السيادية' : 'Sovereign Directory'}</h2>
               </div>
               <button
                 className="dir-collapse-btn"
                 onClick={() => setIsSidebarOpen(false)}
-                title="Minimize Directory"
+                title={locale === 'ar' ? 'تصغير الدليل' : 'Minimize Directory'}
                 type="button"
               >
                 <PanelRightClose size={18} />
@@ -420,14 +433,16 @@ export const MapView: React.FC<MapViewProps> = ({
             </div>
 
             <span className="dir-sub">
-              {filteredProperties.length} Curated estates represented in map
+              {locale === 'ar' 
+                ? `${filteredProperties.length} صروح معمارية ممثلة على الخريطة` 
+                : `${filteredProperties.length} Curated estates represented in map`}
             </span>
 
             <div className="dir-search-wrap">
               <Search size={15} className="dir-search-icon" />
               <input 
                 type="text"
-                placeholder="Filter by estate, compound, price..."
+                placeholder={locale === 'ar' ? 'ابحث بالصرح، الكمبوند، أو السعر...' : 'Filter by estate, compound, price...'}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="dir-search-input"
@@ -480,17 +495,17 @@ export const MapView: React.FC<MapViewProps> = ({
                     </div>
 
                     <div className="estate-price-row">
-                      <span className="estate-price-val">
-                        {formattedPrice} <span className="estate-currency">{property.currency}</span>
+                      <span className="estate-price-val" dir="ltr">
+                        {formattedPrice} <span className="estate-currency">{locale === 'ar' ? 'ج.م' : property.currency}</span>
                       </span>
                     </div>
 
                     <div className="estate-specs-row">
-                      <span>{property.beds} Beds</span>
+                      <span>{property.beds} {locale === 'ar' ? 'غرف' : 'Beds'}</span>
                       <span className="spec-dot">•</span>
-                      <span>{property.baths} Baths</span>
+                      <span>{property.baths} {locale === 'ar' ? 'حمامات' : 'Baths'}</span>
                       <span className="spec-dot">•</span>
-                      <span>{property.sqm} sqm</span>
+                      <span>{property.sqm} {locale === 'ar' ? 'م²' : 'sqm'}</span>
                     </div>
 
                     <div className="estate-card-actions">
@@ -502,7 +517,7 @@ export const MapView: React.FC<MapViewProps> = ({
                           onSelectProperty(property.id);
                         }}
                       >
-                        <span>Explore Estate</span>
+                        <span>{locale === 'ar' ? 'معاينة الصرح' : 'Explore Estate'}</span>
                         <ArrowUpRight size={13} />
                       </button>
                     </div>
@@ -515,6 +530,27 @@ export const MapView: React.FC<MapViewProps> = ({
       )}
 
       <style>{`
+        @keyframes sidebarSlideIn {
+          from { opacity: 0; transform: translateX(32px); }
+          to   { opacity: 1; transform: translateX(0); }
+        }
+        @keyframes sidebarSlideInRTL {
+          from { opacity: 0; transform: translateX(-32px); }
+          to   { opacity: 1; transform: translateX(0); }
+        }
+        @keyframes sidebarSlideUp {
+          from { opacity: 0; transform: translateY(100%); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes previewCardSlideIn {
+          from { opacity: 0; transform: translateY(18px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes previewCardSlideInRTL {
+          from { opacity: 0; transform: translateY(18px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+
         .map-view-page {
           position: relative;
           width: 100vw;
@@ -532,21 +568,28 @@ export const MapView: React.FC<MapViewProps> = ({
         }
 
         /* =========================================================
-           THEME-AWARE TRANSLUCENT CRYSTAL GLASS OVER SATELLITE
+           BALANCED TRANSLUCENT LIQUID CRYSTAL GLASS OVER MAP
            ========================================================= */
         [data-theme="dark"] .map-glass-ctrl-pill,
         [data-theme="dark"] .map-mode-pill-btn,
         [data-theme="dark"] .map-selected-preview-card,
         [data-theme="dark"] .floating-sidebar-trigger,
         [data-theme="dark"] .floating-glass-directory {
-          background: rgba(10, 14, 22, 0.55) !important;
-          backdrop-filter: blur(40px) saturate(240%) !important;
-          -webkit-backdrop-filter: blur(40px) saturate(240%) !important;
-          border: 1px solid rgba(255, 255, 255, 0.22) !important;
+          background: linear-gradient(
+            135deg,
+            rgba(255, 255, 255, 0.16) 0%,
+            rgba(255, 255, 255, 0.05) 25%,
+            rgba(18, 24, 38, 0.46) 60%,
+            rgba(10, 14, 24, 0.62) 100%
+          ) !important;
+          backdrop-filter: blur(24px) saturate(200%) contrast(105%) brightness(105%) !important;
+          -webkit-backdrop-filter: blur(24px) saturate(200%) contrast(105%) brightness(105%) !important;
+          border: 1px solid rgba(255, 255, 255, 0.24) !important;
           box-shadow: 
-            0 20px 50px rgba(0, 0, 0, 0.35), 
-            inset 0 1.5px 1.5px rgba(255, 255, 255, 0.5),
-            inset 0 -1px 1px rgba(255, 255, 255, 0.1) !important;
+            0 20px 48px rgba(0, 0, 0, 0.38), 
+            0 4px 14px rgba(0, 0, 0, 0.22),
+            inset 0 1.5px 2px rgba(255, 255, 255, 0.55),
+            inset 0 -1px 1px rgba(255, 255, 255, 0.08) !important;
         }
 
         [data-theme="light"] .map-glass-ctrl-pill,
@@ -556,18 +599,18 @@ export const MapView: React.FC<MapViewProps> = ({
         [data-theme="light"] .floating-glass-directory {
           background: linear-gradient(
             135deg,
-            rgba(255, 255, 255, 0.62) 0%,
-            rgba(255, 255, 255, 0.28) 35%,
-            rgba(255, 255, 255, 0.45) 100%
+            rgba(255, 255, 255, 0.58) 0%,
+            rgba(255, 255, 255, 0.32) 40%,
+            rgba(248, 246, 240, 0.48) 100%
           ) !important;
-          backdrop-filter: blur(20px) saturate(210%) contrast(108%) brightness(108%) !important;
-          -webkit-backdrop-filter: blur(20px) saturate(210%) contrast(108%) brightness(108%) !important;
-          border: 1px solid rgba(255, 255, 255, 0.75) !important;
+          backdrop-filter: blur(22px) saturate(180%) contrast(102%) brightness(102%) !important;
+          -webkit-backdrop-filter: blur(22px) saturate(180%) contrast(102%) brightness(102%) !important;
+          border: 1px solid rgba(255, 255, 255, 0.70) !important;
           box-shadow: 
-            0 18px 44px rgba(15, 23, 42, 0.08), 
+            0 16px 40px rgba(15, 23, 42, 0.08), 
             0 2px 8px rgba(15, 23, 42, 0.03),
             inset 0 1.5px 2px #FFFFFF,
-            inset 0 -1px 1px rgba(255, 255, 255, 0.25) !important;
+            inset 0 -1px 1px rgba(255, 255, 255, 0.35) !important;
         }
 
         /* Keyframe entrance animations */
@@ -593,6 +636,39 @@ export const MapView: React.FC<MapViewProps> = ({
           }
         }
 
+        @keyframes sidebarSlideInRTL {
+          from {
+            opacity: 0;
+            transform: translateX(-40px);
+          }
+          to {
+            opacity: 1;
+            transform: translateX(0);
+          }
+        }
+
+        @keyframes previewCardSlideIn {
+          from {
+            opacity: 0;
+            transform: translateX(-30px) scale(0.95);
+          }
+          to {
+            opacity: 1;
+            transform: translateX(0) scale(1);
+          }
+        }
+
+        @keyframes previewCardSlideInRTL {
+          from {
+            opacity: 0;
+            transform: translateX(30px) scale(0.95);
+          }
+          to {
+            opacity: 1;
+            transform: translateX(0) scale(1);
+          }
+        }
+
         /* 4. Horizontal Map Control Strip Docked Beside Sidebar */
         .map-floating-controls-row {
           position: absolute;
@@ -601,15 +677,29 @@ export const MapView: React.FC<MapViewProps> = ({
           display: flex;
           align-items: center;
           gap: 10px;
-          transition: right 0.3s cubic-bezier(0.16, 1, 0.3, 1), transform 0.3s ease;
+          transition: right 0.3s cubic-bezier(0.16, 1, 0.3, 1), left 0.3s cubic-bezier(0.16, 1, 0.3, 1), transform 0.3s ease;
         }
 
         .map-floating-controls-row.sidebar-is-open {
           right: calc(420px + 2.5rem);
+          left: auto;
         }
 
         .map-floating-controls-row.sidebar-is-closed {
           right: 1.5rem;
+          left: auto;
+        }
+
+        .map-view-page[dir="rtl"] .map-floating-controls-row.sidebar-is-open,
+        [dir="rtl"] .map-floating-controls-row.sidebar-is-open {
+          right: auto;
+          left: calc(420px + 2.5rem);
+        }
+
+        .map-view-page[dir="rtl"] .map-floating-controls-row.sidebar-is-closed,
+        [dir="rtl"] .map-floating-controls-row.sidebar-is-closed {
+          right: auto;
+          left: 1.5rem;
         }
 
         .map-glass-ctrl-pill {
@@ -697,6 +787,7 @@ export const MapView: React.FC<MapViewProps> = ({
           position: absolute;
           bottom: 1.5rem;
           left: 1.5rem;
+          right: auto;
           z-index: 1001;
           width: min(320px, calc(100vw - 2.5rem));
           border-radius: 24px;
@@ -705,6 +796,13 @@ export const MapView: React.FC<MapViewProps> = ({
           flex-direction: column;
           gap: 0.75rem;
           animation: previewCardSlideIn 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        .map-view-page[dir="rtl"] .map-selected-preview-card,
+        [dir="rtl"] .map-selected-preview-card {
+          left: auto;
+          right: 1.5rem;
+          animation: previewCardSlideInRTL 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
 
         .preview-top-row {
@@ -1046,6 +1144,12 @@ export const MapView: React.FC<MapViewProps> = ({
           transition: all var(--transition-fast);
         }
 
+        .map-view-page[dir="rtl"] .floating-sidebar-trigger,
+        [dir="rtl"] .floating-sidebar-trigger {
+          right: auto;
+          left: 1.5rem;
+        }
+
         [data-theme="dark"] .floating-sidebar-trigger {
           color: #FFFFFF;
           text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
@@ -1071,6 +1175,7 @@ export const MapView: React.FC<MapViewProps> = ({
           top: 1.5rem;
           bottom: 1.5rem;
           right: 1.5rem;
+          left: auto;
           width: min(420px, calc(100vw - 3rem));
           z-index: 1000;
           border-radius: 28px;
@@ -1078,6 +1183,13 @@ export const MapView: React.FC<MapViewProps> = ({
           flex-direction: column;
           overflow: hidden;
           animation: sidebarSlideIn 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        .map-view-page[dir="rtl"] .floating-glass-directory,
+        [dir="rtl"] .floating-glass-directory {
+          right: auto;
+          left: 1.5rem;
+          animation: sidebarSlideInRTL 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
 
         .glass-directory-header {
@@ -1187,6 +1299,12 @@ export const MapView: React.FC<MapViewProps> = ({
           pointer-events: none;
         }
 
+        .map-view-page[dir="rtl"] .dir-search-icon,
+        [dir="rtl"] .dir-search-icon {
+          left: auto;
+          right: 12px;
+        }
+
         .dir-search-input {
           width: 100%;
           border-radius: 12px;
@@ -1195,6 +1313,12 @@ export const MapView: React.FC<MapViewProps> = ({
           font-weight: 600;
           outline: none;
           transition: all var(--transition-fast);
+        }
+
+        .map-view-page[dir="rtl"] .dir-search-input,
+        [dir="rtl"] .dir-search-input {
+          padding: 0.65rem 2.25rem 0.65rem 2rem;
+          text-align: right;
         }
 
         [data-theme="dark"] .dir-search-input {
@@ -1240,6 +1364,12 @@ export const MapView: React.FC<MapViewProps> = ({
           cursor: pointer;
         }
 
+        .map-view-page[dir="rtl"] .dir-search-clear,
+        [dir="rtl"] .dir-search-clear {
+          right: auto;
+          left: 10px;
+        }
+
         /* 5. Scrollable Floating Cards */
         .glass-cards-scroll {
           padding: 1.25rem 1.4rem;
@@ -1253,6 +1383,8 @@ export const MapView: React.FC<MapViewProps> = ({
         }
 
         .floating-estate-card {
+          flex-shrink: 0;
+          width: 100%;
           backdrop-filter: blur(24px) saturate(200%);
           -webkit-backdrop-filter: blur(24px) saturate(200%);
           border-radius: 20px;
@@ -1349,6 +1481,12 @@ export const MapView: React.FC<MapViewProps> = ({
           text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
         }
 
+        .map-view-page[dir="rtl"] .estate-district-pill,
+        [dir="rtl"] .estate-district-pill {
+          left: auto;
+          right: 10px;
+        }
+
         .pin-icon {
           color: var(--gold-primary);
         }
@@ -1439,6 +1577,11 @@ export const MapView: React.FC<MapViewProps> = ({
           justify-content: flex-end;
         }
 
+        .map-view-page[dir="rtl"] .estate-card-actions,
+        [dir="rtl"] .estate-card-actions {
+          justify-content: flex-start;
+        }
+
         [data-theme="dark"] .estate-card-actions {
           border-top: 1px solid rgba(255, 255, 255, 0.18);
         }
@@ -1466,6 +1609,11 @@ export const MapView: React.FC<MapViewProps> = ({
           transform: translateX(2px);
         }
 
+        .map-view-page[dir="rtl"] .estate-open-btn:hover,
+        [dir="rtl"] .estate-open-btn:hover {
+          transform: translateX(-2px);
+        }
+
         /* 6. Custom Leaflet Pin Styling */
         .custom-gold-leaflet-marker {
           background: transparent !important;
@@ -1477,7 +1625,7 @@ export const MapView: React.FC<MapViewProps> = ({
           flex-direction: column;
           align-items: center;
           cursor: pointer;
-          transform: translateY(-8px);
+          transform: translateY(-5px);
           transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
           position: relative;
           z-index: 100;
@@ -1485,26 +1633,26 @@ export const MapView: React.FC<MapViewProps> = ({
 
         .leaflet-gold-pin-wrapper:hover,
         .leaflet-gold-pin-wrapper.active {
-          transform: translateY(-8px) scale(1.15);
+          transform: translateY(-5px) scale(1.1);
           z-index: 99999 !important;
         }
 
         .pin-beacon {
           position: relative;
-          width: 28px;
-          height: 28px;
+          width: 18px;
+          height: 18px;
           display: flex;
           align-items: center;
           justify-content: center;
         }
 
         .pin-core-dot {
-          width: 14px;
-          height: 14px;
+          width: 9px;
+          height: 9px;
           border-radius: 50%;
-          background: #DDA752;
-          border: 2.5px solid #0A0C10;
-          box-shadow: 0 0 14px #DDA752;
+          background: #E5B869;
+          border: 1.5px solid #0A0C10;
+          box-shadow: 0 0 8px #E5B869;
           z-index: 2;
           transition: all 0.25s ease;
         }
@@ -1512,65 +1660,65 @@ export const MapView: React.FC<MapViewProps> = ({
         .leaflet-gold-pin-wrapper:hover .pin-core-dot,
         .leaflet-gold-pin-wrapper.active .pin-core-dot {
           background: #FFFFFF;
-          border-color: #DDA752;
-          box-shadow: 0 0 18px #FFFFFF, 0 0 26px #DDA752;
-          transform: scale(1.25);
+          border-color: #E5B869;
+          box-shadow: 0 0 12px #FFFFFF, 0 0 18px #E5B869;
+          transform: scale(1.2);
         }
 
         .pin-glow-ring {
           position: absolute;
           inset: 0;
           border-radius: 50%;
-          background: rgba(221, 167, 82, 0.35);
-          border: 1.5px solid #DDA752;
-          animation: pulseRing 2.4s infinite;
+          background: rgba(229, 184, 105, 0.25);
+          border: 1px solid rgba(229, 184, 105, 0.7);
+          animation: pulseRing 2.6s cubic-bezier(0.25, 1, 0.5, 1) infinite;
         }
 
         .leaflet-gold-pin-wrapper.active .pin-glow-ring {
-          animation: pulseRingFast 1.2s infinite;
+          animation: pulseRingFast 1.4s cubic-bezier(0.25, 1, 0.5, 1) infinite;
         }
 
         @keyframes pulseRing {
-          0% { transform: scale(0.9); opacity: 0.9; }
+          0% { transform: scale(0.9); opacity: 0.85; }
+          70% { transform: scale(1.7); opacity: 0; }
+          100% { transform: scale(1.7); opacity: 0; }
+        }
+
+        @keyframes pulseRingFast {
+          0% { transform: scale(0.9); opacity: 0.95; }
           70% { transform: scale(2.0); opacity: 0; }
           100% { transform: scale(2.0); opacity: 0; }
         }
 
-        @keyframes pulseRingFast {
-          0% { transform: scale(0.9); opacity: 1; }
-          70% { transform: scale(2.5); opacity: 0; }
-          100% { transform: scale(2.5); opacity: 0; }
-        }
-
         .pin-title-pill {
           position: absolute;
-          top: 30px;
+          top: 22px;
           left: 50%;
-          transform: translateX(-50%) translateY(-6px) scale(0.92);
+          transform: translateX(-50%) translateY(-4px) scale(0.92);
           opacity: 0;
           pointer-events: none;
-          background: rgba(8, 12, 20, 0.94);
-          backdrop-filter: blur(24px) saturate(210%);
-          -webkit-backdrop-filter: blur(24px) saturate(210%);
-          border: 1.5px solid rgba(221, 167, 82, 0.65);
+          background: rgba(10, 14, 24, 0.92);
+          backdrop-filter: blur(20px) saturate(200%);
+          -webkit-backdrop-filter: blur(20px) saturate(200%);
+          border: 1px solid rgba(229, 184, 105, 0.45);
           border-radius: var(--radius-full);
-          padding: 0.4rem 0.95rem;
+          padding: 0.28rem 0.68rem;
           white-space: nowrap;
-          box-shadow: 0 8px 26px rgba(0, 0, 0, 0.75), 0 0 16px rgba(221, 167, 82, 0.35), inset 0 1px 1px rgba(255, 255, 255, 0.3);
-          transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+          box-shadow: 0 6px 20px rgba(0, 0, 0, 0.65), 0 0 12px rgba(229, 184, 105, 0.25), inset 0 1px 1px rgba(255, 255, 255, 0.3);
+          transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
           z-index: 1000;
         }
 
         [data-theme="light"] .pin-title-pill {
-          background: rgba(255, 255, 255, 0.96);
-          border: 1.5px solid rgba(184, 134, 11, 0.65);
-          box-shadow: 0 8px 24px rgba(30, 24, 16, 0.18), inset 0 1.5px 1.5px #FFFFFF;
+          background: rgba(255, 255, 255, 0.95);
+          border: 1px solid rgba(144, 107, 39, 0.4);
+          box-shadow: 0 6px 18px rgba(15, 23, 42, 0.12), inset 0 1.5px 1.5px #FFFFFF;
         }
 
         .pin-title-pill span {
           font-family: var(--font-heading);
-          font-size: 0.8125rem;
-          font-weight: 800;
+          font-size: 0.6875rem;
+          font-weight: 700;
           color: #FFF0C2;
           letter-spacing: 0.02em;
         }
@@ -1590,6 +1738,15 @@ export const MapView: React.FC<MapViewProps> = ({
         @media (max-width: 1024px) {
           .map-floating-controls-row.sidebar-is-open {
             right: 1.5rem;
+            left: auto;
+            bottom: auto;
+            top: 5.5rem;
+          }
+
+          .map-view-page[dir="rtl"] .map-floating-controls-row.sidebar-is-open,
+          [dir="rtl"] .map-floating-controls-row.sidebar-is-open {
+            right: auto;
+            left: 1.5rem;
             bottom: auto;
             top: 5.5rem;
           }
@@ -1597,28 +1754,76 @@ export const MapView: React.FC<MapViewProps> = ({
 
         @media (max-width: 768px) {
           .floating-glass-directory {
+            top: auto !important;
+            bottom: 0 !important;
+            left: 0 !important;
+            right: 0 !important;
+            width: 100% !important;
+            max-height: 60vh !important;
+            border-radius: 24px 24px 0 0 !important;
+            border-bottom: none !important;
+            animation: sidebarSlideUp 0.32s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
+          }
+
+          .glass-directory-header {
+            padding: 1.1rem 1.25rem 0.75rem;
+          }
+
+          .dir-title {
+            font-size: 1.15rem;
+          }
+
+          .glass-cards-scroll {
+            padding: 0.75rem 1rem 1.75rem;
+            gap: 0.85rem;
+          }
+
+          .estate-thumb-wrap {
+            height: 120px;
+          }
+
+          .floating-sidebar-trigger {
             top: auto;
-            bottom: 1rem;
-            right: 1rem;
+            bottom: 1.25rem;
             left: 1rem;
+            right: 1rem;
             width: auto;
-            max-height: 50vh;
-            border-radius: 20px;
+            justify-content: center;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
           }
 
           .map-selected-preview-card {
-            left: 1rem;
-            right: 1rem;
-            bottom: 1rem;
-            width: auto;
-            border-radius: 22px;
+            left: 0.75rem !important;
+            right: 0.75rem !important;
+            bottom: 0.75rem !important;
+            width: auto !important;
+            border-radius: 20px !important;
+            max-height: calc(100vh - 120px);
+            overflow-y: auto;
           }
 
           .map-floating-controls-row {
-            top: 5.5rem;
+            top: 5rem;
             bottom: auto;
-            left: 1rem;
+            left: 0.85rem;
             right: auto;
+            gap: 6px;
+          }
+
+          .map-view-page[dir="rtl"] .map-floating-controls-row,
+          [dir="rtl"] .map-floating-controls-row {
+            left: auto;
+            right: 0.85rem;
+          }
+
+          .map-glass-ctrl-btn {
+            width: 32px;
+            height: 32px;
+          }
+
+          .map-mode-pill-btn {
+            padding: 0.35rem 0.75rem;
+            font-size: 0.75rem;
           }
         }
       `}</style>

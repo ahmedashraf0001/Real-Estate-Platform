@@ -1,46 +1,36 @@
 'use client';
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Layers, 
   Zap, 
   Wind, 
   Droplet, 
-  Compass, 
-  FileText, 
   Building, 
   Check, 
   Sparkles,
-  Camera,
   MessageSquare,
-  ShieldCheck,
-  ChevronLeft,
-  ChevronRight,
   Plus,
   Minus,
-  Maximize2
+  X,
+  Maximize2,
+  Minimize2,
+  Compass,
+  Info
 } from 'lucide-react';
 import { ZoneInstance, ZoneSpatialLayout, getZoneBadge, FinishBadge } from '@/lib/layering';
-import { computeMetricLayout, metricInputFromSpatial, openingSegments } from '@/lib/layering/floorplanLayout';
+import { computeMetricLayout, metricInputFromSpatial, MetricRoomRect } from '@/lib/layering/floorplanLayout';
 import { FALLBACK_ZONE_METRICS, FALLBACK_ZONE_TITLES, GENERIC_ZONE_METRIC } from '@/lib/layering/zoneMetrics';
 
 type SystemKey = 'all' | 'civil' | 'electrical' | 'plumbing' | 'hvac' | 'finishes';
 
-const SYSTEM_FILTERS: Array<{ key: SystemKey; en: string; ar: string }> = [
-  { key: 'all',        en: 'All Systems', ar: 'كل الأنظمة' },
-  { key: 'civil',      en: 'Civil',       ar: 'إنشائي' },
-  { key: 'electrical', en: 'Electrical',  ar: 'كهرباء' },
-  { key: 'plumbing',   en: 'Plumbing',    ar: 'سباكة' },
-  { key: 'hvac',       en: 'HVAC',        ar: 'تكييف' },
-  { key: 'finishes',   en: 'Finishes',    ar: 'تشطيبات' },
-];
-
 const TIER_BADGES: Record<Exclude<FinishBadge, 'unknown'>, { en: string; ar: string; color: string; bg: string }> = {
-  fully_finished: { en: 'Fully Finished', ar: 'تشطيب كامل', color: '#4CC38A', bg: 'rgba(76, 195, 138, 0.12)' },
+  fully_finished: { en: 'Fully Finished', ar: 'تشطيب كامل', color: '#10B981', bg: 'rgba(16, 185, 129, 0.12)' },
   semi_finished:  { en: 'Semi-Finished',  ar: 'نص تشطيب',   color: '#E0A63A', bg: 'rgba(224, 166, 58, 0.12)' },
   red_brick:      { en: 'Red Brick',      ar: 'طوب أحمر',    color: '#E06D5B', bg: 'rgba(224, 109, 91, 0.12)' },
-  mixed:          { en: 'Mixed Finishing', ar: 'تشطيب مختلط', color: '#9FB3D9', bg: 'rgba(159, 179, 217, 0.12)' },
+  mixed:          { en: 'Mixed Finishing', ar: 'تشطيب مختلط', color: '#3B82F6', bg: 'rgba(59, 130, 246, 0.12)' },
 };
 
 interface ArchitecturalBlueprintInspectorProps {
@@ -51,7 +41,6 @@ interface ArchitecturalBlueprintInspectorProps {
   propertyImages?: string[];
 }
 
-// Curated Architectural Room Photography
 const CURATED_ROOM_IMAGES: Record<string, string> = {
   grounds: 'https://images.unsplash.com/photo-1580587771525-78b9dba3b914?auto=format&fit=crop&w=1200&q=85',
   garden: 'https://images.unsplash.com/photo-1580587771525-78b9dba3b914?auto=format&fit=crop&w=1200&q=85',
@@ -70,6 +59,7 @@ const CURATED_ROOM_IMAGES: Record<string, string> = {
   spa: 'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?auto=format&fit=crop&w=1200&q=85',
   powder: 'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?auto=format&fit=crop&w=1200&q=85',
   terrace: 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=1200&q=85',
+  balcony: 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=1200&q=85',
   roof: 'https://images.unsplash.com/photo-1533105079780-92b9be482077?auto=format&fit=crop&w=1200&q=85',
   garage: 'https://images.unsplash.com/photo-1590674899484-d5640e854abe?auto=format&fit=crop&w=1200&q=85',
   family: 'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=1200&q=85',
@@ -87,18 +77,6 @@ function resolveSpaceImage(key: string, customImage?: string): string {
   return 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=85';
 }
 
-// All metrics come from the shared FALLBACK_ZONE_METRICS table so the public
-// page and the admin edit form always agree.
-const ZONE_METRICS: Record<string, { sqm: number; ceiling: string; dims: string }> =
-  Object.fromEntries(
-    Object.entries(FALLBACK_ZONE_METRICS).map(([id, m]) => [
-      id,
-      { sqm: m.sqm, ceiling: m.ceiling, dims: `${m.length_m}m × ${m.width_m}m` },
-    ]),
-  );
-
-const ZONE_TITLES: Record<string, { en: string; ar: string }> = FALLBACK_ZONE_TITLES;
-
 interface TradeSpecItem {
   id: string;
   name: string;
@@ -110,2083 +88,1771 @@ interface TradeSpecItem {
   badgeAr: string;
 }
 
-function systemOf(trade: TradeSpecItem): Exclude<SystemKey, 'all'> {
-  if (trade.icon === 'zap') return 'electrical';
-  if (trade.icon === 'droplet') return 'plumbing';
-  if (trade.icon === 'wind') return 'hvac';
-  const n = `${trade.name} ${trade.nameAr}`.toLowerCase();
-  if (/paint|finish|carpentry|joinery|door|tiling|دهان|تشطيب|نجارة|أبواب/.test(n)) return 'finishes';
-  return 'civil';
-}
-
-// Room-Specific Bespoke Engineering Systems & Materials
-const BESPOKE_ROOM_SPECS: Record<string, TradeSpecItem[]> = {
-  'vil.g.entrance': [
-    {
-      id: 'foyer_portal',
-      name: 'Statuario Marble Portal & Atrium Wall',
-      nameAr: 'بوابة رخام ستاتوريو إيطالي مع بهو مزدوج',
-      spec: '5.2m full-height book-matched Statuario marble slabs with brushed brass profile inlays',
-      specAr: 'ألواح رخام ستاتوريو إيطالي متطابق بارتفاع ٥.٢م مع حليات وتطعيمات نحاس معتق',
-      icon: 'layers',
-      badge: 'Bespoke Craft',
-      badgeAr: 'تنفيذ خاص'
-    },
-    {
-      id: 'foyer_pivot',
-      name: 'Motorized Biometric Pivot Portal',
-      nameAr: 'باب محوري مصفح ذكي ببصمة الإصبع',
-      spec: '3.2m armored thermal pivot door with integrated biometric recognition & smart lock',
-      specAr: 'باب مدخل محوري مصفح بارتفاع ٣.٢م مع قارئ بصمة مدمج وقفل ذكي كهروميكانيكي',
-      icon: 'zap',
-      badge: 'High Security',
-      badgeAr: 'أمان فائق'
-    },
-    {
-      id: 'foyer_lighting',
-      name: 'Atrium Architectural Lighting & Chandelier Circuit',
-      nameAr: 'الإنارة المعمارية ومسارات الثريا المركزية',
-      spec: 'Lutron welcome scenes, perimeter cove light grazing, reinforced 150kg chandelier ceiling box',
-      specAr: 'سيناريوهات ترحيب Lutron، إنارة مخفية في الكوف، وصندوق تعليق ثريات مدعم ١٥٠ كجم',
-      icon: 'zap',
-      badge: 'Lutron HomeWorks',
-      badgeAr: 'نظام لوترون'
-    },
-    {
-      id: 'foyer_hvac',
-      name: 'High-Throw Vertical Air Diffusers',
-      nameAr: 'مخارج هواء رأسية عالية التدفق للبهو',
-      spec: 'Concealed Daikin VRF vertical jet diffusers ensuring uniform climate across 5.2m height',
-      specAr: 'مخارج هواء نفاثة مخفية Daikin VRF تضمن ثبات درجات الحرارة عبر كامل الارتفاع',
-      icon: 'wind',
-      badge: 'Balanced Flow',
-      badgeAr: 'تدفق متوازن'
-    }
-  ],
-
-  'vil.g.reception': [
+const DEFAULT_TRADE_SPECS: Record<string, TradeSpecItem[]> = {
+  reception: [
     {
       id: 'rec_marble',
-      name: 'Book-Matched Calacatta Gold Marble',
-      nameAr: 'رخام كالاكاتا جولد إيطالي متطابق العروق',
-      spec: '120×240cm premium Calacatta slabs with acoustic sound-dampening subfloor underlayment',
-      specAr: 'ألواح كالاكاتا نخب أول مقاس ١٢٠×٢٤٠سم مع طبقات عزل صوتي متقدمة أسفل الأرضيات',
+      name: 'Imported Marble & Parquet Finish',
+      nameAr: 'أرضيات رخام مستورد وباركيه HDF ألماني',
+      spec: 'Premium Calacatta gold marble borders with acoustic sound-dampening subfloor',
+      specAr: 'رخام كالاكاتا فاخر مع عزل صوتي متطور أسفل الأرضيات',
       icon: 'layers',
       badge: 'Ultra-Luxury',
-      badgeAr: 'خامات ملكية'
+      badgeAr: 'تشطيب فاخر'
     },
     {
-      id: 'rec_facade',
-      name: 'Schuco Structural Glass Panoramic Wall',
-      nameAr: 'واجهة زجاجية بانورامية هيكلية Schuco',
-      spec: 'Floor-to-ceiling Schuco triple-glazed low-E acoustic glass with thermal barrier & motorized tracks',
-      specAr: 'زجاج ثلاثي عازل للصوت والحرارة Schuco من الأرض للسقف مع مسارات ستائر كهروميكانيكية',
-      icon: 'layers',
-      badge: 'Acoustic 42dB',
-      badgeAr: 'عزل صوتي ٤٢ ديسبل'
-    },
-    {
-      id: 'rec_knx',
-      name: 'KNX Architectural Lighting & Track Spots',
-      nameAr: 'التحكم الذكي والإنارة المغناطيسية KNX',
-      spec: 'Magnetic track spotlights (CRI 98+), museum-grade art wall illumination, automated scene pads',
-      specAr: 'كشافات مغناطيسية CRI 98+، إنارة لوحات فنية بمستوى المتاحف، ولوحات لمسية ذكية',
-      icon: 'zap',
-      badge: 'KNX Certified',
-      badgeAr: 'معتمد KNX'
-    },
-    {
-      id: 'rec_vrf',
-      name: 'Concealed 2.4m Architectural Slot VRF',
-      nameAr: 'تكييف مركزي مخفي بمخارج خطية ٢.٤م',
-      spec: 'Daikin VRF inverter with 2400mm invisible linear slot diffusers and digital room thermostat',
-      specAr: 'أنظمة Daikin VRF بمخارج خطية مدمجة ٢٤٠٠ مم وثرموستات لمسي رقمي مستقل',
+      id: 'rec_hvac',
+      name: 'Concealed Slot Diffuser AC',
+      nameAr: 'تكييف كونسيلد مخفي بمخارج خطية',
+      spec: 'Inverter VRF system with whisper-quiet operation (NC 25)',
+      specAr: 'نظام VRF إنفرتر هادئ للغاية مع مخارج هواء ديكورية',
       icon: 'wind',
-      badge: 'Whisper Silent',
-      badgeAr: 'فائق الهدوء'
+      badge: 'Smart VRF',
+      badgeAr: 'إنفرتر ذكي'
+    },
+    {
+      id: 'rec_elec',
+      name: 'Architectural Lighting & Smart Circuits',
+      nameAr: 'إنارة معمارية ومسارات مغناطيسية ذكية',
+      spec: 'Magnetic track spotlights (CRI 95+) with automated lighting scenes',
+      specAr: 'كشافات مغناطيسية عالية الدقة مع لوحات تحكم ذكية',
+      icon: 'zap',
+      badge: 'Smart Ready',
+      badgeAr: 'تحكم ذكي'
     }
   ],
-
-  'vil.g.dining': [
+  master_bed: [
     {
-      id: 'din_panelling',
-      name: 'Canaletto Walnut & Acoustic Ceiling Dome',
-      nameAr: 'تجليد خشب جوز كاناليتو وقبة صوتية',
-      spec: 'Fluted Italian Canaletto walnut wall paneling, acoustic recessed gypsum dome ceiling',
-      specAr: 'تجليدات حوائط خشب جوز إيطالي مضلع مع قبة سقفية جبسية معالجة صوتياً',
+      id: 'bed_floor',
+      name: 'Natural Hardwood Oak Parquet',
+      nameAr: 'أرضيات باركيه خشب طبيعي أرو',
+      spec: 'Multi-layer engineered oak with thermal insulation underlayment',
+      specAr: 'خشب أرو طبيعي متعدد الطبقات مع عزل حراري وصوتي',
       icon: 'layers',
-      badge: 'Italian Joinery',
-      badgeAr: 'نجارة إيطالية'
+      badge: 'Engineered Wood',
+      badgeAr: 'خشب طبيعي'
     },
     {
-      id: 'din_light',
-      name: 'Warm-Dimming Dining Ambiance (2200K)',
-      nameAr: 'إنارة عشاء دافئة متدرجة ٢٢٠٠ كلفن',
-      spec: 'Lutron warm-dimming technology shifting from crisp 3000K to intimate 2200K candlelight warmth',
-      specAr: 'تقنية Lutron للتعتيم الدافئ تتحول بسلاسة لضوء الشموع الدافئ ٢٢٠٠ كلفن',
-      icon: 'zap',
-      badge: 'Lutron WarmDim',
-      badgeAr: 'تعتيم دافئ'
-    },
-    {
-      id: 'din_wine',
-      name: 'Climate-Controlled Wine Storage Prep',
-      nameAr: 'تجهيزات كابينة حفظ المشروبات المبردة',
-      spec: 'Dedicated 12°C refrigeration lines, insulated UV-resistant frameless glass enclosure rough-in',
-      specAr: 'تمديدات تبريد مخصصة لدرجة ١٢ مئوية وتجهيزات زجاج عازل للأشعة فوق البنفسجية',
-      icon: 'droplet',
-      badge: 'Sommelier Prep',
-      badgeAr: 'جاهز للتبريد'
-    },
-    {
-      id: 'din_vrf',
-      name: 'Low-Velocity Silent VRF Climate Supply',
-      nameAr: 'تكييف منخفض السرعة غير مسموع',
-      spec: 'Acoustically lined ductwork operating below 18 dBA for undisturbed fine dining conversations',
-      specAr: 'مجاري هواء معزولة صوتياً تعمل بأقل من ١٨ ديسبل لضمان هدوء تام أثناء العشاء',
-      icon: 'wind',
-      badge: '< 18 dBA',
-      badgeAr: 'أقل من ١٨ ديسبل'
+      id: 'bed_windows',
+      name: 'Acoustic Double-Glazed Facade',
+      nameAr: 'قطاعات ألومنيوم عازلة للصوت والحرارة',
+      spec: 'Thermal-break Schuco double glazing ensuring 38dB acoustic reduction',
+      specAr: 'زجاج مزدوج عازل للضوضاء والحرارة مع قطاع ألومنيوم ثيرمال بريك',
+      icon: 'layers',
+      badge: 'Acoustic 38dB',
+      badgeAr: 'عازل للصوت'
     }
   ],
-
-  'vil.g.kitchen': [
+  kitchen: [
     {
-      id: 'kit_appliance',
-      name: 'Gaggenau 400 Series 380V Power Infrastructure',
-      nameAr: 'بنية كهربائية ٣٨٠ فولت لأجهزة Gaggenau',
-      spec: 'Dedicated 3-phase high-amperage feeds for induction cooktop, combi-steam ovens & warming drawers',
-      specAr: 'خطوط كهرباء ثلاثية الفاز عالية التحمل لمسطحات الحث، أفران البخار، وأدراج التسخين',
-      icon: 'zap',
-      badge: '3-Phase 380V',
-      badgeAr: '٣ فاز مخصص'
-    },
-    {
-      id: 'kit_stone',
-      name: 'Dekton Laurent 20mm Heatproof Island',
-      nameAr: 'جزيرة مطبخ رخام صناعي دكتون لوران ٢٠ مم',
-      spec: 'Ultra-compact heat-, scratch-, and stain-proof Dekton Laurent slabs with integrated waterfall edge',
-      specAr: 'أسطح دكتون فائقة المقاومة للحرارة والخدش والبقع مع جوانب شلال متصلة',
+      id: 'kitch_tiles',
+      name: 'Porcelain Nano-Sealed Floor & Wall Tiles',
+      nameAr: 'سيراميك وبورسلين معالج نانو مقاوم للبقع',
+      spec: '60×120cm rectified anti-slip porcelain with epoxy grouting',
+      specAr: 'بورسلين مقاس ٦٠×١٢٠سم مع فواصل إيبوكسية مضادة للبكتيريا',
       icon: 'layers',
-      badge: 'Heat & Stain Proof',
-      badgeAr: 'مقاوم للحرارة'
+      badge: 'Nano-Shield',
+      badgeAr: 'معالج نانو'
     },
     {
-      id: 'kit_water',
-      name: 'Quooker Boiling & Multi-Stage Reverse Osmosis',
-      nameAr: 'محطة تحلية RO مع خلاط مياه مغلية Quooker',
-      spec: 'Integrated 7-stage RO mineral purification system, Quooker instant 100°C boiling water tap',
-      specAr: 'نظام تنقية RO بـ ٧ مراحل، وخلاط Quooker الفوري للمياه المغلية بدرجة ١٠٠ مئوية',
+      id: 'kitch_plumb',
+      name: 'Concealed Drainage & Water Filter Ready',
+      nameAr: 'تغذية وصرف مخفي مجهز لوحدات الفلترة',
+      spec: 'Multi-layer PPR German plumbing lines with soundproof drainage pipes',
+      specAr: 'شبكة تغذية PPR ألمانية وصرف سمارت معزول للصوت',
       icon: 'droplet',
-      badge: 'Mineral Purity',
-      badgeAr: 'تنقية متقدمة'
-    },
-    {
-      id: 'kit_hvac',
-      name: 'High-Volume 1400m³/h Ceiling Extraction',
-      nameAr: 'شفاط سقف مدمج عالي السحب ١٤٠٠ م³/ساعة',
-      spec: 'Flush ceiling extractor with dedicated roof duct and make-up air ventilation interlock',
-      specAr: 'شفاط سقف خطي متصل بمدخنة مستقلة للسطح ونظام تعويض هواء أوتوماتيكي',
-      icon: 'wind',
-      badge: '1400 m³/h',
-      badgeAr: 'سحب هائل'
+      badge: 'DIN Certified',
+      badgeAr: 'معتمد ألمانياً'
     }
   ],
-
-  'vil.g.powder_room': [
+  bath: [
     {
-      id: 'pwd_onyx',
-      name: 'Backlit Translucent Honey Onyx Slab',
-      nameAr: 'لوح رخام أونيكس عسلي مضيء',
-      spec: 'Natural book-matched Honey Onyx backlit with 2700K diffusion LED panel and brass wall fixtures',
-      specAr: 'رخام أونيكس طبيعي منفذ للضوء مع إضاءة خلفية متجانسة وخلاطات نحاس جدارية',
-      icon: 'layers',
-      badge: 'Natural Onyx',
-      badgeAr: 'أونيكس طبيعي'
-    },
-    {
-      id: 'pwd_geberit',
-      name: 'Geberit Sigma80 Touchless Glass Actuator',
-      nameAr: 'شاسيه Geberit مع شاشة لمس زجاجية',
-      spec: 'Concealed Geberit carrier with dual-beam optical touchless sensor in obsidian black glass',
-      specAr: 'شاسيه مدفون Geberit مع لوحة تشغيل زجاجية سوداء تعمل بمستشعر حركة غير تلامسي',
+      id: 'bath_sanitary',
+      name: 'Concealed Cistern & Wall-Hung Fixtures',
+      nameAr: 'أطقم صحية معلقة وخزانات دفن',
+      spec: 'Grohe/Duravit soft-close wall-hung toilet with pneumatic flush plate',
+      specAr: 'قاعدة معلقة درافيت مع صندوق طرد دفن جروهي',
       icon: 'droplet',
-      badge: 'Touchless Pro',
-      badgeAr: 'تشغيل بدون لمس'
+      badge: 'European Fixtures',
+      badgeAr: 'أطقم أوروبية'
     },
     {
-      id: 'pwd_basin',
-      name: 'Antonio Lupi Monolithic Freestanding Basin',
-      nameAr: 'حوض أنطونيو لوبي حجري قائم بذاته',
-      spec: 'Hand-carved Nero Marquina stone basin with Dornbracht brushed dark platinum mixer',
-      specAr: 'حوض منحوت يدوياً من حجر نيرو ماركينا الإسباني مع خلاط بلاتينيوم معتق Dornbracht',
+      id: 'bath_waterproofing',
+      name: 'Dual-Layer Polymer Waterproofing',
+      nameAr: 'عزل مائي كيميائي مزدوج للحمامات',
+      spec: 'Certified 72-hr water-tested elastomeric waterproofing membrane',
+      specAr: 'عزل مائي بوليمري مرن مختبر ضد التسريب لمدة ٧٢ ساعة',
       icon: 'droplet',
-      badge: 'Italian Atelier',
-      badgeAr: 'تصميم إيطالي'
-    },
-    {
-      id: 'pwd_vent',
-      name: 'Continuous Silent Acoustic Extraction',
-      nameAr: 'نظام سحب وتهوية صامت مستمر',
-      spec: 'S&P ultra-quiet inline extraction with continuous low-speed trickle and motion boost',
-      specAr: 'شفاط مخفي S&P ألماني صامت يعمل بنظام تدفق هواء دائم وزيادة سحب بالحساس',
-      icon: 'wind',
-      badge: 'Silent Air Flow',
-      badgeAr: 'تهوية صامتة'
+      badge: '100% Tested',
+      badgeAr: 'مختبر ٧٢ ساعة'
     }
   ],
-
-  'vil.f.master_suite': [
+  balcony: [
     {
-      id: 'mst_wood',
-      name: 'European Smoked Oak Herringbone Parquet',
-      nameAr: 'باركيه خشب بلوط مدخن ألماني هيرنجبون',
-      spec: '15mm engineered solid oak with acoustic underlayment, UV matte lacquer finish & brass dividers',
-      specAr: 'خشب بلوط طبيعي متداخل مع طبقة عزل صوتي ودهان غير لامع مقاوم للخدش وحليات نحاسية',
+      id: 'balc_deck',
+      name: 'Weatherproof Wood Composite Decking',
+      nameAr: 'أرضيات خشب بلاستيكي WPC مقاوم للعوامل الجوية',
+      spec: 'UV-stabilized anti-slip outdoor decking with concealed drainage channel',
+      specAr: 'خشب WPC معالج ضد الشمس والأمطار مع مسار صرف مخفي',
       icon: 'layers',
-      badge: 'Solid European Oak',
-      badgeAr: 'بلوط أوروبي'
+      badge: 'Weatherproof',
+      badgeAr: 'مقاوم للشمس'
     },
     {
-      id: 'mst_circadian',
-      name: 'Circadian Sleep & Wake KNX Lighting',
-      nameAr: 'نظام إنارة بيولوجي ذكي يحاكي ضوء الشمس',
-      spec: 'Automated color temperature shifting (1800K to 5000K) supporting natural melatonin cycles',
-      specAr: 'تعديل آلي لدرجة حرارة الضوء من الشروق حتى الغروب لتعزيز جودة النوم والراحة',
-      icon: 'zap',
-      badge: 'Circadian Sync',
-      badgeAr: 'مزامنة حيوية'
-    },
-    {
-      id: 'mst_shades',
-      name: 'Dual Motorized Blackout & Sheer Drapery',
-      nameAr: 'ستائر كهربائية مزدوجة عاتمة وشفافة',
-      spec: 'Silent Somfy motorized tracks recessed in ceiling pocket, programmed with bedside keypad',
-      specAr: 'مسارات Somfy صامتة مدمجة بالسقف مع تحكم من لوحات جانب السرير وتطبيق الهاتف',
-      icon: 'zap',
-      badge: '100% Total Blackout',
-      badgeAr: 'عزل ضوئي ١٠٠٪'
-    },
-    {
-      id: 'mst_vrf',
-      name: 'Draft-Free Night-Mode Daikin VRF',
-      nameAr: 'تكييف Daikin بنمط نوم فائق الهدوء',
-      spec: 'Indirect linear slot diffusers positioned away from bed zone with continuous humidity balance',
-      specAr: 'مخارج هواء غير مباشرة بعيدة عن السرير مع موازنة آلية لنسبة الرطوبة أثناء النوم',
-      icon: 'wind',
-      badge: 'Draft-Free',
-      badgeAr: 'تدفق مريح'
-    }
-  ],
-
-  'vil.f.master_bath': [
-    {
-      id: 'mbath_shower',
-      name: 'Hansgrohe Axor RainSky Ceiling Shower',
-      nameAr: 'دش سقفي مطري فاخر Axor RainSky',
-      spec: 'Flush ceiling-mounted multi-pattern shower with integrated therapeutic chromatherapy LED lighting',
-      specAr: 'دش مطري سقفي مدفون مع خيارات تدفق متعددة وإنارة علاجية مدمجة بالألوان',
-      icon: 'droplet',
-      badge: 'Chromatherapy',
-      badgeAr: 'إنارة علاجية'
-    },
-    {
-      id: 'mbath_stone',
-      name: 'Full-Height Arabescato Corchia Marble Slabs',
-      nameAr: 'ألواح رخام أرابيسكاتو إيطالي بارتفاع كامل',
-      spec: 'Seamless book-matched wet walls with concealed floor drainage and anti-limescale sealing',
-      specAr: 'حوائط رخامية متطابقة بدون فواصل ظاهرة مع صفاية دش خطية مخفية تحت الرخام',
+      id: 'balc_rail',
+      name: 'Architectural Safety Balustrade Railing',
+      nameAr: 'درابزين أمان مع حديد مشغول وزجاج سيكوريت',
+      spec: '1.1m height tempered laminated safety glass with stainless steel posts',
+      specAr: 'درابزين أمان بارتفاع ١.١م مع زجاج سيكوريت وقوائم صلب',
       icon: 'layers',
-      badge: 'Book-Matched',
-      badgeAr: 'عروق متطابقة'
-    },
-    {
-      id: 'mbath_heat',
-      name: 'Devi Digital Radiant Heated Floor',
-      nameAr: 'تدفئة أرضية كهربائية رقمية Devi',
-      spec: 'Programmable radiant underfloor heating mat paired with heated architectural towel rails',
-      specAr: 'شبكة تدفئة تحت الرخام رقمية قابلة للبرمجة مع مجفف مناشف معلق ساخن',
-      icon: 'zap',
-      badge: 'Radiant Warmth',
-      badgeAr: 'تدفئة متجانسة'
-    },
-    {
-      id: 'mbath_tub',
-      name: 'Freestanding Mineral Composite Soaking Tub',
-      nameAr: 'حوض استحمام قائم بذاته من الحجر المعدني',
-      spec: 'Solid surface thermal-retaining soaking tub with floor-mounted Hansgrohe Axor mixer',
-      specAr: 'بانيو حجري عازل للحرارة يحتفظ بسخونة المياه مع خلاط أرضي مستقل Axor',
-      icon: 'droplet',
-      badge: 'Spa Grade',
-      badgeAr: 'جودة سبا'
-    }
-  ],
-
-  'vil.f.family_room': [
-    {
-      id: 'fam_cinema',
-      name: 'Dolby Atmos 7.2.4 In-Wall Audio Conduit',
-      nameAr: 'بنية تحتية صوتية Dolby Atmos 7.2.4',
-      spec: 'Pre-wired in-wall acoustic conduits with soundproof fabric wall paneling and low-resonance studs',
-      specAr: 'تمديدات مسرح منزلي مخفية بالحوائط مع ألواح قماشية معالجة صوتياً لامتصاص الصدى',
-      icon: 'zap',
-      badge: 'Dolby Atmos Ready',
-      badgeAr: 'جاهز للصوت المحيطي'
-    },
-    {
-      id: 'fam_knx',
-      name: 'Cinema Scene Keypad & RGBW Bias Backlight',
-      nameAr: 'لوحة تحكم سينمائية مع إضاءة خلفية للشاشات',
-      spec: 'One-touch "Cinema Mode" dimming ceiling spots, closing shades, and illuminating OLED bias lights',
-      specAr: 'كبسة واحدة تضبط الإنارة، تغلق الستائر، وتفعل الإضاءة الخلفية المريحة للعين',
-      icon: 'zap',
-      badge: 'Cinema Presets',
-      badgeAr: 'أوضاع سينما'
-    },
-    {
-      id: 'fam_millwork',
-      name: 'Bespoke Fluted Oak Media Atelier',
-      nameAr: 'مكتبة شاشة من خشب البلوط المضلع',
-      spec: 'Custom low-profile media unit with concealed cooling fans for AV receivers and hidden cables',
-      specAr: 'وحدة أجهزة ومكتبة بتصميم مضلع مع مراوح تبريد مخفية للأجهزة الصوتية ومسارات أسلاك',
-      icon: 'layers',
-      badge: 'Custom Millwork',
-      badgeAr: 'تفصيل خاص'
-    },
-    {
-      id: 'fam_vrf',
-      name: 'High-CFM Daikin Multi-Slot Linear Diffuser',
-      nameAr: 'مخرج هواء خطي متعدد الفتحات للتجمعات العائلية',
-      spec: 'Sized to maintain crisp cooling during large family film gatherings without air noise',
-      specAr: 'مصمم خصيصاً لتبريد مريح وهادئ أثناء التجمعات العائلية الكبيرة دون أي ضجيج',
-      icon: 'wind',
-      badge: 'Silent Air Flow',
-      badgeAr: 'تدفق هادئ'
-    }
-  ],
-
-  'vil.r.terrace': [
-    {
-      id: 'roof_pergola',
-      name: 'Motorized Bioclimatic Louvered Pergola',
-      nameAr: 'برجولا ألومنيوم ذكية بشرائح متحركة',
-      spec: 'Automated tilting louvers with built-in rain and wind sensors, integrated perimeter 3000K LED',
-      specAr: 'شرائح ألومنيوم كهروميكانيكية تغلق آلياً عند المطر مع إنارة دافئة محيطية مدمجة',
-      icon: 'layers',
-      badge: 'Smart Bioclimatic',
-      badgeAr: 'تحكم ذكي بالطقس'
-    },
-    {
-      id: 'roof_bbq',
-      name: 'Marine-Grade 316 Stainless Outdoor BBQ',
-      nameAr: 'شواية ومطبخ خارجي ستانلس ستيل ٣١٦',
-      spec: 'Built-in 5-burner gas grill, outdoor marine-grade beverage chiller, and granite prep bar',
-      specAr: 'شواية غاز بلت إن من الستانلس المقاوم للصدأ مع ثلاجة مشروبات ورخام جرانيت خارجي',
-      icon: 'layers',
-      badge: 'Marine Grade 316',
-      badgeAr: 'مقاوم للعوامل الجوية'
-    },
-    {
-      id: 'roof_waterproof',
-      name: 'Sika Double-Layer SBS Elastomeric Membrane',
-      nameAr: 'عزل مائي مزدوج SBS من شركة Sika',
-      spec: 'Heavy-duty root-proof elastomeric waterproofing membrane with concealed linear perimeter drains',
-      specAr: 'عزل مائي مطاطي مزدوج عالي التحمل مع مجاري تصريف أمطار خطية مخفية',
-      icon: 'droplet',
-      badge: '10-Year Certified',
-      badgeAr: 'ضمان ١٠ سنوات'
-    },
-    {
-      id: 'roof_sound',
-      name: 'Sonance All-Weather Landscape Audio',
-      nameAr: 'نظام صوتي خارجي Sonance مقاوم للماء',
-      spec: 'IP66 waterproof landscape speakers paired with multi-zone Sonos digital streaming amplifier',
-      specAr: 'سماعات خارجية IP66 مقاومة للرطوبة والشمس متصلة بنظام Sonos للبث الصوتي',
-      icon: 'zap',
-      badge: 'IP66 Waterproof',
-      badgeAr: 'مقاوم للماء IP66'
-    }
-  ],
-
-  'vil.b.garage': [
-    {
-      id: 'grg_floor',
-      name: 'Polyaspartic Terrazzo Epoxy Coating',
-      nameAr: 'أرضيات إيبوكسي تيرازو بوليازبارتيك فائق التحمل',
-      spec: 'Industrial-grade seamless resin floor resistant to hot tire marks, chemical spills & motor oils',
-      specAr: 'أرضية راتنجية متصلة خالية من الفواصل مقاومة لحرارة الإطارات، الزيوت والمواد الكيميائية',
-      icon: 'layers',
-      badge: 'Heavy Duty Resin',
-      badgeAr: 'تحمل شاق'
-    },
-    {
-      id: 'grg_ev',
-      name: 'Dual 22kW 3-Phase Fast EV Wallbox Chargers',
-      nameAr: 'محطتا شحن سريع للسيارات الكهربائية ٢٢ ك.و',
-      spec: 'Two Type-2 smart chargers with intelligent load management and solar-generation prioritization',
-      specAr: 'شاحنا سيارات كهربائية ذكيان مع توزيع آلي للحمل الكهربائي ودعم الطاقة الشمسية',
-      icon: 'zap',
-      badge: '2× 22kW Fast Charge',
-      badgeAr: 'شحن سريع ٢٢ ك.و'
-    },
-    {
-      id: 'grg_door',
-      name: 'Hormann Insulated Sectional High-Speed Doors',
-      nameAr: 'أبواب جراج قطعية سريعة عازلة Hormann',
-      spec: '42mm double-skin polyurethane insulated panels with optical safety beams and app control',
-      specAr: 'أبواب قطعية ألمانية معزولة بسماكة ٤٢ مم مع حساسات أمان وتطبيق تحكم بالجوال',
-      icon: 'zap',
-      badge: 'German Hormann',
-      badgeAr: 'صناعة ألمانية'
-    },
-    {
-      id: 'grg_vent',
-      name: 'Automated CO/NO2 Sensor Exhaust System',
-      nameAr: 'نظام شفط عوادم السيارات بحساسات الغاز',
-      spec: 'Continuous gas monitoring triggering automated dual high-CFM extraction blowers',
-      specAr: 'مراقبة دائمة لغازات العوادم مع تشغيل آلي لمراوح السحب العملاقة لضمان هواء نقي',
-      icon: 'wind',
-      badge: 'Auto Safety Exhaust',
-      badgeAr: 'أمان آلي'
-    }
-  ],
-
-  'vil.exterior': [
-    {
-      id: 'ext_landscape',
-      name: 'Hunter Weather-Sensed Drip & Spray Irrigation',
-      nameAr: 'شبكة ري ذكية بمستشعرات طقس Hunter',
-      spec: 'Automated multi-zone smart controller adjusting water delivery based on local evapotranspiration',
-      specAr: 'نظام ري ذكي متعدد المناطق يضبط كميات المياه آلياً حسب درجات الحرارة والرطوبة',
-      icon: 'droplet',
-      badge: 'Water Efficient',
-      badgeAr: 'ري مستدام'
-    },
-    {
-      id: 'ext_pool',
-      name: 'Magnesium Heated Salt-Water Pool System',
-      nameAr: 'مسبح مدفأ بنظام تعقيم الماغنيسيوم الصحي',
-      spec: 'Skin-softening mineral filtration, inverter heat pump, automated hidden slatted safety cover',
-      specAr: 'تعقيم طبيعي بأملاح الماغنيسيوم، مضخة تسخين حرارية، وغطاء أمان كهروميكانيكي مخفي',
-      icon: 'droplet',
-      badge: 'Mineral Salt Pool',
-      badgeAr: 'مياه معدنية صحية'
-    },
-    {
-      id: 'ext_lighting',
-      name: 'Bega Brass Bollards & Architectural Uplighting',
-      nameAr: 'إنارة حدائق معمارية ألمانية Bega',
-      spec: 'Solid forged brass landscape fixtures, astronomical timer control, antiglare tree grazing',
-      specAr: 'كشافات نحاس صب ألمانية مع توقيت فلكي يتبع غروب الشمس بدون أي توهج مزعج',
-      icon: 'zap',
-      badge: 'Solid Brass Bega',
-      badgeAr: 'نحاس أصلي Bega'
-    },
-    {
-      id: 'ext_security',
-      name: 'AI Perimeter Protection & Thermal CCTV',
-      nameAr: 'حماية أمنية ذكية مع كاميرات مراقبة حرارية',
-      spec: 'Fiber-optic perimeter intrusion detection paired with 4K active deterrence smart cameras',
-      specAr: 'حساسات كابلات ألياف ضوئية على الأسوار مع كاميرات 4K تدعم التعرف الذكي على الأشخاص',
-      icon: 'zap',
-      badge: 'AI Security Perimeter',
-      badgeAr: 'حماية ذكية'
+      badge: 'Safety Rated',
+      badgeAr: 'معايير الأمان'
     }
   ]
 };
 
-// Fallback Default Room Specs
-const DEFAULT_FALLBACK_SPECS: TradeSpecItem[] = [
-  {
-    id: 'elec',
-    name: 'KNX Smart Automation & Lighting',
-    nameAr: 'التحكم الذكي والإنارة المعمارية KNX',
-    spec: 'Lutron scene dimming, invisible magnetic track lights, presence automation',
-    specAr: 'أنظمة تحكم متطورة Lutron، إنارة مغناطيسية مخفية، وحساسات حركة ذكية',
-    icon: 'zap',
-    badge: 'Turnkey 100%',
-    badgeAr: 'تشطيب مكتمل'
-  },
-  {
-    id: 'hvac',
-    name: 'Concealed VRF Climate Control',
-    nameAr: 'تكييف الهواء المركزي المخفي VRF',
-    spec: 'Daikin multi-zone inverter with flush linear architectural slot diffusers',
-    specAr: 'أنظمة Daikin متعددة المناطق ومخارج هواء معمارية خطية مدمجة',
-    icon: 'wind',
-    badge: 'Certified Code',
-    badgeAr: 'معتمد هندسياً'
-  },
-  {
-    id: 'finishes',
-    name: 'Stonework & Wall Finishes',
-    nameAr: 'الرخام المستورد والدهانات المعمارية',
-    spec: 'Book-matched Calacatta Gold marble, solid natural parquet, acoustic stucco',
-    specAr: 'رخام كالاكاتا إيطالي متطابق العروق، باركيه طبيعي وعزل صوتي فائق',
-    icon: 'layers',
-    badge: 'Ultra-Luxury',
-    badgeAr: 'خامات سوبر ديلوكس'
-  },
-  {
-    id: 'plumbing',
-    name: 'Concealed Plumbing & Spa Fixtures',
-    nameAr: 'السباكة المدفونة والتجهيزات الصحية',
-    spec: 'Geberit concealed carriers, Hansgrohe Axor brushed fixtures, PEX lines',
-    specAr: 'شاسيهات مدفونة Geberit، خلاطات Hansgrohe، وتمديدات PEX معزولة',
-    icon: 'droplet',
-    badge: 'Pressure Tested',
-    badgeAr: 'تم الاختبار'
+function resolveRoomTradeSpecs(tid: string): TradeSpecItem[] {
+  const clean = tid.toLowerCase();
+  for (const [k, specs] of Object.entries(DEFAULT_TRADE_SPECS)) {
+    if (clean.includes(k)) return specs;
   }
-];
-
-function resolveRoomTradeSpecs(zoneKey: string): TradeSpecItem[] {
-  const clean = zoneKey.toLowerCase();
-  for (const [pattern, specs] of Object.entries(BESPOKE_ROOM_SPECS)) {
-    if (clean === pattern || clean.includes(pattern) || pattern.includes(clean)) {
-      return specs;
-    }
-  }
-
-  // Check partial matches (e.g. powder, bath, kitchen, bed, dining, roof, garage)
-  if (clean.includes('powder') || clean.includes('guest_bath')) return BESPOKE_ROOM_SPECS['vil.g.powder_room'];
-  if (clean.includes('kitchen')) return BESPOKE_ROOM_SPECS['vil.g.kitchen'];
-  if (clean.includes('dining')) return BESPOKE_ROOM_SPECS['vil.g.dining'];
-  if (clean.includes('entrance') || clean.includes('foyer')) return BESPOKE_ROOM_SPECS['vil.g.entrance'];
-  if (clean.includes('master_bath') || clean.includes('spa')) return BESPOKE_ROOM_SPECS['vil.f.master_bath'];
-  if (clean.includes('master')) return BESPOKE_ROOM_SPECS['vil.f.master_suite'];
-  if (clean.includes('family') || clean.includes('media') || clean.includes('game')) return BESPOKE_ROOM_SPECS['vil.f.family_room'];
-  if (clean.includes('bath')) return BESPOKE_ROOM_SPECS['vil.f.main_bath'];
-  if (clean.includes('terrace') || clean.includes('roof') || clean.includes('balcony')) return BESPOKE_ROOM_SPECS['vil.r.terrace'];
-  if (clean.includes('garage')) return BESPOKE_ROOM_SPECS['vil.b.garage'];
-  if (clean.includes('exterior') || clean.includes('garden') || clean.includes('pool')) return BESPOKE_ROOM_SPECS['vil.exterior'];
-
-  return DEFAULT_FALLBACK_SPECS;
-}
-
-interface FlatZoneEntry {
-  zone: ZoneInstance;
-  unitLabel?: string;
-}
-
-function flattenZoneEntries(rawZones: ZoneInstance[], unitLabel?: string): FlatZoneEntry[] {
-  const result: FlatZoneEntry[] = [];
-  for (const z of rawZones) {
-    if (z.children && z.children.length > 0) {
-      const nextUnit = z.zone_template_id === 'bld.unit' ? (z.instance_label || unitLabel) : unitLabel;
-      result.push(...flattenZoneEntries(z.children, nextUnit));
-    } else {
-      result.push({ zone: z, unitLabel });
-    }
-  }
-  return result;
+  return DEFAULT_TRADE_SPECS.reception;
 }
 
 interface ProcessedZone {
   id: string;
-  zoneKey: string;
+  templateId: string;
+  zoneTitle: string;
+  zoneTitleAr: string;
   floorKey: string;
   floorLabel: string;
   floorLabelAr: string;
   unitLabel?: string;
-  zoneTitle: string;
-  zoneTitleAr: string;
-  image: string;
-  imagesList: string[];
-  badge: FinishBadge;
   sqm: number;
   ceiling: string;
   dims: string;
+  length_m: number;
+  width_m: number;
+  badge: FinishBadge;
+  image: string;
+  imagesList: string[];
+  trades: TradeSpecItem[];
   doorCount: number;
   windowCount: number;
   spatial?: ZoneSpatialLayout;
-  svgCoords: { x: number; y: number; w: number; h: number; pinX: number; pinY: number };
-  trades: TradeSpecItem[];
-}
-
-
-// Metric-true layout: rooms are sized by their real meter dimensions via the
-// shared engine, so this public plan always matches the admin builder preview.
-function computeArchitecturalLayout(zones: ProcessedZone[]): { zones: ProcessedZone[]; pxPerMeter: number } {
-  const count = zones.length;
-  if (count === 0) return { zones: [], pxPerMeter: 1 };
-
-  const layout = computeMetricLayout(
-    zones.map((zone) => {
-      if (zone.spatial?.width_m && zone.spatial?.length_m) {
-        return metricInputFromSpatial(zone.id, zone.spatial, zone.sqm);
-      }
-      const parsed = zone.dims.match(/([\d.]+)\s*m?\s*[×x]\s*([\d.]+)\s*m?/i);
-      if (parsed) {
-        return { id: zone.id, widthM: parseFloat(parsed[2]), lengthM: parseFloat(parsed[1]) };
-      }
-      return metricInputFromSpatial(zone.id, zone.spatial, zone.sqm);
-    }),
-  );
-
-  const mapped = zones.map((zone, idx) => {
-    const rect = layout.rooms[idx];
-    const hasSpatialDims = Boolean(zone.spatial?.length_m && zone.spatial?.width_m);
-    return {
-      ...zone,
-      dims: hasSpatialDims ? `${zone.spatial!.length_m}m × ${zone.spatial!.width_m}m` : zone.dims,
-      sqm: zone.spatial?.sqm || zone.sqm,
-      ceiling: zone.spatial?.ceiling_height || zone.ceiling,
-      svgCoords: { x: rect.x, y: rect.y, w: rect.w, h: rect.h, pinX: rect.x + rect.w / 2, pinY: rect.y + rect.h / 2 },
-    };
-  });
-  return { zones: mapped, pxPerMeter: layout.pxPerMeter };
-}
-
-const TRADE_LABELS: Record<string, { en: string; ar: string; defaultSpecEn: string; defaultSpecAr: string }> = {
-  electrical: {
-    en: 'Electrical Infrastructure & Lighting',
-    ar: 'التمديدات الكهربائية والإنارة الذكية',
-    defaultSpecEn: 'Concealed fire-rated conduits, certified copper circuitry, and independent sub-panel distribution',
-    defaultSpecAr: 'تمديدات خراطيم معزولة مقاومة للحريق وشبكة أسلاك نحاسية معتمدة مع لوحة توزيع مستقلة'
-  },
-  walls: {
-    en: 'Wall Systems & Plastering',
-    ar: 'أنظمة الحوائط واللياسة',
-    defaultSpecEn: 'Acoustic-treated partition masonry, multi-layer cementitious plaster, and primed smooth surface',
-    defaultSpecAr: 'قواطع معالجة صوتياً مع طبقات بياض أسمنتي وشبك تسليح فايبر وبطانة تأسيسية'
-  },
-  flooring: {
-    en: 'Flooring & Sub-Base Prep',
-    ar: 'تأسيس وتشطيب الأرضيات',
-    defaultSpecEn: 'Laser-calibrated sand base, acoustic insulation membrane, and screed finish preparation',
-    defaultSpecAr: 'فرشة رملية موزونة بالليزر مع عازل صوتي وطبقة لياسة مجهزة للرخام والبورسلين'
-  },
-  carpentry: {
-    en: 'Carpentry, Doors & Joinery',
-    ar: 'أعمال النجارة والأبواب',
-    defaultSpecEn: 'Steamed beechwood sub-frames with acoustic rubber gasket seals and anti-warp anchors',
-    defaultSpecAr: 'حلوق خشب زان مبخر مع جوانات عزل الصوت وتثبيت معالج ضد الانفتال والتمدد'
-  },
-  hvac: {
-    en: 'HVAC & Climate Control',
-    ar: 'التكييف والتحكم المناخي',
-    defaultSpecEn: 'Insulated refrigerant copper piping, concealed condensation drain, and architectural diffuser lines',
-    defaultSpecAr: 'مواسير نحاسية معزولة وتمديدات صرف تكييف ومسارات جريلات خطية مدمجة'
-  },
-  plumbing: {
-    en: 'Plumbing & Drainage',
-    ar: 'السباكة وشبكات الصرف',
-    defaultSpecEn: 'German PEX hot/cold pressure piping, multi-layer acoustic silent drain system, and isolation valves',
-    defaultSpecAr: 'شبكة تغذية PEX ألمانية معزولة وصرف صحي ثلاثي الطبقات عازل للصوت ومحابس عزل'
-  },
-  finishing: {
-    en: 'Architectural Finishes',
-    ar: 'التشطيبات المعمارية',
-    defaultSpecEn: 'Premium grade surface coatings, architectural trim moldings, and high-durability sealants',
-    defaultSpecAr: 'دهانات وتشطيبات ديكورية معتمدة وحليات معمارية ومواد عزل وحماية عالية المتانة'
-  }
-};
-
-const STATUS_FORMATTER: Record<string, { en: string; ar: string }> = {
-  conduitsonly: { en: 'Conduits Installed', ar: 'تمديدات الخراطيم' },
-  conduits_only: { en: 'Conduits Installed', ar: 'تمديدات الخراطيم' },
-  plastered: { en: 'Plastered & Primed', ar: 'محارة وبطانة' },
-  sandbed: { en: 'Sub-Base Prepared', ar: 'فرشة رمل موزونة' },
-  sand_bed: { en: 'Sub-Base Prepared', ar: 'فرشة رمل موزونة' },
-  subframes: { en: 'Sub-Frames Fixed', ar: 'حلوق خشبية مثبتة' },
-  sub_frames: { en: 'Sub-Frames Fixed', ar: 'حلوق خشبية مثبتة' },
-  notstarted: { en: 'Planned Phase', ar: 'مرحلة مستقبلية' },
-  not_started: { en: 'Planned Phase', ar: 'مرحلة مستقبلية' },
-  inprogress: { en: 'In Progress', ar: 'قيد التنفيذ' },
-  in_progress: { en: 'In Progress', ar: 'قيد التنفيذ' },
-  completed: { en: 'Fully Finished', ar: 'مكتمل بالكامل' },
-  turnkey: { en: 'Turnkey Verified', ar: 'تسليم معتمد' },
-  firstfix: { en: '1st Fix Complete', ar: 'المرحلة الأولى' },
-  first_fix: { en: '1st Fix Complete', ar: 'المرحلة الأولى' },
-  secondfix: { en: '2nd Fix Complete', ar: 'المرحلة الثانية' },
-  second_fix: { en: '2nd Fix Complete', ar: 'المرحلة الثانية' },
-  roughin: { en: 'Rough-In Done', ar: 'التأسيس منجز' }
-};
-
-function formatStatus(rawStatus?: string): { en: string; ar: string } {
-  if (!rawStatus) return { en: 'Turnkey Verified', ar: 'تسليم معتمد' };
-  const clean = rawStatus.toLowerCase().replace(/[^a-z0-9]/g, '');
-  if (STATUS_FORMATTER[clean]) return STATUS_FORMATTER[clean];
-  const en = rawStatus.replace(/([A-Z])/g, ' $1').trim().replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-  return { en, ar: en };
-}
-
-function resolveTradeInfo(rawTid: string): { nameEn: string; nameAr: string; defaultSpecEn: string; defaultSpecAr: string } {
-  const parts = rawTid.split('.');
-  const key = parts[parts.length - 1].toLowerCase();
-  
-  for (const [tKey, data] of Object.entries(TRADE_LABELS)) {
-    if (key.includes(tKey) || rawTid.toLowerCase().includes(tKey)) {
-      return {
-        nameEn: data.en,
-        nameAr: data.ar,
-        defaultSpecEn: data.defaultSpecEn,
-        defaultSpecAr: data.defaultSpecAr
-      };
-    }
-  }
-
-  const fallback = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-  return {
-    nameEn: fallback,
-    nameAr: fallback,
-    defaultSpecEn: 'Specification verified according to architectural engineering standards',
-    defaultSpecAr: 'المواصفة مطابقة للمعايير الهندسية والمعمارية المعتمدة'
-  };
-}
-
-function parseTradeInstances(zInst: ZoneInstance): TradeSpecItem[] {
-  if (!zInst.trades || zInst.trades.length === 0) {
-    return resolveRoomTradeSpecs(zInst.zone_template_id);
-  }
-
-  const parsed = zInst.trades.map((tInst, tIdx) => {
-    const tid = tInst.trade_template_id || `trade-${tIdx}`;
-    const tradeInfo = resolveTradeInfo(tid);
-    const statusInfo = formatStatus(tInst.status);
-
-    let specEn = '';
-    let specAr = '';
-
-    if (tInst.attributes && tInst.attributes.length > 0) {
-      const parts: string[] = [];
-      tInst.attributes.forEach(attr => {
-        if (attr.value !== null && attr.value !== undefined && attr.value !== '') {
-          const valStr = typeof attr.value === 'boolean' ? (attr.value ? 'Yes' : 'No') : String(attr.value);
-          const attrLabel = attr.attribute_template_id.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-          parts.push(`${attrLabel}: ${valStr}`);
-        }
-      });
-      if (parts.length > 0) {
-        specEn = parts.join(' • ');
-        specAr = parts.join(' • ');
-      }
-    }
-
-    if (!specEn) {
-      specEn = tradeInfo.defaultSpecEn;
-      specAr = tradeInfo.defaultSpecAr;
-    }
-
-    let icon: 'zap' | 'wind' | 'droplet' | 'layers' = 'layers';
-    const lower = tid.toLowerCase();
-    if (lower.includes('elec') || lower.includes('light') || lower.includes('smart') || lower.includes('knx') || lower.includes('power')) {
-      icon = 'zap';
-    } else if (lower.includes('hvac') || lower.includes('air') || lower.includes('vent') || lower.includes('duct') || lower.includes('climate')) {
-      icon = 'wind';
-    } else if (lower.includes('plumb') || lower.includes('water') || lower.includes('drain') || lower.includes('sanitary')) {
-      icon = 'droplet';
-    }
-
-    return {
-      id: tInst.id || `trade-${tIdx}-${tid}`,
-      name: tradeInfo.nameEn,
-      nameAr: tradeInfo.nameAr,
-      spec: specEn,
-      specAr: specAr,
-      icon,
-      badge: statusInfo.en,
-      badgeAr: statusInfo.ar
-    };
-  });
-
-  return parsed.length > 0 ? parsed : resolveRoomTradeSpecs(zInst.zone_template_id);
 }
 
 export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintInspectorProps> = ({
   zones = [],
   propertyTitle,
   locale = 'en',
-  propertyType = 'villa'
+  propertyType = 'apartment',
+  propertyImages = []
 }) => {
   const isAr = locale === 'ar';
+  const [mounted, setMounted] = useState(false);
+  const [currentTheme, setCurrentTheme] = useState<'light' | 'dark'>('dark');
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [bldView, setBldView] = useState<{ mode: 'elevation' | 'floor' | 'unit'; floorKey: string; unitId?: string }>({
+    mode: propertyType === 'building' ? 'elevation' : 'unit',
+    floorKey: 'Floor 1',
+  });
   const [selectedZoneId, setSelectedZoneId] = useState<string | null>(null);
-  const [canvasMode, setCanvasMode] = useState<'blueprint' | 'photo'>('blueprint');
-  const [systemFilter, setSystemFilter] = useState<SystemKey>('all');
-  const [photoIndex, setPhotoIndex] = useState(0);
-
-  useEffect(() => {
-    setPhotoIndex(0);
-  }, [selectedZoneId]);
-  const [hoveredZoneId, setHoveredZoneId] = useState<string | null>(null);
-
-  // CAD Blueprint Interactive Zoom & Pan (Grab) State
+  const [activeModalZone, setActiveModalZone] = useState<ProcessedZone | null>(null);
   const [zoom, setZoom] = useState<number>(1);
   const [pan, setPan] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState<boolean>(false);
   const dragStartRef = useRef<{ x: number; y: number; panX: number; panY: number }>({ x: 0, y: 0, panX: 0, panY: 0 });
-  const hasDraggedRef = useRef<boolean>(false);
 
+  useEffect(() => {
+    setMounted(true);
+    const updateTheme = () => {
+      const themeAttr = document.documentElement.getAttribute('data-theme');
+      setCurrentTheme(themeAttr === 'light' ? 'light' : 'dark');
+    };
+    updateTheme();
+
+    const observer = new MutationObserver((mutations) => {
+      for (const mutation of mutations) {
+        if (mutation.attributeName === 'data-theme') {
+          updateTheme();
+        }
+      }
+    });
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+    return () => observer.disconnect();
+  }, []);
+
+  // Keyboard shortcut (Escape to exit fullscreen or modal)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        if (activeModalZone) setActiveModalZone(null);
+        else if (isFullscreen) setIsFullscreen(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [activeModalZone, isFullscreen]);
+
+  // 1. Process All Zones with Dimensions, Titles, and Trades
+  const processedZones = useMemo<ProcessedZone[]>(() => {
+    const list: ProcessedZone[] = [];
+
+    const processSingle = (z: ZoneInstance, parentFloorKey?: string, unitLabel?: string) => {
+      const tid = z.zone_template_id;
+      const metric = FALLBACK_ZONE_METRICS[tid] || GENERIC_ZONE_METRIC;
+      const titleFallback = FALLBACK_ZONE_TITLES[tid] || { en: z.instance_label || 'Space', ar: z.instance_label || 'مساحة' };
+      const titleEn = z.instance_label || titleFallback.en;
+      const titleAr = z.instance_label || titleFallback.ar;
+
+      const sp = z.spatial;
+      const length_m = sp?.length_m ?? metric.length_m;
+      const width_m = sp?.width_m ?? metric.width_m;
+      const sqm = sp?.sqm ?? metric.sqm;
+      const ceiling = metric.ceiling || '3.0m';
+      const dims = `${length_m.toFixed(1)}m × ${width_m.toFixed(1)}m`;
+
+      const floorKey = parentFloorKey || z.level_label || 'Floor 1';
+      const floorLabel = floorKey === 'bld_ground' ? 'Ground Floor' : floorKey === 'bld_roof' ? 'Roof' : floorKey === 'bld_basement' ? 'Basement' : floorKey;
+      const floorLabelAr = floorKey === 'bld_ground' ? 'الدور الأرضي' : floorKey === 'bld_roof' ? 'السطح' : floorKey === 'bld_basement' ? 'البدروم' : floorKey;
+
+      const doorCount = sp?.openings?.filter(o => o.kind === 'door').length ?? 1;
+      const windowCount = sp?.openings?.filter(o => o.kind === 'window').length ?? 1;
+
+      const baseImg = resolveSpaceImage(tid);
+      const imagesList = propertyImages.length > 0 ? propertyImages : [baseImg];
+      const trades = resolveRoomTradeSpecs(tid);
+
+      list.push({
+        id: z.id,
+        templateId: tid,
+        zoneTitle: titleEn,
+        zoneTitleAr: titleAr,
+        floorKey,
+        floorLabel,
+        floorLabelAr,
+        unitLabel: unitLabel || (tid === 'bld.unit' ? z.instance_label : undefined),
+        sqm,
+        ceiling,
+        dims,
+        length_m,
+        width_m,
+        badge: getZoneBadge(z),
+        image: baseImg,
+        imagesList,
+        trades,
+        doorCount,
+        windowCount,
+        spatial: z.spatial,
+      });
+
+      if (z.children && z.children.length > 0) {
+        for (const child of z.children) {
+          processSingle(child, floorKey, z.instance_label || 'Unit');
+        }
+      }
+    };
+
+    for (const z of zones) {
+      processSingle(z);
+    }
+
+    // If no zones provided, generate rich default apartment zones
+    if (list.length === 0) {
+      const defaultTids = ['apt.reception', 'apt.master_bed', 'apt.std_bed', 'apt.kitchen', 'apt.main_bath', 'apt.balcony'];
+      for (const tid of defaultTids) {
+        const m = FALLBACK_ZONE_METRICS[tid] || GENERIC_ZONE_METRIC;
+        const t = FALLBACK_ZONE_TITLES[tid] || { en: 'Room', ar: 'غرفة' };
+        list.push({
+          id: `def-${tid}`,
+          templateId: tid,
+          zoneTitle: t.en,
+          zoneTitleAr: t.ar,
+          floorKey: 'Floor 1',
+          floorLabel: 'Floor 1',
+          floorLabelAr: 'الدور الأول',
+          sqm: m.sqm,
+          ceiling: m.ceiling,
+          dims: `${m.length_m}m × ${m.width_m}m`,
+          length_m: m.length_m,
+          width_m: m.width_m,
+          badge: 'fully_finished',
+          image: resolveSpaceImage(tid),
+          imagesList: propertyImages.length > 0 ? propertyImages : [resolveSpaceImage(tid)],
+          trades: resolveRoomTradeSpecs(tid),
+          doorCount: 1,
+          windowCount: 1,
+        });
+      }
+    }
+
+    return list;
+  }, [zones, propertyImages]);
+
+  // 1.5 Extract Available Distinct Floors / Levels
+  const availableFloors = useMemo(() => {
+    const keys = Array.from(new Set(processedZones.map(z => z.floorKey))).filter(Boolean);
+    if (keys.length === 0) return ['Floor 1'];
+    return keys;
+  }, [processedZones]);
+
+  const [activeFloorKey, setActiveFloorKey] = useState<string>(availableFloors[0] || 'Floor 1');
+
+  // Keep activeFloorKey in sync when floors change
+  useEffect(() => {
+    if (availableFloors.length > 0 && !availableFloors.includes(activeFloorKey)) {
+      setActiveFloorKey(availableFloors[0]);
+    }
+  }, [availableFloors, activeFloorKey]);
+
+  // 2. Active Zones for Current View
+  const currentViewZones = useMemo(() => {
+    if (propertyType === 'building') {
+      if (bldView.mode === 'unit') {
+        return processedZones.filter(z => z.unitLabel && z.floorKey === bldView.floorKey);
+      }
+      return processedZones.filter(z => z.floorKey === bldView.floorKey);
+    }
+    // If property has multiple floors (e.g. Ground Floor, First Floor, Roof), filter by active floor tab!
+    if (availableFloors.length > 1) {
+      return processedZones.filter(z => z.floorKey === activeFloorKey);
+    }
+    return processedZones;
+  }, [propertyType, bldView, processedZones, availableFloors, activeFloorKey]);
+
+  // 3. Metric Layout
+  const metricLayout = useMemo(() => {
+    const inputs = currentViewZones.map(z => metricInputFromSpatial(z.id, z.spatial, z.sqm));
+    return computeMetricLayout(inputs, 680, 440);
+  }, [currentViewZones]);
+
+  const previewSlots = useMemo(() => {
+    return metricLayout.rooms.map((s: MetricRoomRect) => {
+      const found = currentViewZones.find(z => z.id === s.id);
+      return {
+        ...s,
+        zone: found,
+        title: isAr ? found?.zoneTitleAr || '' : found?.zoneTitle || '',
+        sqm: found?.sqm || 0,
+        dims: found?.dims || '',
+      };
+    });
+  }, [metricLayout, currentViewZones, isAr]);
+
+  // Structural Envelope (indoor conditioned rooms only)
+  const indoorSlots = useMemo(() => {
+    return previewSlots.filter((s: { zone?: ProcessedZone }) => {
+      const tid = s.zone?.templateId || '';
+      return !tid.includes('balcony') && !tid.includes('terrace');
+    });
+  }, [previewSlots]);
+
+  const envBounds = useMemo(() => {
+    const slots = indoorSlots.length > 0 ? indoorSlots : previewSlots;
+    if (slots.length === 0) return { minX: 40, maxX: 640, minY: 40, maxY: 400 };
+    return {
+      minX: Math.min(...slots.map((s: { x: number }) => s.x)),
+      maxX: Math.max(...slots.map((s: { x: number; w: number }) => s.x + s.w)),
+      minY: Math.min(...slots.map((s: { y: number }) => s.y)),
+      maxY: Math.max(...slots.map((s: { y: number; h: number }) => s.y + s.h)),
+    };
+  }, [indoorSlots, previewSlots]);
+
+  // Dynamic layout bounding coordinates for rooms
+  const layoutBounds = useMemo(() => {
+    if (previewSlots.length === 0) return { minX: 40, maxX: 640, minY: 40, maxY: 400 };
+    const minX = Math.min(...previewSlots.map(s => s.x));
+    const maxX = Math.max(...previewSlots.map(s => s.x + s.w));
+    const minY = Math.min(...previewSlots.map(s => s.y));
+    const maxY = Math.max(...previewSlots.map(s => s.y + s.h));
+    return { minX, maxX, minY, maxY };
+  }, [previewSlots]);
+
+  // Mathematically calculated positions for stamps & compass to prevent clipping
+  const stampWidth = locale === 'ar' ? 260 : 248;
+  const stampX = useMemo(() => Math.max(layoutBounds.minX, layoutBounds.maxX - stampWidth), [layoutBounds.minX, layoutBounds.maxX, stampWidth]);
+  const stampY = useMemo(() => layoutBounds.maxY + 10, [layoutBounds.maxY]);
+  const compassX = useMemo(() => layoutBounds.maxX - 22, [layoutBounds.maxX]);
+  const compassY = useMemo(() => layoutBounds.minY - 26, [layoutBounds.minY]);
+
+  // Dynamic tight viewBox that incorporates drawing, stamps, and north arrow
+  const dynamicViewBox = useMemo(() => {
+    const { minX, maxX, minY, maxY } = layoutBounds;
+    const effectiveMinX = Math.min(minX, stampX);
+    const effectiveMaxX = Math.max(maxX, stampX + stampWidth, compassX + 30);
+    const padLeft = 24;
+    const padRight = 24;
+    const padTop = 38; // Accommodates North Compass Arrow
+    const padBottom = 46; // Accommodates Title Block Stamp
+    const x = Math.floor(effectiveMinX - padLeft);
+    const y = Math.floor(minY - padTop);
+    const w = Math.ceil((effectiveMaxX - effectiveMinX) + padLeft + padRight);
+    const h = Math.ceil((maxY - minY) + padTop + padBottom);
+    return `${x} ${y} ${w} ${h}`;
+  }, [layoutBounds, stampX, stampWidth, compassX]);
+
+  const totalWidthM = useMemo(() => {
+    if (previewSlots.length === 0) return '24.00';
+    return ((layoutBounds.maxX - layoutBounds.minX) / (metricLayout.pxPerMeter || 1)).toFixed(2);
+  }, [layoutBounds, metricLayout]);
+
+  const totalDepthM = useMemo(() => {
+    if (previewSlots.length === 0) return '16.00';
+    return ((layoutBounds.maxY - layoutBounds.minY) / (metricLayout.pxPerMeter || 1)).toFixed(2);
+  }, [layoutBounds, metricLayout]);
+
+  // Zoom and Pan Handlers
   const handleZoomIn = () => setZoom(prev => Math.min(prev + 0.25, 2.5));
   const handleZoomOut = () => setZoom(prev => Math.max(prev - 0.25, 0.75));
   const handleResetZoom = () => { setZoom(1); setPan({ x: 0, y: 0 }); };
 
-  const handleMouseDown = (e: React.MouseEvent<SVGSVGElement>) => {
+  const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
     if (e.button !== 0) return;
     setIsDragging(true);
-    hasDraggedRef.current = false;
     dragStartRef.current = { x: e.clientX, y: e.clientY, panX: pan.x, panY: pan.y };
   };
 
-  const handleMouseMove = (e: React.MouseEvent<SVGSVGElement>) => {
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!isDragging) return;
     const dx = e.clientX - dragStartRef.current.x;
     const dy = e.clientY - dragStartRef.current.y;
-    if (Math.abs(dx) > 3 || Math.abs(dy) > 3) {
-      hasDraggedRef.current = true;
-    }
     setPan({
       x: dragStartRef.current.panX + dx,
       y: dragStartRef.current.panY + dy,
     });
   };
 
-  const handleMouseUp = () => {
-    setIsDragging(false);
+  const handleMouseUp = () => setIsDragging(false);
+
+  // When room is clicked -> open popup modal with specs
+  const handleRoomClick = (zone: ProcessedZone | undefined) => {
+    if (!zone) return;
+    setActiveModalZone(zone);
   };
 
-  const handleSvgWheel = (e: React.WheelEvent<SVGSVGElement>) => {
-    if (e.ctrlKey || e.metaKey || e.altKey) {
-      e.preventDefault();
-      if (e.deltaY < 0) {
-        setZoom(prev => Math.min(prev + 0.15, 2.5));
-      } else {
-        setZoom(prev => Math.max(prev - 0.15, 0.75));
-      }
+  const isGround = bldView.floorKey === 'bld_ground' || bldView.floorKey === 'Ground Floor';
+  const isRoof = bldView.floorKey === 'bld_roof' || bldView.floorKey === 'Roof';
+  const isBasement = bldView.floorKey === 'bld_basement' || bldView.floorKey === 'Basement';
+
+  // Vector SVG Content Renderer
+  const renderVectorSvgContent = () => {
+    /* ─── 1. BUILDING FACADE & ELEVATION VIEW ─── */
+    if (propertyType === 'building' && bldView.mode === 'elevation') {
+      const bldX = 140;
+      const bldW = 460;
+      const bldRight = bldX + bldW;
+      const groundBaseY = 380;
+      const basementH = 50;
+      const groundY = 320;
+      const typFloorH = 60;
+      const actualTypicalTotalH = 3 * typFloorH;
+      const roofY = groundY - actualTypicalTotalH;
+
+      const buildingFloors = [
+        { key: 'Floor 3', labelEn: 'Floor 3', labelAr: 'الدور الثالث', sqm: 412, unitsCount: 2 },
+        { key: 'Floor 2', labelEn: 'Floor 2', labelAr: 'الدور الثاني', sqm: 412, unitsCount: 2 },
+        { key: 'Floor 1', labelEn: 'Floor 1', labelAr: 'الدور الأول', sqm: 412, unitsCount: 2 },
+      ];
+
+      return (
+        <svg
+          viewBox="0 0 760 480"
+          className="cad-vector-svg fp-building-elevation"
+          style={{ transform: `scale(${zoom}) translate(${pan.x}px, ${pan.y}px)`, transformOrigin: 'center center', direction: 'ltr' }}
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <defs>
+            <pattern id="pubElevGrid" width="12" height="12" patternUnits="userSpaceOnUse">
+              <path d="M 12 0 L 0 0 0 12" fill="none" stroke="var(--cad-grid-color)" strokeWidth="0.5" />
+            </pattern>
+            <pattern id="pubElevMajorGrid" width="60" height="60" patternUnits="userSpaceOnUse">
+              <path d="M 60 0 L 0 0 0 60" fill="none" stroke="var(--cad-grid-color)" strokeOpacity="0.8" strokeWidth="0.8" />
+            </pattern>
+            <pattern id="pubElevGroundHatch" width="8" height="8" patternTransform="rotate(45 0 0)" patternUnits="userSpaceOnUse">
+              <line x1="0" y1="0" x2="0" y2="8" stroke="var(--gold-primary)" strokeOpacity="0.35" strokeWidth="1" />
+            </pattern>
+            <linearGradient id="pubElevGlassGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="rgba(127, 180, 216, 0.35)" />
+              <stop offset="40%" stopColor="rgba(127, 180, 216, 0.15)" />
+              <stop offset="60%" stopColor="rgba(221, 167, 82, 0.08)" />
+              <stop offset="100%" stopColor="rgba(127, 180, 216, 0.25)" />
+            </linearGradient>
+            <linearGradient id="pubElevBalconyGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stopColor="rgba(127, 180, 216, 0.28)" />
+              <stop offset="100%" stopColor="rgba(127, 180, 216, 0.06)" />
+            </linearGradient>
+            <linearGradient id="pubElevLobbyGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stopColor="rgba(221, 167, 82, 0.22)" />
+              <stop offset="100%" stopColor="rgba(221, 167, 82, 0.04)" />
+            </linearGradient>
+          </defs>
+
+          {/* Background Grid */}
+          <rect width="760" height="480" fill="var(--cad-stage-bg)" />
+          <rect width="760" height="480" fill="url(#pubElevGrid)" />
+          <rect width="760" height="480" fill="url(#pubElevMajorGrid)" opacity="0.4" />
+
+          {/* Left Datum / Elevation Level Lines */}
+          {buildingFloors.map((f, idx) => {
+            const floorY = roofY + idx * typFloorH;
+            const datumM = ((buildingFloors.length - idx) * 3.3).toFixed(2);
+            return (
+              <g key={`datum-${f.key}`} className="fp-datum-group">
+                <line x1="20" y1={floorY} x2={bldX - 8} y2={floorY} stroke="var(--cad-dims-color)" strokeOpacity="0.4" strokeDasharray="3 3" />
+                <circle cx="34" cy={floorY} r="4" fill="none" stroke="var(--gold-primary)" strokeWidth="1" />
+                <line x1="30" y1={floorY} x2="38" y2={floorY} stroke="var(--gold-primary)" strokeWidth="1" />
+                <line x1="34" y1={floorY - 4} x2="34" y2={floorY + 4} stroke="var(--gold-primary)" strokeWidth="1" />
+                <text x="44" y={floorY + 3} fontSize="8.5" fill="var(--gold-primary)" fontFamily="monospace">
+                  +{datumM}m
+                </text>
+              </g>
+            );
+          })}
+          {/* Ground Datum Line */}
+          <g className="fp-datum-group">
+            <line x1="20" y1={groundBaseY} x2={bldX - 8} y2={groundBaseY} stroke="var(--gold-primary)" strokeWidth="1.2" />
+            <text x="44" y={groundBaseY + 3} fontSize="9" fill="var(--gold-primary)" fontWeight="800" fontFamily="monospace">
+              ±0.00m
+            </text>
+          </g>
+          {/* Basement Datum Line */}
+          <g className="fp-datum-group">
+            <line x1="20" y1={groundBaseY + basementH} x2={bldX - 8} y2={groundBaseY + basementH} stroke="var(--cad-dims-color)" strokeOpacity="0.4" strokeDasharray="3 3" />
+            <text x="44" y={groundBaseY + basementH + 3} fontSize="8.5" fill="var(--gold-primary)" fontFamily="monospace">
+              -3.00m
+            </text>
+          </g>
+
+          {/* ─── ROOFTOP ARCHITECTURAL CROWN ─── */}
+          <g
+            role="button"
+            tabIndex={0}
+            className="pub-elev-floor-row"
+            style={{ cursor: 'pointer' }}
+            onClick={() => setBldView({ mode: 'floor', floorKey: 'bld_roof' })}
+          >
+            {/* Left Rooftop Modern Pergola */}
+            <g transform={`translate(${bldX + 24}, ${roofY - 24})`}>
+              <rect width="140" height="24" fill="rgba(221, 167, 82, 0.08)" stroke="var(--gold-primary)" strokeWidth="1.2" />
+              {[20, 40, 60, 80, 100, 120].map(px => (
+                <line key={`perg-${px}`} x1={px} y1="0" x2={px} y2="24" stroke="var(--cad-dims-color)" strokeOpacity="0.4" strokeWidth="1" />
+              ))}
+              <line x1="0" y1="0" x2="140" y2="0" stroke="var(--gold-primary)" strokeWidth="2" />
+            </g>
+
+            {/* Center Elevator Penthouse Machine Room */}
+            <g transform={`translate(${bldX + bldW / 2 - 40}, ${roofY - 32})`}>
+              <rect width="80" height="32" rx="2" fill="var(--cad-core-bg)" stroke="var(--gold-primary)" strokeWidth="1.5" />
+              <line x1="20" y1="10" x2="60" y2="10" stroke="var(--cad-dims-color)" strokeOpacity="0.5" strokeWidth="1" />
+              <line x1="20" y1="16" x2="60" y2="16" stroke="var(--cad-dims-color)" strokeOpacity="0.5" strokeWidth="1" />
+              <line x1="20" y1="22" x2="60" y2="22" stroke="var(--cad-dims-color)" strokeOpacity="0.5" strokeWidth="1" />
+              <text x="40" y="7" fontSize="7" fill="var(--gold-primary)" textAnchor="middle" fontWeight="700" fontFamily="monospace">ELEVATOR PENTHOUSE</text>
+            </g>
+
+            {/* Right Rooftop Water Storage Tanks */}
+            <g transform={`translate(${bldRight - 110}, ${roofY - 22})`}>
+              <rect x="0" y="4" width="34" height="18" rx="3" fill="rgba(127, 180, 216, 0.15)" stroke="#7FB4D8" strokeWidth="1.2" />
+              <rect x="42" y="4" width="34" height="18" rx="3" fill="rgba(127, 180, 216, 0.15)" stroke="#7FB4D8" strokeWidth="1.2" />
+              <line x1="34" y1="13" x2="42" y2="13" stroke="#7FB4D8" strokeWidth="1.5" />
+              <text x="38" y="-1" fontSize="6.5" fill="#7FB4D8" textAnchor="middle" fontFamily="monospace">WATER TANKS</text>
+            </g>
+
+            {/* Roof Parapet & Glass Balustrade */}
+            <rect x={bldX} y={roofY - 4} width={bldW} height="4" fill="var(--gold-primary)" />
+            <line x1={bldX} y1={roofY - 14} x2={bldRight} y2={roofY - 14} stroke="rgba(127, 180, 216, 0.6)" strokeWidth="1" strokeDasharray="6 3" />
+
+            {/* Roof Info Card on the Right */}
+            <g transform={`translate(${bldRight + 16}, ${roofY - 20})`}>
+              <rect width="138" height="32" rx="6" fill="var(--cad-stamp-bg)" stroke="var(--gold-primary)" strokeOpacity="0.4" strokeWidth="1" />
+              <text x="8" y="14" fontSize="9.5" fill="var(--cad-text-primary)" fontWeight="700">
+                {isAr ? 'السطح والتراس' : 'Roof Terrace'}
+              </text>
+              <text x="8" y="25" fontSize="8" fill="var(--gold-primary)" fontFamily="monospace" fontWeight="700">
+                280 m²
+              </text>
+              <text x="130" y="25" fontSize="7.5" fill="var(--cad-text-muted)" textAnchor="end">
+                {isAr ? 'عرض ‹' : 'Inspect ›'}
+              </text>
+            </g>
+          </g>
+
+          {/* ─── TYPICAL RESIDENTIAL FLOORS (FACADE & BALCONIES) ─── */}
+          {buildingFloors.map((floor, idx) => {
+            const floorY = roofY + idx * typFloorH;
+
+            return (
+              <g
+                key={floor.key}
+                role="button"
+                tabIndex={0}
+                className="pub-elev-floor-row"
+                style={{ cursor: 'pointer' }}
+                onClick={() => setBldView({ mode: 'floor', floorKey: floor.key })}
+              >
+                {/* Floor Backdrop */}
+                <rect
+                  x={bldX}
+                  y={floorY}
+                  width={bldW}
+                  height={typFloorH}
+                  fill={idx % 2 === 0 ? 'rgba(255, 255, 255, 0.015)' : 'rgba(221, 167, 82, 0.02)'}
+                  stroke="none"
+                />
+
+                {/* Concrete Floor Slab Band */}
+                <rect x={bldX - 4} y={floorY + typFloorH - 3} width={bldW + 8} height="4" fill="var(--gold-primary)" opacity="0.9" />
+
+                {/* Left Residential Bay (Flat A Balcony & Windows) */}
+                <g transform={`translate(${bldX + 16}, ${floorY + 4})`}>
+                  <rect x="10" y="4" width="70" height={typFloorH - 12} fill="url(#pubElevGlassGrad)" stroke="#7FB4D8" strokeWidth="1" />
+                  <line x1="45" y1="4" x2="45" y2={typFloorH - 8} stroke="#7FB4D8" strokeWidth="1.2" />
+                  <rect x="4" y={typFloorH - 10} width="82" height="4" fill="var(--gold-primary)" />
+                  <rect x="4" y={typFloorH - 22} width="82" height="12" fill="url(#pubElevBalconyGrad)" stroke="#7FB4D8" strokeWidth="1" />
+                  <line x1="24" y1={typFloorH - 22} x2="24" y2={typFloorH - 10} stroke="#7FB4D8" strokeWidth="1" />
+                  <line x1="44" y1={typFloorH - 22} x2="44" y2={typFloorH - 10} stroke="#7FB4D8" strokeWidth="1" />
+                  <line x1="64" y1={typFloorH - 22} x2="64" y2={typFloorH - 10} stroke="#7FB4D8" strokeWidth="1" />
+
+                  <rect x="100" y="8" width="56" height={typFloorH - 20} rx="1" fill="url(#pubElevGlassGrad)" stroke="#7FB4D8" strokeWidth="1" />
+                  <line x1="128" y1="8" x2="128" y2={typFloorH - 12} stroke="#7FB4D8" strokeWidth="1" />
+                </g>
+
+                {/* Center Architectural Spine (Core Glazing) */}
+                <g transform={`translate(${bldX + bldW / 2 - 28}, ${floorY + 4})`}>
+                  <rect width="56" height={typFloorH - 8} fill="var(--cad-core-bg)" stroke="var(--gold-primary)" strokeOpacity="0.4" strokeWidth="1.2" />
+                  <line x1="14" y1="0" x2="14" y2={typFloorH - 8} stroke="var(--gold-primary)" strokeOpacity="0.3" strokeWidth="1" />
+                  <line x1="28" y1="0" x2="28" y2={typFloorH - 8} stroke="var(--gold-primary)" strokeOpacity="0.3" strokeWidth="1" />
+                  <line x1="42" y1="0" x2="42" y2={typFloorH - 8} stroke="var(--gold-primary)" strokeOpacity="0.3" strokeWidth="1" />
+                </g>
+
+                {/* Right Residential Bay (Flat B Windows & Balcony) */}
+                <g transform={`translate(${bldRight - 186}, ${floorY + 4})`}>
+                  <rect x="14" y="8" width="56" height={typFloorH - 20} rx="1" fill="url(#pubElevGlassGrad)" stroke="#7FB4D8" strokeWidth="1" />
+                  <line x1="42" y1="8" x2="42" y2={typFloorH - 12} stroke="#7FB4D8" strokeWidth="1" />
+
+                  <rect x="90" y="4" width="70" height={typFloorH - 12} fill="url(#pubElevGlassGrad)" stroke="#7FB4D8" strokeWidth="1" />
+                  <line x1="125" y1="4" x2="125" y2={typFloorH - 8} stroke="#7FB4D8" strokeWidth="1.2" />
+                  <rect x="84" y={typFloorH - 10} width="82" height="4" fill="var(--gold-primary)" />
+                  <rect x="84" y={typFloorH - 22} width="82" height="12" fill="url(#pubElevBalconyGrad)" stroke="#7FB4D8" strokeWidth="1" />
+                  <line x1="104" y1={typFloorH - 22} x2="104" y2={typFloorH - 10} stroke="#7FB4D8" strokeWidth="1" />
+                  <line x1="124" y1={typFloorH - 22} x2="124" y2={typFloorH - 10} stroke="#7FB4D8" strokeWidth="1" />
+                  <line x1="144" y1={typFloorH - 22} x2="144" y2={typFloorH - 10} stroke="#7FB4D8" strokeWidth="1" />
+                </g>
+
+                {/* Right Info Card */}
+                <g transform={`translate(${bldRight + 16}, ${floorY + 12})`}>
+                  <rect width="138" height="36" rx="6" fill="var(--cad-stamp-bg)" stroke="var(--gold-primary)" strokeOpacity="0.3" strokeWidth="1" />
+                  <text x="8" y="15" fontSize="10" fill="var(--cad-text-primary)" fontWeight="700">
+                    {isAr ? floor.labelAr : floor.labelEn}
+                  </text>
+                  <text x="8" y="27" fontSize="8" fill="var(--gold-primary)" fontFamily="monospace">
+                    {`${floor.sqm} m² • 2 ${isAr ? 'شقق' : 'units'}`}
+                  </text>
+                  <text x="130" y="22" fontSize="8" fill="var(--gold-primary)" textAnchor="end">
+                    {isAr ? 'عرض ‹' : 'Inspect ›'}
+                  </text>
+                </g>
+              </g>
+            );
+          })}
+
+          {/* ─── GROUND FLOOR LOBBY ─── */}
+          <g
+            role="button"
+            tabIndex={0}
+            className="pub-elev-floor-row"
+            style={{ cursor: 'pointer' }}
+            onClick={() => setBldView({ mode: 'floor', floorKey: 'bld_ground' })}
+          >
+            <rect x={bldX} y={groundY} width={bldW} height="60" fill="url(#pubElevLobbyGrad)" stroke="none" />
+            <rect x={bldX - 6} y={groundBaseY - 4} width={bldW + 12} height="5" fill="var(--gold-primary)" />
+            {/* Grand Portico Entrance Canopy */}
+            <g transform={`translate(${bldX + bldW / 2 - 40}, ${groundY + 12})`}>
+              <rect x="0" y="0" width="80" height="48" fill="var(--cad-core-bg)" stroke="var(--gold-primary)" strokeWidth="1.5" />
+              <rect x="18" y="10" width="44" height="38" fill="url(#pubElevGlassGrad)" stroke="#7FB4D8" strokeWidth="1" />
+              <line x1="40" y1="10" x2="40" y2="48" stroke="var(--gold-primary)" strokeWidth="1.2" />
+              <text x="40" y="6" fontSize="6.5" fill="var(--gold-primary)" textAnchor="middle" fontWeight="800" letterSpacing="0.1em">GRAND LOBBY</text>
+            </g>
+            {/* Retail Storefront Glazing */}
+            <g transform={`translate(${bldX + 20}, ${groundY + 16})`}>
+              <rect width="130" height="44" fill="url(#pubElevGlassGrad)" stroke="#7FB4D8" strokeWidth="1" />
+              <line x1="65" y1="0" x2="65" y2="44" stroke="#7FB4D8" strokeWidth="1" />
+              <text x="65" y="26" fontSize="7.5" fill="var(--cad-text-primary)" textAnchor="middle" fontWeight="700">COMMERCIAL SUITE</text>
+            </g>
+            {/* Security Guard / Gate */}
+            <g transform={`translate(${bldRight - 150}, ${groundY + 16})`}>
+              <rect width="130" height="44" fill="url(#pubElevGlassGrad)" stroke="#7FB4D8" strokeWidth="1" />
+              <line x1="65" y1="0" x2="65" y2="44" stroke="#7FB4D8" strokeWidth="1" />
+              <text x="65" y="26" fontSize="7.5" fill="var(--cad-text-primary)" textAnchor="middle" fontWeight="700">RECEPTION & GATE</text>
+            </g>
+
+            {/* Ground Info Card */}
+            <g transform={`translate(${bldRight + 16}, ${groundY + 14})`}>
+              <rect width="138" height="36" rx="6" fill="var(--cad-stamp-bg)" stroke="var(--gold-primary)" strokeWidth="1.2" />
+              <text x="8" y="15" fontSize="10" fill="var(--cad-text-primary)" fontWeight="800">
+                {isAr ? 'الدور الأرضي' : 'Ground Floor'}
+              </text>
+              <text x="8" y="27" fontSize="8" fill="var(--gold-primary)" fontFamily="monospace">
+                412 m² • Lobby & Retail
+              </text>
+              <text x="130" y="22" fontSize="8" fill="var(--gold-primary)" textAnchor="end">
+                {isAr ? 'عرض ‹' : 'Inspect ›'}
+              </text>
+            </g>
+          </g>
+
+          {/* ─── BASEMENT FLOOR ─── */}
+          <g
+            role="button"
+            tabIndex={0}
+            className="pub-elev-floor-row"
+            style={{ cursor: 'pointer' }}
+            onClick={() => setBldView({ mode: 'floor', floorKey: 'bld_basement' })}
+          >
+            {/* Earth & Concrete Retaining Soil Background */}
+            <rect x={bldX - 10} y={groundBaseY + 1} width={bldW + 20} height={basementH} fill="url(#pubElevGroundHatch)" opacity="0.3" />
+            <rect x={bldX} y={groundBaseY + 1} width={bldW} height={basementH} fill="var(--cad-core-bg)" stroke="var(--gold-primary)" strokeWidth="1.5" strokeDasharray="6 3" />
+            {/* Basement Ramp / Garage Pillars */}
+            <g transform={`translate(${bldX + 24}, ${groundBaseY + 10})`}>
+              <rect width="140" height="32" fill="rgba(221, 167, 82, 0.04)" stroke="var(--gold-primary)" strokeOpacity="0.4" strokeWidth="1" strokeDasharray="4 2" />
+              <text x="70" y="20" fontSize="8" fill="var(--cad-text-primary)" textAnchor="middle" fontWeight="700">PARKING (P-01..P-08)</text>
+            </g>
+            <g transform={`translate(${bldRight - 164}, ${groundBaseY + 10})`}>
+              <rect width="140" height="32" fill="rgba(221, 167, 82, 0.04)" stroke="var(--gold-primary)" strokeOpacity="0.4" strokeWidth="1" strokeDasharray="4 2" />
+              <text x="70" y="20" fontSize="8" fill="var(--cad-text-primary)" textAnchor="middle" fontWeight="700">PUMPS & GENERATOR</text>
+            </g>
+
+            {/* Basement Info Card */}
+            <g transform={`translate(${bldRight + 16}, ${groundBaseY + 8})`}>
+              <rect width="138" height="34" rx="6" fill="var(--cad-stamp-bg)" stroke="var(--gold-primary)" strokeOpacity="0.4" strokeWidth="1" />
+              <text x="8" y="14" fontSize="9.5" fill="var(--cad-text-primary)" fontWeight="700">
+                {isAr ? 'البدروم والمواقف' : 'Basement Parking'}
+              </text>
+              <text x="8" y="26" fontSize="8" fill="var(--gold-primary)" fontFamily="monospace">
+                412 m² • Secure Garage
+              </text>
+              <text x="130" y="20" fontSize="8" fill="var(--gold-primary)" textAnchor="end">
+                {isAr ? 'عرض ‹' : 'Inspect ›'}
+              </text>
+            </g>
+          </g>
+        </svg>
+      );
     }
+
+    /* ─── 2. BUILDING FLOOR PLATE VIEW ─── */
+    if (propertyType === 'building' && bldView.mode === 'floor') {
+      return (
+        <svg
+          viewBox="0 0 740 480"
+          className="cad-vector-svg"
+          style={{ transform: `scale(${zoom}) translate(${pan.x}px, ${pan.y}px)`, transformOrigin: 'center center', direction: 'ltr' }}
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <defs>
+            <pattern id="pubFloorCadGrid" width="12" height="12" patternUnits="userSpaceOnUse">
+              <path d="M 12 0 L 0 0 0 12" fill="none" stroke="var(--cad-grid-color)" strokeWidth="0.5" />
+            </pattern>
+            <pattern id="pubParquetPattern" width="16" height="16" patternUnits="userSpaceOnUse">
+              <path d="M 0 0 L 8 8 M 8 0 L 16 8 M 0 8 L 8 16 M 8 8 L 16 16" fill="none" stroke="var(--cad-parquet-stroke)" strokeWidth="0.8" />
+              <rect width="16" height="16" fill="var(--cad-parquet-fill)" />
+            </pattern>
+            <pattern id="pubTilePattern" width="14" height="14" patternUnits="userSpaceOnUse">
+              <rect width="14" height="14" fill="var(--cad-tile-fill)" stroke="var(--cad-tile-stroke)" strokeWidth="0.6" />
+            </pattern>
+            <pattern id="pubDeckPattern" width="8" height="16" patternUnits="userSpaceOnUse">
+              <line x1="0" y1="0" x2="8" y2="0" stroke="var(--cad-deck-stroke)" strokeWidth="0.8" />
+              <rect width="8" height="16" fill="var(--cad-deck-fill)" />
+            </pattern>
+            <pattern id="pubBedPattern" width="10" height="10" patternUnits="userSpaceOnUse">
+              <circle cx="5" cy="5" r="0.8" fill="var(--cad-bed-dot)" />
+              <rect width="10" height="10" fill="var(--cad-bed-fill)" />
+            </pattern>
+            <pattern id="pubColumnHatch" width="6" height="6" patternTransform="rotate(45 0 0)" patternUnits="userSpaceOnUse">
+              <line x1="0" y1="0" x2="0" y2="6" stroke="var(--gold-primary)" strokeWidth="1.2" />
+            </pattern>
+          </defs>
+
+          <rect width="740" height="480" fill="var(--cad-stage-bg)" />
+          <rect width="740" height="480" fill="url(#pubFloorCadGrid)" />
+
+          {/* Dimension Leader Lines */}
+          <g className="fp-dimension-leaders" opacity="0.95">
+            <line x1="64" y1="36" x2="676" y2="36" stroke="var(--gold-primary)" strokeWidth="1" />
+            <line x1="64" y1="30" x2="64" y2="46" stroke="var(--gold-primary)" strokeWidth="1.5" />
+            <line x1="676" y1="30" x2="676" y2="46" stroke="var(--gold-primary)" strokeWidth="1.5" />
+            <rect x="320" y="26" width="100" height="18" rx="4" fill="var(--cad-stamp-bg)" stroke="var(--gold-primary)" strokeWidth="0.8" />
+            <text x="370" y="38" fontSize="8.5" fill="var(--cad-dims-color)" textAnchor="middle" fontFamily="monospace" fontWeight="800">24.00 m</text>
+
+            <line x1="36" y1="56" x2="36" y2="424" stroke="var(--gold-primary)" strokeWidth="1" />
+            <line x1="30" y1="56" x2="46" y2="56" stroke="var(--gold-primary)" strokeWidth="1.5" />
+            <line x1="30" y1="424" x2="46" y2="424" stroke="var(--gold-primary)" strokeWidth="1.5" />
+            <rect x="18" y="230" width="36" height="18" rx="4" fill="var(--cad-stamp-bg)" stroke="var(--gold-primary)" strokeWidth="0.8" />
+            <text x="36" y="242" fontSize="8" fill="var(--cad-dims-color)" textAnchor="middle" fontFamily="monospace" fontWeight="800">16.00m</text>
+          </g>
+
+          {/* Exterior Double Insulated Walls */}
+          <rect x="64" y="56" width="612" height="368" fill="none" stroke="var(--gold-primary)" strokeWidth="4" />
+          <rect x="68" y="60" width="604" height="360" fill="none" stroke="var(--gold-primary)" strokeOpacity="0.4" strokeWidth="1" />
+
+          {/* Corner Concrete Columns */}
+          {[
+            [64, 56], [320, 56], [420, 56], [676, 56],
+            [64, 240], [676, 240],
+            [64, 424], [320, 424], [420, 424], [676, 424]
+          ].map(([cx, cy], i) => (
+            <rect key={`col-${i}`} x={cx - 6} y={cy - 6} width="12" height="12" fill="url(#pubColumnHatch)" stroke="var(--gold-primary)" strokeWidth="1.2" />
+          ))}
+
+          {/* GROUND FLOOR PLATE */}
+          {isGround && (
+            <g className="pub-ground-plate">
+              <rect x="70" y="62" width="600" height="356" fill="url(#pubTilePattern)" />
+              <circle cx="370" cy="424" r="20" fill="var(--cad-core-bg)" stroke="var(--gold-primary)" strokeWidth="1.5" />
+              <text x="370" y="446" fontSize="7.5" fill="var(--gold-primary)" textAnchor="middle" fontWeight="800">ENTRANCE GATE</text>
+              <g transform="translate(330, 80)">
+                <rect width="80" height="74" fill="var(--cad-core-bg)" stroke="var(--gold-primary)" strokeWidth="2" />
+                <text x="40" y="42" fontSize="9" fill="var(--gold-primary)" textAnchor="middle" fontWeight="800">ELEVATOR</text>
+              </g>
+              <g transform="translate(330, 160)">
+                <rect width="80" height="100" fill="var(--cad-core-bg)" stroke="var(--gold-primary)" strokeWidth="2" />
+                <text x="40" y="55" fontSize="7.5" fill="var(--gold-primary)" textAnchor="middle" fontWeight="800">STAIRCASE ↗</text>
+              </g>
+              <g transform="translate(80, 80)">
+                <rect width="220" height="160" fill="rgba(221,167,82,0.04)" stroke="var(--gold-primary)" strokeOpacity="0.4" strokeWidth="1.5" />
+                <text x="110" y="90" fontSize="9.5" fill="var(--cad-text-primary)" textAnchor="middle" fontWeight="800">GROUND GARAGE BAYS</text>
+              </g>
+              <g transform="translate(80, 260)">
+                <rect width="100" height="150" fill="var(--cad-tile-fill)" stroke="#3B82F6" strokeWidth="1.5" strokeDasharray="4 2" />
+                <text x="50" y="80" fontSize="7.5" fill="#3B82F6" textAnchor="middle" fontWeight="800">WATER PUMPS</text>
+              </g>
+              <g transform="translate(190, 260)">
+                <rect width="110" height="150" fill="var(--cad-parquet-fill)" stroke="var(--gold-primary)" strokeWidth="1.5" strokeDasharray="4 2" />
+                <text x="55" y="80" fontSize="7.5" fill="var(--gold-primary)" textAnchor="middle" fontWeight="800">⚡ ELECTRIC BOX</text>
+              </g>
+              <g transform="translate(440, 80)">
+                <rect width="220" height="200" fill="var(--cad-parquet-fill)" stroke="var(--gold-primary)" strokeOpacity="0.4" strokeWidth="1.5" />
+                <text x="110" y="110" fontSize="10" fill="var(--cad-text-primary)" textAnchor="middle" fontWeight="800">COMMERCIAL RETAIL SHOP</text>
+              </g>
+            </g>
+          )}
+
+          {/* BASEMENT FLOOR PLATE */}
+          {isBasement && (
+            <g className="pub-basement-plate">
+              <rect x="70" y="62" width="600" height="356" fill="rgba(10, 14, 24, 0.4)" stroke="var(--gold-primary)" strokeDasharray="4 2" />
+              <g transform="translate(80, 70)">
+                <rect width="580" height="220" fill="rgba(221,167,82,0.03)" stroke="var(--gold-primary)" strokeOpacity="0.4" strokeWidth="1.5" />
+                <text x="290" y="110" fontSize="14" fill="var(--gold-primary)" textAnchor="middle" fontWeight="800">BASEMENT PARKING ENCLAVE (P-01 to P-12)</text>
+                <text x="290" y="130" fontSize="9" fill="var(--cad-text-muted)" textAnchor="middle">Secure access via automatic hydraulic gate</text>
+              </g>
+              <g transform="translate(80, 300)">
+                <rect width="280" height="110" fill="var(--cad-tile-fill)" stroke="#3B82F6" strokeWidth="1.5" strokeDasharray="4 2" />
+                <text x="140" y="60" fontSize="9" fill="#3B82F6" textAnchor="middle" fontWeight="800">CENTRAL WATER TANK & MOTOR PUMPS</text>
+              </g>
+              <g transform="translate(380, 300)">
+                <rect width="280" height="110" fill="var(--cad-parquet-fill)" stroke="var(--gold-primary)" strokeWidth="1.5" strokeDasharray="4 2" />
+                <text x="140" y="60" fontSize="9" fill="var(--gold-primary)" textAnchor="middle" fontWeight="800">BACKUP POWER GENERATOR & MAIN PANEL</text>
+              </g>
+            </g>
+          )}
+
+          {/* ROOFTOP SKY TERRACE PLATE */}
+          {isRoof && (
+            <g className="pub-roof-plate">
+              <rect x="70" y="62" width="600" height="356" fill="url(#pubDeckPattern)" />
+              <g transform="translate(330, 80)">
+                <rect width="80" height="74" fill="var(--cad-core-bg)" stroke="var(--gold-primary)" strokeWidth="2" />
+                <text x="40" y="42" fontSize="8" fill="var(--gold-primary)" textAnchor="middle" fontWeight="800">ELEVATOR</text>
+              </g>
+              <g transform="translate(330, 160)">
+                <rect width="80" height="100" fill="var(--cad-core-bg)" stroke="var(--gold-primary)" strokeWidth="2" />
+                <text x="40" y="55" fontSize="7.5" fill="var(--gold-primary)" textAnchor="middle" fontWeight="800">STAIRS ↗</text>
+              </g>
+              <g transform="translate(100, 90)">
+                <rect width="200" height="280" fill="rgba(221,167,82,0.06)" stroke="var(--gold-primary)" strokeWidth="1.5" />
+                <text x="100" y="140" fontSize="12" fill="var(--gold-primary)" textAnchor="middle" fontWeight="800">SKY LOUNGE & PERGOLA</text>
+                <text x="100" y="160" fontSize="8.5" fill="var(--cad-text-muted)" textAnchor="middle">Outdoor BBQ & Seating Area</text>
+              </g>
+              <g transform="translate(440, 90)">
+                <rect width="200" height="280" fill="rgba(127,180,216,0.08)" stroke="#7FB4D8" strokeWidth="1.5" />
+                <text x="100" y="140" fontSize="12" fill="#7FB4D8" textAnchor="middle" fontWeight="800">SOLAR ARRAY & TANKS</text>
+                <text x="100" y="160" fontSize="8.5" fill="var(--cad-text-muted)" textAnchor="middle">Clean energy & water reserves</text>
+              </g>
+            </g>
+          )}
+
+          {/* TYPICAL RESIDENTIAL FLOOR PLATE */}
+          {!isGround && !isRoof && !isBasement && (
+            <g className="pub-typical-plate">
+              <rect x="320" y="56" width="100" height="368" fill="var(--cad-core-bg)" stroke="var(--gold-primary)" strokeWidth="2.5" />
+              <g transform="translate(330, 68)">
+                <rect width="80" height="74" fill="var(--cad-core-bg)" stroke="var(--gold-primary)" strokeWidth="2" />
+                <text x="40" y="38" fontSize="8" fill="var(--gold-primary)" textAnchor="middle" fontWeight="800">ELEVATOR</text>
+                <text x="40" y="50" fontSize="7" fill="var(--cad-text-muted)" textAnchor="middle">8 Persons</text>
+              </g>
+              <g transform="translate(330, 154)">
+                <rect width="80" height="110" fill="var(--cad-core-bg)" stroke="var(--gold-primary)" strokeWidth="2" />
+                <text x="40" y="60" fontSize="7.5" fill="var(--gold-primary)" textAnchor="middle" fontWeight="800">STAIRS ↗</text>
+              </g>
+              <g transform="translate(320, 320)">
+                <rect width="100" height="104" fill="var(--cad-core-bg)" />
+                <text x="50" y="58" fontSize="7.5" fill="var(--cad-text-primary)" textAnchor="middle" fontWeight="800">CORRIDOR</text>
+              </g>
+
+              {/* Flat A (Left Wing) */}
+              <g 
+                className="pub-elev-floor-group"
+                onClick={() => setBldView({ mode: 'unit', floorKey: bldView.floorKey, unitId: 'flatA' })}
+                style={{ cursor: 'pointer' }}
+              >
+                <rect x="68" y="60" width="252" height="360" fill="transparent" />
+                <rect x="170" y="210" width="150" height="210" fill="url(#pubParquetPattern)" stroke="var(--gold-primary)" strokeWidth="1.5" />
+                {/* Sofa Lounge outline */}
+                <rect x="190" y="340" width="70" height="24" rx="3" fill="var(--cad-furniture-fill)" stroke="var(--gold-primary)" strokeOpacity="0.6" strokeWidth="1" />
+                <circle cx="225" cy="315" r="10" fill="var(--cad-furniture-fill)" stroke="var(--gold-primary)" strokeOpacity="0.6" strokeWidth="1" />
+                <text x="245" y="250" fontSize="9" fill="var(--cad-text-primary)" textAnchor="middle" fontWeight="700">Grand Reception</text>
+                <text x="245" y="264" fontSize="8" fill="var(--gold-primary)" textAnchor="middle" fontFamily="monospace">68.0 m²</text>
+
+                <rect x="68" y="60" width="112" height="150" fill="url(#pubBedPattern)" stroke="var(--gold-primary)" strokeWidth="1.5" />
+                <rect x="90" y="74" width="46" height="50" rx="2" fill="var(--cad-furniture-fill)" stroke="var(--gold-primary)" strokeOpacity="0.6" strokeWidth="1" />
+                <text x="124" y="145" fontSize="8.5" fill="var(--cad-text-primary)" textAnchor="middle" fontWeight="700">Master Suite</text>
+
+                <rect x="180" y="60" width="140" height="150" fill="url(#pubBedPattern)" stroke="var(--gold-primary)" strokeWidth="1.5" />
+                <rect x="230" y="74" width="40" height="46" rx="2" fill="var(--cad-furniture-fill)" stroke="var(--gold-primary)" strokeOpacity="0.6" strokeWidth="1" />
+                <text x="250" y="145" fontSize="8.5" fill="var(--cad-text-primary)" textAnchor="middle" fontWeight="700">Guest Bedroom</text>
+
+                <rect x="68" y="210" width="102" height="100" fill="url(#pubTilePattern)" stroke="var(--gold-primary)" strokeWidth="1.5" />
+                <text x="119" y="260" fontSize="8.5" fill="var(--cad-text-primary)" textAnchor="middle" fontWeight="700">Kitchen</text>
+
+                <rect x="68" y="310" width="102" height="110" fill="url(#pubTilePattern)" stroke="var(--gold-primary)" strokeWidth="1.5" />
+                <text x="119" y="365" fontSize="8.5" fill="var(--cad-text-primary)" textAnchor="middle" fontWeight="700">Main Bath</text>
+
+                {/* Exterior Projecting Balcony */}
+                <rect x="36" y="140" width="28" height="140" fill="url(#pubDeckPattern)" stroke="#3B82F6" strokeWidth="1.5" />
+                <text x="50" y="215" fontSize="7.5" fill="#3B82F6" textAnchor="middle" fontWeight="800" transform="rotate(-90 50 215)">BALCONY</text>
+
+                {/* Flat A Action Card */}
+                <g transform="translate(80, 72)">
+                  <rect width="136" height="28" rx="6" fill="var(--cad-stamp-bg)" stroke="var(--gold-primary)" strokeWidth="1.2" />
+                  <text x="8" y="14" fontSize="9" fill="var(--cad-text-primary)" fontWeight="800">Flat 1A</text>
+                  <text x="128" y="14" fontSize="8.5" fill="var(--gold-primary)" textAnchor="end" fontWeight="800">206 m²</text>
+                  <text x="8" y="23" fontSize="7" fill="var(--cad-dims-color)">{isAr ? 'انقر لعرض مخطط الشقة ‹' : 'Click to inspect unit plan ›'}</text>
+                </g>
+              </g>
+
+              {/* Flat B (Right Wing) */}
+              <g 
+                className="pub-elev-floor-group"
+                onClick={() => setBldView({ mode: 'unit', floorKey: bldView.floorKey, unitId: 'flatB' })}
+                style={{ cursor: 'pointer' }}
+              >
+                <rect x="420" y="60" width="252" height="360" fill="transparent" />
+                <rect x="420" y="210" width="150" height="210" fill="url(#pubParquetPattern)" stroke="var(--gold-primary)" strokeWidth="1.5" />
+                <rect x="480" y="340" width="70" height="24" rx="3" fill="var(--cad-furniture-fill)" stroke="var(--gold-primary)" strokeOpacity="0.6" strokeWidth="1" />
+                <circle cx="515" cy="315" r="10" fill="var(--cad-furniture-fill)" stroke="var(--gold-primary)" strokeOpacity="0.6" strokeWidth="1" />
+                <text x="495" y="250" fontSize="9" fill="var(--cad-text-primary)" textAnchor="middle" fontWeight="700">Grand Reception</text>
+                <text x="495" y="264" fontSize="8" fill="var(--gold-primary)" textAnchor="middle" fontFamily="monospace">68.0 m²</text>
+
+                <rect x="560" y="60" width="112" height="150" fill="url(#pubBedPattern)" stroke="var(--gold-primary)" strokeWidth="1.5" />
+                <rect x="604" y="74" width="46" height="50" rx="2" fill="var(--cad-furniture-fill)" stroke="var(--gold-primary)" strokeOpacity="0.6" strokeWidth="1" />
+                <text x="616" y="145" fontSize="8.5" fill="var(--cad-text-primary)" textAnchor="middle" fontWeight="700">Master Suite</text>
+
+                <rect x="420" y="60" width="140" height="150" fill="url(#pubBedPattern)" stroke="var(--gold-primary)" strokeWidth="1.5" />
+                <rect x="470" y="74" width="40" height="46" rx="2" fill="var(--cad-furniture-fill)" stroke="var(--gold-primary)" strokeOpacity="0.6" strokeWidth="1" />
+                <text x="490" y="145" fontSize="8.5" fill="var(--cad-text-primary)" textAnchor="middle" fontWeight="700">Guest Bedroom</text>
+
+                <rect x="570" y="210" width="102" height="100" fill="url(#pubTilePattern)" stroke="var(--gold-primary)" strokeWidth="1.5" />
+                <text x="621" y="260" fontSize="8.5" fill="var(--cad-text-primary)" textAnchor="middle" fontWeight="700">Kitchen</text>
+
+                <rect x="570" y="310" width="102" height="110" fill="url(#pubTilePattern)" stroke="var(--gold-primary)" strokeWidth="1.5" />
+                <text x="621" y="365" fontSize="8.5" fill="var(--cad-text-primary)" textAnchor="middle" fontWeight="700">Main Bath</text>
+
+                {/* Exterior Projecting Balcony */}
+                <rect x="676" y="140" width="28" height="140" fill="url(#pubDeckPattern)" stroke="#3B82F6" strokeWidth="1.5" />
+                <text x="690" y="215" fontSize="7.5" fill="#3B82F6" textAnchor="middle" fontWeight="800" transform="rotate(90 690 215)">BALCONY</text>
+
+                {/* Flat B Action Card */}
+                <g transform="translate(524, 72)">
+                  <rect width="136" height="28" rx="6" fill="var(--cad-stamp-bg)" stroke="var(--gold-primary)" strokeWidth="1.2" />
+                  <text x="8" y="14" fontSize="9" fill="var(--cad-text-primary)" fontWeight="800">Flat 1B</text>
+                  <text x="128" y="14" fontSize="8.5" fill="var(--gold-primary)" textAnchor="end" fontWeight="800">206 m²</text>
+                  <text x="8" y="23" fontSize="7" fill="var(--cad-dims-color)">{isAr ? 'انقر لعرض مخطط الشقة ‹' : 'Click to inspect unit plan ›'}</text>
+                </g>
+              </g>
+            </g>
+          )}
+
+          {/* Title Badge Bottom Left */}
+          <g transform="translate(64, 436)">
+            <rect width="140" height="24" rx="4" fill="var(--cad-stamp-bg)" stroke="var(--gold-primary)" strokeWidth="0.8" />
+            <text x="8" y="16" fontSize="8.5" fill="var(--cad-text-primary)" fontWeight="800">
+              {isGround ? (isAr ? 'الدور الأرضي' : 'Ground Floor') : isRoof ? (isAr ? 'السطح والتراس' : 'Roof Terrace') : isBasement ? (isAr ? 'البدروم' : 'Basement') : bldView.floorKey}
+            </text>
+            <text x="132" y="16" fontSize="8" fill="var(--gold-primary)" textAnchor="end" fontFamily="monospace">412 m²</text>
+          </g>
+        </svg>
+      );
+    }
+
+    /* ─── 3. APARTMENT / FLAT / UNIT DETAILED BLUEPRINT ─── */
+    return (
+      <svg
+        viewBox={dynamicViewBox}
+        preserveAspectRatio="xMidYMid meet"
+        className="cad-vector-svg cad-unit-svg"
+        style={{ transform: `scale(${zoom}) translate(${pan.x}px, ${pan.y}px)`, transformOrigin: 'center center', direction: 'ltr' }}
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <defs>
+          <pattern id="pubUnitCadGrid" width="10" height="10" patternUnits="userSpaceOnUse">
+            <path d="M 10 0 L 0 0 0 10" fill="none" stroke="var(--cad-grid-color)" strokeWidth="0.4" />
+          </pattern>
+          <pattern id="pubUnitParquetPattern" width="16" height="16" patternUnits="userSpaceOnUse">
+            <path d="M 0 0 L 8 8 M 8 0 L 16 8 M 0 8 L 8 16 M 8 8 L 16 16" fill="none" stroke="var(--cad-parquet-stroke)" strokeWidth="0.8" />
+            <rect width="16" height="16" fill="var(--cad-parquet-fill)" />
+          </pattern>
+          <pattern id="pubUnitTilePattern" width="12" height="12" patternUnits="userSpaceOnUse">
+            <rect width="12" height="12" fill="var(--cad-tile-fill)" stroke="var(--cad-tile-stroke)" strokeWidth="0.6" />
+          </pattern>
+          <pattern id="pubUnitDeckPattern" width="8" height="16" patternUnits="userSpaceOnUse">
+            <line x1="0" y1="0" x2="8" y2="0" stroke="var(--cad-deck-stroke)" strokeWidth="0.8" />
+            <rect width="8" height="16" fill="var(--cad-deck-fill)" />
+          </pattern>
+          <pattern id="pubUnitBedPattern" width="10" height="10" patternUnits="userSpaceOnUse">
+            <circle cx="5" cy="5" r="0.8" fill="var(--cad-bed-dot)" />
+            <rect width="10" height="10" fill="var(--cad-bed-fill)" />
+          </pattern>
+          <pattern id="pubUnitColumnHatch" width="6" height="6" patternTransform="rotate(45 0 0)" patternUnits="userSpaceOnUse">
+            <line x1="0" y1="0" x2="0" y2="6" stroke="var(--gold-primary)" strokeWidth="1.2" />
+          </pattern>
+        </defs>
+
+        {/* Background Grid */}
+        <rect x="-300" y="-300" width="1400" height="1200" fill="var(--cad-stage-bg)" />
+        <rect x="-300" y="-300" width="1400" height="1200" fill="url(#pubUnitCadGrid)" />
+
+        {/* Structural Insulated Perimeter Envelopes (Single Envelope or Dual-Unit Side-by-Side Envelopes) */}
+        {(() => {
+          const isAr = locale === 'ar';
+          const unitMap = new Map<string, typeof indoorSlots>();
+          for (const s of indoorSlots) {
+            const lbl = (s.zone?.zoneTitle || s.zone?.zoneTitleAr || s.id || '');
+            let k = 'all';
+            if (lbl.includes('وحدة أ') || lbl.includes('Unit A')) k = isAr ? 'وحدة أ — 150 م²' : 'Unit A — 150 m²';
+            else if (lbl.includes('وحدة ب') || lbl.includes('Unit B')) k = isAr ? 'وحدة ب — 150 م²' : 'Unit B — 150 m²';
+            if (!unitMap.has(k)) unitMap.set(k, []);
+            unitMap.get(k)!.push(s);
+          }
+
+          const isMultiUnit = unitMap.size > 1 && !unitMap.has('all');
+          const envelopes = isMultiUnit
+            ? Array.from(unitMap.entries()).map(([label, slots]) => ({
+                label,
+                minX: Math.min(...slots.map((s: { x: number }) => s.x)),
+                maxX: Math.max(...slots.map((s: { x: number; w: number }) => s.x + s.w)),
+                minY: Math.min(...slots.map((s: { y: number }) => s.y)),
+                maxY: Math.max(...slots.map((s: { y: number; h: number }) => s.y + s.h)),
+              }))
+            : [{ label: '', minX: envBounds.minX, maxX: envBounds.maxX, minY: envBounds.minY, maxY: envBounds.maxY }];
+
+          return (
+            <>
+              {envelopes.map((env, eIdx) => (
+                <g key={`pub-env-${eIdx}`} className="fp-envelope" pointerEvents="none">
+                  <rect x={env.minX - 2} y={env.minY - 2} width={env.maxX - env.minX + 4} height={env.maxY - env.minY + 4} fill="none" stroke="var(--gold-primary)" strokeWidth="3.5" />
+                  <rect x={env.minX + 2} y={env.minY + 2} width={env.maxX - env.minX - 4} height={env.maxY - env.minY - 4} fill="none" stroke="var(--gold-primary)" strokeOpacity="0.45" strokeWidth="1" />
+                  {/* Reinforced Corner Concrete Columns */}
+                  <rect x={env.minX - 5} y={env.minY - 5} width="10" height="10" fill="url(#pubUnitColumnHatch)" stroke="var(--gold-primary)" strokeWidth="1" />
+                  <rect x={env.maxX - 5} y={env.minY - 5} width="10" height="10" fill="url(#pubUnitColumnHatch)" stroke="var(--gold-primary)" strokeWidth="1" />
+                  <rect x={env.minX - 5} y={env.maxY - 5} width="10" height="10" fill="url(#pubUnitColumnHatch)" stroke="var(--gold-primary)" strokeWidth="1" />
+                  <rect x={env.maxX - 5} y={env.maxY - 5} width="10" height="10" fill="url(#pubUnitColumnHatch)" stroke="var(--gold-primary)" strokeWidth="1" />
+                  {/* Unit Header Badge */}
+                  {env.label && (
+                    <g transform={`translate(${(env.minX + env.maxX) / 2 - 60}, ${env.minY - 22})`}>
+                      <rect width="120" height="18" rx="4" fill="var(--cad-stage-bg)" stroke="var(--gold-primary)" strokeWidth="1.2" />
+                      <text x="60" y="12" fontSize="9" fill="var(--gold-primary)" textAnchor="middle" fontWeight="800" fontFamily="'Plus Jakarta Sans', sans-serif">
+                        {env.label}
+                      </text>
+                    </g>
+                  )}
+                </g>
+              ))}
+            </>
+          );
+        })()}
+
+        {/* Room Internal Partitions */}
+        {indoorSlots.map((s: { id: string; x: number; y: number; w: number; h: number }) => (
+          <rect key={`part-${s.id}`} x={s.x} y={s.y} width={s.w} height={s.h} fill="none" stroke="var(--gold-primary)" strokeOpacity="0.6" strokeWidth="2" pointerEvents="none" />
+        ))}
+
+        {/* Interactive Room Cards & Architectural Vectors */}
+        {previewSlots.map((s: { id: string; x: number; y: number; w: number; h: number; zone?: ProcessedZone; title: string; sqm: number; dims: string }) => {
+          const tid = s.zone?.templateId || '';
+          const isReception = tid === 'apt.reception';
+          const isMasterBed = tid === 'apt.master_bed';
+          const isBed = tid.includes('bed') || tid === 'apt.dressing';
+          const isKitchen = tid === 'apt.kitchen';
+          const isBath = tid.includes('bath');
+          const isBalcony = tid.includes('balcony') || tid.includes('terrace');
+          const isSelected = selectedZoneId === s.id;
+          const isNarrowVertical = s.w < 70 && s.h > 100;
+
+          const floorFill = isReception
+            ? 'url(#pubUnitParquetPattern)'
+            : isKitchen || isBath
+              ? 'url(#pubUnitTilePattern)'
+              : isBalcony
+                ? 'url(#pubUnitDeckPattern)'
+                : isBed
+                  ? 'url(#pubUnitBedPattern)'
+                  : 'var(--cad-stage-bg)';
+
+          return (
+            <g
+              key={s.id}
+              className="pub-interactive-room-slot"
+              style={{ cursor: 'pointer' }}
+              onClick={() => handleRoomClick(s.zone)}
+            >
+              {/* Floor Surface */}
+              <rect
+                x={s.x + 2}
+                y={s.y + 2}
+                width={Math.max(2, s.w - 4)}
+                height={Math.max(2, s.h - 4)}
+                fill={floorFill}
+                stroke={isSelected ? 'var(--gold-primary)' : 'transparent'}
+                strokeWidth="1.5"
+              />
+
+              {/* Exterior Balcony Cantilever Construction */}
+              {isBalcony && (
+                <g pointerEvents="none">
+                  <rect x={s.x + 2} y={s.y + 2} width={Math.max(2, s.w - 4)} height={Math.max(2, s.h - 4)} fill="rgba(127, 180, 216, 0.08)" />
+                  {/* Cantilever Slab Outer Edge */}
+                  <rect x={s.x} y={s.y} width={s.w} height={s.h} fill="none" stroke="#7FB4D8" strokeWidth="2.5" strokeDasharray="6 3" />
+                  {/* Corner Baluster Posts */}
+                  <circle cx={s.x + 3} cy={s.y + 3} r="3.5" fill="#7FB4D8" />
+                  <circle cx={s.x + s.w - 3} cy={s.y + 3} r="3.5" fill="#7FB4D8" />
+                  <circle cx={s.x + 3} cy={s.y + s.h - 3} r="3.5" fill="#7FB4D8" />
+                  <circle cx={s.x + s.w - 3} cy={s.y + s.h - 3} r="3.5" fill="#7FB4D8" />
+                  {/* Balcony Badge */}
+                  <rect x={s.x + 4} y={s.y + s.h - 18} width={Math.max(10, s.w - 8)} height="14" rx="3" fill="var(--cad-balcony-badge-bg)" stroke="#7FB4D8" strokeWidth="0.8" />
+                  <text x={s.x + s.w / 2} y={s.y + s.h - 8} fontSize="6" fill="#7FB4D8" textAnchor="middle" fontWeight="800" fontFamily="monospace">
+                    {isAr ? 'شرفة خارجية' : 'BALCONY'}
+                  </text>
+                </g>
+              )}
+
+              {/* ── CAD Spatial Furniture / Fixture Outlines ── */}
+              {s.w >= 50 && s.h >= 36 && !isBalcony && (
+                <g className="fp-cad-fixtures" opacity="0.75" pointerEvents="none">
+                  {/* Living Reception: 3-piece sofa & coffee table */}
+                  {isReception && (
+                    <g>
+                      <rect x={s.x + 10} y={s.y + s.h - 26} width={Math.min(54, s.w - 20)} height="16" rx="3" fill="none" stroke="var(--gold-primary)" strokeWidth="1" />
+                      <rect x={s.x + s.w / 2 - 12} y={s.y + s.h / 2 - 6} width="24" height="12" rx="2" fill="none" stroke="var(--gold-primary)" strokeOpacity="0.8" strokeWidth="0.8" />
+                      <line x1={s.x + 12} y1={s.y + 8} x2={s.x + Math.min(48, s.w - 24)} y2={s.y + 8} stroke="var(--gold-primary)" strokeOpacity="0.8" strokeWidth="1.5" />
+                    </g>
+                  )}
+                  {/* Master Bed: King bed with headboard & pillows */}
+                  {isMasterBed && (
+                    <g>
+                      <rect x={s.x + s.w / 2 - 16} y={s.y + 10} width="32" height="38" rx="2" fill="none" stroke="var(--gold-primary)" strokeWidth="1" />
+                      <line x1={s.x + s.w / 2 - 16} y1={s.y + 10} x2={s.x + s.w / 2 + 16} y2={s.y + 10} stroke="var(--gold-primary)" strokeWidth="2" />
+                      <rect x={s.x + s.w / 2 - 13} y={s.y + 13} width="11" height="8" rx="1" fill="none" stroke="var(--gold-primary)" strokeOpacity="0.8" strokeWidth="0.8" />
+                      <rect x={s.x + s.w / 2 + 2} y={s.y + 13} width="11" height="8" rx="1" fill="none" stroke="var(--gold-primary)" strokeOpacity="0.8" strokeWidth="0.8" />
+                      {/* Nightstands */}
+                      <rect x={s.x + s.w / 2 - 24} y={s.y + 10} width="6" height="8" fill="none" stroke="var(--gold-primary)" strokeOpacity="0.7" strokeWidth="0.8" />
+                      <rect x={s.x + s.w / 2 + 18} y={s.y + 10} width="6" height="8" fill="none" stroke="var(--gold-primary)" strokeOpacity="0.7" strokeWidth="0.8" />
+                    </g>
+                  )}
+                  {/* Standard Bed */}
+                  {!isMasterBed && isBed && (
+                    <g>
+                      <rect x={s.x + s.w / 2 - 12} y={s.y + 10} width="24" height="34" rx="2" fill="none" stroke="var(--gold-primary)" strokeWidth="1" />
+                      <rect x={s.x + s.w / 2 - 9} y={s.y + 13} width="18" height="7" rx="1" fill="none" stroke="var(--gold-primary)" strokeOpacity="0.8" strokeWidth="0.8" />
+                    </g>
+                  )}
+                  {/* Kitchen: Countertop, sink, hob */}
+                  {isKitchen && (
+                    <g>
+                      <line x1={s.x + 8} y1={s.y + 8} x2={s.x + s.w - 8} y2={s.y + 8} stroke="var(--gold-primary)" strokeOpacity="0.8" strokeWidth="1.5" />
+                      <line x1={s.x + 8} y1={s.y + 8} x2={s.x + 8} y2={s.y + s.h - 8} stroke="var(--gold-primary)" strokeOpacity="0.8" strokeWidth="1.5" />
+                      {/* Double sink */}
+                      <rect x={s.x + 12} y={s.y + 12} width="16" height="10" fill="none" stroke="#7FB4D8" strokeWidth="0.8" />
+                      <line x1={s.x + 20} y1={s.y + 12} x2={s.x + 20} y2={s.y + 22} stroke="#7FB4D8" strokeWidth="0.8" />
+                    </g>
+                  )}
+                  {/* Bathroom: Shower tray & vanity */}
+                  {isBath && (
+                    <g>
+                      <rect x={s.x + 8} y={s.y + 8} width="22" height="22" fill="none" stroke="#7FB4D8" strokeWidth="1" />
+                      <circle cx={s.x + 19} cy={s.y + 19} r="2" fill="#7FB4D8" />
+                      {/* Vanity oval */}
+                      <ellipse cx={s.x + s.w - 16} cy={s.y + 16} rx="8" ry="6" fill="none" stroke="var(--gold-primary)" strokeOpacity="0.8" strokeWidth="0.8" />
+                    </g>
+                  )}
+                </g>
+              )}
+
+              {/* Room Dimension Stamp (Placed top right to prevent fixture overlap) */}
+              <text 
+                x={isKitchen || isBath ? s.x + s.w - 6 : s.x + 8} 
+                y={s.y + 13} 
+                fontSize="6.2" 
+                fill="var(--cad-dims-color)" 
+                fontFamily="monospace" 
+                fontWeight="700"
+                textAnchor={isKitchen || isBath ? 'end' : 'start'}
+              >
+                {s.dims}
+              </text>
+
+              {/* Room Title & Area Badge (Smartly wrapped for narrow spaces like balconies) */}
+              {isNarrowVertical ? (
+                <g transform={`translate(${s.x + s.w / 2}, ${s.y + s.h / 2 - 4})`}>
+                  <text y="-8" fontSize="7" fill="var(--cad-text-primary)" textAnchor="middle" fontWeight="800">
+                    {isAr ? 'شرفة' : (s.title.split(' ')[0] || s.title)}
+                  </text>
+                  {s.title.split(' ').length > 1 && (
+                    <text y="2" fontSize="7" fill="var(--cad-text-primary)" textAnchor="middle" fontWeight="800">
+                      {isAr ? 'بانورامية' : s.title.split(' ').slice(1).join(' ')}
+                    </text>
+                  )}
+                  <text y="14" fontSize="6.8" fill="var(--gold-primary)" textAnchor="middle" fontFamily="monospace" fontWeight="800">
+                    {s.sqm} m²
+                  </text>
+                </g>
+              ) : (
+                <g transform={`translate(${s.x + s.w / 2}, ${s.y + (isBed ? s.h / 2 + 10 : s.h / 2)})`}>
+                  <text y="-2" fontSize="9.5" fill="var(--cad-text-primary)" textAnchor="middle" fontWeight="800">
+                    {s.title}
+                  </text>
+                  <text y="12" fontSize="8" fill="var(--gold-primary)" textAnchor="middle" fontFamily="monospace" fontWeight="800">
+                    {s.sqm} m²
+                  </text>
+                </g>
+              )}
+
+              {/* Selected Corner Accents */}
+              {isSelected && (() => {
+                const cx = s.x + 4, cy = s.y + 4, ex = s.x + s.w - 4, ey = s.y + s.h - 4, t = 6;
+                return (
+                  <g stroke="var(--gold-primary)" strokeWidth="1.5">
+                    <path d={`M ${cx} ${cy + t} L ${cx} ${cy} L ${cx + t} ${cy}`} fill="none" />
+                    <path d={`M ${ex - t} ${cy} L ${ex} ${cy} L ${ex} ${cy + t}`} fill="none" />
+                    <path d={`M ${cx} ${ey - t} L ${cx} ${ey} L ${cx + t} ${ey}`} fill="none" />
+                    <path d={`M ${ex - t} ${ey} L ${ex} ${ey} L ${ex} ${ey - t}`} fill="none" />
+                  </g>
+                );
+              })()}
+            </g>
+          );
+        })}
+
+        {/* Title Block Stamp (Dynamic positioning relative to layoutBounds) */}
+        <g transform={`translate(${stampX}, ${stampY})`} opacity="0.95" style={{ direction: 'ltr' }}>
+          <rect width={stampWidth} height="24" rx="4" fill="var(--cad-stamp-bg)" stroke="var(--gold-primary)" strokeWidth="0.8" />
+          <text x="10" y="11" fontSize="7.5" fill="var(--cad-text-primary)" fontWeight="800" textAnchor="start" dominantBaseline="middle" style={{ direction: 'ltr', unicodeBidi: 'plaintext' }}>
+            {isAr ? 'مخطط معماري تفصيلي للمساحات' : 'ARCHITECTURAL CAD FLOOR PLAN'}
+          </text>
+          <text x="10" y="18.5" fontSize="6.5" fill="var(--gold-primary)" fontFamily="monospace" fontWeight="700" textAnchor="start" dominantBaseline="middle" style={{ direction: 'ltr', unicodeBidi: 'plaintext' }}>
+            {`BOUNDS: ${totalWidthM}m × ${totalDepthM}m • SCALE 1:50`}
+          </text>
+        </g>
+
+        {/* North Compass Arrow (Dynamic positioning relative to layoutBounds) */}
+        <g transform={`translate(${compassX}, ${compassY})`} opacity="0.95">
+          <circle cx="14" cy="14" r="12" fill="var(--cad-stamp-bg)" stroke="var(--gold-primary)" strokeWidth="1" />
+          <polygon points="14,4 18,20 14,16 10,20" fill="var(--gold-primary)" />
+          <text x="14" y="2" fontSize="7" fill="var(--gold-primary)" textAnchor="middle" fontWeight="900">N</text>
+        </g>
+      </svg>
+    );
   };
 
-  // Process and adapt raw zones into rich spatial blueprints
-  const processedZones = useMemo<ProcessedZone[]>(() => {
-    const flattened = flattenZoneEntries(zones || []);
+  // Controls Toolbar Component
+  const renderControlsBar = (inFullscreen = false) => (
+    <div className={`stage-controls-bar ${inFullscreen ? 'fullscreen-stage-controls' : ''}`}>
+      {/* Left Cluster: Zoom Controls */}
+      <div className="cad-zoom-controls">
+        <button 
+          className="cad-zoom-btn" 
+          onClick={handleZoomOut} 
+          disabled={zoom <= 0.75}
+          type="button" 
+          title="Zoom Out (-)"
+        >
+          <Minus size={13} />
+        </button>
+        <button 
+          className="cad-zoom-val-btn" 
+          onClick={handleResetZoom} 
+          type="button" 
+          title="Reset View (100%)"
+        >
+          <span>{Math.round(zoom * 100)}%</span>
+        </button>
+        <button 
+          className="cad-zoom-btn" 
+          onClick={handleZoomIn} 
+          disabled={zoom >= 2.5}
+          type="button" 
+          title="Zoom In (+)"
+        >
+          <Plus size={13} />
+        </button>
+      </div>
 
-    const defaultTemplateKeys = propertyType === 'apartment'
-      ? ['apt.reception', 'apt.master_bed', 'apt.kitchen', 'apt.main_bath', 'apt.balcony']
-      : [
-          'vil.g.reception', 'vil.g.entrance', 'vil.g.dining', 'vil.g.kitchen', 'vil.g.powder_room',
-          'vil.f.master_suite', 'vil.f.master_bath', 'vil.f.std_bed', 'vil.f.family_room',
-          'vil.r.terrace', 'vil.r.guest_suite',
-          'vil.b.garage', 'vil.b.game_room'
-        ];
+      {/* Right Cluster: Metrology Tags & Fullscreen Toggle */}
+      <div className="stage-controls-right-group">
+        <div className="metrology-tag">
+          <Compass size={13} className="compass-icon" />
+          <span>N 32° W</span>
+        </div>
 
-    const sourceList: FlatZoneEntry[] = (flattened.length > 0)
-      ? flattened
-      : defaultTemplateKeys.map((key, i) => ({
-          zone: {
-            id: `default-${i}-${key}`,
-            zone_template_id: key,
-            sort_order: i,
-            trades: []
-          } as ZoneInstance,
-        }));
+        <div className="metrology-tag">
+          <span>SCALE 1:50</span>
+        </div>
 
-    return sourceList.map(({ zone: zInst, unitLabel }, idx) => {
-      const key = zInst.zone_template_id;
-      const titles = ZONE_TITLES[key] || { 
-        en: zInst.instance_label || key.split('.').pop()?.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || 'Curated Suite',
-        ar: zInst.instance_label || 'مساحة معمارية منتقاة'
-      };
+        <div className="metrology-tag gold-tag">
+          <Info size={12} />
+          <span>{isAr ? 'انقر على أي غرفة لعرض المواصفات' : 'Click any space for full specs'}</span>
+        </div>
 
-      const metrics = ZONE_METRICS[key] || {
-        sqm: GENERIC_ZONE_METRIC.sqm,
-        ceiling: GENERIC_ZONE_METRIC.ceiling,
-        dims: `${GENERIC_ZONE_METRIC.length_m}m × ${GENERIC_ZONE_METRIC.width_m}m`,
-      };
-
-      // Floor derivation: admin-authored level labels win; legacy template-key
-      // patterns only classify old records saved before levels existed.
-      let floorKey = 'ground';
-      let floorLabel = 'Ground Level';
-      let floorLabelAr = 'الطابق الأرضي';
-
-      if (zInst.level_label && zInst.level_label.trim()) {
-        const lvl = zInst.level_label.trim();
-        floorKey = `lvl:${lvl}`;
-        floorLabel = lvl;
-        floorLabelAr = lvl;
-      } else if (key.includes('.f.') || key.includes('master') || key.includes('std_bed') || key.includes('family')) {
-        floorKey = 'first';
-        floorLabel = 'First Level';
-        floorLabelAr = 'الطابق الأول';
-      } else if (key.includes('.r.') || key.includes('roof') || key.includes('terrace')) {
-        floorKey = 'roof';
-        floorLabel = 'Sky Terrace & Roof';
-        floorLabelAr = 'الرووف والتراس البانورامي';
-      } else if (key.includes('.b.') || key.includes('garage') || key.includes('game') || key.includes('driver')) {
-        floorKey = 'basement';
-        floorLabel = 'Basement & Garage';
-        floorLabelAr = 'البدروم والجراج الخاص';
-      } else if (key.includes('exterior')) {
-        floorKey = 'exterior';
-        floorLabel = 'Private Grounds';
-        floorLabelAr = 'الحدائق والمحيط الخارجي';
-      }
-
-      const openings = zInst.spatial?.openings ?? [];
-
-      return {
-        id: zInst.id || `zone-${idx}-${key}`,
-        zoneKey: key,
-        floorKey,
-        floorLabel,
-        floorLabelAr,
-        unitLabel,
-        zoneTitle: titles.en,
-        zoneTitleAr: titles.ar,
-        image: resolveSpaceImage(key, zInst.images?.[0]),
-        imagesList: (zInst.images ?? []).filter(Boolean),
-        badge: getZoneBadge(zInst),
-        sqm: zInst.spatial?.sqm || metrics.sqm,
-        ceiling: zInst.spatial?.ceiling_height || metrics.ceiling,
-        dims: zInst.spatial ? `${zInst.spatial.length_m}m × ${zInst.spatial.width_m}m` : metrics.dims,
-        doorCount: openings.filter(o => o.kind === 'door').length,
-        windowCount: openings.filter(o => o.kind === 'window').length,
-        spatial: zInst.spatial,
-        svgCoords: { x: 0, y: 0, w: 0, h: 0, pinX: 0, pinY: 0 },
-        trades: parseTradeInstances(zInst)
-      };
-    });
-  }, [zones, propertyType]);
-
-  // Unique floors ordered logically
-  const availableFloors = useMemo(() => {
-    const floorOrder = ['ground', 'first', 'roof', 'basement', 'exterior'];
-    const map = new Map<string, { key: string; label: string; labelAr: string; count: number }>();
-
-    processedZones.forEach(z => {
-      if (!map.has(z.floorKey)) {
-        map.set(z.floorKey, {
-          key: z.floorKey,
-          label: z.floorLabel,
-          labelAr: z.floorLabelAr,
-          count: 1
-        });
-      } else {
-        map.get(z.floorKey)!.count++;
-      }
-    });
-
-    const firstSeen = new Map<string, number>();
-    processedZones.forEach((z, i) => {
-      if (!firstSeen.has(z.floorKey)) firstSeen.set(z.floorKey, i);
-    });
-    const rankOf = (key: string, label: string) => {
-      const legacyIdx = floorOrder.indexOf(key);
-      if (legacyIdx >= 0) return legacyIdx;
-      const num = label.match(/(\d+)/);
-      if (/lower/i.test(label)) return 40;
-      if (/upper/i.test(label)) return 41;
-      if (num) return 50 + parseInt(num[1], 10);
-      return 90 + (firstSeen.get(key) ?? 0) / 1000;
-    };
-    return Array.from(map.values()).sort((a, b) => rankOf(a.key, a.label) - rankOf(b.key, b.label));
-  }, [processedZones]);
-
-  // Active Floor initialized to the first logical floor (e.g. Ground Level)
-  const [activeFloor, setActiveFloor] = useState<string>(() => {
-    return availableFloors[0]?.key || 'ground';
-  });
-
-  // Sync active floor if property zones change
-  useEffect(() => {
-    if (availableFloors.length > 0 && !availableFloors.some(f => f.key === activeFloor)) {
-      setActiveFloor(availableFloors[0].key);
-    }
-  }, [availableFloors, activeFloor]);
-
-  // Filtered & Architecturally-laid-out zones for Active Floor
-  const displayedLayout = useMemo(() => {
-    const currentFloorKey = activeFloor || (availableFloors[0]?.key ?? 'ground');
-    const floorZones = processedZones.filter(z => z.floorKey === currentFloorKey);
-    const baseList = floorZones.length > 0 ? floorZones : processedZones;
-
-    return computeArchitecturalLayout(baseList);
-  }, [processedZones, activeFloor, availableFloors]);
-
-  const displayedZones = displayedLayout.zones;
-  const layoutPxPerMeter = displayedLayout.pxPerMeter;
-  const hasRealOpenings = useMemo(
-    () => displayedZones.some(z => (z.spatial?.openings?.length ?? 0) > 0),
-    [displayedZones],
+        {/* Fullscreen Button (Only shown in inline mode) */}
+        {!inFullscreen && (
+          <button
+            type="button"
+            className="cad-fullscreen-toggle-btn"
+            onClick={() => setIsFullscreen(true)}
+            title="View Fullscreen Studio"
+          >
+            <Maximize2 size={14} />
+            <span>{isAr ? 'ملء الشاشة' : 'Fullscreen'}</span>
+          </button>
+        )}
+      </div>
+    </div>
   );
 
-  // Active list of rooms on currently selected floor
-  const activeRoomList = displayedZones;
-
-  // Active Zone (defaults to first room of currently active floor)
-  const currentZone = useMemo<ProcessedZone>(() => {
-    if (selectedZoneId) {
-      const found = displayedZones.find(z => z.id === selectedZoneId);
-      if (found) return found;
-    }
-    return displayedZones[0] || processedZones[0];
-  }, [selectedZoneId, displayedZones, processedZones]);
-
-  // Current room index in active room list
-  const currentRoomIndex = useMemo(() => {
-    const idx = activeRoomList.findIndex(z => z.id === currentZone.id);
-    return idx >= 0 ? idx : 0;
-  }, [activeRoomList, currentZone]);
-
-  const pillsBarRef = useRef<HTMLDivElement>(null);
-  const filmstripTrackRef = useRef<HTMLDivElement>(null);
-  const [canScrollLeft, setCanScrollLeft] = useState(false);
-  const [canScrollRight, setCanScrollRight] = useState(false);
-
-  const updatePillsScrollState = () => {
-    if (!pillsBarRef.current) return;
-    const { scrollLeft, scrollWidth, clientWidth } = pillsBarRef.current;
-    setCanScrollLeft(scrollLeft > 6);
-    setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 6);
-  };
-
-  useEffect(() => {
-    updatePillsScrollState();
-    const el = pillsBarRef.current;
-    if (el) {
-      el.addEventListener('scroll', updatePillsScrollState, { passive: true });
-      window.addEventListener('resize', updatePillsScrollState);
-      return () => {
-        el.removeEventListener('scroll', updatePillsScrollState);
-        window.removeEventListener('resize', updatePillsScrollState);
-      };
-    }
-  }, [activeRoomList, activeFloor]);
-
-  // Automatically center active chip when selected
-  useEffect(() => {
-    if (pillsBarRef.current && currentZone?.id) {
-      const activeBtn = pillsBarRef.current.querySelector('.room-chip-btn.active') as HTMLElement;
-      if (activeBtn) {
-        activeBtn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
-      }
-    }
-    if (filmstripTrackRef.current && currentZone?.id) {
-      const activeThumb = filmstripTrackRef.current.querySelector('.filmstrip-thumb-card.active') as HTMLElement;
-      if (activeThumb) {
-        activeThumb.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
-      }
-    }
-  }, [selectedZoneId, activeFloor, currentZone?.id]);
-
-  const handleHorizontalWheel = (e: React.WheelEvent<HTMLDivElement>) => {
-    if (e.deltaY !== 0) {
-      e.currentTarget.scrollLeft += e.deltaY;
-    }
-  };
-
-  const handleScrollPills = (direction: 'left' | 'right') => {
-    if (!pillsBarRef.current) return;
-    const offset = direction === 'left' ? -240 : 240;
-    pillsBarRef.current.scrollBy({ left: offset, behavior: 'smooth' });
-  };
-
-  const handlePrevRoom = () => {
-    if (activeRoomList.length <= 1) return;
-    const prevIdx = (currentRoomIndex - 1 + activeRoomList.length) % activeRoomList.length;
-    setSelectedZoneId(activeRoomList[prevIdx].id);
-  };
-
-  const handleNextRoom = () => {
-    if (activeRoomList.length <= 1) return;
-    const nextIdx = (currentRoomIndex + 1) % activeRoomList.length;
-    setSelectedZoneId(activeRoomList[nextIdx].id);
-  };
-
-  const handleInquireSpace = () => {
-    const text = `Hello, I would like to inquire about the ${currentZone.zoneTitle} (${currentZone.sqm} SQM) in ${propertyTitle}.`;
-    window.location.href = `https://wa.me/201009998888?text=${encodeURIComponent(text)}`;
-  };
-
   return (
-    <div className="blueprint-studio-root" dir={isAr ? 'rtl' : 'ltr'}>
+    <div className="blueprint-studio-root" data-theme={currentTheme} dir={isAr ? 'rtl' : 'ltr'}>
       
-      {/* 1. Header Bar */}
+      {/* 1. Header Bar with Metrology & Navigation */}
       <div className="studio-top-header">
         <div className="studio-title-block">
           <span className="studio-eyebrow">
             <Sparkles size={13} className="sparkle-gold" />
             <span>
               {isAr 
-                ? `${processedZones.length} مساحات معمارية مدققة • ${availableFloors.length} مستويات` 
-                : `${processedZones.length} CURATED ARCHITECTURAL SPACES • ${availableFloors.length} LEVELS`}
+                ? 'المخطط الهندسي والمعماري المعتمد • كراسة المواصفات' 
+                : 'VERIFIED ARCHITECTURAL CAD BLUEPRINT • SPECIFICATIONS'}
             </span>
           </span>
           <h3 className="studio-main-heading">
-            {isAr ? 'المخطط المعماري التفاعلي وملف المواصفات' : 'Interactive Blueprint & Engineering Dossier'}
+            {isAr ? 'المخطط المعماري التفاعلي وتوزيع المساحات' : 'Interactive Architectural Blueprint'}
           </h3>
         </div>
 
-        <button 
-          className="studio-print-btn"
-          onClick={() => window.print()}
-          type="button"
-          title="Export Complete Specification Dossier"
-        >
-          <FileText size={15} />
-          <span>{isAr ? 'طباعة كراسة المواصفات (PDF)' : 'Export Complete Dossier (PDF)'}</span>
-        </button>
-      </div>
-
-      {/* 2. Floor Level Selector Tabs */}
-      <div className="studio-floor-tabs-bar" onWheel={handleHorizontalWheel}>
-        {availableFloors.map((floor) => {
-          const isSelected = activeFloor === floor.key;
-          return (
+        {/* View Switcher / Breadcrumbs for Building or Multi-Floor Villas */}
+        {propertyType === 'building' ? (
+          <div className="studio-crumbs-row">
             <button
-              key={floor.key}
-              className={`studio-floor-tab ${isSelected ? 'active' : ''}`}
-              onClick={() => {
-                setActiveFloor(floor.key);
-                const firstOnFloor = processedZones.find(z => z.floorKey === floor.key);
-                if (firstOnFloor) setSelectedZoneId(firstOnFloor.id);
-              }}
               type="button"
+              className={`studio-crumb-btn ${bldView.mode === 'elevation' ? 'active' : ''}`}
+              onClick={() => setBldView({ mode: 'elevation', floorKey: bldView.floorKey })}
             >
-              <Building size={14} className="tab-icon" />
-              <span>{isAr ? floor.labelAr : floor.label}</span>
-              <span className="floor-count-pill">{floor.count}</span>
-              {isSelected && (
-                <motion.div 
-                  layoutId="activeFloorIndicator" 
-                  className="tab-active-indicator"
-                  transition={{ type: 'spring', stiffness: 450, damping: 32 }}
-                />
-              )}
+              <Building size={13} />
+              <span>{isAr ? 'واجهة المبنى' : 'Building Facade'}</span>
             </button>
-          );
-        })}
-      </div>
-
-      {/* 3. Room Quick Select Pills (1:1 with Active Floor's Rooms) with Smooth Scrolling */}
-      <div className="studio-room-pills-wrapper">
-        {canScrollLeft && (
-          <button 
-            className="pills-scroll-btn scroll-left" 
-            onClick={() => handleScrollPills(isAr ? 'right' : 'left')}
-            type="button"
-            aria-label="Scroll Left"
-          >
-            <ChevronLeft size={16} />
-          </button>
-        )}
-
-        <div 
-          ref={pillsBarRef}
-          className="studio-room-pills-bar"
-          onWheel={handleHorizontalWheel}
-        >
-          {activeRoomList.map((zone, idx) => {
-            const isActive = currentZone.id === zone.id;
-            return (
-              <button
-                key={zone.id}
-                className={`room-chip-btn ${isActive ? 'active' : ''}`}
-                onClick={() => setSelectedZoneId(zone.id)}
-                onMouseEnter={() => setHoveredZoneId(zone.id)}
-                onMouseLeave={() => setHoveredZoneId(null)}
-                type="button"
-              >
-                <span className="room-num-badge">0{idx + 1}</span>
-                {zone.unitLabel && <span className="room-chip-unit">{zone.unitLabel}</span>}
-                <span className="room-chip-title">{isAr ? zone.zoneTitleAr : zone.zoneTitle}</span>
-                <span className="room-chip-sqm">{zone.sqm} m²</span>
-              </button>
-            );
-          })}
-        </div>
-
-        {canScrollRight && (
-          <button 
-            className="pills-scroll-btn scroll-right" 
-            onClick={() => handleScrollPills(isAr ? 'left' : 'right')}
-            type="button"
-            aria-label="Scroll Right"
-          >
-            <ChevronRight size={16} />
-          </button>
-        )}
-      </div>
-
-      {/* 4. Panoramic Stacked Workspace: Full-Width Visual Stage + Full-Width Live Dossier */}
-      <div className="studio-workspace-container">
-        
-        {/* Top Panoramic Visual Stage */}
-        <div className="studio-stage-pane">
-          
-          {/* Top Stage Control Bar */}
-          <div className="stage-controls-bar">
-            {/* Mode Switcher */}
-            <div className="stage-mode-switcher">
-              <button
-                className={`mode-switch-btn ${canvasMode === 'blueprint' ? 'active' : ''}`}
-                onClick={() => setCanvasMode('blueprint')}
-                type="button"
-              >
-                <Layers size={14} />
-                <span>{isAr ? 'المخطط الهندسي (CAD)' : 'CAD Blueprint'}</span>
-              </button>
-
-              <button
-                className={`mode-switch-btn ${canvasMode === 'photo' ? 'active' : ''}`}
-                onClick={() => setCanvasMode('photo')}
-                type="button"
-              >
-                <Camera size={14} />
-                <span>{isAr ? 'الواقع المعماري' : 'Spatial Photo'}</span>
-              </button>
-            </div>
-
-            {/* Architectural Compass, Interactive Zoom & Metrology */}
-            <div className="stage-metrology-row">
-              <div className="cad-zoom-controls">
-                <button 
-                  className="cad-zoom-btn" 
-                  onClick={handleZoomOut} 
-                  disabled={zoom <= 0.75}
-                  type="button" 
-                  title="Zoom Out (-)"
+            {bldView.mode !== 'elevation' && (
+              <>
+                <span className="studio-crumb-sep">›</span>
+                <button
+                  type="button"
+                  className={`studio-crumb-btn ${bldView.mode === 'floor' ? 'active' : ''}`}
+                  onClick={() => setBldView({ mode: 'floor', floorKey: bldView.floorKey })}
                 >
-                  <Minus size={13} />
+                  <span>{isGround ? (isAr ? 'الدور الأرضي' : 'Ground Floor') : isRoof ? (isAr ? 'السطح' : 'Roof') : isBasement ? (isAr ? 'البدروم' : 'Basement') : bldView.floorKey}</span>
                 </button>
-                <button 
-                  className="cad-zoom-val-btn" 
-                  onClick={handleResetZoom} 
-                  type="button" 
-                  title="Reset Zoom & Pan (100%)"
-                >
-                  <span>{Math.round(zoom * 100)}%</span>
-                </button>
-                <button 
-                  className="cad-zoom-btn" 
-                  onClick={handleZoomIn} 
-                  disabled={zoom >= 2.5}
-                  type="button" 
-                  title="Zoom In (+)"
-                >
-                  <Plus size={13} />
-                </button>
-              </div>
-              <div className="metrology-divider" />
-              <div className="metrology-tag">
-                <Compass size={13} className="compass-icon" />
-                <span>N 32° W</span>
-              </div>
-              <div className="metrology-divider" />
-              <div className="metrology-tag">
-                <span>SCALE 1:50</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Main Visual Display Stage */}
-          <div className="stage-viewport-box">
-            
-            <AnimatePresence mode="wait">
-              {canvasMode === 'blueprint' ? (
-                /* Interactive CAD Vector Schematic */
-                <motion.div 
-                  key={`blueprint-${activeFloor}`}
-                  className="blueprint-svg-canvas"
-                  initial={{ opacity: 0, scale: 0.98 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.98 }}
-                  transition={{ duration: 0.28 }}
-                >
-                  <svg 
-                    viewBox="0 0 680 440" 
-                    className="cad-vector-svg"
-                    xmlns="http://www.w3.org/2000/svg"
-                    onMouseDown={handleMouseDown}
-                    onMouseMove={handleMouseMove}
-                    onMouseUp={handleMouseUp}
-                    onMouseLeave={handleMouseUp}
-                    onWheel={handleSvgWheel}
-                    style={{ cursor: isDragging ? 'grabbing' : (zoom > 1 ? 'grab' : 'default'), userSelect: 'none' }}
-                  >
-                    <defs>
-                      <pattern id="cadGrid" width="10" height="10" patternUnits="userSpaceOnUse">
-                        <path d="M 10 0 L 0 0 0 10" fill="none" className="cad-grid-pattern-line" strokeWidth="0.4" />
-                      </pattern>
-                      <pattern id="cadGridMajor" width="50" height="50" patternUnits="userSpaceOnUse">
-                        <path d="M 50 0 L 0 0 0 50" fill="none" className="cad-grid-major-line" strokeWidth="0.8" />
-                      </pattern>
-                      <filter id="goldGlowFilter" x="-30%" y="-30%" width="160%" height="160%">
-                        <feDropShadow dx="0" dy="0" stdDeviation="8" floodColor="#DDA752" floodOpacity="0.7" />
-                      </filter>
-                    </defs>
-
-                    {/* ── 1. Fine Background Engineering Grid ── */}
-                    <rect width="680" height="440" fill="url(#cadGrid)" />
-                    <rect width="680" height="440" fill="url(#cadGridMajor)" opacity="0.35" />
-
-                    {/* ── 2. Scalable & Pannable Floor Plan Interactive Group ── */}
-                    <g 
-                      transform={`translate(${pan.x}, ${pan.y}) scale(${zoom})`} 
-                      style={{ transformOrigin: '340px 220px', transition: isDragging ? 'none' : 'transform 0.15s ease-out' }}
-                    >
-
-                    {/* ── 2. Building Outer Perimeter Enclosure (Double Structural Walls) ── */}
-                    {displayedZones.length > 0 && (() => {
-                      const minX = Math.min(...displayedZones.map(z => z.svgCoords.x));
-                      const maxX = Math.max(...displayedZones.map(z => z.svgCoords.x + z.svgCoords.w));
-                      const minY = Math.min(...displayedZones.map(z => z.svgCoords.y));
-                      const maxY = Math.max(...displayedZones.map(z => z.svgCoords.y + z.svgCoords.h));
-                      return (
-                        <g className="cad-structural-perimeter">
-                          {/* Exterior Outer Wall */}
-                          <rect
-                            x={minX}
-                            y={minY}
-                            width={maxX - minX}
-                            height={maxY - minY}
-                            fill="none"
-                            stroke="#DDA752"
-                            strokeWidth="3.5"
-                            rx="2"
-                          />
-                          {/* Cavity Inner Line */}
-                          <rect
-                            x={minX + 3}
-                            y={minY + 3}
-                            width={maxX - minX - 6}
-                            height={maxY - minY - 6}
-                            fill="none"
-                            stroke="rgba(221, 167, 82, 0.4)"
-                            strokeWidth="1"
-                            rx="1"
-                          />
-                        </g>
-                      );
-                    })()}
-
-                    {/* ── 3. Interior Partition Walls Between Adjacent Rooms ── */}
-                    {displayedZones.map((zone) => {
-                      const { x, y, w, h } = zone.svgCoords;
-                      return (
-                        <g key={`walls-${zone.id}`} className="cad-partition-lines">
-                          {/* Right partition wall */}
-                          <line x1={x + w} y1={y} x2={x + w} y2={y + h} stroke="#DDA752" strokeWidth="2.5" opacity="0.8" />
-                          {/* Bottom partition wall */}
-                          <line x1={x} y1={y + h} x2={x + w} y2={y + h} stroke="#DDA752" strokeWidth="2.5" opacity="0.8" />
-                        </g>
-                      );
-                    })}
-
-                    {/* ── 4a. Real Placed Openings (Doors & Windows from the Admin Composer) ── */}
-                    {hasRealOpenings && displayedZones.flatMap((zone) =>
-                      openingSegments(zone.svgCoords, zone.spatial?.openings, layoutPxPerMeter).map(seg => {
-                        const dx = seg.x2 - seg.x1;
-                        const dy = seg.y2 - seg.y1;
-                        const len = Math.hypot(dx, dy);
-                        const nx = seg.edge === 'w' ? 1 : seg.edge === 'e' ? -1 : 0;
-                        const ny = seg.edge === 'n' ? 1 : seg.edge === 's' ? -1 : 0;
-                        const leafX = seg.x1 + nx * len;
-                        const leafY = seg.y1 + ny * len;
-                        const sweep = dx * ny - dy * nx > 0 ? 0 : 1;
-                        return (
-                          <g key={seg.id} className="cad-real-opening">
-                            {seg.kind === 'door' ? (
-                              <>
-                                <line x1={seg.x1} y1={seg.y1} x2={seg.x2} y2={seg.y2} strokeWidth={4} className="cad-opening-gap" />
-                                <line x1={seg.x1} y1={seg.y1} x2={leafX} y2={leafY} stroke="#DDA752" strokeWidth={1.5} />
-                                <path d={`M ${leafX} ${leafY} A ${len} ${len} 0 0 ${sweep} ${seg.x2} ${seg.y2}`} fill="none" stroke="rgba(221,167,82,0.55)" strokeWidth={1} strokeDasharray="3 2" />
-                              </>
-                            ) : (
-                              <>
-                                <line x1={seg.x1} y1={seg.y1} x2={seg.x2} y2={seg.y2} strokeWidth={5} className="cad-opening-gap" />
-                                <line x1={seg.x1} y1={seg.y1} x2={seg.x2} y2={seg.y2} stroke="#7FB4D8" strokeWidth={3} />
-                                <line x1={seg.x1} y1={seg.y1} x2={seg.x2} y2={seg.y2} strokeWidth={1} className="cad-opening-gap" />
-                              </>
-                            )}
-                          </g>
-                        );
-                      }),
-                    )}
-
-                    {/* ── 4. Architectural Window Glazing & Patio Sliders (Embedded in Outer Walls) ── */}
-                    {!hasRealOpenings && displayedZones.length > 0 && (() => {
-                      const minX = Math.min(...displayedZones.map(z => z.svgCoords.x));
-                      const maxX = Math.max(...displayedZones.map(z => z.svgCoords.x + z.svgCoords.w));
-                      const minY = Math.min(...displayedZones.map(z => z.svgCoords.y));
-                      const maxY = Math.max(...displayedZones.map(z => z.svgCoords.y + z.svgCoords.h));
-                      return (
-                        <g className="cad-exterior-glazing">
-                          {/* Reception East Facade: Sliding Glass Patio Doors */}
-                          <rect x={maxX - 3} y={minY + 30} width={6} height={120} rx="1" fill="rgba(96, 165, 250, 0.3)" stroke="#60A5FA" strokeWidth="1" />
-                          <line x1={maxX} y1={minY + 32} x2={maxX} y2={minY + 148} stroke="#93C5FD" strokeWidth="1.2" />
-
-                          {/* Dining South Facade: Panoramic Window */}
-                          <rect x={minX + 35} y={maxY - 3} width={130} height={6} rx="1" fill="rgba(96, 165, 250, 0.3)" stroke="#60A5FA" strokeWidth="1" />
-                          <line x1={minX + 38} y1={maxY} x2={minX + 162} y2={maxY} stroke="#93C5FD" strokeWidth="1.2" />
-
-                          {/* Kitchen South-East Facade: Garden Vista Window */}
-                          <rect x={maxX - 130} y={maxY - 3} width={95} height={6} rx="1" fill="rgba(96, 165, 250, 0.3)" stroke="#60A5FA" strokeWidth="1" />
-                          <line x1={maxX - 127} y1={maxY} x2={maxX - 38} y2={maxY} stroke="#93C5FD" strokeWidth="1.2" />
-                        </g>
-                      );
-                    })()}
-
-                    {/* ── 5. Interactive Room Polygons & Luxury Architectural Layouts ── */}
-                    {displayedZones.map((zone) => {
-                      const { x, y, w, h, pinX, pinY } = zone.svgCoords;
-                      const isSelected = currentZone.id === zone.id;
-                      const isHovered = hoveredZoneId === zone.id;
-                      const key = zone.zoneKey.toLowerCase();
-
-                      return (
-                        <g
-                          key={zone.id}
-                          className="interactive-cad-room"
-                          onClick={() => setSelectedZoneId(zone.id)}
-                          onMouseEnter={() => setHoveredZoneId(zone.id)}
-                          onMouseLeave={() => setHoveredZoneId(null)}
-                          style={{ cursor: 'pointer' }}
-                        >
-                          {/* Room Floor Fill Area */}
-                          <rect
-                            x={x + 2}
-                            y={y + 2}
-                            width={w - 4}
-                            height={h - 4}
-                            className={`cad-room-fill ${isSelected ? 'selected' : ''}`}
-                            filter={isSelected ? 'url(#goldGlowFilter)' : undefined}
-                          />
-
-                          {/* ② Clean, Intuitive Luxury Space Symbol Badge */}
-                          <g transform={`translate(${pinX}, ${pinY - (h > 100 ? 16 : 10)})`} className="cad-room-symbol-badge">
-                            {/* Living / Reception / Salon: Modern Sofa */}
-                            {(key.includes('reception') || key.includes('living') || key.includes('salon') || key.includes('lounge') || key.includes('family')) && (
-                              <g>
-                                <rect x="-16" y="-16" width="32" height="32" rx="8" fill={isSelected ? "rgba(221,167,82,0.22)" : "rgba(221,167,82,0.08)"} stroke="#DDA752" strokeWidth={isSelected ? "1.6" : "1.2"} />
-                                <path d="M -9 -4 C -9 -8, 9 -8, 9 -4 L 9 4 L -9 4 Z" fill="none" stroke="#DDA752" strokeWidth="1.3" strokeLinejoin="round" />
-                                <rect x="-11" y="-4" width="3" height="9" rx="1.5" fill="#DDA752" />
-                                <rect x="8" y="-4" width="3" height="9" rx="1.5" fill="#DDA752" />
-                                <line x1="0" y1="-4" x2="0" y2="4" stroke="#DDA752" strokeWidth="1" />
-                                <line x1="-8" y1="5" x2="8" y2="5" stroke="#DDA752" strokeWidth="1.3" />
-                                <line x1="-7" y1="5" x2="-8" y2="8" stroke="#DDA752" strokeWidth="1.2" />
-                                <line x1="7" y1="5" x2="8" y2="8" stroke="#DDA752" strokeWidth="1.2" />
-                              </g>
-                            )}
-
-                            {/* Formal Dining Salon: Table & Utensils */}
-                            {key.includes('dining') && (
-                              <g>
-                                <rect x="-16" y="-16" width="32" height="32" rx="8" fill={isSelected ? "rgba(221,167,82,0.22)" : "rgba(221,167,82,0.08)"} stroke="#DDA752" strokeWidth={isSelected ? "1.6" : "1.2"} />
-                                <path d="M -6 -7 L -6 -1 M -8 -7 L -8 -3 C -8 -1 -6 -1 -6 -1 M -4 -7 L -4 -3 C -4 -1 -6 -1 -6 -1 M -6 -1 L -6 7" fill="none" stroke="#DDA752" strokeWidth="1.1" strokeLinecap="round" />
-                                <path d="M 6 -7 C 6 -7 3 -3 3 1 L 3 7 M 6 -7 L 6 7" fill="none" stroke="#DDA752" strokeWidth="1.1" strokeLinecap="round" />
-                                <circle cx="0" cy="0" r="4.5" fill="none" stroke="#DDA752" strokeWidth="1.1" />
-                              </g>
-                            )}
-
-                            {/* Chef Show Kitchen & Pantry: Chef Hat & Cookware */}
-                            {key.includes('kitchen') && (
-                              <g>
-                                <rect x="-16" y="-16" width="32" height="32" rx="8" fill={isSelected ? "rgba(221,167,82,0.22)" : "rgba(221,167,82,0.08)"} stroke="#DDA752" strokeWidth={isSelected ? "1.6" : "1.2"} />
-                                <path d="M -5 3 L 5 3 L 5 0 C 7 0 8 -3 6 -5 C 7 -8 3 -9 0 -7 C -2 -9 -7 -8 -6 -5 C -8 -3 -7 0 -5 0 Z" fill="none" stroke="#DDA752" strokeWidth="1.2" strokeLinejoin="round" />
-                                <line x1="-5" y1="4" x2="5" y2="4" stroke="#DDA752" strokeWidth="1.2" />
-                                <line x1="-5" y1="6" x2="5" y2="6" stroke="#DDA752" strokeWidth="1.2" />
-                              </g>
-                            )}
-
-                            {/* Guest Powder Room & Spa: Bathtub & Spa Droplets */}
-                            {(key.includes('bath') || key.includes('powder') || key.includes('spa')) && (
-                              <g>
-                                <rect x="-16" y="-16" width="32" height="32" rx="8" fill={isSelected ? "rgba(221,167,82,0.22)" : "rgba(221,167,82,0.08)"} stroke="#DDA752" strokeWidth={isSelected ? "1.6" : "1.2"} />
-                                <path d="M -8 -1 L 8 -1 C 8 -1 8 5 5 5 L -5 5 C -8 5 -8 -1 -8 -1 Z" fill="none" stroke="#DDA752" strokeWidth="1.2" strokeLinejoin="round" />
-                                <path d="M -6 -1 L -6 -6 C -6 -8 -3 -8 -3 -6" fill="none" stroke="#DDA752" strokeWidth="1.1" />
-                                <circle cx="-2.5" cy="-3.5" r="0.7" fill="#DDA752" />
-                                <circle cx="-0.5" cy="-2.5" r="0.7" fill="#DDA752" />
-                                <line x1="-5" y1="5" x2="-6" y2="7" stroke="#DDA752" strokeWidth="1.1" />
-                                <line x1="5" y1="5" x2="6" y2="7" stroke="#DDA752" strokeWidth="1.1" />
-                              </g>
-                            )}
-
-                            {/* Entrance Foyer: Grand Portal Doors */}
-                            {(key.includes('foyer') || key.includes('entrance') || key.includes('hall')) && (
-                              <g>
-                                <rect x="-16" y="-16" width="32" height="32" rx="8" fill={isSelected ? "rgba(221,167,82,0.22)" : "rgba(221,167,82,0.08)"} stroke="#DDA752" strokeWidth={isSelected ? "1.6" : "1.2"} />
-                                <rect x="-7" y="-8" width="14" height="15" rx="1" fill="none" stroke="#DDA752" strokeWidth="1.2" />
-                                <line x1="0" y1="-8" x2="0" y2="7" stroke="#DDA752" strokeWidth="1" />
-                                <circle cx="-2" cy="0" r="0.9" fill="#DDA752" />
-                                <circle cx="2" cy="0" r="0.9" fill="#DDA752" />
-                                <path d="M -7 -8 Q 0 -11 7 -8" fill="none" stroke="#DDA752" strokeWidth="1" />
-                              </g>
-                            )}
-
-                            {/* Master Suite & Bedrooms: Luxury Bed */}
-                            {(key.includes('bed') || key.includes('master') || key.includes('suite')) && !key.includes('bath') && (
-                              <g>
-                                <rect x="-16" y="-16" width="32" height="32" rx="8" fill={isSelected ? "rgba(221,167,82,0.22)" : "rgba(221,167,82,0.08)"} stroke="#DDA752" strokeWidth={isSelected ? "1.6" : "1.2"} />
-                                <line x1="-8" y1="-5" x2="8" y2="-5" stroke="#DDA752" strokeWidth="1.3" strokeLinecap="round" />
-                                <rect x="-6" y="-4" width="4.5" height="2.5" rx="0.8" fill="none" stroke="#DDA752" strokeWidth="0.9" />
-                                <rect x="1.5" y="-4" width="4.5" height="2.5" rx="0.8" fill="none" stroke="#DDA752" strokeWidth="0.9" />
-                                <path d="M -7 0 L 7 0 L 7 5 L -7 5 Z" fill="none" stroke="#DDA752" strokeWidth="1.2" />
-                                <line x1="-7" y1="2" x2="7" y2="2" stroke="#DDA752" strokeWidth="0.8" strokeDasharray="2 1" />
-                                <line x1="-7" y1="5" x2="-7" y2="7" stroke="#DDA752" strokeWidth="1.1" />
-                                <line x1="7" y1="5" x2="7" y2="7" stroke="#DDA752" strokeWidth="1.1" />
-                              </g>
-                            )}
-
-                            {/* Private Grounds / Pool / Terrace: Waves & Sun */}
-                            {(key.includes('pool') || key.includes('garden') || key.includes('exterior') || key.includes('terrace') || key.includes('roof')) && (
-                              <g>
-                                <rect x="-16" y="-16" width="32" height="32" rx="8" fill={isSelected ? "rgba(221,167,82,0.22)" : "rgba(221,167,82,0.08)"} stroke="#DDA752" strokeWidth={isSelected ? "1.6" : "1.2"} />
-                                <path d="M -7 -2 Q -3.5 -5 0 -2 Q 3.5 1 7 -2" fill="none" stroke="#DDA752" strokeWidth="1.3" strokeLinecap="round" />
-                                <path d="M -7 3 Q -3.5 0 0 3 Q 3.5 6 7 3" fill="none" stroke="#DDA752" strokeWidth="1.3" strokeLinecap="round" />
-                              </g>
-                            )}
-                          </g>
-
-                          {/* Dimension Stamp (Non-Overlapping Position in Top-Left) */}
-                          <text
-                            x={x + 8}
-                            y={y + 14}
-                            className="cad-room-dims"
-                            fontSize="8"
-                            fontFamily="monospace"
-                          >
-                            {zone.dims}
-                          </text>
-
-                          {/* Room Name with Smart Multi-line Fitting */}
-                          {w < 130 && !isAr && zone.zoneTitle.includes('&') ? (
-                            <text
-                              x={pinX}
-                              y={y + h - 28}
-                              className="cad-room-title"
-                              fontSize="8.5"
-                              textAnchor="middle"
-                              fontFamily="'Plus Jakarta Sans', sans-serif"
-                              fontWeight="800"
-                            >
-                              <tspan x={pinX} dy="0">{zone.zoneTitle.split('&')[0].trim()}</tspan>
-                              <tspan x={pinX} dy="10">& {zone.zoneTitle.split('&')[1].trim()}</tspan>
-                            </text>
-                          ) : (
-                            <text
-                              x={pinX}
-                              y={y + h - 22}
-                              className="cad-room-title"
-                              fontSize={w < 120 ? '8.5' : (w > 160 ? '11' : '10')}
-                              textAnchor="middle"
-                              fontFamily="'Plus Jakarta Sans', sans-serif"
-                              fontWeight="800"
-                            >
-                              {isAr ? zone.zoneTitleAr : zone.zoneTitle}
-                            </text>
-                          )}
-
-                          {/* SQM Badge */}
-                          <text
-                            x={pinX}
-                            y={y + h - 9}
-                            className="cad-room-sqm"
-                            fontSize="9"
-                            textAnchor="middle"
-                            fontFamily="'Plus Jakarta Sans', sans-serif"
-                            fontWeight="800"
-                          >
-                            {zone.sqm} SQM
-                          </text>
-
-                          {/* Pulsating Hotspot Beacon */}
-                          {isSelected && (
-                            <g>
-                              <circle cx={pinX} cy={pinY} r={13} fill="rgba(221, 167, 82, 0.18)" className="beacon-ring-ping" />
-                              <circle cx={pinX} cy={pinY} r={4.5} fill="#DDA752" stroke="#FFFFFF" strokeWidth="1.8" className="beacon-dot-live" />
-                            </g>
-                          )}
-                        </g>
-                      );
-                    })}
-
-                    {/* ── 6. Structural Column Grid Coordinates (Outside Perimeter) ── */}
-                    {displayedZones.length > 0 && (() => {
-                      const minX = Math.min(...displayedZones.map(z => z.svgCoords.x));
-                      const maxX = Math.max(...displayedZones.map(z => z.svgCoords.x + z.svgCoords.w));
-                      const minY = Math.min(...displayedZones.map(z => z.svgCoords.y));
-                      const maxY = Math.max(...displayedZones.map(z => z.svgCoords.y + z.svgCoords.h));
-                      const cols = ['A', 'B', 'C', 'D'];
-                      const rows = ['1', '2', '3'];
-                      const colStep = (maxX - minX) / 3;
-                      const rowStep = (maxY - minY) / 2;
-                      return (
-                        <g opacity="0.45" className="cad-grid-axes">
-                          {/* Column Bubbles along Top (Above building) */}
-                          {cols.map((label, i) => {
-                            const cx = minX + i * colStep;
-                            return (
-                              <g key={`col-${label}`}>
-                                <line x1={cx} y1={minY - 16} x2={cx} y2={minY} stroke="rgba(221, 167, 82, 0.25)" strokeDasharray="3 3" strokeWidth="0.8" />
-                                <circle cx={cx} cy={minY - 14} r="6.5" fill="rgba(10, 14, 24, 0.85)" stroke="#DDA752" strokeWidth="1" />
-                                <text x={cx} y={minY - 11.5} fontSize="7" fill="#DDA752" textAnchor="middle" fontFamily="monospace" fontWeight="bold">{label}</text>
-                              </g>
-                            );
-                          })}
-                          {/* Row Bubbles along Left (Left of building) */}
-                          {rows.map((label, i) => {
-                            const cy = minY + i * rowStep;
-                            return (
-                              <g key={`row-${label}`}>
-                                <line x1={minX - 16} y1={cy} x2={minX} y2={cy} stroke="rgba(221, 167, 82, 0.25)" strokeDasharray="3 3" strokeWidth="0.8" />
-                                <circle cx={minX - 14} cy={cy} r="6.5" fill="rgba(10, 14, 24, 0.85)" stroke="#DDA752" strokeWidth="1" />
-                                <text x={minX - 14} y={cy + 2.5} fontSize="7" fill="#DDA752" textAnchor="middle" fontFamily="monospace" fontWeight="bold">{label}</text>
-                              </g>
-                            );
-                          })}
-                        </g>
-                      );
-                    })()}
-
-                    {/* ── 7. Architectural Graphic Scale Bar ── */}
-                    <g transform="translate(40, 420)" opacity="0.65">
-                      <line x1="0" y1="0" x2="80" y2="0" stroke="#DDA752" strokeWidth="1.5" />
-                      <line x1="0" y1="-3" x2="0" y2="3" stroke="#DDA752" strokeWidth="1.5" />
-                      <line x1="40" y1="-2" x2="40" y2="2" stroke="#DDA752" strokeWidth="1" />
-                      <line x1="80" y1="-3" x2="80" y2="3" stroke="#DDA752" strokeWidth="1.5" />
-                      <text x="0" y="10" fontSize="7" fill="#DDA752" fontFamily="monospace">0m</text>
-                      <text x="36" y="10" fontSize="7" fill="#DDA752" fontFamily="monospace">5m</text>
-                      <text x="74" y="10" fontSize="7" fill="#DDA752" fontFamily="monospace">10m</text>
-                    </g>
-
-                    {/* ── 8. North Orientation Arrow ── */}
-                    <g transform="translate(642, 26)" opacity="0.75">
-                      <polygon points="0,-10 4,5 0,2 -4,5" fill="#DDA752" />
-                      <polygon points="0,10 4,-5 0,-2 -4,-5" fill="rgba(221, 167, 82, 0.25)" stroke="#DDA752" strokeWidth="0.6" />
-                      <text x="0" y="18" fontSize="7.5" fill="#DDA752" textAnchor="middle" fontFamily="monospace" fontWeight="bold">N</text>
-                    </g>
-                  </g>
-                </svg>
-                </motion.div>
-
-              ) : (
-                /* High-Res Spatial Photography View with Interactive Carousel & Filmstrip */
-                <motion.div 
-                  key={`photo-${activeFloor}`}
-                  className="photo-preview-stage"
-                  initial={{ opacity: 0, scale: 0.98 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.98 }}
-                  transition={{ duration: 0.28 }}
-                >
-                  {(() => {
-                    const gallery = currentZone.imagesList.length > 0 ? currentZone.imagesList : [currentZone.image];
-                    const safeIdx = photoIndex % gallery.length;
-                    return (
-                      <>
-                        <AnimatePresence mode="wait">
-                          <motion.img
-                            key={`${currentZone.id}-${safeIdx}`}
-                            src={gallery[safeIdx]}
-                            alt={currentZone.zoneTitle}
-                            className="photo-preview-img"
-                            initial={{ opacity: 0, scale: 1.03 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.98 }}
-                            transition={{ duration: 0.35, ease: 'easeOut' }}
-                          />
-                        </AnimatePresence>
-
-                        {gallery.length > 1 && (
-                          <div className="zone-gallery-dots" role="tablist" aria-label={isAr ? 'صور الغرفة' : 'Room photos'}>
-                            <button
-                              type="button"
-                              className="zone-gallery-arrow"
-                              aria-label={isAr ? 'الصورة السابقة' : 'Previous photo'}
-                              onClick={(e) => { e.stopPropagation(); setPhotoIndex((safeIdx - 1 + gallery.length) % gallery.length); }}
-                            >
-                              <ChevronLeft size={14} />
-                            </button>
-                            {gallery.map((_, i) => (
-                              <button
-                                key={i}
-                                type="button"
-                                role="tab"
-                                aria-selected={i === safeIdx}
-                                aria-label={`${isAr ? 'صورة' : 'Photo'} ${i + 1}`}
-                                className={`zone-gallery-dot ${i === safeIdx ? 'active' : ''}`}
-                                onClick={(e) => { e.stopPropagation(); setPhotoIndex(i); }}
-                              />
-                            ))}
-                            <button
-                              type="button"
-                              className="zone-gallery-arrow"
-                              aria-label={isAr ? 'الصورة التالية' : 'Next photo'}
-                              onClick={(e) => { e.stopPropagation(); setPhotoIndex((safeIdx + 1) % gallery.length); }}
-                            >
-                              <ChevronRight size={14} />
-                            </button>
-                            <span className="zone-gallery-counter" dir="ltr">{safeIdx + 1}/{gallery.length}</span>
-                          </div>
-                        )}
-                      </>
-                    );
-                  })()}
-
-                  <div className="photo-preview-vignette" />
-
-                  {/* Top Metadata Bar */}
-                  <div className="photo-top-meta-bar">
-                    <div className="photo-vista-badge">
-                      <Sparkles size={12} className="sparkle-gold" />
-                      <span>{isAr ? currentZone.zoneTitleAr : currentZone.zoneTitle} • 4K ARCHITECTURAL CAPTURE</span>
-                    </div>
-
-                    <div className="photo-counter-badge">
-                      <span>{currentRoomIndex + 1} / {activeRoomList.length}</span>
-                    </div>
-                  </div>
-
-                  {/* Carousel Left / Right Arrows */}
-                  {activeRoomList.length > 1 && (
-                    <>
-                      <button 
-                        className="photo-nav-arrow arrow-left" 
-                        onClick={(e) => { e.stopPropagation(); handlePrevRoom(); }}
-                        type="button"
-                        aria-label="Previous Room"
-                      >
-                        <ChevronLeft size={22} />
-                      </button>
-
-                      <button 
-                        className="photo-nav-arrow arrow-right" 
-                        onClick={(e) => { e.stopPropagation(); handleNextRoom(); }}
-                        type="button"
-                        aria-label="Next Room"
-                      >
-                        <ChevronRight size={22} />
-                      </button>
-                    </>
-                  )}
-
-                  {/* Bottom Floating Room Thumbnail Filmstrip */}
-                  <div className="photo-filmstrip-container">
-                    <div 
-                      ref={filmstripTrackRef}
-                      className="photo-filmstrip-track"
-                      onWheel={handleHorizontalWheel}
-                    >
-                      {activeRoomList.map((zone, idx) => {
-                        const isCurrent = zone.id === currentZone.id;
-                        return (
-                          <button
-                            key={zone.id}
-                            className={`filmstrip-thumb-card ${isCurrent ? 'active' : ''}`}
-                            onClick={() => setSelectedZoneId(zone.id)}
-                            type="button"
-                          >
-                            <div className="thumb-img-box">
-                              <img src={zone.image} alt={zone.zoneTitle} className="thumb-img" />
-                              <span className="thumb-num-badge">0{idx + 1}</span>
-                            </div>
-                            <div className="thumb-meta">
-                              <span className="thumb-title">{isAr ? zone.zoneTitleAr : zone.zoneTitle}</span>
-                              <span className="thumb-sqm">{zone.sqm} m²</span>
-                            </div>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                </motion.div>
-              )}
-            </AnimatePresence>
-
-          </div>
-        </div>
-
-        {/* Synced Specifications Rail — live dossier for the selected space */}
-        <div className="studio-dossier-pane">
-
-          {/* Zone Hero Banner */}
-          <div className="dossier-hero">
-            <img
-              src={currentZone.image}
-              alt={isAr ? currentZone.zoneTitleAr : currentZone.zoneTitle}
-              className="dossier-hero-img"
-              loading="lazy"
-            />
-            <div className="dossier-hero-scrim" />
-            <div className="dossier-hero-content">
-              <div className="dossier-badge-row">
-                <span className="dossier-floor-badge">
-                  <Building size={12} />
-                  <span>{isAr ? currentZone.floorLabelAr : currentZone.floorLabel}</span>
+              </>
+            )}
+            {bldView.mode === 'unit' && (
+              <>
+                <span className="studio-crumb-sep">›</span>
+                <span className="studio-crumb-btn active">
+                  <span>{bldView.unitId ? 'Flat' : (isAr ? 'الشقة' : 'Flat Plan')}</span>
                 </span>
-                {currentZone.unitLabel && (
-                  <span className="dossier-unit-badge">{currentZone.unitLabel}</span>
-                )}
-                {currentZone.badge !== 'unknown' && (() => {
-                  const tier = TIER_BADGES[currentZone.badge];
-                  return (
-                    <span
-                      className="dossier-tier-badge"
-                      style={{ color: tier.color, background: tier.bg, borderColor: tier.color }}
-                    >
-                      <span className="tier-dot" style={{ background: tier.color }} />
-                      <span>{isAr ? tier.ar : tier.en}</span>
-                    </span>
-                  );
-                })()}
-              </div>
-              <h4 className="dossier-space-title">
-                {isAr ? currentZone.zoneTitleAr : currentZone.zoneTitle}
-              </h4>
-            </div>
+              </>
+            )}
           </div>
+        ) : availableFloors.length > 1 ? (
+          <div className="studio-crumbs-row">
+            {availableFloors.map((fKey) => {
+              const isActive = activeFloorKey === fKey;
+              const fZone = processedZones.find(z => z.floorKey === fKey);
+              const label = isAr ? (fZone?.floorLabelAr || fKey) : (fZone?.floorLabel || fKey);
+              return (
+                <button
+                  key={fKey}
+                  type="button"
+                  className={`studio-crumb-btn ${isActive ? 'active' : ''}`}
+                  onClick={() => setActiveFloorKey(fKey)}
+                >
+                  <Layers size={13} />
+                  <span>{label}</span>
+                </button>
+              );
+            })}
+          </div>
+        ) : null}
+      </div>
 
-          {/* Metric Grid */}
-          <div className="dossier-metrics-grid">
-            <div className="dossier-metric-cell">
-              <span className="metric-lbl">{isAr ? 'مساحة المسطح' : 'BUILT-UP AREA'}</span>
-              <span className="metric-val" dir="ltr">{currentZone.sqm} m²</span>
-            </div>
-            <div className="dossier-metric-cell">
-              <span className="metric-lbl">{isAr ? 'ارتفاع السقف' : 'CEILING'}</span>
-              <span className="metric-val">{currentZone.ceiling}</span>
-            </div>
-            <div className="dossier-metric-cell">
-              <span className="metric-lbl">{isAr ? 'الأبعاد المعمارية' : 'DIMENSIONS'}</span>
-              <span className="metric-val" dir="ltr">{currentZone.dims}</span>
-            </div>
-            <div className="dossier-metric-cell">
-              <span className="metric-lbl">{isAr ? 'الفتحات' : 'OPENINGS'}</span>
-              <span className="metric-val" dir="ltr">
-                {currentZone.doorCount + currentZone.windowCount > 0
-                  ? [
-                      currentZone.doorCount > 0 ? `${currentZone.doorCount} ${isAr ? (currentZone.doorCount === 1 ? 'باب' : 'أبواب') : (currentZone.doorCount === 1 ? 'Door' : 'Doors')}` : null,
-                      currentZone.windowCount > 0 ? `${currentZone.windowCount} ${isAr ? (currentZone.windowCount === 1 ? 'نافذة' : 'نوافذ') : (currentZone.windowCount === 1 ? 'Window' : 'Windows')}` : null,
-                    ].filter(Boolean).join(' · ')
-                  : '—'}
+      {/* 2. Panoramic Inline CAD Stage */}
+      <div className="studio-panoramic-stage">
+        {renderControlsBar(false)}
+        <div 
+          className="stage-svg-wrapper" 
+          onMouseDown={handleMouseDown} 
+          onMouseMove={handleMouseMove} 
+          onMouseUp={handleMouseUp}
+        >
+          {renderVectorSvgContent()}
+        </div>
+      </div>
+
+      {/* 3. DEDICATED FULLSCREEN STUDIO OVERLAY (PORTALED TO DOCUMENT.BODY) */}
+      {mounted && isFullscreen && createPortal(
+        <div className="cad-fullscreen-portal-overlay" data-theme={currentTheme} dir={isAr ? 'rtl' : 'ltr'}>
+          <div className="cad-fullscreen-topbar">
+            <div className="cad-fullscreen-meta-block">
+              <span className="cad-fullscreen-badge">
+                <Sparkles size={12} className="sparkle-gold" />
+                <span>{isAr ? 'استوديو المخططات المعمارية المعتمدة' : 'ARCHITECTURAL CAD STUDIO'}</span>
               </span>
+              <h3 className="cad-fullscreen-title">{propertyTitle}</h3>
             </div>
+
+            {propertyType === 'building' ? (
+              <div className="studio-crumbs-row">
+                <button
+                  type="button"
+                  className={`studio-crumb-btn ${bldView.mode === 'elevation' ? 'active' : ''}`}
+                  onClick={() => setBldView({ mode: 'elevation', floorKey: bldView.floorKey })}
+                >
+                  <Building size={13} />
+                  <span>{isAr ? 'واجهة المبنى' : 'Building Facade'}</span>
+                </button>
+                {bldView.mode !== 'elevation' && (
+                  <>
+                    <span className="studio-crumb-sep">›</span>
+                    <button
+                      type="button"
+                      className={`studio-crumb-btn ${bldView.mode === 'floor' ? 'active' : ''}`}
+                      onClick={() => setBldView({ mode: 'floor', floorKey: bldView.floorKey })}
+                    >
+                      <span>{isGround ? (isAr ? 'الدور الأرضي' : 'Ground Floor') : isRoof ? (isAr ? 'السطح' : 'Roof') : isBasement ? (isAr ? 'البدروم' : 'Basement') : bldView.floorKey}</span>
+                    </button>
+                  </>
+                )}
+                {bldView.mode === 'unit' && (
+                  <>
+                    <span className="studio-crumb-sep">›</span>
+                    <span className="studio-crumb-btn active">
+                      <span>{bldView.unitId ? 'Flat' : (isAr ? 'الشقة' : 'Flat Plan')}</span>
+                    </span>
+                  </>
+                )}
+              </div>
+            ) : availableFloors.length > 1 ? (
+              <div className="studio-crumbs-row">
+                {availableFloors.map((fKey) => {
+                  const isActive = activeFloorKey === fKey;
+                  const fZone = processedZones.find(z => z.floorKey === fKey);
+                  const label = isAr ? (fZone?.floorLabelAr || fKey) : (fZone?.floorLabel || fKey);
+                  return (
+                    <button
+                      key={fKey}
+                      type="button"
+                      className={`studio-crumb-btn ${isActive ? 'active' : ''}`}
+                      onClick={() => setActiveFloorKey(fKey)}
+                    >
+                      <Layers size={13} />
+                      <span>{label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            ) : null}
+
+            <button
+              type="button"
+              className="cad-fullscreen-close-btn"
+              onClick={() => setIsFullscreen(false)}
+            >
+              <Minimize2 size={16} />
+              <span>{isAr ? 'إغلاق ملء الشاشة' : 'Exit Fullscreen'}</span>
+            </button>
           </div>
 
-          {/* Zone Photo Filmstrip */}
-          {currentZone.imagesList.length > 1 && (
-            <div className="dossier-photo-strip">
-              {currentZone.imagesList.slice(0, 6).map((img, i) => (
-                <img key={`${currentZone.id}-ph-${i}`} src={img} alt="" className="dossier-photo-thumb" loading="lazy" />
-              ))}
+          <div className="cad-fullscreen-stage-container">
+            {renderControlsBar(true)}
+            <div 
+              className="stage-svg-wrapper fullscreen-svg-wrapper" 
+              onMouseDown={handleMouseDown} 
+              onMouseMove={handleMouseMove} 
+              onMouseUp={handleMouseUp}
+            >
+              {renderVectorSvgContent()}
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* 4. LUXURY FLOATING POPUP MODAL (PORTALED TO DOCUMENT.BODY) */}
+      {mounted && createPortal(
+        <AnimatePresence>
+          {activeModalZone && (
+            <div className="pub-modal-portal-wrapper">
+              <div 
+                className="pub-modal-backdrop" 
+                onClick={() => setActiveModalZone(null)}
+              />
+              <motion.div 
+                className="pub-spec-modal-card"
+                initial={{ opacity: 0, scale: 0.92, y: 30 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.92, y: 30 }}
+                transition={{ type: 'spring', stiffness: 450, damping: 30 }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                {/* Modal Top Header */}
+                <div className="pub-modal-header">
+                  <div className="pub-modal-meta">
+                    <div className="pub-badge-row">
+                      <span className="pub-floor-pill">
+                        <Building size={12} />
+                        <span>{isAr ? activeModalZone.floorLabelAr : activeModalZone.floorLabel}</span>
+                      </span>
+                      {activeModalZone.unitLabel && (
+                        <span className="pub-unit-pill">{activeModalZone.unitLabel}</span>
+                      )}
+                      {activeModalZone.badge !== 'unknown' && (() => {
+                        const tier = TIER_BADGES[activeModalZone.badge];
+                        return (
+                          <span className="pub-tier-pill" style={{ color: tier.color, background: tier.bg, borderColor: tier.color }}>
+                            <Check size={10} strokeWidth={3} />
+                            <span>{isAr ? tier.ar : tier.en}</span>
+                          </span>
+                        );
+                      })()}
+                    </div>
+                    <h3 className="pub-modal-title">
+                      {isAr ? activeModalZone.zoneTitleAr : activeModalZone.zoneTitle}
+                    </h3>
+                  </div>
+
+                  <button 
+                    type="button" 
+                    className="pub-modal-close-btn"
+                    onClick={() => setActiveModalZone(null)}
+                    aria-label="Close"
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
+
+                {/* Modal Hero Visual Image */}
+                <div className="pub-modal-hero">
+                  <img 
+                    src={activeModalZone.image} 
+                    alt={isAr ? activeModalZone.zoneTitleAr : activeModalZone.zoneTitle} 
+                    className="pub-modal-img" 
+                  />
+                  <div className="pub-modal-scrim" />
+                </div>
+
+                {/* 4 Architectural Key Metrics */}
+                <div className="pub-metrics-grid">
+                  <div className="pub-metric-cell">
+                    <span className="pub-metric-lbl">{isAr ? 'مساحة المسطح' : 'BUILT-UP AREA'}</span>
+                    <span className="pub-metric-val" dir="ltr">{activeModalZone.sqm} m²</span>
+                  </div>
+                  <div className="pub-metric-cell">
+                    <span className="pub-metric-lbl">{isAr ? 'ارتفاع السقف' : 'CEILING HEIGHT'}</span>
+                    <span className="pub-metric-val">{activeModalZone.ceiling}</span>
+                  </div>
+                  <div className="pub-metric-cell">
+                    <span className="pub-metric-lbl">{isAr ? 'الأبعاد المعمارية' : 'DIMENSIONS'}</span>
+                    <span className="pub-metric-val" dir="ltr">{activeModalZone.dims}</span>
+                  </div>
+                  <div className="pub-metric-cell">
+                    <span className="pub-metric-lbl">{isAr ? 'الفتحات والنوافذ' : 'OPENINGS'}</span>
+                    <span className="pub-metric-val" dir="ltr">
+                      {activeModalZone.doorCount + activeModalZone.windowCount > 0
+                        ? [
+                            activeModalZone.doorCount > 0 
+                              ? `${activeModalZone.doorCount} ${isAr ? (activeModalZone.doorCount === 1 ? 'باب' : 'أبواب') : (activeModalZone.doorCount === 1 ? 'Door' : 'Doors')}` 
+                              : null,
+                            activeModalZone.windowCount > 0 
+                              ? `${activeModalZone.windowCount} ${isAr ? (activeModalZone.windowCount === 1 ? 'نافذة' : 'نوافذ') : (activeModalZone.windowCount === 1 ? 'Window' : 'Windows')}` 
+                              : null,
+                          ].filter(Boolean).join(' · ')
+                        : '—'}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Engineered Trades & Materials Matrix */}
+                <div className="pub-trades-section">
+                  <h4 className="pub-trades-heading">
+                    {isAr ? 'المواصفات والأنظمة الهندسية المعتمدة' : 'ENGINEERED SYSTEMS & MATERIAL SPECIFICATIONS'}
+                  </h4>
+
+                  <div className="pub-trades-grid">
+                    {activeModalZone.trades.map((trade) => {
+                      const Icon = trade.icon === 'zap' ? Zap : trade.icon === 'wind' ? Wind : trade.icon === 'droplet' ? Droplet : Layers;
+                      return (
+                        <div key={trade.id} className="pub-trade-card">
+                          <div className="pub-trade-icon-box">
+                            <Icon size={16} />
+                          </div>
+                          <div className="pub-trade-info">
+                            <div className="pub-trade-title-row">
+                              <span className="pub-trade-name">{isAr ? trade.nameAr : trade.name}</span>
+                              <span className="pub-trade-badge">{isAr ? trade.badgeAr : trade.badge}</span>
+                            </div>
+                            <p className="pub-trade-spec">{isAr ? trade.specAr : trade.spec}</p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Modal Footer Actions */}
+                <div className="pub-modal-footer">
+                  <a
+                    href={`https://wa.me/201000000000?text=Hello,%20I%20am%20inquiring%20about%20${encodeURIComponent(activeModalZone.zoneTitle)}%20in%20${encodeURIComponent(propertyTitle)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="pub-inquire-cta-btn"
+                  >
+                    <MessageSquare size={16} />
+                    <span>{isAr ? 'استفسار فوري عن هذا الجناح' : 'Inquire About This Space'}</span>
+                  </a>
+                </div>
+
+              </motion.div>
             </div>
           )}
-
-          {/* Trade Specifications Matrix Grid (2 Columns on Desktop) */}
-          <div className="dossier-trades-container">
-            <span className="trades-section-eyebrow">
-              {isAr ? 'البنود والأنظمة الهندسية المعتمدة لهذا الجناح' : 'ENGINEERED SYSTEMS & MATERIAL SPECIFICATIONS'}
-            </span>
-
-            <div className="system-filter-strip" role="tablist" aria-label={isAr ? 'تصفية حسب النظام' : 'Filter by system'}>
-              {SYSTEM_FILTERS.map(sf => {
-                const count = sf.key === 'all'
-                  ? currentZone.trades.length
-                  : currentZone.trades.filter(t => systemOf(t) === sf.key).length;
-                if (sf.key !== 'all' && count === 0) return null;
-                return (
-                  <button
-                    key={sf.key}
-                    type="button"
-                    role="tab"
-                    aria-selected={systemFilter === sf.key}
-                    className={`system-filter-pill ${systemFilter === sf.key ? 'active' : ''}`}
-                    onClick={() => setSystemFilter(sf.key)}
-                  >
-                    <span>{isAr ? sf.ar : sf.en}</span>
-                    <span className="system-pill-count">{count}</span>
-                  </button>
-                );
-              })}
-            </div>
-
-            <div className="dossier-trades-grid">
-              {currentZone.trades.filter(t => systemFilter === 'all' || systemOf(t) === systemFilter).map((trade) => {
-                const Icon = trade.icon === 'zap' ? Zap : trade.icon === 'wind' ? Wind : trade.icon === 'droplet' ? Droplet : Layers;
-                return (
-                  <div key={trade.id} className="trade-spec-card">
-                    <div className="trade-spec-icon-box">
-                      <Icon size={18} className="trade-icon" />
-                    </div>
-
-                    <div className="trade-spec-info">
-                      <div className="trade-spec-title-row">
-                        <span className="trade-name">{isAr ? trade.nameAr : trade.name}</span>
-                        <span className="trade-status-pill">
-                          <Check size={11} strokeWidth={3} />
-                          <span>{isAr ? trade.badgeAr : trade.badge}</span>
-                        </span>
-                      </div>
-                      <p className="trade-spec-desc">{isAr ? trade.specAr : trade.spec}</p>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Dossier Footer Actions */}
-          <div className="dossier-footer-actions">
-            <button 
-              className="dossier-inquire-btn"
-              onClick={handleInquireSpace}
-              type="button"
-            >
-              <MessageSquare size={16} />
-              <span>{isAr ? 'استفسار فوري عن هذا الجناح' : 'Inquire About This Space'}</span>
-            </button>
-          </div>
-
-        </div>
-
-      </div>
+        </AnimatePresence>,
+        document.body
+      )}
 
       <style>{`
-        .blueprint-studio-root {
-          margin-bottom: 4rem;
+        /* ── THEMING VARIABLES ── */
+        .blueprint-studio-root,
+        .cad-fullscreen-portal-overlay {
+          --cad-stage-bg: #090C15;
+          --cad-grid-color: rgba(221, 167, 82, 0.08);
+          --cad-text-primary: #FFFFFF;
+          --cad-text-muted: rgba(255, 255, 255, 0.7);
+          --cad-dims-color: rgba(221, 167, 82, 0.85);
+          --cad-parquet-stroke: rgba(221, 167, 82, 0.22);
+          --cad-parquet-fill: rgba(221, 167, 82, 0.035);
+          --cad-tile-stroke: rgba(127, 180, 216, 0.25);
+          --cad-tile-fill: rgba(127, 180, 216, 0.04);
+          --cad-deck-stroke: rgba(221, 167, 82, 0.35);
+          --cad-deck-fill: rgba(221, 167, 82, 0.05);
+          --cad-bed-dot: rgba(221, 167, 82, 0.25);
+          --cad-bed-fill: rgba(255, 255, 255, 0.02);
+          --cad-furniture-fill: rgba(221, 167, 82, 0.14);
+          --cad-stamp-bg: rgba(10, 14, 24, 0.92);
+          --cad-core-bg: rgba(10, 14, 24, 0.95);
+          --cad-balcony-badge-bg: rgba(10, 14, 24, 0.95);
+          --cad-toolbar-bg: rgba(10, 14, 24, 0.88);
+          --cad-toolbar-text: #FFFFFF;
+          --cad-toolbar-border: rgba(221, 167, 82, 0.3);
+          --gold-primary: #DDA752;
+
+          margin-bottom: 2rem;
           width: 100%;
           display: flex;
           flex-direction: column;
           gap: 1.25rem;
+          font-family: var(--font-body, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif);
         }
 
-        .dossier-tier-badge {
-          display: inline-flex;
-          align-items: center;
-          gap: 6px;
-          padding: 4px 12px;
-          border-radius: 9999px;
-          border: 1px solid;
-          font-size: 0.7rem;
-          font-weight: 800;
-          letter-spacing: 0.04em;
-          white-space: nowrap;
+        [data-theme="light"] .blueprint-studio-root,
+        [data-theme="light"] .cad-fullscreen-portal-overlay,
+        .blueprint-studio-root[data-theme="light"],
+        .cad-fullscreen-portal-overlay[data-theme="light"],
+        .pub-modal-portal-wrapper[data-theme="light"] {
+          --cad-stage-bg: #FFFFFF;
+          --cad-grid-color: rgba(15, 23, 42, 0.05);
+          --cad-text-primary: #0F172A;
+          --cad-text-muted: #475569;
+          --cad-dims-color: #B8860B;
+          --cad-parquet-stroke: rgba(184, 134, 11, 0.3);
+          --cad-parquet-fill: #FFFBF2;
+          --cad-tile-stroke: rgba(59, 130, 246, 0.3);
+          --cad-tile-fill: #F0F7FF;
+          --cad-deck-stroke: rgba(184, 134, 11, 0.4);
+          --cad-deck-fill: #FEF9E7;
+          --cad-bed-dot: rgba(184, 134, 11, 0.35);
+          --cad-bed-fill: #FAF9F6;
+          --cad-furniture-fill: rgba(184, 134, 11, 0.15);
+          --cad-stamp-bg: rgba(255, 255, 255, 0.96);
+          --cad-core-bg: #F8FAFC;
+          --cad-balcony-badge-bg: #FFFFFF;
+          --cad-toolbar-bg: rgba(255, 255, 255, 0.94);
+          --cad-toolbar-text: #0F172A;
+          --cad-toolbar-border: rgba(184, 134, 11, 0.4);
+          --gold-primary: #B8860B;
         }
 
-        .tier-dot {
-          width: 7px;
-          height: 7px;
-          border-radius: 9999px;
-          flex-shrink: 0;
+        [data-theme="dark"] .blueprint-studio-root,
+        [data-theme="dark"] .cad-fullscreen-portal-overlay,
+        .blueprint-studio-root[data-theme="dark"],
+        .cad-fullscreen-portal-overlay[data-theme="dark"],
+        .pub-modal-portal-wrapper[data-theme="dark"] {
+          --cad-stage-bg: #090C15;
+          --cad-grid-color: rgba(221, 167, 82, 0.08);
+          --cad-text-primary: #FFFFFF;
+          --cad-text-muted: rgba(255, 255, 255, 0.7);
+          --cad-dims-color: rgba(221, 167, 82, 0.85);
+          --cad-parquet-stroke: rgba(221, 167, 82, 0.22);
+          --cad-parquet-fill: rgba(221, 167, 82, 0.035);
+          --cad-tile-stroke: rgba(127, 180, 216, 0.25);
+          --cad-tile-fill: rgba(127, 180, 216, 0.04);
+          --cad-deck-stroke: rgba(221, 167, 82, 0.35);
+          --cad-deck-fill: rgba(221, 167, 82, 0.05);
+          --cad-bed-dot: rgba(221, 167, 82, 0.25);
+          --cad-bed-fill: rgba(255, 255, 255, 0.02);
+          --cad-furniture-fill: rgba(221, 167, 82, 0.14);
+          --cad-stamp-bg: rgba(10, 14, 24, 0.92);
+          --cad-core-bg: rgba(10, 14, 24, 0.95);
+          --cad-balcony-badge-bg: rgba(10, 14, 24, 0.95);
+          --cad-toolbar-bg: rgba(10, 14, 24, 0.88);
+          --cad-toolbar-text: #FFFFFF;
+          --cad-toolbar-border: rgba(221, 167, 82, 0.3);
+          --gold-primary: #DDA752;
         }
 
-        .system-filter-strip {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          flex-wrap: wrap;
-          margin: 0.75rem 0 1rem;
-        }
-
-        .system-filter-pill {
-          display: inline-flex;
-          align-items: center;
-          gap: 7px;
-          padding: 6px 14px;
-          border-radius: 9999px;
-          font-size: 0.75rem;
-          font-weight: 700;
-          cursor: pointer;
-          background: rgba(255, 255, 255, 0.03);
-          border: 1px solid rgba(221, 167, 82, 0.18);
-          color: rgba(237, 232, 221, 0.6);
-          transition: color 0.15s cubic-bezier(0.2,0,0,1), border-color 0.15s cubic-bezier(0.2,0,0,1), background-color 0.15s cubic-bezier(0.2,0,0,1);
-        }
-
-        .system-filter-pill:hover { color: #EDE8DD; border-color: rgba(221, 167, 82, 0.45); }
-
-        .system-filter-pill.active {
-          background: rgba(221, 167, 82, 0.12);
-          border-color: #DDA752;
-          color: #DDA752;
-        }
-
-        .system-pill-count {
-          font-family: monospace;
-          font-variant-numeric: tabular-nums;
-          font-size: 0.65rem;
-          font-weight: 800;
-          padding: 1px 7px;
-          border-radius: 9999px;
-          background: rgba(255, 255, 255, 0.07);
-        }
-
-        .system-filter-pill.active .system-pill-count { background: rgba(221, 167, 82, 0.22); }
-
-        [data-theme="light"] .system-filter-pill {
-          background: #FFFFFF;
-          border-color: rgba(184, 134, 11, 0.25);
-          color: rgba(28, 26, 22, 0.6);
-        }
-
-        [data-theme="light"] .system-filter-pill.active {
-          background: rgba(184, 134, 11, 0.1);
-          border-color: #B8860B;
-          color: #B8860B;
-        }
-
-        .zone-gallery-dots {
-          position: absolute;
-          inset-block-end: 96px;
-          inset-inline-start: 50%;
-          transform: translateX(-50%);
-          z-index: 8;
-          display: flex;
-          align-items: center;
-          gap: 7px;
-          padding: 7px 12px;
-          border-radius: 9999px;
-          background: rgba(10, 14, 24, 0.72);
-          border: 1px solid rgba(221, 167, 82, 0.3);
-          backdrop-filter: blur(8px);
-        }
-
-        [dir="rtl"] .zone-gallery-dots { transform: translateX(50%); }
-
-        .zone-gallery-dot {
-          width: 8px;
-          height: 8px;
-          border-radius: 9999px;
-          border: none;
-          padding: 0;
-          cursor: pointer;
-          background: rgba(237, 232, 221, 0.35);
-          transition: background-color 0.15s cubic-bezier(0.2,0,0,1), transform 0.15s cubic-bezier(0.2,0,0,1);
-        }
-
-        .zone-gallery-dot.active { background: #DDA752; transform: scale(1.25); }
-
-        .zone-gallery-arrow {
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          width: 22px;
-          height: 22px;
-          border-radius: 9999px;
-          border: none;
-          cursor: pointer;
-          background: rgba(221, 167, 82, 0.16);
-          color: #DDA752;
-        }
-
-        .zone-gallery-counter {
-          font-family: monospace;
-          font-variant-numeric: tabular-nums;
-          font-size: 0.65rem;
-          font-weight: 800;
-          color: rgba(237, 232, 221, 0.75);
-          padding-inline-start: 3px;
-        }
-
-        /* 1. Header Bar */
         .studio-top-header {
           display: flex;
           align-items: flex-end;
           justify-content: space-between;
-          gap: 1.25rem;
           flex-wrap: wrap;
+          gap: 1rem;
+          padding-bottom: 0.75rem;
+          border-bottom: 1px solid var(--gold-primary, rgba(221, 167, 82, 0.2));
         }
 
         .studio-title-block {
@@ -2196,604 +1862,74 @@ export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintIns
         }
 
         .studio-eyebrow {
-          display: inline-flex;
+          display: flex;
           align-items: center;
-          gap: 6px;
-          font-family: var(--font-heading);
-          font-size: 0.6875rem;
-          font-weight: 800;
-          letter-spacing: 0.16em;
-          color: var(--gold-primary, #DDA752);
+          gap: 0.4rem;
+          font-size: 0.72rem;
+          letter-spacing: 0.12em;
           text-transform: uppercase;
-        }
-
-        [data-theme="light"] .studio-eyebrow {
-          color: #B8860B;
+          color: var(--gold-primary, #DDA752);
+          font-weight: 800;
         }
 
         .sparkle-gold {
           color: var(--gold-primary, #DDA752);
-          filter: drop-shadow(0 0 6px rgba(221, 167, 82, 0.7));
         }
 
         .studio-main-heading {
-          font-family: var(--font-heading);
-          font-size: clamp(1.4rem, 2.2vw, 1.85rem);
+          font-size: 1.45rem;
           font-weight: 800;
-          letter-spacing: -0.025em;
-          color: var(--text-primary, #FFFFFF);
+          color: var(--text-primary, var(--cad-text-primary));
+          font-family: var(--font-heading, inherit);
+          letter-spacing: -0.01em;
           margin: 0;
         }
 
-        .studio-print-btn {
-          display: inline-flex;
-          align-items: center;
-          gap: 8px;
-          padding: 0.6rem 1.15rem;
-          border-radius: 9999px;
-          font-family: var(--font-heading);
-          font-size: 0.78125rem;
-          font-weight: 700;
-          cursor: pointer;
-          transition: all 0.2s ease;
-          background: rgba(221, 167, 82, 0.1);
-          border: 1px solid rgba(221, 167, 82, 0.35);
-          color: var(--gold-primary, #DDA752);
-        }
-
-        .studio-print-btn:hover {
-          background: rgba(221, 167, 82, 0.2);
-          border-color: var(--gold-primary, #DDA752);
-          transform: translateY(-1px);
-        }
-
-        /* 2. Floor Tabs Bar */
-        .studio-floor-tabs-bar {
+        .studio-crumbs-row {
           display: flex;
           align-items: center;
-          gap: 8px;
-          overflow-x: auto;
-          padding: 0.35rem;
-          border-radius: 16px;
-          background: rgba(255, 255, 255, 0.03);
-          border: 1px solid rgba(255, 255, 255, 0.08);
-          scrollbar-width: none;
+          gap: 0.5rem;
+          background: var(--cad-toolbar-bg);
+          padding: 0.35rem 0.65rem;
+          border-radius: 10px;
+          border: 1px solid var(--cad-toolbar-border);
         }
 
-        .studio-floor-tabs-bar::-webkit-scrollbar {
-          display: none;
-        }
-
-        [data-theme="light"] .studio-floor-tabs-bar {
-          background: #FFFFFF;
-          border-color: rgba(0, 0, 0, 0.08);
-        }
-
-        .studio-floor-tab {
-          position: relative;
-          display: inline-flex;
+        .studio-crumb-btn {
+          display: flex;
           align-items: center;
-          gap: 8px;
-          padding: 0.55rem 1.05rem;
-          border-radius: 12px;
-          font-family: var(--font-heading);
-          font-size: 0.8125rem;
-          font-weight: 700;
-          cursor: pointer;
+          gap: 0.4rem;
           background: transparent;
           border: none;
-          color: var(--text-secondary, rgba(255, 255, 255, 0.7));
-          transition: all 0.2s ease;
-          white-space: nowrap;
+          color: var(--cad-text-muted);
+          font-size: 0.8rem;
+          font-weight: 600;
+          cursor: pointer;
+          transition: color 0.2s ease;
         }
 
-        .studio-floor-tab:hover {
-          color: var(--text-primary, #FFFFFF);
-        }
-
-        .studio-floor-tab.active {
+        .studio-crumb-btn:hover,
+        .studio-crumb-btn.active {
           color: var(--gold-primary, #DDA752);
         }
 
-        [data-theme="light"] .studio-floor-tab.active {
-          color: #7A5200;
+        .studio-crumb-sep {
+          color: var(--gold-primary, rgba(221, 167, 82, 0.5));
+          font-size: 0.85rem;
         }
 
-        .tab-icon {
-          flex-shrink: 0;
-        }
-
-        .floor-count-pill {
-          padding: 0.15rem 0.5rem;
-          border-radius: 9999px;
-          font-size: 0.6875rem;
-          font-weight: 800;
-          background: rgba(255, 255, 255, 0.06);
-        }
-
-        .studio-floor-tab.active .floor-count-pill {
-          background: rgba(221, 167, 82, 0.2);
-          color: var(--gold-primary, #DDA752);
-        }
-
-        .tab-active-indicator {
-          position: absolute;
-          inset: 0;
-          border-radius: 12px;
-          background: rgba(221, 167, 82, 0.12);
-          border: 1.5px solid rgba(221, 167, 82, 0.5);
-          pointer-events: none;
-        }
-
-        /* 3. Room Quick Select Pills */
-        .studio-room-pills-wrapper {
+        /* Stage Container */
+        .studio-panoramic-stage {
           position: relative;
           width: 100%;
-          display: flex;
-          align-items: center;
-        }
-
-        .studio-room-pills-bar {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          overflow-x: auto;
-          scroll-behavior: smooth;
-          -webkit-overflow-scrolling: touch;
-          padding: 4px 2px;
-          scrollbar-width: none;
-          width: 100%;
-        }
-
-        .studio-room-pills-bar::-webkit-scrollbar {
-          display: none;
-        }
-
-        .pills-scroll-btn {
-          position: absolute;
-          top: 50%;
-          transform: translateY(-50%);
-          z-index: 10;
-          width: 28px;
-          height: 28px;
-          border-radius: 9999px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          background: rgba(10, 14, 24, 0.9);
-          border: 1px solid rgba(221, 167, 82, 0.5);
-          color: var(--gold-primary, #DDA752);
-          cursor: pointer;
-          box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
-          transition: all 0.2s ease;
-        }
-
-        .pills-scroll-btn:hover {
-          background: var(--gold-primary, #DDA752);
-          color: #0A0E18;
-          transform: translateY(-50%) scale(1.1);
-        }
-
-        .pills-scroll-btn.scroll-left {
-          left: -4px;
-        }
-
-        .pills-scroll-btn.scroll-right {
-          right: -4px;
-        }
-
-        [data-theme="light"] .pills-scroll-btn {
-          background: #FFFFFF;
-          border-color: rgba(221, 167, 82, 0.7);
-          color: #7A5200;
-          box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
-        }
-
-        .room-chip-btn {
-          display: inline-flex;
-          align-items: center;
-          gap: 8px;
-          padding: 0.45rem 0.9rem;
-          border-radius: 9999px;
-          font-family: var(--font-heading);
-          font-size: 0.78125rem;
-          font-weight: 700;
-          cursor: pointer;
-          transition: all 0.2s ease;
-          background: rgba(255, 255, 255, 0.03);
-          border: 1px solid rgba(255, 255, 255, 0.08);
-          color: var(--text-secondary, rgba(255, 255, 255, 0.7));
-          white-space: nowrap;
-        }
-
-        [data-theme="light"] .room-chip-btn {
-          background: #FFFFFF;
-          border-color: rgba(0, 0, 0, 0.08);
-          color: #334155;
-        }
-
-        .room-chip-btn:hover {
-          border-color: rgba(221, 167, 82, 0.4);
-          color: var(--text-primary, #FFFFFF);
-          transform: translateY(-1px);
-        }
-
-        .room-chip-btn.active {
-          background: linear-gradient(135deg, rgba(221, 167, 82, 0.22) 0%, rgba(10, 14, 24, 0.85) 100%);
-          border-color: var(--gold-primary, #DDA752);
-          color: #FFF4D4;
-          box-shadow: 0 0 14px rgba(221, 167, 82, 0.25);
-        }
-
-        [data-theme="light"] .room-chip-btn.active {
-          background: linear-gradient(135deg, #FFF5DB 0%, #FFFFFF 100%);
-          border-color: #B8860B;
-          color: #7A5200;
-        }
-
-        .room-num-badge {
-          font-size: 0.65rem;
-          font-weight: 800;
-          opacity: 0.6;
-        }
-
-        .room-chip-sqm {
-          font-size: 0.6875rem;
-          opacity: 0.75;
-          color: var(--gold-primary, #DDA752);
-        }
-
-        .room-chip-unit {
-          font-size: 0.625rem;
-          font-weight: 800;
-          letter-spacing: 0.04em;
-          padding: 0.1rem 0.45rem;
-          border-radius: 9999px;
-          background: rgba(221, 167, 82, 0.14);
-          border: 1px solid rgba(221, 167, 82, 0.3);
-          color: var(--gold-primary, #DDA752);
-          white-space: nowrap;
-        }
-
-        /* 4. Panoramic Stacked Workspace Container */
-        .studio-workspace-container {
-          display: flex;
-          flex-direction: column;
-          gap: 1.5rem;
-          width: 100%;
-        }
-
-        .blueprint-studio-root {
-          container-type: inline-size;
-        }
-
-        @container (min-width: 980px) {
-          .studio-workspace-container {
-            display: grid;
-            grid-template-columns: minmax(0, 1fr) 400px;
-            align-items: start;
-          }
-
-          .studio-stage-pane {
-            position: sticky;
-            top: 96px;
-          }
-        }
-
-        /* Top Stage Pane */
-        .studio-stage-pane {
-          width: 100%;
-          border-radius: 24px;
+          border-radius: 18px;
           overflow: hidden;
-          background: rgba(10, 14, 24, 0.7);
-          backdrop-filter: blur(28px);
-          -webkit-backdrop-filter: blur(28px);
-          border: 1px solid rgba(255, 255, 255, 0.1);
-          display: flex;
-          flex-direction: column;
-          min-height: 440px;
-          box-shadow: 0 20px 48px rgba(0, 0, 0, 0.4);
-        }
-
-        [data-theme="light"] .studio-stage-pane {
-          background: #FFFFFF;
-          border-color: rgba(0, 0, 0, 0.08);
-          box-shadow: 0 16px 40px rgba(30, 24, 16, 0.06);
+          background: var(--cad-stage-bg);
+          border: 1px solid var(--cad-toolbar-border);
+          box-shadow: 0 16px 40px rgba(0, 0, 0, 0.12);
         }
 
         .stage-controls-bar {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          padding: 0.85rem 1.25rem;
-          border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-        }
-
-        [data-theme="light"] .stage-controls-bar {
-          border-bottom-color: rgba(0, 0, 0, 0.06);
-        }
-
-        .stage-mode-switcher {
-          display: flex;
-          gap: 6px;
-          padding: 3px;
-          border-radius: 10px;
-          background: rgba(255, 255, 255, 0.04);
-        }
-
-        [data-theme="light"] .stage-mode-switcher {
-          background: #F1F5F9;
-        }
-
-        .mode-switch-btn {
-          display: inline-flex;
-          align-items: center;
-          gap: 6px;
-          padding: 0.4rem 0.85rem;
-          border-radius: 8px;
-          font-family: var(--font-heading);
-          font-size: 0.75rem;
-          font-weight: 700;
-          cursor: pointer;
-          background: transparent;
-          border: none;
-          color: var(--text-secondary, rgba(255, 255, 255, 0.7));
-          transition: all 0.2s ease;
-        }
-
-        .mode-switch-btn.active {
-          background: rgba(221, 167, 82, 0.2);
-          color: var(--gold-primary, #DDA752);
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-        }
-
-        [data-theme="light"] .mode-switch-btn.active {
-          background: #FFFFFF;
-          color: #7A5200;
-          box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
-        }
-
-        .stage-metrology-row {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          font-family: monospace;
-          font-size: 0.75rem;
-          color: var(--gold-primary, #DDA752);
-          font-weight: 700;
-        }
-
-        .cad-zoom-controls {
-          display: inline-flex;
-          align-items: center;
-          gap: 2px;
-          background: rgba(255, 255, 255, 0.05);
-          border: 1px solid rgba(221, 167, 82, 0.3);
-          border-radius: 8px;
-          padding: 2px 4px;
-        }
-
-        [data-theme="light"] .cad-zoom-controls {
-          background: #F1F5F9;
-          border-color: rgba(221, 167, 82, 0.5);
-        }
-
-        .cad-zoom-btn {
-          width: 22px;
-          height: 22px;
-          border-radius: 6px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          background: transparent;
-          border: none;
-          color: #DDA752;
-          cursor: pointer;
-          transition: all 0.15s ease;
-        }
-
-        .cad-zoom-btn:hover:not(:disabled) {
-          background: rgba(221, 167, 82, 0.2);
-          color: #FFFFFF;
-        }
-
-        .cad-zoom-btn:disabled {
-          opacity: 0.3;
-          cursor: not-allowed;
-        }
-
-        .cad-zoom-val-btn {
-          padding: 2px 6px;
-          background: transparent;
-          border: none;
-          color: #DDA752;
-          font-family: monospace;
-          font-size: 0.7rem;
-          font-weight: 700;
-          cursor: pointer;
-          border-radius: 4px;
-          transition: all 0.15s ease;
-        }
-
-        .cad-zoom-val-btn:hover {
-          background: rgba(221, 167, 82, 0.15);
-        }
-
-        [data-theme="light"] .stage-metrology-row {
-          color: #B8860B;
-        }
-
-        .metrology-tag {
-          display: inline-flex;
-          align-items: center;
-          gap: 4px;
-        }
-
-        .metrology-divider {
-          width: 1px;
-          height: 12px;
-          background: rgba(221, 167, 82, 0.3);
-        }
-
-        .stage-viewport-box {
-          position: relative;
-          width: 100%;
-          flex: 1;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          overflow: hidden;
-          min-height: 420px;
-        }
-
-        .blueprint-svg-canvas {
-          width: 100%;
-          height: 100%;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          padding: 1rem;
-          background: #080C14;
-        }
-
-        [data-theme="light"] .blueprint-svg-canvas {
-          background: #F8FAFC;
-        }
-
-        .cad-vector-svg {
-          width: 100%;
-          max-height: 400px;
-        }
-
-        .cad-grid-pattern-line {
-          stroke: rgba(221, 167, 82, 0.08);
-        }
-
-        .cad-opening-gap {
-          stroke: #080C14;
-        }
-
-        [data-theme="light"] .cad-opening-gap {
-          stroke: #F8FAFC;
-        }
-
-        [data-theme="light"] .cad-grid-pattern-line {
-          stroke: rgba(30, 41, 59, 0.09);
-        }
-
-        /* ── CAD Floor Fill (building interior background) */
-        .cad-floor-fill {
-          fill: rgba(255, 255, 255, 0.03);
-        }
-        [data-theme="light"] .cad-floor-fill {
-          fill: rgba(254, 250, 240, 0.9);
-        }
-
-        /* ── Perimeter Wall */
-        .cad-perimeter-wall {
-          stroke: #DDA752;
-          opacity: 0.85;
-        }
-        [data-theme="light"] .cad-perimeter-wall {
-          stroke: #B8860B;
-          opacity: 0.9;
-        }
-
-        /* ── Partition Walls Between Rooms */
-        .cad-partition-wall {
-          stroke: rgba(221, 167, 82, 0.55);
-        }
-        [data-theme="light"] .cad-partition-wall {
-          stroke: rgba(100, 80, 20, 0.5);
-        }
-
-        /* ── Major grid lines */
-        .cad-grid-major-line {
-          stroke: rgba(221, 167, 82, 0.06);
-        }
-        [data-theme="light"] .cad-grid-major-line {
-          stroke: rgba(30, 41, 59, 0.08);
-        }
-
-        /* ── Room Fill */
-        .cad-room-fill {
-          fill: rgba(255, 255, 255, 0.0);
-          transition: fill 0.2s ease;
-        }
-        .interactive-cad-room:hover .cad-room-fill {
-          fill: rgba(221, 167, 82, 0.06);
-        }
-        .cad-room-fill.selected {
-          fill: rgba(221, 167, 82, 0.14);
-        }
-        [data-theme="light"] .cad-room-fill {
-          fill: transparent;
-        }
-        [data-theme="light"] .interactive-cad-room:hover .cad-room-fill {
-          fill: rgba(221, 167, 82, 0.09);
-        }
-        [data-theme="light"] .cad-room-fill.selected {
-          fill: rgba(221, 167, 82, 0.18);
-        }
-
-        .cad-room-title {
-          fill: rgba(255, 255, 255, 0.9);
-          font-weight: 800;
-        }
-        [data-theme="light"] .cad-room-title {
-          fill: #0F172A !important;
-          font-weight: 800;
-        }
-
-        .cad-room-dims {
-          fill: rgba(255, 255, 255, 0.5);
-          font-weight: 700;
-        }
-        [data-theme="light"] .cad-room-dims {
-          fill: #475569 !important;
-          font-weight: 700;
-        }
-
-        .cad-room-sqm {
-          fill: rgba(221, 167, 82, 0.85);
-          font-weight: 800;
-        }
-        [data-theme="light"] .cad-room-sqm {
-          fill: #9E6B0B !important;
-          font-weight: 800;
-        }
-
-
-        /* ─── Spatial Photography Stage & Carousel Controls ────────────────────────── */
-        .photo-preview-stage {
-          position: absolute;
-          inset: 0;
-          width: 100%;
-          height: 100%;
-          overflow: hidden;
-          background: #000000;
-        }
-
-        .photo-preview-img {
-          width: 100%;
-          height: 100%;
-          object-fit: cover;
-          object-position: center;
-        }
-
-        .photo-preview-vignette {
-          position: absolute;
-          inset: 0;
-          background: linear-gradient(
-            to top, 
-            rgba(6, 9, 16, 0.92) 0%, 
-            rgba(6, 9, 16, 0.4) 40%, 
-            transparent 70%
-          );
-          pointer-events: none;
-        }
-
-        .photo-top-meta-bar {
           position: absolute;
           top: 1rem;
           left: 1.25rem;
@@ -2801,496 +1937,567 @@ export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintIns
           display: flex;
           align-items: center;
           justify-content: space-between;
+          gap: 0.75rem;
           z-index: 10;
           pointer-events: none;
         }
 
-        .photo-vista-badge {
-          display: inline-flex;
-          align-items: center;
-          gap: 8px;
-          padding: 0.45rem 1rem;
-          border-radius: 9999px;
-          background: rgba(10, 14, 24, 0.85);
-          backdrop-filter: blur(16px);
-          -webkit-backdrop-filter: blur(16px);
-          border: 1px solid rgba(221, 167, 82, 0.4);
-          color: #FFF4D4;
-          font-family: var(--font-heading);
-          font-size: 0.75rem;
-          font-weight: 700;
+        .fullscreen-stage-controls {
+          top: 1.25rem;
+          left: 1.75rem;
+          right: 1.75rem;
         }
 
-        .photo-counter-badge {
-          display: inline-flex;
+        .stage-controls-right-group {
+          display: flex;
           align-items: center;
-          padding: 0.4rem 0.85rem;
-          border-radius: 9999px;
-          background: rgba(10, 14, 24, 0.85);
-          backdrop-filter: blur(16px);
-          -webkit-backdrop-filter: blur(16px);
-          border: 1px solid rgba(255, 255, 255, 0.2);
-          color: #FFFFFF;
+          gap: 0.5rem;
+          pointer-events: auto;
+        }
+
+        .cad-zoom-controls,
+        .metrology-tag,
+        .cad-fullscreen-toggle-btn {
+          pointer-events: auto;
+          background: var(--cad-toolbar-bg);
+          backdrop-filter: blur(14px);
+          -webkit-backdrop-filter: blur(14px);
+          border: 1px solid var(--cad-toolbar-border);
+          border-radius: 8px;
+          display: flex;
+          align-items: center;
+          gap: 0.4rem;
+          padding: 0.35rem 0.65rem;
+          font-size: 0.75rem;
+          color: var(--cad-toolbar-text);
+          font-weight: 600;
+          box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+        }
+
+        .cad-fullscreen-toggle-btn {
+          cursor: pointer;
+          color: var(--gold-primary, #DDA752);
+          transition: all 0.2s ease;
+        }
+
+        .cad-fullscreen-toggle-btn:hover {
+          transform: translateY(-1px);
+          box-shadow: 0 6px 16px rgba(221, 167, 82, 0.25);
+        }
+
+        .metrology-tag.gold-tag {
+          color: var(--gold-primary, #DDA752);
+          border-color: var(--gold-primary, rgba(221, 167, 82, 0.5));
+        }
+
+        .cad-zoom-btn {
+          background: transparent;
+          border: none;
+          color: var(--gold-primary, #DDA752);
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 0.15rem;
+        }
+
+        .cad-zoom-val-btn {
+          background: transparent;
+          border: none;
+          color: var(--cad-toolbar-text);
+          font-size: 0.72rem;
           font-family: monospace;
-          font-size: 0.75rem;
-          font-weight: 700;
-          letter-spacing: 0.05em;
+          cursor: pointer;
         }
 
-        /* Carousel Navigation Arrows */
-        .photo-nav-arrow {
-          position: absolute;
-          top: 45%;
-          transform: translateY(-50%);
-          width: 44px;
-          height: 44px;
+        .compass-icon {
+          color: var(--gold-primary, #DDA752);
+        }
+
+        .stage-svg-wrapper {
+          width: 100%;
+          min-height: 440px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 1.5rem;
+          cursor: grab;
+          background: var(--cad-stage-bg);
+        }
+
+        .stage-svg-wrapper:active {
+          cursor: grabbing;
+        }
+
+        .cad-vector-svg {
+          width: 100%;
+          height: auto;
+          max-height: 520px;
+          transition: transform 0.15s ease-out;
+          direction: ltr !important;
+        }
+
+        .pub-elev-floor-row:hover rect {
+          fill: rgba(221, 167, 82, 0.18);
+          stroke-width: 2.2;
+        }
+
+        .pub-interactive-room-slot:hover rect {
+          stroke: var(--gold-primary, #DDA752);
+          stroke-width: 2;
+          filter: drop-shadow(0 0 6px rgba(221, 167, 82, 0.8));
+        }
+
+        /* ── DEDICATED FULLSCREEN PORTAL OVERLAY ── */
+        .cad-fullscreen-portal-overlay {
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          width: 100vw;
+          height: 100vh;
+          z-index: 9999999;
+          background: var(--cad-stage-bg, #090C15);
+          display: flex;
+          flex-direction: column;
+          overflow: hidden;
+          margin: 0 !important;
+          padding: 0 !important;
+          font-family: var(--font-body, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif);
+        }
+
+        .cad-fullscreen-topbar {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 1.5rem;
+          padding: 0.9rem 1.75rem;
+          background: var(--cad-toolbar-bg);
+          border-bottom: 1px solid var(--cad-toolbar-border);
+          backdrop-filter: blur(16px);
+          flex-shrink: 0;
+        }
+
+        .cad-fullscreen-meta-block {
+          display: flex;
+          flex-direction: column;
+          gap: 0.2rem;
+        }
+
+        .cad-fullscreen-badge {
+          display: flex;
+          align-items: center;
+          gap: 0.4rem;
+          font-size: 0.7rem;
+          font-weight: 800;
+          color: var(--gold-primary, #DDA752);
+          letter-spacing: 0.1em;
+          text-transform: uppercase;
+        }
+
+        .cad-fullscreen-title {
+          font-size: 1.15rem;
+          font-weight: 800;
+          color: var(--cad-text-primary);
+          margin: 0;
+        }
+
+        .cad-fullscreen-close-btn {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          background: linear-gradient(135deg, #DDA752 0%, #C4913E 100%);
+          color: #0A0E18;
+          border: none;
+          font-weight: 800;
+          font-size: 0.85rem;
+          padding: 0.55rem 1.15rem;
+          border-radius: 8px;
+          cursor: pointer;
+          box-shadow: 0 4px 14px rgba(221, 167, 82, 0.35);
+          transition: all 0.2s ease;
+        }
+
+        .cad-fullscreen-close-btn:hover {
+          transform: translateY(-1px);
+          box-shadow: 0 6px 20px rgba(221, 167, 82, 0.5);
+        }
+
+        .cad-fullscreen-stage-container {
+          position: relative;
+          flex: 1;
+          width: 100%;
+          height: 100%;
+          overflow: hidden;
+          background: var(--cad-stage-bg, #090C15);
+        }
+
+        .fullscreen-svg-wrapper {
+          width: 100%;
+          height: 100%;
+          min-height: calc(100vh - 75px);
+          max-height: calc(100vh - 75px);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 3.5rem 1.5rem 1.5rem 1.5rem;
+          box-sizing: border-box;
+          overflow: hidden;
+        }
+
+        .fullscreen-svg-wrapper .cad-vector-svg {
+          width: auto;
+          max-width: 92vw;
+          max-height: calc(100vh - 140px);
+          height: auto;
+          margin: auto;
+          display: block;
+        }
+
+        /* ── MODAL POPUP PORTAL STYLING ── */
+        .pub-modal-portal-wrapper {
+          position: fixed !important;
+          inset: 0 !important;
+          top: 0 !important;
+          left: 0 !important;
+          right: 0 !important;
+          bottom: 0 !important;
+          width: 100vw !important;
+          height: 100vh !important;
+          z-index: 99999999 !important;
+          display: flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          padding: 1.25rem !important;
+          margin: 0 !important;
+          box-sizing: border-box !important;
+          overflow: hidden !important;
+          background: transparent !important;
+        }
+
+        .pub-modal-backdrop {
+          position: fixed !important;
+          inset: 0 !important;
+          top: 0 !important;
+          left: 0 !important;
+          right: 0 !important;
+          bottom: 0 !important;
+          width: 100vw !important;
+          height: 100vh !important;
+          background: rgba(4, 7, 14, 0.85) !important;
+          backdrop-filter: blur(16px) !important;
+          -webkit-backdrop-filter: blur(16px) !important;
+          z-index: 1 !important;
+          margin: 0 !important;
+        }
+
+        .pub-spec-modal-card {
+          position: relative;
+          z-index: 10;
+          width: 100%;
+          max-width: 640px;
+          max-height: 88vh;
+          overflow-y: auto;
+          background: var(--bg-surface, #FFFFFF);
+          border: 1px solid rgba(221, 167, 82, 0.45);
+          border-radius: 20px;
+          box-shadow: 0 28px 64px rgba(0, 0, 0, 0.45), 0 0 24px rgba(221, 167, 82, 0.15);
+          display: flex;
+          flex-direction: column;
+          gap: 1.25rem;
+          padding: 1.5rem;
+        }
+
+        [data-theme="dark"] .pub-spec-modal-card {
+          background: #0D1220;
+          border-color: rgba(221, 167, 82, 0.4);
+          box-shadow: 0 28px 64px rgba(0, 0, 0, 0.75), 0 0 24px rgba(221, 167, 82, 0.18);
+        }
+
+        [data-theme="light"] .pub-spec-modal-card {
+          background: #FAF8F5;
+          border-color: rgba(184, 133, 48, 0.35);
+          box-shadow: 0 28px 64px rgba(15, 23, 42, 0.15), 0 0 24px rgba(184, 133, 48, 0.12);
+        }
+
+        .pub-modal-header {
+          display: flex;
+          align-items: flex-start;
+          justify-content: space-between;
+          gap: 1rem;
+        }
+
+        .pub-modal-meta {
+          display: flex;
+          flex-direction: column;
+          gap: 0.4rem;
+        }
+
+        .pub-badge-row {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          flex-wrap: wrap;
+        }
+
+        .pub-floor-pill,
+        .pub-unit-pill,
+        .pub-tier-pill {
+          display: flex;
+          align-items: center;
+          gap: 0.3rem;
+          font-size: 0.72rem;
+          font-weight: 700;
+          padding: 0.2rem 0.55rem;
+          border-radius: 6px;
+          background: rgba(15, 23, 42, 0.05);
+          border: 1px solid rgba(15, 23, 42, 0.12);
+          color: #0F172A;
+        }
+
+        [data-theme="dark"] .pub-floor-pill,
+        [data-theme="dark"] .pub-unit-pill {
+          background: rgba(255, 255, 255, 0.05);
+          border-color: rgba(255, 255, 255, 0.15);
+          color: #FFFFFF;
+        }
+
+        .pub-floor-pill {
+          color: var(--gold-primary, #B8860B);
+          border-color: var(--gold-primary, rgba(184, 134, 11, 0.35));
+        }
+
+        .pub-modal-title {
+          font-size: 1.35rem;
+          font-weight: 800;
+          color: #0F172A;
+          margin: 0;
+        }
+
+        [data-theme="dark"] .pub-modal-title {
+          color: #FFFFFF;
+        }
+
+        .pub-modal-close-btn {
+          background: rgba(15, 23, 42, 0.06);
+          border: 1px solid rgba(15, 23, 42, 0.12);
+          color: #0F172A;
+          width: 34px;
+          height: 34px;
           border-radius: 50%;
           display: flex;
           align-items: center;
           justify-content: center;
-          background: rgba(10, 14, 24, 0.75);
-          backdrop-filter: blur(16px);
-          -webkit-backdrop-filter: blur(16px);
-          border: 1px solid rgba(255, 255, 255, 0.25);
-          color: #FFFFFF;
-          cursor: pointer;
-          z-index: 20;
-          transition: all 0.2s ease;
-          box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
-        }
-
-        .photo-nav-arrow:hover {
-          background: rgba(221, 167, 82, 0.35);
-          border-color: #DDA752;
-          color: #FFF4D4;
-          transform: translateY(-50%) scale(1.08);
-        }
-
-        .arrow-left {
-          left: 1.25rem;
-        }
-
-        .arrow-right {
-          right: 1.25rem;
-        }
-
-        /* Bottom Floating Thumbnail Filmstrip */
-        .photo-filmstrip-container {
-          position: absolute;
-          bottom: 1rem;
-          left: 1.25rem;
-          right: 1.25rem;
-          z-index: 15;
-          display: flex;
-          align-items: center;
-          padding: 6px;
-          border-radius: 16px;
-          background: rgba(10, 14, 24, 0.82);
-          backdrop-filter: blur(20px);
-          -webkit-backdrop-filter: blur(20px);
-          border: 1px solid rgba(255, 255, 255, 0.12);
-        }
-
-        .photo-filmstrip-track {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          overflow-x: auto;
-          width: 100%;
-          scrollbar-width: none;
-          padding: 2px;
-        }
-
-        .photo-filmstrip-track::-webkit-scrollbar {
-          display: none;
-        }
-
-        .filmstrip-thumb-card {
-          display: inline-flex;
-          align-items: center;
-          gap: 8px;
-          padding: 4px 10px 4px 4px;
-          border-radius: 10px;
-          background: rgba(255, 255, 255, 0.04);
-          border: 1px solid rgba(255, 255, 255, 0.08);
           cursor: pointer;
           transition: all 0.2s ease;
-          flex-shrink: 0;
-          text-align: left;
         }
 
-        .filmstrip-thumb-card:hover {
-          background: rgba(255, 255, 255, 0.1);
-          border-color: rgba(221, 167, 82, 0.4);
-        }
-
-        .filmstrip-thumb-card.active {
-          background: linear-gradient(135deg, rgba(221, 167, 82, 0.25) 0%, rgba(10, 14, 24, 0.95) 100%);
-          border-color: var(--gold-primary, #DDA752);
-          box-shadow: 0 0 12px rgba(221, 167, 82, 0.3);
-        }
-
-        .thumb-img-box {
-          position: relative;
-          width: 44px;
-          height: 32px;
-          border-radius: 6px;
-          overflow: hidden;
-          flex-shrink: 0;
-        }
-
-        .thumb-img {
-          width: 100%;
-          height: 100%;
-          object-fit: cover;
-        }
-
-        .thumb-num-badge {
-          position: absolute;
-          bottom: 2px;
-          right: 2px;
-          font-size: 0.55rem;
-          font-weight: 800;
-          padding: 1px 3px;
-          border-radius: 3px;
-          background: rgba(0, 0, 0, 0.7);
-          color: #FFFFFF;
-          line-height: 1;
-        }
-
-        .thumb-meta {
-          display: flex;
-          flex-direction: column;
-          gap: 1px;
-        }
-
-        .thumb-title {
-          font-family: var(--font-heading);
-          font-size: 0.6875rem;
-          font-weight: 700;
-          color: #FFFFFF;
-          white-space: nowrap;
-        }
-
-        .thumb-sqm {
-          font-size: 0.625rem;
-          font-weight: 700;
-          color: var(--gold-primary, #DDA752);
-        }
-
-        /* Bottom Dossier Pane */
-        .studio-dossier-pane {
-          width: 100%;
-          border-radius: 24px;
-          background: rgba(10, 14, 24, 0.7);
-          backdrop-filter: blur(28px);
-          -webkit-backdrop-filter: blur(28px);
-          border: 1px solid rgba(255, 255, 255, 0.1);
-          padding: 1.25rem;
-          display: flex;
-          flex-direction: column;
-          gap: 1.25rem;
-          box-shadow: 0 20px 48px rgba(0, 0, 0, 0.4);
-        }
-
-        .dossier-hero {
-          position: relative;
-          border-radius: 16px;
-          overflow: hidden;
-          aspect-ratio: 16 / 9;
-          background: rgba(221, 167, 82, 0.06);
-        }
-
-        .dossier-hero-img {
-          position: absolute;
-          inset: 0;
-          width: 100%;
-          height: 100%;
-          object-fit: cover;
-        }
-
-        .dossier-hero-scrim {
-          position: absolute;
-          inset: 0;
-          background: linear-gradient(180deg, rgba(6, 9, 16, 0.05) 30%, rgba(6, 9, 16, 0.88) 100%);
-        }
-
-        .dossier-hero-content {
-          position: absolute;
-          inset-inline: 0;
-          inset-block-end: 0;
-          padding: 0.9rem 1rem;
-          display: flex;
-          flex-direction: column;
-          gap: 0.45rem;
-        }
-
-        .dossier-hero-content .dossier-space-title {
+        [data-theme="dark"] .pub-modal-close-btn {
+          background: rgba(255, 255, 255, 0.06);
+          border-color: rgba(255, 255, 255, 0.15);
           color: #FFFFFF;
         }
 
-        .dossier-unit-badge {
-          display: inline-flex;
-          align-items: center;
-          padding: 0.25rem 0.65rem;
-          border-radius: 9999px;
-          font-size: 0.6875rem;
-          font-weight: 800;
-          background: rgba(255, 255, 255, 0.12);
-          color: #FFFFFF;
-          border: 1px solid rgba(255, 255, 255, 0.25);
-          backdrop-filter: blur(6px);
-        }
-
-        .dossier-metrics-grid {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 8px;
-        }
-
-        .dossier-metric-cell {
-          display: flex;
-          flex-direction: column;
-          gap: 4px;
-          padding: 0.7rem 0.85rem;
-          border-radius: 12px;
-          background: rgba(221, 167, 82, 0.06);
-          border: 1px solid rgba(221, 167, 82, 0.14);
-          min-width: 0;
-        }
-
-        [data-theme="light"] .dossier-metric-cell {
-          background: rgba(184, 134, 11, 0.05);
-          border-color: rgba(184, 134, 11, 0.16);
-        }
-
-        .dossier-photo-strip {
-          display: flex;
-          gap: 8px;
-          overflow-x: auto;
-          padding-bottom: 4px;
-          scrollbar-width: thin;
-        }
-
-        .dossier-photo-thumb {
-          width: 84px;
-          height: 60px;
-          object-fit: cover;
-          border-radius: 10px;
-          border: 1px solid rgba(221, 167, 82, 0.2);
-          flex-shrink: 0;
-        }
-
-        [data-theme="light"] .studio-dossier-pane {
-          background: #FFFFFF;
-          border-color: rgba(0, 0, 0, 0.08);
-          box-shadow: 0 16px 40px rgba(30, 24, 16, 0.06);
-        }
-
-        .dossier-badge-row {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          flex-wrap: wrap;
-        }
-
-        .dossier-floor-badge {
-          display: inline-flex;
-          align-items: center;
-          gap: 5px;
-          padding: 0.25rem 0.65rem;
-          border-radius: 9999px;
-          font-size: 0.6875rem;
-          font-weight: 800;
+        .pub-modal-close-btn:hover {
           background: rgba(221, 167, 82, 0.2);
-          color: #EFC98A;
-          border: 1px solid rgba(221, 167, 82, 0.45);
-          backdrop-filter: blur(6px);
-        }
-
-        .dossier-space-title {
-          font-family: var(--font-heading);
-          font-size: 1.3rem;
-          font-weight: 800;
-          color: var(--text-primary, #FFFFFF);
-          margin: 0;
-          line-height: 1.25;
-        }
-
-        .metric-lbl {
-          font-size: 0.58rem;
-          font-weight: 800;
-          letter-spacing: 0.1em;
           color: var(--gold-primary, #DDA752);
-          text-transform: uppercase;
+          border-color: var(--gold-primary, #DDA752);
         }
 
-        [data-theme="light"] .metric-lbl {
-          color: #B8860B;
+        .pub-modal-hero {
+          position: relative;
+          width: 100%;
+          height: 180px;
+          border-radius: 12px;
+          overflow: hidden;
+          border: 1px solid rgba(221, 167, 82, 0.2);
         }
 
-        .metric-val {
-          font-size: 0.8125rem;
-          font-weight: 700;
-          color: var(--text-primary, #FFFFFF);
+        .pub-modal-img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
         }
 
-        [data-theme="light"] .metric-val {
-          color: #0F172A;
+        .pub-modal-scrim {
+          position: absolute;
+          inset: 0;
+          background: linear-gradient(180deg, transparent 40%, rgba(10, 14, 24, 0.7) 100%);
         }
 
-        .dossier-trades-container {
-          display: flex;
-          flex-direction: column;
-          gap: 0.85rem;
-        }
-
-        .trades-section-eyebrow {
-          font-family: var(--font-heading);
-          font-size: 0.65rem;
-          font-weight: 800;
-          letter-spacing: 0.12em;
-          color: var(--gold-primary, #DDA752);
-          text-transform: uppercase;
-        }
-
-        [data-theme="light"] .trades-section-eyebrow {
-          color: #B8860B;
-        }
-
-        .dossier-trades-grid {
+        .pub-metrics-grid {
           display: grid;
-          grid-template-columns: 1fr;
+          grid-template-columns: repeat(4, 1fr);
           gap: 0.75rem;
         }
 
-        .trade-spec-card {
+        @media (max-width: 600px) {
+          .pub-metrics-grid {
+            grid-template-columns: repeat(2, 1fr);
+          }
+        }
+
+        .pub-metric-cell {
+          background: rgba(221, 167, 82, 0.04);
+          border: 1px solid rgba(221, 167, 82, 0.22);
+          border-radius: 10px;
+          padding: 0.65rem 0.75rem;
           display: flex;
-          gap: 12px;
-          padding: 1rem 1.15rem;
-          border-radius: 16px;
-          background: rgba(255, 255, 255, 0.03);
-          border: 1px solid rgba(255, 255, 255, 0.06);
+          flex-direction: column;
+          gap: 0.3rem;
           transition: all 0.2s ease;
         }
 
-        [data-theme="light"] .trade-spec-card {
-          background: #F8FAFC;
-          border-color: rgba(0, 0, 0, 0.05);
+        [data-theme="dark"] .pub-metric-cell {
+          background: rgba(255, 255, 255, 0.03);
+          border-color: rgba(221, 167, 82, 0.20);
         }
 
-        .trade-spec-card:hover {
-          border-color: rgba(221, 167, 82, 0.35);
-          transform: translateY(-2px);
+        .pub-metric-lbl {
+          font-size: 0.65rem;
+          color: #64748B;
+          font-weight: 700;
+          letter-spacing: 0.06em;
+          text-transform: uppercase;
         }
 
-        .trade-spec-icon-box {
-          width: 38px;
-          height: 38px;
+        [data-theme="dark"] .pub-metric-lbl {
+          color: rgba(255, 255, 255, 0.55);
+        }
+
+        .pub-metric-val {
+          font-size: 0.95rem;
+          font-weight: 700;
+          color: #9E6B0D;
+          font-family: var(--font-heading, var(--font-sans, system-ui, -apple-system, sans-serif));
+          font-variant-numeric: tabular-nums;
+          letter-spacing: -0.01em;
+          line-height: 1.3;
+        }
+
+        [data-theme="dark"] .pub-metric-val {
+          color: #DDA752;
+        }
+
+        .pub-trades-section {
+          display: flex;
+          flex-direction: column;
+          gap: 0.65rem;
+        }
+
+        .pub-trades-heading {
+          font-size: 0.75rem;
+          font-weight: 700;
+          color: #64748B;
+          letter-spacing: 0.08em;
+          text-transform: uppercase;
+          margin: 0;
+        }
+
+        [data-theme="dark"] .pub-trades-heading {
+          color: rgba(255, 255, 255, 0.6);
+        }
+
+        .pub-trades-grid {
+          display: grid;
+          grid-template-columns: 1fr;
+          gap: 0.65rem;
+        }
+
+        .pub-trade-card {
+          background: rgba(15, 23, 42, 0.02);
+          border: 1px solid rgba(15, 23, 42, 0.08);
           border-radius: 10px;
+          padding: 0.75rem 0.9rem;
+          display: flex;
+          align-items: flex-start;
+          gap: 0.75rem;
+        }
+
+        [data-theme="dark"] .pub-trade-card {
+          background: rgba(255, 255, 255, 0.025);
+          border-color: rgba(255, 255, 255, 0.08);
+        }
+
+        .pub-trade-icon-box {
+          background: rgba(221, 167, 82, 0.12);
+          border: 1px solid var(--gold-primary, rgba(221, 167, 82, 0.35));
+          color: var(--gold-primary, #B8860B);
+          width: 32px;
+          height: 32px;
+          border-radius: 8px;
           display: flex;
           align-items: center;
           justify-content: center;
           flex-shrink: 0;
-          background: rgba(221, 167, 82, 0.12);
-          border: 1px solid rgba(221, 167, 82, 0.25);
         }
 
-        .trade-icon {
-          color: var(--gold-primary, #DDA752);
-        }
-
-        [data-theme="light"] .trade-icon {
-          color: #B8860B;
-        }
-
-        .trade-spec-info {
+        .pub-trade-info {
           display: flex;
           flex-direction: column;
-          gap: 4px;
+          gap: 0.2rem;
           flex: 1;
-          min-width: 0;
         }
 
-        .trade-spec-title-row {
+        .pub-trade-title-row {
           display: flex;
           align-items: center;
           justify-content: space-between;
-          gap: 8px;
+          gap: 0.5rem;
         }
 
-        .trade-name {
-          font-family: var(--font-heading);
-          font-size: 0.8125rem;
+        .pub-trade-name {
+          font-size: 0.85rem;
           font-weight: 700;
-          color: var(--text-primary, #FFFFFF);
-        }
-
-        [data-theme="light"] .trade-name {
           color: #0F172A;
         }
 
-        .trade-status-pill {
-          display: inline-flex;
-          align-items: center;
-          gap: 3px;
-          padding: 0.15rem 0.45rem;
-          border-radius: 9999px;
-          font-size: 0.625rem;
-          font-weight: 800;
-          background: rgba(16, 185, 129, 0.15);
-          color: #10B981;
-          white-space: nowrap;
+        [data-theme="dark"] .pub-trade-name {
+          color: #FFFFFF;
         }
 
-        .trade-spec-desc {
-          font-size: 0.75rem;
-          color: var(--text-secondary, rgba(255, 255, 255, 0.65));
-          line-height: 1.45;
+        .pub-trade-badge {
+          font-size: 0.68rem;
+          color: #10B981;
+          font-weight: 700;
+        }
+
+        .pub-trade-spec {
+          font-size: 0.78rem;
+          color: #475569;
+          line-height: 1.4;
           margin: 0;
         }
 
-        [data-theme="light"] .trade-spec-desc {
-          color: #475569;
+        [data-theme="dark"] .pub-trade-spec {
+          color: rgba(255, 255, 255, 0.65);
         }
 
-        /* Dossier Footer Actions */
-        .dossier-footer-actions {
-          display: flex;
-          gap: 10px;
+        .pub-modal-footer {
           padding-top: 0.5rem;
         }
 
-        .dossier-inquire-btn {
-          flex: 1;
-          display: inline-flex;
+        .pub-inquire-cta-btn {
+          width: 100%;
+          background: linear-gradient(135deg, #DDA752 0%, #C4913E 100%);
+          color: #0A0E18;
+          font-weight: 800;
+          font-size: 0.88rem;
+          border-radius: 10px;
+          padding: 0.85rem 1.25rem;
+          display: flex;
           align-items: center;
           justify-content: center;
-          gap: 8px;
-          padding: 0.85rem 1.25rem;
-          border-radius: 9999px;
-          font-family: var(--font-heading);
-          font-size: 0.8125rem;
-          font-weight: 800;
-          cursor: pointer;
+          gap: 0.5rem;
+          text-decoration: none;
+          box-shadow: 0 6px 18px rgba(221, 167, 82, 0.35);
           transition: all 0.2s ease;
-          background: linear-gradient(135deg, #FFF4D4 0%, var(--gold-primary, #DDA752) 50%, #9E7226 100%);
-          color: #0A0C10;
-          border: none;
-          box-shadow: 0 4px 18px rgba(221, 167, 82, 0.35);
         }
 
-        .dossier-inquire-btn:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 8px 24px rgba(221, 167, 82, 0.5);
-        }
-
-        @media (max-width: 768px) {
-          .photo-filmstrip-container {
-            bottom: 0.5rem;
-            left: 0.5rem;
-            right: 0.5rem;
-          }
+        .pub-inquire-cta-btn:hover {
+          transform: translateY(-1px);
+          box-shadow: 0 8px 24px rgba(221, 167, 82, 0.45);
         }
       `}</style>
     </div>

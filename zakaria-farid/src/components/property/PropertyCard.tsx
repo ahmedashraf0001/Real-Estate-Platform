@@ -1,8 +1,11 @@
 'use client';
-import React, { useState } from 'react';
+import React from 'react';
 import { Property } from '@/types';
 import { Bed, Bath, Maximize2, MapPin, Bookmark, ArrowUpRight, Calendar, Scale } from 'lucide-react';
 import { motion, Variants } from 'framer-motion';
+import { decodeHtmlEntities, cleanHtmlToPlainText } from '@/lib/utils/propertyAdapter';
+import { useFavorites } from '@/lib/context/FavoritesContext';
+import { toast } from 'sonner';
 
 interface PropertyCardProps {
   property: Property;
@@ -27,19 +30,67 @@ const cardVariants: Variants = {
     filter: 'blur(0px)',
     transition: {
       type: 'spring',
-      stiffness: 380,
-      damping: 28
+      stiffness: 280,
+      damping: 24,
+      mass: 0.8
     }
   },
   exit: {
     opacity: 0,
-    y: -10,
-    filter: 'blur(2px)',
-    transition: {
-      duration: 0.15,
-      ease: [0.16, 1, 0.3, 1]
-    }
+    scale: 0.96,
+    filter: 'blur(4px)',
+    transition: { duration: 0.2 }
   }
+};
+
+const KNOWN_AR_TITLES: Record<string, string> = {
+  'contemporary parkside townhouse in westown': 'تاون هاوس عصري يطل على النادي في ويست تاون',
+  'executive duplex residence in golden square': 'دوبلكس فاخر بحديقة خاصة في الجولدن سكوير',
+  'the obsidian pavilion': 'قصر الأوبسيديان المعماري',
+  'sokhna sea-cliff mansion': 'قصر جرف السخنة البانورامي',
+  'the sky palace penthouse': 'بنتهاوس قصر السحاب بالشيخ زايد',
+  'north coast seaside sanctuary': 'قصر هاسيندا الساحلي الفاخر',
+  'gouna water sanctuary': 'فيلا الملاذ المائي بالجونة',
+  'madinaty four seasons mansion': 'قصر فورسيزونز مدينتي الفاخر',
+  'palatial neoclassical villa in beverly hills': 'فيلا مستقلة طراز متوسطي فاخر في بيفرلي هيلز',
+  'ultra-luxury modern mansion in allegria': 'قصر عصري نقي فائق الفخامة في كمبوند أليجريا',
+  'prime beachfront chalet in sidi abdel rahman': 'شاليه فاخر صف أول على البحر في سيدي عبد الرحمن',
+  'panoramic luxury penthouse in katameya dunes': 'بنتهاوس فاخر بإطلالة بانورامية في قطامية ديونز'
+};
+
+const DISTRICT_AR_MAP: Record<string, string> = {
+  'New Cairo': 'القاهرة الجديدة',
+  'Sheikh Zayed': 'الشيخ زايد',
+  'North Coast': 'الساحل الشمالي',
+  'North Coast (Sahel)': 'الساحل الشمالي',
+  'Sidi Abdel Rahman': 'سيدي عبد الرحمن',
+  'El Gouna': 'الجونة',
+  'Gouna': 'الجونة',
+  'Ain Sokhna': 'العين السخنة',
+  'Madinaty': 'مدينتي',
+  'Westown': 'ويست تاون',
+  'Golden Square': 'المربع الذهبي',
+  'Beverly Hills': 'بيفرلي هيلز',
+  'Allegria': 'أليجريا',
+  'Katameya Dunes': 'قطامية ديونز',
+  'Sodic East': 'سوديك إيست',
+  'Sodic East Estate': 'سوديك إيست',
+  'Privado': 'بريفادو',
+};
+
+const TYPE_AR_MAP: Record<string, string> = {
+  'Standalone Villa': 'فيلا مستقلة',
+  'Penthouse': 'بنتهاوس',
+  'Mansion': 'قصر ملكي',
+  'Apartment': 'شقة فاخرة',
+  'Chalet': 'شاليه ساحلي',
+  'Townhouse': 'تاون هاوس',
+  'Duplex': 'دوبلكس',
+  'villa': 'فيلا مستقلة',
+  'apartment': 'شقة فاخرة',
+  'chalet': 'شاليه ساحلي',
+  'townhouse': 'تاون هاوس',
+  'duplex': 'دوبلكس'
 };
 
 export const PropertyCard: React.FC<PropertyCardProps> = ({
@@ -50,10 +101,49 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
   onToggleCompare,
   isCompared = false
 }) => {
-  const [isSaved, setIsSaved] = useState(false);
+  const { isFavorite, toggleFavorite, setIsDrawerOpen } = useFavorites();
+  const isSaved = isFavorite(property.id) || (property.slug ? isFavorite(property.slug) : false);
 
+  const isAr = typeof document !== 'undefined' 
+    ? (document.documentElement.lang === 'ar' || document.documentElement.dir === 'rtl' || (typeof window !== 'undefined' && window.location.pathname.startsWith('/ar')))
+    : false;
+
+  const normalizedKey = (property.title || property.title_en || '').toLowerCase().trim();
+  const rawTitle = isAr
+    ? (property.title_ar || KNOWN_AR_TITLES[normalizedKey] || property.title || property.title_en || '')
+    : (property.title_en || property.title || property.title_ar || '');
+  const formattedTitle = decodeHtmlEntities(rawTitle);
+
+  const rawDistrict = property.district || property.location?.split(',')[0]?.trim() || '';
+  const formattedDistrict = isAr ? (DISTRICT_AR_MAP[rawDistrict] || rawDistrict) : rawDistrict;
+
+  const rawType = property.propertyType || property.type || '';
+  const formattedType = isAr ? (TYPE_AR_MAP[rawType] || rawType) : rawType;
+
+  const formattedNarrative = cleanHtmlToPlainText(
+    (isAr ? (property.description_ar || property.narrative || property.description) : (property.description_en || property.narrative || property.description)) || ''
+  ) || (isAr ? 'صرح معماري استثنائي يجمع بين الفخامة الإنشائية والإطلالات البانورامية الخلابة.' : 'An exceptional luxury residence exhibiting bespoke architectural craftsmanship and panoramic landscaped vistas.');
+  
   const formattedPrice = new Intl.NumberFormat('en-US').format(property.price);
-  const pricePerSqm = new Intl.NumberFormat('en-US').format(Math.round(property.price / property.sqm));
+  const pricePerSqm = new Intl.NumberFormat('en-US').format(Math.round(property.price / (property.sqm || 1)));
+
+  const handleToggleSave = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const isNowSaved = toggleFavorite(property);
+    if (isNowSaved) {
+      toast.success(isAr ? 'تم الحفظ في المحفظة المفضلة' : 'Saved to Private Portfolio Shortlist', {
+        description: formattedTitle,
+        action: {
+          label: isAr ? 'عرض المحفظة' : 'View Shortlist',
+          onClick: () => setIsDrawerOpen(true),
+        },
+      });
+    } else {
+      toast.info(isAr ? 'تمت الإزالة من المحفظة' : 'Removed from Saved Portfolio', {
+        description: formattedTitle,
+      });
+    }
+  };
 
   if (viewMode === 'list') {
     return (
@@ -65,16 +155,17 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
         animate="visible"
         exit="exit"
         layout
+        dir={isAr ? 'rtl' : 'ltr'}
       >
         {/* Left Visual Media */}
         <div className="list-media-wrapper">
-          <img src={property.images[0]} alt={property.title} className="list-card-image" loading="lazy" />
+          <img src={property.images[0]} alt={formattedTitle} className="list-card-image" loading="lazy" />
           <div className="list-media-overlay" />
 
           {/* Top Location Badge */}
           <span className="location-badge list-badge">
             <MapPin size={15} className="badge-pin" />
-            <span>{property.district}</span>
+            <span>{formattedDistrict}</span>
           </span>
 
           <div className="list-top-actions">
@@ -85,7 +176,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
                   e.stopPropagation();
                   onToggleCompare(property.id);
                 }}
-                title={isCompared ? 'Remove from Comparison Matrix' : 'Add to Side-by-Side Comparison'}
+                title={isCompared ? (isAr ? 'إزالة من المقارنة' : 'Remove from Comparison Matrix') : (isAr ? 'إضافة للمقارنة جنباً إلى جنب' : 'Add to Side-by-Side Comparison')}
               >
                 <Scale size={16} />
               </button>
@@ -93,11 +184,8 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
 
             <button
               className={`action-pill-btn ${isSaved ? 'saved' : ''}`}
-              onClick={(e) => {
-                e.stopPropagation();
-                setIsSaved(!isSaved);
-              }}
-              title={isSaved ? 'Saved to Private Portfolio Shortlist' : 'Save to Shortlist'}
+              onClick={handleToggleSave}
+              title={isSaved ? (isAr ? 'محفوظ في المفضلة' : 'Saved to Private Portfolio Shortlist') : (isAr ? 'حفظ في المفضلة' : 'Save to Shortlist')}
             >
               <Bookmark size={16} fill={isSaved ? 'currentColor' : 'none'} />
             </button>
@@ -107,15 +195,15 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
         {/* Center Architectural Details */}
         <div className="list-content-body">
           <div className="list-meta-tag">
-            <span>{property.district}</span>
+            <span>{formattedDistrict}</span>
             <span className="tag-dot">•</span>
-            <span className="gold-type">{property.propertyType}</span>
+            <span className="gold-type">{formattedType}</span>
           </div>
 
-          <h3 className="list-card-title">{property.title}</h3>
+          <h3 className="list-card-title">{formattedTitle}</h3>
 
           <p className="list-narrative">
-            {property.narrative || 'An exceptional luxury residence exhibiting bespoke architectural craftsmanship and panoramic landscaped vistas.'}
+            {formattedNarrative}
           </p>
 
           <div className="list-specs-row">
@@ -123,7 +211,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
               <Bed size={17} strokeWidth={2.2} className="list-spec-icon" />
               <span className="list-spec-text">
                 <span className="list-spec-num">{property.beds}</span>
-                <span className="list-spec-unit">Beds</span>
+                <span className="list-spec-unit">{isAr ? 'غرف نوم' : 'Beds'}</span>
               </span>
             </div>
 
@@ -133,7 +221,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
               <Bath size={17} strokeWidth={2.2} className="list-spec-icon" />
               <span className="list-spec-text">
                 <span className="list-spec-num">{property.baths}</span>
-                <span className="list-spec-unit">Baths</span>
+                <span className="list-spec-unit">{isAr ? 'حمامات' : 'Baths'}</span>
               </span>
             </div>
 
@@ -143,7 +231,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
               <Maximize2 size={16} strokeWidth={2.2} className="list-spec-icon" />
               <span className="list-spec-text">
                 <span className="list-spec-num">{new Intl.NumberFormat('en-US').format(property.sqm)}</span>
-                <span className="list-spec-unit">sqm</span>
+                <span className="list-spec-unit">{isAr ? 'م²' : 'sqm'}</span>
               </span>
             </div>
 
@@ -153,7 +241,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
                 <div className="list-spec-item">
                   <Calendar size={16} strokeWidth={2.2} className="list-spec-icon" />
                   <span className="list-spec-text">
-                    <span className="list-spec-unit">Delivery</span>
+                    <span className="list-spec-unit">{isAr ? 'الاستلام' : 'Delivery'}</span>
                     <span className="list-spec-num">{property.builtYear}</span>
                   </span>
                 </div>
@@ -165,15 +253,15 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
         {/* Right Financials & Action Column */}
         <div className="list-actions-col">
           <div className="list-pricing-wrap">
-            <span className="list-price-label">GUIDE PRICE</span>
+            <span className="list-price-label">{isAr ? 'السعر الاسترشادي' : 'GUIDE PRICE'}</span>
             <div className="list-price-val">
-              {formattedPrice} <span className="currency-unit">{property.currency}</span>
+              {formattedPrice} <span className="currency-unit">{isAr ? 'ج.م' : property.currency}</span>
             </div>
-            <span className="list-sqm-rate">{pricePerSqm} EGP / sqm</span>
+            <span className="list-sqm-rate">{pricePerSqm} {isAr ? 'ج.م / م²' : 'EGP / sqm'}</span>
           </div>
 
           <button className="btn-gold list-cta-btn">
-            <span>Explore Estate</span>
+            <span>{isAr ? 'معاينة الصرح' : 'Explore Estate'}</span>
             <ArrowUpRight size={15} />
           </button>
         </div>
@@ -510,13 +598,13 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
             font-weight: 800;
             line-height: 1.15;
             letter-spacing: -0.01em;
-            color: #FCD34D;
-            text-shadow: 0 0 20px rgba(252, 211, 77, 0.45), 0 1px 4px rgba(0, 0, 0, 0.7);
+            color: #E5B869;
+            text-shadow: 0 1px 3px rgba(0, 0, 0, 0.85);
           }
 
           [data-theme="light"] .list-price-val {
-            color: #B8860B;
-            text-shadow: 0 0 15px rgba(184, 134, 11, 0.3);
+            color: #8C6826;
+            text-shadow: none;
           }
 
           .list-sqm-rate {
@@ -588,7 +676,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
       <div className="card-image-wrapper">
         <motion.img 
           src={property.images[0]} 
-          alt={property.title} 
+          alt={formattedTitle} 
           className="card-image"
           loading="lazy"
           whileHover={{ scale: 1.05 }}
@@ -599,7 +687,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
         <div className="card-top-bar">
           <span className="location-badge">
             <MapPin size={15} className="badge-pin" />
-            <span>{property.district}</span>
+            <span>{formattedDistrict}</span>
           </span>
 
           <div className="card-top-actions">
@@ -610,7 +698,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
                   e.stopPropagation();
                   onToggleCompare(property.id);
                 }}
-                title={isCompared ? 'Remove from Comparison Matrix' : 'Add to Side-by-Side Comparison'}
+                title={isCompared ? (isAr ? 'إزالة من المقارنة' : 'Remove from Comparison Matrix') : (isAr ? 'إضافة للمقارنة جنباً إلى جنب' : 'Add to Side-by-Side Comparison')}
               >
                 <Scale size={16} />
               </button>
@@ -618,11 +706,8 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
 
             <button 
               className={`action-pill-btn ${isSaved ? 'saved' : ''}`}
-              onClick={(e) => {
-                e.stopPropagation();
-                setIsSaved(!isSaved);
-              }}
-              title={isSaved ? 'Saved to Private Portfolio Shortlist' : 'Save to Shortlist'}
+              onClick={handleToggleSave}
+              title={isSaved ? (isAr ? 'محفوظ في المفضلة' : 'Saved to Private Portfolio Shortlist') : (isAr ? 'حفظ في المفضلة' : 'Save to Shortlist')}
             >
               <Bookmark size={16} fill={isSaved ? 'currentColor' : 'none'} />
             </button>
@@ -630,26 +715,27 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
         </div>
 
         {/* Floating Frosted Glass Panel */}
-        <div className="card-content-overlay">
-          <h3 className="card-title">{property.title}</h3>
-          <div className="card-price">
-            {formattedPrice} <span className="currency-unit">{property.currency}</span>
+        <div className="card-content-overlay" dir={isAr ? 'rtl' : 'ltr'}>
+          <h3 className="card-title">{formattedTitle}</h3>
+          <div className="card-price" dir="ltr">
+            <span className="price-amount">{formattedPrice}</span>
+            <span className="currency-unit">{isAr ? 'ج.م' : property.currency}</span>
           </div>
 
           <div className="card-specs">
             <div className="spec-item">
               <Bed size={16} strokeWidth={2.2} className="spec-icon" />
-              <span className="spec-label">{property.beds} Beds</span>
+              <span className="spec-label">{property.beds} {isAr ? 'غرف' : 'Beds'}</span>
             </div>
 
             <div className="spec-item">
               <Bath size={16} strokeWidth={2.2} className="spec-icon" />
-              <span className="spec-label">{property.baths} Baths</span>
+              <span className="spec-label">{property.baths} {isAr ? 'حمامات' : 'Baths'}</span>
             </div>
 
             <div className="spec-item">
               <Maximize2 size={15} strokeWidth={2.2} className="spec-icon" />
-              <span className="spec-label">{new Intl.NumberFormat('en-US').format(property.sqm)} sqm</span>
+              <span className="spec-label">{new Intl.NumberFormat('en-US').format(property.sqm)} {isAr ? 'م²' : 'sqm'}</span>
             </div>
           </div>
         </div>
@@ -658,43 +744,43 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
       <style>{`
         .property-card {
           position: relative;
-          background: var(--bg-card);
-          border: 1px solid var(--border-subtle);
+          background: #0E121B;
+          border: 1px solid rgba(255, 255, 255, 0.08);
           border-radius: 22px;
           overflow: hidden;
           cursor: pointer;
+          height: 480px;
+          display: flex;
+          flex-direction: column;
           transition: all var(--transition-smooth);
         }
 
-        [data-theme="dark"] .property-card {
-          background: #11141B;
-          border: 1px solid rgba(255, 255, 255, 0.08);
-        }
-
         [data-theme="light"] .property-card {
-          background: #FFFFFF;
-          border: 1px solid rgba(184, 133, 48, 0.16);
-          box-shadow: 0 10px 30px rgba(30, 24, 16, 0.06), 0 2px 6px rgba(0, 0, 0, 0.02);
+          background: #0E121B;
+          border: 1px solid rgba(184, 133, 48, 0.2);
+          box-shadow: 0 10px 30px rgba(30, 24, 16, 0.08), 0 2px 6px rgba(0, 0, 0, 0.04);
         }
 
         .property-card:hover {
           border-color: var(--gold-primary);
           box-shadow: var(--shadow-lg);
+          transform: translateY(-4px);
         }
 
         [data-theme="light"] .property-card:hover {
-          box-shadow: 0 20px 48px rgba(30, 24, 16, 0.10), 0 0 20px rgba(184, 133, 48, 0.15);
+          border-color: #B8934A;
+          box-shadow: 0 20px 48px rgba(30, 24, 16, 0.14), 0 0 20px rgba(184, 133, 48, 0.18);
         }
 
         .card-image-wrapper {
           position: relative;
           width: 100%;
-          height: 490px;
+          height: 100%;
           overflow: hidden;
           display: flex;
           flex-direction: column;
           justify-content: space-between;
-          padding-bottom: 1rem;
+          padding-bottom: 0.85rem;
         }
 
         .card-image {
@@ -711,7 +797,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
           display: flex;
           align-items: center;
           justify-content: space-between;
-          padding: 1.15rem 1.15rem 0;
+          padding: 1rem 1rem 0;
         }
 
         .location-badge {
@@ -719,32 +805,20 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
           align-items: center;
           gap: 7px;
           border-radius: var(--radius-full);
-          padding: 0.38rem 0.95rem;
-          font-size: 0.84rem;
+          padding: 0.35rem 0.85rem;
+          font-size: 0.8125rem;
           font-weight: 700;
+          background: rgba(10, 14, 22, 0.72);
+          backdrop-filter: blur(20px) saturate(200%);
+          -webkit-backdrop-filter: blur(20px) saturate(200%);
+          border: 1px solid rgba(255, 255, 255, 0.24);
+          color: #ffffff;
+          box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35), inset 0 1px 1px rgba(255, 255, 255, 0.4);
           transition: all var(--transition-fast);
         }
 
-        [data-theme="dark"] .location-badge {
-          background: rgba(10, 14, 22, 0.70);
-          backdrop-filter: blur(28px) saturate(210%);
-          -webkit-backdrop-filter: blur(28px) saturate(210%);
-          border: 1px solid rgba(255, 255, 255, 0.24);
-          color: #ffffff;
-          box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3), inset 0 1.5px 1.5px rgba(255, 255, 255, 0.45);
-        }
-
-        [data-theme="light"] .location-badge {
-          background: rgba(255, 255, 255, 0.32);
-          backdrop-filter: blur(12px) saturate(180%);
-          -webkit-backdrop-filter: blur(12px) saturate(180%);
-          border: 1px solid rgba(255, 255, 255, 0.55);
-          color: #0D1117;
-          box-shadow: 0 4px 16px rgba(15, 23, 42, 0.06), inset 0 1.5px 1.5px rgba(255, 255, 255, 0.95);
-        }
-
         .badge-pin {
-          color: var(--gold-primary);
+          color: #E5B869;
         }
 
         .card-top-actions {
@@ -760,26 +834,14 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
           display: flex;
           align-items: center;
           justify-content: center;
-          transition: all var(--transition-fast);
-          cursor: pointer;
-        }
-
-        [data-theme="dark"] .action-pill-btn {
-          background: rgba(10, 14, 22, 0.70);
-          backdrop-filter: blur(28px) saturate(210%);
-          -webkit-backdrop-filter: blur(28px) saturate(210%);
+          background: rgba(10, 14, 22, 0.72);
+          backdrop-filter: blur(20px) saturate(200%);
+          -webkit-backdrop-filter: blur(20px) saturate(200%);
           border: 1px solid rgba(255, 255, 255, 0.24);
           color: #ffffff;
-          box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3), inset 0 1.5px 1.5px rgba(255, 255, 255, 0.45);
-        }
-
-        [data-theme="light"] .action-pill-btn {
-          background: rgba(255, 255, 255, 0.32);
-          backdrop-filter: blur(12px) saturate(180%);
-          -webkit-backdrop-filter: blur(12px) saturate(180%);
-          border: 1px solid rgba(255, 255, 255, 0.55);
-          color: #0D1117;
-          box-shadow: 0 4px 16px rgba(15, 23, 42, 0.06), inset 0 1.5px 1.5px rgba(255, 255, 255, 0.95);
+          box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35), inset 0 1px 1px rgba(255, 255, 255, 0.4);
+          transition: all var(--transition-fast);
+          cursor: pointer;
         }
 
         .action-pill-btn:hover {
@@ -795,25 +857,24 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
           box-shadow: 0 0 12px var(--gold-glow);
         }
 
-        /* Radiant Liquid Crystal Glass Panel */
+        /* Unified Smoked Liquid Glass Overlay (Consistent across Light & Dark modes) */
         .card-content-overlay {
           position: relative;
           z-index: 3;
-          margin: 0 1rem;
-          padding: 1.65rem 1.5rem 1.45rem;
+          margin: 0 0.85rem;
+          padding: 1.35rem 1.35rem 1.15rem;
           background: linear-gradient(
             135deg,
-            rgba(255, 255, 255, 0.28) 0%,
-            rgba(255, 255, 255, 0.08) 25%,
-            rgba(18, 24, 38, 0.38) 60%,
-            rgba(10, 14, 24, 0.62) 100%
+            rgba(255, 255, 255, 0.22) 0%,
+            rgba(18, 24, 38, 0.55) 45%,
+            rgba(10, 14, 24, 0.78) 100%
           );
-          backdrop-filter: blur(20px) saturate(210%) contrast(108%) brightness(108%);
-          -webkit-backdrop-filter: blur(20px) saturate(210%) contrast(108%) brightness(108%);
-          border: 1px solid rgba(255, 255, 255, 0.32);
-          border-radius: 20px;
+          backdrop-filter: blur(24px) saturate(210%) contrast(108%) brightness(105%);
+          -webkit-backdrop-filter: blur(24px) saturate(210%) contrast(108%) brightness(105%);
+          border: 1px solid rgba(255, 255, 255, 0.28);
+          border-radius: 18px;
           box-shadow: 
-            0 20px 48px rgba(0, 0, 0, 0.38),
+            0 20px 48px rgba(0, 0, 0, 0.45),
             0 4px 14px rgba(0, 0, 0, 0.18),
             inset 0 1.5px 2px rgba(255, 255, 255, 0.65),
             inset 0 -1px 1px rgba(255, 255, 255, 0.15);
@@ -822,55 +883,66 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
 
         .card-title {
           font-family: var(--font-heading);
-          font-size: 1.25rem;
+          font-size: 1.0625rem;
           font-weight: 700;
-          margin-bottom: 0.65rem;
-          line-height: 1.25;
-          letter-spacing: -0.015em;
           color: #FFFFFF;
-          text-shadow: 0 1px 6px rgba(0, 0, 0, 0.6), 0 2px 14px rgba(0, 0, 0, 0.35);
+          line-height: 1.35;
+          margin: 0 0 0.4rem 0;
+          height: 2.85rem;
+          display: -webkit-box;
+          -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
+          text-shadow: 0 1px 4px rgba(0, 0, 0, 0.75);
+          letter-spacing: -0.015em;
         }
 
         .card-price {
           font-family: var(--font-heading);
-          font-size: 1.35rem;
+          font-size: 1.25rem;
           font-weight: 800;
-          margin-bottom: 1.85rem;
+          margin-bottom: 1.15rem;
           display: inline-flex;
           align-items: baseline;
           gap: 6px;
-          letter-spacing: -0.01em;
+          letter-spacing: -0.015em;
           line-height: 1.15;
-          color: #FCD34D;
-          text-shadow: 0 0 20px rgba(252, 211, 77, 0.45), 0 1px 4px rgba(0, 0, 0, 0.7);
+        }
+
+        .price-amount {
+          color: #E5B869;
+          font-weight: 800;
+          text-shadow: 0 1px 4px rgba(0, 0, 0, 0.85);
         }
 
         .currency-unit {
-          font-size: 0.84rem;
-          font-weight: 800;
+          font-size: 0.75rem;
+          font-weight: 700;
           letter-spacing: 0.04em;
-          color: #FBBF24;
+          color: #E5B869;
+          opacity: 0.85;
+          text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
         }
 
         .card-specs {
           display: flex;
           align-items: center;
           justify-content: space-between;
-          padding-top: 1.25rem;
+          padding-top: 0.95rem;
           border-top: 1px solid rgba(255, 255, 255, 0.22);
         }
 
         .spec-item {
           display: inline-flex;
           align-items: center;
-          gap: 7px;
+          gap: 6px;
           flex-shrink: 0;
           white-space: nowrap;
         }
 
         .spec-icon {
           flex-shrink: 0;
-          color: #FCD34D;
+          color: #E5B869;
           filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.5));
         }
 
@@ -883,23 +955,24 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
         }
 
         .spec-label {
-          font-size: 0.875rem;
+          font-size: 0.8125rem;
           font-weight: 600;
           white-space: nowrap;
           letter-spacing: -0.01em;
           line-height: 1;
           color: #FFFFFF;
-          text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
+          text-shadow: 0 1px 4px rgba(0, 0, 0, 0.7);
         }
 
         /* Compact High-Density Card Mode */
         .property-card.compact-card {
-          border-radius: 16px;
+          height: 380px;
+          border-radius: 18px;
         }
 
         .property-card.compact-card .card-image-wrapper {
-          height: 320px;
-          padding-bottom: 0.5rem;
+          height: 100%;
+          padding-bottom: 0.65rem;
         }
 
         .property-card.compact-card .card-top-bar {
@@ -912,31 +985,31 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
         }
 
         .property-card.compact-card .action-pill-btn {
-          width: 28px;
-          height: 28px;
+          width: 30px;
+          height: 30px;
         }
 
         .property-card.compact-card .card-content-overlay {
-          margin: 0 0.5rem;
-          padding: 0.85rem 0.75rem;
-          border-radius: 12px;
+          margin: 0 0.65rem;
+          padding: 0.85rem 0.85rem;
+          border-radius: 14px;
         }
 
         .property-card.compact-card .card-title {
           font-size: 0.9375rem;
-          margin-bottom: 0.2rem;
+          margin-bottom: 0.25rem;
           white-space: nowrap;
           overflow: hidden;
           text-overflow: ellipsis;
         }
 
         .property-card.compact-card .card-price {
-          font-size: 0.9375rem;
-          margin-bottom: 0.5rem;
+          font-size: 1.05rem;
+          margin-bottom: 0.65rem;
         }
 
         .property-card.compact-card .card-specs {
-          padding-top: 0.4rem;
+          padding-top: 0.55rem;
         }
 
         .property-card.compact-card .spec-label {
@@ -944,8 +1017,46 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
         }
 
         .property-card.compact-card .spec-icon {
-          width: 12px;
-          height: 12px;
+          width: 13px;
+          height: 13px;
+        }
+
+        @media (max-width: 640px) {
+          .property-card {
+            height: 440px;
+            border-radius: 20px;
+          }
+          .card-top-bar {
+            padding: 0.75rem 0.75rem 0;
+          }
+          .location-badge {
+            padding: 0.25rem 0.65rem;
+            font-size: 0.75rem;
+          }
+          .action-pill-btn {
+            width: 32px;
+            height: 32px;
+          }
+          .card-content-overlay {
+            margin: 0 0.65rem;
+            padding: 1.1rem 1rem 0.95rem;
+            border-radius: 16px;
+          }
+          .card-title {
+            font-size: 0.98rem;
+            height: 2.7rem;
+            margin-bottom: 0.35rem;
+          }
+          .card-price {
+            font-size: 1.15rem;
+            margin-bottom: 0.85rem;
+          }
+          .card-specs {
+            padding-top: 0.75rem;
+          }
+          .spec-label {
+            font-size: 0.75rem;
+          }
         }
       `}</style>
     </motion.div>

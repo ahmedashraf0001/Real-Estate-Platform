@@ -18,6 +18,7 @@ export interface MetricRoomInput {
    *  room is placed at this coordinate (no packing, no orientation swap). */
   xM?: number;
   yM?: number;
+  label?: string;
 }
 
 export interface MetricRoomRect {
@@ -136,12 +137,18 @@ function computePositionedLayout(
 
   const loose = rooms.filter(r => r.xM == null || r.yM == null);
   if (loose.length > 0) {
+    const isLooseOutdoor = (id: string) => id.includes('balcony') || id.includes('terrace');
+    const looseIndoor = loose.filter(r => !isLooseOutdoor(r.id));
+    const looseOutdoor = loose.filter(r => isLooseOutdoor(r.id));
+
     const looseArea = loose.reduce((s, r) => s + clampM(r.widthM) * clampM(r.lengthM), 0);
     const stripW = Math.max(maxX, Math.sqrt(looseArea) * 1.6, 8);
     let cx = 0;
     let cy = placed.size > 0 ? maxY + LOOSE_GAP_M * 2 : 0;
     let shelfH = 0;
-    for (const r of loose) {
+    
+    // Pack loose indoor rooms first
+    for (const r of looseIndoor) {
       const a = clampM(r.widthM);
       const b = clampM(r.lengthM);
       const w = Math.max(a, b);
@@ -156,6 +163,19 @@ function computePositionedLayout(
       shelfH = Math.max(shelfH, h);
       maxX = Math.max(maxX, cx - LOOSE_GAP_M);
       maxY = Math.max(maxY, cy + h);
+    }
+
+    // Place outdoor balconies on the perimeter East facade
+    let balcY = 0;
+    for (const r of looseOutdoor) {
+      const a = clampM(r.widthM);
+      const b = clampM(r.lengthM);
+      const w = Math.max(a, b);
+      const h = Math.min(a, b);
+      placed.set(r.id, { x: maxX + LOOSE_GAP_M, y: balcY, w, h });
+      balcY += h + LOOSE_GAP_M;
+      maxX = Math.max(maxX, maxX + LOOSE_GAP_M + w);
+      maxY = Math.max(maxY, balcY - LOOSE_GAP_M);
     }
   }
 
@@ -202,13 +222,205 @@ export function computeMetricLayout(
     return computePositionedLayout(rooms, canvasW, canvasH);
   }
 
+  // Detect twin units on the same floor (e.g. Unit A and Unit B)
+  const isUnitA = (r: MetricRoomInput) => (r.label || r.id).includes('وحدة أ') || (r.label || r.id).includes('Unit A');
+  const isUnitB = (r: MetricRoomInput) => (r.label || r.id).includes('وحدة ب') || (r.label || r.id).includes('Unit B');
+  const hasTwinUnits = rooms.some(isUnitA) && rooms.some(isUnitB);
+
+  if (hasTwinUnits) {
+    const unitARooms = rooms.filter(isUnitA);
+    const unitBRooms = rooms.filter(isUnitB);
+    const otherRooms = rooms.filter(r => !isUnitA(r) && !isUnitB(r));
+
+    const positionedRooms: MetricRoomInput[] = [];
+
+    // Arrange Unit A in left wing (X: 0 to ~12.5m)
+    let curAX = 0;
+    let curAY = 0;
+    let maxARowH = 0;
+    const maxAWidth = 13.0;
+    for (const r of unitARooms) {
+      const a = clampM(r.widthM);
+      const b = clampM(r.lengthM);
+      const w = Math.max(a, b);
+      const h = Math.min(a, b);
+      if (curAX > 0 && curAX + w > maxAWidth) {
+        curAX = 0;
+        curAY += maxARowH + LOOSE_GAP_M;
+        maxARowH = 0;
+      }
+      positionedRooms.push({ ...r, xM: curAX, yM: curAY });
+      curAX += w + LOOSE_GAP_M;
+      maxARowH = Math.max(maxARowH, h);
+    }
+
+    // Arrange Unit B in right wing (Offset X by 14.5m)
+    const OFF_B = 14.5;
+    let curBX = 0;
+    let curBY = 0;
+    let maxBRowH = 0;
+    const maxBWidth = 13.0;
+    for (const r of unitBRooms) {
+      const a = clampM(r.widthM);
+      const b = clampM(r.lengthM);
+      const w = Math.max(a, b);
+      const h = Math.min(a, b);
+      if (curBX > 0 && curBX + w > maxBWidth) {
+        curBX = 0;
+        curBY += maxBRowH + LOOSE_GAP_M;
+        maxBRowH = 0;
+      }
+      positionedRooms.push({ ...r, xM: OFF_B + curBX, yM: curBY });
+      curBX += w + LOOSE_GAP_M;
+      maxBRowH = Math.max(maxBRowH, h);
+    }
+
+    for (const r of otherRooms) {
+      positionedRooms.push({ ...r, xM: 0, yM: Math.max(curAY, curBY) + 2 });
+    }
+
+    return computePositionedLayout(positionedRooms, canvasW, canvasH);
+  }
+
   const marginX = canvasW * 0.08;
   const marginY = canvasH * 0.08;
   const usableW = canvasW - marginX * 2;
   const usableH = canvasH - marginY * 2;
 
-  // Landscape orientation: longer side horizontal — corridors read naturally
-  // and shelves pack densely. Labels always report the true entered W × L.
+  const isOutdoor = (id: string) => id.includes('balcony') || id.includes('terrace');
+  const indoorRooms = rooms.filter(r => !isOutdoor(r.id));
+  const outdoorRooms = rooms.filter(r => isOutdoor(r.id));
+
+  // If there are both indoor and outdoor rooms, pack indoor rooms first to create the envelope,
+  // then rigidly attach outdoor balconies/terraces to the exterior facade.
+  if (indoorRooms.length > 0 && outdoorRooms.length > 0) {
+    const indoorDims = indoorRooms.map((r) => {
+      const a = clampM(r.widthM);
+      const b = clampM(r.lengthM);
+      return { wM: Math.max(a, b), hM: Math.min(a, b) };
+    });
+
+    const outdoorDims = outdoorRooms.map((r) => {
+      const a = clampM(r.widthM);
+      const b = clampM(r.lengthM);
+      return { wM: Math.max(a, b), hM: Math.min(a, b) };
+    });
+
+    // Try packing indoor rooms + attaching outdoor balconies
+    const tryPackWithExteriorBalconies = (k: number): { indoor: PackedRoom[]; outdoor: PackedRoom[]; maxX: number; maxY: number } | null => {
+      const inPacked = tryPack(indoorDims, k, usableW, usableH);
+      if (!inPacked) return null;
+
+      const inMaxX = Math.max(...inPacked.map(p => p.x + p.w));
+      const inMaxY = Math.max(...inPacked.map(p => p.y + p.h));
+
+      // Check if attaching to East facade fits within usableW
+      let outCursorY = 0;
+      const outPackedEast: PackedRoom[] = [];
+      let fitsEast = true;
+
+      for (const d of outdoorDims) {
+        const w = d.wM * k;
+        const h = d.hM * k;
+        const x = inMaxX + ROOM_GAP;
+        const y = outCursorY;
+        if (x + w > usableW || y + h > usableH) {
+          fitsEast = false;
+          break;
+        }
+        outPackedEast.push({ x, y, w, h });
+        outCursorY += h + ROOM_GAP;
+      }
+
+      if (fitsEast) {
+        const totalMaxX = Math.max(inMaxX, ...outPackedEast.map(p => p.x + p.w));
+        const totalMaxY = Math.max(inMaxY, ...outPackedEast.map(p => p.y + p.h));
+        return { indoor: inPacked, outdoor: outPackedEast, maxX: totalMaxX, maxY: totalMaxY };
+      }
+
+      // If East doesn't fit, attach to South exterior facade
+      let outCursorX = 0;
+      const outPackedSouth: PackedRoom[] = [];
+      let fitsSouth = true;
+
+      for (const d of outdoorDims) {
+        const w = d.wM * k;
+        const h = d.hM * k;
+        const x = outCursorX;
+        const y = inMaxY + ROOM_GAP;
+        if (x + w > usableW || y + h > usableH) {
+          fitsSouth = false;
+          break;
+        }
+        outPackedSouth.push({ x, y, w, h });
+        outCursorX += w + ROOM_GAP;
+      }
+
+      if (fitsSouth) {
+        const totalMaxX = Math.max(inMaxX, ...outPackedSouth.map(p => p.x + p.w));
+        const totalMaxY = Math.max(inMaxY, ...outPackedSouth.map(p => p.y + p.h));
+        return { indoor: inPacked, outdoor: outPackedSouth, maxX: totalMaxX, maxY: totalMaxY };
+      }
+
+      return null;
+    };
+
+    let lo = 0.05;
+    let hi = 80;
+    let bestResult: { indoor: PackedRoom[]; outdoor: PackedRoom[]; maxX: number; maxY: number } | null = null;
+    let bestK = lo;
+
+    for (let i = 0; i < 48; i++) {
+      const mid = (lo + hi) / 2;
+      const res = tryPackWithExteriorBalconies(mid);
+      if (res) {
+        bestResult = res;
+        bestK = mid;
+        lo = mid;
+      } else {
+        hi = mid;
+      }
+    }
+
+    if (bestResult) {
+      const offsetX = marginX + (usableW - bestResult.maxX) / 2;
+      const offsetY = marginY + (usableH - bestResult.maxY) / 2;
+
+      const rectMap = new Map<string, MetricRoomRect>();
+
+      indoorRooms.forEach((r, i) => {
+        const p = bestResult!.indoor[i];
+        rectMap.set(r.id, {
+          id: r.id,
+          x: offsetX + p.x,
+          y: offsetY + p.y,
+          w: p.w,
+          h: p.h,
+        });
+      });
+
+      outdoorRooms.forEach((r, i) => {
+        const p = bestResult!.outdoor[i];
+        rectMap.set(r.id, {
+          id: r.id,
+          x: offsetX + p.x,
+          y: offsetY + p.y,
+          w: p.w,
+          h: p.h,
+        });
+      });
+
+      const rects = rooms.map(r => rectMap.get(r.id)!);
+
+      return {
+        rooms: rects,
+        bounds: { x: offsetX, y: offsetY, w: bestResult.maxX, h: bestResult.maxY },
+        pxPerMeter: bestK,
+      };
+    }
+  }
+
+  // Standard packing if all rooms are indoor or outdoor
   const dims = rooms.map((r) => {
     const a = clampM(r.widthM);
     const b = clampM(r.lengthM);
@@ -308,6 +520,9 @@ export interface OpeningSegment {
   y1: number;
   x2: number;
   y2: number;
+  offset_m?: number;
+  width_m?: number;
+  flip?: boolean;
 }
 
 /**
@@ -317,7 +532,7 @@ export interface OpeningSegment {
  */
 export function openingSegments(
   rect: { x: number; y: number; w: number; h: number },
-  openings: Array<{ id: string; kind: 'door' | 'window'; edge: 'n' | 'e' | 's' | 'w'; offset_m: number; width_m: number }> | undefined,
+  openings: Array<{ id: string; kind: 'door' | 'window'; edge: 'n' | 'e' | 's' | 'w'; offset_m: number; width_m: number; flip?: boolean }> | undefined,
   pxPerMeter: number,
 ): OpeningSegment[] {
   if (!openings || openings.length === 0 || pxPerMeter <= 0) return [];
@@ -329,10 +544,10 @@ export function openingSegments(
     const offPx = Math.max(0, Math.min(o.offset_m * pxPerMeter, edgeLen - wPx));
     if (horizontal) {
       const y = o.edge === 'n' ? rect.y : rect.y + rect.h;
-      out.push({ id: o.id, kind: o.kind, edge: o.edge, x1: rect.x + offPx, y1: y, x2: rect.x + offPx + wPx, y2: y });
+      out.push({ id: o.id, kind: o.kind, edge: o.edge, x1: rect.x + offPx, y1: y, x2: rect.x + offPx + wPx, y2: y, offset_m: o.offset_m, width_m: o.width_m, flip: o.flip });
     } else {
       const x = o.edge === 'w' ? rect.x : rect.x + rect.w;
-      out.push({ id: o.id, kind: o.kind, edge: o.edge, x1: x, y1: rect.y + offPx, x2: x, y2: rect.y + offPx + wPx });
+      out.push({ id: o.id, kind: o.kind, edge: o.edge, x1: x, y1: rect.y + offPx, x2: x, y2: rect.y + offPx + wPx, offset_m: o.offset_m, width_m: o.width_m, flip: o.flip });
     }
   }
   return out;

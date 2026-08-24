@@ -9,6 +9,95 @@ const PROPERTY_TYPE_MAP: Record<string, string> = {
   garage:    'Garage',
 };
 
+/**
+ * Decodes all common named, decimal, and hexadecimal HTML entities.
+ * Handles single and multi-pass double-encoded entities (e.g., &amp;amp; -> &amp; -> &).
+ */
+export function decodeHtmlEntities(raw: string): string {
+  if (!raw) return '';
+  let result = String(raw);
+
+  const entityMap: Record<string, string> = {
+    '&amp;': '&',
+    '&lt;': '<',
+    '&gt;': '>',
+    '&quot;': '"',
+    '&#39;': "'",
+    '&apos;': "'",
+    '&nbsp;': ' ',
+    '&ndash;': '–',
+    '&mdash;': '—',
+    '&lsquo;': '‘',
+    '&rsquo;': '’',
+    '&sbquo;': '‚',
+    '&ldquo;': '“',
+    '&rdquo;': '”',
+    '&bdquo;': '„',
+    '&hellip;': '…',
+    '&prime;': '′',
+    '&Prime;': '″',
+    '&copy;': '©',
+    '&reg;': '®',
+    '&trade;': '™',
+    '&deg;': '°',
+    '&plusmn;': '±',
+    '&sup2;': '²',
+    '&sup3;': '³',
+    '&frac12;': '½',
+    '&frac14;': '¼',
+    '&frac34;': '¾',
+    '&bull;': '•',
+    '&middot;': '·',
+  };
+
+  // Perform multi-pass decoding to handle double-escaped entities like &amp;amp;
+  for (let pass = 0; pass < 3; pass++) {
+    const prev = result;
+    // Named entities
+    result = result.replace(/&(?:amp|lt|gt|quot|apos|nbsp|ndash|mdash|lsquo|rsquo|sbquo|ldquo|rdquo|bdquo|hellip|prime|Prime|copy|reg|trade|deg|plusmn|sup2|sup3|frac12|frac14|frac34|bull|middot|#39|#039);/gi, (match) => {
+      const lower = match.toLowerCase();
+      return entityMap[lower] || match;
+    });
+
+    // Decimal numeric entities &#123;
+    result = result.replace(/&#(\d+);/g, (_, dec) => {
+      try {
+        const code = parseInt(dec, 10);
+        return (code > 0 && code <= 0x10ffff) ? String.fromCodePoint(code) : _;
+      } catch {
+        return _;
+      }
+    });
+
+    // Hexadecimal numeric entities &#x1aF;
+    result = result.replace(/&#x([0-9a-f]+);/gi, (_, hex) => {
+      try {
+        const code = parseInt(hex, 16);
+        return (code > 0 && code <= 0x10ffff) ? String.fromCodePoint(code) : _;
+      } catch {
+        return _;
+      }
+    });
+
+    if (result === prev) break;
+  }
+
+  return result;
+}
+
+/**
+ * Strips HTML tags, preserves paragraph breaks, and fully decodes HTML entities into clean plain text.
+ */
+export function cleanHtmlToPlainText(html: string): string {
+  if (!html) return '';
+  return decodeHtmlEntities(
+    html
+      .replace(/<\/p>\s*<p>/gi, '\n\n')
+      .replace(/<br\s*\/?>/gi, '\n')
+      .replace(/<[^>]*>/g, '')
+  ).trim();
+}
+
 export function adaptProperty(property: SupabaseProperty, locale: 'en' | 'ar' = 'en'): Property {
   const isAr = locale === 'ar';
 
@@ -21,36 +110,27 @@ export function adaptProperty(property: SupabaseProperty, locale: 'en' | 'ar' = 
   const amenities = property.property_amenities
     ? property.property_amenities.map((am: any) => ({
         icon: 'check',
-        title: isAr ? (am.amenity_ar || am.amenity_en) : am.amenity_en,
+        title: decodeHtmlEntities(isAr ? (am.amenity_ar || am.amenity_en) : am.amenity_en),
       }))
     : [];
 
-  const locationStr = property.location || 'New Cairo, Egypt';
+  const locationStr = decodeHtmlEntities(property.location || 'New Cairo, Egypt');
   const districtName = locationStr.split(',')[0].trim() || 'New Cairo';
 
-  const descEn = (property.description_en || '')
-    .replace(/<\/p>\s*<p>/gi, '\n\n')
-    .replace(/<br\s*\/?>/gi, '\n')
-    .replace(/<[^>]*>/g, '')
-    .trim();
-
-  const descAr = (property.description_ar || '')
-    .replace(/<\/p>\s*<p>/gi, '\n\n')
-    .replace(/<br\s*\/?>/gi, '\n')
-    .replace(/<[^>]*>/g, '')
-    .trim();
+  const descEn = cleanHtmlToPlainText(property.description_en || '');
+  const descAr = cleanHtmlToPlainText(property.description_ar || '');
 
   const narrativeText = isAr ? (descAr || descEn) : (descEn || descAr);
 
   return {
     id: property.slug,
     slug: property.slug,
-    title: isAr ? property.title_ar : property.title_en,
-    title_en: property.title_en,
-    title_ar: property.title_ar,
+    title: decodeHtmlEntities(isAr ? property.title_ar : property.title_en),
+    title_en: decodeHtmlEntities(property.title_en),
+    title_ar: decodeHtmlEntities(property.title_ar),
     location: locationStr,
-    district: districtName,
-    estateName: districtName,
+    district: decodeHtmlEntities(districtName),
+    estateName: decodeHtmlEntities(districtName),
     description: narrativeText,
     description_en: descEn,
     description_ar: descAr,

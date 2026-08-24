@@ -10,10 +10,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale } = await params;
   const t = await getTranslations({ locale, namespace: 'hero' });
   return {
-    title: locale === 'ar' ? 'زكريا فريد | العقارات المعمارية الفاخرة في مصر' : 'Zakaria Farid | Sovereign Luxury Real Estate in Egypt',
+    title: locale === 'ar' ? 'آل زكريا | العقارات المعمارية الفاخرة والاستشارات السيادية' : 'AL ZAKARIA | Sovereign Luxury Real Estate in Egypt',
     description: t('subheadline'),
     openGraph: {
-      title: 'Zakaria Farid Real Estate',
+      title: locale === 'ar' ? 'آل زكريا للعقارات الفاخرة' : 'AL ZAKARIA Real Estate',
       description: t('subheadline'),
       images: [{ url: '/og-home.jpg', width: 1200, height: 630 }],
     },

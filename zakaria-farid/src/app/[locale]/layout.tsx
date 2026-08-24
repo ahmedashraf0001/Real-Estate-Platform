@@ -1,10 +1,12 @@
 import { NextIntlClientProvider } from 'next-intl';
 import { getMessages, getTranslations } from 'next-intl/server';
 import { notFound } from 'next/navigation';
+import { cookies } from 'next/headers';
 import '@/app/globals.css';
 import { routing } from '@/i18n/routing';
 import { LenisProvider } from '@/components/LenisProvider';
 import { ClientAppShell } from '@/components/ClientAppShell';
+import { FavoritesProvider } from '@/lib/context/FavoritesContext';
 import { Toaster } from 'sonner';
 import type { Metadata } from 'next';
 import Script from 'next/script';
@@ -22,7 +24,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const t = await getTranslations({ locale, namespace: 'hero' });
   return {
     metadataBase: new URL(baseUrl),
-    title: 'Zakaria Farid Real Estate',
+    title: locale === 'ar' ? 'آل زكريا للعقارات الفاخرة' : 'AL ZAKARIA Real Estate',
     description: t('subheadline'),
     alternates: {
       canonical: `/${locale}`,
@@ -47,21 +49,32 @@ export default async function LocaleLayout({ children, params }: Props) {
 
   const messages = await getMessages();
   const dir = locale === 'ar' ? 'rtl' : 'ltr';
+  const cookieStore = await cookies();
+  const themeCookie = cookieStore.get('zf_theme')?.value;
+  const initialTheme = (themeCookie === 'light' || themeCookie === 'dark') ? themeCookie : 'dark';
 
   return (
-    <html lang={locale} dir={dir} data-theme="dark" suppressHydrationWarning>
+    <html lang={locale} dir={dir} data-theme={initialTheme} suppressHydrationWarning>
       <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=Cairo:wght@300;400;500;600;700;800;900&display=swap"
-          rel="stylesheet"
-        />
-        <link
-          rel="stylesheet"
-          href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-          integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
-          crossOrigin=""
+        <Script
+          id="theme-init"
+          strategy="beforeInteractive"
+          dangerouslySetInnerHTML={{
+            __html: `(function() {
+  try {
+    var cookieMatch = document.cookie.match(/(?:^|;\\s*)zf_theme=([^;]*)/);
+    var cookieTheme = cookieMatch ? cookieMatch[1] : null;
+    var saved = localStorage.getItem('zf_theme') || cookieTheme;
+    var theme = (saved === 'light' || saved === 'dark') ? saved : '${initialTheme}';
+    document.documentElement.setAttribute('data-theme', theme);
+    if (saved && (!cookieTheme || cookieTheme !== theme)) {
+      document.cookie = 'zf_theme=' + theme + '; path=/; max-age=31536000; SameSite=Lax';
+    }
+  } catch(e) {
+    document.documentElement.setAttribute('data-theme', '${initialTheme}');
+  }
+})();`,
+          }}
         />
       </head>
       <body>
@@ -74,18 +87,19 @@ export default async function LocaleLayout({ children, params }: Props) {
           />
         )}
         <NextIntlClientProvider messages={messages}>
-          <LenisProvider locale={locale}>
-            <ClientAppShell locale={locale}>
-              {children}
-            </ClientAppShell>
-          </LenisProvider>
+          <FavoritesProvider>
+            <LenisProvider locale={locale}>
+              <ClientAppShell locale={locale}>
+                {children}
+              </ClientAppShell>
+            </LenisProvider>
+          </FavoritesProvider>
           <Toaster
             position="bottom-right"
+            theme="system"
+            gap={10}
             toastOptions={{
-              style: {
-                fontFamily: 'var(--font-body)',
-                borderRadius: 'var(--radius-md)',
-              },
+              duration: 4000,
             }}
           />
         </NextIntlClientProvider>

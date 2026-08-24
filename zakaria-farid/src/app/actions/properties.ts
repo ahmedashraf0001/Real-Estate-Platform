@@ -3,6 +3,7 @@
 import { createServerClient } from '@supabase/ssr';
 import { createClient as createBrowserServer } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
+import { sendNewPropertyAlerts } from '@/lib/services/emailService';
 
 // Creates an admin client using the service role key — bypasses RLS entirely.
 // Falls back to null if the key is not set (e.g. Cloudflare Workers secrets not configured yet),
@@ -56,6 +57,42 @@ async function getAdminClient() {
   });
 }
 
+const VALID_PROPERTY_COLUMNS = new Set([
+  'id',
+  'slug',
+  'title_en',
+  'title_ar',
+  'description_en',
+  'description_ar',
+  'price_egp',
+  'bedrooms',
+  'bathrooms',
+  'area_sqm',
+  'type',
+  'location',
+  'latitude',
+  'longitude',
+  'completion_status',
+  'listing_status',
+  'is_featured',
+  'view',
+  'floor_number',
+  'spec_layers',
+  'calcom_event_link',
+  'created_at',
+]);
+
+function sanitizePropertyPayload(raw: Record<string, any>) {
+  if (!raw || typeof raw !== 'object') return raw;
+  const sanitized: Record<string, any> = {};
+  for (const [key, val] of Object.entries(raw)) {
+    if (VALID_PROPERTY_COLUMNS.has(key)) {
+      sanitized[key] = val;
+    }
+  }
+  return sanitized;
+}
+
 export async function saveProperty(
   payload: any,
   isEditing: boolean,
@@ -64,6 +101,8 @@ export async function saveProperty(
   previewUrls: string[] = []
 ) {
   try {
+    const cleanPayload = sanitizePropertyPayload(payload);
+
     // First verify the user is actually authenticated via their session cookie
     const sessionClient = await createBrowserServer();
     const { data: { user } } = await sessionClient.auth.getUser();
@@ -77,12 +116,12 @@ export async function saveProperty(
     const supabase = adminSupabase ?? (await createBrowserServer());
 
     if (isEditing && propertyId) {
-      let { error } = await supabase.from('properties').update(payload).eq('id', propertyId);
+      let { error } = await supabase.from('properties').update(cleanPayload).eq('id', propertyId);
       
       // Fallback: If spec_layers column hasn't been added to Supabase DB yet, retry without spec_layers
       if (error && error.message?.includes('spec_layers')) {
         console.warn('spec_layers column missing in Supabase DB. Retrying update without spec_layers...');
-        const fallbackPayload = { ...payload };
+        const fallbackPayload = { ...cleanPayload };
         delete fallbackPayload.spec_layers;
         const fallbackRes = await supabase.from('properties').update(fallbackPayload).eq('id', propertyId);
         if (fallbackRes.error) throw fallbackRes.error;
@@ -106,14 +145,14 @@ export async function saveProperty(
       let newPropData: any = null;
       let { data: newProp, error } = await supabase
         .from('properties')
-        .insert(payload)
+        .insert(cleanPayload)
         .select('id, slug')
         .single();
 
       // Fallback: If spec_layers column hasn't been added to Supabase DB yet, retry without spec_layers
       if (error && error.message?.includes('spec_layers')) {
         console.warn('spec_layers column missing in Supabase DB. Retrying insert without spec_layers...');
-        const fallbackPayload = { ...payload };
+        const fallbackPayload = { ...cleanPayload };
         delete fallbackPayload.spec_layers;
         const fallbackRes = await supabase
           .from('properties')
@@ -151,6 +190,27 @@ export async function saveProperty(
 
       revalidatePath('/admin');
       revalidatePath('/');
+
+      // Fire property alert emails to all subscribers (non-blocking, non-fatal)
+      if (newProp) {
+        const alertPayload = {
+          title_en: cleanPayload.title_en || payload.title_en || 'New Property',
+          title_ar: cleanPayload.title_ar || payload.title_ar,
+          description_en: cleanPayload.description_en || payload.description_en,
+          price_egp: cleanPayload.price_egp || payload.price_egp,
+          location: cleanPayload.location || payload.location,
+          bedrooms: cleanPayload.bedrooms ?? payload.bedrooms,
+          bathrooms: cleanPayload.bathrooms ?? payload.bathrooms,
+          area_sqm: cleanPayload.area_sqm ?? payload.area_sqm,
+          type: cleanPayload.type || payload.type,
+          slug: newProp.slug || payload.slug,
+          imageUrl: previewUrls[0] || undefined,
+        };
+        sendNewPropertyAlerts(supabase, alertPayload).catch((e) =>
+          console.warn('[saveProperty] Property alert email non-fatal error:', e)
+        );
+      }
+
       return { success: true, propertyId: newProp?.id, slug: newProp?.slug || payload.slug };
     }
   } catch (error: any) {

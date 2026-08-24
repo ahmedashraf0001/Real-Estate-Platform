@@ -81,6 +81,26 @@ export const ZONE_TEMPLATES: ZoneTemplate[] = [
   { id: 'bld.roof',            property_type_id: 'building', label_en: 'Roof',                       label_ar: 'السطح',                      category: 'infrastructure', sort_order: 4 },
   { id: 'bld.unit',            property_type_id: 'building', label_en: 'Residential Unit',           label_ar: 'وحدة سكنية',                 category: 'infrastructure', is_container: true, is_optional: true, sort_order: 5 },
 
+  // Ground Floor & Common Egyptian Building Components
+  { id: 'bld.entrance_gate',   property_type_id: 'building', label_en: 'Entrance Gate & Fence',      label_ar: 'بوابة وسور المدخل',          category: 'infrastructure', is_optional: true, sort_order: 10 },
+  { id: 'bld.entrance_lobby',  property_type_id: 'building', label_en: 'Main Entrance & Lobby',      label_ar: 'مدخل العمارة والردهة',      category: 'infrastructure', is_optional: true, sort_order: 11 },
+  { id: 'bld.staircase',       property_type_id: 'building', label_en: 'Building Staircase',         label_ar: 'السلم وبيت السلم',           category: 'infrastructure', is_optional: true, sort_order: 12 },
+  { id: 'bld.elevator',        property_type_id: 'building', label_en: 'Elevator & Shaft',           label_ar: 'الأسانسير والمصعد',          category: 'infrastructure', is_optional: true, sort_order: 13 },
+  { id: 'bld.electric_box',    property_type_id: 'building', label_en: 'Electric Meters & Board',    label_ar: 'غرفة ولوحة الكهرباء والعدادات', category: 'infrastructure', is_optional: true, sort_order: 14 },
+  { id: 'bld.water_motors',    property_type_id: 'building', label_en: 'Water Motors & Pumps Box',   label_ar: 'غرفة مواتير ومضخات المياه',   category: 'infrastructure', is_optional: true, sort_order: 15 },
+  { id: 'bld.garage_bays',     property_type_id: 'building', label_en: 'Ground Garage & Parking',    label_ar: 'باكيات الجراج الأرضي',       category: 'infrastructure', is_optional: true, sort_order: 16 },
+  { id: 'bld.guard_room',      property_type_id: 'building', label_en: 'Guard Room / Booth',         label_ar: 'غرفة الحارس والأمن',         category: 'infrastructure', is_optional: true, sort_order: 17 },
+  { id: 'bld.commercial_shop', property_type_id: 'building', label_en: 'Commercial Shop / Retail',   label_ar: 'محل تجاري',                  category: 'infrastructure', is_optional: true, sort_order: 18 },
+
+  // Typical Floor Components
+  { id: 'bld.central_corridor', property_type_id: 'building', label_en: 'Central Floor Corridor',    label_ar: 'طرقة التوزيع بالدور',        category: 'infrastructure', is_optional: true, sort_order: 20 },
+  { id: 'bld.lightwell',       property_type_id: 'building', label_en: 'Building Lightwell & Duct',  label_ar: 'منور العمارة والخدمات',      category: 'infrastructure', is_optional: true, sort_order: 21 },
+  { id: 'bld.balcony',         property_type_id: 'building', label_en: 'Exterior Balcony / Terrace', label_ar: 'البلكونة والتراس الخارجي',   category: 'infrastructure', is_optional: true, sort_order: 22 },
+
+  // Roof Components
+  { id: 'bld.roof_terrace',    property_type_id: 'building', label_en: 'Panoramic Roof Terrace',     label_ar: 'تراس السطح والبرجولا',       category: 'infrastructure', is_optional: true, sort_order: 30 },
+  { id: 'bld.roof_service',    property_type_id: 'building', label_en: 'Elevator Machine & Tanks',   label_ar: 'غرفة محرك الأسانسير وخزانات المياه', category: 'infrastructure', is_optional: true, sort_order: 31 },
+
   // ── GARAGE (جراج) ──────────────────────────────────────────────────────────
   { id: 'grg.garage', property_type_id: 'garage', label_en: 'Garage', label_ar: 'الجراج', category: 'garage_unit', sort_order: 0 },
   { id: 'grg.ramp',  property_type_id: 'garage', label_en: 'Ramp & Gate',    label_ar: 'الرامب والبوابة',  category: 'garage_unit', is_optional: true, sort_order: 1 },

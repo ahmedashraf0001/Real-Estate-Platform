@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { createClient as createBrowserServer } from '@/lib/supabase/server';
 import type { Lead } from '@/lib/supabase/types';
+import { sendServerSideLeadNotification } from '@/lib/services/whatsappNotifier';
 
 async function getAdminClient() {
   let url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -115,15 +116,32 @@ export async function createLead(payload: {
       return { success: false, error: 'Lead creation failed: 0 rows inserted.' };
     }
 
+    const createdLead = data[0] as Lead;
+
+    // Trigger automated background notification to Farid Zakaria
+    try {
+      void sendServerSideLeadNotification({
+        name: createdLead.name,
+        phone: createdLead.phone,
+        email: createdLead.email,
+        message: createdLead.message,
+        notes: createdLead.notes,
+        source: createdLead.source || 'Admin Manual Entry',
+        entryMethod: 'admin_manual',
+      });
+    } catch (notifyErr) {
+      console.warn('Background notification non-fatal error:', notifyErr);
+    }
+
     revalidatePath('/admin');
-    return { success: true, lead: data[0] as Lead };
+    return { success: true, lead: createdLead };
   } catch (err: any) {
     console.error('Exception in createLead:', err);
     return { success: false, error: err.message || 'Server action error' };
   }
 }
 
-export async function updateLeadStage(leadId: string, stage: string) {
+export async function updateLeadStage(leadId: string, stage: string, autoArchive: boolean = true) {
   try {
     const sessionClient = await createBrowserServer();
     const { data: { user } } = await sessionClient.auth.getUser();
@@ -135,12 +153,16 @@ export async function updateLeadStage(leadId: string, stage: string) {
     const adminSupabase = await getAdminClient();
     const supabase = adminSupabase ?? (await createBrowserServer());
 
-    // Primary update attempt with stage and stage_updated_at
+    const isClosed = stage === 'closed_won' || stage === 'closed_lost';
+    const shouldArchive = autoArchive ? isClosed : false;
+
+    // Primary update attempt with stage, is_archived, and stage_updated_at
     let updateResult = await supabase
       .from('leads')
       .update(
         {
           stage,
+          is_archived: shouldArchive,
           stage_updated_at: new Date().toISOString(),
         },
         { count: 'exact' }
@@ -149,10 +171,10 @@ export async function updateLeadStage(leadId: string, stage: string) {
 
     // Fallback: if stage_updated_at fails
     if (updateResult.error || (updateResult.count !== null && updateResult.count === 0)) {
-      console.warn('Lead stage update with stage_updated_at failed or updated 0 rows, attempting stage-only fallback');
+      console.warn('Lead stage update with stage_updated_at failed or updated 0 rows, attempting fallback');
       updateResult = await supabase
         .from('leads')
-        .update({ stage }, { count: 'exact' })
+        .update({ stage, is_archived: shouldArchive }, { count: 'exact' })
         .eq('id', leadId);
     }
 
@@ -170,7 +192,7 @@ export async function updateLeadStage(leadId: string, stage: string) {
     }
 
     revalidatePath('/admin');
-    return { success: true, lead: { id: leadId, stage } as Lead };
+    return { success: true, lead: { id: leadId, stage, is_archived: shouldArchive } as Lead };
   } catch (err: any) {
     console.error('Exception in updateLeadStage:', err);
     return { success: false, error: err.message || 'Server action error' };
@@ -183,6 +205,7 @@ export async function updateLeadDetails(
     notes?: string | null;
     lost_reason?: string | null;
     source?: string | null;
+    property_id?: string | null;
   }
 ) {
   try {
@@ -200,6 +223,7 @@ export async function updateLeadDetails(
       notes: updates.notes === undefined ? undefined : normalizeString(updates.notes),
       lost_reason: updates.lost_reason === undefined ? undefined : normalizeString(updates.lost_reason),
       source: updates.source === undefined ? undefined : normalizeString(updates.source),
+      property_id: updates.property_id === undefined ? undefined : normalizeString(updates.property_id),
     };
 
     let updateResult = await supabase
@@ -213,6 +237,7 @@ export async function updateLeadDetails(
       if (updates.notes !== undefined) fallbackPayload.notes = normalizeString(updates.notes);
       if (updates.lost_reason !== undefined) fallbackPayload.lost_reason = normalizeString(updates.lost_reason);
       if (updates.source !== undefined) fallbackPayload.source = normalizeString(updates.source);
+      if (updates.property_id !== undefined) fallbackPayload.property_id = normalizeString(updates.property_id);
       
       updateResult = await supabase.from('leads').update(fallbackPayload, { count: 'exact' }).eq('id', leadId);
     }

@@ -11,26 +11,68 @@ import {
   MessageCircle, 
   PhoneCall, 
   ArrowUpRight,
-  Send
+  Send,
+  Loader2,
+  Bell
 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { toast } from 'sonner';
 let L: any = null;
 if (typeof window !== 'undefined') {
   L = require('leaflet');
 }
 import { createCachedTileLayer } from '@/lib/mapCache';
+import { usePlatformSettings } from '@/lib/hooks/usePlatformSettings';
 
 export const ContactView: React.FC<{ locale?: string }> = ({ locale = 'en' }) => {
-  // Form State
+  const isAr = locale === 'ar';
+  const { contact } = usePlatformSettings();
+
+  // Form State aligned with CRM Pipeline Schema
+  const [intent, setIntent] = useState<'acquire' | 'sell' | 'advisory'>('acquire');
   const [fullName, setFullName] = useState<string>('');
   const [email, setEmail] = useState<string>('');
   const [phone, setPhone] = useState<string>('');
-  const [contactPref, setContactPref] = useState<string>('whatsapp');
+  const [district, setDistrict] = useState<string>('New Cairo');
+  const [budget, setBudget] = useState<string>('500,000 - 5,000,000 EGP');
+  const [contactPref, setContactPref] = useState<'whatsapp' | 'phone' | 'hq'>('whatsapp');
   const [message, setMessage] = useState<string>('');
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [isSubmitted, setIsSubmitted] = useState<boolean>(false);
+  const [subscribeToPromos, setSubscribeToPromos] = useState<boolean>(false);
+  const [faridWhatsAppUrl, setFaridWhatsAppUrl] = useState<string | null>(null);
 
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
+
+  const intentOptions = [
+    { id: 'acquire', en: 'Private Acquisition', ar: 'طلب شراء / استحواذ' },
+    { id: 'sell', en: 'Exclusive Estate Listing', ar: 'عرض عقار للبيع' },
+    { id: 'advisory', en: 'Architectural Advisory', ar: 'استشارات معمارية وتطوير' },
+  ];
+
+  const districtOptions = [
+    { id: 'New Cairo', en: 'New Cairo & Katameya', ar: 'القاهرة الجديدة والقطامية' },
+    { id: 'North Coast', en: 'North Coast (Sahel)', ar: 'الساحل الشمالي' },
+    { id: 'El Gouna', en: 'El Gouna & Red Sea', ar: 'الجونة والبحر الأحمر' },
+    { id: 'Sheikh Zayed', en: 'Sheikh Zayed & October', ar: 'الشيخ زايد وأكتوبر' },
+    { id: 'General', en: 'Egypt-Wide / Flexible', ar: 'مصر ككل / مرن' },
+  ];
+
+  const budgetOptions = [
+    '500,000 - 5,000,000 EGP',
+    '5,000,000 - 15,000,000 EGP',
+    '15,000,000 - 30,000,000 EGP',
+    '30,000,000 - 60,000,000 EGP',
+    '60,000,000 - 120,000,000 EGP',
+    '120,000,000+ EGP (Trophy Sovereign Asset)',
+  ];
+
+  const channelOptions = [
+    { id: 'whatsapp', en: 'WhatsApp Dossier', ar: 'واتساب فوري' },
+    { id: 'phone', en: 'Discreet Phone Call', ar: 'اتصال هاتفي خاص' },
+    { id: 'hq', en: 'Flagship HQ Meeting', ar: 'جلسة بالمقر الرئيسي' },
+  ];
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -41,10 +83,8 @@ export const ContactView: React.FC<{ locale?: string }> = ({ locale = 'en' }) =>
 
   useEffect(() => {
     if (typeof window === 'undefined' || !mapContainerRef.current) return;
-    
     if (!mapContainerRef.current || mapInstanceRef.current) return;
 
-    // Real Leaflet map centered on MASR Grand HQ in New Cairo Financial District
     const map = L.map(mapContainerRef.current, {
       center: [30.023, 31.438],
       zoom: 14,
@@ -61,32 +101,32 @@ export const ContactView: React.FC<{ locale?: string }> = ({ locale = 'en' }) =>
 
     const pinHtml = `
       <div style="
-        width: 38px;
-        height: 38px;
+        width: 32px;
+        height: 32px;
         border-radius: 50%;
-        background: rgba(10, 14, 22, 0.9);
+        background: rgba(10, 14, 22, 0.92);
         border: 2px solid #DDA752;
-        box-shadow: 0 0 24px rgba(221, 167, 82, 0.85);
+        box-shadow: 0 0 20px rgba(221, 167, 82, 0.8);
         display: flex;
         align-items: center;
         justify-content: center;
         cursor: pointer;
       ">
-        <div style="width: 12px; height: 12px; border-radius: 50%; background: #DDA752;"></div>
+        <div style="width: 10px; height: 10px; border-radius: 50%; background: #E5B869;"></div>
       </div>
     `;
 
     const customIcon = L.divIcon({
       html: pinHtml,
       className: 'grand-hq-map-pin',
-      iconSize: [38, 38],
-      iconAnchor: [19, 19]
+      iconSize: [32, 32],
+      iconAnchor: [16, 16]
     });
 
     const marker = L.marker([30.023, 31.438], { icon: customIcon }).addTo(map);
     marker.bindTooltip(
-      `<div style="font-family: 'Plus Jakarta Sans', sans-serif; font-size: 12px; font-weight: 800; color: #DDA752; background: #0A0C10; padding: 6px 14px; border-radius: 8px; border: 1px solid rgba(221, 167, 82, 0.5); box-shadow: 0 8px 24px rgba(0,0,0,0.6);">Zakaria Farid Flagship HQ · Financial District</div>`,
-      { direction: 'top', offset: [0, -18], permanent: true, className: 'luxury-leaflet-tooltip' }
+      `<div style="font-family: var(--font-heading); font-size: 11px; font-weight: 800; color: #E5B869; background: #0A0C10; padding: 5px 12px; border-radius: 8px; border: 1px solid rgba(229, 184, 105, 0.5); box-shadow: 0 8px 24px rgba(0,0,0,0.6);">AL ZAKARIA Flagship HQ · Financial District</div>`,
+      { direction: 'top', offset: [0, -14], permanent: true, className: 'luxury-leaflet-tooltip' }
     );
 
     mapInstanceRef.current = map;
@@ -97,13 +137,77 @@ export const ContactView: React.FC<{ locale?: string }> = ({ locale = 'en' }) =>
     };
   }, []);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsSubmitted(true);
+    if (!fullName.trim() || !phone.trim()) {
+      toast.error(isAr ? 'يرجى إدخال الاسم ورقم الهاتف' : 'Please provide your name and phone number');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const intentLabel = intent === 'sell' 
+        ? 'Exclusive Listing Request' 
+        : intent === 'advisory' 
+        ? 'Architectural Advisory' 
+        : 'Private Acquisition';
+
+      const formattedNotes = [
+        `Intent: ${intentLabel}`,
+        `Region: ${district}`,
+        `Budget: ${budget}`,
+        `Channel: ${contactPref}`,
+        message ? `Notes: ${message.trim()}` : ''
+      ].filter(Boolean).join(' | ');
+
+      const res = await fetch('/api/leads', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: fullName.trim(),
+          email: email.trim() || null,
+          phone: phone.trim(),
+          message: message.trim() || `${intentLabel} consultation for ${district}`,
+          budget,
+          preferred_channel: contactPref === 'whatsapp' ? 'WhatsApp' : contactPref === 'phone' ? 'Direct Phone Call' : 'In-Person HQ Meeting',
+          notes: formattedNotes + (subscribeToPromos ? ' | Opted-in: Email Promotions' : ''),
+          source: `Executive Concierge Page (${intentLabel})`,
+        }),
+      });
+
+      // Fire subscription request in parallel if opted in
+      if (subscribeToPromos && email.trim().includes('@')) {
+        fetch('/api/subscribe', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: email.trim(),
+            name: fullName.trim(),
+            source: `Promotion Opt-in (Contact Page - ${intentLabel})`,
+            locale,
+          }),
+        }).catch(() => {/* non-fatal */});
+      }
+
+      const data = await res.json();
+      if (res.ok && data.success) {
+        if (data.farid_whatsapp_url) {
+          setFaridWhatsAppUrl(data.farid_whatsapp_url);
+        }
+        setIsSubmitted(true);
+        toast.success(isAr ? 'تم استلام رسالتكم وإخطار آل زكريا' : 'Inquiry dispatched to AL ZAKARIA directly');
+      } else {
+        toast.error(data.error || (isAr ? 'تعذر إرسال الطلب' : 'Failed to send message'));
+      }
+    } catch {
+      toast.error(isAr ? 'خطأ في الاتصال بالخادم' : 'Server connection error');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
-    <div className="contact-page">
+    <div className="contact-page" dir={isAr ? 'rtl' : 'ltr'}>
       <div className="container">
         
         {/* 1. Header Section */}
@@ -116,7 +220,7 @@ export const ContactView: React.FC<{ locale?: string }> = ({ locale = 'en' }) =>
               transition={{ duration: 0.4 }}
             >
               <Compass size={13} className="badge-icon" />
-              <span>PRIVATE CLIENT DESK</span>
+              <span>{isAr ? 'مكتب خدمة كبار العملاء' : 'PRIVATE CLIENT DESK'}</span>
             </motion.div>
 
             <motion.h1 
@@ -125,7 +229,9 @@ export const ContactView: React.FC<{ locale?: string }> = ({ locale = 'en' }) =>
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4, delay: 0.05, ease: [0.16, 1, 0.3, 1] }}
             >
-              <span className="header-scan-glow">Executive Concierge & Inquiries</span>
+              <span className="header-scan-glow">
+                {isAr ? 'الاستشارات الخاصة والوساطة الاستراتيجية' : 'Executive Concierge & Inquiries'}
+              </span>
             </motion.h1>
 
             <motion.p 
@@ -134,7 +240,9 @@ export const ContactView: React.FC<{ locale?: string }> = ({ locale = 'en' }) =>
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.16 }}
             >
-              Connect directly with our client advisory team for private portfolio consultations, discrete property inquiries, and chauffeured estate walkthroughs across Egypt.
+              {isAr 
+                ? 'تواصل مباشرة مع مكتب الاستشارات الخاصة لإجراء الدراسات المعمارية، وطلبات الاستحواذ الفاخرة، والترتيب لجولات المعاينة الحصرية لكبرى العقارات السيادية في مصر.'
+                : 'Connect directly with our private client advisory team for sovereign portfolio consultations, discrete property acquisitions, and chauffeured estate walkthroughs across Egypt.'}
             </motion.p>
           </div>
         </section>
@@ -143,27 +251,46 @@ export const ContactView: React.FC<{ locale?: string }> = ({ locale = 'en' }) =>
         <section className="contact-form-grid-section">
           <div className="contact-two-col-grid">
             
-            {/* Left: Streamlined Inquiry Form */}
+            {/* Left: Streamlined Luxury Advisory Form */}
             <div className="acquisition-form-card">
               <div className="form-card-header">
-                <span className="form-eyebrow">DIRECT INQUIRY</span>
-                <h2 className="form-card-title">Send a Message</h2>
+                <span className="form-eyebrow">{isAr ? 'استمارة التواصل المباشر' : 'DIRECT ADVISORY DOSSIER'}</span>
+                <h2 className="form-card-title">{isAr ? 'طلب استشارة أو استحواذ رسمي' : 'Executive Client Inquiry'}</h2>
                 <p className="form-card-sub">
-                  Provide your details and inquiry below. Our private client team will respond within 24 hours.
+                  {isAr 
+                    ? 'حدد متطلباتك ومعلومات التواصل الخاصة بك، وسيقوم فريق الاستشارات بالتواصل معكم خلال ساعتي عمل.'
+                    : 'Provide your credentials and requirements below. Our private client team will prepare a discreet dossier within 2 business hours.'}
                 </p>
               </div>
 
               {!isSubmitted ? (
                 <form className="acquisition-form" onSubmit={handleSubmit}>
                   
-                  {/* Contact Info Fields */}
+                  {/* 1. Intent Selector */}
+                  <div className="form-field-group">
+                    <label className="form-field-label">{isAr ? 'نوع الاستشارة أو الطلب' : 'INQUIRY PURPOSE / INTENT'}</label>
+                    <div className="intent-chips-grid">
+                      {intentOptions.map((opt) => (
+                        <button
+                          key={opt.id}
+                          type="button"
+                          className={`selector-chip ${intent === opt.id ? 'active' : ''}`}
+                          onClick={() => setIntent(opt.id as any)}
+                        >
+                          {isAr ? opt.ar : opt.en}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* 2. Client Credentials */}
                   <div className="form-inputs-grid">
                     <div className="form-field-group">
-                      <label className="form-field-label">FULL NAME</label>
+                      <label className="form-field-label">{isAr ? 'الاسم واللقب' : 'FULL NAME / TITLE'}</label>
                       <input 
                         type="text" 
                         required 
-                        placeholder="e.g. Tarek Mansour"
+                        placeholder={isAr ? 'مثال: د. هشام الجمال' : 'e.g. Dr. Hisham El-Gammal'}
                         value={fullName}
                         onChange={(e) => setFullName(e.target.value)}
                         className="form-dark-input"
@@ -171,86 +298,158 @@ export const ContactView: React.FC<{ locale?: string }> = ({ locale = 'en' }) =>
                     </div>
 
                     <div className="form-field-group">
-                      <label className="form-field-label">EMAIL ADDRESS</label>
+                      <label className="form-field-label">{isAr ? 'رقم الهاتف / الواتساب' : 'PHONE / WHATSAPP'}</label>
                       <input 
-                        type="email" 
+                        type="tel" 
                         required 
-                        placeholder="tarek@example.com"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
+                        placeholder="+20 100 000 0000"
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value)}
                         className="form-dark-input"
                       />
                     </div>
                   </div>
 
                   <div className="form-field-group">
-                    <label className="form-field-label">PHONE NUMBER</label>
+                    <label className="form-field-label">{isAr ? 'البريد الإلكتروني (اختياري لاستلام الملف الفني)' : 'EMAIL ADDRESS (FOR DOSSIER DELIVERY)'}</label>
                     <input 
-                      type="tel" 
-                      required 
-                      placeholder="+20 100 123 4567"
-                      value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
+                      type="email" 
+                      placeholder="client@domain.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
                       className="form-dark-input"
                     />
                   </div>
 
-                  {/* Preferred Channel */}
-                  <div className="form-chip-group">
-                    <label className="form-field-label">PREFERRED COMMUNICATION CHANNEL</label>
+                  {/* 3. Target District & Capital Allocation */}
+                  <div className="form-inputs-grid">
+                    <div className="form-field-group">
+                      <label className="form-field-label">{isAr ? 'المنطقة المستهدفة' : 'TARGET REGION'}</label>
+                      <select 
+                        value={district}
+                        onChange={(e) => setDistrict(e.target.value)}
+                        className="form-dark-select"
+                      >
+                        {districtOptions.map((d) => (
+                          <option key={d.id} value={d.id}>{isAr ? d.ar : d.en}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="form-field-group">
+                      <label className="form-field-label">{isAr ? 'الميزانية التقريبية' : 'CAPITAL ALLOCATION'}</label>
+                      <select 
+                        value={budget}
+                        onChange={(e) => setBudget(e.target.value)}
+                        className="form-dark-select"
+                      >
+                        {budgetOptions.map((b) => (
+                          <option key={b} value={b}>{b}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* 4. Preferred Communication Protocol */}
+                  <div className="form-field-group">
+                    <label className="form-field-label">{isAr ? 'بروتوكول التواصل المفضل' : 'PREFERRED COMMUNICATION PROTOCOL'}</label>
                     <div className="chips-row">
-                      {[
-                        { id: 'whatsapp', label: 'WhatsApp' },
-                        { id: 'phone', label: 'Direct Phone Call' },
-                        { id: 'email', label: 'Email Correspondence' },
-                        { id: 'hq-meeting', label: 'In-Person HQ Meeting' }
-                      ].map((c) => (
+                      {channelOptions.map((c) => (
                         <button
                           key={c.id}
                           type="button"
                           className={`selector-chip ${contactPref === c.id ? 'active' : ''}`}
-                          onClick={() => setContactPref(c.id)}
+                          onClick={() => setContactPref(c.id as any)}
                         >
-                          {c.label}
+                          {isAr ? c.ar : c.en}
                         </button>
                       ))}
                     </div>
                   </div>
 
+                  {/* Message / Notes */}
                   <div className="form-field-group">
-                    <label className="form-field-label">YOUR INQUIRY / MESSAGE</label>
+                    <label className="form-field-label">{isAr ? 'المتطلبات الخاصة أو تفاصيل الطلب (اختياري)' : 'CONFIDENTIAL SPECIFICATIONS (OPTIONAL)'}</label>
                     <textarea 
-                      rows={4}
-                      required
-                      placeholder="Describe your inquiry, property preferences, or desired viewing schedule..."
+                      rows={3}
+                      placeholder={isAr ? 'مثال: مطلوب قصر مستقل بمساحة تتجاوز 1000م² مع حمام سباحة وإطلالة بانورامية...' : 'Describe specific architectural nuances, compound preferences, or inspection schedule...'}
                       value={message}
                       onChange={(e) => setMessage(e.target.value)}
                       className="form-dark-textarea"
                     />
                   </div>
 
-                  <button type="submit" className="submit-inquiry-btn btn-gold">
-                    <span>Send Message</span>
-                    <ArrowUpRight size={16} />
+                  {/* Promotions Opt-in — show only when email is filled */}
+                  {email.trim().includes('@') && (
+                    <label className="contact-promo-optin">
+                      <input
+                        type="checkbox"
+                        className="promo-optin-checkbox"
+                        checked={subscribeToPromos}
+                        onChange={(e) => setSubscribeToPromos(e.target.checked)}
+                      />
+                      <Bell size={13} className="contact-promo-bell" />
+                      <span>
+                        {isAr
+                          ? 'أرغب في استلام تنبيهات البريد الإلكتروني عن العروض والعقارات الجديدة'
+                          : 'Send me property alerts and exclusive promotions via email'}
+                      </span>
+                    </label>
+                  )}
+
+                  {/* Submit Button */}
+                  <button type="submit" disabled={isSubmitting} className="submit-inquiry-btn btn-gold">
+                    {isSubmitting ? (
+                      <>
+                        <Loader2 size={16} className="spinner" />
+                        <span>{isAr ? 'جاري إرسال الطلب...' : 'Transmitting dossier…'}</span>
+                      </>
+                    ) : (
+                      <>
+                        <Send size={15} />
+                        <span>{isAr ? 'إرسال الطلب السري للمكتب' : 'Submit Confidential Dossier'}</span>
+                        <ArrowUpRight size={16} />
+                      </>
+                    )}
                   </button>
                 </form>
               ) : (
                 <div className="form-success-box">
                   <CheckCircle size={48} className="success-icon" />
-                  <h3 className="success-title">Inquiry Received</h3>
+                  <h3 className="success-title">{isAr ? 'تم استلام طلبكم بنجاح' : 'Inquiry Received'}</h3>
                   <p className="success-msg">
-                    Thank you, <strong>{fullName}</strong>. Our private advisory team has received your message and will reach out to you via <strong>{phone}</strong> or <strong>{email}</strong> shortly.
+                    {isAr ? (
+                      <>شكراً لك، <strong>{fullName}</strong>. تم استلام رسالتك وإشعار مكتب آل زكريا مباشرة. سنتواصل معك عبر <strong>{phone}</strong> في أقرب وقت.</>
+                    ) : (
+                      <>Thank you, <strong>{fullName}</strong>. Your message has been received and notified directly to AL ZAKARIA. We will reach out to you via <strong>{phone}</strong> shortly.</>
+                    )}
                   </p>
-                  <button 
-                    className="btn-dark reset-form-btn"
-                    onClick={() => {
-                      setIsSubmitted(false);
-                      setMessage('');
-                    }}
-                    type="button"
-                  >
-                    Send Another Message
-                  </button>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', width: '100%', marginTop: '16px' }}>
+                    {faridWhatsAppUrl && (
+                      <a
+                        href={faridWhatsAppUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="direct-whatsapp-action-link"
+                      >
+                        <MessageCircle size={17} />
+                        <span>{isAr ? 'فتح المحادثة المباشرة على واتساب آل زكريا' : 'Open WhatsApp Chat with AL ZAKARIA'}</span>
+                      </a>
+                    )}
+
+                    <button 
+                      className="btn-dark reset-form-btn"
+                      onClick={() => {
+                        setIsSubmitted(false);
+                        setMessage('');
+                        setFaridWhatsAppUrl(null);
+                      }}
+                      type="button"
+                    >
+                      {isAr ? 'إرسال طلب آخر' : 'Submit Another Inquiry'}
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
@@ -261,62 +460,70 @@ export const ContactView: React.FC<{ locale?: string }> = ({ locale = 'en' }) =>
               {/* Direct Concierge WhatsApp Card */}
               <div className="direct-agent-card">
                 <div className="agent-card-top">
-                  <span className="agent-badge">LIVE CONCIERGE</span>
+                  <span className="agent-badge">{isAr ? 'مستشار فوري' : 'LIVE CONCIERGE'}</span>
                 </div>
-                <h3 className="agent-card-title">WhatsApp Client Desk</h3>
+                <h3 className="agent-card-title">{isAr ? 'مكتب خدمة العملاء عبر واتساب' : 'WhatsApp Client Desk'}</h3>
                 <p className="agent-card-desc">
-                  Connect immediately with our advisory team for real-time inquiries, catalog requests, or viewing schedules.
+                  {isAr 
+                    ? 'تواصل مباشرة مع المهندس زكريا فريد للحصول على الاستشارات الفورية، أو طلب الكتالوجات، أو حجز مواعيد المعاينات.'
+                    : 'Connect immediately with our senior advisory team for real-time inquiries, catalog requests, or viewing schedules.'}
                 </p>
                 <a 
-                  href="https://wa.me/201001234567?text=Hello,%20I%20am%20inquiring%20about%20Zakaria%20Farid%20estates."
+                  href={`https://wa.me/${(contact?.whatsapp || '+201009998888').replace(/[^0-9]/g, '')}?text=${encodeURIComponent(
+                    isAr ? 'مرحباً، أود الاستفسار عن عقارات واستشارات آل زكريا.' : 'Hello, I am inquiring about AL ZAKARIA estates.'
+                  )}`}
                   target="_blank" 
                   rel="noopener noreferrer"
                   className="chat-agent-link btn-gold"
                 >
                   <MessageCircle size={16} />
-                  <span>Chat on WhatsApp</span>
+                  <span>{isAr ? 'محادثة مباشرة عبر واتساب' : 'Chat on WhatsApp'}</span>
                 </a>
               </div>
 
               {/* Direct Telephone Hotline */}
               <div className="direct-hotline-card">
-                <h4 className="hotline-title">Direct Client Hotline</h4>
-                <a href="tel:+20219688" className="hotline-num">
+                <h4 className="hotline-title">{isAr ? 'الخط الساخن المباشر' : 'Direct Client Hotline'}</h4>
+                <a href={`tel:${(contact?.phone || '+20 2 19688').replace(/\s+/g, '')}`} className="hotline-num">
                   <PhoneCall size={18} className="hotline-icon" />
-                  <span>+20 2 19688</span>
+                  <span>{contact?.phone || '+20 2 19688'}</span>
                 </a>
-                <span className="hotline-sub">Available Sun – Thu · 9:00 AM – 6:00 PM (EET)</span>
+                <span className="hotline-sub">
+                  {isAr ? 'متاح من الأحد إلى الخميس · ٩:٠٠ ص – ٦:٠٠ م' : 'Available Sun – Thu · 9:00 AM – 6:00 PM (EET)'}
+                </span>
               </div>
 
               {/* Direct Email Card */}
               <div className="direct-hotline-card">
-                <h4 className="hotline-title">Corporate Inquiries</h4>
-                <a href="mailto:concierge@zakariafarid.com" className="hotline-num email-hotline">
+                <h4 className="hotline-title">{isAr ? 'الاستفسارات المؤسسية' : 'Corporate Inquiries'}</h4>
+                <a href={`mailto:${contact?.email || 'concierge@zakariafarid.com'}`} className="hotline-num email-hotline">
                   <Mail size={18} className="hotline-icon" />
-                  <span>concierge@zakariafarid.com</span>
+                  <span>{contact?.email || 'concierge@zakariafarid.com'}</span>
                 </a>
-                <span className="hotline-sub">Official advisory correspondence desk</span>
+                <span className="hotline-sub">
+                  {isAr ? 'المكتب الرسمي للمراسلات الاستشارية' : 'Official advisory correspondence desk'}
+                </span>
               </div>
 
             </div>
           </div>
         </section>
 
-        {/* 3. Zakaria Farid Grand HQ Panoramic Satellite Map Stage */}
+        {/* 3. AL ZAKARIA Grand HQ Panoramic Satellite Map Stage */}
         <section className="grand-hq-map-section">
           <div className="grand-hq-banner">
             <div ref={mapContainerRef} className="grand-hq-leaflet-canvas" />
             <div className="grand-hq-vignette" />
 
             <div className="grand-hq-floating-card">
-              <span className="hq-eyebrow-pill">FLAGSHIP HEADQUARTERS</span>
-              <h3 className="floating-hq-title">Zakaria Farid Grand HQ</h3>
+              <span className="hq-eyebrow-pill">{isAr ? 'المقر الرئيسي' : 'FLAGSHIP HEADQUARTERS'}</span>
+              <h3 className="floating-hq-title">{isAr ? 'مقر آل زكريا الرئيسي' : 'AL ZAKARIA Grand HQ'}</h3>
               <p className="floating-hq-address">
-                G-08 Grand Tower, Financial District, South 90th Axis, New Cairo, Egypt
+                {isAr ? (contact?.addressAr || 'برج جراند G-08، الحي المالي، محور التسعين الجنوبي، القاهرة الجديدة، مصر') : (contact?.addressEn || 'G-08 Grand Tower, Financial District, South 90th Axis, New Cairo, Egypt')}
               </p>
               <div className="floating-hq-hours">
                 <Clock size={13} className="hq-clock" />
-                <span>Open: Sun – Thu · 9:00 AM – 6:00 PM (EET)</span>
+                <span>{isAr ? 'مواعيد العمل: الأحد – الخميس · ٩:٠٠ ص – ٦:٠٠ م' : 'Open: Sun – Thu · 9:00 AM – 6:00 PM (EET)'}</span>
               </div>
               <a 
                 href="https://maps.google.com/?q=New+Cairo+Financial+District" 
@@ -325,7 +532,7 @@ export const ContactView: React.FC<{ locale?: string }> = ({ locale = 'en' }) =>
                 className="directions-btn"
               >
                 <Navigation size={15} />
-                <span>Get Driving Directions</span>
+                <span>{isAr ? 'الاتجاهات وخرائط القيادة' : 'Get Driving Directions'}</span>
               </a>
             </div>
           </div>
@@ -573,6 +780,12 @@ export const ContactView: React.FC<{ locale?: string }> = ({ locale = 'en' }) =>
           color: #0D1117;
         }
 
+        .intent-chips-grid {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 0.5rem;
+        }
+
         [data-theme="light"] .selector-chip.active {
           background: rgba(212, 160, 52, 0.16);
           border: 1.5px solid #B8860B;
@@ -593,7 +806,7 @@ export const ContactView: React.FC<{ locale?: string }> = ({ locale = 'en' }) =>
           gap: 6px;
         }
 
-        .form-dark-input, .form-dark-textarea {
+        .form-dark-input, .form-dark-select, .form-dark-textarea {
           width: 100%;
           border-radius: 12px;
           padding: 0.85rem 1.15rem;
@@ -602,11 +815,22 @@ export const ContactView: React.FC<{ locale?: string }> = ({ locale = 'en' }) =>
           transition: border-color var(--transition-fast), background var(--transition-fast), box-shadow var(--transition-fast);
         }
 
+        .form-dark-select {
+          appearance: none;
+          cursor: pointer;
+        }
+
         [data-theme="dark"] .form-dark-input, 
+        [data-theme="dark"] .form-dark-select,
         [data-theme="dark"] .form-dark-textarea {
           background: rgba(255, 255, 255, 0.05);
           border: 1px solid rgba(255, 255, 255, 0.15);
           color: #ffffff;
+        }
+
+        [data-theme="dark"] .form-dark-select option {
+          background: #0A0D14;
+          color: #FFFFFF;
         }
 
         [data-theme="dark"] .form-dark-input::placeholder, 
@@ -615,6 +839,7 @@ export const ContactView: React.FC<{ locale?: string }> = ({ locale = 'en' }) =>
         }
 
         [data-theme="dark"] .form-dark-input:focus, 
+        [data-theme="dark"] .form-dark-select:focus,
         [data-theme="dark"] .form-dark-textarea:focus {
           border-color: #DDA752;
           background: rgba(255, 255, 255, 0.1);
@@ -622,6 +847,7 @@ export const ContactView: React.FC<{ locale?: string }> = ({ locale = 'en' }) =>
         }
 
         [data-theme="light"] .form-dark-input, 
+        [data-theme="light"] .form-dark-select,
         [data-theme="light"] .form-dark-textarea {
           background: rgba(255, 255, 255, 0.85);
           border: 1px solid rgba(0, 0, 0, 0.16);
@@ -630,12 +856,18 @@ export const ContactView: React.FC<{ locale?: string }> = ({ locale = 'en' }) =>
           box-shadow: 0 2px 6px rgba(0, 0, 0, 0.02);
         }
 
+        [data-theme="light"] .form-dark-select option {
+          background: #FFFFFF;
+          color: #0D1117;
+        }
+
         [data-theme="light"] .form-dark-input::placeholder, 
         [data-theme="light"] .form-dark-textarea::placeholder {
           color: #64748B;
         }
 
         [data-theme="light"] .form-dark-input:focus, 
+        [data-theme="light"] .form-dark-select:focus,
         [data-theme="light"] .form-dark-textarea:focus {
           border-color: #A87E2C;
           background: #FFFFFF;
@@ -644,6 +876,27 @@ export const ContactView: React.FC<{ locale?: string }> = ({ locale = 'en' }) =>
 
         .form-dark-textarea {
           resize: vertical;
+        }
+
+        .direct-whatsapp-action-link {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          padding: 12px 20px;
+          border-radius: 12px;
+          font-size: 13px;
+          font-weight: 800;
+          background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+          color: #FFFFFF;
+          text-decoration: none;
+          box-shadow: 0 4px 16px rgba(16, 185, 129, 0.35);
+          transition: all 0.2s ease;
+        }
+
+        .direct-whatsapp-action-link:hover {
+          transform: translateY(-1.5px);
+          box-shadow: 0 8px 24px rgba(16, 185, 129, 0.45);
         }
 
         .submit-inquiry-btn {
@@ -1102,13 +1355,57 @@ export const ContactView: React.FC<{ locale?: string }> = ({ locale = 'en' }) =>
           transform: translateY(-2px);
         }
 
+        /* Promotion opt-in checkbox — contact form */
+        .contact-promo-optin {
+          display: flex;
+          align-items: flex-start;
+          gap: 9px;
+          cursor: pointer;
+          padding: 10px 14px;
+          border-radius: 10px;
+          border: 1px dashed rgba(221, 167, 82, 0.35);
+          background: rgba(221, 167, 82, 0.05);
+          transition: border-color 0.2s, background 0.2s;
+          user-select: none;
+          margin-top: 4px;
+        }
+        .contact-promo-optin:hover {
+          border-color: rgba(221, 167, 82, 0.65);
+          background: rgba(221, 167, 82, 0.09);
+        }
+        .contact-promo-optin .promo-optin-checkbox {
+          width: 15px;
+          height: 15px;
+          flex-shrink: 0;
+          accent-color: #DDA752;
+          margin-top: 1px;
+          cursor: pointer;
+        }
+        .contact-promo-bell {
+          flex-shrink: 0;
+          margin-top: 1px;
+          color: var(--gold-primary, #DDA752);
+        }
+        .contact-promo-optin span {
+          font-size: 0.8rem;
+          font-weight: 500;
+          color: var(--text-secondary);
+          line-height: 1.45;
+        }
+
         /* Responsive */
+
         @media (max-width: 1024px) {
           .contact-two-col-grid {
             grid-template-columns: 1fr;
+            gap: 2rem;
+          }
+          .acquisition-form-card {
+            order: 2;
           }
           .contact-sidebar-col {
             position: static;
+            order: 1;
           }
           .grand-hq-banner {
             padding: 2rem 1.25rem;
@@ -1121,6 +1418,9 @@ export const ContactView: React.FC<{ locale?: string }> = ({ locale = 'en' }) =>
         }
 
         @media (max-width: 640px) {
+          .intent-chips-grid {
+            grid-template-columns: 1fr;
+          }
           .form-inputs-grid {
             grid-template-columns: 1fr;
           }

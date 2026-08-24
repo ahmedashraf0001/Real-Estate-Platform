@@ -13,18 +13,20 @@ import { Sparkles, ArrowRight, Compass, MapPin } from 'lucide-react';
 interface MapSectionProps {
   onOpenMapModal: () => void;
   properties?: Property[];
+  locale?: string;
 }
 
 const FLY_DESTINATIONS = [
-  { id: 'all', label: 'All Corridors', center: [29.2, 31.0] as [number, number], zoom: 7 },
-  { id: 'new-cairo', label: 'New Cairo', center: [30.0131, 31.4913] as [number, number], zoom: 12 },
-  { id: 'sahel', label: 'North Coast (Sahel)', center: [30.9856, 28.7690] as [number, number], zoom: 12 },
-  { id: 'gouna', label: 'El Gouna Sanctuary', center: [27.3949, 33.6766] as [number, number], zoom: 13 },
-  { id: 'sokhna', label: 'Ain Sokhna Peak', center: [29.6010, 32.3380] as [number, number], zoom: 12 },
-  { id: 'zayed', label: 'Sheikh Zayed', center: [30.0385, 30.9784] as [number, number], zoom: 12 }
+  { id: 'all', label: 'All Corridors', labelAr: 'جميع المناطق', center: [29.2, 31.0] as [number, number], zoom: 7 },
+  { id: 'new-cairo', label: 'New Cairo', labelAr: 'القاهرة الجديدة', center: [30.0131, 31.4913] as [number, number], zoom: 12 },
+  { id: 'sahel', label: 'North Coast (Sahel)', labelAr: 'الساحل الشمالي', center: [30.9856, 28.7690] as [number, number], zoom: 12 },
+  { id: 'gouna', label: 'El Gouna Sanctuary', labelAr: 'الجونة والبحر الأحمر', center: [27.3949, 33.6766] as [number, number], zoom: 13 },
+  { id: 'sokhna', label: 'Ain Sokhna Peak', labelAr: 'العين السخنة', center: [29.6010, 32.3380] as [number, number], zoom: 12 },
+  { id: 'zayed', label: 'Sheikh Zayed', labelAr: 'الشيخ زايد', center: [30.0385, 30.9784] as [number, number], zoom: 12 }
 ];
 
-export const MapSection: React.FC<MapSectionProps> = ({ onOpenMapModal, properties }) => {
+export const MapSection: React.FC<MapSectionProps> = ({ onOpenMapModal, properties, locale = 'en' }) => {
+  const isAr = locale === 'ar';
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
   const [activeFlyZone, setActiveFlyZone] = useState('all');
@@ -32,8 +34,8 @@ export const MapSection: React.FC<MapSectionProps> = ({ onOpenMapModal, properti
   // Use server-passed real DB properties, fall back to adapted FALLBACK_PROPERTIES
   const propertiesList = React.useMemo(() => {
     if (properties && properties.length > 0) return properties;
-    return adaptProperties(FALLBACK_PROPERTIES, 'en');
-  }, [properties]);
+    return adaptProperties(FALLBACK_PROPERTIES, locale as 'en' | 'ar');
+  }, [properties, locale]);
 
   const handleFlyTo = (dest: typeof FLY_DESTINATIONS[0]) => {
     setActiveFlyZone(dest.id);
@@ -73,14 +75,14 @@ export const MapSection: React.FC<MapSectionProps> = ({ onOpenMapModal, properti
         height: 32px;
         border-radius: 50%;
         background: rgba(10, 12, 16, 0.9);
-        border: 2px solid #DDA752;
-        box-shadow: 0 0 16px rgba(221, 167, 82, 0.6);
+        border: 2px solid #E5B869;
+        box-shadow: 0 0 16px rgba(229, 184, 105, 0.6);
         display: flex;
         align-items: center;
         justify-content: center;
         cursor: pointer;
       ">
-        <div style="width: 8px; height: 8px; border-radius: 50%; background: #DDA752;"></div>
+        <div style="width: 8px; height: 8px; border-radius: 50%; background: #E5B869;"></div>
       </div>
     `;
 
@@ -98,7 +100,7 @@ export const MapSection: React.FC<MapSectionProps> = ({ onOpenMapModal, properti
       const label = prop.title || prop.title_en || '';
       const marker = L.marker([lat, lng], { icon: customIcon }).addTo(map);
       marker.bindTooltip(
-        `<div style="font-family: 'Plus Jakarta Sans', sans-serif; font-size: 12px; font-weight: 700; color: #DDA752; background: #11141B; padding: 6px 12px; border-radius: 8px; border: 1px solid rgba(221, 167, 82, 0.4);">${label}</div>`,
+        `<div style="font-family: 'Plus Jakarta Sans', sans-serif; font-size: 12px; font-weight: 700; color: #E5B869; background: #11141B; padding: 6px 12px; border-radius: 8px; border: 1px solid rgba(229, 184, 105, 0.4);">${label}</div>`,
         { direction: 'top', offset: [0, -14], className: 'luxury-leaflet-tooltip' }
       );
     });
@@ -113,20 +115,27 @@ export const MapSection: React.FC<MapSectionProps> = ({ onOpenMapModal, properti
 
 
   return (
-    <section className="map-section section-padding">
+    <section className="map-section section-padding" dir={isAr ? 'rtl' : 'ltr'}>
       <div className="map-horizon-glow" />
       <div className="container">
         {/* Header */}
         <div className="map-section-header">
           <div>
-            <span className="eyebrow">GEOGRAPHIC EXCLUSIVITY</span>
-            <h2 className="section-title">Cairo & Coast Cartography</h2>
+            <div className="section-eyebrow-pill">
+              <span className="eyebrow-dot" />
+              <span>{isAr ? 'الحصرية الجغرافية والمسح السيادي' : 'GEOGRAPHIC EXCLUSIVITY'}</span>
+            </div>
+            <h2 className="section-title">
+              <span>{isAr ? 'خريطة الصروح الفاخرة في ' : 'Cairo & Coast '}</span>
+              <span className="title-serif-accent">{isAr ? 'مصر والساحل' : 'Cartography'}</span>
+            </h2>
           </div>
           <button 
             className="explore-map-btn"
             onClick={onOpenMapModal}
+            type="button"
           >
-            <span>Open Interactive Map</span>
+            <span>{isAr ? 'فتح الخريطة التفاعلية' : 'Open Interactive Map'}</span>
             <ArrowRight size={16} />
           </button>
         </div>
@@ -145,9 +154,10 @@ export const MapSection: React.FC<MapSectionProps> = ({ onOpenMapModal, properti
                   key={dest.id}
                   onClick={() => handleFlyTo(dest)}
                   className={`map-fly-pill ${isActive ? 'active' : ''}`}
+                  type="button"
                 >
                   <MapPin size={12} className="fly-pin-icon" />
-                  <span>{dest.label}</span>
+                  <span>{isAr ? dest.labelAr : dest.label}</span>
                 </button>
               );
             })}
@@ -157,17 +167,20 @@ export const MapSection: React.FC<MapSectionProps> = ({ onOpenMapModal, properti
           <div className="map-glass-badge">
             <div className="glass-badge-header">
               <Compass size={18} className="badge-compass-icon" />
-              <span>Real-Time Prime Cartography</span>
+              <span>{isAr ? 'المسح الجغرافي اللحظي للصروح' : 'Real-Time Prime Cartography'}</span>
             </div>
             <p className="glass-badge-sub">
-              Drag, zoom, and inspect architectural parcels across Greater Cairo, North Coast, and El Gouna.
+              {isAr 
+                ? 'استكشف، كبّر وتفقد مواقع وتوزيع الأصول والقصور عبر القاهرة الكبرى، الساحل الشمالي والجونة.' 
+                : 'Drag, zoom, and inspect architectural parcels across Greater Cairo, North Coast, and El Gouna.'}
             </p>
             <button 
               className="btn-gold map-launch-btn"
               onClick={onOpenMapModal}
+              type="button"
             >
               <Sparkles size={15} />
-              <span>Full Directory Exploration</span>
+              <span>{isAr ? 'استكشاف الدليل الجغرافي الكامل' : 'Full Directory Exploration'}</span>
             </button>
           </div>
         </div>
@@ -189,8 +202,8 @@ export const MapSection: React.FC<MapSectionProps> = ({ onOpenMapModal, properti
           height: 320px;
           background: radial-gradient(
             ellipse at center,
-            rgba(221, 167, 82, 0.065) 0%,
-            rgba(221, 167, 82, 0.012) 45%,
+            rgba(229, 184, 105, 0.08) 0%,
+            rgba(229, 184, 105, 0.015) 45%,
             transparent 70%
           );
           pointer-events: none;
@@ -211,26 +224,87 @@ export const MapSection: React.FC<MapSectionProps> = ({ onOpenMapModal, properti
           gap: 1.5rem;
         }
 
+        .section-eyebrow-pill {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          padding: 5px 14px;
+          border-radius: 999px;
+          font-size: 0.75rem;
+          font-weight: 800;
+          letter-spacing: 0.14em;
+          color: #E5B869;
+          background: rgba(229, 184, 105, 0.08);
+          border: 1px solid rgba(229, 184, 105, 0.25);
+          margin-bottom: 0.85rem;
+          text-transform: uppercase;
+        }
+
+        [data-theme="light"] .section-eyebrow-pill {
+          color: #8C6826;
+          background: rgba(184, 147, 74, 0.08);
+          border-color: rgba(140, 104, 38, 0.22);
+        }
+
+        .eyebrow-dot {
+          width: 6px;
+          height: 6px;
+          border-radius: 50%;
+          background: #E5B869;
+          display: inline-block;
+        }
+
+        [data-theme="light"] .eyebrow-dot {
+          background: #8C6826;
+        }
+
         .section-title {
           font-family: var(--font-heading);
           font-size: clamp(2rem, 3.5vw, 2.75rem);
           font-weight: 800;
-          color: var(--text-primary);
+          color: var(--text-primary, #FFFFFF);
+          line-height: 1.2;
+        }
+
+        [data-theme="light"] .section-title {
+          color: #141210;
+        }
+
+        .title-serif-accent {
+          font-family: Georgia, serif;
+          font-weight: 400;
+          font-style: italic;
+          color: #E5B869;
+        }
+
+        [data-theme="light"] .title-serif-accent {
+          color: #8C6826;
         }
 
         .explore-map-btn {
           display: inline-flex;
           align-items: center;
           gap: 6px;
-          color: var(--gold-primary);
+          color: #E5B869;
           font-size: 0.9375rem;
           font-weight: 700;
           transition: all var(--transition-fast);
+          background: transparent;
+          border: none;
+          cursor: pointer;
+        }
+
+        [data-theme="light"] .explore-map-btn {
+          color: #8C6826;
         }
 
         .explore-map-btn:hover {
-          color: var(--gold-light);
+          color: #FFF0C2;
           transform: translateX(4px);
+        }
+
+        [data-theme="light"] .explore-map-btn:hover {
+          color: #593D0E;
         }
 
         /* Real Map Card */
@@ -425,15 +499,47 @@ export const MapSection: React.FC<MapSectionProps> = ({ onOpenMapModal, properti
         }
 
         @media (max-width: 768px) {
+          .map-section-header {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+          }
+          .section-title {
+            font-size: 1.75rem;
+            line-height: 1.25;
+          }
           .real-map-card {
-            height: 380px;
+            height: 420px;
+            border-radius: 20px;
+          }
+          .map-fly-pills-bar {
+            top: 0.85rem;
+            left: 0.85rem;
+            right: 0.85rem;
+            flex-wrap: nowrap;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
+            padding-bottom: 4px;
+          }
+          .map-fly-pill {
+            flex-shrink: 0;
+            white-space: nowrap;
+            padding: 0.4rem 0.85rem;
+            font-size: 0.72rem;
           }
           .map-glass-badge {
-            left: 1rem;
-            right: 1rem;
-            bottom: 1rem;
+            left: 0.75rem;
+            right: 0.75rem;
+            bottom: 0.75rem;
             max-width: none;
-            padding: 1.25rem;
+            padding: 1.15rem 1.25rem;
+            border-radius: 16px;
+          }
+          .glass-badge-sub {
+            font-size: 0.75rem;
+            margin-bottom: 0.85rem;
           }
         }
       `}</style>

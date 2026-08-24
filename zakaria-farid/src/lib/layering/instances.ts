@@ -18,7 +18,7 @@ import {
 
 export type GlobalFinishingState = 'red_brick' | 'semi_finished' | 'fully_finished';
 
-export type ApartmentSubType = 'standard' | 'ground' | 'duplex' | 'roof';
+export type ApartmentSubType = 'standard' | 'ground' | 'duplex' | 'standard_roof' | 'full_roof';
 export type BuildingSubType = 'residential' | 'mixed';
 
 export interface BuildZoneOptions {
@@ -30,6 +30,7 @@ export interface BuildZoneOptions {
 export interface AttributeValue {
   attribute_template_id: string;
   value: boolean | string | number | null;
+  custom_label?: string;
 }
 
 export interface TradeInstance {
@@ -45,6 +46,7 @@ export interface ZoneOpening {
   edge: 'n' | 'e' | 's' | 'w';
   offset_m: number;       // Distance from edge start (n/s: from left, e/w: from top)
   width_m: number;        // Opening width along the edge
+  flip?: boolean;         // Optional door swing / window flip
 }
 
 export interface ZoneSpatialLayout {
@@ -169,7 +171,7 @@ const GLOBAL_STATE_MAP: Record<GlobalFinishingState, TradeStatusMap> = {
   },
 };
 
-function getStatusForTrade(tradeId: string, globalState: GlobalFinishingState, fallbackStatuses: string[]): string {
+export function getStatusForTrade(tradeId: string, globalState: GlobalFinishingState, fallbackStatuses: string[]): string {
   const map = GLOBAL_STATE_MAP[globalState];
   if (map[tradeId]) return map[tradeId];
   // Fallback: first status for red_brick, last for fully_finished, middle for semi
@@ -192,10 +194,7 @@ function buildTradeInstances(
     id: uid(),
     trade_template_id: trade.id,
     status: getStatusForTrade(trade.id, globalState, trade.status_values),
-    attributes: getAttributesForTrade(trade.id, zone.id).map(attr => ({
-      attribute_template_id: attr.id,
-      value: null,
-    })),
+    attributes: [],
   }));
 }
 
@@ -304,39 +303,160 @@ function buildDuplexTree(globalState: GlobalFinishingState, bedroomCount: number
   return [lower, upper];
 }
 
-const UNIT_CHILD_TEMPLATES = ['apt.reception', 'apt.kitchen', 'apt.master_bed', 'apt.std_bed', 'apt.main_bath'];
+const UNIT_CHILD_TEMPLATES = ['apt.reception', 'apt.kitchen', 'apt.master_bed', 'apt.std_bed', 'apt.main_bath', 'apt.balcony'];
 const UNIT_LETTERS = ['A', 'B', 'C', 'D', 'E', 'F'];
 
-function buildBuildingUnits(
+function buildBuildingStructureAndUnits(
   globalState: GlobalFinishingState,
-  totalFloors: number,
-  unitsPerFloor: number,
-  baseSortOrder: number
+  totalFloors = 4,
+  unitsPerFloor = 2,
 ): ZoneInstance[] {
-  const typicalFloors = Math.min(14, Math.max(0, totalFloors - 1));
-  const units = Math.min(UNIT_LETTERS.length, Math.max(1, unitsPerFloor));
   const result: ZoneInstance[] = [];
+  let sortIdx = 1;
+
+  // ── 1. Ground Floor Realistic Egyptian Components ──
+  const groundFloorComponents: Array<{ tid: string; label?: string }> = [
+    { tid: 'bld.entrance_gate', label: 'Entrance Gate & Fence' },
+    { tid: 'bld.entrance_lobby', label: 'Main Entrance & Marble Lobby' },
+    { tid: 'bld.staircase', label: 'Building Staircase' },
+    { tid: 'bld.elevator', label: 'Elevator & Shaft' },
+    { tid: 'bld.electric_box', label: 'Electric Meters & Board Box' },
+    { tid: 'bld.water_motors', label: 'Water Motors & Pumps Box' },
+    { tid: 'bld.garage_bays', label: 'Ground Garage & Parking' },
+    { tid: 'bld.guard_room', label: 'Guard Room / Booth' },
+  ];
+
+  for (const item of groundFloorComponents) {
+    const inst = fromTemplateId(item.tid, globalState, item.label, 'bld_ground', sortIdx++);
+    if (inst) result.push(inst);
+  }
+
+  // ── 2. Typical Residential Floors (Floor 1, Floor 2...) ──
+  const typicalFloors = Math.min(14, Math.max(1, totalFloors - 1));
+  const unitsCount = Math.min(UNIT_LETTERS.length, Math.max(1, unitsPerFloor));
 
   for (let f = 1; f <= typicalFloors; f++) {
     const levelLabel = `Floor ${f}`;
-    for (let u = 0; u < units; u++) {
+
+    // Common Core per Typical Floor
+    const floorCoreComponents = [
+      { tid: 'bld.central_corridor', label: `Floor ${f} Central Corridor` },
+      { tid: 'bld.staircase', label: `Floor ${f} Stairwell` },
+      { tid: 'bld.elevator', label: `Floor ${f} Elevator` },
+      { tid: 'bld.lightwell', label: `Floor ${f} Lightwell & Duct` },
+    ];
+
+    for (const item of floorCoreComponents) {
+      const inst = fromTemplateId(item.tid, globalState, item.label, levelLabel, sortIdx++);
+      if (inst) result.push(inst);
+    }
+
+    // Residential Units per Floor
+    for (let u = 0; u < unitsCount; u++) {
       const code = `${f}${UNIT_LETTERS[u]}`;
       const children = UNIT_CHILD_TEMPLATES
         .map((tid, i) => fromTemplateId(tid, globalState, undefined, levelLabel, i + 1))
         .filter((z): z is ZoneInstance => z !== null);
+
       result.push({
         id: uid(),
         zone_template_id: 'bld.unit',
         instance_label: `Flat ${code}`,
         level_label: levelLabel,
-        sort_order: baseSortOrder + (f - 1) * units + u,
+        sort_order: sortIdx++,
         trades: [],
         children,
       });
     }
   }
 
+  // ── 3. Roof Sky Terrace & Service Components ──
+  const roofComponents = [
+    { tid: 'bld.staircase', label: 'Staircase Roof Access' },
+    { tid: 'bld.roof_service', label: 'Elevator Machine & Water Tanks' },
+    { tid: 'bld.roof_terrace', label: 'Panoramic Roof Sky Terrace' },
+  ];
+
+  for (const item of roofComponents) {
+    const inst = fromTemplateId(item.tid, globalState, item.label, 'bld_roof', sortIdx++);
+    if (inst) result.push(inst);
+  }
+
   return result;
+}
+
+function buildStandardRoofTree(globalState: GlobalFinishingState, bedroomCount: number): ZoneInstance[] {
+  // Standard Roof: Compact low-end apartment on the roof (Kitchen, Reception, Bathroom, and Rooms) - No penthouse terrace
+  const result: ZoneInstance[] = [];
+  let sortIdx = 1;
+
+  const standardTpls = [
+    { tid: 'apt.reception', label: 'Reception & Living' },
+    { tid: 'apt.kitchen', label: 'Kitchen' },
+    { tid: 'apt.main_bath', label: 'Bathroom' },
+    { tid: 'apt.master_bed', label: 'Main Bedroom' },
+  ];
+
+  for (const item of standardTpls) {
+    const inst = fromTemplateId(item.tid, globalState, item.label, undefined, sortIdx++);
+    if (inst) result.push(inst);
+  }
+
+  const extraBeds = Math.max(0, bedroomCount - 1);
+  for (let i = 0; i < extraBeds; i++) {
+    const bed = fromTemplateId('apt.std_bed', globalState, `Bedroom ${i + 2}`, undefined, sortIdx++);
+    if (bed) result.push(bed);
+  }
+
+  return result;
+}
+
+function buildFullRoofTree(globalState: GlobalFinishingState, bedroomCount: number): ZoneInstance[] {
+  // Full Roof Package: 
+  // Level 1 (Main Floor): Full Apartment (150m²) + Front Companion Apartment (150m²)
+  // Level 2 (Upper Floor): Normal Full Roof Sky Terrace (Full Package)
+  const lowerLabel = 'Main Floor (Unit A + Unit B 300 m²)';
+  const upperLabel = 'Upper Private Roof Terrace';
+
+  // Primary Residential Suite / Unit A (150m²)
+  const primaryUnitIds = ['apt.reception', 'apt.kitchen', 'apt.master_bed', 'apt.master_bath', 'apt.main_bath', 'apt.corridor', 'apt.balcony'];
+  const mainFloor = buildLevelContainer(
+    lowerLabel,
+    lowerLabel,
+    primaryUnitIds,
+    globalState,
+    1,
+  );
+
+  // Add extra bedrooms to primary suite
+  const stdBedTpl = ZONE_TEMPLATES.find(z => z.id === 'apt.std_bed');
+  if (stdBedTpl && mainFloor.children) {
+    const extraBeds = Math.max(0, bedroomCount - 1);
+    for (let i = 0; i < extraBeds; i++) {
+      mainFloor.children.push(
+        buildZoneInstance(stdBedTpl, globalState, `Unit A Bedroom ${i + 2}`, lowerLabel, 1 + (primaryUnitIds.length + i + 1) * 0.01),
+      );
+    }
+    // Front Companion Apartment Wing / Unit B (150m² across the landing)
+    const frontWingComponents = [
+      { tid: 'apt.reception', label: 'Unit B Grand Reception & Living (150m²)' },
+      { tid: 'apt.kitchen', label: 'Unit B Kitchen' },
+      { tid: 'apt.master_bed', label: 'Unit B Master Bedroom' },
+      { tid: 'apt.main_bath', label: 'Unit B Bathroom' },
+      { tid: 'apt.balcony', label: 'Unit B Balcony' },
+    ];
+    for (const item of frontWingComponents) {
+      const inst = fromTemplateId(item.tid, globalState, item.label, lowerLabel, 1 + (primaryUnitIds.length + extraBeds + 2) * 0.01);
+      if (inst) mainFloor.children.push(inst);
+    }
+  }
+
+  // Upper Roof Floor: Plain Full Open Rooftop Slab
+  const upperRoof = buildLevelContainer(upperLabel, upperLabel, [], globalState, 2);
+  const roofSlab = fromTemplateId('apt.balcony', globalState, 'السطح المكشوف (Open Rooftop Slab)', upperLabel, 2.01);
+  if (roofSlab) upperRoof.children = [roofSlab];
+
+  return [mainFloor, upperRoof];
 }
 
 /**
@@ -355,6 +475,22 @@ export function buildZoneInstances(
 ): ZoneInstance[] {
   if (typeId === 'apartment' && options.subtype === 'duplex') {
     return buildDuplexTree(globalState, bedroomCount);
+  }
+
+  if (typeId === 'apartment' && options.subtype === 'standard_roof') {
+    return buildStandardRoofTree(globalState, bedroomCount);
+  }
+
+  if (typeId === 'apartment' && options.subtype === 'full_roof') {
+    return buildFullRoofTree(globalState, bedroomCount);
+  }
+
+  if (typeId === 'building') {
+    return buildBuildingStructureAndUnits(
+      globalState,
+      options.totalFloors ?? 4,
+      options.unitsPerFloor ?? 2,
+    );
   }
 
   const topLevelZones = getZonesForType(typeId).filter(z => !z.parent_zone_id);
@@ -380,15 +516,6 @@ export function buildZoneInstances(
   if (typeId === 'apartment' && options.subtype === 'ground') {
     const garden = fromTemplateId('apt.balcony', globalState, 'Private Garden', undefined, 20);
     if (garden) result.push(garden);
-  }
-
-  if (typeId === 'apartment' && options.subtype === 'roof') {
-    const terrace = fromTemplateId('apt.balcony', globalState, 'Roof Terrace', undefined, 20);
-    if (terrace) result.push(terrace);
-  }
-
-  if (typeId === 'building' && options.totalFloors && options.unitsPerFloor) {
-    result.push(...buildBuildingUnits(globalState, options.totalFloors, options.unitsPerFloor, result.length + 1));
   }
 
   return result;
@@ -518,7 +645,8 @@ export function updateAttributeValue(
   zoneInstanceId: string,
   tradeInstanceId: string,
   attributeTemplateId: string,
-  newValue: boolean | string | number | null
+  newValue: boolean | string | number | null,
+  customLabel?: string
 ): ZoneInstance[] {
   return zones.map(zone => {
     if (zone.id === zoneInstanceId) {
@@ -529,15 +657,44 @@ export function updateAttributeValue(
           const exists = t.attributes.some(a => a.attribute_template_id === attributeTemplateId);
           const updatedAttrs = exists
             ? t.attributes.map(a =>
-                a.attribute_template_id === attributeTemplateId ? { ...a, value: newValue } : a
+                a.attribute_template_id === attributeTemplateId ? { ...a, value: newValue, custom_label: customLabel ?? a.custom_label } : a
               )
-            : [...t.attributes, { attribute_template_id: attributeTemplateId, value: newValue }];
+            : [...t.attributes, { attribute_template_id: attributeTemplateId, value: newValue, custom_label: customLabel }];
           return { ...t, attributes: updatedAttrs };
         }),
       };
     }
     if (zone.children) {
-      return { ...zone, children: updateAttributeValue(zone.children, zoneInstanceId, tradeInstanceId, attributeTemplateId, newValue) };
+      return { ...zone, children: updateAttributeValue(zone.children, zoneInstanceId, tradeInstanceId, attributeTemplateId, newValue, customLabel) };
+    }
+    return zone;
+  });
+}
+
+/**
+ * Remove an attribute from a trade (for optional or custom attributes).
+ */
+export function removeAttributeFromTrade(
+  zones: ZoneInstance[],
+  zoneInstanceId: string,
+  tradeInstanceId: string,
+  attributeTemplateId: string
+): ZoneInstance[] {
+  return zones.map(zone => {
+    if (zone.id === zoneInstanceId) {
+      return {
+        ...zone,
+        trades: zone.trades.map(t => {
+          if (t.id !== tradeInstanceId) return t;
+          return {
+            ...t,
+            attributes: t.attributes.filter(a => a.attribute_template_id !== attributeTemplateId),
+          };
+        }),
+      };
+    }
+    if (zone.children) {
+      return { ...zone, children: removeAttributeFromTrade(zone.children, zoneInstanceId, tradeInstanceId, attributeTemplateId) };
     }
     return zone;
   });

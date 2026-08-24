@@ -3,7 +3,12 @@ import React from 'react';
 import { ShieldCheck, Compass, TrendingUp } from 'lucide-react';
 import { motion } from 'framer-motion';
 
-export const WhyUsSection: React.FC = () => {
+interface WhyUsSectionProps {
+  locale?: string;
+}
+
+export const WhyUsSection: React.FC<WhyUsSectionProps> = ({ locale = 'en' }) => {
+  const isAr = locale === 'ar';
   const pillars = [
     {
       number: '01',
@@ -35,10 +40,18 @@ export const WhyUsSection: React.FC = () => {
       <div className="container">
         {/* Section Header */}
         <div className="why-header">
-          <span className="why-eyebrow">THE ZAKARIA FARID STANDARD</span>
-          <h2 className="why-title">Why Choose Zakaria Farid</h2>
+          <div className="section-eyebrow-pill">
+            <span className="eyebrow-dot" />
+            <span>{isAr ? 'معيار آل زكريا السيادي' : 'THE AL ZAKARIA STANDARD'}</span>
+          </div>
+          <h2 className="why-title">
+            <span>{isAr ? 'لماذا تختار ' : 'Why Choose '}</span>
+            <span className="title-serif-accent">{isAr ? 'آل زكريا' : 'AL ZAKARIA'}</span>
+          </h2>
           <p className="why-subtitle">
-            Three core commitments that guide how we find, verify, and present every property in our collection.
+            {isAr 
+              ? 'ثلاثة التزامات جوهرية ترسم ميثاقنا في التدقيق والاختيار والتمثيل العقاري الحصري.'
+              : 'Three core commitments that guide how we find, verify, and present every property in our collection.'}
           </p>
         </div>
 

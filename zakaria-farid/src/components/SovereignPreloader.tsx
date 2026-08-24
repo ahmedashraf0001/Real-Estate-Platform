@@ -136,29 +136,39 @@ export const SovereignPreloader: React.FC<SovereignPreloaderProps> = ({ onComple
                 <circle cx="100" cy="46" r="2" fill="#FFF2D6" />
                 <circle cx="114" cy="38" r="1.5" fill="#FFF2D6" />
 
-                {/* Monogram: Intertwined 'Z' and 'F' */}
-                {/* Letter 'Z' */}
+                {/* Monogram: Intertwined 'A' and 'Z' (AL ZAKARIA) */}
+                {/* Letter 'A' Spires */}
                 <motion.path
-                  d="M74,75 L126,75 L74,125 L126,125"
+                  d="M100,60 L68,135 M100,60 L132,135"
                   stroke="url(#goldStroke)"
                   strokeWidth="3.25"
                   strokeLinecap="round"
-                  strokeLinejoin="round"
                   filter="url(#goldShine)"
                   initial={{ pathLength: 0 }}
                   animate={{ pathLength: 1 }}
                   transition={{ duration: 1.4, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
                 />
-
-                {/* Letter 'F' Cross-Intersection */}
+                {/* Letter 'A' Crossbar */}
                 <motion.path
-                  d="M100,75 L100,135 M100,102 L120,102"
+                  d="M78,108 L122,108"
                   stroke="url(#goldLinear)"
                   strokeWidth="2.5"
                   strokeLinecap="round"
                   initial={{ pathLength: 0 }}
                   animate={{ pathLength: 1 }}
-                  transition={{ duration: 1.2, delay: 0.5, ease: [0.22, 1, 0.36, 1] }}
+                  transition={{ duration: 1.0, delay: 0.4, ease: [0.22, 1, 0.36, 1] }}
+                />
+
+                {/* Letter 'Z' Intertwined */}
+                <motion.path
+                  d="M68,76 L132,76 L68,126 L132,126"
+                  stroke="url(#goldLinear)"
+                  strokeWidth="2.8"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  initial={{ pathLength: 0 }}
+                  animate={{ pathLength: 1 }}
+                  transition={{ duration: 1.3, delay: 0.5, ease: [0.22, 1, 0.36, 1] }}
                 />
 
                 {/* Four Cardinal Jewel Nodes */}
@@ -176,8 +186,8 @@ export const SovereignPreloader: React.FC<SovereignPreloaderProps> = ({ onComple
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.5 }}
             >
-              <h1 className="preloader-brand-title">ZAKARIA FARID</h1>
-              <p className="preloader-brand-subtitle">LUXURY REAL ESTATE • EGYPT</p>
+              <h1 className="preloader-brand-title">AL ZAKARIA</h1>
+              <p className="preloader-brand-subtitle">SOVEREIGN REAL ESTATE & ADVISORY</p>
             </motion.div>
 
             {/* Precision Loading Gauge */}
@@ -272,32 +282,32 @@ export const SovereignPreloader: React.FC<SovereignPreloaderProps> = ({ onComple
             }
 
             .preloader-brand-title {
-              font-family: var(--font-heading, 'Plus Jakarta Sans', sans-serif);
-              font-size: 1.35rem;
-              font-weight: 800;
-              letter-spacing: 0.42em;
-              margin: 0 0 0.5rem 0;
-              background: linear-gradient(135deg, #FFF6DF 0%, #DDA752 50%, #B37D28 100%);
+              font-family: Georgia, 'Cinzel', 'Playfair Display', serif;
+              font-size: 1.5rem;
+              font-weight: 700;
+              letter-spacing: 0.22em;
+              margin: 0 0 0.4rem 0;
+              background: linear-gradient(135deg, #FFFDF5 0%, #FEE8A0 25%, #E5B869 60%, #B8934A 100%);
               -webkit-background-clip: text;
               -webkit-text-fill-color: transparent;
               text-transform: uppercase;
             }
 
             [data-theme="light"] .preloader-brand-title {
-              background: linear-gradient(135deg, #8A641A 0%, #B8860B 50%, #5E420C 100%);
+              background: linear-gradient(135deg, #A87A28 0%, #8C6826 60%, #684812 100%);
               -webkit-background-clip: text;
               -webkit-text-fill-color: transparent;
             }
 
             .preloader-brand-subtitle {
               font-family: var(--font-heading, 'Plus Jakarta Sans', sans-serif);
-              font-size: 0.6875rem;
+              font-size: 0.625rem;
               font-weight: 700;
-              letter-spacing: 0.25em;
-              color: var(--text-muted, #7E8B9B);
+              letter-spacing: 0.32em;
+              color: #E5B869;
               text-transform: uppercase;
               margin: 0 0 2.25rem 0;
-              opacity: 0.85;
+              opacity: 0.9;
             }
 
             .preloader-progress-wrap {

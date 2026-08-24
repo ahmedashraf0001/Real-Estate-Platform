@@ -11,6 +11,7 @@ interface DynamicMapPickerProps {
   latitude?: number;
   longitude?: number;
   onChange: (lat: number, lng: number) => void;
+  isAr?: boolean;
 }
 
 export default function DynamicMapPicker(props: DynamicMapPickerProps) {

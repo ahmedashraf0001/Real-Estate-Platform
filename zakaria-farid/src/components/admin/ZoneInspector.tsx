@@ -2,7 +2,7 @@
 
 import React, { useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
-import { Building, Plus, Trash2, ImagePlus, Loader2, X, MousePointerClick } from 'lucide-react';
+import { Building, Plus, Trash2, ImagePlus, Loader2, X, MousePointerClick, Zap, Droplets, Wind, DoorOpen, Paintbrush, Hammer, Wrench } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import {
   ZoneInstance,
@@ -15,6 +15,7 @@ import {
   getZoneBadge,
   updateTradeStatus,
   updateAttributeValue,
+  removeAttributeFromTrade,
   addZoneImage,
   removeZoneImage,
   addTradeToZone,
@@ -27,6 +28,8 @@ interface ZoneInspectorProps {
   zoneInstances: ZoneInstance[];
   onZoneInstancesChange: (updated: ZoneInstance[]) => void;
   selectedZoneId: string | null;
+  /** Declared property area (m²) to prevent total room areas from exceeding the apartment size */
+  declaredArea?: number;
   /** Figma-style flyout mode: hidden when nothing is selected, closable, offset beside the rooms rail. */
   nested?: boolean;
   onClose?: () => void;
@@ -104,7 +107,7 @@ const TIER_STYLES: Record<string, { en: string; ar: string; color: string }> = {
   mixed: { en: 'Mixed', ar: 'مختلط', color: '#9FB3D9' },
 };
 
-export function ZoneInspector({ zoneInstances, onZoneInstancesChange, selectedZoneId, nested = false, onClose, isAr = false }: ZoneInspectorProps) {
+export function ZoneInspector({ zoneInstances, onZoneInstancesChange, selectedZoneId, declaredArea, nested = false, onClose, isAr = false }: ZoneInspectorProps) {
   const [uploading, setUploading] = useState(false);
   const [addTradeOpen, setAddTradeOpen] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -139,6 +142,7 @@ export function ZoneInspector({ zoneInstances, onZoneInstancesChange, selectedZo
         zone={zone}
         zoneInstances={zoneInstances}
         onZoneInstancesChange={onZoneInstancesChange}
+        declaredArea={declaredArea}
         isAr={isAr}
         uploading={uploading}
         setUploading={setUploading}
@@ -156,6 +160,7 @@ interface BodyProps {
   zone: ZoneInstance;
   zoneInstances: ZoneInstance[];
   onZoneInstancesChange: (updated: ZoneInstance[]) => void;
+  declaredArea?: number;
   isAr: boolean;
   uploading: boolean;
   setUploading: (v: boolean) => void;
@@ -166,7 +171,7 @@ interface BodyProps {
 }
 
 function ZoneInspectorBody({
-  zone, zoneInstances, onZoneInstancesChange, isAr,
+  zone, zoneInstances, onZoneInstancesChange, declaredArea, isAr,
   uploading, setUploading, addTradeOpen, setAddTradeOpen, fileRef, onClose,
 }: BodyProps) {
   const shared = fallbackMetricFor(zone.zone_template_id);
@@ -176,6 +181,22 @@ function ZoneInspectorBody({
   const ceiling = zone.spatial?.ceiling_height ?? shared?.ceiling ?? '3.0m Flush';
   const badge = getZoneBadge(zone);
   const tier = TIER_STYLES[badge];
+
+  // Calculate sum of areas of all other zones
+  const otherZonesTotalSqm = useMemo(() => {
+    function sumExcept(list: ZoneInstance[]): number {
+      return list.reduce((acc, z) => {
+        const selfSqm = z.id === zone.id ? 0 : (z.spatial?.sqm ?? 0);
+        const childSqm = z.children ? sumExcept(z.children) : 0;
+        return acc + selfSqm + childSqm;
+      }, 0);
+    }
+    return sumExcept(zoneInstances);
+  }, [zoneInstances, zone.id]);
+
+  const maxAllowedSqm = (declaredArea && declaredArea > 0)
+    ? Math.max(2.25, Math.round((declaredArea - otherZonesTotalSqm) * 10) / 10)
+    : Infinity;
 
   const patchSpatial = (updates: Partial<ZoneSpatialLayout>) => {
     function walk(list: ZoneInstance[]): ZoneInstance[] {
@@ -187,7 +208,25 @@ function ZoneInspectorBody({
           };
           const next = { ...current, ...updates };
           if (updates.length_m !== undefined || updates.width_m !== undefined) {
-            next.sqm = Math.round((updates.length_m ?? current.length_m) * (updates.width_m ?? current.width_m) * 10) / 10;
+            let l = updates.length_m ?? current.length_m;
+            let w = updates.width_m ?? current.width_m;
+            let calculatedSqm = Math.round(l * w * 10) / 10;
+            if (maxAllowedSqm < Infinity && calculatedSqm > maxAllowedSqm) {
+              if (updates.width_m !== undefined && updates.length_m === undefined) {
+                w = Math.max(1.0, Math.floor((maxAllowedSqm / l) * 10) / 10);
+              } else if (updates.length_m !== undefined && updates.width_m === undefined) {
+                l = Math.max(1.0, Math.floor((maxAllowedSqm / w) * 10) / 10);
+              } else {
+                const scale = Math.sqrt(maxAllowedSqm / calculatedSqm);
+                w = Math.max(1.0, Math.floor(w * scale * 10) / 10);
+                l = Math.max(1.0, Math.floor(l * scale * 10) / 10);
+              }
+              calculatedSqm = Math.round(l * w * 10) / 10;
+              toast.warning(isAr ? `تم ضبط الأبعاد لعدم تجاوز إجمالي مساحة الشقة (${declaredArea}م²)` : `Adjusted dimensions to fit within total apartment area (${declaredArea}m²)`);
+            }
+            next.width_m = w;
+            next.length_m = l;
+            next.sqm = calculatedSqm;
           }
           return { ...z, spatial: next };
         }
@@ -341,59 +380,144 @@ function ZoneInspectorBody({
         {zone.trades.map(trade => {
           const tpl = tradeTemplateFor(trade);
           const attrs = getAttributesForTrade(trade.trade_template_id, zone.zone_template_id);
+          const isElectrical = trade.trade_template_id.includes('elec');
+          const isPlumbing = trade.trade_template_id.includes('plumb');
+          const isHVAC = trade.trade_template_id.includes('hvac');
+          const isCarpentry = trade.trade_template_id.includes('carpentry') || trade.trade_template_id.includes('door') || trade.trade_template_id.includes('window');
+          const isPainting = trade.trade_template_id.includes('paint') || trade.trade_template_id.includes('plaster');
+          const isFlooring = trade.trade_template_id.includes('floor') || trade.trade_template_id.includes('tile');
+
           return (
             <div key={trade.id} className="zi-trade">
               <div className="zi-trade-head">
-                <span className="zi-trade-name" dir="auto">{isAr ? tpl.label_ar : tpl.label_en}</span>
+                <div className="zi-trade-title-wrap">
+                  <span className="zi-trade-icon-box" aria-hidden="true">
+                    {isElectrical && <Zap size={13} />}
+                    {isPlumbing && <Droplets size={13} />}
+                    {isHVAC && <Wind size={13} />}
+                    {isCarpentry && <DoorOpen size={13} />}
+                    {isPainting && <Paintbrush size={13} />}
+                    {isFlooring && <Hammer size={13} />}
+                    {!isElectrical && !isPlumbing && !isHVAC && !isCarpentry && !isPainting && !isFlooring && <Wrench size={13} />}
+                  </span>
+                  <span className="zi-trade-name" dir="auto">{isAr ? tpl.label_ar : tpl.label_en}</span>
+                </div>
                 <button
                   type="button"
                   className="zi-icon-btn danger"
                   aria-label={isAr ? 'حذف القسم' : 'Remove trade'}
+                  title={isAr ? 'حذف البند' : 'Remove trade'}
                   onClick={() => onZoneInstancesChange(removeTradeFromZone(zoneInstances, zone.id, trade.id))}
                 >
                   <Trash2 size={12} />
                 </button>
               </div>
-              <div className="zi-statuses">
-                {tpl.status_values.map(sv => (
-                  <button
-                    key={sv}
-                    type="button"
-                    className={`zi-status ${trade.status === sv ? 'active' : ''}`}
-                    onClick={() => onZoneInstancesChange(updateTradeStatus(zoneInstances, zone.id, trade.id, sv))}
-                  >
-                    {statusLabel(sv, isAr)}
-                  </button>
-                ))}
+
+              {/* Luxury Segmented Pill Track for Trade Statuses */}
+              <div className="zi-status-segmented-track" role="group">
+                {tpl.status_values.map(sv => {
+                  const isActive = trade.status === sv;
+                  return (
+                    <button
+                      key={sv}
+                      type="button"
+                      className={`zi-status-seg-btn ${isActive ? 'active' : ''}`}
+                      onClick={() => onZoneInstancesChange(updateTradeStatus(zoneInstances, zone.id, trade.id, sv))}
+                    >
+                      {statusLabel(sv, isAr)}
+                    </button>
+                  );
+                })}
               </div>
-              {attrs.length > 0 && (
-                <div className="zi-attrs">
-                  {attrs.map(attr => {
-                    const current = trade.attributes.find(a => a.attribute_template_id === attr.id)?.value ?? null;
-                    const set = (v: boolean | string | number | null) =>
-                      onZoneInstancesChange(updateAttributeValue(zoneInstances, zone.id, trade.id, attr.id, v));
-                    return (
-                      <label key={attr.id} className="zi-attr">
-                        <span dir="auto">{isAr ? attr.label_ar : attr.label_en}</span>
-                        {attr.data_type === 'boolean' ? (
-                          <input type="checkbox" checked={current === true} onChange={e => set(e.target.checked)} />
-                        ) : attr.data_type === 'enum' ? (
-                          <select value={String(current ?? '')} onChange={e => set(e.target.value || null)}>
-                            <option value="">—</option>
-                            {(attr.enum_values ?? []).map(v => <option key={v} value={v}>{v}</option>)}
-                          </select>
-                        ) : (
-                          <input
-                            type={attr.data_type === 'text' ? 'text' : 'number'}
-                            defaultValue={current === null ? '' : String(current)}
-                            onBlur={e => set(e.target.value === '' ? null : attr.data_type === 'text' ? e.target.value : Number(e.target.value))}
-                          />
-                        )}
-                      </label>
-                    );
-                  })}
+
+              {/* Dynamic & Custom Trade Specifications */}
+              <div className="zi-attrs">
+                {trade.attributes.map(attr => {
+                  const tplAttr = attrs.find(a => a.id === attr.attribute_template_id);
+                  const label = attr.custom_label || (tplAttr ? (isAr ? tplAttr.label_ar : tplAttr.label_en) : attr.attribute_template_id);
+                  const val = attr.value === null ? '' : String(attr.value);
+
+                  return (
+                    <div key={attr.attribute_template_id} className="zi-attr-row">
+                      <span className="zi-attr-label" dir="auto" title={label}>{label}</span>
+                      <div className="zi-attr-input-group">
+                        <input
+                          type="text"
+                          className="zi-attr-val-input"
+                          dir="auto"
+                          placeholder={isAr ? 'اكتب المواصفة...' : 'Enter spec...'}
+                          defaultValue={val}
+                          onBlur={e => {
+                            const next = e.target.value.trim();
+                            onZoneInstancesChange(updateAttributeValue(zoneInstances, zone.id, trade.id, attr.attribute_template_id, next || null, attr.custom_label));
+                          }}
+                          onKeyDown={e => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              (e.target as HTMLInputElement).blur();
+                            }
+                          }}
+                        />
+                        <button
+                          type="button"
+                          className="zi-attr-del-btn"
+                          aria-label={isAr ? 'حذف هذا التفصيل' : 'Delete this detail'}
+                          title={isAr ? 'حذف' : 'Delete'}
+                          onClick={() => onZoneInstancesChange(removeAttributeFromTrade(zoneInstances, zone.id, trade.id, attr.attribute_template_id))}
+                        >
+                          <X size={11} />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+
+                {/* Add Custom Detail Row */}
+                <div className="zi-add-attr-row">
+                  <span className="zi-add-attr-icon">+</span>
+                  <input
+                    type="text"
+                    className="zi-add-attr-input"
+                    dir="auto"
+                    placeholder={isAr ? 'إضافة تفصيل مخصص (مثال: ماركة الأسلاك، القواطع...)' : 'Add custom spec (e.g. Wiring Brand, Breaker...)'}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        const input = e.target as HTMLInputElement;
+                        const customName = input.value.trim();
+                        if (customName) {
+                          const newAttrId = `custom-attr-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+                          onZoneInstancesChange(updateAttributeValue(zoneInstances, zone.id, trade.id, newAttrId, '', customName));
+                          input.value = '';
+                        }
+                      }
+                    }}
+                  />
                 </div>
-              )}
+
+                {/* Quick Add Suggestions Chips */}
+                {attrs.filter(tplAttr => !trade.attributes.some(a => a.attribute_template_id === tplAttr.id)).length > 0 && (
+                  <div className="zi-attr-chips">
+                    <span className="zi-attr-chips-label">{isAr ? 'اقتراحات:' : 'Suggestions:'}</span>
+                    {attrs
+                      .filter(tplAttr => !trade.attributes.some(a => a.attribute_template_id === tplAttr.id))
+                      .map(tplAttr => (
+                        <button
+                          key={tplAttr.id}
+                          type="button"
+                          className="zi-attr-chip"
+                          onClick={() => {
+                            const label = isAr ? tplAttr.label_ar : tplAttr.label_en;
+                            onZoneInstancesChange(updateAttributeValue(zoneInstances, zone.id, trade.id, tplAttr.id, '', label));
+                          }}
+                        >
+                          <span>+</span>
+                          <span>{isAr ? tplAttr.label_ar : tplAttr.label_en}</span>
+                        </button>
+                      ))}
+                  </div>
+                )}
+              </div>
             </div>
           );
         })}
@@ -465,18 +589,20 @@ function InspectorStyles() {
     <style>{`
       .zi-root {
         position: fixed;
-        inset-block: 0;
+        top: 0;
+        bottom: 72px;
         inset-inline-end: 0;
         width: 320px;
-        height: 100dvh;
+        height: calc(100dvh - 72px);
         z-index: 60;
         overflow-y: auto;
         display: flex;
         flex-direction: column;
         gap: 14px;
-        padding: 16px 14px;
+        padding: 16px 14px 24px;
         background: #0D1220;
         border-inline-start: 1px solid rgba(221,167,82,0.16);
+        border-bottom: 1px solid rgba(221,167,82,0.16);
         box-shadow: -12px 0 32px rgba(0,0,0,0.35);
         font-family: 'Plus Jakarta Sans', sans-serif;
         color: #EDE8DD;
@@ -619,55 +745,176 @@ function InspectorStyles() {
       }
       .zi-ceiling select:focus, .zi-ceiling input:focus, .zi-attr select:focus { border-color: #DDA752; }
 
+      /* ── Modern Finishing System Trade Card ── */
       .zi-trade {
-        display: flex; flex-direction: column; gap: 6px;
-        padding: 8px; border-radius: 10px;
-        background: rgba(255,255,255,0.02);
-        border: 1px solid rgba(221,167,82,0.10);
+        display: flex; flex-direction: column; gap: 8px;
+        padding: 12px; border-radius: 12px;
+        background: rgba(255, 255, 255, 0.025);
+        border: 1px solid rgba(221, 167, 82, 0.16);
+        transition: all 0.2s ease;
       }
-      .zi-trade-head { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
-      .zi-trade-name { font-size: 0.72rem; font-weight: 700; min-width: 0; overflow-wrap: break-word; }
+      .zi-trade:hover {
+        border-color: rgba(221, 167, 82, 0.35);
+        background: rgba(255, 255, 255, 0.04);
+      }
+      [data-theme="light"] .zi-trade {
+        background: #F8FAFC;
+        border-color: rgba(184, 134, 11, 0.2);
+      }
+
+      .zi-trade-head {
+        display: flex; align-items: center; justify-content: space-between; gap: 8px;
+      }
+      .zi-trade-title-wrap {
+        display: inline-flex; align-items: center; gap: 6px;
+      }
+      .zi-trade-icon-box {
+        display: inline-flex; align-items: center; justify-content: center;
+        width: 24px; height: 24px; border-radius: 6px;
+        background: rgba(221, 167, 82, 0.12);
+        color: #DDA752;
+      }
+      .zi-trade-name {
+        font-size: 0.8rem; font-weight: 800; color: #EDE8DD;
+      }
+      [data-theme="light"] .zi-trade-name {
+        color: #0F172A;
+      }
 
       .zi-icon-btn {
         flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center;
-        width: 22px; height: 22px; border-radius: 6px;
-        background: transparent; border: 1px solid rgba(221,167,82,0.14);
-        color: rgba(237,232,221,0.4); cursor: pointer;
-        transition: color 0.15s, border-color 0.15s;
+        width: 24px; height: 24px; border-radius: 6px;
+        background: transparent; border: 1px solid rgba(221, 167, 82, 0.14);
+        color: rgba(237, 232, 221, 0.4); cursor: pointer;
+        transition: all 0.15s ease;
       }
-      .zi-icon-btn.danger:hover { color: #D96B6B; border-color: #D96B6B; }
-
-      .zi-statuses { display: flex; flex-wrap: wrap; gap: 4px; }
-      .zi-status {
-        padding: 3px 8px; border-radius: 999px;
-        font-size: 0.6rem; font-weight: 700; cursor: pointer;
-        background: rgba(255,255,255,0.03);
-        border: 1px solid rgba(221,167,82,0.14);
-        color: rgba(237,232,221,0.6);
-        transition: color 0.15s, border-color 0.15s, background-color 0.15s;
-      }
-      .zi-status:hover { color: #EDE8DD; }
-      .zi-status.active {
-        background: rgba(221,167,82,0.15);
-        border-color: #DDA752; color: #DDA752;
+      .zi-icon-btn.danger:hover {
+        color: #EF4444; border-color: rgba(239, 68, 68, 0.4);
+        background: rgba(239, 68, 68, 0.1);
       }
 
+      /* ── Luxury Segmented Status Track ── */
+      .zi-status-segmented-track {
+        display: flex;
+        background: rgba(10, 14, 24, 0.7);
+        border: 1px solid rgba(221, 167, 82, 0.18);
+        border-radius: 8px;
+        padding: 2px;
+        gap: 2px;
+      }
+      [data-theme="light"] .zi-status-segmented-track {
+        background: #E2E8F0;
+      }
+      .zi-status-seg-btn {
+        flex: 1;
+        padding: 5px 6px;
+        border-radius: 6px;
+        font-size: 0.65rem;
+        font-weight: 700;
+        cursor: pointer;
+        background: transparent;
+        border: none;
+        color: rgba(237, 232, 221, 0.6);
+        transition: all 0.15s cubic-bezier(0.2, 0, 0, 1);
+        text-align: center;
+        white-space: nowrap;
+      }
+      [data-theme="light"] .zi-status-seg-btn {
+        color: #64748B;
+      }
+      .zi-status-seg-btn:hover {
+        color: #EDE8DD;
+        background: rgba(255, 255, 255, 0.05);
+      }
+      .zi-status-seg-btn.active {
+        background: linear-gradient(135deg, #DDA752, #B8860B);
+        color: #0A0E18;
+        font-weight: 800;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+      }
+
+      /* ── Trade Attributes & Custom Specifications ── */
       .zi-attrs {
-        display: flex; flex-direction: column; gap: 5px;
-        padding-top: 6px; border-top: 1px dashed rgba(221,167,82,0.12);
+        display: flex; flex-direction: column; gap: 6px;
+        padding-top: 8px; border-top: 1px solid rgba(221, 167, 82, 0.10);
       }
-      .zi-attr {
+      .zi-attr-row {
         display: flex; align-items: center; justify-content: space-between; gap: 8px;
-        font-size: 0.66rem; font-weight: 600; color: rgba(237,232,221,0.7);
+        background: rgba(255, 255, 255, 0.02);
+        padding: 4px 8px; border-radius: 7px;
+        border: 1px solid rgba(255, 255, 255, 0.03);
       }
-      .zi-attr input[type="text"], .zi-attr input[type="number"] {
-        width: 45%; padding: 4px 6px; border-radius: 6px;
-        background: #0A0E18; border: 1px solid rgba(221,167,82,0.16);
-        color: #EDE8DD; font-size: 0.66rem; outline: none;
+      .zi-attr-label {
+        font-size: 0.68rem; font-weight: 700; color: rgba(237, 232, 221, 0.8);
+        max-width: 48%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
       }
-      .zi-attr input:focus { border-color: #DDA752; }
-      .zi-attr input[type="checkbox"] { accent-color: #DDA752; width: 14px; height: 14px; }
-      .zi-attr select { max-width: 50%; }
+      [data-theme="light"] .zi-attr-label {
+        color: #334155;
+      }
+      .zi-attr-input-group {
+        display: flex; align-items: center; gap: 4px; flex: 1; justify-content: flex-end;
+      }
+      .zi-attr-val-input {
+        width: 100%; max-width: 130px; padding: 4px 8px; border-radius: 6px;
+        background: #0A0E18; border: 1px solid rgba(221, 167, 82, 0.2);
+        color: #DDA752; font-size: 0.68rem; font-weight: 600; outline: none;
+        transition: border-color 0.15s ease;
+      }
+      [data-theme="light"] .zi-attr-val-input {
+        background: #FFFFFF;
+      }
+      .zi-attr-val-input:focus { border-color: #DDA752; box-shadow: 0 0 0 2px rgba(221, 167, 82, 0.2); }
+      .zi-attr-del-btn {
+        width: 20px; height: 20px; display: inline-flex; align-items: center; justify-content: center;
+        border-radius: 5px; background: transparent; border: none;
+        color: rgba(237, 232, 221, 0.35); cursor: pointer; transition: all 0.15s ease;
+        flex-shrink: 0;
+      }
+      .zi-attr-del-btn:hover { color: #EF4444; background: rgba(239, 68, 68, 0.15); }
+
+      .zi-add-attr-row {
+        display: flex; align-items: center; gap: 6px;
+        margin-top: 2px;
+        background: rgba(255, 255, 255, 0.015);
+        border: 1px dashed rgba(221, 167, 82, 0.22);
+        border-radius: 7px;
+        padding: 2px 8px;
+        transition: all 0.15s ease;
+      }
+      .zi-add-attr-row:focus-within {
+        border-color: #DDA752;
+        background: rgba(221, 167, 82, 0.04);
+      }
+      .zi-add-attr-icon {
+        font-size: 0.8rem; font-weight: 800; color: #DDA752;
+      }
+      .zi-add-attr-input {
+        flex: 1; padding: 4px 0; background: transparent; border: none;
+        color: #EDE8DD; font-size: 0.68rem; outline: none;
+      }
+      [data-theme="light"] .zi-add-attr-input {
+        color: #0F172A;
+      }
+      .zi-add-attr-input::placeholder {
+        color: rgba(237, 232, 221, 0.4);
+      }
+
+      .zi-attr-chips {
+        display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin-top: 4px;
+      }
+      .zi-attr-chips-label {
+        font-size: 0.6rem; font-weight: 700; color: rgba(237, 232, 221, 0.45);
+      }
+      .zi-attr-chip {
+        display: inline-flex; align-items: center; gap: 3px;
+        padding: 2px 8px; border-radius: 999px;
+        background: rgba(221, 167, 82, 0.08); border: 1px solid rgba(221, 167, 82, 0.25);
+        color: #DDA752; font-size: 0.62rem; font-weight: 700; cursor: pointer;
+        transition: all 0.15s ease;
+      }
+      .zi-attr-chip:hover {
+        background: rgba(221, 167, 82, 0.2); border-color: #DDA752;
+      }
 
       .zi-add-trade select { width: 100%; }
       .zi-add-btn {

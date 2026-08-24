@@ -1,5 +1,6 @@
 'use client';
 import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 let L: any = null;
 if (typeof window !== 'undefined') {
   L = require('leaflet');
@@ -8,10 +9,13 @@ import { Property } from '@/types';
 import { useRouter } from 'next/navigation';
 import { triggerNavigationStart } from '@/components/NavigationProgress';
 import { FALLBACK_PROPERTIES } from '@/lib/data/fallbackProperties';
-import { adaptProperties } from '@/lib/utils/propertyAdapter';
+import { adaptProperties, cleanHtmlToPlainText, decodeHtmlEntities } from '@/lib/utils/propertyAdapter';
 import { PropertyCard } from './PropertyCard';
 import ArchitecturalBlueprintInspector from './ArchitecturalBlueprintInspector';
 import ViewingScheduler from './ViewingScheduler';
+import { InquiryModal } from '@/components/InquiryModal';
+import { useFavorites } from '@/lib/context/FavoritesContext';
+import { toast } from 'sonner';
 import { createCachedTileLayer } from '@/lib/mapCache';
 import { 
   Bed, 
@@ -43,7 +47,8 @@ import {
   LocateFixed,
   RefreshCw,
   Clock,
-  Landmark
+  Landmark,
+  Send
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -90,6 +95,17 @@ const SanctumSatelliteMap: React.FC<{ lat: number; lng: number; title: string; d
       { maxZoom: 19 }
     ).addTo(map);
 
+    // Street Names, Roads & Compound Labels Overlay (Cached)
+    createCachedTileLayer(
+      'https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}',
+      { maxZoom: 19, opacity: 0.95 }
+    ).addTo(map);
+
+    createCachedTileLayer(
+      'https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',
+      { maxZoom: 19, opacity: 0.95 }
+    ).addTo(map);
+
     // Custom Glowing Beacon Pin
     const pinHtml = `
       <div class="sanctum-pin-wrapper">
@@ -110,7 +126,18 @@ const SanctumSatelliteMap: React.FC<{ lat: number; lng: number; title: string; d
 
     mapInstanceRef.current = map;
 
+    const resizeTimer = setTimeout(() => {
+      map.invalidateSize();
+    }, 250);
+
+    const handleResize = () => {
+      map.invalidateSize();
+    };
+    window.addEventListener('resize', handleResize);
+
     return () => {
+      clearTimeout(resizeTimer);
+      window.removeEventListener('resize', handleResize);
       map.remove();
       mapInstanceRef.current = null;
     };
@@ -152,26 +179,21 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
     router.push('/' + locale + '/properties/' + id);
   });
   const onOpenInquiry = propOnOpenInquiry || ((type: string, propertyName?: string) => {
-    const phone = (rawProperty.broker?.phone || '+201009970776').replace(/[^0-9]/g, '');
-    window.location.href = `https://wa.me/${phone}?text=${encodeURIComponent('Hello, I am inquiring about ' + (propertyName || rawProperty.title_en || rawProperty.title))}`;
+    setIsInquiryModalOpen(true);
   });
 
   const rawNarrative = isAr 
     ? (rawProperty.description_ar || rawProperty.narrative || rawProperty.description_en || '')
     : (rawProperty.description_en || rawProperty.narrative || rawProperty.description_ar || '');
 
-  // Strip raw HTML tags cleanly from narrative if entered via rich-text editor
-  const cleanNarrative = rawNarrative
-    .replace(/<\/p>\s*<p>/gi, '\n\n')
-    .replace(/<br\s*\/?>/gi, '\n')
-    .replace(/<[^>]*>/g, '')
-    .trim() || (isAr ? 'تحفة معمارية استثنائية صُممت بأعلى معايير الفخامة والدقة الهندسية.' : 'An extraordinary architectural masterpiece crafted with the highest standards of luxury and precision.');
+  // Strip raw HTML tags cleanly from narrative and decode all HTML entities
+  const cleanNarrative = cleanHtmlToPlainText(rawNarrative) || (isAr ? 'تحفة معمارية استثنائية صُممت بأعلى معايير الفخامة والدقة الهندسية.' : 'An extraordinary architectural masterpiece crafted with the highest standards of luxury and precision.');
 
   const property: Property = {
     id: rawProperty.slug || rawProperty.id || 'the-obsidian-pavilion',
     slug: rawProperty.slug || rawProperty.id || 'the-obsidian-pavilion',
-    title: isAr ? (rawProperty.title_ar || rawProperty.title) : (rawProperty.title_en || rawProperty.title || 'The Obsidian Pavilion'),
-    location: rawProperty.location || 'Sodic East Estate, New Cairo, Egypt',
+    title: decodeHtmlEntities(isAr ? (rawProperty.title_ar || rawProperty.title) : (rawProperty.title_en || rawProperty.title || 'The Obsidian Pavilion')),
+    location: decodeHtmlEntities(rawProperty.location || 'Sodic East Estate, New Cairo, Egypt'),
     district: rawProperty.district || (rawProperty.location ? rawProperty.location.split(',')[0].trim() : 'New Cairo'),
     estateName: rawProperty.estateName || (rawProperty.district ? rawProperty.district : 'Four Seasons Privado'),
     price: rawProperty.price || rawProperty.price_egp || 42500000,
@@ -218,10 +240,43 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
     }
   }, [propertyId]);
 
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
-  const [isBookmarked, setIsBookmarked] = useState(false);
+  const { isFavorite, toggleFavorite, setIsDrawerOpen, registerProperties } = useFavorites();
+  const isBookmarked = isFavorite(property.id) || (rawProperty?.id ? isFavorite(rawProperty.id) : false) || (rawProperty?.slug ? isFavorite(rawProperty.slug) : false);
+
+  useEffect(() => {
+    if (property) {
+      registerProperties([property]);
+    }
+  }, [property, registerProperties]);
+  
+  const handleToggleBookmark = () => {
+    const isNowSaved = toggleFavorite(rawProperty || property);
+    if (isNowSaved) {
+      toast.success(
+        isAr ? 'تمت إضافة العقار إلى المحفظة المحفوظة' : 'Saved to Private Portfolio Shortlist',
+        {
+          description: property.title,
+          action: {
+            label: isAr ? 'عرض المحفظة' : 'View Shortlist',
+            onClick: () => setIsDrawerOpen(true),
+          },
+        }
+      );
+    } else {
+      toast.info(
+        isAr ? 'تمت إزالة العقار من المحفظة' : 'Removed from Saved Portfolio'
+      );
+    }
+  };
   const [isAmbientGlow, setIsAmbientGlow] = useState(true);
+  const [isInquiryModalOpen, setIsInquiryModalOpen] = useState(false);
   
   // Live User Geolocation & Distance State
   const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(null);
@@ -377,6 +432,18 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isLightboxOpen, property.images.length]);
 
+  // Lock body scroll when Lightbox is open
+  useEffect(() => {
+    if (isLightboxOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isLightboxOpen]);
+
   // Preload all property images for instant zero-latency slide transitions
   useEffect(() => {
     if (property?.images?.length) {
@@ -419,7 +486,7 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
               </span>
               <span className="property-id-badge">
                 <ShieldCheck size={13} className="badge-gold-icon" />
-                <span>ID: MP-{property.id.toUpperCase()} • {isAr ? 'تسجيل ملكية حرة' : 'FREEHOLD REGISTERED'}</span>
+                <span>{isAr ? 'عقار موثق • ملكية حرة مسجلة' : 'Verified • Registered Freehold'}</span>
               </span>
             </div>
           </div>
@@ -458,11 +525,11 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
                 <div className="header-icon-actions">
                   <button 
                     className={`header-icon-btn ${isBookmarked ? 'active' : ''}`}
-                    onClick={() => setIsBookmarked(!isBookmarked)}
+                    onClick={handleToggleBookmark}
                     title={isAr ? 'حفظ في المفضلات' : 'Save to Favorites'}
                     type="button"
                   >
-                    <Bookmark size={17} />
+                    <Bookmark size={17} fill={isBookmarked ? 'currentColor' : 'none'} />
                   </button>
                   <button 
                     className="header-icon-btn"
@@ -575,7 +642,12 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
                   <span className={`ambient-dot-pulse ${isAmbientGlow ? 'active' : 'off'}`} />
                 </button>
 
-                <button className="gallery-fullscreen-btn" type="button" title="Open Fullscreen Lightbox">
+                <button 
+                  className="gallery-fullscreen-btn" 
+                  type="button" 
+                  title="Open Fullscreen Lightbox"
+                  onClick={() => setIsLightboxOpen(true)}
+                >
                   <Maximize size={14} />
                   <span>Fullscreen Stage</span>
                 </button>
@@ -623,169 +695,163 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
         </div>
 
         {/* 4. Fullscreen Lightbox Modal with 3D Cinematic Liquid Carousel & Ambient Aurora */}
-        <AnimatePresence>
-          {isLightboxOpen && (
-            <motion.div 
-              className="lightbox-overlay"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setIsLightboxOpen(false)}
-            >
-              {/* Fullscreen Lightbox Ambient Glow with Smooth Morphing Transition */}
-              <AnimatePresence initial={false}>
-                <motion.div 
-                  key={activeImageIndex}
-                  className="lightbox-ambient-fade-slot"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.75, ease: [0.22, 1, 0.36, 1] }}
-                >
-                  <div 
-                    className="lightbox-aurora-mesh mesh-alpha"
-                    style={{
-                      backgroundImage: `url(${property.images[activeImageIndex] || property.images[0]})`
-                    }}
-                  />
-                  <div 
-                    className="lightbox-aurora-mesh mesh-beta"
-                    style={{
-                      backgroundImage: `url(${property.images[activeImageIndex] || property.images[0]})`
-                    }}
-                  />
-                </motion.div>
-              </AnimatePresence>
+        {mounted && typeof document !== 'undefined' && createPortal(
+          <AnimatePresence>
+            {isLightboxOpen && (
+              <motion.div 
+                className="lightbox-overlay"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={() => setIsLightboxOpen(false)}
+              >
+                {/* Fullscreen Lightbox Ambient Glow with Smooth Morphing Transition */}
+                <AnimatePresence initial={false}>
+                  <motion.div 
+                    key={activeImageIndex}
+                    className="lightbox-ambient-fade-slot"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.75, ease: [0.22, 1, 0.36, 1] }}
+                  >
+                    <div 
+                      className="lightbox-aurora-mesh mesh-alpha"
+                      style={{
+                        backgroundImage: `url(${property.images[activeImageIndex] || property.images[0]})`
+                      }}
+                    />
+                    <div 
+                      className="lightbox-aurora-mesh mesh-beta"
+                      style={{
+                        backgroundImage: `url(${property.images[activeImageIndex] || property.images[0]})`
+                      }}
+                    />
+                  </motion.div>
+                </AnimatePresence>
 
-              <div className="lightbox-carousel-stage" onClick={(e) => e.stopPropagation()}>
-                
-                {/* Floating Top Header Bar */}
-                <div className="lightbox-top-bar">
-                  <div className="lightbox-top-left">
-                    <span className="lightbox-dossier-tag">
-                      <ShieldCheck size={14} className="tag-gold-icon" />
-                      <span>PROPERTY PHOTOS</span>
-                    </span>
-                    <span className="lightbox-counter-pill">
-                      {String(activeImageIndex + 1).padStart(2, '0')} / {String(property.images.length).padStart(2, '0')}
-                    </span>
+                <div className="lightbox-carousel-stage" onClick={(e) => e.stopPropagation()}>
+                  
+                  {/* Floating Top Header Bar */}
+                  <div className="lightbox-top-bar">
+                    <div className="lightbox-top-left">
+                      <span className="lightbox-dossier-tag">
+                        <ShieldCheck size={14} className="tag-gold-icon" />
+                        <span>PROPERTY PHOTOS</span>
+                      </span>
+                      <span className="lightbox-counter-pill">
+                        {String(activeImageIndex + 1).padStart(2, '0')} / {String(property.images.length).padStart(2, '0')}
+                      </span>
+                    </div>
+
+                    <div className="lightbox-top-right">
+                      <button 
+                        className="lightbox-close-btn" 
+                        onClick={() => setIsLightboxOpen(false)}
+                        type="button"
+                        title="Close Fullscreen Stage (Esc)"
+                      >
+                        <X size={18} />
+                        <span>Close</span>
+                      </button>
+                    </div>
                   </div>
 
-                  <div className="lightbox-top-right">
+                  {/* Flat Clean Carousel Cards Deck */}
+                  <div className="lightbox-deck-container">
+                    {property.images.map((imgUrl, idx) => {
+                      const total = property.images.length;
+                      let diff = idx - activeImageIndex;
+                      if (diff > total / 2) diff -= total;
+                      if (diff < -total / 2) diff += total;
+
+                      const isCenter = diff === 0;
+                      const isPrev = diff === -1;
+                      const isNext = diff === 1;
+                      const isVisible = Math.abs(diff) <= 1;
+
+                      return (
+                        <motion.div
+                          key={idx}
+                          className={`carousel-card-slot ${isCenter ? 'slot-center' : isPrev ? 'slot-prev' : isNext ? 'slot-next' : 'slot-hidden'}`}
+                          animate={{
+                            x: diff === 0 ? '0%' : diff === -1 ? '-70%' : diff === 1 ? '70%' : diff < -1 ? '-120%' : '120%',
+                            scale: isCenter ? 1 : 0.82,
+                            opacity: isCenter ? 1 : isVisible ? 0.38 : 0,
+                            zIndex: isCenter ? 10 : isVisible ? 4 : 1
+                          }}
+                          transition={{
+                            type: 'spring',
+                            stiffness: 260,
+                            damping: 28,
+                            mass: 0.85
+                          }}
+                          onClick={() => {
+                            if (!isCenter) setActiveImageIndex(idx);
+                          }}
+                        >
+                          <img src={imgUrl} alt={`${property.title} - Plate ${idx + 1}`} className="carousel-card-img" />
+                        </motion.div>
+                      );
+                    })}
+
+                    {/* Left & Right Floating Navigation Control Arrows */}
                     <button 
-                      className="lightbox-close-btn" 
-                      onClick={() => setIsLightboxOpen(false)}
+                      className="lightbox-nav-arrow arrow-prev"
+                      onClick={() => setActiveImageIndex((prev) => (prev - 1 + property.images.length) % property.images.length)}
                       type="button"
-                      title="Close Fullscreen Stage (Esc)"
+                      title="Previous Plate (Left Arrow)"
                     >
-                      <X size={18} />
-                      <span>Close</span>
+                      <ChevronLeft size={22} />
+                    </button>
+
+                    <button 
+                      className="lightbox-nav-arrow arrow-next"
+                      onClick={() => setActiveImageIndex((prev) => (prev + 1) % property.images.length)}
+                      type="button"
+                      title="Next Plate (Right Arrow)"
+                    >
+                      <ChevronRight size={22} />
                     </button>
                   </div>
-                </div>
 
-                {/* Flat Clean Carousel Cards Deck */}
-                <div className="lightbox-deck-container">
-                  {property.images.map((imgUrl, idx) => {
-                    const total = property.images.length;
-                    let diff = idx - activeImageIndex;
-                    if (diff > total / 2) diff -= total;
-                    if (diff < -total / 2) diff += total;
+                  {/* Bottom Floating Curated Info & Thumbnail Dock */}
+                  <div className="lightbox-bottom-dock">
+                    <div className="dock-meta-row">
+                      <div className="dock-title-group">
+                        <h3 className="dock-property-title">{property.title}</h3>
+                        <div className="dock-sub-tags">
+                          <span className="dock-estate">{property.estateName}</span>
+                          <span className="dock-dot">•</span>
+                          <span className="dock-district">{property.district}</span>
+                          <span className="dock-dot">•</span>
+                          <span className="dock-badge">Plate {activeImageIndex + 1} of {property.images.length}</span>
+                        </div>
+                      </div>
 
-                    const isCenter = diff === 0;
-                    const isPrev = diff === -1;
-                    const isNext = diff === 1;
-                    const isVisible = Math.abs(diff) <= 1;
-
-                    return (
-                      <motion.div
-                        key={idx}
-                        className={`carousel-card-slot ${isCenter ? 'slot-center' : isPrev ? 'slot-prev' : isNext ? 'slot-next' : 'slot-hidden'}`}
-                        animate={{
-                          x: diff === 0 ? '0%' : diff === -1 ? '-70%' : diff === 1 ? '70%' : diff < -1 ? '-120%' : '120%',
-                          scale: isCenter ? 1 : 0.82,
-                          opacity: isCenter ? 1 : isVisible ? 0.38 : 0,
-                          zIndex: isCenter ? 10 : isVisible ? 4 : 1
-                        }}
-                        transition={{
-                          type: 'spring',
-                          stiffness: 260,
-                          damping: 28,
-                          mass: 0.85
-                        }}
-                        onClick={() => {
-                          if (!isCenter) setActiveImageIndex(idx);
-                        }}
-                      >
-                        <img src={imgUrl} alt={`${property.title} - Plate ${idx + 1}`} className="carousel-card-img" />
-                      </motion.div>
-                    );
-                  })}
-
-                  {/* Left & Right Floating Navigation Control Arrows */}
-                  <button 
-                    className="lightbox-nav-arrow arrow-prev"
-                    onClick={() => setActiveImageIndex((prev) => (prev - 1 + property.images.length) % property.images.length)}
-                    type="button"
-                    title="Previous Plate (Left Arrow)"
-                  >
-                    <ChevronLeft size={22} />
-                  </button>
-
-                  <button 
-                    className="lightbox-nav-arrow arrow-next"
-                    onClick={() => setActiveImageIndex((prev) => (prev + 1) % property.images.length)}
-                    type="button"
-                    title="Next Plate (Right Arrow)"
-                  >
-                    <ChevronRight size={22} />
-                  </button>
-                </div>
-
-                {/* Bottom Floating Curated Info & Thumbnail Dock */}
-                <div className="lightbox-bottom-dock">
-                  <div className="dock-meta-row">
-                    <div className="dock-title-group">
-                      <h3 className="dock-property-title">{property.title}</h3>
-                      <div className="dock-sub-tags">
-                        <span className="dock-estate">{property.estateName}</span>
-                        <span className="dock-dot">•</span>
-                        <span className="dock-district">{property.district}</span>
-                        <span className="dock-dot">•</span>
-                        <span className="dock-badge">Plate {activeImageIndex + 1} of {property.images.length}</span>
+                      {/* Interactive Thumbnail Navigation Pills */}
+                      <div className="dock-thumbnails-row">
+                        {property.images.map((thumb, idx) => (
+                          <button
+                            key={idx}
+                            className={`dock-thumb-btn ${activeImageIndex === idx ? 'active' : ''}`}
+                            onClick={() => setActiveImageIndex(idx)}
+                            type="button"
+                            title={`Jump to Plate ${idx + 1}`}
+                          >
+                            <img src={thumb} alt={`Thumb ${idx + 1}`} className="dock-thumb-img" />
+                          </button>
+                        ))}
                       </div>
                     </div>
-
-                    {/* Interactive Thumbnail Navigation Pills */}
-                    <div className="dock-thumbnails-row">
-                      {property.images.map((thumb, idx) => (
-                        <button
-                          key={idx}
-                          className={`dock-thumb-btn ${activeImageIndex === idx ? 'active' : ''}`}
-                          onClick={() => setActiveImageIndex(idx)}
-                          type="button"
-                          title={`Jump to Plate ${idx + 1}`}
-                        >
-                          <img src={thumb} alt={`Thumb ${idx + 1}`} className="dock-thumb-img" />
-                        </button>
-                      ))}
-                    </div>
                   </div>
+
                 </div>
-
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* C. Interactive Architectural Blueprint & Space Specifications — full-bleed studio */}
-        <ArchitecturalBlueprintInspector 
-          zones={rawProperty.spec_layers || []} 
-          propertyTitle={property.title} 
-          locale={locale} 
-          propertyType={rawProperty.type} 
-          propertyImages={property.images} 
-        />
+              </motion.div>
+            )}
+          </AnimatePresence>,
+          document.body
+        )}
 
         {/* 5. Main Detail Grid: Left Body + Sticky Right Advisory Desk */}
         <div className="detail-layout">
@@ -874,146 +940,201 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
               </div>
             </div>
 
-            {/* D. Location & Surroundings */}
-            <div className="content-section">
-              <div className="section-title-wrap proximity-header-row">
-                <div>
-                  <span className="section-eyebrow">{isAr ? 'الموقع والمناطق المحيطة' : 'LOCATION & SURROUNDINGS'}</span>
-                  <h3 className="section-subtitle">{isAr ? 'الموقع وسهولة الوصول' : 'Location & Accessibility'}</h3>
-                </div>
-
-                <button 
-                  className={`gps-locate-btn ${geoStatus === 'locating' ? 'locating' : ''}`}
-                  onClick={requestLocation}
-                  type="button"
-                  title={isAr ? 'حساب المسافة الدقيقة من موقعك الحالي' : 'Calculate travel distance from your current coordinates'}
-                >
-                  <LocateFixed size={14} className={geoStatus === 'locating' ? 'spin' : ''} />
-                  <span>
-                    {geoStatus === 'locating' 
-                      ? (isAr ? 'جاري تحديد موقعك...' : 'Detecting Location...') 
-                      : geoStatus === 'located' 
-                        ? (isAr ? 'تم تحديد موقعك' : 'Live Location Set') 
-                        : (isAr ? 'احسب المسافة من موقعك' : 'Calculate Distance')}
-                  </span>
-                </button>
-              </div>
-
-              <div className="sanctum-map-and-transit-layout">
-                <div className="sanctum-map-col">
-                  <SanctumSatelliteMap 
-                    lat={property.mapCoordinates.lat} 
-                    lng={property.mapCoordinates.lng} 
-                    title={property.title} 
-                    district={property.district} 
-                    isAr={isAr}
-                  />
-                </div>
-
-                <div className="sanctum-transit-col">
-                  {/* Commute Times & Proximity Radar Card attached to Map */}
-                  <div className="sidebar-radar-card attached-radar-card">
-                    <div className="radar-stack-header">
-                      <div>
-                        <span className="radar-stack-eyebrow">{isAr ? 'سهولة الوصول والتنقل' : 'CONNECTIVITY & COMMUTE'}</span>
-                        <h4 className="radar-stack-title">{isAr ? 'أوقات التنقل التقريبية' : 'Commute Times'}</h4>
-                      </div>
-                      <span className="radar-stack-status">
-                        <span className="live-radar-dot" />
-                        {geoStatus === 'located' 
-                          ? (isAr ? 'موقعك المباشر' : 'Live GPS') 
-                          : (isAr ? 'من وسط القاهرة' : 'From Downtown Cairo')}
-                      </span>
-                    </div>
-
-                    <div className="radar-cards-list">
-                      {travelEstimates.map((item, i) => {
-                        const Icon = item.icon;
-                        return (
-                          <div key={i} className="proximity-card">
-                            <div className="poi-icon-box">
-                              <Icon size={17} />
-                            </div>
-                            <div className="poi-info">
-                              <div className="poi-mode-row">
-                                <span className="poi-mode-title">{item.mode}</span>
-                                <span className="poi-time-val">{item.time}</span>
-                              </div>
-                              <span className="poi-sub-detail">{item.sub}</span>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-
-                    <div className="radar-stack-footer">
-                      <Compass size={13} className="compass-icon" />
-                      <span>{isAr ? `وصول مباشر وسريع عبر المحاور الرئيسية في ${property.district}` : `Direct access via ${property.district} main arterials`}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
           </div>
 
           {/* Right Column Sticky Advisory Suite */}
           <aside className="detail-sidebar-col">
             
-            {/* Broker & Concierge Card */}
-            <div className="broker-card">
+            {/* Unified Private Acquisition & Advisory Suite Card */}
+            <div className="broker-card unified-advisory-card" id="request-viewing-section">
               <div className="broker-profile">
                 <img src={property.broker.avatar} alt={property.broker.name} className="broker-avatar" />
                 <div className="broker-meta">
-                  <h3 className="broker-name">{property.broker.name}</h3>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <h3 className="broker-name">{property.broker.name}</h3>
+                    <ShieldCheck size={14} className="badge-gold-icon" />
+                  </div>
                   <span className="broker-role">{property.broker.role}</span>
-                  <span className="broker-stat">Senior Acquisition Lead • 40+ Closed Mansions</span>
+                  <span className="broker-stat">{isAr ? 'المكتب الاستشاري الحصري • توثيق فوري' : 'Direct Advisory Desk • Instant Verification'}</span>
                 </div>
               </div>
 
-              <div className="broker-action-buttons">
-                <a href={`tel:${property.broker.phone}`} className="btn-gold broker-btn">
-                  <PhoneCall size={15} />
-                  <span>Direct Private Call</span>
-                </a>
-                <a 
-                  href={`https://wa.me/${property.broker.phone.replace(/[^0-9]/g, '')}?text=Hello%20${encodeURIComponent(property.broker.name)},%20I%20am%20inquiring%20about%20the%20sovereign%20estate:%20${encodeURIComponent(property.title)}`} 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="btn-dark broker-btn"
+              {/* Primary Direct Actions & Clean Contact Channels */}
+              <div className="broker-action-stack">
+                {/* 1. Official Acquisition Inquiry Modal Trigger */}
+                <button
+                  type="button"
+                  onClick={() => setIsInquiryModalOpen(true)}
+                  className="btn-gold broker-primary-btn"
+                  title={isAr ? 'تقديم طلب شراء رسمي وسري' : 'Submit Private Acquisition Inquiry'}
                 >
-                  <MessageCircle size={15} />
-                  <span>Encrypted WhatsApp Desk</span>
-                </a>
+                  <Send size={15} />
+                  <span>{isAr ? 'طلب استشارة أو شراء' : 'Private Acquisition Request'}</span>
+                </button>
+
+                {/* 2. Direct Communication Dual Channels */}
+                <div className="broker-quick-channels">
+                  <a 
+                    href={`https://wa.me/${property.broker.phone.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(
+                      `🏛️ *استفسار خاص عن عقار — منصة زكريا فريد*\n` +
+                      `━━━━━━━━━━━━━━━━━━━━\n` +
+                      `🏡 *العقار:* ${property.title}\n` +
+                      `📍 *الموقع:* ${property.location}\n` +
+                      `💰 *السعر المعلن:* ${formattedPrice} ${property.currency}\n` +
+                      `━━━━━━━━━━━━━━━━━━━━\n` +
+                      `أرغب في الاستفسار عن تفاصيل العقار وترتيب زيارة خاصة.`
+                    )}`} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="broker-channel-btn whatsapp-channel"
+                    title={isAr ? 'محادثة مباشرة على واتساب' : 'WhatsApp Concierge Desk'}
+                  >
+                    <MessageCircle size={15} />
+                    <span>{isAr ? 'واتساب' : 'WhatsApp'}</span>
+                  </a>
+
+                  <a 
+                    href={`tel:${property.broker.phone}`} 
+                    className="broker-channel-btn phone-channel"
+                    title={isAr ? 'اتصال هاتفي مباشر' : 'Direct Phone Call'}
+                  >
+                    <PhoneCall size={15} />
+                    <span>{isAr ? 'اتصال مباشر' : 'Direct Call'}</span>
+                  </a>
+                </div>
               </div>
+
+              {/* Optional Cal.com VIP Viewing Scheduler (Only shown if calendar is active) */}
+              {rawProperty.calcom_event_link && (
+                <div className="broker-calendar-section">
+                  <div className="calendar-section-header">
+                    <span className="calendar-eyebrow">
+                      {isAr ? 'معاينة ميدانية خاصة' : 'VIP PRIVATE VIEWING'}
+                    </span>
+                    <p className="calendar-subtext">
+                      {isAr ? 'اختر موعد الجولة التفقدية مباشرة من التقويم.' : 'Schedule an on-site walkthrough directly.'}
+                    </p>
+                  </div>
+                  <ViewingScheduler
+                    calLink={rawProperty.calcom_event_link}
+                    propertyId={rawProperty.id}
+                    propertySlug={rawProperty.slug}
+                    propertyTitle={property.title}
+                    isAr={isAr}
+                    whatsappHref={`https://wa.me/${property.broker.phone.replace(/[^0-9]/g, '')}`}
+                  />
+                </div>
+              )}
             </div>
 
-            {/* Book a Private Viewing — Cal.com scheduling dialog */}
-            <div className="viewing-form-card" id="request-viewing-section">
-              <div className="viewing-header">
-                <span className="viewing-eyebrow">{isAr ? 'معاينة خاصة' : 'PRIVATE VIEWING'}</span>
-                <h3 className="viewing-title">{isAr ? 'احجز معاينة للعقار' : 'Book a Property Viewing'}</h3>
-                <p className="viewing-sub">
-                  {isAr
-                    ? `اختر الموعد المناسب لك لمعاينة ${property.title} مع مستشارك العقاري.`
-                    : `Choose a time that suits you to tour ${property.title} with your property advisor.`}
-                </p>
-              </div>
-
-              <ViewingScheduler
-                calLink={rawProperty.calcom_event_link || process.env.NEXT_PUBLIC_CALCOM_DEFAULT_LINK || null}
-                propertyId={rawProperty.id}
-                propertySlug={rawProperty.slug}
-                propertyTitle={property.title}
-                isAr={isAr}
-                whatsappHref={`https://wa.me/${property.broker.phone.replace(/[^0-9]/g, '')}`}
-              />
-            </div>
           </aside>
         </div>
 
+        {/* 6. Location & Connectivity Suite (Full-Width Row with Big Map & Aligned Radar) */}
+        <div className="location-suite-section" id="location-section">
+          {/* Main Section Header above the 2-column grid */}
+          <div className="section-title-wrap proximity-header-row" style={{ marginBottom: '1.75rem' }}>
+            <div>
+              <span className="section-eyebrow">{isAr ? 'الموقع والمناطق المحيطة' : 'LOCATION & SURROUNDINGS'}</span>
+              <h3 className="section-subtitle">{isAr ? 'الموقع وسهولة الوصول' : 'Location & Accessibility'}</h3>
+            </div>
+
+            <button 
+              className={`gps-locate-btn ${geoStatus === 'locating' ? 'locating' : ''}`}
+              onClick={requestLocation}
+              type="button"
+              title={isAr ? 'حساب المسافة الدقيقة من موقعك الحالي' : 'Calculate travel distance from your current coordinates'}
+            >
+              <LocateFixed size={14} className={geoStatus === 'locating' ? 'spin' : ''} />
+              <span>
+                {geoStatus === 'locating' 
+                  ? (isAr ? 'جاري تحديد موقعك...' : 'Detecting Location...') 
+                  : geoStatus === 'located' 
+                    ? (isAr ? 'تم تحديد موقعك' : 'Live Location Set') 
+                    : (isAr ? 'احسب المسافة من موقعك' : 'Calculate Distance')}
+              </span>
+            </button>
+          </div>
+
+          <div className="location-suite-grid">
+            
+            {/* Left Main Column: Big Satellite Map */}
+            <div className="location-suite-main">
+              <div className="sanctum-map-full-wrap">
+                <SanctumSatelliteMap 
+                  lat={property.mapCoordinates.lat} 
+                  lng={property.mapCoordinates.lng} 
+                  title={property.title} 
+                  district={property.district} 
+                  isAr={isAr}
+                />
+              </div>
+            </div>
+
+            {/* Right Side Column: Aligned Commute Times Card */}
+            <div className="location-suite-side">
+              
+              {/* Commute Times Card — Top Aligned with the Map */}
+              <div className="sidebar-radar-card aligned-map-radar-card">
+                <div className="radar-stack-header">
+                  <div className="radar-stack-header-text">
+                    <span className="radar-stack-eyebrow">{isAr ? 'المسافات وسهولة الوصول' : 'PROXIMITY & CONNECTIVITY'}</span>
+                    <h4 className="radar-stack-title">{isAr ? 'أوقات الوصول والتنقل' : 'Estimated Travel Times'}</h4>
+                  </div>
+                  <span className="radar-stack-status">
+                    <span className="live-radar-dot" />
+                    <span>
+                      {geoStatus === 'located' 
+                        ? (isAr ? 'موقعك المباشر' : 'Live GPS') 
+                        : (isAr ? 'من وسط القاهرة' : 'From Downtown Cairo')}
+                    </span>
+                  </span>
+                </div>
+
+                <div className="radar-cards-list">
+                  {travelEstimates.map((item, i) => {
+                    const Icon = item.icon;
+                    return (
+                      <div key={i} className="proximity-card">
+                        <div className="poi-icon-box">
+                          <Icon size={17} />
+                        </div>
+                        <div className="poi-info">
+                          <div className="poi-mode-row">
+                            <span className="poi-mode-title">{item.mode}</span>
+                            <span className="poi-time-val">{item.time}</span>
+                          </div>
+                          <span className="poi-sub-detail">{item.sub}</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <div className="radar-stack-footer">
+                  <Compass size={13} className="compass-icon" />
+                  <span>{isAr ? `وصول مباشر وسريع عبر المحاور الرئيسية في ${property.district}` : `Direct access via ${property.district} main arterials`}</span>
+                </div>
+              </div>
+
+            </div>
+
+          </div>
+        </div>
+
+        {/* E. Architectural CAD Blueprint Section — Full-Width Concluding Showcase Section */}
+        <div className="content-section cad-blueprint-full-section" id="architectural-cad-section">
+          <ArchitecturalBlueprintInspector 
+            zones={rawProperty.spec_layers || []} 
+            propertyTitle={property.title} 
+            locale={locale} 
+            propertyType={rawProperty.type} 
+            propertyImages={property.images} 
+          />
+        </div>
+
         {/* 6. Similar Architectural Statements */}
-        <section className="similar-section section-padding">
+        <section className="similar-section">
           <div className="similar-header">
             <span className="eyebrow-gold">RECOMMENDED PROPERTIES</span>
             <h2 className="similar-title">Similar Properties</h2>
@@ -1039,7 +1160,11 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
         </div>
         <div className="mobile-lead-actions">
           <a 
-            href={`https://wa.me/${property.broker.phone.replace(/[^0-9]/g, '')}`}
+            href={`https://wa.me/${property.broker.phone.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(
+              `🏛️ *استفسار خاص عن عقار — منصة زكريا فريد*\n` +
+              `🏡 *العقار:* ${property.title}\n` +
+              `💰 *السعر:* ${formattedPrice} ${property.currency}`
+            )}`}
             target="_blank" 
             rel="noopener noreferrer"
             className="mobile-wa-btn"
@@ -1049,20 +1174,28 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
           </a>
           <button 
             className="btn-gold mobile-book-btn"
-            onClick={() => {
-              document.getElementById('request-viewing-section')?.scrollIntoView({ behavior: 'smooth' });
-            }}
+            onClick={() => setIsInquiryModalOpen(true)}
             type="button"
           >
-            Book Viewing
+            {isAr ? 'طلب استشارة / شراء' : 'Inquire / Book'}
           </button>
         </div>
       </div>
 
+      {/* Global Confidential Acquisition Inquiry Modal */}
+      <InquiryModal
+        isOpen={isInquiryModalOpen}
+        onClose={() => setIsInquiryModalOpen(false)}
+        title={isAr ? `طلب استحواذ — ${property.title}` : `Private Acquisition — ${property.title}`}
+        propertyName={property.title}
+        propertyId={rawProperty.id || property.id}
+        locale={locale}
+      />
+
       <style>{`
         .property-detail-view {
-          padding-top: 155px;
-          padding-bottom: 6rem;
+          padding-top: 140px;
+          padding-bottom: 3.5rem;
           background: var(--bg-primary);
           min-height: 100vh;
           transition: background var(--transition-smooth);
@@ -1073,8 +1206,8 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
           display: flex;
           flex-direction: column;
           gap: 1.25rem;
-          margin-bottom: 1.75rem;
-          padding-bottom: 1.75rem;
+          margin-bottom: 1.5rem;
+          padding-bottom: 1.5rem;
           border-bottom: 1px solid var(--border-subtle);
         }
 
@@ -1314,7 +1447,7 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
           flex-wrap: wrap;
           align-items: center;
           gap: 0.75rem;
-          margin-bottom: 2.25rem;
+          margin-bottom: 1.5rem;
         }
 
         .spec-pill {
@@ -1366,7 +1499,7 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
         /* 3. Cinematic Gallery Stage with Luxury Ambient Cinema Mode */
         .gallery-section {
           position: relative;
-          margin-bottom: 4.5rem;
+          margin-bottom: 2.25rem;
         }
 
         /* Ambient Cinema Illumination Projection */
@@ -2141,9 +2274,9 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
         .detail-layout {
           display: grid;
           grid-template-columns: 1fr 400px;
-          gap: 3.5rem;
+          gap: 2.5rem;
           align-items: start;
-          margin-bottom: 5rem;
+          margin-bottom: 2.5rem;
         }
 
         .detail-main-col {
@@ -2158,13 +2291,27 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
           top: 110px;
           display: flex;
           flex-direction: column;
-          gap: 2rem;
+          gap: 1.5rem;
         }
 
         .content-section {
-          margin-bottom: 4rem;
+          margin-bottom: 2.5rem;
           width: 100%;
           min-width: 0;
+        }
+
+        .content-section:last-child {
+          margin-bottom: 0;
+        }
+
+        .location-suite-section {
+          margin-bottom: 2.5rem;
+          width: 100%;
+        }
+
+        .cad-blueprint-full-section {
+          margin-bottom: 2.5rem;
+          width: 100%;
         }
 
         .section-title-wrap {
@@ -2941,39 +3088,62 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
           color: #FFFFFF !important;
         }
 
-        /* Location Sanctum Map & Attached Transit Sidebar */
-        .sanctum-map-and-transit-layout {
+        /* Location & Connectivity Suite (Aligned 2-Column Grid) */
+        .location-suite-section {
+          margin-bottom: 5rem;
+          width: 100%;
+        }
+
+        .location-suite-grid {
           display: grid;
-          grid-template-columns: 1fr 340px;
-          gap: 1.5rem;
+          grid-template-columns: 1fr 390px;
+          gap: 2.25rem;
           align-items: stretch;
-          margin-top: 1rem;
         }
 
-        .sanctum-map-col {
-          min-width: 0;
-        }
-
-        .sanctum-transit-col {
+        .location-suite-main {
           min-width: 0;
           display: flex;
+          flex-direction: column;
+          height: 100%;
         }
 
-        .attached-radar-card {
+        .sanctum-map-full-wrap {
           width: 100%;
-          margin: 0 !important;
           height: 100%;
+          display: flex;
+          flex-direction: column;
+          flex: 1;
+        }
+
+        .location-suite-main .sanctum-map-frame {
+          width: 100%;
+          height: 100%;
+          min-height: 420px;
+          margin-bottom: 0;
+          flex: 1;
           display: flex;
           flex-direction: column;
         }
 
-        .attached-radar-card .radar-cards-list {
-          flex: 1;
+        .location-suite-side {
+          min-width: 0;
+          display: flex;
+          flex-direction: column;
+          height: 100%;
         }
 
         @media (max-width: 1024px) {
-          .sanctum-map-and-transit-layout {
+          .location-suite-grid {
             grid-template-columns: 1fr;
+            gap: 2.5rem;
+          }
+          .location-suite-main .sanctum-map-frame {
+            height: 380px;
+            min-height: 380px;
+          }
+          .location-suite-side {
+            padding-top: 0;
           }
         }
 
@@ -2986,6 +3156,9 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
           display: flex;
           flex-direction: column;
           gap: 1.15rem;
+          height: 100%;
+          box-sizing: border-box;
+          justify-content: space-between;
           transition: all var(--transition-smooth);
         }
 
@@ -3010,9 +3183,10 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
 
         .radar-stack-header {
           display: flex;
-          align-items: flex-start;
+          align-items: center;
           justify-content: space-between;
-          padding-bottom: 0.75rem;
+          gap: 12px;
+          padding-bottom: 0.85rem;
           border-bottom: 1px solid rgba(212, 160, 52, 0.2);
         }
 
@@ -3037,19 +3211,22 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
           font-weight: 800;
           color: var(--text-primary);
           margin: 0;
+          white-space: nowrap;
         }
 
         .radar-stack-status {
           display: inline-flex;
           align-items: center;
-          gap: 5px;
-          font-size: 0.75rem;
+          gap: 6px;
+          font-size: 0.72rem;
           color: var(--text-muted);
-          font-weight: 600;
-          padding: 0.25rem 0.6rem;
+          font-weight: 700;
+          padding: 0.3rem 0.7rem;
           border-radius: 9999px;
           background: rgba(16, 185, 129, 0.08);
-          border: 1px solid rgba(16, 185, 129, 0.2);
+          border: 1px solid rgba(16, 185, 129, 0.25);
+          white-space: nowrap;
+          flex-shrink: 0;
         }
 
         .live-radar-dot {
@@ -3243,36 +3420,114 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
           margin-top: 2px;
         }
 
-        .broker-action-buttons {
+        .broker-action-stack {
           display: flex;
           flex-direction: column;
           gap: 0.75rem;
+          width: 100%;
         }
 
-        .broker-btn {
+        .broker-primary-btn {
           width: 100%;
-          padding: 0.85rem;
-          font-size: 0.875rem;
-          font-weight: 700;
+          padding: 0.95rem 1.25rem;
+          font-size: 0.9375rem;
+          font-weight: 800;
           display: inline-flex;
           align-items: center;
           justify-content: center;
-          gap: 8px;
+          gap: 9px;
+          border-radius: 14px;
+          cursor: pointer;
+          transition: all var(--transition-fast);
+          border: none;
+          box-shadow: 0 4px 18px rgba(221, 167, 82, 0.35);
+        }
+
+        .broker-primary-btn:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 8px 26px rgba(221, 167, 82, 0.5);
+        }
+
+        .broker-quick-channels {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 0.65rem;
+          width: 100%;
+        }
+
+        .broker-channel-btn {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 7px;
+          padding: 0.75rem 0.85rem;
+          font-size: 0.8125rem;
+          font-weight: 700;
           border-radius: 12px;
           text-decoration: none;
           cursor: pointer;
+          transition: all var(--transition-fast);
+          box-sizing: border-box;
         }
 
-        .btn-dark {
-          background: rgba(255, 255, 255, 0.08);
+        .broker-channel-btn.whatsapp-channel {
+          background: rgba(16, 185, 129, 0.10);
+          border: 1px solid rgba(16, 185, 129, 0.28);
+          color: #10B981;
+        }
+
+        [data-theme="dark"] .broker-channel-btn.whatsapp-channel {
+          color: #34D399;
+        }
+
+        .broker-channel-btn.whatsapp-channel:hover {
+          background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+          color: #FFFFFF;
+          border-color: #10B981;
+          transform: translateY(-1px);
+          box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35);
+        }
+
+        .broker-channel-btn.phone-channel {
+          background: rgba(255, 255, 255, 0.05);
           border: 1px solid var(--border-subtle);
           color: var(--text-primary);
-          transition: all var(--transition-fast);
         }
 
-        .btn-dark:hover {
+        [data-theme="light"] .broker-channel-btn.phone-channel {
+          background: #FFFFFF;
+          border-color: rgba(0, 0, 0, 0.12);
+        }
+
+        .broker-channel-btn.phone-channel:hover {
           border-color: var(--gold-primary);
           color: var(--gold-primary);
+          transform: translateY(-1px);
+        }
+
+        .broker-calendar-section {
+          margin-top: 1.25rem;
+          padding-top: 1.25rem;
+          border-top: 1px solid var(--border-subtle);
+        }
+
+        .calendar-section-header {
+          margin-bottom: 0.75rem;
+        }
+
+        .calendar-eyebrow {
+          font-size: 0.625rem;
+          font-weight: 800;
+          color: var(--gold-primary);
+          text-transform: uppercase;
+          letter-spacing: 0.12em;
+          display: block;
+        }
+
+        .calendar-subtext {
+          font-size: 0.75rem;
+          color: var(--text-secondary);
+          margin: 2px 0 0 0;
         }
 
         /* Viewing Form Card */
@@ -3508,8 +3763,9 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
         /* Similar Section */
         .similar-section {
           border-top: 1px solid var(--border-subtle);
-          margin-top: 2.25rem;
-          padding-top: 2.25rem;
+          margin-top: 0;
+          padding-top: 3.5rem;
+          padding-bottom: 2rem;
         }
 
         .similar-header {
@@ -3618,6 +3874,32 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
           font-size: 0.875rem;
           white-space: nowrap;
           border-radius: 8px;
+        }
+
+        /* 7. Similar Recommended Properties */
+        .similar-section {
+          margin-top: 0.5rem;
+          margin-bottom: 0;
+          padding-top: 0;
+        }
+
+        .similar-header {
+          margin-bottom: 1.25rem;
+        }
+
+        .similar-title {
+          font-family: var(--font-heading);
+          font-size: 1.75rem;
+          font-weight: 800;
+          color: var(--text-primary);
+          letter-spacing: -0.02em;
+          margin: 0.25rem 0 0;
+        }
+
+        .similar-grid {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 1.5rem;
         }
 
         @media (max-width: 1024px) {

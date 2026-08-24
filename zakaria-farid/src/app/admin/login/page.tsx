@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { Loader2, LogIn, Lock, Mail, ShieldCheck } from 'lucide-react';
+import { BrandLogo } from '@/components/BrandLogo';
 
 export default function AdminLoginPage() {
   const [email, setEmail] = useState('');
@@ -37,7 +38,7 @@ export default function AdminLoginPage() {
       background: 'linear-gradient(135deg, #07090D 0%, #0A0C10 50%, #11141B 100%)',
       padding: '24px',
       boxSizing: 'border-box',
-      fontFamily: "'Plus Jakarta Sans', sans-serif",
+      fontFamily: "'ThmanyahSans', 'Cairo', 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif",
     }}>
       <div style={{
         background: 'rgba(22, 23, 28, 0.98)',
@@ -52,30 +53,10 @@ export default function AdminLoginPage() {
         gap: '24px',
       }}>
         {/* Header */}
-        <div style={{ textAlign: 'center' }}>
-          <div style={{
-            width: '56px',
-            height: '56px',
-            borderRadius: '16px',
-            background: 'linear-gradient(135deg, #DDA752 0%, #C48D3A 100%)',
-            color: '#0A0C10',
-            display: 'inline-flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontFamily: "'Plus Jakarta Sans', sans-serif",
-            fontWeight: 900,
-            fontSize: '22px',
-            marginBottom: '14px',
-            border: '1.5px solid rgba(221,167,82,0.4)',
-            boxShadow: '0 8px 20px rgba(221,167,82,0.25)',
-          }}>
-            ZF
-          </div>
-          <h1 style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '24px', fontWeight: 800, color: '#FFFFFF', margin: '0 0 4px' }}>
-            Admin Portal
-          </h1>
-          <p style={{ color: '#8E9BAE', fontSize: '13px', margin: 0, fontWeight: 500 }}>
-            Zakaria Farid Real Estate Management
+        <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+          <BrandLogo size="md" locale="en" />
+          <p style={{ color: 'rgba(255, 255, 255, 0.55)', fontSize: '12px', margin: '4px 0 0', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+            Private Executive Advisory Portal
           </p>
         </div>
 
@@ -105,7 +86,7 @@ export default function AdminLoginPage() {
                   transition: 'border-color 0.2s',
                   color: '#FFFFFF',
                   background: 'rgba(255,255,255,0.05)',
-                  fontFamily: "'Plus Jakarta Sans', sans-serif",
+                  fontFamily: "'ThmanyahSans', 'Cairo', 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif",
                 }}
               />
             </div>
@@ -135,7 +116,7 @@ export default function AdminLoginPage() {
                   transition: 'border-color 0.2s',
                   color: '#FFFFFF',
                   background: 'rgba(255,255,255,0.05)',
-                  fontFamily: "'Plus Jakarta Sans', sans-serif",
+                  fontFamily: "'ThmanyahSans', 'Cairo', 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif",
                 }}
               />
             </div>
@@ -175,7 +156,7 @@ export default function AdminLoginPage() {
               gap: '8px',
               boxShadow: '0 4px 14px rgba(221,167,82,0.35)',
               transition: 'transform 0.15s ease',
-              fontFamily: "'Plus Jakarta Sans', sans-serif",
+              fontFamily: "'ThmanyahSans', 'Cairo', 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif",
               letterSpacing: '0.02em',
             }}
           >

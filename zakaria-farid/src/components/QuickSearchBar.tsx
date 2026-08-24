@@ -5,35 +5,140 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 interface QuickSearchBarProps {
   onSearch: (filters: { location: string; propertyType: string; priceTier: string }) => void;
+  locale?: string;
 }
 
 const LOCATION_OPTIONS = [
-  { value: 'New Cairo, Fifth Settlement', label: 'New Cairo, Fifth Settlement', shortLabel: 'New Cairo, Fifth Settlement' },
-  { value: 'Sheikh Zayed', label: 'Sheikh Zayed & 6th of October', shortLabel: 'Sheikh Zayed' },
-  { value: 'North Coast', label: 'North Coast (Sahel)', shortLabel: 'North Coast (Sahel)' },
-  { value: 'Ain Sokhna', label: 'Ain Sokhna (Red Sea)', shortLabel: 'Ain Sokhna' },
-  { value: 'El Gouna', label: 'El Gouna (Red Sea)', shortLabel: 'El Gouna' },
-  { value: 'Madinaty', label: 'Madinaty (East Cairo)', shortLabel: 'Madinaty' },
+  { 
+    value: 'New Cairo, Fifth Settlement', 
+    label: 'New Cairo, Fifth Settlement', 
+    shortLabel: 'New Cairo, Fifth Settlement',
+    labelAr: 'القاهرة الجديدة والتجمع الخامس',
+    shortLabelAr: 'القاهرة الجديدة والتجمع'
+  },
+  { 
+    value: 'Sheikh Zayed', 
+    label: 'Sheikh Zayed & 6th of October', 
+    shortLabel: 'Sheikh Zayed',
+    labelAr: 'الشيخ زايد والسادس من أكتوبر',
+    shortLabelAr: 'الشيخ زايد وأكتوبر'
+  },
+  { 
+    value: 'North Coast', 
+    label: 'North Coast (Sahel)', 
+    shortLabel: 'North Coast (Sahel)',
+    labelAr: 'الساحل الشمالي (سيدي عبد الرحمن)',
+    shortLabelAr: 'الساحل الشمالي'
+  },
+  { 
+    value: 'Ain Sokhna', 
+    label: 'Ain Sokhna (Red Sea)', 
+    shortLabel: 'Ain Sokhna',
+    labelAr: 'العين السخنة (ساحل البحر الأحمر)',
+    shortLabelAr: 'العين السخنة'
+  },
+  { 
+    value: 'El Gouna', 
+    label: 'El Gouna (Red Sea)', 
+    shortLabel: 'El Gouna',
+    labelAr: 'الجونة (البحر الأحمر)',
+    shortLabelAr: 'الجونة'
+  },
+  { 
+    value: 'Madinaty', 
+    label: 'Madinaty (East Cairo)', 
+    shortLabel: 'Madinaty',
+    labelAr: 'مدينتي (شرق القاهرة)',
+    shortLabelAr: 'مدينتي'
+  },
 ];
 
 const TYPE_OPTIONS = [
-  { value: 'Standalone Villa', label: 'Standalone Villa', shortLabel: 'Standalone Villa' },
-  { value: 'Penthouse', label: 'Sky Penthouse', shortLabel: 'Sky Penthouse' },
-  { value: 'Mansion', label: 'Grand Mansion', shortLabel: 'Grand Mansion' },
-  { value: 'Apartment', label: 'Luxury Apartment', shortLabel: 'Luxury Apartment' },
-  { value: 'Chalet', label: 'Prime Chalet', shortLabel: 'Prime Chalet' },
-  { value: 'Duplex', label: 'Sky Duplex', shortLabel: 'Sky Duplex' },
+  { 
+    value: 'Standalone Villa', 
+    label: 'Standalone Villa', 
+    shortLabel: 'Standalone Villa',
+    labelAr: 'قصور وفيلات مستقلة',
+    shortLabelAr: 'فيلات مستقلة'
+  },
+  { 
+    value: 'Penthouse', 
+    label: 'Sky Penthouse', 
+    shortLabel: 'Sky Penthouse',
+    labelAr: 'سكاي بنتهاوس ورووف',
+    shortLabelAr: 'بنتهاوس فاخر'
+  },
+  { 
+    value: 'Mansion', 
+    label: 'Grand Mansion', 
+    shortLabel: 'Grand Mansion',
+    labelAr: 'قصور سيادية كبرى',
+    shortLabelAr: 'قصور سيادية'
+  },
+  { 
+    value: 'Apartment', 
+    label: 'Luxury Apartment', 
+    shortLabel: 'Luxury Apartment',
+    labelAr: 'أجنحة وشقق فاخرة',
+    shortLabelAr: 'شقق وأجنحة'
+  },
+  { 
+    value: 'Chalet', 
+    label: 'Prime Chalet', 
+    shortLabel: 'Prime Chalet',
+    labelAr: 'شاليهات ساحلية صف أول',
+    shortLabelAr: 'شاليهات ساحلية'
+  },
+  { 
+    value: 'Duplex', 
+    label: 'Sky Duplex', 
+    shortLabel: 'Sky Duplex',
+    labelAr: 'دوبلكس بحديقة خاصة',
+    shortLabelAr: 'دوبلكس بحديقة'
+  },
 ];
 
 const PRICE_OPTIONS = [
-  { value: '15,000,000 - 45,000,000 EGP', label: '15M – 45M EGP', shortLabel: '15M – 45M EGP' },
-  { value: 'Under 20,000,000 EGP', label: 'Under 20M EGP', shortLabel: '< 20M EGP' },
-  { value: '20,000,000 - 35,000,000 EGP', label: '20M – 35M EGP', shortLabel: '20M – 35M EGP' },
-  { value: '35,000,000 - 60,000,000 EGP', label: '35M – 60M EGP', shortLabel: '35M – 60M EGP' },
-  { value: '60,000,000+ EGP', label: 'Ultra-Luxury (60M+ EGP)', shortLabel: '60M+ EGP' },
+  { 
+    value: '15,000,000 - 45,000,000 EGP', 
+    label: '15M – 45M EGP', 
+    shortLabel: '15M – 45M EGP',
+    labelAr: '١٥ – ٤٥ مليون ج.م',
+    shortLabelAr: '١٥ – ٤٥ مليون ج.م'
+  },
+  { 
+    value: 'Under 20,000,000 EGP', 
+    label: 'Under 20M EGP', 
+    shortLabel: '< 20M EGP',
+    labelAr: 'أقل من ٢٠ مليون ج.م',
+    shortLabelAr: '< ٢٠ مليون ج.م'
+  },
+  { 
+    value: '20,000,000 - 35,000,000 EGP', 
+    label: '20M – 35M EGP', 
+    shortLabel: '20M – 35M EGP',
+    labelAr: '٢٠ – ٣٥ مليون ج.م',
+    shortLabelAr: '٢٠ – ٣٥ مليون ج.م'
+  },
+  { 
+    value: '35,000,000 - 60,000,000 EGP', 
+    label: '35M – 60M EGP', 
+    shortLabel: '35M – 60M EGP',
+    labelAr: '٣٥ – ٦٠ مليون ج.م',
+    shortLabelAr: '٣٥ – ٦٠ مليون ج.م'
+  },
+  { 
+    value: '60,000,000+ EGP', 
+    label: 'Ultra-Luxury (60M+ EGP)', 
+    shortLabel: '60M+ EGP',
+    labelAr: 'قصور فائقة (٦٠ مليون+ ج.م)',
+    shortLabelAr: '٦٠ مليون+ ج.م'
+  },
 ];
 
-export const QuickSearchBar: React.FC<QuickSearchBarProps> = ({ onSearch }) => {
+export const QuickSearchBar: React.FC<QuickSearchBarProps> = ({ onSearch, locale: propLocale }) => {
+  const isAr = propLocale === 'ar' || (typeof document !== 'undefined' && (document.documentElement.lang === 'ar' || document.documentElement.dir === 'rtl'));
+
   const [location, setLocation] = useState('New Cairo, Fifth Settlement');
   const [propertyType, setPropertyType] = useState('Standalone Villa');
   const [priceTier, setPriceTier] = useState('15,000,000 - 45,000,000 EGP');
@@ -82,10 +187,10 @@ export const QuickSearchBar: React.FC<QuickSearchBarProps> = ({ onSearch }) => {
   };
 
   return (
-    <form ref={barRef} className="quick-search-bar" onSubmit={handleSubmit}>
+    <form ref={barRef} className="quick-search-bar" onSubmit={handleSubmit} dir={isAr ? 'rtl' : 'ltr'}>
       {/* 1. Location Custom Dropdown */}
       <div className="search-field custom-filter-dropdown">
-        <label className="field-label">LOCATION</label>
+        <label className="field-label">{isAr ? 'المدينة / المنطقة' : 'LOCATION'}</label>
         <button
           type="button"
           className={`filter-custom-trigger ${openDropdown === 'location' ? 'open' : ''}`}
@@ -96,7 +201,10 @@ export const QuickSearchBar: React.FC<QuickSearchBarProps> = ({ onSearch }) => {
           <div className="trigger-left">
             <MapPin size={15} className="field-icon" />
             <span className="trigger-value">
-              {LOCATION_OPTIONS.find((o) => o.value === location)?.shortLabel || location}
+              {(() => {
+                const opt = LOCATION_OPTIONS.find((o) => o.value === location);
+                return opt ? (isAr ? opt.shortLabelAr : opt.shortLabel) : location;
+              })()}
             </span>
           </div>
           <ChevronDown size={14} className={`chevron-icon ${openDropdown === 'location' ? 'rotate' : ''}`} />
@@ -122,7 +230,7 @@ export const QuickSearchBar: React.FC<QuickSearchBarProps> = ({ onSearch }) => {
                     setOpenDropdown(null);
                   }}
                 >
-                  <span className="option-label">{opt.label}</span>
+                  <span className="option-label">{isAr ? opt.labelAr : opt.label}</span>
                   {location === opt.value && <Check size={14} className="option-check" />}
                 </button>
               ))}
@@ -135,7 +243,7 @@ export const QuickSearchBar: React.FC<QuickSearchBarProps> = ({ onSearch }) => {
 
       {/* 2. Property Type Custom Dropdown */}
       <div className="search-field custom-filter-dropdown">
-        <label className="field-label">PROPERTY TYPE</label>
+        <label className="field-label">{isAr ? 'نوع العقار' : 'PROPERTY TYPE'}</label>
         <button
           type="button"
           className={`filter-custom-trigger ${openDropdown === 'type' ? 'open' : ''}`}
@@ -146,7 +254,10 @@ export const QuickSearchBar: React.FC<QuickSearchBarProps> = ({ onSearch }) => {
           <div className="trigger-left">
             <Building2 size={15} className="field-icon" />
             <span className="trigger-value">
-              {TYPE_OPTIONS.find((o) => o.value === propertyType)?.shortLabel || propertyType}
+              {(() => {
+                const opt = TYPE_OPTIONS.find((o) => o.value === propertyType);
+                return opt ? (isAr ? opt.shortLabelAr : opt.shortLabel) : propertyType;
+              })()}
             </span>
           </div>
           <ChevronDown size={14} className={`chevron-icon ${openDropdown === 'type' ? 'rotate' : ''}`} />
@@ -172,7 +283,7 @@ export const QuickSearchBar: React.FC<QuickSearchBarProps> = ({ onSearch }) => {
                     setOpenDropdown(null);
                   }}
                 >
-                  <span className="option-label">{opt.label}</span>
+                  <span className="option-label">{isAr ? opt.labelAr : opt.label}</span>
                   {propertyType === opt.value && <Check size={14} className="option-check" />}
                 </button>
               ))}
@@ -185,7 +296,7 @@ export const QuickSearchBar: React.FC<QuickSearchBarProps> = ({ onSearch }) => {
 
       {/* 3. Price Range Custom Dropdown */}
       <div className="search-field custom-filter-dropdown">
-        <label className="field-label">PRICE RANGE</label>
+        <label className="field-label">{isAr ? 'نطاق السعر' : 'PRICE RANGE'}</label>
         <button
           type="button"
           className={`filter-custom-trigger ${openDropdown === 'price' ? 'open' : ''}`}
@@ -196,7 +307,10 @@ export const QuickSearchBar: React.FC<QuickSearchBarProps> = ({ onSearch }) => {
           <div className="trigger-left">
             <Banknote size={15} className="field-icon" />
             <span className="trigger-value">
-              {PRICE_OPTIONS.find((o) => o.value === priceTier)?.shortLabel || priceTier}
+              {(() => {
+                const opt = PRICE_OPTIONS.find((o) => o.value === priceTier);
+                return opt ? (isAr ? opt.shortLabelAr : opt.shortLabel) : priceTier;
+              })()}
             </span>
           </div>
           <ChevronDown size={14} className={`chevron-icon ${openDropdown === 'price' ? 'rotate' : ''}`} />
@@ -222,7 +336,7 @@ export const QuickSearchBar: React.FC<QuickSearchBarProps> = ({ onSearch }) => {
                     setOpenDropdown(null);
                   }}
                 >
-                  <span className="option-label">{opt.label}</span>
+                  <span className="option-label">{isAr ? opt.labelAr : opt.label}</span>
                   {priceTier === opt.value && <Check size={14} className="option-check" />}
                 </button>
               ))}
@@ -233,7 +347,7 @@ export const QuickSearchBar: React.FC<QuickSearchBarProps> = ({ onSearch }) => {
 
       {/* Submit Button */}
       <button type="submit" className="search-submit-btn">
-        <span>Search Properties</span>
+        <span>{isAr ? 'بحث في الصروح' : 'Search Properties'}</span>
       </button>
 
       <style>{`
@@ -277,16 +391,17 @@ export const QuickSearchBar: React.FC<QuickSearchBarProps> = ({ onSearch }) => {
           background: linear-gradient(
             135deg,
             rgba(255, 255, 255, 0.65) 0%,
-            rgba(255, 255, 255, 0.30) 35%,
-            rgba(255, 255, 255, 0.48) 100%
+            rgba(255, 255, 255, 0.32) 40%,
+            rgba(255, 255, 255, 0.52) 100%
           );
-          backdrop-filter: blur(20px) saturate(210%) contrast(108%) brightness(108%);
-          -webkit-backdrop-filter: blur(20px) saturate(210%) contrast(108%) brightness(108%);
-          border: 1px solid rgba(255, 255, 255, 0.75);
+          backdrop-filter: blur(32px) saturate(210%) contrast(106%);
+          -webkit-backdrop-filter: blur(32px) saturate(210%) contrast(106%);
+          border: 1.5px solid rgba(255, 255, 255, 0.75);
           box-shadow: 
-            0 18px 44px rgba(15, 23, 42, 0.08), 
-            inset 0 1.5px 2px #FFFFFF,
-            inset 0 -1px 1px rgba(255, 255, 255, 0.25);
+            0 24px 56px rgba(15, 23, 42, 0.14), 
+            0 4px 16px rgba(0, 0, 0, 0.04),
+            inset 0 1.5px 2px rgba(255, 255, 255, 0.95),
+            inset 0 -1px 1px rgba(0, 0, 0, 0.05);
         }
 
         .search-field {
@@ -307,12 +422,14 @@ export const QuickSearchBar: React.FC<QuickSearchBarProps> = ({ onSearch }) => {
         }
 
         [data-theme="dark"] .field-label {
-          color: #E8C87A;
+          color: #E5B869;
           text-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
         }
 
         [data-theme="light"] .field-label {
-          color: #B8860B;
+          color: #8C6826;
+          font-weight: 800;
+          letter-spacing: 0.14em;
         }
 
         .filter-custom-trigger {
@@ -346,11 +463,11 @@ export const QuickSearchBar: React.FC<QuickSearchBarProps> = ({ onSearch }) => {
         }
 
         [data-theme="dark"] .field-icon {
-          color: #F5C672;
+          color: #E5B869;
         }
 
         [data-theme="light"] .field-icon {
-          color: #B8860B;
+          color: #8C6826;
         }
 
         .trigger-value {
@@ -367,7 +484,8 @@ export const QuickSearchBar: React.FC<QuickSearchBarProps> = ({ onSearch }) => {
         }
 
         [data-theme="light"] .trigger-value {
-          color: #0D1117;
+          color: #141210;
+          font-weight: 700;
         }
 
         .filter-custom-trigger:hover .trigger-value,
@@ -461,15 +579,16 @@ export const QuickSearchBar: React.FC<QuickSearchBarProps> = ({ onSearch }) => {
         [data-theme="light"] .filter-custom-menu {
           background: linear-gradient(
             145deg,
-            rgba(255, 255, 255, 0.92) 0%,
-            rgba(255, 255, 255, 0.82) 50%,
-            rgba(255, 255, 255, 0.90) 100%
+            rgba(255, 255, 255, 0.88) 0%,
+            rgba(255, 255, 255, 0.68) 50%,
+            rgba(255, 255, 255, 0.82) 100%
           );
-          backdrop-filter: blur(20px) saturate(210%) contrast(108%) brightness(108%);
-          -webkit-backdrop-filter: blur(20px) saturate(210%) contrast(108%) brightness(108%);
-          border: 1px solid rgba(255, 255, 255, 0.95);
+          backdrop-filter: blur(28px) saturate(210%);
+          -webkit-backdrop-filter: blur(28px) saturate(210%);
+          border: 1.5px solid rgba(255, 255, 255, 0.85);
           box-shadow: 
-            0 18px 45px rgba(15, 23, 42, 0.12),
+            0 24px 56px rgba(15, 23, 42, 0.16),
+            0 4px 16px rgba(0, 0, 0, 0.04),
             inset 0 1.5px 2px #FFFFFF;
         }
 
@@ -493,7 +612,7 @@ export const QuickSearchBar: React.FC<QuickSearchBarProps> = ({ onSearch }) => {
         }
 
         [data-theme="light"] .filter-menu-option {
-          color: #1E293B;
+          color: #141210;
         }
 
         [data-theme="dark"] .filter-menu-option {
@@ -501,15 +620,26 @@ export const QuickSearchBar: React.FC<QuickSearchBarProps> = ({ onSearch }) => {
         }
 
         .filter-menu-option:hover {
-          background: rgba(197, 154, 69, 0.14);
-          color: var(--gold-primary);
+          background: rgba(229, 184, 105, 0.15);
+          color: #E5B869;
           transform: translateX(2px);
         }
 
+        [data-theme="light"] .filter-menu-option:hover {
+          background: rgba(184, 147, 74, 0.12);
+          color: #8C6826;
+        }
+
         .filter-menu-option.selected {
-          background: rgba(197, 154, 69, 0.20);
-          color: var(--gold-primary);
+          background: rgba(229, 184, 105, 0.20);
+          color: #E5B869;
           font-weight: 700;
+        }
+
+        [data-theme="light"] .filter-menu-option.selected {
+          background: rgba(184, 147, 74, 0.18);
+          color: #8C6826;
+          font-weight: 800;
         }
 
         .option-label {
@@ -519,8 +649,12 @@ export const QuickSearchBar: React.FC<QuickSearchBarProps> = ({ onSearch }) => {
         }
 
         .option-check {
-          color: var(--gold-primary);
+          color: #E5B869;
           flex-shrink: 0;
+        }
+
+        [data-theme="light"] .option-check {
+          color: #8C6826;
         }
 
         .search-divider {
@@ -529,18 +663,36 @@ export const QuickSearchBar: React.FC<QuickSearchBarProps> = ({ onSearch }) => {
           background: var(--border-subtle);
         }
 
+        [data-theme="light"] .search-divider {
+          background: rgba(184, 147, 74, 0.20);
+        }
+
         .search-submit-btn {
           white-space: nowrap;
           padding: 0.8125rem 1.75rem;
           font-size: 0.9375rem;
-          font-weight: 700;
-          background: linear-gradient(135deg, #F5E5BE 0%, #D4AF37 45%, #C59A45 100%);
+          font-weight: 800;
+          background: linear-gradient(135deg, #FFF0C2 0%, #E5B869 50%, #B8934A 100%);
           color: #0A0C10;
           border-radius: 10px;
           flex-shrink: 0;
           border: 1px solid rgba(255, 255, 255, 0.6);
-          box-shadow: 0 4px 18px rgba(197, 154, 69, 0.25), inset 0 1px 1.5px rgba(255, 255, 255, 0.7);
+          box-shadow: 0 4px 18px rgba(229, 184, 105, 0.35), inset 0 1px 1.5px rgba(255, 255, 255, 0.7);
           transition: all var(--transition-smooth);
+          cursor: pointer;
+        }
+
+        [data-theme="light"] .search-submit-btn {
+          background: linear-gradient(135deg, #FFF0C2 0%, #E5B869 50%, #B8934A 100%);
+          color: #0A0C10;
+          border: 1px solid rgba(255, 255, 255, 0.8);
+          box-shadow: 0 4px 18px rgba(184, 147, 74, 0.30), inset 0 1px 1.5px rgba(255, 255, 255, 0.8);
+        }
+
+        .search-submit-btn:hover {
+          background: linear-gradient(135deg, #FFFFFF 0%, #FFF0C2 40%, #E5B869 100%);
+          box-shadow: 0 6px 24px rgba(229, 184, 105, 0.5);
+          transform: translateY(-1px);
         }
 
         .filter-custom-trigger:focus-visible,
@@ -550,6 +702,30 @@ export const QuickSearchBar: React.FC<QuickSearchBarProps> = ({ onSearch }) => {
           outline: 2px solid var(--gold-primary) !important;
           outline-offset: 2px !important;
           box-shadow: 0 0 16px var(--gold-glow) !important;
+        }
+
+        /* RTL overrides */
+        [dir="rtl"].quick-search-bar,
+        .quick-search-bar[dir="rtl"] {
+          text-align: right;
+        }
+
+        .quick-search-bar[dir="rtl"] .filter-custom-trigger {
+          text-align: right;
+        }
+
+        .quick-search-bar[dir="rtl"] .field-label {
+          letter-spacing: normal;
+        }
+
+        .quick-search-bar[dir="rtl"] .trigger-value {
+          line-height: 1.5;
+          padding-bottom: 2px;
+        }
+
+        .quick-search-bar[dir="rtl"] .search-submit-btn {
+          font-family: inherit;
+          font-weight: 700;
         }
 
         @media (max-width: 900px) {
@@ -574,6 +750,21 @@ export const QuickSearchBar: React.FC<QuickSearchBarProps> = ({ onSearch }) => {
             width: 100%;
             min-width: 100%;
             margin-top: 6px;
+          }
+        }
+
+        @media (max-width: 600px) {
+          .quick-search-bar {
+            padding: 0.95rem 1rem;
+            border-radius: 20px;
+            gap: 0.75rem;
+          }
+          .trigger-value {
+            font-size: 0.875rem;
+          }
+          .search-submit-btn {
+            padding: 0.75rem 1.25rem;
+            font-size: 0.875rem;
           }
         }
       `}</style>

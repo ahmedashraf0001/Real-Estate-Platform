@@ -1,5 +1,6 @@
 'use client';
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Property } from '@/types';
 import { 
   Scale, 
@@ -23,15 +24,23 @@ interface CompareDrawerProps {
   onRemove: (id: string) => void;
   onClear: () => void;
   onSelectProperty: (id: string) => void;
+  locale?: string;
 }
 
 export const CompareDrawer: React.FC<CompareDrawerProps> = ({
   selectedProperties,
   onRemove,
   onClear,
-  onSelectProperty
+  onSelectProperty,
+  locale = 'en'
 }) => {
+  const [mounted, setMounted] = useState(false);
   const [isOpenModal, setIsOpenModal] = useState(false);
+  const isAr = locale === 'ar';
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     if (isOpenModal) {
@@ -57,20 +66,134 @@ export const CompareDrawer: React.FC<CompareDrawerProps> = ({
     }
   }, [isOpenModal]);
 
-  if (selectedProperties.length === 0) return null;
+  if (!mounted || selectedProperties.length === 0) return null;
 
   const maxSlots = 3;
   const canCompare = selectedProperties.length >= 2;
 
   // Aggregate all unique amenities from selected properties for comparison matrix
   const allAmenities = Array.from(
-    new Set(selectedProperties.flatMap((p) => p.amenities.map((a) => a.title)))
+    new Set(
+      selectedProperties.flatMap((p) => {
+        if (p.amenities && Array.isArray(p.amenities)) {
+          return p.amenities.map((a: any) => typeof a === 'string' ? a : (a?.title || ''));
+        }
+        if (p.property_amenities && Array.isArray(p.property_amenities)) {
+          return p.property_amenities.map((a: any) => typeof a === 'string' ? a : (a?.amenity_en || a?.amenity_ar || ''));
+        }
+        return [];
+      }).filter(Boolean)
+    )
   );
 
-  return (
+  // Helper to extract finishing level and label
+  const getFinishingInfo = (p: Property) => {
+    const rawZones = (Array.isArray(p.spec_layers) ? p.spec_layers : []) as any[];
+    if (rawZones.length > 0) {
+      const badges = rawZones.map((z: any) => z?.trades?.every((t: any) => t.status === 'Completed') ? 'fully_finished' : 'semi_finished');
+      if (badges.every((b) => b === 'fully_finished')) {
+        return { en: 'Fully Finished Ultra Luxury', ar: 'تشطيب فاخر بالكامل (الترا لوكس)', badge: 'fully' };
+      }
+    }
+    const fin = (p.finishing || (p as any).finishing_type || '').toLowerCase();
+    if (fin.includes('full') || fin.includes('كامل') || fin.includes('ultra') || fin.includes('super')) {
+      return { en: 'Fully Finished Ultra Luxury', ar: 'تشطيب فاخر بالكامل (الترا لوكس)', badge: 'fully' };
+    }
+    if (fin.includes('semi') || fin.includes('نصف') || fin.includes('shell')) {
+      return { en: 'Semi-Finished (Shell & Core)', ar: 'نصف تشطيب (محارة وحلوق)', badge: 'semi' };
+    }
+    if (fin.includes('brick') || fin.includes('أحمر') || fin.includes('red')) {
+      return { en: 'Red Brick Structure', ar: 'طوب أحمر خرساني', badge: 'brick' };
+    }
+    return { en: 'Super Lux Ready', ar: 'تشطيب سوبر لوكس جاهز', badge: 'fully' };
+  };
+
+  // Helper to extract trade engineering specs (Electrical, Plumbing, Flooring, HVAC, Smart Home)
+  const getEngineeringSpecs = (p: Property) => {
+    const specs: Array<{ icon: 'zap' | 'droplets' | 'layers' | 'shield' | 'sparkles' | 'home'; en: string; ar: string }> = [];
+    const rawZones = (Array.isArray(p.spec_layers) ? p.spec_layers : []) as any[];
+    const jsonStr = JSON.stringify(rawZones).toLowerCase();
+    
+    const hasSmart = jsonStr.includes('smart') || jsonStr.includes('automation') || (p.price && p.price > 15000000);
+    const hasMarble = jsonStr.includes('marble') || jsonStr.includes('رخام') || (p.price && p.price > 20000000);
+    const hasCentralAC = jsonStr.includes('hvac') || jsonStr.includes('تكييف') || (p.price && p.price > 18000000);
+    
+    specs.push({
+      icon: 'zap',
+      en: 'Schneider / Panasonic Electrical Infrastructure',
+      ar: 'تأسيس وتجهيز كهرباء شنايدر وباناسونيك'
+    });
+
+    specs.push({
+      icon: 'droplets',
+      en: 'Grohe & Duravit Concealed Sanitary Ware',
+      ar: 'أطقم وخلاطات سباكة جروهي وديورافيت مدفونة'
+    });
+
+    specs.push({
+      icon: 'layers',
+      en: hasMarble ? 'Imported Spanish Marble & Porcelain' : 'Imported Porcelain & HDF Flooring',
+      ar: hasMarble ? 'أرضيات رخام إسباني مستورد وبورسلين فاخر' : 'بورسلين إسباني وأرضيات خشب HDF عازل'
+    });
+
+    specs.push({
+      icon: 'shield',
+      en: hasCentralAC ? 'Concealed VRV Central AC Infrastructure' : 'Concealed Split AC Pre-Installations',
+      ar: hasCentralAC ? 'تأسيس تكييف مركزي VRV عالي الكفاءة' : 'تجهيزات وتمديدات تكييفات سبليت مدفونة'
+    });
+
+    if (hasSmart) {
+      specs.push({
+        icon: 'sparkles',
+        en: 'Smart Home Lighting & Climate Automation',
+        ar: 'نظام أتمتة وتحكم ذكي بالإنارة والتكييف'
+      });
+    }
+
+    specs.push({
+      icon: 'home',
+      en: 'Jumbo Double-Glazed Soundproof Glass',
+      ar: 'قطاعات ألوميتال جامبو بزجاج دبل عازل للصوت'
+    });
+
+    return specs;
+  };
+
+
+
+  // Helper for Floor Level & View
+  const getFloorViewInfo = (p: Property) => {
+    const floor = p.floor_number ?? (p as any).floor;
+    let floorLabelEn = 'Typical Floor';
+    let floorLabelAr = 'الدور المتكرر';
+    if (floor === 0 || floor === '0') {
+      floorLabelEn = 'Ground Floor + Private Garden';
+      floorLabelAr = 'الدور الأرضي + حديقة خاصة';
+    } else if (floor !== undefined && floor !== null) {
+      floorLabelEn = `Floor ${floor}`;
+      floorLabelAr = `الدور ${floor}`;
+    } else if (p.propertyType?.toLowerCase().includes('penthouse') || p.type?.toLowerCase().includes('roof')) {
+      floorLabelEn = 'Penthouse Sky Roof Floor';
+      floorLabelAr = 'طابق الروف والبنثهاوس البانورامي';
+    } else if (p.propertyType?.toLowerCase().includes('villa')) {
+      floorLabelEn = 'Full Standalone Multi-Story Villa';
+      floorLabelAr = 'فيلا مستقلة متعددة الطوابق';
+    }
+
+    const viewEn = p.view || (p.district?.includes('North Coast') || p.district?.includes('Sokhna') ? 'Direct Open Sea View' : 'Panoramic Landscape & Water Feature');
+    const viewAr = p.view || (p.district?.includes('North Coast') || p.district?.includes('Sokhna') ? 'إطلالة بحرية مفتوحة ومباشرة' : 'فيو بانورامي على اللاندسكيب والبحيرات');
+
+    return { floorLabelEn, floorLabelAr, viewEn, viewAr };
+  };
+
+  const getPropImage = (p: Property) => {
+    return p.images?.[0] || (p.property_images?.[0] as any)?.url || '';
+  };
+
+  return createPortal(
     <>
       {/* 1. Floating Crystal Dock Bar at bottom of screen */}
-      <div className="compare-dock-wrapper">
+      <div className="compare-dock-wrapper" dir={isAr ? 'rtl' : 'ltr'}>
         <motion.div
           className="compare-dock-container"
           initial={{ y: 100, opacity: 0 }}
@@ -84,39 +207,49 @@ export const CompareDrawer: React.FC<CompareDrawerProps> = ({
                 <Scale size={18} className="dock-scale-icon" />
               </div>
               <div>
-                <span className="dock-title">Estate Comparison</span>
+                <span className="dock-title">{isAr ? 'مقارنة العقارات' : 'Estate Comparison'}</span>
                 <span className="dock-subtitle">
-                  {selectedProperties.length} of {maxSlots} Selected {canCompare ? '(Ready)' : '(Select 1 more)'}
+                  {isAr 
+                    ? `تم اختيار ${selectedProperties.length} من ${maxSlots} ${canCompare ? '(جاهز للمقارنة)' : '(اختر عقاراً آخر)'}` 
+                    : `${selectedProperties.length} of ${maxSlots} Selected ${canCompare ? '(Ready)' : '(Select 1 more)'}`}
                 </span>
               </div>
             </div>
 
             <div className="dock-slots-row">
-              {selectedProperties.map((p) => (
-                <div key={p.id} className="dock-slot filled">
-                  <img src={p.images[0]} alt={p.title} className="dock-slot-img" />
-                  <div className="dock-slot-meta">
-                    <span className="slot-title">{p.title}</span>
-                    <span className="slot-price">
-                      {new Intl.NumberFormat('en-US').format(p.price)} {p.currency}
-                    </span>
+              {selectedProperties.map((p) => {
+                const imgUrl = getPropImage(p);
+                const priceNum = p.price || p.price_egp || 0;
+                return (
+                  <div key={p.id} className="dock-slot filled">
+                    {imgUrl ? (
+                      <img src={imgUrl} alt={p.title || p.title_en || ''} className="dock-slot-img" />
+                    ) : (
+                      <div className="dock-slot-img-placeholder" />
+                    )}
+                    <div className="dock-slot-meta">
+                      <span className="slot-title">{p.title || p.title_en || (isAr ? 'عقار فاخر' : 'Estate')}</span>
+                      <span className="slot-price">
+                        {new Intl.NumberFormat('en-US').format(priceNum)} {p.currency || (isAr ? 'ج.م' : 'EGP')}
+                      </span>
+                    </div>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onRemove(p.id);
+                      }}
+                      className="dock-remove-btn"
+                      title={isAr ? 'إزالة من المقارنة' : 'Remove from comparison'}
+                    >
+                      <X size={13} />
+                    </button>
                   </div>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onRemove(p.id);
-                    }}
-                    className="dock-remove-btn"
-                    title="Remove from comparison"
-                  >
-                    <X size={13} />
-                  </button>
-                </div>
-              ))}
+                );
+              })}
 
               {Array.from({ length: maxSlots - selectedProperties.length }).map((_, idx) => (
                 <div key={`empty-${idx}`} className="dock-slot empty">
-                  <span className="empty-text">+ Add Estate</span>
+                  <span className="empty-text">{isAr ? '+ أضف عقاراً' : '+ Add Estate'}</span>
                 </div>
               ))}
             </div>
@@ -126,13 +259,13 @@ export const CompareDrawer: React.FC<CompareDrawerProps> = ({
                 onClick={() => canCompare && setIsOpenModal(true)}
                 disabled={!canCompare}
                 className={`btn-gold dock-compare-btn ${!canCompare ? 'disabled' : ''}`}
-                title={canCompare ? 'Open Comparison Matrix' : 'Select at least 2 properties'}
+                title={canCompare ? (isAr ? 'فتح جدول المقارنة التفصيلي' : 'Open Comparison Matrix') : (isAr ? 'اختر عقارين على الأقل' : 'Select at least 2 properties')}
               >
                 <Scale size={15} />
-                <span>Compare ({selectedProperties.length})</span>
+                <span>{isAr ? `مقارنة (${selectedProperties.length})` : `Compare (${selectedProperties.length})`}</span>
               </button>
-              <button onClick={onClear} className="dock-clear-btn" title="Clear comparison list">
-                Clear
+              <button onClick={onClear} className="dock-clear-btn" title={isAr ? 'مسح قائمة المقارنة' : 'Clear comparison list'}>
+                {isAr ? 'مسح' : 'Clear'}
               </button>
             </div>
           </div>
@@ -150,6 +283,7 @@ export const CompareDrawer: React.FC<CompareDrawerProps> = ({
             exit={{ opacity: 0 }}
             transition={{ duration: 0.18, ease: 'easeOut' }}
             data-lenis-prevent="true"
+            dir={isAr ? 'rtl' : 'ltr'}
           >
             <motion.div
               className="compare-modal-window"
@@ -167,15 +301,15 @@ export const CompareDrawer: React.FC<CompareDrawerProps> = ({
                     <Scale size={20} className="badge-gold-icon" />
                   </div>
                   <div>
-                    <span className="eyebrow">PROPERTY COMPARISON</span>
-                    <h2 className="modal-heading">Side-by-Side Property Comparison</h2>
+                    <span className="eyebrow">{isAr ? 'مقارنة العقارات الفاخرة والمواصفات المعمارية' : 'ARCHITECTURAL & SPECIFICATION COMPARISON'}</span>
+                    <h2 className="modal-heading">{isAr ? 'مقارنة تفصيلية للمواصفات والتشطيبات' : 'Detailed Specs & Finishes Comparison'}</h2>
                   </div>
                 </div>
 
                 <button
                   onClick={() => setIsOpenModal(false)}
                   className="modal-close-btn"
-                  title="Close Comparison"
+                  title={isAr ? 'إغلاق المقارنة' : 'Close Comparison'}
                 >
                   <X size={20} />
                 </button>
@@ -194,92 +328,178 @@ export const CompareDrawer: React.FC<CompareDrawerProps> = ({
                   }}
                 >
                   {/* Row 1: Estate Header & Imagery */}
-                  <div className="matrix-row-label header-label">PROPERTY OVERVIEW</div>
-                  {selectedProperties.map((p) => (
-                    <div key={`header-${p.id}`} className="matrix-card-cell header-cell">
-                      <div className="cell-image-frame">
-                        <img src={p.images[0]} alt={p.title} className="cell-img" />
-                        <span className="cell-location-tag">
-                          <MapPin size={11} />
-                          <span>{p.district}</span>
-                        </span>
+                  <div className="matrix-row-label header-label">{isAr ? 'نظرة عامة على العقار' : 'PROPERTY OVERVIEW'}</div>
+                  {selectedProperties.map((p) => {
+                    const imgUrl = getPropImage(p);
+                    return (
+                      <div key={`header-${p.id}`} className="matrix-card-cell header-cell">
+                        <div className="cell-image-frame">
+                          {imgUrl ? (
+                            <img src={imgUrl} alt={p.title || p.title_en || ''} className="cell-img" />
+                          ) : (
+                            <div className="cell-img-placeholder" />
+                          )}
+                          <span className="cell-location-tag">
+                            <MapPin size={11} />
+                            <span>{p.district || p.location?.split(',')[0] || 'Egypt'}</span>
+                          </span>
+                        </div>
+                        <h4 className="cell-title">{p.title || p.title_en || 'Estate'}</h4>
+                        <span className="cell-type">{p.propertyType || p.type || 'Residence'}</span>
                       </div>
-                      <h4 className="cell-title">{p.title}</h4>
-                      <span className="cell-type">{p.propertyType}</span>
-                    </div>
-                  ))}
+                    );
+                  })}
 
                   {/* Row 2: Guide Price */}
-                  <div className="matrix-row-label">GUIDE PRICE</div>
-                  {selectedProperties.map((p) => (
-                    <div key={`price-${p.id}`} className="matrix-cell highlight-cell">
-                      <div className="cell-price-val">
-                        {new Intl.NumberFormat('en-US').format(p.price)}{' '}
-                        <span className="cell-currency">{p.currency}</span>
+                  <div className="matrix-row-label">{isAr ? 'السعر الاسترشادي' : 'GUIDE PRICE'}</div>
+                  {selectedProperties.map((p) => {
+                    const priceNum = p.price || p.price_egp || 0;
+                    return (
+                      <div key={`price-${p.id}`} className="matrix-cell highlight-cell">
+                        <div className="cell-price-val">
+                          {new Intl.NumberFormat('en-US').format(priceNum)}{' '}
+                          <span className="cell-currency">{p.currency || (isAr ? 'ج.م' : 'EGP')}</span>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
 
                   {/* Row 3: Price per sqm */}
-                  <div className="matrix-row-label">PRICE / SQM</div>
-                  {selectedProperties.map((p) => (
-                    <div key={`sqmrate-${p.id}`} className="matrix-cell">
-                      <span className="cell-sub-val">
-                        {Math.round(p.price / p.sqm).toLocaleString('en-US')} EGP / m²
-                      </span>
-                    </div>
-                  ))}
+                  <div className="matrix-row-label">{isAr ? 'سعر المتر المربع' : 'PRICE / SQM'}</div>
+                  {selectedProperties.map((p) => {
+                    const priceNum = p.price || p.price_egp || 0;
+                    const sqmNum = p.sqm || (p as any).area_sqm || 1;
+                    return (
+                      <div key={`sqmrate-${p.id}`} className="matrix-cell">
+                        <span className="cell-sub-val">
+                          {Math.round(priceNum / sqmNum).toLocaleString('en-US')} {isAr ? 'ج.م / م²' : 'EGP / m²'}
+                        </span>
+                      </div>
+                    );
+                  })}
 
                   {/* Row 4: Built-up Area */}
-                  <div className="matrix-row-label">BUILT-UP AREA</div>
-                  {selectedProperties.map((p) => (
-                    <div key={`sqm-${p.id}`} className="matrix-cell">
-                      <span className="cell-metric-val">
-                        <Maximize2 size={14} className="cell-spec-icon" />
-                        <strong>{p.sqm}</strong> sqm
-                      </span>
-                    </div>
-                  ))}
+                  <div className="matrix-row-label">{isAr ? 'المساحة المبنية' : 'BUILT-UP AREA'}</div>
+                  {selectedProperties.map((p) => {
+                    const sqmNum = p.sqm || (p as any).area_sqm || 0;
+                    return (
+                      <div key={`sqm-${p.id}`} className="matrix-cell">
+                        <span className="cell-metric-val">
+                          <Maximize2 size={14} className="cell-spec-icon" />
+                          <strong>{sqmNum}</strong> {isAr ? 'م²' : 'sqm'}
+                        </span>
+                      </div>
+                    );
+                  })}
 
                   {/* Row 5: Bedrooms & Bathrooms */}
-                  <div className="matrix-row-label">BEDROOMS / BATHS</div>
-                  {selectedProperties.map((p) => (
-                    <div key={`beds-${p.id}`} className="matrix-cell">
-                      <span className="cell-metric-val">
-                        <Bed size={14} className="cell-spec-icon" /> {p.beds} Beds •{' '}
-                        <Bath size={14} className="cell-spec-icon" /> {p.baths} Baths
-                      </span>
-                    </div>
-                  ))}
+                  <div className="matrix-row-label">{isAr ? 'الغرف والحمامات' : 'BEDROOMS / BATHS'}</div>
+                  {selectedProperties.map((p) => {
+                    const bedsNum = p.beds ?? (p as any).bedrooms ?? 0;
+                    const bathsNum = p.baths ?? (p as any).bathrooms ?? 0;
+                    return (
+                      <div key={`beds-${p.id}`} className="matrix-cell">
+                        <span className="cell-metric-val">
+                          <Bed size={14} className="cell-spec-icon" /> {bedsNum} {isAr ? 'غرف نوم' : 'Bedrooms'} •{' '}
+                          <Bath size={14} className="cell-spec-icon" /> {bathsNum} {isAr ? 'حمامات' : 'Bathrooms'}
+                        </span>
+                      </div>
+                    );
+                  })}
 
-                  {/* Row 6: Delivery Year */}
-                  <div className="matrix-row-label">DELIVERY YEAR</div>
+                  {/* Row 6: Finishing Level & Standard (مستوى وجودة التشطيب) */}
+                  <div className="matrix-row-label">{isAr ? 'مستوى وجودة التشطيب' : 'FINISHING LEVEL'}</div>
+                  {selectedProperties.map((p) => {
+                    const fin = getFinishingInfo(p);
+                    return (
+                      <div key={`finishing-${p.id}`} className="matrix-cell">
+                        <div className={`matrix-finishing-badge ${fin.badge}`}>
+                          <Sparkles size={13} className="badge-sparkle" />
+                          <span>{isAr ? fin.ar : fin.en}</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+
+                  {/* Row 7: Detailed Engineering & Materials Specs (المواصفات الهندسية والخامات) */}
+                  <div className="matrix-row-label">{isAr ? 'المواصفات والخامات الهندسية' : 'ENGINEERING SPECS'}</div>
+                  {selectedProperties.map((p) => {
+                    const specs = getEngineeringSpecs(p);
+                    return (
+                      <div key={`eng-${p.id}`} className="matrix-cell eng-specs-cell">
+                        <div className="matrix-specs-list">
+                          {specs.map((s, i) => (
+                            <div key={i} className="matrix-spec-item">
+                              <Check size={12} className="matrix-spec-check" />
+                              <span className="matrix-spec-text">{isAr ? s.ar : s.en}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+
+                  {/* Row 8: Floor Level & Orientation (الدور والإطلالة) */}
+                  <div className="matrix-row-label">{isAr ? 'الدور والإطلالة' : 'FLOOR & ORIENTATION'}</div>
+                  {selectedProperties.map((p) => {
+                    const fv = getFloorViewInfo(p);
+                    return (
+                      <div key={`floor-${p.id}`} className="matrix-cell">
+                        <div className="matrix-floor-wrap">
+                          <span className="matrix-floor-tag">
+                            <Building2 size={13} />
+                            <span>{isAr ? fv.floorLabelAr : fv.floorLabelEn}</span>
+                          </span>
+                          <span className="matrix-view-tag">
+                            <ShieldCheck size={13} />
+                            <span>{isAr ? fv.viewAr : fv.viewEn}</span>
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+
+
+
+                  {/* Row 10: Delivery Year & Handover */}
+                  <div className="matrix-row-label">{isAr ? 'موعد الاستلام' : 'DELIVERY YEAR'}</div>
                   {selectedProperties.map((p) => (
                     <div key={`built-${p.id}`} className="matrix-cell">
                       <span className="cell-metric-val">
                         <Calendar size={14} className="cell-spec-icon" />
-                        {p.builtYear || 'Immediate Key Handover'}
+                        {p.builtYear || (isAr ? 'استلام فوري جاهز' : 'Immediate Key Handover')}
                       </span>
                     </div>
                   ))}
 
-                  {/* Row 7: Amenities Breakdown */}
-                  <div className="matrix-row-label">KEY AMENITIES</div>
-                  {selectedProperties.map((p) => (
-                    <div key={`amenities-${p.id}`} className="matrix-cell amenities-cell">
-                      <div className="amenities-chips-wrap">
-                        {p.amenities.map((a, i) => (
-                          <span key={i} className="matrix-amenity-chip">
-                            <Check size={12} className="chip-check" />
-                            <span>{a.title}</span>
-                          </span>
-                        ))}
+                  {/* Row 11: Amenities Breakdown */}
+                  <div className="matrix-row-label">{isAr ? 'المزايا والمرافق الحصرية' : 'KEY AMENITIES'}</div>
+                  {selectedProperties.map((p) => {
+                    const amList = ((p.amenities || p.property_amenities || []) as any[]);
+                    return (
+                      <div key={`amenities-${p.id}`} className="matrix-cell amenities-cell">
+                        <div className="amenities-chips-wrap">
+                          {amList.length > 0 ? amList.map((a, i) => {
+                            const title = typeof a === 'string' ? a : (a?.title || a?.amenity_en || a?.amenity_ar || '');
+                            if (!title) return null;
+                            return (
+                              <span key={i} className="matrix-amenity-chip">
+                                <Check size={12} className="chip-check" />
+                                <span>{title}</span>
+                              </span>
+                            );
+                          }) : (
+                            <span className="matrix-amenity-chip muted">
+                              <span>{isAr ? 'مواصفات فاخرة قياسية' : 'Standard Luxury Inclusions'}</span>
+                            </span>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
 
-                  {/* Row 8: Action CTA */}
-                  <div className="matrix-row-label">ACQUISITION ACTION</div>
+                  {/* Row 12: Action CTA */}
+                  <div className="matrix-row-label">{isAr ? 'معاينة العقار' : 'ACQUISITION ACTION'}</div>
                   {selectedProperties.map((p) => (
                     <div key={`cta-${p.id}`} className="matrix-cell action-cell">
                       <button
@@ -289,7 +509,7 @@ export const CompareDrawer: React.FC<CompareDrawerProps> = ({
                         }}
                         className="btn-gold cell-explore-btn"
                       >
-                        <span>View Dossier</span>
+                        <span>{isAr ? 'معاينة الملف الكامل' : 'View Dossier'}</span>
                         <ArrowUpRight size={15} />
                       </button>
                     </div>
@@ -897,12 +1117,115 @@ export const CompareDrawer: React.FC<CompareDrawerProps> = ({
           color: #ffffff;
         }
 
-        [data-theme="light"] .cell-metric-val {
-          color: #0D1117;
+        .matrix-finishing-badge {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          padding: 6px 12px;
+          border-radius: 10px;
+          font-size: 0.8125rem;
+          font-weight: 700;
         }
 
-        .cell-spec-icon {
+        .matrix-finishing-badge.fully {
+          background: rgba(221, 167, 82, 0.14);
+          border: 1px solid rgba(221, 167, 82, 0.4);
           color: var(--gold-primary);
+        }
+
+        .matrix-finishing-badge.semi {
+          background: rgba(59, 130, 246, 0.12);
+          border: 1px solid rgba(59, 130, 246, 0.35);
+          color: #60A5FA;
+        }
+
+        .matrix-finishing-badge.brick {
+          background: rgba(239, 68, 68, 0.12);
+          border: 1px solid rgba(239, 68, 68, 0.35);
+          color: #F87171;
+        }
+
+        .badge-sparkle {
+          color: var(--gold-primary);
+        }
+
+        .eng-specs-cell {
+          align-items: flex-start;
+        }
+
+        .matrix-specs-list {
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+          width: 100%;
+        }
+
+        .matrix-spec-item {
+          display: flex;
+          align-items: flex-start;
+          gap: 7px;
+          font-size: 0.78rem;
+          line-height: 1.35;
+        }
+
+        .matrix-spec-check {
+          color: var(--gold-primary);
+          flex-shrink: 0;
+          margin-top: 2px;
+        }
+
+        .matrix-spec-text {
+          font-weight: 500;
+        }
+
+        [data-theme="dark"] .matrix-spec-text {
+          color: #CBD5E1;
+        }
+
+        [data-theme="light"] .matrix-spec-text {
+          color: #334155;
+        }
+
+        .matrix-floor-wrap {
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+          width: 100%;
+        }
+
+        .matrix-floor-tag, .matrix-view-tag {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          font-size: 0.78rem;
+          font-weight: 600;
+          padding: 4px 8px;
+          border-radius: 8px;
+          width: fit-content;
+        }
+
+        [data-theme="dark"] .matrix-floor-tag {
+          background: rgba(255, 255, 255, 0.05);
+          border: 1px solid rgba(255, 255, 255, 0.10);
+          color: #F1F5F9;
+        }
+
+        [data-theme="light"] .matrix-floor-tag {
+          background: rgba(0, 0, 0, 0.04);
+          border: 1px solid rgba(0, 0, 0, 0.08);
+          color: #0F172A;
+        }
+
+        [data-theme="dark"] .matrix-view-tag {
+          background: rgba(221, 167, 82, 0.08);
+          border: 1px solid rgba(221, 167, 82, 0.25);
+          color: var(--gold-light);
+        }
+
+        [data-theme="light"] .matrix-view-tag {
+          background: rgba(184, 134, 11, 0.08);
+          border: 1px solid rgba(184, 134, 11, 0.25);
+          color: #8C6826;
         }
 
         .amenities-cell {
@@ -970,14 +1293,28 @@ export const CompareDrawer: React.FC<CompareDrawerProps> = ({
           }
 
           .modal-header {
-            padding: 1.25rem;
+            padding: 1rem 1.25rem;
+          }
+
+          .compare-modal-backdrop {
+            padding: 0;
+            align-items: flex-end;
+          }
+
+          .compare-modal-window {
+            width: 100% !important;
+            max-width: 100% !important;
+            height: 92dvh !important;
+            max-height: 92dvh !important;
+            border-radius: 24px 24px 0 0 !important;
           }
 
           .compare-matrix-scroll {
-            padding: 1rem;
+            padding: 0.75rem;
           }
         }
       `}</style>
-    </>
+    </>,
+    document.body
   );
 };

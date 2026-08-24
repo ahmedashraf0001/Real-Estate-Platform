@@ -1,18 +1,18 @@
 'use client';
 
+import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
-import { useState, useEffect } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
 import { useDropzone } from 'react-dropzone';
 import imageCompression from 'browser-image-compression';
-import { Loader2, Save, Trash2, Upload, X, Layers, Image as ImageIcon, ChevronRight, ChevronLeft, Check, Eye, MapPin, Building2, Sparkles, FileText, PanelRightClose, PanelRightOpen } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
+import { Loader2, Save, Trash2, Upload, X, Layers, Image as ImageIcon, ChevronRight, ChevronLeft, Check, Eye, MapPin, Building2, Sparkles, FileText, PanelRightClose, PanelRightOpen, Sofa, Bed, Bath, Trees, Tag, DollarSign, Ruler, Compass, AlertCircle } from 'lucide-react';
 import CADBlueprintBuilder from './CADBlueprintBuilder';
 import ZoneInspector from './ZoneInspector';
 import DynamicMapPicker from './DynamicMapPicker';
@@ -50,14 +50,14 @@ const CATEGORY_BUCKETS: Array<{
   key: string;
   en: string;
   ar: string;
-  emoji: string;
+  icon: 'sofa' | 'bed' | 'bath' | 'outdoor';
   match: (id: string, label?: string) => boolean;
 }> = [
   {
     key: 'living',
     en: 'Living & Reception Areas',
     ar: 'المساحات المعيشية والاستقبال',
-    emoji: '🛋️',
+    icon: 'sofa',
     match: (id: string, label?: string) => {
       const text = (id + ' ' + (label ?? '')).toLowerCase();
       return text.includes('reception') || text.includes('living') || text.includes('dining') || text.includes('corridor') || text.includes('entrance') || text.includes('foyer') || text.includes('salon') || text.includes('office') || text.includes('storage') || text.includes('مساحات') || text.includes('معيشة') || text.includes('استقبال') || text.includes('مكتب') || text.includes('مخزن');
@@ -67,7 +67,7 @@ const CATEGORY_BUCKETS: Array<{
     key: 'bedrooms',
     en: 'Bedrooms & Suites',
     ar: 'غرف النوم والأجنحة',
-    emoji: '🛏️',
+    icon: 'bed',
     match: (id: string, label?: string) => {
       const text = (id + ' ' + (label ?? '')).toLowerCase();
       return text.includes('bedroom') || text.includes('suite') || text.includes('maid') || text.includes('driver') || text.includes('dressing') || text.includes('نوم') || text.includes('غرفة') || text.includes('خادمة') || text.includes('سائق') || text.includes('ملابس');
@@ -77,7 +77,7 @@ const CATEGORY_BUCKETS: Array<{
     key: 'baths_kitchen',
     en: 'Bathrooms & Kitchen',
     ar: 'الحمامات والمطبخ',
-    emoji: '🛁',
+    icon: 'bath',
     match: (id: string, label?: string) => {
       const text = (id + ' ' + (label ?? '')).toLowerCase();
       return text.includes('bath') || text.includes('kitchen') || text.includes('toilet') || text.includes('wc') || text.includes('laundry') || text.includes('pantry') || text.includes('powder') || text.includes('حمام') || text.includes('مطبخ') || text.includes('غسيل') || text.includes('بوفيه');
@@ -87,7 +87,7 @@ const CATEGORY_BUCKETS: Array<{
     key: 'outdoor',
     en: 'Outdoor & Terraces',
     ar: 'البلكونات والمساحات الخارجية',
-    emoji: '🌿',
+    icon: 'outdoor',
     match: (id: string, label?: string) => {
       const text = (id + ' ' + (label ?? '')).toLowerCase();
       return text.includes('balcony') || text.includes('terrace') || text.includes('exterior') || text.includes('roof') || text.includes('garden') || text.includes('pool') || text.includes('jacuzzi') || text.includes('بلكونة') || text.includes('تراس') || text.includes('حديقة') || text.includes('روف') || text.includes('سباحة') || text.includes('جاكوزي');
@@ -134,62 +134,57 @@ function zoneSqm(zone: ZoneInstance): number {
   return fallbackMetricFor(zone.zone_template_id)?.sqm ?? 0;
 }
 
-const REVIEW_BADGES: Record<string, { en: string; ar: string; color: string; bg: string; border: string }> = {
-  fully_finished: { en: 'Fully Finished ✨', ar: 'تشطيب كامل ✨', color: '#4CC38A', bg: 'rgba(76,195,138,0.12)', border: 'rgba(76,195,138,0.35)' },
-  semi_finished:  { en: 'Semi-Finished 🏗️', ar: 'نص تشطيب 🏗️', color: '#E0A63A', bg: 'rgba(224,166,58,0.12)', border: 'rgba(224,166,58,0.35)' },
-  red_brick:      { en: 'Red Brick 🧱', ar: 'طوب أحمر 🧱', color: '#E06D5B', bg: 'rgba(224,109,91,0.12)', border: 'rgba(224,109,91,0.35)' },
-  mixed:          { en: 'Mixed 🔄', ar: 'مختلط 🔄', color: '#9FB3D9', bg: 'rgba(159,179,217,0.12)', border: 'rgba(159,179,217,0.35)' },
-};
-
 function ReviewZoneCard({ zone, levelLabel, isAr }: { zone: ZoneInstance; levelLabel?: string; isAr: boolean }) {
   const badge = getZoneBadge(zone);
-  const badgeCfg = REVIEW_BADGES[badge];
-  const sqm = zoneSqm(zone);
+  const sqm = Math.round(zoneSqm(zone));
+
+  const badgeCfg = {
+    red_brick:      { en: 'Red Brick',   ar: 'طوب أحمر',   color: '#D97706', bg: 'rgba(217, 119, 6, 0.12)',   border: 'rgba(217, 119, 6, 0.3)' },
+    semi_finished:  { en: 'Semi',        ar: 'نص تشطيب',   color: '#3B82F6', bg: 'rgba(59, 130, 246, 0.12)',  border: 'rgba(59, 130, 246, 0.3)' },
+    fully_finished: { en: 'Finished',    ar: 'تشطيب كامل', color: '#10B981', bg: 'rgba(16, 185, 129, 0.12)', border: 'rgba(16, 185, 129, 0.3)' },
+    mixed:          { en: 'Mixed',       ar: 'مختلط',      color: '#DDA752', bg: 'rgba(221, 167, 82, 0.12)', border: 'rgba(221, 167, 82, 0.3)' },
+    unknown:        null,
+  }[badge];
 
   return (
-    <div style={{
-      background: 'rgba(255, 255, 255, 0.02)',
-      border: '1px solid rgba(221, 167, 82, 0.14)',
-      borderRadius: '10px',
-      padding: '10px 12px',
-      display: 'flex',
-      flexDirection: 'column',
-      gap: '6px'
-    }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
-        <strong style={{ fontSize: '12px', color: '#FFFFFF', fontWeight: 700, fontFamily: "'Plus Jakarta Sans', sans-serif", minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-          {resolveZoneName(zone, isAr)}
-        </strong>
+    <div className={styles.reviewRoomCard}>
+      <div className={styles.reviewRoomHead}>
+        <div className={styles.reviewRoomTitleGroup}>
+          <span className={styles.reviewRoomName}>
+            {resolveZoneName(zone, isAr)}
+          </span>
+          <div className={styles.reviewRoomMeta}>
+            {sqm > 0 && <span className={styles.reviewRoomSqm}>{sqm} m²</span>}
+            {levelLabel && (
+              <span className={styles.reviewRoomLevel}>
+                {levelLabel}
+              </span>
+            )}
+          </div>
+        </div>
         {badgeCfg && (
-          <span style={{ flexShrink: 0, fontSize: '9px', fontWeight: 800, color: badgeCfg.color, background: badgeCfg.bg, border: `1px solid ${badgeCfg.border}`, padding: '1px 6px', borderRadius: '6px' }}>
+          <span
+            className={styles.reviewRoomBadge}
+            style={{ color: badgeCfg.color, background: badgeCfg.bg, borderColor: badgeCfg.border }}
+          >
             {isAr ? badgeCfg.ar : badgeCfg.en}
           </span>
         )}
       </div>
+      <div className={styles.reviewRoomTrades}>
+        {zone.trades.map((t) => {
+          const isFinished = t.status.toLowerCase().includes('finish') || t.status.toLowerCase().includes('tile') || t.status.toLowerCase().includes('paint') || t.status.toLowerCase().includes('install');
+          const isNotStarted = t.status.toLowerCase().includes('not') || t.status.toLowerCase().includes('none');
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '10px', color: 'rgba(255,255,255,0.55)', fontFamily: 'monospace' }}>
-        {sqm > 0 && <span dir="ltr">{sqm} m²</span>}
-        {levelLabel && (
-          <span style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", padding: '1px 7px', borderRadius: '999px', background: 'rgba(221,167,82,0.10)', color: '#DDA752', fontWeight: 700 }}>
-            {levelLabel}
-          </span>
-        )}
-      </div>
-
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '2px' }}>
-        {zone.trades.map((t) => (
-          <span key={t.id} style={{
-            fontSize: '9px',
-            fontWeight: 600,
-            background: 'rgba(255, 255, 255, 0.04)',
-            border: '1px solid rgba(255, 255, 255, 0.1)',
-            borderRadius: '6px',
-            padding: '2px 6px',
-            color: 'rgba(255, 255, 255, 0.75)'
-          }}>
-            {resolveTradeName(t.trade_template_id, isAr)}: {formatStatus(t.status, isAr)}
-          </span>
-        ))}
+          return (
+            <div key={t.id} className={styles.reviewTradeRow}>
+              <span className={styles.reviewTradeName}>{resolveTradeName(t.trade_template_id, isAr)}</span>
+              <span className={`${styles.reviewTradeStatus} ${isFinished ? styles.tradeFinished : isNotStarted ? styles.tradeNotStarted : styles.tradeInProgress}`}>
+                {formatStatus(t.status, isAr)}
+              </span>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
@@ -202,7 +197,8 @@ function inferSubtype(property: Property | undefined): FormValues['subtype'] {
   const zones = Array.isArray(property.spec_layers) ? (property.spec_layers as ZoneInstance[]) : [];
   const text = zones.map(z => `${z.zone_template_id} ${z.instance_label ?? ''} ${z.level_label ?? ''}`).join(' ');
   if (zones.some(z => z.zone_template_id === 'apt.level') || /Lower Floor|Upper Floor|الدور السفلي|الدور العلوي/.test(text)) return 'duplex';
-  if (/Roof Terrace|تراس الروف|شقة روف/.test(text)) return 'roof';
+  if (/الدور المشترك|وحدة أ|وحدة ب|Unit A|Unit B|السطح العلوي/.test(text)) return 'full_roof';
+  if (/السطح|Roof/.test(text) && zones.length > 0) return 'standard_roof';
   if (/Private Garden|الحديقة الخاصة/.test(text)) return 'ground';
   return 'standard';
 }
@@ -213,13 +209,14 @@ function generateSlug(text: string) {
 }
 
 const schema = z.object({
-  title: z.string().min(3),
+  title_en: z.string().min(3, 'English title must be at least 3 characters'),
+  title_ar: z.string().min(3, 'Arabic title must be at least 3 characters'),
   price_egp: z.coerce.number().positive(),
   bedrooms: z.coerce.number().int().min(0),
   bathrooms: z.coerce.number().int().min(0),
   area_sqm: z.coerce.number().positive(),
   type: z.enum(['apartment', 'building', 'garage']),
-  subtype: z.enum(['standard', 'ground', 'duplex', 'roof', 'residential', 'mixed']).optional(),
+  subtype: z.enum(['standard', 'ground', 'duplex', 'standard_roof', 'full_roof', 'residential', 'mixed']).optional(),
   total_floors: z.coerce.number().int().min(1).max(15).optional().or(z.literal('')),
   units_per_floor: z.coerce.number().int().min(1).max(6).optional().or(z.literal('')),
   location: z.string().min(2),
@@ -266,6 +263,9 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
     }
   }, []);
 
+  const [step3PromptOpen, setStep3PromptOpen] = useState(false);
+  const [autoOpenWizard, setAutoOpenWizard] = useState(false);
+
   const goToStep = (stepNum: number) => {
     setCurrentStep(stepNum);
     setIsSaved(false);
@@ -279,13 +279,31 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
 
   const handleNextStep = async () => {
     if (currentStep === 1) {
-      const valid = await trigger(['title', 'price_egp', 'area_sqm']);
+      const valid = await trigger(['title_en', 'title_ar', 'price_egp', 'area_sqm']);
       if (!valid) return;
     } else if (currentStep === 2) {
       const valid = await trigger(['location']);
       if (!valid) return;
+      // Prompt user before entering step 3 if apartment has no rooms yet
+      if (selectedType === 'apartment' && zoneInstances.length === 0) {
+        setStep3PromptOpen(true);
+        return;
+      }
     }
     goToStep(Math.min(currentStep + 1, 4));
+  };
+
+  const handleChooseWizard = () => {
+    setStep3PromptOpen(false);
+    setAutoOpenWizard(true);
+    goToStep(3);
+  };
+
+  const handleChooseGroundZero = () => {
+    setStep3PromptOpen(false);
+    setAutoOpenWizard(false);
+    setZoneInstances([]);
+    goToStep(3);
   };
 
   const handlePrevStep = () => {
@@ -315,14 +333,15 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
         return property.spec_layers as ZoneInstance[];
       }
     }
-    const initialType = (property ? (['apartment', 'building', 'garage'].includes(property.type) ? property.type : 'apartment') : 'apartment') as 'apartment' | 'building' | 'garage';
-    return buildZoneInstances(initialType, 'semi_finished', property?.bedrooms || 2);
+    // For new properties, start with empty array so Step 3 prompts the user with the Wizard vs Ground Zero choice
+    return [];
   });
 
   const { register, handleSubmit, watch, setValue, trigger, formState: { errors } } = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: property ? {
-      title: property.title_en,
+      title_en: property.title_en || '',
+      title_ar: property.title_ar || property.title_en || '',
       price_egp: property.price_egp,
       bedrooms: property.bedrooms,
       bathrooms: property.bathrooms,
@@ -340,6 +359,8 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
       view: property.view ?? '',
       floor_number: property.floor_number ?? '',
     } : {
+      title_en: '',
+      title_ar: '',
       type: 'apartment',
       subtype: 'standard',
       total_floors: '',
@@ -396,7 +417,12 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
     setValue('type', typed, { shouldValidate: true });
     const defaultSub = typed === 'apartment' ? 'standard' : typed === 'building' ? 'residential' : undefined;
     setValue('subtype', defaultSub);
-    reseedZones(typed, defaultSub);
+    if (typed === 'building' || typed === 'garage') {
+      reseedZones(typed, defaultSub);
+    } else {
+      setZoneInstances([]);
+      setAutoOpenWizard(false);
+    }
   };
 
   const handleSubtypeChange = (newSubtype: string) => {
@@ -406,14 +432,19 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
     setValue('subtype', sub);
     const tf = Number(totalFloorsRaw) || undefined;
     const uf = Number(unitsPerFloorRaw) || undefined;
-    reseedZones(selectedType, sub, tf, uf);
+    if (selectedType === 'building') {
+      reseedZones(selectedType, sub, tf, uf);
+    } else {
+      setZoneInstances([]);
+      setAutoOpenWizard(false);
+    }
   };
 
   const handleBuildingConfigChange = (field: 'total_floors' | 'units_per_floor', raw: string) => {
     const num = raw === '' ? '' : Math.max(1, Math.min(field === 'total_floors' ? 15 : 6, Number(raw) || 1));
     const tf = field === 'total_floors' ? num : totalFloorsRaw;
     const uf = field === 'units_per_floor' ? num : unitsPerFloorRaw;
-    const willReseed = typeof tf === 'number' && typeof uf === 'number';
+    const willReseed = typeof tf === 'number' && typeof uf === 'number' && selectedType === 'building';
     if (willReseed && !confirmRebuild()) return;
     setValue(field, num as FormValues['total_floors']);
     if (willReseed) {
@@ -421,14 +452,24 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
     }
   };
 
-  // Tiptap editor for description
-  const editor = useEditor({
+  // Tiptap editors for English and Arabic descriptions
+  const editorEn = useEditor({
     extensions: [
       StarterKit,
-      Placeholder.configure({ placeholder: isAr ? 'اكتب وصف العقار هنا...' : 'Property description...' }),
+      Placeholder.configure({ placeholder: 'Write luxury property architectural brief in English...' }),
     ],
     content: property?.description_en ?? '',
   });
+
+  const editorAr = useEditor({
+    extensions: [
+      StarterKit,
+      Placeholder.configure({ placeholder: 'اكتب الوصف المعماري والتسويقي الفاخر للعقار باللغة العربية...' }),
+    ],
+    content: property?.description_ar ?? property?.description_en ?? '',
+  });
+
+  const [descTab, setDescTab] = useState<'en' | 'ar'>(isAr ? 'ar' : 'en');
 
   // Image dropzone
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
@@ -461,7 +502,7 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
 
   
   const handlePrintSummary = () => {
-    const title = watch('title') || 'Property Specification Report';
+    const title = (isAr ? watch('title_ar') || watch('title_en') : watch('title_en') || watch('title_ar')) || 'Property Specification Report';
     const price = watch('price_egp') ? Number(watch('price_egp')).toLocaleString() : 'N/A';
     const area = watch('area_sqm') || 'N/A';
     const location = watch('location') || 'N/A';
@@ -523,7 +564,7 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
               return `
                 <div class="catCard">
                   <div class="catHeader">
-                    <span>${cat.emoji} ${isAr ? cat.ar : cat.en}</span>
+                    <span>${isAr ? cat.ar : cat.en}</span>
                     <span style="font-size: 11px; color: #64748B;">${catLeaves.length} ${isAr ? 'مناطق' : 'Zones'}</span>
                   </div>
                   <div class="zoneGrid">
@@ -562,24 +603,29 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
     setSaving(true);
     try {
       const payloadBase = {
-        ...data,
-        description_en: editor?.getHTML() ?? '',
-        description_ar: editor?.getHTML() ?? '',
+        title_en: data.title_en,
+        title_ar: data.title_ar,
+        price_egp: data.price_egp,
+        bedrooms: data.bedrooms,
+        bathrooms: data.bathrooms,
+        area_sqm: data.area_sqm,
+        type: data.type,
+        location: data.location,
         latitude: data.latitude ?? null,
         longitude: data.longitude ?? null,
-        title_en: data.title,
-        title_ar: data.title,
+        completion_status: data.completion_status,
+        listing_status: data.listing_status,
+        is_featured: data.is_featured,
         view: data.view || null,
         floor_number: (data.floor_number === '' || data.floor_number === null || data.floor_number === undefined) ? null : Number(data.floor_number),
+        description_en: editorEn?.getHTML() ?? '',
+        description_ar: editorAr?.getHTML() ?? '',
         spec_layers: zoneInstances,
       };
 
-      // @ts-ignore
-      delete payloadBase.title;
-
       const payload = isEditing && property 
         ? payloadBase 
-        : { ...payloadBase, slug: generateSlug(data.title) };
+        : { ...payloadBase, slug: generateSlug(data.title_en || data.title_ar) };
 
       const res = await saveProperty(payload, isEditing, property?.id, amenities, previewUrls);
       
@@ -661,58 +707,24 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className={`${styles.form} ${currentStep === 3 && railOpen ? (inspectorZoneId ? 'form-with-flyout' : 'form-with-inspector') : ''}`} onKeyDown={(e) => {
+    <form onSubmit={handleSubmit(onSubmit)} className={`${styles.form} ${currentStep === 3 ? (railOpen ? 'form-step-3-with-rail' : 'form-step-3-full') : ''}`} onKeyDown={(e) => {
       if (e.key === 'Enter' && e.target instanceof HTMLInputElement && e.target.type !== 'submit') {
         e.preventDefault();
       }
     }}>
       <style>{`
-        .form-with-inspector {
-          padding-inline-end: 308px;
+        .form-step-3-with-rail {
+          max-width: 100% !important;
+          padding-inline-end: 356px;
         }
-        .form-with-flyout {
-          padding-inline-end: 632px;
+        .form-step-3-full {
+          max-width: 100% !important;
+          padding-inline-end: 0;
         }
         @media (max-width: 1023px) {
-          .form-with-inspector, .form-with-flyout { padding-inline-end: 0; }
+          .form-step-3-with-rail, .form-step-3-full { padding-inline-end: 0; }
         }
       `}</style>
-      {/* ─── Stepper Progress Header ─── */}
-      {/* ─── Stepper Progress Header ─── */}
-      <div className={styles.stepperContainer}>
-        <div className={styles.stepperHeader}>
-          {steps.map((st, idx) => {
-            const isActive = currentStep === st.num;
-            const isCompleted = currentStep > st.num;
-            return (
-              <div key={st.num} className={styles.stepTrackItem}>
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (st.num < currentStep || currentStep > 1) {
-                      setCurrentStep(st.num);
-                    }
-                  }}
-                  className={`${styles.stepItem} ${isActive ? styles.stepItemActive : ''} ${isCompleted ? styles.stepItemCompleted : ''}`}
-                  aria-current={isActive ? 'step' : undefined}
-                  title={isAr ? st.title_ar : st.title_en}
-                >
-                  <div className={styles.stepBadge}>
-                    {isCompleted ? <Check size={15} strokeWidth={2.5} /> : st.num}
-                  </div>
-                  <div className={styles.stepInfo}>
-                    <span className={styles.stepNum}>{isAr ? `الخطوة ${st.num}` : `Step ${st.num}`}</span>
-                    <span className={styles.stepTitle}>{isAr ? st.title_ar : st.title_en}</span>
-                  </div>
-                </button>
-                {idx < steps.length - 1 && (
-                  <div className={`${styles.stepDivider} ${isCompleted ? styles.stepDividerActive : ''}`} />
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </div>
 
       {/* ─── STEP 1: Basic Info & Property Type ─── */}
       {currentStep === 1 && (
@@ -731,15 +743,40 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
             </div>
           </div>
 
-          <div className={styles.field}>
-            <label className={styles.label}>{isAr ? 'عنوان العقار *' : 'Property Title *'}</label>
-            <input 
-              type="text" 
-              className={`${styles.input} ${errors.title ? styles.err : ''}`} 
-              {...register('title')} 
-              placeholder={isAr ? "مثال: فيلا فاخرة للإيجار بالشيخ زايد" : "e.g. Luxury Modern Villa in Sheikh Zayed"} 
-            />
-            {errors.title && <p className={styles.errMsg}>{errors.title.message}</p>}
+          <div className={styles.grid2}>
+            <div className={styles.field}>
+              <label className={styles.label}>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                  <span>🇬🇧</span>
+                  <span>{isAr ? 'عنوان العقار (إنجليزي) *' : 'Property Title (English) *'}</span>
+                </span>
+              </label>
+              <input 
+                type="text" 
+                dir="ltr"
+                className={`${styles.input} ${errors.title_en ? styles.err : ''}`} 
+                {...register('title_en')} 
+                placeholder="e.g. Direct Sea-Front Luxury Chalet in Sidi Abdel Rahman" 
+              />
+              {errors.title_en && <p className={styles.errMsg}>{errors.title_en.message}</p>}
+            </div>
+
+            <div className={styles.field}>
+              <label className={styles.label}>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                  <span>🇪🇬</span>
+                  <span>{isAr ? 'عنوان العقار (عربي) *' : 'Property Title (Arabic) *'}</span>
+                </span>
+              </label>
+              <input 
+                type="text" 
+                dir="rtl"
+                className={`${styles.input} ${errors.title_ar ? styles.err : ''}`} 
+                {...register('title_ar')} 
+                placeholder="مثال: شاليه فاخر مباشر على البحر في سيدي عبد الرحمن" 
+              />
+              {errors.title_ar && <p className={styles.errMsg}>{errors.title_ar.message}</p>}
+            </div>
           </div>
 
           <div className={styles.grid2}>
@@ -771,9 +808,10 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
                   onChange={(e) => handleSubtypeChange(e.target.value)}
                 >
                   {(selectedType === 'apartment' ? [
-                    { value: 'standard', en: 'Standard Flat', ar: 'شقة عادية' },
-                    { value: 'duplex',   en: 'Duplex (دورين)', ar: 'دوبلكس (دورين)' },
-                    { value: 'roof',     en: 'Roof Apartment', ar: 'شقة روف' },
+                    { value: 'standard',      en: 'Standard Flat', ar: 'شقة عادية' },
+                    { value: 'duplex',        en: 'Duplex (دورين)', ar: 'دوبلكس (دورين)' },
+                    { value: 'standard_roof', en: 'Standard Roof (Low-End Flat on Rooftop)', ar: 'روف عادي (شقة بسيطة على السطح)' },
+                    { value: 'full_roof',     en: 'Premium Roof (150m + 150m + Open Rooftop)', ar: 'روف بريميم (150م + 150م + سطح مكشوف)' },
                   ] : [
                     { value: 'residential', en: 'Residential', ar: 'سكني' },
                     { value: 'mixed',       en: 'Mixed Use',   ar: 'سكني تجاري' },
@@ -926,37 +964,276 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
 
       {/* ─── STEP 2: Location, Media & Description ─── */}
       {currentStep === 2 && (
-        <div className="step2-grid">
+        <div className="step2-vertical-layout">
           <style>{`
-            .step2-grid {
-              display: grid;
-              grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
-              gap: 24px;
-              align-items: start;
-            }
-            .step2-side {
+            .step2-vertical-layout {
               display: flex;
               flex-direction: column;
               gap: 24px;
-              min-width: 0;
+              width: 100%;
             }
-            @media (max-width: 1023px) {
-              .step2-grid { grid-template-columns: 1fr; }
+            .step2-top-row {
+              display: grid;
+              grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr);
+              gap: 20px;
+              align-items: stretch;
+              width: 100%;
+            }
+            .step2-top-row .step2-card {
+              height: 100%;
+              box-sizing: border-box;
+            }
+            @media (max-width: 1024px) {
+              .step2-top-row {
+                grid-template-columns: 1fr;
+              }
+              .step2-top-row .step2-card {
+                height: auto;
+              }
+            }
+            .step2-card {
+              background: rgba(13, 19, 34, 0.75);
+              backdrop-filter: blur(24px);
+              -webkit-backdrop-filter: blur(24px);
+              border: 1px solid rgba(221, 167, 82, 0.18);
+              border-radius: 18px;
+              padding: 22px 24px;
+              display: flex;
+              flex-direction: column;
+              gap: 16px;
+              box-shadow: 0 12px 36px rgba(0, 0, 0, 0.35);
+              box-sizing: border-box;
+            }
+            [data-theme="light"] .step2-card {
+              background: #FFFFFF;
+              border-color: rgba(0, 0, 0, 0.08);
+              box-shadow: 0 8px 24px rgba(0, 0, 0, 0.04);
+            }
+            .step2-card-head {
+              display: flex;
+              align-items: center;
+              gap: 10px;
+              padding-bottom: 12px;
+              border-bottom: 1px solid rgba(221, 167, 82, 0.12);
+            }
+            .step2-card-icon {
+              width: 32px;
+              height: 32px;
+              border-radius: 8px;
+              display: inline-flex;
+              align-items: center;
+              justify-content: center;
+              background: rgba(221, 167, 82, 0.12);
+              color: #DDA752;
+              border: 1px solid rgba(221, 167, 82, 0.25);
+            }
+            .step2-card-title {
+              font-size: 0.85rem;
+              font-weight: 800;
+              letter-spacing: 0.06em;
+              text-transform: uppercase;
+              color: #DDA752;
+              margin: 0;
+            }
+            .step2-dropzone-compact {
+              border: 1.5px dashed rgba(221, 167, 82, 0.3);
+              border-radius: 14px;
+              padding: 24px 16px;
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              justify-content: center;
+              gap: 8px;
+              cursor: pointer;
+              background: rgba(221, 167, 82, 0.02);
+              transition: all 0.2s ease;
+              text-align: center;
+            }
+            .step2-dropzone-compact:hover {
+              border-color: #DDA752;
+              background: rgba(221, 167, 82, 0.06);
+              transform: translateY(-1px);
+            }
+            .step2-dropzone-icon {
+              color: #DDA752;
+            }
+            .step2-dropzone-text {
+              font-size: 0.78rem;
+              color: rgba(237, 232, 221, 0.7);
+              margin: 0;
+            }
+            [data-theme="light"] .step2-dropzone-text {
+              color: #64748B;
             }
           `}</style>
-          {/* Location */}
-          <div className={styles.section}>
-            <h2 className={styles.sectionTitle}>
-              <MapPin size={18} />
-              {isAr ? 'الموقع على الخريطة' : 'Property Location'}
-            </h2>
-            <div className={styles.field} style={{ marginBottom: 16 }}>
-              <label className="label">{isAr ? 'اسم الموقع / المنطقة *' : 'Location / Area Name *'}</label>
-              <input className={`input ${errors.location ? styles.err : ''}`} {...register('location')} placeholder={isAr ? "الشيخ زايد - التجمع الخامس" : "Sheikh Zayed - New Cairo"} />
+
+          {/* Top Row: Media Gallery & Rich Description */}
+          <div className="step2-top-row">
+            {/* Overview Photos */}
+            <div className="step2-card">
+              <div className="step2-card-head">
+                <div className="step2-card-icon">
+                  <ImageIcon size={16} />
+                </div>
+                <h2 className="step2-card-title">
+                  {isAr ? 'صور الغلاف والمعرض العام' : 'Overview & Hero Gallery Photos'}
+                </h2>
+              </div>
+
+              <div {...getRootProps()} className="step2-dropzone-compact">
+                <input {...getInputProps()} />
+                {uploadingImages ? (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#DDA752', fontSize: '0.8rem', fontWeight: 700 }}>
+                    <Loader2 size={18} className={styles.spinner} />
+                    <span>{isAr ? 'جاري رفع الصور...' : 'Uploading gallery photos…'}</span>
+                  </div>
+                ) : (
+                  <>
+                    <Upload size={22} strokeWidth={1.75} className="step2-dropzone-icon" />
+                    <p className="step2-dropzone-text">
+                      {isDragActive 
+                        ? (isAr ? 'أفلت الصور العامة هنا' : 'Drop overview images here') 
+                        : (isAr ? 'اسحب صور المعرض العام هنا أو انقر للتصفح' : 'Drag overview gallery images here or click to browse')}
+                    </p>
+                  </>
+                )}
+              </div>
+
+              {previewUrls.length > 0 && (
+                <div className={styles.previews}>
+                  {previewUrls.map((url) => (
+                    <div key={url} className={styles.preview}>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={url} alt="overview preview" className={styles.previewImg} />
+                      <button type="button" className={styles.removeImg} onClick={() => removePreview(url)}>
+                        <Trash2 size={13} strokeWidth={1.5} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Description & Key Amenities */}
+            <div className="step2-card">
+              <div className="step2-card-head">
+                <div className="step2-card-icon">
+                  <Sparkles size={16} />
+                </div>
+                <h2 className="step2-card-title">
+                  {isAr ? 'الوصف والمرافق المميزة' : 'Description & Key Amenities'}
+                </h2>
+              </div>
+              
+              <div className={styles.field}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px', flexWrap: 'wrap', gap: '8px' }}>
+                  <label className={styles.label} style={{ margin: 0 }}>
+                    {isAr ? 'الوصف المعماري والتسويقي *' : 'Architectural Description *'}
+                  </label>
+
+                  <div style={{ display: 'flex', gap: '4px', background: 'rgba(255,255,255,0.05)', padding: '3px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.08)' }}>
+                    <button
+                      type="button"
+                      onClick={() => setDescTab('en')}
+                      style={{
+                        padding: '4px 10px',
+                        borderRadius: '6px',
+                        fontSize: '11px',
+                        fontWeight: 700,
+                        border: 'none',
+                        cursor: 'pointer',
+                        background: descTab === 'en' ? 'linear-gradient(135deg, #E5B869 0%, #C5A059 100%)' : 'transparent',
+                        color: descTab === 'en' ? '#0A0C10' : 'rgba(255,255,255,0.7)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        transition: 'all 150ms ease'
+                      }}
+                    >
+                      <span>🇬🇧</span>
+                      <span>English</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setDescTab('ar')}
+                      style={{
+                        padding: '4px 10px',
+                        borderRadius: '6px',
+                        fontSize: '11px',
+                        fontWeight: 700,
+                        border: 'none',
+                        cursor: 'pointer',
+                        background: descTab === 'ar' ? 'linear-gradient(135deg, #E5B869 0%, #C5A059 100%)' : 'transparent',
+                        color: descTab === 'ar' ? '#0A0C10' : 'rgba(255,255,255,0.7)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        transition: 'all 150ms ease'
+                      }}
+                    >
+                      <span>🇪🇬</span>
+                      <span>العربية</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div className={styles.tiptap} dir={descTab === 'ar' ? 'rtl' : 'ltr'}>
+                  {descTab === 'en' ? (
+                    <EditorContent editor={editorEn} />
+                  ) : (
+                    <EditorContent editor={editorAr} />
+                  )}
+                </div>
+              </div>
+
+              <div className={styles.field}>
+                <label className={styles.label}>{isAr ? 'المرافق المميزة (اضغط Enter للإضافة)' : 'Key Amenities (Press Enter to add)'}</label>
+                <div className={styles.tagsInputContainer}>
+                  {amenities.map((am) => (
+                    <div key={am} className={styles.tag}>
+                      {am}
+                      <button type="button" onClick={() => removeAmenity(am)} className={styles.tagRemove}>
+                        <X size={12} strokeWidth={3} />
+                      </button>
+                    </div>
+                  ))}
+                  <input 
+                    type="text" 
+                    className={styles.tagsInput} 
+                    placeholder={isAr ? "مثال: مسبح خاص، نادي صحي، تراس بانورامي..." : "e.g. Private Pool, Gym, Panoramic Terrace..."}
+                    value={amenityInput}
+                    onChange={(e) => setAmenityInput(e.target.value)}
+                    onKeyDown={handleAddAmenity}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Full-Width Bottom Section: Location & Interactive Map */}
+          <div className="step2-card" style={{ width: '100%' }}>
+            <div className="step2-card-head">
+              <div className="step2-card-icon">
+                <MapPin size={16} />
+              </div>
+              <h2 className="step2-card-title">
+                {isAr ? 'الموقع الجغرافي وتحديد الإحداثيات على الخريطة' : 'Property Location & Coordinates'}
+              </h2>
+            </div>
+
+            <div className={styles.field}>
+              <label className={styles.label}>{isAr ? 'اسم الموقع / الحي والمنطقة *' : 'Location / Area & Neighborhood *'}</label>
+              <input 
+                className={`${styles.input} ${errors.location ? styles.err : ''}`} 
+                {...register('location')} 
+                placeholder={isAr ? "مثال: بيفرلي هيلز، الشيخ زايد" : "e.g. Beverly Hills, Sheikh Zayed"} 
+              />
               {errors.location && <p className={styles.errMsg}>{errors.location.message}</p>}
             </div>
-            <div className={styles.field}>
-              <label className="label">{isAr ? 'حدد الموقع الدقيق على الخريطة' : 'Pinpoint Location on Map'}</label>
+
+            <div className={styles.field} style={{ marginTop: '4px' }}>
+              <label className={styles.label}>{isAr ? 'حدد الموقع الدقيق على الخريطة التفاعلية' : 'Pinpoint Location on Map'}</label>
               <DynamicMapPicker 
                 latitude={watch('latitude')} 
                 longitude={watch('longitude')} 
@@ -964,81 +1241,11 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
                   setValue('latitude', lat, { shouldValidate: true });
                   setValue('longitude', lng, { shouldValidate: true });
                 }}
+                isAr={isAr}
               />
             </div>
           </div>
 
-          <div className="step2-side">
-          {/* Overview & Hero Gallery Images */}
-          <div className={styles.section}>
-            <h2 className={styles.sectionTitle}>
-              <ImageIcon size={18} />
-              {isAr ? 'صور الغلاف والمعرض العام' : 'Overview & Hero Gallery Photos'}
-            </h2>
-            <div {...getRootProps()} className={`${styles.dropzone} ${isDragActive ? styles.dropzoneActive : ''}`}>
-              <input {...getInputProps()} />
-              {uploadingImages ? (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: 'var(--color-text-muted)' }}>
-                  <Loader2 size={20} className={styles.spinner} /> {isAr ? 'جاري الرفع...' : 'Uploading…'}
-                </div>
-              ) : (
-                <>
-                  <Upload size={24} strokeWidth={1.5} style={{ color: 'var(--color-text-muted)' }} />
-                  <p style={{ color: 'var(--color-text-muted)', fontSize: 14, marginTop: 8 }}>
-                    {isDragActive 
-                      ? (isAr ? 'أفلت الصور العامة هنا' : 'Drop overview images here') 
-                      : (isAr ? 'اسحب صور المعرض العام هنا أو انقر للتصفح' : 'Drag overview gallery images here or click to browse')}
-                  </p>
-                </>
-              )}
-            </div>
-            {previewUrls.length > 0 && (
-              <div className={styles.previews}>
-                {previewUrls.map((url, i) => (
-                  <div key={url} className={styles.preview}>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={url} alt="overview preview" className={styles.previewImg} />
-                    <button type="button" className={styles.removeImg} onClick={() => removePreview(url)}>
-                      <Trash2 size={13} strokeWidth={1.5} />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Description & Amenities */}
-          <div className={styles.section}>
-            <h2 className={styles.sectionTitle}>{isAr ? 'الوصف والمرافق المميزة' : 'Description & Amenities'}</h2>
-            
-            <div className={styles.field}>
-              <label className="label">{isAr ? 'الوصف التفصيلي' : 'Detailed Description'}</label>
-              <div className={styles.tiptap}><EditorContent editor={editor} /></div>
-            </div>
-
-            <div className={styles.field} style={{ marginTop: '12px' }}>
-              <label className="label">{isAr ? 'المرافق المميزة (اضغط Enter للإضافة)' : 'Key Amenities (Press Enter to add)'}</label>
-              <div className={styles.tagsInputContainer}>
-                {amenities.map((am) => (
-                  <div key={am} className={styles.tag}>
-                    {am}
-                    <button type="button" onClick={() => removeAmenity(am)} className={styles.tagRemove}>
-                      <X size={12} strokeWidth={3} />
-                    </button>
-                  </div>
-                ))}
-                <input 
-                  type="text" 
-                  className={styles.tagsInput} 
-                  placeholder={isAr ? "مثال: مسبح، نادي رياضي، بلكونة..." : "e.g. Pool, Gym, Balcony..."}
-                  value={amenityInput}
-                  onChange={(e) => setAmenityInput(e.target.value)}
-                  onKeyDown={handleAddAmenity}
-                />
-              </div>
-            </div>
-          </div>
-          </div>
         </div>
       )}
 
@@ -1049,6 +1256,7 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
             zoneInstances={zoneInstances}
             onZoneInstancesChange={setZoneInstances}
             propertyType={selectedType}
+            subtype={selectedSubtype}
             bedrooms={bedroomsCount}
             declaredArea={Number(watch('area_sqm')) || undefined}
             selectedZoneId={inspectorZoneId}
@@ -1062,12 +1270,25 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
               setValue('bathrooms', bathrooms);
               if (floorNumber !== null) setValue('floor_number', floorNumber);
             }}
+            autoOpenWizardOnEmpty={autoOpenWizard}
             isAr={isAr}
           />
 
           <div className={`rooms-rail ${railOpen ? '' : 'closed'}`} dir={isAr ? 'rtl' : 'ltr'}>
             <div className="rooms-rail-head">
-              <span className="rooms-rail-title">{isAr ? 'الغرف' : 'ROOMS'}</span>
+              {inspectorZoneId ? (
+                <button
+                  type="button"
+                  className="rooms-rail-back-btn"
+                  onClick={() => setInspectorZoneId(null)}
+                  title={isAr ? 'العودة لقائمة الغرف' : 'Back to all rooms'}
+                >
+                  <ChevronLeft size={15} style={{ transform: isAr ? 'rotate(180deg)' : 'none' }} />
+                  <span>{isAr ? 'قائمة الغرف' : 'All Rooms'}</span>
+                </button>
+              ) : (
+                <span className="rooms-rail-title">{isAr ? 'الغرف' : 'ROOMS'}</span>
+              )}
               <button
                 type="button"
                 className="rooms-rail-toggle"
@@ -1077,7 +1298,22 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
                 <PanelRightClose size={14} />
               </button>
             </div>
-            <div className="rooms-rail-body" ref={setRoomsRailEl} />
+
+            <div className="rooms-rail-body" ref={setRoomsRailEl} style={{ display: inspectorZoneId ? 'none' : 'flex' }} />
+
+            {inspectorZoneId && (
+              <div className="rooms-rail-inspector-scroll">
+                <ZoneInspector
+                  zoneInstances={zoneInstances}
+                  onZoneInstancesChange={setZoneInstances}
+                  selectedZoneId={inspectorZoneId}
+                  declaredArea={Number(watch('area_sqm')) || undefined}
+                  nested={false}
+                  onClose={() => setInspectorZoneId(null)}
+                  isAr={isAr}
+                />
+              </div>
+            )}
           </div>
 
           {!railOpen && (
@@ -1092,27 +1328,18 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
             </button>
           )}
 
-          {railOpen && (
-            <ZoneInspector
-              zoneInstances={zoneInstances}
-              onZoneInstancesChange={setZoneInstances}
-              selectedZoneId={inspectorZoneId}
-              nested
-              onClose={() => setInspectorZoneId(null)}
-              isAr={isAr}
-            />
-          )}
-
           <style>{`
             .rooms-rail {
               position: fixed;
-              inset-block: 0;
+              top: 0;
+              bottom: 72px;
               inset-inline-end: 0;
-              width: 300px;
-              height: 100dvh;
+              width: 340px;
+              height: calc(100dvh - 72px);
               z-index: 60;
               background: #0D1220;
               border-inline-start: 1px solid rgba(221, 167, 82, 0.16);
+              border-bottom: 1px solid rgba(221, 167, 82, 0.16);
               box-shadow: -12px 0 32px rgba(0, 0, 0, 0.35);
               display: flex;
               flex-direction: column;
@@ -1132,6 +1359,8 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
               padding: 12px 14px;
               border-block-end: 1px solid rgba(221, 167, 82, 0.16);
               flex-shrink: 0;
+              background: #0A0E18;
+              min-height: 48px;
             }
             .rooms-rail-title {
               font-family: 'Plus Jakarta Sans', sans-serif;
@@ -1139,6 +1368,25 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
               font-weight: 800;
               letter-spacing: 0.12em;
               color: rgba(237, 232, 221, 0.55);
+            }
+            .rooms-rail-back-btn {
+              display: inline-flex;
+              align-items: center;
+              gap: 5px;
+              background: rgba(221, 167, 82, 0.08);
+              border: 1px solid rgba(221, 167, 82, 0.25);
+              color: #DDA752;
+              font-family: 'Plus Jakarta Sans', sans-serif;
+              font-size: 0.75rem;
+              font-weight: 700;
+              cursor: pointer;
+              padding: 5px 9px;
+              border-radius: 7px;
+              transition: all 0.15s ease;
+            }
+            .rooms-rail-back-btn:hover {
+              background: rgba(221, 167, 82, 0.18);
+              border-color: #DDA752;
             }
             .rooms-rail-toggle, .rooms-rail-reopen {
               display: inline-flex;
@@ -1186,9 +1434,28 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
               min-height: 0;
               display: flex;
               flex-direction: column;
-              overflow: hidden;
+              overflow-y: auto;
             }
             .rooms-rail-body > .fp-list-panel { flex: 1; min-height: 0; }
+
+            .rooms-rail-inspector-scroll {
+              flex: 1;
+              min-height: 0;
+              overflow-y: auto;
+            }
+
+            .rooms-rail .zi-root {
+              position: static !important;
+              width: 100% !important;
+              height: auto !important;
+              max-height: none !important;
+              box-shadow: none !important;
+              border-inline-start: none !important;
+              border-inline-end: none !important;
+              background: transparent !important;
+              padding: 12px 14px 28px !important;
+              z-index: auto !important;
+            }
 
             @media (max-width: 1023px) {
               .rooms-rail {
@@ -1279,156 +1546,159 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
               </div>
             </div>
           )}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', marginBottom: '16px' }}>
+
+          {/* ─── Step 4 Header ─── */}
+          <div className={styles.reviewHeader}>
             <div>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
-                <h2 className={styles.sectionTitle} style={{ margin: 0 }}>
-                  <Sparkles size={18} />
-                  {isAr ? 'الخطوة ٤: مراجعة ملخص العقار والمخطط الهندسي' : 'Step 4: Review Property & CAD Specs Summary'}
-                </h2>
-                <button
-                  type="button"
-                  onClick={handlePrintSummary}
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    padding: '8px 16px',
-                    borderRadius: '10px',
-                    fontSize: '12px',
-                    fontWeight: 800,
-                    background: 'rgba(221, 167, 82, 0.12)',
-                    border: '1px solid rgba(221, 167, 82, 0.3)',
-                    color: '#DDA752',
-                    cursor: 'pointer',
-                  }}
-                >
-                  <FileText size={14} />
-                  <span>{isAr ? 'طباعة تقرير المواصفات PDF 📄' : 'Download Specification Dossier PDF 📄'}</span>
-                </button>
+              <div className={styles.reviewBadge}>
+                <Sparkles size={13} />
+                <span>{isAr ? 'الخطوة ٤: مراجعة العقار والنشر النهائي' : 'STEP 4: FINAL SPECIFICATION REVIEW'}</span>
               </div>
-              <p style={{ margin: '4px 0 0', fontSize: '13px', color: 'rgba(255, 255, 255, 0.6)' }}>
+              <h2 className={styles.reviewTitle}>
+                {isAr ? 'مراجعة ملخص العقار والمواصفات المعمارية' : 'Review Property & CAD Specs Summary'}
+              </h2>
+              <p className={styles.reviewSubtitle}>
                 {isAr
-                  ? 'راجع تفاصيل العقار وأبعاد المخطط الهندسي وكافة المواصفات أدناه قبل التأكيد والنشر النهائي'
+                  ? 'راجع تفاصيل العقار وأبعاد المخطط الهندسي وكافة المواصفات أدناه قبل التأكيد والنشر النهائي.'
                   : 'Review property identity, CAD floor plan metrology, and engineering specifications before live publishing.'}
               </p>
             </div>
+
+            <button
+              type="button"
+              onClick={handlePrintSummary}
+              className={styles.reviewPdfBtn}
+            >
+              <FileText size={14} />
+              <span>{isAr ? 'طباعة تقرير المواصفات PDF' : 'Download Specification Dossier PDF'}</span>
+            </button>
           </div>
 
-          {/* 4 Summary Stat Cards */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
-            {/* Card 1: Property Title & Location */}
-            <div className={styles.reviewBox}>
-              <span className={styles.reviewBoxTitle}>{isAr ? 'عنوان العقار والموقع' : 'Property Title & Location'}</span>
-              <span className={styles.reviewVal} style={{ fontSize: '15px', lineHeight: 1.3 }}>{watch('title') || '—'}</span>
-              <span className={styles.reviewSub}>{watch('location') || (isAr ? 'لم يحدد الموقع' : 'No location specified')}</span>
+          {/* ─── 4 Modern Summary Metrics Cards ─── */}
+          <div className={styles.reviewStatsGrid}>
+            {/* Metric 1: Title & Location */}
+            <div className={styles.reviewStatCard}>
+              <div className={styles.reviewStatIconWrap}>
+                <Building2 size={18} />
+              </div>
+              <div className={styles.reviewStatContent}>
+                <span className={styles.reviewStatLabel}>{isAr ? 'العنوان والموقع' : 'Title & Location'}</span>
+                <span className={styles.reviewStatMainText}>
+                  {isAr ? (watch('title_ar') || watch('title_en')) : (watch('title_en') || watch('title_ar')) || '—'}
+                </span>
+                <span className={styles.reviewStatSubText}>
+                  <MapPin size={12} />
+                  {watch('location') || (isAr ? 'لم يحدد الموقع' : 'No location specified')}
+                </span>
+              </div>
             </div>
 
-            {/* Card 2: Type, Area & Pricing */}
-            <div className={styles.reviewBox}>
-              <span className={styles.reviewBoxTitle}>{isAr ? 'نوع العقار والسعر' : 'Type & Pricing'}</span>
-              <span className={styles.reviewVal} style={{ color: '#DDA752', fontWeight: 800, fontSize: '20px' }}>
-                {watch('price_egp') ? `${Number(watch('price_egp')).toLocaleString()} EGP` : '—'}
-              </span>
-              <span className={styles.reviewSub} style={{ textTransform: 'capitalize' }}>
-                {selectedType} • {watch('area_sqm')} sqm • {bedroomsCount} {isAr ? 'غرف نوم' : 'Bedrooms'}
-              </span>
+            {/* Metric 2: Pricing & Specs */}
+            <div className={styles.reviewStatCard}>
+              <div className={styles.reviewStatIconWrap}>
+                <DollarSign size={18} />
+              </div>
+              <div className={styles.reviewStatContent}>
+                <span className={styles.reviewStatLabel}>{isAr ? 'السعر والمساحة' : 'Pricing & Specs'}</span>
+                <span className={styles.reviewStatPrice}>
+                  {watch('price_egp') ? `${Number(watch('price_egp')).toLocaleString()} EGP` : '—'}
+                </span>
+                <span className={styles.reviewStatSubText}>
+                  {selectedType} • {watch('area_sqm')} m² • {bedroomsCount} {isAr ? 'غرف' : 'Bedrooms'}
+                </span>
+              </div>
             </div>
 
-            {/* Card 3: Media & Live Photo Thumbnails Preview */}
-            <div className={styles.reviewBox} style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
-                  <span className={styles.reviewBoxTitle}>{isAr ? 'معاينة الصور والوسائط' : 'Media & Photo Preview'}</span>
-                  <span style={{ fontSize: '11px', fontWeight: 700, color: '#DDA752' }}>
+            {/* Metric 3: Media & Photos */}
+            <div className={styles.reviewStatCard}>
+              <div className={styles.reviewStatIconWrap}>
+                <ImageIcon size={18} />
+              </div>
+              <div className={styles.reviewStatContent}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <span className={styles.reviewStatLabel}>{isAr ? 'معاينة الوسائط' : 'Media & Photos'}</span>
+                  <span className={styles.reviewStatCountBadge}>
                     {previewUrls.length} {isAr ? 'صور' : 'Photos'}
                   </span>
                 </div>
-                <span className={styles.reviewSub}>
-                  {amenities.length} {isAr ? 'مرفق وميزة إضافية' : 'Amenities Added'}
-                </span>
+                {previewUrls.length > 0 ? (
+                  <div className={styles.reviewMediaThumbs}>
+                    {previewUrls.slice(0, 4).map((url, i) => (
+                      <div key={i} className={styles.reviewMediaThumb}>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={url} alt={`Photo ${i + 1}`} />
+                        {i === 3 && previewUrls.length > 4 && (
+                          <div className={styles.reviewMediaOverflow}>
+                            +{previewUrls.length - 4}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <span className={styles.reviewStatSubText}>
+                    {isAr ? 'لم يتم إرفاق صور بعد' : 'No photos uploaded yet'}
+                  </span>
+                )}
               </div>
-
-              {previewUrls.length > 0 ? (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px', marginTop: '10px' }}>
-                  {previewUrls.slice(0, 4).map((url, i) => (
-                    <div key={i} style={{ position: 'relative', width: '100%', height: '54px', borderRadius: '8px', overflow: 'hidden', border: '1px solid rgba(221, 167, 82, 0.3)' }}>
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={url} alt={`Photo ${i+1}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                      {i === 3 && previewUrls.length > 4 && (
-                        <div style={{ position: 'absolute', inset: 0, background: 'rgba(10, 14, 24, 0.85)', color: '#DDA752', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 800 }}>
-                          +{previewUrls.length - 4}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div style={{ fontSize: '11px', color: '#94A3B8', marginTop: '8px', fontStyle: 'italic' }}>
-                  {isAr ? 'لم تم ارفاق صور حتى الآن' : 'No photos uploaded yet'}
-                </div>
-              )}
             </div>
 
-            {/* Card 4: Layered Specs Overview */}
-            <div className={styles.reviewBox}>
-              <span className={styles.reviewBoxTitle}>{isAr ? 'طبقات المواصفات المعمارية' : 'Layered Specs Overview'}</span>
-              {(() => {
-                const leaves = flattenLeafZones(zoneInstances);
-                const totalSqm = Math.round(leaves.reduce((acc, { zone }) => acc + zoneSqm(zone), 0));
-                const declared = Number(watch('area_sqm')) || 0;
-                const ratio = declared > 0 ? totalSqm / declared : 0;
-                const matches = declared > 0 && ratio >= 0.9 && ratio <= 1.1;
-                const tradeCount = leaves.reduce((acc, { zone }) => acc + zone.trades.length, 0);
-                return (
-                  <>
-                    <span className={styles.reviewVal}>
-                      {leaves.length} {isAr ? 'غرفة' : 'Rooms'} · <span dir="ltr">{totalSqm} m²</span>
-                    </span>
-                    <span className={styles.reviewSub}>
-                      {tradeCount} {isAr ? 'بند تشطيب معرف' : 'Trade Specs'}
-                      {declared > 0 && (
-                        <span style={{ color: matches ? '#4CC38A' : '#E0A63A', fontWeight: 700 }}>
-                          {' · '}{matches
-                            ? (isAr ? 'مطابق للمساحة المعلنة ✓' : 'Matches declared area ✓')
-                            : (isAr ? `المعلن ${declared} م² ⚠` : `Declared ${declared} m² ⚠`)}
-                        </span>
-                      )}
-                    </span>
-                  </>
-                );
-              })()}
+            {/* Metric 4: Blueprint & Trade Specs */}
+            <div className={styles.reviewStatCard}>
+              <div className={styles.reviewStatIconWrap}>
+                <Compass size={18} />
+              </div>
+              <div className={styles.reviewStatContent}>
+                <span className={styles.reviewStatLabel}>{isAr ? 'المخطط الهندسي' : 'Blueprint & Trades'}</span>
+                {(() => {
+                  const leaves = flattenLeafZones(zoneInstances);
+                  const totalSqm = Math.round(leaves.reduce((acc, { zone }) => acc + zoneSqm(zone), 0));
+                  const declared = Number(watch('area_sqm')) || 0;
+                  const ratio = declared > 0 ? totalSqm / declared : 0;
+                  const matches = declared > 0 && ratio >= 0.9 && ratio <= 1.1;
+                  const tradeCount = leaves.reduce((acc, { zone }) => acc + zone.trades.length, 0);
+
+                  return (
+                    <>
+                      <span className={styles.reviewStatMainText}>
+                        {leaves.length} {isAr ? 'غرفة' : 'Rooms'} · <bdi dir="ltr">{totalSqm} m²</bdi>
+                      </span>
+                      <div className={styles.reviewStatSubText}>
+                        <span>{tradeCount} {isAr ? 'بند تشطيب' : 'Trade Specs'}</span>
+                        {declared > 0 && (
+                          <span className={matches ? styles.reconTagOk : styles.reconTagWarn}>
+                            {matches
+                              ? (isAr ? 'مطابق للمساحة ✓' : 'Matches area ✓')
+                              : (isAr ? `المعلن ${declared} م²` : `Declared ${declared} m²`)}
+                          </span>
+                        )}
+                      </div>
+                    </>
+                  );
+                })()}
+              </div>
             </div>
           </div>
 
-          {/* Full Pre-Save Specs Breakdown Summary Box */}
-          <div style={{
-            marginTop: '16px',
-            background: 'rgba(255, 255, 255, 0.02)',
-            border: '1px solid rgba(221, 167, 82, 0.16)',
-            borderRadius: '14px',
-            padding: '18px',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '14px'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <FileText size={18} style={{ color: '#DDA752' }} />
-                <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 800, color: '#DDA752', fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-                  {isAr ? 'ملخص المواصفات والتشطيبات المسجلة' : 'Registered Finishing & Zone Summary'}
+          {/* ─── Categorized Human-Readable Zones Breakdown ─── */}
+          <div className={styles.reviewBreakdownBox}>
+            <div className={styles.reviewBreakdownHead}>
+              <div className={styles.reviewBreakdownTitleWrap}>
+                <Layers size={18} className={styles.reviewBreakdownIcon} />
+                <h3 className={styles.reviewBreakdownTitle}>
+                  {isAr ? 'توزيع الغرف والمواصفات المسجلة' : 'Registered Finishing & Zone Breakdown'}
                 </h3>
               </div>
-              <span style={{ fontSize: '11px', fontWeight: 700, padding: '3px 10px', borderRadius: '10px', background: 'rgba(221, 167, 82, 0.15)', color: '#DDA752', border: '1px solid rgba(221, 167, 82, 0.3)' }}>
-                {flattenLeafZones(zoneInstances).length} {isAr ? 'منطقة جاهزة' : 'Zones Configured'}
+              <span className={styles.reviewBreakdownCount}>
+                {flattenLeafZones(zoneInstances).length} {isAr ? 'غرفة جاهزة' : 'Zones Configured'}
               </span>
             </div>
 
-            {/* Categorized Human-Readable Zones & Trades Breakdown */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <div className={styles.reviewBucketsStack}>
               {(() => {
                 const leaves = flattenLeafZones(zoneInstances);
                 const categorizedSet = new Set<string>();
+
                 const renderedBuckets = CATEGORY_BUCKETS.map((cat) => {
                   const catZones = leaves.filter(({ zone }) => {
                     const matched = cat.match(zone.zone_template_id, resolveZoneName(zone, false));
@@ -1438,28 +1708,25 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
                   if (catZones.length === 0) return null;
 
                   return (
-                    <div key={cat.key} style={{
-                      background: 'rgba(255, 255, 255, 0.03)',
-                      border: '1px solid rgba(255, 255, 255, 0.08)',
-                      borderRadius: '12px',
-                      padding: '14px',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: '10px'
-                    }}>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid rgba(255, 255, 255, 0.06)', paddingBottom: '8px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <span style={{ fontSize: '16px' }}>{cat.emoji}</span>
-                          <h4 style={{ margin: 0, fontSize: '13px', fontWeight: 800, color: '#DDA752', fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+                    <div key={cat.key} className={styles.reviewBucketCard}>
+                      <div className={styles.reviewBucketHead}>
+                        <div className={styles.reviewBucketTitleWrap}>
+                          <span className={styles.reviewBucketIconWrap}>
+                            {cat.icon === 'sofa' && <Sofa size={14} />}
+                            {cat.icon === 'bed' && <Bed size={14} />}
+                            {cat.icon === 'bath' && <Bath size={14} />}
+                            {cat.icon === 'outdoor' && <Trees size={14} />}
+                          </span>
+                          <h4 className={styles.reviewBucketTitle}>
                             {isAr ? cat.ar : cat.en}
                           </h4>
                         </div>
-                        <span style={{ fontSize: '10px', fontWeight: 700, padding: '2px 8px', borderRadius: '8px', background: 'rgba(221, 167, 82, 0.1)', color: '#DDA752' }}>
-                          {catZones.length} {isAr ? 'مناطق' : 'Zones'}
+                        <span className={styles.reviewBucketCountBadge}>
+                          {catZones.length} {isAr ? 'غرفة' : 'Rooms'}
                         </span>
                       </div>
 
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '10px' }}>
+                      <div className={styles.reviewRoomsGrid}>
                         {catZones.map(({ zone, levelLabel }) => (
                           <ReviewZoneCard key={zone.id} zone={zone} levelLabel={levelLabel} isAr={isAr} />
                         ))}
@@ -1474,28 +1741,22 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
                   <>
                     {renderedBuckets}
                     {uncategorizedZones.length > 0 && (
-                      <div style={{
-                        background: "rgba(255, 255, 255, 0.03)",
-                        border: "1px solid rgba(255, 255, 255, 0.08)",
-                        borderRadius: "12px",
-                        padding: "14px",
-                        display: "flex",
-                        flexDirection: "column",
-                        gap: "10px"
-                      }}>
-                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid rgba(255, 255, 255, 0.06)", paddingBottom: "8px" }}>
-                          <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                            <span style={{ fontSize: "16px" }}>📍</span>
-                            <h4 style={{ margin: 0, fontSize: "13px", fontWeight: 800, color: "#DDA752", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-                              {isAr ? "مناطق أخرى" : "Other Areas"}
+                      <div className={styles.reviewBucketCard}>
+                        <div className={styles.reviewBucketHead}>
+                          <div className={styles.reviewBucketTitleWrap}>
+                            <span className={styles.reviewBucketIconWrap}>
+                              <Building2 size={14} />
+                            </span>
+                            <h4 className={styles.reviewBucketTitle}>
+                              {isAr ? 'مساحات أخرى' : 'Other Areas'}
                             </h4>
                           </div>
-                          <span style={{ fontSize: "10px", fontWeight: 700, padding: "2px 8px", borderRadius: "8px", background: "rgba(221, 167, 82, 0.1)", color: "#DDA752" }}>
-                            {uncategorizedZones.length} {isAr ? "مناطق" : "Zones"}
+                          <span className={styles.reviewBucketCountBadge}>
+                            {uncategorizedZones.length} {isAr ? 'غرفة' : 'Rooms'}
                           </span>
                         </div>
 
-                        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: "10px" }}>
+                        <div className={styles.reviewRoomsGrid}>
                           {uncategorizedZones.map(({ zone, levelLabel }) => (
                             <ReviewZoneCard key={zone.id} zone={zone} levelLabel={levelLabel} isAr={isAr} />
                           ))}
@@ -1508,28 +1769,62 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
             </div>
           </div>
 
-          <div style={{ padding: '16px 20px', background: 'rgba(221, 167, 82, 0.05)', borderRadius: 14, border: '1px solid rgba(221, 167, 82, 0.25)', marginTop: 16 }}>
-            <h4 style={{ fontSize: 14, fontWeight: 800, color: '#DDA752', marginBottom: 4, margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span>📌</span>
-              <span>{isAr ? 'مراجعة المخطط والمواصفات قبل النشر' : 'Pre-Publish Architectural Verification'}</span>
-            </h4>
-            <p style={{ fontSize: 12, color: 'rgba(255, 255, 255, 0.7)', margin: '4px 0 0', lineHeight: 1.5 }}>
-              {isAr
-                ? 'تم ضبط كافة أبعاد الغرف والمواصفات المعمارية. عند الضغط على زر "تأكيد ونشر العقار"، سيتم تحديث الصفحة العامة والمخطط الهندسي التفاعلي فوراً.'
-                : 'All room metrology and layered engineering systems are synchronized. Clicking "Confirm & Publish Property" will deploy updates live immediately.'}
-            </p>
+          {/* Verification Callout Note */}
+          <div className={styles.reviewVerifyNotice}>
+            <div className={styles.reviewVerifyNoticeIcon}>
+              <Check size={16} />
+            </div>
+            <div className={styles.reviewVerifyNoticeContent}>
+              <h4 className={styles.reviewVerifyNoticeTitle}>
+                {isAr ? 'مراجعة المخطط والمواصفات جاهزة' : 'Pre-Publish Verification Complete'}
+              </h4>
+              <p className={styles.reviewVerifyNoticeText}>
+                {isAr
+                  ? 'تمت مطابقة كافة مقاسات المخطط وبنود التشطيب. اضغط على "تأكيد ونشر العقار" في الشريط السفلي لنشر العقار مباشرة.'
+                  : 'All room metrology and layered engineering systems are synchronized. Click "Confirm & Publish Property" to make this listing live.'}
+              </p>
+            </div>
           </div>
         </div>
       )}
 
       {/* ─── Stepper Bottom Navigation Bar ─── */}
       <div className={styles.saveBar}>
-        <div className={styles.saveBarStepIndicator}>
-          <span>{isAr ? `الخطوة ${currentStep} من 4` : `Step ${currentStep} of 4`}</span>
-          <span>•</span>
-          <span style={{ color: '#DDA752' }}>
-            {isAr ? steps[currentStep - 1]?.title_ar : steps[currentStep - 1]?.title_en}
-          </span>
+        <div className={styles.saveBarStepper}>
+          {steps.map((st, idx) => {
+            const isActive = currentStep === st.num;
+            const isCompleted = currentStep > st.num;
+            return (
+              <React.Fragment key={st.num}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (st.num === 3 && currentStep !== 3 && selectedType === 'apartment' && zoneInstances.length === 0) {
+                      setStep3PromptOpen(true);
+                      return;
+                    }
+                    if (st.num < currentStep || currentStep > 1) {
+                      goToStep(st.num);
+                    }
+                  }}
+                  className={`${styles.saveBarStepItem} ${isActive ? styles.saveBarStepItemActive : ''} ${isCompleted ? styles.saveBarStepItemCompleted : ''}`}
+                  aria-current={isActive ? 'step' : undefined}
+                  title={isAr ? st.title_ar : st.title_en}
+                >
+                  <div className={styles.saveBarStepBadge}>
+                    {isCompleted ? <Check size={13} strokeWidth={2.5} /> : st.num}
+                  </div>
+                  <div className={styles.saveBarStepText}>
+                    <span className={styles.saveBarStepNum}>{isAr ? `الخطوة ${st.num}` : `Step ${st.num}`}</span>
+                    <span className={styles.saveBarStepTitle}>{isAr ? st.title_ar : st.title_en}</span>
+                  </div>
+                </button>
+                {idx < steps.length - 1 && (
+                  <div className={`${styles.saveBarStepLine} ${isCompleted ? styles.saveBarStepLineActive : ''}`} />
+                )}
+              </React.Fragment>
+            );
+          })}
         </div>
 
         <div className={styles.saveBarControls}>
@@ -1575,6 +1870,72 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
           )}
         </div>
       </div>
+
+      {/* ─── Modal Choice Before Step 3: Wizard vs Ground Zero ─── */}
+      {step3PromptOpen && (
+        <div className={styles.promptOverlay} role="dialog" aria-modal="true">
+          <div className={styles.promptModal}>
+            <div className={styles.promptHeader}>
+              <div className={styles.promptBadge}>
+                <Sparkles size={14} />
+                <span>{isAr ? 'إعداد المخطط المعماري (الخطوة ٣)' : 'STEP 3: BLUEPRINT SETUP'}</span>
+              </div>
+              <button type="button" className={styles.promptClose} onClick={() => setStep3PromptOpen(false)}>
+                <X size={16} />
+              </button>
+            </div>
+
+            <h3 className={styles.promptTitle}>
+              {isAr ? 'كيف ترغب في بناء المخطط الهندسي؟' : 'How would you like to build the floor plan?'}
+            </h3>
+            <p className={styles.promptSubtitle}>
+              {isAr
+                ? 'اختر بين استخدام معالج التوليد الذكي لإنشاء التوزيع والمقاسات ومستوى التشطيب بضغطة زر، أو البدء من الصفر داخل حدود الشقة.'
+                : 'Choose whether to generate an automated architectural layout with custom dimensions & finishing, or start with clean boundary walls from ground zero.'}
+            </p>
+
+            <div className={styles.promptCards}>
+              {/* Option A: Smart Preset Wizard */}
+              <div className={`${styles.promptCard} ${styles.promptCardPrimary}`} onClick={handleChooseWizard}>
+                <div className={styles.promptCardTag}>{isAr ? 'موصى به' : 'RECOMMENDED'}</div>
+                <div className={styles.promptIconBox}>
+                  <Sparkles size={26} />
+                </div>
+                <h4 className={styles.promptCardTitle}>
+                  {isAr ? 'معالج التوليد الذكي' : 'Smart Preset Wizard'}
+                </h4>
+                <p className={styles.promptCardDesc}>
+                  {isAr
+                    ? 'حدد عدد الغرف، الصالة، البلكونات، والمساحات الإضافية ومستوى التشطيب لتوليد المخطط وتعديله بحرية.'
+                    : 'Configure bedrooms, living room, balconies, extra layout spaces and finishing level to generate the layout.'}
+                </p>
+                <button type="button" className={styles.promptBtnPrimary}>
+                  <Sparkles size={14} />
+                  <span>{isAr ? 'توليد بالمعالج والمتابعة' : 'Generate with Wizard'}</span>
+                </button>
+              </div>
+
+              {/* Option B: Build from Ground Zero */}
+              <div className={styles.promptCard} onClick={handleChooseGroundZero}>
+                <div className={`${styles.promptIconBox} ${styles.promptIconBoxMuted}`}>
+                  <Layers size={26} />
+                </div>
+                <h4 className={styles.promptCardTitle}>
+                  {isAr ? 'البدء من نقطة الصفر' : 'Build from Ground Zero'}
+                </h4>
+                <p className={styles.promptCardDesc}>
+                  {isAr
+                    ? 'مساحة عمل فارغة محاطة بحدود الشقة الخارجية، لتضيف وتسحب وتوزع الغرف والأبواب يدوياً.'
+                    : 'Start with clean outer perimeter boundary walls and assemble rooms, partitions & doors manually.'}
+                </p>
+                <button type="button" className={styles.promptBtnOutline}>
+                  <span>{isAr ? 'البدء بحدود فارغة' : 'Start from Scratch'}</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </form>
   );
 }

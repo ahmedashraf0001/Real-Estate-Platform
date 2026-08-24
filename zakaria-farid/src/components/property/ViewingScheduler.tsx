@@ -49,14 +49,11 @@ const ViewingScheduler: React.FC<ViewingSchedulerProps> = ({
     };
   }, [calLink]);
 
+  if (!calLink) return null;
+
   return (
     <div className="vs-root">
-      {!calLink ? (
-        <a href={whatsappHref} target="_blank" rel="noopener noreferrer" className="vs-fallback-btn">
-          <MessageCircle size={16} />
-          <span>{isAr ? 'رتّب معاينة عبر واتساب' : 'Arrange a viewing on WhatsApp'}</span>
-        </a>
-      ) : booked ? (
+      {booked ? (
         <div className="vs-confirmed-box">
           <CheckCircle size={38} className="vs-confirmed-icon" />
           <h4 className="vs-confirmed-title">{isAr ? 'تم حجز المعاينة' : 'Viewing Scheduled'}</h4>

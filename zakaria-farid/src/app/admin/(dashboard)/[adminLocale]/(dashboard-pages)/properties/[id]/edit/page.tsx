@@ -3,6 +3,14 @@ import AdminPropertyForm from '@/components/admin/AdminPropertyForm';
 
 type Props = { params: Promise<{ id: string; adminLocale: string }> };
 
+export async function generateMetadata({ params }: Props) {
+  const { adminLocale } = await params;
+  const isAr = adminLocale === 'ar';
+  return {
+    title: isAr ? 'تعديل بيانات العقار' : 'Edit Property',
+  };
+}
+
 export default async function EditPropertyPage({ params }: Props) {
   const { id, adminLocale } = await params;
   const isAr = adminLocale === 'ar';
@@ -13,17 +21,7 @@ export default async function EditPropertyPage({ params }: Props) {
   if (!data) notFound();
 
   return (
-    <div>
-      <div style={{ marginBottom: '28px' }}>
-        <h1 style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '26px', fontWeight: 800, margin: 0, color: '#FFFFFF', letterSpacing: '-0.02em' }}>
-          {isAr ? 'تعديل العقار' : 'Edit Property'}
-        </h1>
-        <p style={{ margin: '6px 0 0', color: 'rgba(255, 255, 255, 0.65)', fontSize: '13.5px' }}>
-          {isAr 
-            ? 'تعديل بيانات العقار والوسائط والمخططات الهندسية ومواصفات التشطيب' 
-            : 'Update architectural specifications, CAD blueprints, and engineering trade layers.'}
-        </p>
-      </div>
+    <div style={{ width: '100%' }}>
       <AdminPropertyForm property={data} isAr={isAr} />
     </div>
   );

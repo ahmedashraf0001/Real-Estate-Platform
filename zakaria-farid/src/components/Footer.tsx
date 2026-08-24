@@ -2,6 +2,7 @@
 import React from 'react';
 import { useRouter } from 'next/navigation';
 import { BrandLogo } from '@/components/BrandLogo';
+import { usePlatformSettings } from '@/lib/hooks/usePlatformSettings';
 
 interface FooterProps {
   locale?: string;
@@ -19,6 +20,8 @@ export const Footer: React.FC<FooterProps> = ({
   onOpenAdmin
 }) => {
   const router = useRouter();
+  const isAr = locale === 'ar';
+  const { contact } = usePlatformSettings();
 
   const onNavigate = (view: string) => {
     if (propOnNavigate) {
@@ -54,10 +57,13 @@ export const Footer: React.FC<FooterProps> = ({
             <BrandLogo 
               size="lg" 
               showSubtitle={true}
+              locale={locale}
               onClick={() => onNavigate('home')} 
             />
             <p className="footer-brand-desc">
-              Elevating Egyptian real estate into an art form. We curate high-design, luxury architectural masterworks in the country's most sought-after destinations.
+              {isAr 
+                ? 'نرتقي بالعقارات المصرية الفاخرة إلى مستوى التحف المعمارية الخالدة. ننتقي ونمثل أندر القصور والصروح المعمارية بأعلى معايير الحصرية والسيادة.'
+                : "Elevating Egyptian real estate into an art form. We curate high-design, luxury architectural masterworks in the country's most sought-after destinations."}
             </p>
             <div className="footer-socials">
               <a href="#instagram" className="social-icon-btn" aria-label="Instagram">
@@ -89,18 +95,32 @@ export const Footer: React.FC<FooterProps> = ({
 
           {/* Properties Links */}
           <div className="footer-nav-col">
-            <h4 className="footer-col-title">PROPERTIES</h4>
+            <h4 className="footer-col-title">{isAr ? 'أنواع الصروح' : 'PROPERTIES'}</h4>
             <ul className="footer-links">
-              {['Villas', 'Apartments', 'Penthouses', 'Chalets', 'Duplexes'].map((item) => (
-                <li key={item}>
+              {(isAr ? [
+                { label: 'فيلا مستقلة فاخرة', filter: 'Standalone Villa' },
+                { label: 'بنتهاوس سماوي', filter: 'Penthouse' },
+                { label: 'قصر ملكي متكامل', filter: 'Mansion' },
+                { label: 'قصور وبنتهاوس', filter: 'Villas & Penthouses' },
+              ] : [
+                { label: 'Standalone Villas', filter: 'Standalone Villa' },
+                { label: 'Sky Penthouses', filter: 'Penthouse' },
+                { label: 'Grand Mansions', filter: 'Mansion' },
+                { label: 'Villas & Penthouses', filter: 'Villas & Penthouses' },
+              ]).map((item) => (
+                <li key={item.filter}>
                   <button 
                     className="footer-link-btn"
                     onClick={() => {
-                      if (onSelectPropertyType) onSelectPropertyType(item);
-                      onNavigate('properties');
+                      if (propOnSelectType) {
+                        propOnSelectType(item.filter);
+                        onNavigate('properties');
+                      } else {
+                        router.push('/' + locale + '/properties?type=' + encodeURIComponent(item.filter));
+                      }
                     }}
                   >
-                    {item}
+                    {item.label}
                   </button>
                 </li>
               ))}
@@ -109,18 +129,36 @@ export const Footer: React.FC<FooterProps> = ({
 
           {/* Destinations Links */}
           <div className="footer-nav-col">
-            <h4 className="footer-col-title">DESTINATIONS</h4>
+            <h4 className="footer-col-title">{isAr ? 'الوجهات الاستثمارية' : 'DESTINATIONS'}</h4>
             <ul className="footer-links">
-              {['New Cairo', 'Sheikh Zayed', 'North Coast', 'Gouna', 'Ain Sokhna'].map((item) => (
-                <li key={item}>
+              {(isAr ? [
+                { label: 'القاهرة الجديدة', filter: 'New Cairo' },
+                { label: 'الشيخ زايد', filter: 'Sheikh Zayed' },
+                { label: 'الساحل الشمالي', filter: 'North Coast' },
+                { label: 'الجونة', filter: 'Gouna' },
+                { label: 'العين السخنة', filter: 'Ain Sokhna' },
+                { label: 'مدينتي', filter: 'Madinaty' },
+              ] : [
+                { label: 'New Cairo', filter: 'New Cairo' },
+                { label: 'Sheikh Zayed', filter: 'Sheikh Zayed' },
+                { label: 'North Coast (Sahel)', filter: 'North Coast' },
+                { label: 'El Gouna', filter: 'Gouna' },
+                { label: 'Ain Sokhna', filter: 'Ain Sokhna' },
+                { label: 'Madinaty', filter: 'Madinaty' },
+              ]).map((item) => (
+                <li key={item.filter}>
                   <button 
                     className="footer-link-btn"
                     onClick={() => {
-                      if (onSelectDestination) onSelectDestination(item);
-                      onNavigate('properties');
+                      if (propOnSelectDest) {
+                        propOnSelectDest(item.filter);
+                        onNavigate('properties');
+                      } else {
+                        router.push('/' + locale + '/properties?location=' + encodeURIComponent(item.filter));
+                      }
                     }}
                   >
-                    {item}
+                    {item.label}
                   </button>
                 </li>
               ))}
@@ -129,20 +167,20 @@ export const Footer: React.FC<FooterProps> = ({
 
           {/* Inquiries Column */}
           <div className="footer-nav-col inquiries-col">
-            <h4 className="footer-col-title">INQUIRIES</h4>
+            <h4 className="footer-col-title">{isAr ? 'بيانات التواصل' : 'INQUIRIES'}</h4>
             <div className="inquiry-info-item">
               <span className="inquiry-address">
-                G-08 Grand Tower, Financial District,<br />New Cairo, Egypt
+                {isAr ? (contact?.addressAr || 'برج جراند G-08، الحي المالي، القاهرة الجديدة، مصر') : (contact?.addressEn || 'G-08 Grand Tower, Financial District,\nNew Cairo, Egypt')}
               </span>
             </div>
             <div className="inquiry-info-item">
-              <a href="tel:+20219688" className="inquiry-phone">
-                +20 2 19688
+              <a href={`tel:${(contact?.phone || '+20 2 19688').replace(/\s+/g, '')}`} className="inquiry-phone">
+                {contact?.phone || '+20 2 19688'}
               </a>
             </div>
             <div className="inquiry-info-item">
-              <a href="mailto:concierge@zakariafarid.com" className="inquiry-email">
-                concierge@zakariafarid.com
+              <a href={`mailto:${contact?.email || 'concierge@zakariafarid.com'}`} className="inquiry-email">
+                {contact?.email || 'concierge@zakariafarid.com'}
               </a>
             </div>
           </div>
@@ -151,30 +189,30 @@ export const Footer: React.FC<FooterProps> = ({
         {/* Bottom Bar */}
         <div className="footer-bottom-bar">
           <div className="footer-copy">
-            © 2026 Zakaria Farid. Sovereign real estate collection.
+            {isAr ? '© ٢٠٢٦ آل زكريا. المجموعة العقارية والاستشارات السيادية.' : '© 2026 AL ZAKARIA. Sovereign Real Estate & Advisory.'}
           </div>
           <div className="footer-credits">
-            <span>Designed by luxury operators. All rights reserved.</span>
+            <span>{isAr ? 'تصميم وإدارة تنفيذية بمعايير الفخامة العالمية. جميع الحقوق محفوظة.' : 'Designed by luxury operators. All rights reserved.'}</span>
             {onOpenAdmin && (
               <button 
                 onClick={onOpenAdmin}
                 className="footer-admin-link"
-                title="Enter Secure Admin Entrance"
+                title={isAr ? 'الدخول لبوابة الإدارة والمكتب الخاص' : 'Enter Secure Admin Entrance'}
               >
-                Admin Entrance
+                {isAr ? 'بوابة الإدارة' : 'Admin Entrance'}
               </button>
             )}
             <button 
               onClick={() => onNavigate('maintenance' as any)}
               className="footer-admin-link"
-              title="Preview 503 Maintenance Mode"
+              title={isAr ? 'معاينة وضع الصيانة 503' : 'Preview 503 Maintenance Mode'}
             >
               503 Status
             </button>
             <button 
               onClick={() => onNavigate('not-found' as any)}
               className="footer-admin-link"
-              title="Preview 404 Not Found"
+              title={isAr ? 'معاينة صفحة 404' : 'Preview 404 Not Found'}
             >
               404 Status
             </button>
@@ -273,7 +311,16 @@ export const Footer: React.FC<FooterProps> = ({
           font-size: 0.875rem;
           color: var(--text-secondary);
           text-align: left;
+          background: transparent;
+          border: none;
+          padding: 0;
+          cursor: pointer;
           transition: color var(--transition-fast);
+        }
+
+        [dir="rtl"] .footer-link-btn,
+        .luxury-footer[dir="rtl"] .footer-link-btn {
+          text-align: right;
         }
 
         .footer-link-btn:hover {

@@ -7,6 +7,7 @@ import {
   LayoutDashboard, 
   Building2, 
   Users, 
+  TrendingUp,
   LogOut, 
   Languages, 
   ExternalLink,
@@ -14,8 +15,10 @@ import {
   Sparkles,
   Menu,
   X,
-  Compass
+  Compass,
+  Sliders
 } from 'lucide-react';
+import { BrandLogo } from '@/components/BrandLogo';
 import { createClient } from '@/lib/supabase/client';
 import styles from './AdminSidebar.module.css';
 
@@ -33,20 +36,32 @@ export default function AdminSidebar({ adminLocale }: AdminSidebarProps) {
   const navItems = [
     { 
       href: `/admin/${adminLocale}`, 
-      label: isAr ? 'لوحة التحكم المركزية' : 'Executive Dashboard', 
+      label: isAr ? 'لوحة القيادة التنفيذية' : 'Executive Overview', 
       icon: LayoutDashboard, 
       exact: true 
     },
     { 
       href: `/admin/${adminLocale}/properties`, 
-      label: isAr ? 'إدارة العقارات' : 'Properties', 
+      label: isAr ? 'محفظة العقارات' : 'Properties Portfolio', 
       icon: Building2, 
       exact: false 
     },
     { 
       href: `/admin/${adminLocale}/leads`, 
-      label: isAr ? 'طلبات كبار العملاء (CRM)' : 'Client Inquiries & CRM', 
+      label: isAr ? 'إدارة العملاء والصفقات' : 'Client Inquiries & CRM', 
       icon: Users, 
+      exact: false 
+    },
+    { 
+      href: `/admin/${adminLocale}/analytics`, 
+      label: isAr ? 'تحليلات العقارات والذكاء السوقي' : 'Property Analytics', 
+      icon: TrendingUp, 
+      exact: false 
+    },
+    { 
+      href: `/admin/${adminLocale}/settings`, 
+      label: isAr ? 'إعدادات المنصة والسوق' : 'Platform & Market Radar', 
+      icon: Sliders, 
       exact: false 
     },
   ] as const;
@@ -64,8 +79,7 @@ export default function AdminSidebar({ adminLocale }: AdminSidebarProps) {
     <>
       <div className={styles.mobileHeader}>
         <div className={styles.mobileBrand}>
-          <div className={styles.logoIcon}>ZF</div>
-          <span className={styles.mobileTitle}>ZAKARIA FARID</span>
+          <BrandLogo size="sm" locale={adminLocale} />
         </div>
         <button 
           className={styles.hamburgerBtn} 
@@ -83,18 +97,9 @@ export default function AdminSidebar({ adminLocale }: AdminSidebarProps) {
       <aside className={`${styles.sidebar} ${isOpen ? styles.sidebarOpen : ''}`}>
         {/* Brand Header */}
         <div className={styles.brandContainer}>
-          <div className={styles.logoRow}>
-            <div className={styles.logoIcon}>
-              <span>ZF</span>
-            </div>
-            <div className={styles.logoText}>
-              <h2 className={styles.brandTitle}>ZAKARIA FARID</h2>
-              <span className={styles.brandSubtitle}>
-                <Sparkles size={10} className={styles.sparkleIcon} />
-                {isAr ? 'المنظومة المعمارية الفاخرة' : 'LUXURY ARCHITECTURAL STUDIO'}
-              </span>
-            </div>
-          </div>
+          <Link href={`/admin/${adminLocale}`} style={{ textDecoration: 'none' }}>
+            <BrandLogo size="sm" locale={adminLocale} />
+          </Link>
         </div>
 
         {/* Quick Add CTA */}

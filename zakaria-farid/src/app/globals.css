@@ -4,8 +4,9 @@
    RTL support added for Arabic locale
 ───────────────────────────────────────────────────────────────── */
 
-/* ─── Google Fonts ─────────────────────────────────────────────── */
+/* ─── Google Fonts & External Styles ──────────────────────────────── */
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=Cairo:wght@300;400;500;600;700;800;900&display=swap');
+@import url('https://unpkg.com/leaflet@1.9.4/dist/leaflet.css');
 
 /* ─── Thmanyah Sans — UI / body text ─────────── */
 @font-face {
@@ -136,12 +137,12 @@
   --border-glass-subtle: rgba(255, 255, 255, 0.18);
   --glass-blur: blur(20px) saturate(210%) contrast(108%) brightness(108%);
 
-  /* Gold Accents */
-  --gold-primary: #DDA752;
-  --gold-light: #FCD34D;
-  --gold-dark: #B88530;
-  --gold-border: rgba(221, 167, 82, 0.32);
-  --gold-glow: rgba(252, 211, 77, 0.25);
+  /* Unified Egyptian Champagne Gold System */
+  --gold-primary: #E5B869;
+  --gold-light: #FFF0C2;
+  --gold-dark: #B8934A;
+  --gold-border: rgba(229, 184, 105, 0.28);
+  --gold-glow: rgba(229, 184, 105, 0.25);
 
   /* Text Hierarchy */
   --text-primary: #FFFFFF;
@@ -164,7 +165,7 @@
   --shadow-sm: 0 4px 12px rgba(0, 0, 0, 0.35);
   --shadow-md: 0 10px 30px rgba(0, 0, 0, 0.45);
   --shadow-lg: 0 20px 50px rgba(0, 0, 0, 0.6);
-  --shadow-gold: 0 8px 30px rgba(221, 167, 82, 0.18);
+  --shadow-gold: 0 8px 30px rgba(229, 184, 105, 0.22);
   --shadow-glass:
     0 20px 48px rgba(0, 0, 0, 0.38),
     0 4px 14px rgba(0, 0, 0, 0.18),
@@ -172,10 +173,10 @@
     inset 0 -1px 1px rgba(255, 255, 255, 0.15);
 
   /* Typography */
-  --font-heading: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
-  --font-body: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
-  --font-arabic: 'Cairo', 'Plus Jakarta Sans', sans-serif;
-  --font-serif: 'ThmanyahSerifDisplay', 'Plus Jakarta Sans', Georgia, serif;
+  --font-heading: 'ThmanyahSans', 'Cairo', 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-body: 'ThmanyahSans', 'Cairo', 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-arabic: 'ThmanyahSans', 'Cairo', 'Plus Jakarta Sans', sans-serif;
+  --font-serif: 'ThmanyahSerifDisplay', 'ThmanyahSerifText', Georgia, serif;
 
   /* Transitions */
   --transition-fast: 150ms cubic-bezier(0.16, 1, 0.3, 1);
@@ -190,9 +191,9 @@
   --color-bg-dark: #07090D;
   --color-surface: #11141B;
   --color-surface-hover: #161922;
-  --color-primary: #DDA752;
-  --color-primary-hover: #C48D3A;
-  --color-accent: #FCD34D;
+  --color-primary: #E5B869;
+  --color-primary-hover: #B8934A;
+  --color-accent: #FFF0C2;
   --color-border: rgba(255, 255, 255, 0.08);
   --color-text: #FFFFFF;
   --color-text-muted: #8E9BAE;
@@ -217,7 +218,7 @@
    LUXURY LIGHT THEME (WARM ARCHITECTURAL ALABASTER & EGYPTIAN GOLD)
 ───────────────────────────────────────────────────────────────── */
 [data-theme="light"] {
-  --bg-primary: #F4F1EA;
+  --bg-primary: #F7F4EE;
   --bg-surface: #FCFAF7;
   --bg-card: #FFFFFF;
   --bg-card-hover: #F8F5EE;
@@ -228,12 +229,12 @@
   --border-glass: rgba(255, 255, 255, 0.65);
   --border-glass-subtle: rgba(255, 255, 255, 0.35);
 
-  --gold-primary: #D4A034;
-  --gold-light: #FCD34D;
-  --gold-dark: #B8860B;
+  --gold-primary: #8C6826;
+  --gold-light: #B8934A;
+  --gold-dark: #6B4E1B;
   --gold-surface: #FAF5E8;
-  --gold-border: rgba(212, 160, 52, 0.32);
-  --gold-glow: rgba(212, 160, 52, 0.22);
+  --gold-border: rgba(140, 104, 38, 0.28);
+  --gold-glow: rgba(184, 147, 74, 0.18);
 
   --text-primary: #0D1117;
   --text-secondary: #334155;
@@ -610,10 +611,34 @@ img {
 }
 
 /* ─────────────────────────────────────────────────────────────────
-   RTL LAYOUT OVERRIDES (Arabic locale)
+   RTL LAYOUT & TYPOGRAPHY OVERRIDES (Arabic locale)
 ───────────────────────────────────────────────────────────────── */
-[dir="rtl"] {
+[dir="rtl"],
+html[lang="ar"] {
   text-align: right;
+  letter-spacing: 0 !important;
+}
+
+[dir="rtl"] h1,
+[dir="rtl"] h2,
+[dir="rtl"] h3,
+[dir="rtl"] h4,
+[dir="rtl"] h5,
+[dir="rtl"] h6,
+[dir="rtl"] .section-title,
+[dir="rtl"] .hero-title,
+[dir="rtl"] .card-title {
+  letter-spacing: 0 !important;
+  font-style: normal !important;
+  line-height: 1.35 !important;
+}
+
+[dir="rtl"] .title-serif-accent,
+[dir="rtl"] .title-gold-serif,
+[dir="rtl"] .serif-italic,
+[dir="rtl"] em {
+  font-style: normal !important;
+  font-family: inherit !important;
 }
 
 [dir="rtl"] .container {

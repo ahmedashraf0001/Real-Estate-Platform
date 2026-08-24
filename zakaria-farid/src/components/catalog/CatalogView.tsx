@@ -2,12 +2,15 @@
 import { useRouter } from 'next/navigation';
 import { triggerNavigationStart } from '@/components/NavigationProgress';
 import React, { useState, useMemo, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { PropertyCard } from '@/components/property/PropertyCard';
 import { MarketChart } from '@/components/MarketChart';
 import { CompareDrawer } from '@/components/property/CompareDrawer';
 import { FALLBACK_PROPERTIES } from '@/lib/data/fallbackProperties';
 import { adaptProperties } from '@/lib/utils/propertyAdapter';
 import { Property } from '@/types';
+import { useFavorites } from '@/lib/context/FavoritesContext';
+import { usePlatformSettings } from '@/lib/hooks/usePlatformSettings';
 import {
   SlidersHorizontal,
   ChevronDown,
@@ -55,53 +58,53 @@ interface CatalogViewProps {
 export type SortOption = 'highest' | 'lowest' | 'newest' | 'largest';
 export type ViewMode = 'grid' | 'compact' | 'list';
 
-const SORT_OPTIONS: { id: SortOption; label: string; shortLabel: string }[] = [
-  { id: 'highest', label: 'Highest Guide Price', shortLabel: 'Highest Price' },
-  { id: 'lowest', label: 'Lowest Guide Price', shortLabel: 'Lowest Price' },
-  { id: 'newest', label: 'Newest Delivery Year', shortLabel: 'Newest Delivery' },
-  { id: 'largest', label: 'Largest Built-Up Area', shortLabel: 'Largest Area' },
+const SORT_OPTIONS: { id: SortOption; label: string; shortLabel: string; labelAr: string; shortLabelAr: string }[] = [
+  { id: 'highest', label: 'Highest Guide Price', shortLabel: 'Highest Price', labelAr: 'السعر: من الأعلى للأقل', shortLabelAr: 'السعر الأعلى' },
+  { id: 'lowest', label: 'Lowest Guide Price', shortLabel: 'Lowest Price', labelAr: 'السعر: من الأقل للأعلى', shortLabelAr: 'السعر الأقل' },
+  { id: 'newest', label: 'Newest Delivery Year', shortLabel: 'Newest Delivery', labelAr: 'سنة الاستلام: الأحدث', shortLabelAr: 'الأحدث تسليماً' },
+  { id: 'largest', label: 'Largest Built-Up Area', shortLabel: 'Largest Area', labelAr: 'المساحة: الأكبر مساحة', shortLabelAr: 'الأكبر مساحة' },
 ];
 
 const DESTINATION_PILLS = [
-  { id: 'All', label: 'All Destinations' },
-  { id: 'New Cairo', label: 'New Cairo' },
-  { id: 'Sheikh Zayed', label: 'Sheikh Zayed' },
-  { id: 'North Coast', label: 'North Coast (Sahel)' },
-  { id: 'Gouna', label: 'El Gouna' },
-  { id: 'Ain Sokhna', label: 'Ain Sokhna' },
-  { id: 'Madinaty', label: 'Madinaty' },
+  { id: 'All', label: 'All Destinations', labelAr: 'جميع الوجهات' },
+  { id: 'New Cairo', label: 'New Cairo', labelAr: 'القاهرة الجديدة' },
+  { id: 'Sheikh Zayed', label: 'Sheikh Zayed', labelAr: 'الشيخ زايد' },
+  { id: 'North Coast', label: 'North Coast (Sahel)', labelAr: 'الساحل الشمالي' },
+  { id: 'Gouna', label: 'El Gouna', labelAr: 'الجونة' },
+  { id: 'Ain Sokhna', label: 'Ain Sokhna', labelAr: 'العين السخنة' },
+  { id: 'Madinaty', label: 'Madinaty', labelAr: 'مدينتي' },
 ];
 
 const LOCATION_FILTER_OPTIONS = [
-  { value: 'All', label: 'All Destinations', shortLabel: 'All Cities' },
-  { value: 'New Cairo', label: 'New Cairo (Fifth Settlement)', shortLabel: 'New Cairo' },
-  { value: 'Sheikh Zayed', label: 'Sheikh Zayed (October)', shortLabel: 'Sheikh Zayed' },
-  { value: 'North Coast', label: 'North Coast (Sahel)', shortLabel: 'North Coast' },
-  { value: 'Ain Sokhna', label: 'Ain Sokhna (Red Sea)', shortLabel: 'Ain Sokhna' },
-  { value: 'Gouna', label: 'El Gouna (Lagoon)', shortLabel: 'El Gouna' },
-  { value: 'Madinaty', label: 'Madinaty (East Cairo)', shortLabel: 'Madinaty' },
+  { value: 'All', label: 'All Destinations', shortLabel: 'All Cities', labelAr: 'جميع الوجهات والمدن', shortLabelAr: 'جميع المدن' },
+  { value: 'New Cairo', label: 'New Cairo (Fifth Settlement)', shortLabel: 'New Cairo', labelAr: 'القاهرة الجديدة (التجمع الخامس)', shortLabelAr: 'القاهرة الجديدة' },
+  { value: 'Sheikh Zayed', label: 'Sheikh Zayed (October)', shortLabel: 'Sheikh Zayed', labelAr: 'الشيخ زايد (٦ أكتوبر)', shortLabelAr: 'الشيخ زايد' },
+  { value: 'North Coast', label: 'North Coast (Sahel)', shortLabel: 'North Coast', labelAr: 'الساحل الشمالي (سيدي عبد الرحمن)', shortLabelAr: 'الساحل الشمالي' },
+  { value: 'Ain Sokhna', label: 'Ain Sokhna (Red Sea)', shortLabel: 'Ain Sokhna', labelAr: 'العين السخنة (البحر الأحمر)', shortLabelAr: 'العين السخنة' },
+  { value: 'Gouna', label: 'El Gouna (Lagoon)', shortLabel: 'El Gouna', labelAr: 'الجونة (البحيرات واللاجون)', shortLabelAr: 'الجونة' },
+  { value: 'Madinaty', label: 'Madinaty (East Cairo)', shortLabel: 'Madinaty', labelAr: 'مدينتي (شرق القاهرة)', shortLabelAr: 'مدينتي' },
 ];
 
 const TYPE_FILTER_OPTIONS = [
-  { value: 'All', label: 'All Typologies', shortLabel: 'All Types' },
-  { value: 'Standalone Villa', label: 'Standalone Villa', shortLabel: 'Standalone' },
-  { value: 'Penthouse', label: 'Sky Penthouse', shortLabel: 'Penthouse' },
-  { value: 'Mansion', label: 'Grand Mansion', shortLabel: 'Mansion' },
-  { value: 'Villas & Penthouses', label: 'Villas & Penthouses', shortLabel: 'Villas/Penthouses' },
+  { value: 'All', label: 'All Typologies', shortLabel: 'All Types', labelAr: 'جميع أنواع الصروح', shortLabelAr: 'جميع الأنواع' },
+  { value: 'Standalone Villa', label: 'Standalone Villa', shortLabel: 'Standalone', labelAr: 'فيلا مستقلة فاخرة', shortLabelAr: 'فيلا مستقلة' },
+  { value: 'Penthouse', label: 'Sky Penthouse', shortLabel: 'Penthouse', labelAr: 'بنتهاوس سماوي ورووف', shortLabelAr: 'بنتهاوس' },
+  { value: 'Mansion', label: 'Grand Mansion', shortLabel: 'Mansion', labelAr: 'قصر ملكي متكامل', shortLabelAr: 'قصر' },
+  { value: 'Villas & Penthouses', label: 'Villas & Penthouses', shortLabel: 'Villas/Penthouses', labelAr: 'قصور وبنتهاوس', shortLabelAr: 'قصور/بنتهاوس' },
 ];
 
 const PRICE_FILTER_OPTIONS = [
-  { value: 'All', label: 'All Price Tiers', shortLabel: 'All Tiers' },
-  { value: 'Under 25M EGP', label: 'Under 25M EGP', shortLabel: '< 25M EGP' },
-  { value: '25M - 50M+ EGP', label: '25M – 50M+ EGP', shortLabel: '25M–50M EGP' },
-  { value: '50M+ EGP', label: 'Ultra-Luxury (50M+ EGP)', shortLabel: '50M+ EGP' },
+  { value: 'All', label: 'All Price Tiers', shortLabel: 'All Tiers', labelAr: 'جميع النطاقات السعرية', shortLabelAr: 'كل الأسعار' },
+  { value: 'Under 25M EGP', label: 'Under 25M EGP', shortLabel: '< 25M EGP', labelAr: 'أقل من ٢٥ مليون ج.م', shortLabelAr: '< ٢٥ م ج.م' },
+  { value: '25M - 50M+ EGP', label: '25M – 50M+ EGP', shortLabel: '25M–50M EGP', labelAr: 'من ٢٥ إلى ٥٠+ مليون ج.م', shortLabelAr: '٢٥–٥٠ م ج.م' },
+  { value: '50M+ EGP', label: 'Ultra-Luxury (50M+ EGP)', shortLabel: '50M+ EGP', labelAr: 'فائقة الفخامة (+٥٠ مليون ج.م)', shortLabelAr: '+٥٠ م ج.م' },
 ];
 
 const BEDROOM_FILTER_OPTIONS = [
-  { value: 'All', label: 'All Bedrooms', shortLabel: 'All Beds' },
-  { value: '3', label: '3 Bedrooms', shortLabel: '3 Beds' },
-  { value: '4+', label: '4+ Bedrooms', shortLabel: '4+ Beds' },
-  { value: '5+', label: '5+ Bedrooms', shortLabel: '5+ Beds' },
+  { value: 'All', label: 'All Bedrooms', shortLabel: 'All Beds', labelAr: 'جميع غرف النوم', shortLabelAr: 'كل الغرف' },
+  { value: '3', label: '3 Bedrooms', shortLabel: '3 Beds', labelAr: '٣ غرف نوم', shortLabelAr: '٣ غرف' },
+  { value: '4+', label: '4+ Bedrooms', shortLabel: '4+ Beds', labelAr: '٤+ غرف نوم', shortLabelAr: '٤+ غرف' },
+  { value: '5+', label: '5+ Bedrooms', shortLabel: '5+ Beds', labelAr: '٥+ غرف نوم', shortLabelAr: '٥+ غرف' },
 ];
 
 const cardsContainerVariants: Variants = {
@@ -130,6 +133,7 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
   onSelectProperty: propOnSelectProperty,
   onOpenInquiry: propOnOpenInquiry
 }) => {
+  const isAr = locale === 'ar';
   const router = useRouter();
   const onSelectProperty = propOnSelectProperty || ((id: string) => {
     triggerNavigationStart();
@@ -153,6 +157,19 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
   const [selectedDelivery, setSelectedDelivery] = useState<string>('All');
   const [isSortOpen, setIsSortOpen] = useState(false);
   const [isSearchFocused, setIsSearchFocused] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  const { registerProperties } = useFavorites();
+  const platformSettings = usePlatformSettings();
+  const showSidebar = Boolean(
+    platformSettings.showMarketRadar !== false || platformSettings.showVIPAlerts !== false
+  );
+
+  useEffect(() => {
+    setMounted(true);
+    if (allPropertiesList && allPropertiesList.length > 0) {
+      registerProperties(allPropertiesList);
+    }
+  }, [allPropertiesList, registerProperties]);
   const [openDropdown, setOpenDropdown] = useState<'location' | 'type' | 'price' | 'beds' | null>(null);
   const [dropdownPlacement, setDropdownPlacement] = useState<'down' | 'up'>('down');
   const sortRef = useRef<HTMLDivElement>(null);
@@ -174,6 +191,9 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
     setOpenDropdown(type);
   };
   const [emailAlertSaved, setEmailAlertSaved] = useState(false);
+  const [isEmailInputOpen, setIsEmailInputOpen] = useState(false);
+  const [alertEmail, setAlertEmail] = useState('');
+  const [isSubmittingEmail, setIsSubmittingEmail] = useState(false);
   const [searchSaved, setSearchSaved] = useState(false);
   const [compareIds, setCompareIds] = useState<string[]>([]);
 
@@ -369,7 +389,7 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
   }, [searchQuery, location, propertyType, priceTier, bedrooms, sortBy]);
 
   return (
-    <div className="catalog-view">
+    <div className="catalog-view" dir={isAr ? 'rtl' : 'ltr'}>
       {/* 1. Dedicated Header & Filter Banner */}
       <div className="catalog-header-banner">
         <div className="catalog-header-glow" />
@@ -380,7 +400,7 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
               animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
               transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
             >
-              <span className="eyebrow">CURATED REAL ESTATE DIRECTORY</span>
+              <span className="eyebrow">{isAr ? 'دليل الصروح العقارية الفاخرة' : 'CURATED REAL ESTATE DIRECTORY'}</span>
             </motion.div>
 
             <motion.h1
@@ -389,7 +409,7 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4, delay: 0.05, ease: [0.16, 1, 0.3, 1] }}
             >
-              <span className="header-scan-glow">Egypt's Prime Listings</span>
+              <span className="header-scan-glow">{isAr ? 'أندر الصروح والعقارات المعمارية في مصر' : "Egypt's Prime Listings"}</span>
             </motion.h1>
           </div>
 
@@ -412,7 +432,7 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
                   role="tab"
                   aria-selected={isActive}
                 >
-                  <span>{dest.label}</span>
+                  <span>{isAr ? dest.labelAr : dest.label}</span>
                   {isActive && (
                     <motion.div
                       className="dest-jump-pill-active"
@@ -435,7 +455,7 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
           >
             {/* Slot 1: Integrated Keyword Search */}
             <div className="omnibar-search-slot">
-              <label className="omnibar-slot-label">SEARCH</label>
+              <label className="omnibar-slot-label">{isAr ? 'البحث' : 'SEARCH'}</label>
               <div className="omnibar-search-inner">
                 <Search size={15} className="slot-icon" />
                 <input
@@ -449,8 +469,8 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
                   onBlur={() => setIsSearchFocused(false)}
                   placeholder={
                     isSearchFocused
-                      ? "Search estates, compounds, architects, amenities (e.g. Sodic, Sea Cliff)..."
-                      : "Estates, compounds, amenities..."
+                      ? (isAr ? "ابحث بالصرح، الكمبوند، أو المزايا..." : "Search estates, compounds, architects, amenities (e.g. Sodic, Sea Cliff)...")
+                      : (isAr ? "ابحث بالاسم، الكمبوند، المزايا..." : "Estates, compounds, amenities...")
                   }
                   className="omnibar-search-input"
                 />
@@ -458,7 +478,7 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
                   <button
                     onClick={() => setSearchQuery('')}
                     className="omnibar-clear-btn"
-                    title="Clear search"
+                    title={isAr ? "مسح البحث" : "Clear search"}
                     type="button"
                   >
                     <X size={13} />
@@ -471,7 +491,7 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
 
             {/* Slot 2: Location Dropdown */}
             <div className="omnibar-filter-slot custom-filter-dropdown">
-              <label className="omnibar-slot-label">LOCATION</label>
+              <label className="omnibar-slot-label">{isAr ? 'المدينة / المنطقة' : 'LOCATION'}</label>
               <button
                 type="button"
                 className={`omnibar-trigger-btn ${openDropdown === 'location' ? 'open' : ''} ${location !== 'All' ? 'has-value' : ''}`}
@@ -482,7 +502,10 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
                 <div className="trigger-left">
                   <MapPin size={15} className="slot-icon" />
                   <span className="trigger-value">
-                    {LOCATION_FILTER_OPTIONS.find((o) => o.value === location)?.shortLabel || 'All Cities'}
+                    {(() => {
+                      const opt = LOCATION_FILTER_OPTIONS.find((o) => o.value === location);
+                      return opt ? (isAr ? opt.shortLabelAr : opt.shortLabel) : (isAr ? 'جميع المدن' : 'All Cities');
+                    })()}
                   </span>
                 </div>
                 <ChevronDown size={13} className={`slot-chevron ${openDropdown === 'location' ? 'rotate' : ''}`} />
@@ -508,7 +531,7 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
                           setOpenDropdown(null);
                         }}
                       >
-                        <span className="option-label">{opt.label}</span>
+                        <span className="option-label">{isAr ? opt.labelAr : opt.label}</span>
                         {location === opt.value && <Check size={14} className="option-check" />}
                       </button>
                     ))}
@@ -521,7 +544,7 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
 
             {/* Slot 3: Property Type Dropdown */}
             <div className="omnibar-filter-slot custom-filter-dropdown">
-              <label className="omnibar-slot-label">PROPERTY TYPE</label>
+              <label className="omnibar-slot-label">{isAr ? 'نوع العقار' : 'PROPERTY TYPE'}</label>
               <button
                 type="button"
                 className={`omnibar-trigger-btn ${openDropdown === 'type' ? 'open' : ''} ${propertyType !== 'All' ? 'has-value' : ''}`}
@@ -532,7 +555,10 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
                 <div className="trigger-left">
                   <Building2 size={15} className="slot-icon" />
                   <span className="trigger-value">
-                    {TYPE_FILTER_OPTIONS.find((o) => o.value === propertyType)?.shortLabel || 'All Types'}
+                    {(() => {
+                      const opt = TYPE_FILTER_OPTIONS.find((o) => o.value === propertyType);
+                      return opt ? (isAr ? opt.shortLabelAr : opt.shortLabel) : (isAr ? 'جميع الأنواع' : 'All Types');
+                    })()}
                   </span>
                 </div>
                 <ChevronDown size={13} className={`slot-chevron ${openDropdown === 'type' ? 'rotate' : ''}`} />
@@ -558,7 +584,7 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
                           setOpenDropdown(null);
                         }}
                       >
-                        <span className="option-label">{opt.label}</span>
+                        <span className="option-label">{isAr ? opt.labelAr : opt.label}</span>
                         {propertyType === opt.value && <Check size={14} className="option-check" />}
                       </button>
                     ))}
@@ -571,7 +597,7 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
 
             {/* Slot 4: Price Tier Dropdown */}
             <div className="omnibar-filter-slot custom-filter-dropdown">
-              <label className="omnibar-slot-label">PRICE TIER</label>
+              <label className="omnibar-slot-label">{isAr ? 'نطاق السعر' : 'PRICE TIER'}</label>
               <button
                 type="button"
                 className={`omnibar-trigger-btn ${openDropdown === 'price' ? 'open' : ''} ${priceTier !== 'All' ? 'has-value' : ''}`}
@@ -582,7 +608,10 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
                 <div className="trigger-left">
                   <Banknote size={15} className="slot-icon" />
                   <span className="trigger-value">
-                    {PRICE_FILTER_OPTIONS.find((o) => o.value === priceTier)?.shortLabel || 'All Tiers'}
+                    {(() => {
+                      const opt = PRICE_FILTER_OPTIONS.find((o) => o.value === priceTier);
+                      return opt ? (isAr ? opt.shortLabelAr : opt.shortLabel) : (isAr ? 'كل الأسعار' : 'All Tiers');
+                    })()}
                   </span>
                 </div>
                 <ChevronDown size={13} className={`slot-chevron ${openDropdown === 'price' ? 'rotate' : ''}`} />
@@ -608,7 +637,7 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
                           setOpenDropdown(null);
                         }}
                       >
-                        <span className="option-label">{opt.label}</span>
+                        <span className="option-label">{isAr ? opt.labelAr : opt.label}</span>
                         {priceTier === opt.value && <Check size={14} className="option-check" />}
                       </button>
                     ))}
@@ -621,7 +650,7 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
 
             {/* Slot 5: Bedrooms Dropdown */}
             <div className="omnibar-filter-slot custom-filter-dropdown">
-              <label className="omnibar-slot-label">BEDROOMS</label>
+              <label className="omnibar-slot-label">{isAr ? 'غرف النوم' : 'BEDROOMS'}</label>
               <button
                 type="button"
                 className={`omnibar-trigger-btn ${openDropdown === 'beds' ? 'open' : ''} ${bedrooms !== 'All' ? 'has-value' : ''}`}
@@ -632,7 +661,10 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
                 <div className="trigger-left">
                   <Bed size={15} className="slot-icon" />
                   <span className="trigger-value">
-                    {BEDROOM_FILTER_OPTIONS.find((o) => o.value === bedrooms)?.shortLabel || 'All Bedrooms'}
+                    {(() => {
+                      const opt = BEDROOM_FILTER_OPTIONS.find((o) => o.value === bedrooms);
+                      return opt ? (isAr ? opt.shortLabelAr : opt.shortLabel) : (isAr ? 'كل الغرف' : 'All Bedrooms');
+                    })()}
                   </span>
                 </div>
                 <ChevronDown size={13} className={`slot-chevron ${openDropdown === 'beds' ? 'rotate' : ''}`} />
@@ -658,7 +690,7 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
                           setOpenDropdown(null);
                         }}
                       >
-                        <span className="option-label">{opt.label}</span>
+                        <span className="option-label">{isAr ? opt.labelAr : opt.label}</span>
                         {bedrooms === opt.value && <Check size={14} className="option-check" />}
                       </button>
                     ))}
@@ -674,18 +706,18 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
               {hasActiveFilters && (
                 <button
                   className="omnibar-reset-btn"
-                  title="Reset All Filters"
+                  title={isAr ? "إعادة ضبط جميع الفلاتر" : "Reset All Filters"}
                   onClick={resetAllFilters}
                   type="button"
                 >
                   <RotateCcw size={13} />
-                  <span>Reset</span>
+                  <span>{isAr ? 'إعادة ضبط' : 'Reset'}</span>
                 </button>
               )}
 
               <button
                 className={`omnibar-filter-btn ${isAdvancedModalOpen ? 'active' : ''} ${(selectedDelivery !== 'All' || selectedAmenity !== 'All') ? 'has-extra-filters' : ''}`}
-                title="Advanced Architectural Filters"
+                title={isAr ? "الفلاتر المعمارية المتقدمة" : "Advanced Architectural Filters"}
                 onClick={() => setIsAdvancedModalOpen(true)}
                 type="button"
               >
@@ -707,12 +739,12 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
                 exit={{ opacity: 0, y: -8, height: 0 }}
                 transition={{ duration: 0.25 }}
               >
-                <span className="active-tags-heading">Active Filters:</span>
+                <span className="active-tags-heading">{isAr ? 'الفلاتر النشطة:' : 'Active Filters:'}</span>
 
                 {searchQuery.trim() && (
                   <span className="filter-tag">
                     <span className="tag-text">"{searchQuery}"</span>
-                    <button onClick={() => setSearchQuery('')} className="tag-remove-btn" title="Remove keyword search">
+                    <button onClick={() => setSearchQuery('')} className="tag-remove-btn" title={isAr ? "إزالة البحث" : "Remove keyword search"}>
                       <X size={12} />
                     </button>
                   </span>
@@ -721,8 +753,8 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
                 {location !== 'All' && (
                   <span className="filter-tag">
                     <MapPin size={12} className="tag-gold-icon" />
-                    <span className="tag-text">{location}</span>
-                    <button onClick={() => setLocation('All')} className="tag-remove-btn" title="Remove location filter">
+                    <span className="tag-text">{isAr ? (LOCATION_FILTER_OPTIONS.find(o => o.value === location)?.shortLabelAr || location) : location}</span>
+                    <button onClick={() => setLocation('All')} className="tag-remove-btn" title={isAr ? "إزالة فلتر الموقع" : "Remove location filter"}>
                       <X size={12} />
                     </button>
                   </span>
@@ -731,8 +763,8 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
                 {propertyType !== 'All' && (
                   <span className="filter-tag">
                     <Building2 size={12} className="tag-gold-icon" />
-                    <span className="tag-text">{propertyType}</span>
-                    <button onClick={() => setPropertyType('All')} className="tag-remove-btn" title="Remove type filter">
+                    <span className="tag-text">{isAr ? (TYPE_FILTER_OPTIONS.find(o => o.value === propertyType)?.shortLabelAr || propertyType) : propertyType}</span>
+                    <button onClick={() => setPropertyType('All')} className="tag-remove-btn" title={isAr ? "إزالة فلتر النوع" : "Remove type filter"}>
                       <X size={12} />
                     </button>
                   </span>
@@ -741,8 +773,8 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
                 {priceTier !== 'All' && (
                   <span className="filter-tag">
                     <Banknote size={12} className="tag-gold-icon" />
-                    <span className="tag-text">{priceTier}</span>
-                    <button onClick={() => setPriceTier('All')} className="tag-remove-btn" title="Remove price filter">
+                    <span className="tag-text">{isAr ? (PRICE_FILTER_OPTIONS.find(o => o.value === priceTier)?.shortLabelAr || priceTier) : priceTier}</span>
+                    <button onClick={() => setPriceTier('All')} className="tag-remove-btn" title={isAr ? "إزالة فلتر السعر" : "Remove price filter"}>
                       <X size={12} />
                     </button>
                   </span>
@@ -751,8 +783,8 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
                 {bedrooms !== 'All' && (
                   <span className="filter-tag">
                     <Bed size={12} className="tag-gold-icon" />
-                    <span className="tag-text">{bedrooms} Beds</span>
-                    <button onClick={() => setBedrooms('All')} className="tag-remove-btn" title="Remove beds filter">
+                    <span className="tag-text">{isAr ? (BEDROOM_FILTER_OPTIONS.find(o => o.value === bedrooms)?.shortLabelAr || bedrooms) : bedrooms}</span>
+                    <button onClick={() => setBedrooms('All')} className="tag-remove-btn" title={isAr ? "إزالة فلتر الغرف" : "Remove bedrooms filter"}>
                       <X size={12} />
                     </button>
                   </span>
@@ -761,8 +793,8 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
                 {selectedDelivery !== 'All' && (
                   <span className="filter-tag">
                     <Calendar size={12} className="tag-gold-icon" />
-                    <span className="tag-text">Delivery: {selectedDelivery}</span>
-                    <button onClick={() => setSelectedDelivery('All')} className="tag-remove-btn" title="Remove delivery filter">
+                    <span className="tag-text">{isAr ? `الاستلام: ${selectedDelivery}` : `Delivery: ${selectedDelivery}`}</span>
+                    <button onClick={() => setSelectedDelivery('All')} className="tag-remove-btn" title={isAr ? "إزالة فلتر الاستلام" : "Remove delivery filter"}>
                       <X size={12} />
                     </button>
                   </span>
@@ -771,15 +803,15 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
                 {selectedAmenity !== 'All' && (
                   <span className="filter-tag">
                     <Sparkles size={12} className="tag-gold-icon" />
-                    <span className="tag-text">Amenity: {selectedAmenity}</span>
-                    <button onClick={() => setSelectedAmenity('All')} className="tag-remove-btn" title="Remove amenity filter">
+                    <span className="tag-text">{isAr ? `الميزة: ${selectedAmenity}` : `Amenity: ${selectedAmenity}`}</span>
+                    <button onClick={() => setSelectedAmenity('All')} className="tag-remove-btn" title={isAr ? "إزالة فلتر الميزة" : "Remove amenity filter"}>
                       <X size={12} />
                     </button>
                   </span>
                 )}
 
                 <button onClick={resetAllFilters} className="clear-all-tags-btn">
-                  Clear All
+                  {isAr ? 'مسح الكل' : 'Clear All'}
                 </button>
               </motion.div>
             )}
@@ -794,11 +826,23 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
           <div className="results-count-badge">
             <span className="results-live-dot" />
             <div className="results-count-text">
-              <span>Showing</span>
-              <strong className="gold-count">{filteredProperties.length}</strong>
-              <span>of</span>
-              <strong className="total-count">{allPropertiesList.length}</strong>
-              <span>Masterpieces</span>
+              {isAr ? (
+                <>
+                  <span>عرض</span>
+                  <strong className="gold-count">{filteredProperties.length}</strong>
+                  <span>من أصل</span>
+                  <strong className="total-count">{allPropertiesList.length}</strong>
+                  <span>صروح معمارية</span>
+                </>
+              ) : (
+                <>
+                  <span>Showing</span>
+                  <strong className="gold-count">{filteredProperties.length}</strong>
+                  <span>of</span>
+                  <strong className="total-count">{allPropertiesList.length}</strong>
+                  <span>Masterpieces</span>
+                </>
+              )}
             </div>
           </div>
 
@@ -808,12 +852,12 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
               <button
                 className={`view-mode-btn ${viewMode === 'grid' ? 'active' : ''}`}
                 onClick={() => setViewMode('grid')}
-                title="Spacious Gallery (2-Col)"
+                title={isAr ? "عرض رحب (عمودين)" : "Spacious Gallery (2-Col)"}
                 aria-pressed={viewMode === 'grid'}
                 type="button"
               >
                 <LayoutGrid size={14} />
-                <span className="view-mode-text">Spacious</span>
+                <span className="view-mode-text">{isAr ? 'عرض رحب' : 'Spacious'}</span>
                 {viewMode === 'grid' && (
                   <motion.div
                     className="view-mode-indicator"
@@ -826,12 +870,12 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
               <button
                 className={`view-mode-btn ${viewMode === 'compact' ? 'active' : ''}`}
                 onClick={() => setViewMode('compact')}
-                title="Compact Density Grid (3-Col)"
+                title={isAr ? "عرض مدمج (٣ أعمدة)" : "Compact Density Grid (3-Col)"}
                 aria-pressed={viewMode === 'compact'}
                 type="button"
               >
                 <SlidersHorizontal size={13} />
-                <span className="view-mode-text">Compact</span>
+                <span className="view-mode-text">{isAr ? 'عرض مدمج' : 'Compact'}</span>
                 {viewMode === 'compact' && (
                   <motion.div
                     className="view-mode-indicator"
@@ -844,12 +888,12 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
               <button
                 className={`view-mode-btn ${viewMode === 'list' ? 'active' : ''}`}
                 onClick={() => setViewMode('list')}
-                title="Architectural Row List"
+                title={isAr ? "عرض قائمة تفصيلي" : "Architectural Row List"}
                 aria-pressed={viewMode === 'list'}
                 type="button"
               >
                 <List size={14} />
-                <span className="view-mode-text">List</span>
+                <span className="view-mode-text">{isAr ? 'عرض قائمة' : 'List'}</span>
                 {viewMode === 'list' && (
                   <motion.div
                     className="view-mode-indicator"
@@ -862,7 +906,7 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
 
             {/* Custom Gold Sort Dropdown */}
             <div className="custom-sort-container" ref={sortRef}>
-              <span className="sort-label">Sort:</span>
+              <span className="sort-label">{isAr ? 'الترتيب حسب:' : 'Sort:'}</span>
               <button
                 className={`custom-sort-trigger ${isSortOpen ? 'open' : ''}`}
                 onClick={() => setIsSortOpen(!isSortOpen)}
@@ -871,7 +915,10 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
                 type="button"
               >
                 <span className="current-sort-label">
-                  {SORT_OPTIONS.find((o) => o.id === sortBy)?.shortLabel}
+                  {(() => {
+                    const opt = SORT_OPTIONS.find((o) => o.id === sortBy);
+                    return opt ? (isAr ? opt.shortLabelAr : opt.shortLabel) : '';
+                  })()}
                 </span>
                 <ChevronDown
                   size={14}
@@ -903,7 +950,7 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
                           aria-selected={isSelected}
                           type="button"
                         >
-                          <span>{opt.label}</span>
+                          <span>{isAr ? opt.labelAr : opt.label}</span>
                           {isSelected && <Check size={14} className="sort-item-check" />}
                         </button>
                       );
@@ -916,7 +963,7 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
         </div>
 
         {/* Main Body: Grid + Sidebar */}
-        <div className="catalog-body-layout">
+        <div className={`catalog-body-layout ${!showSidebar ? 'no-sidebar' : ''}`}>
           {/* Properties Grid Column */}
           <div className="catalog-grid-col">
             {filteredProperties.length > 0 ? (
@@ -996,41 +1043,132 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
           </div>
 
           {/* Sidebar Insights Widgets */}
-          <aside className="catalog-sidebar">
-            {/* Interactive Data Visualization Widget */}
-            <MarketChart />
+          {showSidebar && (
+            <aside className="catalog-sidebar">
+              {/* Interactive Data Visualization Widget */}
+              {platformSettings.showMarketRadar !== false && <MarketChart locale={locale} />}
 
-            {/* Alert Subscription Card */}
-            <div className="sidebar-widget alert-widget">
-              <div className="widget-header-row">
-                <div className="widget-icon-wrap">
-                  <Bell size={18} className="alert-bell-icon" />
+              {/* Alert Subscription Card with Direct Email Input */}
+              {platformSettings.showVIPAlerts !== false && (
+                <div className="sidebar-widget alert-widget">
+                  <div className="widget-header-row">
+                    <div className="widget-icon-wrap">
+                      <Bell size={18} className="alert-bell-icon" />
+                    </div>
+                    <div className="vip-concierge-badge">
+                      <Sparkles size={11} className="vip-sparkle" />
+                      <span>VIP DOSSIER</span>
+                    </div>
+                  </div>
+                  <h3 className="widget-title">{locale === 'ar' ? 'تنبيهات العقارات الفاخرة' : 'Property Alerts'}</h3>
+                  <p className="widget-desc">
+                    {locale === 'ar' 
+                      ? 'احفظ معايير بحثك واستلم إشعارات فورية عند إدراج عقارات جديدة تناسب اهتماماتك.' 
+                      : 'Save your search and get notified when new properties matching your criteria become available.'}
+                  </p>
+
+                  {/* Email Form / Input */}
+                  {isEmailInputOpen ? (
+                    <form 
+                      className="alert-email-form"
+                      onSubmit={async (e) => {
+                        e.preventDefault();
+                        if (!alertEmail || !alertEmail.includes('@')) return;
+                        setIsSubmittingEmail(true);
+                        const searchCriteria = [
+                          location ? `Location: ${location}` : '',
+                          propertyType ? `Type: ${propertyType}` : '',
+                          priceTier ? `Price: ${priceTier}` : '',
+                        ].filter(Boolean).join(', ');
+                        try {
+                          // Primary: store in newsletter_subscribers table
+                          await fetch('/api/subscribe', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                              email: alertEmail,
+                              name: 'VIP Alert Subscriber',
+                              source: 'Property Alert Subscription (Catalog Sidebar)',
+                              locale,
+                              search_criteria: searchCriteria || null,
+                            })
+                          });
+                          setEmailAlertSaved(true);
+                          setIsEmailInputOpen(false);
+                        } catch (err) {
+                          console.warn('Alert subscription error, falling back:', err);
+                          // Fallback: store in leads CRM directly
+                          try {
+                            await fetch('/api/leads', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({
+                                name: 'VIP Alert Subscriber',
+                                email: alertEmail,
+                                phone: 'N/A - Email Only',
+                                source: 'Property Alert Subscription',
+                                message: `Subscribed to VIP property alerts. ${searchCriteria}`,
+                                preferred_channel: 'email'
+                              })
+                            });
+                          } catch { /* non-fatal */ }
+                          setEmailAlertSaved(true);
+                          setIsEmailInputOpen(false);
+                        } finally {
+                          setIsSubmittingEmail(false);
+                        }
+                      }}
+                    >
+                      <input 
+                        type="email" 
+                        required
+                        placeholder={locale === 'ar' ? 'أدخل بريدك الإلكتروني...' : 'Enter your email address...'}
+                        value={alertEmail}
+                        onChange={(e) => setAlertEmail(e.target.value)}
+                        className="alert-email-input"
+                        autoFocus
+                      />
+                      <div className="alert-form-actions">
+                        <button type="submit" className="btn-gold alert-submit-btn" disabled={isSubmittingEmail}>
+                          {isSubmittingEmail ? (locale === 'ar' ? 'جاري التفعيل...' : 'Subscribing...') : (locale === 'ar' ? 'تأكيد الاشتراك' : 'Confirm Alerts')}
+                        </button>
+                        <button type="button" className="alert-cancel-btn" onClick={() => setIsEmailInputOpen(false)}>
+                          {locale === 'ar' ? 'إلغاء' : 'Cancel'}
+                        </button>
+                      </div>
+                    </form>
+                  ) : (
+                    <div className="widget-actions">
+                      <button
+                        className={`btn-gold widget-cta ${searchSaved ? 'saved' : ''}`}
+                        onClick={() => setSearchSaved(!searchSaved)}
+                        type="button"
+                      >
+                        {searchSaved 
+                          ? <><Check size={16} /> {locale === 'ar' ? 'تم حفظ البحث' : 'Search Saved'}</> 
+                          : (locale === 'ar' ? 'حفظ معايير البحث' : 'Save Search')}
+                      </button>
+                      <button
+                        className={`widget-secondary-btn ${emailAlertSaved ? 'enabled' : ''}`}
+                        onClick={() => {
+                          if (emailAlertSaved) {
+                            setEmailAlertSaved(false);
+                          } else {
+                            setIsEmailInputOpen(true);
+                          }
+                        }}
+                        type="button"
+                      >
+                        {emailAlertSaved 
+                          ? <><Check size={16} /> {locale === 'ar' ? 'التنبيهات مفعلة' : 'Alerts Active'}</> 
+                          : (locale === 'ar' ? 'تفعيل تنبيهات البريد' : 'Enable Email Alerts')}
+                      </button>
+                    </div>
+                  )}
                 </div>
-                <div className="vip-concierge-badge">
-                  <Sparkles size={11} className="vip-sparkle" />
-                  <span>VIP DOSSIER</span>
-                </div>
-              </div>
-              <h3 className="widget-title">Property Alerts</h3>
-              <p className="widget-desc">
-                Save your search and get notified when new properties matching your criteria become available.
-              </p>
-              <div className="widget-actions">
-                <button
-                  className={`btn-gold widget-cta ${searchSaved ? 'saved' : ''}`}
-                  onClick={() => setSearchSaved(!searchSaved)}
-                >
-                  {searchSaved ? <><Check size={16} /> Search Saved</> : 'Save Search'}
-                </button>
-                <button
-                  className={`widget-secondary-btn ${emailAlertSaved ? 'enabled' : ''}`}
-                  onClick={() => setEmailAlertSaved(!emailAlertSaved)}
-                >
-                  {emailAlertSaved ? <><Check size={16} /> Alerts Active</> : 'Enable Email Alerts'}
-                </button>
-              </div>
-            </div>
-          </aside>
+              )}
+            </aside>
+          )}
         </div>
       </div>
 
@@ -1047,13 +1185,15 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
             <div className="catalog-ender-left">
               <div className="catalog-ender-eyebrow">
                 <Sparkles size={13} className="ender-sparkle-icon" />
-                <span>PRIVATE CLIENT ADVISORY</span>
+                <span>{isAr ? 'المكتب الخاص للاستشارات السيادية' : 'PRIVATE CLIENT ADVISORY'}</span>
               </div>
               <h3 className="catalog-ender-heading">
-                Haven't found the right estate?
+                {isAr ? 'هل تبحث عن صرح بمواصفات خاصة؟' : "Haven't found the right estate?"}
               </h3>
               <p className="catalog-ender-sub">
-                Contact our private team for unlisted properties and bespoke custom commissions.
+                {isAr 
+                  ? 'تواصل مع فريقنا الخاص للاطلاع على العقارات غير المعلنة والتكليفات المعمارية الحصرية.' 
+                  : 'Contact our private team for unlisted properties and bespoke custom commissions.'}
               </p>
             </div>
 
@@ -1063,7 +1203,7 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
                 className="btn-gold catalog-ender-btn"
                 onClick={() => onOpenInquiry ? onOpenInquiry('Bespoke Architectural Property Inquiry') : null}
               >
-                <span>Request Custom Search</span>
+                <span>{isAr ? 'طلب تكليف وبحث خاص' : 'Request Custom Search'}</span>
                 <ArrowUpRight size={15} />
               </button>
 
@@ -1074,129 +1214,144 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
                 className="catalog-ender-wa-pill"
               >
                 <MessageSquare size={14} />
-                <span>WhatsApp</span>
+                <span>{isAr ? 'تواصل واتساب' : 'WhatsApp'}</span>
               </a>
             </div>
           </motion.div>
         </div>
       </section>
 
-      {/* Advanced Architectural Filters Modal */}
-      <AnimatePresence>
-        {isAdvancedModalOpen && (
-          <motion.div
-            className="advanced-filter-backdrop"
-            onClick={() => setIsAdvancedModalOpen(false)}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.18, ease: 'easeOut' }}
-            data-lenis-prevent="true"
-          >
+      {/* Advanced Architectural Filters Modal (Portaled to document.body) */}
+      {mounted && createPortal(
+        <AnimatePresence>
+          {isAdvancedModalOpen && (
             <motion.div
-              className="advanced-filter-modal"
-              onClick={(e) => e.stopPropagation()}
-              initial={{ opacity: 0, scale: 0.95, y: 15 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 15 }}
-              transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
+              className="advanced-filter-backdrop"
+              onClick={() => setIsAdvancedModalOpen(false)}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
               data-lenis-prevent="true"
+              dir={isAr ? 'rtl' : 'ltr'}
             >
-              <div className="adv-modal-header">
-                <div className="adv-header-left">
-                  <div className="adv-icon-badge">
-                    <SlidersHorizontal size={18} className="adv-gold-icon" />
+              <motion.div
+                className="advanced-filter-modal"
+                onClick={(e) => e.stopPropagation()}
+                initial={{ opacity: 0, scale: 0.94, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.94, y: 20 }}
+                transition={{ type: 'spring', stiffness: 450, damping: 32 }}
+                data-lenis-prevent="true"
+              >
+                {/* Modal Header */}
+                <div className="adv-modal-header">
+                  <div className="adv-header-left">
+                    <div className="adv-icon-badge">
+                      <SlidersHorizontal size={18} className="adv-gold-icon" />
+                    </div>
+                    <div>
+                      <span className="adv-eyebrow">
+                        {isAr ? 'خيارات التصفية المعمارية' : 'FILTER OPTIONS'}
+                      </span>
+                      <h3 className="adv-title">
+                        {isAr ? 'الفلاتر المعمارية المتقدمة' : 'Advanced Architectural Filters'}
+                      </h3>
+                    </div>
                   </div>
-                  <div>
-                    <span className="adv-eyebrow">FILTER OPTIONS</span>
-                    <h3 className="adv-title">Advanced Filters</h3>
-                  </div>
-                </div>
-                <button
-                  className="adv-close-btn"
-                  onClick={() => setIsAdvancedModalOpen(false)}
-                  title="Close Filters"
-                  type="button"
-                >
-                  <X size={18} />
-                </button>
-              </div>
-
-              <div className="adv-modal-body" data-lenis-prevent="true" onWheel={(e) => e.stopPropagation()}>
-                {/* Section 1: Delivery Status */}
-                <div className="adv-filter-group">
-                  <label className="adv-group-label">DELIVERY STATUS & TIMELINE</label>
-                  <div className="adv-chips-row">
-                    {[
-                      { id: 'All', label: 'All Timelines' },
-                      { id: 'Immediate', label: 'Immediate Handover' },
-                      { id: '2025', label: '2025 Handover' },
-                      { id: '2026+', label: '2026+ Construction' },
-                    ].map((item) => (
-                      <button
-                        key={item.id}
-                        type="button"
-                        className={`adv-chip-btn ${selectedDelivery === item.id ? 'active' : ''}`}
-                        onClick={() => setSelectedDelivery(item.id)}
-                      >
-                        {item.label}
-                      </button>
-                    ))}
-                  </div>
+                  <button
+                    className="adv-close-btn"
+                    onClick={() => setIsAdvancedModalOpen(false)}
+                    title={isAr ? 'إغلاق' : 'Close Filters'}
+                    type="button"
+                  >
+                    <X size={18} />
+                  </button>
                 </div>
 
-                {/* Section 2: Signature Luxury Amenities */}
-                <div className="adv-filter-group">
-                  <label className="adv-group-label">SIGNATURE AMENITIES & LIFESTYLE</label>
-                  <div className="adv-chips-row">
-                    {[
-                      { id: 'All', label: 'All Amenities', icon: null },
-                      { id: 'Pool', label: 'Private Infinity Pool', icon: Waves },
-                      { id: 'Beach', label: 'Beachfront Access', icon: Waves },
-                      { id: 'Garage', label: 'Subterranean Garage', icon: Car },
-                      { id: 'Lagoon', label: 'Private Lagoon Island', icon: Palmtree },
-                      { id: 'Hospitality', label: '5-Star Concierge', icon: Crown },
-                    ].map((item) => {
-                      const IconComp = item.icon;
-                      return (
+                {/* Modal Body */}
+                <div className="adv-modal-body" data-lenis-prevent="true" onWheel={(e) => e.stopPropagation()}>
+                  {/* Section 1: Delivery Status */}
+                  <div className="adv-filter-group">
+                    <label className="adv-group-label">
+                      {isAr ? 'موعد الاستلام وحالة التسليم' : 'DELIVERY STATUS & TIMELINE'}
+                    </label>
+                    <div className="adv-chips-row">
+                      {[
+                        { id: 'All', labelEn: 'All Timelines', labelAr: 'جميع المواعيد' },
+                        { id: 'Immediate', labelEn: 'Immediate Handover', labelAr: 'استلام فوري' },
+                        { id: '2025', labelEn: '2025 Handover', labelAr: 'تسليم ٢٠٢٥' },
+                        { id: '2026+', labelEn: '2026+ Construction', labelAr: 'تحت الإنشاء (٢٠٢٦+)' },
+                      ].map((item) => (
                         <button
                           key={item.id}
                           type="button"
-                          className={`adv-chip-btn ${selectedAmenity === item.id ? 'active' : ''}`}
-                          onClick={() => setSelectedAmenity(item.id)}
+                          className={`adv-chip-btn ${selectedDelivery === item.id ? 'active' : ''}`}
+                          onClick={() => setSelectedDelivery(item.id)}
                         >
-                          {IconComp && <IconComp size={14} className="chip-gold-icon" />}
-                          <span>{item.label}</span>
+                          {isAr ? item.labelAr : item.labelEn}
                         </button>
-                      );
-                    })}
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Section 2: Signature Luxury Amenities */}
+                  <div className="adv-filter-group">
+                    <label className="adv-group-label">
+                      {isAr ? 'المزايا الحصرية ونمط الحياة' : 'SIGNATURE AMENITIES & LIFESTYLE'}
+                    </label>
+                    <div className="adv-chips-row">
+                      {[
+                        { id: 'All', labelEn: 'All Amenities', labelAr: 'جميع المزايا', icon: null },
+                        { id: 'Pool', labelEn: 'Private Infinity Pool', labelAr: 'حمام سباحة إنفينيتي خاص', icon: Waves },
+                        { id: 'Beach', labelEn: 'Beachfront Access', labelAr: 'واجهة شاطئية مباشرة', icon: Waves },
+                        { id: 'Garage', labelEn: 'Subterranean Garage', labelAr: 'جراج سفلي خاص', icon: Car },
+                        { id: 'Lagoon', labelEn: 'Private Lagoon Island', labelAr: 'جزيرة وبحيرات كريستالية', icon: Palmtree },
+                        { id: 'Hospitality', labelEn: '5-Star Concierge', labelAr: 'خدمات فندقية ٥ نجوم', icon: Crown },
+                      ].map((item) => {
+                        const IconComp = item.icon;
+                        return (
+                          <button
+                            key={item.id}
+                            type="button"
+                            className={`adv-chip-btn ${selectedAmenity === item.id ? 'active' : ''}`}
+                            onClick={() => setSelectedAmenity(item.id)}
+                          >
+                            {IconComp && <IconComp size={14} className="chip-gold-icon" />}
+                            <span>{isAr ? item.labelAr : item.labelEn}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              <div className="adv-modal-footer">
-                <button
-                  type="button"
-                  className="adv-reset-btn"
-                  onClick={resetAllFilters}
-                >
-                  <RotateCcw size={14} />
-                  <span>Reset All</span>
-                </button>
+                {/* Modal Footer */}
+                <div className="adv-modal-footer">
+                  <button
+                    type="button"
+                    className="adv-reset-btn"
+                    onClick={resetAllFilters}
+                  >
+                    <RotateCcw size={14} />
+                    <span>{isAr ? 'إعادة ضبط الكل' : 'Reset All'}</span>
+                  </button>
 
-                <button
-                  type="button"
-                  className="btn-gold adv-apply-btn"
-                  onClick={() => setIsAdvancedModalOpen(false)}
-                >
-                  <span>Show {filteredProperties.length} Matches</span>
-                  <Check size={16} />
-                </button>
-              </div>
+                  <button
+                    type="button"
+                    className="btn-gold adv-apply-btn"
+                    onClick={() => setIsAdvancedModalOpen(false)}
+                  >
+                    <span>{isAr ? `عرض ${filteredProperties.length} عقارات متطابقة` : `Show ${filteredProperties.length} Matches`}</span>
+                    <Check size={16} />
+                  </button>
+                </div>
+              </motion.div>
             </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+          )}
+        </AnimatePresence>,
+        document.body
+      )}
 
       {/* Estate Comparison Drawer & Modal */}
       <CompareDrawer
@@ -1204,6 +1359,7 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
         onRemove={removeCompare}
         onClear={clearCompare}
         onSelectProperty={onSelectProperty}
+        locale={locale}
       />
 
       <style>{`
@@ -1579,7 +1735,7 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
           gap: 6px;
           background: transparent;
           border: none;
-          padding: 0.1rem 0;
+          padding: 0.2rem 0;
           color: var(--text-primary);
           font-family: inherit;
           cursor: pointer;
@@ -1588,12 +1744,16 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
           text-align: left;
         }
 
+        [dir="rtl"] .omnibar-trigger-btn {
+          text-align: right;
+        }
+
         .trigger-left {
           display: flex;
           align-items: center;
           gap: 7px;
           min-width: 0;
-          overflow: hidden;
+          padding-bottom: 2px;
         }
 
         .slot-icon {
@@ -1602,13 +1762,20 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
         }
 
         .trigger-value {
-          font-size: 0.85rem;
+          font-size: 0.875rem;
           font-weight: 600;
+          line-height: 1.5;
           color: var(--text-primary);
           transition: color var(--transition-fast);
           white-space: nowrap;
           overflow: hidden;
           text-overflow: ellipsis;
+          padding-bottom: 2px;
+        }
+
+        [dir="rtl"] .trigger-value {
+          line-height: 1.6;
+          padding-bottom: 3px;
         }
 
         .omnibar-trigger-btn:hover .trigger-value,
@@ -1967,59 +2134,46 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
 
         /* Advanced Filters Modal Backdrop */
         .advanced-filter-backdrop {
-          position: fixed;
-          inset: 0;
-          background: rgba(4, 6, 12, 0.55);
-          backdrop-filter: blur(8px);
-          -webkit-backdrop-filter: blur(8px);
-          z-index: 100000;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          padding: 1.5rem;
-          overflow: hidden;
+          position: fixed !important;
+          inset: 0 !important;
+          top: 0 !important;
+          left: 0 !important;
+          right: 0 !important;
+          bottom: 0 !important;
+          width: 100vw !important;
+          height: 100vh !important;
+          background: rgba(4, 6, 12, 0.82) !important;
+          backdrop-filter: blur(16px) !important;
+          -webkit-backdrop-filter: blur(16px) !important;
+          z-index: 99999999 !important;
+          display: flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          padding: 1.5rem !important;
+          box-sizing: border-box !important;
+          overflow: hidden !important;
         }
 
         .advanced-filter-modal {
-          backdrop-filter: blur(24px) saturate(210%) contrast(108%) brightness(108%);
-          -webkit-backdrop-filter: blur(24px) saturate(210%) contrast(108%) brightness(108%);
-          border-radius: 28px;
-          width: 100%;
-          max-width: 680px;
-          max-height: 90vh;
-          display: flex;
-          flex-direction: column;
-          overflow: hidden;
-        }
-
-        [data-theme="dark"] .advanced-filter-modal {
-          background: linear-gradient(
-            145deg,
-            rgba(255, 255, 255, 0.18) 0%,
-            rgba(18, 24, 38, 0.85) 40%,
-            rgba(10, 14, 24, 0.95) 100%
-          );
-          border: 1px solid rgba(255, 255, 255, 0.28);
-          box-shadow: 
-            0 32px 80px rgba(0, 0, 0, 0.75),
-            0 0 30px rgba(252, 211, 77, 0.18),
-            inset 0 1.5px 2px rgba(255, 255, 255, 0.65);
+          position: relative !important;
+          z-index: 10 !important;
+          border-radius: 28px !important;
+          width: 100% !important;
+          max-width: 600px !important;
+          max-height: 88vh !important;
+          display: flex !important;
+          flex-direction: column !important;
+          overflow: hidden !important;
+          box-sizing: border-box !important;
+          background: rgba(10, 14, 24, 0.98) !important;
+          border: 1px solid rgba(221, 167, 82, 0.45) !important;
+          box-shadow: 0 32px 80px rgba(0, 0, 0, 0.8), 0 0 30px rgba(221, 167, 82, 0.18) !important;
         }
 
         [data-theme="light"] .advanced-filter-modal {
-          background: linear-gradient(
-            145deg,
-            rgba(255, 255, 255, 0.94) 0%,
-            rgba(255, 255, 255, 0.84) 40%,
-            rgba(255, 255, 255, 0.92) 100%
-          );
-          backdrop-filter: blur(24px) saturate(210%) contrast(108%) brightness(108%);
-          -webkit-backdrop-filter: blur(24px) saturate(210%) contrast(108%) brightness(108%);
-          border: 1px solid rgba(255, 255, 255, 0.95);
-          box-shadow: 
-            0 32px 80px rgba(15, 23, 42, 0.15),
-            0 0 30px rgba(184, 133, 48, 0.14),
-            inset 0 2px 2.5px #FFFFFF;
+          background: #FAF8F5 !important;
+          border: 1px solid rgba(184, 133, 48, 0.35) !important;
+          box-shadow: 0 32px 80px rgba(15, 23, 42, 0.18), 0 0 30px rgba(184, 133, 48, 0.12) !important;
         }
 
         .adv-modal-header {
@@ -2497,6 +2651,26 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
           align-items: start;
         }
 
+        .catalog-body-layout.no-sidebar {
+          grid-template-columns: 1fr;
+        }
+
+        .catalog-body-layout.no-sidebar .catalog-cards-grid {
+          grid-template-columns: repeat(3, 1fr);
+        }
+
+        @media (max-width: 1200px) {
+          .catalog-body-layout.no-sidebar .catalog-cards-grid {
+            grid-template-columns: repeat(2, 1fr);
+          }
+        }
+
+        @media (max-width: 768px) {
+          .catalog-body-layout.no-sidebar .catalog-cards-grid {
+            grid-template-columns: 1fr;
+          }
+        }
+
         .catalog-cards-grid {
           display: grid;
           grid-template-columns: repeat(2, 1fr);
@@ -2571,40 +2745,43 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
         }
 
         .sidebar-widget {
-          backdrop-filter: blur(20px) saturate(210%) contrast(108%) brightness(108%);
-          -webkit-backdrop-filter: blur(20px) saturate(210%) contrast(108%) brightness(108%);
-          border-radius: 20px;
-          padding: 1.65rem 1.5rem;
+          backdrop-filter: blur(28px) saturate(210%);
+          -webkit-backdrop-filter: blur(28px) saturate(210%);
+          border-radius: 22px;
+          padding: 1.6rem 1.45rem;
+          transition: all var(--transition-smooth);
         }
 
         [data-theme="dark"] .sidebar-widget {
           background: linear-gradient(
             135deg,
-            rgba(255, 255, 255, 0.22) 0%,
-            rgba(255, 255, 255, 0.06) 25%,
-            rgba(18, 24, 38, 0.42) 60%,
-            rgba(10, 14, 24, 0.65) 100%
+            rgba(255, 255, 255, 0.18) 0%,
+            rgba(255, 255, 255, 0.04) 20%,
+            rgba(18, 24, 38, 0.60) 50%,
+            rgba(10, 14, 24, 0.88) 100%
           );
-          border: 1px solid rgba(255, 255, 255, 0.28);
+          border: 1px solid rgba(229, 184, 105, 0.25);
           box-shadow: 
-            0 20px 48px rgba(0, 0, 0, 0.38),
-            0 4px 14px rgba(0, 0, 0, 0.18),
+            0 24px 54px rgba(0, 0, 0, 0.55),
+            0 4px 18px rgba(0, 0, 0, 0.28),
             inset 0 1.5px 2px rgba(255, 255, 255, 0.65),
-            inset 0 -1px 1px rgba(255, 255, 255, 0.12);
+            inset 0 -1px 1px rgba(255, 255, 255, 0.10),
+            inset 0 0 24px rgba(229, 184, 105, 0.04);
         }
 
         [data-theme="light"] .sidebar-widget {
           background: linear-gradient(
             135deg,
-            rgba(255, 255, 255, 0.65) 0%,
-            rgba(255, 255, 255, 0.30) 35%,
-            rgba(255, 255, 255, 0.48) 100%
+            rgba(255, 255, 255, 0.92) 0%,
+            rgba(250, 248, 243, 0.82) 100%
           );
-          border: 1px solid rgba(255, 255, 255, 0.75);
+          backdrop-filter: blur(24px) saturate(180%);
+          -webkit-backdrop-filter: blur(24px) saturate(180%);
+          border: 1px solid rgba(184, 147, 74, 0.32);
           box-shadow: 
-            0 18px 44px rgba(15, 23, 42, 0.08), 
+            0 18px 44px rgba(30, 24, 16, 0.08), 
             inset 0 1.5px 2px #FFFFFF,
-            inset 0 -1px 1px rgba(255, 255, 255, 0.25);
+            inset 0 -1px 1px rgba(184, 147, 74, 0.15);
         }
 
         .alert-widget {
@@ -2623,43 +2800,55 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
           width: 40px;
           height: 40px;
           border-radius: 12px;
-          background: rgba(221, 167, 82, 0.16);
-          border: 1px solid rgba(221, 167, 82, 0.35);
+          background: rgba(229, 184, 105, 0.15);
+          border: 1px solid rgba(229, 184, 105, 0.35);
           display: flex;
           align-items: center;
           justify-content: center;
-          box-shadow: 0 0 16px rgba(197, 142, 54, 0.2);
+          box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.3);
+        }
+
+        [data-theme="light"] .widget-icon-wrap {
+          background: rgba(184, 147, 74, 0.12);
+          border-color: rgba(184, 147, 74, 0.3);
         }
 
         .alert-bell-icon {
-          color: #FCD34D;
+          color: #E5B869;
         }
 
         [data-theme="light"] .alert-bell-icon {
-          color: #B8860B;
+          color: #8C6826;
         }
 
         .vip-concierge-badge {
           display: inline-flex;
           align-items: center;
-          gap: 5px;
+          gap: 6px;
           font-family: var(--font-heading);
-          font-size: 0.625rem;
+          font-size: 0.65rem;
           font-weight: 800;
           letter-spacing: 0.12em;
-          color: #FCD34D;
-          background: rgba(221, 167, 82, 0.12);
-          border: 1px solid rgba(221, 167, 82, 0.35);
+          color: #E5B869;
+          background: rgba(229, 184, 105, 0.12);
+          border: 1px solid rgba(229, 184, 105, 0.35);
           padding: 0.25rem 0.65rem;
           border-radius: 9999px;
+          box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.2);
         }
 
         [data-theme="light"] .vip-concierge-badge {
-          color: #B8860B;
+          color: #8C6826;
+          background: rgba(184, 147, 74, 0.10);
+          border-color: rgba(184, 147, 74, 0.25);
         }
 
         .vip-sparkle {
-          color: #FCD34D;
+          color: #E5B869;
+        }
+
+        [data-theme="light"] .vip-sparkle {
+          color: #8C6826;
         }
 
         .widget-title {
@@ -2724,13 +2913,75 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
           color: var(--gold-primary);
         }
 
+        .alert-email-form {
+          display: flex;
+          flex-direction: column;
+          gap: 0.75rem;
+          margin-top: 0.5rem;
+        }
+
+        .alert-email-input {
+          width: 100%;
+          padding: 0.75rem 1rem;
+          border-radius: 12px;
+          background: rgba(255, 255, 255, 0.06);
+          border: 1px solid var(--border-subtle);
+          color: var(--text-primary);
+          font-size: 0.875rem;
+          font-family: inherit;
+          outline: none;
+          transition: border-color var(--transition-fast);
+        }
+
+        [data-theme="light"] .alert-email-input {
+          background: #FFFFFF;
+          border-color: rgba(0, 0, 0, 0.12);
+        }
+
+        .alert-email-input:focus {
+          border-color: var(--gold-primary);
+          box-shadow: 0 0 12px rgba(221, 167, 82, 0.25);
+        }
+
+        .alert-form-actions {
+          display: flex;
+          gap: 0.5rem;
+        }
+
+        .alert-submit-btn {
+          flex: 1;
+          padding: 0.75rem 1rem;
+          font-size: 0.8125rem;
+          font-weight: 700;
+          border-radius: 10px;
+          border: none;
+          cursor: pointer;
+        }
+
+        .alert-cancel-btn {
+          padding: 0.75rem 1rem;
+          font-size: 0.8125rem;
+          font-weight: 600;
+          border-radius: 10px;
+          background: transparent;
+          border: 1px solid var(--border-subtle);
+          color: var(--text-secondary);
+          cursor: pointer;
+          transition: all var(--transition-fast);
+        }
+
+        .alert-cancel-btn:hover {
+          color: var(--text-primary);
+          border-color: var(--gold-primary);
+        }
+
         .widget-secondary-btn.enabled {
           background: rgba(197, 142, 54, 0.2);
           border-color: var(--gold-primary);
           color: var(--gold-primary);
         }
 
-        /* Luxury Dynamic Pagination Suite */
+        /* Luxury Dynamic Liquid Glass Pagination Suite */
         .catalog-pagination-wrap {
           margin-top: 3.5rem;
           display: flex;
@@ -2742,52 +2993,119 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
         .catalog-pagination {
           display: inline-flex;
           align-items: center;
-          gap: 0.5rem;
-          backdrop-filter: blur(20px) saturate(190%);
-          -webkit-backdrop-filter: blur(20px) saturate(190%);
-          padding: 6px;
-          border-radius: 16px;
+          gap: 0.4rem;
+          backdrop-filter: blur(28px) saturate(210%);
+          -webkit-backdrop-filter: blur(28px) saturate(210%);
+          padding: 6px 8px;
+          border-radius: 9999px;
+          transition: all var(--transition-smooth);
         }
 
         [data-theme="dark"] .catalog-pagination {
-          background: rgba(255, 255, 255, 0.04);
-          border: 1px solid rgba(255, 255, 255, 0.12);
-          box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+          background: linear-gradient(
+            135deg,
+            rgba(255, 255, 255, 0.18) 0%,
+            rgba(255, 255, 255, 0.04) 20%,
+            rgba(18, 24, 38, 0.60) 50%,
+            rgba(10, 14, 24, 0.88) 100%
+          );
+          border: 1px solid rgba(229, 184, 105, 0.25);
+          box-shadow: 
+            0 20px 48px rgba(0, 0, 0, 0.5),
+            0 4px 14px rgba(0, 0, 0, 0.25),
+            inset 0 1.5px 2px rgba(255, 255, 255, 0.65),
+            inset 0 -1px 1px rgba(255, 255, 255, 0.10),
+            inset 0 0 20px rgba(229, 184, 105, 0.04);
         }
 
         [data-theme="light"] .catalog-pagination {
-          background: rgba(255, 255, 255, 0.88);
-          border: 1px solid rgba(0, 0, 0, 0.08);
-          box-shadow: 0 8px 24px rgba(0, 0, 0, 0.04);
+          background: linear-gradient(
+            135deg,
+            rgba(255, 255, 255, 0.92) 0%,
+            rgba(250, 248, 243, 0.82) 100%
+          );
+          backdrop-filter: blur(24px) saturate(180%);
+          -webkit-backdrop-filter: blur(24px) saturate(180%);
+          border: 1px solid rgba(184, 147, 74, 0.32);
+          box-shadow: 
+            0 16px 40px rgba(30, 24, 16, 0.08), 
+            inset 0 1.5px 2px #FFFFFF,
+            inset 0 -1px 1px rgba(184, 147, 74, 0.15);
         }
 
         .page-btn {
-          width: 40px;
-          height: 40px;
-          border-radius: 10px;
+          width: 38px;
+          height: 38px;
+          border-radius: 9999px;
           background: transparent;
           border: 1px solid transparent;
-          color: var(--text-secondary);
-          font-family: var(--font-heading);
+          color: rgba(255, 255, 255, 0.7);
+          font-family: Georgia, var(--font-heading), serif;
           font-weight: 700;
-          font-size: 0.875rem;
+          font-size: 0.9375rem;
           display: flex;
           align-items: center;
           justify-content: center;
           cursor: pointer;
-          transition: all var(--transition-fast);
+          transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+          user-select: none;
         }
 
-        .page-btn:hover:not(:disabled) {
-          border-color: var(--gold-primary);
-          color: var(--gold-primary);
+        [data-theme="light"] .page-btn {
+          color: #475569;
+        }
+
+        .page-btn:hover:not(:disabled):not(.active) {
+          background: rgba(255, 255, 255, 0.08);
+          border: 1px solid rgba(229, 184, 105, 0.35);
+          color: #E5B869;
+          transform: translateY(-1px);
+          box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.2);
+        }
+
+        [data-theme="light"] .page-btn:hover:not(:disabled):not(.active) {
+          background: rgba(184, 147, 74, 0.10);
+          border-color: rgba(184, 147, 74, 0.35);
+          color: #8C6826;
+        }
+
+        .page-btn:disabled {
+          opacity: 0.3;
+          cursor: not-allowed;
         }
 
         .page-btn.active {
-          background: linear-gradient(135deg, #F5E5BE 0%, #D4AF37 50%, #C59A45 100%);
-          color: #0A0C10;
-          border: 1px solid rgba(255, 255, 255, 0.6);
-          box-shadow: 0 2px 10px rgba(197, 154, 69, 0.25), inset 0 1px 1px #FFFFFF;
+          background: linear-gradient(
+            135deg, 
+            rgba(255, 253, 245, 0.35) 0%, 
+            rgba(229, 184, 105, 0.38) 35%, 
+            rgba(184, 147, 74, 0.25) 100%
+          );
+          backdrop-filter: blur(16px);
+          -webkit-backdrop-filter: blur(16px);
+          border: 1px solid rgba(229, 184, 105, 0.65);
+          color: #FFFDF5;
+          font-weight: 800;
+          text-shadow: 0 1px 4px rgba(0, 0, 0, 0.85);
+          box-shadow: 
+            0 4px 18px rgba(229, 184, 105, 0.35), 
+            inset 0 1.5px 2px rgba(255, 255, 255, 0.7), 
+            inset 0 -1px 1px rgba(229, 184, 105, 0.3);
+          transform: scale(1.05);
+        }
+
+        [data-theme="light"] .page-btn.active {
+          background: linear-gradient(
+            135deg, 
+            rgba(229, 184, 105, 0.22) 0%, 
+            rgba(184, 147, 74, 0.15) 100%
+          );
+          border: 1px solid rgba(140, 104, 38, 0.45);
+          color: #8C6826;
+          text-shadow: none;
+          box-shadow: 
+            0 4px 14px rgba(140, 104, 38, 0.18), 
+            inset 0 1.5px 2px #FFFFFF;
         }
 
         /* 3. Sleek Architectural Advisory Bar */
@@ -2949,6 +3267,31 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
         }
 
         @media (max-width: 768px) {
+          .catalog-header-area {
+            padding-top: 1.5rem;
+          }
+          .catalog-main-title {
+            font-size: 1.65rem;
+            line-height: 1.25;
+            margin-bottom: 1rem;
+          }
+          .catalog-destination-pills {
+            flex-wrap: nowrap;
+            overflow-x: auto;
+            padding: 4px 1rem 12px 1rem;
+            margin: 0 -1rem 1.25rem -1rem;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
+          }
+          .catalog-destination-pills::-webkit-scrollbar {
+            display: none;
+          }
+          .dest-jump-pill {
+            flex-shrink: 0;
+            white-space: nowrap;
+            padding: 0.45rem 1rem;
+            font-size: 0.78rem;
+          }
           .filter-toolbar {
             flex-direction: column;
             align-items: stretch;
