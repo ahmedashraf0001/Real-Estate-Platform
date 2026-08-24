@@ -110,14 +110,11 @@ export const HomeView: React.FC<HomeViewProps> = ({
   });
 
   // Typewriter animation state for Hero Title
-  const line1WhiteText = isAr ? 'استكشف أندر ' : "Discover Egypt's ";
-  const line1GoldText = isAr ? 'الصروح المعمارية' : 'Premier ';
-  const line2Text = isAr ? 'والقصور الفاخرة في مصر' : 'Luxury Living & Sovereign Estates';
+  const line1Text = isAr ? 'استكشف أندر الصروح المعمارية و' : "Discover Egypt's Premier Residences &";
+  const line2Text = isAr ? 'القصور الفاخرة في مصر' : 'Luxury Living & Sovereign Estates';
 
-  const line1WhiteLen = line1WhiteText.length;
-  const line1GoldLen = line1GoldText.length;
-  const line1Total = line1WhiteLen + line1GoldLen;
-  const totalChars = line1Total + line2Text.length;
+  const line1Len = line1Text.length;
+  const totalChars = line1Len + line2Text.length;
 
   const [charCount, setCharCount] = React.useState(0);
   const [isDoneTyping, setIsDoneTyping] = React.useState(false);
@@ -131,23 +128,20 @@ export const HomeView: React.FC<HomeViewProps> = ({
       setCharCount(current);
       if (current >= totalChars) {
         clearInterval(interval);
-        setTimeout(() => setIsDoneTyping(true), 2000);
+        setTimeout(() => setIsDoneTyping(true), 2200);
       }
     }, 38);
 
     return () => clearInterval(interval);
   }, [totalChars, locale]);
 
-  const display1A = line1WhiteText.slice(0, Math.min(charCount, line1WhiteLen));
-  const display1B = charCount > line1WhiteLen 
-    ? line1GoldText.slice(0, Math.min(charCount - line1WhiteLen, line1GoldLen))
-    : '';
-  const display2 = charCount > line1Total
-    ? line2Text.slice(0, charCount - line1Total)
+  const display1 = line1Text.slice(0, Math.min(charCount, line1Len));
+  const display2 = charCount > line1Len
+    ? line2Text.slice(0, charCount - line1Len)
     : '';
 
-  const showCursorOnLine1 = charCount <= line1Total && !isDoneTyping;
-  const showCursorOnLine2 = charCount > line1Total && !isDoneTyping;
+  const showCursorOnLine1 = charCount <= line1Len && !isDoneTyping;
+  const showCursorOnLine2 = charCount > line1Len && !isDoneTyping;
 
   return (
     <div className="home-view" dir={isAr ? 'rtl' : 'ltr'}>
@@ -183,14 +177,13 @@ export const HomeView: React.FC<HomeViewProps> = ({
             {/* Monumental Headline with Living Typewriter Animation */}
             <motion.h1 
               className="hero-title"
-              aria-label={isAr ? 'استكشف أندر الصروح المعمارية والقصور الفاخرة في مصر' : "Discover Egypt's Premier Luxury Living & Sovereign Estates"}
+              aria-label={isAr ? 'استكشف أندر الصروح المعمارية و القصور الفاخرة في مصر' : "Discover Egypt's Premier Residences & Luxury Living & Sovereign Estates"}
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
             >
               <span className="hero-title-main">
-                <span>{display1A}</span>
-                {display1B && <span className="hero-title-gold">{display1B}</span>}
+                <span>{display1}</span>
                 {showCursorOnLine1 && <span className="typewriter-cursor">|</span>}
               </span>
               <span className="hero-title-serif">
@@ -591,22 +584,6 @@ export const HomeView: React.FC<HomeViewProps> = ({
           white-space: nowrap;
           display: inline-flex;
           align-items: center;
-          flex-wrap: wrap;
-        }
-
-        .hero-title-gold {
-          background: linear-gradient(
-            135deg, 
-            #FFFDF5 0%, 
-            #FEE8A0 25%, 
-            #FCD34D 50%, 
-            var(--gold-primary, #DDA752) 80%, 
-            #B8860B 100%
-          );
-          -webkit-background-clip: text;
-          -webkit-text-fill-color: transparent;
-          filter: drop-shadow(0 2px 12px rgba(0, 0, 0, 0.85)) drop-shadow(0 0 16px rgba(221, 167, 82, 0.45));
-          font-weight: 800;
         }
 
         .hero-title-serif {
