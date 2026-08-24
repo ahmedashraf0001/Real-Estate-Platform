@@ -1,6 +1,6 @@
 import type { ZoneInstance } from '@/lib/layering';
 
-export type PropertyType = 'apartment' | 'building' | 'garage' | 'villa';
+export type PropertyType = 'apartment' | 'building' | 'garage';
 
 export type CompletionStatus = 'ready' | 'off_plan';
 export type ListingStatus = 'active' | 'under_offer' | 'sold' | 'archived';

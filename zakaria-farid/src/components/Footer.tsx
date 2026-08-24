@@ -95,20 +95,20 @@ export const Footer: React.FC<FooterProps> = ({
 
           {/* Properties Links */}
           <div className="footer-nav-col">
-            <h4 className="footer-col-title">{isAr ? 'أنواع الصروح' : 'PROPERTIES'}</h4>
+            <h4 className="footer-col-title">{isAr ? 'أنواع العقارات' : 'PROPERTIES'}</h4>
             <ul className="footer-links">
               {(isAr ? [
-                { label: 'فيلا مستقلة فاخرة', filter: 'Standalone Villa' },
-                { label: 'بنتهاوس سماوي', filter: 'Penthouse' },
-                { label: 'قصر ملكي متكامل', filter: 'Mansion' },
-                { label: 'قصور وبنتهاوس', filter: 'Villas & Penthouses' },
+                { id: 'footer-apt-luxury', label: 'شقق سكنية فاخرة', filter: 'apartment' },
+                { id: 'footer-bld-whole', label: 'عمائر كاملة (عمارة)', filter: 'building' },
+                { id: 'footer-grg-bays', label: 'جراجات وباكيات خاصة', filter: 'garage' },
+                { id: 'footer-apt-duplex', label: 'شقق دوبلكس ورووف', filter: 'apartment' },
               ] : [
-                { label: 'Standalone Villas', filter: 'Standalone Villa' },
-                { label: 'Sky Penthouses', filter: 'Penthouse' },
-                { label: 'Grand Mansions', filter: 'Mansion' },
-                { label: 'Villas & Penthouses', filter: 'Villas & Penthouses' },
+                { id: 'footer-apt-luxury', label: 'Luxury Apartments', filter: 'apartment' },
+                { id: 'footer-bld-whole', label: 'Whole Buildings', filter: 'building' },
+                { id: 'footer-grg-bays', label: 'Garages & Bays', filter: 'garage' },
+                { id: 'footer-apt-duplex', label: 'Duplexes & Roofs', filter: 'apartment' },
               ]).map((item) => (
-                <li key={item.filter}>
+                <li key={item.id}>
                   <button 
                     className="footer-link-btn"
                     onClick={() => {

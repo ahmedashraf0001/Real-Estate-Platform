@@ -86,11 +86,10 @@ const LOCATION_FILTER_OPTIONS = [
 ];
 
 const TYPE_FILTER_OPTIONS = [
-  { value: 'All', label: 'All Typologies', shortLabel: 'All Types', labelAr: 'جميع أنواع الصروح', shortLabelAr: 'جميع الأنواع' },
-  { value: 'Standalone Villa', label: 'Standalone Villa', shortLabel: 'Standalone', labelAr: 'فيلا مستقلة فاخرة', shortLabelAr: 'فيلا مستقلة' },
-  { value: 'Penthouse', label: 'Sky Penthouse', shortLabel: 'Penthouse', labelAr: 'بنتهاوس سماوي ورووف', shortLabelAr: 'بنتهاوس' },
-  { value: 'Mansion', label: 'Grand Mansion', shortLabel: 'Mansion', labelAr: 'قصر ملكي متكامل', shortLabelAr: 'قصر' },
-  { value: 'Villas & Penthouses', label: 'Villas & Penthouses', shortLabel: 'Villas/Penthouses', labelAr: 'قصور وبنتهاوس', shortLabelAr: 'قصور/بنتهاوس' },
+  { value: 'All', label: 'All Typologies', shortLabel: 'All Types', labelAr: 'جميع أنواع العقارات', shortLabelAr: 'جميع العقارات' },
+  { value: 'apartment', label: 'Apartments & Duplexes', shortLabel: 'Apartments', labelAr: 'شقق ودوبلكس', shortLabelAr: 'شقق سكنية' },
+  { value: 'building', label: 'Whole Buildings (عمارة)', shortLabel: 'Buildings', labelAr: 'عمائر كاملة', shortLabelAr: 'عمائر' },
+  { value: 'garage', label: 'Garages & Bays', shortLabel: 'Garages', labelAr: 'جراجات وباكيات', shortLabelAr: 'جراجات' },
 ];
 
 const PRICE_FILTER_OPTIONS = [
@@ -319,12 +318,10 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
 
       // Property Type Filter — matches both adapted propertyType and raw DB type
       if (propertyType !== 'All') {
-        const pt = p.propertyType || '';
-        const rawType = p.type || '';
-        if (propertyType === 'Villas & Penthouses') {
-          if (!['Standalone Villa', 'Penthouse', 'Mansion', 'villa', 'townhouse', 'duplex'].includes(pt) &&
-              !['villa', 'townhouse', 'duplex'].includes(rawType)) return false;
-        } else if (pt !== propertyType && rawType !== propertyType.toLowerCase()) {
+        const pt = (p.propertyType || '').toLowerCase();
+        const rawType = (p.type || '').toLowerCase();
+        const filterVal = propertyType.toLowerCase();
+        if (rawType !== filterVal && !pt.includes(filterVal) && !filterVal.includes(rawType)) {
           return false;
         }
       }
@@ -985,6 +982,7 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
                       viewMode={viewMode}
                       onToggleCompare={toggleCompare}
                       isCompared={compareIds.includes(property.id)}
+                      locale={locale}
                     />
                   ))}
                 </motion.div>

@@ -292,21 +292,22 @@ export const Navbar: React.FC<NavbarProps> = ({
           transition: background var(--transition-smooth), border-color var(--transition-smooth), box-shadow var(--transition-smooth);
         }
 
-        /* 2. Hero Blended State */
+        /* 2. Hero Blended State (Fully transparent over hero in both light and dark modes) */
         .nav-glass-capsule.hero-blended {
-          background: rgba(10, 14, 24, 0.35);
-          backdrop-filter: blur(12px) saturate(180%);
-          -webkit-backdrop-filter: blur(12px) saturate(180%);
-          border: 1px solid rgba(255, 255, 255, 0.15);
-          box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+          background: transparent !important;
+          backdrop-filter: none !important;
+          -webkit-backdrop-filter: none !important;
+          border: 1px solid transparent !important;
+          box-shadow: none !important;
         }
 
+        [data-theme="dark"] .nav-glass-capsule.hero-blended,
         [data-theme="light"] .nav-glass-capsule.hero-blended {
-          background: transparent;
-          border-color: transparent;
-          backdrop-filter: blur(0px);
-          -webkit-backdrop-filter: blur(0px);
-          box-shadow: 0 0 0 transparent;
+          background: transparent !important;
+          border-color: transparent !important;
+          backdrop-filter: none !important;
+          -webkit-backdrop-filter: none !important;
+          box-shadow: none !important;
         }
 
         /* 3. Scrolled / Separated State */

@@ -219,6 +219,113 @@ function resolveRoomTradeSpecs(tid: string): TradeSpecItem[] {
   return DEFAULT_TRADE_SPECS.reception;
 }
 
+const KNOWN_TEMPLATE_AR_LABELS: Record<string, string> = {
+  'bld.entrance_gate': 'بوابة وسور المدخل',
+  'bld.entrance_lobby': 'مدخل وردهة العمارة',
+  'bld.staircase': 'السلم الرئيسي',
+  'bld.elevator': 'المصعد الكهربائي',
+  'bld.electric_box': 'لوحة العدادات',
+  'bld.water_motors': 'مضخات المياه',
+  'bld.garage_bays': 'باكيات الجراج',
+  'bld.guard_room': 'غرفة الحارس والأمن',
+  'bld.commercial_shop': 'محل تجاري',
+  'bld.central_corridor': 'طرقة التوزيع',
+  'bld.lightwell': 'المنور والخدمات',
+  'bld.balcony': 'البلكونة والتراس',
+  'bld.roof_terrace': 'تراس السطح والبرجولا',
+  'bld.roof_service': 'غرفة المحرك والخزانات',
+  'bld.unit': 'وحدة سكنية',
+  'grg.garage': 'مساحة الجراج',
+  'grg.ramp': 'رامب وبوابة الدخول',
+  'grg.bay': 'باكيات السيارات',
+  'grg.elec': 'الكهرباء والإنارة',
+  'grg.security_booth': 'كابينة الأمن',
+  'grg.storage': 'المخزن الملحق',
+  'apt.reception': 'الاستقبال والصالة',
+  'apt.master_bed': 'غرفة النوم الرئيسية',
+  'apt.master_bath': 'حمام الماستر',
+  'apt.std_bed': 'غرفة نوم',
+  'apt.main_bath': 'الحمام الرئيسي',
+  'apt.kitchen': 'المطبخ',
+  'apt.balcony': 'الشرفة الخارجية',
+  'apt.corridor': 'الطرقة الداخلية',
+  'apt.guest_bath': 'حمام الضيوف',
+  'apt.laundry': 'غرفة الغسيل',
+  'apt.dressing': 'غرفة الملابس',
+};
+
+function isArabicText(str?: string): boolean {
+  if (!str) return false;
+  return /[\u0600-\u06FF]/.test(str);
+}
+
+function computeRoomTextLayout(
+  title: string,
+  boxWidth: number,
+  boxHeight: number
+): { lines: string[]; fontSize: number; lineHeight: number } {
+  if (!title) return { lines: [''], fontSize: 7.5, lineHeight: 9.5 };
+
+  const cleanTitle = title.trim();
+  const words = cleanTitle.split(/\s+/);
+  
+  const availW = Math.max(24, boxWidth - 8);
+  const availH = Math.max(20, boxHeight - 20);
+
+  let lines: string[] = [];
+
+  if (words.length <= 1) {
+    lines = [cleanTitle];
+  } else if (words.length === 2) {
+    if (cleanTitle.length <= 14 && availW >= 75) {
+      lines = [cleanTitle];
+    } else {
+      lines = [words[0], words[1]];
+    }
+  } else if (words.length <= 4) {
+    const mid = Math.ceil(words.length / 2);
+    lines = [
+      words.slice(0, mid).join(' '),
+      words.slice(mid).join(' ')
+    ];
+  } else {
+    // 5 or more words: 2 or 3 lines depending on height
+    if (availH >= 65 && availW < 130) {
+      const p1 = Math.ceil(words.length / 3);
+      const p2 = Math.ceil((words.length * 2) / 3);
+      lines = [
+        words.slice(0, p1).join(' '),
+        words.slice(p1, p2).join(' '),
+        words.slice(p2).join(' ')
+      ];
+    } else {
+      const mid = Math.ceil(words.length / 2);
+      lines = [
+        words.slice(0, mid).join(' '),
+        words.slice(mid).join(' ')
+      ];
+    }
+  }
+
+  lines = lines.filter(l => l.trim().length > 0);
+  const maxLineLen = Math.max(...lines.map(l => l.length), 1);
+
+  // Compute font size to fit inside the room envelope
+  const widthFont = (availW / (maxLineLen * 0.55));
+  const heightFont = (availH / (lines.length + 1.25)) * 0.85;
+  
+  let fontSize = Math.min(8.5, widthFont, heightFont);
+  fontSize = Math.max(5.4, Math.min(fontSize, 9.0));
+  
+  const lineHeight = Math.max(7.2, fontSize * 1.25);
+
+  return {
+    lines,
+    fontSize: Number(fontSize.toFixed(1)),
+    lineHeight: Number(lineHeight.toFixed(1)),
+  };
+}
+
 interface ProcessedZone {
   id: string;
   templateId: string;
@@ -304,7 +411,7 @@ export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintIns
       const metric = FALLBACK_ZONE_METRICS[tid] || GENERIC_ZONE_METRIC;
       const titleFallback = FALLBACK_ZONE_TITLES[tid] || { en: z.instance_label || 'Space', ar: z.instance_label || 'مساحة' };
       const titleEn = z.instance_label || titleFallback.en;
-      const titleAr = z.instance_label || titleFallback.ar;
+      const titleAr = KNOWN_TEMPLATE_AR_LABELS[tid] || (isArabicText(z.instance_label) ? z.instance_label : titleFallback.ar) || titleEn;
 
       const sp = z.spatial;
       const length_m = sp?.length_m ?? metric.length_m;
@@ -1311,31 +1418,45 @@ export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintIns
                 {s.dims}
               </text>
 
-              {/* Room Title & Area Badge (Smartly wrapped for narrow spaces like balconies) */}
-              {isNarrowVertical ? (
-                <g transform={`translate(${s.x + s.w / 2}, ${s.y + s.h / 2 - 4})`}>
-                  <text y="-8" fontSize="7" fill="var(--cad-text-primary)" textAnchor="middle" fontWeight="800">
-                    {isAr ? 'شرفة' : (s.title.split(' ')[0] || s.title)}
-                  </text>
-                  {s.title.split(' ').length > 1 && (
-                    <text y="2" fontSize="7" fill="var(--cad-text-primary)" textAnchor="middle" fontWeight="800">
-                      {isAr ? 'بانورامية' : s.title.split(' ').slice(1).join(' ')}
+              {/* Room Title & Area Badge (Smart multi-line auto-fit to prevent box overflow) */}
+              {(() => {
+                const textLayout = computeRoomTextLayout(s.title, s.w, s.h);
+                const { lines, fontSize, lineHeight } = textLayout;
+                const totalTextH = (lines.length * lineHeight) + lineHeight * 0.85;
+                const headerOffset = 14;
+                const startY = s.y + headerOffset + Math.max(2, (s.h - headerOffset - totalTextH) / 2) + fontSize * 0.8;
+
+                return (
+                  <g style={{ pointerEvents: 'none' }}>
+                    {lines.map((line, lIdx) => (
+                      <text
+                        key={lIdx}
+                        x={s.x + s.w / 2}
+                        y={startY + lIdx * lineHeight}
+                        fontSize={fontSize}
+                        fill="var(--cad-text-primary)"
+                        textAnchor="middle"
+                        fontWeight="800"
+                        style={{ userSelect: 'none' }}
+                      >
+                        {line}
+                      </text>
+                    ))}
+                    <text
+                      x={s.x + s.w / 2}
+                      y={startY + lines.length * lineHeight + 2}
+                      fontSize={Math.max(5.4, fontSize - 0.6)}
+                      fill="var(--gold-primary)"
+                      textAnchor="middle"
+                      fontFamily="monospace"
+                      fontWeight="800"
+                      style={{ userSelect: 'none' }}
+                    >
+                      {s.sqm} m²
                     </text>
-                  )}
-                  <text y="14" fontSize="6.8" fill="var(--gold-primary)" textAnchor="middle" fontFamily="monospace" fontWeight="800">
-                    {s.sqm} m²
-                  </text>
-                </g>
-              ) : (
-                <g transform={`translate(${s.x + s.w / 2}, ${s.y + (isBed ? s.h / 2 + 10 : s.h / 2)})`}>
-                  <text y="-2" fontSize="9.5" fill="var(--cad-text-primary)" textAnchor="middle" fontWeight="800">
-                    {s.title}
-                  </text>
-                  <text y="12" fontSize="8" fill="var(--gold-primary)" textAnchor="middle" fontFamily="monospace" fontWeight="800">
-                    {s.sqm} m²
-                  </text>
-                </g>
-              )}
+                  </g>
+                );
+              })()}
 
               {/* Selected Corner Accents */}
               {isSelected && (() => {

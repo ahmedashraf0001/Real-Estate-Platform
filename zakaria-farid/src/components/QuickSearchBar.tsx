@@ -55,46 +55,25 @@ const LOCATION_OPTIONS = [
 
 const TYPE_OPTIONS = [
   { 
-    value: 'Standalone Villa', 
-    label: 'Standalone Villa', 
-    shortLabel: 'Standalone Villa',
-    labelAr: 'قصور وفيلات مستقلة',
-    shortLabelAr: 'فيلات مستقلة'
+    value: 'apartment', 
+    label: 'Apartment / Duplex', 
+    shortLabel: 'Apartment',
+    labelAr: 'شقق وأجنحة ودوبلكس',
+    shortLabelAr: 'شقق سكنية'
   },
   { 
-    value: 'Penthouse', 
-    label: 'Sky Penthouse', 
-    shortLabel: 'Sky Penthouse',
-    labelAr: 'سكاي بنتهاوس ورووف',
-    shortLabelAr: 'بنتهاوس فاخر'
+    value: 'building', 
+    label: 'Whole Building', 
+    shortLabel: 'Building',
+    labelAr: 'عمارة سكنية / تجارية',
+    shortLabelAr: 'عمارة كاملة'
   },
   { 
-    value: 'Mansion', 
-    label: 'Grand Mansion', 
-    shortLabel: 'Grand Mansion',
-    labelAr: 'قصور سيادية كبرى',
-    shortLabelAr: 'قصور سيادية'
-  },
-  { 
-    value: 'Apartment', 
-    label: 'Luxury Apartment', 
-    shortLabel: 'Luxury Apartment',
-    labelAr: 'أجنحة وشقق فاخرة',
-    shortLabelAr: 'شقق وأجنحة'
-  },
-  { 
-    value: 'Chalet', 
-    label: 'Prime Chalet', 
-    shortLabel: 'Prime Chalet',
-    labelAr: 'شاليهات ساحلية صف أول',
-    shortLabelAr: 'شاليهات ساحلية'
-  },
-  { 
-    value: 'Duplex', 
-    label: 'Sky Duplex', 
-    shortLabel: 'Sky Duplex',
-    labelAr: 'دوبلكس بحديقة خاصة',
-    shortLabelAr: 'دوبلكس بحديقة'
+    value: 'garage', 
+    label: 'Garage & Bays', 
+    shortLabel: 'Garage',
+    labelAr: 'جراجات وباكيات خاصة',
+    shortLabelAr: 'جراجات'
   },
 ];
 
@@ -140,7 +119,7 @@ export const QuickSearchBar: React.FC<QuickSearchBarProps> = ({ onSearch, locale
   const isAr = propLocale === 'ar' || (typeof document !== 'undefined' && (document.documentElement.lang === 'ar' || document.documentElement.dir === 'rtl'));
 
   const [location, setLocation] = useState('New Cairo, Fifth Settlement');
-  const [propertyType, setPropertyType] = useState('Standalone Villa');
+  const [propertyType, setPropertyType] = useState('apartment');
   const [priceTier, setPriceTier] = useState('15,000,000 - 45,000,000 EGP');
   const [openDropdown, setOpenDropdown] = useState<'location' | 'type' | 'price' | null>(null);
   const [dropdownPlacement, setDropdownPlacement] = useState<'down' | 'up'>('down');

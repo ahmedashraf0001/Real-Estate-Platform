@@ -201,7 +201,7 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
     beds: rawProperty.beds || rawProperty.bedrooms || 5,
     baths: rawProperty.baths || rawProperty.bathrooms || 6,
     sqm: rawProperty.sqm || rawProperty.area_sqm || 720,
-    propertyType: rawProperty.propertyType || rawProperty.type || 'Standalone Villa',
+    propertyType: rawProperty.propertyType || rawProperty.type || 'Apartment',
     builtYear: rawProperty.builtYear || rawProperty.year_built || 2025,
     featured: rawProperty.featured ?? rawProperty.is_featured ?? true,
     images: (rawProperty.images && rawProperty.images.length > 0) 
@@ -1146,6 +1146,7 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
                 property={p}
                 index={idx}
                 onSelect={(id) => onSelectProperty(id || p.id || p.slug || '')}
+                locale={locale}
               />
             ))}
           </div>

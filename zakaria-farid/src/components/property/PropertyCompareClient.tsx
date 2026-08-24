@@ -52,11 +52,10 @@ export default function PropertyCompareClient({ properties, locale }: PropertyCo
   };
 
   const typeLabel: Record<string, string> = {
-    villa: isAr ? 'فيلا مستقلة' : 'Standalone Villa',
     apartment: isAr ? 'شقة سكنية' : 'Apartment',
-    townhouse: isAr ? 'تاون هاوس' : 'Townhouse',
-    duplex: isAr ? 'دوبلكس' : 'Duplex',
-    chalet: isAr ? 'شاليه شاطئي' : 'Beachfront Chalet',
+    building: isAr ? 'عمارة كاملة' : 'Whole Building',
+    garage: isAr ? 'جراج وباكية' : 'Garage & Bay',
+    duplex: isAr ? 'شقة دوبلكس' : 'Duplex',
   };
 
   const completionLabel: Record<string, string> = {

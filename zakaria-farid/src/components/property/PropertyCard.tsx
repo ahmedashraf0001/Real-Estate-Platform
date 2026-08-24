@@ -7,6 +7,8 @@ import { decodeHtmlEntities, cleanHtmlToPlainText } from '@/lib/utils/propertyAd
 import { useFavorites } from '@/lib/context/FavoritesContext';
 import { toast } from 'sonner';
 
+import { useParams } from 'next/navigation';
+
 interface PropertyCardProps {
   property: Property;
   onSelect: (propertyId: string) => void;
@@ -14,6 +16,7 @@ interface PropertyCardProps {
   viewMode?: 'grid' | 'compact' | 'list';
   onToggleCompare?: (propertyId: string) => void;
   isCompared?: boolean;
+  locale?: string;
 }
 
 const cardVariants: Variants = {
@@ -44,9 +47,17 @@ const cardVariants: Variants = {
 };
 
 const KNOWN_AR_TITLES: Record<string, string> = {
-  'contemporary parkside townhouse in westown': 'تاون هاوس عصري يطل على النادي في ويست تاون',
-  'executive duplex residence in golden square': 'دوبلكس فاخر بحديقة خاصة في الجولدن سكوير',
   'the obsidian pavilion': 'قصر الأوبسيديان المعماري',
+  'sodic east prime residence': 'شقة فاخرة بمشروع سوديك إيست – التجمع الخامس',
+  'zayed central park garden residence': 'شقة أرضي بحديقة خاصة – الشيخ زايد',
+  'aurum tower sky duplex': 'شقة دوبلكس سماوية ببرج أوروم – التجمع الخامس',
+  'al-narges prime residential building (عمارة كاملة)': 'عمارة سكنية كاملة فاخرة – حي النرجس التجمع الخامس',
+  'zayed horizon mixed-use building (عمارة تجارية وسكنية)': 'عمارة تجارية وسكنية متكاملة – الشيخ زايد',
+  'madinaty privado roof suite & sky slab': 'شقة رووف كاملة مع السطح – مدينتي بريفادو',
+  'new cairo automated parking facility & garage bays': 'جراج تجاري واستثماري خاص – التجمع الخامس',
+  'monte galala cliffside apartment': 'شقة ساحلية بإطلالة جبلية وبحرية – العين السخنة',
+  'hacienda waters luxury residence (off-plan)': 'شقة فاخرة قيد الإنشاء – هاسيندا ووترز الساحل الشمالي',
+  'el gouna marina residential building (عمارة شقق بالجونة)': 'عمارة سكنية فاخرة مطلة على اللاجون – الجونة البحر الأحمر',
   'sokhna sea-cliff mansion': 'قصر جرف السخنة البانورامي',
   'the sky palace penthouse': 'بنتهاوس قصر السحاب بالشيخ زايد',
   'north coast seaside sanctuary': 'قصر هاسيندا الساحلي الفاخر',
@@ -79,18 +90,17 @@ const DISTRICT_AR_MAP: Record<string, string> = {
 };
 
 const TYPE_AR_MAP: Record<string, string> = {
-  'Standalone Villa': 'فيلا مستقلة',
-  'Penthouse': 'بنتهاوس',
-  'Mansion': 'قصر ملكي',
-  'Apartment': 'شقة فاخرة',
-  'Chalet': 'شاليه ساحلي',
-  'Townhouse': 'تاون هاوس',
-  'Duplex': 'دوبلكس',
-  'villa': 'فيلا مستقلة',
-  'apartment': 'شقة فاخرة',
-  'chalet': 'شاليه ساحلي',
-  'townhouse': 'تاون هاوس',
-  'duplex': 'دوبلكس'
+  'apartment': 'شقة سكنية',
+  'building': 'عمارة كاملة',
+  'garage': 'جراج وباكية',
+  'Apartment': 'شقة سكنية',
+  'Building (عمارة)': 'عمارة كاملة',
+  'Building': 'عمارة كاملة',
+  'Garage': 'جراج وباكية',
+  'Duplex': 'شقة دوبلكس',
+  'duplex': 'شقة دوبلكس',
+  'Roof': 'شقة روف',
+  'Ground': 'أرضي بحديقة',
 };
 
 export const PropertyCard: React.FC<PropertyCardProps> = ({
@@ -99,14 +109,17 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
   index = 0,
   viewMode = 'grid',
   onToggleCompare,
-  isCompared = false
+  isCompared = false,
+  locale: propLocale
 }) => {
+  const params = useParams();
+  const currentLocale = (propLocale || (params?.locale as string) || 'en');
+  const isAr = currentLocale === 'ar';
+
   const { isFavorite, toggleFavorite, setIsDrawerOpen } = useFavorites();
   const isSaved = isFavorite(property.id) || (property.slug ? isFavorite(property.slug) : false);
 
-  const isAr = typeof document !== 'undefined' 
-    ? (document.documentElement.lang === 'ar' || document.documentElement.dir === 'rtl' || (typeof window !== 'undefined' && window.location.pathname.startsWith('/ar')))
-    : false;
+
 
   const normalizedKey = (property.title || property.title_en || '').toLowerCase().trim();
   const rawTitle = isAr

@@ -122,6 +122,16 @@ export function adaptProperty(property: SupabaseProperty, locale: 'en' | 'ar' = 
 
   const narrativeText = isAr ? (descAr || descEn) : (descEn || descAr);
 
+  const rawTitle = ((property.title_en || '') + ' ' + (property.title_ar || '')).toLowerCase();
+  const derivedType = (() => {
+    if (property.type === 'building' || property.type === 'garage' || property.type === 'apartment') {
+      return property.type;
+    }
+    if (rawTitle.includes('building') || rawTitle.includes('عمارة')) return 'building';
+    if (rawTitle.includes('garage') || rawTitle.includes('جراج')) return 'garage';
+    return property.type || 'apartment';
+  })();
+
   return {
     id: property.slug,
     slug: property.slug,
@@ -141,8 +151,8 @@ export function adaptProperty(property: SupabaseProperty, locale: 'en' | 'ar' = 
     beds: property.bedrooms || 0,
     baths: property.bathrooms || 0,
     sqm: property.area_sqm || 0,
-    propertyType: (PROPERTY_TYPE_MAP[property.type] || property.type || 'Standalone Villa') as any,
-    type: property.type,
+    propertyType: (PROPERTY_TYPE_MAP[derivedType] || derivedType || 'Apartment') as any,
+    type: derivedType as any,
     builtYear: 2025,
     featured: property.is_featured,
     is_featured: property.is_featured,

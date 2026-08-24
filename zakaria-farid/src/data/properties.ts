@@ -12,7 +12,7 @@ export const PROPERTIES: Property[] = [
     beds: 5,
     baths: 6,
     sqm: 720,
-    propertyType: 'Standalone Villa',
+    propertyType: 'Apartment',
     builtYear: 2025,
     featured: true,
     images: [
@@ -53,31 +53,27 @@ Every interior coordinate flows seamlessly to the sprawling outside lagoons. Des
     beds: 4,
     baths: 5,
     sqm: 540,
-    propertyType: 'Standalone Villa',
+    propertyType: 'Apartment',
     builtYear: 2024,
     featured: true,
     images: [
       'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=1600&q=85',
       'https://images.unsplash.com/photo-1600585154526-990dced4db0d?auto=format&fit=crop&w=1200&q=85',
-      'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=1200&q=85',
-      'https://images.unsplash.com/photo-1600573472550-8090b5e0745e?auto=format&fit=crop&w=1200&q=85'
+      'https://images.unsplash.com/photo-1600565193348-f74bd3c7ccdf?auto=format&fit=crop&w=1200&q=85'
     ],
-    narrative: `Carved directly into the crimson granite elevations of the Galala plateau, this coastal sanctuary commands uninterrupted panoramic vistas of the Gulf of Suez. Featuring multi-tier cantilevered terraces, sea-facing infinity plunge pools, and floor-to-ceiling panoramic glass walls.
-
-The master suite occupies its own secluded pavilion with an open-air rain shower and direct private cliff walk trail to the private marina below.`,
+    narrative: `Carved directly into the crimson granite elevations of the Galala plateau, this coastal sanctuary commands uninterrupted panoramic vistas of the Gulf of Suez. An architectural monument where raw mountain geology meets supreme interior craftsmanship.`,
     amenities: [
-      { icon: 'waves', title: 'Dual-Level Cliff Plunge Pools' },
-      { icon: 'shield-check', title: 'Private Gated Mountain Access' },
-      { icon: 'flower-2', title: 'Xeriscape Desert Flora Terraces' },
-      { icon: 'building', title: 'Bespoke Italian Solar Glass' }
+      { icon: 'waves', title: 'Cliff-edge Saltwater Pool' },
+      { icon: 'shield-check', title: 'Private Helipad Access' },
+      { icon: 'flower-2', title: 'Native Terraced Desert Flora' }
     ],
-    mapCoordinates: { x: 78, y: 72, lat: 29.6010, lng: 32.3380 },
+    mapCoordinates: { x: 72, y: 62, lat: 29.6010, lng: 32.3380 },
     broker: {
-      name: 'Yasmine El-Shamy',
-      role: 'Head of Coastal Portfolios',
-      phone: '+20 100 876 5432',
-      email: 'y.shamy@zakariafarid.com',
-      avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=300&q=80'
+      name: 'Sherif Badran',
+      role: 'Senior Private Advisor',
+      phone: '+20 100 999 8888',
+      email: 's.badran@zakariafarid.com',
+      avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=300&q=80'
     }
   },
   {
@@ -85,34 +81,33 @@ The master suite occupies its own secluded pavilion with an open-air rain shower
     title: 'The Sky Palace Penthouse',
     location: 'Zayed Central Park Tower, Sheikh Zayed, Egypt',
     district: 'Sheikh Zayed',
-    estateName: 'Zayed Heights Park',
+    estateName: 'Zayed Central Park',
     price: 36000000,
     currency: 'EGP',
     beds: 4,
     baths: 4,
     sqm: 480,
-    propertyType: 'Penthouse',
+    propertyType: 'Apartment',
     builtYear: 2025,
     featured: true,
     images: [
       'https://images.unsplash.com/photo-1600607687920-4e2a09cf159d?auto=format&fit=crop&w=1600&q=85',
       'https://images.unsplash.com/photo-1600566753376-12c8ab7fb75b?auto=format&fit=crop&w=1200&q=85',
-      'https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?auto=format&fit=crop&w=1200&q=85'
+      'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?auto=format&fit=crop&w=1200&q=85'
     ],
-    narrative: `Rising 42 stories above the vibrant Sheikh Zayed district, this duplex penthouse commands 360-degree panoramic views over the Great Pyramids and modern city skyline. Featuring a double-height grand gallery salon, private rooftop heated infinity pool, and custom marble staircase.`,
+    narrative: `Rising 42 stories above the vibrant Sheikh Zayed skyline, this 480 sqm sky duplex commands unobstructed 360-degree views stretching toward the Pyramids of Giza. Custom double-height glazed gallery rooms are accompanied by a cantilevered private outdoor infinity pool.`,
     amenities: [
-      { icon: 'waves', title: 'Private Sky Infinity Pool' },
-      { icon: 'shield-check', title: 'Private Keyed Elevator Access' },
-      { icon: 'car', title: '3 Underground VIP Parking Bays' },
-      { icon: 'building', title: 'Triple-Height 7.5m Ceilings' }
+      { icon: 'waves', title: 'Cantilevered Rooftop Pool' },
+      { icon: 'shield-check', title: 'Direct Biometric Lift Access' },
+      { icon: 'car', title: 'Dedicated Subterranean EV Bays' }
     ],
-    mapCoordinates: { x: 22, y: 38, lat: 30.0489, lng: 30.9856 },
+    mapCoordinates: { x: 22, y: 48, lat: 30.0489, lng: 30.9856 },
     broker: {
-      name: 'Karim Mansour',
-      role: 'Prime Residences Partner',
-      phone: '+20 100 555 7777',
-      email: 'k.mansour@zakariafarid.com',
-      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80'
+      name: 'Tarek Mansour',
+      role: 'Director of Private Assets',
+      phone: '+20 100 123 4567',
+      email: 't.mansour@zakariafarid.com',
+      avatar: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=300&q=80'
     }
   },
   {
@@ -120,33 +115,33 @@ The master suite occupies its own secluded pavilion with an open-air rain shower
     title: 'North Coast Seaside Sanctuary',
     location: 'Hacienda Bay Waters, North Coast, Egypt',
     district: 'North Coast',
-    estateName: 'Hacienda Waters',
+    estateName: 'Hacienda Bay Waters',
     price: 52000000,
     currency: 'EGP',
     beds: 6,
     baths: 7,
     sqm: 850,
-    propertyType: 'Mansion',
-    builtYear: 2024,
+    propertyType: 'Building (عمارة)',
+    builtYear: 2025,
     featured: true,
     images: [
-      'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1600&q=85',
-      'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=1200&q=85',
-      'https://images.unsplash.com/photo-1600566753376-12c8ab7fb75b?auto=format&fit=crop&w=1200&q=85'
+      'https://images.unsplash.com/photo-1499793983690-e29da59ef1c2?auto=format&fit=crop&w=1600&q=85',
+      'https://images.unsplash.com/photo-1571896349842-33c89424de2d?auto=format&fit=crop&w=1200&q=85',
+      'https://images.unsplash.com/photo-1613490493576-7fde63acd811?auto=format&fit=crop&w=1200&q=85'
     ],
-    narrative: `Direct beachfront Mediterranean estate offering private white sand access and turquoise sea views. Masterfully constructed with travertine marble and sustainable teak elements.`,
+    narrative: `Direct beachfront Mediterranean compound offering private white sand access and turquoise sea views. Masterfully constructed with travertine marble and sustainable teak elements.`,
     amenities: [
-      { icon: 'waves', title: 'Direct Private Beachfront Access' },
-      { icon: 'flower-2', title: 'Pergola Shaded Dining Terraces' },
-      { icon: 'shield-check', title: 'Private Gated Compound Security' }
+      { icon: 'waves', title: 'Direct Beachfront Boardwalk' },
+      { icon: 'flower-2', title: 'Lagoon Side Infinity Pool' },
+      { icon: 'shield-check', title: '24/7 Gated Community Security' }
     ],
-    mapCoordinates: { x: 20, y: 15, lat: 30.9333, lng: 28.7500 },
+    mapCoordinates: { x: 15, y: 18, lat: 30.9333, lng: 28.7500 },
     broker: {
-      name: 'Yasmine El-Shamy',
-      role: 'Head of Coastal Portfolios',
-      phone: '+20 100 876 5432',
-      email: 'y.shamy@zakariafarid.com',
-      avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=300&q=80'
+      name: 'Sherif Badran',
+      role: 'Senior Private Advisor',
+      phone: '+20 100 999 8888',
+      email: 's.badran@zakariafarid.com',
+      avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=300&q=80'
     }
   },
   {
@@ -160,7 +155,7 @@ The master suite occupies its own secluded pavilion with an open-air rain shower
     beds: 4,
     baths: 5,
     sqm: 510,
-    propertyType: 'Standalone Villa',
+    propertyType: 'Apartment',
     builtYear: 2024,
     featured: true,
     images: [
@@ -194,7 +189,7 @@ The master suite occupies its own secluded pavilion with an open-air rain shower
     beds: 7,
     baths: 8,
     sqm: 1150,
-    propertyType: 'Mansion',
+    propertyType: 'Building (عمارة)',
     builtYear: 2025,
     featured: true,
     images: [

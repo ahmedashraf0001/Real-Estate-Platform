@@ -55,7 +55,7 @@ export default async function LocaleLayout({ children, params }: Props) {
 
   return (
     <html lang={locale} dir={dir} data-theme={initialTheme} suppressHydrationWarning>
-      <head>
+      <body>
         <Script
           id="theme-init"
           strategy="beforeInteractive"
@@ -76,8 +76,6 @@ export default async function LocaleLayout({ children, params }: Props) {
 })();`,
           }}
         />
-      </head>
-      <body>
         {process.env.NODE_ENV === 'production' && (
           <Script
             defer

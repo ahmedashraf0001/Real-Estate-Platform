@@ -109,6 +109,46 @@ export const HomeView: React.FC<HomeViewProps> = ({
     return true;
   });
 
+  // Typewriter animation state for Hero Title
+  const line1WhiteText = isAr ? 'استكشف أندر ' : "Discover Egypt's ";
+  const line1GoldText = isAr ? 'الصروح المعمارية' : 'Premier ';
+  const line2Text = isAr ? 'والقصور الفاخرة في مصر' : 'Luxury Living & Sovereign Estates';
+
+  const line1WhiteLen = line1WhiteText.length;
+  const line1GoldLen = line1GoldText.length;
+  const line1Total = line1WhiteLen + line1GoldLen;
+  const totalChars = line1Total + line2Text.length;
+
+  const [charCount, setCharCount] = React.useState(0);
+  const [isDoneTyping, setIsDoneTyping] = React.useState(false);
+
+  React.useEffect(() => {
+    setCharCount(0);
+    setIsDoneTyping(false);
+    let current = 0;
+    const interval = setInterval(() => {
+      current += 1;
+      setCharCount(current);
+      if (current >= totalChars) {
+        clearInterval(interval);
+        setTimeout(() => setIsDoneTyping(true), 2000);
+      }
+    }, 38);
+
+    return () => clearInterval(interval);
+  }, [totalChars, locale]);
+
+  const display1A = line1WhiteText.slice(0, Math.min(charCount, line1WhiteLen));
+  const display1B = charCount > line1WhiteLen 
+    ? line1GoldText.slice(0, Math.min(charCount - line1WhiteLen, line1GoldLen))
+    : '';
+  const display2 = charCount > line1Total
+    ? line2Text.slice(0, charCount - line1Total)
+    : '';
+
+  const showCursorOnLine1 = charCount <= line1Total && !isDoneTyping;
+  const showCursorOnLine2 = charCount > line1Total && !isDoneTyping;
+
   return (
     <div className="home-view" dir={isAr ? 'rtl' : 'ltr'}>
       {/* ─── 1. Full-Bleed Viewport Cinematic Hero ─── */}
@@ -140,18 +180,22 @@ export const HomeView: React.FC<HomeViewProps> = ({
 
         <div className="container hero-container">
           <div className="hero-content">
-            {/* Monumental Headline */}
+            {/* Monumental Headline with Living Typewriter Animation */}
             <motion.h1 
               className="hero-title"
+              aria-label={isAr ? 'استكشف أندر الصروح المعمارية والقصور الفاخرة في مصر' : "Discover Egypt's Premier Luxury Living & Sovereign Estates"}
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
             >
               <span className="hero-title-main">
-                {isAr ? 'استكشف أندر الصروح المعمارية' : 'Discover Egypt’s Premier'}
+                <span>{display1A}</span>
+                {display1B && <span className="hero-title-gold">{display1B}</span>}
+                {showCursorOnLine1 && <span className="typewriter-cursor">|</span>}
               </span>
               <span className="hero-title-serif">
-                {isAr ? 'والقصور الفاخرة في مصر' : 'Luxury Living & Sovereign Estates'}
+                {display2 && <span>{display2}</span>}
+                {showCursorOnLine2 && <span className="typewriter-cursor">|</span>}
               </span>
             </motion.h1>
 
@@ -261,6 +305,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                     property={property}
                     index={idx}
                     onSelect={onSelectProperty}
+                    locale={locale}
                   />
                 </motion.div>
               ))}
@@ -537,12 +582,31 @@ export const HomeView: React.FC<HomeViewProps> = ({
           display: flex;
           flex-direction: column;
           gap: 6px;
+          min-height: calc(2.2 * 1.18em);
         }
 
         .hero-title-main {
           color: #FFFFFF;
           text-shadow: 0 2px 18px rgba(0, 0, 0, 0.85);
           white-space: nowrap;
+          display: inline-flex;
+          align-items: center;
+          flex-wrap: wrap;
+        }
+
+        .hero-title-gold {
+          background: linear-gradient(
+            135deg, 
+            #FFFDF5 0%, 
+            #FEE8A0 25%, 
+            #FCD34D 50%, 
+            var(--gold-primary, #DDA752) 80%, 
+            #B8860B 100%
+          );
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          filter: drop-shadow(0 2px 12px rgba(0, 0, 0, 0.85)) drop-shadow(0 0 16px rgba(221, 167, 82, 0.45));
+          font-weight: 800;
         }
 
         .hero-title-serif {
@@ -554,6 +618,27 @@ export const HomeView: React.FC<HomeViewProps> = ({
           -webkit-text-fill-color: transparent;
           filter: drop-shadow(0 2px 14px rgba(0, 0, 0, 0.9));
           white-space: nowrap;
+          min-height: 1.18em;
+          display: inline-flex;
+          align-items: center;
+        }
+
+        .typewriter-cursor {
+          display: inline-block;
+          font-family: monospace, sans-serif;
+          font-weight: 300;
+          font-style: normal;
+          color: var(--gold-primary, #DDA752);
+          margin-inline-start: 4px;
+          animation: blinkCursor 0.75s infinite ease-in-out;
+          vertical-align: 0.05em;
+          -webkit-text-fill-color: var(--gold-primary, #DDA752);
+          text-shadow: 0 0 10px rgba(221, 167, 82, 0.85);
+        }
+
+        @keyframes blinkCursor {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0; }
         }
 
         @media (max-width: 768px) {
