@@ -992,6 +992,10 @@ export function AboutView({ locale, onNavigateToCatalog, onOpenInquiry = () => {
         }
 
         @media (max-width: 768px) {
+          .atelier-hero-section {
+            padding-top: 84px;
+            min-height: 0;
+          }
           .atelier-hero-title {
             font-size: 2.25rem;
           }

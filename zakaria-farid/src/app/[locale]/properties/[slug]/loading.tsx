@@ -86,6 +86,12 @@ export default function PropertyDetailLoading() {
           min-height: 100vh;
         }
 
+        @media (max-width: 768px) {
+          .property-skeleton-view {
+            padding-top: 84px;
+          }
+        }
+
         .skeleton-header {
           display: flex;
           flex-direction: column;

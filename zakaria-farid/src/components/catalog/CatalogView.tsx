@@ -170,6 +170,10 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
     }
   }, [allPropertiesList, registerProperties]);
   const [openDropdown, setOpenDropdown] = useState<'location' | 'type' | 'price' | 'beds' | null>(null);
+  const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
+
+  // Mobile Valuation Radar opens as a bottom sheet from the search row
+  const [isRadarOpen, setIsRadarOpen] = useState(false);
   const [dropdownPlacement, setDropdownPlacement] = useState<'down' | 'up'>('down');
   const sortRef = useRef<HTMLDivElement>(null);
   const toolbarRef = useRef<HTMLDivElement>(null);
@@ -482,7 +486,55 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
                   </button>
                 )}
               </div>
+
+              {/* Mobile: filters toggle lives inside the search pill (opens bottom sheet) */}
+              <button
+                type="button"
+                className="mobile-filters-toggle"
+                onClick={() => setIsMobileFiltersOpen(true)}
+                aria-label={isAr ? 'الفلاتر' : 'Filters'}
+              >
+                <SlidersHorizontal size={15} />
+                <span>{isAr ? 'الفلاتر' : 'Filters'}</span>
+                {(() => {
+                  const n =
+                    [location, propertyType, priceTier, bedrooms, selectedDelivery, selectedAmenity].filter((v) => v !== 'All').length +
+                    (searchQuery.trim() ? 1 : 0);
+                  return n > 0 ? <span className="mobile-filters-count">{n}</span> : null;
+                })()}
+              </button>
             </div>
+
+            {/* Mobile: market radar trigger next to the search pill (opens bottom sheet) */}
+            <button
+              type="button"
+              className="radar-top-trigger"
+              onClick={() => setIsRadarOpen(true)}
+              aria-label={isAr ? 'مؤشرات السوق' : 'Market Radar'}
+              title={isAr ? 'مؤشرات السوق' : 'Market Radar'}
+            >
+              <TrendingUp size={16} />
+            </button>
+
+            {isMobileFiltersOpen && (
+              <div
+                className="mobile-filters-backdrop"
+                onClick={() => setIsMobileFiltersOpen(false)}
+              />
+            )}
+
+            <div className={`omnibar-slots-group ${isMobileFiltersOpen ? 'sheet-open' : ''}`}>
+              <div className="mobile-sheet-head">
+                <span className="mobile-sheet-title">{isAr ? 'الفلاتر' : 'Filters'}</span>
+                <button
+                  type="button"
+                  className="mobile-sheet-close"
+                  onClick={() => setIsMobileFiltersOpen(false)}
+                  aria-label={isAr ? 'إغلاق' : 'Close'}
+                >
+                  <X size={18} />
+                </button>
+              </div>
 
             <div className="omnibar-divider" />
 
@@ -724,6 +776,15 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
                 )}
               </button>
             </div>
+
+              <button
+                type="button"
+                className="btn-gold mobile-sheet-apply"
+                onClick={() => setIsMobileFiltersOpen(false)}
+              >
+                {isAr ? `عرض ${filteredProperties.length} نتيجة` : `Show ${filteredProperties.length} results`}
+              </button>
+            </div>
           </motion.div>
 
           {/* Active Dismissible Filter Tags */}
@@ -903,6 +964,9 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
 
             {/* Custom Gold Sort Dropdown */}
             <div className="custom-sort-container" ref={sortRef}>
+              {isSortOpen && (
+                <div className="sort-sheet-backdrop" onClick={() => setIsSortOpen(false)} />
+              )}
               <span className="sort-label">{isAr ? 'الترتيب حسب:' : 'Sort:'}</span>
               <button
                 className={`custom-sort-trigger ${isSortOpen ? 'open' : ''}`}
@@ -1043,8 +1107,17 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
           {/* Sidebar Insights Widgets */}
           {showSidebar && (
             <aside className="catalog-sidebar">
-              {/* Interactive Data Visualization Widget */}
-              {platformSettings.showMarketRadar !== false && <MarketChart locale={locale} />}
+              {/* Interactive Data Visualization Widget (mobile: opens as bottom sheet) */}
+              {platformSettings.showMarketRadar !== false && (
+                <div className="radar-mobile-wrap">
+                  {isRadarOpen && (
+                    <div className="radar-sheet-backdrop" onClick={() => setIsRadarOpen(false)} />
+                  )}
+                  <div className={`radar-chart-holder ${isRadarOpen ? 'open' : ''}`}>
+                    <MarketChart locale={locale} />
+                  </div>
+                </div>
+              )}
 
               {/* Alert Subscription Card with Direct Email Input */}
               {platformSettings.showVIPAlerts !== false && (
@@ -2115,16 +2188,350 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
           }
         }
 
-        @media (max-width: 640px) {
-          .omnibar-search-slot {
-            flex: 1 1 100%;
+        /* Mobile filter bottom sheet: wrapper is transparent on desktop */
+        .omnibar-slots-group {
+          display: contents;
+        }
+
+        .sort-sheet-backdrop {
+          display: none;
+        }
+
+        /* Radar: desktop renders the plain widget; mobile trigger/backdrop hidden */
+        .radar-mobile-wrap,
+        .radar-chart-holder {
+          display: contents;
+        }
+
+        .radar-top-trigger,
+        .radar-sheet-backdrop {
+          display: none;
+        }
+
+        .mobile-filters-toggle,
+        .mobile-filters-backdrop,
+        .mobile-sheet-head,
+        .mobile-sheet-apply {
+          display: none;
+        }
+
+        @media (max-width: 768px) {
+          /* Flat layout: no container card — just the search pill + filter button on the page.
+             (Also keeps the fixed bottom sheet working: no backdrop-filter ancestor.) */
+          .catalog-master-omnibar,
+          [data-theme="dark"] .catalog-master-omnibar,
+          [data-theme="light"] .catalog-master-omnibar {
+            flex-wrap: nowrap;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0;
+            background: transparent;
+            border: none;
+            box-shadow: none;
+            backdrop-filter: none;
+            -webkit-backdrop-filter: none;
           }
 
-          .omnibar-filter-slot {
-            flex: 1 1 100%;
+          /* Small glass search pill */
+          .catalog-master-omnibar,
+          [data-theme="dark"] .catalog-master-omnibar,
+          [data-theme="light"] .catalog-master-omnibar {
+            min-height: 0;
           }
 
-          .omnibar-actions-slot {
+          .omnibar-search-slot,
+          .catalog-master-omnibar.search-active .omnibar-search-slot,
+          [data-theme="dark"] .omnibar-search-slot,
+          [data-theme="light"] .omnibar-search-slot,
+          [data-theme="dark"] .catalog-master-omnibar.search-active .omnibar-search-slot,
+          [data-theme="light"] .catalog-master-omnibar.search-active .omnibar-search-slot {
+            flex: 1 1 auto;
+            min-width: 0;
+            flex-direction: row;
+            align-items: center;
+            gap: 0.35rem;
+            padding: 0.3rem;
+            border-radius: 9999px;
+            backdrop-filter: blur(18px) saturate(190%);
+            -webkit-backdrop-filter: blur(18px) saturate(190%);
+          }
+
+          [data-theme="dark"] .omnibar-search-slot,
+          [data-theme="dark"] .catalog-master-omnibar.search-active .omnibar-search-slot {
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+          }
+
+          [data-theme="light"] .omnibar-search-slot,
+          [data-theme="light"] .catalog-master-omnibar.search-active .omnibar-search-slot {
+            background: rgba(255, 255, 255, 0.65);
+            border: 1px solid rgba(255, 255, 255, 0.85);
+            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.04), inset 0 1.5px 1.5px #FFFFFF;
+          }
+
+          .omnibar-search-inner {
+            flex: 1;
+            min-width: 0;
+            padding: 0.55rem 0.5rem 0.55rem 0.9rem;
+          }
+
+          [dir="rtl"] .omnibar-search-inner {
+            padding: 0.55rem 0.9rem 0.55rem 0.5rem;
+          }
+
+          .omnibar-search-input {
+            font-size: 0.9rem;
+          }
+
+          /* Icon-only search pill: no "SEARCH" label */
+          .omnibar-search-slot .omnibar-slot-label {
+            display: none;
+          }
+
+          /* Filters button: icon only */
+          .mobile-filters-toggle span:not(.mobile-filters-count) {
+            display: none;
+          }
+          .mobile-filters-toggle,
+          [data-theme="light"] .mobile-filters-toggle {
+            width: 38px;
+            height: 38px;
+            padding: 0;
+            justify-content: center;
+            flex-shrink: 0;
+            background: transparent;
+            border: none;
+            color: var(--text-primary);
+          }
+
+          .mobile-filters-toggle svg {
+            width: 15px;
+            height: 15px;
+            flex-shrink: 0;
+          }
+          .mobile-filters-count {
+            position: absolute;
+            top: -5px;
+            inset-inline-end: -5px;
+          }
+
+          /* Layout density switcher: mobile always uses Spacious */
+          .results-controls .view-mode-toggle {
+            display: none;
+          }
+
+          /* Results row: inline count below the divider line, sort on the other side */
+          .results-meta-bar {
+            border-bottom: none;
+            border-top: 1px solid var(--border-subtle);
+            padding-top: 1rem;
+            padding-bottom: 0;
+            margin-bottom: 1.25rem;
+            flex-wrap: nowrap;
+            justify-content: space-between;
+          }
+
+          .results-meta-bar .results-count-badge,
+          [data-theme="dark"] .results-meta-bar .results-count-badge,
+          [data-theme="light"] .results-meta-bar .results-count-badge {
+            background: transparent;
+            border: none;
+            box-shadow: none;
+            padding: 0;
+            backdrop-filter: none;
+            -webkit-backdrop-filter: none;
+          }
+
+          .results-count-text {
+            font-size: 0.78rem;
+          }
+
+          .sort-label {
+            display: none;
+          }
+
+          /* Sort menu opens as a bottom sheet */
+          .sort-sheet-backdrop {
+            display: block;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.45);
+            z-index: 1290;
+          }
+
+          .custom-sort-menu,
+          [data-theme="dark"] .custom-sort-menu,
+          [data-theme="light"] .custom-sort-menu {
+            position: fixed;
+            left: 0.5rem;
+            right: 0.5rem;
+            bottom: 0;
+            top: auto;
+            min-width: 0;
+            max-height: 70dvh;
+            overflow-y: auto;
+            border-radius: 22px 22px 0 0;
+            border-bottom: none;
+            padding: 0.9rem 0.9rem 1.2rem;
+            z-index: 1300;
+          }
+
+          .sort-menu-item {
+            padding: 0.85rem 0.9rem;
+            font-size: 0.9rem;
+          }
+
+          .mobile-filters-toggle {
+            display: inline-flex;
+            position: relative;
+            align-items: center;
+            gap: 6px;
+            flex-shrink: 0;
+            padding: 0.55rem 0.9rem;
+            border-radius: 9999px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            cursor: pointer;
+            color: var(--text-primary);
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+          }
+
+          [data-theme="light"] .mobile-filters-toggle {
+            background: rgba(255, 255, 255, 0.75);
+            border-color: rgba(0, 0, 0, 0.1);
+          }
+
+          .mobile-filters-count {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 18px;
+            height: 18px;
+            padding: 0 4px;
+            border-radius: 9999px;
+            font-size: 0.65rem;
+            font-weight: 900;
+            background: var(--gold-primary, #DDA752);
+            color: #0A0C10;
+          }
+
+          .mobile-filters-backdrop {
+            display: block;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.45);
+            z-index: 1290;
+          }
+
+          .omnibar-slots-group {
+            display: none;
+          }
+
+          .omnibar-slots-group.sheet-open {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            position: fixed;
+            left: 0.5rem;
+            right: 0.5rem;
+            bottom: 0;
+            z-index: 1300;
+            max-height: 84dvh;
+            overflow-y: auto;
+            border-radius: 22px 22px 0 0;
+            padding: 1rem 1rem 1.1rem;
+            backdrop-filter: blur(28px) saturate(210%);
+            -webkit-backdrop-filter: blur(28px) saturate(210%);
+          }
+
+          [data-theme="dark"] .omnibar-slots-group.sheet-open {
+            background: linear-gradient(
+              135deg,
+              rgba(255, 255, 255, 0.18) 0%,
+              rgba(255, 255, 255, 0.06) 30%,
+              rgba(18, 24, 38, 0.72) 65%,
+              rgba(10, 14, 24, 0.88) 100%
+            );
+            border: 1px solid rgba(255, 255, 255, 0.28);
+            border-bottom: none;
+            box-shadow: 0 -20px 48px rgba(0, 0, 0, 0.5);
+          }
+
+          [data-theme="light"] .omnibar-slots-group.sheet-open {
+            background: linear-gradient(
+              135deg,
+              rgba(255, 255, 255, 0.9) 0%,
+              rgba(255, 255, 255, 0.75) 100%
+            );
+            border: 1.5px solid rgba(255, 255, 255, 0.85);
+            border-bottom: none;
+            box-shadow: 0 -20px 48px rgba(15, 23, 42, 0.18);
+          }
+
+          .omnibar-slots-group.sheet-open .mobile-sheet-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+          }
+
+          .mobile-sheet-title {
+            font-family: var(--font-heading);
+            font-size: 1rem;
+            font-weight: 800;
+            color: var(--text-primary);
+          }
+
+          .mobile-sheet-close {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            color: var(--text-primary);
+            cursor: pointer;
+          }
+
+          [data-theme="light"] .mobile-sheet-close {
+            background: rgba(0, 0, 0, 0.04);
+            border-color: rgba(0, 0, 0, 0.1);
+          }
+
+          .omnibar-slots-group.sheet-open .mobile-sheet-apply {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            min-height: 48px;
+            border-radius: 9999px;
+            font-size: 0.9rem;
+            font-weight: 700;
+            cursor: pointer;
+            flex-shrink: 0;
+          }
+
+          .omnibar-slots-group.sheet-open .omnibar-divider {
+            display: none;
+          }
+
+          .omnibar-slots-group.sheet-open .omnibar-filter-slot {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 14px;
+            padding: 0.6rem 0.8rem;
+          }
+
+          [data-theme="light"] .omnibar-slots-group.sheet-open .omnibar-filter-slot {
+            background: rgba(0, 0, 0, 0.03);
+            border-color: rgba(0, 0, 0, 0.08);
+          }
+
+          .omnibar-slots-group.sheet-open .omnibar-actions-slot {
             width: 100%;
             justify-content: space-between;
           }
@@ -3265,6 +3672,9 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
         }
 
         @media (max-width: 768px) {
+          .catalog-header-banner {
+            padding-top: 84px;
+          }
           .catalog-header-area {
             padding-top: 1.5rem;
           }
@@ -3305,6 +3715,80 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
           }
           .catalog-sidebar {
             grid-template-columns: 1fr;
+          }
+
+          /* Mobile Valuation Radar: bottom sheet opened from the search row */
+          .radar-chart-holder {
+            display: none;
+          }
+
+          .radar-top-trigger {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 44px;
+            height: 44px;
+            flex-shrink: 0;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            color: var(--text-primary);
+            backdrop-filter: blur(18px) saturate(190%);
+            -webkit-backdrop-filter: blur(18px) saturate(190%);
+            cursor: pointer;
+          }
+
+          [data-theme="light"] .radar-top-trigger {
+            background: rgba(255, 255, 255, 0.65);
+            border-color: rgba(255, 255, 255, 0.85);
+          }
+
+          .radar-sheet-backdrop {
+            display: block;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.45);
+            z-index: 1290;
+          }
+
+          .radar-chart-holder.open {
+            display: block;
+            position: fixed;
+            left: 0.5rem;
+            right: 0.5rem;
+            bottom: 0;
+            z-index: 1300;
+            max-height: 84dvh;
+            overflow-y: auto;
+            border-radius: 22px 22px 0 0;
+          }
+
+          .radar-chart-holder.open .market-chart-widget {
+            border-radius: 22px 22px 0 0;
+          }
+          .sidebar-widget.alert-widget {
+            padding: 1.1rem 1.1rem 1.2rem;
+          }
+          .alert-widget .widget-desc {
+            font-size: 0.8rem;
+            margin-bottom: 0.85rem;
+          }
+          .alert-widget .widget-actions {
+            flex-direction: row;
+            gap: 0.6rem;
+          }
+          .alert-widget .widget-cta,
+          .alert-widget .widget-secondary-btn {
+            flex: 1;
+            min-height: 44px;
+            white-space: nowrap;
+            font-size: 0.82rem;
+            padding: 0.6rem 0.75rem;
+          }
+
+          /* Advisory ender: buttons in one row, tighter padding */
+          .catalog-ender-strip {
+            padding: 1.25rem 1.15rem;
           }
         }
       `}</style>

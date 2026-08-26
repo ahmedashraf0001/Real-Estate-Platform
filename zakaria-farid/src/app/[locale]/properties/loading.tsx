@@ -50,6 +50,12 @@ export default function CatalogLoading() {
           min-height: 100vh;
         }
 
+        @media (max-width: 768px) {
+          .catalog-skeleton-view {
+            padding-top: 84px;
+          }
+        }
+
         .catalog-skeleton-header {
           display: flex;
           flex-direction: column;

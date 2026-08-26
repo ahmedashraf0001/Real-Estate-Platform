@@ -1395,6 +1395,12 @@ export const ContactView: React.FC<{ locale?: string }> = ({ locale = 'en' }) =>
 
         /* Responsive */
 
+        @media (max-width: 768px) {
+          .contact-page {
+            padding-top: 84px;
+          }
+        }
+
         @media (max-width: 1024px) {
           .contact-two-col-grid {
             grid-template-columns: 1fr;

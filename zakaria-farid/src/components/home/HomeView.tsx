@@ -623,23 +623,29 @@ export const HomeView: React.FC<HomeViewProps> = ({
             min-height: 100svh;
             padding-top: 96px;
             padding-bottom: 2rem;
+            align-items: center;
           }
           .hero-container {
             gap: 1.15rem;
           }
+          /* Stronger headline hierarchy on mobile */
           .hero-title {
-            font-size: clamp(1.65rem, 5.2vw, 2.15rem);
-            line-height: 1.22;
-            margin-top: 0.75rem;
-            margin-bottom: 0.65rem;
+            font-size: clamp(2.1rem, 8.5vw, 2.7rem);
+            line-height: 1.16;
+            letter-spacing: -0.03em;
+            margin-top: 0.5rem;
+            margin-bottom: 0.9rem;
           }
           .hero-title-main,
           .hero-title-serif {
             white-space: normal;
           }
           .hero-subtitle {
-            font-size: 0.875rem;
-            line-height: 1.55;
+            font-size: 0.84rem;
+            line-height: 1.6;
+            color: rgba(255, 255, 255, 0.72);
+            max-width: 34ch;
+            margin-bottom: 0.5rem;
           }
         }
 

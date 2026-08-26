@@ -504,9 +504,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           inset: 0;
           width: 100vw;
           height: 100vh;
-          background: rgba(0, 0, 0, 0.45);
-          backdrop-filter: blur(4px);
-          -webkit-backdrop-filter: blur(4px);
+          background: rgba(0, 0, 0, 0.15);
           z-index: 1001;
           pointer-events: auto;
         }
@@ -518,21 +516,50 @@ export const Navbar: React.FC<NavbarProps> = ({
           right: 0.75rem;
           width: auto;
           max-height: calc(100vh - 96px);
-          background: var(--bg-surface, #0E121B);
-          backdrop-filter: blur(28px) saturate(200%);
-          -webkit-backdrop-filter: blur(28px) saturate(200%);
-          border: 1px solid var(--border-glass, rgba(221, 167, 82, 0.3));
+          background: var(--bg-glass);
+          backdrop-filter: blur(28px) saturate(210%);
+          -webkit-backdrop-filter: blur(28px) saturate(210%);
+          border: 1px solid var(--border-glass);
           border-radius: 20px;
           padding: 1.25rem 1.25rem 1.5rem;
-          box-shadow: 0 20px 48px rgba(0, 0, 0, 0.6), 0 0 20px rgba(221, 167, 82, 0.15);
+          box-shadow: var(--shadow-glass);
           z-index: 1002;
           pointer-events: auto;
         }
 
+        [data-theme="dark"] .mobile-drawer-glass {
+          background: linear-gradient(
+            135deg,
+            rgba(255, 255, 255, 0.25) 0%,
+            rgba(255, 255, 255, 0.08) 30%,
+            rgba(18, 24, 38, 0.42) 65%,
+            rgba(10, 14, 24, 0.65) 100%
+          );
+          backdrop-filter: blur(20px) saturate(210%) contrast(108%) brightness(108%);
+          -webkit-backdrop-filter: blur(20px) saturate(210%) contrast(108%) brightness(108%);
+          border: 1px solid rgba(255, 255, 255, 0.28);
+          box-shadow:
+            0 20px 48px rgba(0, 0, 0, 0.38),
+            0 4px 14px rgba(0, 0, 0, 0.18),
+            inset 0 1.5px 2px rgba(255, 255, 255, 0.65),
+            inset 0 -1px 1px rgba(255, 255, 255, 0.12);
+        }
+
         [data-theme="light"] .mobile-drawer-glass {
-          background: rgba(255, 255, 255, 0.96);
-          border: 1px solid rgba(184, 147, 74, 0.25);
-          box-shadow: 0 20px 48px rgba(15, 23, 42, 0.15);
+          background: linear-gradient(
+            135deg,
+            rgba(255, 255, 255, 0.65) 0%,
+            rgba(255, 255, 255, 0.32) 40%,
+            rgba(255, 255, 255, 0.52) 100%
+          );
+          backdrop-filter: blur(32px) saturate(210%) contrast(106%);
+          -webkit-backdrop-filter: blur(32px) saturate(210%) contrast(106%);
+          border: 1.5px solid rgba(255, 255, 255, 0.75);
+          box-shadow:
+            0 24px 56px rgba(15, 23, 42, 0.14),
+            0 4px 16px rgba(0, 0, 0, 0.04),
+            inset 0 1.5px 2px rgba(255, 255, 255, 0.95),
+            inset 0 -1px 1px rgba(0, 0, 0, 0.05);
         }
 
         .mobile-links {

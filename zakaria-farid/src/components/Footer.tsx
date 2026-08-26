@@ -399,7 +399,13 @@ export const Footer: React.FC<FooterProps> = ({
 
         @media (max-width: 600px) {
           .footer-main-grid {
-            grid-template-columns: 1fr;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 2rem 1.25rem;
+          }
+          /* Brand and contact blocks span the full row; link lists sit side by side */
+          .footer-main-grid > *:first-child,
+          .footer-main-grid > *:last-child {
+            grid-column: 1 / -1;
           }
           .footer-bottom-bar {
             flex-direction: column;

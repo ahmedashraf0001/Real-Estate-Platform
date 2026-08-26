@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useRef, useEffect } from 'react';
-import { MapPin, Building2, Banknote, ChevronDown, Check } from 'lucide-react';
+import { MapPin, Building2, Banknote, ChevronDown, Check, Search, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface QuickSearchBarProps {
@@ -160,13 +160,43 @@ export const QuickSearchBar: React.FC<QuickSearchBarProps> = ({ onSearch, locale
     };
   }, [openDropdown]);
 
+  const [isSheetOpen, setIsSheetOpen] = useState(false);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setIsSheetOpen(false);
     onSearch({ location, propertyType, priceTier });
   };
 
   return (
     <form ref={barRef} className="quick-search-bar" onSubmit={handleSubmit} dir={isAr ? 'rtl' : 'ltr'}>
+      {/* Mobile: compact launcher that opens the search sheet */}
+      <button
+        type="button"
+        className="qsb-mobile-launcher"
+        onClick={() => setIsSheetOpen(true)}
+      >
+        <Search size={16} />
+        <span>{isAr ? 'ابحث في الصروح الفاخرة...' : 'Search luxury estates...'}</span>
+      </button>
+
+      {isSheetOpen && (
+        <div className="qsb-sheet-backdrop" onClick={() => setIsSheetOpen(false)} />
+      )}
+
+      <div className={`qsb-slots-group ${isSheetOpen ? 'sheet-open' : ''}`}>
+        <div className="qsb-sheet-head">
+          <span className="qsb-sheet-title">{isAr ? 'بحث في الصروح' : 'Search Properties'}</span>
+          <button
+            type="button"
+            className="qsb-sheet-close"
+            onClick={() => setIsSheetOpen(false)}
+            aria-label={isAr ? 'إغلاق' : 'Close'}
+          >
+            <X size={18} />
+          </button>
+        </div>
+
       {/* 1. Location Custom Dropdown */}
       <div className="search-field custom-filter-dropdown">
         <label className="field-label">{isAr ? 'المدينة / المنطقة' : 'LOCATION'}</label>
@@ -328,6 +358,7 @@ export const QuickSearchBar: React.FC<QuickSearchBarProps> = ({ onSearch, locale
       <button type="submit" className="search-submit-btn">
         <span>{isAr ? 'بحث في الصروح' : 'Search Properties'}</span>
       </button>
+      </div>
 
       <style>{`
         .quick-search-bar {
@@ -733,17 +764,178 @@ export const QuickSearchBar: React.FC<QuickSearchBarProps> = ({ onSearch, locale
         }
 
         @media (max-width: 600px) {
-          .quick-search-bar {
-            padding: 0.95rem 1rem;
-            border-radius: 20px;
-            gap: 0.75rem;
-          }
           .trigger-value {
             font-size: 0.875rem;
           }
           .search-submit-btn {
             padding: 0.75rem 1.25rem;
             font-size: 0.875rem;
+          }
+        }
+
+        /* Desktop: mobile sheet chrome hidden, group is transparent */
+        .qsb-mobile-launcher,
+        .qsb-sheet-backdrop,
+        .qsb-sheet-head {
+          display: none;
+        }
+
+        .qsb-slots-group {
+          display: contents;
+        }
+
+        @media (max-width: 768px) {
+          /* Flat: the launcher IS the visible search bar */
+          .quick-search-bar,
+          [data-theme="dark"] .quick-search-bar,
+          [data-theme="light"] .quick-search-bar {
+            background: transparent;
+            border: none;
+            box-shadow: none;
+            padding: 0;
+            backdrop-filter: none;
+            -webkit-backdrop-filter: none;
+          }
+
+          .qsb-mobile-launcher {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            width: 100%;
+            padding: 0.9rem 1.15rem;
+            border-radius: 9999px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--text-secondary, #C7D2DF);
+            cursor: pointer;
+            backdrop-filter: blur(18px) saturate(190%);
+            -webkit-backdrop-filter: blur(18px) saturate(190%);
+          }
+
+          [data-theme="dark"] .qsb-mobile-launcher {
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+          }
+
+          [data-theme="light"] .qsb-mobile-launcher {
+            background: rgba(255, 255, 255, 0.65);
+            border: 1px solid rgba(255, 255, 255, 0.85);
+            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.04), inset 0 1.5px 1.5px #FFFFFF;
+            color: #475569;
+          }
+
+          .qsb-mobile-launcher svg {
+            color: var(--gold-primary, #DDA752);
+            flex-shrink: 0;
+          }
+
+          .qsb-sheet-backdrop {
+            display: block;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.45);
+            z-index: 1290;
+          }
+
+          .qsb-slots-group {
+            display: none;
+          }
+
+          .qsb-slots-group.sheet-open {
+            display: flex;
+            flex-direction: column;
+            gap: 0.8rem;
+            position: fixed;
+            left: 0.5rem;
+            right: 0.5rem;
+            bottom: 0;
+            z-index: 1300;
+            max-height: 84dvh;
+            overflow-y: auto;
+            border-radius: 22px 22px 0 0;
+            padding: 1rem 1rem 1.15rem;
+            backdrop-filter: blur(28px) saturate(210%);
+            -webkit-backdrop-filter: blur(28px) saturate(210%);
+          }
+
+          [data-theme="dark"] .qsb-slots-group.sheet-open {
+            background: linear-gradient(
+              135deg,
+              rgba(255, 255, 255, 0.18) 0%,
+              rgba(255, 255, 255, 0.06) 30%,
+              rgba(18, 24, 38, 0.72) 65%,
+              rgba(10, 14, 24, 0.88) 100%
+            );
+            border: 1px solid rgba(255, 255, 255, 0.28);
+            border-bottom: none;
+            box-shadow: 0 -20px 48px rgba(0, 0, 0, 0.5);
+          }
+
+          [data-theme="light"] .qsb-slots-group.sheet-open {
+            background: linear-gradient(
+              135deg,
+              rgba(255, 255, 255, 0.9) 0%,
+              rgba(255, 255, 255, 0.75) 100%
+            );
+            border: 1.5px solid rgba(255, 255, 255, 0.85);
+            border-bottom: none;
+            box-shadow: 0 -20px 48px rgba(15, 23, 42, 0.18);
+          }
+
+          .qsb-slots-group.sheet-open .qsb-sheet-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+          }
+
+          .qsb-sheet-title {
+            font-family: var(--font-heading);
+            font-size: 1rem;
+            font-weight: 800;
+            color: var(--text-primary);
+          }
+
+          .qsb-sheet-close {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            color: var(--text-primary);
+            cursor: pointer;
+          }
+
+          [data-theme="light"] .qsb-sheet-close {
+            background: rgba(0, 0, 0, 0.04);
+            border-color: rgba(0, 0, 0, 0.1);
+          }
+
+          .qsb-slots-group.sheet-open .search-divider {
+            display: none;
+          }
+
+          .qsb-slots-group.sheet-open .search-field {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 14px;
+            padding: 0.6rem 0.8rem;
+          }
+
+          [data-theme="light"] .qsb-slots-group.sheet-open .search-field {
+            background: rgba(0, 0, 0, 0.03);
+            border-color: rgba(0, 0, 0, 0.08);
+          }
+
+          .qsb-slots-group.sheet-open .search-submit-btn {
+            width: 100%;
+            min-height: 48px;
+            border-radius: 9999px;
+            flex-shrink: 0;
           }
         }
       `}</style>

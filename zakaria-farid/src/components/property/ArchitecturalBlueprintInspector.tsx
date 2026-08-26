@@ -2459,6 +2459,66 @@ export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintIns
           }
         }
 
+        /* ── Mobile: clean CAD controls & floor tabs ── */
+        @media (max-width: 768px) {
+          /* Floor tabs: one scrollable row, no per-tab icons */
+          .studio-top-header {
+            align-items: stretch;
+          }
+          .studio-crumbs-row {
+            width: 100%;
+            overflow-x: auto;
+            flex-wrap: nowrap;
+            scrollbar-width: none;
+            -webkit-overflow-scrolling: touch;
+          }
+          .studio-crumbs-row::-webkit-scrollbar {
+            display: none;
+          }
+          .studio-crumb-btn {
+            flex-shrink: 0;
+            white-space: nowrap;
+            font-size: 0.78rem;
+            padding: 0.3rem 0.35rem;
+          }
+          .studio-crumb-btn svg {
+            display: none;
+          }
+
+          /* Controls: static row above the canvas instead of overlaying it */
+          .stage-controls-bar {
+            position: static;
+            flex-wrap: wrap;
+            row-gap: 0.5rem;
+            padding: 0.75rem 0.75rem 0;
+          }
+          .stage-controls-right-group {
+            display: contents;
+          }
+          .metrology-tag {
+            display: none;
+          }
+          .metrology-tag.gold-tag {
+            display: flex;
+            order: 3;
+            flex: 1 1 100%;
+            justify-content: center;
+            font-size: 0.7rem;
+            padding: 0.4rem 0.6rem;
+          }
+          .cad-zoom-controls {
+            order: 1;
+          }
+          .cad-fullscreen-toggle-btn {
+            order: 2;
+          }
+
+          .stage-svg-wrapper {
+            min-height: 300px;
+            padding: 0.75rem;
+          }
+        }
+
         .pub-metric-cell {
           background: rgba(221, 167, 82, 0.04);
           border: 1px solid rgba(221, 167, 82, 0.22);

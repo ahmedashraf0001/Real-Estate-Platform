@@ -246,7 +246,43 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
   }, []);
 
   const [activeImageIndex, setActiveImageIndex] = useState(0);
+  const [slideDirection, setSlideDirection] = useState(0);
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
+
+  // Mobile sticky lead bar: hide on scroll down, show on scroll up or when scrolling stops
+  const [isLeadBarHidden, setIsLeadBarHidden] = useState(false);
+  useEffect(() => {
+    let lastY = window.scrollY;
+    let ticking = false;
+    let idleTimer: ReturnType<typeof setTimeout>;
+    const onScroll = () => {
+      clearTimeout(idleTimer);
+      idleTimer = setTimeout(() => setIsLeadBarHidden(false), 400);
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(() => {
+        const y = window.scrollY;
+        const delta = y - lastY;
+        if (Math.abs(delta) > 8) {
+          setIsLeadBarHidden(delta > 0 && y > 120);
+          lastY = y;
+        }
+        ticking = false;
+      });
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => {
+      clearTimeout(idleTimer);
+      window.removeEventListener('scroll', onScroll);
+    };
+  }, []);
+
+  const goToImage = (idx: number, dir?: number) => {
+    const total = property.images.length;
+    const target = ((idx % total) + total) % total;
+    setSlideDirection(dir ?? (target > activeImageIndex ? 1 : target < activeImageIndex ? -1 : 0));
+    setActiveImageIndex(target);
+  };
   const { isFavorite, toggleFavorite, setIsDrawerOpen, registerProperties } = useFavorites();
   const isBookmarked = isFavorite(property.id) || (rawProperty?.id ? isFavorite(rawProperty.id) : false) || (rawProperty?.slug ? isFavorite(rawProperty.slug) : false);
 
@@ -422,9 +458,11 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
       if (!isLightboxOpen) return;
       if (e.key === 'Escape') setIsLightboxOpen(false);
       if (e.key === 'ArrowRight') {
+        setSlideDirection(1);
         setActiveImageIndex((prev) => (prev + 1) % property.images.length);
       }
       if (e.key === 'ArrowLeft') {
+        setSlideDirection(-1);
         setActiveImageIndex((prev) => (prev - 1 + property.images.length) % property.images.length);
       }
     };
@@ -479,16 +517,6 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
               <span className="crumb-text active">{property.title}</span>
             </div>
 
-            <div className="property-eyebrow-row">
-              <span className="property-compound-badge">
-                <Building2 size={13} className="badge-compound-icon" />
-                <span>{property.estateName}</span>
-              </span>
-              <span className="property-id-badge">
-                <ShieldCheck size={13} className="badge-gold-icon" />
-                <span>{isAr ? 'عقار موثق • ملكية حرة مسجلة' : 'Verified • Registered Freehold'}</span>
-              </span>
-            </div>
           </div>
 
           {/* Main Hero Split Row: Title & Location (Left) + Acquisition Value & Actions (Right) */}
@@ -498,6 +526,10 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
               <div className="property-location-bar">
                 <MapPin size={15} className="location-pin" />
                 <span>{property.location}</span>
+                <span className="verified-trust-inline">
+                  <ShieldCheck size={14} />
+                  <span>{isAr ? 'عقار موثق' : 'Verified'}</span>
+                </span>
               </div>
             </div>
 
@@ -548,34 +580,6 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
           </div>
         </div>
 
-        {/* 2. Quick Specs Glass Strip */}
-        <div className="property-quick-specs-bar">
-          <div className="spec-pill">
-            <Bed size={16} className="pill-icon" />
-            <span><strong>{property.beds}</strong> Bedrooms</span>
-          </div>
-          <div className="spec-pill">
-            <Bath size={16} className="pill-icon" />
-            <span><strong>{property.baths}</strong> Bathrooms</span>
-          </div>
-          <div className="spec-pill">
-            <Maximize2 size={16} className="pill-icon" />
-            <span><strong>{property.sqm}</strong> SQM Built-up</span>
-          </div>
-          <div className="spec-pill">
-            <Calendar size={16} className="pill-icon" />
-            <span>Built in <strong>{property.builtYear}</strong></span>
-          </div>
-          <div className="spec-pill">
-            <Building2 size={16} className="pill-icon" />
-            <span><strong>{property.propertyType}</strong></span>
-          </div>
-          <div className="spec-pill verified-pill">
-            <ShieldCheck size={16} className="pill-icon-gold" />
-            <span><strong>Verified Property</strong></span>
-          </div>
-        </div>
-
         {/* 3. Cinematic Gallery Stage with Luxury Ambient Cinema Mode */}
         <div className="gallery-section">
           {/* Luxury Ambient Cinema Backdrop Layer */}
@@ -607,23 +611,30 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
             </AnimatePresence>
           </div>
 
-          <div className="main-image-frame" onClick={() => setIsLightboxOpen(true)}>
-            <AnimatePresence initial={false}>
-              <motion.img 
+          <div className="main-image-frame">
+            <AnimatePresence initial={false} custom={slideDirection}>
+              <motion.img
                 key={activeImageIndex}
-                src={property.images[activeImageIndex] || property.images[0]} 
-                alt={property.title} 
+                src={property.images[activeImageIndex] || property.images[0]}
+                alt={property.title}
                 className="main-hero-img"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.35, ease: 'easeInOut' }}
+                custom={slideDirection}
+                variants={{
+                  enter: (dir: number) => ({ x: dir > 0 ? '100%' : dir < 0 ? '-100%' : '0%', opacity: dir === 0 ? 0 : 1, scale: dir === 0 ? 1 : 0.96 }),
+                  center: { x: '0%', opacity: 1, scale: 1 },
+                  exit: (dir: number) => ({ x: dir > 0 ? '-70%' : dir < 0 ? '70%' : '0%', opacity: 0, scale: dir === 0 ? 1 : 0.9 })
+                }}
+                initial="enter"
+                animate="center"
+                exit="exit"
+                transition={{ type: 'spring', stiffness: 260, damping: 28, mass: 0.85 }}
               />
             </AnimatePresence>
 
             <div className="gallery-stage-overlay">
               <div className="gallery-counter-pill">
-                <span>{String(activeImageIndex + 1).padStart(2, '0')} / {String(property.images.length).padStart(2, '0')} • ARCHITECTURAL VISTA</span>
+                <span>{String(activeImageIndex + 1).padStart(2, '0')} / {String(property.images.length).padStart(2, '0')}</span>
+                <span className="counter-vista-label"> • ARCHITECTURAL VISTA</span>
               </div>
 
               <div className="gallery-actions-right">
@@ -649,7 +660,7 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
                   onClick={() => setIsLightboxOpen(true)}
                 >
                   <Maximize size={14} />
-                  <span>Fullscreen Stage</span>
+                  <span className="fullscreen-btn-label">Fullscreen Stage</span>
                 </button>
               </div>
             </div>
@@ -659,7 +670,7 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
               className="gallery-nav-arrow arrow-left"
               onClick={(e) => {
                 e.stopPropagation();
-                setActiveImageIndex((prev) => (prev - 1 + property.images.length) % property.images.length);
+                goToImage(activeImageIndex - 1, -1);
               }}
               type="button"
             >
@@ -670,7 +681,7 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
               className="gallery-nav-arrow arrow-right"
               onClick={(e) => {
                 e.stopPropagation();
-                setActiveImageIndex((prev) => (prev + 1) % property.images.length);
+                goToImage(activeImageIndex + 1, 1);
               }}
               type="button"
             >
@@ -684,11 +695,24 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
               <motion.div 
                 key={idx}
                 className={`thumb-item ${activeImageIndex === idx ? 'active' : ''}`}
-                onClick={() => setActiveImageIndex(idx)}
+                onClick={() => goToImage(idx)}
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
               >
                 <img src={imgUrl} alt={`Thumbnail ${idx + 1}`} className="thumb-img" />
+                {idx === 2 && property.images.length > 3 && (
+                  <button
+                    type="button"
+                    className="thumb-more-overlay"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setIsLightboxOpen(true);
+                    }}
+                    title={isAr ? 'عرض كل الصور' : 'View all photos'}
+                  >
+                    +{property.images.length - 3}
+                  </button>
+                )}
               </motion.div>
             ))}
           </div>
@@ -787,7 +811,7 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
                             mass: 0.85
                           }}
                           onClick={() => {
-                            if (!isCenter) setActiveImageIndex(idx);
+                            if (!isCenter) goToImage(idx);
                           }}
                         >
                           <img src={imgUrl} alt={`${property.title} - Plate ${idx + 1}`} className="carousel-card-img" />
@@ -798,7 +822,7 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
                     {/* Left & Right Floating Navigation Control Arrows */}
                     <button 
                       className="lightbox-nav-arrow arrow-prev"
-                      onClick={() => setActiveImageIndex((prev) => (prev - 1 + property.images.length) % property.images.length)}
+                      onClick={() => goToImage(activeImageIndex - 1, -1)}
                       type="button"
                       title="Previous Plate (Left Arrow)"
                     >
@@ -807,7 +831,7 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
 
                     <button 
                       className="lightbox-nav-arrow arrow-next"
-                      onClick={() => setActiveImageIndex((prev) => (prev + 1) % property.images.length)}
+                      onClick={() => goToImage(activeImageIndex + 1, 1)}
                       type="button"
                       title="Next Plate (Right Arrow)"
                     >
@@ -822,10 +846,12 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
                         <h3 className="dock-property-title">{property.title}</h3>
                         <div className="dock-sub-tags">
                           <span className="dock-estate">{property.estateName}</span>
-                          <span className="dock-dot">•</span>
-                          <span className="dock-district">{property.district}</span>
-                          <span className="dock-dot">•</span>
-                          <span className="dock-badge">Plate {activeImageIndex + 1} of {property.images.length}</span>
+                          {property.district && property.district !== property.estateName && (
+                            <>
+                              <span className="dock-dot">•</span>
+                              <span className="dock-district">{property.district}</span>
+                            </>
+                          )}
                         </div>
                       </div>
 
@@ -835,7 +861,7 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
                           <button
                             key={idx}
                             className={`dock-thumb-btn ${activeImageIndex === idx ? 'active' : ''}`}
-                            onClick={() => setActiveImageIndex(idx)}
+                            onClick={() => goToImage(idx)}
                             type="button"
                             title={`Jump to Plate ${idx + 1}`}
                           >
@@ -1153,35 +1179,52 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
         </section>
       </div>
 
-      {/* Mobile Sticky Bottom Lead Bar */}
-      <div className="mobile-bottom-lead-bar">
-        <div className="mobile-lead-price">
-          <span className="mlp-val">{formattedPrice}</span>
-          <span className="mlp-cur">{property.currency}</span>
+      {/* Mobile Sticky Bottom Lead Bar (portaled: the page-transition wrapper's filter breaks position:fixed) */}
+      {mounted && typeof document !== 'undefined' && createPortal(
+      <div className={`mobile-bottom-lead-bar ${isLeadBarHidden ? 'lead-bar-hidden' : ''}`}>
+        <div className="property-price-card">
+          <span className="price-label">{isAr ? 'قيمة الاستحواذ المعتمدة' : 'ACQUISITION VALUE'}</span>
+          <div className="price-value">
+            {formattedPrice} <span className="price-currency">{property.currency}</span>
+          </div>
+          <span className="price-tax-note">
+            {pricePerSqm ? `~ ${pricePerSqm} ${property.currency} / m² • ` : ''}
+            {isAr ? 'تسجيل عقاري موثق • ٠٪ عمولات خفية' : 'Freehold Escrow Verified • 0% Hidden Fees'}
+          </span>
         </div>
-        <div className="mobile-lead-actions">
-          <a 
-            href={`https://wa.me/${property.broker.phone.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(
-              `🏛️ *استفسار خاص عن عقار — منصة زكريا فريد*\n` +
-              `🏡 *العقار:* ${property.title}\n` +
-              `💰 *السعر:* ${formattedPrice} ${property.currency}`
-            )}`}
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="mobile-wa-btn"
-            title="WhatsApp Desk"
-          >
-            <MessageCircle size={18} />
-          </a>
-          <button 
-            className="btn-gold mobile-book-btn"
-            onClick={() => setIsInquiryModalOpen(true)}
+        <div className="top-action-group">
+          <button
+            className="btn-gold top-inquire-btn"
+            onClick={() => onOpenInquiry('Acquisition Inquiry', property.title)}
             type="button"
           >
-            {isAr ? 'طلب استشارة / شراء' : 'Inquire / Book'}
+            <span>{isAr ? 'طلب الاستحواذ' : 'Inquire for Acquisition'}</span>
           </button>
+          <div className="header-icon-actions">
+            <button
+              className={`header-icon-btn ${isBookmarked ? 'active' : ''}`}
+              onClick={handleToggleBookmark}
+              title={isAr ? 'حفظ في المفضلات' : 'Save to Favorites'}
+              type="button"
+            >
+              <Bookmark size={17} fill={isBookmarked ? 'currentColor' : 'none'} />
+            </button>
+            <button
+              className="header-icon-btn"
+              onClick={() => {
+                navigator.clipboard?.writeText(window.location.href);
+                alert(isAr ? 'تم نسخ رابط العقار الخاص إلى الحافظة.' : 'Private sovereign listing link copied to clipboard.');
+              }}
+              title={isAr ? 'مشاركة الملف' : 'Share Dossier'}
+              type="button"
+            >
+              <Share2 size={17} />
+            </button>
+          </div>
         </div>
-      </div>
+      </div>,
+      document.body
+      )}
 
       {/* Global Confidential Acquisition Inquiry Modal */}
       <InquiryModal
@@ -1268,53 +1311,6 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
           font-weight: 600;
         }
 
-        .property-eyebrow-row {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          margin-bottom: 0.25rem;
-          flex-wrap: wrap;
-        }
-
-        .property-compound-badge {
-          display: inline-flex;
-          align-items: center;
-          gap: 6px;
-          font-family: var(--font-heading);
-          font-size: 0.75rem;
-          font-weight: 700;
-          letter-spacing: 0.12em;
-          text-transform: uppercase;
-          color: var(--gold-primary);
-          background: rgba(197, 142, 54, 0.12);
-          border: 1px solid var(--gold-border);
-          padding: 0.3rem 0.75rem;
-          border-radius: 6px;
-        }
-
-        .property-id-badge {
-          display: inline-flex;
-          align-items: center;
-          gap: 6px;
-          font-size: 0.6875rem;
-          font-weight: 700;
-          letter-spacing: 0.08em;
-          padding: 0.3rem 0.75rem;
-          border-radius: 6px;
-        }
-
-        [data-theme="dark"] .property-id-badge {
-          color: #C7D2DF;
-          background: rgba(255, 255, 255, 0.06);
-          border: 1px solid rgba(255, 255, 255, 0.14);
-        }
-
-        [data-theme="light"] .property-id-badge {
-          color: var(--text-secondary);
-          background: rgba(0, 0, 0, 0.04);
-          border: 1px solid rgba(0, 0, 0, 0.08);
-        }
-
         .badge-gold-icon {
           color: var(--gold-primary);
         }
@@ -1332,14 +1328,43 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
         .property-location-bar {
           display: flex;
           align-items: center;
+          flex-wrap: wrap;
           gap: 6px;
           font-size: 0.9375rem;
           color: var(--text-secondary);
           margin-top: 0.25rem;
         }
 
-        .location-pin {
+        /* Inline trust note next to the location (no badge chrome) */
+        .verified-trust-inline {
+          display: inline-flex;
+          align-items: center;
+          gap: 5px;
+          font-size: 0.8125rem;
+          font-weight: 600;
+          white-space: nowrap;
           color: var(--gold-primary);
+          margin-inline-start: 8px;
+        }
+
+        .verified-trust-inline svg {
+          color: var(--gold-primary);
+          flex-shrink: 0;
+        }
+
+        @media (min-width: 769px) {
+          .verified-trust-inline {
+            font-size: 0.9375rem;
+            font-weight: 800;
+          }
+          .property-location-bar {
+            font-size: 1.0625rem;
+            font-weight: 600;
+          }
+        }
+
+        .location-pin {
+          color: currentColor;
         }
 
         .top-header-right {
@@ -1442,61 +1467,6 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
           border-color: transparent;
         }
 
-        /* 2. Quick Specs Glass Strip */
-        .property-quick-specs-bar {
-          display: flex;
-          flex-wrap: wrap;
-          align-items: center;
-          gap: 0.75rem;
-          margin-bottom: 1.5rem;
-        }
-
-        .spec-pill {
-          display: inline-flex;
-          align-items: center;
-          gap: 8px;
-          backdrop-filter: blur(18px) saturate(190%);
-          -webkit-backdrop-filter: blur(18px) saturate(190%);
-          border-radius: 9999px;
-          padding: 0.5rem 1.15rem;
-          font-size: 0.8125rem;
-        }
-
-        [data-theme="dark"] .spec-pill {
-          background: rgba(255, 255, 255, 0.06);
-          border: 1px solid rgba(255, 255, 255, 0.18);
-          color: #C7D2DF;
-          box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.2);
-        }
-
-        [data-theme="light"] .spec-pill {
-          background: rgba(255, 255, 255, 0.65);
-          border: 1px solid rgba(255, 255, 255, 0.85);
-          color: var(--text-secondary);
-          box-shadow: 0 4px 14px rgba(0, 0, 0, 0.04), inset 0 1.5px 1.5px #FFFFFF;
-        }
-
-        .spec-pill strong {
-          color: var(--text-primary);
-          font-weight: 700;
-        }
-
-        .pill-icon {
-          flex-shrink: 0;
-        }
-
-        .pill-icon,
-        .pill-icon-gold,
-        .location-pin {
-          color: var(--gold-primary);
-        }
-
-        .spec-pill.verified-pill {
-          border-color: var(--gold-border);
-          background: rgba(197, 142, 54, 0.12);
-          color: var(--gold-primary);
-        }
-
         /* 3. Cinematic Gallery Stage with Luxury Ambient Cinema Mode */
         .gallery-section {
           position: relative;
@@ -1597,7 +1567,6 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
           margin-bottom: 1.25rem;
           box-shadow: 0 24px 60px rgba(0, 0, 0, 0.4);
           background: #080A0E;
-          cursor: pointer;
         }
 
         .main-hero-img {
@@ -1744,6 +1713,56 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
           color: #DDA752;
         }
 
+        /* Compact icon-only gallery controls (all screen sizes) */
+        .counter-vista-label,
+        .ambient-btn-label,
+        .fullscreen-btn-label,
+        .gallery-ambient-btn .ambient-dot-pulse {
+          display: none;
+        }
+
+        .gallery-ambient-btn,
+        .gallery-fullscreen-btn {
+          width: 44px;
+          height: 44px;
+          padding: 0;
+          gap: 0;
+          justify-content: center;
+          border-radius: 50%;
+        }
+
+        .gallery-ambient-btn,
+        .gallery-ambient-btn.active,
+        [data-theme="dark"] .gallery-ambient-btn,
+        [data-theme="light"] .gallery-ambient-btn,
+        [data-theme="dark"] .gallery-ambient-btn.active,
+        [data-theme="light"] .gallery-ambient-btn.active {
+          background: rgba(10, 14, 22, 0.8);
+          border: 1px solid rgba(255, 255, 255, 0.2);
+          box-shadow: none;
+          color: #ffffff;
+        }
+
+        .gallery-ambient-btn:hover {
+          transform: none;
+          border-color: #DDA752;
+        }
+
+        .gallery-ambient-btn.active,
+        [data-theme="dark"] .gallery-ambient-btn.active,
+        [data-theme="light"] .gallery-ambient-btn.active {
+          border-color: #DDA752;
+        }
+
+        .gallery-ambient-btn .ambient-sparkle-icon {
+          color: #ffffff;
+          filter: none;
+        }
+
+        .gallery-ambient-btn.active .ambient-sparkle-icon {
+          color: #DDA752;
+        }
+
         .gallery-nav-arrow {
           position: absolute;
           top: 50%;
@@ -1770,6 +1789,11 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
           border-color: #DDA752;
         }
 
+        /* keep vertical centering on press (global button:active resets transform) */
+        .gallery-nav-arrow:active {
+          transform: translateY(-50%) scale(0.94);
+        }
+
         .arrow-left { left: 1.25rem; }
         .arrow-right { right: 1.25rem; }
 
@@ -1782,6 +1806,7 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
         }
 
         .thumb-item {
+          position: relative;
           height: 100px;
           border-radius: 16px;
           overflow: hidden;
@@ -1790,6 +1815,24 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
           transition: all var(--transition-fast);
           opacity: 0.6;
           background: #0E121A;
+        }
+
+        /* WhatsApp-style "+N" overlay on the last visible thumbnail (mobile) */
+        .thumb-more-overlay {
+          display: none;
+          position: absolute;
+          inset: 0;
+          align-items: center;
+          justify-content: center;
+          background: rgba(8, 10, 14, 0.62);
+          backdrop-filter: blur(2px);
+          -webkit-backdrop-filter: blur(2px);
+          border: none;
+          color: #FFFFFF;
+          font-family: var(--font-heading);
+          font-size: 1.35rem;
+          font-weight: 800;
+          cursor: pointer;
         }
 
         .thumb-item:hover {
@@ -2125,6 +2168,10 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
           transform: translateY(-50%) scale(1.08);
         }
 
+        .lightbox-nav-arrow:active {
+          transform: translateY(-50%) scale(0.94);
+        }
+
         .lightbox-nav-arrow.arrow-prev {
           left: 2rem;
         }
@@ -2355,44 +2402,46 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
           line-height: 1.75;
         }
 
-        /* Luxury Key Specification Cards Matrix */
+        /* Key Specification Glass Pills */
         .property-spec-matrix-grid {
-          display: grid;
-          grid-template-columns: repeat(3, 1fr);
-          gap: 0.9rem;
+          display: flex;
+          flex-wrap: wrap;
+          align-items: center;
+          gap: 0.75rem;
           margin-bottom: 2rem;
           padding-bottom: 1.75rem;
           border-bottom: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
         }
 
         .spec-stat-card {
-          display: flex;
+          display: inline-flex;
           align-items: center;
-          gap: 0.9rem;
-          padding: 0.9rem 1.15rem;
-          border-radius: 16px;
+          gap: 8px;
+          padding: 0.5rem 1.15rem;
+          border-radius: 9999px;
+          font-size: 0.8125rem;
           transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-          backdrop-filter: blur(16px);
-          -webkit-backdrop-filter: blur(16px);
+          backdrop-filter: blur(18px) saturate(190%);
+          -webkit-backdrop-filter: blur(18px) saturate(190%);
         }
 
         [data-theme="dark"] .spec-stat-card {
-          background: rgba(255, 255, 255, 0.03);
-          border: 1px solid rgba(255, 255, 255, 0.08);
-          box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25), inset 0 1px 1px rgba(255, 255, 255, 0.08);
+          background: rgba(255, 255, 255, 0.06);
+          border: 1px solid rgba(255, 255, 255, 0.18);
+          box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.2);
         }
 
         [data-theme="dark"] .spec-stat-card:hover {
-          background: rgba(255, 255, 255, 0.06);
+          background: rgba(255, 255, 255, 0.09);
           border-color: rgba(221, 167, 82, 0.4);
           transform: translateY(-2px);
           box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35), 0 0 12px rgba(221, 167, 82, 0.15);
         }
 
         [data-theme="light"] .spec-stat-card {
-          background: #FFFFFF;
-          border: 1px solid rgba(0, 0, 0, 0.07);
-          box-shadow: 0 4px 16px rgba(30, 24, 16, 0.05);
+          background: rgba(255, 255, 255, 0.65);
+          border: 1px solid rgba(255, 255, 255, 0.85);
+          box-shadow: 0 4px 14px rgba(0, 0, 0, 0.04), inset 0 1.5px 1.5px #FFFFFF;
         }
 
         [data-theme="light"] .spec-stat-card:hover {
@@ -2402,15 +2451,15 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
         }
 
         .spec-stat-icon-wrap {
-          width: 40px;
-          height: 40px;
-          border-radius: 12px;
           display: flex;
           align-items: center;
           justify-content: center;
           flex-shrink: 0;
-          background: rgba(221, 167, 82, 0.1);
-          border: 1px solid rgba(221, 167, 82, 0.25);
+        }
+
+        .spec-stat-icon-wrap svg {
+          width: 16px;
+          height: 16px;
         }
 
         .spec-stat-icon {
@@ -2428,9 +2477,9 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
 
         .spec-stat-info {
           display: flex;
-          flex-direction: column;
-          gap: 2px;
-          min-width: 0;
+          align-items: center;
+          gap: 6px;
+          flex-wrap: nowrap;
         }
 
         .spec-stat-label {
@@ -2441,6 +2490,7 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
           text-transform: uppercase;
           color: var(--gold-primary, #DDA752);
           opacity: 0.85;
+          white-space: nowrap;
         }
 
         [data-theme="light"] .spec-stat-label {
@@ -2449,18 +2499,16 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
 
         .spec-stat-value {
           font-family: var(--font-heading);
-          font-size: 0.9375rem;
+          font-size: 0.875rem;
           font-weight: 700;
           color: var(--text-primary);
           white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
         }
 
         /* Gold highlighted card */
         [data-theme="dark"] .spec-stat-card.card-highlight-gold {
-          background: linear-gradient(135deg, rgba(221, 167, 82, 0.12) 0%, rgba(255, 255, 255, 0.03) 100%);
-          border-color: rgba(221, 167, 82, 0.35);
+          background: rgba(197, 142, 54, 0.12);
+          border-color: var(--gold-border, rgba(221, 167, 82, 0.35));
         }
 
         [data-theme="dark"] .spec-stat-card.card-highlight-gold .gold-val {
@@ -2476,15 +2524,12 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
           color: #7A5200;
         }
 
-        @media (max-width: 900px) {
-          .property-spec-matrix-grid {
-            grid-template-columns: repeat(2, 1fr);
-          }
-        }
-
         @media (max-width: 550px) {
           .property-spec-matrix-grid {
-            grid-template-columns: 1fr;
+            gap: 0.5rem;
+          }
+          .spec-stat-card {
+            padding: 0.45rem 0.9rem;
           }
         }
 
@@ -3810,72 +3855,71 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
         .mobile-bottom-lead-bar {
           display: none;
           position: fixed;
-          bottom: 0;
-          left: 0;
-          right: 0;
+          bottom: 0.75rem;
+          left: 0.75rem;
+          right: 0.75rem;
           z-index: 99;
-          backdrop-filter: blur(20px) saturate(180%);
-          -webkit-backdrop-filter: blur(20px) saturate(180%);
-          padding: 0.875rem 1.25rem;
-          align-items: center;
-          justify-content: space-between;
-          gap: 1rem;
+          border-radius: 18px;
+          backdrop-filter: blur(28px) saturate(210%);
+          -webkit-backdrop-filter: blur(28px) saturate(210%);
+          padding: 0.875rem 1.15rem 1rem;
+          flex-direction: column;
+          align-items: stretch;
+          gap: 0.65rem;
+          transition: transform 0.32s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.32s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .mobile-bottom-lead-bar.lead-bar-hidden {
+          transform: translateY(130%);
+          opacity: 0;
+          pointer-events: none;
+        }
+
+        /* Sticky bar text: white in dark, black in light */
+        [data-theme="dark"] .mobile-bottom-lead-bar .price-label,
+        [data-theme="dark"] .mobile-bottom-lead-bar .price-tax-note {
+          color: #FFFFFF;
+        }
+
+        [data-theme="light"] .mobile-bottom-lead-bar .price-label,
+        [data-theme="light"] .mobile-bottom-lead-bar .price-tax-note {
+          color: #000000;
         }
 
         [data-theme="dark"] .mobile-bottom-lead-bar {
-          background: rgba(9, 12, 18, 0.95);
-          border-top: 1px solid rgba(255, 255, 255, 0.1);
-          box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.6);
+          background: linear-gradient(
+            135deg,
+            rgba(255, 255, 255, 0.25) 0%,
+            rgba(255, 255, 255, 0.08) 30%,
+            rgba(18, 24, 38, 0.42) 65%,
+            rgba(10, 14, 24, 0.65) 100%
+          );
+          border: 1px solid rgba(255, 255, 255, 0.28);
+          box-shadow:
+            0 20px 48px rgba(0, 0, 0, 0.38),
+            0 4px 14px rgba(0, 0, 0, 0.18),
+            inset 0 1.5px 2px rgba(255, 255, 255, 0.65),
+            inset 0 -1px 1px rgba(255, 255, 255, 0.12);
         }
 
         [data-theme="light"] .mobile-bottom-lead-bar {
-          background: rgba(255, 255, 255, 0.96);
-          border-top: 1px solid rgba(0, 0, 0, 0.08);
-          box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.08);
+          background: linear-gradient(
+            135deg,
+            rgba(255, 255, 255, 0.65) 0%,
+            rgba(255, 255, 255, 0.32) 40%,
+            rgba(255, 255, 255, 0.52) 100%
+          );
+          backdrop-filter: blur(32px) saturate(210%) contrast(106%);
+          -webkit-backdrop-filter: blur(32px) saturate(210%) contrast(106%);
+          border: 1.5px solid rgba(255, 255, 255, 0.75);
+          box-shadow:
+            0 24px 56px rgba(15, 23, 42, 0.14),
+            0 4px 16px rgba(0, 0, 0, 0.04),
+            inset 0 1.5px 2px rgba(255, 255, 255, 0.95),
+            inset 0 -1px 1px rgba(0, 0, 0, 0.05);
         }
 
-        .mobile-lead-price {
-          display: flex;
-          flex-direction: column;
-        }
 
-        .mlp-val {
-          font-family: var(--font-heading);
-          font-size: 1.15rem;
-          font-weight: 800;
-          color: var(--gold-primary);
-          line-height: 1.1;
-        }
-
-        .mlp-cur {
-          font-size: 0.6875rem;
-          color: var(--text-muted);
-        }
-
-        .mobile-lead-actions {
-          display: flex;
-          align-items: center;
-          gap: 0.5rem;
-        }
-
-        .mobile-wa-btn {
-          width: 42px;
-          height: 42px;
-          border-radius: 8px;
-          background: rgba(197, 142, 54, 0.12);
-          border: 1px solid var(--gold-border);
-          color: var(--gold-primary);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
-
-        .mobile-book-btn {
-          padding: 0.6875rem 1.25rem;
-          font-size: 0.875rem;
-          white-space: nowrap;
-          border-radius: 8px;
-        }
 
         /* 7. Similar Recommended Properties */
         .similar-section {
@@ -3931,17 +3975,60 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
           }
           .header-main-hero-row {
             flex-direction: column;
-            gap: 1.5rem;
+            gap: 1.25rem;
           }
           .top-header-right {
-            align-items: flex-start;
+            align-items: stretch;
             width: 100%;
+            gap: 1rem;
           }
           .property-price-card {
-            text-align: left;
+            text-align: start;
+          }
+          .price-value {
+            font-size: 1.85rem;
+          }
+          /* Price + actions live in the sticky bottom card on mobile */
+          .header-main-hero-row .property-price-card,
+          .header-main-hero-row .top-action-group {
+            display: none;
+          }
+          .top-action-group {
+            width: 100%;
+            gap: 0.6rem;
+          }
+          .top-inquire-btn {
+            flex: 1;
+            min-height: 48px;
+          }
+          .header-icon-btn {
+            width: 46px;
+            height: 46px;
+            flex-shrink: 0;
+          }
+          /* Keep long breadcrumbs on one line */
+          .breadcrumb-bar {
+            max-width: 100%;
+            overflow: hidden;
+          }
+          .crumb-text {
+            white-space: nowrap;
+          }
+          .crumb-text.active {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            min-width: 0;
+            flex: 1;
           }
           .thumbnails-strip {
             grid-template-columns: repeat(3, 1fr);
+          }
+          /* WhatsApp-style: one row of 3, "+N" on the last tile */
+          .thumb-item:nth-child(n+4) {
+            display: none;
+          }
+          .thumb-more-overlay {
+            display: flex;
           }
           .detail-sidebar-col {
             grid-template-columns: 1fr;
@@ -3961,11 +4048,71 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
           .main-image-frame {
             height: 320px;
           }
+
+          /* Clean, minimal fullscreen lightbox on mobile */
+          .lightbox-dossier-tag {
+            display: none;
+          }
+          .lightbox-close-btn span {
+            display: none;
+          }
+          .lightbox-close-btn {
+            width: 42px;
+            height: 42px;
+            padding: 0;
+            gap: 0;
+            justify-content: center;
+            border-radius: 50%;
+          }
+          .dock-title-group {
+            display: none;
+          }
+          .dock-meta-row {
+            justify-content: center;
+            gap: 0;
+          }
+          .lightbox-bottom-dock {
+            padding: 0.6rem 0.75rem;
+          }
+          .lightbox-nav-arrow {
+            width: 44px;
+            height: 44px;
+          }
+          .lightbox-nav-arrow.arrow-prev {
+            left: 0.6rem;
+          }
+          .lightbox-nav-arrow.arrow-next {
+            right: 0.6rem;
+          }
+
+          /* Tighter gallery overlay on mobile */
+          .gallery-stage-overlay {
+            bottom: 0.75rem;
+            left: 0.75rem;
+            right: 0.75rem;
+          }
+          .gallery-counter-pill {
+            padding: 0.4rem 0.85rem;
+            font-size: 0.7rem;
+          }
+          .gallery-nav-arrow {
+            width: 40px;
+            height: 40px;
+          }
+          .arrow-left { left: 0.75rem; }
+          .arrow-right { right: 0.75rem; }
+
           .mobile-bottom-lead-bar {
             display: flex;
           }
           .property-detail-view {
+            padding-top: 84px;
             padding-bottom: 7rem;
+          }
+          .property-top-header {
+            gap: 0.85rem;
+            margin-bottom: 1.1rem;
+            padding-bottom: 1.1rem;
           }
         }
       `}</style>
