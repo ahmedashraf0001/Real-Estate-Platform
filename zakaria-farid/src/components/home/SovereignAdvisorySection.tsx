@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ShieldCheck, Compass, TrendingUp, Sparkles, ChevronRight, ChevronLeft, Building2, CheckCircle2, ArrowRight } from 'lucide-react';
 
@@ -100,6 +100,9 @@ export const SovereignAdvisorySection: React.FC<SovereignAdvisorySectionProps> =
   const handlePrevReview = () => {
     setActiveReviewIdx((prev) => (prev - 1 + PATRON_REVIEWS.length) % PATRON_REVIEWS.length);
   };
+
+  // Swipe between patron reviews on touch screens
+  const reviewTouchX = useRef<number | null>(null);
 
   return (
     <section className="sovereign-advisory-section" dir={isAr ? 'rtl' : 'ltr'}>
@@ -224,8 +227,21 @@ export const SovereignAdvisorySection: React.FC<SovereignAdvisorySectionProps> =
                 </div>
               </div>
 
-              {/* Monograph Quote Area */}
-              <div className="monograph-body">
+              {/* Monograph Quote Area (swipe to browse reviews on touch) */}
+              <div
+                className="monograph-body"
+                onTouchStart={(e) => {
+                  reviewTouchX.current = e.touches[0].clientX;
+                }}
+                onTouchEnd={(e) => {
+                  if (reviewTouchX.current === null) return;
+                  const delta = e.changedTouches[0].clientX - reviewTouchX.current;
+                  reviewTouchX.current = null;
+                  if (Math.abs(delta) < 48) return;
+                  if (delta < 0) handleNextReview();
+                  else handlePrevReview();
+                }}
+              >
                 <AnimatePresence mode="wait">
                   <motion.div
                     key={currentReview.id}
@@ -783,6 +799,120 @@ export const SovereignAdvisorySection: React.FC<SovereignAdvisorySectionProps> =
         .monograph-cta-btn:hover {
           transform: translateY(-1px);
           box-shadow: 0 6px 20px rgba(184, 147, 74, 0.45);
+        }
+
+        /* ── Mobile ── */
+        @media (max-width: 768px) {
+          .sovereign-advisory-section {
+            padding: 3rem 0;
+          }
+
+          /* Header: tighter type hierarchy */
+          .advisory-section-header {
+            margin-bottom: 2rem;
+          }
+          .advisory-heading {
+            font-size: 1.55rem;
+            line-height: 1.25;
+            margin-bottom: 0.75rem;
+          }
+          .advisory-lead-text {
+            font-size: 0.85rem;
+            line-height: 1.6;
+            max-width: 38ch;
+            margin: 0 auto;
+          }
+          .advisory-folio-grid {
+            gap: 1rem;
+          }
+
+          /* Pillars: horizontal scroll, snapping one full card per swipe */
+          .pillars-folio-wing {
+            flex-direction: row;
+            overflow-x: auto;
+            scroll-snap-type: x mandatory;
+            scroll-padding-inline: 1rem;
+            gap: 0.75rem;
+            margin: 0 -1rem;
+            padding: 0 1rem 8px;
+            scrollbar-width: none;
+            -webkit-overflow-scrolling: touch;
+          }
+          .pillars-folio-wing::-webkit-scrollbar {
+            display: none;
+          }
+          .pillar-glass-plate {
+            flex: 0 0 calc(100% - 2rem);
+            scroll-snap-align: start;
+            scroll-snap-stop: always;
+            padding: 1.25rem 1.35rem;
+          }
+
+          /* Monograph card: compact and uncramped */
+          .patron-monograph-card {
+            padding: 1.35rem 1.2rem;
+            border-radius: 20px;
+          }
+          .monograph-body {
+            touch-action: pan-y;
+          }
+          .patron-avatar-seal {
+            width: 38px;
+            height: 38px;
+            font-size: 0.78rem;
+          }
+          .patron-name {
+            font-size: 0.875rem;
+          }
+          .patron-role {
+            font-size: 0.72rem;
+          }
+          .mono-counter {
+            font-size: 0.7rem;
+          }
+          .monograph-top-bar {
+            margin-bottom: 1.1rem;
+            gap: 0.6rem;
+          }
+          .monograph-seal-badge {
+            font-size: 0.6rem;
+            letter-spacing: 0.08em;
+            min-width: 0;
+          }
+          .monograph-seal-badge span:not(.seal-dot) {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+          }
+          .monograph-nav-btns {
+            flex-shrink: 0;
+          }
+          .mono-nav-btn {
+            width: 36px;
+            height: 36px;
+          }
+          .monograph-body {
+            margin-bottom: 1.25rem;
+          }
+          .monograph-quote {
+            font-size: 1rem;
+            line-height: 1.55;
+            margin-bottom: 1rem;
+          }
+          .acquisition-tag {
+            margin-bottom: 1rem;
+            font-size: 0.68rem;
+          }
+          .monograph-footer {
+            flex-direction: column;
+            align-items: stretch;
+            gap: 0.85rem;
+            text-align: center;
+          }
+          .monograph-cta-btn {
+            justify-content: center;
+            min-height: 44px;
+          }
         }
       `}</style>
     </section>

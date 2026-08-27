@@ -2517,6 +2517,48 @@ export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintIns
             min-height: 300px;
             padding: 0.75rem;
           }
+
+          /* Fullscreen studio: breathing room in the topbar, larger CAD canvas */
+          .cad-fullscreen-topbar {
+            flex-wrap: wrap;
+            gap: 0.6rem;
+            padding: 0.75rem 0.9rem;
+          }
+          .cad-fullscreen-badge {
+            display: none;
+          }
+          .cad-fullscreen-title {
+            font-size: 0.95rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 55vw;
+          }
+          .cad-fullscreen-meta-block {
+            flex: 1;
+            min-width: 0;
+          }
+          .cad-fullscreen-close-btn {
+            padding: 0.45rem 0.75rem;
+            font-size: 0.78rem;
+            flex-shrink: 0;
+          }
+          .cad-fullscreen-close-btn span {
+            display: none;
+          }
+          .cad-fullscreen-topbar .studio-crumbs-row {
+            order: 3;
+            flex-basis: 100%;
+          }
+          .fullscreen-svg-wrapper {
+            padding: 0.75rem 0.35rem;
+            min-height: 0;
+            max-height: none;
+          }
+          .fullscreen-svg-wrapper .cad-vector-svg {
+            max-width: 99vw;
+            max-height: calc(100dvh - 200px);
+          }
         }
 
         .pub-metric-cell {

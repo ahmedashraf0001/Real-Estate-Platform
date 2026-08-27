@@ -1397,7 +1397,7 @@ export const ContactView: React.FC<{ locale?: string }> = ({ locale = 'en' }) =>
 
         @media (max-width: 768px) {
           .contact-page {
-            padding-top: 84px;
+            padding-top: 96px;
           }
         }
 
@@ -1424,8 +1424,17 @@ export const ContactView: React.FC<{ locale?: string }> = ({ locale = 'en' }) =>
         }
 
         @media (max-width: 640px) {
+          /* Compact side-by-side chips instead of stacked full-width buttons */
           .intent-chips-grid {
-            grid-template-columns: 1fr;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+          }
+          .selector-chip {
+            flex: 1 1 auto;
+            padding: 0.5rem 0.8rem;
+            font-size: 0.78rem;
+            white-space: nowrap;
           }
           .form-inputs-grid {
             grid-template-columns: 1fr;

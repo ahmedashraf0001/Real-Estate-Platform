@@ -3673,7 +3673,7 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
 
         @media (max-width: 768px) {
           .catalog-header-banner {
-            padding-top: 84px;
+            padding-top: 96px;
           }
           .catalog-header-area {
             padding-top: 1.5rem;

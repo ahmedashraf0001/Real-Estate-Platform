@@ -62,6 +62,14 @@ export const MapView: React.FC<MapViewProps> = ({
   const [isSatelliteMode, setIsSatelliteMode] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isSidebarClosing, setIsSidebarClosing] = useState(false);
+  const closeSidebar = () => {
+    setIsSidebarClosing(true);
+    setTimeout(() => {
+      setIsSidebarOpen(false);
+      setIsSidebarClosing(false);
+    }, 260);
+  };
 
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
@@ -411,8 +419,8 @@ export const MapView: React.FC<MapViewProps> = ({
 
       {/* Right Floating Sovereign Directory (Pure CSS Animation - No Framer Motion) */}
       {isSidebarOpen && (
-        <aside 
-          className="floating-glass-directory"
+        <aside
+          className={`floating-glass-directory ${isSidebarClosing ? 'closing' : ''}`}
           data-lenis-prevent="true"
           dir={locale === 'ar' ? 'rtl' : 'ltr'}
         >
@@ -424,7 +432,7 @@ export const MapView: React.FC<MapViewProps> = ({
               </div>
               <button
                 className="dir-collapse-btn"
-                onClick={() => setIsSidebarOpen(false)}
+                onClick={closeSidebar}
                 title={locale === 'ar' ? 'تصغير الدليل' : 'Minimize Directory'}
                 type="button"
               >
@@ -541,6 +549,18 @@ export const MapView: React.FC<MapViewProps> = ({
         @keyframes sidebarSlideUp {
           from { opacity: 0; transform: translateY(100%); }
           to   { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes sidebarSlideOut {
+          from { opacity: 1; transform: translateX(0); }
+          to   { opacity: 0; transform: translateX(32px); }
+        }
+        @keyframes sidebarSlideOutRTL {
+          from { opacity: 1; transform: translateX(0); }
+          to   { opacity: 0; transform: translateX(-32px); }
+        }
+        @keyframes sidebarSlideDown {
+          from { opacity: 1; transform: translateY(0); }
+          to   { opacity: 0; transform: translateY(100%); }
         }
         @keyframes previewCardSlideIn {
           from { opacity: 0; transform: translateY(18px); }
@@ -1192,6 +1212,16 @@ export const MapView: React.FC<MapViewProps> = ({
           animation: sidebarSlideInRTL 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
 
+        /* Exit animations (state-driven, applied before unmount) */
+        .floating-glass-directory.closing {
+          animation: sidebarSlideOut 0.26s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
+        }
+
+        .map-view-page[dir="rtl"] .floating-glass-directory.closing,
+        [dir="rtl"] .floating-glass-directory.closing {
+          animation: sidebarSlideOutRTL 0.26s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
+        }
+
         .glass-directory-header {
           padding: 1.6rem 1.6rem 1.25rem;
           display: flex;
@@ -1759,10 +1789,27 @@ export const MapView: React.FC<MapViewProps> = ({
             left: 0 !important;
             right: 0 !important;
             width: 100% !important;
-            max-height: 60vh !important;
+            max-height: 74dvh !important;
             border-radius: 24px 24px 0 0 !important;
             border-bottom: none !important;
             animation: sidebarSlideUp 0.32s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
+          }
+
+          .floating-glass-directory.closing {
+            animation: sidebarSlideDown 0.26s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
+          }
+
+          /* Lighter, clearer glass on mobile */
+          [data-theme="dark"] .floating-glass-directory {
+            background: linear-gradient(
+              135deg,
+              rgba(255, 255, 255, 0.14) 0%,
+              rgba(255, 255, 255, 0.05) 25%,
+              rgba(18, 24, 38, 0.68) 60%,
+              rgba(10, 14, 24, 0.82) 100%
+            ) !important;
+            backdrop-filter: blur(14px) saturate(180%) !important;
+            -webkit-backdrop-filter: blur(14px) saturate(180%) !important;
           }
 
           .glass-directory-header {
@@ -1773,13 +1820,32 @@ export const MapView: React.FC<MapViewProps> = ({
             font-size: 1.15rem;
           }
 
+          /* Clearer header text */
+          .dir-eyebrow {
+            font-size: 0.72rem;
+            color: #F0C987;
+          }
+
+          .dir-search-wrap input {
+            color: var(--text-primary) !important;
+          }
+
+          .dir-search-wrap input::placeholder {
+            color: rgba(255, 255, 255, 0.65);
+          }
+
+          [data-theme="light"] .dir-search-wrap input::placeholder {
+            color: rgba(15, 23, 42, 0.55);
+          }
+
           .glass-cards-scroll {
             padding: 0.75rem 1rem 1.75rem;
             gap: 0.85rem;
           }
 
+          /* Shorter cards so one fits fully in the sheet */
           .estate-thumb-wrap {
-            height: 120px;
+            height: 96px;
           }
 
           .floating-sidebar-trigger {
@@ -1802,18 +1868,25 @@ export const MapView: React.FC<MapViewProps> = ({
             overflow-y: auto;
           }
 
-          .map-floating-controls-row {
+          /* One row, spread to opposite edges */
+          .map-floating-controls-row,
+          .map-floating-controls-row.sidebar-is-open,
+          .map-floating-controls-row.sidebar-is-closed,
+          .map-view-page[dir="rtl"] .map-floating-controls-row,
+          [dir="rtl"] .map-floating-controls-row {
             top: 5rem;
             bottom: auto;
             left: 0.85rem;
-            right: auto;
+            right: 0.85rem;
             gap: 6px;
+            justify-content: space-between;
+            transform: none;
           }
 
-          .map-view-page[dir="rtl"] .map-floating-controls-row,
-          [dir="rtl"] .map-floating-controls-row {
-            left: auto;
-            right: 0.85rem;
+          /* Hide map controls while the navbar drawer is open (it overlaps them) */
+          body:has(.mobile-drawer-backdrop) .map-floating-controls-row {
+            opacity: 0;
+            pointer-events: none;
           }
 
           .map-glass-ctrl-btn {

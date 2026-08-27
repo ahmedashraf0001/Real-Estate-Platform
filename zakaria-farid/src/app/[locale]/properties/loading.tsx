@@ -52,7 +52,7 @@ export default function CatalogLoading() {
 
         @media (max-width: 768px) {
           .catalog-skeleton-view {
-            padding-top: 84px;
+            padding-top: 96px;
           }
         }
 

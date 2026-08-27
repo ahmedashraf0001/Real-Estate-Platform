@@ -88,7 +88,7 @@ export default function PropertyDetailLoading() {
 
         @media (max-width: 768px) {
           .property-skeleton-view {
-            padding-top: 84px;
+            padding-top: 96px;
           }
         }
 

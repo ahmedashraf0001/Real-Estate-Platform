@@ -23,10 +23,8 @@ import {
   Maximize2, 
   Calendar, 
   Building2, 
-  MapPin, 
-  PhoneCall, 
-  MessageCircle, 
-  ShieldCheck, 
+  MapPin,
+  ShieldCheck,
   Waves, 
   Flower2, 
   Car, 
@@ -248,6 +246,96 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [slideDirection, setSlideDirection] = useState(0);
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
+  const [zoomedImage, setZoomedImage] = useState<string | null>(null);
+  const lightboxTouchX = useRef<number | null>(null);
+
+  // Pinch-zoom / pan state for the fullscreen single-image view
+  const [zoomView, setZoomView] = useState({ scale: 1, x: 0, y: 0 });
+  const zoomGesture = useRef({
+    mode: 'none' as 'none' | 'pinch' | 'pan',
+    startDist: 0,
+    startScale: 1,
+    startTouchX: 0,
+    startTouchY: 0,
+    startX: 0,
+    startY: 0,
+    moved: false,
+    lastTap: 0,
+  });
+
+  const openZoom = (url: string) => {
+    setZoomView({ scale: 1, x: 0, y: 0 });
+    setZoomedImage(url);
+  };
+
+  const handleZoomTouchStart = (e: React.TouchEvent) => {
+    const g = zoomGesture.current;
+    g.moved = false;
+    if (e.touches.length === 2) {
+      g.mode = 'pinch';
+      g.startDist = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+      g.startScale = zoomView.scale;
+    } else if (e.touches.length === 1 && zoomView.scale > 1) {
+      g.mode = 'pan';
+      g.startTouchX = e.touches[0].clientX;
+      g.startTouchY = e.touches[0].clientY;
+      g.startX = zoomView.x;
+      g.startY = zoomView.y;
+    } else {
+      g.mode = 'none';
+    }
+  };
+
+  const handleZoomTouchMove = (e: React.TouchEvent) => {
+    const g = zoomGesture.current;
+    if (g.mode === 'pinch' && e.touches.length === 2) {
+      const dist = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+      const scale = Math.min(4, Math.max(1, g.startScale * (dist / g.startDist)));
+      g.moved = true;
+      setZoomView((v) => (scale === 1 ? { scale: 1, x: 0, y: 0 } : { ...v, scale }));
+    } else if (g.mode === 'pan' && e.touches.length === 1) {
+      const dx = e.touches[0].clientX - g.startTouchX;
+      const dy = e.touches[0].clientY - g.startTouchY;
+      if (Math.abs(dx) > 4 || Math.abs(dy) > 4) g.moved = true;
+      const limit = (zoomView.scale - 1) * 400;
+      setZoomView((v) => ({
+        ...v,
+        x: Math.min(limit, Math.max(-limit, g.startX + dx)),
+        y: Math.min(limit, Math.max(-limit, g.startY + dy)),
+      }));
+    }
+  };
+
+  const handleZoomTouchEnd = (e: React.TouchEvent) => {
+    const g = zoomGesture.current;
+    if (e.touches.length > 0) return;
+    if (!g.moved && g.mode !== 'pinch') {
+      const now = Date.now();
+      if (now - g.lastTap < 300) {
+        // Double tap: toggle zoom
+        setZoomView((v) => (v.scale > 1 ? { scale: 1, x: 0, y: 0 } : { ...v, scale: 2.5 }));
+        g.lastTap = 0;
+      } else {
+        g.lastTap = now;
+        // Single tap at rest closes back to the lightbox
+        if (zoomView.scale === 1) {
+          setTimeout(() => {
+            if (Date.now() - zoomGesture.current.lastTap >= 280 && zoomGesture.current.lastTap !== 0) {
+              setZoomedImage(null);
+              zoomGesture.current.lastTap = 0;
+            }
+          }, 300);
+        }
+      }
+    }
+    g.mode = 'none';
+  };
 
   // Mobile sticky lead bar: hide on scroll down, show on scroll up or when scrolling stops
   const [isLeadBarHidden, setIsLeadBarHidden] = useState(false);
@@ -456,7 +544,13 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (!isLightboxOpen) return;
-      if (e.key === 'Escape') setIsLightboxOpen(false);
+      if (e.key === 'Escape') {
+        if (zoomedImage) {
+          setZoomedImage(null);
+          return;
+        }
+        setIsLightboxOpen(false);
+      }
       if (e.key === 'ArrowRight') {
         setSlideDirection(1);
         setActiveImageIndex((prev) => (prev + 1) % property.images.length);
@@ -468,7 +562,7 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isLightboxOpen, property.images.length]);
+  }, [isLightboxOpen, zoomedImage, property.images.length]);
 
   // Lock body scroll when Lightbox is open
   useEffect(() => {
@@ -754,7 +848,14 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
                   </motion.div>
                 </AnimatePresence>
 
-                <div className="lightbox-carousel-stage" onClick={(e) => e.stopPropagation()}>
+                <div
+                  className="lightbox-carousel-stage"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    // Tapping the empty/blurred stage area exits fullscreen
+                    if (e.target === e.currentTarget) setIsLightboxOpen(false);
+                  }}
+                >
                   
                   {/* Floating Top Header Bar */}
                   <div className="lightbox-top-bar">
@@ -781,8 +882,25 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
                     </div>
                   </div>
 
-                  {/* Flat Clean Carousel Cards Deck */}
-                  <div className="lightbox-deck-container">
+                  {/* Flat Clean Carousel Cards Deck (swipeable on touch) */}
+                  <div
+                    className="lightbox-deck-container"
+                    onClick={(e) => {
+                      if (e.target === e.currentTarget) setIsLightboxOpen(false);
+                    }}
+                    onTouchStart={(e) => {
+                      lightboxTouchX.current = e.touches[0].clientX;
+                    }}
+                    onTouchEnd={(e) => {
+                      if (lightboxTouchX.current === null) return;
+                      const delta = e.changedTouches[0].clientX - lightboxTouchX.current;
+                      lightboxTouchX.current = null;
+                      if (Math.abs(delta) < 48) return;
+                      // Swipe left reveals the card on the right, and vice versa
+                      if (delta < 0) goToImage(activeImageIndex + 1, 1);
+                      else goToImage(activeImageIndex - 1, -1);
+                    }}
+                  >
                     {property.images.map((imgUrl, idx) => {
                       const total = property.images.length;
                       let diff = idx - activeImageIndex;
@@ -812,6 +930,7 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
                           }}
                           onClick={() => {
                             if (!isCenter) goToImage(idx);
+                            else openZoom(imgUrl);
                           }}
                         >
                           <img src={imgUrl} alt={`${property.title} - Plate ${idx + 1}`} className="carousel-card-img" />
@@ -873,6 +992,52 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
                   </div>
 
                 </div>
+
+                {/* Single-image fullscreen view: pinch to zoom, drag to pan,
+                    double-tap toggles zoom, single tap (unzoomed) returns to lightbox */}
+                <AnimatePresence>
+                  {zoomedImage && (
+                    <motion.div
+                      className="lightbox-zoom-layer"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.2 }}
+                      onClick={(e) => e.stopPropagation()}
+                      onDoubleClick={() =>
+                        setZoomView((v) => (v.scale > 1 ? { scale: 1, x: 0, y: 0 } : { ...v, scale: 2.5 }))
+                      }
+                      onWheel={(e) => {
+                        const scale = Math.min(4, Math.max(1, zoomView.scale - e.deltaY * 0.0025));
+                        setZoomView((v) => (scale === 1 ? { scale: 1, x: 0, y: 0 } : { ...v, scale }));
+                      }}
+                      onTouchStart={handleZoomTouchStart}
+                      onTouchMove={handleZoomTouchMove}
+                      onTouchEnd={handleZoomTouchEnd}
+                    >
+                      <img
+                        src={zoomedImage}
+                        alt={property.title}
+                        className="lightbox-zoom-img"
+                        style={{
+                          transform: `translate(${zoomView.x}px, ${zoomView.y}px) scale(${zoomView.scale})`,
+                        }}
+                        draggable={false}
+                      />
+                      <button
+                        type="button"
+                        className="lightbox-zoom-close"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setZoomedImage(null);
+                        }}
+                        aria-label="Back to gallery"
+                      >
+                        <X size={18} />
+                      </button>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </motion.div>
             )}
           </AnimatePresence>,
@@ -959,6 +1124,7 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
                 </div>
               </div>
 
+              <h4 className="narrative-heading">{isAr ? 'عن العقار' : 'About this Estate'}</h4>
               <div className="narrative-text">
                 {property.narrative.split('\n\n').map((paragraph, i) => (
                   <p key={i} className="narrative-para">{paragraph}</p>
@@ -985,9 +1151,8 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
                 </div>
               </div>
 
-              {/* Primary Direct Actions & Clean Contact Channels */}
+              {/* All communication funnels through the Private Acquisition lead form */}
               <div className="broker-action-stack">
-                {/* 1. Official Acquisition Inquiry Modal Trigger */}
                 <button
                   type="button"
                   onClick={() => setIsInquiryModalOpen(true)}
@@ -997,37 +1162,11 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
                   <Send size={15} />
                   <span>{isAr ? 'طلب استشارة أو شراء' : 'Private Acquisition Request'}</span>
                 </button>
-
-                {/* 2. Direct Communication Dual Channels */}
-                <div className="broker-quick-channels">
-                  <a 
-                    href={`https://wa.me/${property.broker.phone.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(
-                      `🏛️ *استفسار خاص عن عقار — منصة زكريا فريد*\n` +
-                      `━━━━━━━━━━━━━━━━━━━━\n` +
-                      `🏡 *العقار:* ${property.title}\n` +
-                      `📍 *الموقع:* ${property.location}\n` +
-                      `💰 *السعر المعلن:* ${formattedPrice} ${property.currency}\n` +
-                      `━━━━━━━━━━━━━━━━━━━━\n` +
-                      `أرغب في الاستفسار عن تفاصيل العقار وترتيب زيارة خاصة.`
-                    )}`} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="broker-channel-btn whatsapp-channel"
-                    title={isAr ? 'محادثة مباشرة على واتساب' : 'WhatsApp Concierge Desk'}
-                  >
-                    <MessageCircle size={15} />
-                    <span>{isAr ? 'واتساب' : 'WhatsApp'}</span>
-                  </a>
-
-                  <a 
-                    href={`tel:${property.broker.phone}`} 
-                    className="broker-channel-btn phone-channel"
-                    title={isAr ? 'اتصال هاتفي مباشر' : 'Direct Phone Call'}
-                  >
-                    <PhoneCall size={15} />
-                    <span>{isAr ? 'اتصال مباشر' : 'Direct Call'}</span>
-                  </a>
-                </div>
+                <p className="broker-protocol-note">
+                  {isAr
+                    ? 'قدّم طلبك وحدد وسيلة التواصل المفضلة لديك، وسيتواصل معك زكريا فريد مباشرة.'
+                    : 'Submit your request with your preferred contact method. Zakaria Farid will reach out to you directly.'}
+                </p>
               </div>
 
               {/* Optional Cal.com VIP Viewing Scheduler (Only shown if calendar is active) */}
@@ -2524,12 +2663,38 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
           color: #7A5200;
         }
 
-        @media (max-width: 550px) {
+        @media (max-width: 768px) {
+          /* Always two pills per row (labels ellipsize instead of wrapping the row) */
           .property-spec-matrix-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
             gap: 0.5rem;
           }
           .spec-stat-card {
-            padding: 0.45rem 0.9rem;
+            width: 100%;
+            min-width: 0;
+            justify-content: flex-start;
+            padding: 0.5rem 0.85rem;
+          }
+          .spec-stat-info {
+            min-width: 0;
+            overflow: hidden;
+          }
+          .spec-stat-value {
+            overflow: hidden;
+            text-overflow: ellipsis;
+          }
+          /* English labels/values are longer — shrink them so pills don't truncate */
+          [dir="ltr"] .spec-stat-label {
+            font-size: 0.56rem;
+            letter-spacing: 0.06em;
+          }
+          [dir="ltr"] .spec-stat-value {
+            font-size: 0.76rem;
+          }
+          [dir="ltr"] .spec-stat-card {
+            gap: 6px;
+            padding: 0.5rem 0.7rem;
           }
         }
 
@@ -3193,6 +3358,35 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
           }
         }
 
+        @media (max-width: 768px) {
+          /* Compact info panel under the map: swipeable commute chips */
+          .location-suite-grid {
+            gap: 0.85rem;
+          }
+          .location-suite-side .sidebar-radar-card {
+            padding: 1rem 1rem 0.85rem;
+            border-radius: 18px;
+          }
+          .location-suite-side .radar-cards-list {
+            flex-direction: row;
+            overflow-x: auto;
+            scroll-snap-type: x mandatory;
+            gap: 0.6rem;
+            margin: 0 -1rem;
+            padding: 0 1rem 6px;
+            scrollbar-width: none;
+            -webkit-overflow-scrolling: touch;
+          }
+          .location-suite-side .radar-cards-list::-webkit-scrollbar {
+            display: none;
+          }
+          .location-suite-side .proximity-card {
+            flex: 0 0 220px;
+            scroll-snap-align: start;
+            padding: 0.7rem 0.85rem;
+          }
+        }
+
         /* Sidebar Radar Card */
         .sidebar-radar-card {
           backdrop-filter: blur(28px) saturate(190%);
@@ -3494,61 +3688,61 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
           box-shadow: 0 8px 26px rgba(221, 167, 82, 0.5);
         }
 
-        .broker-quick-channels {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 0.65rem;
-          width: 100%;
-        }
-
-        .broker-channel-btn {
-          display: inline-flex;
+        /* Single-image fullscreen view inside the lightbox */
+        .lightbox-zoom-layer {
+          position: fixed;
+          inset: 0;
+          z-index: 60;
+          display: flex;
           align-items: center;
           justify-content: center;
-          gap: 7px;
-          padding: 0.75rem 0.85rem;
-          font-size: 0.8125rem;
-          font-weight: 700;
-          border-radius: 12px;
-          text-decoration: none;
-          cursor: pointer;
-          transition: all var(--transition-fast);
-          box-sizing: border-box;
+          background: rgba(4, 6, 10, 0.98);
+          overflow: hidden;
+          touch-action: none;
+          cursor: zoom-out;
         }
 
-        .broker-channel-btn.whatsapp-channel {
-          background: rgba(16, 185, 129, 0.10);
-          border: 1px solid rgba(16, 185, 129, 0.28);
-          color: #10B981;
+        .lightbox-zoom-img {
+          width: 100vw;
+          height: 100dvh;
+          object-fit: contain;
+          transform-origin: center center;
+          transition: transform 0.12s ease-out;
+          will-change: transform;
+          user-select: none;
+          -webkit-user-drag: none;
         }
 
-        [data-theme="dark"] .broker-channel-btn.whatsapp-channel {
-          color: #34D399;
-        }
-
-        .broker-channel-btn.whatsapp-channel:hover {
-          background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+        .lightbox-zoom-close {
+          position: absolute;
+          top: 1rem;
+          inset-inline-end: 1rem;
+          width: 42px;
+          height: 42px;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: rgba(255, 255, 255, 0.1);
+          border: 1px solid rgba(255, 255, 255, 0.25);
           color: #FFFFFF;
-          border-color: #10B981;
-          transform: translateY(-1px);
-          box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35);
+          cursor: pointer;
         }
 
-        .broker-channel-btn.phone-channel {
-          background: rgba(255, 255, 255, 0.05);
-          border: 1px solid var(--border-subtle);
+        .narrative-heading {
+          font-family: var(--font-heading);
+          font-size: 1.05rem;
+          font-weight: 800;
           color: var(--text-primary);
+          margin: 0 0 0.75rem;
         }
 
-        [data-theme="light"] .broker-channel-btn.phone-channel {
-          background: #FFFFFF;
-          border-color: rgba(0, 0, 0, 0.12);
-        }
-
-        .broker-channel-btn.phone-channel:hover {
-          border-color: var(--gold-primary);
-          color: var(--gold-primary);
-          transform: translateY(-1px);
+        .broker-protocol-note {
+          font-size: 0.78rem;
+          color: var(--text-muted);
+          line-height: 1.55;
+          margin: 0;
+          text-align: center;
         }
 
         .broker-calendar-section {
@@ -4051,6 +4245,12 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
 
           /* Clean, minimal fullscreen lightbox on mobile */
           .lightbox-dossier-tag {
+            font-size: 0.6rem;
+            padding: 0.3rem 0.6rem;
+          }
+
+          /* Swipe navigation replaces the arrows */
+          .lightbox-nav-arrow {
             display: none;
           }
           .lightbox-close-btn span {
@@ -4106,7 +4306,7 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
             display: flex;
           }
           .property-detail-view {
-            padding-top: 84px;
+            padding-top: 96px;
             padding-bottom: 7rem;
           }
           .property-top-header {

@@ -1,7 +1,7 @@
 'use client';
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { X, CheckCircle, Shield, Building2, Phone, Mail, User, Send, MessageCircle, Loader2, Bell } from 'lucide-react';
+import { X, CheckCircle, Shield, Building2, Phone, Mail, User, Send, Loader2, Bell } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface InquiryModalProps {
@@ -31,7 +31,6 @@ export const InquiryModal: React.FC<InquiryModalProps> = ({
   const [subscribeToPromos, setSubscribeToPromos] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
-  const [faridWhatsAppUrl, setFaridWhatsAppUrl] = useState<string | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -116,9 +115,6 @@ export const InquiryModal: React.FC<InquiryModalProps> = ({
 
       const data = await res.json();
       if (res.ok && data.success) {
-        if (data.farid_whatsapp_url) {
-          setFaridWhatsAppUrl(data.farid_whatsapp_url);
-        }
         setIsSubmitted(true);
         toast.success(isAr ? 'تم استلام طلبكم بنجاح وإخطار آل زكريا' : 'Acquisition request dispatched to AL ZAKARIA');
       } else {
@@ -138,7 +134,6 @@ export const InquiryModal: React.FC<InquiryModalProps> = ({
     setPhone('');
     setNotes('');
     setSubscribeToPromos(false);
-    setFaridWhatsAppUrl(null);
     onClose();
   };
 
@@ -290,35 +285,23 @@ export const InquiryModal: React.FC<InquiryModalProps> = ({
             <div className="success-icon-wrap">
               <CheckCircle size={44} className="success-icon" />
             </div>
-            <h2 className="success-title">{isAr ? 'تم استلام طلبكم بنجاح' : 'Inquiry Received'}</h2>
+            <h2 className="success-title">{isAr ? 'شكراً لطلبكم' : 'Thank You for Your Request'}</h2>
             <p className="success-message">
               {isAr ? (
-                <>شكراً لك، <strong>{fullName}</strong>. تم تحويل طلبك مباشرة إلى فريق الاستشارات الخاصة بمكتب آل زكريا.</>
+                <>شكراً لك، <strong>{fullName}</strong>. تم تسجيل طلبك بنجاح، وسيتواصل معك <strong>زكريا فريد</strong> قريباً.</>
               ) : (
-                <>Thank you, <strong>{fullName}</strong>. Your private inquiry has been assigned directly to AL ZAKARIA.</>
+                <>Thank you, <strong>{fullName}</strong>. Your request has been received. <strong>Zakaria Farid</strong> will be in touch with you shortly.</>
               )}
             </p>
             <p className="success-contact-note">
               {isAr ? (
-                <>سنقوم بالتواصل معكم عبر <strong>{phone}</strong> وإرسال الملف الفني للعقار.</>
+                <>سيتم التواصل معك عبر <strong>{channelOptions.find((c) => c.id === preferredChannel)?.ar}</strong> على <strong>{phone}</strong>.</>
               ) : (
-                <>We will contact you discreetly at <strong>{phone}</strong> and send the private architectural dossier to <strong>{email || 'your contact'}</strong>.</>
+                <>You will be contacted via <strong>{channelOptions.find((c) => c.id === preferredChannel)?.en}</strong> at <strong>{phone}</strong>.</>
               )}
             </p>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', width: '100%', marginTop: '16px' }}>
-              {faridWhatsAppUrl && (
-                <a
-                  href={faridWhatsAppUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="direct-farid-btn"
-                >
-                  <MessageCircle size={17} />
-                  <span>{isAr ? 'فتح المحادثة المباشرة على واتساب المهندس زكريا' : 'Open Direct WhatsApp with Farid Zakaria'}</span>
-                </a>
-              )}
-
               <button className="success-close-action-btn" onClick={handleReset}>
                 {isAr ? 'إغلاق والعودة للتصفح' : 'Return to Catalog'}
               </button>
@@ -686,27 +669,6 @@ export const InquiryModal: React.FC<InquiryModalProps> = ({
           color: var(--text-secondary);
           line-height: 1.6;
           margin: 0;
-        }
-
-        .direct-farid-btn {
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          gap: 8px;
-          padding: 12px 20px;
-          border-radius: 12px;
-          font-size: 13px;
-          font-weight: 800;
-          background: linear-gradient(135deg, #10B981 0%, #059669 100%);
-          color: #FFFFFF;
-          text-decoration: none;
-          box-shadow: 0 4px 16px rgba(16, 185, 129, 0.35);
-          transition: all 0.2s ease;
-        }
-
-        .direct-farid-btn:hover {
-          transform: translateY(-1.5px);
-          box-shadow: 0 8px 24px rgba(16, 185, 129, 0.45);
         }
 
         .success-close-action-btn {

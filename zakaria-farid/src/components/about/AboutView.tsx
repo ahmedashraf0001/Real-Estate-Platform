@@ -993,7 +993,7 @@ export function AboutView({ locale, onNavigateToCatalog, onOpenInquiry = () => {
 
         @media (max-width: 768px) {
           .atelier-hero-section {
-            padding-top: 84px;
+            padding-top: 96px;
             min-height: 0;
           }
           .atelier-hero-title {
@@ -1364,6 +1364,11 @@ export function AboutView({ locale, onNavigateToCatalog, onOpenInquiry = () => {
             border-bottom: 1px solid rgba(184, 147, 74, 0.2);
             align-items: center;
             justify-content: flex-start;
+            gap: 14px;
+          }
+          .paravent-body {
+            height: auto;
+            padding: 1.25rem;
           }
           .spine-top {
             flex-direction: row;
@@ -1621,6 +1626,28 @@ export function AboutView({ locale, onNavigateToCatalog, onOpenInquiry = () => {
         @media (max-width: 900px) {
           .pillars-folio-grid {
             grid-template-columns: 1fr;
+          }
+        }
+
+        @media (max-width: 768px) {
+          /* Horizontal swipe row instead of stacked cards */
+          .pillars-folio-grid {
+            display: flex;
+            overflow-x: auto;
+            scroll-snap-type: x mandatory;
+            gap: 0.75rem;
+            margin: 0 -1rem;
+            padding: 0 1rem 8px;
+            scrollbar-width: none;
+            -webkit-overflow-scrolling: touch;
+          }
+          .pillars-folio-grid::-webkit-scrollbar {
+            display: none;
+          }
+          .pillar-folio-card {
+            flex: 0 0 82%;
+            scroll-snap-align: center;
+            padding: 1.35rem 1.4rem;
           }
         }
 

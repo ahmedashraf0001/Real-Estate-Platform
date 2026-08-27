@@ -355,14 +355,18 @@
   .mobileHeader {
     display: flex;
   }
+  /* LTR: docked left, slides in from the left */
   .sidebar {
     position: fixed;
     top: 0;
     left: 0;
+    right: auto;
     bottom: 0;
     transform: translateX(-100%);
     transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
+  /* RTL (Arabic): docked right, slides in from the right */
+  .sidebarRtl,
   [dir="rtl"] .sidebar {
     left: auto;
     right: 0;

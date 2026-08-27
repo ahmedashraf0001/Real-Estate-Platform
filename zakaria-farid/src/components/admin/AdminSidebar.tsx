@@ -94,7 +94,7 @@ export default function AdminSidebar({ adminLocale }: AdminSidebarProps) {
         <div className={styles.overlay} onClick={() => setIsOpen(false)} />
       )}
 
-      <aside className={`${styles.sidebar} ${isOpen ? styles.sidebarOpen : ''}`}>
+      <aside className={`${styles.sidebar} ${isAr ? styles.sidebarRtl : ''} ${isOpen ? styles.sidebarOpen : ''}`}>
         {/* Brand Header */}
         <div className={styles.brandContainer}>
           <Link href={`/admin/${adminLocale}`} style={{ textDecoration: 'none' }}>

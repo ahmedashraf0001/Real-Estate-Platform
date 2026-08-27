@@ -364,11 +364,14 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
             gap: 8px;
           }
           .luxury-brand-logo.size-md .brand-emblem-wrap img {
-            width: 34px !important;
-            height: 34px !important;
+            width: 40px !important;
+            height: 40px !important;
           }
           .luxury-brand-logo.size-md .brand-primary-name .name-serif-gold {
-            font-size: 0.98rem;
+            font-size: 1.05rem;
+          }
+          .luxury-brand-logo.size-md .brand-primary-name .name-ar {
+            font-size: 1.3rem;
           }
           .luxury-brand-logo.size-md .brand-sub-text {
             font-size: 0.5rem;

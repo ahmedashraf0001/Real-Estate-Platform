@@ -49,9 +49,9 @@ export const SavedPortfolioDrawer: React.FC<SavedPortfolioDrawerProps> = ({
         <div className="saved-portfolio-backdrop" onClick={() => setIsDrawerOpen(false)} dir={isAr ? 'rtl' : 'ltr'}>
           <motion.div
             className="saved-portfolio-drawer"
-            initial={{ x: isAr ? -480 : 480, opacity: 0 }}
+            initial={{ x: 480, opacity: 0 }}
             animate={{ x: 0, opacity: 1 }}
-            exit={{ x: isAr ? -480 : 480, opacity: 0 }}
+            exit={{ x: 480, opacity: 0 }}
             transition={{ type: 'spring', damping: 28, stiffness: 300 }}
             onClick={(e) => e.stopPropagation()}
             dir={isAr ? 'rtl' : 'ltr'}
@@ -213,6 +213,9 @@ export const SavedPortfolioDrawer: React.FC<SavedPortfolioDrawerProps> = ({
               padding: 1.5rem;
             }
 
+            /* Drawer is anchored to the right edge in both languages
+               (dir="rtl" flips flex, so flex-start = right in Arabic)
+               and always slides in from the right to match. */
             .saved-portfolio-backdrop[dir="rtl"],
             [dir="rtl"] .saved-portfolio-backdrop {
               justify-content: flex-start !important;

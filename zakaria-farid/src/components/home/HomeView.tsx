@@ -109,9 +109,22 @@ export const HomeView: React.FC<HomeViewProps> = ({
     return true;
   });
 
+  // Compact hero copy on mobile
+  const [isMobileViewport, setIsMobileViewport] = React.useState(false);
+  React.useEffect(() => {
+    const check = () => setIsMobileViewport(window.innerWidth <= 768);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, []);
+
   // Typewriter animation state for Hero Title
-  const line1Text = isAr ? 'استكشف أندر الصروح المعمارية و' : "Discover Egypt's Premier Residences &";
-  const line2Text = isAr ? 'القصور الفاخرة في مصر' : 'Luxury Living & Sovereign Estates';
+  const line1Text = isMobileViewport
+    ? (isAr ? 'أندر الصروح المعمارية' : "Egypt's Premier Residences")
+    : (isAr ? 'استكشف أندر الصروح المعمارية و' : "Discover Egypt's Premier Residences &");
+  const line2Text = isMobileViewport
+    ? (isAr ? 'والقصور الفاخرة في مصر' : '& Sovereign Estates')
+    : (isAr ? 'القصور الفاخرة في مصر' : 'Luxury Living & Sovereign Estates');
 
   const line1Len = line1Text.length;
   const totalChars = line1Len + line2Text.length;
@@ -199,9 +212,13 @@ export const HomeView: React.FC<HomeViewProps> = ({
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
             >
-              {isAr 
-                ? 'ننتقي ونمثل أندر العقارات والقصور الفاخرة التي تجمع بين الهيبة المعمارية، التدقيق الإنشائي الصارم، وسندات الملكية الحرة الموثقة.'
-                : 'Curating and representing architecturally significant residences, coastal sanctuaries, and prime estates with forensic CAD audits and freehold ownership assurance.'}
+              {isMobileViewport
+                ? (isAr
+                    ? 'عقارات موثقة بملكية حرة وتدقيق معماري صارم.'
+                    : 'Verified freehold estates with forensic architectural audits.')
+                : (isAr
+                    ? 'ننتقي ونمثل أندر العقارات والقصور الفاخرة التي تجمع بين الهيبة المعمارية، التدقيق الإنشائي الصارم، وسندات الملكية الحرة الموثقة.'
+                    : 'Curating and representing architecturally significant residences, coastal sanctuaries, and prime estates with forensic CAD audits and freehold ownership assurance.')}
             </motion.p>
           </div>
 
@@ -869,9 +886,20 @@ export const HomeView: React.FC<HomeViewProps> = ({
         }
 
         @media (max-width: 768px) {
+          /* Uniform mobile section rhythm (3rem between sections) */
           .featured-section {
             padding-top: 3rem;
-            padding-bottom: 4rem;
+            padding-bottom: 3rem;
+          }
+          .seller-banner-section {
+            padding: 3rem 0;
+          }
+          /* Uniform gaps: eyebrow→title == title→button == button→pills (0.85rem) */
+          .featured-header {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 0.85rem;
+            margin-bottom: 0.85rem;
           }
           .destination-pills-bar {
             flex-wrap: nowrap;
