@@ -176,6 +176,14 @@ export function adaptProperty(property: SupabaseProperty, locale: 'en' | 'ar' = 
     spec_layers: property.spec_layers,
     property_images: property.property_images,
     property_amenities: property.property_amenities,
+    videos: property.videos || (property.video_url ? [{
+      id: 'v-primary',
+      url: property.video_url,
+      title_en: 'Property Video Tour',
+      title_ar: 'جولة الفيديو داخل العقار',
+      category: 'tour',
+    }] : undefined),
+    video_url: property.video_url || (property.videos && property.videos[0]?.url) || undefined,
     created_at: property.created_at,
     broker: {
       name: isAr ? 'زكريا فريد' : 'Zakaria Farid',

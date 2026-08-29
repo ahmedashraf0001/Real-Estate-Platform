@@ -266,6 +266,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           align-items: center;
           width: 100%;
           padding: 0 1.5rem;
+          box-sizing: border-box;
         }
 
         @media (min-width: 993px) {
@@ -288,6 +289,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           max-width: 1280px;
           height: 66px;
           padding: 0 1.75rem;
+          box-sizing: border-box;
           border-radius: var(--radius-full);
           transition: background var(--transition-smooth), border-color var(--transition-smooth), box-shadow var(--transition-smooth);
         }
@@ -629,31 +631,42 @@ export const Navbar: React.FC<NavbarProps> = ({
 
         @media (max-width: 640px) {
           .navbar-wrapper {
-            top: 0.75rem;
+            top: 0.5rem;
           }
           .nav-capsule-container {
-            padding: 0 0.65rem;
+            padding: 0 0.5rem;
+            box-sizing: border-box;
           }
           .nav-glass-capsule {
             height: 52px;
-            padding: 0 0.65rem;
+            padding: 0 0.75rem;
+            box-sizing: border-box;
+            border-radius: 9999px;
+          }
+          .luxury-brand-logo {
+            margin: 0;
+            padding: 0;
+            flex-shrink: 0;
           }
           .nav-controls {
             gap: 4px;
+            margin: 0;
+            padding: 0;
+            flex-shrink: 0;
           }
           .lang-btn {
-            padding: 0.25rem 0.5rem;
-            font-size: 0.75rem;
+            padding: 0.18rem 0.38rem;
+            font-size: 0.68rem;
           }
           .theme-btn,
           .bookmark-nav-btn {
-            width: 32px;
-            height: 32px;
+            width: 28px;
+            height: 28px;
             padding: 0;
           }
           .mobile-toggle {
-            width: 32px;
-            height: 32px;
+            width: 28px;
+            height: 28px;
             padding: 0;
           }
         }

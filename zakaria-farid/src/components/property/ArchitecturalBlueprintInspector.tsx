@@ -349,6 +349,77 @@ interface ProcessedZone {
   spatial?: ZoneSpatialLayout;
 }
 
+const FLOOR_NAME_MAP_AR: Record<string, string> = {
+  'ground': 'الدور الأرضي',
+  'ground floor': 'الدور الأرضي',
+  'ground level': 'الدور الأرضي',
+  'ground floor plan': 'مسقط الدور الأرضي',
+  'floor 1': 'الدور الأول',
+  'first floor': 'الدور الأول',
+  '1st floor': 'الدور الأول',
+  'first floor plan': 'مسقط الدور الأول',
+  'floor 2': 'الدور الثاني',
+  'second floor': 'الدور الثاني',
+  '2nd floor': 'الدور الثاني',
+  'second floor plan': 'مسقط الدور الثاني',
+  'floor 3': 'الدور الثالث',
+  'third floor': 'الدور الثالث',
+  '3rd floor': 'الدور الثالث',
+  'third floor plan': 'مسقط الدور الثالث',
+  'floor 4': 'الدور الرابع',
+  'fourth floor': 'الدور الرابع',
+  '4th floor': 'الدور الرابع',
+  'floor 5': 'الدور الخامس',
+  'fifth floor': 'الدور الخامس',
+  '5th floor': 'الدور الخامس',
+  'roof': 'طابق الروف (السطح)',
+  'roof sky floor': 'طابق الروف (السطح)',
+  'roof terrace': 'تراس الروف',
+  'roof floor': 'طابق الروف',
+  'roof garden': 'حديقة الروف',
+  'roof level': 'طابق الروف',
+  'basement': 'طابق البدروم',
+  'basement level': 'طابق البدروم',
+  'penthouse': 'طابق البنتهاوس',
+  'podium': 'طابق البوديوم',
+  'mezzanine': 'طابق الميزانين',
+};
+
+const formatFloorLabel = (fKey: string, isAr: boolean, fZone?: any): string => {
+  if (!isAr) {
+    return fZone?.floorLabel || fKey;
+  }
+  if (fZone?.floorLabelAr && !fZone.floorLabelAr.toLowerCase().startsWith('floor')) {
+    return fZone.floorLabelAr;
+  }
+  const cleanKey = (fKey || '').toLowerCase().trim();
+  if (FLOOR_NAME_MAP_AR[cleanKey]) return FLOOR_NAME_MAP_AR[cleanKey];
+
+  const floorMatch = cleanKey.match(/(?:floor|level|الطابق|الدور)\s*(\d+)/i);
+  if (floorMatch) {
+    const num = floorMatch[1];
+    const arNumbers: Record<string, string> = {
+      '1': 'الأول',
+      '2': 'الثاني',
+      '3': 'الثالث',
+      '4': 'الرابع',
+      '5': 'الخامس',
+      '6': 'السادس',
+      '7': 'السابع',
+      '8': 'الثامن',
+      '9': 'التاسع',
+      '10': 'العاشر',
+    };
+    return `الدور ${arNumbers[num] || num}`;
+  }
+  if (cleanKey.includes('ground')) return 'الدور الأرضي';
+  if (cleanKey.includes('roof')) return 'طابق الروف (السطح)';
+  if (cleanKey.includes('basement')) return 'طابق البدروم';
+  if (cleanKey.includes('penthouse')) return 'طابق البنتهاوس';
+
+  return fKey;
+};
+
 export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintInspectorProps> = ({
   zones = [],
   propertyTitle,
@@ -370,6 +441,9 @@ export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintIns
   const [pan, setPan] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState<boolean>(false);
   const dragStartRef = useRef<{ x: number; y: number; panX: number; panY: number }>({ x: 0, y: 0, panX: 0, panY: 0 });
+  const touchPinchRef = useRef<{ initialDist: number; initialZoom: number } | null>(null);
+  const stageRef = useRef<HTMLDivElement | null>(null);
+  const fsStageRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -390,6 +464,22 @@ export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintIns
     return () => observer.disconnect();
   }, []);
 
+  // Lock body scroll when fullscreen or modal is open to prevent page scrolling behind
+  useEffect(() => {
+    if (isFullscreen || activeModalZone) {
+      document.documentElement.classList.add('cad-fullscreen-locked');
+      document.body.classList.add('cad-fullscreen-locked');
+      document.body.style.setProperty('overflow', 'hidden', 'important');
+      document.body.style.setProperty('touch-action', 'none', 'important');
+      return () => {
+        document.documentElement.classList.remove('cad-fullscreen-locked');
+        document.body.classList.remove('cad-fullscreen-locked');
+        document.body.style.removeProperty('overflow');
+        document.body.style.removeProperty('touch-action');
+      };
+    }
+  }, [isFullscreen, activeModalZone]);
+
   // Keyboard shortcut (Escape to exit fullscreen or modal)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -401,6 +491,88 @@ export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintIns
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [activeModalZone, isFullscreen]);
+
+  // Non-passive touch event listeners to guarantee 100% smooth touch panning and pinch-to-zoom without page scroll
+  useEffect(() => {
+    const attachStageListeners = (el: HTMLDivElement | null) => {
+      if (!el) return () => {};
+
+      let isMoving = false;
+      let startX = 0;
+      let startY = 0;
+      let initialPanX = pan.x;
+      let initialPanY = pan.y;
+
+      const onTouchStart = (e: TouchEvent) => {
+        if (e.touches.length === 1) {
+          isMoving = true;
+          setIsDragging(true);
+          const t = e.touches[0];
+          startX = t.clientX;
+          startY = t.clientY;
+          initialPanX = pan.x;
+          initialPanY = pan.y;
+          dragStartRef.current = { x: t.clientX, y: t.clientY, panX: pan.x, panY: pan.y };
+        } else if (e.touches.length === 2) {
+          const dist = Math.hypot(
+            e.touches[0].clientX - e.touches[1].clientX,
+            e.touches[0].clientY - e.touches[1].clientY
+          );
+          touchPinchRef.current = { initialDist: dist, initialZoom: zoom };
+        }
+      };
+
+      const onTouchMove = (e: TouchEvent) => {
+        if (e.cancelable) {
+          e.preventDefault();
+        }
+        e.stopPropagation();
+
+        if (e.touches.length === 1 && isMoving) {
+          const t = e.touches[0];
+          const dx = t.clientX - startX;
+          const dy = t.clientY - startY;
+          setPan({
+            x: initialPanX + dx,
+            y: initialPanY + dy,
+          });
+        } else if (e.touches.length === 2 && touchPinchRef.current) {
+          const dist = Math.hypot(
+            e.touches[0].clientX - e.touches[1].clientX,
+            e.touches[0].clientY - e.touches[1].clientY
+          );
+          const scaleFactor = dist / touchPinchRef.current.initialDist;
+          const newZoom = Math.min(2.5, Math.max(0.75, touchPinchRef.current.initialZoom * scaleFactor));
+          setZoom(newZoom);
+        }
+      };
+
+      const onTouchEnd = () => {
+        isMoving = false;
+        setIsDragging(false);
+        touchPinchRef.current = null;
+      };
+
+      el.addEventListener('touchstart', onTouchStart, { passive: false });
+      el.addEventListener('touchmove', onTouchMove, { passive: false });
+      el.addEventListener('touchend', onTouchEnd, { passive: true });
+      el.addEventListener('touchcancel', onTouchEnd, { passive: true });
+
+      return () => {
+        el.removeEventListener('touchstart', onTouchStart);
+        el.removeEventListener('touchmove', onTouchMove);
+        el.removeEventListener('touchend', onTouchEnd);
+        el.removeEventListener('touchcancel', onTouchEnd);
+      };
+    };
+
+    const cleanup1 = attachStageListeners(stageRef.current);
+    const cleanup2 = attachStageListeners(fsStageRef.current);
+    return () => {
+      cleanup1();
+      cleanup2();
+    };
+  }, [pan, zoom, isFullscreen]);
 
   // 1. Process All Zones with Dimensions, Titles, and Trades
   const processedZones = useMemo<ProcessedZone[]>(() => {
@@ -422,7 +594,7 @@ export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintIns
 
       const floorKey = parentFloorKey || z.level_label || 'Floor 1';
       const floorLabel = floorKey === 'bld_ground' ? 'Ground Floor' : floorKey === 'bld_roof' ? 'Roof' : floorKey === 'bld_basement' ? 'Basement' : floorKey;
-      const floorLabelAr = floorKey === 'bld_ground' ? 'الدور الأرضي' : floorKey === 'bld_roof' ? 'السطح' : floorKey === 'bld_basement' ? 'البدروم' : floorKey;
+      const floorLabelAr = formatFloorLabel(floorKey, true);
 
       const doorCount = sp?.openings?.filter(o => o.kind === 'door').length ?? 1;
       const windowCount = sp?.openings?.filter(o => o.kind === 'window').length ?? 1;
@@ -632,6 +804,45 @@ export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintIns
 
   const handleMouseUp = () => setIsDragging(false);
 
+  const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (e.touches.length === 1) {
+      setIsDragging(true);
+      const t = e.touches[0];
+      dragStartRef.current = { x: t.clientX, y: t.clientY, panX: pan.x, panY: pan.y };
+    } else if (e.touches.length === 2) {
+      const dist = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+      touchPinchRef.current = { initialDist: dist, initialZoom: zoom };
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (e.touches.length === 1 && isDragging) {
+      const t = e.touches[0];
+      const dx = t.clientX - dragStartRef.current.x;
+      const dy = t.clientY - dragStartRef.current.y;
+      setPan({
+        x: dragStartRef.current.panX + dx,
+        y: dragStartRef.current.panY + dy,
+      });
+    } else if (e.touches.length === 2 && touchPinchRef.current) {
+      const dist = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+      const scaleFactor = dist / touchPinchRef.current.initialDist;
+      const newZoom = Math.min(2.5, Math.max(0.75, touchPinchRef.current.initialZoom * scaleFactor));
+      setZoom(newZoom);
+    }
+  };
+
+  const handleTouchEnd = () => {
+    setIsDragging(false);
+    touchPinchRef.current = null;
+  };
+
   // When room is clicked -> open popup modal with specs
   const handleRoomClick = (zone: ProcessedZone | undefined) => {
     if (!zone) return;
@@ -666,7 +877,7 @@ export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintIns
         <svg
           viewBox="0 0 760 480"
           className="cad-vector-svg fp-building-elevation"
-          style={{ transform: `scale(${zoom}) translate(${pan.x}px, ${pan.y}px)`, transformOrigin: 'center center', direction: 'ltr' }}
+          style={{ transform: `translate3d(${pan.x}px, ${pan.y}px, 0) scale(${zoom})`, willChange: 'transform', transformOrigin: 'center center', direction: 'ltr' }}
           xmlns="http://www.w3.org/2000/svg"
         >
           <defs>
@@ -953,7 +1164,7 @@ export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintIns
         <svg
           viewBox="0 0 740 480"
           className="cad-vector-svg"
-          style={{ transform: `scale(${zoom}) translate(${pan.x}px, ${pan.y}px)`, transformOrigin: 'center center', direction: 'ltr' }}
+          style={{ transform: `translate3d(${pan.x}px, ${pan.y}px, 0) scale(${zoom})`, willChange: 'transform', transformOrigin: 'center center', direction: 'ltr' }}
           xmlns="http://www.w3.org/2000/svg"
         >
           <defs>
@@ -1208,7 +1419,7 @@ export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintIns
         viewBox={dynamicViewBox}
         preserveAspectRatio="xMidYMid meet"
         className="cad-vector-svg cad-unit-svg"
-        style={{ transform: `scale(${zoom}) translate(${pan.x}px, ${pan.y}px)`, transformOrigin: 'center center', direction: 'ltr' }}
+        style={{ transform: `translate3d(${pan.x}px, ${pan.y}px, 0) scale(${zoom})`, willChange: 'transform', transformOrigin: 'center center', direction: 'ltr' }}
         xmlns="http://www.w3.org/2000/svg"
       >
         <defs>
@@ -1487,7 +1698,7 @@ export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintIns
 
         {/* North Compass Arrow (Dynamic positioning relative to layoutBounds) */}
         <g transform={`translate(${compassX}, ${compassY})`} opacity="0.95">
-          <circle cx="14" cy="14" r="12" fill="var(--cad-stamp-bg)" stroke="var(--gold-primary)" strokeWidth="1" />
+         <circle cx="14" cy="14" r="12" fill="var(--cad-stamp-bg)" stroke="var(--gold-primary)" strokeWidth="1" />
           <polygon points="14,4 18,20 14,16 10,20" fill="var(--gold-primary)" />
           <text x="14" y="2" fontSize="7" fill="var(--gold-primary)" textAnchor="middle" fontWeight="900">N</text>
         </g>
@@ -1539,10 +1750,20 @@ export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintIns
           <span>SCALE 1:50</span>
         </div>
 
-        <div className="metrology-tag gold-tag">
+        <button
+          type="button"
+          className="metrology-tag gold-tag clickable"
+          onClick={() => {
+            const targetZone = (currentViewZones && currentViewZones.length > 0)
+              ? (currentViewZones.find(z => z.id === selectedZoneId) || currentViewZones[0])
+              : (processedZones[0] || null);
+            if (targetZone) setActiveModalZone(targetZone);
+          }}
+          title={isAr ? 'عرض المواصفات المعمارية الكاملة' : 'View full architectural specifications'}
+        >
           <Info size={12} />
           <span>{isAr ? 'انقر على أي غرفة لعرض المواصفات' : 'Click any space for full specs'}</span>
-        </div>
+        </button>
 
         {/* Fullscreen Button (Only shown in inline mode) */}
         {!inFullscreen && (
@@ -1616,7 +1837,7 @@ export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintIns
             {availableFloors.map((fKey) => {
               const isActive = activeFloorKey === fKey;
               const fZone = processedZones.find(z => z.floorKey === fKey);
-              const label = isAr ? (fZone?.floorLabelAr || fKey) : (fZone?.floorLabel || fKey);
+              const label = formatFloorLabel(fKey, isAr, fZone);
               return (
                 <button
                   key={fKey}
@@ -1694,7 +1915,7 @@ export const ArchitecturalBlueprintInspector: React.FC<ArchitecturalBlueprintIns
                 {availableFloors.map((fKey) => {
                   const isActive = activeFloorKey === fKey;
                   const fZone = processedZones.find(z => z.floorKey === fKey);
-                  const label = isAr ? (fZone?.floorLabelAr || fKey) : (fZone?.floorLabel || fKey);
+                  const label = formatFloorLabel(fKey, isAr, fZone);
                   return (
                     <button
                       key={fKey}

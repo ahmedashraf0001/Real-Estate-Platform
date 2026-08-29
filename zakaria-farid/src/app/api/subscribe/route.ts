@@ -28,7 +28,7 @@ async function getAdminClient() {
     } catch { /* Not in Cloudflare */ }
   }
 
-  if (!url || !serviceKey) return null;
+  if (!url || !serviceKey || serviceKey.startsWith('sb_secret_') || serviceKey.startsWith('placeholder')) return null;
   const { createClient } = require("@supabase/supabase-js");
   return createClient(url, serviceKey, {
     auth: { persistSession: false, autoRefreshToken: false },

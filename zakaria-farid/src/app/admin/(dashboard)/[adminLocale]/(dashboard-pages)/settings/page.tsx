@@ -19,7 +19,7 @@ export default async function AdminSettingsPage({ params }: AdminSettingsPagePro
   const { adminLocale } = await params;
 
   return (
-    <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+    <div style={{ maxWidth: '1200px', width: '100%', minWidth: 0, margin: '0 auto', boxSizing: 'border-box' }}>
       <AdminPlatformSettings adminLocale={adminLocale} />
     </div>
   );

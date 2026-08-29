@@ -12,16 +12,17 @@ import Placeholder from '@tiptap/extension-placeholder';
 import { useDropzone } from 'react-dropzone';
 import imageCompression from 'browser-image-compression';
 import { createClient } from '@/lib/supabase/client';
-import { Loader2, Save, Trash2, Upload, X, Layers, Image as ImageIcon, ChevronRight, ChevronLeft, Check, Eye, MapPin, Building2, Sparkles, FileText, PanelRightClose, PanelRightOpen, Sofa, Bed, Bath, Trees, Tag, DollarSign, Ruler, Compass, AlertCircle } from 'lucide-react';
+import { Loader2, Save, Trash2, Upload, X, Layers, Image as ImageIcon, ChevronRight, ChevronLeft, Check, Eye, MapPin, Building2, Sparkles, FileText, PanelRightClose, PanelRightOpen, Sofa, Bed, Bath, Trees, Tag, DollarSign, Ruler, Compass, AlertCircle, Video as VideoIcon, Film, Play, Plus } from 'lucide-react';
 import CADBlueprintBuilder from './CADBlueprintBuilder';
 import ZoneInspector from './ZoneInspector';
 import DynamicMapPicker from './DynamicMapPicker';
+import LuxuryAmbientVideoPlayer from '@/components/video/LuxuryAmbientVideoPlayer';
 import styles from './AdminPropertyForm.module.css';
 import { saveProperty } from '@/app/actions/properties';
 import { getZoneTemplateLabels, getTradeTemplateLabels, getZoneBadge, buildZoneInstances } from '@/lib/layering';
 import { FALLBACK_ZONE_TITLES, fallbackMetricFor } from '@/lib/layering/zoneMetrics';
 import type { ZoneInstance } from '@/lib/layering';
-import type { Property } from '@/lib/supabase/types';
+import type { Property, PropertyVideo } from '@/lib/supabase/types';
 
 
 const TRADE_STATUS_MAP: Record<string, { en: string; ar: string }> = {
@@ -312,6 +313,82 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
   const [previewUrls, setPreviewUrls] = useState<string[]>(
     property?.property_images?.map((img) => img.url) ?? []
   );
+  const [videos, setVideos] = useState<PropertyVideo[]>(() => {
+    if (property?.videos && Array.isArray(property.videos)) {
+      return property.videos;
+    }
+    if (property?.video_url) {
+      return [{
+        id: 'v-init',
+        url: property.video_url,
+        title_en: 'Property Walkthrough',
+        title_ar: 'جولة العقار',
+        category: 'tour',
+      }];
+    }
+    return [];
+  });
+  const [uploadingVideo, setUploadingVideo] = useState(false);
+  const [newVideoUrl, setNewVideoUrl] = useState('');
+  const [newVideoTitleEn, setNewVideoTitleEn] = useState('');
+  const [newVideoTitleAr, setNewVideoTitleAr] = useState('');
+  const [activeVideoPreview, setActiveVideoPreview] = useState<PropertyVideo | null>(null);
+
+  const handleAddVideo = () => {
+    if (!newVideoUrl.trim()) {
+      toast.error(isAr ? 'يرجى إدخال رابط الفيديو' : 'Please enter a valid video URL');
+      return;
+    }
+    const newVid: PropertyVideo = {
+      id: `vid-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      url: newVideoUrl.trim(),
+      title_en: newVideoTitleEn.trim() || 'Property Video Tour',
+      title_ar: newVideoTitleAr.trim() || 'جولة فيديو داخل العقار',
+      category: 'tour',
+    };
+    setVideos((prev) => [...prev, newVid]);
+    setNewVideoUrl('');
+    setNewVideoTitleEn('');
+    setNewVideoTitleAr('');
+    toast.success(isAr ? 'تمت إضافة جولة الفيديو بنجاح!' : 'Video tour added successfully!');
+  };
+
+  const handleVideoFileUpload = async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    const file = files[0];
+    setUploadingVideo(true);
+    try {
+      const supabase = createClient();
+      const filename = `video-${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
+      const { error } = await supabase.storage.from('property-media').upload(`videos/${filename}`, file, {
+        cacheControl: '3600',
+        upsert: false,
+      });
+      if (error) {
+        throw error;
+      }
+      const { data: publicUrlData } = supabase.storage.from('property-media').getPublicUrl(`videos/${filename}`);
+      const vidUrl = publicUrlData.publicUrl;
+      const newVid: PropertyVideo = {
+        id: `vid-${Date.now()}`,
+        url: vidUrl,
+        title_en: file.name.replace(/\.[^/.]+$/, ''),
+        title_ar: 'فيديو معاينة',
+        category: 'tour',
+      };
+      setVideos((prev) => [...prev, newVid]);
+      toast.success(isAr ? 'تم رفع الفيديو بنجاح!' : 'Video uploaded successfully!');
+    } catch (err: any) {
+      console.warn('Video upload notice:', err);
+      toast.error(isAr ? 'تعذر الرفع المباشر إلى السيرفر. يمكنك لصق رابط الفيديو المباشر في الخانة أدناه.' : 'Direct storage upload unavailable. Please paste the direct video URL below.');
+    } finally {
+      setUploadingVideo(false);
+    }
+  };
+
+  const removeVideo = (vidId: string) => {
+    setVideos((prev) => prev.filter((v) => v.id !== vidId));
+  };
   const [amenities, setAmenities] = useState<string[]>(
     property?.property_amenities?.map((a) => a.amenity_en) ?? []
   );
@@ -621,6 +698,8 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
         description_en: editorEn?.getHTML() ?? '',
         description_ar: editorAr?.getHTML() ?? '',
         spec_layers: zoneInstances,
+        videos: videos,
+        video_url: videos[0]?.url || null,
       };
 
       const payload = isEditing && property 
@@ -1209,6 +1288,195 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
                 </div>
               </div>
             </div>
+          </div>
+
+          {/* Full-Width Middle Section: Property Video Tours */}
+          <div className="step2-card" style={{ width: '100%' }}>
+            <div className="step2-card-head">
+              <div className="step2-card-icon">
+                <Film size={16} />
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flex: 1 }}>
+                <h2 className="step2-card-title">
+                  {isAr ? 'فيديوهات الجولة داخل العقار (Video Tours)' : 'Property Video Tours'}
+                </h2>
+                <span style={{ fontSize: '11px', fontWeight: 700, color: '#DDA752', background: 'rgba(221,167,82,0.12)', padding: '2px 8px', borderRadius: '6px' }}>
+                  {videos.length} {isAr ? 'فيديوهات مضافة' : 'Videos Attached'}
+                </span>
+              </div>
+            </div>
+
+            {/* Video Input & Upload Controls */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 2fr) minmax(0, 1.2fr) minmax(0, 1.2fr)', gap: 10 }}>
+                {/* Video URL */}
+                <input
+                  type="url"
+                  placeholder={isAr ? 'رابط جولة الفيديو المباشر (MP4 / WebM / CDN)...' : 'Direct Video Tour URL (MP4 / WebM / CDN)...'}
+                  value={newVideoUrl}
+                  onChange={(e) => setNewVideoUrl(e.target.value)}
+                  className={styles.input}
+                  dir="ltr"
+                  style={{ height: 38, fontSize: '0.82rem' }}
+                />
+
+                {/* English Title */}
+                <input
+                  type="text"
+                  placeholder="Title (English, e.g. Video Tour)..."
+                  value={newVideoTitleEn}
+                  onChange={(e) => setNewVideoTitleEn(e.target.value)}
+                  className={styles.input}
+                  style={{ height: 38, fontSize: '0.82rem' }}
+                />
+
+                {/* Arabic Title */}
+                <input
+                  type="text"
+                  placeholder="عنوان الفيديو (مثال: جولة فيديو داخل العقار)..."
+                  value={newVideoTitleAr}
+                  onChange={(e) => setNewVideoTitleAr(e.target.value)}
+                  className={styles.input}
+                  dir="rtl"
+                  style={{ height: 38, fontSize: '0.82rem' }}
+                />
+              </div>
+
+              {/* Action Buttons */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <button
+                    type="button"
+                    onClick={handleAddVideo}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 6,
+                      background: 'linear-gradient(135deg, #E5B869 0%, #C5A059 100%)',
+                      color: '#0A0C10',
+                      border: 'none',
+                      padding: '8px 16px',
+                      borderRadius: 8,
+                      fontSize: '0.8rem',
+                      fontWeight: 800,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <Plus size={14} strokeWidth={2.5} />
+                    <span>{isAr ? 'إضافة جولة الفيديو' : 'Add Video Tour'}</span>
+                  </button>
+
+                  <label
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 6,
+                      background: 'rgba(255,255,255,0.05)',
+                      border: '1px solid rgba(221,167,82,0.25)',
+                      color: '#DDA752',
+                      padding: '8px 14px',
+                      borderRadius: 8,
+                      fontSize: '0.8rem',
+                      fontWeight: 700,
+                      cursor: uploadingVideo ? 'not-allowed' : 'pointer',
+                    }}
+                  >
+                    {uploadingVideo ? <Loader2 size={14} className={styles.spinner} /> : <Upload size={14} />}
+                    <span>{uploadingVideo ? (isAr ? 'جاري الرفع...' : 'Uploading...') : (isAr ? 'رفع ملف فيديو' : 'Upload Video File')}</span>
+                    <input
+                      type="file"
+                      accept="video/mp4,video/webm,video/quicktime"
+                      hidden
+                      disabled={uploadingVideo}
+                      onChange={(e) => handleVideoFileUpload(e.target.files)}
+                    />
+                  </label>
+                </div>
+
+                <span style={{ fontSize: '11.5px', color: 'rgba(255,255,255,0.45)' }}>
+                  {isAr ? 'يدعم مشغل الفيديو الخاص الإضاءة المحيطية التفاعلية Ambient Mode تلقائياً' : 'Videos feature dynamic real-time ambient lighting projection on the public portal'}
+                </span>
+              </div>
+            </div>
+
+            {/* Uploaded Videos List */}
+            {videos.length > 0 && (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 12, marginTop: 6 }}>
+                {videos.map((vid) => (
+                  <div
+                    key={vid.id}
+                    style={{
+                      background: 'rgba(10, 14, 24, 0.85)',
+                      border: '1px solid rgba(221, 167, 82, 0.22)',
+                      borderRadius: 12,
+                      padding: '12px 14px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: 8,
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <span
+                        style={{
+                          fontSize: '10.5px',
+                          fontWeight: 800,
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.06em',
+                          color: '#DDA752',
+                          background: 'rgba(221, 167, 82, 0.12)',
+                          padding: '2px 6px',
+                          borderRadius: 4,
+                        }}
+                      >
+                        🎬 {isAr ? 'جولة فيديو' : 'Video Tour'}
+                      </span>
+
+                      <button
+                        type="button"
+                        onClick={() => removeVideo(vid.id)}
+                        className={styles.tagRemove}
+                        style={{ color: '#EF4444' }}
+                        title={isAr ? 'حذف الفيديو' : 'Remove video'}
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                      <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#FFFDF5', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {isAr ? (vid.title_ar || vid.title_en) : (vid.title_en || vid.title_ar)}
+                      </span>
+                      <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} dir="ltr">
+                        {vid.url}
+                      </span>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => setActiveVideoPreview(vid)}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: 6,
+                        background: 'rgba(221, 167, 82, 0.14)',
+                        border: '1px solid rgba(221, 167, 82, 0.3)',
+                        color: '#DDA752',
+                        borderRadius: 6,
+                        padding: '6px 10px',
+                        fontSize: '0.75rem',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        marginTop: 4,
+                      }}
+                    >
+                      <Play size={12} fill="#DDA752" />
+                      <span>{isAr ? 'معاينة بمشغل الإضاءة المحيطية' : 'Test Ambient Player'}</span>
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Full-Width Bottom Section: Location & Interactive Map */}
@@ -1933,6 +2201,72 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── Luxury Ambient Video Player Test Modal ─── */}
+      {activeVideoPreview && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 9999,
+            background: 'rgba(3, 5, 8, 0.92)',
+            backdropFilter: 'blur(16px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '24px',
+            boxSizing: 'border-box',
+          }}
+          onClick={() => setActiveVideoPreview(null)}
+        >
+          <div
+            style={{
+              position: 'relative',
+              width: '100%',
+              maxWidth: '860px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 16,
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <Film size={18} color="#DDA752" />
+                <span style={{ fontSize: '1rem', fontWeight: 800, color: '#FFFDF5' }}>
+                  {isAr ? (activeVideoPreview.title_ar || activeVideoPreview.title_en) : (activeVideoPreview.title_en || activeVideoPreview.title_ar)}
+                </span>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setActiveVideoPreview(null)}
+                style={{
+                  background: 'rgba(255, 255, 255, 0.08)',
+                  border: '1px solid rgba(221, 167, 82, 0.25)',
+                  color: '#FFFDF5',
+                  width: 34,
+                  height: 34,
+                  borderRadius: '50%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                }}
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            {/* Custom Luxury Ambient Video Player */}
+            <LuxuryAmbientVideoPlayer
+              video={activeVideoPreview}
+              autoPlay={true}
+              isAr={isAr}
+            />
           </div>
         </div>
       )}

@@ -1,6 +1,7 @@
 .adminWrapper {
   display: flex;
-  width: 100vw;
+  width: 100%;
+  max-width: 100%;
   height: 100vh;
   overflow: hidden;
   background: #080A0F;
@@ -8,6 +9,7 @@
   font-family: 'ThmanyahSans', 'Cairo', 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  box-sizing: border-box;
 }
 
 [dir="rtl"] .adminWrapper {
@@ -22,7 +24,11 @@
 .adminMain {
   flex: 1;
   height: 100%;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
   overflow-y: auto;
+  overflow-x: hidden;
   padding: 28px 36px;
   display: flex;
   flex-direction: column;
@@ -53,15 +59,17 @@
 .adminContainer {
   max-width: 1360px;
   width: 100%;
+  min-width: 0;
   margin: 0 auto;
   flex: 1;
   display: flex;
   flex-direction: column;
+  box-sizing: border-box;
 }
 
 @media (max-width: 1024px) {
   .adminMain {
-    padding: 24px;
+    padding: 20px;
   }
 }
 
@@ -70,11 +78,23 @@
     flex-direction: column;
     height: auto;
     min-height: 100vh;
-    overflow: visible;
+    width: 100%;
+    max-width: 100vw;
+    overflow-x: hidden;
+    overflow-y: auto;
   }
   .adminMain {
-    padding: 16px;
+    padding: 12px;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    overflow-x: hidden;
     overflow-y: visible;
+  }
+  .adminContainer {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
   }
 }
 

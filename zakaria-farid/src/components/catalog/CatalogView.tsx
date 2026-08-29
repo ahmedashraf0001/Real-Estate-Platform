@@ -11,6 +11,7 @@ import { adaptProperties } from '@/lib/utils/propertyAdapter';
 import { Property } from '@/types';
 import { useFavorites } from '@/lib/context/FavoritesContext';
 import { usePlatformSettings } from '@/lib/hooks/usePlatformSettings';
+import { getDynamicDestinationPills, identifyPropertyDestinationKey } from '@/lib/utils/dynamicLocations';
 import {
   SlidersHorizontal,
   ChevronDown,
@@ -63,26 +64,6 @@ const SORT_OPTIONS: { id: SortOption; label: string; shortLabel: string; labelAr
   { id: 'lowest', label: 'Lowest Guide Price', shortLabel: 'Lowest Price', labelAr: 'السعر: من الأقل للأعلى', shortLabelAr: 'السعر الأقل' },
   { id: 'newest', label: 'Newest Delivery Year', shortLabel: 'Newest Delivery', labelAr: 'سنة الاستلام: الأحدث', shortLabelAr: 'الأحدث تسليماً' },
   { id: 'largest', label: 'Largest Built-Up Area', shortLabel: 'Largest Area', labelAr: 'المساحة: الأكبر مساحة', shortLabelAr: 'الأكبر مساحة' },
-];
-
-const DESTINATION_PILLS = [
-  { id: 'All', label: 'All Destinations', labelAr: 'جميع الوجهات' },
-  { id: 'New Cairo', label: 'New Cairo', labelAr: 'القاهرة الجديدة' },
-  { id: 'Sheikh Zayed', label: 'Sheikh Zayed', labelAr: 'الشيخ زايد' },
-  { id: 'North Coast', label: 'North Coast (Sahel)', labelAr: 'الساحل الشمالي' },
-  { id: 'Gouna', label: 'El Gouna', labelAr: 'الجونة' },
-  { id: 'Ain Sokhna', label: 'Ain Sokhna', labelAr: 'العين السخنة' },
-  { id: 'Madinaty', label: 'Madinaty', labelAr: 'مدينتي' },
-];
-
-const LOCATION_FILTER_OPTIONS = [
-  { value: 'All', label: 'All Destinations', shortLabel: 'All Cities', labelAr: 'جميع الوجهات والمدن', shortLabelAr: 'جميع المدن' },
-  { value: 'New Cairo', label: 'New Cairo (Fifth Settlement)', shortLabel: 'New Cairo', labelAr: 'القاهرة الجديدة (التجمع الخامس)', shortLabelAr: 'القاهرة الجديدة' },
-  { value: 'Sheikh Zayed', label: 'Sheikh Zayed (October)', shortLabel: 'Sheikh Zayed', labelAr: 'الشيخ زايد (٦ أكتوبر)', shortLabelAr: 'الشيخ زايد' },
-  { value: 'North Coast', label: 'North Coast (Sahel)', shortLabel: 'North Coast', labelAr: 'الساحل الشمالي (سيدي عبد الرحمن)', shortLabelAr: 'الساحل الشمالي' },
-  { value: 'Ain Sokhna', label: 'Ain Sokhna (Red Sea)', shortLabel: 'Ain Sokhna', labelAr: 'العين السخنة (البحر الأحمر)', shortLabelAr: 'العين السخنة' },
-  { value: 'Gouna', label: 'El Gouna (Lagoon)', shortLabel: 'El Gouna', labelAr: 'الجونة (البحيرات واللاجون)', shortLabelAr: 'الجونة' },
-  { value: 'Madinaty', label: 'Madinaty (East Cairo)', shortLabel: 'Madinaty', labelAr: 'مدينتي (شرق القاهرة)', shortLabelAr: 'مدينتي' },
 ];
 
 const TYPE_FILTER_OPTIONS = [
@@ -141,9 +122,26 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
   const onOpenInquiry = propOnOpenInquiry || ((title?: string) => {
     window.location.href = 'https://wa.me/201009998888?text=' + encodeURIComponent('Hello, I am inquiring about ' + (title || 'sovereign acquisitions'));
   });
+
   // Use server-passed real DB properties; fall back to adapted FALLBACK_PROPERTIES
   const adaptedFallback = React.useMemo(() => adaptProperties(FALLBACK_PROPERTIES, locale as 'en' | 'ar'), [locale]);
   const allPropertiesList: Property[] = (propProperties && propProperties.length > 0) ? (propProperties as Property[]) : adaptedFallback;
+
+  // Dynamically compute destination pills and filter options directly from active database properties
+  const dynamicDestinationPills = useMemo(() => {
+    return getDynamicDestinationPills(allPropertiesList);
+  }, [allPropertiesList]);
+
+  const dynamicLocationFilterOptions = useMemo(() => {
+    return dynamicDestinationPills.map((d) => ({
+      value: d.id,
+      label: d.id === 'All' ? 'All Destinations' : d.label,
+      shortLabel: d.shortLabel || d.label,
+      labelAr: d.id === 'All' ? 'جميع الوجهات والمدن' : d.labelAr,
+      shortLabelAr: d.shortLabelAr || d.labelAr,
+      count: d.count
+    }));
+  }, [dynamicDestinationPills]);
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [searchQuery, setSearchQuery] = useState('');
   const [location, setLocation] = useState(initialFilters?.location || 'All');
@@ -314,9 +312,25 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
 
       // Location Filter
       if (location !== 'All') {
+        const destKey = identifyPropertyDestinationKey(p).toLowerCase();
+        const destKeyNormalized = destKey.replace(/[-_]/g, ' ');
+        const locLower = location.toLowerCase();
+        const locNormalized = locLower.replace(/[-_]/g, ' ');
+
         const locationMatches =
-          (p.district || '').toLowerCase().includes(location.toLowerCase()) ||
-          (p.location || '').toLowerCase().includes(location.toLowerCase());
+          (p.district || '').toLowerCase().includes(locLower) ||
+          (p.district || '').toLowerCase().includes(locNormalized) ||
+          (p.location || '').toLowerCase().includes(locLower) ||
+          (p.location || '').toLowerCase().includes(locNormalized) ||
+          ((p as any).city_en || '').toLowerCase().includes(locLower) ||
+          ((p as any).city_ar || '').toLowerCase().includes(locLower) ||
+          ((p as any).district_ar || '').toLowerCase().includes(locLower) ||
+          destKey.includes(locLower) ||
+          destKey.includes(locNormalized) ||
+          destKeyNormalized.includes(locLower) ||
+          destKeyNormalized.includes(locNormalized) ||
+          locLower.includes(destKey) ||
+          locNormalized.includes(destKeyNormalized);
         if (!locationMatches) return false;
       }
 
@@ -423,7 +437,7 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.05 }}
           >
-            {DESTINATION_PILLS.map((dest) => {
+            {dynamicDestinationPills.map((dest) => {
               const isActive = location === dest.id || (dest.id === 'All' && location === 'All');
               return (
                 <button
@@ -526,14 +540,28 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
             <div className={`omnibar-slots-group ${isMobileFiltersOpen ? 'sheet-open' : ''}`}>
               <div className="mobile-sheet-head">
                 <span className="mobile-sheet-title">{isAr ? 'الفلاتر' : 'Filters'}</span>
-                <button
-                  type="button"
-                  className="mobile-sheet-close"
-                  onClick={() => setIsMobileFiltersOpen(false)}
-                  aria-label={isAr ? 'إغلاق' : 'Close'}
-                >
-                  <X size={18} />
-                </button>
+                <div className="mobile-sheet-head-actions">
+                  <button
+                    className={`omnibar-filter-btn mobile-head-filter-btn ${isAdvancedModalOpen ? 'active' : ''} ${(selectedDelivery !== 'All' || selectedAmenity !== 'All') ? 'has-extra-filters' : ''}`}
+                    title={isAr ? "الفلاتر المعمارية المتقدمة" : "Advanced Architectural Filters"}
+                    onClick={() => setIsAdvancedModalOpen(true)}
+                    type="button"
+                    aria-label={isAr ? 'الفلاتر المتقدمة' : 'Advanced Filters'}
+                  >
+                    <SlidersHorizontal size={16} />
+                    {(selectedDelivery !== 'All' || selectedAmenity !== 'All') && (
+                      <span className="omnibar-filter-badge" />
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    className="mobile-sheet-close"
+                    onClick={() => setIsMobileFiltersOpen(false)}
+                    aria-label={isAr ? 'إغلاق' : 'Close'}
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
               </div>
 
             <div className="omnibar-divider" />
@@ -552,7 +580,7 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
                   <MapPin size={15} className="slot-icon" />
                   <span className="trigger-value">
                     {(() => {
-                      const opt = LOCATION_FILTER_OPTIONS.find((o) => o.value === location);
+                      const opt = dynamicLocationFilterOptions.find((o) => o.value === location);
                       return opt ? (isAr ? opt.shortLabelAr : opt.shortLabel) : (isAr ? 'جميع المدن' : 'All Cities');
                     })()}
                   </span>
@@ -570,7 +598,7 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
                     exit={{ opacity: 0, y: dropdownPlacement === 'up' ? -8 : 8, scale: 0.96 }}
                     transition={{ duration: 0.15, ease: 'easeOut' }}
                   >
-                    {LOCATION_FILTER_OPTIONS.map((opt: any) => (
+                    {dynamicLocationFilterOptions.map((opt: any) => (
                       <button
                         key={opt.value}
                         type="button"
@@ -811,7 +839,7 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
                 {location !== 'All' && (
                   <span className="filter-tag">
                     <MapPin size={12} className="tag-gold-icon" />
-                    <span className="tag-text">{isAr ? (LOCATION_FILTER_OPTIONS.find(o => o.value === location)?.shortLabelAr || location) : location}</span>
+                    <span className="tag-text">{isAr ? (dynamicLocationFilterOptions.find(o => o.value === location)?.shortLabelAr || location) : location}</span>
                     <button onClick={() => setLocation('All')} className="tag-remove-btn" title={isAr ? "إزالة فلتر الموقع" : "Remove location filter"}>
                       <X size={12} />
                     </button>
@@ -2474,6 +2502,52 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
             display: flex;
             align-items: center;
             justify-content: space-between;
+            gap: 12px;
+            width: 100%;
+            margin-bottom: 0.25rem;
+          }
+
+          .mobile-sheet-head-actions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+          }
+
+          .mobile-head-filter-btn {
+            width: 36px !important;
+            height: 36px !important;
+            min-width: 36px !important;
+            border-radius: 50% !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            padding: 0 !important;
+            background: rgba(229, 184, 105, 0.14) !important;
+            border: 1px solid rgba(229, 184, 105, 0.35) !important;
+            color: #E5B869 !important;
+            cursor: pointer !important;
+            transition: all 0.2s ease !important;
+            position: relative !important;
+          }
+
+          .mobile-head-filter-btn.active {
+            background: #E5B869 !important;
+            color: #0A0C10 !important;
+          }
+
+          [data-theme="light"] .mobile-head-filter-btn {
+            background: rgba(184, 147, 74, 0.12) !important;
+            border-color: rgba(140, 104, 38, 0.3) !important;
+            color: #8C6826 !important;
+          }
+
+          [data-theme="light"] .mobile-head-filter-btn.active {
+            background: #B8860B !important;
+            color: #FFFFFF !important;
+          }
+
+          .omnibar-slots-group.sheet-open .omnibar-actions-slot {
+            display: none !important;
           }
 
           .mobile-sheet-title {

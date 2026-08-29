@@ -40,8 +40,7 @@ async function getAdminClient() {
     }
   }
 
-  if (!url || !serviceKey) {
-    console.warn('[AdminClient] SUPABASE_SERVICE_ROLE_KEY or NEXT_PUBLIC_SUPABASE_URL missing!');
+  if (!url || !serviceKey || serviceKey.startsWith('sb_secret_') || serviceKey.startsWith('placeholder')) {
     return null;
   }
 

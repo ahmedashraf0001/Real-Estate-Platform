@@ -14,43 +14,40 @@ import {
   ShieldCheck, 
   RefreshCw,
   Phone,
-  PhoneCall,
   Mail,
   MessageCircle,
   MapPin,
-  Zap,
-  Key,
-  Radio,
-  Send,
-  ShieldAlert,
   FileText,
   BookOpen,
   Quote,
   Award,
-  ExternalLink,
   Layers,
-  Compass
+  Compass,
+  Home,
+  LayoutTemplate,
+  CheckSquare
 } from 'lucide-react';
-import Link from 'next/link';
 import { 
   MarketDistrictConfig, 
   PlatformDisplaySettings, 
   PlatformContactSettings,
-  PlatformWhatsAppAutomationSettings,
+  PlatformHomeSettings,
   PlatformAboutSettings,
   getStoredPlatformSettings, 
   saveStoredPlatformSettings, 
   DEFAULT_PLATFORM_SETTINGS, 
   DEFAULT_MARKET_DISTRICTS,
-  DEFAULT_WHATSAPP_AUTOMATION_SETTINGS,
-  DEFAULT_ABOUT_SETTINGS
+  DEFAULT_HOME_SETTINGS,
+  DEFAULT_ABOUT_SETTINGS,
+  DEFAULT_CONTACT_SETTINGS
 } from '@/lib/services/marketIntelligence';
+import { formatDisplayPhoneNumber } from '@/lib/utils/formatPhone';
 
 interface AdminPlatformSettingsProps {
   adminLocale: string;
 }
 
-type TabKey = 'radar' | 'contact' | 'whatsapp' | 'about';
+type TabKey = 'radar' | 'home' | 'about' | 'contact';
 
 export default function AdminPlatformSettings({ adminLocale }: AdminPlatformSettingsProps) {
   const isAr = adminLocale === 'ar';
@@ -71,8 +68,6 @@ export default function AdminPlatformSettings({ adminLocale }: AdminPlatformSett
     isEnabled: true
   });
   const [isAddingNew, setIsAddingNew] = useState(false);
-  const [isTestingDispatch, setIsTestingDispatch] = useState(false);
-  const [testDispatchResult, setTestDispatchResult] = useState<{ success: boolean; message: string } | null>(null);
 
   useEffect(() => {
     setSettings(getStoredPlatformSettings());
@@ -84,44 +79,8 @@ export default function AdminPlatformSettings({ adminLocale }: AdminPlatformSett
     setTimeout(() => setSavedSuccess(false), 2500);
   };
 
-  const handleTestWhatsAppDispatch = async () => {
-    setIsTestingDispatch(true);
-    setTestDispatchResult(null);
-    try {
-      const res = await fetch('/api/notifications/test', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          config: settings.whatsappAutomation || DEFAULT_WHATSAPP_AUTOMATION_SETTINGS,
-          phone: settings.whatsappAutomation?.faridAlertPhone || '+201009970776',
-        }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        setTestDispatchResult({
-          success: true,
-          message: isAr 
-            ? `تم إرسال الإشعار التجريبي بنجاح عبر (${data.method}) إلى ${settings.whatsappAutomation?.faridAlertPhone || '+201009970776'}`
-            : `Test WhatsApp notification dispatched successfully via (${data.method}) to ${settings.whatsappAutomation?.faridAlertPhone || '+201009970776'}`
-        });
-      } else {
-        setTestDispatchResult({
-          success: false,
-          message: isAr ? `فشل الإرسال: ${data.error || 'يرجى مراجعة بيانات الاعتماد'}` : `Dispatch failed: ${data.error || 'Please check API credentials'}`
-        });
-      }
-    } catch (err: any) {
-      setTestDispatchResult({
-        success: false,
-        message: err.message || 'Network error while testing dispatch',
-      });
-    } finally {
-      setIsTestingDispatch(false);
-    }
-  };
-
   const handleResetDefaults = () => {
-    if (confirm(isAr ? 'هل تريد استعادة الإعدادات الافتراضية؟' : 'Reset all settings to system defaults?')) {
+    if (confirm(isAr ? 'هل أنت متأكد من استعادة كافة الإعدادات والنصوص الافتراضية؟' : 'Are you sure you want to restore all factory default platform settings and editorials?')) {
       setSettings(DEFAULT_PLATFORM_SETTINGS);
       saveStoredPlatformSettings(DEFAULT_PLATFORM_SETTINGS);
       setSavedSuccess(true);
@@ -129,80 +88,57 @@ export default function AdminPlatformSettings({ adminLocale }: AdminPlatformSett
     }
   };
 
-  const updateDistrict = (id: string, updates: Partial<MarketDistrictConfig>) => {
+  // District mutation helpers
+  const handleToggleDistrict = (id: string) => {
     setSettings(prev => ({
       ...prev,
-      marketDistricts: prev.marketDistricts.map(d => d.id === id ? { ...d, ...updates } : d)
+      marketDistricts: prev.marketDistricts.map(d => 
+        d.id === id ? { ...d, isEnabled: !d.isEnabled } : d
+      )
     }));
   };
 
-  const toggleDistrictEnabled = (id: string) => {
-    setSettings(prev => {
-      const next = {
-        ...prev,
-        marketDistricts: prev.marketDistricts.map(d => d.id === id ? { ...d, isEnabled: !d.isEnabled } : d)
-      };
-      saveStoredPlatformSettings(next);
-      return next;
-    });
+  const handleDistrictChange = (id: string, field: keyof MarketDistrictConfig, value: any) => {
+    setSettings(prev => ({
+      ...prev,
+      marketDistricts: prev.marketDistricts.map(d => 
+        d.id === id ? { ...d, [field]: value } : d
+      )
+    }));
   };
 
-  const deleteDistrict = (id: string) => {
-    setSettings(prev => {
-      const next = {
-        ...prev,
-        marketDistricts: prev.marketDistricts.filter(d => d.id !== id)
-      };
-      saveStoredPlatformSettings(next);
-      return next;
-    });
+  const handleDeleteDistrict = (id: string) => {
+    setSettings(prev => ({
+      ...prev,
+      marketDistricts: prev.marketDistricts.filter(d => d.id !== id)
+    }));
   };
 
-  const handleToggleAboutSection = (key: keyof PlatformAboutSettings, value: boolean) => {
-    setSettings(prev => {
-      const next = {
-        ...prev,
-        about: {
-          ...(prev.about || DEFAULT_ABOUT_SETTINGS),
-          [key]: value
-        }
-      };
-      saveStoredPlatformSettings(next);
-      return next;
-    });
-  };
-
-  const handleAddNewDistrict = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newDistrict.district) return;
-    const id = newDistrict.district.toLowerCase().replace(/[^a-z0-9]/g, '-');
+  const handleAddDistrict = () => {
+    if (!newDistrict.district || !newDistrict.districtAr) return;
+    const newId = (newDistrict.district || 'district').toLowerCase().replace(/[^a-z0-9]+/g, '-');
     const created: MarketDistrictConfig = {
-      id,
+      id: newId,
       rank: String(settings.marketDistricts.length + 1).padStart(2, '0'),
-      district: newDistrict.district || 'New District',
-      districtAr: newDistrict.districtAr || newDistrict.district || 'منطقة جديدة',
-      subDistrict: newDistrict.district || '',
-      subDistrictAr: newDistrict.districtAr || '',
-      category: newDistrict.category || 'Prime District',
-      categoryAr: newDistrict.categoryAr || 'منطقة راقية',
-      pricePerSqm: Number(newDistrict.pricePerSqm) || 40000,
-      medianTotal: newDistrict.medianTotal || '30.0M EGP',
-      medianTotalAr: newDistrict.medianTotalAr || '٣٠.٠ مليون ج.م',
+      district: newDistrict.district || '',
+      districtAr: newDistrict.districtAr || '',
+      subDistrict: newDistrict.subDistrict || '',
+      subDistrictAr: newDistrict.subDistrictAr || '',
+      category: newDistrict.category || 'Prime Sector',
+      categoryAr: newDistrict.categoryAr || 'قطاع متميز',
+      pricePerSqm: Number(newDistrict.pricePerSqm) || 30000,
+      medianTotal: newDistrict.medianTotal || '25.0M EGP',
+      medianTotalAr: newDistrict.medianTotalAr || '٢٥.٠ مليون ج.م',
       fiveYearGain: newDistrict.fiveYearGain || '+50.0%',
-      historical5Yr: [20, 25, 30, 35, 40],
-      insight: newDistrict.insight || 'High liquidity and steady appreciation.',
-      insightAr: newDistrict.insightAr || 'عائد استثماري وسيولة مرتفعة.',
+      historical5Yr: [20, 24, 28, 33, 39],
+      insight: newDistrict.insight || '',
+      insightAr: newDistrict.insightAr || '',
       isEnabled: true
     };
-    setSettings(prev => {
-      const next = {
-        ...prev,
-        marketDistricts: [...prev.marketDistricts, created]
-      };
-      saveStoredPlatformSettings(next);
-      return next;
-    });
-    setIsAddingNew(false);
+    setSettings(prev => ({
+      ...prev,
+      marketDistricts: [...prev.marketDistricts, created]
+    }));
     setNewDistrict({
       district: '',
       districtAr: '',
@@ -216,1391 +152,1789 @@ export default function AdminPlatformSettings({ adminLocale }: AdminPlatformSett
       insightAr: '',
       isEnabled: true
     });
+    setIsAddingNew(false);
   };
 
-  const tabs: { key: TabKey; labelEn: string; labelAr: string; icon: any }[] = [
-    { key: 'radar', labelEn: 'Market Valuation Radar', labelAr: 'مؤشر أسعار المتر والمناطق', icon: BarChart3 },
-    { key: 'contact', labelEn: 'Public Advisory Desk', labelAr: 'بيانات التواصل والمقر', icon: PhoneCall },
-    { key: 'whatsapp', labelEn: 'WhatsApp Lead Dispatch', labelAr: 'محرك إشعارات الواتساب', icon: Zap },
-    { key: 'about', labelEn: 'About Page Editorial CMS', labelAr: 'محتوى صفحة من نحن', icon: BookOpen },
-  ];
+  // Helper for Home editorial changes
+  const updateHome = (field: keyof PlatformHomeSettings, value: any) => {
+    setSettings(prev => ({
+      ...prev,
+      home: {
+        ...(prev.home || DEFAULT_HOME_SETTINGS),
+        [field]: value
+      }
+    }));
+  };
+
+  // Helper for About editorial changes
+  const updateAbout = (field: keyof PlatformAboutSettings, value: any) => {
+    setSettings(prev => ({
+      ...prev,
+      about: {
+        ...(prev.about || DEFAULT_ABOUT_SETTINGS),
+        [field]: value
+      }
+    }));
+  };
+
+  // Helper for Contact changes
+  const updateContact = (field: keyof PlatformContactSettings, value: string) => {
+    setSettings(prev => ({
+      ...prev,
+      contact: {
+        ...(prev.contact || DEFAULT_CONTACT_SETTINGS),
+        [field]: value
+      }
+    }));
+  };
+
+  const home = settings.home || DEFAULT_HOME_SETTINGS;
+  const about = settings.about || DEFAULT_ABOUT_SETTINGS;
+  const contact = settings.contact || DEFAULT_CONTACT_SETTINGS;
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', fontFamily: "var(--font-sans, 'ThmanyahSans', 'Cairo', -apple-system, BlinkMacSystemFont, sans-serif)" }} dir={isAr ? 'rtl' : 'ltr'}>
-      
-      {/* ─── 1. Prestige Settings Header ─── */}
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        flexWrap: 'wrap',
-        gap: '16px',
-        background: 'rgba(16, 20, 29, 0.85)',
-        backdropFilter: 'blur(20px)',
-        WebkitBackdropFilter: 'blur(20px)',
-        padding: '20px 24px',
-        borderRadius: '16px',
-        border: '1px solid rgba(255, 255, 255, 0.08)',
-        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)'
-      }}>
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-            <h1 style={{ fontSize: '20px', fontWeight: 800, margin: 0, color: '#FFFFFF', letterSpacing: '-0.02em' }}>
-              {isAr ? 'إعدادات المنصة ومؤشرات السوق' : 'Platform & Market Radar Settings'}
-            </h1>
-            <span style={{
-              fontSize: '11px',
-              fontWeight: 800,
-              padding: '3px 10px',
-              borderRadius: '9999px',
-              background: 'rgba(229, 184, 105, 0.12)',
-              color: '#E5B869',
-              border: '1px solid rgba(229, 184, 105, 0.3)'
-            }}>
-              {isAr ? 'لوحة التحكم المركزية' : 'Master Control'}
+    <div className="admin-settings-root" dir={isAr ? 'rtl' : 'ltr'}>
+      {/* Top Header Card */}
+      <div className="settings-header-card">
+        <div className="settings-header-left">
+          <div className="header-badge-row">
+            <span className="gold-pill">{isAr ? 'لوحة التحكم والتحرير' : 'Master Control & CMS'}</span>
+            <span className="live-pill">
+              <span className="live-dot" />
+              {isAr ? 'متصل ومباشر' : 'Live Sync'}
             </span>
           </div>
-          <p style={{ fontSize: '12.5px', color: 'rgba(255, 255, 255, 0.6)', marginTop: '4px', margin: '4px 0 0', fontWeight: 500 }}>
-            {isAr 
-              ? 'إدارة أسعار المتر المربع بالمناطق، وأرقام التواصل الرسمية، وأتمتة إشعارات الواتساب، وتخصيص محتوى المنصة'
-              : 'Configure market district benchmarks, official contact details, automated WhatsApp dispatches, and brand editorial.'}
+          <h1 className="settings-main-title">
+            {isAr ? 'إعدادات المنصة ومحرر المحتوى العام' : 'Platform Settings & Site Editorial CMS'}
+          </h1>
+          <p className="settings-main-desc">
+            {isAr
+              ? 'تحكم في مؤشرات السوق، نصوص وصفحات الموقع الرئيسية ومن نحن، مع إمكانية تفعيل أو إخفاء أي قسم بالكامل.'
+              : 'Configure market district benchmarks, customize editorial copy for Home & About Us pages, and toggle individual section visibility.'}
           </p>
         </div>
 
-        {/* Global Save Actions */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div className="settings-actions-row">
           <button 
             type="button" 
             onClick={handleResetDefaults}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              padding: '9px 14px',
-              borderRadius: '10px',
-              fontSize: '12px',
-              fontWeight: 700,
-              background: 'rgba(255, 255, 255, 0.04)',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
-              color: 'rgba(255, 255, 255, 0.75)',
-              cursor: 'pointer',
-              transition: 'all 150ms ease'
-            }}
+            className="btn-outline-gold"
           >
-            <RefreshCw size={13} />
+            <RefreshCw size={15} />
             <span>{isAr ? 'استعادة الافتراضي' : 'Reset Defaults'}</span>
           </button>
 
           <button 
             type="button" 
             onClick={handleSave}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              padding: '9px 18px',
-              borderRadius: '10px',
-              fontSize: '12.5px',
-              fontWeight: 800,
-              background: savedSuccess 
-                ? 'linear-gradient(135deg, #10B981 0%, #059669 100%)' 
-                : 'linear-gradient(135deg, #E5B869 0%, #C5A059 100%)',
-              color: '#0A0C10',
-              border: 'none',
-              cursor: 'pointer',
-              boxShadow: '0 3px 14px rgba(229, 184, 105, 0.3)',
-              transition: 'all 150ms ease'
-            }}
+            className="btn-solid-gold"
           >
-            {savedSuccess ? (
-              <>
-                <Check size={15} strokeWidth={2.5} />
-                <span>{isAr ? 'تم الحفظ المباشر!' : 'Saved Live!'}</span>
-              </>
-            ) : (
-              <>
-                <Save size={15} strokeWidth={2.5} />
-                <span>{isAr ? 'حفظ التعديلات' : 'Save Changes'}</span>
-              </>
-            )}
+            {savedSuccess ? <Check size={16} /> : <Save size={16} />}
+            <span>{savedSuccess ? (isAr ? 'تم الحفظ بنجاح!' : 'Saved Successfully!') : (isAr ? 'حفظ التعديلات' : 'Save Changes')}</span>
           </button>
         </div>
       </div>
 
-      {/* ─── 2. Segmented Navigation Tabs ─── */}
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: '8px',
-        padding: '6px',
-        background: 'rgba(16, 20, 29, 0.75)',
-        backdropFilter: 'blur(20px)',
-        borderRadius: '14px',
-        border: '1px solid rgba(255, 255, 255, 0.08)',
-        overflowX: 'auto'
-      }}>
-        {tabs.map((t) => {
-          const Icon = t.icon;
-          const isActive = activeTab === t.key;
-          return (
-            <button
-              key={t.key}
-              type="button"
-              onClick={() => setActiveTab(t.key)}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '8px',
-                padding: '9px 16px',
-                borderRadius: '10px',
-                fontSize: '12.5px',
-                fontWeight: isActive ? 800 : 600,
-                color: isActive ? '#0A0C10' : 'rgba(255, 255, 255, 0.7)',
-                background: isActive ? 'linear-gradient(135deg, #E5B869 0%, #C5A059 100%)' : 'transparent',
-                border: 'none',
-                cursor: 'pointer',
-                transition: 'all 150ms ease',
-                whiteSpace: 'nowrap',
-                boxShadow: isActive ? '0 4px 12px rgba(229, 184, 105, 0.25)' : 'none'
-              }}
-            >
-              <Icon size={14} />
-              <span>{isAr ? t.labelAr : t.labelEn}</span>
-            </button>
-          );
-        })}
+      {/* Tabs Navigation Scroller */}
+      <div className="settings-tabs-scroller">
+        <div className="settings-tabs-track">
+          <button
+            type="button"
+            onClick={() => setActiveTab('radar')}
+            className={`settings-tab-btn ${activeTab === 'radar' ? 'active' : ''}`}
+          >
+            <BarChart3 size={16} />
+            <span>{isAr ? 'مؤشر الأسعار والمناطق' : 'Market Valuation Radar'}</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('home')}
+            className={`settings-tab-btn ${activeTab === 'home' ? 'active' : ''}`}
+          >
+            <Home size={16} />
+            <span>{isAr ? 'محرر الصفحة الرئيسية' : 'Home Page Editorial'}</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('about')}
+            className={`settings-tab-btn ${activeTab === 'about' ? 'active' : ''}`}
+          >
+            <BookOpen size={16} />
+            <span>{isAr ? 'محرر صفحة من نحن' : 'About Us Editorial & Toggles'}</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('contact')}
+            className={`settings-tab-btn ${activeTab === 'contact' ? 'active' : ''}`}
+          >
+            <Phone size={16} />
+            <span>{isAr ? 'بيانات التواصل والمقر' : 'Public Advisory Desk'}</span>
+          </button>
+        </div>
       </div>
 
-      {/* ─── TAB 1: Market Valuation Radar & District Benchmarks ─── */}
+      {/* ══════════════════════════════════════════════════════════════════════
+          TAB 1: VALUATION RADAR & CATALOG FLAGS
+      ══════════════════════════════════════════════════════════════════════ */}
       {activeTab === 'radar' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          
-          {/* Feature Display Flags Card */}
-          <div style={{
-            background: 'rgba(16, 20, 29, 0.85)',
-            backdropFilter: 'blur(20px)',
-            borderRadius: '16px',
-            border: '1px solid rgba(255, 255, 255, 0.08)',
-            padding: '22px',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '16px'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(229, 184, 105, 0.12)', color: '#E5B869', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Eye size={16} />
-              </div>
+        <div className="settings-tab-pane">
+          {/* Feature Flags Card */}
+          <div className="settings-card">
+            <div className="card-section-head">
+              <div className="card-icon-wrap"><Sliders size={18} /></div>
               <div>
-                <h2 style={{ fontSize: '14.5px', fontWeight: 800, color: '#FFFFFF', margin: 0 }}>
-                  {isAr ? 'خيارات العرض العامة بالكتالوج' : 'Catalog Display & Feature Flags'}
-                </h2>
-                <span style={{ fontSize: '11.5px', color: 'rgba(255, 255, 255, 0.55)' }}>
-                  {isAr ? 'التحكم في ظهور ويدجت مؤشر الأسعار ونموذج التنبيهات' : 'Control visibility of the Valuation Radar and VIP Alerts in the catalog sidebar.'}
-                </span>
+                <h2 className="card-title">{isAr ? 'خيارات العرض وفلاتر الكتالوج' : 'Catalog Display & Feature Flags'}</h2>
+                <p className="card-sub">{isAr ? 'التحكم في ظهور ودجات التقييم وتنبيهات كبار العملاء' : 'Control visibility of Valuation Radar and VIP Alerts'}</p>
               </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '12px' }}>
-              <label style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                gap: '14px',
-                padding: '14px 18px',
-                background: 'rgba(255, 255, 255, 0.02)',
-                border: '1px solid rgba(255, 255, 255, 0.06)',
-                borderRadius: '12px',
-                cursor: 'pointer'
-              }}>
-                <div>
-                  <strong style={{ fontSize: '13px', color: '#FFFFFF', display: 'block' }}>
-                    {isAr ? 'مؤشر أسعار المتر الكلي (Valuation Radar)' : 'Show Valuation Radar Widget'}
-                  </strong>
-                  <span style={{ fontSize: '11.5px', color: 'rgba(255, 255, 255, 0.55)', marginTop: '2px', display: 'block' }}>
-                    {isAr ? 'عرض مؤشر أسعار المتر في الشريط الجانبي للكتالوج' : 'Display EGP/m² benchmarks widget in the properties sidebar'}
-                  </span>
-                </div>
+            <div className="toggles-grid-2col">
+              <label className="toggle-checkbox-card">
                 <input 
-                  type="checkbox" 
-                  checked={settings.showMarketRadar} 
-                  onChange={(e) => {
-                    const next = { ...settings, showMarketRadar: e.target.checked };
-                    setSettings(next);
-                    saveStoredPlatformSettings(next);
-                  }}
-                  style={{ width: '18px', height: '18px', accentColor: '#E5B869', cursor: 'pointer' }}
+                  type="checkbox"
+                  checked={settings.showMarketRadar}
+                  onChange={(e) => setSettings(prev => ({ ...prev, showMarketRadar: e.target.checked }))}
                 />
+                <div className="toggle-info">
+                  <span className="toggle-title">{isAr ? 'عرض ودجت مؤشر الأسعار' : 'Show Valuation Radar Widget'}</span>
+                  <span className="toggle-desc">{isAr ? 'إظهار مؤشر متوسط سعر المتر في شريط الكتالوج الجانبي' : 'Display EGP/m² benchmarks widget in the properties sidebar'}</span>
+                </div>
               </label>
 
-              <label style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                gap: '14px',
-                padding: '14px 18px',
-                background: 'rgba(255, 255, 255, 0.02)',
-                border: '1px solid rgba(255, 255, 255, 0.06)',
-                borderRadius: '12px',
-                cursor: 'pointer'
-              }}>
-                <div>
-                  <strong style={{ fontSize: '13px', color: '#FFFFFF', display: 'block' }}>
-                    {isAr ? 'بطاقة التنبيهات الفاخرة (VIP Alerts Card)' : 'Show VIP Property Alerts Card'}
-                  </strong>
-                  <span style={{ fontSize: '11.5px', color: 'rgba(255, 255, 255, 0.55)', marginTop: '2px', display: 'block' }}>
-                    {isAr ? 'تمكين نموذج الاشتراك بالبريد الإلكتروني بالكتالوج' : 'Enable email alerts subscription box in the properties sidebar'}
-                  </span>
-                </div>
+              <label className="toggle-checkbox-card">
                 <input 
-                  type="checkbox" 
-                  checked={settings.showVIPAlerts} 
-                  onChange={(e) => {
-                    const next = { ...settings, showVIPAlerts: e.target.checked };
-                    setSettings(next);
-                    saveStoredPlatformSettings(next);
-                  }}
-                  style={{ width: '18px', height: '18px', accentColor: '#E5B869', cursor: 'pointer' }}
+                  type="checkbox"
+                  checked={settings.showVIPAlerts}
+                  onChange={(e) => setSettings(prev => ({ ...prev, showVIPAlerts: e.target.checked }))}
                 />
+                <div className="toggle-info">
+                  <span className="toggle-title">{isAr ? 'عرض صندوق تنبيهات الـ VIP' : 'Show VIP Property Alerts Card'}</span>
+                  <span className="toggle-desc">{isAr ? 'تفعيل بطاقة الاشتراك في الفرص النادرة بالشريط الجانبي' : 'Enable email alerts subscription box in the properties sidebar'}</span>
+                </div>
               </label>
             </div>
           </div>
 
-          {/* District Benchmarks Table */}
-          <div style={{
-            background: 'rgba(16, 20, 29, 0.85)',
-            backdropFilter: 'blur(20px)',
-            borderRadius: '16px',
-            border: '1px solid rgba(255, 255, 255, 0.08)',
-            padding: '22px',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '16px'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(229, 184, 105, 0.12)', color: '#E5B869', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <BarChart3 size={16} />
-                </div>
+          {/* District Benchmarks List Card */}
+          <div className="settings-card">
+            <div className="card-section-head-between">
+              <div className="card-section-head-left">
+                <div className="card-icon-wrap"><BarChart3 size={18} /></div>
                 <div>
-                  <h2 style={{ fontSize: '14.5px', fontWeight: 800, color: '#FFFFFF', margin: 0 }}>
-                    {isAr ? 'مصفوفة أسعار المتر المربع حسب المناطق' : 'Valuation Radar Districts & EGP/m² Benchmarks'}
-                  </h2>
-                  <span style={{ fontSize: '11.5px', color: 'rgba(255, 255, 255, 0.55)' }}>
-                    {isAr ? 'تعديل أسعار المتر، نسبة النمو السنوية، وحالة العرض في شريط الموقع' : 'Configure active districts, benchmark prices per square meter, and 5-year growth metrics.'}
-                  </span>
+                  <h2 className="card-title">{isAr ? 'مناطق الرادار العقاري ومتوسط سعر المتر' : 'Valuation Radar Districts & EGP/m² Benchmarks'}</h2>
+                  <p className="card-sub">{isAr ? 'تحديد أسعار المتر ومعدلات النمو لكل منطقة على حدة' : 'Configure active districts, benchmark prices per square meter, and growth metrics.'}</p>
                 </div>
               </div>
 
-              <button
-                type="button"
-                onClick={() => setIsAddingNew(!isAddingNew)}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  padding: '8px 14px',
-                  borderRadius: '9px',
-                  background: 'rgba(229, 184, 105, 0.12)',
-                  border: '1px solid rgba(229, 184, 105, 0.3)',
-                  color: '#E5B869',
-                  fontSize: '12px',
-                  fontWeight: 700,
-                  cursor: 'pointer'
-                }}
+              <button 
+                type="button" 
+                onClick={() => setIsAddingNew(!isAddingNew)} 
+                className="btn-add-district"
               >
-                <Plus size={14} />
+                <Plus size={15} />
                 <span>{isAr ? 'إضافة منطقة جديدة' : 'Add New District'}</span>
               </button>
             </div>
 
-            {/* Add District Inline Box */}
+            {/* Add New District Drawer */}
             {isAddingNew && (
-              <form onSubmit={handleAddNewDistrict} style={{
-                background: 'rgba(229, 184, 105, 0.04)',
-                border: '1px solid rgba(229, 184, 105, 0.25)',
-                borderRadius: '12px',
-                padding: '16px',
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-                gap: '12px',
-                alignItems: 'flex-end'
-              }}>
-                <div>
-                  <label style={{ fontSize: '11px', fontWeight: 700, color: 'rgba(255, 255, 255, 0.7)', display: 'block', marginBottom: '4px' }}>
-                    District Name (EN)
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={newDistrict.district || ''}
-                    onChange={(e) => setNewDistrict(prev => ({ ...prev, district: e.target.value }))}
-                    placeholder="e.g. New Cairo"
-                    style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(255,255,255,0.1)', color: '#FFF', fontSize: '12px', boxSizing: 'border-box' }}
-                  />
+              <div className="new-district-form">
+                <h3 className="new-form-title">{isAr ? 'بيانات المنطقة الجديدة' : 'New District Configuration'}</h3>
+                <div className="form-fields-grid">
+                  <div className="field-group">
+                    <label>{isAr ? 'اسم المنطقة (الإنجليزية)' : 'District Name (English)'}</label>
+                    <input 
+                      type="text" 
+                      placeholder="e.g. New Administrative Capital" 
+                      value={newDistrict.district || ''} 
+                      onChange={(e) => setNewDistrict({ ...newDistrict, district: e.target.value })}
+                    />
+                  </div>
+                  <div className="field-group">
+                    <label>{isAr ? 'اسم المنطقة (العربية)' : 'District Name (Arabic)'}</label>
+                    <input 
+                      type="text" 
+                      placeholder="مثال: العاصمة الإدارية الجديدة" 
+                      value={newDistrict.districtAr || ''} 
+                      onChange={(e) => setNewDistrict({ ...newDistrict, districtAr: e.target.value })}
+                    />
+                  </div>
+                  <div className="field-group">
+                    <label>{isAr ? 'سعر المتر (ج.م)' : 'Price / m² (EGP)'}</label>
+                    <input 
+                      type="number" 
+                      value={newDistrict.pricePerSqm || 40000} 
+                      onChange={(e) => setNewDistrict({ ...newDistrict, pricePerSqm: Number(e.target.value) })}
+                    />
+                  </div>
+                  <div className="field-group">
+                    <label>{isAr ? 'النمو خلال ٥ سنوات' : '5-Year Compound Gain'}</label>
+                    <input 
+                      type="text" 
+                      value={newDistrict.fiveYearGain || '+60.0%'} 
+                      onChange={(e) => setNewDistrict({ ...newDistrict, fiveYearGain: e.target.value })}
+                    />
+                  </div>
                 </div>
 
-                <div>
-                  <label style={{ fontSize: '11px', fontWeight: 700, color: 'rgba(255, 255, 255, 0.7)', display: 'block', marginBottom: '4px' }}>
-                    اسم المنطقة (عربي)
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={newDistrict.districtAr || ''}
-                    onChange={(e) => setNewDistrict(prev => ({ ...prev, districtAr: e.target.value }))}
-                    placeholder="مثال: القاهرة الجديدة"
-                    style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(255,255,255,0.1)', color: '#FFF', fontSize: '12px', boxSizing: 'border-box' }}
-                  />
-                </div>
-
-                <div>
-                  <label style={{ fontSize: '11px', fontWeight: 700, color: 'rgba(255, 255, 255, 0.7)', display: 'block', marginBottom: '4px' }}>
-                    Price / m² (EGP)
-                  </label>
-                  <input
-                    type="number"
-                    required
-                    value={newDistrict.pricePerSqm || ''}
-                    onChange={(e) => setNewDistrict(prev => ({ ...prev, pricePerSqm: Number(e.target.value) }))}
-                    placeholder="45000"
-                    style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(255,255,255,0.1)', color: '#FFF', fontSize: '12px', boxSizing: 'border-box' }}
-                  />
-                </div>
-
-                <div>
-                  <label style={{ fontSize: '11px', fontWeight: 700, color: 'rgba(255, 255, 255, 0.7)', display: 'block', marginBottom: '4px' }}>
-                    5-Yr Growth Gain
-                  </label>
-                  <input
-                    type="text"
-                    value={newDistrict.fiveYearGain || ''}
-                    onChange={(e) => setNewDistrict(prev => ({ ...prev, fiveYearGain: e.target.value }))}
-                    placeholder="+65.0%"
-                    style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(255,255,255,0.1)', color: '#FFF', fontSize: '12px', boxSizing: 'border-box' }}
-                  />
-                </div>
-
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  <button
-                    type="submit"
-                    style={{ flex: 1, padding: '9px', borderRadius: '8px', background: '#E5B869', color: '#0A0C10', fontWeight: 800, border: 'none', cursor: 'pointer', fontSize: '12px' }}
-                  >
-                    {isAr ? 'إضافة' : 'Save'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setIsAddingNew(false)}
-                    style={{ padding: '9px 12px', borderRadius: '8px', background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.7)', border: 'none', cursor: 'pointer', fontSize: '12px' }}
-                  >
+                <div className="new-form-actions">
+                  <button type="button" onClick={() => setIsAddingNew(false)} className="btn-cancel">
                     {isAr ? 'إلغاء' : 'Cancel'}
                   </button>
+                  <button type="button" onClick={handleAddDistrict} className="btn-confirm">
+                    {isAr ? 'تأكيد وإضافة' : 'Add District'}
+                  </button>
                 </div>
-              </form>
+              </div>
             )}
 
-            {/* Table Rows */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              {settings.marketDistricts.map((dist) => {
-                return (
-                  <div
-                    key={dist.id}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      flexWrap: 'wrap',
-                      gap: '12px',
-                      padding: '12px 16px',
-                      background: 'rgba(255, 255, 255, 0.02)',
-                      border: '1px solid rgba(255, 255, 255, 0.06)',
-                      borderRadius: '12px'
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: '220px' }}>
-                      <button
-                        type="button"
-                        onClick={() => toggleDistrictEnabled(dist.id)}
-                        style={{
-                          fontSize: '10.5px',
-                          fontWeight: 800,
-                          padding: '3px 8px',
-                          borderRadius: '6px',
-                          background: dist.isEnabled ? 'rgba(16, 185, 129, 0.15)' : 'rgba(255, 255, 255, 0.05)',
-                          color: dist.isEnabled ? '#34D399' : 'rgba(255, 255, 255, 0.4)',
-                          border: dist.isEnabled ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid rgba(255, 255, 255, 0.08)',
-                          cursor: 'pointer'
-                        }}
-                      >
-                        {dist.isEnabled ? (isAr ? 'نشط بالرادار' : 'Active') : (isAr ? 'مخفي' : 'Hidden')}
-                      </button>
-
-                      <div>
-                        <strong style={{ fontSize: '13px', color: '#FFFFFF', display: 'block' }}>
-                          {isAr ? dist.districtAr : dist.district}
-                        </strong>
-                        <span style={{ fontSize: '11px', color: 'rgba(255, 255, 255, 0.5)' }}>
-                          {isAr ? dist.district : dist.districtAr}
-                        </span>
-                      </div>
+            {/* Districts List */}
+            <div className="districts-list">
+              {settings.marketDistricts.map((district) => (
+                <div key={district.id} className={`district-row-card ${!district.isEnabled ? 'disabled' : ''}`}>
+                  <div className="district-row-top">
+                    <div className="district-tag-group">
+                      <span className="district-rank">#{district.rank}</span>
+                      <span className="district-name-main">{isAr ? district.districtAr : district.district}</span>
+                      <span className="district-name-alt">({isAr ? district.district : district.districtAr})</span>
                     </div>
 
-                    {/* Inputs */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <span style={{ fontSize: '11px', color: 'rgba(255, 255, 255, 0.5)' }}>Price/m²:</span>
-                        <input
-                          type="number"
-                          value={dist.pricePerSqm}
-                          onChange={(e) => updateDistrict(dist.id, { pricePerSqm: Number(e.target.value) })}
-                          style={{
-                            width: '90px',
-                            padding: '6px 8px',
-                            borderRadius: '6px',
-                            background: 'rgba(0,0,0,0.3)',
-                            border: '1px solid rgba(255,255,255,0.1)',
-                            color: '#E5B869',
-                            fontWeight: 700,
-                            fontSize: '12px',
-                            textAlign: 'right'
-                          }}
-                        />
-                        <span style={{ fontSize: '11px', color: '#E5B869' }}>EGP</span>
-                      </div>
-
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <span style={{ fontSize: '11px', color: 'rgba(255, 255, 255, 0.5)' }}>5-Yr:</span>
-                        <input
-                          type="text"
-                          value={dist.fiveYearGain}
-                          onChange={(e) => updateDistrict(dist.id, { fiveYearGain: e.target.value })}
-                          style={{
-                            width: '75px',
-                            padding: '6px 8px',
-                            borderRadius: '6px',
-                            background: 'rgba(0,0,0,0.3)',
-                            border: '1px solid rgba(255,255,255,0.1)',
-                            color: '#34D399',
-                            fontWeight: 700,
-                            fontSize: '12px',
-                            textAlign: 'center'
-                          }}
-                        />
-                      </div>
-
-                      <button
-                        type="button"
-                        onClick={() => deleteDistrict(dist.id)}
-                        style={{
-                          background: 'transparent',
-                          border: 'none',
-                          color: 'rgba(244, 63, 94, 0.6)',
-                          cursor: 'pointer',
-                          padding: '6px',
-                          borderRadius: '6px',
-                          display: 'inline-flex',
-                          alignItems: 'center'
-                        }}
-                        title={isAr ? 'حذف' : 'Delete'}
+                    <div className="district-quick-actions">
+                      <button 
+                        type="button" 
+                        onClick={() => handleToggleDistrict(district.id)}
+                        className={`btn-icon-toggle ${district.isEnabled ? 'active' : ''}`}
+                        title={district.isEnabled ? 'Disable' : 'Enable'}
                       >
-                        <Trash2 size={14} />
+                        {district.isEnabled ? <Eye size={16} /> : <EyeOff size={16} />}
+                      </button>
+
+                      <button 
+                        type="button" 
+                        onClick={() => handleDeleteDistrict(district.id)}
+                        className="btn-icon-delete"
+                        title="Delete"
+                      >
+                        <Trash2 size={16} />
                       </button>
                     </div>
                   </div>
-                );
-              })}
-            </div>
-          </div>
 
-        </div>
-      )}
+                  <div className="district-inputs-grid">
+                    <div className="field-group-sm">
+                      <label>{isAr ? 'سعر المتر (ج.م)' : 'Price / m² (EGP)'}</label>
+                      <input 
+                        type="number" 
+                        value={district.pricePerSqm} 
+                        onChange={(e) => handleDistrictChange(district.id, 'pricePerSqm', Number(e.target.value))}
+                      />
+                    </div>
 
-      {/* ─── TAB 2: Public Advisory Desk & Contact Info ─── */}
-      {activeTab === 'contact' && (
-        <div style={{
-          background: 'rgba(16, 20, 29, 0.85)',
-          backdropFilter: 'blur(20px)',
-          borderRadius: '16px',
-          border: '1px solid rgba(255, 255, 255, 0.08)',
-          padding: '24px',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '20px'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(229, 184, 105, 0.12)', color: '#E5B869', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <PhoneCall size={16} />
-            </div>
-            <div>
-              <h2 style={{ fontSize: '14.5px', fontWeight: 800, color: '#FFFFFF', margin: 0 }}>
-                {isAr ? 'أرقام وبيانات التواصل المعتمدة للمكتب' : 'Public Contact & Advisory Desk Details'}
-              </h2>
-              <span style={{ fontSize: '11.5px', color: 'rgba(255, 255, 255, 0.55)' }}>
-                {isAr ? 'تعديل الهاتف المباشر، البريد الإلكتروني، رقم الواتساب، وعنوان المقر' : 'Shown across website header, footer, property detail cards, and direct contact CTAs.'}
-              </span>
-            </div>
-          </div>
+                    <div className="field-group-sm">
+                      <label>{isAr ? 'النمو (٥ سنوات)' : '5Y Growth'}</label>
+                      <input 
+                        type="text" 
+                        value={district.fiveYearGain} 
+                        onChange={(e) => handleDistrictChange(district.id, 'fiveYearGain', e.target.value)}
+                      />
+                    </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
-            
-            {/* Direct Phone Number */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: 700, color: 'rgba(255, 255, 255, 0.7)' }}>
-                <Phone size={13} style={{ color: '#E5B869' }} />
-                <span>{isAr ? 'رقم الهاتف المباشر (Hotline / Direct Phone)' : 'Direct Phone Hotline'}</span>
-              </label>
-              <input 
-                type="text" 
-                value={settings.contact?.phone || ''} 
-                onChange={(e) => setSettings(prev => ({
-                  ...prev,
-                  contact: { ...(prev.contact || DEFAULT_PLATFORM_SETTINGS.contact), phone: e.target.value }
-                }))}
-                placeholder="+20 2 19688"
-                style={{
-                  padding: '11px 14px',
-                  borderRadius: '10px',
-                  background: 'rgba(255, 255, 255, 0.03)',
-                  border: '1px solid rgba(255, 255, 255, 0.1)',
-                  color: '#FFFFFF',
-                  fontSize: '13px',
-                  outline: 'none'
-                }}
-              />
-              <span style={{ fontSize: '11px', color: 'rgba(255, 255, 255, 0.45)' }}>
-                {isAr ? 'يظهر في تذييل الموقع، صفحة الاتصال، ومربعات طلب الاتصال' : 'Shown in website footer, contact page, and direct call CTAs'}
-              </span>
-            </div>
+                    <div className="field-group-sm">
+                      <label>{isAr ? 'متوسط الصفقات' : 'Median Total (EN)'}</label>
+                      <input 
+                        type="text" 
+                        value={district.medianTotal} 
+                        onChange={(e) => handleDistrictChange(district.id, 'medianTotal', e.target.value)}
+                      />
+                    </div>
 
-            {/* Official Concierge Email */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: 700, color: 'rgba(255, 255, 255, 0.7)' }}>
-                <Mail size={13} style={{ color: '#E5B869' }} />
-                <span>{isAr ? 'البريد الإلكتروني الرسمي (Official Email)' : 'Official Advisory Email'}</span>
-              </label>
-              <input 
-                type="email" 
-                value={settings.contact?.email || ''} 
-                onChange={(e) => setSettings(prev => ({
-                  ...prev,
-                  contact: { ...(prev.contact || DEFAULT_PLATFORM_SETTINGS.contact), email: e.target.value }
-                }))}
-                placeholder="concierge@zakariafarid.com"
-                style={{
-                  padding: '11px 14px',
-                  borderRadius: '10px',
-                  background: 'rgba(255, 255, 255, 0.03)',
-                  border: '1px solid rgba(255, 255, 255, 0.1)',
-                  color: '#FFFFFF',
-                  fontSize: '13px',
-                  outline: 'none'
-                }}
-              />
-              <span style={{ fontSize: '11px', color: 'rgba(255, 255, 255, 0.45)' }}>
-                {isAr ? 'يستقبل استفسارات العملاء ويظهر في تذييل الموقع' : 'Used for official correspondence and inquiry channels'}
-              </span>
+                    <div className="field-group-sm">
+                      <label>{isAr ? 'متوسط الصفقات (عربي)' : 'Median Total (AR)'}</label>
+                      <input 
+                        type="text" 
+                        value={district.medianTotalAr} 
+                        onChange={(e) => handleDistrictChange(district.id, 'medianTotalAr', e.target.value)}
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
-
-            {/* WhatsApp VIP Desk Number */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: 700, color: 'rgba(255, 255, 255, 0.7)' }}>
-                <MessageCircle size={13} style={{ color: '#34D399' }} />
-                <span>{isAr ? 'رقم الواتساب المعتمد (WhatsApp Concierge)' : 'WhatsApp Desk Number'}</span>
-              </label>
-              <input 
-                type="text" 
-                value={settings.contact?.whatsapp || ''} 
-                onChange={(e) => setSettings(prev => ({
-                  ...prev,
-                  contact: { ...(prev.contact || DEFAULT_PLATFORM_SETTINGS.contact), whatsapp: e.target.value }
-                }))}
-                placeholder="+20 100 999 8888"
-                style={{
-                  padding: '11px 14px',
-                  borderRadius: '10px',
-                  background: 'rgba(255, 255, 255, 0.03)',
-                  border: '1px solid rgba(255, 255, 255, 0.1)',
-                  color: '#FFFFFF',
-                  fontSize: '13px',
-                  outline: 'none'
-                }}
-              />
-              <span style={{ fontSize: '11px', color: 'rgba(255, 255, 255, 0.45)' }}>
-                {isAr ? 'يستخدم لروابط المحادثة المشفرة وزر الواتساب السريع' : 'Powers encrypted chat links and floating WhatsApp concierge'}
-              </span>
-            </div>
-
-            {/* Office Address (English) */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: 700, color: 'rgba(255, 255, 255, 0.7)' }}>
-                <MapPin size={13} style={{ color: '#E5B869' }} />
-                <span>{isAr ? 'عنوان المقر الرئيسي (إنجليزي)' : 'Headquarters Address (English)'}</span>
-              </label>
-              <input 
-                type="text" 
-                value={settings.contact?.addressEn || ''} 
-                onChange={(e) => setSettings(prev => ({
-                  ...prev,
-                  contact: { ...(prev.contact || DEFAULT_PLATFORM_SETTINGS.contact), addressEn: e.target.value }
-                }))}
-                placeholder="G-08 Grand Tower, Financial District, New Cairo, Egypt"
-                style={{
-                  padding: '11px 14px',
-                  borderRadius: '10px',
-                  background: 'rgba(255, 255, 255, 0.03)',
-                  border: '1px solid rgba(255, 255, 255, 0.1)',
-                  color: '#FFFFFF',
-                  fontSize: '13px',
-                  outline: 'none'
-                }}
-              />
-            </div>
-
-            {/* Office Address (Arabic) */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', gridColumn: '1 / -1' }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: 700, color: 'rgba(255, 255, 255, 0.7)' }}>
-                <MapPin size={13} style={{ color: '#E5B869' }} />
-                <span>{isAr ? 'عنوان المقر الرئيسي (عربي)' : 'Headquarters Address (Arabic)'}</span>
-              </label>
-              <input 
-                type="text" 
-                value={settings.contact?.addressAr || ''} 
-                onChange={(e) => setSettings(prev => ({
-                  ...prev,
-                  contact: { ...(prev.contact || DEFAULT_PLATFORM_SETTINGS.contact), addressAr: e.target.value }
-                }))}
-                placeholder="برج جراند G-08، الحي المالي، محور التسعين الجنوبي، القاهرة الجديدة، مصر"
-                style={{
-                  padding: '11px 14px',
-                  borderRadius: '10px',
-                  background: 'rgba(255, 255, 255, 0.03)',
-                  border: '1px solid rgba(255, 255, 255, 0.1)',
-                  color: '#FFFFFF',
-                  fontSize: '13px',
-                  outline: 'none'
-                }}
-              />
-            </div>
-
           </div>
         </div>
       )}
 
-      {/* ─── TAB 3: WhatsApp Lead Dispatch & Automation ─── */}
-      {activeTab === 'whatsapp' && (
-        <div style={{
-          background: 'rgba(16, 20, 29, 0.85)',
-          backdropFilter: 'blur(20px)',
-          borderRadius: '16px',
-          border: '1px solid rgba(255, 255, 255, 0.08)',
-          padding: '24px',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '20px'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(16, 185, 129, 0.12)', color: '#34D399', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Zap size={16} />
-              </div>
+      {/* ══════════════════════════════════════════════════════════════════════
+          TAB 2: HOME PAGE EDITORIAL & SECTION TOGGLES
+      ══════════════════════════════════════════════════════════════════════ */}
+      {activeTab === 'home' && (
+        <div className="settings-tab-pane">
+          {/* Section Visibility Toggles for Home */}
+          <div className="settings-card">
+            <div className="card-section-head">
+              <div className="card-icon-wrap"><LayoutTemplate size={18} /></div>
               <div>
-                <h2 style={{ fontSize: '14.5px', fontWeight: 800, color: '#FFFFFF', margin: 0 }}>
-                  {isAr ? 'محرك إرسال إشعارات الواتساب الفورية (WhatsApp Lead Dispatch)' : 'WhatsApp Automated Lead Dispatch Engine'}
-                </h2>
-                <span style={{ fontSize: '11.5px', color: 'rgba(255, 255, 255, 0.55)' }}>
-                  {isAr ? 'إرسال تفاصيل العميل فورياً إلى هاتف فريد زكريا بمجرد إرسال أي طلب' : 'Instantly dispatches structured WhatsApp notifications to Farid Zakaria upon every buyer inquiry.'}
-                </span>
+                <h2 className="card-title">{isAr ? 'أقسام الصفحة الرئيسية وإمكانية الإخفاء' : 'Home Page Section Visibility Toggles'}</h2>
+                <p className="card-sub">{isAr ? 'تفعيل أو إخفاء أي قسم في الصفحة الرئيسية بضغطة زر' : 'Toggle visibility for each individual block on the landing page.'}</p>
               </div>
             </div>
 
-            <button
-              type="button"
-              disabled={isTestingDispatch}
-              onClick={handleTestWhatsAppDispatch}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px',
-                padding: '8px 14px',
-                borderRadius: '9px',
-                fontSize: '12px',
-                fontWeight: 700,
-                background: 'rgba(229, 184, 105, 0.12)',
-                border: '1px solid rgba(229, 184, 105, 0.3)',
-                color: '#E5B869',
-                cursor: isTestingDispatch ? 'wait' : 'pointer'
-              }}
-            >
-              <Send size={13} />
-              <span>{isTestingDispatch ? (isAr ? 'جاري الإرسال التجريبي...' : 'Dispatching...') : (isAr ? 'إرسال إشعار تجريبي' : 'Send Test Notification')}</span>
-            </button>
+            <div className="toggles-grid-2col">
+              <label className="toggle-checkbox-card">
+                <input 
+                  type="checkbox"
+                  checked={home.showHero !== false}
+                  onChange={(e) => updateHome('showHero', e.target.checked)}
+                />
+                <div className="toggle-info">
+                  <span className="toggle-title">{isAr ? '١. الهيرو الرئيسي وشريط البحث' : '1. Cinematic Hero & Quick Search'}</span>
+                  <span className="toggle-desc">{isAr ? 'الخلفية السينمائية والعبارة الترحيبية وشريط البحث' : 'Full-bleed hero background, live typewriter headline, and search bar'}</span>
+                </div>
+              </label>
+
+              <label className="toggle-checkbox-card">
+                <input 
+                  type="checkbox"
+                  checked={home.showStatsRibbon !== false}
+                  onChange={(e) => updateHome('showStatsRibbon', e.target.checked)}
+                />
+                <div className="toggle-info">
+                  <span className="toggle-title">{isAr ? '٢. شريط الإحصائيات والأرقام' : '2. Authority & Metrology Stats Ribbon'}</span>
+                  <span className="toggle-desc">{isAr ? 'الأرقام القياسية وحجم المحفظة أسفل الهيرو' : 'Asset volume, district counts, and transaction speed bar'}</span>
+                </div>
+              </label>
+
+              <label className="toggle-checkbox-card">
+                <input 
+                  type="checkbox"
+                  checked={home.showFeaturedGrid !== false}
+                  onChange={(e) => updateHome('showFeaturedGrid', e.target.checked)}
+                />
+                <div className="toggle-info">
+                  <span className="toggle-title">{isAr ? '٣. معرض الصروح المميزة' : '3. Featured Masterpieces Collection'}</span>
+                  <span className="toggle-desc">{isAr ? 'شبكة العقارات المختارة مع فلاتر المناطق' : '6-card curated showcase grid with destination filter tabs'}</span>
+                </div>
+              </label>
+
+              <label className="toggle-checkbox-card">
+                <input 
+                  type="checkbox"
+                  checked={home.showMapExplorer !== false}
+                  onChange={(e) => updateHome('showMapExplorer', e.target.checked)}
+                />
+                <div className="toggle-info">
+                  <span className="toggle-title">{isAr ? '٤. الخريطة الجغرافية التفاعلية' : '4. Interactive Real Cartography Map'}</span>
+                  <span className="toggle-desc">{isAr ? 'قسم الخريطة التفاعلية ونقاط العقارات' : 'Full-width map preview with cluster pins and spatial orientation'}</span>
+                </div>
+              </label>
+
+              <label className="toggle-checkbox-card">
+                <input 
+                  type="checkbox"
+                  checked={home.showSovereignAdvisory !== false}
+                  onChange={(e) => updateHome('showSovereignAdvisory', e.target.checked)}
+                />
+                <div className="toggle-info">
+                  <span className="toggle-title">{isAr ? '٥. ميثاق الاستشارات السيادية' : '5. Unified Sovereign Advisory Protocol'}</span>
+                  <span className="toggle-desc">{isAr ? 'مزايا الفحص الهندسي والتدقيق القانوني وتجارب العملاء' : 'Forensic CAD auditing pillars, client provenance, and advisory standards'}</span>
+                </div>
+              </label>
+
+              <label className="toggle-checkbox-card">
+                <input 
+                  type="checkbox"
+                  checked={home.showSellerConsignment !== false}
+                  onChange={(e) => updateHome('showSellerConsignment', e.target.checked)}
+                />
+                <div className="toggle-info">
+                  <span className="toggle-title">{isAr ? '٦. بوابة تمثيل العقارات الخاصة' : '6. Private Consignment & Placement Portal'}</span>
+                  <span className="toggle-desc">{isAr ? 'صندوق تسجيل وتمثيل القصور والعقارات الفاخرة' : 'Bespoke seller placement banner and confidential advisory CTA'}</span>
+                </div>
+              </label>
+            </div>
           </div>
 
-          {testDispatchResult && (
-            <div style={{
-              padding: '10px 14px',
-              borderRadius: '10px',
-              fontSize: '12.5px',
-              fontWeight: 700,
-              background: testDispatchResult.success ? 'rgba(16, 185, 129, 0.12)' : 'rgba(244, 63, 94, 0.12)',
-              border: testDispatchResult.success ? '1px solid rgba(16, 185, 129, 0.35)' : '1px solid rgba(244, 63, 94, 0.35)',
-              color: testDispatchResult.success ? '#34D399' : '#FB7185',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px'
-            }}>
-              {testDispatchResult.success ? <Check size={15} /> : <ShieldAlert size={15} />}
-              <span>{testDispatchResult.message}</span>
-            </div>
-          )}
-
-          {/* Toggle Card */}
-          <label style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: '14px',
-            padding: '14px 18px',
-            background: 'rgba(229, 184, 105, 0.05)',
-            border: '1px solid rgba(229, 184, 105, 0.2)',
-            borderRadius: '12px',
-            cursor: 'pointer'
-          }}>
-            <div>
-              <strong style={{ fontSize: '13px', color: '#FFFFFF', display: 'block' }}>
-                {isAr ? 'تفعيل الإرسال التلقائي الفوري لطلبات العملاء' : 'Enable Automatic Real-Time Lead Dispatch'}
-              </strong>
-              <span style={{ fontSize: '11.5px', color: 'rgba(255, 255, 255, 0.55)', marginTop: '2px', display: 'block' }}>
-                {isAr ? 'عند وصول أي طلب جديد يتم إرسال رسالة واتساب منسقة فوراً إلى رقم زكريا فريد' : 'Automatically triggers a WhatsApp notification upon every lead submission'}
-              </span>
-            </div>
-            <input
-              type="checkbox"
-              checked={settings.whatsappAutomation?.isEnabled ?? true}
-              onChange={(e) => {
-                const next = {
-                  ...settings,
-                  whatsappAutomation: {
-                    ...(settings.whatsappAutomation || DEFAULT_WHATSAPP_AUTOMATION_SETTINGS),
-                    isEnabled: e.target.checked
-                  }
-                };
-                setSettings(next);
-                saveStoredPlatformSettings(next);
-              }}
-              style={{ width: '18px', height: '18px', accentColor: '#E5B869', cursor: 'pointer' }}
-            />
-          </label>
-
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
-            {/* Recipient Phone */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: 700, color: 'rgba(255, 255, 255, 0.7)' }}>
-                <Phone size={13} style={{ color: '#E5B869' }} />
-                <span>{isAr ? 'رقم هاتف زكريا فريد لاستقبال الإشعارات' : 'Farid Zakaria Alert Phone'}</span>
-              </label>
-              <input
-                type="text"
-                value={settings.whatsappAutomation?.faridAlertPhone || ''}
-                onChange={(e) => setSettings(prev => ({
-                  ...prev,
-                  whatsappAutomation: {
-                    ...(prev.whatsappAutomation || DEFAULT_WHATSAPP_AUTOMATION_SETTINGS),
-                    faridAlertPhone: e.target.value
-                  }
-                }))}
-                placeholder="+20 100 997 0776"
-                style={{
-                  padding: '11px 14px',
-                  borderRadius: '10px',
-                  background: 'rgba(255, 255, 255, 0.03)',
-                  border: '1px solid rgba(255, 255, 255, 0.1)',
-                  color: '#FFFFFF',
-                  fontSize: '13px',
-                  outline: 'none'
-                }}
-              />
+          {/* Hero Editorial Copy */}
+          <div className="settings-card">
+            <div className="card-section-head">
+              <div className="card-icon-wrap"><Sparkles size={18} /></div>
+              <div>
+                <h2 className="card-title">{isAr ? 'نصوص الهيرو الرئيسي والعبارة الترحيبية' : 'Hero Header & Subheader Editorial'}</h2>
+                <p className="card-sub">{isAr ? 'تعديل العنوان المتحرك والوصف الترحيبي باللغتين' : 'Edit the animated typewriter headline and monograph paragraph in EN & AR.'}</p>
+              </div>
             </div>
 
-            {/* Provider Selector */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: 700, color: 'rgba(255, 255, 255, 0.7)' }}>
-                <Radio size={13} style={{ color: '#E5B869' }} />
-                <span>{isAr ? 'مزود خدمة الأتمتة (API Provider)' : 'Automation Dispatch Provider'}</span>
-              </label>
-              <select
-                value={settings.whatsappAutomation?.provider || 'meta_cloud_api'}
-                onChange={(e) => setSettings(prev => ({
-                  ...prev,
-                  whatsappAutomation: {
-                    ...(prev.whatsappAutomation || DEFAULT_WHATSAPP_AUTOMATION_SETTINGS),
-                    provider: e.target.value as any
-                  }
-                }))}
-                style={{
-                  padding: '11px 14px',
-                  borderRadius: '10px',
-                  background: 'rgba(10, 14, 24, 0.95)',
-                  border: '1px solid rgba(255, 255, 255, 0.1)',
-                  color: '#FFFFFF',
-                  fontSize: '13px',
-                  outline: 'none',
-                  cursor: 'pointer'
-                }}
-              >
-                <option value="meta_cloud_api">{isAr ? 'Meta WhatsApp Cloud API (الرسمي للأعمال)' : 'Meta WhatsApp Cloud API (Official)'}</option>
-                <option value="ultramsg">{isAr ? 'UltraMsg / WhatsApp Gateway' : 'UltraMsg Gateway Instance'}</option>
-                <option value="twilio">{isAr ? 'Twilio WhatsApp API' : 'Twilio for WhatsApp'}</option>
-                <option value="custom_webhook">{isAr ? 'Webhook مخصص (Make / Zapier / Telegram)' : 'Custom Webhook (Make / Zapier / n8n)'}</option>
-                <option value="direct_link">{isAr ? 'روابط واتساب مباشرة فقط (يدوي)' : 'Direct WhatsApp Links Only'}</option>
-              </select>
+            <div className="form-fields-grid">
+              <div className="field-group full-width">
+                <label>{isAr ? 'شارة الإحداثيات / المناطق (EN)' : 'Hero Coordinates / Location Tag (EN)'}</label>
+                <input 
+                  type="text" 
+                  value={home.heroBadgeEn || ''} 
+                  onChange={(e) => updateHome('heroBadgeEn', e.target.value)} 
+                  placeholder="CAIRO • NORTH COAST • RED SEA • SHEIKH ZAYED"
+                />
+              </div>
+              <div className="field-group full-width">
+                <label>{isAr ? 'شارة الإحداثيات / المناطق (عربي)' : 'Hero Coordinates / Location Tag (AR)'}</label>
+                <input 
+                  type="text" 
+                  value={home.heroBadgeAr || ''} 
+                  onChange={(e) => updateHome('heroBadgeAr', e.target.value)} 
+                  placeholder="القاهرة • الساحل الشمالي • البحر الأحمر • الشيخ زايد"
+                />
+              </div>
+
+              <div className="field-group">
+                <label>{isAr ? 'العنوان الرئيسي - السطر الأول (EN)' : 'Hero Title - Line 1 (EN)'}</label>
+                <input 
+                  type="text" 
+                  value={home.heroTitle1En || ''} 
+                  onChange={(e) => updateHome('heroTitle1En', e.target.value)} 
+                  placeholder="Discover Egypt's Premier Residences &"
+                />
+              </div>
+              <div className="field-group">
+                <label>{isAr ? 'العنوان الرئيسي - السطر الأول (عربي)' : 'Hero Title - Line 1 (AR)'}</label>
+                <input 
+                  type="text" 
+                  value={home.heroTitle1Ar || ''} 
+                  onChange={(e) => updateHome('heroTitle1Ar', e.target.value)} 
+                  placeholder="استكشف أندر الصروح المعمارية و"
+                />
+              </div>
+
+              <div className="field-group">
+                <label>{isAr ? 'العنوان الرئيسي - السطر الثاني / التمييز (EN)' : 'Hero Title - Line 2 Serif Accent (EN)'}</label>
+                <input 
+                  type="text" 
+                  value={home.heroTitle2En || ''} 
+                  onChange={(e) => updateHome('heroTitle2En', e.target.value)} 
+                  placeholder="Luxury Living & Sovereign Estates"
+                />
+              </div>
+              <div className="field-group">
+                <label>{isAr ? 'العنوان الرئيسي - السطر الثاني / التمييز (عربي)' : 'Hero Title - Line 2 Serif Accent (AR)'}</label>
+                <input 
+                  type="text" 
+                  value={home.heroTitle2Ar || ''} 
+                  onChange={(e) => updateHome('heroTitle2Ar', e.target.value)} 
+                  placeholder="القصور الفاخرة في مصر"
+                />
+              </div>
+
+              <div className="field-group full-width">
+                <label>{isAr ? 'الوصف الفرعي للهيرو (EN)' : 'Hero Subtitle / Monograph Description (EN)'}</label>
+                <textarea 
+                  rows={3} 
+                  value={home.heroSubtitleEn || ''} 
+                  onChange={(e) => updateHome('heroSubtitleEn', e.target.value)} 
+                  placeholder="Curating and representing architecturally significant residences..."
+                />
+              </div>
+              <div className="field-group full-width">
+                <label>{isAr ? 'الوصف الفرعي للهيرو (عربي)' : 'Hero Subtitle / Monograph Description (AR)'}</label>
+                <textarea 
+                  rows={3} 
+                  value={home.heroSubtitleAr || ''} 
+                  onChange={(e) => updateHome('heroSubtitleAr', e.target.value)} 
+                  placeholder="ننتقي ونمثل أندر العقارات والقصور الفاخرة..."
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Featured & Seller Portal Editorial */}
+          <div className="settings-card">
+            <div className="card-section-head">
+              <div className="card-icon-wrap"><FileText size={18} /></div>
+              <div>
+                <h2 className="card-title">{isAr ? 'نصوص الصروح وبوابة التمثيل العقاري' : 'Featured Showcase & Seller Portal Editorial'}</h2>
+                <p className="card-sub">{isAr ? 'عناوين معرض العقارات وبطاقة بيع وتمثيل القصور' : 'Titles and descriptions for collection galleries and seller placement.'}</p>
+              </div>
             </div>
 
-            {/* Meta Cloud API Parameters */}
-            {(!settings.whatsappAutomation?.provider || settings.whatsappAutomation.provider === 'meta_cloud_api') && (
-              <>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: 700, color: 'rgba(255, 255, 255, 0.7)' }}>
-                    <Key size={13} style={{ color: '#E5B869' }} />
-                    <span>{isAr ? 'معرف رقم الهاتف (Meta Phone Number ID)' : 'Meta Phone Number ID'}</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={settings.whatsappAutomation?.metaPhoneNumberId || ''}
-                    onChange={(e) => setSettings(prev => ({
-                      ...prev,
-                      whatsappAutomation: {
-                        ...(prev.whatsappAutomation || DEFAULT_WHATSAPP_AUTOMATION_SETTINGS),
-                        metaPhoneNumberId: e.target.value
-                      }
-                    }))}
-                    placeholder="e.g. 104829104859102"
-                    style={{
-                      padding: '11px 14px',
-                      borderRadius: '10px',
-                      background: 'rgba(255, 255, 255, 0.03)',
-                      border: '1px solid rgba(255, 255, 255, 0.1)',
-                      color: '#FFFFFF',
-                      fontSize: '13px',
-                      outline: 'none'
-                    }}
-                  />
-                </div>
+            <div className="form-fields-grid">
+              <div className="field-group">
+                <label>{isAr ? 'عنوان معرض الصروح (EN)' : 'Featured Collection Title (EN)'}</label>
+                <input 
+                  type="text" 
+                  value={home.featuredTitle1En || ''} 
+                  onChange={(e) => updateHome('featuredTitle1En', e.target.value)} 
+                  placeholder="Featured Architectural Masterpieces"
+                />
+              </div>
+              <div className="field-group">
+                <label>{isAr ? 'عنوان معرض الصروح (عربي)' : 'Featured Collection Title (AR)'}</label>
+                <input 
+                  type="text" 
+                  value={home.featuredTitle1Ar || ''} 
+                  onChange={(e) => updateHome('featuredTitle1Ar', e.target.value)} 
+                  placeholder="أحدث الصروح المعمارية والقصور الاستثنائية"
+                />
+              </div>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: 700, color: 'rgba(255, 255, 255, 0.7)' }}>
-                    <Key size={13} style={{ color: '#E5B869' }} />
-                    <span>{isAr ? 'رمز وصول النظام (Meta Access Token)' : 'Meta Permanent Access Token'}</span>
-                  </label>
-                  <input
-                    type="password"
-                    value={settings.whatsappAutomation?.metaAccessToken || ''}
-                    onChange={(e) => setSettings(prev => ({
-                      ...prev,
-                      whatsappAutomation: {
-                        ...(prev.whatsappAutomation || DEFAULT_WHATSAPP_AUTOMATION_SETTINGS),
-                        metaAccessToken: e.target.value
-                      }
-                    }))}
-                    placeholder="EAA..."
-                    style={{
-                      padding: '11px 14px',
-                      borderRadius: '10px',
-                      background: 'rgba(255, 255, 255, 0.03)',
-                      border: '1px solid rgba(255, 255, 255, 0.1)',
-                      color: '#FFFFFF',
-                      fontSize: '13px',
-                      outline: 'none'
-                    }}
-                  />
-                </div>
-              </>
-            )}
-
+              <div className="field-group">
+                <label>{isAr ? 'عنوان بوابة بيع العقار (EN)' : 'Seller Portal Title (EN)'}</label>
+                <input 
+                  type="text" 
+                  value={home.sellerTitle1En || ''} 
+                  onChange={(e) => updateHome('sellerTitle1En', e.target.value)} 
+                  placeholder="Looking to List or Consign Your Generational Estate?"
+                />
+              </div>
+              <div className="field-group">
+                <label>{isAr ? 'عنوان بوابة بيع العقار (عربي)' : 'Seller Portal Title (AR)'}</label>
+                <input 
+                  type="text" 
+                  value={home.sellerTitle1Ar || ''} 
+                  onChange={(e) => updateHome('sellerTitle1Ar', e.target.value)} 
+                  placeholder="هل ترغب في بيع أو تمثيل قصرك واستثمارك؟"
+                />
+              </div>
+            </div>
           </div>
         </div>
       )}
 
-      {/* ─── TAB 4: About Page Editorial & Heritage CMS ─── */}
+      {/* ══════════════════════════════════════════════════════════════════════
+          TAB 3: ABOUT US EDITORIAL CMS & FULL SECTION TOGGLES
+      ══════════════════════════════════════════════════════════════════════ */}
       {activeTab === 'about' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          
-          {/* Section Visibility Toggles Card */}
-          <div style={{
-            background: 'rgba(16, 20, 29, 0.85)',
-            backdropFilter: 'blur(20px)',
-            borderRadius: '16px',
-            border: '1px solid rgba(255, 255, 255, 0.08)',
-            padding: '24px',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '16px'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(229, 184, 105, 0.12)', color: '#E5B869', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <Layers size={16} />
+        <div className="settings-tab-pane">
+          {/* Master Section Toggles for About Us */}
+          <div className="settings-card">
+            <div className="card-section-head">
+              <div className="card-icon-wrap"><LayoutTemplate size={18} /></div>
+              <div>
+                <h2 className="card-title">{isAr ? 'أقسام صفحة من نحن وإمكانية تفعيلها أو إخفائها' : 'About Us Section Visibility Toggles'}</h2>
+                <p className="card-sub">{isAr ? 'التحكم الشامل في إظهار أو إخفاء كل قسم بشكل منفصل في صفحة من نحن' : 'Show or hide every single section of the About Us page with dedicated switches.'}</p>
+              </div>
+            </div>
+
+            <div className="toggles-grid-2col">
+              <label className="toggle-checkbox-card">
+                <input 
+                  type="checkbox"
+                  checked={about.showHero !== false}
+                  onChange={(e) => updateAbout('showHero', e.target.checked)}
+                />
+                <div className="toggle-info">
+                  <span className="toggle-title">{isAr ? '١. الهيرو الرئيسي والبيان التأسيسي' : '1. Masthead Hero & Editorial Manifesto'}</span>
+                  <span className="toggle-desc">{isAr ? 'صورة الهيرو والعنوان الباريسي والبيان المعماري' : 'Hero masthead, monumental title, coordinates, and manifesto'}</span>
                 </div>
-                <div>
-                  <h2 style={{ fontSize: '14.5px', fontWeight: 800, color: '#FFFFFF', margin: 0 }}>
-                    {isAr ? 'خيارات ظهور أقسام صفحة من نحن' : 'About Page Section Display Toggles'}
-                  </h2>
-                  <span style={{ fontSize: '11.5px', color: 'rgba(255, 255, 255, 0.55)' }}>
-                    {isAr ? 'تفعيل أو إخفاء أي من الأقسام الرئيسية لصفحة العلامة التجارية' : 'Toggle individual sections of the public About page on or off.'}
-                  </span>
+              </label>
+
+              <label className="toggle-checkbox-card">
+                <input 
+                  type="checkbox"
+                  checked={about.showMetrology !== false}
+                  onChange={(e) => updateAbout('showMetrology', e.target.checked)}
+                />
+                <div className="toggle-info">
+                  <span className="toggle-title">{isAr ? '٢. شريط أرقام وإحصائيات الهيبة' : '2. Integrated Metrology Ribbon (Stats I–IV)'}</span>
+                  <span className="toggle-desc">{isAr ? 'الأرقام الرومانية الأربعة ومؤشرات الثقة وحجم الصفقات' : '4-metric authority strip with asset volume and retention'}</span>
                 </div>
-              </div>
+              </label>
 
-              <Link
-                href={`/${adminLocale}/about`}
-                target="_blank"
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  fontSize: '11.5px',
-                  fontWeight: 700,
-                  color: '#E5B869',
-                  textDecoration: 'none'
-                }}
-              >
-                <span>{isAr ? 'معاينة الصفحة الحية' : 'Preview About Page'}</span>
-                <ExternalLink size={12} />
-              </Link>
-            </div>
+              <label className="toggle-checkbox-card">
+                <input 
+                  type="checkbox"
+                  checked={about.showParavent !== false}
+                  onChange={(e) => updateAbout('showParavent', e.target.checked)}
+                />
+                <div className="toggle-info">
+                  <span className="toggle-title">{isAr ? '٣. سردية العقد الأول (فصول بارافينت ٢٠١٦-٢٠٢٦)' : '3. Decade Monograph Folio (2016–2026)'}</span>
+                  <span className="toggle-desc">{isAr ? 'الأكورديون التفاعلي ذو الأربعة فصول لتاريخ المكتب' : '4-chapter interactive unfolding accordion monograph'}</span>
+                </div>
+              </label>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '10px' }}>
-              {[
-                { key: 'showHero', labelEn: 'Hero Headline & Coordinates', labelAr: 'الترويسة الرئيسية والإحداثيات' },
-                { key: 'showManifesto', labelEn: 'Advisory Manifesto Statement', labelAr: 'بيان الرؤية والمنهجية الاستشارية' },
-                { key: 'showMonograph', labelEn: 'Founder Monograph & Quote', labelAr: 'كلمة المؤسس ومونوجراف العمارة' },
-                { key: 'showBadges', labelEn: 'Heritage Badges & Coordinates', labelAr: 'شارات العراقة والريادة الجغرافية' },
-                { key: 'showStats', labelEn: 'Key Advisory Statistics Bar', labelAr: 'شريط الإحصائيات والأرقام القياسية' },
-                { key: 'showClosingCta', labelEn: 'Confidential Acquisition Desk CTA', labelAr: 'قسم دعوة التواصل السري النهائي' },
-              ].map((item) => {
-                const isEnabled = settings.about ? settings.about[item.key as keyof PlatformAboutSettings] as boolean : true;
-                return (
-                  <label
-                    key={item.key}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      gap: '12px',
-                      padding: '12px 16px',
-                      background: 'rgba(255, 255, 255, 0.02)',
-                      border: '1px solid rgba(255, 255, 255, 0.06)',
-                      borderRadius: '10px',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    <span style={{ fontSize: '12.5px', color: '#FFFFFF', fontWeight: 600 }}>
-                      {isAr ? item.labelAr : item.labelEn}
-                    </span>
-                    <input
-                      type="checkbox"
-                      checked={isEnabled ?? true}
-                      onChange={(e) => handleToggleAboutSection(item.key as keyof PlatformAboutSettings, e.target.checked)}
-                      style={{ width: '17px', height: '17px', accentColor: '#E5B869', cursor: 'pointer' }}
-                    />
-                  </label>
-                );
-              })}
+              <label className="toggle-checkbox-card">
+                <input 
+                  type="checkbox"
+                  checked={about.showCuration !== false}
+                  onChange={(e) => updateAbout('showCuration', e.target.checked)}
+                />
+                <div className="toggle-info">
+                  <span className="toggle-title">{isAr ? '٤. ميثاق الانتقاء وركائز الفحص الثلاثة' : '4. Curation Protocol & 3 Pillars'}</span>
+                  <span className="toggle-desc">{isAr ? 'مختبر المعايير، الفحص الإنشائي والقانوني والمالي' : 'Lightbox inspection protocol and 3 forensic pillar cards'}</span>
+                </div>
+              </label>
+
+              <label className="toggle-checkbox-card">
+                <input 
+                  type="checkbox"
+                  checked={about.showFounder !== false}
+                  onChange={(e) => updateAbout('showFounder', e.target.checked)}
+                />
+                <div className="toggle-info">
+                  <span className="toggle-title">{isAr ? '٥. رسالة ورؤية المؤسس (م. فريد زكريا)' : '5. Founder’s Letter (Eng. Farid Zakaria)'}</span>
+                  <span className="toggle-desc">{isAr ? 'المقولة الاقتباسية والاسم والختم الرسمي للاستشاري' : 'Bespoke quotation card, founder name, title, and seal'}</span>
+                </div>
+              </label>
+
+              <label className="toggle-checkbox-card">
+                <input 
+                  type="checkbox"
+                  checked={about.showPortal !== false}
+                  onChange={(e) => updateAbout('showPortal', e.target.checked)}
+                />
+                <div className="toggle-info">
+                  <span className="toggle-title">{isAr ? '٦. بوابة الاستحواذ الخاص الختامية' : '6. Confidential Acquisitions Office CTA'}</span>
+                  <span className="toggle-desc">{isAr ? 'بطاقة الاتصال المباشر وطلب استشارة شراء خاصة' : 'Private wealth consultation banner and directory link'}</span>
+                </div>
+              </label>
             </div>
           </div>
 
-          {/* Heritage Badges & Titles Card */}
-          <div style={{
-            background: 'rgba(16, 20, 29, 0.85)',
-            backdropFilter: 'blur(20px)',
-            borderRadius: '16px',
-            border: '1px solid rgba(255, 255, 255, 0.08)',
-            padding: '24px',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '16px'
-          }}>
-            <h2 style={{ fontSize: '14px', fontWeight: 800, color: '#E5B869', textTransform: 'uppercase', letterSpacing: '0.06em', margin: 0 }}>
-              {isAr ? '١. شارات العراقة وعناوين الترويسة' : '1. Heritage Badges & Hero Titles'}
-            </h2>
-
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '14px' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                <label style={{ fontSize: '11.5px', fontWeight: 700, color: 'rgba(255, 255, 255, 0.7)' }}>Heritage Badge (English)</label>
-                <input
-                  type="text"
-                  value={settings.about?.badgeEn || ''}
-                  onChange={(e) => setSettings(prev => ({
-                    ...prev,
-                    about: { ...(prev.about || DEFAULT_ABOUT_SETTINGS), badgeEn: e.target.value }
-                  }))}
-                  style={{ padding: '10px 12px', borderRadius: '8px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)', color: '#FFF', fontSize: '12.5px' }}
-                />
-              </div>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                <label style={{ fontSize: '11.5px', fontWeight: 700, color: 'rgba(255, 255, 255, 0.7)' }}>شارة العراقة (عربي)</label>
-                <input
-                  type="text"
-                  value={settings.about?.badgeAr || ''}
-                  onChange={(e) => setSettings(prev => ({
-                    ...prev,
-                    about: { ...(prev.about || DEFAULT_ABOUT_SETTINGS), badgeAr: e.target.value }
-                  }))}
-                  style={{ padding: '10px 12px', borderRadius: '8px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)', color: '#FFF', fontSize: '12.5px' }}
-                />
+          {/* 1. Hero Content */}
+          <div className="settings-card">
+            <div className="card-section-head">
+              <div className="card-icon-wrap"><Sparkles size={18} /></div>
+              <div>
+                <h2 className="card-title">{isAr ? '١. نصوص الهيرو والبيان التأسيسي' : '1. Hero & Manifesto Content'}</h2>
+                <p className="card-sub">{isAr ? 'العبارات والعناوين الترحيبية وأزرار التوجيه' : 'Hero headline, subtitle, manifesto narrative, and action button labels.'}</p>
               </div>
             </div>
-          </div>
 
-          {/* Sovereign Manifesto Statement */}
-          <div style={{
-            background: 'rgba(16, 20, 29, 0.85)',
-            backdropFilter: 'blur(20px)',
-            borderRadius: '16px',
-            border: '1px solid rgba(255, 255, 255, 0.08)',
-            padding: '24px',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '16px'
-          }}>
-            <h2 style={{ fontSize: '14px', fontWeight: 800, color: '#E5B869', textTransform: 'uppercase', letterSpacing: '0.06em', margin: 0 }}>
-              {isAr ? '٢. بيان الرؤية والمنهجية الاستشارية' : '2. Sovereign Manifesto Statement'}
-            </h2>
-
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '14px' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                <label style={{ fontSize: '11.5px', fontWeight: 700, color: 'rgba(255, 255, 255, 0.7)' }}>Manifesto Paragraph (English)</label>
-                <textarea
-                  rows={4}
-                  value={settings.about?.manifestoEn || ''}
-                  onChange={(e) => setSettings(prev => ({
-                    ...prev,
-                    about: { ...(prev.about || DEFAULT_ABOUT_SETTINGS), manifestoEn: e.target.value }
-                  }))}
-                  style={{ padding: '10px 12px', borderRadius: '8px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)', color: '#FFF', fontSize: '12.5px', resize: 'vertical' }}
+            <div className="form-fields-grid">
+              <div className="field-group">
+                <label>{isAr ? 'شارة الهيرو التأسيسية (EN)' : 'Hero Coordinates / Charter Tag (EN)'}</label>
+                <input 
+                  type="text" 
+                  value={about.badgeEn || ''} 
+                  onChange={(e) => updateAbout('badgeEn', e.target.value)} 
+                />
+              </div>
+              <div className="field-group">
+                <label>{isAr ? 'شارة الهيرو التأسيسية (عربي)' : 'Hero Coordinates / Charter Tag (AR)'}</label>
+                <input 
+                  type="text" 
+                  value={about.badgeAr || ''} 
+                  onChange={(e) => updateAbout('badgeAr', e.target.value)} 
                 />
               </div>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                <label style={{ fontSize: '11.5px', fontWeight: 700, color: 'rgba(255, 255, 255, 0.7)' }}>بيان المنهجية (عربي)</label>
-                <textarea
-                  rows={4}
-                  value={settings.about?.manifestoAr || ''}
-                  onChange={(e) => setSettings(prev => ({
-                    ...prev,
-                    about: { ...(prev.about || DEFAULT_ABOUT_SETTINGS), manifestoAr: e.target.value }
-                  }))}
-                  style={{ padding: '10px 12px', borderRadius: '8px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)', color: '#FFF', fontSize: '12.5px', resize: 'vertical' }}
+              <div className="field-group">
+                <label>{isAr ? 'العنوان الرئيسي - السطر الأول (EN)' : 'Hero Title Lead Line (EN)'}</label>
+                <input 
+                  type="text" 
+                  value={about.heroTitle1En || ''} 
+                  onChange={(e) => updateAbout('heroTitle1En', e.target.value)} 
                 />
               </div>
-            </div>
-          </div>
+              <div className="field-group">
+                <label>{isAr ? 'العنوان الرئيسي - السطر الأول (عربي)' : 'Hero Title Lead Line (AR)'}</label>
+                <input 
+                  type="text" 
+                  value={about.heroTitle1Ar || ''} 
+                  onChange={(e) => updateAbout('heroTitle1Ar', e.target.value)} 
+                />
+              </div>
 
-          {/* Founder Monograph Quote */}
-          <div style={{
-            background: 'rgba(16, 20, 29, 0.85)',
-            backdropFilter: 'blur(20px)',
-            borderRadius: '16px',
-            border: '1px solid rgba(255, 255, 255, 0.08)',
-            padding: '24px',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '16px'
-          }}>
-            <h2 style={{ fontSize: '14px', fontWeight: 800, color: '#E5B869', textTransform: 'uppercase', letterSpacing: '0.06em', margin: 0 }}>
-              {isAr ? '٣. اقتباس المؤسس ومونوجراف العمارة' : '3. Founder Monograph & Quote'}
-            </h2>
+              <div className="field-group">
+                <label>{isAr ? 'العنوان الرئيسي - السطر الثاني الذهبي (EN)' : 'Hero Title Gold Serif Line (EN)'}</label>
+                <input 
+                  type="text" 
+                  value={about.heroTitle2En || ''} 
+                  onChange={(e) => updateAbout('heroTitle2En', e.target.value)} 
+                />
+              </div>
+              <div className="field-group">
+                <label>{isAr ? 'العنوان الرئيسي - السطر الثاني الذهبي (عربي)' : 'Hero Title Gold Serif Line (AR)'}</label>
+                <input 
+                  type="text" 
+                  value={about.heroTitle2Ar || ''} 
+                  onChange={(e) => updateAbout('heroTitle2Ar', e.target.value)} 
+                />
+              </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '14px' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                <label style={{ fontSize: '11.5px', fontWeight: 700, color: 'rgba(255, 255, 255, 0.7)' }}>Quote (English)</label>
-                <textarea
+              <div className="field-group full-width">
+                <label>{isAr ? 'نص البيان المعماري التأسيسي (EN)' : 'Editorial Manifesto Lead Text (EN)'}</label>
+                <textarea 
                   rows={3}
-                  value={settings.about?.founderQuoteEn || ''}
-                  onChange={(e) => setSettings(prev => ({
-                    ...prev,
-                    about: { ...(prev.about || DEFAULT_ABOUT_SETTINGS), founderQuoteEn: e.target.value }
-                  }))}
-                  style={{ padding: '10px 12px', borderRadius: '8px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)', color: '#FFF', fontSize: '12.5px' }}
+                  value={about.manifestoEn || ''} 
+                  onChange={(e) => updateAbout('manifestoEn', e.target.value)} 
                 />
               </div>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                <label style={{ fontSize: '11.5px', fontWeight: 700, color: 'rgba(255, 255, 255, 0.7)' }}>اقتباس المؤسس (عربي)</label>
-                <textarea
+              <div className="field-group full-width">
+                <label>{isAr ? 'نص البيان المعماري التأسيسي (عربي)' : 'Editorial Manifesto Lead Text (AR)'}</label>
+                <textarea 
                   rows={3}
-                  value={settings.about?.founderQuoteAr || ''}
-                  onChange={(e) => setSettings(prev => ({
-                    ...prev,
-                    about: { ...(prev.about || DEFAULT_ABOUT_SETTINGS), founderQuoteAr: e.target.value }
-                  }))}
-                  style={{ padding: '10px 12px', borderRadius: '8px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)', color: '#FFF', fontSize: '12.5px' }}
+                  value={about.manifestoAr || ''} 
+                  onChange={(e) => updateAbout('manifestoAr', e.target.value)} 
+                />
+              </div>
+
+              <div className="field-group">
+                <label>{isAr ? 'نص الزر الأول (EN)' : 'Hero Button 1 Text (EN)'}</label>
+                <input 
+                  type="text" 
+                  value={about.heroCta1TextEn || ''} 
+                  onChange={(e) => updateAbout('heroCta1TextEn', e.target.value)} 
+                />
+              </div>
+              <div className="field-group">
+                <label>{isAr ? 'نص الزر الأول (عربي)' : 'Hero Button 1 Text (AR)'}</label>
+                <input 
+                  type="text" 
+                  value={about.heroCta1TextAr || ''} 
+                  onChange={(e) => updateAbout('heroCta1TextAr', e.target.value)} 
+                />
+              </div>
+
+              <div className="field-group">
+                <label>{isAr ? 'نص الزر الثاني (EN)' : 'Hero Button 2 Text (EN)'}</label>
+                <input 
+                  type="text" 
+                  value={about.heroCta2TextEn || ''} 
+                  onChange={(e) => updateAbout('heroCta2TextEn', e.target.value)} 
+                />
+              </div>
+              <div className="field-group">
+                <label>{isAr ? 'نص الزر الثاني (عربي)' : 'Hero Button 2 Text (AR)'}</label>
+                <input 
+                  type="text" 
+                  value={about.heroCta2TextAr || ''} 
+                  onChange={(e) => updateAbout('heroCta2TextAr', e.target.value)} 
                 />
               </div>
             </div>
           </div>
 
-          {/* 4. Metrology & Authority Scale Stats (EN + AR) */}
-          <div style={{
-            background: 'rgba(16, 20, 29, 0.85)',
-            backdropFilter: 'blur(20px)',
-            borderRadius: '16px',
-            border: '1px solid rgba(255, 255, 255, 0.08)',
-            padding: '24px',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '20px'
-          }}>
-            <div>
-              <h2 style={{ fontSize: '14px', fontWeight: 800, color: '#E5B869', textTransform: 'uppercase', letterSpacing: '0.06em', margin: '0 0 4px 0' }}>
-                {isAr ? '٤. المؤشرات الإحصائية ومصفوفة الأرقام' : '4. Metrology & Authority Scale Stats'}
-              </h2>
-              <p style={{ fontSize: '11.5px', color: 'rgba(255, 255, 255, 0.5)', margin: 0 }}>
-                {isAr ? 'تحديد الأرقام والقيم الإحصائية باللغتين الإنجليزية والعربية' : 'Configure metric values and labels for English and Arabic displays'}
-              </p>
-            </div>
-
-            {/* Stat 1 */}
-            <div style={{ padding: '16px', borderRadius: '12px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <span style={{ fontSize: '12px', fontWeight: 800, color: '#E5B869' }}>{isAr ? 'المؤشر الأول (I)' : 'Stat I'}</span>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <label style={{ fontSize: '11px', fontWeight: 600, color: 'rgba(255, 255, 255, 0.7)' }}>Value (EN)</label>
-                  <input
-                    type="text"
-                    placeholder="2.5B+ EGP"
-                    value={settings.about?.stat1Value || ''}
-                    onChange={(e) => setSettings(prev => ({
-                      ...prev,
-                      about: { ...(prev.about || DEFAULT_ABOUT_SETTINGS), stat1Value: e.target.value }
-                    }))}
-                    style={{ padding: '8px 10px', borderRadius: '6px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', color: '#FFF', fontSize: '12px' }}
-                  />
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <label style={{ fontSize: '11px', fontWeight: 600, color: 'rgba(255, 255, 255, 0.7)' }}>القيمة (عربي)</label>
-                  <input
-                    type="text"
-                    placeholder="٢.٥+ مليار ج.م"
-                    value={settings.about?.stat1ValueAr || ''}
-                    onChange={(e) => setSettings(prev => ({
-                      ...prev,
-                      about: { ...(prev.about || DEFAULT_ABOUT_SETTINGS), stat1ValueAr: e.target.value }
-                    }))}
-                    style={{ padding: '8px 10px', borderRadius: '6px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', color: '#FFF', fontSize: '12px' }}
-                  />
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <label style={{ fontSize: '11px', fontWeight: 600, color: 'rgba(255, 255, 255, 0.7)' }}>Label (EN)</label>
-                  <input
-                    type="text"
-                    placeholder="Curated Asset Volume"
-                    value={settings.about?.stat1LabelEn || ''}
-                    onChange={(e) => setSettings(prev => ({
-                      ...prev,
-                      about: { ...(prev.about || DEFAULT_ABOUT_SETTINGS), stat1LabelEn: e.target.value }
-                    }))}
-                    style={{ padding: '8px 10px', borderRadius: '6px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', color: '#FFF', fontSize: '12px' }}
-                  />
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <label style={{ fontSize: '11px', fontWeight: 600, color: 'rgba(255, 255, 255, 0.7)' }}>الوصف (عربي)</label>
-                  <input
-                    type="text"
-                    placeholder="حجم المحفظة الاستشارية"
-                    value={settings.about?.stat1LabelAr || ''}
-                    onChange={(e) => setSettings(prev => ({
-                      ...prev,
-                      about: { ...(prev.about || DEFAULT_ABOUT_SETTINGS), stat1LabelAr: e.target.value }
-                    }))}
-                    style={{ padding: '8px 10px', borderRadius: '6px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', color: '#FFF', fontSize: '12px' }}
-                  />
-                </div>
+          {/* 2. Metrology Stats */}
+          <div className="settings-card">
+            <div className="card-section-head">
+              <div className="card-icon-wrap"><BarChart3 size={18} /></div>
+              <div>
+                <h2 className="card-title">{isAr ? '٢. أرقام وإحصائيات الهيبة (I, II, III, IV)' : '2. Authority Stats Ribbon (I to IV)'}</h2>
+                <p className="card-sub">{isAr ? 'تعديل القيم والنصوص الوصفية لكل رقم' : 'Values and descriptive labels for the metrology strip.'}</p>
               </div>
             </div>
 
-            {/* Stat 2 */}
-            <div style={{ padding: '16px', borderRadius: '12px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <span style={{ fontSize: '12px', fontWeight: 800, color: '#E5B869' }}>{isAr ? 'المؤشر الثاني (II)' : 'Stat II'}</span>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <label style={{ fontSize: '11px', fontWeight: 600, color: 'rgba(255, 255, 255, 0.7)' }}>Value (EN)</label>
-                  <input
-                    type="text"
-                    placeholder="15+ Districts"
-                    value={settings.about?.stat2Value || ''}
-                    onChange={(e) => setSettings(prev => ({
-                      ...prev,
-                      about: { ...(prev.about || DEFAULT_ABOUT_SETTINGS), stat2Value: e.target.value }
-                    }))}
-                    style={{ padding: '8px 10px', borderRadius: '6px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', color: '#FFF', fontSize: '12px' }}
-                  />
+            <div className="form-fields-grid">
+              {/* Stat 1 */}
+              <div className="field-group">
+                <label>{isAr ? 'الرقم I - القيمة (EN & AR)' : 'Stat I - Value (EN / AR)'}</label>
+                <div className="dual-inputs-row">
+                  <input type="text" placeholder="2.5B+ EGP" value={about.stat1Value || ''} onChange={(e) => updateAbout('stat1Value', e.target.value)} />
+                  <input type="text" placeholder="٢.٥+ مليار ج.م" value={about.stat1ValueAr || ''} onChange={(e) => updateAbout('stat1ValueAr', e.target.value)} />
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <label style={{ fontSize: '11px', fontWeight: 600, color: 'rgba(255, 255, 255, 0.7)' }}>القيمة (عربي)</label>
-                  <input
-                    type="text"
-                    placeholder="+١٥ منطقة"
-                    value={settings.about?.stat2ValueAr || ''}
-                    onChange={(e) => setSettings(prev => ({
-                      ...prev,
-                      about: { ...(prev.about || DEFAULT_ABOUT_SETTINGS), stat2ValueAr: e.target.value }
-                    }))}
-                    style={{ padding: '8px 10px', borderRadius: '6px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', color: '#FFF', fontSize: '12px' }}
-                  />
+              </div>
+              <div className="field-group">
+                <label>{isAr ? 'الرقم I - الوصف (EN / AR)' : 'Stat I - Label (EN / AR)'}</label>
+                <div className="dual-inputs-row">
+                  <input type="text" placeholder="Curated Asset Volume" value={about.stat1LabelEn || ''} onChange={(e) => updateAbout('stat1LabelEn', e.target.value)} />
+                  <input type="text" placeholder="حجم المحفظة" value={about.stat1LabelAr || ''} onChange={(e) => updateAbout('stat1LabelAr', e.target.value)} />
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <label style={{ fontSize: '11px', fontWeight: 600, color: 'rgba(255, 255, 255, 0.7)' }}>Label (EN)</label>
-                  <input
-                    type="text"
-                    placeholder="Prime Egyptian Markets"
-                    value={settings.about?.stat2LabelEn || ''}
-                    onChange={(e) => setSettings(prev => ({
-                      ...prev,
-                      about: { ...(prev.about || DEFAULT_ABOUT_SETTINGS), stat2LabelEn: e.target.value }
-                    }))}
-                    style={{ padding: '8px 10px', borderRadius: '6px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', color: '#FFF', fontSize: '12px' }}
-                  />
+              </div>
+
+              {/* Stat 2 */}
+              <div className="field-group">
+                <label>{isAr ? 'الرقم II - القيمة (EN & AR)' : 'Stat II - Value (EN / AR)'}</label>
+                <div className="dual-inputs-row">
+                  <input type="text" placeholder="15+ Districts" value={about.stat2Value || ''} onChange={(e) => updateAbout('stat2Value', e.target.value)} />
+                  <input type="text" placeholder="+١٥ منطقة" value={about.stat2ValueAr || ''} onChange={(e) => updateAbout('stat2ValueAr', e.target.value)} />
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <label style={{ fontSize: '11px', fontWeight: 600, color: 'rgba(255, 255, 255, 0.7)' }}>الوصف (عربي)</label>
-                  <input
-                    type="text"
-                    placeholder="مناطق استراتيجية"
-                    value={settings.about?.stat2LabelAr || ''}
-                    onChange={(e) => setSettings(prev => ({
-                      ...prev,
-                      about: { ...(prev.about || DEFAULT_ABOUT_SETTINGS), stat2LabelAr: e.target.value }
-                    }))}
-                    style={{ padding: '8px 10px', borderRadius: '6px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', color: '#FFF', fontSize: '12px' }}
-                  />
+              </div>
+              <div className="field-group">
+                <label>{isAr ? 'الرقم II - الوصف (EN / AR)' : 'Stat II - Label (EN / AR)'}</label>
+                <div className="dual-inputs-row">
+                  <input type="text" placeholder="Prime Egyptian Markets" value={about.stat2LabelEn || ''} onChange={(e) => updateAbout('stat2LabelEn', e.target.value)} />
+                  <input type="text" placeholder="مناطق استراتيجية" value={about.stat2LabelAr || ''} onChange={(e) => updateAbout('stat2LabelAr', e.target.value)} />
+                </div>
+              </div>
+
+              {/* Stat 3 */}
+              <div className="field-group">
+                <label>{isAr ? 'الرقم III - القيمة (EN & AR)' : 'Stat III - Value (EN / AR)'}</label>
+                <div className="dual-inputs-row">
+                  <input type="text" placeholder="98%" value={about.stat3Value || ''} onChange={(e) => updateAbout('stat3Value', e.target.value)} />
+                  <input type="text" placeholder="٩٨٪" value={about.stat3ValueAr || ''} onChange={(e) => updateAbout('stat3ValueAr', e.target.value)} />
+                </div>
+              </div>
+              <div className="field-group">
+                <label>{isAr ? 'الرقم III - الوصف (EN / AR)' : 'Stat III - Label (EN / AR)'}</label>
+                <div className="dual-inputs-row">
+                  <input type="text" placeholder="Client Retention Rate" value={about.stat3LabelEn || ''} onChange={(e) => updateAbout('stat3LabelEn', e.target.value)} />
+                  <input type="text" placeholder="استمرارية العملاء" value={about.stat3LabelAr || ''} onChange={(e) => updateAbout('stat3LabelAr', e.target.value)} />
+                </div>
+              </div>
+
+              {/* Stat 4 */}
+              <div className="field-group">
+                <label>{isAr ? 'الرقم IV - القيمة (EN & AR)' : 'Stat IV - Value (EN / AR)'}</label>
+                <div className="dual-inputs-row">
+                  <input type="text" placeholder="10+ Years" value={about.stat4Value || ''} onChange={(e) => updateAbout('stat4Value', e.target.value)} />
+                  <input type="text" placeholder="+١٠ سنوات" value={about.stat4ValueAr || ''} onChange={(e) => updateAbout('stat4ValueAr', e.target.value)} />
+                </div>
+              </div>
+              <div className="field-group">
+                <label>{isAr ? 'الرقم IV - الوصف (EN / AR)' : 'Stat IV - Label (EN / AR)'}</label>
+                <div className="dual-inputs-row">
+                  <input type="text" placeholder="Bespoke Heritage" value={about.stat4LabelEn || ''} onChange={(e) => updateAbout('stat4LabelEn', e.target.value)} />
+                  <input type="text" placeholder="سنوات الخبرة" value={about.stat4LabelAr || ''} onChange={(e) => updateAbout('stat4LabelAr', e.target.value)} />
                 </div>
               </div>
             </div>
-
-            {/* Stat 3 */}
-            <div style={{ padding: '16px', borderRadius: '12px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <span style={{ fontSize: '12px', fontWeight: 800, color: '#E5B869' }}>{isAr ? 'المؤشر الثالث (III)' : 'Stat III'}</span>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <label style={{ fontSize: '11px', fontWeight: 600, color: 'rgba(255, 255, 255, 0.7)' }}>Value (EN)</label>
-                  <input
-                    type="text"
-                    placeholder="98%"
-                    value={settings.about?.stat3Value || ''}
-                    onChange={(e) => setSettings(prev => ({
-                      ...prev,
-                      about: { ...(prev.about || DEFAULT_ABOUT_SETTINGS), stat3Value: e.target.value }
-                    }))}
-                    style={{ padding: '8px 10px', borderRadius: '6px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', color: '#FFF', fontSize: '12px' }}
-                  />
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <label style={{ fontSize: '11px', fontWeight: 600, color: 'rgba(255, 255, 255, 0.7)' }}>القيمة (عربي)</label>
-                  <input
-                    type="text"
-                    placeholder="٩٨٪"
-                    value={settings.about?.stat3ValueAr || ''}
-                    onChange={(e) => setSettings(prev => ({
-                      ...prev,
-                      about: { ...(prev.about || DEFAULT_ABOUT_SETTINGS), stat3ValueAr: e.target.value }
-                    }))}
-                    style={{ padding: '8px 10px', borderRadius: '6px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', color: '#FFF', fontSize: '12px' }}
-                  />
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <label style={{ fontSize: '11px', fontWeight: 600, color: 'rgba(255, 255, 255, 0.7)' }}>Label (EN)</label>
-                  <input
-                    type="text"
-                    placeholder="Client Retention Rate"
-                    value={settings.about?.stat3LabelEn || ''}
-                    onChange={(e) => setSettings(prev => ({
-                      ...prev,
-                      about: { ...(prev.about || DEFAULT_ABOUT_SETTINGS), stat3LabelEn: e.target.value }
-                    }))}
-                    style={{ padding: '8px 10px', borderRadius: '6px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', color: '#FFF', fontSize: '12px' }}
-                  />
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <label style={{ fontSize: '11px', fontWeight: 600, color: 'rgba(255, 255, 255, 0.7)' }}>الوصف (عربي)</label>
-                  <input
-                    type="text"
-                    placeholder="نسبة رضا واستمرارية العملاء"
-                    value={settings.about?.stat3LabelAr || ''}
-                    onChange={(e) => setSettings(prev => ({
-                      ...prev,
-                      about: { ...(prev.about || DEFAULT_ABOUT_SETTINGS), stat3LabelAr: e.target.value }
-                    }))}
-                    style={{ padding: '8px 10px', borderRadius: '6px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', color: '#FFF', fontSize: '12px' }}
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Stat 4 */}
-            <div style={{ padding: '16px', borderRadius: '12px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <span style={{ fontSize: '12px', fontWeight: 800, color: '#E5B869' }}>{isAr ? 'المؤشر الرابع (IV)' : 'Stat IV'}</span>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <label style={{ fontSize: '11px', fontWeight: 600, color: 'rgba(255, 255, 255, 0.7)' }}>Value (EN)</label>
-                  <input
-                    type="text"
-                    placeholder="10+ Years"
-                    value={settings.about?.stat4Value || ''}
-                    onChange={(e) => setSettings(prev => ({
-                      ...prev,
-                      about: { ...(prev.about || DEFAULT_ABOUT_SETTINGS), stat4Value: e.target.value }
-                    }))}
-                    style={{ padding: '8px 10px', borderRadius: '6px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', color: '#FFF', fontSize: '12px' }}
-                  />
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <label style={{ fontSize: '11px', fontWeight: 600, color: 'rgba(255, 255, 255, 0.7)' }}>القيمة (عربي)</label>
-                  <input
-                    type="text"
-                    placeholder="+١٠ سنوات"
-                    value={settings.about?.stat4ValueAr || ''}
-                    onChange={(e) => setSettings(prev => ({
-                      ...prev,
-                      about: { ...(prev.about || DEFAULT_ABOUT_SETTINGS), stat4ValueAr: e.target.value }
-                    }))}
-                    style={{ padding: '8px 10px', borderRadius: '6px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', color: '#FFF', fontSize: '12px' }}
-                  />
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <label style={{ fontSize: '11px', fontWeight: 600, color: 'rgba(255, 255, 255, 0.7)' }}>Label (EN)</label>
-                  <input
-                    type="text"
-                    placeholder="Bespoke Advisory Heritage"
-                    value={settings.about?.stat4LabelEn || ''}
-                    onChange={(e) => setSettings(prev => ({
-                      ...prev,
-                      about: { ...(prev.about || DEFAULT_ABOUT_SETTINGS), stat4LabelEn: e.target.value }
-                    }))}
-                    style={{ padding: '8px 10px', borderRadius: '6px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', color: '#FFF', fontSize: '12px' }}
-                  />
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <label style={{ fontSize: '11px', fontWeight: 600, color: 'rgba(255, 255, 255, 0.7)' }}>الوصف (عربي)</label>
-                  <input
-                    type="text"
-                    placeholder="سنوات من الخبرة المعمارية"
-                    value={settings.about?.stat4LabelAr || ''}
-                    onChange={(e) => setSettings(prev => ({
-                      ...prev,
-                      about: { ...(prev.about || DEFAULT_ABOUT_SETTINGS), stat4LabelAr: e.target.value }
-                    }))}
-                    style={{ padding: '8px 10px', borderRadius: '6px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', color: '#FFF', fontSize: '12px' }}
-                  />
-                </div>
-              </div>
-            </div>
-
           </div>
 
+          {/* 3. Paravent Decade Monograph */}
+          <div className="settings-card">
+            <div className="card-section-head">
+              <div className="card-icon-wrap"><BookOpen size={18} /></div>
+              <div>
+                <h2 className="card-title">{isAr ? '٣. نصوص سردية العقد الأول (فصول بارافينت)' : '3. Decade Monograph Folio Chapters'}</h2>
+                <p className="card-sub">{isAr ? 'تعديل فصول المسيرة الأربعة وعناوين المحطات' : 'Edit the 4 historical chapters and narrative monographs.'}</p>
+              </div>
+            </div>
+
+            <div className="form-fields-grid">
+              <div className="field-group">
+                <label>{isAr ? 'عنوان القسم الرئيسي (EN)' : 'Section Main Title (EN)'}</label>
+                <input 
+                  type="text" 
+                  value={about.paraventTitleEn || ''} 
+                  onChange={(e) => updateAbout('paraventTitleEn', e.target.value)} 
+                />
+              </div>
+              <div className="field-group">
+                <label>{isAr ? 'عنوان القسم الرئيسي (عربي)' : 'Section Main Title (AR)'}</label>
+                <input 
+                  type="text" 
+                  value={about.paraventTitleAr || ''} 
+                  onChange={(e) => updateAbout('paraventTitleAr', e.target.value)} 
+                />
+              </div>
+
+              {/* Chapter 1 */}
+              <div className="field-group full-width">
+                <div className="sub-chapter-divider">{isAr ? 'الفصل الأول (٢٠١٦ - التأسيس والميثاق)' : 'Chapter I (2016 Genesis)'}</div>
+              </div>
+              <div className="field-group">
+                <label>{isAr ? 'عنوان الفصل (EN)' : 'Chapter I Title (EN)'}</label>
+                <input type="text" value={about.chap1TitleEn || ''} onChange={(e) => updateAbout('chap1TitleEn', e.target.value)} />
+              </div>
+              <div className="field-group">
+                <label>{isAr ? 'عنوان الفصل (عربي)' : 'Chapter I Title (AR)'}</label>
+                <input type="text" value={about.chap1TitleAr || ''} onChange={(e) => updateAbout('chap1TitleAr', e.target.value)} />
+              </div>
+              <div className="field-group full-width">
+                <label>{isAr ? 'نص السردية للفصل الأول (عربي)' : 'Chapter I Narrative (AR)'}</label>
+                <textarea rows={2} value={about.chap1NarrativeAr || ''} onChange={(e) => updateAbout('chap1NarrativeAr', e.target.value)} />
+              </div>
+
+              {/* Chapter 4 */}
+              <div className="field-group full-width">
+                <div className="sub-chapter-divider">{isAr ? 'الفصل الرابع (٢٠٢٥-٢٠٢٦ - الآفاق المستقبلية والساحل)' : 'Chapter IV (2025–2026 Sovereign Horizon)'}</div>
+              </div>
+              <div className="field-group">
+                <label>{isAr ? 'عنوان الفصل الرابع (EN)' : 'Chapter IV Title (EN)'}</label>
+                <input type="text" value={about.chap4TitleEn || ''} onChange={(e) => updateAbout('chap4TitleEn', e.target.value)} />
+              </div>
+              <div className="field-group">
+                <label>{isAr ? 'عنوان الفصل الرابع (عربي)' : 'Chapter IV Title (AR)'}</label>
+                <input type="text" value={about.chap4TitleAr || ''} onChange={(e) => updateAbout('chap4TitleAr', e.target.value)} />
+              </div>
+              <div className="field-group full-width">
+                <label>{isAr ? 'نص السردية للفصل الرابع (عربي)' : 'Chapter IV Narrative (AR)'}</label>
+                <textarea rows={2} value={about.chap4NarrativeAr || ''} onChange={(e) => updateAbout('chap4NarrativeAr', e.target.value)} />
+              </div>
+            </div>
+          </div>
+
+          {/* 4. Curation Protocol & Pillars */}
+          <div className="settings-card">
+            <div className="card-section-head">
+              <div className="card-icon-wrap"><ShieldCheck size={18} /></div>
+              <div>
+                <h2 className="card-title">{isAr ? '٤. ركائز الفحص المعماري الثلاثة' : '4. Forensic Curation Protocol & 3 Pillars'}</h2>
+                <p className="card-sub">{isAr ? 'تعديل نصوص الفحص الإنشائي والقانوني والمالي' : 'Structural, legal, and capital liquidity pillar descriptions.'}</p>
+              </div>
+            </div>
+
+            <div className="form-fields-grid">
+              {/* Pillar 1 */}
+              <div className="field-group">
+                <label>{isAr ? 'الركيزة الأولى - الفحص الإنشائي (EN)' : 'Pillar I Title (EN)'}</label>
+                <input type="text" value={about.pillar1TitleEn || ''} onChange={(e) => updateAbout('pillar1TitleEn', e.target.value)} />
+              </div>
+              <div className="field-group">
+                <label>{isAr ? 'الركيزة الأولى - الفحص الإنشائي (عربي)' : 'Pillar I Title (AR)'}</label>
+                <input type="text" value={about.pillar1TitleAr || ''} onChange={(e) => updateAbout('pillar1TitleAr', e.target.value)} />
+              </div>
+              <div className="field-group full-width">
+                <label>{isAr ? 'شرح الركيزة الأولى (عربي)' : 'Pillar I Description (AR)'}</label>
+                <textarea rows={2} value={about.pillar1DescAr || ''} onChange={(e) => updateAbout('pillar1DescAr', e.target.value)} />
+              </div>
+
+              {/* Pillar 2 */}
+              <div className="field-group">
+                <label>{isAr ? 'الركيزة الثانية - التوثيق القانوني (EN)' : 'Pillar II Title (EN)'}</label>
+                <input type="text" value={about.pillar2TitleEn || ''} onChange={(e) => updateAbout('pillar2TitleEn', e.target.value)} />
+              </div>
+              <div className="field-group">
+                <label>{isAr ? 'الركيزة الثانية - التوثيق القانوني (عربي)' : 'Pillar II Title (AR)'}</label>
+                <input type="text" value={about.pillar2TitleAr || ''} onChange={(e) => updateAbout('pillar2TitleAr', e.target.value)} />
+              </div>
+              <div className="field-group full-width">
+                <label>{isAr ? 'شرح الركيزة الثانية (عربي)' : 'Pillar II Description (AR)'}</label>
+                <textarea rows={2} value={about.pillar2DescAr || ''} onChange={(e) => updateAbout('pillar2DescAr', e.target.value)} />
+              </div>
+
+              {/* Pillar 3 */}
+              <div className="field-group">
+                <label>{isAr ? 'الركيزة الثالثة - دراسة الجدوى (EN)' : 'Pillar III Title (EN)'}</label>
+                <input type="text" value={about.pillar3TitleEn || ''} onChange={(e) => updateAbout('pillar3TitleEn', e.target.value)} />
+              </div>
+              <div className="field-group">
+                <label>{isAr ? 'الركيزة الثالثة - دراسة الجدوى (عربي)' : 'Pillar III Title (AR)'}</label>
+                <input type="text" value={about.pillar3TitleAr || ''} onChange={(e) => updateAbout('pillar3TitleAr', e.target.value)} />
+              </div>
+              <div className="field-group full-width">
+                <label>{isAr ? 'شرح الركيزة الثالثة (عربي)' : 'Pillar III Description (AR)'}</label>
+                <textarea rows={2} value={about.pillar3DescAr || ''} onChange={(e) => updateAbout('pillar3DescAr', e.target.value)} />
+              </div>
+            </div>
+          </div>
+
+          {/* 5. Founder Monograph */}
+          <div className="settings-card">
+            <div className="card-section-head">
+              <div className="card-icon-wrap"><Quote size={18} /></div>
+              <div>
+                <h2 className="card-title">{isAr ? '٥. رسالة ورؤية المؤسس (م. فريد زكريا)' : '5. Founder’s Letter & Quotation'}</h2>
+                <p className="card-sub">{isAr ? 'نص المقولة الرسمية واسم والمسمى الوظيفي للمؤسس' : 'Quotation text, founder credentials, and official title.'}</p>
+              </div>
+            </div>
+
+            <div className="form-fields-grid">
+              <div className="field-group full-width">
+                <label>{isAr ? 'مقولة ورؤية المؤسس (EN)' : 'Founder Quote (EN)'}</label>
+                <textarea 
+                  rows={2} 
+                  value={about.founderQuoteEn || ''} 
+                  onChange={(e) => updateAbout('founderQuoteEn', e.target.value)} 
+                />
+              </div>
+              <div className="field-group full-width">
+                <label>{isAr ? 'مقولة ورؤية المؤسس (عربي)' : 'Founder Quote (AR)'}</label>
+                <textarea 
+                  rows={2} 
+                  value={about.founderQuoteAr || ''} 
+                  onChange={(e) => updateAbout('founderQuoteAr', e.target.value)} 
+                />
+              </div>
+
+              <div className="field-group">
+                <label>{isAr ? 'اسم المؤسس (EN)' : 'Founder Name (EN)'}</label>
+                <input 
+                  type="text" 
+                  value={about.founderNameEn || ''} 
+                  onChange={(e) => updateAbout('founderNameEn', e.target.value)} 
+                />
+              </div>
+              <div className="field-group">
+                <label>{isAr ? 'اسم المؤسس (عربي)' : 'Founder Name (AR)'}</label>
+                <input 
+                  type="text" 
+                  value={about.founderNameAr || ''} 
+                  onChange={(e) => updateAbout('founderNameAr', e.target.value)} 
+                />
+              </div>
+
+              <div className="field-group">
+                <label>{isAr ? 'المسمى الوظيفي (EN)' : 'Founder Title (EN)'}</label>
+                <input 
+                  type="text" 
+                  value={about.founderTitleEn || ''} 
+                  onChange={(e) => updateAbout('founderTitleEn', e.target.value)} 
+                />
+              </div>
+              <div className="field-group">
+                <label>{isAr ? 'المسمى الوظيفي (عربي)' : 'Founder Title (AR)'}</label>
+                <input 
+                  type="text" 
+                  value={about.founderTitleAr || ''} 
+                  onChange={(e) => updateAbout('founderTitleAr', e.target.value)} 
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* 6. Closing Portal CTA */}
+          <div className="settings-card">
+            <div className="card-section-head">
+              <div className="card-icon-wrap"><Award size={18} /></div>
+              <div>
+                <h2 className="card-title">{isAr ? '٦. بطاقة الاستحواذ الخاص الختامية' : '6. Confidential Placement Portal CTA'}</h2>
+                <p className="card-sub">{isAr ? 'العنوان ونص الدعوة للتواصل في نهاية صفحة من نحن' : 'Closing banner headline and private advisory prompt.'}</p>
+              </div>
+            </div>
+
+            <div className="form-fields-grid">
+              <div className="field-group">
+                <label>{isAr ? 'العنوان الختامي (EN)' : 'Portal Headline (EN)'}</label>
+                <input 
+                  type="text" 
+                  value={about.portalHeadingEn || ''} 
+                  onChange={(e) => updateAbout('portalHeadingEn', e.target.value)} 
+                />
+              </div>
+              <div className="field-group">
+                <label>{isAr ? 'العنوان الختامي (عربي)' : 'Portal Headline (AR)'}</label>
+                <input 
+                  type="text" 
+                  value={about.portalHeadingAr || ''} 
+                  onChange={(e) => updateAbout('portalHeadingAr', e.target.value)} 
+                />
+              </div>
+
+              <div className="field-group full-width">
+                <label>{isAr ? 'الفقرة الختامية (عربي)' : 'Portal Paragraph (AR)'}</label>
+                <textarea 
+                  rows={2} 
+                  value={about.portalParagraphAr || ''} 
+                  onChange={(e) => updateAbout('portalParagraphAr', e.target.value)} 
+                />
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
+      {/* ══════════════════════════════════════════════════════════════════════
+          TAB 4: PUBLIC ADVISORY DESK CONTACT INFO
+      ══════════════════════════════════════════════════════════════════════ */}
+      {activeTab === 'contact' && (
+        <div className="settings-tab-pane">
+          <div className="settings-card">
+            <div className="card-section-head">
+              <div className="card-icon-wrap"><Phone size={18} /></div>
+              <div>
+                <h2 className="card-title">{isAr ? 'أرقام وهوية التواصل الرسمية' : 'Official Advisory Contact Channels'}</h2>
+                <p className="card-sub">{isAr ? 'تعديل أرقام الهاتف والبريد ومكتب الاستقبال' : 'Update the direct phone lines, emails, and address across the site.'}</p>
+              </div>
+            </div>
+
+            <div className="form-fields-grid">
+              <div className="field-group">
+                <label>{isAr ? 'الخط الساخن / الهاتف' : 'Official Phone Line'}</label>
+                <input 
+                  type="text" 
+                  value={contact.phone} 
+                  onChange={(e) => updateContact('phone', e.target.value)}
+                  onBlur={(e) => {
+                    const formatted = formatDisplayPhoneNumber(e.target.value);
+                    if (formatted) updateContact('phone', formatted);
+                  }}
+                  placeholder="+20 100 997 0776"
+                />
+              </div>
+
+              <div className="field-group">
+                <label>{isAr ? 'رقم الواتساب للاستفسارات' : 'Official WhatsApp Number'}</label>
+                <input 
+                  type="text" 
+                  value={contact.whatsapp} 
+                  onChange={(e) => updateContact('whatsapp', e.target.value)}
+                  onBlur={(e) => {
+                    const formatted = formatDisplayPhoneNumber(e.target.value);
+                    if (formatted) updateContact('whatsapp', formatted);
+                  }}
+                  placeholder="+20 100 997 0776"
+                />
+              </div>
+
+              <div className="field-group full-width">
+                <label>{isAr ? 'البريد الإلكتروني للاستشارات' : 'Concierge Email'}</label>
+                <input 
+                  type="email" 
+                  value={contact.email} 
+                  onChange={(e) => updateContact('email', e.target.value)} 
+                />
+              </div>
+
+              <div className="field-group full-width">
+                <label>{isAr ? 'عنوان المقر الرئيسي (EN)' : 'Headquarters Address (EN)'}</label>
+                <input 
+                  type="text" 
+                  value={contact.addressEn} 
+                  onChange={(e) => updateContact('addressEn', e.target.value)} 
+                />
+              </div>
+
+              <div className="field-group full-width">
+                <label>{isAr ? 'عنوان المقر الرئيسي (عربي)' : 'Headquarters Address (AR)'}</label>
+                <input 
+                  type="text" 
+                  value={contact.addressAr} 
+                  onChange={(e) => updateContact('addressAr', e.target.value)} 
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── STYLES (Strict mobile fluid containment with zero overflow) ─── */}
+      <style jsx>{`
+        .admin-settings-root {
+          display: flex;
+          flex-direction: column;
+          gap: 16px;
+          width: 100%;
+          max-width: 100%;
+          min-width: 0;
+          box-sizing: border-box;
+          color: #E2E8F0;
+        }
+
+        /* Top Header Card */
+        .settings-header-card {
+          width: 100%;
+          max-width: 100%;
+          min-width: 0;
+          box-sizing: border-box;
+          background: #11141D;
+          border: 1px solid rgba(212, 175, 55, 0.22);
+          border-radius: 12px;
+          padding: 16px;
+          display: flex;
+          flex-direction: column;
+          gap: 16px;
+        }
+
+        @media (min-width: 900px) {
+          .settings-header-card {
+            flex-direction: row;
+            justify-content: space-between;
+            align-items: center;
+            padding: 24px;
+          }
+        }
+
+        .settings-header-left {
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+          min-width: 0;
+        }
+
+        .header-badge-row {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          flex-wrap: wrap;
+        }
+
+        .gold-pill {
+          font-size: 0.68rem;
+          font-weight: 700;
+          text-transform: uppercase;
+          letter-spacing: 0.08em;
+          padding: 3px 8px;
+          background: rgba(212, 175, 55, 0.12);
+          color: #D4AF37;
+          border: 1px solid rgba(212, 175, 55, 0.3);
+          border-radius: 4px;
+        }
+
+        .live-pill {
+          font-size: 0.68rem;
+          font-weight: 600;
+          padding: 3px 8px;
+          background: rgba(34, 197, 94, 0.12);
+          color: #4ADE80;
+          border: 1px solid rgba(34, 197, 94, 0.3);
+          border-radius: 4px;
+          display: inline-flex;
+          align-items: center;
+          gap: 5px;
+        }
+
+        .live-dot {
+          width: 6px;
+          height: 6px;
+          border-radius: 50%;
+          background: #4ADE80;
+          box-shadow: 0 0 6px #4ADE80;
+        }
+
+        .settings-main-title {
+          font-size: 1.15rem;
+          font-weight: 700;
+          color: #FFFFFF;
+          margin: 0;
+          line-height: 1.3;
+          word-break: break-word;
+        }
+
+        @media (min-width: 640px) {
+          .settings-main-title {
+            font-size: 1.45rem;
+          }
+        }
+
+        .settings-main-desc {
+          font-size: 0.8rem;
+          color: #94A3B8;
+          margin: 0;
+          line-height: 1.45;
+          word-break: break-word;
+        }
+
+        .settings-actions-row {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 10px;
+          width: 100%;
+          min-width: 0;
+          box-sizing: border-box;
+        }
+
+        @media (min-width: 640px) {
+          .settings-actions-row {
+            display: flex;
+            align-items: center;
+            width: auto;
+          }
+        }
+
+        .btn-outline-gold {
+          height: 40px;
+          padding: 0 14px;
+          border-radius: 8px;
+          background: rgba(255, 255, 255, 0.03);
+          border: 1px solid rgba(255, 255, 255, 0.15);
+          color: #CBD5E1;
+          font-size: 0.82rem;
+          font-weight: 600;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 7px;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          width: 100%;
+          box-sizing: border-box;
+        }
+
+        .btn-outline-gold:hover {
+          background: rgba(255, 255, 255, 0.08);
+          border-color: rgba(212, 175, 55, 0.4);
+          color: #FFFFFF;
+        }
+
+        .btn-solid-gold {
+          height: 40px;
+          padding: 0 16px;
+          border-radius: 8px;
+          background: linear-gradient(135deg, #D4AF37 0%, #B89628 100%);
+          border: 1px solid #E6CA65;
+          color: #0A0C10;
+          font-size: 0.82rem;
+          font-weight: 700;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 7px;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          width: 100%;
+          box-sizing: border-box;
+          box-shadow: 0 2px 8px rgba(212, 175, 55, 0.25);
+        }
+
+        .btn-solid-gold:hover {
+          filter: brightness(1.1);
+        }
+
+        /* Tabs Scroller */
+        .settings-tabs-scroller {
+          width: 100%;
+          max-width: 100%;
+          min-width: 0;
+          overflow-x: auto;
+          scrollbar-width: none;
+          box-sizing: border-box;
+        }
+
+        .settings-tabs-scroller::-webkit-scrollbar {
+          display: none;
+        }
+
+        .settings-tabs-track {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          width: max-content;
+          padding-bottom: 2px;
+          box-sizing: border-box;
+        }
+
+        .settings-tab-btn {
+          height: 38px;
+          padding: 0 14px;
+          border-radius: 8px;
+          background: #11141D;
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          color: #94A3B8;
+          font-size: 0.8rem;
+          font-weight: 600;
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          cursor: pointer;
+          white-space: nowrap;
+          transition: all 0.2s ease;
+        }
+
+        .settings-tab-btn:hover {
+          color: #FFFFFF;
+          border-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .settings-tab-btn.active {
+          background: rgba(212, 175, 55, 0.15);
+          border-color: #D4AF37;
+          color: #D4AF37;
+        }
+
+        /* Tab Pane & Cards */
+        .settings-tab-pane {
+          display: flex;
+          flex-direction: column;
+          gap: 16px;
+          width: 100%;
+          max-width: 100%;
+          min-width: 0;
+          box-sizing: border-box;
+        }
+
+        .settings-card {
+          width: 100%;
+          max-width: 100%;
+          min-width: 0;
+          box-sizing: border-box;
+          background: #11141D;
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          border-radius: 12px;
+          padding: 16px;
+          display: flex;
+          flex-direction: column;
+          gap: 16px;
+        }
+
+        @media (min-width: 640px) {
+          .settings-card {
+            padding: 20px;
+          }
+        }
+
+        .card-section-head {
+          display: flex;
+          align-items: flex-start;
+          gap: 12px;
+        }
+
+        .card-section-head-between {
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+        }
+
+        @media (min-width: 640px) {
+          .card-section-head-between {
+            flex-direction: row;
+            justify-content: space-between;
+            align-items: center;
+          }
+        }
+
+        .card-section-head-left {
+          display: flex;
+          align-items: flex-start;
+          gap: 12px;
+        }
+
+        .card-icon-wrap {
+          width: 36px;
+          height: 36px;
+          border-radius: 8px;
+          background: rgba(212, 175, 55, 0.1);
+          border: 1px solid rgba(212, 175, 55, 0.25);
+          color: #D4AF37;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
+        }
+
+        .card-title {
+          font-size: 0.95rem;
+          font-weight: 700;
+          color: #FFFFFF;
+          margin: 0;
+          line-height: 1.3;
+        }
+
+        .card-sub {
+          font-size: 0.76rem;
+          color: #94A3B8;
+          margin: 2px 0 0;
+          line-height: 1.4;
+        }
+
+        /* Toggle Checkbox Cards */
+        .toggles-grid-2col {
+          display: grid;
+          grid-template-columns: 1fr;
+          gap: 10px;
+          width: 100%;
+          min-width: 0;
+          box-sizing: border-box;
+        }
+
+        @media (min-width: 768px) {
+          .toggles-grid-2col {
+            grid-template-columns: 1fr 1fr;
+          }
+        }
+
+        .toggle-checkbox-card {
+          display: flex;
+          align-items: flex-start;
+          gap: 12px;
+          background: rgba(255, 255, 255, 0.02);
+          border: 1px solid rgba(255, 255, 255, 0.06);
+          border-radius: 8px;
+          padding: 12px;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          width: 100%;
+          min-width: 0;
+          box-sizing: border-box;
+        }
+
+        .toggle-checkbox-card:hover {
+          background: rgba(255, 255, 255, 0.04);
+          border-color: rgba(212, 175, 55, 0.3);
+        }
+
+        .toggle-checkbox-card input[type="checkbox"] {
+          margin-top: 3px;
+          accent-color: #D4AF37;
+          width: 18px;
+          height: 18px;
+          cursor: pointer;
+          flex-shrink: 0;
+        }
+
+        .toggle-info {
+          display: flex;
+          flex-direction: column;
+          gap: 2px;
+          min-width: 0;
+        }
+
+        .toggle-title {
+          font-size: 0.82rem;
+          font-weight: 600;
+          color: #E2E8F0;
+        }
+
+        .toggle-desc {
+          font-size: 0.72rem;
+          color: #94A3B8;
+          line-height: 1.35;
+        }
+
+        /* Form Fields Grid */
+        .form-fields-grid {
+          display: grid;
+          grid-template-columns: 1fr;
+          gap: 12px;
+          width: 100%;
+          min-width: 0;
+          box-sizing: border-box;
+        }
+
+        @media (min-width: 640px) {
+          .form-fields-grid {
+            grid-template-columns: 1fr 1fr;
+          }
+        }
+
+        .field-group {
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+          width: 100%;
+          min-width: 0;
+          box-sizing: border-box;
+        }
+
+        .field-group.full-width {
+          grid-column: 1 / -1;
+        }
+
+        .field-group label {
+          font-size: 0.74rem;
+          font-weight: 600;
+          color: #CBD5E1;
+        }
+
+        .field-group input,
+        .field-group textarea,
+        .field-group select {
+          width: 100%;
+          max-width: 100%;
+          min-width: 0;
+          box-sizing: border-box;
+          background: #090B10;
+          border: 1px solid rgba(255, 255, 255, 0.12);
+          border-radius: 6px;
+          padding: 8px 12px;
+          color: #FFFFFF;
+          font-size: 0.82rem;
+          font-family: inherit;
+          transition: border-color 0.2s ease;
+        }
+
+        .field-group input:focus,
+        .field-group textarea:focus,
+        .field-group select:focus {
+          outline: none;
+          border-color: #D4AF37;
+        }
+
+        .field-group textarea {
+          resize: vertical;
+          line-height: 1.45;
+        }
+
+        .dual-inputs-row {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 8px;
+          width: 100%;
+          min-width: 0;
+          box-sizing: border-box;
+        }
+
+        .sub-chapter-divider {
+          font-size: 0.76rem;
+          font-weight: 700;
+          color: #D4AF37;
+          border-bottom: 1px solid rgba(212, 175, 55, 0.2);
+          padding-bottom: 4px;
+          margin-top: 6px;
+        }
+
+        /* District Rows */
+        .btn-add-district {
+          height: 34px;
+          padding: 0 12px;
+          border-radius: 6px;
+          background: rgba(212, 175, 55, 0.15);
+          border: 1px solid rgba(212, 175, 55, 0.35);
+          color: #D4AF37;
+          font-size: 0.78rem;
+          font-weight: 600;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 6px;
+          cursor: pointer;
+        }
+
+        .new-district-form {
+          background: rgba(212, 175, 55, 0.05);
+          border: 1px dashed rgba(212, 175, 55, 0.3);
+          border-radius: 8px;
+          padding: 14px;
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+        }
+
+        .new-form-title {
+          font-size: 0.85rem;
+          font-weight: 700;
+          color: #D4AF37;
+          margin: 0;
+        }
+
+        .new-form-actions {
+          display: flex;
+          justify-content: flex-end;
+          gap: 8px;
+        }
+
+        .btn-cancel {
+          height: 32px;
+          padding: 0 12px;
+          border-radius: 6px;
+          background: transparent;
+          border: 1px solid rgba(255, 255, 255, 0.15);
+          color: #94A3B8;
+          font-size: 0.76rem;
+          cursor: pointer;
+        }
+
+        .btn-confirm {
+          height: 32px;
+          padding: 0 14px;
+          border-radius: 6px;
+          background: #D4AF37;
+          border: none;
+          color: #0A0C10;
+          font-size: 0.76rem;
+          font-weight: 700;
+          cursor: pointer;
+        }
+
+        .districts-list {
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+          width: 100%;
+          min-width: 0;
+          box-sizing: border-box;
+        }
+
+        .district-row-card {
+          background: rgba(255, 255, 255, 0.02);
+          border: 1px solid rgba(255, 255, 255, 0.06);
+          border-radius: 8px;
+          padding: 12px;
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+          width: 100%;
+          min-width: 0;
+          box-sizing: border-box;
+          transition: all 0.2s ease;
+        }
+
+        .district-row-card.disabled {
+          opacity: 0.55;
+        }
+
+        .district-row-top {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          gap: 8px;
+        }
+
+        .district-tag-group {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          flex-wrap: wrap;
+        }
+
+        .district-rank {
+          font-size: 0.7rem;
+          font-weight: 700;
+          color: #D4AF37;
+          background: rgba(212, 175, 55, 0.12);
+          padding: 2px 6px;
+          border-radius: 4px;
+        }
+
+        .district-name-main {
+          font-size: 0.85rem;
+          font-weight: 700;
+          color: #FFFFFF;
+        }
+
+        .district-name-alt {
+          font-size: 0.74rem;
+          color: #94A3B8;
+        }
+
+        .district-quick-actions {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+        }
+
+        .btn-icon-toggle {
+          width: 30px;
+          height: 30px;
+          border-radius: 6px;
+          background: rgba(255, 255, 255, 0.04);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          color: #94A3B8;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+        }
+
+        .btn-icon-toggle.active {
+          color: #4ADE80;
+          border-color: rgba(34, 197, 94, 0.3);
+        }
+
+        .btn-icon-delete {
+          width: 30px;
+          height: 30px;
+          border-radius: 6px;
+          background: rgba(239, 68, 68, 0.08);
+          border: 1px solid rgba(239, 68, 68, 0.2);
+          color: #EF4444;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+        }
+
+        .district-inputs-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 8px;
+          width: 100%;
+          min-width: 0;
+          box-sizing: border-box;
+        }
+
+        @media (min-width: 640px) {
+          .district-inputs-grid {
+            grid-template-columns: 1fr 1fr 1fr 1fr;
+          }
+        }
+
+        .field-group-sm {
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+          min-width: 0;
+        }
+
+        .field-group-sm label {
+          font-size: 0.68rem;
+          color: #94A3B8;
+          font-weight: 500;
+        }
+
+        .field-group-sm input {
+          width: 100%;
+          min-width: 0;
+          box-sizing: border-box;
+          background: #090B10;
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          border-radius: 4px;
+          padding: 6px 8px;
+          color: #FFFFFF;
+          font-size: 0.78rem;
+        }
+      `}</style>
     </div>
   );
 }

@@ -23,6 +23,7 @@ if (typeof window !== 'undefined') {
 }
 import { createCachedTileLayer } from '@/lib/mapCache';
 import { usePlatformSettings } from '@/lib/hooks/usePlatformSettings';
+import { formatDisplayPhoneNumber, cleanPhoneNumber } from '@/lib/utils/formatPhone';
 
 export const ContactView: React.FC<{ locale?: string }> = ({ locale = 'en' }) => {
   const isAr = locale === 'ar';
@@ -484,9 +485,9 @@ export const ContactView: React.FC<{ locale?: string }> = ({ locale = 'en' }) =>
               {/* Direct Telephone Hotline */}
               <div className="direct-hotline-card">
                 <h4 className="hotline-title">{isAr ? 'الخط الساخن المباشر' : 'Direct Client Hotline'}</h4>
-                <a href={`tel:${(contact?.phone || '+20 2 19688').replace(/\s+/g, '')}`} className="hotline-num">
+                <a href={`tel:${cleanPhoneNumber(contact?.phone || '+20 2 19688')}`} className="hotline-num">
                   <PhoneCall size={18} className="hotline-icon" />
-                  <span>{contact?.phone || '+20 2 19688'}</span>
+                  <span dir="ltr" className="phone-digits">{formatDisplayPhoneNumber(contact?.phone || '+20 2 19688')}</span>
                 </a>
                 <span className="hotline-sub">
                   {isAr ? 'متاح من الأحد إلى الخميس · ٩:٠٠ ص – ٦:٠٠ م' : 'Available Sun – Thu · 9:00 AM – 6:00 PM (EET)'}
@@ -1139,7 +1140,6 @@ export const ContactView: React.FC<{ locale?: string }> = ({ locale = 'en' }) =>
         [data-theme="dark"] .hotline-title {
           color: #E8C87A;
         }
-
         [data-theme="light"] .hotline-title {
           color: #B8860B;
         }
@@ -1149,11 +1149,19 @@ export const ContactView: React.FC<{ locale?: string }> = ({ locale = 'en' }) =>
           font-size: 1.65rem;
           font-weight: 800;
           color: var(--gold-primary);
-          display: flex;
+          display: inline-flex;
           align-items: center;
-          gap: 8px;
+          gap: 10px;
           text-decoration: none;
           transition: color var(--transition-fast);
+          letter-spacing: 0.02em;
+        }
+
+        .phone-digits {
+          direction: ltr;
+          unicode-bidi: isolate;
+          font-variant-numeric: tabular-nums;
+          display: inline-block;
         }
 
         .hotline-num.email-hotline {
@@ -1395,23 +1403,17 @@ export const ContactView: React.FC<{ locale?: string }> = ({ locale = 'en' }) =>
 
         /* Responsive */
 
-        @media (max-width: 768px) {
-          .contact-page {
-            padding-top: 96px;
-          }
-        }
-
         @media (max-width: 1024px) {
           .contact-two-col-grid {
             grid-template-columns: 1fr;
             gap: 2rem;
           }
           .acquisition-form-card {
-            order: 2;
+            order: 1;
           }
           .contact-sidebar-col {
             position: static;
-            order: 1;
+            order: 2;
           }
           .grand-hq-banner {
             padding: 2rem 1.25rem;
@@ -1423,24 +1425,168 @@ export const ContactView: React.FC<{ locale?: string }> = ({ locale = 'en' }) =>
           }
         }
 
-        @media (max-width: 640px) {
-          /* Compact side-by-side chips instead of stacked full-width buttons */
+        @media (max-width: 768px) {
+          .contact-page {
+            padding-top: 100px;
+            padding-bottom: 3.5rem;
+          }
+
+          .contact-header-section {
+            margin-bottom: 1.5rem;
+          }
+
+          .hero-concierge-badge {
+            font-size: 0.625rem;
+            padding: 0.32rem 0.9rem;
+            margin-bottom: 0.75rem;
+          }
+
+          .contact-main-title {
+            font-size: clamp(1.6rem, 6.2vw, 2.1rem);
+            line-height: 1.2;
+            letter-spacing: -0.025em;
+            margin-bottom: 0.65rem;
+          }
+
+          .contact-hero-subtitle {
+            font-size: 0.825rem;
+            line-height: 1.55;
+          }
+
+          .contact-form-grid-section {
+            margin-bottom: 2.5rem;
+          }
+
+          /* Mobile Optimized Form Card */
+          .acquisition-form-card {
+            padding: 1.25rem 1.1rem 1.35rem;
+            border-radius: 20px;
+            border-top: 1.5px solid rgba(229, 184, 105, 0.4);
+            box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
+          }
+
+          [data-theme="light"] .acquisition-form-card {
+            border-top: 1.5px solid rgba(212, 160, 52, 0.45);
+            box-shadow: 0 12px 32px rgba(30, 24, 16, 0.08);
+          }
+
+          .form-card-header {
+            margin-bottom: 1rem;
+          }
+
+          .form-eyebrow {
+            font-size: 0.625rem;
+            margin-bottom: 0.2rem;
+          }
+
+          .form-card-title {
+            font-size: 1.25rem;
+            line-height: 1.25;
+            margin-bottom: 0.3rem;
+          }
+
+          .form-card-sub {
+            font-size: 0.78rem;
+            line-height: 1.45;
+          }
+
+          .acquisition-form {
+            gap: 0.85rem;
+          }
+
+          .form-field-group {
+            gap: 4px;
+          }
+
+          .form-field-label {
+            font-size: 0.625rem;
+            letter-spacing: 0.08em;
+          }
+
+          /* Intent Selector Chips: Horizontal 1-row scroll on mobile */
           .intent-chips-grid {
             display: flex;
-            flex-wrap: wrap;
-            gap: 0.5rem;
+            overflow-x: auto;
+            scrollbar-width: none;
+            -webkit-overflow-scrolling: touch;
+            gap: 6px;
+            padding: 2px 0;
+            width: 100%;
           }
-          .selector-chip {
-            flex: 1 1 auto;
-            padding: 0.5rem 0.8rem;
-            font-size: 0.78rem;
+
+          .intent-chips-grid::-webkit-scrollbar {
+            display: none;
+          }
+
+          .intent-chips-grid .selector-chip {
+            flex-shrink: 0;
+            padding: 6px 12px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            border-radius: 9999px;
             white-space: nowrap;
           }
+
           .form-inputs-grid {
-            grid-template-columns: 1fr;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
           }
-          .acquisition-form-card {
-            padding: 2rem 1.5rem;
+
+          /* Prevent iOS input zoom with 16px */
+          .form-dark-input, 
+          .form-dark-select, 
+          .form-dark-textarea {
+            font-size: 16px !important;
+            padding: 0.55rem 0.8rem;
+            border-radius: 10px;
+            min-height: 42px;
+          }
+
+          .form-dark-textarea {
+            min-height: 64px;
+            height: 64px;
+            padding: 0.55rem 0.8rem;
+          }
+
+          /* Communication Channel Chips on Mobile */
+          .chips-row {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 6px;
+          }
+
+          .chips-row .selector-chip {
+            padding: 6px 4px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            border-radius: 9999px;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            line-height: 1.2;
+            white-space: nowrap;
+          }
+
+          .submit-inquiry-btn {
+            width: 100%;
+            height: 46px;
+            padding: 0.65rem 1.25rem;
+            font-size: 0.85rem;
+            font-weight: 800;
+            border-radius: 9999px;
+            margin-top: 0.25rem;
+            justify-content: center;
+          }
+
+          /* Sidebar adjustments on Mobile */
+          .sidebar-desk-card {
+            padding: 1.25rem 1.1rem;
+            border-radius: 18px;
+          }
+          .hq-map-wrapper {
+            height: 240px;
+            border-radius: 16px;
           }
         }
       `}</style>

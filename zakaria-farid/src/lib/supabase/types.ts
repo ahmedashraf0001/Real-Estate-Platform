@@ -39,6 +39,16 @@ export interface SpecLayer {
   items: SpecLayerItem[];
 }
 
+export interface PropertyVideo {
+  id: string;
+  url: string;
+  title_en?: string;
+  title_ar?: string;
+  thumbnail?: string;
+  duration?: string;
+  category?: 'tour' | 'drone' | 'cad' | 'spec';
+}
+
 export interface Property {
   id: string;
   slug: string;
@@ -64,6 +74,8 @@ export interface Property {
   finishing?: string | null;
   furnishing?: string | null;
   calcom_event_link?: string | null;
+  videos?: PropertyVideo[];
+  video_url?: string | null;
   spec_layers?: ZoneInstance[] | SpecLayer[] | any;
   property_images?: PropertyImage[];
   property_amenities?: PropertyAmenity[];

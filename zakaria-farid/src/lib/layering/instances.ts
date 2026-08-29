@@ -63,6 +63,16 @@ export interface ZoneSpatialLayout {
   openings?: ZoneOpening[]; // Doors/windows attached to this room's edges
 }
 
+export interface ZoneVideo {
+  id: string;
+  url: string;
+  title_en?: string;
+  title_ar?: string;
+  thumbnail?: string;
+  duration?: string;
+  category?: string;
+}
+
 export interface ZoneInstance {
   id: string;
   zone_template_id: string;
@@ -72,6 +82,7 @@ export interface ZoneInstance {
   trades: TradeInstance[];
   children?: ZoneInstance[]; // for container zones (Villa floors)
   images?: string[];         // optional admin-uploaded photos for this zone (multiple)
+  videos?: ZoneVideo[];      // optional demo/walkthrough videos for this room/spec
   spatial?: ZoneSpatialLayout; // Optional visual CAD layout & dimensions
 }
 
@@ -734,6 +745,47 @@ export function removeZoneImage(
     }
     if (zone.children) {
       return { ...zone, children: removeZoneImage(zone.children, zoneInstanceId, imageIndex) };
+    }
+    return zone;
+  });
+}
+
+/**
+ * Add a video to a zone's videos array.
+ */
+export function addZoneVideo(
+  zones: ZoneInstance[],
+  zoneInstanceId: string,
+  video: ZoneVideo
+): ZoneInstance[] {
+  return zones.map(zone => {
+    if (zone.id === zoneInstanceId) {
+      return { ...zone, videos: [...(zone.videos ?? []), video] };
+    }
+    if (zone.children) {
+      return { ...zone, children: addZoneVideo(zone.children, zoneInstanceId, video) };
+    }
+    return zone;
+  });
+}
+
+/**
+ * Remove a video from a zone's videos array by id or index.
+ */
+export function removeZoneVideo(
+  zones: ZoneInstance[],
+  zoneInstanceId: string,
+  videoIdOrIndex: string | number
+): ZoneInstance[] {
+  return zones.map(zone => {
+    if (zone.id === zoneInstanceId) {
+      const updated = (zone.videos ?? []).filter((v, i) =>
+        typeof videoIdOrIndex === 'number' ? i !== videoIdOrIndex : v.id !== videoIdOrIndex
+      );
+      return { ...zone, videos: updated.length > 0 ? updated : undefined };
+    }
+    if (zone.children) {
+      return { ...zone, children: removeZoneVideo(zone.children, zoneInstanceId, videoIdOrIndex) };
     }
     return zone;
   });

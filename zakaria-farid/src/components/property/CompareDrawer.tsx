@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Property } from '@/types';
 import { 
-  Scale, 
+  Scale, Trash2, 
   X, 
   ArrowUpRight, 
   Check, 
@@ -202,18 +202,30 @@ export const CompareDrawer: React.FC<CompareDrawerProps> = ({
           transition={{ type: 'spring', stiffness: 350, damping: 28 }}
         >
           <div className="compare-dock-inner">
-            <div className="compare-dock-info">
-              <div className="compare-icon-wrap">
-                <Scale size={18} className="dock-scale-icon" />
+            <div className="compare-dock-top-row">
+              <div className="compare-dock-info">
+                <div className="compare-icon-wrap">
+                  <Scale size={16} className="dock-scale-icon" />
+                </div>
+                <div className="dock-title-group">
+                  <span className="dock-title">{isAr ? 'مقارنة العقارات' : 'Estate Comparison'}</span>
+                  <span className="dock-subtitle">
+                    {isAr 
+                      ? `تم اختيار ${selectedProperties.length} من ${maxSlots} ${canCompare ? '(جاهز)' : '(اختر عقاراً آخر)'}` 
+                      : `${selectedProperties.length}/${maxSlots} Selected ${canCompare ? '(Ready)' : '(Select 1 more)'}`}
+                  </span>
+                </div>
               </div>
-              <div>
-                <span className="dock-title">{isAr ? 'مقارنة العقارات' : 'Estate Comparison'}</span>
-                <span className="dock-subtitle">
-                  {isAr 
-                    ? `تم اختيار ${selectedProperties.length} من ${maxSlots} ${canCompare ? '(جاهز للمقارنة)' : '(اختر عقاراً آخر)'}` 
-                    : `${selectedProperties.length} of ${maxSlots} Selected ${canCompare ? '(Ready)' : '(Select 1 more)'}`}
-                </span>
-              </div>
+
+              <button 
+                onClick={onClear} 
+                className="dock-clear-btn mobile-clear-btn" 
+                title={isAr ? 'مسح قائمة المقارنة' : 'Clear comparison list'}
+                type="button"
+              >
+                <Trash2 size={13} className="clear-icon" />
+                <span>{isAr ? 'مسح' : 'Clear'}</span>
+              </button>
             </div>
 
             <div className="dock-slots-row">
@@ -234,14 +246,16 @@ export const CompareDrawer: React.FC<CompareDrawerProps> = ({
                       </span>
                     </div>
                     <button
+                      type="button"
                       onClick={(e) => {
                         e.stopPropagation();
                         onRemove(p.id);
                       }}
                       className="dock-remove-btn"
                       title={isAr ? 'إزالة من المقارنة' : 'Remove from comparison'}
+                      aria-label="Remove"
                     >
-                      <X size={13} />
+                      <X size={12} />
                     </button>
                   </div>
                 );
@@ -256,15 +270,21 @@ export const CompareDrawer: React.FC<CompareDrawerProps> = ({
 
             <div className="dock-actions-row">
               <button
+                type="button"
                 onClick={() => canCompare && setIsOpenModal(true)}
                 disabled={!canCompare}
                 className={`btn-gold dock-compare-btn ${!canCompare ? 'disabled' : ''}`}
                 title={canCompare ? (isAr ? 'فتح جدول المقارنة التفصيلي' : 'Open Comparison Matrix') : (isAr ? 'اختر عقارين على الأقل' : 'Select at least 2 properties')}
               >
                 <Scale size={15} />
-                <span>{isAr ? `مقارنة (${selectedProperties.length})` : `Compare (${selectedProperties.length})`}</span>
+                <span>{isAr ? `مقارنة العقارات (${selectedProperties.length})` : `Compare Estates (${selectedProperties.length})`}</span>
               </button>
-              <button onClick={onClear} className="dock-clear-btn" title={isAr ? 'مسح قائمة المقارنة' : 'Clear comparison list'}>
+              <button 
+                type="button" 
+                onClick={onClear} 
+                className="dock-clear-btn desktop-clear-btn" 
+                title={isAr ? 'مسح قائمة المقارنة' : 'Clear comparison list'}
+              >
                 {isAr ? 'مسح' : 'Clear'}
               </button>
             </div>
@@ -324,8 +344,8 @@ export const CompareDrawer: React.FC<CompareDrawerProps> = ({
                 <div
                   className="compare-matrix-grid"
                   style={{
-                    gridTemplateColumns: `220px repeat(${selectedProperties.length}, minmax(280px, 1fr))`
-                  }}
+                    '--prop-count': selectedProperties.length
+                  } as React.CSSProperties}
                 >
                   {/* Row 1: Estate Header & Imagery */}
                   <div className="matrix-row-label header-label">{isAr ? 'نظرة عامة على العقار' : 'PROPERTY OVERVIEW'}</div>
@@ -399,10 +419,16 @@ export const CompareDrawer: React.FC<CompareDrawerProps> = ({
                     const bathsNum = p.baths ?? (p as any).bathrooms ?? 0;
                     return (
                       <div key={`beds-${p.id}`} className="matrix-cell">
-                        <span className="cell-metric-val">
-                          <Bed size={14} className="cell-spec-icon" /> {bedsNum} {isAr ? 'غرف نوم' : 'Bedrooms'} •{' '}
-                          <Bath size={14} className="cell-spec-icon" /> {bathsNum} {isAr ? 'حمامات' : 'Bathrooms'}
-                        </span>
+                        <div className="matrix-beds-baths-row">
+                          <span className="spec-stat-pill">
+                            <Bed size={12} className="cell-spec-icon" />
+                            <span>{bedsNum} {isAr ? 'غرف' : 'Beds'}</span>
+                          </span>
+                          <span className="spec-stat-pill">
+                            <Bath size={12} className="cell-spec-icon" />
+                            <span>{bathsNum} {isAr ? 'حمامات' : 'Baths'}</span>
+                          </span>
+                        </div>
                       </div>
                     );
                   })}
@@ -1004,6 +1030,32 @@ export const CompareDrawer: React.FC<CompareDrawerProps> = ({
           border-bottom: none;
         }
 
+        
+        .matrix-beds-baths-row {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          flex-wrap: wrap;
+        }
+
+        .spec-stat-pill {
+          display: inline-flex;
+          align-items: center;
+          gap: 4px;
+          font-size: 0.78rem;
+          font-weight: 600;
+          padding: 2px 6px;
+          border-radius: 6px;
+          background: rgba(255, 255, 255, 0.05);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          color: var(--text-primary);
+        }
+
+        [data-theme="light"] .spec-stat-pill {
+          background: rgba(0, 0, 0, 0.04);
+          border-color: rgba(0, 0, 0, 0.08);
+        }
+
         .matrix-card-cell {
           display: flex;
           flex-direction: column;
@@ -1280,22 +1332,117 @@ export const CompareDrawer: React.FC<CompareDrawerProps> = ({
           border-radius: 12px;
         }
 
+        .compare-matrix-grid {
+          display: grid;
+          grid-template-columns: 220px repeat(var(--prop-count, 2), minmax(280px, 1fr));
+          gap: 1rem 1.5rem;
+          align-items: center;
+        }
+
+        .compare-dock-top-row {
+          display: contents;
+        }
+
+        .mobile-clear-btn {
+          display: none;
+        }
+
+        .desktop-clear-btn {
+          display: inline-flex;
+        }
+
         @media (max-width: 768px) {
+          .compare-dock-wrapper {
+            bottom: 12px;
+            padding: 0 0.75rem;
+            margin-bottom: env(safe-area-inset-bottom, 0px);
+          }
+
           .compare-dock-inner {
             flex-direction: column;
-            gap: 0.75rem;
+            gap: 0.6rem;
+            padding: 0.75rem 0.85rem;
+            border-radius: 20px;
+          }
+
+          .compare-dock-top-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+          }
+
+          .dock-title-group {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+          }
+
+          .dock-subtitle {
+            display: inline-block !important;
+            font-size: 0.65rem;
+            opacity: 0.75;
+          }
+
+          .mobile-clear-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 0.25rem 0.55rem;
+            font-size: 0.68rem;
+            border-radius: 8px;
+          }
+
+          .desktop-clear-btn {
+            display: none;
           }
 
           .dock-slots-row {
             width: 100%;
-            overflow-x: auto;
-            justify-content: flex-start;
+            display: flex;
+            gap: 0.5rem;
+            justify-content: stretch;
           }
 
-          .modal-header {
-            padding: 1rem 1.25rem;
+          .dock-slot {
+            flex: 1 1 0px !important;
+            max-width: none !important;
+            min-width: 0 !important;
+            height: 38px;
+            padding: 2px 6px 2px 2px;
           }
 
+          .dock-slot.empty {
+            display: none;
+          }
+
+          .dock-slot-img {
+            width: 32px;
+            height: 32px;
+            border-radius: 7px;
+          }
+
+          .slot-title {
+            font-size: 0.68rem;
+          }
+
+          .slot-price {
+            font-size: 0.62rem;
+          }
+
+          .dock-actions-row {
+            width: 100%;
+          }
+
+          .dock-compare-btn {
+            width: 100%;
+            justify-content: center;
+            padding: 0.65rem 1rem;
+            font-size: 0.82rem;
+            border-radius: 12px;
+          }
+
+          /* Modal styling on mobile */
           .compare-modal-backdrop {
             padding: 0;
             align-items: flex-end;
@@ -1304,13 +1451,129 @@ export const CompareDrawer: React.FC<CompareDrawerProps> = ({
           .compare-modal-window {
             width: 100% !important;
             max-width: 100% !important;
-            height: 92dvh !important;
-            max-height: 92dvh !important;
-            border-radius: 24px 24px 0 0 !important;
+            height: 90dvh !important;
+            max-height: 90dvh !important;
+            border-radius: 22px 22px 0 0 !important;
+          }
+
+          .modal-header {
+            padding: 0.75rem 1rem;
+            gap: 0.75rem;
+          }
+
+          .modal-icon-badge {
+            width: 34px;
+            height: 34px;
+            border-radius: 10px;
+          }
+
+          .badge-gold-icon {
+            width: 16px;
+            height: 16px;
+          }
+
+          .modal-heading {
+            font-size: 1.05rem;
+            line-height: 1.2;
+          }
+
+          .eyebrow {
+            font-size: 0.62rem;
+          }
+
+          .modal-close-btn {
+            width: 34px;
+            height: 34px;
           }
 
           .compare-matrix-scroll {
-            padding: 0.75rem;
+            padding: 0.75rem 0.85rem 2rem;
+          }
+
+          /* Mobile Comparison Matrix Grid */
+          .compare-matrix-grid {
+            grid-template-columns: 92px repeat(var(--prop-count, 2), minmax(140px, 1fr)) !important;
+            gap: 0.6rem 0.75rem !important;
+            min-width: min-content;
+          }
+
+          .matrix-row-label {
+            position: sticky;
+            left: 0;
+            z-index: 10;
+            font-size: 0.62rem;
+            letter-spacing: 0.04em;
+            padding: 0.45rem 0.4rem 0.45rem 0;
+            background: rgba(10, 14, 24, 0.95);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border-right: 1px solid rgba(221, 167, 82, 0.22);
+            display: flex;
+            align-items: center;
+            line-height: 1.25;
+          }
+
+          [dir="rtl"] .matrix-row-label {
+            left: auto;
+            right: 0;
+            padding: 0.5rem 0 0.5rem 0.5rem;
+            border-right: none;
+            border-left: 1px solid rgba(221, 167, 82, 0.25);
+          }
+
+          [data-theme="light"] .matrix-row-label {
+            background: rgba(250, 248, 245, 0.96);
+            border-color: rgba(184, 133, 48, 0.25);
+          }
+
+          .cell-image-frame {
+            height: 110px !important;
+            border-radius: 12px;
+          }
+
+          .cell-title {
+            font-size: 0.92rem;
+          }
+
+          .cell-type {
+            font-size: 0.7rem;
+          }
+
+          .cell-price-val {
+            font-size: 1.05rem;
+          }
+
+          .cell-sub-val {
+            font-size: 0.75rem;
+          }
+
+          .cell-metric-val {
+            font-size: 0.8rem;
+          }
+
+          .matrix-finishing-badge {
+            font-size: 0.72rem;
+            padding: 0.3rem 0.6rem;
+          }
+
+          .matrix-spec-text {
+            font-size: 0.72rem;
+          }
+
+          .matrix-floor-tag,
+          .matrix-view-tag {
+            font-size: 0.72rem;
+            padding: 3px 6px;
+          }
+
+          .matrix-amenity-chip {
+            font-size: 0.7rem;
+            padding: 0.2rem 0.45rem;
+          }
+
+          .cell-explore-btn {
+            padding: 0.6rem 0.8rem;
+            font-size: 0.8rem;
           }
         }
       `}</style>

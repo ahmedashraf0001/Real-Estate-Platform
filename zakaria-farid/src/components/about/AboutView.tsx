@@ -221,7 +221,7 @@ export function AboutView({ locale, onNavigateToCatalog, onOpenInquiry = () => {
                   onClick={onNavigateToCatalog} 
                   className="atelier-btn-primary"
                 >
-                  <span>{isAr ? 'استعراض الدليل المعماري' : 'Explore Sovereign Portfolio'}</span>
+                  <span>{isAr ? (about.heroCta1TextAr || DEFAULT_ABOUT_SETTINGS.heroCta1TextAr) : (about.heroCta1TextEn || DEFAULT_ABOUT_SETTINGS.heroCta1TextEn)}</span>
                   <ArrowUpRight size={15} />
                 </button>
 
@@ -231,7 +231,7 @@ export function AboutView({ locale, onNavigateToCatalog, onOpenInquiry = () => {
                   className="atelier-btn-ghost"
                 >
                   <Compass size={14} className="ghost-icon-bronze" />
-                  <span>{isAr ? 'المكتب الاستشاري الخاص' : 'Private Advisory Desk'}</span>
+                  <span>{isAr ? (about.heroCta2TextAr || DEFAULT_ABOUT_SETTINGS.heroCta2TextAr) : (about.heroCta2TextEn || DEFAULT_ABOUT_SETTINGS.heroCta2TextEn)}</span>
                 </button>
               </motion.div>
             </div>
@@ -582,7 +582,7 @@ export function AboutView({ locale, onNavigateToCatalog, onOpenInquiry = () => {
               <div className="founder-letter-content">
                 <div className="founder-letter-top">
                   <span className="letter-eyebrow">
-                    {isAr ? 'رسالة ورؤية المؤسس' : 'FOUNDER’S ARCHITECTURAL MONOGRAPH'}
+                    {isAr ? (about.founderEyebrowAr || DEFAULT_ABOUT_SETTINGS.founderEyebrowAr) : (about.founderEyebrowEn || DEFAULT_ABOUT_SETTINGS.founderEyebrowEn)}
                   </span>
                   <span className="letter-est">{isAr ? 'تأسست ٢٠١٦ • القاهرة' : 'EST. 2016 • CAIRO'}</span>
                 </div>
@@ -606,7 +606,7 @@ export function AboutView({ locale, onNavigateToCatalog, onOpenInquiry = () => {
 
                   <div className="signoff-stamp">
                     <Award size={16} className="stamp-icon" />
-                    <span>{isAr ? 'مستشار معماري معتمد' : 'Chartered Architectural Desk'}</span>
+                    <span>{isAr ? (about.founderStampAr || DEFAULT_ABOUT_SETTINGS.founderStampAr) : (about.founderStampEn || DEFAULT_ABOUT_SETTINGS.founderStampEn)}</span>
                   </div>
                 </div>
               </div>
@@ -627,11 +627,11 @@ export function AboutView({ locale, onNavigateToCatalog, onOpenInquiry = () => {
               <div className="portal-inner-wrap">
                 <div className="portal-tag-row">
                   <ShieldCheck size={15} className="portal-tag-icon" />
-                  <span>{isAr ? 'المكتب الاستشاري للاستحواذ الخاص' : 'CONFIDENTIAL ACQUISITIONS OFFICE'}</span>
+                  <span>{isAr ? (about.portalEyebrowAr || DEFAULT_ABOUT_SETTINGS.portalEyebrowAr) : (about.portalEyebrowEn || DEFAULT_ABOUT_SETTINGS.portalEyebrowEn)}</span>
                 </div>
 
                 <h2 className="portal-heading-text">
-                  {isAr ? 'امتلك صرحك المعماري للأجيال القادمة' : 'Own Your Generational Architectural Statement'}
+                  {isAr ? (about.portalHeadingAr || DEFAULT_ABOUT_SETTINGS.portalHeadingAr) : (about.portalHeadingEn || DEFAULT_ABOUT_SETTINGS.portalHeadingEn)}
                 </h2>
                 
                 <p className="portal-paragraph-text">
@@ -646,7 +646,7 @@ export function AboutView({ locale, onNavigateToCatalog, onOpenInquiry = () => {
                     className="portal-btn-gold"
                     onClick={() => onOpenInquiry('Private Wealth Consultation')}
                   >
-                    <span>{isAr ? 'طلب استشارة شراء خاصة' : 'Request Private Consultation'}</span>
+                    <span>{isAr ? (about.portalCtaBtnAr || DEFAULT_ABOUT_SETTINGS.portalCtaBtnAr) : (about.portalCtaBtnEn || DEFAULT_ABOUT_SETTINGS.portalCtaBtnEn)}</span>
                     <ArrowUpRight size={15} />
                   </button>
 

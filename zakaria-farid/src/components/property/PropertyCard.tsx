@@ -70,6 +70,15 @@ const KNOWN_AR_TITLES: Record<string, string> = {
 };
 
 const DISTRICT_AR_MAP: Record<string, string> = {
+  'Abu Tig Marina': 'مارينا أبو تيج',
+  'abu tig marina': 'مارينا أبو تيج',
+  'Al-Narges Sector 2': 'النرجس الجديدة',
+  'Al-Narges': 'حي النرجس',
+  'Narges': 'حي النرجس',
+  'Choueifat': 'الشويفات',
+  'Fifth Settlement': 'التجمع الخامس',
+  'Diplomats': 'حي الدبلوماسيين',
+  'Tagamoa': 'التجمع الخامس',
   'New Cairo': 'القاهرة الجديدة',
   'Sheikh Zayed': 'الشيخ زايد',
   'North Coast': 'الساحل الشمالي',
@@ -87,6 +96,51 @@ const DISTRICT_AR_MAP: Record<string, string> = {
   'Sodic East': 'سوديك إيست',
   'Sodic East Estate': 'سوديك إيست',
   'Privado': 'بريفادو',
+  'Zayed Dunes': 'زايد ديونز',
+  'Palm Hills': 'بالم هيلز',
+  'Hacienda Bay': 'هاسيندا باي',
+  'Hacienda White': 'هاسيندا وايت',
+  'Hacienda Waters': 'هاسيندا واترز',
+  'Hacienda': 'هاسيندا',
+  'hacienda waters': 'هاسيندا واترز',
+  'hacienda bay': 'هاسيندا باي',
+  'hacienda white': 'هاسيندا وايت',
+  'Abu Tig Marina Estates': 'مارينا أبو تيج',
+  'Monte Galala': 'المونت جلالة',
+  'Monte Galala Estate': 'المونت جلالة',
+  'Zayed Central Park': 'زايد سنترال بارك',
+  'Four Seasons Privado': 'فورسيزونز بريفادو',
+  'Marassi': 'مراسي',
+  'Almaza Bay': 'ألماظة باي',
+  'Silver Sands': 'سيلفر ساندز',
+  'Ras El Hekma': 'رأس الحكمة',
+  'Somabay': 'سوما باي',
+  'Makadi Heights': 'مكادي هايتس',
+  'Red Sea': 'البحر الأحمر',
+  'South Sinai': 'جنوب سيناء',
+  'Giza': 'الجيزة',
+  'Cairo': 'القاهرة',
+  'Alexandria': 'الإسكندرية',
+  'Smart Village': 'القرية الذكية',
+  'New Capital': 'العاصمة الإدارية',
+  'Mostakbal City': 'مدينة المستقبل',
+  'Al Shorouk': 'الشروق',
+  'Al Rehab': 'الرحاب',
+  'October': '٦ أكتوبر',
+  '6th of October': 'مدينة ٦ أكتوبر',
+};
+
+export const getArabicDistrict = (rawDistrict: string): string => {
+  if (!rawDistrict) return '';
+  const trimmed = rawDistrict.trim();
+  if (DISTRICT_AR_MAP[trimmed]) return DISTRICT_AR_MAP[trimmed];
+  const lower = trimmed.toLowerCase();
+  for (const [key, val] of Object.entries(DISTRICT_AR_MAP)) {
+    if (key.toLowerCase() === lower || lower.includes(key.toLowerCase())) {
+      return val;
+    }
+  }
+  return trimmed;
 };
 
 const TYPE_AR_MAP: Record<string, string> = {
@@ -128,7 +182,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
   const formattedTitle = decodeHtmlEntities(rawTitle);
 
   const rawDistrict = property.district || property.location?.split(',')[0]?.trim() || '';
-  const formattedDistrict = isAr ? (DISTRICT_AR_MAP[rawDistrict] || rawDistrict) : rawDistrict;
+  const formattedDistrict = isAr ? getArabicDistrict(rawDistrict) : rawDistrict;
 
   const rawType = property.propertyType || property.type || '';
   const formattedType = isAr ? (TYPE_AR_MAP[rawType] || rawType) : rawType;

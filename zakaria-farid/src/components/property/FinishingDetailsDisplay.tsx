@@ -6,7 +6,8 @@ import {
   Layers, Thermometer, Zap, Droplets, PaintBucket, DoorOpen,
   Wind, TreePine, ShieldCheck, Car, Wrench, Sofa, Tv,
   Bed, BedDouble, Bath, ChefHat, Utensils, Sun, Building2, Sparkles,
-  ChevronLeft, ChevronRight, Info, CheckCircle2, Sliders, ArrowRight, ArrowLeft
+  ChevronLeft, ChevronRight, Info, CheckCircle2, Sliders, ArrowRight, ArrowLeft,
+  Film, Play
 } from 'lucide-react';
 import type { ZoneInstance, TradeInstance } from '@/lib/layering/instances';
 import {
@@ -18,6 +19,7 @@ import {
 } from '@/lib/layering/instances';
 import { ATTRIBUTE_TEMPLATES, ZONE_TEMPLATES } from '@/lib/layering/templates';
 import { whatsappUrl, WHATSAPP_NUMBER } from '@/lib/utils/formatting';
+import LuxuryAmbientVideoPlayer from '@/components/video/LuxuryAmbientVideoPlayer';
 import styles from './FinishingDetailsDisplay.module.css';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -364,6 +366,8 @@ function RevampedZonePopUpModal({
   const cfg = BADGE_CONFIG[group.badge];
   const [activeInstanceIdx, setActiveInstanceIdx] = useState(0);
   const [activePhotoIdx, setActivePhotoIdx] = useState(0);
+  const [zoneMediaMode, setZoneMediaMode] = useState<'photos' | 'video'>('photos');
+  const [activeZoneVideoIdx, setActiveZoneVideoIdx] = useState(0);
 
   const activeZone = group.instances[activeInstanceIdx] ?? group.instances[0];
   const instLabels = getZoneTemplateLabels(activeZone.zone_template_id);
@@ -374,6 +378,7 @@ function RevampedZonePopUpModal({
     ? activeZone.images
     : [group.image];
   const currentHeroPhoto = zonePhotos[activePhotoIdx] ?? zonePhotos[0];
+  const zoneVideos = activeZone.videos || [];
 
   const waMsg = isAr
     ? `مرحباً، أستفسر عن تفاصيل تشطيب ${activeDisplayName} في ${propertyTitle}`
@@ -396,47 +401,123 @@ function RevampedZonePopUpModal({
           <X size={20} />
         </button>
 
-        {/* ── Left Side: Interactive Photo Gallery Slider ── */}
+        {/* ── Left Side: Interactive Photo Gallery Slider / Video Player ── */}
         <div className={styles.modalGalleryCol}>
-          <div className={styles.mainHeroPhotoWrap}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={currentHeroPhoto} alt={groupName} className={styles.mainHeroImg} />
-            <div className={styles.mainHeroOverlay} />
-
-            {zonePhotos.length > 1 && (
-              <>
-                <button type="button" className={`${styles.galleryNavArrow} ${styles.navLeft}`} onClick={prevPhoto} aria-label="Previous photo">
-                  {isAr ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}
-                </button>
-                <button type="button" className={`${styles.galleryNavArrow} ${styles.navRight}`} onClick={nextPhoto} aria-label="Next photo">
-                  {isAr ? <ChevronLeft size={20} /> : <ChevronRight size={20} />}
-                </button>
-              </>
-            )}
-
-            <div className={styles.galleryBadgeOverlay}>
-              <span className={`${styles.finishBadge} ${styles[cfg.cls]}`}>
-                <span className={styles.badgeEmoji}>{cfg.icon}</span>
-                <span className={styles.badgeText}>{isAr ? cfg.ar : cfg.en}</span>
-              </span>
+          {zoneVideos.length > 0 && (
+            <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
+              <button
+                type="button"
+                onClick={() => setZoneMediaMode('photos')}
+                style={{
+                  background: zoneMediaMode === 'photos' ? 'rgba(221, 167, 82, 0.2)' : 'rgba(255,255,255,0.06)',
+                  border: `1px solid ${zoneMediaMode === 'photos' ? '#DDA752' : 'rgba(255,255,255,0.1)'}`,
+                  color: '#FFFDF5',
+                  padding: '4px 10px',
+                  borderRadius: 6,
+                  fontSize: '11px',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                }}
+              >
+                📸 {isAr ? 'الصور' : 'Photos'}
+              </button>
+              <button
+                type="button"
+                onClick={() => setZoneMediaMode('video')}
+                style={{
+                  background: zoneMediaMode === 'video' ? 'rgba(221, 167, 82, 0.2)' : 'rgba(255,255,255,0.06)',
+                  border: `1px solid ${zoneMediaMode === 'video' ? '#DDA752' : 'rgba(255,255,255,0.1)'}`,
+                  color: '#FFFDF5',
+                  padding: '4px 10px',
+                  borderRadius: 6,
+                  fontSize: '11px',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 4,
+                }}
+              >
+                <Film size={12} color="#DDA752" />
+                <span>{isAr ? `فيديو المعاينة (${zoneVideos.length})` : `Demo Video (${zoneVideos.length})`}</span>
+              </button>
             </div>
-          </div>
+          )}
 
-          {/* Thumbnails Row below main photo */}
-          {zonePhotos.length > 1 && (
-            <div className={styles.galleryThumbnailsRow}>
-              {zonePhotos.map((photoUrl, pIdx) => (
-                <button
-                  key={pIdx}
-                  type="button"
-                  className={`${styles.galleryThumbBtn} ${pIdx === activePhotoIdx ? styles.galleryThumbActive : ''}`}
-                  onClick={() => setActivePhotoIdx(pIdx)}
-                >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={photoUrl} alt={`Thumbnail ${pIdx + 1}`} className={styles.thumbImg} />
-                </button>
-              ))}
+          {zoneMediaMode === 'video' && zoneVideos.length > 0 ? (
+            <div style={{ width: '100%', borderRadius: 12, overflow: 'hidden' }}>
+              <LuxuryAmbientVideoPlayer
+                video={zoneVideos[activeZoneVideoIdx] || zoneVideos[0]}
+                isAr={isAr}
+                autoPlay={false}
+              />
+              {zoneVideos.length > 1 && (
+                <div style={{ display: 'flex', gap: 6, marginTop: 8, overflowX: 'auto' }}>
+                  {zoneVideos.map((v, i) => (
+                    <button
+                      key={v.id || i}
+                      type="button"
+                      onClick={() => setActiveZoneVideoIdx(i)}
+                      style={{
+                        padding: '4px 8px',
+                        borderRadius: 6,
+                        background: activeZoneVideoIdx === i ? 'rgba(221, 167, 82, 0.25)' : 'rgba(255,255,255,0.05)',
+                        border: '1px solid rgba(221, 167, 82, 0.3)',
+                        color: '#FFFDF5',
+                        fontSize: '11px',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      {isAr ? (v.title_ar || v.title_en) : (v.title_en || v.title_ar)}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
+          ) : (
+            <>
+              <div className={styles.mainHeroPhotoWrap}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={currentHeroPhoto} alt={groupName} className={styles.mainHeroImg} />
+                <div className={styles.mainHeroOverlay} />
+
+                {zonePhotos.length > 1 && (
+                  <>
+                    <button type="button" className={`${styles.galleryNavArrow} ${styles.navLeft}`} onClick={prevPhoto} aria-label="Previous photo">
+                      {isAr ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}
+                    </button>
+                    <button type="button" className={`${styles.galleryNavArrow} ${styles.navRight}`} onClick={nextPhoto} aria-label="Next photo">
+                      {isAr ? <ChevronLeft size={20} /> : <ChevronRight size={20} />}
+                    </button>
+                  </>
+                )}
+
+                <div className={styles.galleryBadgeOverlay}>
+                  <span className={`${styles.finishBadge} ${styles[cfg.cls]}`}>
+                    <span className={styles.badgeEmoji}>{cfg.icon}</span>
+                    <span className={styles.badgeText}>{isAr ? cfg.ar : cfg.en}</span>
+                  </span>
+                </div>
+              </div>
+
+              {/* Thumbnails Row below main photo */}
+              {zonePhotos.length > 1 && (
+                <div className={styles.galleryThumbnailsRow}>
+                  {zonePhotos.map((photoUrl, pIdx) => (
+                    <button
+                      key={pIdx}
+                      type="button"
+                      className={`${styles.galleryThumbBtn} ${pIdx === activePhotoIdx ? styles.galleryThumbActive : ''}`}
+                      onClick={() => setActivePhotoIdx(pIdx)}
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={photoUrl} alt={`Thumbnail ${pIdx + 1}`} className={styles.thumbImg} />
+                    </button>
+                  ))}
+                </div>
+              )}
+            </>
           )}
         </div>
 
@@ -548,10 +629,33 @@ function ZoneGroupCard({
             {icon}
           </div>
 
-          <span className={`${styles.finishBadge} ${styles[cfg.cls]}`}>
-            <span className={styles.badgeEmoji}>{cfg.icon}</span>
-            <span className={styles.badgeText}>{isAr ? cfg.ar : cfg.en}</span>
-          </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            {firstInst?.videos && firstInst.videos.length > 0 && (
+              <span
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 4,
+                  background: 'rgba(10, 14, 24, 0.75)',
+                  border: '1px solid rgba(221, 167, 82, 0.4)',
+                  color: '#DDA752',
+                  padding: '2px 8px',
+                  borderRadius: 999,
+                  fontSize: '10.5px',
+                  fontWeight: 800,
+                  backdropFilter: 'blur(8px)',
+                }}
+              >
+                <Film size={11} />
+                <span>{isAr ? 'فيديو' : 'Video'}</span>
+              </span>
+            )}
+
+            <span className={`${styles.finishBadge} ${styles[cfg.cls]}`}>
+              <span className={styles.badgeEmoji}>{cfg.icon}</span>
+              <span className={styles.badgeText}>{isAr ? cfg.ar : cfg.en}</span>
+            </span>
+          </div>
         </div>
 
         {/* Floating Bottom Room Title Overlay */}

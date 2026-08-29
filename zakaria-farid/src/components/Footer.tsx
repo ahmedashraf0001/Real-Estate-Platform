@@ -3,6 +3,7 @@ import React from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { BrandLogo } from '@/components/BrandLogo';
 import { usePlatformSettings } from '@/lib/hooks/usePlatformSettings';
+import { formatDisplayPhoneNumber, cleanPhoneNumber } from '@/lib/utils/formatPhone';
 
 interface FooterProps {
   locale?: string;
@@ -176,8 +177,8 @@ export const Footer: React.FC<FooterProps> = ({
               </span>
             </div>
             <div className="inquiry-info-item">
-              <a href={`tel:${(contact?.phone || '+20 2 19688').replace(/\s+/g, '')}`} className="inquiry-phone">
-                {contact?.phone || '+20 2 19688'}
+              <a href={`tel:${cleanPhoneNumber(contact?.phone || '+20 2 19688')}`} className="inquiry-phone">
+                <span dir="ltr" className="phone-digits">{formatDisplayPhoneNumber(contact?.phone || '+20 2 19688')}</span>
               </a>
             </div>
             <div className="inquiry-info-item">
@@ -349,8 +350,17 @@ export const Footer: React.FC<FooterProps> = ({
           font-size: 1.0625rem;
           font-weight: 700;
           color: var(--text-primary);
-          display: block;
+          display: inline-block;
+          direction: ltr;
+          unicode-bidi: isolate;
+          font-variant-numeric: tabular-nums;
           transition: color var(--transition-fast);
+        }
+
+        .phone-digits {
+          direction: ltr;
+          unicode-bidi: isolate;
+          font-variant-numeric: tabular-nums;
         }
 
         .inquiry-phone:hover {

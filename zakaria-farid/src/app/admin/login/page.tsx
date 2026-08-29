@@ -54,7 +54,7 @@ export default function AdminLoginPage() {
       }}>
         {/* Header */}
         <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
-          <BrandLogo size="md" locale="en" />
+          <BrandLogo size="md" locale="ar" />
           <p style={{ color: 'rgba(255, 255, 255, 0.55)', fontSize: '12px', margin: '4px 0 0', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
             Private Executive Advisory Portal
           </p>

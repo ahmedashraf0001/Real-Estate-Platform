@@ -45,7 +45,7 @@ async function getAdminClient() {
     }
   }
 
-  if (!url || !serviceKey) {
+  if (!url || !serviceKey || serviceKey.startsWith('sb_secret_') || serviceKey.startsWith('placeholder')) {
     return null;
   }
 

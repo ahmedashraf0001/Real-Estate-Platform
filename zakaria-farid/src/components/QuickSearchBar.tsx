@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useRef, useEffect } from 'react';
-import { MapPin, Building2, Banknote, ChevronDown, Check, Search, X } from 'lucide-react';
+import { MapPin, Building2, Banknote, ChevronDown, Check, Search } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface QuickSearchBarProps {
@@ -160,43 +160,13 @@ export const QuickSearchBar: React.FC<QuickSearchBarProps> = ({ onSearch, locale
     };
   }, [openDropdown]);
 
-  const [isSheetOpen, setIsSheetOpen] = useState(false);
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setIsSheetOpen(false);
     onSearch({ location, propertyType, priceTier });
   };
 
   return (
     <form ref={barRef} className="quick-search-bar" onSubmit={handleSubmit} dir={isAr ? 'rtl' : 'ltr'}>
-      {/* Mobile: compact launcher that opens the search sheet */}
-      <button
-        type="button"
-        className="qsb-mobile-launcher"
-        onClick={() => setIsSheetOpen(true)}
-      >
-        <Search size={16} />
-        <span>{isAr ? 'ابحث في الصروح الفاخرة...' : 'Search luxury estates...'}</span>
-      </button>
-
-      {isSheetOpen && (
-        <div className="qsb-sheet-backdrop" onClick={() => setIsSheetOpen(false)} />
-      )}
-
-      <div className={`qsb-slots-group ${isSheetOpen ? 'sheet-open' : ''}`}>
-        <div className="qsb-sheet-head">
-          <span className="qsb-sheet-title">{isAr ? 'بحث في الصروح' : 'Search Properties'}</span>
-          <button
-            type="button"
-            className="qsb-sheet-close"
-            onClick={() => setIsSheetOpen(false)}
-            aria-label={isAr ? 'إغلاق' : 'Close'}
-          >
-            <X size={18} />
-          </button>
-        </div>
-
       {/* 1. Location Custom Dropdown */}
       <div className="search-field custom-filter-dropdown">
         <label className="field-label">{isAr ? 'المدينة / المنطقة' : 'LOCATION'}</label>
@@ -252,7 +222,7 @@ export const QuickSearchBar: React.FC<QuickSearchBarProps> = ({ onSearch, locale
 
       {/* 2. Property Type Custom Dropdown */}
       <div className="search-field custom-filter-dropdown">
-        <label className="field-label">{isAr ? 'نوع العقار' : 'PROPERTY TYPE'}</label>
+        <label className="field-label">{isAr ? 'نوع الصرح' : 'PROPERTY TYPE'}</label>
         <button
           type="button"
           className={`filter-custom-trigger ${openDropdown === 'type' ? 'open' : ''}`}
@@ -303,9 +273,9 @@ export const QuickSearchBar: React.FC<QuickSearchBarProps> = ({ onSearch, locale
 
       <div className="search-divider" />
 
-      {/* 3. Price Range Custom Dropdown */}
+      {/* 3. Price Tier Custom Dropdown */}
       <div className="search-field custom-filter-dropdown">
-        <label className="field-label">{isAr ? 'نطاق السعر' : 'PRICE RANGE'}</label>
+        <label className="field-label">{isAr ? 'النطاق السعري' : 'PRICE RANGE'}</label>
         <button
           type="button"
           className={`filter-custom-trigger ${openDropdown === 'price' ? 'open' : ''}`}
@@ -358,7 +328,6 @@ export const QuickSearchBar: React.FC<QuickSearchBarProps> = ({ onSearch, locale
       <button type="submit" className="search-submit-btn">
         <span>{isAr ? 'بحث في الصروح' : 'Search Properties'}</span>
       </button>
-      </div>
 
       <style>{`
         .quick-search-bar {
@@ -459,6 +428,10 @@ export const QuickSearchBar: React.FC<QuickSearchBarProps> = ({ onSearch, locale
           text-align: left;
         }
 
+        [dir="rtl"] .filter-custom-trigger {
+          text-align: right;
+        }
+
         .trigger-left {
           display: flex;
           align-items: center;
@@ -513,429 +486,210 @@ export const QuickSearchBar: React.FC<QuickSearchBarProps> = ({ onSearch, locale
           color: rgba(255, 255, 255, 0.6);
         }
 
-        [data-theme="light"] .chevron-icon {
-          color: rgba(15, 23, 42, 0.55);
-        }
-
         .chevron-icon.rotate {
           transform: rotate(180deg);
-          color: var(--gold-primary);
-        }
-
-        .filter-custom-trigger:hover .chevron-icon {
-          color: var(--gold-primary);
-        }
-
-        /* Floating Custom Glass Menu */
-        .filter-custom-menu {
-          position: absolute;
-          left: 0;
-          min-width: 240px;
-          max-height: 240px;
-          overflow-y: auto;
-          overscroll-behavior: contain;
-          backdrop-filter: blur(20px) saturate(210%) contrast(108%) brightness(108%);
-          -webkit-backdrop-filter: blur(20px) saturate(210%) contrast(108%) brightness(108%);
-          border-radius: 16px;
-          padding: 6px;
-          z-index: 1000;
-          display: flex;
-          flex-direction: column;
-          gap: 3px;
-        }
-
-        .filter-custom-menu.placement-down {
-          top: calc(100% + 12px);
-          bottom: auto;
-          transform-origin: top center;
-        }
-
-        .filter-custom-menu.placement-up {
-          bottom: calc(100% + 12px);
-          top: auto;
-          transform-origin: bottom center;
-        }
-
-        .filter-custom-menu::-webkit-scrollbar {
-          width: 5px;
-        }
-
-        .filter-custom-menu::-webkit-scrollbar-track {
-          background: transparent;
-        }
-
-        .filter-custom-menu::-webkit-scrollbar-thumb {
-          background: rgba(212, 160, 52, 0.35);
-          border-radius: 9999px;
-        }
-
-        .filter-custom-menu::-webkit-scrollbar-thumb:hover {
-          background: var(--gold-primary);
-        }
-
-        [data-theme="dark"] .filter-custom-menu {
-          background: linear-gradient(
-            145deg,
-            rgba(255, 255, 255, 0.18) 0%,
-            rgba(22, 28, 42, 0.92) 40%,
-            rgba(10, 14, 22, 0.96) 100%
-          );
-          border: 1px solid rgba(255, 255, 255, 0.25);
-          box-shadow: 
-            0 20px 48px rgba(0, 0, 0, 0.6),
-            inset 0 1.5px 1.5px rgba(255, 255, 255, 0.45);
-        }
-
-        [data-theme="light"] .filter-custom-menu {
-          background: linear-gradient(
-            145deg,
-            rgba(255, 255, 255, 0.88) 0%,
-            rgba(255, 255, 255, 0.68) 50%,
-            rgba(255, 255, 255, 0.82) 100%
-          );
-          backdrop-filter: blur(28px) saturate(210%);
-          -webkit-backdrop-filter: blur(28px) saturate(210%);
-          border: 1.5px solid rgba(255, 255, 255, 0.85);
-          box-shadow: 
-            0 24px 56px rgba(15, 23, 42, 0.16),
-            0 4px 16px rgba(0, 0, 0, 0.04),
-            inset 0 1.5px 2px #FFFFFF;
-        }
-
-        .filter-menu-option {
-          width: 100%;
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          gap: 12px;
-          padding: 0.6rem 0.9rem;
-          background: transparent;
-          border: none;
-          border-radius: 10px;
-          color: var(--text-secondary);
-          font-family: inherit;
-          font-size: 0.84rem;
-          font-weight: 600;
-          cursor: pointer;
-          text-align: left;
-          transition: all var(--transition-fast);
-        }
-
-        [data-theme="light"] .filter-menu-option {
-          color: #141210;
-        }
-
-        [data-theme="dark"] .filter-menu-option {
-          color: #E2E8F0;
-        }
-
-        .filter-menu-option:hover {
-          background: rgba(229, 184, 105, 0.15);
-          color: #E5B869;
-          transform: translateX(2px);
-        }
-
-        [data-theme="light"] .filter-menu-option:hover {
-          background: rgba(184, 147, 74, 0.12);
-          color: #8C6826;
-        }
-
-        .filter-menu-option.selected {
-          background: rgba(229, 184, 105, 0.20);
-          color: #E5B869;
-          font-weight: 700;
-        }
-
-        [data-theme="light"] .filter-menu-option.selected {
-          background: rgba(184, 147, 74, 0.18);
-          color: #8C6826;
-          font-weight: 800;
-        }
-
-        .option-label {
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
-        }
-
-        .option-check {
-          color: #E5B869;
-          flex-shrink: 0;
-        }
-
-        [data-theme="light"] .option-check {
-          color: #8C6826;
         }
 
         .search-divider {
           width: 1px;
-          height: 34px;
+          height: 38px;
           background: var(--border-subtle);
+          opacity: 0.6;
+          flex-shrink: 0;
+        }
+
+        [data-theme="dark"] .search-divider {
+          background: rgba(255, 255, 255, 0.15);
         }
 
         [data-theme="light"] .search-divider {
-          background: rgba(184, 147, 74, 0.20);
+          background: rgba(0, 0, 0, 0.08);
         }
 
         .search-submit-btn {
-          white-space: nowrap;
-          padding: 0.8125rem 1.75rem;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 0.6rem;
+          background: linear-gradient(135deg, #FDE68A 0%, #E5B869 45%, #D97706 100%);
+          color: #0F172A;
+          font-family: inherit;
           font-size: 0.9375rem;
           font-weight: 800;
-          background: linear-gradient(135deg, #FFF0C2 0%, #E5B869 50%, #B8934A 100%);
-          color: #0A0C10;
-          border-radius: 10px;
-          flex-shrink: 0;
-          border: 1px solid rgba(255, 255, 255, 0.6);
-          box-shadow: 0 4px 18px rgba(229, 184, 105, 0.35), inset 0 1px 1.5px rgba(255, 255, 255, 0.7);
-          transition: all var(--transition-smooth);
+          letter-spacing: 0.02em;
+          padding: 0.85rem 1.6rem;
+          border: none;
+          border-radius: 12px;
           cursor: pointer;
-        }
-
-        [data-theme="light"] .search-submit-btn {
-          background: linear-gradient(135deg, #FFF0C2 0%, #E5B869 50%, #B8934A 100%);
-          color: #0A0C10;
-          border: 1px solid rgba(255, 255, 255, 0.8);
-          box-shadow: 0 4px 18px rgba(184, 147, 74, 0.30), inset 0 1px 1.5px rgba(255, 255, 255, 0.8);
+          box-shadow: 0 4px 18px rgba(221, 167, 82, 0.45);
+          transition: all var(--transition-fast);
+          white-space: nowrap;
+          flex-shrink: 0;
         }
 
         .search-submit-btn:hover {
-          background: linear-gradient(135deg, #FFFFFF 0%, #FFF0C2 40%, #E5B869 100%);
-          box-shadow: 0 6px 24px rgba(229, 184, 105, 0.5);
-          transform: translateY(-1px);
+          transform: translateY(-2px);
+          box-shadow: 0 6px 24px rgba(221, 167, 82, 0.6);
+          filter: brightness(1.06);
         }
 
-        .filter-custom-trigger:focus-visible,
-        .search-input-field:focus-visible,
-        .filter-menu-option:focus-visible,
-        .search-submit-btn:focus-visible {
-          outline: 2px solid var(--gold-primary) !important;
-          outline-offset: 2px !important;
-          box-shadow: 0 0 16px var(--gold-glow) !important;
+        .search-submit-btn:active {
+          transform: translateY(0);
         }
 
-        /* RTL overrides */
-        [dir="rtl"].quick-search-bar,
-        .quick-search-bar[dir="rtl"] {
-          text-align: right;
+        /* ── Custom Dropdown Menu ── */
+        .filter-custom-menu {
+          position: absolute;
+          left: 0;
+          right: 0;
+          min-width: 250px;
+          background: var(--bg-surface-elevated, #161A22);
+          backdrop-filter: blur(28px) saturate(200%);
+          -webkit-backdrop-filter: blur(28px) saturate(200%);
+          border: 1px solid var(--border-glass, rgba(255, 255, 255, 0.15));
+          border-radius: 14px;
+          padding: 0.4rem;
+          box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
+          z-index: 1000;
+          max-height: 270px;
+          overflow-y: auto;
+          display: flex;
+          flex-direction: column;
+          gap: 2px;
         }
 
-        .quick-search-bar[dir="rtl"] .filter-custom-trigger {
-          text-align: right;
+        .filter-custom-menu.placement-down {
+          top: calc(100% + 12px);
         }
 
-        .quick-search-bar[dir="rtl"] .field-label {
-          letter-spacing: normal;
+        .filter-custom-menu.placement-up {
+          bottom: calc(100% + 12px);
         }
 
-        .quick-search-bar[dir="rtl"] .trigger-value {
-          line-height: 1.5;
-          padding-bottom: 2px;
+        [data-theme="dark"] .filter-custom-menu {
+          background: rgba(18, 22, 32, 0.95);
+          border: 1px solid rgba(255, 255, 255, 0.2);
+          box-shadow: 0 20px 48px rgba(0, 0, 0, 0.6);
         }
 
-        .quick-search-bar[dir="rtl"] .search-submit-btn {
+        [data-theme="light"] .filter-custom-menu {
+          background: rgba(255, 255, 255, 0.96);
+          border: 1.5px solid rgba(255, 255, 255, 0.9);
+          box-shadow: 0 20px 48px rgba(15, 23, 42, 0.18);
+        }
+
+        .filter-menu-option {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 8px;
+          width: 100%;
+          padding: 0.65rem 0.85rem;
+          border-radius: 9px;
+          border: none;
+          background: transparent;
+          color: var(--text-secondary);
           font-family: inherit;
+          font-size: 0.875rem;
+          font-weight: 500;
+          cursor: pointer;
+          transition: all var(--transition-fast);
+          text-align: left;
+        }
+
+        [dir="rtl"] .filter-menu-option {
+          text-align: right;
+        }
+
+        .filter-menu-option:hover {
+          background: rgba(221, 167, 82, 0.12);
+          color: var(--text-primary);
+        }
+
+        .filter-menu-option.selected {
+          background: rgba(221, 167, 82, 0.18);
+          color: var(--gold-primary);
           font-weight: 700;
         }
 
-        @media (max-width: 900px) {
+        .option-check {
+          color: var(--gold-primary);
+          flex-shrink: 0;
+        }
+
+        /* ── Responsive Vertical Card on Mobile (Original Design from Reference) ── */
+        @media (max-width: 768px) {
           .quick-search-bar {
             flex-direction: column;
             align-items: stretch;
-            gap: 0.875rem;
-            padding: 1.15rem;
+            gap: 0.6rem;
+            padding: 1.15rem 1.15rem 1.05rem;
+            border-radius: 20px;
+            width: 100%;
+            background: linear-gradient(
+              135deg,
+              rgba(255, 255, 255, 0.14) 0%,
+              rgba(255, 255, 255, 0.04) 30%,
+              rgba(18, 24, 38, 0.5) 65%,
+              rgba(10, 14, 24, 0.78) 100%
+            );
+            backdrop-filter: blur(28px) saturate(200%);
+            -webkit-backdrop-filter: blur(28px) saturate(200%);
+            border: 1.5px solid rgba(255, 255, 255, 0.22);
+            box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45), inset 0 1.5px 2px rgba(255, 255, 255, 0.45);
+          }
+
+          [data-theme="light"] .quick-search-bar {
+            background: linear-gradient(
+              135deg,
+              rgba(255, 255, 255, 0.88) 0%,
+              rgba(255, 255, 255, 0.65) 50%,
+              rgba(247, 244, 238, 0.82) 100%
+            );
+            border: 1.5px solid rgba(255, 255, 255, 0.95);
+            box-shadow: 0 16px 40px rgba(15, 23, 42, 0.12), inset 0 1.5px 2px #FFFFFF;
+          }
+
+          .search-field {
+            width: 100%;
+            padding: 0.15rem 0;
+          }
+
+          .field-label {
+            font-size: 0.6875rem;
+            letter-spacing: 0.12em;
+          }
+
+          .trigger-value {
+            font-size: 0.92rem;
           }
 
           .search-divider {
+            display: block;
             width: 100%;
             height: 1px;
+            background: rgba(255, 255, 255, 0.1);
+            margin: 0.05rem 0;
+          }
+
+          [data-theme="light"] .search-divider {
+            background: rgba(0, 0, 0, 0.08);
           }
 
           .search-submit-btn {
             width: 100%;
+            height: 48px;
+            margin-top: 0.35rem;
+            border-radius: 12px;
+            font-size: 0.95rem;
           }
 
           .filter-custom-menu {
-            position: static;
+            position: absolute;
+            left: 0;
+            right: 0;
             width: 100%;
-            min-width: 100%;
-            margin-top: 6px;
-          }
-        }
-
-        @media (max-width: 600px) {
-          .trigger-value {
-            font-size: 0.875rem;
-          }
-          .search-submit-btn {
-            padding: 0.75rem 1.25rem;
-            font-size: 0.875rem;
-          }
-        }
-
-        /* Desktop: mobile sheet chrome hidden, group is transparent */
-        .qsb-mobile-launcher,
-        .qsb-sheet-backdrop,
-        .qsb-sheet-head {
-          display: none;
-        }
-
-        .qsb-slots-group {
-          display: contents;
-        }
-
-        @media (max-width: 768px) {
-          /* Flat: the launcher IS the visible search bar */
-          .quick-search-bar,
-          [data-theme="dark"] .quick-search-bar,
-          [data-theme="light"] .quick-search-bar {
-            background: transparent;
-            border: none;
-            box-shadow: none;
-            padding: 0;
-            backdrop-filter: none;
-            -webkit-backdrop-filter: none;
-          }
-
-          .qsb-mobile-launcher {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            width: 100%;
-            padding: 0.9rem 1.15rem;
-            border-radius: 9999px;
-            font-size: 0.9rem;
-            font-weight: 600;
-            color: var(--text-secondary, #C7D2DF);
-            cursor: pointer;
-            backdrop-filter: blur(18px) saturate(190%);
-            -webkit-backdrop-filter: blur(18px) saturate(190%);
-          }
-
-          [data-theme="dark"] .qsb-mobile-launcher {
-            background: rgba(255, 255, 255, 0.06);
-            border: 1px solid rgba(255, 255, 255, 0.18);
-            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.2);
-          }
-
-          [data-theme="light"] .qsb-mobile-launcher {
-            background: rgba(255, 255, 255, 0.65);
-            border: 1px solid rgba(255, 255, 255, 0.85);
-            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.04), inset 0 1.5px 1.5px #FFFFFF;
-            color: #475569;
-          }
-
-          .qsb-mobile-launcher svg {
-            color: var(--gold-primary, #DDA752);
-            flex-shrink: 0;
-          }
-
-          .qsb-sheet-backdrop {
-            display: block;
-            position: fixed;
-            inset: 0;
-            background: rgba(0, 0, 0, 0.45);
-            z-index: 1290;
-          }
-
-          .qsb-slots-group {
-            display: none;
-          }
-
-          .qsb-slots-group.sheet-open {
-            display: flex;
-            flex-direction: column;
-            gap: 0.8rem;
-            position: fixed;
-            left: 0.5rem;
-            right: 0.5rem;
-            bottom: 0;
-            z-index: 1300;
-            max-height: 84dvh;
-            overflow-y: auto;
-            border-radius: 22px 22px 0 0;
-            padding: 1rem 1rem 1.15rem;
-            backdrop-filter: blur(28px) saturate(210%);
-            -webkit-backdrop-filter: blur(28px) saturate(210%);
-          }
-
-          [data-theme="dark"] .qsb-slots-group.sheet-open {
-            background: linear-gradient(
-              135deg,
-              rgba(255, 255, 255, 0.18) 0%,
-              rgba(255, 255, 255, 0.06) 30%,
-              rgba(18, 24, 38, 0.72) 65%,
-              rgba(10, 14, 24, 0.88) 100%
-            );
-            border: 1px solid rgba(255, 255, 255, 0.28);
-            border-bottom: none;
-            box-shadow: 0 -20px 48px rgba(0, 0, 0, 0.5);
-          }
-
-          [data-theme="light"] .qsb-slots-group.sheet-open {
-            background: linear-gradient(
-              135deg,
-              rgba(255, 255, 255, 0.9) 0%,
-              rgba(255, 255, 255, 0.75) 100%
-            );
-            border: 1.5px solid rgba(255, 255, 255, 0.85);
-            border-bottom: none;
-            box-shadow: 0 -20px 48px rgba(15, 23, 42, 0.18);
-          }
-
-          .qsb-slots-group.sheet-open .qsb-sheet-head {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-          }
-
-          .qsb-sheet-title {
-            font-family: var(--font-heading);
-            font-size: 1rem;
-            font-weight: 800;
-            color: var(--text-primary);
-          }
-
-          .qsb-sheet-close {
-            width: 36px;
-            height: 36px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: rgba(255, 255, 255, 0.06);
-            border: 1px solid rgba(255, 255, 255, 0.18);
-            color: var(--text-primary);
-            cursor: pointer;
-          }
-
-          [data-theme="light"] .qsb-sheet-close {
-            background: rgba(0, 0, 0, 0.04);
-            border-color: rgba(0, 0, 0, 0.1);
-          }
-
-          .qsb-slots-group.sheet-open .search-divider {
-            display: none;
-          }
-
-          .qsb-slots-group.sheet-open .search-field {
-            width: 100%;
-            background: rgba(255, 255, 255, 0.04);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 14px;
-            padding: 0.6rem 0.8rem;
-          }
-
-          [data-theme="light"] .qsb-slots-group.sheet-open .search-field {
-            background: rgba(0, 0, 0, 0.03);
-            border-color: rgba(0, 0, 0, 0.08);
-          }
-
-          .qsb-slots-group.sheet-open .search-submit-btn {
-            width: 100%;
-            min-height: 48px;
-            border-radius: 9999px;
-            flex-shrink: 0;
+            min-width: 0;
           }
         }
       `}</style>

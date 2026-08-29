@@ -46,9 +46,14 @@ import {
   RefreshCw,
   Clock,
   Landmark,
-  Send
+  Send,
+  Film,
+  Play,
+  Video as VideoIcon
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import LuxuryAmbientVideoPlayer from '@/components/video/LuxuryAmbientVideoPlayer';
+import type { PropertyVideo } from '@/lib/supabase/types';
 
 interface PropertyDetailViewProps {
   propertyId?: string;
@@ -228,7 +233,9 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
       phone: process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ? `+${process.env.NEXT_PUBLIC_WHATSAPP_NUMBER}` : '+201009970776',
       email: 'contact@zakariafarid.com',
       avatar: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=300&q=80'
-    }
+    },
+    videos: (rawProperty as any)?.videos || ((rawProperty as any)?.video_url ? [{ id: 'v-1', url: (rawProperty as any).video_url, title_en: rawProperty.title_en || 'Property Video Tour', title_ar: rawProperty.title_ar || 'جولة فيديو داخل العقار', category: 'tour' }] : undefined),
+    video_url: (rawProperty as any)?.video_url || ((rawProperty as any)?.videos && (rawProperty as any).videos[0]?.url) || undefined,
   };
 
   useEffect(() => {
@@ -401,6 +408,32 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
   };
   const [isAmbientGlow, setIsAmbientGlow] = useState(true);
   const [isInquiryModalOpen, setIsInquiryModalOpen] = useState(false);
+  const [mediaMode, setMediaMode] = useState<'photos' | 'videos'>('photos');
+  const [activeVideoIndex, setActiveVideoIndex] = useState(0);
+
+  const rawPropVideos: PropertyVideo[] = (rawProperty as any)?.videos || (property as any)?.videos || [];
+  const propertyVideos: PropertyVideo[] = useMemo(() => {
+    if (rawPropVideos && rawPropVideos.length > 0) return rawPropVideos;
+    if (property?.video_url) {
+      return [{
+        id: 'v-primary',
+        url: property.video_url,
+        title_en: property.title,
+        title_ar: (property as any).title_ar || property.title,
+        category: 'tour',
+      }];
+    }
+    // High-end architectural luxury demo walkthrough video
+    return [
+      {
+        id: 'v-demo-primary',
+        url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
+        title_en: 'Sovereign Architectural Vista & Full Interior Tour',
+        title_ar: 'الجولة السينمائية الفاخرة والمعاينة الداخلية',
+        category: 'tour',
+      },
+    ];
+  }, [rawPropVideos, property]);
   
   // Live User Geolocation & Distance State
   const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(null);
@@ -674,122 +707,181 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
           </div>
         </div>
 
-        {/* 3. Cinematic Gallery Stage with Luxury Ambient Cinema Mode */}
+        {/* 3. Cinematic Unified Gallery Stage (Photos & Video Tour in One Component) */}
         <div className="gallery-section">
-          {/* Luxury Ambient Cinema Backdrop Layer */}
-          <div className="gallery-ambient-wrapper" aria-hidden="true">
-            <AnimatePresence initial={false}>
-              {isAmbientGlow && (
-                <motion.div 
-                  key={activeImageIndex}
-                  className="ambient-glow-fade-slot"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.75, ease: [0.22, 1, 0.36, 1] }}
-                >
-                  <div 
-                    className="ambient-aurora-mesh mesh-alpha"
-                    style={{
-                      backgroundImage: `url(${property.images[activeImageIndex] || property.images[0]})`
-                    }}
-                  />
-                  <div 
-                    className="ambient-aurora-mesh mesh-beta"
-                    style={{
-                      backgroundImage: `url(${property.images[activeImageIndex] || property.images[0]})`
-                    }}
-                  />
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-
-          <div className="main-image-frame">
-            <AnimatePresence initial={false} custom={slideDirection}>
-              <motion.img
-                key={activeImageIndex}
-                src={property.images[activeImageIndex] || property.images[0]}
-                alt={property.title}
-                className="main-hero-img"
-                custom={slideDirection}
-                variants={{
-                  enter: (dir: number) => ({ x: dir > 0 ? '100%' : dir < 0 ? '-100%' : '0%', opacity: dir === 0 ? 0 : 1, scale: dir === 0 ? 1 : 0.96 }),
-                  center: { x: '0%', opacity: 1, scale: 1 },
-                  exit: (dir: number) => ({ x: dir > 0 ? '-70%' : dir < 0 ? '70%' : '0%', opacity: 0, scale: dir === 0 ? 1 : 0.9 })
-                }}
-                initial="enter"
-                animate="center"
-                exit="exit"
-                transition={{ type: 'spring', stiffness: 260, damping: 28, mass: 0.85 }}
+          {mediaMode === 'videos' && propertyVideos.length > 0 ? (
+            /* 🎬 Video Tour Mode Stage */
+            <div className="gallery-video-showcase-stage">
+              <LuxuryAmbientVideoPlayer
+                video={propertyVideos[activeVideoIndex] || propertyVideos[0]}
+                isAr={isAr}
+                autoPlay={false}
               />
-            </AnimatePresence>
 
-            <div className="gallery-stage-overlay">
-              <div className="gallery-counter-pill">
-                <span>{String(activeImageIndex + 1).padStart(2, '0')} / {String(property.images.length).padStart(2, '0')}</span>
-                <span className="counter-vista-label"> • ARCHITECTURAL VISTA</span>
+              {propertyVideos.length > 1 && (
+                <div className="video-playlist-strip">
+                  {propertyVideos.map((vid, idx) => (
+                    <button
+                      key={vid.id || idx}
+                      type="button"
+                      className={`video-playlist-item ${activeVideoIndex === idx ? 'active' : ''}`}
+                      onClick={() => setActiveVideoIndex(idx)}
+                    >
+                      <div className="playlist-item-icon">
+                        {activeVideoIndex === idx ? <Play size={14} fill="#DDA752" /> : <Film size={14} />}
+                      </div>
+                      <div className="playlist-item-meta">
+                        <span className="playlist-item-cat">
+                          {isAr ? '🎬 جولة فيديو' : '🎬 Video Tour'}
+                        </span>
+                        <span className="playlist-item-title">
+                          {isAr ? (vid.title_ar || vid.title_en) : (vid.title_en || vid.title_ar)}
+                        </span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : (
+            /* 📸 Photos Mode Stage */
+            <>
+              {/* Luxury Ambient Cinema Backdrop Layer */}
+              <div className="gallery-ambient-wrapper" aria-hidden="true">
+                <AnimatePresence initial={false}>
+                  {isAmbientGlow && (
+                    <motion.div 
+                      key={activeImageIndex}
+                      className="ambient-glow-fade-slot"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.75, ease: [0.22, 1, 0.36, 1] }}
+                    >
+                      <div 
+                        className="ambient-aurora-mesh mesh-alpha"
+                        style={{
+                          backgroundImage: `url(${property.images[activeImageIndex] || property.images[0]})`
+                        }}
+                      />
+                      <div 
+                        className="ambient-aurora-mesh mesh-beta"
+                        style={{
+                          backgroundImage: `url(${property.images[activeImageIndex] || property.images[0]})`
+                        }}
+                      />
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
 
-              <div className="gallery-actions-right">
-                {/* Luxury Ambient Mode Toggle Button */}
-                <button
-                  className={`gallery-ambient-btn ${isAmbientGlow ? 'active' : ''}`}
+              <div className="main-image-frame">
+                <AnimatePresence initial={false} custom={slideDirection}>
+                  <motion.img
+                    key={activeImageIndex}
+                    src={property.images[activeImageIndex] || property.images[0]}
+                    alt={property.title}
+                    className="main-hero-img"
+                    custom={slideDirection}
+                    variants={{
+                      enter: (dir: number) => ({ x: dir > 0 ? '100%' : dir < 0 ? '-100%' : '0%', opacity: dir === 0 ? 0 : 1, scale: dir === 0 ? 1 : 0.96 }),
+                      center: { x: '0%', opacity: 1, scale: 1 },
+                      exit: (dir: number) => ({ x: dir > 0 ? '-70%' : dir < 0 ? '70%' : '0%', opacity: 0, scale: dir === 0 ? 1 : 0.9 })
+                    }}
+                    initial="enter"
+                    animate="center"
+                    exit="exit"
+                    transition={{ type: 'spring', stiffness: 260, damping: 28, mass: 0.85 }}
+                  />
+                </AnimatePresence>
+
+                <div className="gallery-stage-overlay">
+                  <div className="gallery-counter-pill">
+                    <span>{String(activeImageIndex + 1).padStart(2, '0')} / {String(property.images.length).padStart(2, '0')}</span>
+                    <span className="counter-vista-label"> • ARCHITECTURAL VISTA</span>
+                  </div>
+
+                  <div className="gallery-actions-right">
+                    {/* Luxury Ambient Mode Toggle Button */}
+                    <button
+                      className={`gallery-ambient-btn ${isAmbientGlow ? 'active' : ''}`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setIsAmbientGlow(!isAmbientGlow);
+                      }}
+                      type="button"
+                      title={isAr ? 'تبديل الإضاءة السينمائية المحيطية' : 'Toggle Luxury Ambient Cinema Illumination'}
+                    >
+                      <Sparkles size={15} className="ambient-sparkle-icon" />
+                      <span className="ambient-btn-label">{isAr ? `إضاءة محيطية: ${isAmbientGlow ? 'مفعلة' : 'معطلة'}` : `Ambient: ${isAmbientGlow ? 'ON' : 'OFF'}`}</span>
+                      <span className={`ambient-dot-pulse ${isAmbientGlow ? 'active' : 'off'}`} />
+                    </button>
+
+                    <button 
+                      className="gallery-fullscreen-btn" 
+                      type="button" 
+                      title="Open Fullscreen Lightbox"
+                      onClick={() => setIsLightboxOpen(true)}
+                    >
+                      <Maximize size={14} />
+                      <span className="fullscreen-btn-label">Fullscreen Stage</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Gallery Step Arrows */}
+                <button 
+                  className="gallery-nav-arrow arrow-left"
                   onClick={(e) => {
                     e.stopPropagation();
-                    setIsAmbientGlow(!isAmbientGlow);
+                    goToImage(activeImageIndex - 1, -1);
                   }}
                   type="button"
-                  title={isAr ? 'تبديل الإضاءة السينمائية المحيطية' : 'Toggle Luxury Ambient Cinema Illumination'}
                 >
-                  <Sparkles size={15} className="ambient-sparkle-icon" />
-                  <span className="ambient-btn-label">{isAr ? `إضاءة محيطية: ${isAmbientGlow ? 'مفعلة' : 'معطلة'}` : `Ambient: ${isAmbientGlow ? 'ON' : 'OFF'}`}</span>
-                  <span className={`ambient-dot-pulse ${isAmbientGlow ? 'active' : 'off'}`} />
+                  <ChevronLeft size={20} />
                 </button>
 
                 <button 
-                  className="gallery-fullscreen-btn" 
-                  type="button" 
-                  title="Open Fullscreen Lightbox"
-                  onClick={() => setIsLightboxOpen(true)}
+                  className="gallery-nav-arrow arrow-right"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    goToImage(activeImageIndex + 1, 1);
+                  }}
+                  type="button"
                 >
-                  <Maximize size={14} />
-                  <span className="fullscreen-btn-label">Fullscreen Stage</span>
+                  <ChevronRight size={20} />
                 </button>
               </div>
-            </div>
+            </>
+          )}
 
-            {/* Gallery Step Arrows */}
-            <button 
-              className="gallery-nav-arrow arrow-left"
-              onClick={(e) => {
-                e.stopPropagation();
-                goToImage(activeImageIndex - 1, -1);
-              }}
-              type="button"
-            >
-              <ChevronLeft size={20} />
-            </button>
-
-            <button 
-              className="gallery-nav-arrow arrow-right"
-              onClick={(e) => {
-                e.stopPropagation();
-                goToImage(activeImageIndex + 1, 1);
-              }}
-              type="button"
-            >
-              <ChevronRight size={20} />
-            </button>
-          </div>
-
-          {/* Thumbnail Selector Strip */}
+          {/* Unified Thumbnails Strip (Photos + Video Tour) */}
           <div className="thumbnails-strip">
+            {propertyVideos.length > 0 && (
+              <motion.div
+                className={`thumb-item thumb-video-item ${mediaMode === 'videos' ? 'active' : ''}`}
+                onClick={() => setMediaMode('videos')}
+                whileHover={{ scale: 1.03 }}
+                whileTap={{ scale: 0.97 }}
+                title={isAr ? 'مشاهدة جولة الفيديو' : 'Watch Video Tour'}
+              >
+                <div className="thumb-video-inner">
+                  <div className="thumb-play-circle">
+                    <Play size={13} fill="#DDA752" color="#DDA752" />
+                  </div>
+                  <span className="thumb-video-label">{isAr ? 'جولة فيديو' : 'Video Tour'}</span>
+                </div>
+              </motion.div>
+            )}
+
             {property.images.map((imgUrl, idx) => (
               <motion.div 
                 key={idx}
-                className={`thumb-item ${activeImageIndex === idx ? 'active' : ''}`}
-                onClick={() => goToImage(idx)}
+                className={`thumb-item ${mediaMode === 'photos' && activeImageIndex === idx ? 'active' : ''}`}
+                onClick={() => {
+                  setMediaMode('photos');
+                  goToImage(idx);
+                }}
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
               >
@@ -1052,8 +1144,8 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
             {/* A. Architectural Narrative */}
             <div className="content-section">
               <div className="section-title-wrap">
-                <span className="section-eyebrow">{isAr ? 'الملف المعماري الحصري' : 'CURATED MONOGRAPH'}</span>
-                <h3 className="section-subtitle">{isAr ? 'وصف العقار والتفاصيل' : 'Property Description'}</h3>
+                <span className="section-eyebrow">{isAr ? 'المواصفات الرئيسية' : 'KEY SPECIFICATIONS'}</span>
+                <h3 className="section-subtitle">{isAr ? 'مواصفات وتفاصيل الصرح' : 'Property Specifications'}</h3>
               </div>
 
               {/* Luxury Key Specification Cards Matrix */}
@@ -1124,7 +1216,10 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
                 </div>
               </div>
 
-              <h4 className="narrative-heading">{isAr ? 'عن العقار' : 'About this Estate'}</h4>
+              <div className="section-title-wrap narrative-section-header">
+                <span className="section-eyebrow">{isAr ? 'الملف المعماري الحصري' : 'CURATED MONOGRAPH'}</span>
+                <h3 className="section-subtitle">{isAr ? 'عن هذا الصرح' : 'About this Estate'}</h3>
+              </div>
               <div className="narrative-text">
                 {property.narrative.split('\n\n').map((paragraph, i) => (
                   <p key={i} className="narrative-para">{paragraph}</p>
@@ -1301,8 +1396,8 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
         {/* 6. Similar Architectural Statements */}
         <section className="similar-section">
           <div className="similar-header">
-            <span className="eyebrow-gold">RECOMMENDED PROPERTIES</span>
-            <h2 className="similar-title">Similar Properties</h2>
+            <span className="eyebrow-gold">{isAr ? 'صروح معمارية مقترحة' : 'RECOMMENDED PROPERTIES'}</span>
+            <h2 className="similar-title">{isAr ? 'عقارات مميزة مماثلة' : 'Similar Properties'}</h2>
           </div>
           <div className="similar-grid">
             {similarProperties.map((p: Property, idx: number) => (
@@ -1610,6 +1705,147 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
         .gallery-section {
           position: relative;
           margin-bottom: 2.25rem;
+        }
+
+        .gallery-media-mode-bar {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          margin-bottom: 12px;
+        }
+
+        .gallery-mode-tab {
+          display: inline-flex;
+          align-items: center;
+          gap: 7px;
+          padding: 7px 14px;
+          border-radius: 999px;
+          font-family: var(--font-heading, inherit);
+          font-size: 0.78rem;
+          font-weight: 700;
+          cursor: pointer;
+          transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
+          border: 1px solid rgba(221, 167, 82, 0.22);
+          background: rgba(13, 18, 30, 0.65);
+          color: rgba(255, 255, 255, 0.7);
+          backdrop-filter: blur(12px);
+        }
+
+        .gallery-mode-tab:hover {
+          color: #FFFDF5;
+          border-color: rgba(221, 167, 82, 0.5);
+          background: rgba(221, 167, 82, 0.12);
+        }
+
+        .gallery-mode-tab.active {
+          color: #FFFDF5;
+          background: rgba(221, 167, 82, 0.2);
+          border-color: #DDA752;
+          box-shadow: 0 0 16px rgba(221, 167, 82, 0.28);
+        }
+
+        [data-theme="light"] .gallery-mode-tab {
+          background: #FFFFFF;
+          border-color: rgba(0, 0, 0, 0.1);
+          color: #475569;
+        }
+
+        [data-theme="light"] .gallery-mode-tab.active {
+          background: #FFFDF7;
+          border-color: #A87A28;
+          color: #8C6826;
+        }
+
+        .tab-video-icon {
+          color: #DDA752;
+        }
+
+        .gold-spark-badge {
+          font-size: 0.62rem;
+          font-weight: 800;
+          letter-spacing: 0.08em;
+          background: linear-gradient(135deg, #E5B869 0%, #C5A059 100%);
+          color: #0A0C10;
+          padding: 1px 5px;
+          border-radius: 4px;
+        }
+
+        .gallery-video-showcase-stage {
+          width: 100%;
+          display: flex;
+          flex-direction: column;
+          gap: 14px;
+          margin-bottom: 1.5rem;
+          position: relative;
+          z-index: 2;
+        }
+
+        .video-playlist-strip {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          overflow-x: auto;
+          padding-bottom: 6px;
+        }
+
+        .video-playlist-item {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          background: rgba(13, 18, 30, 0.7);
+          border: 1px solid rgba(221, 167, 82, 0.22);
+          border-radius: 12px;
+          padding: 8px 14px;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          min-width: 180px;
+          flex-shrink: 0;
+          text-align: start;
+        }
+
+        .video-playlist-item:hover {
+          border-color: #DDA752;
+          background: rgba(221, 167, 82, 0.12);
+        }
+
+        .video-playlist-item.active {
+          border-color: #DDA752;
+          background: rgba(221, 167, 82, 0.2);
+          box-shadow: 0 0 14px rgba(221, 167, 82, 0.25);
+        }
+
+        .playlist-item-icon {
+          width: 28px;
+          height: 28px;
+          border-radius: 50%;
+          background: rgba(221, 167, 82, 0.15);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: #DDA752;
+          flex-shrink: 0;
+        }
+
+        .playlist-item-meta {
+          display: flex;
+          flex-direction: column;
+        }
+
+        .playlist-item-cat {
+          font-size: 0.65rem;
+          font-weight: 800;
+          color: #DDA752;
+          text-transform: uppercase;
+        }
+
+        .playlist-item-title {
+          font-size: 0.78rem;
+          font-weight: 700;
+          color: #FFFDF5;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          max-width: 160px;
         }
 
         /* Ambient Cinema Illumination Projection */
@@ -1938,7 +2174,7 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
 
         .thumbnails-strip {
           position: relative;
-          z-index: 1;
+          z-index: 5;
           display: grid;
           grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
           gap: 1rem;
@@ -1983,6 +2219,80 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
           border-color: var(--gold-primary);
           opacity: 1;
           box-shadow: 0 0 24px var(--gold-glow);
+        }
+
+        .thumb-video-item {
+          background: linear-gradient(145deg, rgba(221, 167, 82, 0.22) 0%, rgba(10, 14, 24, 0.95) 100%);
+          border: 1px solid rgba(221, 167, 82, 0.45);
+          opacity: 0.9;
+        }
+
+        .thumb-video-item:hover {
+          opacity: 1;
+          border-color: #DDA752;
+          box-shadow: 0 0 18px rgba(221, 167, 82, 0.35);
+        }
+
+        .thumb-video-inner {
+          width: 100%;
+          height: 100%;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          gap: 4px;
+          padding: 6px;
+        }
+
+        .thumb-play-circle {
+          width: 26px;
+          height: 26px;
+          border-radius: 50%;
+          background: rgba(221, 167, 82, 0.25);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border: 1px solid rgba(221, 167, 82, 0.5);
+        }
+
+        .thumb-video-label {
+          font-size: 0.65rem;
+          font-weight: 800;
+          color: #FFFDF5;
+          text-align: center;
+          line-height: 1.1;
+        }
+
+        .gallery-video-play-btn {
+          pointer-events: auto;
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          background: linear-gradient(135deg, #E5B869 0%, #C5A059 100%);
+          color: #0A0C10;
+          border: 1px solid rgba(255, 255, 255, 0.3);
+          border-radius: 9999px;
+          padding: 0.45rem 1rem;
+          font-family: var(--font-heading, inherit);
+          font-size: 0.76rem;
+          font-weight: 800;
+          cursor: pointer;
+          transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
+          box-shadow: 0 4px 18px rgba(221, 167, 82, 0.35);
+        }
+
+        .gallery-video-play-btn:hover {
+          transform: translateY(-2px) scale(1.03);
+          box-shadow: 0 8px 24px rgba(221, 167, 82, 0.5);
+        }
+
+        .play-badge-spark {
+          font-size: 0.6rem;
+          background: #0A0C10;
+          color: #DDA752;
+          padding: 1px 4px;
+          border-radius: 3px;
+          font-weight: 900;
         }
 
         .thumb-img {
@@ -2501,6 +2811,31 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
           width: 100%;
         }
 
+        
+        .narrative-section-header {
+          margin-top: 2.25rem;
+          margin-bottom: 1.25rem;
+        }
+
+        @media (max-width: 768px) {
+          .narrative-section-header {
+            margin-top: 1.75rem;
+            margin-bottom: 1rem;
+          }
+          .section-subtitle {
+            font-size: 1.35rem;
+            line-height: 1.25;
+          }
+          .section-eyebrow {
+            font-size: 0.625rem;
+            letter-spacing: 0.12em;
+          }
+          .narrative-para {
+            font-size: 0.875rem;
+            line-height: 1.65;
+          }
+        }
+
         .section-title-wrap {
           margin-bottom: 1.5rem;
         }
@@ -2541,73 +2876,114 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
           line-height: 1.75;
         }
 
-        /* Key Specification Glass Pills */
+        /* Key Specification Cards Matrix (Reference Layout) */
         .property-spec-matrix-grid {
-          display: flex;
-          flex-wrap: wrap;
-          align-items: center;
-          gap: 0.75rem;
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 0.85rem;
           margin-bottom: 2rem;
           padding-bottom: 1.75rem;
           border-bottom: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
         }
 
         .spec-stat-card {
-          display: inline-flex;
-          align-items: center;
-          gap: 8px;
-          padding: 0.5rem 1.15rem;
-          border-radius: 9999px;
-          font-size: 0.8125rem;
+          display: flex;
+          flex-direction: column;
+          align-items: flex-start;
+          justify-content: space-between;
+          padding: 1.25rem 1.15rem 1.1rem;
+          border-radius: 18px;
+          min-height: 110px;
           transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-          backdrop-filter: blur(18px) saturate(190%);
-          -webkit-backdrop-filter: blur(18px) saturate(190%);
+          backdrop-filter: blur(24px) saturate(200%) contrast(108%) brightness(108%);
+          -webkit-backdrop-filter: blur(24px) saturate(200%) contrast(108%) brightness(108%);
+          position: relative;
+        }
+
+        [dir="rtl"] .spec-stat-card {
+          align-items: flex-start;
+          text-align: right;
         }
 
         [data-theme="dark"] .spec-stat-card {
-          background: rgba(255, 255, 255, 0.06);
-          border: 1px solid rgba(255, 255, 255, 0.18);
-          box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+          background: linear-gradient(
+            135deg,
+            rgba(255, 255, 255, 0.16) 0%,
+            rgba(255, 255, 255, 0.04) 25%,
+            rgba(18, 24, 38, 0.42) 60%,
+            rgba(10, 14, 24, 0.65) 100%
+          );
+          border: 1.5px solid rgba(255, 255, 255, 0.28);
+          box-shadow: 
+            0 16px 40px rgba(0, 0, 0, 0.35),
+            inset 0 1.5px 2px rgba(255, 255, 255, 0.6),
+            inset 0 -1px 1px rgba(255, 255, 255, 0.1);
         }
 
         [data-theme="dark"] .spec-stat-card:hover {
-          background: rgba(255, 255, 255, 0.09);
-          border-color: rgba(221, 167, 82, 0.4);
-          transform: translateY(-2px);
-          box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35), 0 0 12px rgba(221, 167, 82, 0.15);
+          background: linear-gradient(
+            135deg,
+            rgba(255, 255, 255, 0.22) 0%,
+            rgba(255, 255, 255, 0.07) 25%,
+            rgba(18, 24, 38, 0.5) 60%,
+            rgba(10, 14, 24, 0.75) 100%
+          );
+          border-color: rgba(221, 167, 82, 0.6);
+          transform: translateY(-3px);
+          box-shadow: 
+            0 20px 48px rgba(0, 0, 0, 0.45),
+            0 0 25px rgba(221, 167, 82, 0.2),
+            inset 0 1.5px 2px rgba(255, 255, 255, 0.8);
         }
 
         [data-theme="light"] .spec-stat-card {
-          background: rgba(255, 255, 255, 0.65);
-          border: 1px solid rgba(255, 255, 255, 0.85);
-          box-shadow: 0 4px 14px rgba(0, 0, 0, 0.04), inset 0 1.5px 1.5px #FFFFFF;
+          background: linear-gradient(
+            135deg,
+            rgba(255, 255, 255, 0.75) 0%,
+            rgba(255, 255, 255, 0.4) 35%,
+            rgba(255, 255, 255, 0.6) 100%
+          );
+          backdrop-filter: blur(20px) saturate(210%) contrast(108%) brightness(108%);
+          -webkit-backdrop-filter: blur(20px) saturate(210%) contrast(108%) brightness(108%);
+          border: 1.5px solid rgba(255, 255, 255, 0.9);
+          box-shadow: 
+            0 14px 36px rgba(15, 23, 42, 0.07),
+            0 0 20px rgba(184, 134, 11, 0.06),
+            inset 0 1.5px 2px #FFFFFF;
         }
 
         [data-theme="light"] .spec-stat-card:hover {
-          border-color: rgba(184, 134, 11, 0.4);
-          transform: translateY(-2px);
-          box-shadow: 0 8px 24px rgba(30, 24, 16, 0.08);
+          border-color: rgba(184, 134, 11, 0.6);
+          transform: translateY(-3px);
+          box-shadow: 
+            0 20px 44px rgba(30, 24, 16, 0.1),
+            0 0 25px rgba(184, 134, 11, 0.15),
+            inset 0 2px 2.5px #FFFFFF;
         }
 
         .spec-stat-icon-wrap {
+          width: 36px;
+          height: 36px;
+          border-radius: 10px;
+          background: rgba(229, 184, 105, 0.08);
+          border: 1px solid rgba(229, 184, 105, 0.35);
           display: flex;
           align-items: center;
           justify-content: center;
           flex-shrink: 0;
+          margin-bottom: 0.75rem;
         }
 
-        .spec-stat-icon-wrap svg {
-          width: 16px;
-          height: 16px;
-        }
-
+        .spec-stat-icon-wrap svg,
         .spec-stat-icon {
+          width: 18px;
+          height: 18px;
           color: var(--gold-primary, #DDA752);
         }
 
         [data-theme="light"] .spec-stat-icon-wrap {
           background: rgba(184, 134, 11, 0.08);
-          border-color: rgba(184, 134, 11, 0.2);
+          border-color: rgba(184, 134, 11, 0.25);
         }
 
         [data-theme="light"] .spec-stat-icon {
@@ -2616,85 +2992,111 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
 
         .spec-stat-info {
           display: flex;
-          align-items: center;
-          gap: 6px;
-          flex-wrap: nowrap;
+          flex-direction: column;
+          align-items: flex-start;
+          gap: 3px;
+          width: 100%;
+        }
+
+        [dir="rtl"] .spec-stat-info {
+          align-items: flex-start;
+          text-align: right;
         }
 
         .spec-stat-label {
-          font-family: var(--font-heading);
-          font-size: 0.65rem;
-          font-weight: 800;
-          letter-spacing: 0.1em;
+          font-family: var(--font-heading), sans-serif;
+          font-size: 0.6875rem;
+          font-weight: 700;
+          letter-spacing: 0.06em;
           text-transform: uppercase;
           color: var(--gold-primary, #DDA752);
-          opacity: 0.85;
-          white-space: nowrap;
+          opacity: 0.9;
         }
 
         [data-theme="light"] .spec-stat-label {
-          color: #B8860B;
+          color: #8C6826;
         }
 
         .spec-stat-value {
-          font-family: var(--font-heading);
-          font-size: 0.875rem;
-          font-weight: 700;
-          color: var(--text-primary);
-          white-space: nowrap;
+          font-family: var(--font-heading), sans-serif;
+          font-size: 0.95rem;
+          font-weight: 800;
+          color: var(--text-primary, #FFFFFF);
+          line-height: 1.25;
         }
 
-        /* Gold highlighted card */
+        [data-theme="light"] .spec-stat-value {
+          color: #0F172A;
+        }
+
+        /* Gold highlighted card (e.g. Freehold Title Verification) */
         [data-theme="dark"] .spec-stat-card.card-highlight-gold {
-          background: rgba(197, 142, 54, 0.12);
-          border-color: var(--gold-border, rgba(221, 167, 82, 0.35));
+          background: linear-gradient(
+            135deg,
+            rgba(229, 184, 105, 0.18) 0%,
+            rgba(255, 255, 255, 0.08) 25%,
+            rgba(18, 24, 38, 0.45) 60%,
+            rgba(10, 14, 24, 0.7) 100%
+          );
+          border: 1.5px solid rgba(229, 184, 105, 0.65);
+          box-shadow: 
+            0 16px 40px rgba(0, 0, 0, 0.35),
+            0 0 25px rgba(229, 184, 105, 0.22),
+            inset 0 1.5px 2px rgba(255, 255, 255, 0.7);
         }
 
         [data-theme="dark"] .spec-stat-card.card-highlight-gold .gold-val {
           color: #FCD34D;
+          text-shadow: 0 0 10px rgba(252, 211, 77, 0.4);
         }
 
         [data-theme="light"] .spec-stat-card.card-highlight-gold {
-          background: linear-gradient(135deg, rgba(255, 246, 224, 0.9) 0%, #FFFFFF 100%);
-          border-color: rgba(184, 134, 11, 0.35);
+          background: linear-gradient(
+            135deg,
+            rgba(254, 243, 199, 0.8) 0%,
+            rgba(255, 255, 255, 0.5) 40%,
+            rgba(254, 243, 199, 0.7) 100%
+          );
+          border: 1.5px solid rgba(184, 134, 11, 0.55);
+          box-shadow: 
+            0 14px 36px rgba(184, 134, 11, 0.12),
+            0 0 20px rgba(184, 134, 11, 0.1),
+            inset 0 2px 2px #FFFFFF;
         }
 
         [data-theme="light"] .spec-stat-card.card-highlight-gold .gold-val {
-          color: #7A5200;
+          color: #8C6826;
         }
 
         @media (max-width: 768px) {
-          /* Always two pills per row (labels ellipsize instead of wrapping the row) */
           .property-spec-matrix-grid {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
-            gap: 0.5rem;
+            gap: 0.65rem;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1.25rem;
           }
           .spec-stat-card {
-            width: 100%;
-            min-width: 0;
-            justify-content: flex-start;
-            padding: 0.5rem 0.85rem;
+            padding: 0.95rem 0.85rem 0.85rem;
+            min-height: 96px;
+            border-radius: 14px;
           }
-          .spec-stat-info {
-            min-width: 0;
-            overflow: hidden;
+          .spec-stat-icon-wrap {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            margin-bottom: 0.6rem;
+          }
+          .spec-stat-icon-wrap svg,
+          .spec-stat-icon {
+            width: 16px;
+            height: 16px;
+          }
+          .spec-stat-label {
+            font-size: 0.625rem;
           }
           .spec-stat-value {
-            overflow: hidden;
-            text-overflow: ellipsis;
-          }
-          /* English labels/values are longer — shrink them so pills don't truncate */
-          [dir="ltr"] .spec-stat-label {
-            font-size: 0.56rem;
-            letter-spacing: 0.06em;
-          }
-          [dir="ltr"] .spec-stat-value {
-            font-size: 0.76rem;
-          }
-          [dir="ltr"] .spec-stat-card {
-            gap: 6px;
-            padding: 0.5rem 0.7rem;
+            font-size: 0.875rem;
           }
         }
 
@@ -3359,40 +3761,86 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
         }
 
         @media (max-width: 768px) {
-          /* Compact info panel under the map: swipeable commute chips */
           .location-suite-grid {
             gap: 0.85rem;
           }
           .location-suite-side .sidebar-radar-card {
-            padding: 1rem 1rem 0.85rem;
+            padding: 1.15rem 1rem 1rem;
             border-radius: 18px;
+            gap: 0.85rem;
+          }
+          .location-suite-side .radar-stack-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 8px;
+            flex-wrap: wrap;
+            padding-bottom: 0.65rem;
+          }
+          .location-suite-side .radar-stack-header-text {
+            min-width: 0;
+            flex: 1 1 auto;
+          }
+          .location-suite-side .radar-stack-eyebrow {
+            font-size: 0.625rem;
+            margin-bottom: 0.15rem;
+          }
+          .location-suite-side .radar-stack-title {
+            font-size: 1.05rem;
+            white-space: normal;
+            line-height: 1.25;
+          }
+          .location-suite-side .radar-stack-status {
+            font-size: 0.6875rem;
+            padding: 0.2rem 0.55rem;
+            align-self: flex-start;
           }
           .location-suite-side .radar-cards-list {
-            flex-direction: row;
-            overflow-x: auto;
-            scroll-snap-type: x mandatory;
-            gap: 0.6rem;
-            margin: 0 -1rem;
-            padding: 0 1rem 6px;
-            scrollbar-width: none;
-            -webkit-overflow-scrolling: touch;
-          }
-          .location-suite-side .radar-cards-list::-webkit-scrollbar {
-            display: none;
+            display: flex;
+            flex-direction: column;
+            gap: 0.55rem;
+            margin: 0;
+            padding: 0;
+            overflow-x: visible;
           }
           .location-suite-side .proximity-card {
-            flex: 0 0 220px;
-            scroll-snap-align: start;
-            padding: 0.7rem 0.85rem;
+            flex: 1 1 auto;
+            width: 100%;
+            padding: 0.75rem 0.85rem;
+            gap: 10px;
+            border-radius: 12px;
+            box-sizing: border-box;
+          }
+          .location-suite-side .poi-icon-box {
+            width: 34px;
+            height: 34px;
+            border-radius: 8px;
+          }
+          .location-suite-side .poi-icon-box svg {
+            width: 16px;
+            height: 16px;
+          }
+          .location-suite-side .poi-mode-title {
+            font-size: 0.8rem;
+          }
+          .location-suite-side .poi-time-val {
+            font-size: 0.82rem;
+          }
+          .location-suite-side .poi-sub-detail {
+            font-size: 0.6875rem;
+          }
+          .location-suite-side .radar-stack-footer {
+            font-size: 0.72rem;
+            padding-top: 0.65rem;
           }
         }
 
         /* Sidebar Radar Card */
         .sidebar-radar-card {
-          backdrop-filter: blur(28px) saturate(190%);
-          -webkit-backdrop-filter: blur(28px) saturate(190%);
-          border-radius: 24px;
-          padding: 1.85rem 1.65rem;
+          backdrop-filter: blur(28px) saturate(200%) contrast(108%) brightness(108%);
+          -webkit-backdrop-filter: blur(28px) saturate(200%) contrast(108%) brightness(108%);
+          border-radius: 22px;
+          padding: 1.75rem 1.85rem 1.65rem;
           display: flex;
           flex-direction: column;
           gap: 1.15rem;
@@ -3403,22 +3851,33 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
         }
 
         [data-theme="dark"] .sidebar-radar-card {
-          background: rgba(255, 255, 255, 0.06);
-          border: 1px solid rgba(255, 255, 255, 0.22);
-          box-shadow: 0 20px 48px rgba(0, 0, 0, 0.35), inset 0 1.5px 1.5px rgba(255, 255, 255, 0.55);
+          background: linear-gradient(
+            135deg,
+            rgba(255, 255, 255, 0.18) 0%,
+            rgba(255, 255, 255, 0.05) 25%,
+            rgba(18, 24, 38, 0.45) 60%,
+            rgba(10, 14, 24, 0.7) 100%
+          );
+          border: 1.5px solid rgba(255, 255, 255, 0.32);
+          box-shadow: 
+            0 24px 60px rgba(0, 0, 0, 0.45),
+            0 0 25px rgba(221, 167, 82, 0.12),
+            inset 0 1.5px 2px rgba(255, 255, 255, 0.7),
+            inset 0 -1px 1px rgba(255, 255, 255, 0.12);
         }
 
         [data-theme="light"] .sidebar-radar-card {
           background: linear-gradient(
             135deg,
-            rgba(255, 255, 255, 0.48) 0%,
-            rgba(255, 255, 255, 0.28) 50%,
-            rgba(255, 255, 255, 0.38) 100%
+            rgba(255, 255, 255, 0.75) 0%,
+            rgba(255, 255, 255, 0.4) 35%,
+            rgba(255, 255, 255, 0.6) 100%
           );
-          backdrop-filter: blur(14px) saturate(180%) contrast(102%);
-          -webkit-backdrop-filter: blur(14px) saturate(180%) contrast(102%);
-          border: 1px solid rgba(255, 255, 255, 0.65);
-          box-shadow: 0 18px 44px rgba(15, 23, 42, 0.06), inset 0 1.5px 2px #FFFFFF;
+          border: 1.5px solid rgba(255, 255, 255, 0.95);
+          box-shadow: 
+            0 20px 50px rgba(15, 23, 42, 0.08),
+            0 0 25px rgba(184, 134, 11, 0.08),
+            inset 0 2px 2.5px #FFFFFF;
         }
 
         .radar-stack-header {
@@ -3493,8 +3952,27 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
         }
 
         [data-theme="dark"] .proximity-card {
-          background: rgba(255, 255, 255, 0.05);
-          border: 1px solid rgba(255, 255, 255, 0.12);
+          background: linear-gradient(
+            135deg,
+            rgba(255, 255, 255, 0.12) 0%,
+            rgba(255, 255, 255, 0.03) 25%,
+            rgba(18, 24, 38, 0.35) 60%,
+            rgba(10, 14, 24, 0.55) 100%
+          );
+          border: 1px solid rgba(255, 255, 255, 0.22);
+          box-shadow: inset 0 1px 1.5px rgba(255, 255, 255, 0.35);
+        }
+
+        [data-theme="dark"] .proximity-card:hover {
+          background: linear-gradient(
+            135deg,
+            rgba(255, 255, 255, 0.16) 0%,
+            rgba(255, 255, 255, 0.06) 25%,
+            rgba(18, 24, 38, 0.45) 60%,
+            rgba(10, 14, 24, 0.65) 100%
+          );
+          border-color: rgba(221, 167, 82, 0.5);
+          box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3), 0 0 16px rgba(221, 167, 82, 0.15), inset 0 1.5px 2px rgba(255, 255, 255, 0.5);
         }
 
         [data-theme="light"] .proximity-card {
@@ -3595,39 +4073,65 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
         }
 
         .broker-card {
-          backdrop-filter: blur(28px) saturate(190%);
-          -webkit-backdrop-filter: blur(28px) saturate(190%);
-          border-radius: 24px;
-          padding: 2rem 1.75rem;
+          backdrop-filter: blur(28px) saturate(200%) contrast(108%) brightness(108%);
+          -webkit-backdrop-filter: blur(28px) saturate(200%) contrast(108%) brightness(108%);
+          border-radius: 22px;
+          padding: 1.75rem 1.85rem 1.65rem;
           transition: all var(--transition-smooth);
+          display: flex;
+          flex-direction: column;
+          justify-content: space-between;
+          margin-top: 78px;
+          min-height: 278px;
+          box-sizing: border-box;
+        }
+
+        @media (max-width: 1024px) {
+          .broker-card {
+            margin-top: 0;
+            min-height: auto;
+            padding: 1.35rem 1.4rem 1.25rem;
+            border-radius: 18px;
+          }
         }
 
         [data-theme="dark"] .broker-card {
-          background: rgba(255, 255, 255, 0.06);
-          border: 1px solid rgba(255, 255, 255, 0.22);
-          box-shadow: 0 20px 48px rgba(0, 0, 0, 0.35), inset 0 1.5px 1.5px rgba(255, 255, 255, 0.55);
+          background: linear-gradient(
+            135deg,
+            rgba(255, 255, 255, 0.18) 0%,
+            rgba(255, 255, 255, 0.05) 25%,
+            rgba(18, 24, 38, 0.45) 60%,
+            rgba(10, 14, 24, 0.7) 100%
+          );
+          border: 1.5px solid rgba(255, 255, 255, 0.32);
+          box-shadow: 
+            0 24px 60px rgba(0, 0, 0, 0.45),
+            0 0 25px rgba(221, 167, 82, 0.12),
+            inset 0 1.5px 2px rgba(255, 255, 255, 0.7),
+            inset 0 -1px 1px rgba(255, 255, 255, 0.12);
         }
 
         [data-theme="light"] .broker-card {
           background: linear-gradient(
             135deg,
-            rgba(255, 255, 255, 0.48) 0%,
-            rgba(255, 255, 255, 0.28) 50%,
-            rgba(255, 255, 255, 0.38) 100%
+            rgba(255, 255, 255, 0.75) 0%,
+            rgba(255, 255, 255, 0.4) 35%,
+            rgba(255, 255, 255, 0.6) 100%
           );
-          backdrop-filter: blur(14px) saturate(180%) contrast(102%);
-          -webkit-backdrop-filter: blur(14px) saturate(180%) contrast(102%);
-          border: 1px solid rgba(255, 255, 255, 0.65);
-          box-shadow: 0 18px 44px rgba(15, 23, 42, 0.06), inset 0 1.5px 2px #FFFFFF;
+          border: 1.5px solid rgba(255, 255, 255, 0.95);
+          box-shadow: 
+            0 20px 50px rgba(15, 23, 42, 0.08),
+            0 0 25px rgba(184, 134, 11, 0.08),
+            inset 0 2px 2.5px #FFFFFF;
         }
 
         .broker-profile {
           display: flex;
           align-items: center;
           gap: 1.15rem;
-          padding-bottom: 1.25rem;
+          padding-bottom: 1.15rem;
           border-bottom: 1px solid var(--border-subtle);
-          margin-bottom: 1.25rem;
+          margin-bottom: 1.15rem;
         }
 
         .broker-avatar {

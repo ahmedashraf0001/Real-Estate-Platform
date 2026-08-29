@@ -1,3 +1,13 @@
+export interface PropertyVideo {
+  id: string;
+  url: string;
+  title_en?: string;
+  title_ar?: string;
+  thumbnail?: string;
+  duration?: string;
+  category?: 'tour' | 'drone' | 'cad' | 'spec';
+}
+
 export interface Property {
   id: string;
   title: string;
@@ -13,6 +23,8 @@ export interface Property {
   builtYear: number;
   featured?: boolean;
   images: string[];
+  videos?: PropertyVideo[];
+  video_url?: string;
   narrative: string;
   amenities: {
     icon: string;

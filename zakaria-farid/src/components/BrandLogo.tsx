@@ -190,10 +190,29 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
         }
 
         .name-serif-gold.name-ar {
-          font-family: 'Cairo', 'Amiri', Georgia, serif;
-          letter-spacing: 0.02em;
-          word-spacing: 0.15em;
-          font-weight: 800;
+          font-family: 'Amiri', 'ThmanyahSerifDisplay', 'Reem Kufi', 'Cairo', serif;
+          letter-spacing: 0.03em;
+          word-spacing: 0.22em;
+          font-weight: 700;
+          line-height: 1.18;
+          background: linear-gradient(
+            180deg,
+            #FFFDF7 0%,
+            #FFF0BE 25%,
+            #F6D484 55%,
+            #E8BA5A 80%,
+            #D49F33 100%
+          );
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          filter: drop-shadow(0 0 10px rgba(246, 212, 132, 0.45)) drop-shadow(0 2px 5px rgba(0, 0, 0, 0.9));
+        }
+
+        [data-theme="light"] .name-serif-gold.name-ar {
+          background: linear-gradient(180deg, #C49132 0%, #9E7020 60%, #7D5512 100%);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          filter: none;
         }
 
         [data-theme="light"] .name-serif-gold {
@@ -222,6 +241,12 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
         .size-md .name-serif-gold { font-size: 1.28rem; }
         .size-lg .name-serif-gold { font-size: 1.85rem; }
         .size-hero .name-serif-gold { font-size: 2.65rem; }
+
+        /* Arabic Larger Size Scales for Optical Equilibrium */
+        .size-sm .name-serif-gold.name-ar { font-size: 1.28rem; }
+        .size-md .name-serif-gold.name-ar { font-size: 1.58rem; }
+        .size-lg .name-serif-gold.name-ar { font-size: 2.28rem; }
+        .size-hero .name-serif-gold.name-ar { font-size: 3.25rem; }
 
         /* 2. Sub-row: LUXURY ESTATES with Hairline */
         .brand-sub-row {
@@ -252,6 +277,21 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
           filter: drop-shadow(0 1.5px 5px rgba(0, 0, 0, 0.85));
         }
 
+        [dir="rtl"] .brand-sub-text {
+          font-family: 'ThmanyahSans', 'Cairo', sans-serif;
+          font-weight: 700;
+          letter-spacing: 0.08em;
+          background: linear-gradient(
+            180deg,
+            #FFFDF7 0%,
+            #FFF0BE 30%,
+            #F6D484 65%,
+            #D49F33 100%
+          );
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+        }
+
         [data-theme="light"] .brand-sub-text {
           background: linear-gradient(135deg, #A87A28 0%, #8C6826 60%, #684812 100%) !important;
           -webkit-background-clip: text !important;
@@ -277,6 +317,11 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
         .size-md .brand-sub-text { font-size: 0.58rem; letter-spacing: 0.28em; }
         .size-lg .brand-sub-text { font-size: 0.72rem; letter-spacing: 0.32em; }
         .size-hero .brand-sub-text { font-size: 0.95rem; letter-spacing: 0.38em; }
+
+        [dir="rtl"] .size-sm .brand-sub-text { font-size: 0.58rem; letter-spacing: 0.06em; }
+        [dir="rtl"] .size-md .brand-sub-text { font-size: 0.68rem; letter-spacing: 0.08em; }
+        [dir="rtl"] .size-lg .brand-sub-text { font-size: 0.84rem; letter-spacing: 0.10em; }
+        [dir="rtl"] .size-hero .brand-sub-text { font-size: 1.10rem; letter-spacing: 0.12em; }
 
         .brand-hairline {
           flex: 1;
@@ -361,24 +406,26 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
 
         @media (max-width: 640px) {
           .luxury-brand-logo {
-            gap: 8px;
+            gap: 5px;
           }
           .luxury-brand-logo.size-md .brand-emblem-wrap img {
-            width: 40px !important;
-            height: 40px !important;
+            width: 28px !important;
+            height: 28px !important;
           }
           .luxury-brand-logo.size-md .brand-primary-name .name-serif-gold {
-            font-size: 1.05rem;
+            font-size: 0.78rem;
+            letter-spacing: 0.02em;
           }
           .luxury-brand-logo.size-md .brand-primary-name .name-ar {
-            font-size: 1.3rem;
+            font-size: 0.96rem;
+            line-height: 1.1;
           }
           .luxury-brand-logo.size-md .brand-sub-text {
-            font-size: 0.5rem;
-            letter-spacing: 0.16em;
+            font-size: 0.36rem;
+            letter-spacing: 0.06em;
           }
           .luxury-brand-logo.size-md .brand-hairline {
-            min-width: 18px;
+            min-width: 6px;
           }
         }
       `}</style>

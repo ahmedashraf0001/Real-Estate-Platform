@@ -2,11 +2,13 @@
 
 import React, { useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
-import { Building, Plus, Trash2, ImagePlus, Loader2, X, MousePointerClick, Zap, Droplets, Wind, DoorOpen, Paintbrush, Hammer, Wrench } from 'lucide-react';
+import { Building, Plus, Trash2, ImagePlus, Loader2, X, MousePointerClick, Zap, Droplets, Wind, DoorOpen, Paintbrush, Hammer, Wrench, Film, Play, Video as VideoIcon } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
+import LuxuryAmbientVideoPlayer from '@/components/video/LuxuryAmbientVideoPlayer';
 import {
   ZoneInstance,
   ZoneSpatialLayout,
+  ZoneVideo,
   TradeTemplate,
   ZONE_TEMPLATES,
   TRADE_TEMPLATES,
@@ -18,6 +20,8 @@ import {
   removeAttributeFromTrade,
   addZoneImage,
   removeZoneImage,
+  addZoneVideo,
+  removeZoneVideo,
   addTradeToZone,
   removeTradeFromZone,
   removeZone,
@@ -270,6 +274,28 @@ function ZoneInspectorBody({
       setUploading(false);
       if (fileRef.current) fileRef.current.value = '';
     }
+  };
+
+  const [videoUrlInput, setVideoUrlInput] = useState('');
+  const [videoTitleInput, setVideoTitleInput] = useState('');
+  const [activeZoneVideoPreview, setActiveZoneVideoPreview] = useState<ZoneVideo | null>(null);
+
+  const handleAddZoneVideo = () => {
+    if (!videoUrlInput.trim()) {
+      toast.error(isAr ? 'يرجى إدخال رابط الفيديو' : 'Please enter video URL');
+      return;
+    }
+    const newVid: ZoneVideo = {
+      id: `zvid-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      url: videoUrlInput.trim(),
+      title_en: videoTitleInput.trim() || `${zoneName(zone, false)} Walkthrough`,
+      title_ar: videoTitleInput.trim() || `معاينة ${zoneName(zone, true)}`,
+      category: 'spec',
+    };
+    onZoneInstancesChange(addZoneVideo(zoneInstances, zone.id, newVid));
+    setVideoUrlInput('');
+    setVideoTitleInput('');
+    toast.success(isAr ? 'تمت إضافة فيديو المعاينة للمنطقة' : 'Zone demo video added');
   };
 
   return (
@@ -580,6 +606,163 @@ function ZoneInspectorBody({
         </button>
         <input ref={fileRef} type="file" accept="image/*" multiple hidden onChange={e => handleUpload(e.target.files)} />
       </section>
+
+      {/* ─── ZONE VIDEO TOUR ─── */}
+      <section className="zi-section">
+        <div className="zi-section-head">
+          <span className="zi-section-label">{isAr ? 'جولة الفيديو داخل المنطقة' : 'ZONE VIDEO TOUR'}</span>
+          <span className="zi-count">{zone.videos?.length ?? 0}</span>
+        </div>
+
+        {/* Existing Videos List */}
+        {(zone.videos?.length ?? 0) > 0 && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 8 }}>
+            {zone.videos!.map((v, i) => (
+              <div
+                key={v.id || i}
+                style={{
+                  background: 'rgba(255, 255, 255, 0.04)',
+                  border: '1px solid rgba(221, 167, 82, 0.2)',
+                  borderRadius: 8,
+                  padding: '8px 10px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: 8,
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 1, minWidth: 0 }}>
+                  <Film size={13} color="#DDA752" />
+                  <span style={{ fontSize: '11.5px', fontWeight: 700, color: '#FFFDF5', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {isAr ? (v.title_ar || v.title_en) : (v.title_en || v.title_ar)}
+                  </span>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <button
+                    type="button"
+                    onClick={() => setActiveZoneVideoPreview(v)}
+                    style={{
+                      background: 'rgba(221, 167, 82, 0.15)',
+                      border: 'none',
+                      color: '#DDA752',
+                      borderRadius: 4,
+                      padding: '3px 6px',
+                      fontSize: '10px',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 3,
+                    }}
+                  >
+                    <Play size={9} fill="#DDA752" />
+                    <span>{isAr ? 'مشاهدة' : 'Play'}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    className="zi-icon-btn danger"
+                    onClick={() => onZoneInstancesChange(removeZoneVideo(zoneInstances, zone.id, v.id || i))}
+                    title={isAr ? 'حذف الفيديو' : 'Remove video'}
+                  >
+                    <Trash2 size={11} />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Add Video Form */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, background: 'rgba(0,0,0,0.2)', padding: 8, borderRadius: 8 }}>
+          <input
+            type="url"
+            className="zi-attr-val-input"
+            dir="ltr"
+            placeholder={isAr ? 'رابط الفيديو (MP4 / CDN)...' : 'Video URL (MP4 / CDN)...'}
+            value={videoUrlInput}
+            onChange={(e) => setVideoUrlInput(e.target.value)}
+            style={{ width: '100%', fontSize: '11px', height: 30 }}
+          />
+          <div style={{ display: 'flex', gap: 4 }}>
+            <input
+              type="text"
+              className="zi-attr-val-input"
+              dir="auto"
+              placeholder={isAr ? 'عنوان الفيديو...' : 'Video title...'}
+              value={videoTitleInput}
+              onChange={(e) => setVideoTitleInput(e.target.value)}
+              style={{ flex: 1, fontSize: '11px', height: 28 }}
+            />
+            <button
+              type="button"
+              className="zi-add-btn"
+              style={{ padding: '4px 10px', fontSize: '11px', height: 28 }}
+              onClick={handleAddZoneVideo}
+            >
+              <Plus size={11} />
+              <span>{isAr ? 'إضافة' : 'Add'}</span>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      {/* Active Zone Video Preview Modal */}
+      {activeZoneVideoPreview && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 9999,
+            background: 'rgba(0, 0, 0, 0.92)',
+            backdropFilter: 'blur(16px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '20px',
+            boxSizing: 'border-box',
+          }}
+          onClick={() => setActiveZoneVideoPreview(null)}
+        >
+          <div
+            style={{
+              position: 'relative',
+              width: '100%',
+              maxWidth: '800px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 12,
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span style={{ fontSize: '0.95rem', fontWeight: 800, color: '#FFFDF5' }}>
+                {isAr ? (activeZoneVideoPreview.title_ar || activeZoneVideoPreview.title_en) : (activeZoneVideoPreview.title_en || activeZoneVideoPreview.title_ar)}
+              </span>
+              <button
+                type="button"
+                onClick={() => setActiveZoneVideoPreview(null)}
+                style={{
+                  background: 'rgba(255, 255, 255, 0.1)',
+                  border: '1px solid rgba(221, 167, 82, 0.3)',
+                  color: '#FFF',
+                  width: 32,
+                  height: 32,
+                  borderRadius: '50%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                }}
+              >
+                <X size={15} />
+              </button>
+            </div>
+            <LuxuryAmbientVideoPlayer video={activeZoneVideoPreview} autoPlay={true} isAr={isAr} />
+          </div>
+        </div>
+      )}
     </>
   );
 }

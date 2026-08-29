@@ -10,7 +10,10 @@ import { FALLBACK_PROPERTIES } from '@/lib/data/fallbackProperties';
 import { adaptProperties } from '@/lib/utils/propertyAdapter';
 import { Property } from '@/types';
 import { useFavorites } from '@/lib/context/FavoritesContext';
-import { ArrowRight, ArrowUpRight, ShieldCheck, Building2, Scale, Compass, Sparkles } from 'lucide-react';
+import { usePlatformSettings } from '@/lib/hooks/usePlatformSettings';
+import { DEFAULT_HOME_SETTINGS } from '@/lib/services/marketIntelligence';
+import { getDynamicDestinationPills, identifyPropertyDestinationKey } from '@/lib/utils/dynamicLocations';
+import { ArrowRight, ArrowUpRight, ShieldCheck, Building2, Scale, Compass, Sparkles, ChevronDown } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import { triggerNavigationStart } from '@/components/NavigationProgress';
@@ -34,6 +37,8 @@ export const HomeView: React.FC<HomeViewProps> = ({
 }) => {
   const isAr = locale === 'ar';
   const router = useRouter();
+  const platformSettings = usePlatformSettings();
+  const homeSettings = platformSettings.home || DEFAULT_HOME_SETTINGS;
 
   const onSelectProperty = propOnSelectProperty || ((id: string) => {
     triggerNavigationStart();
@@ -87,26 +92,32 @@ export const HomeView: React.FC<HomeViewProps> = ({
     }
   }, [allProps, registerProperties]);
 
-  // Destination filter state for Featured Masterpieces
-  const [activeDestination, setActiveDestination] = React.useState<'all' | 'new-cairo' | 'sahel' | 'gouna' | 'zayed'>('all');
+  // Destination filter state for Featured Masterpieces (derived dynamically from database properties)
+  const [activeDestination, setActiveDestination] = React.useState<string>('All');
 
-  const destinationFilters: { id: 'all' | 'new-cairo' | 'sahel' | 'gouna' | 'zayed'; label: string }[] = [
-    { id: 'all', label: isAr ? 'جميع العقارات' : 'All Masterpieces' },
-    { id: 'new-cairo', label: isAr ? 'القاهرة الجديدة' : 'New Cairo' },
-    { id: 'sahel', label: isAr ? 'الساحل الشمالي' : 'North Coast (Sahel)' },
-    { id: 'gouna', label: isAr ? 'الجونة والبحر الأحمر' : 'El Gouna & Red Sea' },
-    { id: 'zayed', label: isAr ? 'الشيخ زايد' : 'Sheikh Zayed' },
-  ];
+  const dynamicDestinationPills = React.useMemo(() => {
+    return getDynamicDestinationPills(allProps);
+  }, [allProps]);
+
+  const destinationFilters = React.useMemo(() => {
+    return dynamicDestinationPills.map((d) => ({
+      id: d.id,
+      label: isAr ? (d.id === 'All' ? 'جميع العقارات' : d.labelAr) : (d.id === 'All' ? 'All Masterpieces' : d.label)
+    }));
+  }, [dynamicDestinationPills, isAr]);
 
   const filteredFeaturedProperties = featuredProperties.filter((property) => {
-    if (activeDestination === 'all') return true;
+    if (activeDestination === 'All' || activeDestination === 'all') return true;
+    const destKey = identifyPropertyDestinationKey(property);
+    const filterLower = activeDestination.toLowerCase();
     const loc = (property.location || '').toLowerCase();
     const dist = (property.district || '').toLowerCase();
-    if (activeDestination === 'new-cairo') return dist.includes('new cairo') || dist.includes('madinaty') || loc.includes('new cairo') || loc.includes('madinaty');
-    if (activeDestination === 'sahel') return dist.includes('north coast') || loc.includes('north coast') || loc.includes('sahel');
-    if (activeDestination === 'gouna') return dist.includes('gouna') || dist.includes('sokhna') || loc.includes('gouna') || loc.includes('sokhna') || loc.includes('red sea');
-    if (activeDestination === 'zayed') return dist.includes('sheikh zayed') || dist.includes('zayed') || loc.includes('sheikh zayed') || loc.includes('zayed');
-    return true;
+    return (
+      destKey.includes(filterLower) ||
+      filterLower.includes(destKey) ||
+      dist.includes(filterLower) ||
+      loc.includes(filterLower)
+    );
   });
 
   // Compact hero copy on mobile
@@ -120,11 +131,20 @@ export const HomeView: React.FC<HomeViewProps> = ({
 
   // Typewriter animation state for Hero Title
   const line1Text = isMobileViewport
-    ? (isAr ? 'أندر الصروح المعمارية' : "Egypt's Premier Residences")
-    : (isAr ? 'استكشف أندر الصروح المعمارية و' : "Discover Egypt's Premier Residences &");
+    ? (isAr ? (homeSettings.heroTitle1Ar?.includes('استكشف') ? 'أندر الصروح المعمارية' : homeSettings.heroTitle1Ar || 'أندر الصروح المعمارية')
+            : (homeSettings.heroTitle1En?.includes('Discover') ? "Egypt's Premier Residences" : homeSettings.heroTitle1En || "Egypt's Premier Residences"))
+    : (isAr ? (homeSettings.heroTitle1Ar || 'استكشف أندر الصروح المعمارية و')
+            : (homeSettings.heroTitle1En || "Discover Egypt's Premier Residences &"));
+
   const line2Text = isMobileViewport
-    ? (isAr ? 'والقصور الفاخرة في مصر' : '& Sovereign Estates')
-    : (isAr ? 'القصور الفاخرة في مصر' : 'Luxury Living & Sovereign Estates');
+    ? (isAr ? (homeSettings.heroTitle2Ar || 'القصور الفاخرة في مصر')
+            : (homeSettings.heroTitle2En?.includes('Living') ? 'Sovereign Luxury Estates' : homeSettings.heroTitle2En || 'Sovereign Luxury Estates'))
+    : (isAr ? (homeSettings.heroTitle2Ar || 'القصور الفاخرة في مصر')
+            : (homeSettings.heroTitle2En || 'Luxury Living & Sovereign Estates'));
+
+  const heroSubtitle = isAr
+    ? (homeSettings.heroSubtitleAr || DEFAULT_HOME_SETTINGS.heroSubtitleAr)
+    : (homeSettings.heroSubtitleEn || DEFAULT_HOME_SETTINGS.heroSubtitleEn);
 
   const line1Len = line1Text.length;
   const totalChars = line1Len + line2Text.length;
@@ -143,10 +163,10 @@ export const HomeView: React.FC<HomeViewProps> = ({
         clearInterval(interval);
         setTimeout(() => setIsDoneTyping(true), 2200);
       }
-    }, 38);
+    }, 22);
 
     return () => clearInterval(interval);
-  }, [totalChars, locale]);
+  }, [totalChars, locale, line1Text, line2Text]);
 
   const display1 = line1Text.slice(0, Math.min(charCount, line1Len));
   const display2 = charCount > line1Len
@@ -156,119 +176,126 @@ export const HomeView: React.FC<HomeViewProps> = ({
   const showCursorOnLine1 = charCount <= line1Len && !isDoneTyping;
   const showCursorOnLine2 = charCount > line1Len && !isDoneTyping;
 
+  // Quick destination shortcuts for mobile hero
+  const quickHeroDestinations = [
+    { label: isAr ? 'القاهرة الجديدة' : 'New Cairo', value: 'New Cairo, Fifth Settlement' },
+    { label: isAr ? 'الساحل الشمالي' : 'North Coast', value: 'North Coast' },
+    { label: isAr ? 'الجونة' : 'El Gouna', value: 'El Gouna' },
+    { label: isAr ? 'الشيخ زايد' : 'Sheikh Zayed', value: 'Sheikh Zayed' },
+  ];
+
   return (
     <div className="home-view" dir={isAr ? 'rtl' : 'ltr'}>
       {/* ─── 1. Full-Bleed Viewport Cinematic Hero ─── */}
-      <section className="hero-section">
-        <div className="hero-bg-media">
-          <div className="hero-bg-cinematic-stage">
-            <img 
-              src="/images/hero-dark.jpg" 
-              alt="Al Zakaria Luxury Architectural Estate - Night" 
-              className="hero-image hero-image-dark"
-              loading="eager"
-              decoding="sync"
-            />
-            <img 
-              src="/images/hero-light.jpg" 
-              alt="Al Zakaria Luxury Architectural Estate - Day" 
-              className="hero-image hero-image-light"
-              loading="eager"
-              decoding="sync"
-            />
-          </div>
-          {/* Multi-Stop Cinematic Dimming & Vignette (Synchronized Opacity Layers) */}
-          <div className="hero-dim-overlay hero-dim-dark" />
-          <div className="hero-dim-overlay hero-dim-light" />
-          {/* Progressive Seamless Bottom Dissolve (Synchronized Opacity Layers) */}
-          <div className="hero-bottom-fade hero-fade-dark" />
-          <div className="hero-bottom-fade hero-fade-light" />
-        </div>
-
-        <div className="container hero-container">
-          <div className="hero-content">
-            {/* Monumental Headline with Living Typewriter Animation */}
-            <motion.h1 
-              className="hero-title"
-              aria-label={isAr ? 'استكشف أندر الصروح المعمارية و القصور الفاخرة في مصر' : "Discover Egypt's Premier Residences & Luxury Living & Sovereign Estates"}
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
-            >
-              <span className="hero-title-main">
-                <span>{display1}</span>
-                {showCursorOnLine1 && <span className="typewriter-cursor">|</span>}
-              </span>
-              <span className="hero-title-serif">
-                {display2 && <span>{display2}</span>}
-                {showCursorOnLine2 && <span className="typewriter-cursor">|</span>}
-              </span>
-            </motion.h1>
-
-            {/* Crisp Subtitle */}
-            <motion.p 
-              className="hero-subtitle"
-              initial={{ opacity: 0, y: 14 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
-            >
-              {isMobileViewport
-                ? (isAr
-                    ? 'عقارات موثقة بملكية حرة وتدقيق معماري صارم.'
-                    : 'Verified freehold estates with forensic architectural audits.')
-                : (isAr
-                    ? 'ننتقي ونمثل أندر العقارات والقصور الفاخرة التي تجمع بين الهيبة المعمارية، التدقيق الإنشائي الصارم، وسندات الملكية الحرة الموثقة.'
-                    : 'Curating and representing architecturally significant residences, coastal sanctuaries, and prime estates with forensic CAD audits and freehold ownership assurance.')}
-            </motion.p>
+      {homeSettings.showHero !== false && (
+        <section className="hero-section">
+          <div className="hero-bg-media">
+            <div className="hero-bg-cinematic-stage">
+              <img 
+                src="/images/hero-dark.jpg" 
+                alt="Al Zakaria Luxury Architectural Estate - Night" 
+                className="hero-image hero-image-dark"
+                loading="eager"
+                decoding="sync"
+              />
+              <img 
+                src="/images/hero-light.jpg" 
+                alt="Al Zakaria Luxury Architectural Estate - Day" 
+                className="hero-image hero-image-light"
+                loading="eager"
+                decoding="sync"
+              />
+            </div>
+            {/* Multi-Stop Cinematic Dimming & Vignette (Synchronized Opacity Layers) */}
+            <div className="hero-dim-overlay hero-dim-dark" />
+            <div className="hero-dim-overlay hero-dim-light" />
+            {/* Progressive Seamless Bottom Dissolve (Synchronized Opacity Layers) */}
+            <div className="hero-bottom-fade hero-fade-dark" />
+            <div className="hero-bottom-fade hero-fade-light" />
           </div>
 
-          {/* Floating Frosted Glass QuickSearchBar */}
-          <motion.div 
-            className="hero-search-wrapper"
-            initial={{ opacity: 0, y: 22 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ type: 'spring', damping: 22, stiffness: 100, delay: 0.28 }}
-          >
-            <QuickSearchBar locale={locale} onSearch={(filters) => onNavigateToCatalog(filters)} />
-          </motion.div>
-        </div>
-      </section>
+          <div className="container hero-container">
+            <div className="hero-content">
+              {/* Monumental Headline with Living Typewriter Animation */}
+              <motion.h1 
+                className="hero-title"
+                aria-label={`${line1Text} ${line2Text}`}
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
+              >
+                <span className="hero-title-main">
+                  <span>{display1}</span>
+                  {showCursorOnLine1 && <span className="typewriter-cursor">|</span>}
+                </span>
+                <span className="hero-title-serif">
+                  <span className="hero-title-serif-inner">{display2}</span>
+                  {showCursorOnLine2 && <span className="typewriter-cursor">|</span>}
+                </span>
+              </motion.h1>
+
+              {/* Crisp Subtitle */}
+              <motion.p 
+                className="hero-subtitle"
+                initial={{ opacity: 0, y: 14 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
+              >
+                {heroSubtitle}
+              </motion.p>
+            </div>
+
+            {/* Floating Frosted Glass QuickSearchBar */}
+            <motion.div 
+              className="hero-search-wrapper"
+              initial={{ opacity: 0, y: 22 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ type: 'spring', damping: 22, stiffness: 100, delay: 0.28 }}
+            >
+              <QuickSearchBar locale={locale} onSearch={(filters) => onNavigateToCatalog(filters)} />
+            </motion.div>
+          </div>
+        </section>
+      )}
 
       {/* ─── 2. Authority & Metrology Ribbon (Directly Below Hero Fold) ─── */}
-      <StatsSection locale={locale} hideHeader={true} compact={true} />
+      {homeSettings.showStatsRibbon !== false && (
+        <StatsSection locale={locale} hideHeader={true} compact={true} />
+      )}
 
       {/* ─── 3. Featured Masterpieces Section (Primary Discovery Gallery) ─── */}
-      <section className="featured-section">
-        <div className="featured-horizon-glow" />
-        <div className="container">
-          <motion.div 
-            className="featured-header"
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6 }}
-          >
-            <div>
-              <div className="section-eyebrow-pill">
-                <span className="eyebrow-dot" />
-                <span>{isAr ? 'مجموعة منتقاة • دليل ٢٠٢٦' : 'CURATED SELECTION • 2026 DIRECTORY'}</span>
-              </div>
-              <h2 className="section-title">
-                <span>{isAr ? 'أحدث الصروح المعمارية و ' : 'Featured Architectural '}</span>
-                <span className="title-serif-accent" style={isAr ? { marginInlineStart: '0.45rem', display: 'inline-block' } : undefined}>
-                  {isAr ? 'القصور الاستثنائية' : 'Masterpieces'}
-                </span>
-              </h2>
-            </div>
-            <button 
-              className="explore-catalog-btn"
-              onClick={() => onNavigateToCatalog()}
-              type="button"
+      {homeSettings.showFeaturedGrid !== false && (
+        <section className="featured-section">
+          <div className="featured-horizon-glow" />
+          <div className="container">
+            <motion.div 
+              className="featured-header"
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6 }}
             >
-              <span>{isAr ? 'عرض جميع العقارات' : 'Browse Complete Collection'}</span>
-              <ArrowUpRight size={16} />
-            </button>
-          </motion.div>
+              <div>
+                <div className="section-eyebrow-pill">
+                  <span className="eyebrow-dot" />
+                  <span>{isAr ? (homeSettings.featuredEyebrowAr || 'مجموعة منتقاة • دليل ٢٠٢٦') : (homeSettings.featuredEyebrowEn || 'CURATED SELECTION • 2026 DIRECTORY')}</span>
+                </div>
+                <h2 className="section-title">
+                  <span>{isAr ? (homeSettings.featuredTitle1Ar || 'أحدث الصروح المعمارية و ') : (homeSettings.featuredTitle1En || 'Featured Architectural ')}</span>
+                  <span className="title-serif-accent" style={isAr ? { marginInlineStart: '0.45rem', display: 'inline-block' } : undefined}>
+                    {isAr ? (homeSettings.featuredTitle2Ar || 'القصور الاستثنائية') : (homeSettings.featuredTitle2En || 'Masterpieces')}
+                  </span>
+                </h2>
+              </div>
+              <button 
+                className="explore-catalog-btn"
+                onClick={() => onNavigateToCatalog()}
+                type="button"
+              >
+                <span>{isAr ? 'عرض جميع العقارات' : 'Browse Complete Collection'}</span>
+                <ArrowUpRight size={16} />
+              </button>
+            </motion.div>
 
           {/* Destination Filter Pills */}
           <motion.div 
@@ -323,87 +350,94 @@ export const HomeView: React.FC<HomeViewProps> = ({
           </motion.div>
         </div>
       </section>
+      )}
 
       {/* ─── 4. Interactive Real Cartography Map Explorer ─── */}
-      <MapSection onOpenMapModal={onOpenMapModal} properties={allProps} locale={locale} />
+      {homeSettings.showMapExplorer !== false && (
+        <MapSection onOpenMapModal={onOpenMapModal} properties={allProps} locale={locale} />
+      )}
 
       {/* ─── 5. Unified Sovereign Advisory & Client Provenance ─── */}
-      <SovereignAdvisorySection locale={locale} onOpenListEstate={onOpenListEstate} />
+      {homeSettings.showSovereignAdvisory !== false && (
+        <SovereignAdvisorySection locale={locale} onOpenListEstate={onOpenListEstate} />
+      )}
 
       {/* ─── 6. Panoramic Confidential Placement & Consignment Portal ─── */}
-      <section className="seller-banner-section">
-        <div className="seller-ambient-glow" />
-        <div className="container">
-          <div className="seller-consignment-banner">
-            <div className="banner-watermark-scale">
-              <Scale size={240} strokeWidth={0.8} />
-            </div>
-
-            <div className="seller-banner-content">
-              <div className="seller-text-wrap">
-                <div className="seller-eyebrow-row">
-                  <div className="section-eyebrow-pill">
-                    <span className="eyebrow-dot" />
-                    <span>{isAr ? 'خدمات التمثيل والبيع الخاص' : 'PRIVATE CONSIGNMENT & PLACEMENT'}</span>
-                  </div>
-                  <span className="seller-confidential-tag">
-                    <ShieldCheck size={13} />
-                    <span>{isAr ? 'سرية تامة ١٠٠٪' : '100% Confidential'}</span>
-                  </span>
-                </div>
-
-                <h2 className="seller-title">
-                  <span>{isAr ? 'هل ترغب في بيع أو تمثيل ' : 'Looking to List or Consign Your '}</span>
-                  <span className="title-serif-accent">{isAr ? 'قصرك واستثمارك؟' : 'Generational Estate?'}</span>
-                </h2>
-                
-                <p className="seller-desc">
-                  {isAr 
-                    ? 'اعرض عقارك عبر مكتب زكريا فريد وتواصل مباشرة مع نخبة المشترين والمستثمرين والمكاتب العائلية الباحثة عن الأصول النادرة بأعلى درجات السرية.'
-                    : 'Entrust your architectural statement to our private placement practice. Reach verified buyers, family offices, and sovereign wealth trustees actively seeking rare trophy assets.'}
-                </p>
-
-                <div className="seller-stats-strip">
-                  <div className="seller-stat-item">
-                    <span className="stat-val">{isAr ? '٤٨ ساعة' : '48 Hours'}</span>
-                    <span className="stat-lbl">{isAr ? 'طرح استشاري خاص' : 'Private Placement SLA'}</span>
-                  </div>
-                  <div className="seller-stat-sep" />
-                  <div className="seller-stat-item">
-                    <span className="stat-val">{isAr ? '+٢.٥ مليار ج.م' : '2.5B+ EGP'}</span>
-                    <span className="stat-lbl">{isAr ? 'صفقات تم إغلاقها' : 'Transaction Volume'}</span>
-                  </div>
-                  <div className="seller-stat-sep" />
-                  <div className="seller-stat-item">
-                    <span className="stat-val">{isAr ? '١٠٠٪' : '100%'}</span>
-                    <span className="stat-lbl">{isAr ? 'ملكية حرة مؤكدة' : 'Freehold Verified'}</span>
-                  </div>
-                </div>
+      {homeSettings.showSellerConsignment !== false && (
+        <section className="seller-banner-section">
+          <div className="seller-ambient-glow" />
+          <div className="container">
+            <div className="seller-consignment-banner">
+              <div className="banner-watermark-scale">
+                <Scale size={240} strokeWidth={0.8} />
               </div>
 
-              <div className="seller-cta-group">
-                <button 
-                  className="seller-cta-btn btn-gold"
-                  onClick={onOpenListEstate}
-                  type="button"
-                >
-                  <span>{isAr ? 'طلب تسجيل وتمثيل عقار' : 'Request Private Consignment'}</span>
-                  <ArrowUpRight size={16} />
-                </button>
+              <div className="seller-banner-content">
+                <div className="seller-text-wrap">
+                  <div className="seller-eyebrow-row">
+                    <div className="section-eyebrow-pill">
+                      <span className="eyebrow-dot" />
+                      <span>{isAr ? 'خدمات التمثيل والبيع الخاص' : 'PRIVATE CONSIGNMENT & PLACEMENT'}</span>
+                    </div>
+                    <span className="seller-confidential-tag">
+                      <ShieldCheck size={13} />
+                      <span>{isAr ? 'سرية تامة ١٠٠٪' : '100% Confidential'}</span>
+                    </span>
+                  </div>
 
-                <button 
-                  className="seller-outline-btn"
-                  onClick={() => onNavigateToCatalog()}
-                  type="button"
-                >
-                  <Building2 size={15} />
-                  <span>{isAr ? 'استعراض الدليل الحصري' : 'Explore Portfolio'}</span>
-                </button>
+                  <h2 className="seller-title">
+                    <span>{isAr ? (homeSettings.sellerTitle1Ar || 'هل ترغب في بيع أو تمثيل ') : (homeSettings.sellerTitle1En || 'Looking to List or Consign Your ')}</span>
+                    <span className="title-serif-accent">{isAr ? (homeSettings.sellerTitle2Ar || 'قصرك واستثمارك؟') : (homeSettings.sellerTitle2En || 'Generational Estate?')}</span>
+                  </h2>
+                  
+                  <p className="seller-desc">
+                    {isAr 
+                      ? (homeSettings.sellerDescAr || 'اعرض عقارك عبر مكتب زكريا فريد وتواصل مباشرة مع نخبة المشترين والمستثمرين والمكاتب العائلية الباحثة عن الأصول النادرة بأعلى درجات السرية.')
+                      : (homeSettings.sellerDescEn || 'Entrust your architectural statement to our private placement practice. Reach verified buyers, family offices, and sovereign wealth trustees actively seeking rare trophy assets.')}
+                  </p>
+
+                  <div className="seller-stats-strip">
+                    <div className="seller-stat-item">
+                      <span className="stat-val">{isAr ? '٤٨ ساعة' : '48 Hours'}</span>
+                      <span className="stat-lbl">{isAr ? 'طرح استشاري خاص' : 'Private Placement SLA'}</span>
+                    </div>
+                    <div className="seller-stat-sep" />
+                    <div className="seller-stat-item">
+                      <span className="stat-val">{isAr ? '+٢.٥ مليار ج.م' : '2.5B+ EGP'}</span>
+                      <span className="stat-lbl">{isAr ? 'صفقات تم إغلاقها' : 'Transaction Volume'}</span>
+                    </div>
+                    <div className="seller-stat-sep" />
+                    <div className="seller-stat-item">
+                      <span className="stat-val">{isAr ? '١٠٠٪' : '100%'}</span>
+                      <span className="stat-lbl">{isAr ? 'ملكية حرة مؤكدة' : 'Freehold Verified'}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="seller-cta-group">
+                  <button 
+                    className="seller-cta-btn btn-gold"
+                    onClick={onOpenListEstate}
+                    type="button"
+                  >
+                    <span>{isAr ? 'طلب تسجيل وتمثيل عقار' : 'Request Private Consignment'}</span>
+                    <ArrowUpRight size={16} />
+                  </button>
+
+                  <button 
+                    className="seller-outline-btn"
+                    onClick={() => onNavigateToCatalog()}
+                    type="button"
+                  >
+                    <Building2 size={15} />
+                    <span>{isAr ? 'استعراض الدليل الحصري' : 'Explore Portfolio'}</span>
+                  </button>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       <style>{`
         .home-view {
@@ -586,35 +620,84 @@ export const HomeView: React.FC<HomeViewProps> = ({
           font-family: var(--font-heading);
           font-size: clamp(2.2rem, 3.8vw, 3.65rem);
           font-weight: 800;
-          line-height: 1.18;
+          line-height: 1.15;
           letter-spacing: -0.025em;
           margin: 0 0 1.25rem 0;
           display: flex;
           flex-direction: column;
-          gap: 6px;
-          min-height: calc(2.2 * 1.18em);
+          align-items: flex-start;
+          gap: 2px;
+          min-height: calc(1.15em * 2 + 2px);
         }
 
         .hero-title-main {
           color: #FFFFFF;
-          text-shadow: 0 2px 18px rgba(0, 0, 0, 0.85);
+          text-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
           white-space: nowrap;
           display: inline-flex;
           align-items: center;
+          line-height: 1.15;
+          min-height: 1.15em;
+          margin: 0;
+          padding: 0;
+          text-align: start;
+          align-self: flex-start;
+        }
+
+        [data-theme="light"] .hero-title-main {
+          color: #0F172A;
+          text-shadow: none;
         }
 
         .hero-title-serif {
           font-family: Georgia, var(--font-heading), serif;
-          font-weight: 400;
+          font-weight: 800;
           font-style: italic;
-          background: linear-gradient(135deg, #FFFDF5 0%, #FEE8A0 30%, #E5B869 65%, #B8934A 100%);
+          background: linear-gradient(135deg, #FFFDF7 0%, #FFF0C2 22%, #F6D484 55%, #E5B869 85%, #D49F33 100%);
           -webkit-background-clip: text;
           -webkit-text-fill-color: transparent;
-          filter: drop-shadow(0 2px 14px rgba(0, 0, 0, 0.9));
+          filter: none;
           white-space: nowrap;
-          min-height: 1.18em;
           display: inline-flex;
           align-items: center;
+          line-height: 1.15;
+          min-height: 1.15em;
+          margin: 0;
+          padding: 0;
+          text-align: start;
+          align-self: flex-start;
+          overflow: visible;
+        }
+
+        [data-theme="light"] .hero-title-serif {
+          background: linear-gradient(135deg, #B8860B 0%, #996515 50%, #7B4F0F 100%);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          filter: none;
+        }
+
+        .hero-title-serif-inner {
+          display: inline-block;
+          padding: 0;
+          margin: 0;
+          overflow: visible;
+        }
+
+        :global([dir="rtl"]) .hero-title-serif,
+        [dir="rtl"] .hero-title-serif {
+          font-family: 'ThmanyahSerifDisplay', 'Amiri', 'Traditional Arabic', serif !important;
+          font-style: italic !important;
+          font-weight: 900 !important;
+          line-height: 1.22 !important;
+          min-height: 1.22em !important;
+          letter-spacing: 0 !important;
+          padding: 0 !important;
+          margin: 0 !important;
+          text-align: start !important;
+          align-self: flex-start !important;
+          overflow: visible !important;
+          filter: none !important;
+          text-shadow: none !important;
         }
 
         .typewriter-cursor {
@@ -635,35 +718,328 @@ export const HomeView: React.FC<HomeViewProps> = ({
           50% { opacity: 0; }
         }
 
+        /* Desktop: mobile-only hero elements hidden */
+        .hero-mobile-eyebrow,
+        .hero-mobile-quick-chips {
+          display: none;
+        }
+
+        /* Desktop hidden elements */
+        .hero-mobile-eyebrow,
+        .hero-mobile-quick-chips,
+        .hero-mobile-trust-bar,
+        .hero-mobile-explore-btn {
+          display: none;
+        }
+
         @media (max-width: 768px) {
           .hero-section {
-            min-height: 100svh;
-            padding-top: 96px;
-            padding-bottom: 2rem;
-            align-items: center;
+            min-height: 100vh;
+            min-height: 100dvh;
+            padding-top: 98px;
+            padding-bottom: 2.25rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            align-items: stretch;
+            box-sizing: border-box;
           }
+
           .hero-container {
+            width: 100%;
+            max-width: 100%;
+            padding: 0 1.15rem;
+            margin: 0;
+            background: transparent;
+            border: none;
+            box-shadow: none;
+            border-radius: 0;
             gap: 1.15rem;
+            align-items: flex-start;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
           }
-          /* Stronger headline hierarchy on mobile */
+
+          .hero-content {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+          }
+
+          /* Majestic Title with Living Presence */
           .hero-title {
-            font-size: clamp(2.1rem, 8.5vw, 2.7rem);
-            line-height: 1.16;
+            font-size: clamp(1.42rem, 6.2vw, 1.95rem);
+            font-weight: 800;
+            line-height: 1.15;
             letter-spacing: -0.03em;
-            margin-top: 0.5rem;
-            margin-bottom: 0.9rem;
+            margin-top: 0;
+            margin-bottom: 0.65rem;
+            min-height: calc(1.15em * 2 + 3px);
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 3px;
+            max-width: 100%;
           }
-          .hero-title-main,
+
+          :global([dir="rtl"]) .hero-title,
+          [dir="rtl"] .hero-title {
+            font-size: clamp(2.05rem, 8.4vw, 2.75rem);
+            letter-spacing: -0.015em;
+          }
+
+          .hero-title-main {
+            color: #FFFFFF;
+            font-weight: 800;
+            line-height: 1.15;
+            min-height: 1.15em;
+            margin: 0;
+            padding: 0;
+            text-align: start;
+            align-self: flex-start;
+            white-space: nowrap;
+            text-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+          }
+
+          [data-theme="light"] .hero-title-main {
+            color: #0F172A;
+            text-shadow: none;
+          }
+
           .hero-title-serif {
-            white-space: normal;
+            background: linear-gradient(135deg, #FFFDF7 0%, #FFF0BE 22%, #F6D484 55%, #E5B869 85%, #D49F33 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-weight: 800;
+            text-shadow: none !important;
+            filter: none !important;
+            line-height: 1.15;
+            min-height: 1.15em;
+            margin: 0;
+            padding: 0;
+            text-align: start;
+            align-self: flex-start;
+            white-space: nowrap;
+            overflow: visible;
           }
+
+          :global([dir="rtl"]) .hero-title-serif,
+          [dir="rtl"] .hero-title-serif {
+            font-family: 'ThmanyahSerifDisplay', 'Amiri', 'Traditional Arabic', serif !important;
+            font-style: italic !important;
+            font-weight: 900 !important;
+            line-height: 1.18 !important;
+            min-height: 1.18em !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            text-align: start !important;
+            align-self: flex-start !important;
+            white-space: nowrap !important;
+            text-shadow: none !important;
+            filter: none !important;
+          }
+
+          [data-theme="light"] .hero-title-serif {
+            background: linear-gradient(135deg, #B8860B 0%, #996515 50%, #7B4F0F 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: none !important;
+            filter: none !important;
+          }
+
           .hero-subtitle {
-            font-size: 0.84rem;
-            line-height: 1.6;
-            color: rgba(255, 255, 255, 0.72);
-            max-width: 34ch;
-            margin-bottom: 0.5rem;
+            font-size: 0.85rem;
+            line-height: 1.55;
+            color: rgba(255, 255, 255, 0.88);
+            margin-bottom: 0;
+            max-width: 42ch;
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.9);
           }
+
+          [data-theme="light"] .hero-subtitle {
+            color: #334155;
+            text-shadow: 0 1px 4px rgba(255, 255, 255, 0.85);
+          }
+
+          /* Search & Modules Container */
+          .hero-search-wrapper {
+            width: 100%;
+            background: transparent;
+            border: none;
+            box-shadow: none;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+          }
+
+          /* Quick Destination Chips */
+          .hero-mobile-quick-chips {
+            display: flex;
+            flex-direction: column;
+            gap: 0.45rem;
+            width: 100%;
+          }
+
+          .hero-chips-heading {
+            font-size: 0.6875rem;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+            color: rgba(255, 255, 255, 0.65);
+            text-transform: uppercase;
+          }
+
+          [data-theme="light"] .hero-chips-heading {
+            color: #64748B;
+          }
+
+          .hero-chips-scroll {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            overflow-x: auto;
+            padding-bottom: 4px;
+            scrollbar-width: none;
+            -webkit-overflow-scrolling: touch;
+          }
+
+          .hero-chips-scroll::-webkit-scrollbar {
+            display: none;
+          }
+
+          .hero-dest-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            white-space: nowrap;
+            padding: 6px 12px;
+            border-radius: 999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #FFFFFF;
+            background: rgba(255, 255, 255, 0.07);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+            transition: all 0.2s ease;
+          }
+
+          .hero-dest-chip:active {
+            transform: scale(0.96);
+            background: rgba(229, 184, 105, 0.2);
+            border-color: rgba(229, 184, 105, 0.5);
+            color: #E5B869;
+          }
+
+          [data-theme="light"] .hero-dest-chip {
+            color: #1E293B;
+            background: rgba(255, 255, 255, 0.8);
+            border-color: rgba(0, 0, 0, 0.1);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+          }
+
+          .dest-chip-arrow {
+            opacity: 0.6;
+            color: #E5B869;
+          }
+
+          [data-theme="light"] .dest-chip-arrow {
+            color: #B8860B;
+          }
+
+          /* Trust Guarantee Badges Bar */
+          .hero-mobile-trust-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+            padding: 0.65rem 0.85rem;
+            border-radius: 14px;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+          }
+
+          [data-theme="light"] .hero-mobile-trust-bar {
+            background: rgba(255, 255, 255, 0.7);
+            border-color: rgba(0, 0, 0, 0.08);
+            box-shadow: 0 4px 14px rgba(15, 23, 42, 0.04);
+          }
+
+          .hero-trust-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 0.6875rem;
+            font-weight: 700;
+            color: rgba(255, 255, 255, 0.9);
+          }
+
+          [data-theme="light"] .hero-trust-item {
+            color: #1E293B;
+          }
+
+          .hero-trust-icon {
+            color: #E5B869;
+            flex-shrink: 0;
+          }
+
+          [data-theme="light"] .hero-trust-icon {
+            color: #B8860B;
+          }
+
+          .hero-trust-divider {
+            width: 1px;
+            height: 14px;
+            background: rgba(255, 255, 255, 0.15);
+          }
+
+          [data-theme="light"] .hero-trust-divider {
+            background: rgba(0, 0, 0, 0.1);
+          }
+
+          /* Bottom Explore Discovery Button */
+          .hero-mobile-explore-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            width: 100%;
+            padding: 0.5rem;
+            background: transparent;
+            border: none;
+            color: rgba(255, 255, 255, 0.65);
+            font-size: 0.75rem;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 0.25rem;
+            transition: color 0.2s ease;
+          }
+
+          [data-theme="light"] .hero-mobile-explore-btn {
+            color: #64748B;
+          }
+
+          .hero-mobile-explore-btn:active {
+            color: #E5B869;
+          }
+
+          .hero-explore-chevron {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: bounceChevron 1.8s infinite ease-in-out;
+          }
+
+          @keyframes bounceChevron {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(3px); }
+          }
+        }
         }
 
         .hero-subtitle {

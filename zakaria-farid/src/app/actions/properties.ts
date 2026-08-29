@@ -43,8 +43,8 @@ async function getAdminClient() {
     }
   }
 
-  if (!url || !serviceKey) {
-    console.warn('[Admin] SUPABASE_SERVICE_ROLE_KEY is not set — falling back to session client.');
+  if (!url || !serviceKey || serviceKey.startsWith('sb_secret_') || serviceKey.startsWith('placeholder')) {
+    // Valid service role key not set — use session client seamlessly
     return null;
   }
 
@@ -78,6 +78,8 @@ const VALID_PROPERTY_COLUMNS = new Set([
   'view',
   'floor_number',
   'spec_layers',
+  'videos',
+  'video_url',
   'calcom_event_link',
   'created_at',
 ]);
@@ -110,26 +112,44 @@ export async function saveProperty(
       return { success: false, error: 'Unauthorized: Please log in first.' };
     }
 
-    // Now use the admin client to actually write to the database
-    // Falls back to session client if SUPABASE_SERVICE_ROLE_KEY is not configured
+    // Now use the admin client or session client
     const adminSupabase = await getAdminClient();
-    const supabase = adminSupabase ?? (await createBrowserServer());
+    let supabase = adminSupabase ?? sessionClient;
+
+    const executeWrite = async (client: any, payloadToWrite: any) => {
+      let curPayload = { ...payloadToWrite };
+      let res = isEditing && propertyId
+        ? await client.from('properties').update(curPayload).eq('id', propertyId)
+        : await client.from('properties').insert(curPayload).select('id, slug').single();
+
+      // If missing columns (videos, video_url, spec_layers), strip them and retry
+      if (res.error && (res.error.message?.includes('videos') || res.error.message?.includes('video_url') || res.error.message?.includes('spec_layers') || res.error.message?.includes('column'))) {
+        console.warn('Column mismatch in Supabase DB, retrying with compatible payload:', res.error.message);
+        if (res.error.message?.includes('videos')) delete curPayload.videos;
+        if (res.error.message?.includes('video_url')) delete curPayload.video_url;
+        if (res.error.message?.includes('spec_layers')) delete curPayload.spec_layers;
+
+        res = isEditing && propertyId
+          ? await client.from('properties').update(curPayload).eq('id', propertyId)
+          : await client.from('properties').insert(curPayload).select('id, slug').single();
+      }
+      return res;
+    };
+
+    let writeRes = await executeWrite(supabase, cleanPayload);
+
+    // If adminSupabase failed due to API key / auth issues, fall back to sessionClient immediately
+    if (writeRes.error && (writeRes.error.message?.includes('API key') || writeRes.error.message?.includes('JWT') || writeRes.error.message?.includes('unauthorized') || writeRes.error.status === 401)) {
+      console.warn('Falling back from admin client to authenticated session client:', writeRes.error.message);
+      supabase = sessionClient;
+      writeRes = await executeWrite(supabase, cleanPayload);
+    }
+
+    if (writeRes.error) {
+      throw writeRes.error;
+    }
 
     if (isEditing && propertyId) {
-      let { error } = await supabase.from('properties').update(cleanPayload).eq('id', propertyId);
-      
-      // Fallback: If spec_layers column hasn't been added to Supabase DB yet, retry without spec_layers
-      if (error && error.message?.includes('spec_layers')) {
-        console.warn('spec_layers column missing in Supabase DB. Retrying update without spec_layers...');
-        const fallbackPayload = { ...cleanPayload };
-        delete fallbackPayload.spec_layers;
-        const fallbackRes = await supabase.from('properties').update(fallbackPayload).eq('id', propertyId);
-        if (fallbackRes.error) throw fallbackRes.error;
-        error = null;
-      } else if (error) {
-        throw error;
-      }
-
       // Update amenities
       await supabase.from('property_amenities').delete().eq('property_id', propertyId);
       if (amenities.length > 0) {
@@ -142,29 +162,7 @@ export async function saveProperty(
       revalidatePath('/');
       return { success: true, propertyId, slug: payload.slug };
     } else {
-      let newPropData: any = null;
-      let { data: newProp, error } = await supabase
-        .from('properties')
-        .insert(cleanPayload)
-        .select('id, slug')
-        .single();
-
-      // Fallback: If spec_layers column hasn't been added to Supabase DB yet, retry without spec_layers
-      if (error && error.message?.includes('spec_layers')) {
-        console.warn('spec_layers column missing in Supabase DB. Retrying insert without spec_layers...');
-        const fallbackPayload = { ...cleanPayload };
-        delete fallbackPayload.spec_layers;
-        const fallbackRes = await supabase
-          .from('properties')
-          .insert(fallbackPayload)
-          .select('id, slug')
-          .single();
-        if (fallbackRes.error) throw fallbackRes.error;
-        newProp = fallbackRes.data;
-        error = null;
-      } else if (error) {
-        throw error;
-      }
+      const newProp = writeRes.data;
 
       // Save image urls
       if (previewUrls.length > 0 && newProp) {
