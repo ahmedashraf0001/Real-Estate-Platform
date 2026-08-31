@@ -365,6 +365,18 @@ export const CompareDrawer: React.FC<CompareDrawerProps> = ({
                             <MapPin size={11} />
                             <span>{p.district || p.location?.split(',')[0] || 'Egypt'}</span>
                           </span>
+                          <button
+                            type="button"
+                            className="cell-remove-btn"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onRemove(p.id);
+                            }}
+                            title={isAr ? 'إزالة من المقارنة' : 'Remove from comparison'}
+                            aria-label={isAr ? 'إزالة من المقارنة' : 'Remove from comparison'}
+                          >
+                            <X size={13} />
+                          </button>
                         </div>
                         <h4 className="cell-title">{p.title || p.title_en || 'Estate'}</h4>
                         <span className="cell-type">{p.propertyType || p.type || 'Residence'}</span>
@@ -1336,9 +1348,38 @@ export const CompareDrawer: React.FC<CompareDrawerProps> = ({
 
         .compare-matrix-grid {
           display: grid;
-          grid-template-columns: 220px repeat(var(--prop-count, 2), minmax(280px, 1fr));
+          grid-template-columns: 200px repeat(var(--prop-count, 2), minmax(260px, 1fr));
           gap: 1rem 1.5rem;
+          align-items: stretch;
+        }
+
+        .cell-remove-btn {
+          position: absolute;
+          top: 8px;
+          right: 8px;
+          width: 26px;
+          height: 26px;
+          border-radius: 50%;
+          background: rgba(10, 14, 24, 0.8);
+          border: 1px solid rgba(255, 255, 255, 0.25);
+          color: #FFFFFF;
+          display: flex;
           align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          z-index: 5;
+          transition: all var(--transition-fast);
+        }
+
+        [dir="rtl"] .cell-remove-btn {
+          right: auto;
+          left: 8px;
+        }
+
+        .cell-remove-btn:hover {
+          background: rgba(239, 68, 68, 0.9);
+          border-color: rgba(239, 68, 68, 1);
+          transform: scale(1.08);
         }
 
         .compare-dock-top-row {
@@ -1489,93 +1530,158 @@ export const CompareDrawer: React.FC<CompareDrawerProps> = ({
           }
 
           .compare-matrix-scroll {
-            padding: 0.75rem 0.85rem 2rem;
+            padding: 0.75rem 1rem 2rem 0 !important;
+          }
+
+          [dir="rtl"] .compare-matrix-scroll {
+            padding: 0.75rem 0 2rem 1rem !important;
           }
 
           /* Mobile Comparison Matrix Grid */
           .compare-matrix-grid {
-            grid-template-columns: 92px repeat(var(--prop-count, 2), minmax(140px, 1fr)) !important;
-            gap: 0.6rem 0.75rem !important;
+            grid-template-columns: 110px repeat(var(--prop-count, 2), minmax(180px, 220px)) !important;
+            gap: 0.75rem 1rem !important;
             min-width: min-content;
+            align-items: stretch !important;
           }
 
           .matrix-row-label {
             position: sticky;
             left: 0;
-            z-index: 10;
-            font-size: 0.62rem;
+            z-index: 25;
+            font-size: 0.65rem;
+            font-weight: 800;
             letter-spacing: 0.04em;
-            padding: 0.45rem 0.4rem 0.45rem 0;
-            background: rgba(10, 14, 24, 0.95);
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
-            border-right: 1px solid rgba(221, 167, 82, 0.22);
+            padding: 0.6rem 0.65rem;
+            box-sizing: border-box;
+            align-self: stretch;
+            height: 100%;
+            min-height: 100%;
             display: flex;
             align-items: center;
-            line-height: 1.25;
+            line-height: 1.3;
+            width: 110px;
+            min-width: 110px;
+            max-width: 110px;
+            flex-shrink: 0;
+          }
+
+          [data-theme="dark"] .matrix-row-label {
+            background: #0B0E17 !important;
+            border-right: 1px solid rgba(221, 167, 82, 0.3);
+            box-shadow: 6px 0 16px rgba(0, 0, 0, 0.6);
+            color: #94A3B8;
+          }
+
+          [data-theme="light"] .matrix-row-label {
+            background: #FFFFFF !important;
+            border-right: 1px solid rgba(184, 133, 48, 0.3);
+            box-shadow: 6px 0 16px rgba(0, 0, 0, 0.08);
+            color: #475569;
           }
 
           [dir="rtl"] .matrix-row-label {
             left: auto;
             right: 0;
-            padding: 0.5rem 0 0.5rem 0.5rem;
-            border-right: none;
-            border-left: 1px solid rgba(221, 167, 82, 0.25);
+            padding: 0.6rem 0.65rem;
           }
 
-          [data-theme="light"] .matrix-row-label {
-            background: rgba(250, 248, 245, 0.96);
-            border-color: rgba(184, 133, 48, 0.25);
+          [data-theme="dark"][dir="rtl"] .matrix-row-label,
+          [dir="rtl"] [data-theme="dark"] .matrix-row-label {
+            border-right: none;
+            border-left: 1px solid rgba(221, 167, 82, 0.3);
+            box-shadow: -6px 0 16px rgba(0, 0, 0, 0.6);
+          }
+
+          [data-theme="light"][dir="rtl"] .matrix-row-label,
+          [dir="rtl"] [data-theme="light"] .matrix-row-label {
+            border-right: none;
+            border-left: 1px solid rgba(184, 133, 48, 0.3);
+            box-shadow: -6px 0 16px rgba(0, 0, 0, 0.08);
+          }
+
+          .matrix-row-label.header-label {
+            justify-content: flex-end;
+            padding-bottom: 0.85rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+          }
+
+          [data-theme="light"] .matrix-row-label.header-label {
+            border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+          }
+
+          .matrix-card-cell {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            min-width: 0;
+            box-sizing: border-box;
           }
 
           .cell-image-frame {
-            height: 110px !important;
-            border-radius: 12px;
+            position: relative;
+            height: 120px !important;
+            border-radius: 14px;
+            overflow: hidden;
+            margin-bottom: 6px;
           }
 
           .cell-title {
-            font-size: 0.92rem;
+            font-size: 0.95rem;
+            line-height: 1.25;
+            word-break: break-word;
           }
 
           .cell-type {
-            font-size: 0.7rem;
+            font-size: 0.72rem;
+          }
+
+          .matrix-cell {
+            padding: 0.6rem 0.25rem;
+            display: flex;
+            align-items: center;
+            min-width: 0;
+            box-sizing: border-box;
           }
 
           .cell-price-val {
-            font-size: 1.05rem;
+            font-size: 1.15rem;
+            white-space: nowrap;
           }
 
           .cell-sub-val {
-            font-size: 0.75rem;
+            font-size: 0.8rem;
+            white-space: nowrap;
           }
 
           .cell-metric-val {
-            font-size: 0.8rem;
+            font-size: 0.85rem;
+            white-space: nowrap;
           }
 
           .matrix-finishing-badge {
-            font-size: 0.72rem;
-            padding: 0.3rem 0.6rem;
+            font-size: 0.75rem;
+            padding: 0.35rem 0.65rem;
           }
 
           .matrix-spec-text {
-            font-size: 0.72rem;
+            font-size: 0.75rem;
           }
 
           .matrix-floor-tag,
           .matrix-view-tag {
-            font-size: 0.72rem;
-            padding: 3px 6px;
+            font-size: 0.75rem;
+            padding: 3px 7px;
           }
 
           .matrix-amenity-chip {
-            font-size: 0.7rem;
-            padding: 0.2rem 0.45rem;
+            font-size: 0.72rem;
+            padding: 0.25rem 0.5rem;
           }
 
           .cell-explore-btn {
-            padding: 0.6rem 0.8rem;
-            font-size: 0.8rem;
+            padding: 0.65rem 0.85rem;
+            font-size: 0.82rem;
           }
         }
       `}</style>
