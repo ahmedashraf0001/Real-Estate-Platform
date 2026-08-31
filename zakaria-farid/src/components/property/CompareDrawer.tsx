@@ -586,30 +586,43 @@ export const CompareDrawer: React.FC<CompareDrawerProps> = ({
           display: flex;
           align-items: center;
           justify-content: space-between;
-          backdrop-filter: blur(24px) saturate(200%);
-          -webkit-backdrop-filter: blur(24px) saturate(200%);
-          border-radius: 24px;
-          padding: 0.65rem 1rem;
-          gap: 0.75rem;
+          border-radius: 22px;
+          padding: 0.75rem 1.15rem;
+          gap: 0.85rem;
           width: 100%;
           box-sizing: border-box;
           transition: all var(--transition-smooth);
+          background: linear-gradient(
+            135deg,
+            rgba(255, 255, 255, 0.22) 0%,
+            rgba(18, 24, 38, 0.62) 45%,
+            rgba(10, 14, 24, 0.84) 100%
+          );
+          backdrop-filter: blur(24px) saturate(210%) contrast(108%) brightness(105%);
+          -webkit-backdrop-filter: blur(24px) saturate(210%) contrast(108%) brightness(105%);
+          border: 1px solid rgba(255, 255, 255, 0.28);
+          box-shadow: 
+            0 24px 60px rgba(0, 0, 0, 0.55),
+            0 4px 16px rgba(0, 0, 0, 0.25),
+            0 0 25px rgba(221, 167, 82, 0.14),
+            inset 0 1.5px 2px rgba(255, 255, 255, 0.65),
+            inset 0 -1px 1px rgba(255, 255, 255, 0.15);
         }
 
         [data-theme="dark"] .compare-dock-inner {
           background: linear-gradient(
             135deg,
-            rgba(255, 255, 255, 0.28) 0%,
-            rgba(255, 255, 255, 0.08) 25%,
-            rgba(18, 24, 38, 0.42) 60%,
-            rgba(10, 14, 24, 0.65) 100%
+            rgba(255, 255, 255, 0.22) 0%,
+            rgba(18, 24, 38, 0.62) 45%,
+            rgba(10, 14, 24, 0.84) 100%
           );
-          backdrop-filter: blur(20px) saturate(210%) contrast(108%) brightness(108%);
-          -webkit-backdrop-filter: blur(20px) saturate(210%) contrast(108%) brightness(108%);
-          border: 1px solid rgba(255, 255, 255, 0.32);
+          backdrop-filter: blur(24px) saturate(210%) contrast(108%) brightness(105%);
+          -webkit-backdrop-filter: blur(24px) saturate(210%) contrast(108%) brightness(105%);
+          border: 1px solid rgba(255, 255, 255, 0.28);
           box-shadow: 
-            0 24px 60px rgba(0, 0, 0, 0.45),
-            0 0 30px rgba(252, 211, 77, 0.2),
+            0 24px 60px rgba(0, 0, 0, 0.55),
+            0 4px 16px rgba(0, 0, 0, 0.25),
+            0 0 25px rgba(221, 167, 82, 0.14),
             inset 0 1.5px 2px rgba(255, 255, 255, 0.65),
             inset 0 -1px 1px rgba(255, 255, 255, 0.15);
         }
@@ -617,16 +630,16 @@ export const CompareDrawer: React.FC<CompareDrawerProps> = ({
         [data-theme="light"] .compare-dock-inner {
           background: linear-gradient(
             135deg,
-            rgba(255, 255, 255, 0.70) 0%,
-            rgba(255, 255, 255, 0.35) 35%,
-            rgba(255, 255, 255, 0.55) 100%
+            rgba(255, 255, 255, 0.94) 0%,
+            rgba(255, 255, 255, 0.84) 45%,
+            rgba(248, 246, 240, 0.94) 100%
           );
-          backdrop-filter: blur(20px) saturate(210%) contrast(108%) brightness(108%);
-          -webkit-backdrop-filter: blur(20px) saturate(210%) contrast(108%) brightness(108%);
-          border: 1px solid rgba(255, 255, 255, 0.85);
+          backdrop-filter: blur(24px) saturate(210%) contrast(108%) brightness(105%);
+          -webkit-backdrop-filter: blur(24px) saturate(210%) contrast(108%) brightness(105%);
+          border: 1px solid rgba(255, 255, 255, 0.95);
           box-shadow: 
-            0 20px 50px rgba(15, 23, 42, 0.10),
-            0 0 30px rgba(184, 133, 48, 0.12),
+            0 20px 50px rgba(15, 23, 42, 0.12),
+            0 0 30px rgba(184, 133, 48, 0.14),
             inset 0 1.5px 2px #FFFFFF;
         }
 
@@ -638,9 +651,9 @@ export const CompareDrawer: React.FC<CompareDrawerProps> = ({
         }
 
         .compare-icon-wrap {
-          width: 34px;
-          height: 34px;
-          border-radius: 10px;
+          width: 36px;
+          height: 36px;
+          border-radius: 11px;
           background: rgba(197, 142, 54, 0.18);
           border: 1px solid var(--gold-border);
           display: flex;
@@ -656,24 +669,36 @@ export const CompareDrawer: React.FC<CompareDrawerProps> = ({
 
         .dock-title {
           font-family: var(--font-heading);
-          font-size: 0.84rem;
-          font-weight: 700;
-          color: var(--text-primary);
+          font-size: 0.86rem;
+          font-weight: 800;
+          color: #FFFFFF;
+          text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
           display: block;
           line-height: 1.2;
         }
 
+        [data-theme="light"] .dock-title {
+          color: #0D1117;
+          text-shadow: none;
+        }
+
         .dock-subtitle {
-          font-size: 0.6875rem;
-          color: var(--text-secondary);
+          font-size: 0.7rem;
+          color: #CBD5E1;
+          text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
           display: block;
           white-space: nowrap;
+        }
+
+        [data-theme="light"] .dock-subtitle {
+          color: #64748B;
+          text-shadow: none;
         }
 
         .dock-slots-row {
           display: flex;
           align-items: center;
-          gap: 0.45rem;
+          gap: 0.5rem;
           flex: 1 1 auto;
           min-width: 0;
           justify-content: center;
@@ -683,26 +708,30 @@ export const CompareDrawer: React.FC<CompareDrawerProps> = ({
           display: flex;
           align-items: center;
           gap: 7px;
-          border-radius: 12px;
-          padding: 3px 8px 3px 3px;
+          border-radius: 14px;
+          padding: 4px 8px 4px 4px;
           min-width: 80px;
           max-width: 165px;
           flex: 1 1 0px;
-          height: 42px;
+          height: 44px;
           position: relative;
           box-sizing: border-box;
           overflow: hidden;
+          transition: all var(--transition-fast);
         }
 
         [data-theme="dark"] .dock-slot.filled {
-          background: rgba(255, 255, 255, 0.08);
-          border: 1px solid rgba(221, 167, 82, 0.4);
+          background: rgba(10, 14, 22, 0.65);
+          backdrop-filter: blur(16px) saturate(190%);
+          -webkit-backdrop-filter: blur(16px) saturate(190%);
+          border: 1px solid rgba(221, 167, 82, 0.35);
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3), inset 0 1px 1px rgba(255, 255, 255, 0.25);
         }
 
         [data-theme="light"] .dock-slot.filled {
           background: rgba(255, 255, 255, 0.92);
-          border: 1px solid var(--gold-border);
-          box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+          border: 1px solid rgba(184, 133, 48, 0.35);
+          box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06), inset 0 1px 1px #FFFFFF;
         }
 
         .dock-slot.empty {
@@ -713,12 +742,14 @@ export const CompareDrawer: React.FC<CompareDrawerProps> = ({
 
         [data-theme="dark"] .dock-slot.empty {
           border: 1px dashed rgba(221, 167, 82, 0.35);
-          background: rgba(255, 255, 255, 0.03);
+          background: rgba(255, 255, 255, 0.04);
+          backdrop-filter: blur(12px);
+          -webkit-backdrop-filter: blur(12px);
         }
 
         [data-theme="light"] .dock-slot.empty {
           border: 1.5px dashed rgba(197, 154, 69, 0.45);
-          background: rgba(197, 154, 69, 0.05);
+          background: rgba(197, 154, 69, 0.06);
         }
 
         .empty-text {
@@ -755,27 +786,39 @@ export const CompareDrawer: React.FC<CompareDrawerProps> = ({
 
         .slot-title {
           font-family: var(--font-heading);
-          font-size: 0.72rem;
+          font-size: 0.74rem;
           font-weight: 700;
-          color: var(--text-primary);
+          color: #FFFFFF;
+          text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
           white-space: nowrap;
           overflow: hidden;
           text-overflow: ellipsis;
         }
 
+        [data-theme="light"] .slot-title {
+          color: #0D1117;
+          text-shadow: none;
+        }
+
         .slot-price {
-          font-size: 0.65rem;
+          font-size: 0.68rem;
           color: var(--gold-primary);
-          font-weight: 600;
+          font-weight: 700;
+          text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
           white-space: nowrap;
+        }
+
+        [data-theme="light"] .slot-price {
+          color: #926918;
+          text-shadow: none;
         }
 
         .dock-remove-btn {
           width: 18px;
           height: 18px;
           border-radius: 50%;
-          background: rgba(255, 255, 255, 0.1);
-          color: var(--text-secondary);
+          background: rgba(255, 255, 255, 0.15);
+          color: #FFFFFF;
           border: none;
           display: flex;
           align-items: center;
@@ -793,19 +836,20 @@ export const CompareDrawer: React.FC<CompareDrawerProps> = ({
         .dock-actions-row {
           display: flex;
           align-items: center;
-          gap: 0.45rem;
+          gap: 0.5rem;
           flex-shrink: 0;
         }
 
         .dock-compare-btn {
           display: flex;
           align-items: center;
-          gap: 5px;
-          padding: 0.52rem 0.95rem;
-          font-size: 0.8125rem;
-          font-weight: 700;
-          border-radius: 11px;
+          gap: 6px;
+          padding: 0.58rem 1.15rem;
+          font-size: 0.84rem;
+          font-weight: 800;
+          border-radius: 12px;
           white-space: nowrap;
+          box-shadow: 0 4px 16px rgba(221, 167, 82, 0.35);
         }
 
         .dock-compare-btn.disabled {
@@ -824,32 +868,34 @@ export const CompareDrawer: React.FC<CompareDrawerProps> = ({
           font-weight: 600;
           cursor: pointer;
           transition: all var(--transition-fast);
-          border: 1px solid var(--border-subtle);
           white-space: nowrap;
         }
 
         [data-theme="dark"] .dock-clear-btn {
-          background: rgba(255, 255, 255, 0.06);
-          color: #C7D2DF;
-          border-color: rgba(255, 255, 255, 0.14);
+          background: rgba(10, 14, 22, 0.6);
+          backdrop-filter: blur(16px);
+          -webkit-backdrop-filter: blur(16px);
+          color: #CBD5E1;
+          border: 1px solid rgba(255, 255, 255, 0.2);
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25), inset 0 1px 1px rgba(255, 255, 255, 0.2);
         }
 
         [data-theme="dark"] .dock-clear-btn:hover {
-          background: rgba(255, 255, 255, 0.12);
-          color: #FFFFFF;
-          border-color: rgba(255, 255, 255, 0.25);
+          background: rgba(239, 68, 68, 0.25);
+          color: #FCA5A5;
+          border-color: rgba(239, 68, 68, 0.5);
         }
 
         [data-theme="light"] .dock-clear-btn {
           background: rgba(0, 0, 0, 0.04);
           color: #1E293B;
-          border-color: rgba(0, 0, 0, 0.10);
+          border: 1px solid rgba(0, 0, 0, 0.10);
         }
 
         [data-theme="light"] .dock-clear-btn:hover {
-          background: rgba(0, 0, 0, 0.08);
-          color: #0D1117;
-          border-color: rgba(0, 0, 0, 0.18);
+          background: rgba(239, 68, 68, 0.1);
+          color: #DC2626;
+          border-color: rgba(239, 68, 68, 0.3);
         }
 
         @media (max-width: 860px) {
