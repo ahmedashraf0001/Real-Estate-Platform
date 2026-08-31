@@ -184,7 +184,7 @@ export const LuxuryAmbientVideoPlayer: React.FC<LuxuryAmbientVideoPlayerProps> =
     triggerActivity();
   }, [isAmbientOn, triggerActivity]);
 
-  // Time seek
+  // Time seek via range input
   const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
     const targetTime = parseFloat(e.target.value);
     if (videoRef.current) {
@@ -192,6 +192,19 @@ export const LuxuryAmbientVideoPlayer: React.FC<LuxuryAmbientVideoPlayerProps> =
       setCurrentTime(targetTime);
       syncAmbient();
     }
+  };
+
+  // Direct track pointer seek (guarantees strict LTR left-to-right calculation)
+  const handleTrackPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!videoRef.current || !duration) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const clickX = e.clientX - rect.left;
+    const percent = Math.max(0, Math.min(1, clickX / rect.width));
+    const newTime = percent * duration;
+    videoRef.current.currentTime = newTime;
+    setCurrentTime(newTime);
+    syncAmbient();
+    triggerActivity();
   };
 
   // Seek step (+10s / -10s)
@@ -457,6 +470,7 @@ export const LuxuryAmbientVideoPlayer: React.FC<LuxuryAmbientVideoPlayerProps> =
     <div
       ref={containerRef}
       className={`luxury-ambient-player-root ${className} ${isFullscreen ? 'is-fullscreen' : ''}`}
+      dir="ltr"
       onMouseMove={triggerActivity}
       onTouchStart={triggerActivity}
       style={style}
@@ -555,8 +569,8 @@ export const LuxuryAmbientVideoPlayer: React.FC<LuxuryAmbientVideoPlayerProps> =
           onClick={(e) => e.stopPropagation()}
         >
           {/* Progress Scrub Bar */}
-          <div className="player-scrubber-row">
-            <div className="player-track-wrapper">
+          <div className="player-scrubber-row" dir="ltr">
+            <div className="player-track-wrapper" onPointerDown={handleTrackPointerDown} dir="ltr">
               {/* Buffered progress */}
               <div className="track-buffered" style={{ width: `${bufferedPercent}%` }} />
               {/* Played progress */}
@@ -567,9 +581,10 @@ export const LuxuryAmbientVideoPlayer: React.FC<LuxuryAmbientVideoPlayerProps> =
                 type="range"
                 min="0"
                 max={duration || 100}
-                step="0.1"
+                step="0.05"
                 value={currentTime}
                 onChange={handleSeek}
+                dir="ltr"
                 className="scrubber-range-input"
                 aria-label="Video scrubber"
               />
@@ -577,9 +592,9 @@ export const LuxuryAmbientVideoPlayer: React.FC<LuxuryAmbientVideoPlayerProps> =
           </div>
 
           {/* Bottom Controls Row */}
-          <div className="player-bottom-buttons-row">
+          <div className="player-bottom-buttons-row" dir="ltr">
             {/* Left cluster: Play/Pause, Replay 10, Forward 10, Time */}
-            <div className="player-btn-group left">
+            <div className="player-btn-group left" dir="ltr">
               <button
                 type="button"
                 className="player-control-btn play-btn"
@@ -608,7 +623,7 @@ export const LuxuryAmbientVideoPlayer: React.FC<LuxuryAmbientVideoPlayerProps> =
               </button>
 
               {/* Volume */}
-              <div className="volume-slider-group">
+              <div className="volume-slider-group" dir="ltr">
                 <button
                   type="button"
                   className="player-control-btn vol-btn"
@@ -630,13 +645,14 @@ export const LuxuryAmbientVideoPlayer: React.FC<LuxuryAmbientVideoPlayerProps> =
                   step="0.05"
                   value={isMuted ? 0 : volume}
                   onChange={handleVolumeChange}
+                  dir="ltr"
                   className="volume-range-input"
                   aria-label="Volume slider"
                 />
               </div>
 
               {/* Timestamp */}
-              <div className="player-timestamp">
+              <div className="player-timestamp" dir="ltr">
                 <span className="current-time">{formatTime(currentTime)}</span>
                 <span className="time-divider">/</span>
                 <span className="total-time">{formatTime(duration)}</span>
@@ -737,6 +753,7 @@ export const LuxuryAmbientVideoPlayer: React.FC<LuxuryAmbientVideoPlayerProps> =
           overflow: visible;
           box-sizing: border-box;
           user-select: none;
+          direction: ltr !important;
         }
 
         .luxury-ambient-player-root.is-fullscreen {
@@ -801,6 +818,7 @@ export const LuxuryAmbientVideoPlayer: React.FC<LuxuryAmbientVideoPlayerProps> =
           overflow: hidden;
           cursor: pointer;
           box-shadow: 0 24px 60px rgba(0, 0, 0, 0.4);
+          direction: ltr !important;
         }
 
         .luxury-ambient-player-root.is-fullscreen .player-stage-viewport {
@@ -830,6 +848,7 @@ export const LuxuryAmbientVideoPlayer: React.FC<LuxuryAmbientVideoPlayerProps> =
           background: linear-gradient(to bottom, rgba(7, 9, 13, 0.88) 0%, rgba(7, 9, 13, 0.45) 60%, transparent 100%);
           z-index: 10;
           transition: opacity 0.25s ease, transform 0.25s ease;
+          direction: ltr !important;
         }
 
         .player-top-overlay.hidden {
@@ -1025,6 +1044,7 @@ export const LuxuryAmbientVideoPlayer: React.FC<LuxuryAmbientVideoPlayerProps> =
           flex-direction: column;
           gap: 8px;
           transition: opacity 0.25s ease, transform 0.25s ease;
+          direction: ltr !important;
         }
 
         .player-controls-bottom.hidden {
@@ -1037,52 +1057,59 @@ export const LuxuryAmbientVideoPlayer: React.FC<LuxuryAmbientVideoPlayerProps> =
         .player-scrubber-row {
           width: 100%;
           padding: 4px 0;
+          direction: ltr !important;
         }
 
         .player-track-wrapper {
           position: relative;
           width: 100%;
-          height: 5px;
+          height: 6px;
           border-radius: 4px;
-          background: rgba(255, 255, 255, 0.15);
+          background: rgba(255, 255, 255, 0.2);
           cursor: pointer;
+          direction: ltr !important;
         }
 
         .player-track-wrapper:hover {
-          height: 7px;
+          height: 8px;
         }
 
         .track-buffered {
           position: absolute;
           top: 0;
           left: 0;
+          right: auto;
           height: 100%;
           border-radius: 4px;
-          background: rgba(255, 255, 255, 0.3);
+          background: rgba(255, 255, 255, 0.35);
           pointer-events: none;
+          direction: ltr !important;
         }
 
         .track-played {
           position: absolute;
           top: 0;
           left: 0;
+          right: auto;
           height: 100%;
           border-radius: 4px;
           background: linear-gradient(to right, #C59A45, #FEE8A0);
           pointer-events: none;
+          direction: ltr !important;
         }
 
         .track-scrubber-handle {
           position: absolute;
-          right: -5px;
+          right: -6px;
+          left: auto;
           top: 50%;
           transform: translateY(-50%);
-          width: 12px;
-          height: 12px;
+          width: 13px;
+          height: 13px;
           border-radius: 50%;
           background: #FFFDF5;
           border: 2px solid #DDA752;
-          box-shadow: 0 0 6px rgba(0, 0, 0, 0.6);
+          box-shadow: 0 0 8px rgba(0, 0, 0, 0.8);
         }
 
         .scrubber-range-input {
@@ -1093,6 +1120,7 @@ export const LuxuryAmbientVideoPlayer: React.FC<LuxuryAmbientVideoPlayerProps> =
           opacity: 0;
           cursor: pointer;
           margin: 0;
+          direction: ltr !important;
         }
 
         /* Buttons Row */
@@ -1101,12 +1129,14 @@ export const LuxuryAmbientVideoPlayer: React.FC<LuxuryAmbientVideoPlayerProps> =
           align-items: center;
           justify-content: space-between;
           gap: 12px;
+          direction: ltr !important;
         }
 
         .player-btn-group {
           display: flex;
           align-items: center;
           gap: 10px;
+          direction: ltr !important;
         }
 
         .player-control-btn {
@@ -1147,6 +1177,7 @@ export const LuxuryAmbientVideoPlayer: React.FC<LuxuryAmbientVideoPlayerProps> =
           display: flex;
           align-items: center;
           gap: 4px;
+          direction: ltr !important;
         }
 
         .volume-range-input {
@@ -1163,6 +1194,8 @@ export const LuxuryAmbientVideoPlayer: React.FC<LuxuryAmbientVideoPlayerProps> =
           font-weight: 600;
           color: rgba(255, 255, 255, 0.7);
           margin-left: 6px;
+          direction: ltr !important;
+          unicode-bidi: isolate;
         }
 
         .current-time {
