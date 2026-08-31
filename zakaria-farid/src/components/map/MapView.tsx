@@ -1197,7 +1197,7 @@ export const MapView: React.FC<MapViewProps> = ({
           right: 1.5rem;
           left: auto;
           width: min(420px, calc(100vw - 3rem));
-          z-index: 1000;
+          z-index: 50;
           border-radius: 28px;
           display: flex;
           flex-direction: column;

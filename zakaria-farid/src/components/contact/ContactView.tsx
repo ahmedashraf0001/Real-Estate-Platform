@@ -1427,7 +1427,7 @@ export const ContactView: React.FC<{ locale?: string }> = ({ locale = 'en' }) =>
 
         @media (max-width: 768px) {
           .contact-page {
-            padding-top: 100px;
+            padding-top: 90px;
             padding-bottom: 3.5rem;
           }
 
@@ -1436,21 +1436,21 @@ export const ContactView: React.FC<{ locale?: string }> = ({ locale = 'en' }) =>
           }
 
           .hero-concierge-badge {
-            font-size: 0.625rem;
-            padding: 0.32rem 0.9rem;
+            font-size: 0.65rem;
+            padding: 0.35rem 0.95rem;
             margin-bottom: 0.75rem;
           }
 
           .contact-main-title {
-            font-size: clamp(1.6rem, 6.2vw, 2.1rem);
-            line-height: 1.2;
+            font-size: clamp(1.55rem, 5.8vw, 2.05rem);
+            line-height: 1.25;
             letter-spacing: -0.025em;
             margin-bottom: 0.65rem;
           }
 
           .contact-hero-subtitle {
-            font-size: 0.825rem;
-            line-height: 1.55;
+            font-size: 0.85rem;
+            line-height: 1.6;
           }
 
           .contact-form-grid-section {
@@ -1459,8 +1459,8 @@ export const ContactView: React.FC<{ locale?: string }> = ({ locale = 'en' }) =>
 
           /* Mobile Optimized Form Card */
           .acquisition-form-card {
-            padding: 1.25rem 1.1rem 1.35rem;
-            border-radius: 20px;
+            padding: 1.5rem 1.25rem 1.65rem;
+            border-radius: 22px;
             border-top: 1.5px solid rgba(229, 184, 105, 0.4);
             box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
           }
@@ -1471,93 +1471,95 @@ export const ContactView: React.FC<{ locale?: string }> = ({ locale = 'en' }) =>
           }
 
           .form-card-header {
-            margin-bottom: 1rem;
+            margin-bottom: 1.25rem;
           }
 
           .form-eyebrow {
-            font-size: 0.625rem;
-            margin-bottom: 0.2rem;
+            font-size: 0.65rem;
+            margin-bottom: 0.25rem;
           }
 
           .form-card-title {
-            font-size: 1.25rem;
-            line-height: 1.25;
-            margin-bottom: 0.3rem;
+            font-size: 1.35rem;
+            line-height: 1.3;
+            margin-bottom: 0.35rem;
           }
 
           .form-card-sub {
-            font-size: 0.78rem;
-            line-height: 1.45;
+            font-size: 0.825rem;
+            line-height: 1.5;
           }
 
           .acquisition-form {
-            gap: 0.85rem;
+            gap: 1rem;
           }
 
           .form-field-group {
-            gap: 4px;
+            gap: 5px;
           }
 
           .form-field-label {
-            font-size: 0.625rem;
+            font-size: 0.65rem;
             letter-spacing: 0.08em;
           }
 
-          /* Intent Selector Chips: Horizontal 1-row scroll on mobile */
+          /* Intent Selector Chips on Mobile */
           .intent-chips-grid {
             display: flex;
-            overflow-x: auto;
-            scrollbar-width: none;
-            -webkit-overflow-scrolling: touch;
+            flex-wrap: wrap;
             gap: 6px;
-            padding: 2px 0;
             width: 100%;
           }
 
-          .intent-chips-grid::-webkit-scrollbar {
-            display: none;
-          }
-
           .intent-chips-grid .selector-chip {
-            flex-shrink: 0;
-            padding: 6px 12px;
-            font-size: 0.75rem;
+            flex: 1 1 calc(50% - 4px);
+            min-width: 130px;
+            padding: 8px 12px;
+            font-size: 0.78rem;
             font-weight: 700;
             border-radius: 9999px;
-            white-space: nowrap;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            line-height: 1.25;
           }
 
+          /* 1-Column inputs on mobile for generous full width */
           .form-inputs-grid {
-            grid-template-columns: 1fr 1fr;
-            gap: 8px;
+            grid-template-columns: 1fr !important;
+            gap: 0.95rem;
           }
 
-          /* Prevent iOS input zoom with 16px */
+          /* Prevent iOS input zoom with 16px and generous touch height */
           .form-dark-input, 
           .form-dark-select, 
           .form-dark-textarea {
             font-size: 16px !important;
-            padding: 0.55rem 0.8rem;
-            border-radius: 10px;
-            min-height: 42px;
+            padding: 0.75rem 1rem;
+            border-radius: 12px;
+            min-height: 48px;
+            line-height: 1.4;
           }
 
           .form-dark-textarea {
-            min-height: 64px;
-            height: 64px;
-            padding: 0.55rem 0.8rem;
+            min-height: 85px;
+            padding: 0.75rem 1rem;
           }
 
           /* Communication Channel Chips on Mobile */
           .chips-row {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
+            display: flex;
+            flex-wrap: wrap;
             gap: 6px;
+            width: 100%;
           }
 
           .chips-row .selector-chip {
-            padding: 6px 4px;
-            font-size: 0.7rem;
+            flex: 1 1 calc(33.333% - 4px);
+            min-width: 95px;
+            padding: 8px 8px;
+            font-size: 0.74rem;
             font-weight: 700;
             border-radius: 9999px;
             text-align: center;
@@ -1565,28 +1567,109 @@ export const ContactView: React.FC<{ locale?: string }> = ({ locale = 'en' }) =>
             align-items: center;
             justify-content: center;
             line-height: 1.2;
-            white-space: nowrap;
           }
 
           .submit-inquiry-btn {
             width: 100%;
-            height: 46px;
-            padding: 0.65rem 1.25rem;
-            font-size: 0.85rem;
+            height: 50px;
+            padding: 0.75rem 1.5rem;
+            font-size: 0.9rem;
             font-weight: 800;
             border-radius: 9999px;
-            margin-top: 0.25rem;
+            margin-top: 0.4rem;
             justify-content: center;
           }
 
           /* Sidebar adjustments on Mobile */
-          .sidebar-desk-card {
-            padding: 1.25rem 1.1rem;
-            border-radius: 18px;
+          .contact-sidebar-col {
+            gap: 1.15rem;
           }
-          .hq-map-wrapper {
-            height: 240px;
-            border-radius: 16px;
+
+          .direct-agent-card {
+            padding: 1.4rem 1.25rem;
+            border-radius: 20px;
+            gap: 0.65rem;
+          }
+
+          .agent-card-title {
+            font-size: 1.25rem;
+            line-height: 1.3;
+          }
+
+          .agent-card-desc {
+            font-size: 0.825rem;
+            line-height: 1.55;
+            margin-bottom: 0.35rem;
+          }
+
+          .chat-agent-link {
+            width: 100%;
+            height: 48px;
+            padding: 0.75rem 1.25rem;
+            font-size: 0.875rem;
+            border-radius: 12px;
+            justify-content: center;
+          }
+
+          .direct-hotline-card {
+            padding: 1.25rem 1.25rem;
+            border-radius: 18px;
+            gap: 5px;
+          }
+
+          .hotline-title {
+            font-size: 0.6875rem;
+          }
+
+          .hotline-num {
+            font-size: 1.35rem;
+            gap: 8px;
+          }
+
+          .hotline-num.email-hotline {
+            font-size: 0.88rem;
+            word-break: break-all;
+          }
+
+          .hotline-sub {
+            font-size: 0.72rem;
+            line-height: 1.4;
+          }
+
+          /* Grand HQ Map on Mobile */
+          .grand-hq-banner {
+            padding: 1.25rem 1rem;
+            border-radius: 22px;
+            min-height: 420px;
+          }
+
+          .grand-hq-floating-card {
+            padding: 1.35rem 1.2rem;
+            border-radius: 18px;
+            width: 100%;
+            max-width: 100%;
+            gap: 0.65rem;
+          }
+
+          .floating-hq-title {
+            font-size: 1.35rem;
+          }
+
+          .floating-hq-address {
+            font-size: 0.825rem;
+            line-height: 1.5;
+          }
+
+          .floating-hq-hours {
+            font-size: 0.75rem;
+            margin-bottom: 0.35rem;
+          }
+
+          .directions-btn {
+            width: 100%;
+            height: 46px;
+            justify-content: center;
+            font-size: 0.85rem;
           }
         }
       `}</style>

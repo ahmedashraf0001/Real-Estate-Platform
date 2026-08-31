@@ -255,7 +255,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           left: 0;
           right: 0;
           width: 100%;
-          z-index: 1000;
+          z-index: 2000;
           pointer-events: none;
           transition: top 350ms cubic-bezier(0.16, 1, 0.3, 1);
         }
@@ -506,8 +506,8 @@ export const Navbar: React.FC<NavbarProps> = ({
           inset: 0;
           width: 100vw;
           height: 100vh;
-          background: rgba(0, 0, 0, 0.15);
-          z-index: 1001;
+          background: rgba(0, 0, 0, 0.25);
+          z-index: 2001;
           pointer-events: auto;
         }
 
@@ -525,7 +525,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           border-radius: 20px;
           padding: 1.25rem 1.25rem 1.5rem;
           box-shadow: var(--shadow-glass);
-          z-index: 1002;
+          z-index: 2002;
           pointer-events: auto;
         }
 

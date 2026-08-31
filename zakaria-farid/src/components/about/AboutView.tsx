@@ -1343,51 +1343,161 @@ export function AboutView({ locale, onNavigateToCatalog, onOpenInquiry = () => {
         }
 
         @media (max-width: 900px) {
+          .atelier-paravent-section {
+            padding: 4rem 0;
+          }
+
           .paravent-deck-container {
+            display: flex;
             flex-direction: column;
+            gap: 0.85rem;
             height: auto;
             min-height: auto;
             max-height: none;
+            overflow: visible;
           }
+
+          .paravent-panel {
+            display: flex !important;
+            flex-direction: column !important;
+            height: auto !important;
+            min-height: auto !important;
+            max-height: none !important;
+            width: 100% !important;
+            border-radius: 16px;
+            overflow: hidden;
+            transition: background 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+          }
+
           .paravent-panel.collapsed {
-            flex: 0 0 52px;
+            flex: none !important;
+            height: 54px !important;
+            min-height: 54px !important;
+            cursor: pointer;
           }
+
           .paravent-panel.expanded {
-            flex: 1 1 auto;
+            flex: none !important;
+            height: auto !important;
+            min-height: auto !important;
           }
+
           .paravent-spine {
-            width: 100%;
-            height: 52px;
-            flex-direction: row;
-            padding: 0 1rem;
-            border-right: none;
+            width: 100% !important;
+            height: 54px !important;
+            min-height: 54px !important;
+            flex-direction: row !important;
+            padding: 0 1.25rem !important;
+            border-right: none !important;
+            border-left: none !important;
             border-bottom: 1px solid rgba(184, 147, 74, 0.2);
             align-items: center;
-            justify-content: flex-start;
-            gap: 14px;
+            justify-content: space-between !important;
+            gap: 12px;
+            flex-shrink: 0;
+            cursor: pointer;
+            box-sizing: border-box;
           }
-          .paravent-body {
-            height: auto;
-            padding: 1.25rem;
+
+          .paravent-panel.collapsed .paravent-spine {
+            border-bottom: none !important;
           }
+
           .spine-top {
             flex-direction: row;
             align-items: center;
             gap: 8px;
+            flex-shrink: 0;
           }
+
           .spine-roman {
-            font-size: 1.1rem;
+            font-size: 1.15rem;
           }
-          .spine-tag {
-            writing-mode: horizontal-tb;
-            transform: none;
-            font-size: 0.65rem;
-          }
+
           .spine-year {
-            display: none;
+            font-size: 0.72rem;
+            display: inline-block;
           }
+
+          .spine-tag {
+            writing-mode: horizontal-tb !important;
+            transform: none !important;
+            font-size: 0.72rem;
+            font-weight: 700;
+            flex: 1;
+            text-align: start;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+          }
+
+          .spine-indicator {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+          }
+
+          .paravent-body {
+            width: 100% !important;
+            height: auto !important;
+            min-height: auto !important;
+            max-height: none !important;
+            padding: 1.5rem 1.25rem !important;
+            display: block !important;
+            overflow: visible !important;
+            box-sizing: border-box;
+          }
+
           .paravent-content-inner {
-            min-width: 0;
+            min-width: 0 !important;
+            width: 100% !important;
+            height: auto !important;
+            display: flex !important;
+            flex-direction: column !important;
+            justify-content: flex-start !important;
+            gap: 0.85rem;
+          }
+
+          .paravent-body-top {
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+          }
+
+          .panel-headline {
+            font-size: 1.35rem;
+            line-height: 1.3;
+            margin: 0 0 0.35rem 0;
+          }
+
+          .panel-subtitle {
+            font-size: 0.85rem;
+            line-height: 1.5;
+            margin: 0 0 0.75rem 0;
+          }
+
+          .panel-narrative {
+            font-size: 0.85rem;
+            line-height: 1.65;
+            margin: 0 0 1.25rem 0;
+          }
+
+          .panel-metrics-strip {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            padding-top: 1rem;
+            border-top: 1px solid rgba(184, 147, 74, 0.2);
+          }
+
+          .metric-box-val {
+            font-size: 1.15rem;
+          }
+
+          .metric-box-lbl {
+            font-size: 0.625rem;
           }
         }
 
