@@ -659,6 +659,18 @@ html[lang="ar"] {
   [dir="rtl"] .hero-title {
     font-size: clamp(1.58rem, 6.8vw, 2.15rem) !important;
     line-height: 1.25 !important;
+    text-align: center !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+  [dir="rtl"] .hero-container,
+  [dir="rtl"] .hero-content,
+  [dir="rtl"] .hero-title-main,
+  [dir="rtl"] .hero-title-serif,
+  [dir="rtl"] .hero-subtitle {
+    text-align: center !important;
+    align-items: center !important;
+    justify-content: center !important;
   }
 }
 

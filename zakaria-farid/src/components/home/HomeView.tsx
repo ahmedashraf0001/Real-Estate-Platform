@@ -671,6 +671,9 @@ export const HomeView: React.FC<HomeViewProps> = ({
           flex-direction: column;
           align-items: flex-start;
           gap: 2px;
+          min-height: calc(1.15em * 2 + 2px);
+        }
+
         .hero-title-main {
           color: #FFFFFF;
           text-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
@@ -724,45 +727,57 @@ export const HomeView: React.FC<HomeViewProps> = ({
           overflow: visible;
         }
 
-        :global([dir="rtl"]) .hero-title,
-        [dir="rtl"] .hero-title,
-        .home-view[dir="rtl"] .hero-title {
-          font-size: clamp(2.45rem, 4.2vw, 3.95rem) !important;
-          line-height: 1.24 !important;
-          letter-spacing: 0 !important;
-          min-height: calc(1.24em * 2 + 4px);
-        }
+        /* Desktop RTL Overrides */
+        @media (min-width: 769px) {
+          :global([dir="rtl"]) .hero-title,
+          [dir="rtl"] .hero-title,
+          .home-view[dir="rtl"] .hero-title {
+            font-size: clamp(2.45rem, 4.2vw, 3.95rem) !important;
+            line-height: 1.24 !important;
+            letter-spacing: 0 !important;
+            min-height: calc(1.24em * 2 + 4px);
+            align-items: flex-start !important;
+            text-align: start !important;
+          }
 
-        :global([dir="rtl"]) .hero-title-main,
-        [dir="rtl"] .hero-title-main,
-        .home-view[dir="rtl"] .hero-title-main {
-          font-size: 1em !important;
-          font-style: normal !important;
-          letter-spacing: 0 !important;
-          padding: 0.1em 0.35em !important;
-          margin: -0.1em -0.35em !important;
-          overflow: visible !important;
-          display: inline-block !important;
-        }
+          :global([dir="rtl"]) .hero-title-main,
+          [dir="rtl"] .hero-title-main,
+          .home-view[dir="rtl"] .hero-title-main {
+            font-size: 1em !important;
+            font-style: normal !important;
+            letter-spacing: 0 !important;
+            padding: 0.1em 0.35em !important;
+            margin: -0.1em -0.35em !important;
+            overflow: visible !important;
+            display: inline-block !important;
+            text-align: start !important;
+            align-self: flex-start !important;
+          }
 
-        :global([dir="rtl"]) .hero-title-serif,
-        [dir="rtl"] .hero-title-serif,
-        .home-view[dir="rtl"] .hero-title-serif {
-          font-family: 'ThmanyahSerifDisplay', 'Amiri', 'Traditional Arabic', serif !important;
-          font-size: 1em !important;
-          font-style: normal !important;
-          font-weight: 900 !important;
-          line-height: 1.25 !important;
-          min-height: 1.25em !important;
-          letter-spacing: 0 !important;
-          padding: 0.12em 0.45em !important;
-          margin: -0.12em -0.45em !important;
-          text-align: start !important;
-          align-self: flex-start !important;
-          overflow: visible !important;
-          filter: none !important;
-          text-shadow: none !important;
-          display: inline-block !important;
+          :global([dir="rtl"]) .hero-title-serif,
+          [dir="rtl"] .hero-title-serif,
+          .home-view[dir="rtl"] .hero-title-serif {
+            font-family: 'ThmanyahSerifDisplay', 'Amiri', 'Traditional Arabic', serif !important;
+            font-size: 1em !important;
+            font-style: normal !important;
+            font-weight: 900 !important;
+            line-height: 1.25 !important;
+            min-height: 1.25em !important;
+            letter-spacing: 0 !important;
+            padding: 0.12em 0.45em !important;
+            margin: -0.12em -0.45em !important;
+            overflow: visible !important;
+            filter: none !important;
+            text-shadow: none !important;
+            display: inline-block !important;
+            text-align: start !important;
+            align-self: flex-start !important;
+          }
+
+          .hero-mobile-crest,
+          .hero-mobile-divider {
+            display: none !important;
+          }
         }
 
         .typewriter-cursor {
@@ -784,12 +799,6 @@ export const HomeView: React.FC<HomeViewProps> = ({
         }
 
         /* Desktop: mobile-only hero elements hidden */
-        .hero-mobile-eyebrow,
-        .hero-mobile-quick-chips {
-          display: none;
-        }
-
-        /* Desktop hidden elements */
         .hero-mobile-crest,
         .hero-mobile-divider,
         .hero-mobile-eyebrow,
@@ -812,223 +821,197 @@ export const HomeView: React.FC<HomeViewProps> = ({
             box-sizing: border-box;
           }
 
-          .hero-container {
-            width: 100%;
-            max-width: 100%;
-            padding: 0 1.15rem;
-            margin: 0;
-            background: transparent;
-            border: none;
-            box-shadow: none;
-            border-radius: 0;
-            gap: 1.15rem;
-            align-items: center;
-            text-align: center;
-            display: flex;
-            flex-direction: column;
-            justify-content: flex-end;
+          .hero-container,
+          .home-view .hero-container,
+          .home-view[dir="rtl"] .hero-container,
+          [dir="rtl"] .hero-container {
+            width: 100% !important;
+            max-width: 100% !important;
+            padding: 0 1.15rem !important;
+            margin: 0 auto !important;
+            background: transparent !important;
+            border: none !important;
+            box-shadow: none !important;
+            border-radius: 0 !important;
+            gap: 1.15rem !important;
+            align-items: center !important;
+            text-align: center !important;
+            display: flex !important;
+            flex-direction: column !important;
+            justify-content: flex-end !important;
           }
 
-          .hero-content {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            text-align: center;
-            width: 100%;
+          .hero-content,
+          .home-view .hero-content,
+          .home-view[dir="rtl"] .hero-content,
+          [dir="rtl"] .hero-content {
+            display: flex !important;
+            flex-direction: column !important;
+            align-items: center !important;
+            text-align: center !important;
+            justify-content: center !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            margin: 0 auto !important;
           }
 
           /* Mobile Sovereign Architectural Crest */
           .hero-mobile-crest {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 12px;
-            width: 100%;
-            max-width: 220px;
-            margin: 0 auto 0.75rem auto;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            gap: 10px !important;
+            width: 100% !important;
+            max-width: 220px !important;
+            margin: 0 auto 0.75rem auto !important;
           }
 
           .crest-hairline {
-            flex: 1;
-            height: 1px;
+            flex: 1 !important;
+            height: 1px !important;
+            min-width: 20px !important;
           }
 
           .crest-hairline-start {
-            background: linear-gradient(90deg, transparent 0%, rgba(229, 184, 105, 0.8) 100%);
+            background: linear-gradient(to right, transparent 0%, rgba(229, 184, 105, 0.85) 100%) !important;
           }
 
           .crest-hairline-end {
-            background: linear-gradient(90deg, rgba(229, 184, 105, 0.8) 0%, transparent 100%);
+            background: linear-gradient(to left, transparent 0%, rgba(229, 184, 105, 0.85) 100%) !important;
           }
 
           .crest-emblem {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            filter: drop-shadow(0 0 10px rgba(229, 184, 105, 0.6));
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            flex-shrink: 0 !important;
+            filter: drop-shadow(0 0 10px rgba(229, 184, 105, 0.6)) !important;
           }
 
           /* Majestic Title with Living Presence */
-          .hero-title {
-            font-size: clamp(1.42rem, 6.2vw, 1.95rem);
-            font-weight: 800;
-            line-height: 1.15;
-            letter-spacing: -0.03em;
-            margin-top: 0;
-            margin-bottom: 0.35rem;
-            min-height: calc(1.15em * 2 + 3px);
-            display: flex;
-            flex-direction: column;
-            align-items: center !important;
-            text-align: center !important;
-            justify-content: center !important;
-            gap: 3px;
-            width: 100%;
-            max-width: 100%;
-          }
-
+          .hero-title,
           :global([dir="rtl"]) .hero-title,
           [dir="rtl"] .hero-title,
           .home-view[dir="rtl"] .hero-title {
             font-size: clamp(1.58rem, 6.8vw, 2.15rem) !important;
-            letter-spacing: 0 !important;
+            font-weight: 800 !important;
             line-height: 1.25 !important;
-            min-height: calc(1.25em * 2 + 3px);
-            max-width: 100%;
+            letter-spacing: 0 !important;
+            margin-top: 0 !important;
+            margin-bottom: 0.35rem !important;
+            min-height: calc(1.25em * 2 + 3px) !important;
+            display: flex !important;
+            flex-direction: column !important;
             align-items: center !important;
             text-align: center !important;
             justify-content: center !important;
+            gap: 3px !important;
+            width: 100% !important;
+            max-width: 100% !important;
           }
 
+          .hero-title-main,
           :global([dir="rtl"]) .hero-title-main,
           [dir="rtl"] .hero-title-main,
           .home-view[dir="rtl"] .hero-title-main {
-            font-size: 1em !important;
-            white-space: nowrap !important;
-            max-width: 100%;
+            color: #FFFFFF !important;
+            font-weight: 800 !important;
+            line-height: 1.15 !important;
+            min-height: 1.15em !important;
+            margin: 0 auto !important;
+            padding: 0 !important;
             text-align: center !important;
             align-self: center !important;
             justify-content: center !important;
             display: flex !important;
-          }
-
-          :global([dir="rtl"]) .hero-title-serif,
-          [dir="rtl"] .hero-title-serif,
-          .home-view[dir="rtl"] .hero-title-serif {
-            font-size: 1em !important;
             white-space: nowrap !important;
-            max-width: 100%;
-            text-align: center !important;
-            align-self: center !important;
-            justify-content: center !important;
-            display: flex !important;
-          }
-
-          .hero-title-main {
-            color: #FFFFFF;
-            font-weight: 800;
-            line-height: 1.15;
-            min-height: 1.15em;
-            margin: 0;
-            padding: 0;
-            text-align: center;
-            align-self: center;
-            justify-content: center;
-            display: flex;
-            white-space: nowrap;
-            text-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+            text-shadow: 0 2px 8px rgba(0, 0, 0, 0.35) !important;
+            font-size: 1em !important;
           }
 
           [data-theme="light"] .hero-title-main {
-            color: #0F172A;
-            text-shadow: none;
-          }
-
-          .hero-title-serif {
-            background: linear-gradient(135deg, #FFFDF7 0%, #FFF0BE 22%, #F6D484 55%, #E5B869 85%, #D49F33 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            font-weight: 800;
+            color: #0F172A !important;
             text-shadow: none !important;
-            filter: none !important;
-            line-height: 1.15;
-            min-height: 1.15em;
-            margin: 0;
-            padding: 0;
-            text-align: center;
-            align-self: center;
-            justify-content: center;
-            display: flex;
-            white-space: nowrap;
-            overflow: visible;
           }
 
+          .hero-title-serif,
           :global([dir="rtl"]) .hero-title-serif,
           [dir="rtl"] .hero-title-serif,
           .home-view[dir="rtl"] .hero-title-serif {
+            background: linear-gradient(135deg, #FFFDF7 0%, #FFF0BE 22%, #F6D484 55%, #E5B869 85%, #D49F33 100%) !important;
+            -webkit-background-clip: text !important;
+            -webkit-text-fill-color: transparent !important;
             font-family: 'ThmanyahSerifDisplay', 'Amiri', 'Traditional Arabic', serif !important;
             font-style: normal !important;
             font-weight: 900 !important;
             line-height: 1.25 !important;
             min-height: 1.25em !important;
-            margin: -0.12em -0.45em !important;
-            padding: 0.12em 0.45em !important;
+            margin: 0 auto !important;
+            padding: 0 0.25em !important;
             text-align: center !important;
             align-self: center !important;
             justify-content: center !important;
+            display: flex !important;
             white-space: nowrap !important;
             text-shadow: none !important;
             filter: none !important;
             overflow: visible !important;
-            display: inline-block !important;
+            font-size: 1em !important;
           }
 
           [data-theme="light"] .hero-title-serif {
-            background: linear-gradient(135deg, #B8860B 0%, #996515 50%, #7B4F0F 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
+            background: linear-gradient(135deg, #B8860B 0%, #996515 50%, #7B4F0F 100%) !important;
+            -webkit-background-clip: text !important;
+            -webkit-text-fill-color: transparent !important;
             text-shadow: none !important;
             filter: none !important;
           }
 
           /* Mobile Sparkling Star Divider */
           .hero-mobile-divider {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-            width: 100%;
-            max-width: 180px;
-            margin: 0.45rem auto 0.65rem auto;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            gap: 10px !important;
+            width: 100% !important;
+            max-width: 180px !important;
+            margin: 0.45rem auto 0.65rem auto !important;
           }
 
           .divider-glow-line {
-            flex: 1;
-            height: 1px;
-            background: linear-gradient(90deg, transparent 0%, rgba(229, 184, 105, 0.75) 50%, transparent 100%);
+            flex: 1 !important;
+            height: 1px !important;
+            min-width: 20px !important;
+            background: linear-gradient(90deg, transparent 0%, rgba(229, 184, 105, 0.75) 50%, transparent 100%) !important;
           }
 
           .divider-sparkle {
-            color: #F6D484;
-            font-size: 0.75rem;
-            line-height: 1;
-            filter: drop-shadow(0 0 6px rgba(246, 212, 132, 0.9));
+            color: #F6D484 !important;
+            font-size: 0.75rem !important;
+            line-height: 1 !important;
+            filter: drop-shadow(0 0 6px rgba(246, 212, 132, 0.9)) !important;
+            flex-shrink: 0 !important;
           }
 
-          .hero-subtitle {
-            font-size: 0.85rem;
-            line-height: 1.55;
-            color: rgba(255, 255, 255, 0.9);
-            margin-bottom: 0;
-            margin-inline: auto;
+          .hero-subtitle,
+          :global([dir="rtl"]) .hero-subtitle,
+          [dir="rtl"] .hero-subtitle,
+          .home-view[dir="rtl"] .hero-subtitle {
+            font-size: 0.85rem !important;
+            line-height: 1.55 !important;
+            color: rgba(255, 255, 255, 0.9) !important;
+            margin-bottom: 0 !important;
+            margin-inline: auto !important;
             text-align: center !important;
-            max-width: 44ch;
-            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.9);
+            max-width: 44ch !important;
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.9) !important;
+            display: block !important;
+            width: 100% !important;
           }
 
           [data-theme="light"] .hero-subtitle {
-            color: #334155;
-            text-shadow: 0 1px 4px rgba(255, 255, 255, 0.85);
+            color: #334155 !important;
+            text-shadow: 0 1px 4px rgba(255, 255, 255, 0.85) !important;
           }
 
           /* Search & Modules Container */
