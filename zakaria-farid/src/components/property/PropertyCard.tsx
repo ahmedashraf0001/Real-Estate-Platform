@@ -337,13 +337,17 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
           .property-card-list {
             display: flex;
             align-items: center;
+            width: 100%;
+            max-width: 100%;
+            min-width: 0;
+            box-sizing: border-box;
             backdrop-filter: blur(20px) saturate(210%) contrast(108%) brightness(108%);
             -webkit-backdrop-filter: blur(20px) saturate(210%) contrast(108%) brightness(108%);
             border-radius: 22px;
             overflow: hidden;
             cursor: pointer;
-            padding: 1.35rem 1.65rem;
-            gap: 1.65rem;
+            padding: 1.25rem 1.45rem;
+            gap: 1.45rem;
             transition: all var(--transition-smooth);
           }
 
@@ -385,8 +389,10 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
 
           .list-media-wrapper {
             position: relative;
-            width: 240px;
-            height: 165px;
+            width: 220px;
+            min-width: 180px;
+            max-width: 240px;
+            height: 160px;
             flex-shrink: 0;
             border-radius: 16px;
             overflow: hidden;
@@ -494,23 +500,12 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
           }
 
           .list-content-body {
-            flex: 1;
+            flex: 1 1 0%;
             display: flex;
             flex-direction: column;
             gap: 0.3rem;
             min-width: 0;
-          }
-
-          .list-meta-tag {
-            font-family: var(--font-heading);
-            font-size: 0.6875rem;
-            font-weight: 700;
-            letter-spacing: 0.12em;
-            text-transform: uppercase;
-            color: var(--text-muted);
-            display: flex;
-            align-items: center;
-            gap: 6px;
+            overflow: hidden;
           }
 
           .list-meta-tag {
@@ -540,34 +535,39 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
 
           .list-card-title {
             font-family: var(--font-heading);
-            font-size: 1.25rem;
+            font-size: 1.2rem;
             font-weight: 700;
             color: var(--text-primary);
-            line-height: 1.25;
+            line-height: 1.3;
             letter-spacing: -0.015em;
             margin-bottom: 0.35rem;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
           }
 
           .list-narrative {
-            font-size: 0.84rem;
+            font-size: 0.82rem;
             color: var(--text-secondary);
-            line-height: 1.5;
+            line-height: 1.45;
             display: -webkit-box;
             -webkit-line-clamp: 2;
             -webkit-box-orient: vertical;
             overflow: hidden;
-            margin: 0 0 0.85rem;
+            margin: 0 0 0.65rem;
           }
 
           /* Detail List Specs Row matching exact radiant aesthetic */
           .list-specs-row {
             display: flex;
             align-items: center;
-            gap: 1.25rem;
-            flex-wrap: nowrap;
-            overflow-x: auto;
-            scrollbar-width: none;
-            padding-top: 0.75rem;
+            gap: 0.85rem;
+            flex-wrap: wrap;
+            row-gap: 0.4rem;
+            min-width: 0;
+            padding-top: 0.65rem;
             border-top: 1px solid rgba(255, 255, 255, 0.14);
           }
 
@@ -578,7 +578,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
           .list-spec-item {
             display: inline-flex;
             align-items: center;
-            gap: 8px;
+            gap: 6px;
             flex-shrink: 0;
             white-space: nowrap;
           }
@@ -628,23 +628,59 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
           }
 
           .list-actions-col {
-            width: 185px;
+            width: 175px;
+            min-width: 150px;
             flex-shrink: 0;
             display: flex;
             flex-direction: column;
             align-items: flex-end;
             justify-content: space-between;
-            padding-left: 1.4rem;
-            border-left: 1px solid rgba(255, 255, 255, 0.14);
-            gap: 1rem;
+            padding-inline-start: 1.25rem;
+            border-inline-start: 1px solid rgba(255, 255, 255, 0.14);
+            gap: 0.85rem;
+          }
+
+          [dir="rtl"] .property-card-list .list-actions-col,
+          .property-card-list[dir="rtl"] .list-actions-col {
+            border-left: none;
+            border-right: 1px solid rgba(255, 255, 255, 0.14);
+            padding-left: 0;
+            padding-right: 1.25rem;
+            align-items: flex-start;
+          }
+
+          [dir="rtl"] .property-card-list .list-badge,
+          .property-card-list[dir="rtl"] .list-badge {
+            left: auto;
+            right: 10px;
+          }
+
+          [dir="rtl"] .property-card-list .list-top-actions,
+          .property-card-list[dir="rtl"] .list-top-actions {
+            right: auto;
+            left: 10px;
+          }
+
+          [dir="rtl"] .property-card-list .list-pricing-wrap,
+          .property-card-list[dir="rtl"] .list-pricing-wrap {
+            text-align: right;
+          }
+
+          [dir="ltr"] .property-card-list .list-pricing-wrap,
+          .property-card-list[dir="ltr"] .list-pricing-wrap {
+            text-align: left;
           }
 
           [data-theme="light"] .list-actions-col {
-            border-left: 1px solid rgba(0, 0, 0, 0.08);
+            border-inline-start: 1px solid rgba(0, 0, 0, 0.08);
+          }
+
+          [data-theme="light"][dir="rtl"] .property-card-list .list-actions-col,
+          [data-theme="light"] .property-card-list[dir="rtl"] .list-actions-col {
+            border-right: 1px solid rgba(0, 0, 0, 0.08);
           }
 
           .list-pricing-wrap {
-            text-align: right;
             display: flex;
             flex-direction: column;
             gap: 3px;
@@ -661,7 +697,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
 
           .list-price-val {
             font-family: var(--font-heading);
-            font-size: 1.3rem;
+            font-size: 1.25rem;
             font-weight: 800;
             line-height: 1.15;
             letter-spacing: -0.01em;
@@ -692,33 +728,63 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
             border-radius: 12px;
           }
 
-          @media (max-width: 900px) {
+          @media (max-width: 1280px) {
+            .property-card-list {
+              padding: 1.1rem 1.2rem;
+              gap: 1.15rem;
+            }
+            .list-media-wrapper {
+              width: 185px;
+              min-width: 160px;
+              height: 145px;
+            }
+            .list-actions-col {
+              width: 155px;
+              min-width: 140px;
+              padding-inline-start: 0.9rem;
+            }
+            .list-price-val {
+              font-size: 1.15rem;
+            }
+          }
+
+          @media (max-width: 860px) {
             .property-card-list {
               flex-direction: column;
               align-items: stretch;
+              gap: 1rem;
             }
 
             .list-media-wrapper {
               width: 100%;
-              height: 220px;
+              max-width: 100%;
+              height: 200px;
             }
 
             .list-actions-col {
               width: 100%;
-              border-left: none;
-              border-top: 1px solid var(--border-subtle);
-              padding-left: 0;
-              padding-top: 1rem;
+              min-width: 0;
+              border-inline-start: none !important;
+              border-left: none !important;
+              border-right: none !important;
+              border-top: 1px solid rgba(255, 255, 255, 0.14) !important;
+              padding: 0.85rem 0 0 0 !important;
               flex-direction: row;
               align-items: center;
+              justify-content: space-between;
+            }
+
+            [data-theme="light"] .list-actions-col {
+              border-top: 1px solid rgba(0, 0, 0, 0.08) !important;
             }
 
             .list-pricing-wrap {
-              text-align: left;
+              text-align: start !important;
             }
 
             .list-cta-btn {
               width: auto;
+              min-width: 130px;
             }
           }
         `}</style>
