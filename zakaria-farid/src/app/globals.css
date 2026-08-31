@@ -641,23 +641,21 @@ html[lang="ar"] {
   line-height: 1.35 !important;
 }
 
-/* Arabic Hero Title Prominence */
+/* Arabic Hero Title Prominence (+15% balanced scale) */
 [dir="rtl"] .hero-title {
-  font-size: clamp(3.2rem, 5.8vw, 5.2rem) !important;
+  font-size: clamp(2.45rem, 4.2vw, 3.95rem) !important;
   line-height: 1.24 !important;
-  font-weight: 900 !important;
 }
 
 [dir="rtl"] .hero-title-main,
 [dir="rtl"] .hero-title-serif {
   font-size: 1em !important;
-  font-weight: 900 !important;
 }
 
 @media (max-width: 768px) {
   [dir="rtl"] .hero-title {
-    font-size: clamp(2.6rem, 11vw, 3.6rem) !important;
-    line-height: 1.18 !important;
+    font-size: clamp(1.58rem, 6.8vw, 2.15rem) !important;
+    line-height: 1.25 !important;
   }
 }
 

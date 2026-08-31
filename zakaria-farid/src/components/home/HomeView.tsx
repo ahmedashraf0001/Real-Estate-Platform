@@ -633,18 +633,16 @@ export const HomeView: React.FC<HomeViewProps> = ({
         :global([dir="rtl"]) .hero-title,
         [dir="rtl"] .hero-title,
         .home-view[dir="rtl"] .hero-title {
-          font-size: clamp(3.2rem, 5.8vw, 5.2rem) !important;
+          font-size: clamp(2.45rem, 4.2vw, 3.95rem) !important;
           line-height: 1.24 !important;
           letter-spacing: 0 !important;
-          font-weight: 900 !important;
-          min-height: calc(1.24em * 2 + 6px);
+          min-height: calc(1.24em * 2 + 4px);
         }
 
         :global([dir="rtl"]) .hero-title-main,
         [dir="rtl"] .hero-title-main,
         .home-view[dir="rtl"] .hero-title-main {
           font-size: 1em !important;
-          font-weight: 900 !important;
           letter-spacing: 0 !important;
         }
 
@@ -652,7 +650,6 @@ export const HomeView: React.FC<HomeViewProps> = ({
         [dir="rtl"] .hero-title-serif,
         .home-view[dir="rtl"] .hero-title-serif {
           font-size: 1em !important;
-          font-weight: 900 !important;
           letter-spacing: 0 !important;
         }
 
@@ -812,25 +809,27 @@ export const HomeView: React.FC<HomeViewProps> = ({
           :global([dir="rtl"]) .hero-title,
           [dir="rtl"] .hero-title,
           .home-view[dir="rtl"] .hero-title {
-            font-size: clamp(2.6rem, 11vw, 3.6rem) !important;
-            letter-spacing: -0.015em !important;
-            line-height: 1.18 !important;
-            font-weight: 900 !important;
-            min-height: calc(1.18em * 2 + 4px);
+            font-size: clamp(1.58rem, 6.8vw, 2.15rem) !important;
+            letter-spacing: 0 !important;
+            line-height: 1.25 !important;
+            min-height: calc(1.25em * 2 + 3px);
+            max-width: 100%;
           }
 
           :global([dir="rtl"]) .hero-title-main,
           [dir="rtl"] .hero-title-main,
           .home-view[dir="rtl"] .hero-title-main {
             font-size: 1em !important;
-            font-weight: 900 !important;
+            white-space: nowrap !important;
+            max-width: 100%;
           }
 
           :global([dir="rtl"]) .hero-title-serif,
           [dir="rtl"] .hero-title-serif,
           .home-view[dir="rtl"] .hero-title-serif {
             font-size: 1em !important;
-            font-weight: 900 !important;
+            white-space: nowrap !important;
+            max-width: 100%;
           }
 
           .hero-title-main {
