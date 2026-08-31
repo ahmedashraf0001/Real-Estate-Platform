@@ -288,3 +288,34 @@ export async function deletePropertyPermanently(propertyId: string) {
     return { success: false, error: error.message || 'Error deleting property' };
   }
 }
+
+export async function uploadMediaFile(formData: FormData): Promise<{ success: boolean; url?: string; error?: string }> {
+  try {
+    const file = formData.get('file') as File;
+    if (!file) return { success: false, error: 'No file provided' };
+
+    const adminClient = await getAdminClient();
+    const client = adminClient || (await createBrowserServer());
+
+    const filename = `videos/video-${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
+    const arrayBuffer = await file.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+
+    const { error: uploadErr } = await client.storage
+      .from('property-images')
+      .upload(filename, buffer, {
+        contentType: file.type || 'video/mp4',
+        upsert: false,
+      });
+
+    if (uploadErr) {
+      return { success: false, error: uploadErr.message };
+    }
+
+    const { data } = client.storage.from('property-images').getPublicUrl(filename);
+    return { success: true, url: data.publicUrl };
+  } catch (err: any) {
+    console.error('uploadMediaFile error:', err);
+    return { success: false, error: err?.message || 'Upload failed' };
+  }
+}

@@ -18,7 +18,7 @@ import ZoneInspector from './ZoneInspector';
 import DynamicMapPicker from './DynamicMapPicker';
 import LuxuryAmbientVideoPlayer from '@/components/video/LuxuryAmbientVideoPlayer';
 import styles from './AdminPropertyForm.module.css';
-import { saveProperty } from '@/app/actions/properties';
+import { saveProperty, uploadMediaFile } from '@/app/actions/properties';
 import { getZoneTemplateLabels, getTradeTemplateLabels, getZoneBadge, buildZoneInstances } from '@/lib/layering';
 import { FALLBACK_ZONE_TITLES, fallbackMetricFor } from '@/lib/layering/zoneMetrics';
 import type { ZoneInstance } from '@/lib/layering';
@@ -360,27 +360,45 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
     try {
       const supabase = createClient();
       const filename = `video-${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
-      const { error } = await supabase.storage.from('property-media').upload(`videos/${filename}`, file, {
+      let vidUrl = '';
+
+      // 1. Attempt direct upload to the active Supabase bucket 'property-images'
+      const { error: clientUploadError } = await supabase.storage.from('property-images').upload(`videos/${filename}`, file, {
         cacheControl: '3600',
         upsert: false,
       });
-      if (error) {
-        throw error;
+
+      if (!clientUploadError) {
+        const { data: publicUrlData } = supabase.storage.from('property-images').getPublicUrl(`videos/${filename}`);
+        vidUrl = publicUrlData?.publicUrl || '';
+      } else {
+        // 2. Fallback to server action upload (handles auth/service-role credentials seamlessly)
+        const formData = new FormData();
+        formData.append('file', file);
+        const serverResult = await uploadMediaFile(formData);
+        if (serverResult.success && serverResult.url) {
+          vidUrl = serverResult.url;
+        } else {
+          throw new Error(serverResult.error || clientUploadError.message);
+        }
       }
-      const { data: publicUrlData } = supabase.storage.from('property-media').getPublicUrl(`videos/${filename}`);
-      const vidUrl = publicUrlData.publicUrl;
+
+      if (!vidUrl) {
+        throw new Error('Could not retrieve public video URL');
+      }
+
       const newVid: PropertyVideo = {
         id: `vid-${Date.now()}`,
         url: vidUrl,
         title_en: file.name.replace(/\.[^/.]+$/, ''),
-        title_ar: 'فيديو معاينة',
+        title_ar: 'فيديو جولة معمارية',
         category: 'tour',
       };
       setVideos((prev) => [...prev, newVid]);
       toast.success(isAr ? 'تم رفع الفيديو بنجاح!' : 'Video uploaded successfully!');
     } catch (err: any) {
       console.warn('Video upload notice:', err);
-      toast.error(isAr ? 'تعذر الرفع المباشر إلى السيرفر. يمكنك لصق رابط الفيديو المباشر في الخانة أدناه.' : 'Direct storage upload unavailable. Please paste the direct video URL below.');
+      toast.error(isAr ? 'تعذر رفع الفيديو إلى التخزين. يمكنك لصق رابط الفيديو المباشر في الخانة أدناه.' : 'Direct storage upload unavailable. Please paste the direct video URL below.');
     } finally {
       setUploadingVideo(false);
     }
