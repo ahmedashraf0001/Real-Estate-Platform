@@ -38,6 +38,10 @@ import {
   Calendar,
   ArrowUpRight,
   Shield,
+  ShieldCheck,
+  Layers,
+  Compass,
+  Paintbrush,
   MessageSquare
 } from 'lucide-react';
 import { motion, AnimatePresence, Variants } from 'framer-motion';
@@ -68,9 +72,11 @@ const SORT_OPTIONS: { id: SortOption; label: string; shortLabel: string; labelAr
 
 const TYPE_FILTER_OPTIONS = [
   { value: 'All', label: 'All Typologies', shortLabel: 'All Types', labelAr: 'جميع أنواع العقارات', shortLabelAr: 'جميع العقارات' },
-  { value: 'apartment', label: 'Apartments & Duplexes', shortLabel: 'Apartments', labelAr: 'شقق ودوبلكس', shortLabelAr: 'شقق سكنية' },
-  { value: 'building', label: 'Whole Buildings (عمارة)', shortLabel: 'Buildings', labelAr: 'عمائر كاملة', shortLabelAr: 'عمائر' },
-  { value: 'garage', label: 'Garages & Bays', shortLabel: 'Garages', labelAr: 'جراجات وباكيات', shortLabelAr: 'جراجات' },
+  { value: 'mansion_villa', label: 'Palaces & Standalone Villas', shortLabel: 'Mansions & Villas', labelAr: 'قصور وفيلات مستقلة', shortLabelAr: 'قصور وفيلات' },
+  { value: 'penthouse_duplex', label: 'Penthouses & Sky Duplexes', shortLabel: 'Penthouses', labelAr: 'بنتهاوس ودوبلكس سحابي', shortLabelAr: 'بنتهاوس' },
+  { value: 'apartment', label: 'Luxury Apartments & Suites', shortLabel: 'Apartments', labelAr: 'شقق سكنية فاخرة', shortLabelAr: 'شقق فاخرة' },
+  { value: 'building', label: 'Whole Buildings (صرح كامل)', shortLabel: 'Buildings', labelAr: 'عمائر وصروح كاملة', shortLabelAr: 'عمائر كاملة' },
+  { value: 'garage', label: 'Private Garages & Bays', shortLabel: 'Garages', labelAr: 'جراجات وباكيات خاصة', shortLabelAr: 'جراجات' },
 ];
 
 const PRICE_FILTER_OPTIONS = [
@@ -132,16 +138,6 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
     return getDynamicDestinationPills(allPropertiesList);
   }, [allPropertiesList]);
 
-  const dynamicLocationFilterOptions = useMemo(() => {
-    return dynamicDestinationPills.map((d) => ({
-      value: d.id,
-      label: d.id === 'All' ? 'All Destinations' : d.label,
-      shortLabel: d.shortLabel || d.label,
-      labelAr: d.id === 'All' ? 'جميع الوجهات والمدن' : d.labelAr,
-      shortLabelAr: d.shortLabelAr || d.labelAr,
-      count: d.count
-    }));
-  }, [dynamicDestinationPills]);
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [searchQuery, setSearchQuery] = useState('');
   const [location, setLocation] = useState(initialFilters?.location || 'All');
@@ -152,6 +148,7 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
   const [isAdvancedModalOpen, setIsAdvancedModalOpen] = useState(false);
   const [selectedAmenity, setSelectedAmenity] = useState<string>('All');
   const [selectedDelivery, setSelectedDelivery] = useState<string>('All');
+  const [selectedFinishing, setSelectedFinishing] = useState<string>('All');
   const [isSortOpen, setIsSortOpen] = useState(false);
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -160,6 +157,17 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
   const showSidebar = Boolean(
     platformSettings.showMarketRadar !== false || platformSettings.showVIPAlerts !== false
   );
+
+  const dynamicLocationFilterOptions = useMemo(() => {
+    return dynamicDestinationPills.map((d) => ({
+      value: d.id,
+      label: d.id === 'All' ? 'All Destinations' : d.label,
+      shortLabel: d.shortLabel || d.label,
+      labelAr: d.id === 'All' ? 'جميع الوجهات والمدن' : d.labelAr,
+      shortLabelAr: d.shortLabelAr || d.labelAr,
+      count: d.count
+    }));
+  }, [dynamicDestinationPills]);
 
   useEffect(() => {
     setMounted(true);
@@ -280,6 +288,7 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
     priceTier !== 'All' ||
     bedrooms !== 'All' ||
     selectedAmenity !== 'All' ||
+    selectedFinishing !== 'All' ||
     selectedDelivery !== 'All';
 
   const resetAllFilters = () => {
@@ -289,6 +298,7 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
     setPriceTier('All');
     setBedrooms('All');
     setSelectedAmenity('All');
+    setSelectedFinishing('All');
     setSelectedDelivery('All');
   };
 
@@ -334,13 +344,32 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
         if (!locationMatches) return false;
       }
 
-      // Property Type Filter — matches both adapted propertyType and raw DB type
+      // Property Type Filter — matches authentic luxury typologies
       if (propertyType !== 'All') {
         const pt = (p.propertyType || '').toLowerCase();
         const rawType = (p.type || '').toLowerCase();
+        const title = ((p.title || '') + ' ' + (p.title_en || '') + ' ' + (p.title_ar || '')).toLowerCase();
         const filterVal = propertyType.toLowerCase();
-        if (rawType !== filterVal && !pt.includes(filterVal) && !filterVal.includes(rawType)) {
-          return false;
+
+        if (filterVal === 'mansion_villa') {
+          const isMansionVilla = rawType.includes('villa') || rawType.includes('mansion') || pt.includes('villa') || pt.includes('mansion') || title.includes('villa') || title.includes('mansion') || title.includes('pavilion') || title.includes('sanctuary') || title.includes('قصر') || title.includes('فيلا');
+          if (!isMansionVilla) return false;
+        } else if (filterVal === 'penthouse_duplex') {
+          const isPenthouse = rawType.includes('penthouse') || rawType.includes('duplex') || rawType.includes('roof') || pt.includes('penthouse') || pt.includes('duplex') || title.includes('penthouse') || title.includes('duplex') || title.includes('roof') || title.includes('بنتهاوس') || title.includes('دوبلكس') || title.includes('روف');
+          if (!isPenthouse) return false;
+        } else if (filterVal === 'apartment') {
+          const isApartment = rawType === 'apartment' || pt.includes('apartment') || title.includes('apartment') || title.includes('شقة');
+          if (!isApartment) return false;
+        } else if (filterVal === 'building') {
+          const isBuilding = rawType.includes('building') || pt.includes('building') || title.includes('building') || title.includes('عمارة');
+          if (!isBuilding) return false;
+        } else if (filterVal === 'garage') {
+          const isGarage = rawType.includes('garage') || pt.includes('garage') || title.includes('garage') || title.includes('جراج');
+          if (!isGarage) return false;
+        } else {
+          if (rawType !== filterVal && !pt.includes(filterVal) && !filterVal.includes(rawType)) {
+            return false;
+          }
         }
       }
 
@@ -360,24 +389,60 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
         if (bedrooms === '3' && bedsVal !== 3) return false;
       }
 
-      // Lifestyle Amenities Filter
-      if (selectedAmenity !== 'All') {
-        const hasAmenity =
-          (p.amenities || []).some((a: any) => (a.title || '').toLowerCase().includes(selectedAmenity.toLowerCase())) ||
-          (p.property_amenities || []).some((a: any) => (a.amenity_en || '').toLowerCase().includes(selectedAmenity.toLowerCase()));
-        if (!hasAmenity) return false;
-      }
-
       // Delivery Status Filter — map to completion_status from DB
       if (selectedDelivery !== 'All') {
-        const isReady = p.completion_status === 'ready';
+        const isReady = p.completion_status === 'ready' || (p.builtYear && p.builtYear <= 2025);
         const isOffPlan = p.completion_status === 'off_plan';
         if (selectedDelivery === 'Immediate' && !isReady) return false;
-        if (selectedDelivery === '2025' && !isOffPlan) return false;
-        if (selectedDelivery === '2026+' && !isOffPlan) return false;
+        if (selectedDelivery === 'OffPlan' && !isOffPlan && isReady) return false;
       }
 
-      return true;
+      // Finishing Level Filter
+      if (selectedFinishing !== 'All') {
+        const finStr = ((p.finishing || '') + ' ' + (p.completion_status || '') + ' ' + JSON.stringify(p.spec_layers || [])).toLowerCase();
+        if (selectedFinishing === 'fully') {
+          const isFull = finStr.includes('full') || finStr.includes('ultra') || finStr.includes('super') || p.completion_status === 'ready';
+          if (!isFull) return false;
+        } else if (selectedFinishing === 'semi') {
+          const isSemi = finStr.includes('semi') || finStr.includes('shell') || finStr.includes('محارة');
+          if (!isSemi) return false;
+        } else if (selectedFinishing === 'brick') {
+          const isBrick = finStr.includes('brick') || finStr.includes('red') || finStr.includes('طوب') || p.completion_status === 'off_plan';
+          if (!isBrick) return false;
+        }
+      }
+
+      // Signature Architectural Specs & Lifestyle Filter
+      if (selectedAmenity !== 'All') {
+        const corpus = (
+          JSON.stringify(p.amenities || []) + ' ' +
+          JSON.stringify(p.property_amenities || []) + ' ' +
+          JSON.stringify(p.spec_layers || []) + ' ' +
+          (p.narrative || '') + ' ' +
+          (p.description_en || '') + ' ' +
+          (p.description_ar || '') + ' ' +
+          (p.title_en || '') + ' ' +
+          (p.title_ar || '') + ' ' +
+          (p.location || '') + ' ' +
+          (p.district || '')
+        ).toLowerCase();
+
+        if (selectedAmenity === 'cad') {
+          const hasCad = Array.isArray(p.spec_layers) && p.spec_layers.length > 0;
+          if (!hasCad && !corpus.includes('cad') && !corpus.includes('مخطط')) return false;
+        } else if (selectedAmenity === 'pool') {
+          if (!corpus.includes('pool') && !corpus.includes('سباحة') && !corpus.includes('lagoon') && !corpus.includes('لاجون')) return false;
+        } else if (selectedAmenity === 'beach') {
+          if (!corpus.includes('beach') && !corpus.includes('sea') && !corpus.includes('شاطئ') && !corpus.includes('بحر') && !corpus.includes('coast') && !corpus.includes('sokhna') && !corpus.includes('gouna')) return false;
+        } else if (selectedAmenity === 'smart') {
+          if (!corpus.includes('smart') && !corpus.includes('automation') && !corpus.includes('أتمتة') && !corpus.includes('ذكي') && !(p.price && p.price > 25000000)) return false;
+        } else if (selectedAmenity === 'garage') {
+          if (!corpus.includes('garage') && !corpus.includes('parking') && !corpus.includes('جراج') && !corpus.includes('موقف') && !corpus.includes('bay')) return false;
+        } else if (selectedAmenity === 'garden') {
+          if (!corpus.includes('garden') && !corpus.includes('terrace') && !corpus.includes('حديقة') && !corpus.includes('تراس') && (p.floor_number !== 0 && !corpus.includes('ground'))) return false;
+        }
+      }
+return true;
     }).sort((a: Property, b: Property) => {
       const aPrice = a.price || a.price_egp || 0;
       const bPrice = b.price || b.price_egp || 0;
@@ -389,7 +454,7 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
       if (sortBy === 'largest') return bSqm - aSqm;
       return 0;
     });
-  }, [allPropertiesList, searchQuery, location, propertyType, priceTier, bedrooms, selectedAmenity, selectedDelivery, sortBy]);
+  }, [allPropertiesList, searchQuery, location, propertyType, priceTier, bedrooms, selectedAmenity, selectedFinishing, selectedDelivery, sortBy]);
 
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 6;
@@ -542,14 +607,14 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
                 <span className="mobile-sheet-title">{isAr ? 'الفلاتر' : 'Filters'}</span>
                 <div className="mobile-sheet-head-actions">
                   <button
-                    className={`omnibar-filter-btn mobile-head-filter-btn ${isAdvancedModalOpen ? 'active' : ''} ${(selectedDelivery !== 'All' || selectedAmenity !== 'All') ? 'has-extra-filters' : ''}`}
+                    className={`omnibar-filter-btn mobile-head-filter-btn ${isAdvancedModalOpen ? 'active' : ''} ${(selectedDelivery !== 'All' || selectedAmenity !== 'All' || selectedFinishing !== 'All') ? 'has-extra-filters' : ''}`}
                     title={isAr ? "الفلاتر المعمارية المتقدمة" : "Advanced Architectural Filters"}
                     onClick={() => setIsAdvancedModalOpen(true)}
                     type="button"
                     aria-label={isAr ? 'الفلاتر المتقدمة' : 'Advanced Filters'}
                   >
                     <SlidersHorizontal size={16} />
-                    {(selectedDelivery !== 'All' || selectedAmenity !== 'All') && (
+                    {(selectedDelivery !== 'All' || selectedAmenity !== 'All' || selectedFinishing !== 'All') && (
                       <span className="omnibar-filter-badge" />
                     )}
                   </button>
@@ -793,13 +858,13 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
               )}
 
               <button
-                className={`omnibar-filter-btn ${isAdvancedModalOpen ? 'active' : ''} ${(selectedDelivery !== 'All' || selectedAmenity !== 'All') ? 'has-extra-filters' : ''}`}
+                className={`omnibar-filter-btn ${isAdvancedModalOpen ? 'active' : ''} ${(selectedDelivery !== 'All' || selectedAmenity !== 'All' || selectedFinishing !== 'All') ? 'has-extra-filters' : ''}`}
                 title={isAr ? "الفلاتر المعمارية المتقدمة" : "Advanced Architectural Filters"}
                 onClick={() => setIsAdvancedModalOpen(true)}
                 type="button"
               >
                 <SlidersHorizontal size={17} />
-                {(selectedDelivery !== 'All' || selectedAmenity !== 'All') && (
+                {(selectedDelivery !== 'All' || selectedAmenity !== 'All' || selectedFinishing !== 'All') && (
                   <span className="omnibar-filter-badge" />
                 )}
               </button>
@@ -879,8 +944,26 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
                 {selectedDelivery !== 'All' && (
                   <span className="filter-tag">
                     <Calendar size={12} className="tag-gold-icon" />
-                    <span className="tag-text">{isAr ? `الاستلام: ${selectedDelivery}` : `Delivery: ${selectedDelivery}`}</span>
+                    <span className="tag-text">
+                      {isAr
+                        ? (selectedDelivery === 'Immediate' ? 'استلام فوري' : 'تحت الإنشاء')
+                        : (selectedDelivery === 'Immediate' ? 'Immediate Handover' : 'Under Construction')}
+                    </span>
                     <button onClick={() => setSelectedDelivery('All')} className="tag-remove-btn" title={isAr ? "إزالة فلتر الاستلام" : "Remove delivery filter"}>
+                      <X size={12} />
+                    </button>
+                  </span>
+                )}
+
+                {selectedFinishing !== 'All' && (
+                  <span className="filter-tag">
+                    <Layers size={12} className="tag-gold-icon" />
+                    <span className="tag-text">
+                      {isAr
+                        ? (selectedFinishing === 'fully' ? 'تشطيب كامل' : selectedFinishing === 'semi' ? 'نصف تشطيب' : 'طوب أحمر')
+                        : (selectedFinishing === 'fully' ? 'Fully Finished' : selectedFinishing === 'semi' ? 'Semi-Finished' : 'Core & Shell')}
+                    </span>
+                    <button onClick={() => setSelectedFinishing('All')} className="tag-remove-btn" title={isAr ? "إزالة فلتر التشطيب" : "Remove finishing filter"}>
                       <X size={12} />
                     </button>
                   </span>
@@ -889,8 +972,21 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
                 {selectedAmenity !== 'All' && (
                   <span className="filter-tag">
                     <Sparkles size={12} className="tag-gold-icon" />
-                    <span className="tag-text">{isAr ? `الميزة: ${selectedAmenity}` : `Amenity: ${selectedAmenity}`}</span>
-                    <button onClick={() => setSelectedAmenity('All')} className="tag-remove-btn" title={isAr ? "إزالة فلتر الميزة" : "Remove amenity filter"}>
+                    <span className="tag-text">
+                      {(() => {
+                        const amenityLabels: Record<string, { ar: string; en: string }> = {
+                          cad: { ar: 'مخططات CAD معتمدة', en: '1:1 CAD Blueprints' },
+                          pool: { ar: 'حمام سباحة خاص', en: 'Private Pool' },
+                          beach: { ar: 'واجهة بحرية وشاطئية', en: 'Beachfront Access' },
+                          smart: { ar: 'نظام تحكم ذكي', en: 'Smart Automation' },
+                          garage: { ar: 'جراج سفلي مؤمن', en: 'Secured Garage' },
+                          garden: { ar: 'حديقة وتراس خاص', en: 'Private Garden' },
+                        };
+                        const found = amenityLabels[selectedAmenity];
+                        return isAr ? (found?.ar || selectedAmenity) : (found?.en || selectedAmenity);
+                      })()}
+                    </span>
+                    <button onClick={() => setSelectedAmenity('All')} className="tag-remove-btn" title={isAr ? "إزالة فلتر المواصفات" : "Remove spec filter"}>
                       <X size={12} />
                     </button>
                   </span>
@@ -1370,17 +1466,16 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
 
                 {/* Modal Body */}
                 <div className="adv-modal-body" data-lenis-prevent="true" onWheel={(e) => e.stopPropagation()}>
-                  {/* Section 1: Delivery Status */}
+                  {/* Section 1: Delivery Status & Handover */}
                   <div className="adv-filter-group">
                     <label className="adv-group-label">
-                      {isAr ? 'موعد الاستلام وحالة التسليم' : 'DELIVERY STATUS & TIMELINE'}
+                      {isAr ? 'موعد الاستلام وجاهزية الصرح' : 'HANDOVER & DELIVERY TIMELINE'}
                     </label>
                     <div className="adv-chips-row">
                       {[
                         { id: 'All', labelEn: 'All Timelines', labelAr: 'جميع المواعيد' },
-                        { id: 'Immediate', labelEn: 'Immediate Handover', labelAr: 'استلام فوري' },
-                        { id: '2025', labelEn: '2025 Handover', labelAr: 'تسليم ٢٠٢٥' },
-                        { id: '2026+', labelEn: '2026+ Construction', labelAr: 'تحت الإنشاء (٢٠٢٦+)' },
+                        { id: 'Immediate', labelEn: 'Immediate Handover (Ready)', labelAr: 'استلام فوري (جاهز للسكن)' },
+                        { id: 'OffPlan', labelEn: 'Under Construction (Milestones)', labelAr: 'تحت الإنشاء (خطط سداد)' },
                       ].map((item) => (
                         <button
                           key={item.id}
@@ -1394,19 +1489,48 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
                     </div>
                   </div>
 
-                  {/* Section 2: Signature Luxury Amenities */}
+                  {/* Section 2: Finishing Level & Fitout */}
                   <div className="adv-filter-group">
                     <label className="adv-group-label">
-                      {isAr ? 'المزايا الحصرية ونمط الحياة' : 'SIGNATURE AMENITIES & LIFESTYLE'}
+                      {isAr ? 'درجة التشطيب والتدقيق الإنشائي' : 'FINISHING & STRUCTURAL FITOUT'}
                     </label>
                     <div className="adv-chips-row">
                       {[
-                        { id: 'All', labelEn: 'All Amenities', labelAr: 'جميع المزايا', icon: null },
-                        { id: 'Pool', labelEn: 'Private Infinity Pool', labelAr: 'حمام سباحة إنفينيتي خاص', icon: Waves },
-                        { id: 'Beach', labelEn: 'Beachfront Access', labelAr: 'واجهة شاطئية مباشرة', icon: Waves },
-                        { id: 'Garage', labelEn: 'Subterranean Garage', labelAr: 'جراج سفلي خاص', icon: Car },
-                        { id: 'Lagoon', labelEn: 'Private Lagoon Island', labelAr: 'جزيرة وبحيرات كريستالية', icon: Palmtree },
-                        { id: 'Hospitality', labelEn: '5-Star Concierge', labelAr: 'خدمات فندقية ٥ نجوم', icon: Crown },
+                        { id: 'All', labelEn: 'All Finishing Tiers', labelAr: 'جميع درجات التشطيب', icon: null },
+                        { id: 'fully', labelEn: 'Ultra-Luxury Fully Finished', labelAr: 'تشطيب ألترا لوكس فاخر', icon: Sparkles },
+                        { id: 'semi', labelEn: 'Semi-Finished (Shell & Core)', labelAr: 'نصف تشطيب (محارة وحلوق)', icon: Layers },
+                        { id: 'brick', labelEn: 'Core Frame (Red Brick)', labelAr: 'طوب أحمر / هيكل خرساني', icon: Building2 },
+                      ].map((item) => {
+                        const IconComp = item.icon;
+                        return (
+                          <button
+                            key={item.id}
+                            type="button"
+                            className={`adv-chip-btn ${selectedFinishing === item.id ? 'active' : ''}`}
+                            onClick={() => setSelectedFinishing(item.id)}
+                          >
+                            {IconComp && <IconComp size={14} className="chip-gold-icon" />}
+                            <span>{isAr ? item.labelAr : item.labelEn}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Section 3: Signature Specs & Architectural Features */}
+                  <div className="adv-filter-group">
+                    <label className="adv-group-label">
+                      {isAr ? 'المواصفات الهندسية والمزايا الحصرية' : 'ARCHITECTURAL SPECS & AMENITIES'}
+                    </label>
+                    <div className="adv-chips-row">
+                      {[
+                        { id: 'All', labelEn: 'All Specs & Features', labelAr: 'جميع المواصفات', icon: null },
+                        { id: 'cad', labelEn: '1:1 CAD Blueprints Verified', labelAr: 'مخططات CAD مدققة', icon: Layers },
+                        { id: 'pool', labelEn: 'Private Infinity Pool / Lagoon', labelAr: 'حمام سباحة أو لاجون خاص', icon: Waves },
+                        { id: 'beach', labelEn: 'Direct Beachfront & Sea View', labelAr: 'واجهة شاطئية وبحرية مباشرة', icon: Compass },
+                        { id: 'smart', labelEn: 'Smart Automation System', labelAr: 'نظام تحكم ذكي (Smart Home)', icon: Sparkles },
+                        { id: 'garage', labelEn: 'Secured Underground Garage', labelAr: 'جراج سفلي مؤمن', icon: Car },
+                        { id: 'garden', labelEn: 'Private Landscaped Garden', labelAr: 'حديقة خاصة وتراس واسع', icon: Palmtree },
                       ].map((item) => {
                         const IconComp = item.icon;
                         return (
