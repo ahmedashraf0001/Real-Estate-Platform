@@ -144,12 +144,20 @@ export const HomeView: React.FC<HomeViewProps> = ({
 
   const heroSubtitle = isMobileViewport
     ? (isAr
-        ? (homeSettings.heroSubtitleAr && homeSettings.heroSubtitleAr.length <= 60 && !homeSettings.heroSubtitleAr.includes('التدقيق الإنشائي الصارم')
-            ? homeSettings.heroSubtitleAr
-            : 'ننتقي ونمثل أندر القصور والعقارات الفاخرة الموثقة في مصر.')
-        : (homeSettings.heroSubtitleEn && homeSettings.heroSubtitleEn.length <= 75 && !homeSettings.heroSubtitleEn.includes('forensic CAD audits')
-            ? homeSettings.heroSubtitleEn
-            : 'Curating Egypt’s premier luxury estates and architectural sanctuaries.'))
+        ? (
+            <>
+              ننتقي ونمثل أندر القصور والعقارات الفاخرة
+              <br />
+              بتدقيق إنشائي وقانوني موثق في مصر.
+            </>
+          )
+        : (
+            <>
+              Curating Egypt’s premier luxury estates
+              <br />
+              and architectural sanctuaries.
+            </>
+          ))
     : (isAr
         ? (homeSettings.heroSubtitleAr || DEFAULT_HOME_SETTINGS.heroSubtitleAr)
         : (homeSettings.heroSubtitleEn || DEFAULT_HOME_SETTINGS.heroSubtitleEn));
@@ -905,7 +913,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
             line-height: 1.55;
             color: rgba(255, 255, 255, 0.88);
             margin-bottom: 0;
-            max-width: 42ch;
+            max-width: 36ch;
             text-shadow: 0 2px 10px rgba(0, 0, 0, 0.9);
           }
 
