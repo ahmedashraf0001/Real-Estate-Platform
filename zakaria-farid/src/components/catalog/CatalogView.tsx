@@ -239,7 +239,7 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
   }, [openDropdown]);
 
   useEffect(() => {
-    if (isAdvancedModalOpen) {
+    if (isAdvancedModalOpen || isMobileFiltersOpen) {
       if (typeof window !== 'undefined' && window.__masrLenis) {
         window.__masrLenis.stop();
       }
@@ -255,7 +255,7 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
         document.body.style.overflow = originalBodyOverflow || '';
       };
     }
-  }, [isAdvancedModalOpen]);
+  }, [isAdvancedModalOpen, isMobileFiltersOpen]);
 
   const toggleCompare = (id: string) => {
     setCompareIds((prev) => {
@@ -468,6 +468,293 @@ return true;
     setCurrentPage(1);
   }, [searchQuery, location, propertyType, priceTier, bedrooms, sortBy]);
 
+  const renderOmnibarSlots = (isMobileSheet = false) => (
+    <>
+      {isMobileSheet && (
+        <div className="mobile-sheet-head">
+          <span className="mobile-sheet-title">{isAr ? 'الفلاتر' : 'Filters'}</span>
+          <div className="mobile-sheet-head-actions">
+            <button
+              className={`omnibar-filter-btn mobile-head-filter-btn ${isAdvancedModalOpen ? 'active' : ''} ${(selectedDelivery !== 'All' || selectedAmenity !== 'All' || selectedFinishing !== 'All') ? 'has-extra-filters' : ''}`}
+              title={isAr ? "الفلاتر المعمارية المتقدمة" : "Advanced Architectural Filters"}
+              onClick={() => setIsAdvancedModalOpen(true)}
+              type="button"
+              aria-label={isAr ? 'الفلاتر المتقدمة' : 'Advanced Filters'}
+            >
+              <SlidersHorizontal size={16} />
+              {(selectedDelivery !== 'All' || selectedAmenity !== 'All' || selectedFinishing !== 'All') && (
+                <span className="omnibar-filter-badge" />
+              )}
+            </button>
+            <button
+              type="button"
+              className="mobile-sheet-close"
+              onClick={() => setIsMobileFiltersOpen(false)}
+              aria-label={isAr ? 'إغلاق' : 'Close'}
+            >
+              <X size={18} />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {!isMobileSheet && <div className="omnibar-divider" />}
+
+      {/* Slot 2: Location Dropdown */}
+      <div className="omnibar-filter-slot custom-filter-dropdown">
+        <label className="omnibar-slot-label">{isAr ? 'المدينة / المنطقة' : 'LOCATION'}</label>
+        <button
+          type="button"
+          className={`omnibar-trigger-btn ${openDropdown === 'location' ? 'open' : ''} ${location !== 'All' ? 'has-value' : ''}`}
+          onClick={(e) => handleToggleDropdown('location', e)}
+          aria-haspopup="listbox"
+          aria-expanded={openDropdown === 'location'}
+        >
+          <div className="trigger-left">
+            <MapPin size={15} className="slot-icon" />
+            <span className="trigger-value">
+              {(() => {
+                const opt = dynamicLocationFilterOptions.find((o) => o.value === location);
+                return opt ? (isAr ? opt.shortLabelAr : opt.shortLabel) : (isAr ? 'جميع المدن' : 'All Cities');
+              })()}
+            </span>
+          </div>
+          <ChevronDown size={13} className={`slot-chevron ${openDropdown === 'location' ? 'rotate' : ''}`} />
+        </button>
+
+        <AnimatePresence>
+          {openDropdown === 'location' && (
+            <motion.div
+              className={`filter-custom-menu placement-${dropdownPlacement}`}
+              data-lenis-prevent="true"
+              initial={{ opacity: 0, y: dropdownPlacement === 'up' ? -8 : 8, scale: 0.96 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: dropdownPlacement === 'up' ? -8 : 8, scale: 0.96 }}
+              transition={{ duration: 0.15, ease: 'easeOut' }}
+            >
+              {dynamicLocationFilterOptions.map((opt: any) => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  className={`filter-menu-option ${location === opt.value ? 'selected' : ''}`}
+                  onClick={() => {
+                    setLocation(opt.value);
+                    setOpenDropdown(null);
+                  }}
+                >
+                  <span className="option-label">{isAr ? opt.labelAr : opt.label}</span>
+                  {location === opt.value && <Check size={14} className="option-check" />}
+                </button>
+              ))}
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+
+      <div className="omnibar-divider" />
+
+      {/* Slot 3: Property Type Dropdown */}
+      <div className="omnibar-filter-slot custom-filter-dropdown">
+        <label className="omnibar-slot-label">{isAr ? 'نوع العقار' : 'PROPERTY TYPE'}</label>
+        <button
+          type="button"
+          className={`omnibar-trigger-btn ${openDropdown === 'type' ? 'open' : ''} ${propertyType !== 'All' ? 'has-value' : ''}`}
+          onClick={(e) => handleToggleDropdown('type', e)}
+          aria-haspopup="listbox"
+          aria-expanded={openDropdown === 'type'}
+        >
+          <div className="trigger-left">
+            <Building2 size={15} className="slot-icon" />
+            <span className="trigger-value">
+              {(() => {
+                const opt = TYPE_FILTER_OPTIONS.find((o) => o.value === propertyType);
+                return opt ? (isAr ? opt.shortLabelAr : opt.shortLabel) : (isAr ? 'جميع الأنواع' : 'All Types');
+              })()}
+            </span>
+          </div>
+          <ChevronDown size={13} className={`slot-chevron ${openDropdown === 'type' ? 'rotate' : ''}`} />
+        </button>
+
+        <AnimatePresence>
+          {openDropdown === 'type' && (
+            <motion.div
+              className={`filter-custom-menu placement-${dropdownPlacement}`}
+              data-lenis-prevent="true"
+              initial={{ opacity: 0, y: dropdownPlacement === 'up' ? -8 : 8, scale: 0.96 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: dropdownPlacement === 'up' ? -8 : 8, scale: 0.96 }}
+              transition={{ duration: 0.15, ease: 'easeOut' }}
+            >
+              {TYPE_FILTER_OPTIONS.map((opt: any) => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  className={`filter-menu-option ${propertyType === opt.value ? 'selected' : ''}`}
+                  onClick={() => {
+                    setPropertyType(opt.value);
+                    setOpenDropdown(null);
+                  }}
+                >
+                  <span className="option-label">{isAr ? opt.labelAr : opt.label}</span>
+                  {propertyType === opt.value && <Check size={14} className="option-check" />}
+                </button>
+              ))}
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+
+      <div className="omnibar-divider" />
+
+      {/* Slot 4: Price Tier Dropdown */}
+      <div className="omnibar-filter-slot custom-filter-dropdown">
+        <label className="omnibar-slot-label">{isAr ? 'نطاق السعر' : 'PRICE TIER'}</label>
+        <button
+          type="button"
+          className={`omnibar-trigger-btn ${openDropdown === 'price' ? 'open' : ''} ${priceTier !== 'All' ? 'has-value' : ''}`}
+          onClick={(e) => handleToggleDropdown('price', e)}
+          aria-haspopup="listbox"
+          aria-expanded={openDropdown === 'price'}
+        >
+          <div className="trigger-left">
+            <Banknote size={15} className="slot-icon" />
+            <span className="trigger-value">
+              {(() => {
+                const opt = PRICE_FILTER_OPTIONS.find((o) => o.value === priceTier);
+                return opt ? (isAr ? opt.shortLabelAr : opt.shortLabel) : (isAr ? 'كل الأسعار' : 'All Tiers');
+              })()}
+            </span>
+          </div>
+          <ChevronDown size={13} className={`slot-chevron ${openDropdown === 'price' ? 'rotate' : ''}`} />
+        </button>
+
+        <AnimatePresence>
+          {openDropdown === 'price' && (
+            <motion.div
+              className={`filter-custom-menu placement-${dropdownPlacement}`}
+              data-lenis-prevent="true"
+              initial={{ opacity: 0, y: dropdownPlacement === 'up' ? -8 : 8, scale: 0.96 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: dropdownPlacement === 'up' ? -8 : 8, scale: 0.96 }}
+              transition={{ duration: 0.15, ease: 'easeOut' }}
+            >
+              {PRICE_FILTER_OPTIONS.map((opt: any) => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  className={`filter-menu-option ${priceTier === opt.value ? 'selected' : ''}`}
+                  onClick={() => {
+                    setPriceTier(opt.value);
+                    setOpenDropdown(null);
+                  }}
+                >
+                  <span className="option-label">{isAr ? opt.labelAr : opt.label}</span>
+                  {priceTier === opt.value && <Check size={14} className="option-check" />}
+                </button>
+              ))}
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+
+      <div className="omnibar-divider" />
+
+      {/* Slot 5: Bedrooms Dropdown */}
+      <div className="omnibar-filter-slot custom-filter-dropdown">
+        <label className="omnibar-slot-label">{isAr ? 'غرف النوم' : 'BEDROOMS'}</label>
+        <button
+          type="button"
+          className={`omnibar-trigger-btn ${openDropdown === 'beds' ? 'open' : ''} ${bedrooms !== 'All' ? 'has-value' : ''}`}
+          onClick={(e) => handleToggleDropdown('beds', e)}
+          aria-haspopup="listbox"
+          aria-expanded={openDropdown === 'beds'}
+        >
+          <div className="trigger-left">
+            <Bed size={15} className="slot-icon" />
+            <span className="trigger-value">
+              {(() => {
+                const opt = BEDROOM_FILTER_OPTIONS.find((o) => o.value === bedrooms);
+                return opt ? (isAr ? opt.shortLabelAr : opt.shortLabel) : (isAr ? 'كل الغرف' : 'All Bedrooms');
+              })()}
+            </span>
+          </div>
+          <ChevronDown size={13} className={`slot-chevron ${openDropdown === 'beds' ? 'rotate' : ''}`} />
+        </button>
+
+        <AnimatePresence>
+          {openDropdown === 'beds' && (
+            <motion.div
+              className={`filter-custom-menu placement-${dropdownPlacement}`}
+              data-lenis-prevent="true"
+              initial={{ opacity: 0, y: dropdownPlacement === 'up' ? -8 : 8, scale: 0.96 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: dropdownPlacement === 'up' ? -8 : 8, scale: 0.96 }}
+              transition={{ duration: 0.15, ease: 'easeOut' }}
+            >
+              {BEDROOM_FILTER_OPTIONS.map((opt: any) => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  className={`filter-menu-option ${bedrooms === opt.value ? 'selected' : ''}`}
+                  onClick={() => {
+                    setBedrooms(opt.value);
+                    setOpenDropdown(null);
+                  }}
+                >
+                  <span className="option-label">{isAr ? opt.labelAr : opt.label}</span>
+                  {bedrooms === opt.value && <Check size={14} className="option-check" />}
+                </button>
+              ))}
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+
+      {!isMobileSheet && (
+        <>
+          <div className="omnibar-divider" />
+
+          {/* Slot 6: Action Controls */}
+          <div className="omnibar-actions-slot">
+            {hasActiveFilters && (
+              <button
+                className="omnibar-reset-btn"
+                title={isAr ? "إعادة ضبط جميع الفلاتر" : "Reset All Filters"}
+                onClick={resetAllFilters}
+                type="button"
+              >
+                <RotateCcw size={13} />
+                <span>{isAr ? 'إعادة ضبط' : 'Reset'}</span>
+              </button>
+            )}
+
+            <button
+              className={`omnibar-filter-btn ${isAdvancedModalOpen ? 'active' : ''} ${(selectedDelivery !== 'All' || selectedAmenity !== 'All' || selectedFinishing !== 'All') ? 'has-extra-filters' : ''}`}
+              title={isAr ? "الفلاتر المعمارية المتقدمة" : "Advanced Architectural Filters"}
+              onClick={() => setIsAdvancedModalOpen(true)}
+              type="button"
+            >
+              <SlidersHorizontal size={17} />
+              {(selectedDelivery !== 'All' || selectedAmenity !== 'All' || selectedFinishing !== 'All') && (
+                <span className="omnibar-filter-badge" />
+              )}
+            </button>
+          </div>
+        </>
+      )}
+
+      {isMobileSheet && (
+        <button
+          type="button"
+          className="btn-gold mobile-sheet-apply"
+          onClick={() => setIsMobileFiltersOpen(false)}
+        >
+          {isAr ? `عرض ${filteredProperties.length} نتيجة` : `Show ${filteredProperties.length} results`}
+        </button>
+      )}
+    </>
+  );
+
   return (
     <div className="catalog-view" dir={isAr ? 'rtl' : 'ltr'}>
       {/* 1. Dedicated Header & Filter Banner */}
@@ -595,288 +882,8 @@ return true;
               <TrendingUp size={16} />
             </button>
 
-            {isMobileFiltersOpen && (
-              <div
-                className="mobile-filters-backdrop"
-                onClick={() => setIsMobileFiltersOpen(false)}
-              />
-            )}
-
-            <div className={`omnibar-slots-group ${isMobileFiltersOpen ? 'sheet-open' : ''}`}>
-              <div className="mobile-sheet-head">
-                <span className="mobile-sheet-title">{isAr ? 'الفلاتر' : 'Filters'}</span>
-                <div className="mobile-sheet-head-actions">
-                  <button
-                    className={`omnibar-filter-btn mobile-head-filter-btn ${isAdvancedModalOpen ? 'active' : ''} ${(selectedDelivery !== 'All' || selectedAmenity !== 'All' || selectedFinishing !== 'All') ? 'has-extra-filters' : ''}`}
-                    title={isAr ? "الفلاتر المعمارية المتقدمة" : "Advanced Architectural Filters"}
-                    onClick={() => setIsAdvancedModalOpen(true)}
-                    type="button"
-                    aria-label={isAr ? 'الفلاتر المتقدمة' : 'Advanced Filters'}
-                  >
-                    <SlidersHorizontal size={16} />
-                    {(selectedDelivery !== 'All' || selectedAmenity !== 'All' || selectedFinishing !== 'All') && (
-                      <span className="omnibar-filter-badge" />
-                    )}
-                  </button>
-                  <button
-                    type="button"
-                    className="mobile-sheet-close"
-                    onClick={() => setIsMobileFiltersOpen(false)}
-                    aria-label={isAr ? 'إغلاق' : 'Close'}
-                  >
-                    <X size={18} />
-                  </button>
-                </div>
-              </div>
-
-            <div className="omnibar-divider" />
-
-            {/* Slot 2: Location Dropdown */}
-            <div className="omnibar-filter-slot custom-filter-dropdown">
-              <label className="omnibar-slot-label">{isAr ? 'المدينة / المنطقة' : 'LOCATION'}</label>
-              <button
-                type="button"
-                className={`omnibar-trigger-btn ${openDropdown === 'location' ? 'open' : ''} ${location !== 'All' ? 'has-value' : ''}`}
-                onClick={(e) => handleToggleDropdown('location', e)}
-                aria-haspopup="listbox"
-                aria-expanded={openDropdown === 'location'}
-              >
-                <div className="trigger-left">
-                  <MapPin size={15} className="slot-icon" />
-                  <span className="trigger-value">
-                    {(() => {
-                      const opt = dynamicLocationFilterOptions.find((o) => o.value === location);
-                      return opt ? (isAr ? opt.shortLabelAr : opt.shortLabel) : (isAr ? 'جميع المدن' : 'All Cities');
-                    })()}
-                  </span>
-                </div>
-                <ChevronDown size={13} className={`slot-chevron ${openDropdown === 'location' ? 'rotate' : ''}`} />
-              </button>
-
-              <AnimatePresence>
-                {openDropdown === 'location' && (
-                  <motion.div
-                    className={`filter-custom-menu placement-${dropdownPlacement}`}
-                    data-lenis-prevent="true"
-                    initial={{ opacity: 0, y: dropdownPlacement === 'up' ? -8 : 8, scale: 0.96 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: dropdownPlacement === 'up' ? -8 : 8, scale: 0.96 }}
-                    transition={{ duration: 0.15, ease: 'easeOut' }}
-                  >
-                    {dynamicLocationFilterOptions.map((opt: any) => (
-                      <button
-                        key={opt.value}
-                        type="button"
-                        className={`filter-menu-option ${location === opt.value ? 'selected' : ''}`}
-                        onClick={() => {
-                          setLocation(opt.value);
-                          setOpenDropdown(null);
-                        }}
-                      >
-                        <span className="option-label">{isAr ? opt.labelAr : opt.label}</span>
-                        {location === opt.value && <Check size={14} className="option-check" />}
-                      </button>
-                    ))}
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-
-            <div className="omnibar-divider" />
-
-            {/* Slot 3: Property Type Dropdown */}
-            <div className="omnibar-filter-slot custom-filter-dropdown">
-              <label className="omnibar-slot-label">{isAr ? 'نوع العقار' : 'PROPERTY TYPE'}</label>
-              <button
-                type="button"
-                className={`omnibar-trigger-btn ${openDropdown === 'type' ? 'open' : ''} ${propertyType !== 'All' ? 'has-value' : ''}`}
-                onClick={(e) => handleToggleDropdown('type', e)}
-                aria-haspopup="listbox"
-                aria-expanded={openDropdown === 'type'}
-              >
-                <div className="trigger-left">
-                  <Building2 size={15} className="slot-icon" />
-                  <span className="trigger-value">
-                    {(() => {
-                      const opt = TYPE_FILTER_OPTIONS.find((o) => o.value === propertyType);
-                      return opt ? (isAr ? opt.shortLabelAr : opt.shortLabel) : (isAr ? 'جميع الأنواع' : 'All Types');
-                    })()}
-                  </span>
-                </div>
-                <ChevronDown size={13} className={`slot-chevron ${openDropdown === 'type' ? 'rotate' : ''}`} />
-              </button>
-
-              <AnimatePresence>
-                {openDropdown === 'type' && (
-                  <motion.div
-                    className={`filter-custom-menu placement-${dropdownPlacement}`}
-                    data-lenis-prevent="true"
-                    initial={{ opacity: 0, y: dropdownPlacement === 'up' ? -8 : 8, scale: 0.96 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: dropdownPlacement === 'up' ? -8 : 8, scale: 0.96 }}
-                    transition={{ duration: 0.15, ease: 'easeOut' }}
-                  >
-                    {TYPE_FILTER_OPTIONS.map((opt: any) => (
-                      <button
-                        key={opt.value}
-                        type="button"
-                        className={`filter-menu-option ${propertyType === opt.value ? 'selected' : ''}`}
-                        onClick={() => {
-                          setPropertyType(opt.value);
-                          setOpenDropdown(null);
-                        }}
-                      >
-                        <span className="option-label">{isAr ? opt.labelAr : opt.label}</span>
-                        {propertyType === opt.value && <Check size={14} className="option-check" />}
-                      </button>
-                    ))}
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-
-            <div className="omnibar-divider" />
-
-            {/* Slot 4: Price Tier Dropdown */}
-            <div className="omnibar-filter-slot custom-filter-dropdown">
-              <label className="omnibar-slot-label">{isAr ? 'نطاق السعر' : 'PRICE TIER'}</label>
-              <button
-                type="button"
-                className={`omnibar-trigger-btn ${openDropdown === 'price' ? 'open' : ''} ${priceTier !== 'All' ? 'has-value' : ''}`}
-                onClick={(e) => handleToggleDropdown('price', e)}
-                aria-haspopup="listbox"
-                aria-expanded={openDropdown === 'price'}
-              >
-                <div className="trigger-left">
-                  <Banknote size={15} className="slot-icon" />
-                  <span className="trigger-value">
-                    {(() => {
-                      const opt = PRICE_FILTER_OPTIONS.find((o) => o.value === priceTier);
-                      return opt ? (isAr ? opt.shortLabelAr : opt.shortLabel) : (isAr ? 'كل الأسعار' : 'All Tiers');
-                    })()}
-                  </span>
-                </div>
-                <ChevronDown size={13} className={`slot-chevron ${openDropdown === 'price' ? 'rotate' : ''}`} />
-              </button>
-
-              <AnimatePresence>
-                {openDropdown === 'price' && (
-                  <motion.div
-                    className={`filter-custom-menu placement-${dropdownPlacement}`}
-                    data-lenis-prevent="true"
-                    initial={{ opacity: 0, y: dropdownPlacement === 'up' ? -8 : 8, scale: 0.96 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: dropdownPlacement === 'up' ? -8 : 8, scale: 0.96 }}
-                    transition={{ duration: 0.15, ease: 'easeOut' }}
-                  >
-                    {PRICE_FILTER_OPTIONS.map((opt: any) => (
-                      <button
-                        key={opt.value}
-                        type="button"
-                        className={`filter-menu-option ${priceTier === opt.value ? 'selected' : ''}`}
-                        onClick={() => {
-                          setPriceTier(opt.value);
-                          setOpenDropdown(null);
-                        }}
-                      >
-                        <span className="option-label">{isAr ? opt.labelAr : opt.label}</span>
-                        {priceTier === opt.value && <Check size={14} className="option-check" />}
-                      </button>
-                    ))}
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-
-            <div className="omnibar-divider" />
-
-            {/* Slot 5: Bedrooms Dropdown */}
-            <div className="omnibar-filter-slot custom-filter-dropdown">
-              <label className="omnibar-slot-label">{isAr ? 'غرف النوم' : 'BEDROOMS'}</label>
-              <button
-                type="button"
-                className={`omnibar-trigger-btn ${openDropdown === 'beds' ? 'open' : ''} ${bedrooms !== 'All' ? 'has-value' : ''}`}
-                onClick={(e) => handleToggleDropdown('beds', e)}
-                aria-haspopup="listbox"
-                aria-expanded={openDropdown === 'beds'}
-              >
-                <div className="trigger-left">
-                  <Bed size={15} className="slot-icon" />
-                  <span className="trigger-value">
-                    {(() => {
-                      const opt = BEDROOM_FILTER_OPTIONS.find((o) => o.value === bedrooms);
-                      return opt ? (isAr ? opt.shortLabelAr : opt.shortLabel) : (isAr ? 'كل الغرف' : 'All Bedrooms');
-                    })()}
-                  </span>
-                </div>
-                <ChevronDown size={13} className={`slot-chevron ${openDropdown === 'beds' ? 'rotate' : ''}`} />
-              </button>
-
-              <AnimatePresence>
-                {openDropdown === 'beds' && (
-                  <motion.div
-                    className={`filter-custom-menu placement-${dropdownPlacement}`}
-                    data-lenis-prevent="true"
-                    initial={{ opacity: 0, y: dropdownPlacement === 'up' ? -8 : 8, scale: 0.96 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: dropdownPlacement === 'up' ? -8 : 8, scale: 0.96 }}
-                    transition={{ duration: 0.15, ease: 'easeOut' }}
-                  >
-                    {BEDROOM_FILTER_OPTIONS.map((opt: any) => (
-                      <button
-                        key={opt.value}
-                        type="button"
-                        className={`filter-menu-option ${bedrooms === opt.value ? 'selected' : ''}`}
-                        onClick={() => {
-                          setBedrooms(opt.value);
-                          setOpenDropdown(null);
-                        }}
-                      >
-                        <span className="option-label">{isAr ? opt.labelAr : opt.label}</span>
-                        {bedrooms === opt.value && <Check size={14} className="option-check" />}
-                      </button>
-                    ))}
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-
-            <div className="omnibar-divider" />
-
-            {/* Slot 6: Action Controls */}
-            <div className="omnibar-actions-slot">
-              {hasActiveFilters && (
-                <button
-                  className="omnibar-reset-btn"
-                  title={isAr ? "إعادة ضبط جميع الفلاتر" : "Reset All Filters"}
-                  onClick={resetAllFilters}
-                  type="button"
-                >
-                  <RotateCcw size={13} />
-                  <span>{isAr ? 'إعادة ضبط' : 'Reset'}</span>
-                </button>
-              )}
-
-              <button
-                className={`omnibar-filter-btn ${isAdvancedModalOpen ? 'active' : ''} ${(selectedDelivery !== 'All' || selectedAmenity !== 'All' || selectedFinishing !== 'All') ? 'has-extra-filters' : ''}`}
-                title={isAr ? "الفلاتر المعمارية المتقدمة" : "Advanced Architectural Filters"}
-                onClick={() => setIsAdvancedModalOpen(true)}
-                type="button"
-              >
-                <SlidersHorizontal size={17} />
-                {(selectedDelivery !== 'All' || selectedAmenity !== 'All' || selectedFinishing !== 'All') && (
-                  <span className="omnibar-filter-badge" />
-                )}
-              </button>
-            </div>
-
-              <button
-                type="button"
-                className="btn-gold mobile-sheet-apply"
-                onClick={() => setIsMobileFiltersOpen(false)}
-              >
-                {isAr ? `عرض ${filteredProperties.length} نتيجة` : `Show ${filteredProperties.length} results`}
-              </button>
+            <div className="omnibar-slots-group desktop-omnibar-slots">
+              {renderOmnibarSlots(false)}
             </div>
           </motion.div>
 
@@ -1415,6 +1422,39 @@ return true;
           </motion.div>
         </div>
       </section>
+
+      {/* Mobile Quick Filters Bottom Sheet (Portaled to document.body to prevent stacking context clipping) */}
+      {mounted && createPortal(
+        <AnimatePresence>
+          {isMobileFiltersOpen && (
+            <motion.div
+              className="mobile-filters-portal-container"
+              dir={isAr ? 'rtl' : 'ltr'}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              data-lenis-prevent="true"
+            >
+              <div
+                className="mobile-filters-backdrop"
+                onClick={() => setIsMobileFiltersOpen(false)}
+              />
+              <motion.div
+                className="omnibar-slots-group sheet-open"
+                data-lenis-prevent="true"
+                initial={{ y: '100%', opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                exit={{ y: '100%', opacity: 0 }}
+                transition={{ type: 'spring', damping: 28, stiffness: 350 }}
+              >
+                {renderOmnibarSlots(true)}
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>,
+        document.body
+      )}
 
       {/* Advanced Architectural Filters Modal (Portaled to document.body) */}
       {mounted && createPortal(
@@ -2362,6 +2402,7 @@ return true;
         }
 
         .mobile-filters-toggle,
+        .mobile-filters-portal-container,
         .mobile-filters-backdrop,
         .mobile-sheet-head,
         .mobile-sheet-apply {
@@ -2570,31 +2611,43 @@ return true;
             color: #0A0C10;
           }
 
+          .mobile-filters-portal-container {
+            display: flex !important;
+            position: fixed;
+            inset: 0;
+            z-index: 99998;
+            align-items: flex-end;
+            justify-content: center;
+            pointer-events: auto;
+          }
+
           .mobile-filters-backdrop {
             display: block;
             position: fixed;
             inset: 0;
-            background: rgba(0, 0, 0, 0.45);
-            z-index: 1290;
+            background: rgba(0, 0, 0, 0.65);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            z-index: 99999;
           }
 
-          .omnibar-slots-group {
-            display: none;
+          .omnibar-slots-group.desktop-omnibar-slots {
+            display: none !important;
           }
 
           .omnibar-slots-group.sheet-open {
-            display: flex;
+            display: flex !important;
             flex-direction: column;
             gap: 0.75rem;
             position: fixed;
             left: 0.5rem;
             right: 0.5rem;
             bottom: 0;
-            z-index: 1300;
+            z-index: 100000;
             max-height: 84dvh;
             overflow-y: auto;
-            border-radius: 22px 22px 0 0;
-            padding: 1rem 1rem 1.1rem;
+            border-radius: 24px 24px 0 0;
+            padding: 1.15rem 1.15rem 1.4rem;
             backdrop-filter: blur(28px) saturate(210%);
             -webkit-backdrop-filter: blur(28px) saturate(210%);
           }
@@ -2604,23 +2657,23 @@ return true;
               135deg,
               rgba(255, 255, 255, 0.18) 0%,
               rgba(255, 255, 255, 0.06) 30%,
-              rgba(18, 24, 38, 0.72) 65%,
-              rgba(10, 14, 24, 0.88) 100%
+              rgba(18, 24, 38, 0.92) 65%,
+              rgba(10, 14, 24, 0.98) 100%
             );
             border: 1px solid rgba(255, 255, 255, 0.28);
             border-bottom: none;
-            box-shadow: 0 -20px 48px rgba(0, 0, 0, 0.5);
+            box-shadow: 0 -20px 60px rgba(0, 0, 0, 0.75);
           }
 
           [data-theme="light"] .omnibar-slots-group.sheet-open {
             background: linear-gradient(
               135deg,
-              rgba(255, 255, 255, 0.9) 0%,
-              rgba(255, 255, 255, 0.75) 100%
+              rgba(255, 255, 255, 0.96) 0%,
+              rgba(255, 255, 255, 0.92) 100%
             );
-            border: 1.5px solid rgba(255, 255, 255, 0.85);
+            border: 1.5px solid rgba(255, 255, 255, 0.95);
             border-bottom: none;
-            box-shadow: 0 -20px 48px rgba(15, 23, 42, 0.18);
+            box-shadow: 0 -20px 60px rgba(15, 23, 42, 0.25);
           }
 
           .omnibar-slots-group.sheet-open .mobile-sheet-head {
