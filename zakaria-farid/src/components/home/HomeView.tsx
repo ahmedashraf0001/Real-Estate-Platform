@@ -234,52 +234,58 @@ export const HomeView: React.FC<HomeViewProps> = ({
             <div className="hero-content">
               {/* Royal Baroque Architectural Medallion Crest */}
               <div className="hero-mobile-crest" aria-hidden="true">
-                <svg className="crest-baroque-svg" width="128" height="96" viewBox="0 0 128 96" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <svg className="crest-baroque-svg" width="176" height="106" viewBox="0 0 176 106" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <defs>
                     <linearGradient id="baroque-gold-hero" x1="0%" y1="0%" x2="100%" y2="100%">
                       <stop offset="0%" stopColor="#FFFDF7" />
-                      <stop offset="25%" stopColor="#FDE8A0" />
+                      <stop offset="22%" stopColor="#FFE8A3" />
                       <stop offset="55%" stopColor="#E5B869" />
-                      <stop offset="85%" stopColor="#C59A45" />
+                      <stop offset="85%" stopColor="#C99837" />
                       <stop offset="100%" stopColor="#9E7428" />
                     </linearGradient>
                     <radialGradient id="aura-glow-hero" cx="50%" cy="50%" r="50%">
                       <stop offset="0%" stopColor="rgba(246, 212, 132, 0.45)" />
-                      <stop offset="60%" stopColor="rgba(229, 184, 105, 0.15)" />
+                      <stop offset="55%" stopColor="rgba(229, 184, 105, 0.15)" />
                       <stop offset="100%" stopColor="transparent" />
                     </radialGradient>
                   </defs>
 
                   {/* Ambient Soft Gold Radial Glow */}
-                  <circle cx="64" cy="48" r="42" fill="url(#aura-glow-hero)" />
+                  <ellipse cx="88" cy="54" rx="55" ry="42" fill="url(#aura-glow-hero)" />
 
-                  {/* Central Double Medallion Rings */}
-                  <ellipse cx="64" cy="48" rx="26" ry="24" stroke="url(#baroque-gold-hero)" strokeWidth="1.6" />
-                  <ellipse cx="64" cy="48" rx="22.5" ry="20.5" stroke="url(#baroque-gold-hero)" strokeWidth="0.8" strokeDasharray="1.5 2.5" />
+                  {/* Central Medallion Double Oval Ring */}
+                  <ellipse cx="88" cy="54" rx="25" ry="22.5" stroke="url(#baroque-gold-hero)" strokeWidth="1.5" />
+                  <ellipse cx="88" cy="54" rx="21.5" ry="19" stroke="url(#baroque-gold-hero)" strokeWidth="0.75" strokeDasharray="1.5 2.2" />
 
-                  {/* Classical Mansion / Palace Pediment */}
-                  <path d="M64 34L53 40.5H75L64 34Z" stroke="url(#baroque-gold-hero)" strokeWidth="1.3" strokeLinejoin="round" fill="none" />
-                  <path d="M56 41.5V49.5M60 41.5V49.5M64 41.5V49.5M68 41.5V49.5M72 41.5V49.5" stroke="url(#baroque-gold-hero)" strokeWidth="1.1" strokeLinecap="round" />
-                  <path d="M51.5 50.5H76.5M49 52H79" stroke="url(#baroque-gold-hero)" strokeWidth="1.3" strokeLinecap="round" />
+                  {/* Classical Mansion / Pediment Architecture */}
+                  <path d="M88 41L77 47.5H99L88 41Z" stroke="url(#baroque-gold-hero)" strokeWidth="1.25" strokeLinejoin="round" fill="none" />
+                  <path d="M80 48.5V56M84 48.5V56M88 48.5V56M92 48.5V56M96 48.5V56" stroke="url(#baroque-gold-hero)" strokeWidth="1.05" strokeLinecap="round" />
+                  <path d="M75.5 57H100.5M73 58.5H103" stroke="url(#baroque-gold-hero)" strokeWidth="1.25" strokeLinecap="round" />
 
-                  {/* Top Ornate Crown & Acanthus Leaf Flourish */}
-                  <path d="M64 15C62.5 20 60 23 56 24C51 25.5 47 23 46 19C45 15 48 11 52 11C56 11 60 15 64 20C68 15 72 11 76 11C80 11 83 15 82 19C81 23 77 25.5 72 24C68 23 65.5 20 64 15Z" stroke="url(#baroque-gold-hero)" strokeWidth="1.1" fill="none" />
-                  <path d="M64 9V15M64 9L61 12M64 9L67 12" stroke="url(#baroque-gold-hero)" strokeWidth="1.2" strokeLinecap="round" />
+                  {/* Royal Crown / Crest Tiara at Top */}
+                  <path d="M88 20C86 25 83 28 78 29C72 30.5 67 27.5 66 23C65 18 69 13 74 13C79 13 84 18 88 23C92 18 97 13 102 13C107 13 111 18 110 23C109 27.5 104 30.5 98 29C93 28 90 25 88 20Z" stroke="url(#baroque-gold-hero)" strokeWidth="1.15" fill="none" />
+                  <path d="M88 12V19M88 12L84 15.5M88 12L92 15.5" stroke="url(#baroque-gold-hero)" strokeWidth="1.2" strokeLinecap="round" />
+                  <circle cx="88" cy="9" r="1.5" fill="url(#baroque-gold-hero)" />
 
-                  {/* Left Baroque Filigree Scrolling Vines */}
-                  <path d="M38 48C38 38 43 30 52 27C44 28 35 34 33 42C31 49 34 57 41 62C47 66 54 68 59 70C52 68 44 64 40 58C36 53 38 43 45 37C51 32 58 33 60 38" stroke="url(#baroque-gold-hero)" strokeWidth="1.1" fill="none" />
-                  <path d="M28 42C24 45 22 51 24 57C26 63 32 67 39 67C34 65 29 61 28 55C27 50 29 45 33 42" stroke="url(#baroque-gold-hero)" strokeWidth="0.9" fill="none" />
-                  <path d="M35 32C29 32 24 37 24 43C24 47 27 50 30 50C33 50 35 47 34 44C33 40 29 39 28 42" stroke="url(#baroque-gold-hero)" strokeWidth="0.8" fill="none" />
+                  {/* Left Symmetrical Baroque Vine Scrolls & Acanthus Swirls */}
+                  <path d="M60 54C60 41 66 31 77 28C67 29 55 36 52 46C49 55 53 65 62 70C70 75 79 77 84 79C75 77 65 72 61 65C56 59 58 48 67 41C74 35 83 37 85 43" stroke="url(#baroque-gold-hero)" strokeWidth="1.15" fill="none" />
+                  <path d="M48 46C42 50 39 57 41 64C44 71 52 76 60 76C54 74 47 69 46 62C44 56 47 50 52 46" stroke="url(#baroque-gold-hero)" strokeWidth="1" fill="none" />
+                  <path d="M56 34C48 34 41 40 41 48C41 53 45 57 49 57C53 57 56 53 55 49C53 44 47 43 46 47" stroke="url(#baroque-gold-hero)" strokeWidth="0.85" fill="none" />
+                  <path d="M36 52C28 56 25 64 28 72C31 78 39 82 48 80C41 79 34 74 33 67C32 60 36 55 42 53" stroke="url(#baroque-gold-hero)" strokeWidth="0.85" fill="none" />
+                  <circle cx="26" cy="74" r="1.4" fill="url(#baroque-gold-hero)" />
+                  <circle cx="39" cy="32" r="1.4" fill="url(#baroque-gold-hero)" />
 
-                  {/* Right Baroque Filigree Scrolling Vines (Symmetrical) */}
-                  <path d="M90 48C90 38 85 30 76 27C84 28 93 34 95 42C97 49 94 57 87 62C81 66 74 68 69 70C76 68 84 64 88 58C92 53 90 43 83 37C77 32 70 33 68 38" stroke="url(#baroque-gold-hero)" strokeWidth="1.1" fill="none" />
-                  <path d="M100 42C104 45 106 51 104 57C102 63 96 67 89 67C94 65 99 61 100 55C101 50 99 45 95 42" stroke="url(#baroque-gold-hero)" strokeWidth="0.9" fill="none" />
-                  <path d="M93 32C99 32 104 37 104 43C104 47 101 50 98 50C95 50 93 47 94 44C95 40 99 39 100 42" stroke="url(#baroque-gold-hero)" strokeWidth="0.8" fill="none" />
+                  {/* Right Symmetrical Baroque Vine Scrolls & Acanthus Swirls */}
+                  <path d="M116 54C116 41 110 31 99 28C109 29 121 36 124 46C127 55 123 65 114 70C106 75 97 77 92 79C101 77 111 72 115 65C120 59 118 48 109 41C102 35 93 37 91 43" stroke="url(#baroque-gold-hero)" strokeWidth="1.15" fill="none" />
+                  <path d="M128 46C134 50 137 57 135 64C132 71 124 76 116 76C122 74 129 69 130 62C132 56 129 50 124 46" stroke="url(#baroque-gold-hero)" strokeWidth="1" fill="none" />
+                  <path d="M120 34C128 34 135 40 135 48C135 53 131 57 127 57C123 57 120 53 121 49C123 44 129 43 130 47" stroke="url(#baroque-gold-hero)" strokeWidth="0.85" fill="none" />
+                  <path d="M140 52C148 56 151 64 148 72C145 78 137 82 128 80C135 79 142 74 143 67C144 60 140 55 134 53" stroke="url(#baroque-gold-hero)" strokeWidth="0.85" fill="none" />
+                  <circle cx="150" cy="74" r="1.4" fill="url(#baroque-gold-hero)" />
+                  <circle cx="137" cy="32" r="1.4" fill="url(#baroque-gold-hero)" />
 
-                  {/* Bottom Flourish Tail / Rosette */}
-                  <path d="M54 71C59 74 64 77 64 82C64 77 69 74 74 71C69 72 64 74 64 77C64 74 59 72 54 71Z" stroke="url(#baroque-gold-hero)" strokeWidth="1" fill="none" />
-                  <circle cx="64" cy="85" r="1.5" fill="url(#baroque-gold-hero)" />
-                  <circle cx="64" cy="7" r="1.5" fill="url(#baroque-gold-hero)" />
+                  {/* Bottom Center Rosette / Flourish Terminal */}
+                  <path d="M76 79C82 83 88 87 88 93C88 87 94 83 100 79C94 81 88 83 88 87C88 83 82 81 76 79Z" stroke="url(#baroque-gold-hero)" strokeWidth="1.1" fill="none" />
+                  <circle cx="88" cy="97" r="1.7" fill="url(#baroque-gold-hero)" />
                 </svg>
               </div>
 
@@ -911,41 +917,43 @@ export const HomeView: React.FC<HomeViewProps> = ({
             position: relative !important;
             z-index: 6 !important;
             width: 100% !important;
-            margin: 0 auto -1.5rem auto !important;
+            margin: 0 auto -2.1rem auto !important;
             filter: drop-shadow(0 0 16px rgba(229, 184, 105, 0.45)) !important;
             pointer-events: none !important;
           }
 
           .crest-baroque-svg {
             display: block !important;
-            width: 128px !important;
+            width: 176px !important;
+            max-width: 176px !important;
             height: auto !important;
             overflow: visible !important;
           }
 
-          /* Liquid Frosted Glass Capsule Card (Matching PropertyCard Glass) */
+          /* Liquid Frosted Glass Capsule Card (Identical Translucent Specular Recipe) */
           .hero-title-glass-card {
             position: relative !important;
             z-index: 5 !important;
             width: 100% !important;
-            max-width: 345px !important;
-            margin: 0 auto 0.65rem auto !important;
-            padding: 1.25rem 1.35rem 1.15rem !important;
+            max-width: 350px !important;
+            margin: 0 auto 0.75rem auto !important;
+            padding: 1.15rem 1.45rem 1.05rem !important;
             background: linear-gradient(
               135deg,
-              rgba(255, 255, 255, 0.22) 0%,
-              rgba(18, 24, 38, 0.55) 45%,
-              rgba(10, 14, 24, 0.78) 100%
+              rgba(255, 255, 255, 0.28) 0%,
+              rgba(255, 255, 255, 0.09) 35%,
+              rgba(18, 24, 38, 0.35) 70%,
+              rgba(10, 14, 24, 0.55) 100%
             ) !important;
-            backdrop-filter: blur(24px) saturate(210%) contrast(108%) brightness(105%) !important;
-            -webkit-backdrop-filter: blur(24px) saturate(210%) contrast(108%) brightness(105%) !important;
-            border: 1px solid rgba(255, 255, 255, 0.28) !important;
-            border-radius: 20px !important;
+            backdrop-filter: blur(28px) saturate(220%) brightness(112%) contrast(105%) !important;
+            -webkit-backdrop-filter: blur(28px) saturate(220%) brightness(112%) contrast(105%) !important;
+            border: 1.2px solid rgba(255, 255, 255, 0.35) !important;
+            border-radius: 22px !important;
             box-shadow: 
-              0 20px 48px rgba(0, 0, 0, 0.45),
-              0 4px 14px rgba(0, 0, 0, 0.18),
-              inset 0 1.5px 2px rgba(255, 255, 255, 0.65),
-              inset 0 -1px 1px rgba(255, 255, 255, 0.15) !important;
+              0 20px 48px rgba(0, 0, 0, 0.4),
+              0 4px 16px rgba(0, 0, 0, 0.16),
+              inset 0 2px 2px rgba(255, 255, 255, 0.7),
+              inset 0 -1px 1px rgba(255, 255, 255, 0.2) !important;
             display: flex !important;
             flex-direction: column !important;
             align-items: center !important;
@@ -958,20 +966,20 @@ export const HomeView: React.FC<HomeViewProps> = ({
             position: absolute !important;
             top: 50% !important;
             transform: translateY(-50%) !important;
-            width: 2.5px !important;
-            height: 46px !important;
-            background: linear-gradient(180deg, transparent 0%, rgba(255, 240, 200, 0.95) 50%, transparent 100%) !important;
-            filter: drop-shadow(0 0 8px rgba(246, 212, 132, 0.9)) !important;
+            width: 3px !important;
+            height: 48px !important;
+            background: linear-gradient(180deg, transparent 0%, rgba(255, 245, 220, 0.95) 50%, transparent 100%) !important;
+            filter: drop-shadow(0 0 10px rgba(255, 235, 180, 0.9)) !important;
             pointer-events: none !important;
-            border-radius: 2px !important;
+            border-radius: 3px !important;
           }
 
           .glint-left {
-            left: -1px !important;
+            left: -1.5px !important;
           }
 
           .glint-right {
-            right: -1px !important;
+            right: -1.5px !important;
           }
 
           /* Majestic Title with Living Presence inside Glass */
@@ -979,12 +987,12 @@ export const HomeView: React.FC<HomeViewProps> = ({
           :global([dir="rtl"]) .hero-title,
           [dir="rtl"] .hero-title,
           .home-view[dir="rtl"] .hero-title {
-            font-size: clamp(1.48rem, 6.4vw, 1.95rem) !important;
+            font-size: clamp(1.48rem, 6.2vw, 1.88rem) !important;
             font-weight: 800 !important;
-            line-height: 1.22 !important;
+            line-height: 1.25 !important;
             letter-spacing: 0 !important;
             margin: 0 auto !important;
-            min-height: calc(1.22em * 2 + 2px) !important;
+            min-height: calc(1.25em * 2 + 2px) !important;
             display: flex !important;
             flex-direction: column !important;
             align-items: center !important;
@@ -995,17 +1003,17 @@ export const HomeView: React.FC<HomeViewProps> = ({
             max-width: 100% !important;
           }
 
-          /* In the design: Line 1 Gold Gradient, Line 2 Crisp White */
+          /* Line 1: Golden Metallic Headline */
           .hero-title-main,
           :global([dir="rtl"]) .hero-title-main,
           [dir="rtl"] .hero-title-main,
           .home-view[dir="rtl"] .hero-title-main {
-            background: linear-gradient(135deg, #FFFDF7 0%, #FFF0BE 22%, #F6D484 55%, #E5B869 85%, #D49F33 100%) !important;
+            background: linear-gradient(135deg, #FFFDF7 0%, #FFE599 22%, #F6D484 55%, #E5B869 85%, #C99632 100%) !important;
             -webkit-background-clip: text !important;
             -webkit-text-fill-color: transparent !important;
-            font-weight: 800 !important;
-            line-height: 1.2 !important;
-            min-height: 1.2em !important;
+            font-weight: 700 !important;
+            line-height: 1.25 !important;
+            min-height: 1.25em !important;
             margin: 0 auto !important;
             padding: 0 !important;
             text-align: center !important;
@@ -1014,7 +1022,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
             display: flex !important;
             white-space: nowrap !important;
             text-shadow: none !important;
-            filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.4)) !important;
+            filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.45)) !important;
             font-size: 1em !important;
           }
 
@@ -1024,6 +1032,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
             -webkit-text-fill-color: transparent !important;
           }
 
+          /* Line 2: Crisp Pure White Headline */
           .hero-title-serif,
           :global([dir="rtl"]) .hero-title-serif,
           [dir="rtl"] .hero-title-serif,
@@ -1035,8 +1044,8 @@ export const HomeView: React.FC<HomeViewProps> = ({
             font-family: inherit !important;
             font-style: normal !important;
             font-weight: 800 !important;
-            line-height: 1.2 !important;
-            min-height: 1.2em !important;
+            line-height: 1.25 !important;
+            min-height: 1.25em !important;
             margin: 0 auto !important;
             padding: 0 !important;
             text-align: center !important;
@@ -1044,7 +1053,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
             justify-content: center !important;
             display: flex !important;
             white-space: nowrap !important;
-            text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5) !important;
+            text-shadow: 0 2px 8px rgba(0, 0, 0, 0.45) !important;
             font-size: 1em !important;
           }
 
