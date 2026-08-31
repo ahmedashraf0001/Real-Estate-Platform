@@ -25,6 +25,7 @@ interface CompareDrawerProps {
   onClear: () => void;
   onSelectProperty: (id: string) => void;
   locale?: string;
+  hidden?: boolean;
 }
 
 export const CompareDrawer: React.FC<CompareDrawerProps> = ({
@@ -32,7 +33,8 @@ export const CompareDrawer: React.FC<CompareDrawerProps> = ({
   onRemove,
   onClear,
   onSelectProperty,
-  locale = 'en'
+  locale = 'en',
+  hidden = false
 }) => {
   const [mounted, setMounted] = useState(false);
   const [isOpenModal, setIsOpenModal] = useState(false);
@@ -66,7 +68,7 @@ export const CompareDrawer: React.FC<CompareDrawerProps> = ({
     }
   }, [isOpenModal]);
 
-  if (!mounted || selectedProperties.length === 0) return null;
+  if (!mounted || selectedProperties.length === 0 || hidden) return null;
 
   const maxSlots = 3;
   const canCompare = selectedProperties.length >= 2;

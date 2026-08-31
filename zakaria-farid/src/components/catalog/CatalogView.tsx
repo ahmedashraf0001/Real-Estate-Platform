@@ -1459,6 +1459,7 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
         onClear={clearCompare}
         onSelectProperty={onSelectProperty}
         locale={locale}
+        hidden={isMobileFiltersOpen || isAdvancedModalOpen}
       />
 
       <style>{`
