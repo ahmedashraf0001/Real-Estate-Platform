@@ -232,50 +232,84 @@ export const HomeView: React.FC<HomeViewProps> = ({
 
           <div className="container hero-container">
             <div className="hero-content">
-              {/* Mobile Sovereign Architectural Crest */}
+              {/* Royal Baroque Architectural Medallion Crest */}
               <div className="hero-mobile-crest" aria-hidden="true">
-                <span className="crest-hairline crest-hairline-start" />
-                <div className="crest-emblem">
-                  <svg width="34" height="22" viewBox="0 0 34 22" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M17 2L3 8.5H31L17 2Z" stroke="url(#hero-pediment-gold)" strokeWidth="1.3" strokeLinejoin="round"/>
-                    <path d="M6 9V17M11.5 9V17M17 9V17M22.5 9V17M28 9V17" stroke="url(#hero-pediment-gold)" strokeWidth="1.1" strokeLinecap="round"/>
-                    <path d="M2 18H32" stroke="url(#hero-pediment-gold)" strokeWidth="1.4" strokeLinecap="round"/>
-                    <defs>
-                      <linearGradient id="hero-pediment-gold" x1="0" y1="0" x2="34" y2="22" gradientUnits="userSpaceOnUse">
-                        <stop stopColor="#FFFDF7"/>
-                        <stop offset="0.35" stopColor="#F6D484"/>
-                        <stop offset="0.8" stopColor="#E5B869"/>
-                        <stop offset="1" stopColor="#D49F33"/>
-                      </linearGradient>
-                    </defs>
-                  </svg>
-                </div>
-                <span className="crest-hairline crest-hairline-end" />
+                <svg className="crest-baroque-svg" width="128" height="96" viewBox="0 0 128 96" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <defs>
+                    <linearGradient id="baroque-gold-hero" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" stopColor="#FFFDF7" />
+                      <stop offset="25%" stopColor="#FDE8A0" />
+                      <stop offset="55%" stopColor="#E5B869" />
+                      <stop offset="85%" stopColor="#C59A45" />
+                      <stop offset="100%" stopColor="#9E7428" />
+                    </linearGradient>
+                    <radialGradient id="aura-glow-hero" cx="50%" cy="50%" r="50%">
+                      <stop offset="0%" stopColor="rgba(246, 212, 132, 0.45)" />
+                      <stop offset="60%" stopColor="rgba(229, 184, 105, 0.15)" />
+                      <stop offset="100%" stopColor="transparent" />
+                    </radialGradient>
+                  </defs>
+
+                  {/* Ambient Soft Gold Radial Glow */}
+                  <circle cx="64" cy="48" r="42" fill="url(#aura-glow-hero)" />
+
+                  {/* Central Double Medallion Rings */}
+                  <ellipse cx="64" cy="48" rx="26" ry="24" stroke="url(#baroque-gold-hero)" strokeWidth="1.6" />
+                  <ellipse cx="64" cy="48" rx="22.5" ry="20.5" stroke="url(#baroque-gold-hero)" strokeWidth="0.8" strokeDasharray="1.5 2.5" />
+
+                  {/* Classical Mansion / Palace Pediment */}
+                  <path d="M64 34L53 40.5H75L64 34Z" stroke="url(#baroque-gold-hero)" strokeWidth="1.3" strokeLinejoin="round" fill="none" />
+                  <path d="M56 41.5V49.5M60 41.5V49.5M64 41.5V49.5M68 41.5V49.5M72 41.5V49.5" stroke="url(#baroque-gold-hero)" strokeWidth="1.1" strokeLinecap="round" />
+                  <path d="M51.5 50.5H76.5M49 52H79" stroke="url(#baroque-gold-hero)" strokeWidth="1.3" strokeLinecap="round" />
+
+                  {/* Top Ornate Crown & Acanthus Leaf Flourish */}
+                  <path d="M64 15C62.5 20 60 23 56 24C51 25.5 47 23 46 19C45 15 48 11 52 11C56 11 60 15 64 20C68 15 72 11 76 11C80 11 83 15 82 19C81 23 77 25.5 72 24C68 23 65.5 20 64 15Z" stroke="url(#baroque-gold-hero)" strokeWidth="1.1" fill="none" />
+                  <path d="M64 9V15M64 9L61 12M64 9L67 12" stroke="url(#baroque-gold-hero)" strokeWidth="1.2" strokeLinecap="round" />
+
+                  {/* Left Baroque Filigree Scrolling Vines */}
+                  <path d="M38 48C38 38 43 30 52 27C44 28 35 34 33 42C31 49 34 57 41 62C47 66 54 68 59 70C52 68 44 64 40 58C36 53 38 43 45 37C51 32 58 33 60 38" stroke="url(#baroque-gold-hero)" strokeWidth="1.1" fill="none" />
+                  <path d="M28 42C24 45 22 51 24 57C26 63 32 67 39 67C34 65 29 61 28 55C27 50 29 45 33 42" stroke="url(#baroque-gold-hero)" strokeWidth="0.9" fill="none" />
+                  <path d="M35 32C29 32 24 37 24 43C24 47 27 50 30 50C33 50 35 47 34 44C33 40 29 39 28 42" stroke="url(#baroque-gold-hero)" strokeWidth="0.8" fill="none" />
+
+                  {/* Right Baroque Filigree Scrolling Vines (Symmetrical) */}
+                  <path d="M90 48C90 38 85 30 76 27C84 28 93 34 95 42C97 49 94 57 87 62C81 66 74 68 69 70C76 68 84 64 88 58C92 53 90 43 83 37C77 32 70 33 68 38" stroke="url(#baroque-gold-hero)" strokeWidth="1.1" fill="none" />
+                  <path d="M100 42C104 45 106 51 104 57C102 63 96 67 89 67C94 65 99 61 100 55C101 50 99 45 95 42" stroke="url(#baroque-gold-hero)" strokeWidth="0.9" fill="none" />
+                  <path d="M93 32C99 32 104 37 104 43C104 47 101 50 98 50C95 50 93 47 94 44C95 40 99 39 100 42" stroke="url(#baroque-gold-hero)" strokeWidth="0.8" fill="none" />
+
+                  {/* Bottom Flourish Tail / Rosette */}
+                  <path d="M54 71C59 74 64 77 64 82C64 77 69 74 74 71C69 72 64 74 64 77C64 74 59 72 54 71Z" stroke="url(#baroque-gold-hero)" strokeWidth="1" fill="none" />
+                  <circle cx="64" cy="85" r="1.5" fill="url(#baroque-gold-hero)" />
+                  <circle cx="64" cy="7" r="1.5" fill="url(#baroque-gold-hero)" />
+                </svg>
               </div>
 
-              {/* Monumental Headline with Living Typewriter Animation */}
-              <motion.h1 
-                className="hero-title"
-                aria-label={`${line1Text} ${line2Text}`}
-                initial={{ opacity: 0, y: 16 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
-              >
-                <span className="hero-title-main">
-                  <span>{display1}</span>
-                  {showCursorOnLine1 && <span className="typewriter-cursor">|</span>}
-                </span>
-                <span className="hero-title-serif">
-                  <span className="hero-title-serif-inner">{display2}</span>
-                  {showCursorOnLine2 && <span className="typewriter-cursor">|</span>}
-                </span>
-              </motion.h1>
+              {/* Liquid Frosted Glass Capsule Card */}
+              <div className="hero-title-glass-card">
+                <div className="glass-edge-glint glint-left" aria-hidden="true" />
+                <div className="glass-edge-glint glint-right" aria-hidden="true" />
+                
+                {/* Monumental Headline with Living Typewriter Animation */}
+                <motion.h1 
+                  className="hero-title"
+                  aria-label={`${line1Text} ${line2Text}`}
+                  initial={{ opacity: 0, y: 16 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.6, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
+                >
+                  <span className="hero-title-main">
+                    <span>{display1}</span>
+                    {showCursorOnLine1 && <span className="typewriter-cursor">|</span>}
+                  </span>
+                  <span className="hero-title-serif">
+                    <span className="hero-title-serif-inner">{display2}</span>
+                    {showCursorOnLine2 && <span className="typewriter-cursor">|</span>}
+                  </span>
+                </motion.h1>
+              </div>
 
               {/* Mobile Sparkling Star Divider */}
               <div className="hero-mobile-divider" aria-hidden="true">
-                <span className="divider-glow-line" />
                 <span className="divider-sparkle">✦</span>
-                <span className="divider-glow-line" />
               </div>
 
               {/* Crisp Subtitle */}
@@ -775,8 +809,21 @@ export const HomeView: React.FC<HomeViewProps> = ({
           }
 
           .hero-mobile-crest,
-          .hero-mobile-divider {
+          .hero-mobile-divider,
+          .glass-edge-glint {
             display: none !important;
+          }
+
+          .hero-title-glass-card {
+            background: transparent !important;
+            border: none !important;
+            box-shadow: none !important;
+            backdrop-filter: none !important;
+            -webkit-backdrop-filter: none !important;
+            padding: 0 !important;
+            margin: 0 0 1.25rem 0 !important;
+            width: 100% !important;
+            max-width: 100% !important;
           }
         }
 
@@ -804,7 +851,8 @@ export const HomeView: React.FC<HomeViewProps> = ({
         .hero-mobile-eyebrow,
         .hero-mobile-quick-chips,
         .hero-mobile-trust-bar,
-        .hero-mobile-explore-btn {
+        .hero-mobile-explore-btn,
+        .glass-edge-glint {
           display: none;
         }
 
@@ -855,69 +903,109 @@ export const HomeView: React.FC<HomeViewProps> = ({
             margin: 0 auto !important;
           }
 
-          /* Mobile Sovereign Architectural Crest */
+          /* Royal Baroque Architectural Medallion Crest */
           .hero-mobile-crest {
             display: flex !important;
             align-items: center !important;
             justify-content: center !important;
-            gap: 10px !important;
+            position: relative !important;
+            z-index: 6 !important;
             width: 100% !important;
-            max-width: 220px !important;
-            margin: 0 auto 0.75rem auto !important;
+            margin: 0 auto -1.5rem auto !important;
+            filter: drop-shadow(0 0 16px rgba(229, 184, 105, 0.45)) !important;
+            pointer-events: none !important;
           }
 
-          .crest-hairline {
-            flex: 1 !important;
-            height: 1px !important;
-            min-width: 20px !important;
+          .crest-baroque-svg {
+            display: block !important;
+            width: 128px !important;
+            height: auto !important;
+            overflow: visible !important;
           }
 
-          .crest-hairline-start {
-            background: linear-gradient(to right, transparent 0%, rgba(229, 184, 105, 0.85) 100%) !important;
-          }
-
-          .crest-hairline-end {
-            background: linear-gradient(to left, transparent 0%, rgba(229, 184, 105, 0.85) 100%) !important;
-          }
-
-          .crest-emblem {
+          /* Liquid Frosted Glass Capsule Card (Matching PropertyCard Glass) */
+          .hero-title-glass-card {
+            position: relative !important;
+            z-index: 5 !important;
+            width: 100% !important;
+            max-width: 345px !important;
+            margin: 0 auto 0.65rem auto !important;
+            padding: 1.25rem 1.35rem 1.15rem !important;
+            background: linear-gradient(
+              135deg,
+              rgba(255, 255, 255, 0.22) 0%,
+              rgba(18, 24, 38, 0.55) 45%,
+              rgba(10, 14, 24, 0.78) 100%
+            ) !important;
+            backdrop-filter: blur(24px) saturate(210%) contrast(108%) brightness(105%) !important;
+            -webkit-backdrop-filter: blur(24px) saturate(210%) contrast(108%) brightness(105%) !important;
+            border: 1px solid rgba(255, 255, 255, 0.28) !important;
+            border-radius: 20px !important;
+            box-shadow: 
+              0 20px 48px rgba(0, 0, 0, 0.45),
+              0 4px 14px rgba(0, 0, 0, 0.18),
+              inset 0 1.5px 2px rgba(255, 255, 255, 0.65),
+              inset 0 -1px 1px rgba(255, 255, 255, 0.15) !important;
             display: flex !important;
+            flex-direction: column !important;
             align-items: center !important;
             justify-content: center !important;
-            flex-shrink: 0 !important;
-            filter: drop-shadow(0 0 10px rgba(229, 184, 105, 0.6)) !important;
+            box-sizing: border-box !important;
           }
 
-          /* Majestic Title with Living Presence */
+          .glass-edge-glint {
+            display: block !important;
+            position: absolute !important;
+            top: 50% !important;
+            transform: translateY(-50%) !important;
+            width: 2.5px !important;
+            height: 46px !important;
+            background: linear-gradient(180deg, transparent 0%, rgba(255, 240, 200, 0.95) 50%, transparent 100%) !important;
+            filter: drop-shadow(0 0 8px rgba(246, 212, 132, 0.9)) !important;
+            pointer-events: none !important;
+            border-radius: 2px !important;
+          }
+
+          .glint-left {
+            left: -1px !important;
+          }
+
+          .glint-right {
+            right: -1px !important;
+          }
+
+          /* Majestic Title with Living Presence inside Glass */
           .hero-title,
           :global([dir="rtl"]) .hero-title,
           [dir="rtl"] .hero-title,
           .home-view[dir="rtl"] .hero-title {
-            font-size: clamp(1.58rem, 6.8vw, 2.15rem) !important;
+            font-size: clamp(1.48rem, 6.4vw, 1.95rem) !important;
             font-weight: 800 !important;
-            line-height: 1.25 !important;
+            line-height: 1.22 !important;
             letter-spacing: 0 !important;
-            margin-top: 0 !important;
-            margin-bottom: 0.35rem !important;
-            min-height: calc(1.25em * 2 + 3px) !important;
+            margin: 0 auto !important;
+            min-height: calc(1.22em * 2 + 2px) !important;
             display: flex !important;
             flex-direction: column !important;
             align-items: center !important;
             text-align: center !important;
             justify-content: center !important;
-            gap: 3px !important;
+            gap: 2px !important;
             width: 100% !important;
             max-width: 100% !important;
           }
 
+          /* In the design: Line 1 Gold Gradient, Line 2 Crisp White */
           .hero-title-main,
           :global([dir="rtl"]) .hero-title-main,
           [dir="rtl"] .hero-title-main,
           .home-view[dir="rtl"] .hero-title-main {
-            color: #FFFFFF !important;
+            background: linear-gradient(135deg, #FFFDF7 0%, #FFF0BE 22%, #F6D484 55%, #E5B869 85%, #D49F33 100%) !important;
+            -webkit-background-clip: text !important;
+            -webkit-text-fill-color: transparent !important;
             font-weight: 800 !important;
-            line-height: 1.15 !important;
-            min-height: 1.15em !important;
+            line-height: 1.2 !important;
+            min-height: 1.2em !important;
             margin: 0 auto !important;
             padding: 0 !important;
             text-align: center !important;
@@ -925,46 +1013,45 @@ export const HomeView: React.FC<HomeViewProps> = ({
             justify-content: center !important;
             display: flex !important;
             white-space: nowrap !important;
-            text-shadow: 0 2px 8px rgba(0, 0, 0, 0.35) !important;
+            text-shadow: none !important;
+            filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.4)) !important;
             font-size: 1em !important;
           }
 
           [data-theme="light"] .hero-title-main {
-            color: #0F172A !important;
-            text-shadow: none !important;
+            background: linear-gradient(135deg, #B8860B 0%, #996515 50%, #7B4F0F 100%) !important;
+            -webkit-background-clip: text !important;
+            -webkit-text-fill-color: transparent !important;
           }
 
           .hero-title-serif,
           :global([dir="rtl"]) .hero-title-serif,
           [dir="rtl"] .hero-title-serif,
           .home-view[dir="rtl"] .hero-title-serif {
-            background: linear-gradient(135deg, #FFFDF7 0%, #FFF0BE 22%, #F6D484 55%, #E5B869 85%, #D49F33 100%) !important;
-            -webkit-background-clip: text !important;
-            -webkit-text-fill-color: transparent !important;
-            font-family: 'ThmanyahSerifDisplay', 'Amiri', 'Traditional Arabic', serif !important;
+            color: #FFFFFF !important;
+            background: none !important;
+            -webkit-background-clip: unset !important;
+            -webkit-text-fill-color: #FFFFFF !important;
+            font-family: inherit !important;
             font-style: normal !important;
-            font-weight: 900 !important;
-            line-height: 1.25 !important;
-            min-height: 1.25em !important;
+            font-weight: 800 !important;
+            line-height: 1.2 !important;
+            min-height: 1.2em !important;
             margin: 0 auto !important;
-            padding: 0 0.25em !important;
+            padding: 0 !important;
             text-align: center !important;
             align-self: center !important;
             justify-content: center !important;
             display: flex !important;
             white-space: nowrap !important;
-            text-shadow: none !important;
-            filter: none !important;
-            overflow: visible !important;
+            text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5) !important;
             font-size: 1em !important;
           }
 
           [data-theme="light"] .hero-title-serif {
-            background: linear-gradient(135deg, #B8860B 0%, #996515 50%, #7B4F0F 100%) !important;
-            -webkit-background-clip: text !important;
-            -webkit-text-fill-color: transparent !important;
+            color: #0F172A !important;
+            -webkit-text-fill-color: #0F172A !important;
             text-shadow: none !important;
-            filter: none !important;
           }
 
           /* Mobile Sparkling Star Divider */
@@ -972,34 +1059,24 @@ export const HomeView: React.FC<HomeViewProps> = ({
             display: flex !important;
             align-items: center !important;
             justify-content: center !important;
-            gap: 10px !important;
             width: 100% !important;
-            max-width: 180px !important;
-            margin: 0.45rem auto 0.65rem auto !important;
-          }
-
-          .divider-glow-line {
-            flex: 1 !important;
-            height: 1px !important;
-            min-width: 20px !important;
-            background: linear-gradient(90deg, transparent 0%, rgba(229, 184, 105, 0.75) 50%, transparent 100%) !important;
+            margin: 0.35rem auto 0.55rem auto !important;
           }
 
           .divider-sparkle {
             color: #F6D484 !important;
-            font-size: 0.75rem !important;
+            font-size: 0.85rem !important;
             line-height: 1 !important;
-            filter: drop-shadow(0 0 6px rgba(246, 212, 132, 0.9)) !important;
-            flex-shrink: 0 !important;
+            filter: drop-shadow(0 0 8px rgba(246, 212, 132, 0.95)) !important;
           }
 
           .hero-subtitle,
           :global([dir="rtl"]) .hero-subtitle,
           [dir="rtl"] .hero-subtitle,
           .home-view[dir="rtl"] .hero-subtitle {
-            font-size: 0.85rem !important;
+            font-size: 0.84rem !important;
             line-height: 1.55 !important;
-            color: rgba(255, 255, 255, 0.9) !important;
+            color: rgba(255, 255, 255, 0.92) !important;
             margin-bottom: 0 !important;
             margin-inline: auto !important;
             text-align: center !important;

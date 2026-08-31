@@ -326,10 +326,10 @@ export const QuickSearchBar: React.FC<QuickSearchBarProps> = ({ onSearch, locale
 
       {/* Submit Button */}
       <button type="submit" className="search-submit-btn">
-        <span className="search-btn-icon">
-          {isAr ? <ArrowLeft size={16} strokeWidth={2.4} /> : <ArrowRight size={16} strokeWidth={2.4} />}
-        </span>
         <span>{isAr ? 'بحث في الصروح' : 'Search Properties'}</span>
+        <span className="search-btn-icon">
+          <ArrowRight size={17} strokeWidth={2.4} />
+        </span>
       </button>
 
       <style>{`
