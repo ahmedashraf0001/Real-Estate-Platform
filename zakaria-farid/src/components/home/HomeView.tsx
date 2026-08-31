@@ -232,6 +232,27 @@ export const HomeView: React.FC<HomeViewProps> = ({
 
           <div className="container hero-container">
             <div className="hero-content">
+              {/* Mobile Sovereign Architectural Crest */}
+              <div className="hero-mobile-crest" aria-hidden="true">
+                <span className="crest-hairline crest-hairline-start" />
+                <div className="crest-emblem">
+                  <svg width="34" height="22" viewBox="0 0 34 22" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M17 2L3 8.5H31L17 2Z" stroke="url(#hero-pediment-gold)" strokeWidth="1.3" strokeLinejoin="round"/>
+                    <path d="M6 9V17M11.5 9V17M17 9V17M22.5 9V17M28 9V17" stroke="url(#hero-pediment-gold)" strokeWidth="1.1" strokeLinecap="round"/>
+                    <path d="M2 18H32" stroke="url(#hero-pediment-gold)" strokeWidth="1.4" strokeLinecap="round"/>
+                    <defs>
+                      <linearGradient id="hero-pediment-gold" x1="0" y1="0" x2="34" y2="22" gradientUnits="userSpaceOnUse">
+                        <stop stopColor="#FFFDF7"/>
+                        <stop offset="0.35" stopColor="#F6D484"/>
+                        <stop offset="0.8" stopColor="#E5B869"/>
+                        <stop offset="1" stopColor="#D49F33"/>
+                      </linearGradient>
+                    </defs>
+                  </svg>
+                </div>
+                <span className="crest-hairline crest-hairline-end" />
+              </div>
+
               {/* Monumental Headline with Living Typewriter Animation */}
               <motion.h1 
                 className="hero-title"
@@ -249,6 +270,13 @@ export const HomeView: React.FC<HomeViewProps> = ({
                   {showCursorOnLine2 && <span className="typewriter-cursor">|</span>}
                 </span>
               </motion.h1>
+
+              {/* Mobile Sparkling Star Divider */}
+              <div className="hero-mobile-divider" aria-hidden="true">
+                <span className="divider-glow-line" />
+                <span className="divider-sparkle">✦</span>
+                <span className="divider-glow-line" />
+              </div>
 
               {/* Crisp Subtitle */}
               <motion.p 
@@ -762,6 +790,8 @@ export const HomeView: React.FC<HomeViewProps> = ({
         }
 
         /* Desktop hidden elements */
+        .hero-mobile-crest,
+        .hero-mobile-divider,
         .hero-mobile-eyebrow,
         .hero-mobile-quick-chips,
         .hero-mobile-trust-bar,
@@ -792,7 +822,8 @@ export const HomeView: React.FC<HomeViewProps> = ({
             box-shadow: none;
             border-radius: 0;
             gap: 1.15rem;
-            align-items: flex-start;
+            align-items: center;
+            text-align: center;
             display: flex;
             flex-direction: column;
             justify-content: flex-end;
@@ -801,7 +832,40 @@ export const HomeView: React.FC<HomeViewProps> = ({
           .hero-content {
             display: flex;
             flex-direction: column;
-            align-items: flex-start;
+            align-items: center;
+            text-align: center;
+            width: 100%;
+          }
+
+          /* Mobile Sovereign Architectural Crest */
+          .hero-mobile-crest {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            width: 100%;
+            max-width: 220px;
+            margin: 0 auto 0.75rem auto;
+          }
+
+          .crest-hairline {
+            flex: 1;
+            height: 1px;
+          }
+
+          .crest-hairline-start {
+            background: linear-gradient(90deg, transparent 0%, rgba(229, 184, 105, 0.8) 100%);
+          }
+
+          .crest-hairline-end {
+            background: linear-gradient(90deg, rgba(229, 184, 105, 0.8) 0%, transparent 100%);
+          }
+
+          .crest-emblem {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            filter: drop-shadow(0 0 10px rgba(229, 184, 105, 0.6));
           }
 
           /* Majestic Title with Living Presence */
@@ -811,12 +875,15 @@ export const HomeView: React.FC<HomeViewProps> = ({
             line-height: 1.15;
             letter-spacing: -0.03em;
             margin-top: 0;
-            margin-bottom: 0.65rem;
+            margin-bottom: 0.35rem;
             min-height: calc(1.15em * 2 + 3px);
             display: flex;
             flex-direction: column;
-            align-items: flex-start;
+            align-items: center !important;
+            text-align: center !important;
+            justify-content: center !important;
             gap: 3px;
+            width: 100%;
             max-width: 100%;
           }
 
@@ -828,6 +895,9 @@ export const HomeView: React.FC<HomeViewProps> = ({
             line-height: 1.25 !important;
             min-height: calc(1.25em * 2 + 3px);
             max-width: 100%;
+            align-items: center !important;
+            text-align: center !important;
+            justify-content: center !important;
           }
 
           :global([dir="rtl"]) .hero-title-main,
@@ -836,6 +906,10 @@ export const HomeView: React.FC<HomeViewProps> = ({
             font-size: 1em !important;
             white-space: nowrap !important;
             max-width: 100%;
+            text-align: center !important;
+            align-self: center !important;
+            justify-content: center !important;
+            display: flex !important;
           }
 
           :global([dir="rtl"]) .hero-title-serif,
@@ -844,6 +918,10 @@ export const HomeView: React.FC<HomeViewProps> = ({
             font-size: 1em !important;
             white-space: nowrap !important;
             max-width: 100%;
+            text-align: center !important;
+            align-self: center !important;
+            justify-content: center !important;
+            display: flex !important;
           }
 
           .hero-title-main {
@@ -853,8 +931,10 @@ export const HomeView: React.FC<HomeViewProps> = ({
             min-height: 1.15em;
             margin: 0;
             padding: 0;
-            text-align: start;
-            align-self: flex-start;
+            text-align: center;
+            align-self: center;
+            justify-content: center;
+            display: flex;
             white-space: nowrap;
             text-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
           }
@@ -875,8 +955,10 @@ export const HomeView: React.FC<HomeViewProps> = ({
             min-height: 1.15em;
             margin: 0;
             padding: 0;
-            text-align: start;
-            align-self: flex-start;
+            text-align: center;
+            align-self: center;
+            justify-content: center;
+            display: flex;
             white-space: nowrap;
             overflow: visible;
           }
@@ -891,8 +973,9 @@ export const HomeView: React.FC<HomeViewProps> = ({
             min-height: 1.25em !important;
             margin: -0.12em -0.45em !important;
             padding: 0.12em 0.45em !important;
-            text-align: start !important;
-            align-self: flex-start !important;
+            text-align: center !important;
+            align-self: center !important;
+            justify-content: center !important;
             white-space: nowrap !important;
             text-shadow: none !important;
             filter: none !important;
@@ -908,12 +991,38 @@ export const HomeView: React.FC<HomeViewProps> = ({
             filter: none !important;
           }
 
+          /* Mobile Sparkling Star Divider */
+          .hero-mobile-divider {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            width: 100%;
+            max-width: 180px;
+            margin: 0.45rem auto 0.65rem auto;
+          }
+
+          .divider-glow-line {
+            flex: 1;
+            height: 1px;
+            background: linear-gradient(90deg, transparent 0%, rgba(229, 184, 105, 0.75) 50%, transparent 100%);
+          }
+
+          .divider-sparkle {
+            color: #F6D484;
+            font-size: 0.75rem;
+            line-height: 1;
+            filter: drop-shadow(0 0 6px rgba(246, 212, 132, 0.9));
+          }
+
           .hero-subtitle {
             font-size: 0.85rem;
             line-height: 1.55;
-            color: rgba(255, 255, 255, 0.88);
+            color: rgba(255, 255, 255, 0.9);
             margin-bottom: 0;
-            max-width: 36ch;
+            margin-inline: auto;
+            text-align: center !important;
+            max-width: 44ch;
             text-shadow: 0 2px 10px rgba(0, 0, 0, 0.9);
           }
 

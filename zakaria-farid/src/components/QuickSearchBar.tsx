@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useRef, useEffect } from 'react';
-import { MapPin, Building2, Banknote, ChevronDown, Check, Search } from 'lucide-react';
+import { MapPin, Building2, Banknote, ChevronDown, Check, Search, ArrowLeft, ArrowRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface QuickSearchBarProps {
@@ -326,6 +326,9 @@ export const QuickSearchBar: React.FC<QuickSearchBarProps> = ({ onSearch, locale
 
       {/* Submit Button */}
       <button type="submit" className="search-submit-btn">
+        <span className="search-btn-icon">
+          {isAr ? <ArrowLeft size={16} strokeWidth={2.4} /> : <ArrowRight size={16} strokeWidth={2.4} />}
+        </span>
         <span>{isAr ? 'بحث في الصروح' : 'Search Properties'}</span>
       </button>
 
