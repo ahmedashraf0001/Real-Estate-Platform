@@ -638,8 +638,8 @@ export const Navbar: React.FC<NavbarProps> = ({
             box-sizing: border-box;
           }
           .nav-glass-capsule {
-            height: 52px;
-            padding: 0 0.75rem;
+            height: 56px;
+            padding: 0 0.85rem;
             box-sizing: border-box;
             border-radius: 9999px;
           }
@@ -655,18 +655,18 @@ export const Navbar: React.FC<NavbarProps> = ({
             flex-shrink: 0;
           }
           .lang-btn {
-            padding: 0.18rem 0.38rem;
-            font-size: 0.68rem;
+            padding: 0.22rem 0.42rem;
+            font-size: 0.72rem;
           }
           .theme-btn,
           .bookmark-nav-btn {
-            width: 28px;
-            height: 28px;
+            width: 30px;
+            height: 30px;
             padding: 0;
           }
           .mobile-toggle {
-            width: 28px;
-            height: 28px;
+            width: 30px;
+            height: 30px;
             padding: 0;
           }
         }

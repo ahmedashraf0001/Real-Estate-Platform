@@ -406,26 +406,31 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
 
         @media (max-width: 640px) {
           .luxury-brand-logo {
-            gap: 5px;
+            gap: 8px;
           }
           .luxury-brand-logo.size-md .brand-emblem-wrap img {
-            width: 28px !important;
-            height: 28px !important;
+            width: 36px !important;
+            height: 36px !important;
+          }
+          .luxury-brand-logo.size-sm .brand-emblem-wrap img {
+            width: 30px !important;
+            height: 30px !important;
           }
           .luxury-brand-logo.size-md .brand-primary-name .name-serif-gold {
-            font-size: 0.78rem;
-            letter-spacing: 0.02em;
-          }
-          .luxury-brand-logo.size-md .brand-primary-name .name-ar {
-            font-size: 0.96rem;
-            line-height: 1.1;
-          }
-          .luxury-brand-logo.size-md .brand-sub-text {
-            font-size: 0.36rem;
+            font-size: 0.98rem;
             letter-spacing: 0.06em;
           }
+          .luxury-brand-logo.size-md .brand-primary-name .name-ar {
+            font-size: 1.25rem;
+            line-height: 1.15;
+            font-weight: 800;
+          }
+          .luxury-brand-logo.size-md .brand-sub-text {
+            font-size: 0.52rem;
+            letter-spacing: 0.08em;
+          }
           .luxury-brand-logo.size-md .brand-hairline {
-            min-width: 6px;
+            min-width: 14px;
           }
         }
       `}</style>
