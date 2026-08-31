@@ -44,8 +44,7 @@ export const SovereignPreloader: React.FC<SovereignPreloaderProps> = ({ onComple
           exit={{
             opacity: 0,
             scale: 1.04,
-            filter: 'blur(12px)',
-            transition: { duration: 0.75, ease: [0.76, 0, 0.24, 1] }
+            transition: { duration: 0.65, ease: [0.76, 0, 0.24, 1] }
           }}
           onClick={() => {
             setIsFinished(true);

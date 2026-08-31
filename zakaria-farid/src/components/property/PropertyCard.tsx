@@ -22,15 +22,13 @@ interface PropertyCardProps {
 const cardVariants: Variants = {
   hidden: {
     opacity: 0,
-    y: 18,
-    scale: 0.98,
-    filter: 'blur(3px)'
+    y: 16,
+    scale: 0.98
   },
   visible: {
     opacity: 1,
     y: 0,
     scale: 1,
-    filter: 'blur(0px)',
     transition: {
       type: 'spring',
       stiffness: 280,
@@ -41,7 +39,6 @@ const cardVariants: Variants = {
   exit: {
     opacity: 0,
     scale: 0.96,
-    filter: 'blur(4px)',
     transition: { duration: 0.2 }
   }
 };
