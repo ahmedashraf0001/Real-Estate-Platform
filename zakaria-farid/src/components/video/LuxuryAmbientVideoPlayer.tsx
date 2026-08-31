@@ -295,6 +295,9 @@ export const LuxuryAmbientVideoPlayer: React.FC<LuxuryAmbientVideoPlayerProps> =
     };
 
     const handleWaiting = () => setIsBuffering(true);
+    const handleSeeking = () => setIsBuffering(true);
+    const handleSeeked = () => setIsBuffering(false);
+    const handleCanPlay = () => setIsBuffering(false);
     const handlePlaying = () => {
       setIsBuffering(false);
       setIsPlaying(true);
@@ -302,12 +305,16 @@ export const LuxuryAmbientVideoPlayer: React.FC<LuxuryAmbientVideoPlayerProps> =
     const handlePause = () => setIsPlaying(false);
     const handleEndedEvent = () => {
       setIsPlaying(false);
+      setIsBuffering(false);
       if (onEnded) onEnded();
     };
 
     video.addEventListener('loadedmetadata', handleLoadedMetadata);
     video.addEventListener('timeupdate', handleTimeUpdate);
     video.addEventListener('waiting', handleWaiting);
+    video.addEventListener('seeking', handleSeeking);
+    video.addEventListener('seeked', handleSeeked);
+    video.addEventListener('canplay', handleCanPlay);
     video.addEventListener('playing', handlePlaying);
     video.addEventListener('pause', handlePause);
     video.addEventListener('ended', handleEndedEvent);
@@ -316,6 +323,9 @@ export const LuxuryAmbientVideoPlayer: React.FC<LuxuryAmbientVideoPlayerProps> =
       video.removeEventListener('loadedmetadata', handleLoadedMetadata);
       video.removeEventListener('timeupdate', handleTimeUpdate);
       video.removeEventListener('waiting', handleWaiting);
+      video.removeEventListener('seeking', handleSeeking);
+      video.removeEventListener('seeked', handleSeeked);
+      video.removeEventListener('canplay', handleCanPlay);
       video.removeEventListener('playing', handlePlaying);
       video.removeEventListener('pause', handlePause);
       video.removeEventListener('ended', handleEndedEvent);
@@ -529,8 +539,8 @@ export const LuxuryAmbientVideoPlayer: React.FC<LuxuryAmbientVideoPlayerProps> =
           </div>
         </div>
 
-        {/* Center Play Button Overlay (when paused) */}
-        {!isPlaying && (
+        {/* Center Play Button Overlay (when paused and not buffering) */}
+        {!isPlaying && !isBuffering && (
           <div className="player-center-action" onClick={(e) => { e.stopPropagation(); togglePlay(); }}>
             <div className="player-center-gold-orb">
               <Play size={32} className="play-center-svg" />
@@ -540,7 +550,7 @@ export const LuxuryAmbientVideoPlayer: React.FC<LuxuryAmbientVideoPlayerProps> =
 
         {/* Buffering Spinner */}
         {isBuffering && (
-          <div className="player-buffering-overlay">
+          <div className="player-buffering-overlay" aria-label="Loading video">
             <div className="luxury-spinner-ring" />
           </div>
         )}
@@ -1015,15 +1025,17 @@ export const LuxuryAmbientVideoPlayer: React.FC<LuxuryAmbientVideoPlayerProps> =
           align-items: center;
           justify-content: center;
           z-index: 9;
-          background: rgba(0, 0, 0, 0.25);
+          background: rgba(0, 0, 0, 0.35);
+          pointer-events: none;
         }
 
         .luxury-spinner-ring {
-          width: 44px;
-          height: 44px;
+          width: 48px;
+          height: 48px;
           border-radius: 50%;
           border: 3px solid rgba(221, 167, 82, 0.2);
           border-top-color: #DDA752;
+          box-shadow: 0 0 16px rgba(221, 167, 82, 0.35);
           animation: spin 0.8s linear infinite;
         }
 
