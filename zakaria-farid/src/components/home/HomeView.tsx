@@ -142,9 +142,17 @@ export const HomeView: React.FC<HomeViewProps> = ({
     : (isAr ? (homeSettings.heroTitle2Ar || 'القصور الفاخرة في مصر')
             : (homeSettings.heroTitle2En || 'Luxury Living & Sovereign Estates'));
 
-  const heroSubtitle = isAr
-    ? (homeSettings.heroSubtitleAr || DEFAULT_HOME_SETTINGS.heroSubtitleAr)
-    : (homeSettings.heroSubtitleEn || DEFAULT_HOME_SETTINGS.heroSubtitleEn);
+  const heroSubtitle = isMobileViewport
+    ? (isAr
+        ? (homeSettings.heroSubtitleAr && homeSettings.heroSubtitleAr.length <= 60 && !homeSettings.heroSubtitleAr.includes('التدقيق الإنشائي الصارم')
+            ? homeSettings.heroSubtitleAr
+            : 'ننتقي ونمثل أندر القصور والعقارات الفاخرة الموثقة في مصر.')
+        : (homeSettings.heroSubtitleEn && homeSettings.heroSubtitleEn.length <= 75 && !homeSettings.heroSubtitleEn.includes('forensic CAD audits')
+            ? homeSettings.heroSubtitleEn
+            : 'Curating Egypt’s premier luxury estates and architectural sanctuaries.'))
+    : (isAr
+        ? (homeSettings.heroSubtitleAr || DEFAULT_HOME_SETTINGS.heroSubtitleAr)
+        : (homeSettings.heroSubtitleEn || DEFAULT_HOME_SETTINGS.heroSubtitleEn));
 
   const line1Len = line1Text.length;
   const totalChars = line1Len + line2Text.length;
