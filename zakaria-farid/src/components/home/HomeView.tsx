@@ -627,32 +627,6 @@ export const HomeView: React.FC<HomeViewProps> = ({
           flex-direction: column;
           align-items: flex-start;
           gap: 2px;
-          min-height: calc(1.15em * 2 + 2px);
-        }
-
-        :global([dir="rtl"]) .hero-title,
-        [dir="rtl"] .hero-title,
-        .home-view[dir="rtl"] .hero-title {
-          font-size: clamp(2.45rem, 4.2vw, 3.95rem) !important;
-          line-height: 1.24 !important;
-          letter-spacing: 0 !important;
-          min-height: calc(1.24em * 2 + 4px);
-        }
-
-        :global([dir="rtl"]) .hero-title-main,
-        [dir="rtl"] .hero-title-main,
-        .home-view[dir="rtl"] .hero-title-main {
-          font-size: 1em !important;
-          letter-spacing: 0 !important;
-        }
-
-        :global([dir="rtl"]) .hero-title-serif,
-        [dir="rtl"] .hero-title-serif,
-        .home-view[dir="rtl"] .hero-title-serif {
-          font-size: 1em !important;
-          letter-spacing: 0 !important;
-        }
-
         .hero-title-main {
           color: #FFFFFF;
           text-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
@@ -701,26 +675,50 @@ export const HomeView: React.FC<HomeViewProps> = ({
 
         .hero-title-serif-inner {
           display: inline-block;
-          padding: 0;
-          margin: 0;
+          padding: 0.05em 0.2em;
+          margin: -0.05em -0.2em;
           overflow: visible;
         }
 
-        :global([dir="rtl"]) .hero-title-serif,
-        [dir="rtl"] .hero-title-serif {
-          font-family: 'ThmanyahSerifDisplay', 'Amiri', 'Traditional Arabic', serif !important;
-          font-style: italic !important;
-          font-weight: 900 !important;
-          line-height: 1.22 !important;
-          min-height: 1.22em !important;
+        :global([dir="rtl"]) .hero-title,
+        [dir="rtl"] .hero-title,
+        .home-view[dir="rtl"] .hero-title {
+          font-size: clamp(2.45rem, 4.2vw, 3.95rem) !important;
+          line-height: 1.24 !important;
           letter-spacing: 0 !important;
-          padding: 0 !important;
-          margin: 0 !important;
+          min-height: calc(1.24em * 2 + 4px);
+        }
+
+        :global([dir="rtl"]) .hero-title-main,
+        [dir="rtl"] .hero-title-main,
+        .home-view[dir="rtl"] .hero-title-main {
+          font-size: 1em !important;
+          font-style: normal !important;
+          letter-spacing: 0 !important;
+          padding: 0.1em 0.35em !important;
+          margin: -0.1em -0.35em !important;
+          overflow: visible !important;
+          display: inline-block !important;
+        }
+
+        :global([dir="rtl"]) .hero-title-serif,
+        [dir="rtl"] .hero-title-serif,
+        .home-view[dir="rtl"] .hero-title-serif {
+          font-family: 'ThmanyahSerifDisplay', 'Amiri', 'Traditional Arabic', serif !important;
+          font-size: 1em !important;
+          font-style: normal !important;
+          font-weight: 900 !important;
+          line-height: 1.25 !important;
+          min-height: 1.25em !important;
+          letter-spacing: 0 !important;
+          padding: 0.12em 0.45em !important;
+          margin: -0.12em -0.45em !important;
           text-align: start !important;
           align-self: flex-start !important;
           overflow: visible !important;
           filter: none !important;
           text-shadow: none !important;
+          display: inline-block !important;
         }
 
         .typewriter-cursor {
@@ -868,19 +866,22 @@ export const HomeView: React.FC<HomeViewProps> = ({
           }
 
           :global([dir="rtl"]) .hero-title-serif,
-          [dir="rtl"] .hero-title-serif {
+          [dir="rtl"] .hero-title-serif,
+          .home-view[dir="rtl"] .hero-title-serif {
             font-family: 'ThmanyahSerifDisplay', 'Amiri', 'Traditional Arabic', serif !important;
-            font-style: italic !important;
+            font-style: normal !important;
             font-weight: 900 !important;
-            line-height: 1.18 !important;
-            min-height: 1.18em !important;
-            margin: 0 !important;
-            padding: 0 !important;
+            line-height: 1.25 !important;
+            min-height: 1.25em !important;
+            margin: -0.12em -0.45em !important;
+            padding: 0.12em 0.45em !important;
             text-align: start !important;
             align-self: flex-start !important;
             white-space: nowrap !important;
             text-shadow: none !important;
             filter: none !important;
+            overflow: visible !important;
+            display: inline-block !important;
           }
 
           [data-theme="light"] .hero-title-serif {
