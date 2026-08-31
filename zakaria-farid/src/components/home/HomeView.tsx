@@ -630,6 +630,14 @@ export const HomeView: React.FC<HomeViewProps> = ({
           min-height: calc(1.15em * 2 + 2px);
         }
 
+        :global([dir="rtl"]) .hero-title,
+        [dir="rtl"] .hero-title {
+          font-size: clamp(2.53rem, 4.37vw, 4.2rem) !important;
+          line-height: 1.22 !important;
+          letter-spacing: 0 !important;
+          min-height: calc(1.22em * 2 + 2px);
+        }
+
         .hero-title-main {
           color: #FFFFFF;
           text-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
@@ -785,8 +793,10 @@ export const HomeView: React.FC<HomeViewProps> = ({
 
           :global([dir="rtl"]) .hero-title,
           [dir="rtl"] .hero-title {
-            font-size: clamp(2.05rem, 8.4vw, 2.75rem);
-            letter-spacing: -0.015em;
+            font-size: clamp(2.36rem, 9.66vw, 3.16rem) !important;
+            letter-spacing: -0.015em !important;
+            line-height: 1.18 !important;
+            min-height: calc(1.18em * 2 + 3px);
           }
 
           .hero-title-main {
