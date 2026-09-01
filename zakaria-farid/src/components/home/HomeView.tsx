@@ -297,8 +297,8 @@ export const HomeView: React.FC<HomeViewProps> = ({
                 <div className="glass-edge-glint glint-right" aria-hidden="true" />
 
                 {/* Monumental Headline with Living Typewriter Animation */}
-                <motion.h1
-                  className="hero-title hero-pill-lines-container"
+                <motion.h1 
+                  className={`hero-title hero-pill-lines-container ${isAr ? 'hero-ar' : 'hero-en'}`}
                   aria-label={`${line1Text} ${line2Text}`}
                   initial={{ opacity: 0, y: 16 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -1047,7 +1047,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
             z-index: 2 !important;
           }
 
-          /* Mobile Line 1: Rich Metallic Egyptian Gold (English LTR Sizing) */
+          /* Mobile Line 1: Rich Metallic Egyptian Gold */
           .hero-pill-line-gold {
             display: flex !important;
             align-items: center !important;
@@ -1059,9 +1059,6 @@ export const HomeView: React.FC<HomeViewProps> = ({
             white-space: nowrap !important;
             margin: 0 auto !important;
             padding: 0 !important;
-            font-size: clamp(1.22rem, 5.0vw, 1.40rem) !important;
-            font-weight: 800 !important;
-            letter-spacing: -0.015em !important;
             line-height: 1.22 !important;
           }
 
@@ -1085,7 +1082,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
             color: transparent !important;
           }
 
-          /* Mobile Line 2: Crisp Pure White (English LTR Sizing) */
+          /* Mobile Line 2: Crisp Pure White */
           .hero-pill-line-white {
             display: flex !important;
             align-items: center !important;
@@ -1097,9 +1094,6 @@ export const HomeView: React.FC<HomeViewProps> = ({
             white-space: nowrap !important;
             margin: 0 auto !important;
             padding: 0 !important;
-            font-size: clamp(1.22rem, 5.0vw, 1.40rem) !important;
-            font-weight: 800 !important;
-            letter-spacing: -0.015em !important;
             line-height: 1.22 !important;
           }
 
@@ -1117,16 +1111,20 @@ export const HomeView: React.FC<HomeViewProps> = ({
             white-space: nowrap !important;
           }
 
-          /* Mobile Arabic / RTL Sizing (Expanded to Fill Capsule Generously) */
-          :global([dir="rtl"]) .hero-pill-line-gold,
-          :global([dir="rtl"]) .hero-pill-line-white,
-          [dir="rtl"] .hero-pill-line-gold,
-          [dir="rtl"] .hero-pill-line-white,
-          .home-view[dir="rtl"] .hero-pill-line-gold,
-          .home-view[dir="rtl"] .hero-pill-line-white {
+          /* Mobile Arabic / RTL Sizing (Large & Prominent) */
+          .hero-ar .hero-pill-line-gold,
+          .hero-ar .hero-pill-line-white {
             font-size: clamp(1.82rem, 7.8vw, 2.18rem) !important;
             letter-spacing: 0 !important;
             font-weight: 850 !important;
+          }
+
+          /* Mobile English / LTR Sizing (Calibrated to Fit Snugly) */
+          .hero-en .hero-pill-line-gold,
+          .hero-en .hero-pill-line-white {
+            font-size: clamp(1.22rem, 5.0vw, 1.40rem) !important;
+            font-weight: 800 !important;
+            letter-spacing: -0.015em !important;
           }
 
           [data-theme="light"] .hero-pill-line-white .white-text-span {
