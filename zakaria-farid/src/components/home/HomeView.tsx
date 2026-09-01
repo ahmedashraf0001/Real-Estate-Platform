@@ -957,14 +957,15 @@ export const HomeView: React.FC<HomeViewProps> = ({
             overflow: visible !important;
           }
 
-          /* Liquid Frosted Glass Capsule Card (Compact Width, Snug Padding) */
+          /* Liquid Frosted Glass Capsule Card (Compact Width, Snug Padding, Locked Height) */
           .hero-title-glass-card {
             position: relative !important;
             z-index: 5 !important;
             width: 100% !important;
-            max-width: min(88vw, 328px) !important;
+            max-width: min(92vw, 345px) !important;
+            min-height: calc(1.24em * 2 + 4px + 2.25rem) !important;
             margin: 0 auto 0.35rem auto !important;
-            padding: 1.15rem 0.85rem 1.05rem !important;
+            padding: 1.15rem 0.8rem 1.05rem !important;
             background: 
               radial-gradient(ellipse at 50% 0%, rgba(246, 212, 132, 0.4) 0%, rgba(229, 184, 105, 0.12) 28%, transparent 55%),
               linear-gradient(
@@ -1029,34 +1030,38 @@ export const HomeView: React.FC<HomeViewProps> = ({
             right: -1.5px !important;
           }
 
-          /* Lines Container */
+          /* Lines Container: Fixed 2-Line Height to Eliminate Typing Resizing */
           .hero-pill-lines-container {
             display: flex !important;
             flex-direction: column !important;
             align-items: center !important;
             justify-content: center !important;
             text-align: center !important;
-            gap: 3px !important;
+            gap: 4px !important;
             width: 100% !important;
+            min-height: calc(1.24em * 2 + 4px) !important;
+            height: calc(1.24em * 2 + 4px) !important;
             margin: 0 auto !important;
             padding: 0 !important;
             position: relative !important;
             z-index: 2 !important;
           }
 
-          /* Mobile Line 1: Rich Metallic Egyptian Gold (Matching Target Scale) */
+          /* Mobile Line 1: Rich Metallic Egyptian Gold (+7% Scale) */
           .hero-pill-line-gold {
             display: flex !important;
             align-items: center !important;
             justify-content: center !important;
             text-align: center !important;
             width: 100% !important;
+            min-height: 1.24em !important;
+            height: 1.24em !important;
             white-space: nowrap !important;
             margin: 0 auto !important;
             padding: 0 !important;
-            font-size: clamp(1.44rem, 6.2vw, 1.74rem) !important;
+            font-size: clamp(1.54rem, 6.6vw, 1.86rem) !important;
             font-weight: 800 !important;
-            line-height: 1.22 !important;
+            line-height: 1.24 !important;
           }
 
           .hero-pill-line-gold .gold-text-span {
@@ -1079,19 +1084,21 @@ export const HomeView: React.FC<HomeViewProps> = ({
             color: transparent !important;
           }
 
-          /* Mobile Line 2: Crisp Pure White (Matching Target Scale) */
+          /* Mobile Line 2: Crisp Pure White (+7% Scale) */
           .hero-pill-line-white {
             display: flex !important;
             align-items: center !important;
             justify-content: center !important;
             text-align: center !important;
             width: 100% !important;
+            min-height: 1.24em !important;
+            height: 1.24em !important;
             white-space: nowrap !important;
             margin: 0 auto !important;
             padding: 0 !important;
-            font-size: clamp(1.44rem, 6.2vw, 1.74rem) !important;
+            font-size: clamp(1.54rem, 6.6vw, 1.86rem) !important;
             font-weight: 800 !important;
-            line-height: 1.22 !important;
+            line-height: 1.24 !important;
           }
 
           .hero-pill-line-white .white-text-span {
