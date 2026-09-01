@@ -291,6 +291,8 @@ export const HomeView: React.FC<HomeViewProps> = ({
 
               {/* Liquid Frosted Glass Capsule Card */}
               <div className="hero-title-glass-card">
+                {/* Luminous Center Ambient Highlight Glow */}
+                <div className="glass-center-glow" aria-hidden="true" />
                 <div className="glass-edge-glint glint-left" aria-hidden="true" />
                 <div className="glass-edge-glint glint-right" aria-hidden="true" />
                 
@@ -303,7 +305,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                   transition={{ duration: 0.6, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
                 >
                   <span className="hero-title-main">
-                    <span>{display1}</span>
+                    <span className="hero-title-main-text">{display1}</span>
                     {showCursorOnLine1 && <span className="typewriter-cursor">|</span>}
                   </span>
                   <span className="hero-title-serif">
@@ -313,9 +315,11 @@ export const HomeView: React.FC<HomeViewProps> = ({
                 </motion.h1>
               </div>
 
-              {/* Mobile Sparkling Star Divider */}
+              {/* Mobile Sparkling Star Divider with Glowing Symmetrical Hairlines */}
               <div className="hero-mobile-divider" aria-hidden="true">
+                <span className="divider-glow-line divider-line-start" />
                 <span className="divider-sparkle">✦</span>
+                <span className="divider-glow-line divider-line-end" />
               </div>
 
               {/* Crisp Subtitle */}
@@ -959,6 +963,23 @@ export const HomeView: React.FC<HomeViewProps> = ({
             align-items: center !important;
             justify-content: center !important;
             box-sizing: border-box !important;
+            overflow: visible !important;
+          }
+
+          /* Highlight glow centered in the card */
+          .glass-center-glow {
+            display: block !important;
+            position: absolute !important;
+            top: 50% !important;
+            left: 50% !important;
+            transform: translate(-50%, -50%) !important;
+            width: 230px !important;
+            height: 95px !important;
+            border-radius: 50% !important;
+            background: radial-gradient(ellipse at center, rgba(246, 212, 132, 0.32) 0%, rgba(229, 184, 105, 0.12) 45%, transparent 75%) !important;
+            filter: blur(14px) !important;
+            pointer-events: none !important;
+            z-index: 1 !important;
           }
 
           .glass-edge-glint {
@@ -972,6 +993,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
             filter: drop-shadow(0 0 10px rgba(255, 235, 180, 0.9)) !important;
             pointer-events: none !important;
             border-radius: 3px !important;
+            z-index: 3 !important;
           }
 
           .glint-left {
@@ -1001,16 +1023,23 @@ export const HomeView: React.FC<HomeViewProps> = ({
             gap: 2px !important;
             width: 100% !important;
             max-width: 100% !important;
+            position: relative !important;
+            z-index: 2 !important;
           }
 
           /* Line 1: Golden Metallic Headline */
           .hero-title-main,
+          .hero-title-main-text,
           :global([dir="rtl"]) .hero-title-main,
+          :global([dir="rtl"]) .hero-title-main-text,
           [dir="rtl"] .hero-title-main,
-          .home-view[dir="rtl"] .hero-title-main {
+          [dir="rtl"] .hero-title-main-text,
+          .home-view[dir="rtl"] .hero-title-main,
+          .home-view[dir="rtl"] .hero-title-main-text {
             background: linear-gradient(135deg, #FFFDF7 0%, #FFE599 22%, #F6D484 55%, #E5B869 85%, #C99632 100%) !important;
             -webkit-background-clip: text !important;
             -webkit-text-fill-color: transparent !important;
+            color: #F6D484 !important;
             font-weight: 700 !important;
             line-height: 1.25 !important;
             min-height: 1.25em !important;
@@ -1026,7 +1055,8 @@ export const HomeView: React.FC<HomeViewProps> = ({
             font-size: 1em !important;
           }
 
-          [data-theme="light"] .hero-title-main {
+          [data-theme="light"] .hero-title-main,
+          [data-theme="light"] .hero-title-main-text {
             background: linear-gradient(135deg, #B8860B 0%, #996515 50%, #7B4F0F 100%) !important;
             -webkit-background-clip: text !important;
             -webkit-text-fill-color: transparent !important;
@@ -1034,9 +1064,13 @@ export const HomeView: React.FC<HomeViewProps> = ({
 
           /* Line 2: Crisp Pure White Headline */
           .hero-title-serif,
+          .hero-title-serif-inner,
           :global([dir="rtl"]) .hero-title-serif,
+          :global([dir="rtl"]) .hero-title-serif-inner,
           [dir="rtl"] .hero-title-serif,
-          .home-view[dir="rtl"] .hero-title-serif {
+          [dir="rtl"] .hero-title-serif-inner,
+          .home-view[dir="rtl"] .hero-title-serif,
+          .home-view[dir="rtl"] .hero-title-serif-inner {
             color: #FFFFFF !important;
             background: none !important;
             -webkit-background-clip: unset !important;
@@ -1057,26 +1091,45 @@ export const HomeView: React.FC<HomeViewProps> = ({
             font-size: 1em !important;
           }
 
-          [data-theme="light"] .hero-title-serif {
+          [data-theme="light"] .hero-title-serif,
+          [data-theme="light"] .hero-title-serif-inner {
             color: #0F172A !important;
             -webkit-text-fill-color: #0F172A !important;
             text-shadow: none !important;
           }
 
-          /* Mobile Sparkling Star Divider */
+          /* Mobile Sparkling Star Divider with Symmetrical Glowing Lines */
           .hero-mobile-divider {
             display: flex !important;
             align-items: center !important;
             justify-content: center !important;
+            gap: 12px !important;
             width: 100% !important;
-            margin: 0.35rem auto 0.55rem auto !important;
+            max-width: 220px !important;
+            margin: 0.5rem auto 0.65rem auto !important;
+          }
+
+          .divider-glow-line {
+            display: block !important;
+            flex: 1 !important;
+            height: 1px !important;
+            min-width: 35px !important;
+          }
+
+          .divider-line-start {
+            background: linear-gradient(to right, transparent 0%, rgba(229, 184, 105, 0.85) 100%) !important;
+          }
+
+          .divider-line-end {
+            background: linear-gradient(to left, transparent 0%, rgba(229, 184, 105, 0.85) 100%) !important;
           }
 
           .divider-sparkle {
             color: #F6D484 !important;
-            font-size: 0.85rem !important;
+            font-size: 0.82rem !important;
             line-height: 1 !important;
             filter: drop-shadow(0 0 8px rgba(246, 212, 132, 0.95)) !important;
+            flex-shrink: 0 !important;
           }
 
           .hero-subtitle,
