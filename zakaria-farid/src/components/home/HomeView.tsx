@@ -963,7 +963,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
             z-index: 5 !important;
             width: 100% !important;
             max-width: min(92vw, 345px) !important;
-            min-height: calc(1.24em * 2 + 4px + 2.25rem) !important;
+            min-height: calc(1.22em * 2 + 4px + 2.25rem) !important;
             margin: 0 auto 0.35rem auto !important;
             padding: 1.15rem 0.8rem 1.05rem !important;
             background: 
@@ -1039,8 +1039,8 @@ export const HomeView: React.FC<HomeViewProps> = ({
             text-align: center !important;
             gap: 4px !important;
             width: 100% !important;
-            min-height: calc(1.24em * 2 + 4px) !important;
-            height: calc(1.24em * 2 + 4px) !important;
+            min-height: calc(1.22em * 2 + 4px) !important;
+            height: calc(1.22em * 2 + 4px) !important;
             margin: 0 auto !important;
             padding: 0 !important;
             position: relative !important;
@@ -1054,15 +1054,15 @@ export const HomeView: React.FC<HomeViewProps> = ({
             justify-content: center !important;
             text-align: center !important;
             width: 100% !important;
-            min-height: 1.24em !important;
-            height: 1.24em !important;
+            min-height: 1.22em !important;
+            height: 1.22em !important;
             white-space: nowrap !important;
             margin: 0 auto !important;
             padding: 0 !important;
-            font-size: clamp(1.42rem, 5.5vw, 1.54rem) !important;
+            font-size: clamp(1.54rem, 6.4vw, 1.76rem) !important;
             font-weight: 800 !important;
-            letter-spacing: -0.015em !important;
-            line-height: 1.24 !important;
+            letter-spacing: -0.02em !important;
+            line-height: 1.22 !important;
           }
 
           .hero-pill-line-gold .gold-text-span {
@@ -1092,15 +1092,15 @@ export const HomeView: React.FC<HomeViewProps> = ({
             justify-content: center !important;
             text-align: center !important;
             width: 100% !important;
-            min-height: 1.24em !important;
-            height: 1.24em !important;
+            min-height: 1.22em !important;
+            height: 1.22em !important;
             white-space: nowrap !important;
             margin: 0 auto !important;
             padding: 0 !important;
-            font-size: clamp(1.42rem, 5.5vw, 1.54rem) !important;
+            font-size: clamp(1.54rem, 6.4vw, 1.76rem) !important;
             font-weight: 800 !important;
-            letter-spacing: -0.015em !important;
-            line-height: 1.24 !important;
+            letter-spacing: -0.02em !important;
+            line-height: 1.22 !important;
           }
 
           .hero-pill-line-white .white-text-span {
@@ -1113,9 +1113,20 @@ export const HomeView: React.FC<HomeViewProps> = ({
             font-family: inherit !important;
             font-style: normal !important;
             font-weight: 800 !important;
-            line-height: 1.25 !important;
-            white-space: nowrap !important;
             text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5) !important;
+            white-space: nowrap !important;
+          }
+
+          /* Mobile Arabic / RTL Sizing (Expanded to Fill Capsule Generously) */
+          :global([dir="rtl"]) .hero-pill-line-gold,
+          :global([dir="rtl"]) .hero-pill-line-white,
+          [dir="rtl"] .hero-pill-line-gold,
+          [dir="rtl"] .hero-pill-line-white,
+          .home-view[dir="rtl"] .hero-pill-line-gold,
+          .home-view[dir="rtl"] .hero-pill-line-white {
+            font-size: clamp(1.82rem, 7.8vw, 2.18rem) !important;
+            letter-spacing: 0 !important;
+            font-weight: 850 !important;
           }
 
           [data-theme="light"] .hero-pill-line-white .white-text-span {
