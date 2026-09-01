@@ -893,11 +893,11 @@ export const HomeView: React.FC<HomeViewProps> = ({
           .hero-section {
             min-height: 100svh;
             min-height: 100vh;
-            padding-top: 98px;
-            padding-bottom: 2.25rem;
+            padding-top: 68px;
+            padding-bottom: 1.25rem;
             display: flex;
             flex-direction: column;
-            justify-content: flex-end;
+            justify-content: center;
             align-items: stretch;
             box-sizing: border-box;
           }
@@ -914,12 +914,12 @@ export const HomeView: React.FC<HomeViewProps> = ({
             border: none !important;
             box-shadow: none !important;
             border-radius: 0 !important;
-            gap: 1.15rem !important;
+            gap: 0.75rem !important;
             align-items: center !important;
             text-align: center !important;
             display: flex !important;
             flex-direction: column !important;
-            justify-content: flex-end !important;
+            justify-content: center !important;
           }
 
           .hero-content,
@@ -963,9 +963,9 @@ export const HomeView: React.FC<HomeViewProps> = ({
             z-index: 5 !important;
             width: 100% !important;
             max-width: min(92vw, 345px) !important;
-            min-height: calc(1.22em * 2 + 4px + 2.25rem) !important;
-            margin: 0 auto 0.35rem auto !important;
-            padding: 1.15rem 0.8rem 1.05rem !important;
+            min-height: calc(1.22em * 2 + 4px + 1.85rem) !important;
+            margin: 0 auto 0.2rem auto !important;
+            padding: 0.95rem 0.8rem 0.85rem !important;
             background: 
               radial-gradient(ellipse at 50% 0%, rgba(246, 212, 132, 0.4) 0%, rgba(229, 184, 105, 0.12) 28%, transparent 55%),
               linear-gradient(

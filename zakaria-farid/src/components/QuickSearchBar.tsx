@@ -641,9 +641,9 @@ export const QuickSearchBar: React.FC<QuickSearchBarProps> = ({ onSearch, locale
           .quick-search-bar {
             flex-direction: column;
             align-items: stretch;
-            gap: 0.6rem;
-            padding: 1.15rem 1.15rem 1.05rem;
-            border-radius: 20px;
+            gap: 0.35rem;
+            padding: 0.85rem 1rem 0.8rem;
+            border-radius: 18px;
             width: 100%;
             background: linear-gradient(
               135deg,
@@ -676,7 +676,7 @@ export const QuickSearchBar: React.FC<QuickSearchBarProps> = ({ onSearch, locale
             flex-direction: column !important;
             align-items: flex-start !important;
             text-align: start !important;
-            padding: 0.15rem 0;
+            padding: 0.08rem 0;
           }
 
           :global([dir="rtl"]) .search-field,
@@ -718,10 +718,10 @@ export const QuickSearchBar: React.FC<QuickSearchBarProps> = ({ onSearch, locale
 
           .search-submit-btn {
             width: 100%;
-            height: 48px;
-            margin-top: 0.35rem;
+            height: 44px;
+            margin-top: 0.2rem;
             border-radius: 12px;
-            font-size: 0.95rem;
+            font-size: 0.92rem;
           }
 
           .filter-custom-menu {
