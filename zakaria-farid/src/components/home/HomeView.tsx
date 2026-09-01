@@ -941,34 +941,33 @@ export const HomeView: React.FC<HomeViewProps> = ({
             position: relative !important;
             z-index: 5 !important;
             width: 100% !important;
-            max-width: 350px !important;
+            max-width: min(92vw, 355px) !important;
             margin: 0 auto 0.35rem auto !important;
-            padding: 1.25rem 1.45rem !important;
+            padding: 1.15rem 1.25rem 1.05rem !important;
             background: 
-              radial-gradient(ellipse at 50% 0%, rgba(246, 212, 132, 0.4) 0%, rgba(229, 184, 105, 0.14) 30%, transparent 60%),
+              radial-gradient(ellipse at 50% 0%, rgba(246, 212, 132, 0.38) 0%, rgba(229, 184, 105, 0.12) 28%, transparent 55%),
               linear-gradient(
                 135deg,
-                rgba(255, 255, 255, 0.28) 0%,
-                rgba(255, 255, 255, 0.08) 35%,
-                rgba(18, 24, 38, 0.35) 70%,
-                rgba(10, 14, 24, 0.55) 100%
+                rgba(255, 255, 255, 0.24) 0%,
+                rgba(255, 255, 255, 0.08) 32%,
+                rgba(16, 22, 34, 0.45) 75%,
+                rgba(10, 14, 24, 0.62) 100%
               ) !important;
-            backdrop-filter: blur(28px) saturate(220%) brightness(112%) contrast(105%) !important;
-            -webkit-backdrop-filter: blur(28px) saturate(220%) brightness(112%) contrast(105%) !important;
-            border: 1.2px solid rgba(255, 255, 255, 0.35) !important;
-            border-radius: 22px !important;
+            backdrop-filter: blur(28px) saturate(210%) brightness(108%) contrast(106%) !important;
+            -webkit-backdrop-filter: blur(28px) saturate(210%) brightness(108%) contrast(106%) !important;
+            border: 1.1px solid rgba(255, 255, 255, 0.32) !important;
+            border-radius: 20px !important;
             box-shadow: 
-              0 20px 48px rgba(0, 0, 0, 0.4),
-              0 4px 16px rgba(0, 0, 0, 0.16),
-              inset 0 2px 2px rgba(255, 255, 255, 0.7),
-              inset 0 -1px 1px rgba(255, 255, 255, 0.2) !important;
+              0 18px 44px rgba(0, 0, 0, 0.4),
+              0 4px 14px rgba(0, 0, 0, 0.16),
+              inset 0 1.5px 2px rgba(255, 255, 255, 0.65),
+              inset 0 -1px 1px rgba(255, 255, 255, 0.15) !important;
             display: flex !important;
             flex-direction: column !important;
             align-items: center !important;
             justify-content: center !important;
             box-sizing: border-box !important;
             overflow: visible !important;
-            min-height: 112px !important;
           }
 
           /* Highlight glow perfectly centered behind text */
@@ -979,9 +978,9 @@ export const HomeView: React.FC<HomeViewProps> = ({
             left: 50% !important;
             transform: translate(-50%, -50%) !important;
             width: 220px !important;
-            height: 85px !important;
+            height: 80px !important;
             border-radius: 50% !important;
-            background: radial-gradient(ellipse at center, rgba(246, 212, 132, 0.3) 0%, rgba(229, 184, 105, 0.1) 45%, transparent 75%) !important;
+            background: radial-gradient(ellipse at center, rgba(246, 212, 132, 0.28) 0%, rgba(229, 184, 105, 0.1) 45%, transparent 75%) !important;
             filter: blur(12px) !important;
             pointer-events: none !important;
             z-index: 1 !important;
@@ -1009,12 +1008,12 @@ export const HomeView: React.FC<HomeViewProps> = ({
             right: -1.5px !important;
           }
 
-          /* Majestic Title with Pixel-Perfect Symmetry & Centering */
+          /* Majestic Title with Pixel-Perfect Symmetry & Exactly 2 Lines */
           .hero-title,
           :global([dir="rtl"]) .hero-title,
           [dir="rtl"] .hero-title,
           .home-view[dir="rtl"] .hero-title {
-            font-size: clamp(1.48rem, 6.2vw, 1.88rem) !important;
+            font-size: clamp(1.18rem, 5.0vw, 1.48rem) !important;
             font-weight: 800 !important;
             line-height: 1.25 !important;
             letter-spacing: 0 !important;
@@ -1034,73 +1033,75 @@ export const HomeView: React.FC<HomeViewProps> = ({
             z-index: 2 !important;
           }
 
-          /* Line 1: Golden Metallic Headline */
+          /* Line 1 Wrapper */
           .hero-title-main,
-          .hero-title-main-text,
           :global([dir="rtl"]) .hero-title-main,
-          :global([dir="rtl"]) .hero-title-main-text,
           [dir="rtl"] .hero-title-main,
+          .home-view[dir="rtl"] .hero-title-main {
+            display: block !important;
+            width: 100% !important;
+            text-align: center !important;
+            margin: 0 auto !important;
+            padding: 0 !important;
+            line-height: 1.25 !important;
+            white-space: nowrap !important;
+          }
+
+          /* Line 1 Text: Rich Metallic Gold Gradient */
+          .hero-title-main-text,
+          :global([dir="rtl"]) .hero-title-main-text,
           [dir="rtl"] .hero-title-main-text,
-          .home-view[dir="rtl"] .hero-title-main,
           .home-view[dir="rtl"] .hero-title-main-text {
+            display: inline-block !important;
             background: linear-gradient(135deg, #FFFDF7 0%, #FFE599 22%, #F6D484 55%, #E5B869 85%, #C99632 100%) !important;
             -webkit-background-clip: text !important;
             -webkit-text-fill-color: transparent !important;
             color: #F6D484 !important;
             font-weight: 700 !important;
             line-height: 1.25 !important;
-            min-height: auto !important;
-            height: auto !important;
-            margin: 0 auto !important;
-            padding: 0 !important;
-            text-align: center !important;
-            align-self: center !important;
-            justify-content: center !important;
-            display: flex !important;
             white-space: nowrap !important;
             text-shadow: none !important;
             filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.45)) !important;
-            font-size: 1em !important;
           }
 
-          [data-theme="light"] .hero-title-main,
           [data-theme="light"] .hero-title-main-text {
             background: linear-gradient(135deg, #B8860B 0%, #996515 50%, #7B4F0F 100%) !important;
             -webkit-background-clip: text !important;
             -webkit-text-fill-color: transparent !important;
           }
 
-          /* Line 2: Crisp Pure White Headline */
+          /* Line 2 Wrapper */
           .hero-title-serif,
-          .hero-title-serif-inner,
           :global([dir="rtl"]) .hero-title-serif,
-          :global([dir="rtl"]) .hero-title-serif-inner,
           [dir="rtl"] .hero-title-serif,
+          .home-view[dir="rtl"] .hero-title-serif {
+            display: block !important;
+            width: 100% !important;
+            text-align: center !important;
+            margin: 0 auto !important;
+            padding: 0 !important;
+            line-height: 1.25 !important;
+            white-space: nowrap !important;
+          }
+
+          /* Line 2 Text: Crisp Pure White */
+          .hero-title-serif-inner,
+          :global([dir="rtl"]) .hero-title-serif-inner,
           [dir="rtl"] .hero-title-serif-inner,
-          .home-view[dir="rtl"] .hero-title-serif,
           .home-view[dir="rtl"] .hero-title-serif-inner {
-            color: #FFFFFF !important;
+            display: inline-block !important;
             background: none !important;
             -webkit-background-clip: unset !important;
             -webkit-text-fill-color: #FFFFFF !important;
+            color: #FFFFFF !important;
             font-family: inherit !important;
             font-style: normal !important;
             font-weight: 800 !important;
             line-height: 1.25 !important;
-            min-height: auto !important;
-            height: auto !important;
-            margin: 0 auto !important;
-            padding: 0 !important;
-            text-align: center !important;
-            align-self: center !important;
-            justify-content: center !important;
-            display: flex !important;
             white-space: nowrap !important;
-            text-shadow: 0 2px 8px rgba(0, 0, 0, 0.45) !important;
-            font-size: 1em !important;
+            text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5) !important;
           }
 
-          [data-theme="light"] .hero-title-serif,
           [data-theme="light"] .hero-title-serif-inner {
             color: #0F172A !important;
             -webkit-text-fill-color: #0F172A !important;
