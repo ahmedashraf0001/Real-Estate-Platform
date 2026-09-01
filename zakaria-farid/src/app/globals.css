@@ -641,32 +641,25 @@ html[lang="ar"] {
   line-height: 1.35 !important;
 }
 
-/* Arabic Hero Title Prominence (+15% balanced scale & no clipping) */
-[dir="rtl"] .hero-title {
-  font-size: clamp(2.45rem, 4.2vw, 3.95rem) !important;
-  line-height: 1.24 !important;
-  overflow: visible !important;
-}
+/* Arabic Hero Title Prominence for Desktop */
+@media (min-width: 769px) {
+  [dir="rtl"] .hero-title {
+    font-size: clamp(2.45rem, 4.2vw, 3.95rem) !important;
+    line-height: 1.24 !important;
+    overflow: visible !important;
+  }
 
-[dir="rtl"] .hero-title-main,
-[dir="rtl"] .hero-title-serif {
-  font-size: 1em !important;
-  font-style: normal !important;
-  overflow: visible !important;
+  [dir="rtl"] .hero-title-main,
+  [dir="rtl"] .hero-title-serif {
+    font-size: 1em !important;
+    font-style: normal !important;
+    overflow: visible !important;
+  }
 }
 
 @media (max-width: 768px) {
-  [dir="rtl"] .hero-title {
-    font-size: clamp(1.58rem, 6.8vw, 2.15rem) !important;
-    line-height: 1.25 !important;
-    text-align: center !important;
-    align-items: center !important;
-    justify-content: center !important;
-  }
   [dir="rtl"] .hero-container,
   [dir="rtl"] .hero-content,
-  [dir="rtl"] .hero-title-main,
-  [dir="rtl"] .hero-title-serif,
   [dir="rtl"] .hero-subtitle {
     text-align: center !important;
     align-items: center !important;

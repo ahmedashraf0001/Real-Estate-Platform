@@ -1055,8 +1055,9 @@ export const HomeView: React.FC<HomeViewProps> = ({
             display: inline-block !important;
             background: linear-gradient(135deg, #FFFDF7 0%, #FFE599 22%, #F6D484 55%, #E5B869 85%, #C99632 100%) !important;
             -webkit-background-clip: text !important;
+            background-clip: text !important;
             -webkit-text-fill-color: transparent !important;
-            color: #F6D484 !important;
+            color: transparent !important;
             font-weight: 700 !important;
             line-height: 1.25 !important;
             white-space: nowrap !important;
