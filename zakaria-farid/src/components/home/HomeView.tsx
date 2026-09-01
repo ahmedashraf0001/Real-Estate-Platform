@@ -298,18 +298,18 @@ export const HomeView: React.FC<HomeViewProps> = ({
                 
                 {/* Monumental Headline with Living Typewriter Animation */}
                 <motion.h1 
-                  className="hero-title"
+                  className="hero-title hero-pill-lines-container"
                   aria-label={`${line1Text} ${line2Text}`}
                   initial={{ opacity: 0, y: 16 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.6, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
                 >
-                  <span className="hero-title-main">
-                    <span className="hero-title-main-text">{display1}</span>
+                  <span className="hero-pill-line-gold">
+                    <span className="gold-text-span">{display1}</span>
                     {showCursorOnLine1 && <span className="typewriter-cursor">|</span>}
                   </span>
-                  <span className="hero-title-serif">
-                    <span className="hero-title-serif-inner">{display2}</span>
+                  <span className="hero-pill-line-white">
+                    <span className="white-text-span">{display2}</span>
                     {showCursorOnLine2 && <span className="typewriter-cursor">|</span>}
                   </span>
                 </motion.h1>
@@ -706,7 +706,8 @@ export const HomeView: React.FC<HomeViewProps> = ({
 
         /* Desktop Layout Styles */
         @media (min-width: 769px) {
-          .hero-title {
+          .hero-title,
+          .hero-pill-lines-container {
             font-family: var(--font-heading);
             font-size: clamp(2.2rem, 3.8vw, 3.65rem);
             font-weight: 800;
@@ -720,7 +721,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
             min-height: calc(1.15em * 2 + 2px);
           }
 
-          .hero-title-main {
+          .hero-pill-line-gold {
             color: #FFFFFF;
             text-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
             white-space: nowrap;
@@ -732,21 +733,34 @@ export const HomeView: React.FC<HomeViewProps> = ({
             padding: 0;
             text-align: start;
             align-self: flex-start;
+            font-size: 1em;
           }
 
-          [data-theme="light"] .hero-title-main {
-            color: #0F172A;
-            text-shadow: none;
+          .hero-pill-line-gold .gold-text-span {
+            color: #FFFFFF !important;
+            background: none !important;
+            -webkit-background-clip: unset !important;
+            background-clip: unset !important;
+            -webkit-text-fill-color: #FFFFFF !important;
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.4) !important;
+            font-weight: 800 !important;
           }
 
-          .hero-title-serif {
+          [data-theme="light"] .hero-pill-line-gold .gold-text-span {
+            color: #0F172A !important;
+            -webkit-text-fill-color: #0F172A !important;
+            text-shadow: none !important;
+          }
+
+          .hero-pill-line-white {
             font-family: Georgia, var(--font-heading), serif;
             font-weight: 800;
             font-style: italic;
             background: linear-gradient(135deg, #FFFDF7 0%, #FFF0C2 22%, #F6D484 55%, #E5B869 85%, #D49F33 100%);
             -webkit-background-clip: text;
+            background-clip: text;
             -webkit-text-fill-color: transparent;
-            filter: none;
+            color: transparent;
             white-space: nowrap;
             display: inline-flex;
             align-items: center;
@@ -757,25 +771,35 @@ export const HomeView: React.FC<HomeViewProps> = ({
             text-align: start;
             align-self: flex-start;
             overflow: visible;
+            font-size: 1em;
           }
 
-          [data-theme="light"] .hero-title-serif {
-            background: linear-gradient(135deg, #B8860B 0%, #996515 50%, #7B4F0F 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            filter: none;
-          }
-
-          .hero-title-serif-inner {
+          .hero-pill-line-white .white-text-span {
+            background: linear-gradient(135deg, #FFFDF7 0%, #FFF0C2 22%, #F6D484 55%, #E5B869 85%, #D49F33 100%) !important;
+            -webkit-background-clip: text !important;
+            background-clip: text !important;
+            -webkit-text-fill-color: transparent !important;
+            color: transparent !important;
             display: inline-block;
             padding: 0.05em 0.2em;
             margin: -0.05em -0.2em;
             overflow: visible;
           }
 
+          [data-theme="light"] .hero-pill-line-white .white-text-span {
+            background: linear-gradient(135deg, #B8860B 0%, #996515 50%, #7B4F0F 100%) !important;
+            -webkit-background-clip: text !important;
+            background-clip: text !important;
+            -webkit-text-fill-color: transparent !important;
+            color: transparent !important;
+          }
+
           :global([dir="rtl"]) .hero-title,
+          :global([dir="rtl"]) .hero-pill-lines-container,
           [dir="rtl"] .hero-title,
-          .home-view[dir="rtl"] .hero-title {
+          [dir="rtl"] .hero-pill-lines-container,
+          .home-view[dir="rtl"] .hero-title,
+          .home-view[dir="rtl"] .hero-pill-lines-container {
             font-size: clamp(2.45rem, 4.2vw, 3.95rem) !important;
             line-height: 1.24 !important;
             letter-spacing: 0 !important;
@@ -784,9 +808,9 @@ export const HomeView: React.FC<HomeViewProps> = ({
             text-align: start !important;
           }
 
-          :global([dir="rtl"]) .hero-title-main,
-          [dir="rtl"] .hero-title-main,
-          .home-view[dir="rtl"] .hero-title-main {
+          :global([dir="rtl"]) .hero-pill-line-gold,
+          [dir="rtl"] .hero-pill-line-gold,
+          .home-view[dir="rtl"] .hero-pill-line-gold {
             font-size: 1em !important;
             font-style: normal !important;
             letter-spacing: 0 !important;
@@ -798,21 +822,18 @@ export const HomeView: React.FC<HomeViewProps> = ({
             align-self: flex-start !important;
           }
 
-          :global([dir="rtl"]) .hero-title-serif,
-          [dir="rtl"] .hero-title-serif,
-          .home-view[dir="rtl"] .hero-title-serif {
+          :global([dir="rtl"]) .hero-pill-line-white,
+          :global([dir="rtl"]) .hero-pill-line-white .white-text-span,
+          [dir="rtl"] .hero-pill-line-white,
+          [dir="rtl"] .hero-pill-line-white .white-text-span,
+          .home-view[dir="rtl"] .hero-pill-line-white,
+          .home-view[dir="rtl"] .hero-pill-line-white .white-text-span {
             font-family: 'ThmanyahSerifDisplay', 'Amiri', 'Traditional Arabic', serif !important;
             font-size: 1em !important;
             font-style: normal !important;
             font-weight: 900 !important;
             line-height: 1.25 !important;
-            min-height: 1.25em !important;
             letter-spacing: 0 !important;
-            padding: 0.12em 0.45em !important;
-            margin: -0.12em -0.45em !important;
-            overflow: visible !important;
-            filter: none !important;
-            text-shadow: none !important;
             display: inline-block !important;
             text-align: start !important;
             align-self: flex-start !important;
@@ -1008,93 +1029,78 @@ export const HomeView: React.FC<HomeViewProps> = ({
             right: -1.5px !important;
           }
 
-          /* Majestic Title with Pixel-Perfect Symmetry & Exactly 2 Lines */
-          .hero-title,
-          :global([dir="rtl"]) .hero-title,
-          [dir="rtl"] .hero-title,
-          .home-view[dir="rtl"] .hero-title {
-            font-size: clamp(1.18rem, 5.0vw, 1.48rem) !important;
-            font-weight: 800 !important;
-            line-height: 1.25 !important;
-            letter-spacing: 0 !important;
-            margin: 0 auto !important;
-            padding: 0 !important;
-            min-height: auto !important;
-            height: auto !important;
+          /* Lines Container */
+          .hero-pill-lines-container {
             display: flex !important;
             flex-direction: column !important;
             align-items: center !important;
-            text-align: center !important;
             justify-content: center !important;
+            text-align: center !important;
             gap: 4px !important;
             width: 100% !important;
-            max-width: 100% !important;
+            margin: 0 auto !important;
+            padding: 0 !important;
             position: relative !important;
             z-index: 2 !important;
           }
 
-          /* Line 1 Wrapper */
-          .hero-title-main,
-          :global([dir="rtl"]) .hero-title-main,
-          [dir="rtl"] .hero-title-main,
-          .home-view[dir="rtl"] .hero-title-main {
-            display: block !important;
-            width: 100% !important;
+          /* Mobile Line 1: Rich Metallic Egyptian Gold */
+          .hero-pill-line-gold {
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
             text-align: center !important;
+            width: 100% !important;
+            white-space: nowrap !important;
             margin: 0 auto !important;
             padding: 0 !important;
+            font-size: clamp(1.16rem, 4.9vw, 1.42rem) !important;
+            font-weight: 700 !important;
             line-height: 1.25 !important;
-            white-space: nowrap !important;
           }
 
-          /* Line 1 Text: Rich Metallic Gold Gradient */
-          .hero-title-main-text,
-          :global([dir="rtl"]) .hero-title-main-text,
-          [dir="rtl"] .hero-title-main-text,
-          .home-view[dir="rtl"] .hero-title-main-text {
+          .hero-pill-line-gold .gold-text-span {
             display: inline-block !important;
             background: linear-gradient(135deg, #FFFDF7 0%, #FFE599 22%, #F6D484 55%, #E5B869 85%, #C99632 100%) !important;
             -webkit-background-clip: text !important;
             background-clip: text !important;
             -webkit-text-fill-color: transparent !important;
             color: transparent !important;
-            font-weight: 700 !important;
-            line-height: 1.25 !important;
-            white-space: nowrap !important;
-            text-shadow: none !important;
             filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.45)) !important;
+            text-shadow: none !important;
+            white-space: nowrap !important;
           }
 
-          [data-theme="light"] .hero-title-main-text {
+          [data-theme="light"] .hero-pill-line-gold .gold-text-span {
             background: linear-gradient(135deg, #B8860B 0%, #996515 50%, #7B4F0F 100%) !important;
             -webkit-background-clip: text !important;
+            background-clip: text !important;
             -webkit-text-fill-color: transparent !important;
+            color: transparent !important;
           }
 
-          /* Line 2 Wrapper */
-          .hero-title-serif,
-          :global([dir="rtl"]) .hero-title-serif,
-          [dir="rtl"] .hero-title-serif,
-          .home-view[dir="rtl"] .hero-title-serif {
-            display: block !important;
-            width: 100% !important;
+          /* Mobile Line 2: Crisp Pure White */
+          .hero-pill-line-white {
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
             text-align: center !important;
+            width: 100% !important;
+            white-space: nowrap !important;
             margin: 0 auto !important;
             padding: 0 !important;
+            font-size: clamp(1.16rem, 4.9vw, 1.42rem) !important;
+            font-weight: 800 !important;
             line-height: 1.25 !important;
-            white-space: nowrap !important;
           }
 
-          /* Line 2 Text: Crisp Pure White */
-          .hero-title-serif-inner,
-          :global([dir="rtl"]) .hero-title-serif-inner,
-          [dir="rtl"] .hero-title-serif-inner,
-          .home-view[dir="rtl"] .hero-title-serif-inner {
+          .hero-pill-line-white .white-text-span {
             display: inline-block !important;
+            color: #FFFFFF !important;
             background: none !important;
             -webkit-background-clip: unset !important;
+            background-clip: unset !important;
             -webkit-text-fill-color: #FFFFFF !important;
-            color: #FFFFFF !important;
             font-family: inherit !important;
             font-style: normal !important;
             font-weight: 800 !important;
@@ -1103,7 +1109,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
             text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5) !important;
           }
 
-          [data-theme="light"] .hero-title-serif-inner {
+          [data-theme="light"] .hero-pill-line-white .white-text-span {
             color: #0F172A !important;
             -webkit-text-fill-color: #0F172A !important;
             text-shadow: none !important;
