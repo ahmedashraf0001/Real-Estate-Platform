@@ -1155,7 +1155,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
           .home-view[dir="rtl"] .hero-subtitle {
             font-size: 0.84rem !important;
             line-height: 1.55 !important;
-            color: rgba(255, 255, 255, 0.92) !important;
+            color: #A5A5A7 !important;
             margin: 0 auto !important;
             text-align: center !important;
             max-width: 44ch !important;
@@ -1351,7 +1351,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
 
         .hero-subtitle {
           font-size: 1.05rem;
-          color: rgba(255, 255, 255, 0.9);
+          color: #A5A5A7;
           line-height: 1.65;
           max-width: 680px;
           margin: 0;
