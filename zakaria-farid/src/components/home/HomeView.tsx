@@ -704,75 +704,75 @@ export const HomeView: React.FC<HomeViewProps> = ({
           width: 100%;
         }
 
-        .hero-title {
-          font-family: var(--font-heading);
-          font-size: clamp(2.2rem, 3.8vw, 3.65rem);
-          font-weight: 800;
-          line-height: 1.15;
-          letter-spacing: -0.025em;
-          margin: 0 0 1.25rem 0;
-          display: flex;
-          flex-direction: column;
-          align-items: flex-start;
-          gap: 2px;
-          min-height: calc(1.15em * 2 + 2px);
-        }
-
-        .hero-title-main {
-          color: #FFFFFF;
-          text-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
-          white-space: nowrap;
-          display: inline-flex;
-          align-items: center;
-          line-height: 1.15;
-          min-height: 1.15em;
-          margin: 0;
-          padding: 0;
-          text-align: start;
-          align-self: flex-start;
-        }
-
-        [data-theme="light"] .hero-title-main {
-          color: #0F172A;
-          text-shadow: none;
-        }
-
-        .hero-title-serif {
-          font-family: Georgia, var(--font-heading), serif;
-          font-weight: 800;
-          font-style: italic;
-          background: linear-gradient(135deg, #FFFDF7 0%, #FFF0C2 22%, #F6D484 55%, #E5B869 85%, #D49F33 100%);
-          -webkit-background-clip: text;
-          -webkit-text-fill-color: transparent;
-          filter: none;
-          white-space: nowrap;
-          display: inline-flex;
-          align-items: center;
-          line-height: 1.15;
-          min-height: 1.15em;
-          margin: 0;
-          padding: 0;
-          text-align: start;
-          align-self: flex-start;
-          overflow: visible;
-        }
-
-        [data-theme="light"] .hero-title-serif {
-          background: linear-gradient(135deg, #B8860B 0%, #996515 50%, #7B4F0F 100%);
-          -webkit-background-clip: text;
-          -webkit-text-fill-color: transparent;
-          filter: none;
-        }
-
-        .hero-title-serif-inner {
-          display: inline-block;
-          padding: 0.05em 0.2em;
-          margin: -0.05em -0.2em;
-          overflow: visible;
-        }
-
-        /* Desktop RTL Overrides */
+        /* Desktop Layout Styles */
         @media (min-width: 769px) {
+          .hero-title {
+            font-family: var(--font-heading);
+            font-size: clamp(2.2rem, 3.8vw, 3.65rem);
+            font-weight: 800;
+            line-height: 1.15;
+            letter-spacing: -0.025em;
+            margin: 0 0 1.25rem 0;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 2px;
+            min-height: calc(1.15em * 2 + 2px);
+          }
+
+          .hero-title-main {
+            color: #FFFFFF;
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
+            white-space: nowrap;
+            display: inline-flex;
+            align-items: center;
+            line-height: 1.15;
+            min-height: 1.15em;
+            margin: 0;
+            padding: 0;
+            text-align: start;
+            align-self: flex-start;
+          }
+
+          [data-theme="light"] .hero-title-main {
+            color: #0F172A;
+            text-shadow: none;
+          }
+
+          .hero-title-serif {
+            font-family: Georgia, var(--font-heading), serif;
+            font-weight: 800;
+            font-style: italic;
+            background: linear-gradient(135deg, #FFFDF7 0%, #FFF0C2 22%, #F6D484 55%, #E5B869 85%, #D49F33 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            filter: none;
+            white-space: nowrap;
+            display: inline-flex;
+            align-items: center;
+            line-height: 1.15;
+            min-height: 1.15em;
+            margin: 0;
+            padding: 0;
+            text-align: start;
+            align-self: flex-start;
+            overflow: visible;
+          }
+
+          [data-theme="light"] .hero-title-serif {
+            background: linear-gradient(135deg, #B8860B 0%, #996515 50%, #7B4F0F 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            filter: none;
+          }
+
+          .hero-title-serif-inner {
+            display: inline-block;
+            padding: 0.05em 0.2em;
+            margin: -0.05em -0.2em;
+            overflow: visible;
+          }
+
           :global([dir="rtl"]) .hero-title,
           [dir="rtl"] .hero-title,
           .home-view[dir="rtl"] .hero-title {
@@ -820,7 +820,8 @@ export const HomeView: React.FC<HomeViewProps> = ({
 
           .hero-mobile-crest,
           .hero-mobile-divider,
-          .glass-edge-glint {
+          .glass-edge-glint,
+          .glass-center-glow {
             display: none !important;
           }
 
@@ -862,7 +863,8 @@ export const HomeView: React.FC<HomeViewProps> = ({
         .hero-mobile-quick-chips,
         .hero-mobile-trust-bar,
         .hero-mobile-explore-btn,
-        .glass-edge-glint {
+        .glass-edge-glint,
+        .glass-center-glow {
           display: none;
         }
 
@@ -913,7 +915,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
             margin: 0 auto !important;
           }
 
-          /* Royal Baroque Architectural Medallion Crest */
+          /* Royal Baroque Architectural Medallion Crest - Merged into Glass Apex */
           .hero-mobile-crest {
             display: flex !important;
             align-items: center !important;
@@ -921,8 +923,8 @@ export const HomeView: React.FC<HomeViewProps> = ({
             position: relative !important;
             z-index: 6 !important;
             width: 100% !important;
-            margin: 0 auto -2.1rem auto !important;
-            filter: drop-shadow(0 0 16px rgba(229, 184, 105, 0.45)) !important;
+            margin: 0 auto -28px auto !important;
+            filter: drop-shadow(0 0 16px rgba(229, 184, 105, 0.5)) !important;
             pointer-events: none !important;
           }
 
@@ -934,21 +936,23 @@ export const HomeView: React.FC<HomeViewProps> = ({
             overflow: visible !important;
           }
 
-          /* Liquid Frosted Glass Capsule Card (Identical Translucent Specular Recipe) */
+          /* Liquid Frosted Glass Capsule Card (Merged Apex & Specular Highlights) */
           .hero-title-glass-card {
             position: relative !important;
             z-index: 5 !important;
             width: 100% !important;
             max-width: 350px !important;
-            margin: 0 auto 0.75rem auto !important;
-            padding: 1.15rem 1.45rem 1.05rem !important;
-            background: linear-gradient(
-              135deg,
-              rgba(255, 255, 255, 0.28) 0%,
-              rgba(255, 255, 255, 0.09) 35%,
-              rgba(18, 24, 38, 0.35) 70%,
-              rgba(10, 14, 24, 0.55) 100%
-            ) !important;
+            margin: 0 auto 0.35rem auto !important;
+            padding: 1.25rem 1.45rem !important;
+            background: 
+              radial-gradient(ellipse at 50% 0%, rgba(246, 212, 132, 0.4) 0%, rgba(229, 184, 105, 0.14) 30%, transparent 60%),
+              linear-gradient(
+                135deg,
+                rgba(255, 255, 255, 0.28) 0%,
+                rgba(255, 255, 255, 0.08) 35%,
+                rgba(18, 24, 38, 0.35) 70%,
+                rgba(10, 14, 24, 0.55) 100%
+              ) !important;
             backdrop-filter: blur(28px) saturate(220%) brightness(112%) contrast(105%) !important;
             -webkit-backdrop-filter: blur(28px) saturate(220%) brightness(112%) contrast(105%) !important;
             border: 1.2px solid rgba(255, 255, 255, 0.35) !important;
@@ -964,20 +968,21 @@ export const HomeView: React.FC<HomeViewProps> = ({
             justify-content: center !important;
             box-sizing: border-box !important;
             overflow: visible !important;
+            min-height: 112px !important;
           }
 
-          /* Highlight glow centered in the card */
+          /* Highlight glow perfectly centered behind text */
           .glass-center-glow {
             display: block !important;
             position: absolute !important;
             top: 50% !important;
             left: 50% !important;
             transform: translate(-50%, -50%) !important;
-            width: 230px !important;
-            height: 95px !important;
+            width: 220px !important;
+            height: 85px !important;
             border-radius: 50% !important;
-            background: radial-gradient(ellipse at center, rgba(246, 212, 132, 0.32) 0%, rgba(229, 184, 105, 0.12) 45%, transparent 75%) !important;
-            filter: blur(14px) !important;
+            background: radial-gradient(ellipse at center, rgba(246, 212, 132, 0.3) 0%, rgba(229, 184, 105, 0.1) 45%, transparent 75%) !important;
+            filter: blur(12px) !important;
             pointer-events: none !important;
             z-index: 1 !important;
           }
@@ -1004,7 +1009,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
             right: -1.5px !important;
           }
 
-          /* Majestic Title with Living Presence inside Glass */
+          /* Majestic Title with Pixel-Perfect Symmetry & Centering */
           .hero-title,
           :global([dir="rtl"]) .hero-title,
           [dir="rtl"] .hero-title,
@@ -1014,13 +1019,15 @@ export const HomeView: React.FC<HomeViewProps> = ({
             line-height: 1.25 !important;
             letter-spacing: 0 !important;
             margin: 0 auto !important;
-            min-height: calc(1.25em * 2 + 2px) !important;
+            padding: 0 !important;
+            min-height: auto !important;
+            height: auto !important;
             display: flex !important;
             flex-direction: column !important;
             align-items: center !important;
             text-align: center !important;
             justify-content: center !important;
-            gap: 2px !important;
+            gap: 4px !important;
             width: 100% !important;
             max-width: 100% !important;
             position: relative !important;
@@ -1042,7 +1049,8 @@ export const HomeView: React.FC<HomeViewProps> = ({
             color: #F6D484 !important;
             font-weight: 700 !important;
             line-height: 1.25 !important;
-            min-height: 1.25em !important;
+            min-height: auto !important;
+            height: auto !important;
             margin: 0 auto !important;
             padding: 0 !important;
             text-align: center !important;
@@ -1079,7 +1087,8 @@ export const HomeView: React.FC<HomeViewProps> = ({
             font-style: normal !important;
             font-weight: 800 !important;
             line-height: 1.25 !important;
-            min-height: 1.25em !important;
+            min-height: auto !important;
+            height: auto !important;
             margin: 0 auto !important;
             padding: 0 !important;
             text-align: center !important;
@@ -1103,17 +1112,17 @@ export const HomeView: React.FC<HomeViewProps> = ({
             display: flex !important;
             align-items: center !important;
             justify-content: center !important;
-            gap: 12px !important;
+            gap: 10px !important;
             width: 100% !important;
-            max-width: 220px !important;
-            margin: 0.5rem auto 0.65rem auto !important;
+            max-width: 170px !important;
+            margin: 0.2rem auto 0.3rem auto !important;
           }
 
           .divider-glow-line {
             display: block !important;
             flex: 1 !important;
             height: 1px !important;
-            min-width: 35px !important;
+            min-width: 25px !important;
           }
 
           .divider-line-start {
@@ -1139,8 +1148,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
             font-size: 0.84rem !important;
             line-height: 1.55 !important;
             color: rgba(255, 255, 255, 0.92) !important;
-            margin-bottom: 0 !important;
-            margin-inline: auto !important;
+            margin: 0 auto !important;
             text-align: center !important;
             max-width: 44ch !important;
             text-shadow: 0 2px 10px rgba(0, 0, 0, 0.9) !important;
