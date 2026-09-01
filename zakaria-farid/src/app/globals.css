@@ -269,9 +269,15 @@
 html {
   font-size: 16px;
   background-color: var(--bg-primary) !important;
-  overflow-y: scroll;
-  scrollbar-gutter: stable;
+  overflow-y: auto;
   transition: background-color var(--transition-smooth);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  html {
+    overflow-y: scroll;
+    scrollbar-gutter: stable;
+  }
 }
 
 html[data-theme="dark"] {

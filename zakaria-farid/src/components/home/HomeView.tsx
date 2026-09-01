@@ -415,7 +415,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
             </motion.div>
 
             {/* 6-Card Animated Grid */}
-            <motion.div layout className="featured-grid">
+            <div className="featured-grid">
               <AnimatePresence mode="popLayout">
                 {filteredFeaturedProperties.map((property, idx) => (
                   <motion.div
@@ -435,7 +435,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                   </motion.div>
                 ))}
               </AnimatePresence>
-            </motion.div>
+            </div>
           </div>
         </section>
       )}
@@ -891,8 +891,8 @@ export const HomeView: React.FC<HomeViewProps> = ({
 
         @media (max-width: 768px) {
           .hero-section {
+            min-height: 100svh;
             min-height: 100vh;
-            min-height: 100dvh;
             padding-top: 98px;
             padding-bottom: 2.25rem;
             display: flex;
