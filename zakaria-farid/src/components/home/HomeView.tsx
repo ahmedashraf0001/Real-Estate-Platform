@@ -944,27 +944,27 @@ export const HomeView: React.FC<HomeViewProps> = ({
             position: relative !important;
             z-index: 6 !important;
             width: 100% !important;
-            margin: 0 auto -28px auto !important;
+            margin: 0 auto -26px auto !important;
             filter: drop-shadow(0 0 16px rgba(229, 184, 105, 0.5)) !important;
             pointer-events: none !important;
           }
 
           .crest-baroque-svg {
             display: block !important;
-            width: 176px !important;
-            max-width: 176px !important;
+            width: 156px !important;
+            max-width: 156px !important;
             height: auto !important;
             overflow: visible !important;
           }
 
-          /* Liquid Frosted Glass Capsule Card (Merged Apex & Specular Highlights) */
+          /* Liquid Frosted Glass Capsule Card (Compact Width, Snug Padding) */
           .hero-title-glass-card {
             position: relative !important;
             z-index: 5 !important;
             width: 100% !important;
-            max-width: min(94vw, 380px) !important;
+            max-width: min(88vw, 328px) !important;
             margin: 0 auto 0.35rem auto !important;
-            padding: 1.25rem 1.2rem 1.15rem !important;
+            padding: 1.15rem 0.85rem 1.05rem !important;
             background: 
               radial-gradient(ellipse at 50% 0%, rgba(246, 212, 132, 0.4) 0%, rgba(229, 184, 105, 0.12) 28%, transparent 55%),
               linear-gradient(
@@ -977,7 +977,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
             backdrop-filter: blur(28px) saturate(210%) brightness(108%) contrast(106%) !important;
             -webkit-backdrop-filter: blur(28px) saturate(210%) brightness(108%) contrast(106%) !important;
             border: 1.1px solid rgba(255, 255, 255, 0.32) !important;
-            border-radius: 22px !important;
+            border-radius: 20px !important;
             box-shadow: 
               0 18px 44px rgba(0, 0, 0, 0.4),
               0 4px 14px rgba(0, 0, 0, 0.16),
@@ -998,8 +998,8 @@ export const HomeView: React.FC<HomeViewProps> = ({
             top: 50% !important;
             left: 50% !important;
             transform: translate(-50%, -50%) !important;
-            width: 250px !important;
-            height: 90px !important;
+            width: 210px !important;
+            height: 80px !important;
             border-radius: 50% !important;
             background: radial-gradient(ellipse at center, rgba(246, 212, 132, 0.3) 0%, rgba(229, 184, 105, 0.1) 45%, transparent 75%) !important;
             filter: blur(14px) !important;
@@ -1013,7 +1013,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
             top: 50% !important;
             transform: translateY(-50%) !important;
             width: 3px !important;
-            height: 52px !important;
+            height: 48px !important;
             background: linear-gradient(180deg, transparent 0%, rgba(255, 245, 220, 0.95) 50%, transparent 100%) !important;
             filter: drop-shadow(0 0 10px rgba(255, 235, 180, 0.9)) !important;
             pointer-events: none !important;
@@ -1036,7 +1036,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
             align-items: center !important;
             justify-content: center !important;
             text-align: center !important;
-            gap: 4px !important;
+            gap: 3px !important;
             width: 100% !important;
             margin: 0 auto !important;
             padding: 0 !important;
@@ -1044,7 +1044,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
             z-index: 2 !important;
           }
 
-          /* Mobile Line 1: Rich Metallic Egyptian Gold */
+          /* Mobile Line 1: Rich Metallic Egyptian Gold (Matching Target Scale) */
           .hero-pill-line-gold {
             display: flex !important;
             align-items: center !important;
@@ -1054,9 +1054,9 @@ export const HomeView: React.FC<HomeViewProps> = ({
             white-space: nowrap !important;
             margin: 0 auto !important;
             padding: 0 !important;
-            font-size: clamp(1.32rem, 5.6vw, 1.62rem) !important;
-            font-weight: 700 !important;
-            line-height: 1.28 !important;
+            font-size: clamp(1.44rem, 6.2vw, 1.74rem) !important;
+            font-weight: 800 !important;
+            line-height: 1.22 !important;
           }
 
           .hero-pill-line-gold .gold-text-span {
@@ -1079,7 +1079,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
             color: transparent !important;
           }
 
-          /* Mobile Line 2: Crisp Pure White */
+          /* Mobile Line 2: Crisp Pure White (Matching Target Scale) */
           .hero-pill-line-white {
             display: flex !important;
             align-items: center !important;
@@ -1089,9 +1089,9 @@ export const HomeView: React.FC<HomeViewProps> = ({
             white-space: nowrap !important;
             margin: 0 auto !important;
             padding: 0 !important;
-            font-size: clamp(1.32rem, 5.6vw, 1.62rem) !important;
+            font-size: clamp(1.44rem, 6.2vw, 1.74rem) !important;
             font-weight: 800 !important;
-            line-height: 1.28 !important;
+            line-height: 1.22 !important;
           }
 
           .hero-pill-line-white .white-text-span {
