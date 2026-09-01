@@ -1111,18 +1111,18 @@ export const HomeView: React.FC<HomeViewProps> = ({
             white-space: nowrap !important;
           }
 
-          /* Mobile Arabic / RTL Sizing (Large & Prominent) */
+          /* Mobile Arabic / RTL Sizing (-10% Adjusted) */
           .hero-ar .hero-pill-line-gold,
           .hero-ar .hero-pill-line-white {
-            font-size: clamp(1.82rem, 7.8vw, 2.18rem) !important;
+            font-size: clamp(1.64rem, 7.0vw, 1.96rem) !important;
             letter-spacing: 0 !important;
             font-weight: 850 !important;
           }
 
-          /* Mobile English / LTR Sizing (Calibrated to Fit Snugly) */
+          /* Mobile English / LTR Sizing (+10% Adjusted) */
           .hero-en .hero-pill-line-gold,
           .hero-en .hero-pill-line-white {
-            font-size: clamp(1.22rem, 5.0vw, 1.40rem) !important;
+            font-size: clamp(1.34rem, 5.5vw, 1.54rem) !important;
             font-weight: 800 !important;
             letter-spacing: -0.015em !important;
           }
