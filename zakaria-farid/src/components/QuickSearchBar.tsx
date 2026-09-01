@@ -386,21 +386,37 @@ export const QuickSearchBar: React.FC<QuickSearchBarProps> = ({ onSearch, locale
             inset 0 -1px 1px rgba(0, 0, 0, 0.05);
         }
 
-        .search-field {
+        .custom-filter-dropdown {
           flex: 1;
           display: flex;
           flex-direction: column;
+          align-items: flex-start;
+          text-align: start;
           gap: 3px;
           min-width: 0;
           position: relative;
         }
 
+        :global([dir="rtl"]) .custom-filter-dropdown,
+        [dir="rtl"] .custom-filter-dropdown {
+          align-items: flex-start !important;
+          text-align: start !important;
+        }
+
         .field-label {
+          display: block;
+          width: 100%;
+          text-align: start;
           font-size: 0.7rem;
           font-weight: 800;
           letter-spacing: 0.14em;
           text-transform: uppercase;
           transition: color var(--transition-fast);
+        }
+
+        :global([dir="rtl"]) .field-label,
+        [dir="rtl"] .field-label {
+          text-align: start !important;
         }
 
         [data-theme="dark"] .field-label {
@@ -653,14 +669,35 @@ export const QuickSearchBar: React.FC<QuickSearchBarProps> = ({ onSearch, locale
             box-shadow: 0 16px 40px rgba(15, 23, 42, 0.12), inset 0 1.5px 2px #FFFFFF;
           }
 
-          .search-field {
-            width: 100%;
+          .search-field,
+          .custom-filter-dropdown {
+            width: 100% !important;
+            display: flex !important;
+            flex-direction: column !important;
+            align-items: flex-start !important;
+            text-align: start !important;
             padding: 0.15rem 0;
           }
 
+          :global([dir="rtl"]) .search-field,
+          :global([dir="rtl"]) .custom-filter-dropdown,
+          [dir="rtl"] .search-field,
+          [dir="rtl"] .custom-filter-dropdown {
+            align-items: flex-start !important;
+            text-align: start !important;
+          }
+
           .field-label {
-            font-size: 0.6875rem;
-            letter-spacing: 0.12em;
+            display: block !important;
+            width: 100% !important;
+            text-align: start !important;
+            font-size: 0.6875rem !important;
+            letter-spacing: 0.12em !important;
+          }
+
+          :global([dir="rtl"]) .field-label,
+          [dir="rtl"] .field-label {
+            text-align: start !important;
           }
 
           .trigger-value {

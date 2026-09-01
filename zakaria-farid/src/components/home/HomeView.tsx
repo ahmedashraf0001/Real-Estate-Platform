@@ -132,35 +132,35 @@ export const HomeView: React.FC<HomeViewProps> = ({
   // Typewriter animation state for Hero Title
   const line1Text = isMobileViewport
     ? (isAr ? (homeSettings.heroTitle1Ar?.includes('استكشف') ? 'أندر الصروح المعمارية' : homeSettings.heroTitle1Ar || 'أندر الصروح المعمارية')
-            : (homeSettings.heroTitle1En?.includes('Discover') ? "Egypt's Premier Residences" : homeSettings.heroTitle1En || "Egypt's Premier Residences"))
+      : (homeSettings.heroTitle1En?.includes('Discover') ? "Egypt's Premier Residences" : homeSettings.heroTitle1En || "Egypt's Premier Residences"))
     : (isAr ? (homeSettings.heroTitle1Ar || 'استكشف أندر الصروح المعمارية و')
-            : (homeSettings.heroTitle1En || "Discover Egypt's Premier Residences &"));
+      : (homeSettings.heroTitle1En || "Discover Egypt's Premier Residences &"));
 
   const line2Text = isMobileViewport
     ? (isAr ? (homeSettings.heroTitle2Ar || 'القصور الفاخرة في مصر')
-            : (homeSettings.heroTitle2En?.includes('Living') ? 'Sovereign Luxury Estates' : homeSettings.heroTitle2En || 'Sovereign Luxury Estates'))
+      : (homeSettings.heroTitle2En?.includes('Living') ? 'Sovereign Luxury Estates' : homeSettings.heroTitle2En || 'Sovereign Luxury Estates'))
     : (isAr ? (homeSettings.heroTitle2Ar || 'القصور الفاخرة في مصر')
-            : (homeSettings.heroTitle2En || 'Luxury Living & Sovereign Estates'));
+      : (homeSettings.heroTitle2En || 'Luxury Living & Sovereign Estates'));
 
   const heroSubtitle = isMobileViewport
     ? (isAr
-        ? (
-            <>
-              ننتقي ونمثل أندر القصور والعقارات الفاخرة
-              <br />
-              بتدقيق إنشائي وقانوني موثق في مصر.
-            </>
-          )
-        : (
-            <>
-              Curating Egypt’s premier luxury estates
-              <br />
-              and architectural sanctuaries.
-            </>
-          ))
+      ? (
+        <>
+          ننتقي ونمثل أندر القصور والعقارات الفاخرة
+          <br />
+          بتدقيق إنشائي وقانوني موثق في مصر.
+        </>
+      )
+      : (
+        <>
+          Curating Egypt’s premier luxury estates
+          <br />
+          and architectural sanctuaries.
+        </>
+      ))
     : (isAr
-        ? (homeSettings.heroSubtitleAr || DEFAULT_HOME_SETTINGS.heroSubtitleAr)
-        : (homeSettings.heroSubtitleEn || DEFAULT_HOME_SETTINGS.heroSubtitleEn));
+      ? (homeSettings.heroSubtitleAr || DEFAULT_HOME_SETTINGS.heroSubtitleAr)
+      : (homeSettings.heroSubtitleEn || DEFAULT_HOME_SETTINGS.heroSubtitleEn));
 
   const line1Len = line1Text.length;
   const totalChars = line1Len + line2Text.length;
@@ -207,16 +207,16 @@ export const HomeView: React.FC<HomeViewProps> = ({
         <section className="hero-section">
           <div className="hero-bg-media">
             <div className="hero-bg-cinematic-stage">
-              <img 
-                src="/images/hero-dark.jpg" 
-                alt="Al Zakaria Luxury Architectural Estate - Night" 
+              <img
+                src="/images/hero-dark.jpg"
+                alt="Al Zakaria Luxury Architectural Estate - Night"
                 className="hero-image hero-image-dark"
                 loading="eager"
                 decoding="sync"
               />
-              <img 
-                src="/images/hero-light.jpg" 
-                alt="Al Zakaria Luxury Architectural Estate - Day" 
+              <img
+                src="/images/hero-light.jpg"
+                alt="Al Zakaria Luxury Architectural Estate - Day"
                 className="hero-image hero-image-light"
                 loading="eager"
                 decoding="sync"
@@ -295,9 +295,9 @@ export const HomeView: React.FC<HomeViewProps> = ({
                 <div className="glass-center-glow" aria-hidden="true" />
                 <div className="glass-edge-glint glint-left" aria-hidden="true" />
                 <div className="glass-edge-glint glint-right" aria-hidden="true" />
-                
+
                 {/* Monumental Headline with Living Typewriter Animation */}
-                <motion.h1 
+                <motion.h1
                   className="hero-title hero-pill-lines-container"
                   aria-label={`${line1Text} ${line2Text}`}
                   initial={{ opacity: 0, y: 16 }}
@@ -323,7 +323,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
               </div>
 
               {/* Crisp Subtitle */}
-              <motion.p 
+              <motion.p
                 className="hero-subtitle"
                 initial={{ opacity: 0, y: 14 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -334,7 +334,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
             </div>
 
             {/* Floating Frosted Glass QuickSearchBar */}
-            <motion.div 
+            <motion.div
               className="hero-search-wrapper"
               initial={{ opacity: 0, y: 22 }}
               animate={{ opacity: 1, y: 0 }}
@@ -356,7 +356,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
         <section className="featured-section">
           <div className="featured-horizon-glow" />
           <div className="container">
-            <motion.div 
+            <motion.div
               className="featured-header"
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
@@ -375,7 +375,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                   </span>
                 </h2>
               </div>
-              <button 
+              <button
                 className="explore-catalog-btn"
                 onClick={() => onNavigateToCatalog()}
                 type="button"
@@ -385,59 +385,59 @@ export const HomeView: React.FC<HomeViewProps> = ({
               </button>
             </motion.div>
 
-          {/* Destination Filter Pills */}
-          <motion.div 
-            className="destination-pills-bar"
-            initial={{ opacity: 0, y: 15 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.5, delay: 0.1 }}
-          >
-            {destinationFilters.map((tab) => {
-              const isActive = activeDestination === tab.id;
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveDestination(tab.id)}
-                  className={`destination-pill ${isActive ? 'active' : ''}`}
-                >
-                  <span>{tab.label}</span>
-                  {isActive && (
-                    <motion.div
-                      layoutId="activeFeaturedDestinationPill"
-                      className="destination-pill-indicator"
-                      transition={{ type: 'spring', stiffness: 380, damping: 30 }}
-                    />
-                  )}
-                </button>
-              );
-            })}
-          </motion.div>
+            {/* Destination Filter Pills */}
+            <motion.div
+              className="destination-pills-bar"
+              initial={{ opacity: 0, y: 15 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5, delay: 0.1 }}
+            >
+              {destinationFilters.map((tab) => {
+                const isActive = activeDestination === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveDestination(tab.id)}
+                    className={`destination-pill ${isActive ? 'active' : ''}`}
+                  >
+                    <span>{tab.label}</span>
+                    {isActive && (
+                      <motion.div
+                        layoutId="activeFeaturedDestinationPill"
+                        className="destination-pill-indicator"
+                        transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+                      />
+                    )}
+                  </button>
+                );
+              })}
+            </motion.div>
 
-          {/* 6-Card Animated Grid */}
-          <motion.div layout className="featured-grid">
-            <AnimatePresence mode="popLayout">
-              {filteredFeaturedProperties.map((property, idx) => (
-                <motion.div
-                  key={property.id}
-                  layout
-                  initial={{ opacity: 0, scale: 0.96 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.96 }}
-                  transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
-                >
-                  <PropertyCard
-                    property={property}
-                    index={idx}
-                    onSelect={onSelectProperty}
-                    locale={locale}
-                  />
-                </motion.div>
-              ))}
-            </AnimatePresence>
-          </motion.div>
-        </div>
-      </section>
+            {/* 6-Card Animated Grid */}
+            <motion.div layout className="featured-grid">
+              <AnimatePresence mode="popLayout">
+                {filteredFeaturedProperties.map((property, idx) => (
+                  <motion.div
+                    key={property.id}
+                    layout
+                    initial={{ opacity: 0, scale: 0.96 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.96 }}
+                    transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+                  >
+                    <PropertyCard
+                      property={property}
+                      index={idx}
+                      onSelect={onSelectProperty}
+                      locale={locale}
+                    />
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+            </motion.div>
+          </div>
+        </section>
       )}
 
       {/* ─── 4. Interactive Real Cartography Map Explorer ─── */}
@@ -477,9 +477,9 @@ export const HomeView: React.FC<HomeViewProps> = ({
                     <span>{isAr ? (homeSettings.sellerTitle1Ar || 'هل ترغب في بيع أو تمثيل ') : (homeSettings.sellerTitle1En || 'Looking to List or Consign Your ')}</span>
                     <span className="title-serif-accent">{isAr ? (homeSettings.sellerTitle2Ar || 'قصرك واستثمارك؟') : (homeSettings.sellerTitle2En || 'Generational Estate?')}</span>
                   </h2>
-                  
+
                   <p className="seller-desc">
-                    {isAr 
+                    {isAr
                       ? (homeSettings.sellerDescAr || 'اعرض عقارك عبر مكتب زكريا فريد وتواصل مباشرة مع نخبة المشترين والمستثمرين والمكاتب العائلية الباحثة عن الأصول النادرة بأعلى درجات السرية.')
                       : (homeSettings.sellerDescEn || 'Entrust your architectural statement to our private placement practice. Reach verified buyers, family offices, and sovereign wealth trustees actively seeking rare trophy assets.')}
                   </p>
@@ -503,7 +503,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                 </div>
 
                 <div className="seller-cta-group">
-                  <button 
+                  <button
                     className="seller-cta-btn btn-gold"
                     onClick={onOpenListEstate}
                     type="button"
@@ -512,7 +512,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                     <ArrowUpRight size={16} />
                   </button>
 
-                  <button 
+                  <button
                     className="seller-outline-btn"
                     onClick={() => onNavigateToCatalog()}
                     type="button"
@@ -1059,7 +1059,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
             white-space: nowrap !important;
             margin: 0 auto !important;
             padding: 0 !important;
-            font-size: clamp(1.22rem, 5.1vw, 1.46rem) !important;
+            font-size: clamp(1.42rem, 5.5vw, 1.54rem) !important;
             font-weight: 800 !important;
             letter-spacing: -0.015em !important;
             line-height: 1.24 !important;
@@ -1097,7 +1097,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
             white-space: nowrap !important;
             margin: 0 auto !important;
             padding: 0 !important;
-            font-size: clamp(1.22rem, 5.1vw, 1.46rem) !important;
+            font-size: clamp(1.42rem, 5.5vw, 1.54rem) !important;
             font-weight: 800 !important;
             letter-spacing: -0.015em !important;
             line-height: 1.24 !important;
