@@ -893,11 +893,11 @@ export const HomeView: React.FC<HomeViewProps> = ({
           .hero-section {
             min-height: 100svh;
             min-height: 100vh;
-            padding-top: 68px;
-            padding-bottom: 1.25rem;
+            padding-top: calc(56px + 1.25rem);
+            padding-bottom: 2.25rem;
             display: flex;
             flex-direction: column;
-            justify-content: center;
+            justify-content: flex-end;
             align-items: stretch;
             box-sizing: border-box;
           }
@@ -914,12 +914,13 @@ export const HomeView: React.FC<HomeViewProps> = ({
             border: none !important;
             box-shadow: none !important;
             border-radius: 0 !important;
-            gap: 0.75rem !important;
+            gap: 1.25rem !important;
             align-items: center !important;
             text-align: center !important;
             display: flex !important;
             flex-direction: column !important;
-            justify-content: center !important;
+            justify-content: flex-end !important;
+            flex: 1 !important;
           }
 
           .hero-content,
@@ -933,7 +934,14 @@ export const HomeView: React.FC<HomeViewProps> = ({
             justify-content: center !important;
             width: 100% !important;
             max-width: 100% !important;
-            margin: 0 auto !important;
+            margin: auto auto 0 auto !important;
+          }
+
+          .hero-search-wrapper,
+          .home-view .hero-search-wrapper {
+            width: 100% !important;
+            max-width: 100% !important;
+            margin-top: 0 !important;
           }
 
           /* Royal Baroque Architectural Medallion Crest - Merged into Glass Apex */
