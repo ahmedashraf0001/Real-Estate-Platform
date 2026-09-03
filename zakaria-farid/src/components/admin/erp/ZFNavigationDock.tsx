@@ -9,11 +9,9 @@ import {
   RotateCcw, 
   PieChart, 
   ShieldCheck, 
-  Users, 
-  AlertTriangle,
-  Layers,
-  Building2,
-  Calculator
+  Layers, 
+  Building2, 
+  Calculator 
 } from 'lucide-react';
 import styles from './ZFSubprogram.module.css';
 
@@ -34,6 +32,7 @@ interface DockItemDef {
   labelAr: string;
   icon: React.ComponentType<{ size?: number | string; color?: string; className?: string }>;
   badge?: string | number;
+  badgeVariant?: 'default' | 'gold' | 'emerald';
 }
 
 interface DockGroupDef {
@@ -47,40 +46,96 @@ interface ZFNavigationDockProps {
   onSelectModule: (module: ERPNavModule) => void;
   pendingApprovalsCount?: number;
   openQuestionsCount?: number;
+  contractsCount?: number;
+  pdcSafeCount?: number;
+  propertiesCount?: number;
   isAr?: boolean;
 }
 
 export const ZFNavigationDock: React.FC<ZFNavigationDockProps> = ({
   activeModule,
   onSelectModule,
+  contractsCount,
+  pdcSafeCount,
+  propertiesCount,
   isAr = false
 }) => {
   const GROUPS: DockGroupDef[] = [
     {
-      groupTitleEn: 'CORE WORKSTATION',
-      groupTitleAr: 'المنظومة المحاسبية الرئيسية',
+      groupTitleEn: 'COMMAND & ANALYTICS',
+      groupTitleAr: 'القيادة والتحليل المالي',
       items: [
-        { id: 'cockpit' as ERPNavModule, labelEn: 'Financial Cockpit', labelAr: 'لوحة التحكم والمؤشرات المالية', icon: TrendingUp },
-        { id: 'properties' as ERPNavModule, labelEn: 'Properties & WIP Assets', labelAr: 'العقارات وتكاليف المشاريع (WIP)', icon: Building2 },
-        { id: 'calculator' as ERPNavModule, labelEn: 'Installment Structuring', labelAr: 'حاسبة وهيكلة الأقساط', icon: Calculator },
-        { id: 'ledger' as ERPNavModule, labelEn: 'General Ledger (15/15)', labelAr: 'دفتر الأستاذ العام والدليل المحاسبي', icon: BookOpen }
+        { 
+          id: 'cockpit', 
+          labelEn: 'Executive Cockpit', 
+          labelAr: 'لوحة القيادة المالية', 
+          icon: TrendingUp 
+        },
+        { 
+          id: 'properties', 
+          labelEn: 'Projects & WIP Assets', 
+          labelAr: 'المشاريع والأصول (WIP)', 
+          icon: Building2,
+          badge: propertiesCount && propertiesCount > 0 ? propertiesCount : undefined
+        }
       ]
     },
     {
-      groupTitleEn: 'SALES & CONTRACTING',
-      groupTitleAr: 'المبيعات والعقود',
+      groupTitleEn: 'SALES & DEALS PIPELINE',
+      groupTitleAr: 'المبيعات والعمليات التعاقدية',
       items: [
-        { id: 'contracts' as ERPNavModule, labelEn: 'Sales Registry & Handover', labelAr: 'سجل العقود والمبيعات والتسليم', icon: FileText },
-        { id: 'pdc' as ERPNavModule, labelEn: 'PDC Cheques Vault', labelAr: 'خزينة الشيكات المؤجلة', icon: Landmark }
+        { 
+          id: 'contracts', 
+          labelEn: 'Sales Contracts Registry', 
+          labelAr: 'سجل عقود البيع', 
+          icon: FileText,
+          badge: contractsCount && contractsCount > 0 ? contractsCount : undefined,
+          badgeVariant: 'gold'
+        },
+        { 
+          id: 'calculator', 
+          labelEn: 'Installment Structuring', 
+          labelAr: 'حاسبة وهيكلة الأقساط', 
+          icon: Calculator 
+        },
+        { 
+          id: 'pdc', 
+          labelEn: 'PDC Cheques Vault', 
+          labelAr: 'حافظة شيكات الخزينة (PDC)', 
+          icon: Landmark,
+          badge: pdcSafeCount && pdcSafeCount > 0 ? pdcSafeCount : undefined,
+          badgeVariant: 'emerald'
+        }
       ]
     },
     {
-      groupTitleEn: 'SETTLEMENT & TAX',
-      groupTitleAr: 'التسويات والضرائب',
+      groupTitleEn: 'ACCOUNTING & GOVERNANCE',
+      groupTitleAr: 'المحاسبة والرقابة المالية',
       items: [
-        { id: 'rescissions' as ERPNavModule, labelEn: 'Rescission & Forfeiture', labelAr: 'فسخ العقود والاسترداد', icon: RotateCcw },
-        { id: 'cost-allocation' as ERPNavModule, labelEn: 'RSV & WIP Allocation', labelAr: 'تخصيص التكاليف و RSV', icon: PieChart },
-        { id: 'tax' as ERPNavModule, labelEn: 'Statutory Taxes & ETA', labelAr: 'الضرائب ونموذج ٤١', icon: ShieldCheck }
+        { 
+          id: 'ledger', 
+          labelEn: 'General Ledger & COA', 
+          labelAr: 'دفتر الأستاذ والدليل (COA)', 
+          icon: BookOpen 
+        },
+        { 
+          id: 'cost-allocation', 
+          labelEn: 'WIP Cost Allocation (RSV)', 
+          labelAr: 'تخصيص التكاليف (RSV)', 
+          icon: PieChart 
+        },
+        { 
+          id: 'tax', 
+          labelEn: 'Statutory Taxes & ETA', 
+          labelAr: 'الضرائب والخصم (نموذج ٤١)', 
+          icon: ShieldCheck 
+        },
+        { 
+          id: 'rescissions', 
+          labelEn: 'Rescissions & Settlement', 
+          labelAr: 'فسخ واسترداد العقود', 
+          icon: RotateCcw 
+        }
       ]
     }
   ];
@@ -101,16 +156,29 @@ export const ZFNavigationDock: React.FC<ZFNavigationDockProps> = ({
               return (
                 <button
                   key={item.id}
+                  type="button"
                   className={`${styles.dockItem} ${isActive ? styles.dockItemActive : ''}`}
                   onClick={() => onSelectModule(item.id)}
+                  title={isAr ? item.labelAr : item.labelEn}
                 >
+                  {/* Leading Active Indicator Notch */}
+                  {isActive && <span className={styles.dockActiveNotch} />}
+
                   <div className={styles.dockItemContent}>
-                    <Icon size={16} color={isActive ? 'var(--zf-gold, #d4af37)' : 'currentColor'} />
-                    <span>{isAr ? item.labelAr : item.labelEn}</span>
+                    <div className={styles.dockItemIconWrap}>
+                      <Icon size={15} />
+                    </div>
+                    <span className={styles.dockItemLabel}>
+                      {isAr ? item.labelAr : item.labelEn}
+                    </span>
                   </div>
 
-                  {item.badge && (
-                    <span className={styles.dockBadge}>
+                  {item.badge !== undefined && (
+                    <span className={`
+                      ${styles.dockBadge} 
+                      ${item.badgeVariant === 'gold' ? styles.dockBadgeGold : ''}
+                      ${item.badgeVariant === 'emerald' ? styles.dockBadgeEmerald : ''}
+                    `}>
                       {item.badge}
                     </span>
                   )}
@@ -121,15 +189,25 @@ export const ZFNavigationDock: React.FC<ZFNavigationDockProps> = ({
         ))}
       </div>
 
-      {/* Dock Footer: Quick Fiscal & Engine Status */}
+      {/* Dock Footer: Audited Financial Engine Status */}
       <div className={styles.dockFooter}>
         <div className={styles.dockFiscalCard}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: 'var(--zf-gold, #d4af37)', fontWeight: 700 }}>
-            <Layers size={13} />
-            <span>{isAr ? 'حالة المنظومة المالية' : 'Engine Status'}</span>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.35rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', color: '#e2c974', fontWeight: 800, fontSize: '0.74rem' }}>
+              <Layers size={14} />
+              <span>{isAr ? 'حالة الرقابة المالية' : 'Financial Controls'}</span>
+            </div>
+            <span style={{
+              width: '8px',
+              height: '8px',
+              borderRadius: '50%',
+              background: '#10b981',
+              boxShadow: '0 0 8px #10b981',
+              display: 'inline-block'
+            }} />
           </div>
-          <div style={{ color: 'var(--zf-text-secondary, #a7acc0)', marginTop: '0.2rem', fontSize: '0.68rem' }}>
-            {isAr ? 'القيود متوازنة بدقة القرش (0.00)' : 'Double-Entry Invariant 4.1 Verified (0.00)'}
+          <div style={{ color: '#94a3b8', fontSize: '0.68rem', lineHeight: 1.4 }}>
+            {isAr ? 'القيود المحاسبية متوازنة بدقة القرش (مدين = دائن 0.00)' : 'Double-Entry Invariant 4.1 Verified (0.00)'}
           </div>
         </div>
       </div>

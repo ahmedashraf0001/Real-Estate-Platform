@@ -1459,6 +1459,9 @@ export default function AdminERPHub({ adminLocale }: AdminERPHubProps) {
         <ZFNavigationDock 
           activeModule={activeTab === 'dashboard' ? 'cockpit' : (activeTab as ERPNavModule)}
           onSelectModule={(mod) => setActiveTab(mod === 'cockpit' ? 'dashboard' : mod)}
+          contractsCount={data.contracts.length}
+          pdcSafeCount={data.pdcRecords.filter(p => p.status === 'In Safe').length}
+          propertiesCount={data.properties.length}
           pendingApprovalsCount={data.makerCheckerRequests.filter(r => r.status === 'Pending').length}
           openQuestionsCount={10}
           isAr={isAr}

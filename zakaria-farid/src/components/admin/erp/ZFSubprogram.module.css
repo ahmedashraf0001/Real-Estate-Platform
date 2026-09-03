@@ -221,36 +221,47 @@
   position: relative;
 }
 
-/* Subprogram Left Dock */
+/* Subprogram Navigation Dock (Refactored Clean Luxury Architecture) */
 .navigationDock {
-  width: 240px;
+  width: 268px;
   flex-shrink: 0;
-  background: rgba(10, 12, 18, 0.96);
-  border-right: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(9, 12, 19, 0.98);
+  border-right: 1px solid rgba(255, 255, 255, 0.07);
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  padding: 1rem 0.75rem;
+  padding: 1.15rem 0.85rem;
   overflow-y: auto;
   z-index: 40;
+  box-sizing: border-box;
 }
 
 .rtl .navigationDock {
   border-right: none;
-  border-left: 1px solid rgba(255, 255, 255, 0.06);
+  border-left: 1px solid rgba(255, 255, 255, 0.07);
 }
 
 .dockGroup {
-  margin-bottom: 1.25rem;
+  margin-bottom: 1.35rem;
 }
 
 .dockGroupTitle {
-  font-size: 0.68rem;
+  font-size: 0.66rem;
   font-weight: 800;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--zf-text-muted, #6b7086);
-  padding: 0 0.65rem 0.45rem 0.65rem;
+  letter-spacing: 0.08em;
+  color: #64748b;
+  padding: 0 0.75rem 0.45rem 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.dockGroupTitle::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.05);
 }
 
 .dockItem {
@@ -259,60 +270,132 @@
   justify-content: space-between;
   width: 100%;
   padding: 0.55rem 0.75rem;
-  border-radius: 8px;
+  border-radius: 10px;
   font-size: 0.82rem;
   font-weight: 600;
-  color: var(--zf-text-secondary, #a7acc0);
+  color: #94a3b8;
   background: transparent;
   border: 1px solid transparent;
   cursor: pointer;
-  transition: all 0.15s ease;
-  margin-bottom: 0.2rem;
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  margin-bottom: 0.25rem;
+  position: relative;
+  text-align: inherit;
+  box-sizing: border-box;
 }
 
 .dockItem:hover {
   background: rgba(255, 255, 255, 0.04);
-  color: #ffffff;
+  color: #f8fafc;
 }
 
 .dockItemActive {
-  background: rgba(212, 175, 55, 0.09) !important;
-  color: var(--zf-gold, #d4af37) !important;
-  border-color: rgba(212, 175, 55, 0.25) !important;
+  background: linear-gradient(135deg, rgba(212, 175, 55, 0.14) 0%, rgba(212, 175, 55, 0.03) 100%) !important;
+  color: #ffffff !important;
+  border-color: rgba(212, 175, 55, 0.35) !important;
   font-weight: 700;
-  box-shadow: inset 0 0 10px rgba(212, 175, 55, 0.05);
+  box-shadow: 0 2px 14px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(212, 175, 55, 0.2) !important;
+}
+
+.dockActiveNotch {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3.5px;
+  height: 18px;
+  border-radius: 3px;
+  background: #d4af37;
+  box-shadow: 0 0 10px rgba(212, 175, 55, 0.7);
+}
+
+.rtl .dockActiveNotch {
+  right: 2px;
+}
+
+:not(.rtl) .dockActiveNotch {
+  left: 2px;
 }
 
 .dockItemContent {
   display: flex;
   align-items: center;
   gap: 0.65rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.dockItemIconWrap {
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: #94a3b8;
+  transition: all 0.15s ease;
+}
+
+.dockItem:hover .dockItemIconWrap {
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.dockItemActive .dockItemIconWrap {
+  background: rgba(212, 175, 55, 0.2);
+  border-color: rgba(212, 175, 55, 0.45);
+  color: #e2c974;
+  box-shadow: 0 0 10px rgba(212, 175, 55, 0.2);
+}
+
+.dockItemLabel {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 0.81rem;
+  letter-spacing: -0.01em;
 }
 
 .dockBadge {
-  font-size: 0.65rem;
+  font-size: 0.64rem;
   font-weight: 800;
-  padding: 0.1rem 0.4rem;
-  border-radius: 9999px;
-  background: rgba(239, 68, 68, 0.2);
-  color: #f87171;
-  border: 1px solid rgba(239, 68, 68, 0.4);
+  padding: 0.1rem 0.45rem;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.06);
+  color: #cbd5e1;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  font-family: monospace;
+}
+
+.dockBadgeGold {
+  background: rgba(212, 175, 55, 0.15);
+  color: #e2c974;
+  border-color: rgba(212, 175, 55, 0.35);
+}
+
+.dockBadgeEmerald {
+  background: rgba(16, 185, 129, 0.15);
+  color: #10b981;
+  border-color: rgba(16, 185, 129, 0.35);
 }
 
 .dockFooter {
-  padding-top: 0.75rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  padding-top: 0.85rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
   display: flex;
   flex-direction: column;
-  gap: 0.4rem;
+  gap: 0.5rem;
 }
 
 .dockFiscalCard {
-  background: rgba(0, 0, 0, 0.35);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 8px;
-  padding: 0.6rem;
-  font-size: 0.72rem;
+  background: linear-gradient(145deg, rgba(16, 21, 33, 0.8) 0%, rgba(9, 12, 20, 0.95) 100%);
+  border: 1px solid rgba(212, 175, 55, 0.22);
+  border-radius: 12px;
+  padding: 0.75rem 0.85rem;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
 }
 
 /* --------------------------------------------------------------------------

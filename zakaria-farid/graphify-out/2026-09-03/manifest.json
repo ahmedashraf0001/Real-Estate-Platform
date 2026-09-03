@@ -5040,9 +5040,9 @@
     "semantic_hash": ""
   },
   "src/components/admin/erp/AdminERPHub.tsx": {
-    "mtime": 1788435724.6491206,
-    "seen": 1788435857.989423,
-    "ast_hash": "7a2be46e89f347e030997e262d6e8460",
+    "mtime": 1788436134.6289444,
+    "seen": 1788436241.948811,
+    "ast_hash": "0812be8328e70040956be5fb24819247",
     "semantic_hash": ""
   },
   "src/components/admin/erp/CockpitAnalyticsCharts.tsx": {
@@ -5316,9 +5316,9 @@
     "semantic_hash": ""
   },
   "src/components/admin/erp/DashboardAnalyticalStudio.tsx": {
-    "mtime": 1788404465.0996237,
-    "seen": 1788404715.720896,
-    "ast_hash": "157927089b857177ea3112007387da90",
+    "mtime": 1788436087.21313,
+    "seen": 1788436241.948816,
+    "ast_hash": "3525ae018148b239682224f56eed40ca",
     "semantic_hash": ""
   },
   "src/components/admin/erp/DashboardOperationsRadar.tsx": {
@@ -5337,6 +5337,12 @@
     "mtime": 1788435319.4967167,
     "seen": 1788435452.3960204,
     "ast_hash": "647edb4642040115f510dd871d107804",
+    "semantic_hash": ""
+  },
+  "src/components/erp/CapitalFlowMindmap.tsx": {
+    "mtime": 1788435952.3408418,
+    "seen": 1788436241.9488368,
+    "ast_hash": "9e76abf7a324584b7d9fc2a118a94108",
     "semantic_hash": ""
   }
 }
