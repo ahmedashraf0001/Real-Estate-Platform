@@ -1466,8 +1466,9 @@ export default function AdminERPHub({ adminLocale }: AdminERPHubProps) {
 
         {/* Main Workstation Stage */}
         <main className={subStyles.workspaceStage}>
-          {/* Proactive Period Lock Banner (Invariant 0.9) */}
-          <LockedPeriodBanner period={activePeriod} isAr={isAr} />
+          <div className={subStyles.stageContainer}>
+            {/* Proactive Period Lock Banner (Invariant 0.9) */}
+            <LockedPeriodBanner period={activePeriod} isAr={isAr} />
 
           {/* MODULE 0: FINANCIAL COCKPIT */}
           {activeTab === 'dashboard' && (
@@ -1825,6 +1826,10 @@ export default function AdminERPHub({ adminLocale }: AdminERPHubProps) {
                 trancheStats={trancheStats}
                 costAllocations={data.costAllocations}
                 partnerCalls={data.partnerCalls}
+                taxRecords={data.taxRecords}
+                totalInjectedCapital={data.partnerCalls
+                  .reduce((acc, c) => acc.plus(c.paid_amount || c.call_amount || '0'), D(0))
+                  .toFixed(2)}
                 registeredPartners={unifiedPartners}
                 onInjectCapital={() => setShowQuickTransactionModal(true)}
                 onInspectRSV={handleInspectRSV}
@@ -5820,7 +5825,7 @@ export default function AdminERPHub({ adminLocale }: AdminERPHubProps) {
             );
           })()}
 
-
+          </div>
         </main>
       </div>
 

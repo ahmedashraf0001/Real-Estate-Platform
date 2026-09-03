@@ -13,13 +13,15 @@ import {
   ArrowUpRight,
   Eye,
   Layers,
-  Calculator
+  Calculator,
+  GitFork
 } from 'lucide-react';
 import { CashflowHorizonChart } from '@/components/erp/CashflowHorizonChart';
 import { RSVAllocationRing } from '@/components/erp/RSVAllocationRing';
 import { TranchePipelineChart } from '@/components/erp/TranchePipelineChart';
 import { PartnerCapitalCards } from './PartnerCapitalCards';
-import { ERPCostAllocation, ERPPartnerCall } from '@/lib/erp/types';
+import { CapitalFlowMindmap } from '@/components/erp/CapitalFlowMindmap';
+import { ERPCostAllocation, ERPPartnerCall, ERPTaxRecord } from '@/lib/erp/types';
 import { MoneyCell } from '@/components/erp/MoneyCell';
 import { D } from '@/lib/erp/math';
 
@@ -52,6 +54,8 @@ interface DashboardAnalyticalStudioProps {
   };
   costAllocations: ERPCostAllocation[];
   partnerCalls: ERPPartnerCall[];
+  taxRecords?: ERPTaxRecord[];
+  totalInjectedCapital?: string;
   registeredPartners: Array<{ name: string; role: string }>;
   onInjectCapital: (partnerName: string) => void;
   onInspectRSV: (allocation: ERPCostAllocation) => void;
@@ -64,15 +68,17 @@ export const DashboardAnalyticalStudio: React.FC<DashboardAnalyticalStudioProps>
   totalCollectedCash,
   totalWipIncurred,
   totalSafePDCs = '0.00',
+  totalInjectedCapital = '0.00',
   wipAccounts,
   trancheStats,
   costAllocations,
   partnerCalls,
+  taxRecords = [],
   registeredPartners,
   onInjectCapital,
   onInspectRSV
 }) => {
-  const [activeStudioTab, setActiveStudioTab] = useState<'cashflow' | 'wip' | 'sales' | 'partners'>('cashflow');
+  const [activeStudioTab, setActiveStudioTab] = useState<'cashflow' | 'flowmap' | 'wip' | 'sales' | 'partners'>('cashflow');
 
   const renderMoneyParts = (val: string | number) => {
     const parts = D(val).toFixed(2).split('.');
@@ -160,7 +166,8 @@ export const DashboardAnalyticalStudio: React.FC<DashboardAnalyticalStudioProps>
           flexWrap: 'wrap'
         }}>
           {[
-            { id: 'cashflow', icon: TrendingUp, labelAr: 'السيولة والتدفقات', labelEn: 'Cashflow & Liquidity' },
+            { id: 'cashflow', icon: TrendingUp, labelAr: 'مسار السيولة', labelEn: 'Cashflow Spline' },
+            { id: 'flowmap', icon: GitFork, labelAr: 'خريطة التدفقات (Mindmap)', labelEn: 'Flow Mindmap' },
             { id: 'wip', icon: PieIcon, labelAr: 'الإنشاءات و RSV', labelEn: 'WIP & RSV Allocation' },
             { id: 'sales', icon: BarChart3, labelAr: 'المبيعات والأقساط', labelEn: 'Sales & Tranches' },
             { id: 'partners', icon: Users, labelAr: 'حقوق الشركاء', labelEn: 'Partner Equity' }
@@ -348,6 +355,26 @@ export const DashboardAnalyticalStudio: React.FC<DashboardAnalyticalStudioProps>
               </span>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* TAB: CAPITAL FLOW MINDMAP (INCOME & OUTCOMES TOPOLOGY)                    */}
+      {/* ========================================================================= */}
+      {activeStudioTab === 'flowmap' && (
+        <div key="flowmap" className="studio-tab-content" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <CapitalFlowMindmap 
+            isAr={isAr}
+            kpis={kpis}
+            totalGrossContractValue={totalGrossContractValue}
+            totalCollectedCash={totalCollectedCash}
+            totalWipIncurred={totalWipIncurred}
+            totalSafePDCs={totalSafePDCs}
+            totalInjectedCapital={totalInjectedCapital}
+            wipAccounts={wipAccounts}
+            taxRecords={taxRecords}
+            partnerCalls={partnerCalls}
+          />
         </div>
       )}
 
