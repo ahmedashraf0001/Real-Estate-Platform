@@ -12,11 +12,10 @@ import {
   Languages, 
   ExternalLink,
   Plus,
-  Sparkles,
   Menu,
   X,
-  Compass,
-  Sliders
+  Sliders,
+  Landmark
 } from 'lucide-react';
 import { BrandLogo } from '@/components/BrandLogo';
 import { createClient } from '@/lib/supabase/client';
@@ -39,6 +38,12 @@ export default function AdminSidebar({ adminLocale }: AdminSidebarProps) {
       label: isAr ? 'لوحة القيادة التنفيذية' : 'Executive Overview', 
       icon: LayoutDashboard, 
       exact: true 
+    },
+    { 
+      href: `/fin-os/${adminLocale}`, 
+      label: isAr ? 'النظام المالي والـ ERP' : 'Financial ERP & Ledger', 
+      icon: Landmark, 
+      exact: false 
     },
     { 
       href: `/admin/${adminLocale}/properties`, 

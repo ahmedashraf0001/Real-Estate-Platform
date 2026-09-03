@@ -728,3 +728,15 @@ html[lang="ar"] {
     padding-bottom: 4rem;
   }
 }
+
+/* ─────────────────────────────────────────────────────────────────
+   GLOBAL SELECT & OPTION ACCESSIBILITY (DARK MODE POPUP FIX)
+───────────────────────────────────────────────────────────────── */
+select {
+  color-scheme: dark;
+}
+
+select option {
+  background-color: #121622 !important;
+  color: #ffffff !important;
+}

@@ -14,6 +14,7 @@ const intlMiddleware = createMiddleware(routing);
 function isExempt(pathname: string): boolean {
   return (
     pathname.startsWith('/admin') ||
+    pathname.startsWith('/fin-os') ||
     pathname.startsWith('/maintenance')
   );
 }
@@ -22,10 +23,15 @@ function isExempt(pathname: string): boolean {
 export default async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
+  // Handle any mistargeted /ar/fin-os or /en/fin-os paths by redirecting to clean /fin-os
+  if (pathname.startsWith('/ar/fin-os') || pathname.startsWith('/en/fin-os')) {
+    const cleanPath = pathname.replace(/^\/(ar|en)/, '');
+    return NextResponse.redirect(new URL(cleanPath, req.url));
+  }
+
   // Always pass exempt routes through without any maintenance check.
   if (isExempt(pathname)) {
-    // Still run intl middleware for non-static exempt routes that need locale.
-    // Admin and API routes handle their own routing, so just return next().
+    // Admin, FIN-OS, and API routes handle their own routing, so just return next().
     return NextResponse.next();
   }
 

@@ -67,6 +67,24 @@
   box-sizing: border-box;
 }
 
+/* Full-bleed subprogram workstation support (eliminates outer dead space) */
+.adminMainFullBleed,
+.adminMain:has([data-erp-workstation="true"]) {
+  padding: 0 !important;
+  overflow: hidden !important;
+  background: #07080b !important;
+}
+
+.adminContainerFullBleed,
+.adminMain:has([data-erp-workstation="true"]) > .adminContainer {
+  max-width: 100% !important;
+  width: 100% !important;
+  height: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  flex: 1 !important;
+}
+
 @media (max-width: 1024px) {
   .adminMain {
     padding: 20px;

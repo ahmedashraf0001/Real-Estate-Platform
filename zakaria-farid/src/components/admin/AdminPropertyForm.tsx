@@ -12,7 +12,7 @@ import Placeholder from '@tiptap/extension-placeholder';
 import { useDropzone } from 'react-dropzone';
 import imageCompression from 'browser-image-compression';
 import { createClient } from '@/lib/supabase/client';
-import { Loader2, Save, Trash2, Upload, X, Layers, Image as ImageIcon, ChevronRight, ChevronLeft, Check, Eye, MapPin, Building2, Sparkles, FileText, PanelRightClose, PanelRightOpen, Sofa, Bed, Bath, Trees, Tag, DollarSign, Ruler, Compass, AlertCircle, Video as VideoIcon, Film, Play, Plus } from 'lucide-react';
+import { Loader2, Save, Trash2, Upload, X, Layers, Image as ImageIcon, ChevronRight, ChevronLeft, Check, Eye, MapPin, Building2, Sparkles, FileText, PanelRightClose, PanelRightOpen, Sofa, Bed, Bath, Trees, Tag, DollarSign, Ruler, Compass, Film, Play, Plus, Users } from 'lucide-react';
 import CADBlueprintBuilder from './CADBlueprintBuilder';
 import ZoneInspector from './ZoneInspector';
 import DynamicMapPicker from './DynamicMapPicker';
@@ -23,6 +23,15 @@ import { getZoneTemplateLabels, getTradeTemplateLabels, getZoneBadge, buildZoneI
 import { FALLBACK_ZONE_TITLES, fallbackMetricFor } from '@/lib/layering/zoneMetrics';
 import type { ZoneInstance } from '@/lib/layering';
 import type { Property, PropertyVideo } from '@/lib/supabase/types';
+import {
+  PartnerShareItem,
+  PRIMARY_DEVELOPER_NAME,
+  INITIAL_REGISTERED_PARTNERS,
+  normalizePartnerSplits,
+  smartRemovePartner,
+  smartAddPartner,
+  autoBalanceShares
+} from '@/lib/erp/partnersDirectory';
 
 
 const TRADE_STATUS_MAP: Record<string, { en: string; ar: string }> = {
@@ -246,7 +255,12 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
   const [uploadingImages, setUploadingImages] = useState(false);
   const [isSaved, setIsSaved] = useState<boolean>(false);
   const [savedSlug, setSavedSlug] = useState<string | null>(property?.slug ?? null);
-  const [savedResult, setSavedResult] = useState<{ id?: string; slug?: string } | null>(null);
+
+  const [partnerSplits, setPartnerSplits] = useState<PartnerShareItem[]>(() => {
+    return normalizePartnerSplits(property?.partner_splits);
+  });
+  const [selectedPartnerToAdd, setSelectedPartnerToAdd] = useState<string>('');
+  const [customPartnerNameInput, setCustomPartnerNameInput] = useState<string>('');
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -396,7 +410,8 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
       };
       setVideos((prev) => [...prev, newVid]);
       toast.success(isAr ? 'تم رفع الفيديو بنجاح!' : 'Video uploaded successfully!');
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const errMsg = err instanceof Error ? err.message : String(err);
       console.warn('Video upload notice:', err);
       toast.error(isAr ? 'تعذر رفع الفيديو إلى التخزين. يمكنك لصق رابط الفيديو المباشر في الخانة أدناه.' : 'Direct storage upload unavailable. Please paste the direct video URL below.');
     } finally {
@@ -471,7 +486,7 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
   });
 
   const steps = [
-    { num: 1, title_en: 'Property Details', title_ar: 'بيانات العقار' },
+    { num: 1, title_en: 'Property & Contributors', title_ar: 'بيانات العقار والشركاء' },
     { num: 2, title_en: 'Location & Media', title_ar: 'الموقع والوسائط' },
     { num: 3, title_en: 'Floor Plan & Finishes', title_ar: 'المخططات والتشطيب' },
     { num: 4, title_en: 'Review & Publish', title_ar: 'المراجعة والنشر' },
@@ -718,6 +733,10 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
         spec_layers: zoneInstances,
         videos: videos,
         video_url: videos[0]?.url || null,
+        partner_splits: partnerSplits.map(p => ({
+          partner_name: p.partnerName,
+          share_percentage: p.sharePct
+        })),
       };
 
       const payload = isEditing && property 
@@ -740,9 +759,10 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
         url.searchParams.set('saved', 'true');
         window.history.replaceState({}, '', url.toString());
       }
-    } catch (err: any) {
-      console.error('Save error:', err?.message || err, err);
-      toast.error(isAr ? 'فشل الحفظ. يرجى المحاولة مرة أخرى.' : 'Save failed: ' + (err?.message || 'Please try again.'));
+    } catch (err: unknown) {
+      const errMsg = err instanceof Error ? err.message : 'Please try again.';
+      console.error('Save error:', err);
+      toast.error(isAr ? 'فشل الحفظ. يرجى المحاولة مرة أخرى.' : 'Save failed: ' + errMsg);
     } finally {
       setSaving(false);
     }
@@ -823,22 +843,23 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
         }
       `}</style>
 
-      {/* ─── STEP 1: Basic Info & Property Type ─── */}
+      {/* ─── STEP 1: Basic Info & Contributor Equity ─── */}
       {currentStep === 1 && (
-        <div className={styles.section}>
-          <div className={styles.sectionHeader}>
-            <div className={styles.sectionHeaderIcon}>
-              <Building2 size={20} />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', width: '100%' }}>
+          <div className={styles.section}>
+            <div className={styles.sectionHeader}>
+              <div className={styles.sectionHeaderIcon}>
+                <Building2 size={20} />
+              </div>
+              <div>
+                <h2 className={styles.sectionTitle}>
+                  {isAr ? 'الخطوة ١: البيانات الأساسية ونوع العقار' : 'Step 1: Core Property Details & Type'}
+                </h2>
+                <span style={{ fontSize: '12px', color: 'rgba(255, 255, 255, 0.5)', marginTop: '2px', display: 'block' }}>
+                  {isAr ? 'حدد عنوان العقار، تصنيفه الهندسي، والمواصفات الأولية' : 'Define property identity, architectural categorization, and primary specs'}
+                </span>
+              </div>
             </div>
-            <div>
-              <h2 className={styles.sectionTitle}>
-                {isAr ? 'الخطوة ١: البيانات الأساسية ونوع العقار' : 'Step 1: Core Property Details & Type'}
-              </h2>
-              <span style={{ fontSize: '12px', color: 'rgba(255, 255, 255, 0.5)', marginTop: '2px', display: 'block' }}>
-                {isAr ? 'حدد عنوان العقار، تصنيفه الهندسي، والمواصفات الأولية' : 'Define property identity, architectural categorization, and primary specs'}
-              </span>
-            </div>
-          </div>
 
           <div className={styles.grid2}>
             <div className={styles.field}>
@@ -1056,7 +1077,264 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
               </div>
             </div>
           </div>
+
+          {/* ─── Contributor & Partner Equity Allocation Section ─── */}
+          <div className={styles.section}>
+            <div className={styles.sectionHeader}>
+              <div className={styles.sectionHeaderIcon} style={{ color: 'var(--zf-gold, #d4af37)', background: 'rgba(212, 175, 55, 0.12)' }}>
+                <Users size={20} />
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
+                  <div>
+                    <h2 className={styles.sectionTitle} style={{ color: '#ffffff' }}>
+                      {isAr ? 'توزيع حصص الشركاء والممولين في هذا العقار' : 'Property Contributor & Equity Allocation'}
+                    </h2>
+                    <span style={{ fontSize: '12px', color: 'rgba(255, 255, 255, 0.5)', marginTop: '2px', display: 'block' }}>
+                      {isAr 
+                        ? 'حدد نسب الشركاء والممولين المساهمين في تشييد هذا العقار (المهندس زكريا فريد هو المطور الدائم والأساسي).' 
+                        : 'Specify contributor equity shares for this property. Eng. Zakaria Farid is the permanent anchor developer.'}
+                    </span>
+                  </div>
+
+                  {/* Total Share Validation Badge */}
+                  {(() => {
+                    const totalPct = partnerSplits.reduce((sum, p) => sum + p.sharePct, 0);
+                    const isExact100 = Math.abs(totalPct - 100) < 0.01;
+                    return (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <span style={{
+                          fontSize: '0.75rem',
+                          fontWeight: 700,
+                          padding: '0.25rem 0.65rem',
+                          borderRadius: '6px',
+                          background: isExact100 ? 'rgba(212, 175, 55, 0.15)' : 'rgba(239, 68, 68, 0.15)',
+                          color: isExact100 ? 'var(--zf-gold, #d4af37)' : '#f87171',
+                          border: isExact100 ? '1px solid rgba(212, 175, 55, 0.35)' : '1px solid rgba(239, 68, 68, 0.35)'
+                        }}>
+                          {isExact100 
+                            ? (isAr ? 'إجمالي الحصص: 100% ✓' : 'Total Shares: 100% ✓')
+                            : (isAr ? `الإجمالي: ${totalPct}% (يجب أن يساوي 100%)` : `Total: ${totalPct}% (Must = 100%)`)
+                          }
+                        </span>
+                        {!isExact100 && (
+                          <button
+                            type="button"
+                            onClick={() => setPartnerSplits(autoBalanceShares(partnerSplits))}
+                            style={{
+                              background: 'rgba(212, 175, 55, 0.15)',
+                              color: 'var(--zf-gold, #d4af37)',
+                              border: '1px solid rgba(212, 175, 55, 0.4)',
+                              borderRadius: '6px',
+                              padding: '0.25rem 0.6rem',
+                              fontSize: '0.72rem',
+                              fontWeight: 700,
+                              cursor: 'pointer'
+                            }}
+                          >
+                            {isAr ? 'موازنة الحصص تلقائياً (100%)' : 'Auto Balance 100%'}
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })()}
+                </div>
+              </div>
+            </div>
+
+            {/* Partners List */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
+              {partnerSplits.map((partner, idx) => {
+                const isZakaria = partner.partnerName === PRIMARY_DEVELOPER_NAME || partner.isPermanent;
+                const propPrice = priceParsed || 0;
+                const partnerVal = propPrice * (partner.sharePct / 100);
+
+                return (
+                  <div key={idx} style={{
+                    display: 'grid',
+                    gridTemplateColumns: '1.4fr 0.8fr 1.3fr auto',
+                    gap: '0.5rem',
+                    alignItems: 'center',
+                    background: isZakaria ? 'rgba(212, 175, 55, 0.04)' : 'rgba(0, 0, 0, 0.25)',
+                    padding: '0.45rem 0.65rem',
+                    borderRadius: '8px',
+                    border: isZakaria ? '1px solid rgba(212, 175, 55, 0.2)' : '1px solid rgba(255, 255, 255, 0.05)'
+                  }}>
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                        <span style={{ fontSize: '0.78rem', fontWeight: 700, color: isZakaria ? 'var(--zf-gold, #d4af37)' : '#f8fafc' }}>
+                          {partner.partnerName}
+                        </span>
+                        {isZakaria && (
+                          <span style={{
+                            background: 'rgba(212, 175, 55, 0.12)',
+                            color: 'var(--zf-gold, #d4af37)',
+                            border: '1px solid rgba(212, 175, 55, 0.25)',
+                            padding: '0.1rem 0.35rem',
+                            borderRadius: '4px',
+                            fontSize: '0.62rem',
+                            fontWeight: 700
+                          }}>
+                            {isAr ? 'المطور الأساسي' : 'Primary Developer'}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                        <input
+                          type="number"
+                          min="1"
+                          max="100"
+                          step="1"
+                          style={{
+                            width: '100%',
+                            padding: '0.35rem 0.4rem',
+                            fontSize: '0.78rem',
+                            fontWeight: 700,
+                            textAlign: 'center',
+                            background: 'rgba(255, 255, 255, 0.04)',
+                            border: '1px solid rgba(255, 255, 255, 0.1)',
+                            borderRadius: '6px',
+                            color: '#ffffff'
+                          }}
+                          value={partner.sharePct}
+                          onChange={e => {
+                            const val = parseFloat(e.target.value) || 0;
+                            const next = [...partnerSplits];
+                            next[idx].sharePct = val;
+                            setPartnerSplits(next);
+                          }}
+                        />
+                        <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>%</span>
+                      </div>
+                    </div>
+
+                    <div style={{ textAlign: isAr ? 'right' : 'left' }}>
+                      <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--zf-gold, #d4af37)' }}>
+                        {propPrice > 0 ? `${Math.round(partnerVal).toLocaleString()} ج.م` : '—'}
+                      </span>
+                    </div>
+
+                    <div>
+                      {!isZakaria ? (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const updated = smartRemovePartner(partnerSplits, idx);
+                            setPartnerSplits(updated);
+                          }}
+                          style={{
+                            background: 'rgba(239, 68, 68, 0.1)',
+                            color: '#ef4444',
+                            border: 'none',
+                            borderRadius: '6px',
+                            padding: '0.3rem 0.5rem',
+                            cursor: 'pointer',
+                            fontSize: '0.75rem'
+                          }}
+                          title={isAr ? 'حذف الشريك' : 'Remove partner'}
+                        >
+                          ✕
+                        </button>
+                      ) : (
+                        <span style={{ fontSize: '0.7rem', color: '#64748b' }}>—</span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Add Partner Bar */}
+            {(() => {
+              const availablePartners = INITIAL_REGISTERED_PARTNERS.filter(
+                p => !partnerSplits.some(cp => cp.partnerName.toLowerCase() === p.name.toLowerCase())
+              );
+
+              return (
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: selectedPartnerToAdd === '__custom__' ? '1fr 1fr auto' : '2fr auto',
+                  gap: '0.5rem',
+                  alignItems: 'center',
+                  marginTop: '0.25rem',
+                  padding: '0.45rem',
+                  background: 'rgba(255, 255, 255, 0.015)',
+                  border: '1px dashed rgba(255, 255, 255, 0.1)',
+                  borderRadius: '8px'
+                }}>
+                  <select
+                    style={{
+                      background: 'rgba(255, 255, 255, 0.04)',
+                      border: '1px solid rgba(255, 255, 255, 0.1)',
+                      borderRadius: '6px',
+                      padding: '0.35rem 0.5rem',
+                      color: '#ffffff',
+                      fontSize: '0.75rem',
+                      colorScheme: 'dark'
+                    }}
+                    value={selectedPartnerToAdd}
+                    onChange={e => setSelectedPartnerToAdd(e.target.value)}
+                  >
+                    <option value="">{isAr ? '-- اختر شريكاً مسجلاً للإضافة --' : '-- Choose registered partner --'}</option>
+                    {availablePartners.map(ap => (
+                      <option key={ap.name} value={ap.name}>
+                        {ap.name} ({ap.role})
+                      </option>
+                    ))}
+                    <option value="__custom__">{isAr ? '+ إدخال اسم شريك جديد يدوياً...' : '+ Type new custom partner...'}</option>
+                  </select>
+
+                  {selectedPartnerToAdd === '__custom__' && (
+                    <input
+                      type="text"
+                      placeholder={isAr ? 'اسم الشريك الجديد' : 'New partner name'}
+                      value={customPartnerNameInput}
+                      onChange={e => setCustomPartnerNameInput(e.target.value)}
+                      style={{
+                        background: 'rgba(255, 255, 255, 0.04)',
+                        border: '1px solid rgba(255, 255, 255, 0.1)',
+                        borderRadius: '6px',
+                        padding: '0.35rem 0.5rem',
+                        color: '#ffffff',
+                        fontSize: '0.75rem'
+                      }}
+                    />
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const nameToAdd = selectedPartnerToAdd === '__custom__' ? customPartnerNameInput.trim() : selectedPartnerToAdd;
+                      if (!nameToAdd) return;
+                      const updated = smartAddPartner(partnerSplits, nameToAdd, 25);
+                      setPartnerSplits(updated);
+                      setSelectedPartnerToAdd('');
+                      setCustomPartnerNameInput('');
+                    }}
+                    disabled={!selectedPartnerToAdd || (selectedPartnerToAdd === '__custom__' && !customPartnerNameInput.trim())}
+                    style={{
+                      padding: '0.35rem 0.75rem',
+                      borderRadius: '6px',
+                      fontSize: '0.75rem',
+                      fontWeight: 700,
+                      background: 'rgba(212, 175, 55, 0.15)',
+                      color: 'var(--zf-gold, #d4af37)',
+                      border: '1px solid rgba(212, 175, 55, 0.3)',
+                      cursor: 'pointer',
+                      opacity: (!selectedPartnerToAdd || (selectedPartnerToAdd === '__custom__' && !customPartnerNameInput.trim())) ? 0.5 : 1
+                    }}
+                  >
+                    {isAr ? 'إضافة الشريك' : 'Add Partner'}
+                  </button>
+                </div>
+              );
+            })()}
+          </div>
         </div>
+      </div>
       )}
 
       {/* ─── STEP 2: Location, Media & Description ─── */}
@@ -1963,6 +2241,78 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
                   );
                 })()}
               </div>
+            </div>
+          </div>
+
+          {/* ─── Contributor & Partner Equity Review Card ─── */}
+          <div className={styles.reviewBreakdownBox}>
+            <div className={styles.reviewBreakdownHead}>
+              <div className={styles.reviewBreakdownTitleWrap}>
+                <Users size={18} className={styles.reviewBreakdownIcon} />
+                <h3 className={styles.reviewBreakdownTitle}>
+                  {isAr ? 'حصص الشركاء والممولين في هذا العقار' : 'Registered Contributor & Equity Splits'}
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => goToStep(1)}
+                style={{
+                  background: 'rgba(212, 175, 55, 0.15)',
+                  color: 'var(--zf-gold, #d4af37)',
+                  border: '1px solid rgba(212, 175, 55, 0.3)',
+                  borderRadius: '6px',
+                  padding: '0.3rem 0.65rem',
+                  fontSize: '0.75rem',
+                  fontWeight: 700,
+                  cursor: 'pointer'
+                }}
+              >
+                {isAr ? 'تعديل الحصص ✎' : 'Edit Splits ✎'}
+              </button>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0.75rem', padding: '1rem' }}>
+              {partnerSplits.map((partner, idx) => {
+                const isZakaria = partner.partnerName === PRIMARY_DEVELOPER_NAME || partner.isPermanent;
+                const propPrice = priceParsed || 0;
+                const partnerVal = propPrice * (partner.sharePct / 100);
+                return (
+                  <div
+                    key={idx}
+                    style={{
+                      background: isZakaria ? 'rgba(212, 175, 55, 0.06)' : 'rgba(255, 255, 255, 0.02)',
+                      border: isZakaria ? '1px solid rgba(212, 175, 55, 0.25)' : '1px solid rgba(255, 255, 255, 0.06)',
+                      borderRadius: '10px',
+                      padding: '0.85rem',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '0.35rem'
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <strong style={{ fontSize: '0.85rem', color: isZakaria ? 'var(--zf-gold, #d4af37)' : '#ffffff' }}>
+                        {partner.partnerName}
+                      </strong>
+                      <span style={{
+                        fontSize: '0.75rem',
+                        fontWeight: 800,
+                        color: 'var(--zf-gold, #d4af37)',
+                        background: 'rgba(212, 175, 55, 0.12)',
+                        padding: '0.15rem 0.45rem',
+                        borderRadius: '4px'
+                      }}>
+                        {partner.sharePct}%
+                      </span>
+                    </div>
+                    <div style={{ fontSize: '0.72rem', color: '#94a3b8' }}>
+                      {isZakaria ? (isAr ? 'المطور الدائم والأساسي' : 'Primary Developer') : (isAr ? 'شريك / ممول مساهم' : 'Contributor / Co-Investor')}
+                    </div>
+                    <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#f8fafc', marginTop: '0.2rem' }}>
+                      {propPrice > 0 ? `${Math.round(partnerVal).toLocaleString()} ج.م` : '—'}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
 

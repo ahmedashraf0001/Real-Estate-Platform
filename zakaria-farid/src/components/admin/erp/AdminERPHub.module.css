@@ -1,0 +1,731 @@
+/* Zakaria Farid Luxury ERP Studio - Refined, Intuitive Visual Hierarchy */
+
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.75rem;
+  padding: 1.5rem;
+  color: #f3f4f6;
+  font-family: var(--font-sans, inherit);
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.rtl {
+  direction: rtl;
+  text-align: right;
+}
+
+.rtl .erpTable th {
+  text-align: right;
+}
+
+.rtl .erpTable td {
+  text-align: right;
+}
+
+.rtl .modalFooter {
+  flex-direction: row-reverse;
+}
+
+/* Header Banner - Streamlined & Focused */
+.headerCard {
+  position: relative;
+  background: linear-gradient(135deg, rgba(20, 24, 33, 0.95), rgba(12, 14, 20, 0.98));
+  border: 1px solid rgba(212, 175, 55, 0.25);
+  border-radius: 18px;
+  padding: 2rem;
+  box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.7);
+  overflow: hidden;
+}
+
+.headerCard::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #d4af37, #f3e5ab, transparent);
+}
+
+.headerTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1.25rem;
+}
+
+.titleArea {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.badgeTag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #d4af37;
+  background: rgba(212, 175, 55, 0.1);
+  border: 1px solid rgba(212, 175, 55, 0.3);
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  width: fit-content;
+}
+
+.mainTitle {
+  font-size: 1.85rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  background: linear-gradient(135deg, #ffffff, #e5e7eb, #d4af37);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin: 0;
+}
+
+.subtitle {
+  color: #9ca3af;
+  font-size: 0.95rem;
+  margin: 0;
+}
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.actionBtnGold {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: linear-gradient(135deg, #d4af37, #b8860b);
+  color: #0c0e14;
+  font-weight: 700;
+  font-size: 0.85rem;
+  padding: 0.65rem 1.25rem;
+  border-radius: 10px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 15px rgba(212, 175, 55, 0.3);
+}
+
+.actionBtnGold:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(212, 175, 55, 0.45);
+}
+
+.actionBtnGhost {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: rgba(255, 255, 255, 0.05);
+  color: #e5e7eb;
+  font-weight: 600;
+  font-size: 0.85rem;
+  padding: 0.65rem 1.15rem;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.actionBtnGhost:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(212, 175, 55, 0.4);
+}
+
+/* Streamlined Navigation: 4 Intuitive Workspaces */
+.navTabsRow {
+  display: flex;
+  gap: 0.5rem;
+  background: rgba(14, 18, 26, 0.7);
+  padding: 0.4rem;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  width: fit-content;
+}
+
+.navTabBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.65rem 1.25rem;
+  border-radius: 10px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #9ca3af;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.navTabBtn:hover {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.navTabBtnActive {
+  color: #0c0e14;
+  background: linear-gradient(135deg, #d4af37, #f3e5ab);
+  font-weight: 700;
+  box-shadow: 0 4px 15px rgba(212, 175, 55, 0.35);
+}
+
+/* Invariant Health Banner - Calm, Expandable */
+.healthBanner {
+  background: rgba(16, 20, 28, 0.85);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  border-radius: 14px;
+  padding: 1rem 1.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.healthBanner:hover {
+  border-color: rgba(16, 185, 129, 0.6);
+  background: rgba(16, 20, 28, 0.95);
+}
+
+.healthBannerContent {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.healthBannerTitle {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #f3f4f6;
+  margin: 0;
+}
+
+.healthBannerSubtitle {
+  font-size: 0.8rem;
+  color: #9ca3af;
+  margin: 0;
+}
+
+/* Financial KPIs Grid */
+.kpiGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1.25rem;
+}
+
+.kpiCard {
+  background: linear-gradient(135deg, rgba(23, 28, 43, 0.75) 0%, rgba(18, 22, 34, 0.88) 100%);
+  border: 1px solid rgba(212, 175, 55, 0.14);
+  border-radius: 18px;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  backdrop-filter: blur(16px);
+  position: relative;
+  overflow: hidden;
+  transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.kpiCard:hover {
+  transform: translateY(-3px);
+  border-color: rgba(212, 175, 55, 0.45);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.7), 0 0 25px rgba(212, 175, 55, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.kpiCardHighlight {
+  border-color: rgba(212, 175, 55, 0.4);
+  background: radial-gradient(circle at top right, rgba(212, 175, 55, 0.12), transparent 70%), linear-gradient(135deg, rgba(28, 33, 48, 0.9), rgba(18, 22, 34, 0.95));
+  box-shadow: 0 12px 35px rgba(0, 0, 0, 0.6), 0 0 15px rgba(212, 175, 55, 0.08);
+}
+
+.kpiHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.kpiLabel {
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #9ca3af;
+}
+
+.kpiIconBox {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.kpiValue {
+  font-size: 1.75rem;
+  font-weight: 800;
+  color: #ffffff;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+
+.kpiFooter {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.78rem;
+  color: #9ca3af;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  padding-top: 0.5rem;
+}
+
+/* Charts Section Grid */
+.chartsRow {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 1.5rem;
+}
+
+@media (max-width: 1024px) {
+  .chartsRow {
+    grid-template-columns: 1fr;
+  }
+}
+
+.chartCard {
+  background: rgba(16, 20, 28, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 18px;
+  padding: 1.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+}
+
+.chartCardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.chartTitle {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.chartSubtitle {
+  font-size: 0.8rem;
+  color: #9ca3af;
+  margin: 0;
+}
+
+/* Visual SVG Cash Flow Chart */
+.svgChartContainer {
+  width: 100%;
+  height: 260px;
+  position: relative;
+}
+
+.chartLegendRow {
+  display: flex;
+  gap: 1.25rem;
+  flex-wrap: wrap;
+  font-size: 0.8rem;
+  color: #d1d5db;
+}
+
+.legendItem {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.legendDot {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+}
+
+/* WIP Cost Breakdown Visual Rings */
+.wipBreakdownList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.wipItem {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.wipItemHeader {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.wipProgressBar {
+  height: 8px;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+
+.wipProgressFill {
+  height: 100%;
+  border-radius: 9999px;
+  transition: width 0.6s ease;
+}
+
+/* Contracts Visual Card Grid */
+.contractCardsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+  gap: 1.25rem;
+}
+
+.contractVisualCard {
+  background: rgba(18, 22, 31, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.contractVisualCard:hover {
+  border-color: rgba(212, 175, 55, 0.35);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+
+.contractCardTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.contractNumberBadge {
+  font-family: monospace;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #d4af37;
+  background: rgba(212, 175, 55, 0.1);
+  padding: 0.2rem 0.5rem;
+  border-radius: 6px;
+  border: 1px solid rgba(212, 175, 55, 0.25);
+}
+
+.contractUnitTitle {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0.25rem 0 0 0;
+}
+
+.contractBuyerText {
+  font-size: 0.82rem;
+  color: #9ca3af;
+  margin: 0.15rem 0 0 0;
+}
+
+.contractProgressSection {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  background: rgba(12, 14, 20, 0.5);
+  padding: 1rem;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.progressLabelRow {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #d1d5db;
+}
+
+.progressPct {
+  color: #34d399;
+  font-weight: 700;
+}
+
+.contractProgressBar {
+  height: 8px;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+}
+
+.contractProgressFill {
+  height: 100%;
+  background: linear-gradient(90deg, #10b981, #34d399);
+  border-radius: 9999px;
+}
+
+.contractFinancialRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+  font-size: 0.82rem;
+}
+
+.finBox {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.finBoxLabel {
+  font-size: 0.72rem;
+  color: #6b7280;
+  text-transform: uppercase;
+}
+
+.finBoxVal {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.contractCardActions {
+  display: flex;
+  gap: 0.5rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  padding-top: 1rem;
+}
+
+/* Clean Tables */
+.tableCard {
+  background: rgba(16, 20, 28, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 18px;
+  overflow: hidden;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+}
+
+.tableWrapper {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.erpTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+  text-align: left;
+}
+
+.rtl .erpTable {
+  text-align: right;
+}
+
+.erpTable th {
+  background: rgba(24, 29, 41, 0.95);
+  color: #d4af37;
+  font-weight: 700;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  white-space: nowrap;
+}
+
+.erpTable td {
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  color: #d1d5db;
+  font-variant-numeric: tabular-nums;
+}
+
+.erpTable tr:hover {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.codeCell {
+  font-family: monospace;
+  font-weight: 600;
+  color: #93c5fd;
+}
+
+.statusPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.25rem 0.65rem;
+  border-radius: 9999px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.statusPending {
+  background: rgba(245, 158, 11, 0.15);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.statusPaid {
+  background: rgba(16, 185, 129, 0.15);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.statusSuperseded {
+  background: rgba(156, 163, 175, 0.12);
+  color: #9ca3af;
+  border: 1px solid rgba(156, 163, 175, 0.25);
+  text-decoration: line-through;
+}
+
+.statusVoid {
+  background: rgba(239, 68, 68, 0.12);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.25);
+}
+
+/* Modals */
+.modalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1.5rem;
+}
+
+.modalContent {
+  background: #121622;
+  color-scheme: dark;
+  border: 1px solid rgba(212, 175, 55, 0.35);
+  border-radius: 20px;
+  width: 100%;
+  max-width: 620px;
+  max-height: 90vh;
+  overflow-y: auto;
+  padding: 2.25rem;
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.85);
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.modalTitle {
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: #ffffff;
+  margin: 0;
+}
+
+.formGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.formLabel {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #9ca3af;
+}
+
+.formInput {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  padding: 0.8rem 1rem;
+  color: #ffffff;
+  font-size: 0.9rem;
+  outline: none;
+  transition: all 0.2s ease;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.formInput:focus {
+  border-color: #d4af37;
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 0 0 2px rgba(212, 175, 55, 0.15);
+}
+
+/* Luxury dark styling for select dropdowns */
+select.formInput {
+  background-color: #151a28 !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(212, 175, 55, 0.35) !important;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23d4af37' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") !important;
+  background-repeat: no-repeat !important;
+  background-position: left 1rem center !important;
+  padding-left: 2.75rem !important;
+}
+
+:global([dir="ltr"]) select.formInput,
+:global(.ltr) select.formInput {
+  background-position: right 1rem center !important;
+  padding-right: 2.75rem !important;
+  padding-left: 1rem !important;
+}
+
+/* Explicit solid background & color on <option> elements to eliminate native OS white-on-white bug */
+select.formInput option {
+  background-color: #121622 !important;
+  color: #ffffff !important;
+  padding: 0.75rem 1rem !important;
+  font-size: 0.9rem !important;
+}
+
+select.formInput option:hover,
+select.formInput option:focus,
+select.formInput option:checked {
+  background-color: #1e2638 !important;
+  color: #d4af37 !important;
+}
+
+.modalFooter {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}

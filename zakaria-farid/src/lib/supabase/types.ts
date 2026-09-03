@@ -1,6 +1,6 @@
 import type { ZoneInstance } from '@/lib/layering';
 
-export type PropertyType = 'apartment' | 'building' | 'garage';
+export type PropertyType = 'apartment' | 'building' | 'garage' | 'villa' | 'duplex' | 'penthouse' | 'townhouse' | 'commercial';
 
 export type CompletionStatus = 'ready' | 'off_plan';
 export type ListingStatus = 'active' | 'under_offer' | 'sold' | 'archived';
@@ -79,6 +79,7 @@ export interface Property {
   spec_layers?: ZoneInstance[] | SpecLayer[] | any;
   property_images?: PropertyImage[];
   property_amenities?: PropertyAmenity[];
+  partner_splits?: Array<{ partner_name: string; share_percentage: number }>;
 }
 
 export interface Lead {

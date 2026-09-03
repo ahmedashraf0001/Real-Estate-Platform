@@ -1,0 +1,87 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+.lineageRow {
+  background: var(--zf-bg-panel, #121622);
+  border: 1px solid var(--zf-border-hairline, rgba(212, 175, 55, 0.12));
+  border-radius: 10px;
+  overflow: hidden;
+  transition: all 0.2s ease;
+}
+
+.lineageRow:hover {
+  border-color: rgba(212, 175, 55, 0.3);
+}
+
+.lineageHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  cursor: pointer;
+}
+
+.settledRow {
+  background: rgba(16, 185, 129, 0.04);
+  border-color: rgba(16, 185, 129, 0.2);
+  cursor: default;
+}
+
+.supersededTimeline {
+  background: rgba(0, 0, 0, 0.35);
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  padding: 0.85rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.timelineNode {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.8rem;
+}
+
+.versionBadgeOld {
+  font-family: monospace;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--zf-state-superseded, #8b8fa3);
+  background: rgba(139, 143, 163, 0.15);
+  padding: 0.15rem 0.4rem;
+  border-radius: 4px;
+}
+
+.versionBadgeNew {
+  font-family: monospace;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #0c0e14;
+  background: var(--zf-gold, #d4af37);
+  padding: 0.15rem 0.4rem;
+  border-radius: 4px;
+}
+
+.struckAmount {
+  text-decoration: line-through;
+  color: var(--zf-state-superseded, #8b8fa3);
+  font-variant-numeric: tabular-nums;
+}
+
+.activeAmount {
+  color: var(--zf-gold, #d4af37);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.reasonBox {
+  font-size: 0.75rem;
+  color: var(--zf-text-muted, #6b7086);
+  font-style: italic;
+  padding-left: 1.5rem;
+}

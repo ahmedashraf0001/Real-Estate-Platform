@@ -81,6 +81,7 @@ const VALID_PROPERTY_COLUMNS = new Set([
   'videos',
   'video_url',
   'calcom_event_link',
+  'partner_splits',
   'created_at',
 ]);
 
@@ -128,6 +129,7 @@ export async function saveProperty(
         if (res.error.message?.includes('videos')) delete curPayload.videos;
         if (res.error.message?.includes('video_url')) delete curPayload.video_url;
         if (res.error.message?.includes('spec_layers')) delete curPayload.spec_layers;
+        if (res.error.message?.includes('partner_splits')) delete curPayload.partner_splits;
 
         res = isEditing && propertyId
           ? await client.from('properties').update(curPayload).eq('id', propertyId)

@@ -1,0 +1,87 @@
+.container {
+  background: var(--zf-bg-panel, #121622);
+  border-radius: 12px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: all 0.2s ease;
+}
+
+.posted {
+  border: 1px solid var(--zf-border-hairline, rgba(212, 175, 55, 0.15));
+}
+
+.unpostedDraft {
+  border: 1px dashed var(--zf-gold, #d4af37);
+  background: rgba(212, 175, 55, 0.03);
+}
+
+.header {
+  padding: 0.75rem 1rem;
+  background: rgba(255, 255, 255, 0.03);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.draftBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--zf-gold, #d4af37);
+  background: rgba(212, 175, 55, 0.1);
+  padding: 0.2rem 0.5rem;
+  border-radius: 6px;
+  border: 1px dashed var(--zf-gold, #d4af37);
+}
+
+.postedBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--zf-state-paid, #6fcf97);
+  background: rgba(111, 207, 151, 0.1);
+  padding: 0.2rem 0.5rem;
+  border-radius: 6px;
+  border: 1px solid rgba(111, 207, 151, 0.3);
+}
+
+.tAccountTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+}
+
+.tAccountTable th {
+  padding: 0.6rem 0.85rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  font-size: 0.7rem;
+  color: var(--zf-text-muted, #6b7086);
+  background: rgba(0, 0, 0, 0.2);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.tAccountTable td {
+  padding: 0.55rem 0.85rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+  font-variant-numeric: tabular-nums;
+}
+
+.footerTotals {
+  padding: 0.6rem 0.85rem;
+  background: rgba(0, 0, 0, 0.3);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.8rem;
+  font-weight: 700;
+}

@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import AdminSidebar from '@/components/admin/AdminSidebar';
+import { AdminMainContent } from '@/components/admin/AdminMainContent';
 import styles from '../../../admin.module.css';
 
 interface LayoutProps {
@@ -22,11 +23,9 @@ export default async function DashboardGroupLayout({ children, params }: LayoutP
   return (
     <div className={styles.adminWrapper} dir={dir}>
       <AdminSidebar adminLocale={adminLocale} />
-      <div className={styles.adminMain}>
-        <div className={styles.adminContainer}>
-          {children}
-        </div>
-      </div>
+      <AdminMainContent>
+        {children}
+      </AdminMainContent>
     </div>
   );
 }
