@@ -314,7 +314,7 @@ export const ZFErpAcademyModal: React.FC<ZFErpAcademyModalProps> = ({
                 <SubIndexItem id="wf-phase3" titleAr="المرحلة 3: تحرير وإبرام عقد البيع" titleEn="Phase 3: Sales Contract Booking" icon={FileText} activeId={activeArticleId} onSelect={setActiveArticleId} isAr={isAr} />
                 <SubIndexItem id="wf-phase4" titleAr="المرحلة 4: استلام الشيكات وإيداع الخزينة" titleEn="Phase 4: PDC Vaulting & Tranche Autolink" icon={Landmark} activeId={activeArticleId} onSelect={setActiveArticleId} isAr={isAr} />
                 <SubIndexItem id="wf-phase5" titleAr="المرحلة 5: المتابعة اليومية والتحصيل والمطابقة" titleEn="Phase 5: Daily Dues & Bank Clearing" icon={Clock} activeId={activeArticleId} onSelect={setActiveArticleId} isAr={isAr} />
-                <SubIndexItem id="wf-phase6" titleAr="المرحلة 6: الضرائب السيادية ونموذج 41" titleEn="Phase 6: Statutory Taxes & Form 41" icon={ShieldCheck} activeId={activeArticleId} onSelect={setActiveArticleId} isAr={isAr} />
+                <SubIndexItem id="wf-phase6" titleAr="المرحلة 6: سجل الضرائب والرسوم المضافة" titleEn="Phase 6: Apartment Taxes & Fees Ledger" icon={ShieldCheck} activeId={activeArticleId} onSelect={setActiveArticleId} isAr={isAr} />
                 <SubIndexItem id="wf-phase7" titleAr="المرحلة 7: الفسخ والإقالات والتسويات" titleEn="Phase 7: Rescissions & Forfeitures" icon={RotateCcw} activeId={activeArticleId} onSelect={setActiveArticleId} isAr={isAr} />
                 <SubIndexItem id="wf-phase8" titleAr="المرحلة 8: ميزان المراجعة وإقفال الفترة" titleEn="Phase 8: Trial Balance & Period Closing" icon={PieChart} activeId={activeArticleId} onSelect={setActiveArticleId} isAr={isAr} />
               </>
@@ -328,7 +328,7 @@ export const ZFErpAcademyModal: React.FC<ZFErpAcademyModalProps> = ({
                 <SubIndexItem id="mod-calculator" titleAr="04. حاسبة وهيكلة الأقساط" titleEn="04. Installment Structuring" icon={Calculator} activeId={activeArticleId} onSelect={setActiveArticleId} isAr={isAr} />
                 <SubIndexItem id="mod-pdc" titleAr="05. حافظة وخزينة الشيكات (PDC)" titleEn="05. PDC Cheques Vault" icon={Landmark} activeId={activeArticleId} onSelect={setActiveArticleId} isAr={isAr} />
                 <SubIndexItem id="mod-cost" titleAr="06. تخصيص التكاليف (WIP RSV)" titleEn="06. WIP Cost Allocation (RSV)" icon={PieChart} activeId={activeArticleId} onSelect={setActiveArticleId} isAr={isAr} />
-                <SubIndexItem id="mod-tax" titleAr="07. الضرائب السيادية ونموذج 41" titleEn="07. Statutory Taxes & ETA" icon={ShieldCheck} activeId={activeArticleId} onSelect={setActiveArticleId} isAr={isAr} />
+                <SubIndexItem id="mod-tax" titleAr="07. سجل الضرائب والرسوم المضافة" titleEn="07. Apartment Taxes & Fees Ledger" icon={ShieldCheck} activeId={activeArticleId} onSelect={setActiveArticleId} isAr={isAr} />
                 <SubIndexItem id="mod-rescissions" titleAr="08. فسخ واسترداد العقود والتسويات" titleEn="08. Rescissions & Settlement" icon={RotateCcw} activeId={activeArticleId} onSelect={setActiveArticleId} isAr={isAr} />
                 <SubIndexItem id="mod-ledger" titleAr="09. دفتر الأستاذ والدليل المحاسبي" titleEn="09. General Ledger & COA" icon={BookOpen} activeId={activeArticleId} onSelect={setActiveArticleId} isAr={isAr} />
               </>
@@ -540,10 +540,10 @@ const ArticleRenderer: React.FC<ArticleRendererProps> = ({
               },
               {
                 step: '06',
-                titleAr: 'الضرائب السيادية ونموذج 41 (Statutory Taxes & ETA)',
-                titleEn: 'Statutory Taxes & ETA Remittance',
-                descAr: 'احتساب ضريبة التصرفات العقارية (2.5%) على إجمالي العقود، واستقطاع نموذج 41 من مقاولي الباطن، وتوثيق أرقام الإيصالات وسداد مصلحة الضرائب.',
-                descEn: 'Automatic 2.5% property disposal tax provisions and Form 41 withholding on subcontractors with ETA compliance tracking.',
+                titleAr: 'سجل الضرائب والرسوم المضافة (Apartment Taxes & Fees)',
+                titleEn: 'Apartment Taxes & Fees Ledger',
+                descAr: 'متابعة الضرائب والرسوم المضافة يدوياً لكل شقة، والمحسوبة مباشرة ضمن إجمالي سعر بيع الوحدة، مع تسوية استيفائها بالخزينة الرئيسية.',
+                descEn: 'Manual apartment taxes and fees tracking factored directly into gross contract pricing and settled via Main Safe.',
                 mod: 'tax'
               },
               {
@@ -729,16 +729,16 @@ const ArticleRenderer: React.FC<ArticleRendererProps> = ({
               contentEn: 'Directed interactive tree connecting Inflows -> Central Treasury Liquidity -> Outflows onto capitalized development projects and taxes.'
             },
             {
-              headingAr: 'المكون 2: التقويم المالي وجدول استحقاق الشيكات الشهري',
+              headingAr: 'المكون 2: التقويم المالي وجدول استحقاق الأقساط الشهري',
               headingEn: 'Component 2: Monthly Financial Calendar',
-              contentAr: 'تقويم كامل يعرض أيام الشهر (من السبت إلى الجمعة)، مدمج به مؤشر سيولة اليوم، ويعرض الشيكات المستحقة والأقساط التعاقدية. الضغط على أي يوم يفتح درجاً جانبياً مفصلاً ببنود هذا اليوم.',
-              contentEn: 'Interactive monthly matrix showing every day\'s PDC maturities and contract dues. Clicking any day opens the Day Agenda Inspector Drawer.'
+              contentAr: 'تقويم كامل يعرض أيام الشهر (من السبت إلى الجمعة)، مدمج به مؤشر سيولة اليوم، ويعرض الأقساط التعاقدية المستحقة للتحصيل نقداً باليد. الضغط على أي يوم يفتح درجاً جانبياً مفصلاً ببنود هذا اليوم مع زر تحصيل فوري.',
+              contentEn: 'Interactive monthly matrix showing every day\'s contract installment dues for hand collection. Clicking any day opens the Day Agenda Inspector Drawer with one-click collection.'
             },
             {
               headingAr: 'المكون 3: أجندة واستحقاقات اليوم والتحذيرات الرقابية',
               headingEn: 'Component 3: Today\'s Executive Financial Action Ledger',
-              contentAr: 'كشف فوري للشيكات المستحقة بالخزينة اليوم والشيكات المتأخرة وطلبات الاعتماد المعلقة؛ مزودة بأزرار إجراءات سريعة لتحصيل الشيك أو مراجعة العقد فوراً.',
-              contentEn: 'Real-time briefing of cheques in safe maturing today, overdue arrears, and pending dual-approvals with quick collection triggers.'
+              contentAr: 'كشف فوري للأقساط المستحقة بالخزينة اليوم والأقساط المتأخرة وطلبات الاعتماد المعلقة؛ مزودة بأزرار إجراءات سريعة لتحصيل القسط نقداً باليد أو مراجعة العقد فوراً.',
+              contentEn: 'Real-time briefing of hand installments maturing today, overdue arrears, and pending dual-approvals with quick collection triggers.'
             }
           ]}
           targetModule="cockpit"

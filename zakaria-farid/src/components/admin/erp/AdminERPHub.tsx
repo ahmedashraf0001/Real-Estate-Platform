@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { 
   RotateCcw, 
   TrendingUp, 
@@ -17,6 +17,7 @@ import {
   Search,
   FileText,
   Building,
+  Building2,
   Clock,
   User,
   Calendar,
@@ -29,7 +30,12 @@ import {
   ShieldCheck,
   ArrowUpRight,
   Sparkles,
-  X
+  X,
+  Receipt,
+  Scale,
+  CreditCard,
+  BarChart2,
+  Wallet
 } from 'lucide-react';
 import subStyles from './ZFSubprogram.module.css';
 import legacyStyles from './AdminERPHub.module.css';
@@ -50,7 +56,8 @@ import {
   ERPPDCRecord,
   ERPRescissionRecord,
   ERPTaxRecord,
-  ERPCostAllocation
+  ERPCostAllocation,
+  ERPPropertyCostItem
 } from '@/lib/erp/types';
 import {
   PartnerShareItem,
@@ -75,6 +82,7 @@ import { ERPFinancialCharts } from './ERPFinancialCharts';
 
 import { QuickTransactionModal } from './QuickTransactionModal';
 import { NewChequeModal } from './NewChequeModal';
+import { HandCollectionModal } from './HandCollectionModal';
 import { PartnerCapitalCards } from './PartnerCapitalCards';
 import { CockpitAnalyticsCharts } from './CockpitAnalyticsCharts';
 import { DashboardDailyActionLedger } from './DashboardDailyActionLedger';
@@ -84,8 +92,9 @@ import { DashboardAnalyticalStudio } from './DashboardAnalyticalStudio';
 import { exportComprehensiveArabicExcel } from '@/lib/erp/excelExporter';
 import { ConstructionCostCalculator } from './ConstructionCostCalculator';
 import { PropertyFinancialMatrix } from './PropertyFinancialMatrix';
+import { PropertyLifecycleAuditModal } from './PropertyLifecycleAuditModal';
 import { GeneralLedgerView } from './GeneralLedgerView';
-import { Property } from '@/lib/supabase/types';
+import { Property, BuildingUnitItem } from '@/lib/supabase/types';
 
 // FIN-OS Subprogram Workstation Shell Components
 import { ZFCommandBar } from './ZFCommandBar';
@@ -165,6 +174,7 @@ export default function AdminERPHub({ adminLocale }: AdminERPHubProps) {
     makerCheckerRequests: [],
     properties: [],
     leads: [],
+    propertyCosts: [],
     isSchemaMigrated: true
   });
 
@@ -173,8 +183,17 @@ export default function AdminERPHub({ adminLocale }: AdminERPHubProps) {
 
   // Active Navigation Module & Workspace State
   const [activeTab, setActiveTab] = useState<
-    'dashboard' | 'properties' | 'calculator' | 'ledger' | 'contracts' | 'pdc' | 'rescissions' | 'cost-allocation' | 'tax'
+    'dashboard' | 'properties' | 'calculator' | 'ledger' | 'contracts' | 'pdc' | 'rescissions' | 'cost-allocation'
   >('dashboard');
+
+  const stageRef = useRef<HTMLElement | null>(null);
+
+  // Automatically reset workspace stage scroll to top when switching tabs or modules
+  useEffect(() => {
+    if (stageRef.current) {
+      stageRef.current.scrollTop = 0;
+    }
+  }, [activeTab]);
 
   const [currency, setCurrency] = useState<'EGP' | 'USD'>('EGP');
   const [deepLinkedQ, setDeepLinkedQ] = useState<string | null>(null);
@@ -196,10 +215,11 @@ export default function AdminERPHub({ adminLocale }: AdminERPHubProps) {
   const [chequeViewMode, setChequeViewMode] = useState<'cards' | 'table'>('cards');
   const [contractFilter, setContractFilter] = useState<'All' | 'Delivered' | 'Pending' | 'Rescinded'>('All');
   const [contractSearchQuery, setContractSearchQuery] = useState('');
-  const [chequeFilter, setChequeFilter] = useState<'All' | 'In Safe' | 'Deposited' | 'Cleared' | 'Bounced'>('All');
+  const [chequeFilter, setChequeFilter] = useState<'All' | 'due_later' | 'overdue' | 'collected' | 'In Safe' | 'Deposited' | 'Cleared' | 'Bounced'>('All');
   const [chequeSearchQuery, setChequeSearchQuery] = useState('');
   const [chequeBankFilter, setChequeBankFilter] = useState<string>('all');
   const [chequeMaturityFilter, setChequeMaturityFilter] = useState<'all' | 'due_now' | 'due_30'>('all');
+  const [collectingPDCItem, setCollectingPDCItem] = useState<ERPPDCRecord | null>(null);
   const [showNewPDCModal, setShowNewPDCModal] = useState(false);
   const [newPdcContractId, setNewPdcContractId] = useState('');
   const [newPdcNumber, setNewPdcNumber] = useState('');
@@ -208,9 +228,9 @@ export default function AdminERPHub({ adminLocale }: AdminERPHubProps) {
   const [newPdcValue, setNewPdcValue] = useState('');
   const [newPdcDueDate, setNewPdcDueDate] = useState(new Date().toISOString().split('T')[0]);
 
-  // Statutory Tax Module States
+  // Apartment Taxes Ledger States
   const [taxSearchQuery, setTaxSearchQuery] = useState('');
-  const [taxTypeFilter, setTaxTypeFilter] = useState<'all' | 'disposal' | 'form41'>('all');
+  const [taxTypeFilter, setTaxTypeFilter] = useState<'all' | 'with_tax' | 'exempt'>('all');
   const [taxStatusFilter, setTaxStatusFilter] = useState<'all' | 'Pending' | 'Remitted to ETA'>('all');
   const [taxViewMode, setTaxViewMode] = useState<'cards' | 'table'>('cards');
 
@@ -221,13 +241,16 @@ export default function AdminERPHub({ adminLocale }: AdminERPHubProps) {
   const [buyerName, setBuyerName] = useState('');
   const [buyerNationalId, setBuyerNationalId] = useState('');
   const [customPrice, setCustomPrice] = useState('');
+  const [basePriceInput, setBasePriceInput] = useState('');
+  const [apartmentTaxInput, setApartmentTaxInput] = useState('0');
+  const [apartmentTaxDesc, setApartmentTaxDesc] = useState('');
   const [paymentPlanType, setPaymentPlanType] = useState<'FULL_CASH' | 'UPFRONT_HANDOVER' | 'INSTALLMENTS'>('INSTALLMENTS');
   const [downPaymentPct, setDownPaymentPct] = useState('0.15');
   const [downPaymentInputPct, setDownPaymentInputPct] = useState('15');
   const [downPaymentAmountInput, setDownPaymentAmountInput] = useState('');
   const [numInstallments, setNumInstallments] = useState('8');
   const [firstPaymentDate, setFirstPaymentDate] = useState(new Date().toISOString().split('T')[0]);
-  const [cashRoutingAccount, setCashRoutingAccount] = useState<'102000' | '101000'>('102000'); // Q3
+  const [cashRoutingAccount, setCashRoutingAccount] = useState<'101000'>('101000'); // Safe [101000] - Manual Cash on Hand (No Bank Link)
 
   const [partnerSplits, setPartnerSplits] = useState<PartnerShareItem[]>(() => {
     return normalizePartnerSplits(null);
@@ -241,6 +264,17 @@ export default function AdminERPHub({ adminLocale }: AdminERPHubProps) {
   const [buyerEmail, setBuyerEmail] = useState<string>('');
   const [contractWizardStep, setContractWizardStep] = useState<1 | 2 | 3>(1);
   const [contractErrors, setContractErrors] = useState<{ [key: string]: string }>({});
+
+  // Building Contract Specific States (Whole Building vs Individual Apartment)
+  const [isWholeBuildingContract, setIsWholeBuildingContract] = useState(false);
+  const [selectedBuildingUnitId, setSelectedBuildingUnitId] = useState<string | undefined>(undefined);
+  const [selectedBuildingUnitNumber, setSelectedBuildingUnitNumber] = useState<string | undefined>(undefined);
+
+  // Property Lifecycle Audit, Calculator Focus & Dashboard View Modes
+  const [calculatorPropertyId, setCalculatorPropertyId] = useState<string | undefined>(undefined);
+  const [auditModalProperty, setAuditModalProperty] = useState<Property | null>(null);
+  const [dashboardViewMode, setDashboardViewMode] = useState<'daily' | 'analytics' | 'all'>('daily');
+  const [analyticsSubView, setAnalyticsSubView] = useState<'mindmap' | 'studio'>('mindmap');
 
   // FIN-OS Academy & Guided Tour States
   const [isAcademyOpen, setIsAcademyOpen] = useState(false);
@@ -284,10 +318,13 @@ export default function AdminERPHub({ adminLocale }: AdminERPHubProps) {
   };
 
   const modalContractValue = useMemo(() => {
+    const base = parseFloat(basePriceInput) || 0;
+    const tax = parseFloat(apartmentTaxInput) || 0;
+    if (base > 0 || tax > 0) return base + tax;
     if (customPrice && parseFloat(customPrice) > 0) return parseFloat(customPrice);
     const prop = data.properties.find(p => p.id === selectedPropertyId);
     return prop?.price_egp || 0;
-  }, [customPrice, selectedPropertyId, data.properties]);
+  }, [basePriceInput, apartmentTaxInput, customPrice, selectedPropertyId, data.properties]);
 
   const handleDownPaymentPctChange = (pctStr: string) => {
     setDownPaymentInputPct(pctStr);
@@ -341,14 +378,36 @@ export default function AdminERPHub({ adminLocale }: AdminERPHubProps) {
       errors.customUnitName = isAr ? 'يرجى كتابة اسم وتفاصيل المشروع / الوحدة المخصصة' : 'Please specify custom unit / project details';
     } else if (selectedPropertyId !== 'custom_unit') {
       const prop = data.properties.find(p => p.id === selectedPropertyId);
-      const existingContract = data.contracts.find(c => 
-        (c.property_id === selectedPropertyId || (prop && (c.unit_id === prop.title_ar || c.unit_id === prop.title_en))) && 
-        (c.status === 'Active' || c.status === 'Completed')
-      );
-      if (existingContract) {
-        errors.property = isAr 
-          ? `عفواً! هذا العقار متعاقد عليه بالفعل بموجب العقد (${existingContract.contract_number}) باسم (${existingContract.buyer_name}). لا يمكن تحرير عقد بيع مكرر لنفس العقار إلا بعد فسخ العقد القائم.`
-          : `This property is already sold under active contract ${existingContract.contract_number} for ${existingContract.buyer_name}.`;
+      const isBuilding = prop && (prop.type === 'building' || (prop.title_ar || '').includes('عمارة') || (prop.title_en || '').toLowerCase().includes('building'));
+
+      if (isBuilding) {
+        const wholeContract = data.contracts.find(c => 
+          (c.property_id === selectedPropertyId || (prop && (c.unit_id === prop.title_ar || c.unit_id === prop.title_en))) && 
+          (c.status === 'Active' || c.status === 'Completed') &&
+          (c.is_whole_building_sale || !c.building_unit_id)
+        );
+        if (wholeContract || prop.listing_status === 'sold') {
+          errors.property = isAr 
+            ? `عفواً! هذه العمارة تم بيعها بالكامل بموجب العقد (${wholeContract?.contract_number || 'مسجل'}) باسم (${wholeContract?.buyer_name || 'المشتري'}). لا يمكن بيع أي شقة منفصلة منها.`
+            : `This building is already sold entirely under contract ${wholeContract?.contract_number || ''}. No individual apartments can be sold.`;
+        } else if (!isWholeBuildingContract && selectedBuildingUnitId) {
+          const targetUnit = (prop.building_units || []).find(u => u.unit_id === selectedBuildingUnitId);
+          if (targetUnit && targetUnit.status === 'contracted') {
+            errors.property = isAr 
+              ? `عفواً! هذه الشقة (${targetUnit.unit_number}) بالعمارة متعاقد عليها بالفعل بموجب عقد سابق.`
+              : `This apartment (${targetUnit.unit_number}) is already contracted.`;
+          }
+        }
+      } else {
+        const existingContract = data.contracts.find(c => 
+          (c.property_id === selectedPropertyId || (prop && (c.unit_id === prop.title_ar || c.unit_id === prop.title_en))) && 
+          (c.status === 'Active' || c.status === 'Completed')
+        );
+        if (existingContract) {
+          errors.property = isAr 
+            ? `عفواً! هذا العقار متعاقد عليه بالفعل بموجب العقد (${existingContract.contract_number}) باسم (${existingContract.buyer_name}). لا يمكن تحرير عقد بيع مكرر لنفس العقار إلا بعد فسخ العقد القائم.`
+            : `This property is already sold under active contract ${existingContract.contract_number} for ${existingContract.buyer_name}.`;
+        }
       }
     }
 
@@ -370,7 +429,7 @@ export default function AdminERPHub({ adminLocale }: AdminERPHubProps) {
 
     setContractErrors(errors);
     return Object.keys(errors).length === 0;
-  }, [selectedPropertyId, customUnitName, buyerName, buyerNationalId, buyerPhone, isAr, data.contracts, data.properties]);
+  }, [selectedPropertyId, customUnitName, buyerName, buyerNationalId, buyerPhone, isAr, data.contracts, data.properties, isWholeBuildingContract, selectedBuildingUnitId]);
 
   const validateStep2 = useCallback((): boolean => {
     const errors: { [key: string]: string } = {};
@@ -660,11 +719,7 @@ export default function AdminERPHub({ adminLocale }: AdminERPHubProps) {
         if (contract) handleInspectContract(contract);
       }
     } else if (targetModule === 'tax') {
-      setActiveTab('tax');
-      if (metadata?.taxId) {
-        const tax = data.taxRecords.find(t => t.tax_id === metadata.taxId);
-        if (tax) handleInspectTax(tax);
-      }
+      setActiveTab('calculator');
     } else if (targetModule === 'rescissions' || targetModule === 'approvals') {
       setActiveTab('rescissions');
     } else if (targetModule === 'ledger') {
@@ -700,16 +755,47 @@ export default function AdminERPHub({ adminLocale }: AdminERPHubProps) {
     }
 
     if (!isCustom && prop) {
-      const existingContract = data.contracts.find(c => 
-        (c.property_id === prop.id || c.unit_id === prop.title_ar || c.unit_id === prop.title_en) && 
-        (c.status === 'Active' || c.status === 'Completed')
-      );
-      if (existingContract) {
-        alert(isAr 
-          ? `عفواً! هذا العقار متعاقد عليه بالفعل بموجب العقد (${existingContract.contract_number}) باسم (${existingContract.buyer_name}). لا يمكن تحرير عقد بيع مكرر لنفس العقار إلا بعد فسخ العقد السابق أولاً.`
-          : `This property is already sold under active contract ${existingContract.contract_number} for ${existingContract.buyer_name}.`
+      const isBuilding = prop.type === 'building' || (prop.title_ar || '').includes('عمارة') || (prop.title_en || '').toLowerCase().includes('building');
+      
+      if (isBuilding) {
+        const wholeContract = data.contracts.find(c => 
+          (c.property_id === prop.id || c.unit_id === prop.title_ar || c.unit_id === prop.title_en) && 
+          (c.status === 'Active' || c.status === 'Completed') &&
+          (c.is_whole_building_sale || !c.building_unit_id)
         );
-        return;
+        if (wholeContract || prop.listing_status === 'sold') {
+          alert(isAr 
+            ? `عفواً! هذه العمارة تم بيعها بالكامل بموجب العقد (${wholeContract?.contract_number || 'مسجل'}) باسم (${wholeContract?.buyer_name || 'المشتري'}). لا يمكن بيع أي شقة منفصلة منها.`
+            : `This building is already sold entirely under contract ${wholeContract?.contract_number || ''}. No individual apartments can be sold.`
+          );
+          return;
+        }
+
+        if (!isWholeBuildingContract && selectedBuildingUnitId) {
+          // Individual unit sale: check if this apartment is already contracted
+          const targetUnit = (prop.building_units || []).find(u => u.unit_id === selectedBuildingUnitId);
+          if (targetUnit && targetUnit.status === 'contracted') {
+            alert(isAr 
+              ? `عفواً! هذه الشقة (${targetUnit.unit_number}) بالعمارة متعاقد عليها بالفعل بموجب عقد سابق.`
+              : `This apartment (${targetUnit.unit_number}) is already contracted under a previous contract.`
+            );
+            return;
+          }
+        }
+      } else {
+        // Whole building or standard unit sale
+        const existingContract = data.contracts.find(c => 
+          (c.property_id === prop.id || c.unit_id === prop.title_ar || c.unit_id === prop.title_en) && 
+          (c.status === 'Active' || c.status === 'Completed') &&
+          (c.is_whole_building_sale || !c.building_unit_id)
+        );
+        if (existingContract) {
+          alert(isAr 
+            ? `عفواً! هذا العقار متعاقد عليه بالكامل بالفعل بموجب العقد (${existingContract.contract_number}) باسم (${existingContract.buyer_name}). لا يمكن تحرير عقد بيع مكرر لنفس العقار إلا بعد فسخ العقد السابق أولاً.`
+            : `This property is already sold under active contract ${existingContract.contract_number} for ${existingContract.buyer_name}.`
+          );
+          return;
+        }
       }
     }
 
@@ -772,16 +858,25 @@ export default function AdminERPHub({ adminLocale }: AdminERPHubProps) {
         });
       }
 
+      const isBuilding = prop?.type === 'building' || (prop?.title_ar || '').includes('عمارة') || (prop?.title_en || '').toLowerCase().includes('building');
+      let finalUnitId = isCustom ? customUnitName : (prop?.title_ar || prop?.title_en || 'Unit');
+      if (isBuilding && !isWholeBuildingContract && selectedBuildingUnitNumber) {
+        finalUnitId = `${finalUnitId} - ${selectedBuildingUnitNumber}`;
+      }
+
       const contract: ERPContract = {
         contract_id: contractId,
         contract_number: contractNumber,
-        unit_id: (isCustom ? customUnitName : (prop?.title_ar || prop?.title_en || 'Unit')).slice(0, 50),
+        unit_id: finalUnitId.slice(0, 50),
         property_id: (isCustom || !prop?.id || !isUUID(prop.id)) ? undefined : prop.id,
         lead_id: (finalLeadId && isUUID(finalLeadId)) ? finalLeadId : undefined,
         buyer_name: buyerName,
         buyer_phone: buyerPhone || undefined,
         buyer_email: buyerEmail || undefined,
         buyer_national_id: buyerNationalId,
+        base_price: basePriceInput ? D(basePriceInput).toFixed(2) : (prop ? D(prop.price_egp).toFixed(2) : contractValue),
+        tax_amount: apartmentTaxInput ? D(apartmentTaxInput).toFixed(2) : '0.00',
+        tax_description: apartmentTaxDesc || (isAr ? 'ضريبة ورسوم محددة يدوياً للشقة' : 'Manual Apartment Tax'),
         gross_contract_value: contractValue,
         currency: 'EGP',
         exchange_rate: '1.0000',
@@ -790,7 +885,10 @@ export default function AdminERPHub({ adminLocale }: AdminERPHubProps) {
         total_cash_collected: paymentPlanType === 'FULL_CASH' ? contractValue : '0.00',
         status: 'Active',
         payment_plan_type: paymentPlanType,
-        partner_splits: calculatedSplits
+        partner_splits: calculatedSplits,
+        is_whole_building_sale: isBuilding ? isWholeBuildingContract : undefined,
+        building_unit_id: isBuilding && !isWholeBuildingContract ? selectedBuildingUnitId : undefined,
+        building_unit_number: isBuilding && !isWholeBuildingContract ? selectedBuildingUnitNumber : undefined
       };
 
       const dpEntry = ContractsEngine.createAdvancePaymentEntry(
@@ -803,6 +901,25 @@ export default function AdminERPHub({ adminLocale }: AdminERPHubProps) {
 
       await ERPSupabaseService.persistNewContract(supabase, contract, schedules, dpEntry);
 
+      if (isBuilding && !isWholeBuildingContract && selectedBuildingUnitId && prop?.id) {
+        await ERPSupabaseService.updateBuildingUnitStatus(
+          supabase,
+          prop.id,
+          selectedBuildingUnitId,
+          'contracted',
+          contractId,
+          contractNumber,
+          buyerName
+        );
+        await ERPSupabaseService.updateBuildingUnitTax(
+          supabase,
+          prop.id,
+          selectedBuildingUnitId,
+          parseFloat(apartmentTaxInput) || 0,
+          apartmentTaxDesc || (isAr ? 'ضريبة ورسوم محددة يدوياً للشقة' : 'Manual Apartment Tax')
+        );
+      }
+
       setShowNewContractModal(false);
       setContractWizardStep(1);
       setSelectedPropertyId('');
@@ -812,6 +929,12 @@ export default function AdminERPHub({ adminLocale }: AdminERPHubProps) {
       setBuyerEmail('');
       setBuyerNationalId('');
       setCustomPrice('');
+      setBasePriceInput('');
+      setApartmentTaxInput('0');
+      setApartmentTaxDesc('');
+      setIsWholeBuildingContract(false);
+      setSelectedBuildingUnitId(undefined);
+      setSelectedBuildingUnitNumber(undefined);
       await loadLiveData();
     } catch (err: unknown) {
       alert((err as Error).message);
@@ -932,16 +1055,16 @@ export default function AdminERPHub({ adminLocale }: AdminERPHubProps) {
         entry_number: entryNumber,
         entry_date: new Date().toISOString().split('T')[0],
         period: activePeriod,
-        description: `Installment #${schedule.tranche_number} collected - Contract ${contract.contract_number}`,
+        description: `Installment #${schedule.tranche_number} collected by hand - Contract ${contract.contract_number}`,
         source_module: 'SALES',
         source_entity_id: contract.contract_id,
         created_by: 'CFO_FARID',
         lines: [
           {
-            account_code: '102000',
+            account_code: '101000', // Main Safe / Cash on Hand (Direct collection by hand, no bank link)
             debit_amount: amount,
             credit_amount: '0.00',
-            memo: `Cash collection into Operating Bank for Contract ${contract.contract_number}`
+            memo: `Cash collection by hand into Treasury Safe for Contract ${contract.contract_number}`
           },
           {
             account_code: creditAccount,
@@ -1014,16 +1137,16 @@ export default function AdminERPHub({ adminLocale }: AdminERPHubProps) {
           entry_number: `JE-PDC-CLR-${cheque.cheque_number}`,
           entry_date: new Date().toISOString().split('T')[0],
           period: activePeriod,
-          description: `PDC Cheque #${cheque.cheque_number} cleared into Operating Bank`,
+          description: `PDC Cheque #${cheque.cheque_number} collected by hand into Treasury Safe`,
           source_module: 'PDC',
           source_entity_id: cheque.cheque_id,
           created_by: 'CFO_FARID',
           lines: [
             {
-              account_code: '102000', // Operating Bank
+              account_code: '101000', // Main Safe / Cash on Hand (Collection by hand)
               debit_amount: cheque.nominal_value,
               credit_amount: '0.00',
-              memo: `PDC Cheque #${cheque.cheque_number} cleared into Operating Bank`
+              memo: `PDC Cheque #${cheque.cheque_number} collected by hand into Treasury Safe`
             },
             {
               account_code: '104000', // Cheques Under Collection / Safe
@@ -1114,27 +1237,103 @@ export default function AdminERPHub({ adminLocale }: AdminERPHubProps) {
     }
   }
 
-  // Handler: Bulk Deposit All Cheques Due for Clearing
-  async function handleDepositDuePDCs() {
+  // Handler: Bulk Collect All Dues Due Today by Hand into Main Safe [101000]
+  async function handleCollectDuePDCsToday() {
     const todayStr = new Date().toISOString().split('T')[0];
-    const dueInSafe = data.pdcRecords.filter(p => p.status === 'In Safe' && p.due_date <= todayStr);
-    if (dueInSafe.length === 0) {
-      alert(isAr ? 'لا توجد شيكات مستحقة الإيداع اليوم بالخزينة' : 'No cheques in safe are due for deposit today.');
+    const dueToday = data.pdcRecords.filter(p => p.status !== 'Cleared' && p.due_date <= todayStr);
+    if (dueToday.length === 0) {
+      alert(isAr ? 'لا توجد أقساط أو بنود مستحقة للتحصيل اليوم.' : 'No installments are due for collection today.');
       return;
     }
 
+    const totalDue = dueToday.reduce((acc, p) => acc.plus(p.nominal_value || '0'), D(0));
     if (!confirm(isAr 
-      ? `هل ترغب في إيداع عدد (${dueInSafe.length}) شيك بالبنك برسم التحصيل بمبلغ إجمالي (${dueInSafe.reduce((acc, p) => acc.plus(p.nominal_value || '0'), D(0)).formatEGP(isAr)})؟`
-      : `Deposit ${dueInSafe.length} cheques to bank under collection?`)) {
+      ? `هل ترغب في تأكيد استلام عدد (${dueToday.length}) قسط مستحق اليوم بمبلغ إجمالي (${totalDue.formatEGP(isAr)}) وتوريدها نقدياً بالخزينة الرئيسية [101000]؟`
+      : `Confirm hand cash collection of ${dueToday.length} due installments total ${totalDue.formatEGP(isAr)} into Main Safe?`)) {
       return;
     }
 
     setIsMutating(true);
     try {
-      for (const chq of dueInSafe) {
-        await ERPSupabaseService.persistPDCStatus(supabase, chq.cheque_id, 'Deposited');
+      for (const item of dueToday) {
+        const entry = GeneralLedgerEngine.validateAndCreateEntry({
+          entry_number: `JE-CASH-REC-${item.cheque_number}`,
+          entry_date: todayStr,
+          period: activePeriod,
+          description: `تحصيل قسط باليد نقداً بالخزينة - بند #${item.cheque_number} - العميل: ${item.drawer_name}`,
+          source_module: 'PDC',
+          source_entity_id: item.cheque_id,
+          created_by: 'CFO_FARID',
+          lines: [
+            {
+              account_code: '101000', // Main Safe
+              debit_amount: item.nominal_value,
+              credit_amount: '0.00',
+              memo: `تحصيل قسط نقداً باليد - العميل: ${item.drawer_name}`
+            },
+            {
+              account_code: '104000', // Installments receivable
+              debit_amount: '0.00',
+              credit_amount: item.nominal_value,
+              memo: `إثبات سداد قسط باليد - بند #${item.cheque_number}`
+            }
+          ]
+        });
+        await ERPSupabaseService.persistPDCStatus(supabase, item.cheque_id, 'Cleared');
+        await ERPSupabaseService.persistJournalEntry(supabase, entry);
       }
       await loadLiveData();
+    } catch (err: unknown) {
+      alert((err as Error).message);
+    } finally {
+      setIsMutating(false);
+    }
+  }
+
+  // Handler: Execute Individual Hand Cash Collection with Official Receipt Number
+  async function handleConfirmHandCollection(
+    item: ERPPDCRecord,
+    receiptNo: string,
+    date: string,
+    amount: string,
+    notes: string
+  ) {
+    setIsMutating(true);
+    try {
+      const entry = GeneralLedgerEngine.validateAndCreateEntry({
+        entry_number: `JE-RCP-${receiptNo}`,
+        entry_date: date,
+        period: activePeriod,
+        description: `تحصيل قسط نقداً باليد بموجب إيصال رقم ${receiptNo} من العميل: ${item.drawer_name}${notes ? ` - ${notes}` : ''}`,
+        source_module: 'PDC',
+        source_entity_id: item.cheque_id,
+        created_by: 'CFO_FARID',
+        lines: [
+          {
+            account_code: '101000', // Main Safe / Cash on Hand
+            debit_amount: D(amount).toFixed(2),
+            credit_amount: '0.00',
+            memo: `استلام نقدي باليد - إيصال #${receiptNo}`
+          },
+          {
+            account_code: '104000', // Installments receivable
+            debit_amount: '0.00',
+            credit_amount: D(amount).toFixed(2),
+            memo: `سداد قسط العميل: ${item.drawer_name}`
+          }
+        ]
+      });
+
+      await ERPSupabaseService.persistPDCStatus(supabase, item.cheque_id, 'Cleared');
+      await ERPSupabaseService.persistJournalEntry(supabase, entry);
+
+      setData(prev => ({
+        ...prev,
+        pdcRecords: prev.pdcRecords.map(p => p.cheque_id === item.cheque_id ? { ...p, status: 'Cleared' as const } : p),
+        journalEntries: [entry, ...prev.journalEntries]
+      }));
+
+      await loadLiveData(true);
     } catch (err: unknown) {
       alert((err as Error).message);
     } finally {
@@ -1193,33 +1392,33 @@ export default function AdminERPHub({ adminLocale }: AdminERPHubProps) {
     }
   }
 
-  // Handler: Remit Statutory Tax to ETA with balanced GL Posting
+  // Handler: Settle / Remit Apartment Tax with balanced GL Posting to Safe (101000)
   async function handleRemitTax(taxId: string) {
     const tax = data.taxRecords.find(t => t.tax_id === taxId);
     if (!tax) return;
     setIsMutating(true);
     try {
-      // 1. Post GL Journal Entry: Dr 204000 (Tax Authority Liability) / Cr 102000 (Operating Bank)
+      // 1. Post GL Journal Entry: Dr 204000 (Tax Liability) / Cr 101000 (Main Safe - Cash on Hand)
       const entry = GeneralLedgerEngine.validateAndCreateEntry({
         entry_number: `JE-TAX-RMT-${tax.tax_id.slice(0, 8)}`,
         entry_date: new Date().toISOString().split('T')[0],
         period: activePeriod,
-        description: `Statutory Tax Remittance to ETA (${tax.tax_type})`,
+        description: `استيفاء / سداد ضريبة ورسوم الوحدة (${tax.tax_type})`,
         source_module: 'TAX',
         source_entity_id: tax.tax_id,
         created_by: 'CFO_FARID',
         lines: [
           {
-            account_code: '204000', // Tax Authority Liability
+            account_code: '204000', // Tax Liability
             debit_amount: tax.tax_amount,
             credit_amount: '0.00',
-            memo: `Tax Remittance to Egyptian Tax Authority - ${tax.tax_type}`
+            memo: `استيفاء وتسوية ضريبة ورسوم الشقة - ${tax.tax_type}`
           },
           {
-            account_code: '102000', // Operating Bank
+            account_code: '101000', // Main Safe (Cash on Hand - No Bank Link)
             debit_amount: '0.00',
             credit_amount: tax.tax_amount,
-            memo: `Settlement via Commercial Bank for ETA tax liability`
+            memo: `سداد / استيفاء ضريبة الوحدة نقداً باليد من الخزينة الرئيسية`
           }
         ]
       });
@@ -1373,20 +1572,123 @@ export default function AdminERPHub({ adminLocale }: AdminERPHubProps) {
   }, [data, totalCollectedCash, totalRemainingAR, totalWipIncurred, totalTaxLiabilities, totalGrossContractValue, totalContributedCapital, isAr]);
 
   // Property Actions Handlers
-  const handleOpenContractForProperty = useCallback((prop: Property) => {
+  const handleOpenContractForProperty = useCallback((prop: Property, unit?: BuildingUnitItem) => {
+    const isBld = prop.type === 'building' || (prop.title_ar || '').includes('عمارة') || (prop.title_en || '').toLowerCase().includes('building');
+    const wholeContract = data.contracts.find(c => 
+      (c.property_id === prop.id || c.unit_id === prop.title_ar || c.unit_id === prop.title_en) && 
+      (c.status === 'Active' || c.status === 'Completed') &&
+      (c.is_whole_building_sale || !c.building_unit_id)
+    );
+    if (isBld && (wholeContract || prop.listing_status === 'sold')) {
+      alert(isAr 
+        ? `عفواً! هذه العمارة تم بيعها بالكامل بموجب العقد (${wholeContract?.contract_number || 'مسجل'}) باسم (${wholeContract?.buyer_name || 'المشتري'}). لا يمكن بيع أي شقة منفصلة منها.`
+        : `This building is already sold entirely under contract ${wholeContract?.contract_number || ''}. No individual apartments can be sold.`
+      );
+      return;
+    }
+
     setSelectedPropertyId(prop.id);
-    setCustomPrice(prop.price_egp.toString());
+    if (unit) {
+      setIsWholeBuildingContract(false);
+      setSelectedBuildingUnitId(unit.unit_id);
+      setSelectedBuildingUnitNumber(unit.unit_number);
+      const b = unit.price_egp;
+      const t = unit.tax_amount_egp || 0;
+      setBasePriceInput(b.toString());
+      setApartmentTaxInput(t.toString());
+      setApartmentTaxDesc(unit.tax_description || '');
+      setCustomPrice((b + t).toString());
+    } else {
+      setIsWholeBuildingContract(isBld);
+      setSelectedBuildingUnitId(undefined);
+      setSelectedBuildingUnitNumber(undefined);
+      const b = prop.price_egp;
+      const t = prop.tax_amount_egp || 0;
+      setBasePriceInput(b.toString());
+      setApartmentTaxInput(t.toString());
+      setApartmentTaxDesc('');
+      setCustomPrice((b + t).toString());
+    }
     setDownPaymentPct('0.15');
     setDownPaymentInputPct('15');
     setDownPaymentAmountInput('');
     setNumInstallments(prop.completion_status === 'off_plan' ? '12' : '6');
     setContractWizardStep(1);
     setShowNewContractModal(true);
-  }, []);
+  }, [data.contracts, isAr]);
 
-  const handleOpenCalculatorForProperty = useCallback(() => {
+  const handleUpdatePropertyUnitTax = useCallback(async (propertyId: string, unitId: string, taxAmount: number, taxDesc?: string) => {
+    await ERPSupabaseService.updateBuildingUnitTax(supabase, propertyId, unitId, taxAmount, taxDesc);
+    await loadLiveData();
+  }, [loadLiveData]);
+
+  const handleOpenCalculatorForProperty = useCallback((prop?: Property) => {
+    if (prop) {
+      setCalculatorPropertyId(prop.id);
+    }
     setActiveTab('calculator');
   }, []);
+
+  const handleOpenAuditForProperty = useCallback((prop: Property) => {
+    setAuditModalProperty(prop);
+  }, []);
+
+  const handleAddPropertyCostItem = useCallback(async (item: ERPPropertyCostItem) => {
+    setIsMutating(true);
+    try {
+      await ERPSupabaseService.addPropertyCostItem(supabase, item);
+      setData(prev => ({
+        ...prev,
+        propertyCosts: [item, ...prev.propertyCosts]
+      }));
+    } catch (err) {
+      console.warn('Fallback adding property cost item:', err);
+      setData(prev => ({
+        ...prev,
+        propertyCosts: [item, ...prev.propertyCosts]
+      }));
+    } finally {
+      setIsMutating(false);
+    }
+  }, [supabase]);
+
+  const handleDeletePropertyCostItem = useCallback(async (itemId: string) => {
+    setIsMutating(true);
+    try {
+      await ERPSupabaseService.deletePropertyCostItem(supabase, itemId);
+      setData(prev => ({
+        ...prev,
+        propertyCosts: prev.propertyCosts.filter(c => c.item_id !== itemId && c.id !== itemId)
+      }));
+    } catch (err) {
+      console.warn('Fallback deleting property cost item:', err);
+      setData(prev => ({
+        ...prev,
+        propertyCosts: prev.propertyCosts.filter(c => c.item_id !== itemId && c.id !== itemId)
+      }));
+    } finally {
+      setIsMutating(false);
+    }
+  }, [supabase]);
+
+  const handleUpdatePropertySellingPrice = useCallback(async (propertyId: string, newPriceEgp: number) => {
+    setIsMutating(true);
+    try {
+      await ERPSupabaseService.updatePropertySellingPrice(supabase, propertyId, newPriceEgp);
+      setData(prev => ({
+        ...prev,
+        properties: prev.properties.map(p => p.id === propertyId ? { ...p, price_egp: newPriceEgp } : p)
+      }));
+    } catch (err) {
+      console.warn('Fallback updating property price:', err);
+      setData(prev => ({
+        ...prev,
+        properties: prev.properties.map(p => p.id === propertyId ? { ...p, price_egp: newPriceEgp } : p)
+      }));
+    } finally {
+      setIsMutating(false);
+    }
+  }, [supabase]);
 
   // Contract Portfolio Summary KPIs (Only Active & Non-Rescinded Contracts)
   const contractPortfolioKPIs = useMemo(() => {
@@ -1457,7 +1759,7 @@ export default function AdminERPHub({ adminLocale }: AdminERPHubProps) {
     });
   }, [data.contracts, contractFilter, contractSearchQuery]);
 
-  // Filtered Cheques
+  // Filtered Hand Installment Dues
   const filteredCheques = useMemo(() => {
     const now = new Date();
     const todayStr = now.toISOString().split('T')[0];
@@ -1465,14 +1767,21 @@ export default function AdminERPHub({ adminLocale }: AdminERPHubProps) {
 
     return data.pdcRecords.filter(p => {
       // 1. Status Filter
-      if (chequeFilter !== 'All' && p.status !== chequeFilter) return false;
+      if (chequeFilter === 'due_later') {
+        if (p.status === 'Cleared' || p.due_date < todayStr) return false;
+      } else if (chequeFilter === 'overdue') {
+        if (p.status === 'Cleared' || p.due_date >= todayStr) return false;
+      } else if (chequeFilter === 'collected') {
+        if (p.status !== 'Cleared') return false;
+      } else if (chequeFilter !== 'All' && p.status !== chequeFilter) {
+        return false;
+      }
 
-
-      // 3. Maturity Filter
+      // 2. Maturity Filter
       if (chequeMaturityFilter === 'due_now' && (p.due_date > todayStr || p.status === 'Cleared')) return false;
       if (chequeMaturityFilter === 'due_30' && (p.due_date > in30DaysStr || p.status === 'Cleared')) return false;
 
-      // 4. Search Query (Cheque #, Drawer, Bank, Contract #, Unit)
+      // 3. Search Query (Item Code, Drawer/Payer, Contract #, Unit)
       if (chequeSearchQuery.trim()) {
         const q = chequeSearchQuery.toLowerCase().trim();
         const num = (p.cheque_number || '').toLowerCase();
@@ -1495,9 +1804,9 @@ export default function AdminERPHub({ adminLocale }: AdminERPHubProps) {
       // 1. Status Filter
       if (taxStatusFilter !== 'all' && t.remittance_status !== taxStatusFilter) return false;
 
-      // 2. Type Filter
-      if (taxTypeFilter === 'disposal' && !t.tax_type.includes('Disposal')) return false;
-      if (taxTypeFilter === 'form41' && !t.tax_type.includes('Form 41') && !t.tax_type.includes('1%') && !t.tax_type.includes('3%')) return false;
+      // 2. Type Filter: with tax vs exempt
+      if (taxTypeFilter === 'with_tax' && (!parseFloat(t.tax_amount) || parseFloat(t.tax_amount) === 0)) return false;
+      if (taxTypeFilter === 'exempt' && parseFloat(t.tax_amount) > 0) return false;
 
       // 3. Search Query
       if (taxSearchQuery.trim()) {
@@ -1601,7 +1910,7 @@ export default function AdminERPHub({ adminLocale }: AdminERPHubProps) {
         />
 
         {/* Main Workstation Stage */}
-        <main className={subStyles.workspaceStage}>
+        <main className={subStyles.workspaceStage} ref={stageRef}>
           <div className={subStyles.stageContainer}>
             {/* Proactive Period Lock Banner (Invariant 0.9) */}
             <LockedPeriodBanner period={activePeriod} isAr={isAr} />
@@ -1765,80 +2074,229 @@ export default function AdminERPHub({ adminLocale }: AdminERPHubProps) {
                 </div>
               )}
 
-              {/* 1. FINANCIAL FLOW & CAPITAL ALLOCATION MINDMAP (First Priority Overview) */}
-              <div data-tour="capital-mindmap">
-                <CapitalFlowMindmap 
-                  isAr={isAr}
-                  kpis={kpis}
-                  totalGrossContractValue={totalGrossContractValue}
-                  totalCollectedCash={totalCollectedCash}
-                  totalWipIncurred={totalWipIncurred}
-                  totalSafePDCs={data.pdcRecords
-                    .filter(p => p.status === 'In Safe')
-                    .reduce((acc, p) => acc.plus(p.nominal_value || '0'), D(0))
-                    .toFixed(2)}
-                  totalInjectedCapital={data.partnerCalls
-                    .reduce((acc, c) => acc.plus(c.paid_amount || c.call_amount || '0'), D(0))
-                    .toFixed(2)}
-                  wipAccounts={wipAccounts}
-                  taxRecords={data.taxRecords}
-                  partnerCalls={data.partnerCalls}
-                />
+              {/* Executive Dashboard Mode Switcher - Eliminates clutter & repetitive figures */}
+              <div style={{
+                background: 'rgba(18, 22, 34, 0.85)',
+                border: '1px solid rgba(255, 255, 255, 0.08)',
+                borderRadius: '12px',
+                padding: '0.4rem',
+                display: 'flex',
+                gap: '0.5rem',
+                alignItems: 'center',
+                justifyContent: 'flex-start',
+                flexWrap: 'wrap'
+              }}>
+                <button
+                  type="button"
+                  onClick={() => setDashboardViewMode('daily')}
+                  style={{
+                    background: dashboardViewMode === 'daily' 
+                      ? 'linear-gradient(135deg, #d4af37 0%, #b89628 100%)' 
+                      : 'transparent',
+                    color: dashboardViewMode === 'daily' ? '#0a0c12' : '#94a3b8',
+                    border: 'none',
+                    borderRadius: '8px',
+                    padding: '0.5rem 1rem',
+                    fontSize: '0.8rem',
+                    fontWeight: 800,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.45rem',
+                    transition: 'all 0.15s ease'
+                  }}
+                >
+                  <CheckCircle2 size={15} />
+                  <span>{isAr ? 'العمليات والمهام اليومية والاستحقاقات' : 'Daily Operations & Liquidity Schedule'}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setDashboardViewMode('analytics')}
+                  style={{
+                    background: dashboardViewMode === 'analytics' 
+                      ? 'linear-gradient(135deg, #d4af37 0%, #b89628 100%)' 
+                      : 'transparent',
+                    color: dashboardViewMode === 'analytics' ? '#0a0c12' : '#94a3b8',
+                    border: 'none',
+                    borderRadius: '8px',
+                    padding: '0.5rem 1rem',
+                    fontSize: '0.8rem',
+                    fontWeight: 800,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.45rem',
+                    transition: 'all 0.15s ease'
+                  }}
+                >
+                  <TrendingUp size={15} />
+                  <span>{isAr ? 'الاستوديو المالي والتحليلات' : 'Capital Flow & Analytics Studio'}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setDashboardViewMode('all')}
+                  style={{
+                    background: dashboardViewMode === 'all' 
+                      ? 'rgba(255, 255, 255, 0.12)' 
+                      : 'transparent',
+                    color: dashboardViewMode === 'all' ? '#ffffff' : '#64748b',
+                    border: 'none',
+                    borderRadius: '8px',
+                    padding: '0.5rem 0.85rem',
+                    fontSize: '0.75rem',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.4rem',
+                    transition: 'all 0.15s ease',
+                    marginInlineStart: 'auto'
+                  }}
+                >
+                  <Layers size={14} />
+                  <span>{isAr ? 'العرض المجمع الشامل' : 'Comprehensive View'}</span>
+                </button>
               </div>
 
-              {/* 2. MONTHLY FINANCIAL & CHEQUE MATURITY CALENDAR (Work & Schedule for the Month) */}
-              <div data-tour="financial-calendar">
-                <DashboardFinancialCalendar 
-                  pdcRecords={data.pdcRecords}
-                  contracts={data.contracts}
-                  schedules={data.schedules}
-                  taxRecords={data.taxRecords}
-                  onInspectCheque={handleInspectCheque}
-                  onInspectContract={handleInspectContract}
-                  onInspectTax={handleInspectTax}
-                  isAr={isAr}
-                />
-              </div>
+              {/* 1. OPERATIONS & DAILY TASKS VIEW (No repetitive charts, focused execution) */}
+              {(dashboardViewMode === 'daily' || dashboardViewMode === 'all') && (
+                <>
+                  {/* Today's Executive Financial Action Ledger */}
+                  <div data-tour="action-ledger">
+                    <DashboardDailyActionLedger 
+                      pdcRecords={data.pdcRecords}
+                      contracts={data.contracts}
+                      schedules={data.schedules}
+                      makerCheckerRequests={data.makerCheckerRequests}
+                      taxRecords={data.taxRecords}
+                      onInspectCheque={handleInspectCheque}
+                      onInspectContract={handleInspectContract}
+                      onInspectTax={handleInspectTax}
+                      onNavigateToModule={(mod) => setActiveTab(mod === 'cockpit' ? 'dashboard' : mod as any)}
+                      isAr={isAr}
+                    />
+                  </div>
 
-              {/* 3. TODAY'S EXECUTIVE FINANCIAL ACTION LEDGER (Daily Action Items & Approvals) */}
-              <div data-tour="action-ledger">
-                <DashboardDailyActionLedger 
-                  pdcRecords={data.pdcRecords}
-                  contracts={data.contracts}
-                  schedules={data.schedules}
-                  makerCheckerRequests={data.makerCheckerRequests}
-                  taxRecords={data.taxRecords}
-                  onInspectCheque={handleInspectCheque}
-                  onInspectContract={handleInspectContract}
-                  onInspectTax={handleInspectTax}
-                  onNavigateToModule={(mod) => setActiveTab(mod === 'cockpit' ? 'dashboard' : mod as any)}
-                  isAr={isAr}
-                />
-              </div>
+                  {/* Monthly Financial & Installment Dues Calendar */}
+                  <div data-tour="financial-calendar">
+                    <DashboardFinancialCalendar 
+                      pdcRecords={data.pdcRecords}
+                      contracts={data.contracts}
+                      schedules={data.schedules}
+                      onInspectCheque={handleInspectCheque}
+                      onInspectContract={handleInspectContract}
+                      onCollectItem={(item) => setCollectingPDCItem(item)}
+                      isAr={isAr}
+                    />
+                  </div>
+                </>
+              )}
 
-              {/* 4. Unified Domain-Focused Analytical Studio (Horizon Curves, Cost Relief & Equity) */}
-              <DashboardAnalyticalStudio 
-                isAr={isAr}
-                kpis={kpis}
-                totalGrossContractValue={totalGrossContractValue}
-                totalCollectedCash={totalCollectedCash}
-                totalWipIncurred={totalWipIncurred}
-                totalSafePDCs={data.pdcRecords
-                  .filter(p => p.status === 'In Safe')
-                  .reduce((acc, p) => acc.plus(p.nominal_value || '0'), D(0))
-                  .toFixed(2)}
-                wipAccounts={wipAccounts}
-                trancheStats={trancheStats}
-                costAllocations={data.costAllocations}
-                partnerCalls={data.partnerCalls}
-                taxRecords={data.taxRecords}
-                totalInjectedCapital={data.partnerCalls
-                  .reduce((acc, c) => acc.plus(c.paid_amount || c.call_amount || '0'), D(0))
-                  .toFixed(2)}
-                registeredPartners={unifiedPartners}
-                onInjectCapital={() => setShowQuickTransactionModal(true)}
-                onInspectRSV={handleInspectRSV}
-              />
+              {/* 2. ANALYTICS & CAPITAL FLOW VIEW (Eliminates showing repetitive KPIs twice) */}
+              {(dashboardViewMode === 'analytics' || dashboardViewMode === 'all') && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                  {dashboardViewMode === 'analytics' && (
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      background: 'rgba(255, 255, 255, 0.02)',
+                      border: '1px solid rgba(255, 255, 255, 0.06)',
+                      borderRadius: '10px',
+                      padding: '0.5rem 0.85rem'
+                    }}>
+                      <span style={{ fontSize: '0.8rem', color: '#94a3b8', fontWeight: 600 }}>
+                        {isAr ? 'اختر أسلوب العرض التحليلي لبيانات رأس المال والسيولة:' : 'Select Analytics Visualization:'}
+                      </span>
+                      <div style={{ display: 'flex', gap: '0.35rem' }}>
+                        <button
+                          type="button"
+                          onClick={() => setAnalyticsSubView('mindmap')}
+                          style={{
+                            background: analyticsSubView === 'mindmap' ? 'rgba(212, 175, 55, 0.15)' : 'transparent',
+                            color: analyticsSubView === 'mindmap' ? 'var(--zf-gold, #d4af37)' : '#64748b',
+                            border: analyticsSubView === 'mindmap' ? '1px solid rgba(212, 175, 55, 0.3)' : '1px solid transparent',
+                            borderRadius: '6px',
+                            padding: '0.35rem 0.75rem',
+                            fontSize: '0.74rem',
+                            fontWeight: 700,
+                            cursor: 'pointer'
+                          }}
+                        >
+                          {isAr ? 'خريطة التدفقات التفاعلية (Mindmap)' : 'Capital Flow Mindmap'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setAnalyticsSubView('studio')}
+                          style={{
+                            background: analyticsSubView === 'studio' ? 'rgba(56, 189, 248, 0.15)' : 'transparent',
+                            color: analyticsSubView === 'studio' ? '#38bdf8' : '#64748b',
+                            border: analyticsSubView === 'studio' ? '1px solid rgba(56, 189, 248, 0.3)' : '1px solid transparent',
+                            borderRadius: '6px',
+                            padding: '0.35rem 0.75rem',
+                            fontSize: '0.74rem',
+                            fontWeight: 700,
+                            cursor: 'pointer'
+                          }}
+                        >
+                          {isAr ? 'استوديو التحليلات المالية (Studio)' : 'Analytical Studio'}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Capital Flow Mindmap */}
+                  {(dashboardViewMode === 'all' || analyticsSubView === 'mindmap') && (
+                    <div data-tour="capital-mindmap">
+                      <CapitalFlowMindmap 
+                        isAr={isAr}
+                        kpis={kpis}
+                        totalGrossContractValue={totalGrossContractValue}
+                        totalCollectedCash={totalCollectedCash}
+                        totalWipIncurred={totalWipIncurred}
+                        totalSafePDCs={data.pdcRecords
+                          .filter(p => p.status === 'In Safe')
+                          .reduce((acc, p) => acc.plus(p.nominal_value || '0'), D(0))
+                          .toFixed(2)}
+                        totalInjectedCapital={data.partnerCalls
+                          .reduce((acc, c) => acc.plus(c.paid_amount || c.call_amount || '0'), D(0))
+                          .toFixed(2)}
+                        wipAccounts={wipAccounts}
+                        taxRecords={data.taxRecords}
+                        partnerCalls={data.partnerCalls}
+                      />
+                    </div>
+                  )}
+
+                  {/* Analytical Studio */}
+                  {(dashboardViewMode === 'all' || analyticsSubView === 'studio') && (
+                    <DashboardAnalyticalStudio 
+                      isAr={isAr}
+                      kpis={kpis}
+                      totalGrossContractValue={totalGrossContractValue}
+                      totalCollectedCash={totalCollectedCash}
+                      totalWipIncurred={totalWipIncurred}
+                      totalSafePDCs={data.pdcRecords
+                        .filter(p => p.status === 'In Safe')
+                        .reduce((acc, p) => acc.plus(p.nominal_value || '0'), D(0))
+                        .toFixed(2)}
+                      wipAccounts={wipAccounts}
+                      trancheStats={trancheStats}
+                      costAllocations={data.costAllocations}
+                      partnerCalls={data.partnerCalls}
+                      taxRecords={data.taxRecords}
+                      totalInjectedCapital={data.partnerCalls
+                        .reduce((acc, c) => acc.plus(c.paid_amount || c.call_amount || '0'), D(0))
+                        .toFixed(2)}
+                      registeredPartners={unifiedPartners}
+                      onInjectCapital={() => setShowQuickTransactionModal(true)}
+                      onInspectRSV={handleInspectRSV}
+                    />
+                  )}
+                </div>
+              )}
             </div>
           )}
 
@@ -2151,8 +2609,11 @@ export default function AdminERPHub({ adminLocale }: AdminERPHubProps) {
               <PropertyFinancialMatrix 
                 properties={data.properties}
                 contracts={data.contracts}
+                propertyCosts={data.propertyCosts}
                 onOpenContractForProperty={handleOpenContractForProperty}
                 onOpenCalculatorForProperty={handleOpenCalculatorForProperty}
+                onOpenAuditForProperty={handleOpenAuditForProperty}
+                onUpdatePropertyUnitTax={handleUpdatePropertyUnitTax}
                 isAr={isAr}
               />
             </div>
@@ -2176,6 +2637,10 @@ export default function AdminERPHub({ adminLocale }: AdminERPHubProps) {
 
               <ConstructionCostCalculator 
                 properties={data.properties}
+                propertyCosts={data.propertyCosts}
+                initialPropertyId={calculatorPropertyId}
+                onOpenAuditForProperty={handleOpenAuditForProperty}
+                onUpdateSellingPrice={handleUpdatePropertySellingPrice}
                 isAr={isAr}
               />
             </div>
@@ -2742,54 +3207,102 @@ export default function AdminERPHub({ adminLocale }: AdminERPHubProps) {
                         key={c.contract_id}
                         className={subStyles.workstationCard}
                         style={{ 
-                          borderColor: isSelected ? 'var(--zf-gold, #d4af37)' : undefined,
+                          background: 'linear-gradient(165deg, #09141f 0%, #050b12 100%)',
+                          border: '1px solid rgba(212, 175, 55, 0.28)',
+                          borderInlineStart: isSelected ? '5px solid #10b981' : '5px solid var(--zf-gold, #d4af37)',
+                          borderRadius: '14px',
                           cursor: 'pointer',
                           display: 'flex',
                           flexDirection: 'column',
                           gap: '0.9rem',
-                          padding: '1.25rem'
+                          padding: '1.25rem 1.35rem',
+                          boxShadow: isSelected 
+                            ? '0 0 25px rgba(212, 175, 55, 0.35), 0 10px 30px rgba(0, 0, 0, 0.6)' 
+                            : '0 10px 30px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(212, 175, 55, 0.15)',
+                          position: 'relative',
+                          overflow: 'hidden',
+                          transition: 'all 0.2s ease'
                         }}
                         onClick={() => handleInspectContract(c)}
                       >
-                        {/* Top: Contract # and Handover Badge */}
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        {/* 1. Official Legal Deed Header Ribbon */}
+                        <div style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          background: 'rgba(212, 175, 55, 0.08)',
+                          border: '1px solid rgba(212, 175, 55, 0.2)',
+                          borderRadius: '8px',
+                          padding: '0.4rem 0.65rem'
+                        }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                            <FileText size={13} color="var(--zf-gold, #d4af37)" />
+                            <span style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--zf-gold, #d4af37)', letterSpacing: '0.02em' }}>
+                              {isAr ? 'صك تعاقد رسمي' : 'SALES DEED'}
+                            </span>
+                            <span style={{ color: '#475569' }}>•</span>
                             <span 
                               dir="ltr"
                               style={{ 
-                                fontSize: '0.78rem', 
-                                color: 'var(--zf-gold, #d4af37)', 
                                 fontFamily: 'monospace', 
-                                fontWeight: 800,
-                                background: 'rgba(212, 175, 55, 0.1)',
-                                padding: '0.2rem 0.55rem',
+                                fontWeight: 900, 
+                                fontSize: '0.76rem', 
+                                color: '#ffffff',
+                                background: 'rgba(0, 0, 0, 0.35)',
+                                padding: '0.1rem 0.45rem',
                                 borderRadius: '4px',
-                                border: '1px solid rgba(212, 175, 55, 0.25)',
-                                display: 'inline-block',
-                                unicodeBidi: 'isolate'
+                                border: '1px solid rgba(212, 175, 55, 0.25)'
                               }}
                             >
                               #{c.contract_number}
                             </span>
-                            <span style={{ fontSize: '0.72rem', color: 'var(--zf-text-muted, #6b7086)' }}>
+                          </div>
+
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                            <span style={{ fontSize: '0.7rem', color: '#94a3b8' }}>
                               {c.contract_date}
                             </span>
+                            <StatusBadge domain="unit" status={c.handover_status} isAr={isAr} />
                           </div>
-                          <StatusBadge domain="unit" status={c.handover_status} isAr={isAr} />
                         </div>
 
-                        {/* Middle: Unit Name & Buyer */}
+                        {/* 2. Unit Headline & Legal Notice */}
                         <div>
-                          <h4 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: '#ffffff', letterSpacing: '-0.01em', lineHeight: 1.4 }}>
+                          <h4 style={{ margin: 0, fontSize: '1.08rem', fontWeight: 800, color: '#ffffff', letterSpacing: '-0.01em', lineHeight: 1.35 }}>
                             {c.unit_id}
                           </h4>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.75rem', color: 'var(--zf-text-muted, #6b7086)', marginTop: '0.3rem' }}>
-                            <User size={13} color="var(--zf-gold, #d4af37)" />
-                            <span>{isAr ? 'العميل:' : 'Buyer:'} <strong style={{ color: '#f1f5f9' }}>{c.buyer_name}</strong></span>
-                          </div>
                         </div>
 
-                        {/* Rescinded Alert Banner */}
+                        {/* 3. Second Party / Buyer Dossier Strip */}
+                        <div style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          background: 'rgba(255, 255, 255, 0.03)',
+                          border: '1px solid rgba(255, 255, 255, 0.07)',
+                          borderRadius: '8px',
+                          padding: '0.45rem 0.75rem',
+                          fontSize: '0.75rem'
+                        }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                            <User size={13} color="var(--zf-gold, #d4af37)" />
+                            <span style={{ color: '#94a3b8' }}>{isAr ? 'الطرف الثاني (المشتري):' : 'Buyer:'}</span>
+                            <strong style={{ color: '#f8fafc' }}>{c.buyer_name}</strong>
+                          </div>
+                          <span style={{ 
+                            fontSize: '0.66rem', 
+                            color: 'var(--zf-gold, #d4af37)', 
+                            background: 'rgba(212, 175, 55, 0.1)', 
+                            padding: '0.12rem 0.45rem', 
+                            borderRadius: '4px', 
+                            border: '1px solid rgba(212, 175, 55, 0.25)',
+                            fontWeight: 700
+                          }}>
+                            {isAr ? 'عقد موثق ومسجل' : 'Notarized'}
+                          </span>
+                        </div>
+
+                        {/* Rescinded Alert Banner if applicable */}
                         {c.status === 'Rescinded' && (
                           <div style={{
                             background: 'rgba(239, 68, 68, 0.12)',
@@ -2827,19 +3340,34 @@ export default function AdminERPHub({ adminLocale }: AdminERPHubProps) {
                           </div>
                         )}
 
-                        {/* Financial Horizon: Clean stacked high-contrast rows */}
+                        {/* 4. Contract Escrow & Financial Horizon Box */}
                         <div style={{
-                          background: 'rgba(0, 0, 0, 0.4)',
+                          background: 'rgba(0, 0, 0, 0.55)',
                           borderRadius: '10px',
                           padding: '0.75rem 0.95rem',
-                          border: '1px solid rgba(255, 255, 255, 0.06)',
+                          border: '1px solid rgba(212, 175, 55, 0.18)',
                           display: 'flex',
                           flexDirection: 'column',
                           gap: '0.45rem'
                         }}>
+                          <div style={{ 
+                            fontSize: '0.65rem', 
+                            color: 'var(--zf-gold, #d4af37)', 
+                            fontWeight: 800, 
+                            letterSpacing: '0.04em',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.35rem',
+                            paddingBottom: '0.25rem',
+                            borderBottom: '1px solid rgba(255, 255, 255, 0.05)'
+                          }}>
+                            <Scale size={11} />
+                            <span>{isAr ? 'الذمة المالية للتعاقد والتحصيل (CONTRACT ESCROW)' : 'CONTRACT ESCROW & RECEIVABLES'}</span>
+                          </div>
+
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.78rem' }}>
-                            <span style={{ color: 'var(--zf-text-muted, #6b7086)', fontWeight: 600 }}>
-                              {isAr ? 'قيمة العقد (V):' : 'Gross Value (V):'}
+                            <span style={{ color: 'var(--zf-text-muted, #94a3b8)', fontWeight: 600 }}>
+                              {isAr ? 'قيمة التعاقد الإجمالية (V):' : 'Gross Value (V):'}
                             </span>
                             <strong style={{ color: 'var(--zf-gold, #d4af37)', fontFamily: 'monospace', fontSize: '0.88rem' }}>
                               {D(c.gross_contract_value || '0').formatEGP(isAr)}
@@ -2848,7 +3376,7 @@ export default function AdminERPHub({ adminLocale }: AdminERPHubProps) {
 
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.78rem' }}>
                             <span style={{ color: '#10b981', fontWeight: 600 }}>
-                              {isAr ? 'المحصل بالبنك (C):' : 'Collected (C):'}
+                              {isAr ? 'المحصل الفعلي بالبنك (C):' : 'Collected (C):'}
                             </span>
                             <strong style={{ color: '#10b981', fontFamily: 'monospace', fontSize: '0.88rem' }}>
                               {D(c.total_cash_collected || '0').formatEGP(isAr)}
@@ -2872,17 +3400,17 @@ export default function AdminERPHub({ adminLocale }: AdminERPHubProps) {
                           </div>
                         </div>
 
-                        {/* Collection Progress Bar */}
+                        {/* 5. Collection Progress Bar */}
                         <div>
                           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.7rem', marginBottom: '0.25rem' }}>
-                            <span style={{ color: 'var(--zf-text-muted, #6b7086)' }}>
-                              {isAr ? 'نسبة التحصيل الفعلي:' : 'Collection Rate:'}
+                            <span style={{ color: 'var(--zf-text-muted, #94a3b8)' }}>
+                              {isAr ? 'نسبة الوفاء والتحصيل التعاقدي:' : 'Contract Collection Rate:'}
                             </span>
-                            <span style={{ fontWeight: 700, color: isFullyPaid ? '#10b981' : 'var(--zf-gold, #d4af37)' }}>
+                            <span style={{ fontWeight: 800, color: isFullyPaid ? '#10b981' : 'var(--zf-gold, #d4af37)' }}>
                               {progress.toFixed(1)}%
                             </span>
                           </div>
-                          <div style={{ width: '100%', height: '5px', background: 'rgba(255, 255, 255, 0.06)', borderRadius: '999px', overflow: 'hidden' }}>
+                          <div style={{ width: '100%', height: '6px', background: 'rgba(255, 255, 255, 0.06)', borderRadius: '999px', overflow: 'hidden' }}>
                             <div 
                               style={{ 
                                 width: `${progress}%`, 
@@ -2895,14 +3423,14 @@ export default function AdminERPHub({ adminLocale }: AdminERPHubProps) {
                           </div>
                         </div>
 
-                        {/* Footer Info & Action Hint */}
+                        {/* 6. Footer Info & Action Hint */}
                         <div style={{ 
                           display: 'flex', 
                           alignItems: 'center', 
                           justifyContent: 'space-between', 
                           fontSize: '0.72rem', 
-                          paddingTop: '0.4rem', 
-                          borderTop: '1px solid rgba(255, 255, 255, 0.05)' 
+                          paddingTop: '0.5rem', 
+                          borderTop: '1px solid rgba(255, 255, 255, 0.07)' 
                         }}>
                           {isFullyPaid ? (
                             <span style={{ color: '#10b981', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
@@ -2914,9 +3442,9 @@ export default function AdminERPHub({ adminLocale }: AdminERPHubProps) {
                             </span>
                           )}
 
-                          <span style={{ color: 'var(--zf-gold, #d4af37)', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
-                            <Eye size={12} />
-                            <span>{isAr ? 'فحص العقد' : 'Inspect'}</span>
+                          <span style={{ color: 'var(--zf-gold, #d4af37)', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
+                            <Eye size={13} />
+                            <span>{isAr ? 'فحص وتدقيق العقد' : 'Inspect Contract'}</span>
                           </span>
                         </div>
                       </div>
@@ -3011,7 +3539,7 @@ export default function AdminERPHub({ adminLocale }: AdminERPHubProps) {
             </div>
           )}
 
-          {/* MODULE 4: PDC CHEQUES VAULT */}
+          {/* MODULE 4: HAND INSTALLMENTS & CASH DUES VAULT (حافظة بنود التحصيل والأقساط باليد) */}
           {activeTab === 'pdc' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
               <div className={subStyles.stageHeader}>
@@ -3019,10 +3547,10 @@ export default function AdminERPHub({ adminLocale }: AdminERPHubProps) {
                   <div className={subStyles.stageBreadcrumb}>
                     <span>FIN-OS</span>
                     <span>/</span>
-                    <span>{isAr ? 'خزينة الشيكات' : 'PDC Cheques Vault'}</span>
+                    <span>{isAr ? 'بنود التحصيل والأقساط المستحقة' : 'Installments & Hand Dues'}</span>
                   </div>
                   <h1 className={subStyles.stageTitle}>
-                    {isAr ? 'خزينة الشيكات المؤجلة وحالة الإيداع والتحصيل' : 'Post-Dated Cheques (PDC) Vault'}
+                    {isAr ? 'حافظة بنود التحصيل والأقساط المستحقة باليد' : 'Hand Installments & Cash Dues Vault'}
                   </h1>
                 </div>
 
@@ -3030,12 +3558,12 @@ export default function AdminERPHub({ adminLocale }: AdminERPHubProps) {
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
                   <button
                     type="button"
-                    onClick={handleDepositDuePDCs}
+                    onClick={handleCollectDuePDCsToday}
                     disabled={isMutating}
                     style={{
-                      border: '1px solid rgba(59, 130, 246, 0.45)',
-                      background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.15) 0%, rgba(30, 58, 138, 0.25) 100%)',
-                      color: '#93c5fd',
+                      border: '1px solid rgba(16, 185, 129, 0.45)',
+                      background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(5, 150, 105, 0.25) 100%)',
+                      color: '#6ee7b7',
                       fontSize: '0.8rem',
                       fontWeight: 800,
                       padding: '0.55rem 1rem',
@@ -3044,11 +3572,11 @@ export default function AdminERPHub({ adminLocale }: AdminERPHubProps) {
                       display: 'flex',
                       alignItems: 'center',
                       gap: '0.45rem',
-                      boxShadow: '0 4px 15px rgba(59, 130, 246, 0.2)'
+                      boxShadow: '0 4px 15px rgba(16, 185, 129, 0.2)'
                     }}
                   >
-                    <Landmark size={15} />
-                    <span>{isAr ? 'إيداع بنكي للشيكات المستحقة اليوم' : 'Deposit Due Cheques to Bank'}</span>
+                    <Wallet size={15} />
+                    <span>{isAr ? 'تحصيل الأقساط المستحقة اليوم باليد' : 'Collect Today\'s Dues by Hand'}</span>
                   </button>
 
                   <button
@@ -3075,22 +3603,22 @@ export default function AdminERPHub({ adminLocale }: AdminERPHubProps) {
                     }}
                   >
                     <Plus size={16} strokeWidth={3} />
-                    <span>{isAr ? 'استلام شيك وارد جديد للخزينة' : 'Receive New Cheque'}</span>
+                    <span>{isAr ? '+ تسجيل بند قسط / استحقاق جديد' : '+ Record New Installment Due'}</span>
                   </button>
                 </div>
               </div>
 
-              {/* PDC Executive Luxury KPI Bar */}
+              {/* Hand Installments Executive KPI Bar */}
               {(() => {
-                const safeCheques = data.pdcRecords.filter(c => c.status === 'In Safe');
-                const depositedCheques = data.pdcRecords.filter(c => c.status === 'Deposited');
-                const clearedCheques = data.pdcRecords.filter(c => c.status === 'Cleared');
-                const bouncedCheques = data.pdcRecords.filter(c => c.status === 'Bounced');
+                const todayStr = new Date().toISOString().split('T')[0];
+                const collectedDues = data.pdcRecords.filter(c => c.status === 'Cleared');
+                const dueLaterDues = data.pdcRecords.filter(c => c.status !== 'Cleared' && c.due_date >= todayStr);
+                const overdueDues = data.pdcRecords.filter(c => c.status !== 'Cleared' && c.due_date < todayStr);
 
-                const safeSum = safeCheques.reduce((acc, c) => acc.plus(c.nominal_value || '0'), D(0));
-                const depositedSum = depositedCheques.reduce((acc, c) => acc.plus(c.nominal_value || '0'), D(0));
-                const clearedSum = clearedCheques.reduce((acc, c) => acc.plus(c.nominal_value || '0'), D(0));
-                const bouncedSum = bouncedCheques.reduce((acc, c) => acc.plus(c.nominal_value || '0'), D(0));
+                const collectedSum = collectedDues.reduce((acc, c) => acc.plus(c.nominal_value || '0'), D(0));
+                const dueLaterSum = dueLaterDues.reduce((acc, c) => acc.plus(c.nominal_value || '0'), D(0));
+                const overdueSum = overdueDues.reduce((acc, c) => acc.plus(c.nominal_value || '0'), D(0));
+                const totalPortfolioSum = data.pdcRecords.reduce((acc, c) => acc.plus(c.nominal_value || '0'), D(0));
 
                 return (
                   <div style={{
@@ -3098,113 +3626,46 @@ export default function AdminERPHub({ adminLocale }: AdminERPHubProps) {
                     gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
                     gap: '1.25rem'
                   }}>
-                    {/* Card 1: In Safe */}
+                    {/* Card 1: Due Later (مستحق لاحقاً باليد) */}
                     <div style={{
-                      background: 'linear-gradient(145deg, rgba(212, 175, 55, 0.12) 0%, rgba(14, 18, 28, 0.95) 100%)',
-                      border: '1px solid rgba(212, 175, 55, 0.35)',
+                      background: 'linear-gradient(145deg, rgba(56, 189, 248, 0.1) 0%, rgba(14, 18, 28, 0.95) 100%)',
+                      border: '1px solid rgba(56, 189, 248, 0.35)',
                       borderRadius: '16px',
                       padding: '1.35rem 1.45rem',
                       display: 'flex',
                       flexDirection: 'column',
                       justifyContent: 'space-between',
-                      boxShadow: '0 8px 30px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(212, 175, 55, 0.25)',
+                      boxShadow: '0 8px 30px rgba(0, 0, 0, 0.45)',
                       position: 'relative',
                       overflow: 'hidden',
                       minHeight: '155px'
                     }}>
-                      <div style={{ position: 'absolute', top: -30, right: -30, width: 90, height: 90, background: 'radial-gradient(circle, rgba(212, 175, 55, 0.2) 0%, transparent 70%)', pointerEvents: 'none' }} />
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', zIndex: 1 }}>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
-                          <span style={{ fontSize: '0.78rem', color: '#e2e8f0', fontWeight: 800, letterSpacing: '0.02em' }}>
-                            {isAr ? 'شيكات مقيدة بالخزينة (In Safe)' : 'Cheques in Company Safe'}
-                          </span>
-                          <span style={{ fontSize: '0.68rem', color: 'var(--zf-text-muted, #94a3b8)' }}>
-                            {isAr ? 'في عهدة خزينة الشركة' : 'Awaiting deposit date'}
-                          </span>
-                        </div>
-                        <div style={{
-                          width: '40px',
-                          height: '40px',
-                          borderRadius: '10px',
-                          background: 'rgba(212, 175, 55, 0.15)',
-                          border: '1px solid rgba(212, 175, 55, 0.35)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          color: 'var(--zf-gold, #d4af37)',
-                          boxShadow: '0 0 15px rgba(212, 175, 55, 0.2)'
-                        }}>
-                          <FileText size={20} strokeWidth={2.2} />
-                        </div>
-                      </div>
-                      <div style={{ margin: '0.85rem 0 0.5rem 0', zIndex: 1 }}>
-                        <div style={{ fontSize: '1.75rem', fontWeight: 900, color: 'var(--zf-gold, #d4af37)', letterSpacing: '-0.02em', lineHeight: 1.15 }}>
-                          {safeSum.formatEGP(isAr)}
-                        </div>
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', zIndex: 1 }}>
-                        <span style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '0.3rem',
-                          background: 'rgba(212, 175, 55, 0.15)',
-                          color: 'var(--zf-gold, #d4af37)',
-                          fontSize: '0.72rem',
-                          fontWeight: 800,
-                          padding: '0.2rem 0.55rem',
-                          borderRadius: '999px',
-                          border: '1px solid rgba(212, 175, 55, 0.3)'
-                        }}>
-                          {safeCheques.length} {isAr ? 'شيكات بالخزينة' : 'cheques'}
-                        </span>
-                        <span style={{ fontSize: '0.72rem', color: '#94a3b8' }}>
-                          {isAr ? 'جاهزة للإيداع البنكي' : 'ready for deposit'}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Card 2: Deposited */}
-                    <div style={{
-                      background: 'linear-gradient(145deg, rgba(59, 130, 246, 0.12) 0%, rgba(14, 18, 28, 0.95) 100%)',
-                      border: '1px solid rgba(59, 130, 246, 0.35)',
-                      borderRadius: '16px',
-                      padding: '1.35rem 1.45rem',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      justifyContent: 'space-between',
-                      boxShadow: '0 8px 30px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(59, 130, 246, 0.25)',
-                      position: 'relative',
-                      overflow: 'hidden',
-                      minHeight: '155px'
-                    }}>
-                      <div style={{ position: 'absolute', top: -30, right: -30, width: 90, height: 90, background: 'radial-gradient(circle, rgba(59, 130, 246, 0.2) 0%, transparent 70%)', pointerEvents: 'none' }} />
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', zIndex: 1 }}>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
-                          <span style={{ fontSize: '0.78rem', color: '#93c5fd', fontWeight: 800, letterSpacing: '0.02em' }}>
-                            {isAr ? 'شيكات برسم التحصيل (104000)' : 'Cheques Under Collection'}
+                          <span style={{ fontSize: '0.78rem', color: '#93c5fd', fontWeight: 800 }}>
+                            {isAr ? 'بنود مستحقة لاحقاً باليد' : 'Installments Due Later'}
                           </span>
                           <span style={{ fontSize: '0.68rem', color: '#94a3b8' }}>
-                            {isAr ? 'مودعة بالبنك بانتظار المقاصة' : 'Deposited to bank clearing'}
+                            {isAr ? 'تستحق السداد نقداً في مواعيدها' : 'Scheduled future collections'}
                           </span>
                         </div>
                         <div style={{
                           width: '40px',
                           height: '40px',
                           borderRadius: '10px',
-                          background: 'rgba(59, 130, 246, 0.15)',
-                          border: '1px solid rgba(59, 130, 246, 0.35)',
+                          background: 'rgba(56, 189, 248, 0.15)',
+                          border: '1px solid rgba(56, 189, 248, 0.35)',
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
-                          color: '#60a5fa',
-                          boxShadow: '0 0 15px rgba(59, 130, 246, 0.2)'
+                          color: '#38bdf8'
                         }}>
-                          <Clock size={20} strokeWidth={2.4} />
+                          <Clock size={20} strokeWidth={2.2} />
                         </div>
                       </div>
                       <div style={{ margin: '0.85rem 0 0.5rem 0', zIndex: 1 }}>
-                        <div style={{ fontSize: '1.75rem', fontWeight: 900, color: '#60a5fa', letterSpacing: '-0.02em', lineHeight: 1.15 }}>
-                          {depositedSum.formatEGP(isAr)}
+                        <div style={{ fontSize: '1.75rem', fontWeight: 900, color: '#38bdf8', letterSpacing: '-0.02em', lineHeight: 1.15 }}>
+                          {dueLaterSum.formatEGP(isAr)}
                         </div>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', zIndex: 1 }}>
@@ -3212,88 +3673,23 @@ export default function AdminERPHub({ adminLocale }: AdminERPHubProps) {
                           display: 'inline-flex',
                           alignItems: 'center',
                           gap: '0.3rem',
-                          background: 'rgba(59, 130, 246, 0.15)',
+                          background: 'rgba(56, 189, 248, 0.15)',
                           color: '#93c5fd',
                           fontSize: '0.72rem',
                           fontWeight: 800,
                           padding: '0.2rem 0.55rem',
                           borderRadius: '999px',
-                          border: '1px solid rgba(59, 130, 246, 0.3)'
+                          border: '1px solid rgba(56, 189, 248, 0.3)'
                         }}>
-                          {depositedCheques.length} {isAr ? 'شيكات مودعة' : 'deposited'}
+                          {dueLaterDues.length} {isAr ? 'أقساط قادمة' : 'upcoming'}
                         </span>
                         <span style={{ fontSize: '0.72rem', color: '#94a3b8' }}>
-                          {isAr ? 'حسابات ١٠٤٠٠٠' : 'GL 104000'}
+                          {isAr ? 'مجدولة بالعقود' : 'on schedule'}
                         </span>
                       </div>
                     </div>
 
-                    {/* Card 3: Cleared */}
-                    <div style={{
-                      background: 'linear-gradient(145deg, rgba(16, 185, 129, 0.12) 0%, rgba(14, 18, 28, 0.95) 100%)',
-                      border: '1px solid rgba(16, 185, 129, 0.35)',
-                      borderRadius: '16px',
-                      padding: '1.35rem 1.45rem',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      justifyContent: 'space-between',
-                      boxShadow: '0 8px 30px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(16, 185, 129, 0.25)',
-                      position: 'relative',
-                      overflow: 'hidden',
-                      minHeight: '155px'
-                    }}>
-                      <div style={{ position: 'absolute', top: -30, right: -30, width: 90, height: 90, background: 'radial-gradient(circle, rgba(16, 185, 129, 0.2) 0%, transparent 70%)', pointerEvents: 'none' }} />
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', zIndex: 1 }}>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
-                          <span style={{ fontSize: '0.78rem', color: '#6ee7b7', fontWeight: 800, letterSpacing: '0.02em' }}>
-                            {isAr ? 'شيكات محصلة فعلياً (Cleared)' : 'Cleared Cheques'}
-                          </span>
-                          <span style={{ fontSize: '0.68rem', color: '#94a3b8' }}>
-                            {isAr ? 'سيولة مستقرة بالحساب البنكي' : 'Credited to Bank 102000'}
-                          </span>
-                        </div>
-                        <div style={{
-                          width: '40px',
-                          height: '40px',
-                          borderRadius: '10px',
-                          background: 'rgba(16, 185, 129, 0.15)',
-                          border: '1px solid rgba(16, 185, 129, 0.35)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          color: '#10b981',
-                          boxShadow: '0 0 15px rgba(16, 185, 129, 0.2)'
-                        }}>
-                          <CheckCircle2 size={20} strokeWidth={2.4} />
-                        </div>
-                      </div>
-                      <div style={{ margin: '0.85rem 0 0.5rem 0', zIndex: 1 }}>
-                        <div style={{ fontSize: '1.75rem', fontWeight: 900, color: '#10b981', letterSpacing: '-0.02em', lineHeight: 1.15 }}>
-                          {clearedSum.formatEGP(isAr)}
-                        </div>
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', zIndex: 1 }}>
-                        <span style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '0.3rem',
-                          background: 'rgba(16, 185, 129, 0.15)',
-                          color: '#34d399',
-                          fontSize: '0.72rem',
-                          fontWeight: 800,
-                          padding: '0.2rem 0.55rem',
-                          borderRadius: '999px',
-                          border: '1px solid rgba(16, 185, 129, 0.3)'
-                        }}>
-                          {clearedCheques.length} {isAr ? 'شيكات محصلة' : 'cleared'}
-                        </span>
-                        <span style={{ fontSize: '0.72rem', color: '#94a3b8' }}>
-                          {isAr ? 'تمت مقاصتها بالكامل' : 'fully settled'}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Card 4: Bounced */}
+                    {/* Card 2: Overdue (متأخرة عن موعدها) */}
                     <div style={{
                       background: 'linear-gradient(145deg, rgba(239, 68, 68, 0.12) 0%, rgba(14, 18, 28, 0.95) 100%)',
                       border: '1px solid rgba(239, 68, 68, 0.35)',
@@ -3302,19 +3698,18 @@ export default function AdminERPHub({ adminLocale }: AdminERPHubProps) {
                       display: 'flex',
                       flexDirection: 'column',
                       justifyContent: 'space-between',
-                      boxShadow: '0 8px 30px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(239, 68, 68, 0.25)',
+                      boxShadow: '0 8px 30px rgba(0, 0, 0, 0.45)',
                       position: 'relative',
                       overflow: 'hidden',
                       minHeight: '155px'
                     }}>
-                      <div style={{ position: 'absolute', top: -30, right: -30, width: 90, height: 90, background: 'radial-gradient(circle, rgba(239, 68, 68, 0.2) 0%, transparent 70%)', pointerEvents: 'none' }} />
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', zIndex: 1 }}>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
-                          <span style={{ fontSize: '0.78rem', color: '#fca5a5', fontWeight: 800, letterSpacing: '0.02em' }}>
-                            {isAr ? 'شيكات مرتدة ومرفوضة (Bounced)' : 'Bounced Cheques'}
+                          <span style={{ fontSize: '0.78rem', color: '#fca5a5', fontWeight: 800 }}>
+                            {isAr ? 'بنود متأخرة عن موعد التحصيل' : 'Overdue Hand Dues'}
                           </span>
                           <span style={{ fontSize: '0.68rem', color: '#94a3b8' }}>
-                            {isAr ? 'تتطلب متابعة قانونية وتحصيل' : 'Legal & collection follow-up'}
+                            {isAr ? 'تجاوزت تاريخ الاستحقاق وتتطلب التحصيل' : 'Requires collection follow-up'}
                           </span>
                         </div>
                         <div style={{
@@ -3326,15 +3721,14 @@ export default function AdminERPHub({ adminLocale }: AdminERPHubProps) {
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
-                          color: '#f87171',
-                          boxShadow: '0 0 15px rgba(239, 68, 68, 0.2)'
+                          color: '#f87171'
                         }}>
                           <AlertTriangle size={20} strokeWidth={2.4} />
                         </div>
                       </div>
                       <div style={{ margin: '0.85rem 0 0.5rem 0', zIndex: 1 }}>
                         <div style={{ fontSize: '1.75rem', fontWeight: 900, color: '#f87171', letterSpacing: '-0.02em', lineHeight: 1.15 }}>
-                          {bouncedSum.formatEGP(isAr)}
+                          {overdueSum.formatEGP(isAr)}
                         </div>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', zIndex: 1 }}>
@@ -3350,10 +3744,136 @@ export default function AdminERPHub({ adminLocale }: AdminERPHubProps) {
                           borderRadius: '999px',
                           border: '1px solid rgba(239, 68, 68, 0.3)'
                         }}>
-                          {bouncedCheques.length} {isAr ? 'شيكات مرتدة' : 'bounced'}
+                          {overdueDues.length} {isAr ? 'أقساط متأخرة' : 'overdue'}
                         </span>
                         <span style={{ fontSize: '0.72rem', color: '#94a3b8' }}>
-                          {isAr ? 'مرفوضة من المقاصة' : 'unpaid'}
+                          {isAr ? 'تتطلب تواصل عاجل' : 'urgent contact'}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Card 3: Collected (تم التحصيل باليد بالخزينة) */}
+                    <div style={{
+                      background: 'linear-gradient(145deg, rgba(16, 185, 129, 0.12) 0%, rgba(14, 18, 28, 0.95) 100%)',
+                      border: '1px solid rgba(16, 185, 129, 0.35)',
+                      borderRadius: '16px',
+                      padding: '1.35rem 1.45rem',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      justifyContent: 'space-between',
+                      boxShadow: '0 8px 30px rgba(0, 0, 0, 0.45)',
+                      position: 'relative',
+                      overflow: 'hidden',
+                      minHeight: '155px'
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', zIndex: 1 }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+                          <span style={{ fontSize: '0.78rem', color: '#6ee7b7', fontWeight: 800 }}>
+                            {isAr ? 'بنود تم تحصيلها باليد (بالخزينة)' : 'Collected by Hand in Safe'}
+                          </span>
+                          <span style={{ fontSize: '0.68rem', color: '#94a3b8' }}>
+                            {isAr ? 'نقدية مستلمة وموردة بالخزينة [101000]' : 'Deposited in Cash Safe [101000]'}
+                          </span>
+                        </div>
+                        <div style={{
+                          width: '40px',
+                          height: '40px',
+                          borderRadius: '10px',
+                          background: 'rgba(16, 185, 129, 0.15)',
+                          border: '1px solid rgba(16, 185, 129, 0.35)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          color: '#10b981'
+                        }}>
+                          <CheckCircle2 size={20} strokeWidth={2.4} />
+                        </div>
+                      </div>
+                      <div style={{ margin: '0.85rem 0 0.5rem 0', zIndex: 1 }}>
+                        <div style={{ fontSize: '1.75rem', fontWeight: 900, color: '#10b981', letterSpacing: '-0.02em', lineHeight: 1.15 }}>
+                          {collectedSum.formatEGP(isAr)}
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', zIndex: 1 }}>
+                        <span style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '0.3rem',
+                          background: 'rgba(16, 185, 129, 0.15)',
+                          color: '#34d399',
+                          fontSize: '0.72rem',
+                          fontWeight: 800,
+                          padding: '0.2rem 0.55rem',
+                          borderRadius: '999px',
+                          border: '1px solid rgba(16, 185, 129, 0.3)'
+                        }}>
+                          {collectedDues.length} {isAr ? 'أقساط محصلة' : 'collected'}
+                        </span>
+                        <span style={{ fontSize: '0.72rem', color: '#94a3b8' }}>
+                          {isAr ? 'مسددة بالكامل' : 'fully settled'}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Card 4: Total Portfolio Dues */}
+                    <div style={{
+                      background: 'linear-gradient(145deg, rgba(212, 175, 55, 0.12) 0%, rgba(14, 18, 28, 0.95) 100%)',
+                      border: '1px solid rgba(212, 175, 55, 0.35)',
+                      borderRadius: '16px',
+                      padding: '1.35rem 1.45rem',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      justifyContent: 'space-between',
+                      boxShadow: '0 8px 30px rgba(0, 0, 0, 0.45)',
+                      position: 'relative',
+                      overflow: 'hidden',
+                      minHeight: '155px'
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', zIndex: 1 }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+                          <span style={{ fontSize: '0.78rem', color: '#e2e8f0', fontWeight: 800 }}>
+                            {isAr ? 'إجمالي محفظة بنود العقود والأقساط' : 'Total Portfolio Dues'}
+                          </span>
+                          <span style={{ fontSize: '0.68rem', color: '#94a3b8' }}>
+                            {isAr ? 'إجمالي كافة الأقساط والدفعات المستحقة' : 'Cumulative contract dues'}
+                          </span>
+                        </div>
+                        <div style={{
+                          width: '40px',
+                          height: '40px',
+                          borderRadius: '10px',
+                          background: 'rgba(212, 175, 55, 0.15)',
+                          border: '1px solid rgba(212, 175, 55, 0.35)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          color: 'var(--zf-gold, #d4af37)'
+                        }}>
+                          <Receipt size={20} strokeWidth={2.2} />
+                        </div>
+                      </div>
+                      <div style={{ margin: '0.85rem 0 0.5rem 0', zIndex: 1 }}>
+                        <div style={{ fontSize: '1.75rem', fontWeight: 900, color: 'var(--zf-gold, #d4af37)', letterSpacing: '-0.02em', lineHeight: 1.15 }}>
+                          {totalPortfolioSum.formatEGP(isAr)}
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', zIndex: 1 }}>
+                        <span style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '0.3rem',
+                          background: 'rgba(212, 175, 55, 0.15)',
+                          color: 'var(--zf-gold, #d4af37)',
+                          fontSize: '0.72rem',
+                          fontWeight: 800,
+                          padding: '0.2rem 0.55rem',
+                          borderRadius: '999px',
+                          border: '1px solid rgba(212, 175, 55, 0.3)'
+                        }}>
+                          {data.pdcRecords.length} {isAr ? 'إجمالي البنود' : 'items'}
+                        </span>
+                        <span style={{ fontSize: '0.72rem', color: '#94a3b8' }}>
+                          {isAr ? 'المحفظة التعاقدية' : 'contract portfolio'}
                         </span>
                       </div>
                     </div>
@@ -3394,7 +3914,7 @@ export default function AdminERPHub({ adminLocale }: AdminERPHubProps) {
                     <Search size={15} color="#94a3b8" />
                     <input
                       type="text"
-                      placeholder={isAr ? 'بحث فوري برقم الشيك، اسم الساحب، البنك، أو رقم العقد...' : 'Search cheque #, drawer, bank, contract...'}
+                      placeholder={isAr ? 'بحث فوري بكود البند، اسم العميل، أو رقم العقد...' : 'Search item code, client, contract #...'}
                       value={chequeSearchQuery}
                       onChange={e => setChequeSearchQuery(e.target.value)}
                       style={{
@@ -3463,8 +3983,8 @@ export default function AdminERPHub({ adminLocale }: AdminERPHubProps) {
                       type="button"
                       onClick={() => setChequeMaturityFilter('due_30')}
                       style={{
-                        background: chequeMaturityFilter === 'due_30' ? 'rgba(245, 158, 11, 0.25)' : 'transparent',
-                        color: chequeMaturityFilter === 'due_30' ? '#fbbf24' : '#94a3b8',
+                        background: chequeMaturityFilter === 'due_30' ? 'rgba(56, 189, 248, 0.25)' : 'transparent',
+                        color: chequeMaturityFilter === 'due_30' ? '#38bdf8' : '#94a3b8',
                         border: 'none',
                         borderRadius: '6px',
                         padding: '0.3rem 0.65rem',
@@ -3482,7 +4002,7 @@ export default function AdminERPHub({ adminLocale }: AdminERPHubProps) {
                     <button 
                       className={`${subStyles.viewModeBtn} ${chequeViewMode === 'cards' ? subStyles.viewModeBtnActive : ''}`}
                       onClick={() => setChequeViewMode('cards')}
-                      title={isAr ? 'عرض بطاقات الشيكات البنكية' : 'Cards view'}
+                      title={isAr ? 'عرض بطاقات السندات والأقساط' : 'Cards view'}
                     >
                       <LayoutGrid size={14} />
                     </button>
@@ -3498,33 +4018,40 @@ export default function AdminERPHub({ adminLocale }: AdminERPHubProps) {
 
                 {/* Status Tabs */}
                 <div className={subStyles.filterTabs}>
-                  {(['All', 'In Safe', 'Deposited', 'Cleared', 'Bounced'] as const).map(f => {
-                    const count = data.pdcRecords.filter(p => f === 'All' ? true : p.status === f).length;
-                    return (
+                  {(() => {
+                    const todayStr = new Date().toISOString().split('T')[0];
+                    const dueLaterCount = data.pdcRecords.filter(c => c.status !== 'Cleared' && c.due_date >= todayStr).length;
+                    const overdueCount = data.pdcRecords.filter(c => c.status !== 'Cleared' && c.due_date < todayStr).length;
+                    const collectedCount = data.pdcRecords.filter(c => c.status === 'Cleared').length;
+
+                    const tabs = [
+                      { id: 'All', labelAr: 'الكل', labelEn: 'All', count: data.pdcRecords.length },
+                      { id: 'due_later', labelAr: 'مستحقة لاحقاً باليد', labelEn: 'Due Later', count: dueLaterCount },
+                      { id: 'overdue', labelAr: 'متأخرة عن موعدها', labelEn: 'Overdue', count: overdueCount },
+                      { id: 'collected', labelAr: 'تم التحصيل باليد (بالخزينة)', labelEn: 'Collected by Hand', count: collectedCount }
+                    ] as const;
+
+                    return tabs.map(tab => (
                       <button
-                        key={f}
-                        className={`${subStyles.filterTabItem} ${chequeFilter === f ? subStyles.filterTabItemActive : ''}`}
-                        onClick={() => setChequeFilter(f)}
+                        key={tab.id}
+                        className={`${subStyles.filterTabItem} ${chequeFilter === tab.id ? subStyles.filterTabItemActive : ''}`}
+                        onClick={() => setChequeFilter(tab.id as any)}
                       >
-                        {f === 'All' && (isAr ? 'الكل' : 'All')}
-                        {f === 'In Safe' && (isAr ? 'في الخزينة' : 'In Safe')}
-                        {f === 'Deposited' && (isAr ? 'مودع برسم التحصيل' : 'Deposited')}
-                        {f === 'Cleared' && (isAr ? 'تم التحصيل' : 'Cleared')}
-                        {f === 'Bounced' && (isAr ? 'مرتد' : 'Bounced')}
+                        {isAr ? tab.labelAr : tab.labelEn}
                         <span style={{
                           marginRight: isAr ? '0.45rem' : undefined,
                           marginLeft: !isAr ? '0.45rem' : undefined,
-                          background: chequeFilter === f ? 'rgba(212, 175, 55, 0.3)' : 'rgba(255, 255, 255, 0.1)',
+                          background: chequeFilter === tab.id ? 'rgba(212, 175, 55, 0.3)' : 'rgba(255, 255, 255, 0.1)',
                           padding: '0.12rem 0.45rem',
                           borderRadius: '999px',
                           fontSize: '0.68rem',
                           fontWeight: 800
                         }}>
-                          {count}
+                          {tab.count}
                         </span>
                       </button>
-                    );
-                  })}
+                    ));
+                  })()}
                 </div>
               </div>
 
@@ -3551,14 +4078,14 @@ export default function AdminERPHub({ adminLocale }: AdminERPHubProps) {
                     justifyContent: 'center',
                     color: 'var(--zf-gold, #d4af37)'
                   }}>
-                    <FileText size={28} />
+                    <Wallet size={28} />
                   </div>
                   <div>
                     <h3 style={{ margin: 0, fontSize: '1.05rem', color: '#ffffff', fontWeight: 800 }}>
-                      {isAr ? 'لا توجد شيكات مطابقة لمعايير البحث' : 'No cheques match the current filter'}
+                      {isAr ? 'لا توجد أقساط أو بنود استحقاق مطابقة لمعايير البحث' : 'No dues match the current filter'}
                     </h3>
                     <p style={{ margin: '0.35rem 0 0 0', fontSize: '0.8rem', color: '#94a3b8' }}>
-                      {isAr ? 'جرّب إعادة تعيين الفلاتر أو تسجيل شيك وارد جديد للخزينة.' : 'Try resetting search filters or record a new cheque in safe.'}
+                      {isAr ? 'جرّب إعادة تعيين الفلاتر أو تسجيل بند قسط جديد بالعقد.' : 'Try resetting search filters or record a new installment due.'}
                     </p>
                   </div>
                   <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem' }}>
@@ -3567,7 +4094,6 @@ export default function AdminERPHub({ adminLocale }: AdminERPHubProps) {
                       onClick={() => {
                         setChequeFilter('All');
                         setChequeSearchQuery('');
-                        setChequeBankFilter('all');
                         setChequeMaturityFilter('all');
                       }}
                     >
@@ -3578,114 +4104,140 @@ export default function AdminERPHub({ adminLocale }: AdminERPHubProps) {
                       onClick={() => setShowNewPDCModal(true)}
                     >
                       <Plus size={14} />
-                      <span>{isAr ? 'تسجيل شيك جديد' : 'Record New Cheque'}</span>
+                      <span>{isAr ? 'تسجيل بند قسط جديد' : 'Record New Installment Due'}</span>
                     </button>
                   </div>
                 </div>
               )}
 
-              {/* Cheques Grid: Executive Bank Cheque Voucher Card Design */}
+              {/* Installments Grid: Executive Cash Installment Due Voucher Cards */}
               {chequeViewMode === 'cards' && filteredCheques.length > 0 && (
                 <div className={subStyles.cardsGrid}>
                   {filteredCheques.map(pdc => {
                     const todayStr = new Date().toISOString().split('T')[0];
                     const isOverdue = pdc.status !== 'Cleared' && pdc.due_date < todayStr;
                     const isDueToday = pdc.status !== 'Cleared' && pdc.due_date === todayStr;
+                    const isCollected = pdc.status === 'Cleared';
                     const linkedContract = data.contracts.find(c => c.contract_id === pdc.contract_id);
-                    const step = pdc.status === 'Cleared' ? 3 : pdc.status === 'Deposited' ? 2 : 1;
 
                     return (
                       <div 
                         key={pdc.cheque_id}
                         style={{
-                          background: 'linear-gradient(135deg, rgba(20, 24, 38, 0.96) 0%, rgba(12, 15, 24, 0.98) 100%)',
-                          border: isOverdue ? '1.5px solid rgba(239, 68, 68, 0.6)' : isDueToday ? '1.5px solid rgba(245, 158, 11, 0.6)' : '1px solid rgba(212, 175, 55, 0.25)',
+                          background: 'linear-gradient(175deg, #0a111e 0%, #060a12 100%)',
+                          border: isCollected
+                            ? '1.5px solid rgba(16, 185, 129, 0.45)'
+                            : isOverdue 
+                            ? '1.5px dashed rgba(239, 68, 68, 0.8)' 
+                            : isDueToday 
+                            ? '1.5px dashed rgba(245, 158, 11, 0.8)' 
+                            : '1.5px dashed rgba(212, 175, 55, 0.45)',
                           borderRadius: '16px',
                           padding: '1.25rem 1.35rem',
                           display: 'flex',
                           flexDirection: 'column',
                           justifyContent: 'space-between',
                           gap: '0.85rem',
-                          boxShadow: '0 10px 30px rgba(0, 0, 0, 0.45)',
+                          boxShadow: 'inset 0 0 0 1px rgba(255, 255, 255, 0.04), 0 10px 30px rgba(0, 0, 0, 0.55)',
                           position: 'relative',
-                          overflow: 'hidden',
-                          transition: 'transform 0.15s ease, border-color 0.15s ease'
+                          overflow: 'hidden'
                         }}
                       >
-                        {/* Background Watermark Pattern */}
-                        <div style={{
-                          position: 'absolute',
-                          top: 0,
-                          right: 0,
-                          bottom: 0,
-                          left: 0,
-                          backgroundImage: 'radial-gradient(rgba(212, 175, 55, 0.05) 1px, transparent 0)',
-                          backgroundSize: '16px 16px',
-                          pointerEvents: 'none'
-                        }} />
-
-                        {/* Cheque Header: Cheque Number + Status */}
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', zIndex: 1 }}>
-                          <span style={{ 
-                            fontFamily: 'monospace', 
-                            fontSize: '0.86rem', 
-                            fontWeight: 900, 
-                            color: 'var(--zf-gold, #d4af37)',
-                            background: 'rgba(212, 175, 55, 0.12)',
-                            border: '1px solid rgba(212, 175, 55, 0.3)',
-                            padding: '0.25rem 0.65rem',
-                            borderRadius: '8px',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '0.45rem'
-                          }}>
-                            <Landmark size={14} color="var(--zf-gold, #d4af37)" />
-                            <span>#{pdc.cheque_number}</span>
-                          </span>
-                          <StatusBadge domain="cheque" status={pdc.status} isAr={isAr} />
-                        </div>
-
-                        {/* Cheque Body: Framed Amount Box */}
+                        {/* Security Ribbon Header */}
                         <div style={{
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'space-between',
-                          background: 'rgba(0, 0, 0, 0.45)',
-                          border: '1px solid rgba(255, 255, 255, 0.08)',
-                          padding: '0.75rem 1rem',
-                          borderRadius: '10px',
+                          background: 'linear-gradient(90deg, rgba(20, 32, 52, 0.65) 0%, rgba(10, 20, 35, 0.75) 100%)',
+                          border: '1px solid rgba(212, 175, 55, 0.3)',
+                          borderRadius: '8px',
+                          padding: '0.45rem 0.75rem',
                           zIndex: 1
                         }}>
-                          <span style={{ fontSize: '0.72rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: 700 }}>
-                            {isAr ? 'قيمة الشيك الاسمية' : 'Nominal Value'}
-                          </span>
-                          <div style={{ fontSize: '1.4rem', fontWeight: 900, color: '#ffffff', letterSpacing: '-0.02em' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                            <Wallet size={14} color="var(--zf-gold, #d4af37)" />
+                            <span style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--zf-gold, #d4af37)', letterSpacing: '0.04em' }}>
+                              {isAr ? 'بند قسط تحصيل باليد' : 'HAND INSTALLMENT DUE'}
+                            </span>
+                            <span style={{ color: '#475569' }}>•</span>
+                            <span style={{ fontFamily: 'monospace', fontWeight: 900, color: '#ffffff', fontSize: '0.8rem' }}>
+                              № {pdc.cheque_number}
+                            </span>
+                          </div>
+
+                          {/* Authentic Status Tag */}
+                          <div>
+                            {isCollected && (
+                              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', background: 'rgba(16, 185, 129, 0.15)', border: '1px solid rgba(16, 185, 129, 0.45)', color: '#6ee7b7', padding: '0.15rem 0.5rem', borderRadius: '4px', fontSize: '0.68rem', fontWeight: 800 }}>
+                                <CheckCircle2 size={11} /> {isAr ? 'تم التحصيل باليد (بالخزينة)' : 'Collected by Hand'}
+                              </span>
+                            )}
+                            {!isCollected && isOverdue && (
+                              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', background: 'rgba(239, 68, 68, 0.15)', border: '1px solid rgba(239, 68, 68, 0.45)', color: '#fca5a5', padding: '0.15rem 0.5rem', borderRadius: '4px', fontSize: '0.68rem', fontWeight: 800 }}>
+                                ⚠️ {isAr ? 'متأخر عن موعده' : 'Overdue'}
+                              </span>
+                            )}
+                            {!isCollected && isDueToday && (
+                              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', background: 'rgba(245, 158, 11, 0.15)', border: '1px solid rgba(245, 158, 11, 0.45)', color: '#fbbf24', padding: '0.15rem 0.5rem', borderRadius: '4px', fontSize: '0.68rem', fontWeight: 800 }}>
+                                ⏳ {isAr ? 'يستحق التحصيل اليوم' : 'Due Today'}
+                              </span>
+                            )}
+                            {!isCollected && !isOverdue && !isDueToday && (
+                              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', background: 'rgba(56, 189, 248, 0.15)', border: '1px solid rgba(56, 189, 248, 0.45)', color: '#93c5fd', padding: '0.15rem 0.5rem', borderRadius: '4px', fontSize: '0.68rem', fontWeight: 800 }}>
+                                📅 {isAr ? 'مستحق لاحقاً باليد' : 'Due Later'}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Certified Due Value Box */}
+                        <div style={{
+                          background: 'rgba(0, 0, 0, 0.65)',
+                          border: '1.5px solid rgba(212, 175, 55, 0.38)',
+                          borderRadius: '10px',
+                          padding: '0.7rem 1rem',
+                          boxShadow: 'inset 0 2px 6px rgba(0, 0, 0, 0.6)',
+                          zIndex: 1
+                        }}>
+                          <div style={{ 
+                            fontSize: '0.66rem', 
+                            color: 'var(--zf-gold, #d4af37)', 
+                            fontWeight: 800, 
+                            letterSpacing: '0.04em',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.35rem'
+                          }}>
+                            <DollarSign size={11} />
+                            <span>{isAr ? 'قيمة القسط / البند المطلوب تحصيله (ج.م)' : 'INSTALLMENT DUE AMOUNT (EGP)'}</span>
+                          </div>
+                          <div style={{ fontSize: '1.45rem', fontWeight: 900, color: '#ffffff', letterSpacing: '-0.02em', marginTop: '0.2rem' }}>
                             <MoneyCell amount={pdc.nominal_value} isAr={isAr} highlight />
                           </div>
                         </div>
 
-                        {/* Payee, Drawer & Due Date */}
+                        {/* Client & Due Date Section */}
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.65rem', fontSize: '0.75rem', zIndex: 1 }}>
                           <div>
                             <span style={{ color: '#64748b', display: 'block', fontSize: '0.68rem' }}>
-                              {isAr ? 'الساحب (العميل):' : 'Drawer:'}
+                              {isAr ? 'العميل الملتزم بالسداد:' : 'Client / Payer:'}
                             </span>
                             <strong style={{ color: '#e2e8f0', fontSize: '0.82rem' }}>{pdc.drawer_name}</strong>
                           </div>
                           <div>
                             <span style={{ color: '#64748b', display: 'block', fontSize: '0.68rem' }}>
-                              {isAr ? 'تاريخ الاستحقاق:' : 'Due Date:'}
+                              {isAr ? 'تاريخ الاستحقاق الدفتري:' : 'Due Date:'}
                             </span>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
                               <Calendar size={13} color="#94a3b8" />
-                              <strong style={{ color: '#ffffff', fontFamily: 'monospace', fontSize: '0.82rem' }}>
+                              <strong style={{ color: isOverdue ? '#f87171' : '#ffffff', fontFamily: 'monospace', fontSize: '0.82rem' }}>
                                 {pdc.due_date}
                               </strong>
                             </div>
                           </div>
                         </div>
 
-                        {/* Linked Contract pill if exists */}
+                        {/* Linked Contract Strip */}
                         {linkedContract && (
                           <div style={{
                             display: 'flex',
@@ -3700,84 +4252,18 @@ export default function AdminERPHub({ adminLocale }: AdminERPHubProps) {
                             zIndex: 1
                           }}>
                             <FileText size={12} color="var(--zf-gold, #d4af37)" />
-                            <span>{isAr ? 'عقد:' : 'Contract:'} <strong style={{ color: '#ffffff' }}>{linkedContract.contract_number}</strong></span>
+                            <span>{isAr ? 'عقد:' : 'Contract:'} <strong style={{ color: '#ffffff' }}>#{linkedContract.contract_number}</strong></span>
                             <span>•</span>
                             <span style={{ color: 'var(--zf-gold, #d4af37)' }}>{linkedContract.unit_id}</span>
                           </div>
                         )}
 
-                        {/* Maturity / Aging Alert Pill */}
-                        <div style={{ zIndex: 1 }}>
-                          {isOverdue && (
-                            <span style={{
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '0.3rem',
-                              background: 'rgba(239, 68, 68, 0.15)',
-                              color: '#f87171',
-                              fontSize: '0.7rem',
-                              fontWeight: 800,
-                              padding: '0.25rem 0.6rem',
-                              borderRadius: '6px',
-                              border: '1px solid rgba(239, 68, 68, 0.4)'
-                            }}>
-                              <AlertTriangle size={12} />
-                              {isAr ? 'تجاوز موعد الاستحقاق! يرجى الإيداع البنكي الفوري' : 'Overdue for deposit!'}
-                            </span>
-                          )}
-                          {isDueToday && (
-                            <span style={{
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '0.3rem',
-                              background: 'rgba(245, 158, 11, 0.15)',
-                              color: '#fbbf24',
-                              fontSize: '0.7rem',
-                              fontWeight: 800,
-                              padding: '0.25rem 0.6rem',
-                              borderRadius: '6px',
-                              border: '1px solid rgba(245, 158, 11, 0.4)'
-                            }}>
-                              <Clock size={12} />
-                              {isAr ? 'يستحق الإيداع بالبنك اليوم!' : 'Due for deposit today!'}
-                            </span>
-                          )}
-                        </div>
-
-                        {/* 3-Step Lifecycle Visual Journey */}
-                        <div style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          padding: '0.45rem 0.75rem',
-                          background: 'rgba(0, 0, 0, 0.3)',
-                          borderRadius: '8px',
-                          border: '1px solid rgba(255, 255, 255, 0.05)',
-                          fontSize: '0.7rem',
-                          zIndex: 1
-                        }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', color: step >= 1 ? '#d4af37' : '#64748b' }}>
-                            <CheckCircle2 size={12} />
-                            <span>{isAr ? '١. بالخزينة' : '1. In Safe'}</span>
-                          </div>
-                          <span style={{ color: '#475569' }}>➔</span>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', color: step >= 2 ? '#60a5fa' : '#64748b' }}>
-                            <CheckCircle2 size={12} />
-                            <span>{isAr ? '٢. مودع بالبنك' : '2. Deposited'}</span>
-                          </div>
-                          <span style={{ color: '#475569' }}>➔</span>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', color: step >= 3 ? '#10b981' : '#64748b' }}>
-                            <CheckCircle2 size={12} />
-                            <span>{isAr ? '٣. تم التحصيل' : '3. Cleared'}</span>
-                          </div>
-                        </div>
-
-                        {/* Interactive Action Footer directly on the Card */}
+                        {/* Interactive Hand Collection Action Button directly on Card */}
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', zIndex: 1, paddingTop: '0.25rem' }}>
-                          {pdc.status === 'In Safe' && (
+                          {!isCollected ? (
                             <button
                               type="button"
-                              onClick={() => handlePDCStatusChange(pdc.cheque_id, 'Deposited')}
+                              onClick={() => setCollectingPDCItem(pdc)}
                               disabled={isMutating}
                               style={{
                                 flex: 1,
@@ -3785,103 +4271,28 @@ export default function AdminERPHub({ adminLocale }: AdminERPHubProps) {
                                 alignItems: 'center',
                                 justifyContent: 'center',
                                 gap: '0.35rem',
-                                background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.2) 0%, rgba(37, 99, 235, 0.3) 100%)',
-                                color: '#93c5fd',
-                                border: '1px solid rgba(59, 130, 246, 0.45)',
+                                background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.25) 0%, rgba(5, 150, 105, 0.35) 100%)',
+                                color: '#6ee7b7',
+                                border: '1px solid rgba(16, 185, 129, 0.45)',
                                 borderRadius: '8px',
-                                padding: '0.5rem',
-                                fontSize: '0.75rem',
+                                padding: '0.55rem',
+                                fontSize: '0.78rem',
                                 fontWeight: 800,
-                                cursor: 'pointer'
+                                cursor: 'pointer',
+                                boxShadow: '0 4px 15px rgba(16, 185, 129, 0.2)'
                               }}
                             >
-                              <Clock size={13} />
-                              <span>{isAr ? 'إيداع برسم التحصيل' : 'Deposit to Bank'}</span>
+                              <Wallet size={14} />
+                              <span>{isAr ? 'تحصيل البند نقداً باليد' : 'Collect Cash by Hand'}</span>
                             </button>
-                          )}
-
-                          {pdc.status === 'Deposited' && (
-                            <>
-                              <button
-                                type="button"
-                                onClick={() => handlePDCStatusChange(pdc.cheque_id, 'Cleared')}
-                                disabled={isMutating}
-                                style={{
-                                  flex: 2,
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  gap: '0.35rem',
-                                  background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.2) 0%, rgba(5, 150, 105, 0.3) 100%)',
-                                  color: '#6ee7b7',
-                                  border: '1px solid rgba(16, 185, 129, 0.45)',
-                                  borderRadius: '8px',
-                                  padding: '0.5rem',
-                                  fontSize: '0.75rem',
-                                  fontWeight: 800,
-                                  cursor: 'pointer'
-                                }}
-                              >
-                                <CheckCircle2 size={13} />
-                                <span>{isAr ? 'تأكيد التحصيل البنكي' : 'Confirm Cleared'}</span>
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => handlePDCStatusChange(pdc.cheque_id, 'Bounced')}
-                                disabled={isMutating}
-                                style={{
-                                  flex: 1,
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  gap: '0.35rem',
-                                  background: 'rgba(239, 68, 68, 0.15)',
-                                  color: '#fca5a5',
-                                  border: '1px solid rgba(239, 68, 68, 0.4)',
-                                  borderRadius: '8px',
-                                  padding: '0.5rem',
-                                  fontSize: '0.75rem',
-                                  fontWeight: 800,
-                                  cursor: 'pointer'
-                                }}
-                              >
-                                <AlertTriangle size={13} />
-                                <span>{isAr ? 'ارتداد' : 'Bounced'}</span>
-                              </button>
-                            </>
-                          )}
-
-                          {pdc.status === 'Bounced' && (
-                            <button
-                              type="button"
-                              onClick={() => handlePDCStatusChange(pdc.cheque_id, 'In Safe')}
-                              disabled={isMutating}
-                              style={{
-                                flex: 1,
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                gap: '0.35rem',
-                                background: 'rgba(245, 158, 11, 0.15)',
-                                color: '#fbbf24',
-                                border: '1px solid rgba(245, 158, 11, 0.4)',
-                                borderRadius: '8px',
-                                padding: '0.5rem',
-                                fontSize: '0.75rem',
-                                fontWeight: 800,
-                                cursor: 'pointer'
-                              }}
-                            >
-                              <RotateCcw size={13} />
-                              <span>{isAr ? 'إعادة استلام بالخزينة' : 'Return to Safe'}</span>
-                            </button>
-                          )}
-
-                          {pdc.status === 'Cleared' && (
+                          ) : (
                             <div style={{
                               flex: 1,
-                              textAlign: 'center',
-                              padding: '0.45rem',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: '0.35rem',
+                              padding: '0.5rem',
                               borderRadius: '8px',
                               background: 'rgba(16, 185, 129, 0.1)',
                               color: '#34d399',
@@ -3889,11 +4300,12 @@ export default function AdminERPHub({ adminLocale }: AdminERPHubProps) {
                               fontWeight: 800,
                               border: '1px solid rgba(16, 185, 129, 0.25)'
                             }}>
-                              {isAr ? 'مُقيد بالبنك التشغيلي ١٠٢٠٠٠' : 'Credited to Bank 102000'}
+                              <CheckCircle2 size={13} />
+                              <span>{isAr ? 'تم التحصيل باليد ومورد بالخزينة [101000]' : 'Collected in Safe [101000]'}</span>
                             </div>
                           )}
 
-                          {/* Inspect Drawer Button */}
+                          {/* Inspect Details Button */}
                           <button
                             type="button"
                             onClick={() => handleInspectCheque(pdc)}
@@ -3902,17 +4314,16 @@ export default function AdminERPHub({ adminLocale }: AdminERPHubProps) {
                               border: '1px solid rgba(255, 255, 255, 0.15)',
                               color: '#e2e8f0',
                               borderRadius: '8px',
-                              padding: '0.5rem 0.75rem',
+                              padding: '0.5rem 0.65rem',
                               fontSize: '0.75rem',
-                              fontWeight: 700,
                               cursor: 'pointer',
                               display: 'flex',
                               alignItems: 'center',
                               justifyContent: 'center'
                             }}
-                            title={isAr ? 'عرض تفاصيل الشيك والقيد المحاسبي' : 'Inspect details'}
+                            title={isAr ? 'عرض تفاصيل البند' : 'Inspect details'}
                           >
-                            <ArrowRight size={13} />
+                            <Eye size={13} />
                           </button>
                         </div>
                       </div>
@@ -3921,25 +4332,26 @@ export default function AdminERPHub({ adminLocale }: AdminERPHubProps) {
                 </div>
               )}
 
-              {/* Cheques Table: Dense Professional Accounting Table */}
+              {/* Installments Table: Dense Professional Accounting Table */}
               {chequeViewMode === 'table' && filteredCheques.length > 0 && (
                 <div className={subStyles.denseTableContainer}>
                   <table className={subStyles.denseTable}>
                     <thead>
                       <tr>
-                        <th>{isAr ? 'رقم الشيك والبنك' : 'Cheque # & Bank'}</th>
-                        <th>{isAr ? 'الساحب والعميل' : 'Drawer / Buyer'}</th>
+                        <th>{isAr ? 'كود البند' : 'Item Code'}</th>
+                        <th>{isAr ? 'العميل الملتزم بالسداد' : 'Client / Payer'}</th>
                         <th>{isAr ? 'العقد والوحدة' : 'Contract & Unit'}</th>
-                        <th>{isAr ? 'القيمة الاسمية' : 'Nominal Value'}</th>
-                        <th>{isAr ? 'الاستحقاق والموعد' : 'Due Date & Aging'}</th>
-                        <th>{isAr ? 'الحالة المحاسبية' : 'Status'}</th>
-                        <th style={{ textAlign: 'center' }}>{isAr ? 'إجراءات سريعة' : 'Actions'}</th>
+                        <th>{isAr ? 'قيمة القسط المطلوبة' : 'Installment Value'}</th>
+                        <th>{isAr ? 'تاريخ الاستحقاق' : 'Due Date & Aging'}</th>
+                        <th>{isAr ? 'حالة التحصيل' : 'Collection Status'}</th>
+                        <th style={{ textAlign: 'center' }}>{isAr ? 'إجراء التحصيل باليد' : 'Hand Collection Action'}</th>
                       </tr>
                     </thead>
                     <tbody>
                       {filteredCheques.map(pdc => {
                         const todayStr = new Date().toISOString().split('T')[0];
                         const isOverdue = pdc.status !== 'Cleared' && pdc.due_date < todayStr;
+                        const isCollected = pdc.status === 'Cleared';
                         const linkedContract = data.contracts.find(c => c.contract_id === pdc.contract_id);
 
                         return (
@@ -3976,83 +4388,80 @@ export default function AdminERPHub({ adminLocale }: AdminERPHubProps) {
                               )}
                             </td>
                             <td>
-                              <StatusBadge domain="cheque" status={pdc.status} isAr={isAr} />
+                              {isCollected ? (
+                                <span style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '0.3rem',
+                                  padding: '0.2rem 0.55rem',
+                                  borderRadius: '999px',
+                                  background: 'rgba(16, 185, 129, 0.15)',
+                                  color: '#34d399',
+                                  border: '1px solid rgba(16, 185, 129, 0.3)',
+                                  fontSize: '0.7rem',
+                                  fontWeight: 800
+                                }}>
+                                  <CheckCircle2 size={11} /> {isAr ? 'تم التحصيل باليد' : 'Collected'}
+                                </span>
+                              ) : isOverdue ? (
+                                <span style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '0.3rem',
+                                  padding: '0.2rem 0.55rem',
+                                  borderRadius: '999px',
+                                  background: 'rgba(239, 68, 68, 0.15)',
+                                  color: '#f87171',
+                                  border: '1px solid rgba(239, 68, 68, 0.3)',
+                                  fontSize: '0.7rem',
+                                  fontWeight: 800
+                                }}>
+                                  ⚠️ {isAr ? 'متأخر عن موعده' : 'Overdue'}
+                                </span>
+                              ) : (
+                                <span style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '0.3rem',
+                                  padding: '0.2rem 0.55rem',
+                                  borderRadius: '999px',
+                                  background: 'rgba(56, 189, 248, 0.15)',
+                                  color: '#93c5fd',
+                                  border: '1px solid rgba(56, 189, 248, 0.3)',
+                                  fontSize: '0.7rem',
+                                  fontWeight: 800
+                                }}>
+                                  ⏳ {isAr ? 'مستحق لاحقاً باليد' : 'Due Later'}
+                                </span>
+                              )}
                             </td>
                             <td style={{ textAlign: 'center' }} onClick={e => e.stopPropagation()}>
                               <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
-                                {pdc.status === 'In Safe' && (
+                                {!isCollected ? (
                                   <button
                                     type="button"
-                                    onClick={() => handlePDCStatusChange(pdc.cheque_id, 'Deposited')}
+                                    onClick={() => setCollectingPDCItem(pdc)}
                                     style={{
-                                      background: 'rgba(59, 130, 246, 0.15)',
-                                      border: '1px solid rgba(59, 130, 246, 0.4)',
-                                      color: '#93c5fd',
-                                      padding: '0.25rem 0.55rem',
+                                      background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.2) 0%, rgba(5, 150, 105, 0.3) 100%)',
+                                      border: '1px solid rgba(16, 185, 129, 0.45)',
+                                      color: '#6ee7b7',
+                                      padding: '0.3rem 0.65rem',
                                       borderRadius: '6px',
-                                      fontSize: '0.72rem',
-                                      fontWeight: 700,
-                                      cursor: 'pointer'
+                                      fontSize: '0.74rem',
+                                      fontWeight: 800,
+                                      cursor: 'pointer',
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      gap: '0.3rem'
                                     }}
                                   >
-                                    {isAr ? 'إيداع' : 'Deposit'}
+                                    <Wallet size={12} />
+                                    <span>{isAr ? 'تحصيل نقداً باليد' : 'Collect Cash'}</span>
                                   </button>
-                                )}
-
-                                {pdc.status === 'Deposited' && (
-                                  <>
-                                    <button
-                                      type="button"
-                                      onClick={() => handlePDCStatusChange(pdc.cheque_id, 'Cleared')}
-                                      style={{
-                                        background: 'rgba(16, 185, 129, 0.15)',
-                                        border: '1px solid rgba(16, 185, 129, 0.4)',
-                                        color: '#34d399',
-                                        padding: '0.25rem 0.55rem',
-                                        borderRadius: '6px',
-                                        fontSize: '0.72rem',
-                                        fontWeight: 700,
-                                        cursor: 'pointer'
-                                      }}
-                                    >
-                                      {isAr ? 'تحصيل' : 'Clear'}
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => handlePDCStatusChange(pdc.cheque_id, 'Bounced')}
-                                      style={{
-                                        background: 'rgba(239, 68, 68, 0.15)',
-                                        border: '1px solid rgba(239, 68, 68, 0.4)',
-                                        color: '#f87171',
-                                        padding: '0.25rem 0.55rem',
-                                        borderRadius: '6px',
-                                        fontSize: '0.72rem',
-                                        fontWeight: 700,
-                                        cursor: 'pointer'
-                                      }}
-                                    >
-                                      {isAr ? 'ارتداد' : 'Bounce'}
-                                    </button>
-                                  </>
-                                )}
-
-                                {pdc.status === 'Bounced' && (
-                                  <button
-                                    type="button"
-                                    onClick={() => handlePDCStatusChange(pdc.cheque_id, 'In Safe')}
-                                    style={{
-                                      background: 'rgba(245, 158, 11, 0.15)',
-                                      border: '1px solid rgba(245, 158, 11, 0.4)',
-                                      color: '#fbbf24',
-                                      padding: '0.25rem 0.55rem',
-                                      borderRadius: '6px',
-                                      fontSize: '0.72rem',
-                                      fontWeight: 700,
-                                      cursor: 'pointer'
-                                    }}
-                                  >
-                                    {isAr ? 'إعادة للخزينة' : 'To Safe'}
-                                  </button>
+                                ) : (
+                                  <span style={{ fontSize: '0.72rem', color: '#10b981', fontWeight: 700 }}>
+                                    {isAr ? 'مورد بالخزينة' : 'In Safe'}
+                                  </span>
                                 )}
 
                                 <button
@@ -4794,8 +5203,9 @@ export default function AdminERPHub({ adminLocale }: AdminERPHubProps) {
                           key={ca.allocation_id}
                           onClick={() => handleInspectRSV(ca)}
                           style={{
-                            background: 'linear-gradient(145deg, rgba(20, 26, 42, 0.95) 0%, rgba(12, 16, 28, 0.98) 100%)',
-                            border: '1px solid rgba(255, 255, 255, 0.08)',
+                            background: 'linear-gradient(165deg, #071224 0%, #030814 100%)',
+                            border: '1px solid rgba(14, 165, 233, 0.3)',
+                            borderTop: '4px solid #0ea5e9',
                             borderRadius: '16px',
                             padding: '1.35rem',
                             display: 'flex',
@@ -4804,36 +5214,48 @@ export default function AdminERPHub({ adminLocale }: AdminERPHubProps) {
                             cursor: 'pointer',
                             position: 'relative',
                             overflow: 'hidden',
-                            boxShadow: '0 8px 30px rgba(0, 0, 0, 0.4)',
+                            boxShadow: '0 10px 30px rgba(0, 0, 0, 0.55), 0 0 20px rgba(14, 165, 233, 0.08)',
                             transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)'
                           }}
                           onMouseEnter={e => {
-                            e.currentTarget.style.borderColor = 'rgba(212, 175, 55, 0.5)';
+                            e.currentTarget.style.borderColor = '#38bdf8';
                             e.currentTarget.style.transform = 'translateY(-3px)';
-                            e.currentTarget.style.boxShadow = '0 12px 35px rgba(0, 0, 0, 0.6), 0 0 20px rgba(212, 175, 55, 0.15)';
+                            e.currentTarget.style.boxShadow = '0 12px 35px rgba(0, 0, 0, 0.7), 0 0 25px rgba(14, 165, 233, 0.25)';
                           }}
                           onMouseLeave={e => {
-                            e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.08)';
+                            e.currentTarget.style.borderColor = 'rgba(14, 165, 233, 0.3)';
                             e.currentTarget.style.transform = 'translateY(0)';
-                            e.currentTarget.style.boxShadow = '0 8px 30px rgba(0, 0, 0, 0.4)';
+                            e.currentTarget.style.boxShadow = '0 10px 30px rgba(0, 0, 0, 0.55), 0 0 20px rgba(14, 165, 233, 0.08)';
                           }}
                         >
-                          {/* Card Top: Standard badge & Date */}
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                          {/* Background Isometric Blueprint Grid Pattern */}
+                          <div style={{
+                            position: 'absolute',
+                            top: 0,
+                            right: 0,
+                            bottom: 0,
+                            left: 0,
+                            backgroundImage: 'radial-gradient(rgba(14, 165, 233, 0.08) 1px, transparent 0)',
+                            backgroundSize: '20px 20px',
+                            pointerEvents: 'none'
+                          }} />
+
+                          {/* 1. Quantitative Header Ribbon: IFRS 15 Formula Tag & Assessment Date */}
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', zIndex: 1 }}>
                             <div style={{
                               display: 'inline-flex',
                               alignItems: 'center',
-                              gap: '0.35rem',
-                              background: 'rgba(59, 130, 246, 0.12)',
-                              border: '1px solid rgba(59, 130, 246, 0.3)',
-                              padding: '0.25rem 0.55rem',
+                              gap: '0.4rem',
+                              background: 'rgba(14, 165, 233, 0.14)',
+                              border: '1px solid rgba(14, 165, 233, 0.38)',
+                              padding: '0.25rem 0.65rem',
                               borderRadius: '6px',
                               fontSize: '0.72rem',
                               fontWeight: 800,
-                              color: '#93c5fd'
+                              color: '#38bdf8'
                             }}>
-                              <Building size={12} />
-                              <span>{isAr ? 'مشروع مرسمل IFRS 15' : 'Capitalized Project'}</span>
+                              <Calculator size={13} />
+                              <span>{isAr ? 'معيار IFRS 15 • معامل رسملة الإنشاء (RSV)' : 'IFRS 15 • RSV Allocation Matrix'}</span>
                             </div>
 
                             <span style={{ fontSize: '0.7rem', color: '#94a3b8' }}>
@@ -4841,66 +5263,78 @@ export default function AdminERPHub({ adminLocale }: AdminERPHubProps) {
                             </span>
                           </div>
 
-                          {/* Project Name */}
-                          <div>
-                            <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: '#ffffff', letterSpacing: '-0.01em' }}>
-                              {ca.project_name}
-                            </h3>
-                            <span style={{ fontSize: '0.72rem', color: 'var(--zf-text-muted, #94a3b8)' }}>
-                              {isAr ? 'كود تخصيص الأعمال: ' : 'Allocation ID: '}
-                              <span style={{ fontFamily: 'monospace', color: '#e2e8f0' }}>{ca.allocation_id.slice(0, 8)}...</span>
+                          {/* 2. Project Headline & Engineering Code */}
+                          <div style={{ zIndex: 1 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                              <Building2 size={16} color="#38bdf8" />
+                              <h3 style={{ margin: 0, fontSize: '1.08rem', fontWeight: 800, color: '#ffffff', letterSpacing: '-0.01em' }}>
+                                {ca.project_name}
+                              </h3>
+                            </div>
+                            <span style={{ fontSize: '0.72rem', color: 'var(--zf-text-muted, #94a3b8)', marginTop: '0.25rem', display: 'block' }}>
+                              {isAr ? 'كود تخصيص الأعمال الإنشائية: ' : 'Allocation ID: '}
+                              <span style={{ fontFamily: 'monospace', color: '#38bdf8' }}>#{ca.allocation_id.slice(0, 10)}</span>
                             </span>
                           </div>
 
-                          {/* Main Dual Metrics Box */}
+                          {/* 3. Dual Split Analytics HUD Pods (RSV WIP vs Gross Margin) */}
                           <div style={{
-                            background: 'rgba(0, 0, 0, 0.45)',
-                            border: '1px solid rgba(255, 255, 255, 0.06)',
-                            borderRadius: '12px',
-                            padding: '0.85rem 1rem',
                             display: 'grid',
                             gridTemplateColumns: '1fr 1fr',
-                            gap: '0.75rem'
+                            gap: '0.75rem',
+                            zIndex: 1
                           }}>
-                            <div>
-                              <span style={{ fontSize: '0.68rem', color: '#94a3b8', display: 'block', fontWeight: 700 }}>
-                                {isAr ? 'معامل RSV (تكلفة الإنشاء):' : 'RSV Factor (COGS):'}
+                            {/* Pod 1: WIP Ratio (Cyan) */}
+                            <div style={{
+                              background: 'rgba(14, 165, 233, 0.08)',
+                              border: '1px solid rgba(14, 165, 233, 0.28)',
+                              borderRadius: '10px',
+                              padding: '0.75rem 0.85rem'
+                            }}>
+                              <span style={{ fontSize: '0.67rem', color: '#7dd3fc', display: 'block', fontWeight: 800 }}>
+                                {isAr ? 'معامل RSV (تكلفة WIP):' : 'RSV Factor (COGS):'}
                               </span>
-                              <div style={{ fontSize: '1.45rem', fontWeight: 900, color: 'var(--zf-gold, #d4af37)', fontFamily: 'monospace', marginTop: '0.15rem' }}>
+                              <div style={{ fontSize: '1.45rem', fontWeight: 900, color: '#38bdf8', fontFamily: 'monospace', marginTop: '0.15rem' }}>
                                 {ca.rsv_factor}
                               </div>
-                              <span style={{ fontSize: '0.72rem', color: '#fbbf24', fontWeight: 700 }}>
+                              <span style={{ fontSize: '0.7rem', color: '#bae6fd', fontWeight: 700 }}>
                                 {rsvPct}% {isAr ? 'من قيمة الوحدة' : 'cost ratio'}
                               </span>
                             </div>
 
-                            <div style={{ textAlign: isAr ? 'left' : 'right', borderRight: isAr ? 'none' : '1px solid rgba(255,255,255,0.08)', borderLeft: isAr ? '1px solid rgba(255,255,255,0.08)' : 'none', paddingLeft: isAr ? '0.75rem' : 0, paddingRight: isAr ? 0 : '0.75rem' }}>
-                              <span style={{ fontSize: '0.68rem', color: '#94a3b8', display: 'block', fontWeight: 700 }}>
-                                {isAr ? 'هامش الربح الإجمالي المقدر:' : 'Projected Gross Margin:'}
+                            {/* Pod 2: Gross Profit Margin (Mint) */}
+                            <div style={{
+                              background: 'rgba(16, 185, 129, 0.08)',
+                              border: '1px solid rgba(16, 185, 129, 0.28)',
+                              borderRadius: '10px',
+                              padding: '0.75rem 0.85rem'
+                            }}>
+                              <span style={{ fontSize: '0.67rem', color: '#6ee7b7', display: 'block', fontWeight: 800 }}>
+                                {isAr ? 'هامش الربح المقدر:' : 'Gross Profit Margin:'}
                               </span>
                               <div style={{ fontSize: '1.45rem', fontWeight: 900, color: '#10b981', fontFamily: 'monospace', marginTop: '0.15rem' }}>
                                 {grossMarginPct}%
                               </div>
-                              <span style={{ fontSize: '0.72rem', color: '#6ee7b7', fontWeight: 700 }}>
-                                {isAr ? 'عائد التعاقد' : 'profit margin'}
+                              <span style={{ fontSize: '0.7rem', color: '#a7f3d0', fontWeight: 700 }}>
+                                {isAr ? 'عائد ربحي معترف به' : 'profit margin'}
                               </span>
                             </div>
                           </div>
 
-                          {/* Progress Bar */}
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                          {/* 4. Dual Spectrum Progress Bar */}
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', zIndex: 1 }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem' }}>
-                              <span style={{ color: '#60a5fa', fontWeight: 700 }}>{isAr ? `WIP: ${rsvPct}%` : `WIP: ${rsvPct}%`}</span>
-                              <span style={{ color: '#10b981', fontWeight: 700 }}>{isAr ? `هامش: ${grossMarginPct}%` : `Margin: ${grossMarginPct}%`}</span>
+                              <span style={{ color: '#38bdf8', fontWeight: 800 }}>{isAr ? `تكلفة إنشاء WIP: ${rsvPct}%` : `WIP: ${rsvPct}%`}</span>
+                              <span style={{ color: '#10b981', fontWeight: 800 }}>{isAr ? `هامش ربح: ${grossMarginPct}%` : `Margin: ${grossMarginPct}%`}</span>
                             </div>
                             <div style={{ width: '100%', height: '7px', borderRadius: '999px', background: 'rgba(255,255,255,0.06)', overflow: 'hidden', display: 'flex' }}>
-                              <div style={{ width: `${Math.min(parseFloat(rsvPct) || 0, 100)}%`, background: 'linear-gradient(90deg, #3b82f6, #60a5fa)', height: '100%' }} />
-                              <div style={{ flex: 1, background: 'linear-gradient(90deg, #10b981, #34d399)', height: '100%' }} />
+                              <div style={{ width: `${Math.min(parseFloat(rsvPct) || 0, 100)}%`, background: 'linear-gradient(90deg, #0284c7, #38bdf8)', height: '100%' }} />
+                              <div style={{ flex: 1, background: 'linear-gradient(90deg, #059669, #34d399)', height: '100%' }} />
                             </div>
                           </div>
 
-                          {/* Financial Pool Breakdown */}
-                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', fontSize: '0.74rem', borderTop: '1px dashed rgba(255,255,255,0.08)', paddingTop: '0.75rem' }}>
+                          {/* 5. Financial Pool Ceiling Breakdown */}
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', fontSize: '0.74rem', borderTop: '1px dashed rgba(255,255,255,0.08)', paddingTop: '0.75rem', zIndex: 1 }}>
                             <div>
                               <span style={{ color: '#94a3b8', fontSize: '0.68rem', display: 'block' }}>
                                 {isAr ? 'تكاليف الإنشاء المتكبدة (105000):' : 'Incurred WIP:'}
@@ -4913,14 +5347,14 @@ export default function AdminERPHub({ adminLocale }: AdminERPHubProps) {
                               <span style={{ color: '#94a3b8', fontSize: '0.68rem', display: 'block' }}>
                                 {isAr ? 'سقف المبيعات المقدر:' : 'Sales Ceiling:'}
                               </span>
-                              <span style={{ color: '#60a5fa', fontWeight: 800 }}>
+                              <span style={{ color: '#38bdf8', fontWeight: 800 }}>
                                 {D(ca.total_sales_value).formatEGP(isAr)}
                               </span>
                             </div>
                           </div>
 
-                          {/* Card Footer: Action Button */}
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', paddingTop: '0.25rem' }}>
+                          {/* 6. Action Footer Button */}
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', paddingTop: '0.25rem', zIndex: 1 }}>
                             <button
                               type="button"
                               onClick={(e) => {
@@ -4928,13 +5362,13 @@ export default function AdminERPHub({ adminLocale }: AdminERPHubProps) {
                                 handleInspectRSV(ca);
                               }}
                               style={{
-                                background: 'rgba(255, 255, 255, 0.05)',
-                                border: '1px solid rgba(255, 255, 255, 0.1)',
+                                background: 'rgba(14, 165, 233, 0.1)',
+                                border: '1px solid rgba(14, 165, 233, 0.3)',
                                 borderRadius: '8px',
                                 padding: '0.45rem 0.85rem',
-                                color: 'var(--zf-gold, #d4af37)',
+                                color: '#38bdf8',
                                 fontSize: '0.75rem',
-                                fontWeight: 700,
+                                fontWeight: 800,
                                 display: 'flex',
                                 alignItems: 'center',
                                 gap: '0.35rem',
@@ -5028,8 +5462,8 @@ export default function AdminERPHub({ adminLocale }: AdminERPHubProps) {
             );
           })()}
 
-          {/* MODULE 7: STATUTORY TAXES & FORM 41 */}
-          {activeTab === 'tax' && (() => {
+          {/* MODULE 7: APARTMENT TAXES & FEES LEDGER */}
+          {(activeTab as any) === 'tax' && (() => {
             const pendingTax = data.taxRecords
               .filter(t => t.remittance_status !== 'Remitted to ETA')
               .reduce((acc, t) => acc.plus(t.tax_amount || '0'), D(0));
@@ -5045,11 +5479,16 @@ export default function AdminERPHub({ adminLocale }: AdminERPHubProps) {
                     <div className={subStyles.stageBreadcrumb}>
                       <span>FIN-OS</span>
                       <span>/</span>
-                      <span>{isAr ? 'الضرائب الحكومية' : 'Statutory Tax'}</span>
+                      <span>{isAr ? 'الضرائب والرسوم المضافة' : 'Apartment Taxes & Fees'}</span>
                     </div>
                     <h1 className={subStyles.stageTitle}>
-                      {isAr ? 'ضريبة التصرفات العقارية (2.5%) ونموذج 41' : 'Statutory Taxes & Form 41 Withholding'}
+                      {isAr ? 'سجل الضرائب والرسوم المضافة للوحدات والعقود' : 'Manual Apartment Taxes & Fees Ledger'}
                     </h1>
+                    <p style={{ margin: '0.35rem 0 0 0', fontSize: '0.8rem', color: '#94a3b8' }}>
+                      {isAr 
+                        ? 'سجل متابعة تفصيلي بالضرائب والرسوم المضافة يدوياً لكل شقة والمحسوبة تلقائياً ضمن إجمالي سعر التعاقد (غير ثابتة وتحدد يدوياً باليد).'
+                        : 'Detailed tracking ledger of custom taxes added manually per apartment and calculated directly into gross contract pricing.'}
+                    </p>
                   </div>
                 </div>
 
@@ -5077,10 +5516,10 @@ export default function AdminERPHub({ adminLocale }: AdminERPHubProps) {
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', zIndex: 1 }}>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
                         <span style={{ fontSize: '0.78rem', color: '#fca5a5', fontWeight: 800, letterSpacing: '0.02em' }}>
-                          {isAr ? 'الضرائب المستحقة قيد التوريد' : 'Pending Tax Liabilities'}
+                          {isAr ? 'الضرائب والرسوم قيد الاستيفاء' : 'Pending Taxes & Fees'}
                         </span>
                         <span style={{ fontSize: '0.68rem', color: '#94a3b8' }}>
-                          {isAr ? 'التزامات سيادية مستحقة لمصلحة الضرائب' : 'Payable to ETA (GL 205000)'}
+                          {isAr ? 'مستحقة التحصيل مع أقساط العقود' : 'Due with contract installments'}
                         </span>
                       </div>
                       <div style={{
@@ -5116,10 +5555,10 @@ export default function AdminERPHub({ adminLocale }: AdminERPHubProps) {
                         borderRadius: '999px',
                         border: '1px solid rgba(239, 68, 68, 0.3)'
                       }}>
-                        {isAr ? 'حسابات ٢٠٥٠٠٠' : 'GL 205000'}
+                        {isAr ? 'حساب ٢٠٤٠٠٠' : 'GL 204000'}
                       </span>
                       <span style={{ fontSize: '0.72rem', color: '#94a3b8' }}>
-                        {isAr ? 'واجبة السداد القانوني' : 'pending remittance'}
+                        {isAr ? 'قيد التحصيل مع السداد' : 'pending collection'}
                       </span>
                     </div>
                   </div>
@@ -5142,10 +5581,10 @@ export default function AdminERPHub({ adminLocale }: AdminERPHubProps) {
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', zIndex: 1 }}>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
                         <span style={{ fontSize: '0.78rem', color: '#6ee7b7', fontWeight: 800, letterSpacing: '0.02em' }}>
-                          {isAr ? 'المبالغ الموردة لمصلحة الضرائب المصرية' : 'Remitted to ETA'}
+                          {isAr ? 'الضرائب والرسوم المستوفاة' : 'Settled / Collected Taxes'}
                         </span>
                         <span style={{ fontSize: '0.68rem', color: '#94a3b8' }}>
-                          {isAr ? 'تم سدادها واستلام إيصالات التوريد' : 'Official tax receipts issued'}
+                          {isAr ? 'تم استيفاؤها وتحصيلها بالخزينة' : 'Collected into Main Safe (GL 101000)'}
                         </span>
                       </div>
                       <div style={{
@@ -5181,10 +5620,10 @@ export default function AdminERPHub({ adminLocale }: AdminERPHubProps) {
                         borderRadius: '999px',
                         border: '1px solid rgba(16, 185, 129, 0.3)'
                       }}>
-                        {isAr ? 'مستوفى ضريبياً' : 'Compliant'}
+                        {isAr ? 'مستوفاة بالدفاتر' : 'Settled'}
                       </span>
                       <span style={{ fontSize: '0.72rem', color: '#94a3b8' }}>
-                        {isAr ? 'خالص السداد' : 'cleared'}
+                        {isAr ? 'بالخزينة الرئيسية' : 'in Safe'}
                       </span>
                     </div>
                   </div>
@@ -5207,10 +5646,10 @@ export default function AdminERPHub({ adminLocale }: AdminERPHubProps) {
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', zIndex: 1 }}>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
                         <span style={{ fontSize: '0.78rem', color: '#e2e8f0', fontWeight: 800, letterSpacing: '0.02em' }}>
-                          {isAr ? 'إجمالي الوعاء الضريبي الموثق' : 'Total Assessed Tax Pool'}
+                          {isAr ? 'إجمالي محفظة الضرائب المضافة للشقق' : 'Total Apartment Taxes Pool'}
                         </span>
                         <span style={{ fontSize: '0.68rem', color: 'var(--zf-text-muted, #94a3b8)' }}>
-                          {isAr ? 'شامل التصرفات ونموذج ٤١' : 'Disposal 2.5% & Form 41'}
+                          {isAr ? 'محسوبة ضمن أسعار البيع الإجمالية' : 'Factored into gross sales prices'}
                         </span>
                       </div>
                       <div style={{
@@ -5246,10 +5685,10 @@ export default function AdminERPHub({ adminLocale }: AdminERPHubProps) {
                         borderRadius: '999px',
                         border: '1px solid rgba(212, 175, 55, 0.3)'
                       }}>
-                        {data.taxRecords.length} {isAr ? 'ملفات ضريبية' : 'tax records'}
+                        {data.taxRecords.length} {isAr ? 'سجلات ضريبية' : 'tax records'}
                       </span>
                       <span style={{ fontSize: '0.72rem', color: '#94a3b8' }}>
-                        {isAr ? 'مستوفاة بالدفاتر' : 'audited'}
+                        {isAr ? 'مضافة يدوياً للشقق' : 'custom added'}
                       </span>
                     </div>
                   </div>
@@ -5279,9 +5718,9 @@ export default function AdminERPHub({ adminLocale }: AdminERPHubProps) {
                       gap: '0.25rem'
                     }}>
                       {[
-                        { id: 'all', labelAr: 'كافة الضرائب', labelEn: 'All Taxes', count: data.taxRecords.length },
-                        { id: 'disposal', labelAr: 'تصرفات عقارية (٢.٥٪)', labelEn: 'Disposal (2.5%)', count: data.taxRecords.filter(t => t.tax_type.includes('Disposal')).length },
-                        { id: 'form41', labelAr: 'نموذج ٤١ (خصم)', labelEn: 'Form 41', count: data.taxRecords.filter(t => !t.tax_type.includes('Disposal')).length }
+                        { id: 'all', labelAr: 'كافة الوحدات والعقود', labelEn: 'All Units', count: data.taxRecords.length },
+                        { id: 'with_tax', labelAr: 'وحدات بضريبة مضافة', labelEn: 'With Manual Tax', count: data.taxRecords.filter(t => parseFloat(t.tax_amount) > 0).length },
+                        { id: 'exempt', labelAr: 'معفاة / بدون ضريبة (٠ ج.م)', labelEn: 'Zero Tax (0 EGP)', count: data.taxRecords.filter(t => !parseFloat(t.tax_amount) || parseFloat(t.tax_amount) === 0).length }
                       ].map(tab => (
                         <button
                           key={tab.id}
@@ -5324,8 +5763,8 @@ export default function AdminERPHub({ adminLocale }: AdminERPHubProps) {
                     }}>
                       {[
                         { id: 'all', labelAr: 'الكل', labelEn: 'All' },
-                        { id: 'Pending', labelAr: 'قيد التوريد', labelEn: 'Pending' },
-                        { id: 'Remitted to ETA', labelAr: 'مسدد ومورد', labelEn: 'Remitted' }
+                        { id: 'Pending', labelAr: 'قيد التحصيل / الاستيفاء', labelEn: 'Pending' },
+                        { id: 'Remitted to ETA', labelAr: 'مستوفاة ومسددة بالخزينة', labelEn: 'Settled' }
                       ].map(st => (
                         <button
                           key={st.id}
@@ -5503,121 +5942,134 @@ export default function AdminERPHub({ adminLocale }: AdminERPHubProps) {
                           key={t.tax_id}
                           onClick={() => handleInspectTax(t)}
                           style={{
-                            background: 'linear-gradient(145deg, rgba(18, 23, 36, 0.95) 0%, rgba(12, 16, 26, 0.98) 100%)',
-                            border: `1px solid ${isRemitted ? 'rgba(16, 185, 129, 0.3)' : 'rgba(245, 158, 11, 0.35)'}`,
-                            borderRadius: '14px',
-                            padding: '1.25rem',
+                            background: 'linear-gradient(170deg, #18151f 0%, #0d0a14 100%)',
+                            border: isRemitted ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid rgba(245, 158, 11, 0.35)',
+                            borderTop: isRemitted ? '4px solid #10b981' : '4px solid #f59e0b',
+                            borderRadius: '16px',
+                            padding: '1.25rem 1.35rem',
                             display: 'flex',
                             flexDirection: 'column',
                             justifyContent: 'space-between',
-                            gap: '1rem',
+                            gap: '0.9rem',
                             cursor: 'pointer',
-                            boxShadow: '0 8px 24px rgba(0, 0, 0, 0.45)',
+                            boxShadow: '0 10px 30px rgba(0, 0, 0, 0.55), 0 0 20px rgba(245, 158, 11, 0.08)',
                             position: 'relative',
                             overflow: 'hidden',
-                            transition: 'all 0.2s ease'
+                            transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)'
                           }}
                           onMouseEnter={(e) => {
                             e.currentTarget.style.transform = 'translateY(-3px)';
-                            e.currentTarget.style.boxShadow = '0 12px 30px rgba(0, 0, 0, 0.65)';
+                            e.currentTarget.style.boxShadow = '0 12px 35px rgba(0, 0, 0, 0.7), 0 0 25px rgba(245, 158, 11, 0.2)';
                             e.currentTarget.style.borderColor = isRemitted ? '#10b981' : '#f59e0b';
                           }}
                           onMouseLeave={(e) => {
                             e.currentTarget.style.transform = 'none';
-                            e.currentTarget.style.boxShadow = '0 8px 24px rgba(0, 0, 0, 0.45)';
-                            e.currentTarget.style.borderColor = isRemitted ? 'rgba(16, 185, 129, 0.3)' : 'rgba(245, 158, 11, 0.35)';
+                            e.currentTarget.style.boxShadow = '0 10px 30px rgba(0, 0, 0, 0.55), 0 0 20px rgba(245, 158, 11, 0.08)';
+                            e.currentTarget.style.borderColor = isRemitted ? 'rgba(16, 185, 129, 0.4)' : 'rgba(245, 158, 11, 0.35)';
                           }}
                         >
-                          {/* Top Row: Tax ID + Status Badge */}
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                            <div style={{
-                              fontFamily: 'monospace',
-                              fontWeight: 800,
-                              fontSize: '0.74rem',
-                              color: 'var(--zf-gold, #d4af37)',
-                              background: 'rgba(212, 175, 55, 0.1)',
-                              border: '1px solid rgba(212, 175, 55, 0.25)',
-                              padding: '0.2rem 0.5rem',
-                              borderRadius: '6px',
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '0.3rem'
-                            }}>
-                              <ShieldCheck size={13} color="var(--zf-gold, #d4af37)" />
-                              <span>{t.tax_id.slice(0, 12)}</span>
+                          {/* Background Treasury Seal Grid Watermark */}
+                          <div style={{
+                            position: 'absolute',
+                            top: 0,
+                            right: 0,
+                            bottom: 0,
+                            left: 0,
+                            backgroundImage: 'radial-gradient(rgba(245, 158, 11, 0.05) 1px, transparent 0)',
+                            backgroundSize: '18px 18px',
+                            pointerEvents: 'none'
+                          }} />
+
+                          {/* 1. Header Ribbon: Firm Badge + Settlement Status */}
+                          <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            background: 'linear-gradient(90deg, rgba(212, 175, 55, 0.12) 0%, rgba(212, 175, 55, 0.04) 100%)',
+                            border: '1px solid rgba(212, 175, 55, 0.25)',
+                            borderRadius: '8px',
+                            padding: '0.45rem 0.75rem',
+                            zIndex: 1
+                          }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                              <ShieldCheck size={14} color="var(--zf-gold, #d4af37)" />
+                              <span style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--zf-gold, #d4af37)', letterSpacing: '0.02em' }}>
+                                {isAr ? 'زكريا فريد للتطوير العقاري • حافظة الرسوم والضرائب' : 'ZF REAL ESTATE • TAX & FEES LEDGER'}
+                              </span>
                             </div>
 
                             <span style={{
-                              padding: '0.2rem 0.6rem',
+                              padding: '0.15rem 0.55rem',
                               borderRadius: '999px',
-                              fontSize: '0.7rem',
+                              fontSize: '0.68rem',
                               fontWeight: 800,
-                              background: isRemitted ? 'rgba(16, 185, 129, 0.15)' : 'rgba(245, 158, 11, 0.15)',
-                              border: `1px solid ${isRemitted ? 'rgba(16, 185, 129, 0.4)' : 'rgba(245, 158, 11, 0.4)'}`,
-                              color: isRemitted ? '#6ee7b7' : '#fbbf24',
+                              background: isRemitted ? 'rgba(16, 185, 129, 0.15)' : 'rgba(56, 189, 248, 0.15)',
+                              border: `1px solid ${isRemitted ? 'rgba(16, 185, 129, 0.4)' : 'rgba(56, 189, 248, 0.4)'}`,
+                              color: isRemitted ? '#6ee7b7' : '#38bdf8',
                               display: 'inline-flex',
                               alignItems: 'center',
                               gap: '0.3rem'
                             }}>
                               {isRemitted ? (
                                 <>
-                                  <CheckCircle2 size={12} />
-                                  <span>{isAr ? 'تم التوريد للمصلحة' : 'Remitted to ETA'}</span>
+                                  <CheckCircle2 size={11} />
+                                  <span>{isAr ? 'مُستوفاة ومسددة' : 'Settled'}</span>
                                 </>
                               ) : (
                                 <>
-                                  <Clock size={12} />
-                                  <span>{isAr ? 'قيد التوريد والسداد' : 'Pending Remittance'}</span>
+                                  <Clock size={11} />
+                                  <span>{isAr ? 'قيد الاستيفاء والتحصيل' : 'Pending Collection'}</span>
                                 </>
                               )}
                             </span>
                           </div>
 
-                          {/* Tax Title */}
-                          <div>
-                            <div style={{ fontSize: '0.92rem', fontWeight: 800, color: '#ffffff', lineHeight: 1.3 }}>
+                          {/* 2. Tax Label & Description Headline */}
+                          <div style={{ zIndex: 1 }}>
+                            <div style={{ fontSize: '0.96rem', fontWeight: 800, color: '#ffffff', lineHeight: 1.3 }}>
                               {isAr 
-                                ? (isDisposal 
-                                    ? 'ضريبة التصرفات العقارية (مادة ٤٢)' 
-                                    : (t.tax_type.includes('1%') 
-                                        ? 'استقطاع نموذج ٤١ - توريدات ومقاولات' 
-                                        : 'استقطاع نموذج ٤١ - خدمات ومهن'))
+                                ? (t.tax_type.includes('Disposal') 
+                                    ? 'ضريبة ورسوم محددة يدوياً للشقة' 
+                                    : t.tax_type)
                                 : t.tax_type}
                             </div>
-                            <div style={{ fontSize: '0.7rem', color: '#94a3b8', marginTop: '0.15rem' }}>
-                              {isAr ? 'مصلحة الضرائب المصرية (ETA)' : 'Egyptian Tax Authority'}
+                            <div style={{ fontSize: '0.7rem', color: 'var(--zf-text-muted, #94a3b8)', marginTop: '0.2rem' }}>
+                              {isAr ? 'كود القيد الضريبي للوحدة: ' : 'Tax Entry Code: '}
+                              <span style={{ fontFamily: 'monospace', color: 'var(--zf-gold, #d4af37)', fontWeight: 700 }}>#{t.tax_id.slice(0, 12)}</span>
                             </div>
                           </div>
 
-                          {/* Highlight Amount Box */}
+                          {/* 3. Slip Box for Tax Amount & Effective Rate */}
                           <div style={{
-                            background: 'rgba(0, 0, 0, 0.4)',
-                            border: '1px solid rgba(255, 255, 255, 0.08)',
+                            background: 'rgba(0, 0, 0, 0.65)',
+                            border: '1.5px dashed rgba(56, 189, 248, 0.35)',
                             borderRadius: '10px',
-                            padding: '0.85rem 1rem',
+                            padding: '0.8rem 1rem',
                             display: 'flex',
                             alignItems: 'center',
-                            justifyContent: 'space-between'
+                            justifyContent: 'space-between',
+                            boxShadow: 'inset 0 2px 6px rgba(0, 0, 0, 0.6)',
+                            zIndex: 1
                           }}>
                             <div>
-                              <span style={{ fontSize: '0.68rem', color: '#94a3b8', display: 'block' }}>
-                                {isAr ? 'قيمة الضريبة المستحقة:' : 'Tax Due Amount:'}
+                              <span style={{ fontSize: '0.67rem', color: '#38bdf8', display: 'block', fontWeight: 700 }}>
+                                {isAr ? 'الضريبة المضافة يدوياً للشقة (ضمن السعر):' : 'Manual Tax Added (In Price):'}
                               </span>
-                              <div style={{ fontSize: '1.35rem', fontWeight: 900, color: '#10b981', letterSpacing: '-0.02em', marginTop: '0.1rem' }}>
+                              <div style={{ fontSize: '1.4rem', fontWeight: 900, color: '#38bdf8', letterSpacing: '-0.02em', marginTop: '0.15rem' }}>
                                 <MoneyCell amount={t.tax_amount} isAr={isAr} highlight />
                               </div>
                             </div>
                             <div style={{ textAlign: isAr ? 'left' : 'right' }}>
-                              <span style={{ fontSize: '0.68rem', color: '#94a3b8', display: 'block' }}>
-                                {isAr ? 'النسبة:' : 'Rate:'}
+                              <span style={{ fontSize: '0.67rem', color: '#94a3b8', display: 'block', fontWeight: 700 }}>
+                                {isAr ? 'النسبة من الأساسي:' : 'Effective Rate:'}
                               </span>
                               <div style={{
                                 fontSize: '0.95rem',
                                 fontWeight: 800,
-                                color: 'var(--zf-gold, #d4af37)',
-                                background: 'rgba(212, 175, 55, 0.12)',
-                                border: '1px solid rgba(212, 175, 55, 0.3)',
-                                padding: '0.15rem 0.5rem',
+                                color: '#ffffff',
+                                background: 'rgba(56, 189, 248, 0.2)',
+                                border: '1px solid rgba(56, 189, 248, 0.45)',
+                                padding: '0.2rem 0.55rem',
                                 borderRadius: '6px',
                                 display: 'inline-block',
                                 marginTop: '0.15rem'
@@ -5627,7 +6079,7 @@ export default function AdminERPHub({ adminLocale }: AdminERPHubProps) {
                             </div>
                           </div>
 
-                          {/* Linked Contract & Unit Card snippet */}
+                          {/* 4. Declared Entity & Contract Dossier */}
                           <div style={{
                             background: 'rgba(255, 255, 255, 0.03)',
                             border: '1px solid rgba(255, 255, 255, 0.06)',
@@ -5636,46 +6088,48 @@ export default function AdminERPHub({ adminLocale }: AdminERPHubProps) {
                             display: 'flex',
                             flexDirection: 'column',
                             gap: '0.35rem',
-                            fontSize: '0.74rem'
+                            fontSize: '0.74rem',
+                            zIndex: 1
                           }}>
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                              <span style={{ color: '#94a3b8' }}>{isAr ? 'العقد المرتبط:' : 'Contract #:'}</span>
+                              <span style={{ color: '#94a3b8' }}>{isAr ? 'العقد المنسوب إليه:' : 'Contract #:'}</span>
                               <span style={{ fontFamily: 'monospace', fontWeight: 800, color: 'var(--zf-gold, #d4af37)' }}>
                                 {linkedContract?.contract_number || t.contract_id?.slice(0, 10) || '—'}
                               </span>
                             </div>
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                              <span style={{ color: '#94a3b8' }}>{isAr ? 'الوحدة / المشروع:' : 'Unit:'}</span>
+                              <span style={{ color: '#94a3b8' }}>{isAr ? 'الوحدة / الشقة:' : 'Apartment:'}</span>
                               <span style={{ color: '#ffffff', fontWeight: 600, maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                {linkedContract?.unit_id || (isAr ? 'تسوية مباشرة' : 'Direct assessment')}
+                                {linkedContract?.unit_id || (isAr ? 'وحدة مباشرة' : 'Direct unit')}
                               </span>
                             </div>
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                              <span style={{ color: '#94a3b8' }}>{isAr ? 'المشتري / الطرف:' : 'Buyer:'}</span>
+                              <span style={{ color: '#94a3b8' }}>{isAr ? 'اسم العميل / المشتري:' : 'Buyer:'}</span>
                               <span style={{ color: '#ffffff', fontWeight: 600 }}>
-                                {linkedContract?.buyer_name || (isAr ? 'مستخلص مقاول' : 'Supplier')}
+                                {linkedContract?.buyer_name || (isAr ? 'غير محدد' : 'N/A')}
                               </span>
                             </div>
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px dashed rgba(255,255,255,0.06)', paddingTop: '0.3rem' }}>
-                              <span style={{ color: '#94a3b8' }}>{isAr ? 'الوعاء الخاضع (Base):' : 'Taxable Base:'}</span>
+                              <span style={{ color: '#94a3b8' }}>{isAr ? 'سعر الشقة الأساسي:' : 'Base Price:'}</span>
                               <span style={{ color: '#e2e8f0', fontWeight: 700 }}>
                                 <MoneyCell amount={t.taxable_base} isAr={isAr} />
                               </span>
                             </div>
                           </div>
 
-                          {/* Card Footer: Action + Inspect */}
+                          {/* 5. Card Footer: Remit Action + Dossier Link */}
                           <div style={{
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'space-between',
                             borderTop: '1px solid rgba(255, 255, 255, 0.08)',
-                            paddingTop: '0.75rem'
+                            paddingTop: '0.75rem',
+                            zIndex: 1
                           }}>
                             {isRemitted ? (
-                              <span style={{ color: '#10b981', fontWeight: 700, fontSize: '0.74rem', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                              <span style={{ color: '#10b981', fontWeight: 800, fontSize: '0.74rem', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
                                 <CheckCircle2 size={14} />
-                                <span>{isAr ? 'مسدد ومورد' : 'Remitted'}</span>
+                                <span>{isAr ? 'مستوفاة ومسددة بالخزينة' : 'Settled in Safe'}</span>
                               </span>
                             ) : (
                               <button
@@ -5692,7 +6146,7 @@ export default function AdminERPHub({ adminLocale }: AdminERPHubProps) {
                                   color: '#ffffff',
                                   padding: '0.35rem 0.85rem',
                                   fontSize: '0.72rem',
-                                  fontWeight: 700,
+                                  fontWeight: 800,
                                   cursor: 'pointer',
                                   display: 'inline-flex',
                                   alignItems: 'center',
@@ -5700,8 +6154,8 @@ export default function AdminERPHub({ adminLocale }: AdminERPHubProps) {
                                   boxShadow: '0 2px 8px rgba(16, 185, 129, 0.25)'
                                 }}
                               >
-                                <Landmark size={13} />
-                                <span>{isAr ? 'توريد للمصلحة' : 'Remit to ETA'}</span>
+                                <CheckCircle2 size={13} />
+                                <span>{isAr ? 'إثبات الاستيفاء بالخزينة' : 'Settle in Safe'}</span>
                               </button>
                             )}
 
@@ -5709,11 +6163,11 @@ export default function AdminERPHub({ adminLocale }: AdminERPHubProps) {
                               display: 'inline-flex',
                               alignItems: 'center',
                               gap: '0.3rem',
-                              color: 'var(--zf-gold, #d4af37)',
+                              color: '#fbbf24',
                               fontSize: '0.74rem',
-                              fontWeight: 700
+                              fontWeight: 800
                             }}>
-                              <span>{isAr ? 'فحص الملف الضريبي' : 'Inspect Dossier'}</span>
+                              <span>{isAr ? 'فحص تفاصيل الوحدة' : 'Inspect Unit Tax'}</span>
                               <ArrowUpRight size={13} />
                             </div>
                           </div>
@@ -5727,25 +6181,27 @@ export default function AdminERPHub({ adminLocale }: AdminERPHubProps) {
                     <table className={subStyles.denseTable}>
                       <thead>
                         <tr>
-                          <th>{isAr ? 'كود الضريبة' : 'Tax ID'}</th>
-                          <th>{isAr ? 'نوع الضريبة' : 'Tax Type'}</th>
+                          <th>{isAr ? 'كود القيد' : 'Tax ID'}</th>
+                          <th>{isAr ? 'بيان / مسمى الضريبة' : 'Tax Label'}</th>
                           <th>{isAr ? 'العقد والوحدة' : 'Contract & Unit'}</th>
-                          <th>{isAr ? 'الوعاء الضريبي' : 'Taxable Base'}</th>
-                          <th>{isAr ? 'النسبة' : 'Rate'}</th>
-                          <th>{isAr ? 'المستحق' : 'Amount Due'}</th>
-                          <th>{isAr ? 'حالة التوريد للمصلحة' : 'ETA Status'}</th>
-                          <th style={{ textAlign: 'center' }}>{isAr ? 'إجراء التوريد' : 'Remit Action'}</th>
+                          <th>{isAr ? 'سعر الشقة الأساسي' : 'Base Price'}</th>
+                          <th>{isAr ? 'النسبة المحسوبة' : 'Rate'}</th>
+                          <th>{isAr ? 'الضريبة المضافة (يدوياً)' : 'Manual Tax'}</th>
+                          <th>{isAr ? 'إجمالي السعر شامل الضريبة' : 'Total Price with Tax'}</th>
+                          <th>{isAr ? 'حالة الاستيفاء' : 'Status'}</th>
+                          <th style={{ textAlign: 'center' }}>{isAr ? 'إجراء التسوية' : 'Action'}</th>
                         </tr>
                       </thead>
                       <tbody>
                         {filteredTaxes.map(t => {
                           const linkedContract = data.contracts.find(c => c.contract_id === t.contract_id);
+                          const totalVal = D(t.taxable_base).plus(t.tax_amount).toFixed(2);
                           return (
                             <tr 
                               key={t.tax_id}
                               onClick={() => handleInspectTax(t)}
                               style={{ cursor: 'pointer' }}
-                              title={isAr ? 'انقر لفحص تفاصيل الملف الضريبي في القائمة الجانبية' : 'Click to inspect tax details'}
+                              title={isAr ? 'انقر لفحص تفاصيل الضريبة في القائمة الجانبية' : 'Click to inspect tax details'}
                             >
                               <td style={{ fontFamily: 'monospace', fontWeight: 700, color: 'var(--zf-gold, #d4af37)' }}>
                                 {t.tax_id.slice(0, 14)}
@@ -5753,10 +6209,8 @@ export default function AdminERPHub({ adminLocale }: AdminERPHubProps) {
                               <td style={{ fontWeight: 600 }}>
                                 {isAr 
                                   ? (t.tax_type.includes('Disposal') 
-                                      ? 'ضريبة تصرفات عقارية (٢.٥٪)' 
-                                      : (t.tax_type.includes('1%') 
-                                          ? 'خصم نموذج ٤١ - أرباح تجارية (١٪)' 
-                                          : 'خصم نموذج ٤١ - خدمات ومهن (٣٪)'))
+                                      ? 'ضريبة ورسوم محددة يدوياً للشقة' 
+                                      : t.tax_type)
                                   : t.tax_type}
                               </td>
                               <td>
@@ -5771,28 +6225,30 @@ export default function AdminERPHub({ adminLocale }: AdminERPHubProps) {
                               </td>
                               <td><MoneyCell amount={t.taxable_base} isAr={isAr} /></td>
                               <td>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                                  <span>{D(t.tax_rate).times(100).toFixed(1)}%</span>
-                                  <LegalVerificationTag label={isAr ? 'مصلحة الضرائب' : 'ETA'} isAr={isAr} />
-                                </div>
+                                <span style={{ fontWeight: 700, color: '#cbd5e1' }}>{D(t.tax_rate).times(100).toFixed(1)}%</span>
                               </td>
                               <td><MoneyCell amount={t.tax_amount} isAr={isAr} highlight /></td>
                               <td>
+                                <span style={{ fontWeight: 800, color: 'var(--zf-gold, #d4af37)' }}>
+                                  <MoneyCell amount={totalVal} isAr={isAr} />
+                                </span>
+                              </td>
+                              <td>
                                 <span className={subStyles.statusPill} style={{
-                                  background: t.remittance_status === 'Remitted to ETA' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(245, 158, 11, 0.15)',
-                                  color: t.remittance_status === 'Remitted to ETA' ? '#6ee7b7' : '#fbbf24',
-                                  border: `1px solid ${t.remittance_status === 'Remitted to ETA' ? 'rgba(16, 185, 129, 0.35)' : 'rgba(245, 158, 11, 0.35)'}`
+                                  background: t.remittance_status === 'Remitted to ETA' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(56, 189, 248, 0.15)',
+                                  color: t.remittance_status === 'Remitted to ETA' ? '#6ee7b7' : '#38bdf8',
+                                  border: `1px solid ${t.remittance_status === 'Remitted to ETA' ? 'rgba(16, 185, 129, 0.35)' : 'rgba(56, 189, 248, 0.35)'}`
                                 }}>
                                   {t.remittance_status === 'Remitted to ETA' 
-                                    ? (isAr ? 'تم التوريد للمصلحة' : 'Remitted to ETA') 
-                                    : (isAr ? 'قيد التوريد' : 'Pending Remittance')}
+                                    ? (isAr ? 'مستوفاة بالخزينة' : 'Settled') 
+                                    : (isAr ? 'قيد التحصيل' : 'Pending')}
                                 </span>
                               </td>
                               <td style={{ textAlign: 'center' }} onClick={(e) => e.stopPropagation()}>
                                 {t.remittance_status === 'Remitted to ETA' ? (
                                   <span style={{ color: '#10b981', fontWeight: 700, fontSize: '0.72rem', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
                                     <CheckCircle2 size={13} />
-                                    <span>{isAr ? 'مسدد ومورد' : 'Remitted'}</span>
+                                    <span>{isAr ? 'مسدد ومستوفى' : 'Settled'}</span>
                                   </span>
                                 ) : (
                                   <button
@@ -5814,8 +6270,8 @@ export default function AdminERPHub({ adminLocale }: AdminERPHubProps) {
                                       boxShadow: '0 2px 8px rgba(16, 185, 129, 0.25)'
                                     }}
                                   >
-                                    <Landmark size={12} />
-                                    <span>{isAr ? 'توريد للمصلحة' : 'Remit to ETA'}</span>
+                                    <CheckCircle2 size={12} />
+                                    <span>{isAr ? 'إثبات الاستيفاء' : 'Settle'}</span>
                                   </button>
                                 )}
                               </td>
@@ -6049,6 +6505,9 @@ export default function AdminERPHub({ adminLocale }: AdminERPHubProps) {
                         if (contractErrors.property) setContractErrors(prev => ({ ...prev, property: '' }));
                         if (id === 'custom_unit') {
                           setCustomPrice('');
+                          setBasePriceInput('');
+                          setApartmentTaxInput('0');
+                          setApartmentTaxDesc('');
                           setCustomUnitName('');
                           setDownPaymentPct('0.15');
                           setDownPaymentInputPct('15');
@@ -6058,7 +6517,12 @@ export default function AdminERPHub({ adminLocale }: AdminERPHubProps) {
                         }
                         const prop = data.properties.find(p => p.id === id);
                         if (prop) {
-                          setCustomPrice(prop.price_egp.toString());
+                          const b = prop.price_egp;
+                          const t = prop.tax_amount_egp || 0;
+                          setBasePriceInput(b.toString());
+                          setApartmentTaxInput(t.toString());
+                          setApartmentTaxDesc('');
+                          setCustomPrice((b + t).toString());
                           setDownPaymentPct('0.15');
                           setDownPaymentInputPct('15');
                           setDownPaymentAmountInput('');
@@ -6082,13 +6546,23 @@ export default function AdminERPHub({ adminLocale }: AdminERPHubProps) {
                       {data.properties.filter(p => p.type === 'building').length > 0 && (
                         <optgroup label={isAr ? 'عمارات ومباني كاملة (Buildings)' : 'Buildings'}>
                           {data.properties.filter(p => p.type === 'building').map(p => {
-                            const activeContract = data.contracts.find(c => 
+                            const wholeContract = data.contracts.find(c => 
                               (c.property_id === p.id || c.unit_id === p.title_ar || c.unit_id === p.title_en) && 
-                              (c.status === 'Active' || c.status === 'Completed')
+                              (c.status === 'Active' || c.status === 'Completed') &&
+                              (c.is_whole_building_sale || !c.building_unit_id)
                             );
+                            const bUnits = p.building_units || [];
+                            const unitContracts = data.contracts.filter(c => 
+                              (c.property_id === p.id || c.unit_id?.includes(p.title_ar)) &&
+                              (c.status === 'Active' || c.status === 'Completed') &&
+                              c.building_unit_id
+                            );
+                            const allUnitsSold = bUnits.length > 0 && bUnits.every(u => u.status === 'contracted' || unitContracts.some(c => c.building_unit_id === u.unit_id));
+                            const isFullySold = Boolean(wholeContract || allUnitsSold || p.listing_status === 'sold');
+
                             return (
-                              <option key={p.id} value={p.id} disabled={Boolean(activeContract)} style={activeContract ? { color: '#94a3b8', fontStyle: 'italic' } : undefined}>
-                                {isAr ? p.title_ar : p.title_en} {p.area_sqm ? `(${p.area_sqm} م²)` : ''} — {D(p.price_egp).formatEGP(isAr)} {activeContract ? `[${isAr ? 'مُتعاقد عليه' : 'Sold'} - ${activeContract.contract_number}]` : ''}
+                              <option key={p.id} value={p.id} disabled={isFullySold} style={isFullySold ? { color: '#94a3b8', fontStyle: 'italic' } : undefined}>
+                                {isAr ? p.title_ar : p.title_en} {p.area_sqm ? `(${p.area_sqm} م²)` : ''} — {D(p.price_egp).formatEGP(isAr)} {wholeContract ? `[${isAr ? 'عمارة مباعة بالكامل' : 'Whole Building Sold'} - ${wholeContract.contract_number}]` : allUnitsSold ? `[${isAr ? 'كافة الشقق مباعة' : 'All Units Sold'}]` : ''}
                               </option>
                             );
                           })}
@@ -6149,12 +6623,167 @@ export default function AdminERPHub({ adminLocale }: AdminERPHubProps) {
                       </span>
                     )}
 
+                    {/* Building Sales Scope Selector (Whole Building vs Individual Apartment) */}
+                    {selectedPropertyId && selectedPropertyId !== 'custom_unit' && (() => {
+                      const prop = data.properties.find(p => p.id === selectedPropertyId);
+                      if (!prop || (prop.type !== 'building' && !(prop.title_ar || '').includes('عمارة') && !(prop.title_en || '').toLowerCase().includes('building'))) return null;
+                      
+                      const wholeContract = data.contracts.find(c => 
+                        (c.property_id === prop.id || c.unit_id === prop.title_ar || c.unit_id === prop.title_en) && 
+                        (c.status === 'Active' || c.status === 'Completed') &&
+                        (c.is_whole_building_sale || !c.building_unit_id)
+                      );
+                      const isWholeBuildingSold = Boolean(wholeContract || prop.listing_status === 'sold');
+
+                      if (isWholeBuildingSold) {
+                        return (
+                          <div style={{
+                            marginTop: '0.65rem',
+                            background: 'rgba(239, 68, 68, 0.1)',
+                            border: '1px solid rgba(239, 68, 68, 0.35)',
+                            borderRadius: '12px',
+                            padding: '0.85rem',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.6rem'
+                          }}>
+                            <AlertCircle size={18} color="#f87171" style={{ flexShrink: 0 }} />
+                            <div>
+                              <strong style={{ color: '#f87171', fontSize: '0.82rem', display: 'block' }}>
+                                {isAr ? 'هذه العمارة تم بيعها بالكامل بموجب تعاقد رسمي!' : 'This building is already sold entirely!'}
+                              </strong>
+                              <span style={{ fontSize: '0.74rem', color: '#cbd5e1' }}>
+                                {isAr 
+                                  ? `العقد القائم: ${wholeContract?.contract_number || ''} للمشتري (${wholeContract?.buyer_name || ''}). لا يُسمح ببيع أي شقق منفصلة من هذه العمارة لأنها مبيعة بالكامل.` 
+                                  : `Master contract: ${wholeContract?.contract_number || ''}. No individual apartments can be sold.`}
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      }
+
+                      const units = prop.building_units || [];
+
+                      return (
+                        <div style={{
+                          marginTop: '0.65rem',
+                          background: 'rgba(212, 175, 55, 0.08)',
+                          border: '1px solid rgba(212, 175, 55, 0.25)',
+                          borderRadius: '12px',
+                          padding: '0.85rem',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '0.65rem'
+                        }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
+                            <span style={{ fontSize: '0.78rem', color: '#ffffff', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                              <Building2 size={15} color="var(--zf-gold, #d4af37)" />
+                              <span>{isAr ? 'نظام التعاقد على هذه العمارة:' : 'Building Contract Scope:'}</span>
+                            </span>
+                            <div style={{ display: 'flex', gap: '0.35rem' }}>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setIsWholeBuildingContract(true);
+                                  setSelectedBuildingUnitId(undefined);
+                                  setSelectedBuildingUnitNumber(undefined);
+                                  setCustomPrice(prop.price_egp.toString());
+                                }}
+                                style={{
+                                  background: isWholeBuildingContract ? 'linear-gradient(135deg, #d4af37 0%, #b89628 100%)' : 'rgba(255, 255, 255, 0.05)',
+                                  color: isWholeBuildingContract ? '#080c14' : '#94a3b8',
+                                  border: isWholeBuildingContract ? '1px solid #d4af37' : '1px solid rgba(255,255,255,0.1)',
+                                  borderRadius: '6px',
+                                  padding: '0.3rem 0.65rem',
+                                  fontSize: '0.72rem',
+                                  fontWeight: 800,
+                                  cursor: 'pointer'
+                                }}
+                              >
+                                {isAr ? '🏢 بيع العمارة كاملة' : 'Whole Building'}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setIsWholeBuildingContract(false);
+                                  const firstAvail = units.find(u => u.status !== 'contracted') || units[0];
+                                  if (firstAvail) {
+                                    setSelectedBuildingUnitId(firstAvail.unit_id);
+                                    setSelectedBuildingUnitNumber(firstAvail.unit_number);
+                                    setCustomPrice(firstAvail.price_egp.toString());
+                                  }
+                                }}
+                                style={{
+                                  background: !isWholeBuildingContract ? 'linear-gradient(135deg, #38bdf8 0%, #0284c7 100%)' : 'rgba(255, 255, 255, 0.05)',
+                                  color: !isWholeBuildingContract ? '#080c14' : '#94a3b8',
+                                  border: !isWholeBuildingContract ? '1px solid #38bdf8' : '1px solid rgba(255,255,255,0.1)',
+                                  borderRadius: '6px',
+                                  padding: '0.3rem 0.65rem',
+                                  fontSize: '0.72rem',
+                                  fontWeight: 800,
+                                  cursor: 'pointer'
+                                }}
+                              >
+                                {isAr ? '🚪 بيع شقة محددة' : 'Specific Apartment'}
+                              </button>
+                            </div>
+                          </div>
+
+                          {!isWholeBuildingContract && units.length > 0 && (
+                            <div>
+                              <label style={{ fontSize: '0.72rem', color: '#94a3b8', display: 'block', marginBottom: '0.3rem' }}>
+                                {isAr ? 'اختر الشقة / الوحدة المراد بيعها بالعمارة:' : 'Select Target Apartment in Building:'}
+                              </label>
+                              <select
+                                className={legacyStyles.formInput}
+                                value={selectedBuildingUnitId || ''}
+                                onChange={(e) => {
+                                  const uId = e.target.value;
+                                  setSelectedBuildingUnitId(uId);
+                                  const targetUnit = units.find(u => u.unit_id === uId);
+                                  if (targetUnit) {
+                                    setSelectedBuildingUnitNumber(targetUnit.unit_number);
+                                    const b = targetUnit.price_egp;
+                                    const t = targetUnit.tax_amount_egp || 0;
+                                    setBasePriceInput(b.toString());
+                                    setApartmentTaxInput(t.toString());
+                                    setApartmentTaxDesc(targetUnit.tax_description || '');
+                                    setCustomPrice((b + t).toString());
+                                  }
+                                }}
+                              >
+                                <option value="">{isAr ? '-- اختر الشقة --' : '-- Choose Apartment --'}</option>
+                                {units.map((u) => {
+                                  const isUnitSold = u.status === 'contracted';
+                                  const baseAmt = u.price_egp || 0;
+                                  const taxAmt = u.tax_amount_egp || 0;
+                                  const totalUnitAmt = baseAmt + taxAmt;
+                                  return (
+                                    <option key={u.unit_id} value={u.unit_id} disabled={isUnitSold}>
+                                      {u.unit_number} ({u.area_sqm} م²) — {isAr ? 'أساس:' : 'Base:'} {D(baseAmt).formatEGP(isAr)}
+                                      {taxAmt > 0 ? ` + ${isAr ? 'ضريبة:' : 'Tax:'} ${D(taxAmt).formatEGP(isAr)}` : ''}
+                                      {` = ${D(totalUnitAmt).formatEGP(isAr)}`}
+                                      {isUnitSold ? ` [${isAr ? 'مباعة' : 'Sold'}]` : ''}
+                                    </option>
+                                  );
+                                })}
+                              </select>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
+
                     {/* Active Contract Alert for selected property */}
                     {selectedPropertyId && selectedPropertyId !== 'custom_unit' && (() => {
                       const prop = data.properties.find(p => p.id === selectedPropertyId);
+                      if (prop && (prop.type === 'building' || (prop.title_ar || '').includes('عمارة')) && !isWholeBuildingContract) {
+                        return null; // Apartment level checks handled in dropdown
+                      }
                       const activeContract = data.contracts.find(c => 
                         (c.property_id === selectedPropertyId || (prop && (c.unit_id === prop.title_ar || c.unit_id === prop.title_en))) && 
-                        (c.status === 'Active' || c.status === 'Completed')
+                        (c.status === 'Active' || c.status === 'Completed') &&
+                        (c.is_whole_building_sale || !c.building_unit_id)
                       );
                       if (!activeContract) return null;
                       return (
@@ -6446,7 +7075,7 @@ export default function AdminERPHub({ adminLocale }: AdminERPHubProps) {
               {contractWizardStep === 2 && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                   
-                  {/* Card 1: Contract Value & Execution Date */}
+                  {/* Card 1: Agreed Contract Value & Signing Date */}
                   <div style={{
                     background: 'rgba(255, 255, 255, 0.02)',
                     border: '1px solid rgba(255, 255, 255, 0.08)',
@@ -6454,47 +7083,60 @@ export default function AdminERPHub({ adminLocale }: AdminERPHubProps) {
                     padding: '1.15rem',
                     display: 'flex',
                     flexDirection: 'column',
-                    gap: '0.75rem'
+                    gap: '1rem'
                   }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.2rem' }}>
-                      <span style={{ background: 'rgba(212, 175, 55, 0.12)', color: 'var(--zf-gold, #d4af37)', fontSize: '0.7rem', fontWeight: 800, padding: '0.15rem 0.5rem', borderRadius: '4px' }}>
-                        01
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.2rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <span style={{ background: 'rgba(212, 175, 55, 0.12)', color: 'var(--zf-gold, #d4af37)', fontSize: '0.7rem', fontWeight: 800, padding: '0.15rem 0.5rem', borderRadius: '4px' }}>
+                          01
+                        </span>
+                        <h4 style={{ margin: 0, fontSize: '0.9rem', fontWeight: 700, color: '#ffffff' }}>
+                          {isAr ? 'قيمة التعاقد المتفق عليها وتاريخ التوقيع:' : 'Agreed Contract Value & Signing Date:'}
+                        </h4>
+                      </div>
+                      <span style={{
+                        fontSize: '0.66rem',
+                        color: '#10b981',
+                        background: 'rgba(16, 185, 129, 0.1)',
+                        border: '1px solid rgba(16, 185, 129, 0.25)',
+                        padding: '0.15rem 0.5rem',
+                        borderRadius: '6px',
+                        fontWeight: 700
+                      }}>
+                        {isAr ? 'شامل تكاليف البناء والضرائب والرسوم المسددة' : 'Includes All Incurred Costs & Taxes'}
                       </span>
-                      <h4 style={{ margin: 0, fontSize: '0.9rem', fontWeight: 700, color: '#ffffff' }}>
-                        {isAr ? 'قيمة العقد الإجمالية وتاريخ التوقيع:' : 'Contract Total Value & Signing Date:'}
-                      </h4>
                     </div>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '0.85rem' }}>
+                    {/* Inputs Row: Contract Value + Signing Date */}
+                    <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: '1rem', alignItems: 'start' }}>
                       <div className={legacyStyles.formGroup}>
-                        <label className={legacyStyles.formLabel}>{isAr ? 'سعر التعاقد المخصص (ج.م):' : 'Gross Contract Price (EGP):'}</label>
+                        <label className={legacyStyles.formLabel} style={{ fontWeight: 700, color: '#f8fafc' }}>
+                          {isAr ? 'سعر بيع الشقة / قيمة التعاقد الإجمالية (ج.م) *' : 'Agreed Unit Selling Price (EGP) *'}
+                        </label>
                         <input 
                           type="number" 
                           step="1000"
                           className={legacyStyles.formInput}
                           value={customPrice}
                           onChange={e => {
-                            setCustomPrice(e.target.value);
+                            const val = e.target.value;
+                            setCustomPrice(val);
+                            setBasePriceInput(val);
                             if (contractErrors.contractValue) setContractErrors(prev => ({ ...prev, contractValue: '' }));
                           }}
-                          placeholder={data.properties.find(p => p.id === selectedPropertyId)?.price_egp.toString() || '95000000'}
-                          style={{ borderColor: contractErrors.contractValue ? '#ef4444' : undefined, fontSize: '0.95rem', fontWeight: 800, color: 'var(--zf-gold, #d4af37)' }}
+                          placeholder="2500000"
+                          style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--zf-gold, #d4af37)' }}
                           required
                         />
-                        {contractErrors.contractValue && (
-                          <span style={{ fontSize: '0.7rem', color: '#f87171', fontWeight: 600, display: 'block', marginTop: '0.25rem' }}>
-                            {contractErrors.contractValue}
-                          </span>
-                        )}
-                        {modalContractValue > 0 && !contractErrors.contractValue && (
-                          <div style={{ fontSize: '0.72rem', color: '#94a3b8', marginTop: '0.15rem' }}>
-                            = {D(modalContractValue).formatEGP(isAr)}
+                        {customPrice && parseFloat(customPrice) > 0 && (
+                          <div style={{ fontSize: '0.72rem', color: '#94a3b8', marginTop: '0.25rem' }}>
+                            {D(customPrice).formatEGP(isAr)}
                           </div>
                         )}
                       </div>
 
                       <div className={legacyStyles.formGroup}>
-                        <label className={legacyStyles.formLabel}>{isAr ? 'تاريخ توقيع العقد:' : 'Contract Signing Date:'}</label>
+                        <label className={legacyStyles.formLabel}>{isAr ? 'تاريخ توقيع العقد *' : 'Contract Signing Date *'}</label>
                         <input 
                           type="date" 
                           className={legacyStyles.formInput}
@@ -7197,35 +7839,30 @@ export default function AdminERPHub({ adminLocale }: AdminERPHubProps) {
                         02
                       </span>
                       <label className={legacyStyles.formLabel} style={{ fontWeight: 700, color: '#ffffff' }}>
-                        {isAr ? 'حساب توجيه النقدية المحصلة بالدفاتر المحاسبية:' : 'Cash Routing Account:'}
+                        {isAr ? 'حساب استلام النقدية المحصلة باليد:' : 'Hand Cash Collection Account:'}
                       </label>
                       <OpenQuestionFlag 
                         questionId="Q3" 
-                        summary="Cash receipt routing (101000 vs 102000) is a required manual choice, not defaulted." 
+                        summary="Cash receipt routing (101000 Safe vs 102000 Bank) is configured for hand collection." 
                         onNavigate={handleNavigateToOpenQuestion}
                         isAr={isAr}
                       />
                     </div>
-                    <select 
-                      className={legacyStyles.formInput}
-                      value={cashRoutingAccount}
-                      onChange={e => {
-                        setCashRoutingAccount(e.target.value as '102000' | '101000');
-                        if (contractErrors.routing) setContractErrors(prev => ({ ...prev, routing: '' }));
-                      }}
-                    >
-                      <option value="102000">
-                        {isAr ? '[١٠٢٠٠٠] الحساب البنكي التشغيلي (إيداع بنكي مباشر)' : '[102000] Operating Bank Account (Direct Bank Receipt)'}
-                      </option>
-                      <option value="101000">
-                        {isAr ? '[١٠١٠٠٠] النقدية بالخزينة (صندوق نقدية الشركة)' : '[101000] Cash on Hand (Company Safe Cash Box)'}
-                      </option>
-                    </select>
-                    {contractErrors.routing && (
-                      <span style={{ fontSize: '0.72rem', color: '#f87171', fontWeight: 600, display: 'block', marginTop: '0.25rem' }}>
-                        {contractErrors.routing}
-                      </span>
-                    )}
+                    <div style={{
+                      padding: '0.65rem 0.85rem',
+                      background: 'rgba(16, 185, 129, 0.08)',
+                      border: '1px solid rgba(16, 185, 129, 0.3)',
+                      borderRadius: '8px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      color: '#6ee7b7',
+                      fontSize: '0.82rem',
+                      fontWeight: 700
+                    }}>
+                      <Wallet size={16} />
+                      <span>{isAr ? '[١٠١٠٠٠] الخزينة الرئيسية (استلام وتوريد نقدي باليد - بدون أي ربط بنكي)' : '[101000] Main Safe (Direct Cash on Hand - No Bank Link)'}</span>
+                    </div>
                   </div>
 
                   {/* Card 3: Executive Deal Summary Strip */}
@@ -7258,7 +7895,7 @@ export default function AdminERPHub({ adminLocale }: AdminERPHubProps) {
                       <span style={{ fontSize: '0.68rem', color: '#94a3b8', display: 'block' }}>{isAr ? 'تاريخ التوقيع والحساب:' : 'Date & Routing:'}</span>
                       <strong style={{ fontSize: '0.84rem', color: '#ffffff' }}>{firstPaymentDate}</strong>
                       <div style={{ fontSize: '0.7rem', color: '#94a3b8', marginTop: '0.1rem' }}>
-                        {cashRoutingAccount === '102000' ? (isAr ? 'البنك التشغيلي [102000]' : 'Bank [102000]') : (isAr ? 'الخزينة [101000]' : 'Safe [101000]')}
+                        {isAr ? 'الخزينة [101000]' : 'Safe [101000]'}
                       </div>
                     </div>
                   </div>
@@ -7441,18 +8078,24 @@ export default function AdminERPHub({ adminLocale }: AdminERPHubProps) {
         <div className={legacyStyles.modalOverlay} onClick={() => setShowPayModal(null)}>
           <div className={legacyStyles.modalContent} onClick={e => e.stopPropagation()}>
             <h3 className={legacyStyles.modalTitle}>
-              {isAr ? 'تحصيل قسط وقيده بالدفاتر' : 'Record Installment Payment'}
+              {isAr ? 'إثبات تحصيل القسط باليد (تم التحصيل)' : 'Record Hand Collection (Mark as Collected)'}
             </h3>
             <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--zf-text-secondary, #a7acc0)' }}>
               {showPayModal.contract.contract_number} — {isAr ? `قسط #${showPayModal.schedule.tranche_number}` : `Tranche #${showPayModal.schedule.tranche_number}`} ({D(showPayModal.schedule.nominal_value).formatEGP(isAr)})
             </p>
 
             <div style={{ background: 'rgba(16, 185, 129, 0.08)', padding: '1rem', borderRadius: '10px', border: '1px solid rgba(16, 185, 129, 0.2)', fontSize: '0.85rem' }}>
-              <div>{isAr ? 'المسار المحاسبي للقيد:' : 'Posting Route:'}</div>
-              <div style={{ fontWeight: 700, color: 'var(--zf-state-paid, #6fcf97)', marginTop: '0.25rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: '#10b981', fontWeight: 800 }}>
+                <CheckCircle2 size={16} />
+                <span>{isAr ? 'التحصيل يدوي واستلام باليد (بدون ربط بنكي)' : 'Manual Hand Collection (No Bank Link)'}</span>
+              </div>
+              <div style={{ fontWeight: 700, color: 'var(--zf-state-paid, #6fcf97)', marginTop: '0.35rem' }}>
+                {isAr ? 'حساب الإيداع: الخزينة الرئيسية [١٠١٠٠٠]' : 'Receiving Account: Main Safe [101000]'}
+              </div>
+              <div style={{ fontSize: '0.74rem', color: '#94a3b8', marginTop: '0.25rem' }}>
                 {showPayModal.contract.handover_status === 'Delivered' 
-                  ? (isAr ? 'مدين: ١٠٢٠٠٠ (البنك التشغيلي) / دائن: ١٠٣٠٠٠ (مدينو عقود العملاء)' : 'Dr 102000 (Bank) / Cr 103000 (Accounts Receivable)') 
-                  : (isAr ? 'مدين: ١٠٢٠٠٠ (البنك التشغيلي) / دائن: ٢٠٣٠٠٠ (إيرادات تعاقدية مؤجلة)' : 'Dr 102000 (Bank) / Cr 203000 (Deferred Contract Revenue)')}
+                  ? (isAr ? 'مدين: ١٠١٠٠٠ (الخزينة الرئيسية - استلام باليد) / دائن: ١٠٣٠٠٠ (مدينو عقود العملاء)' : 'Dr 101000 (Safe) / Cr 103000 (Accounts Receivable)') 
+                  : (isAr ? 'مدين: ١٠١٠٠٠ (الخزينة الرئيسية - استلام باليد) / دائن: ٢٠٣٠٠٠ (إيرادات تعاقدية مؤجلة)' : 'Dr 101000 (Safe) / Cr 203000 (Deferred Contract Revenue)')}
               </div>
             </div>
 
@@ -7462,7 +8105,7 @@ export default function AdminERPHub({ adminLocale }: AdminERPHubProps) {
               </button>
               <button className={legacyStyles.actionBtnGold} onClick={handleCollectPayment} disabled={isMutating}>
                 {isMutating ? <Loader2 size={15} className="animate-spin" /> : <CheckCircle2 size={15} />}
-                <span>{isAr ? 'تأكيد السداد والترحيل' : 'Post Collection'}</span>
+                <span>{isAr ? 'تأكيد الاستلام باليد (تم التحصيل)' : 'Confirm Hand Collection (Mark Collected)'}</span>
               </button>
             </div>
           </div>
@@ -7736,13 +8379,24 @@ export default function AdminERPHub({ adminLocale }: AdminERPHubProps) {
         </div>
       )}
 
-      {/* RECORD NEW CHEQUE MODAL (خزينة الشيكات الواردة) — Luxury Intuitive Digital Cheque Studio */}
+      {/* RECORD NEW INSTALLMENT DUE MODAL */}
       <NewChequeModal 
         isOpen={showNewPDCModal}
         onClose={() => setShowNewPDCModal(false)}
         contracts={data.contracts}
         schedules={data.schedules}
         onSaveCheque={handleSaveNewCheque}
+        isMutating={isMutating}
+        isAr={isAr}
+      />
+
+      {/* HAND CASH COLLECTION PROCESS MODAL */}
+      <HandCollectionModal 
+        isOpen={!!collectingPDCItem}
+        onClose={() => setCollectingPDCItem(null)}
+        item={collectingPDCItem}
+        linkedContract={data.contracts.find(c => c.contract_id === collectingPDCItem?.contract_id)}
+        onConfirmCollection={handleConfirmHandCollection}
         isMutating={isMutating}
         isAr={isAr}
       />
@@ -7758,6 +8412,23 @@ export default function AdminERPHub({ adminLocale }: AdminERPHubProps) {
         isAr={isAr}
         registeredPartners={unifiedPartners}
       />
+
+      {/* PROPERTY LIFECYCLE AUDIT & MATERIAL LOGS MODAL (سجل وتدقيق مواد وتكاليف البناء) */}
+      {auditModalProperty && (
+        <PropertyLifecycleAuditModal 
+          property={auditModalProperty}
+          allCosts={data.propertyCosts}
+          isAr={isAr}
+          onClose={() => setAuditModalProperty(null)}
+          onAddCostItem={handleAddPropertyCostItem}
+          onDeleteCostItem={handleDeletePropertyCostItem}
+          onOpenCalculatorForProperty={(propId) => {
+            setAuditModalProperty(null);
+            setCalculatorPropertyId(propId);
+            setActiveTab('calculator');
+          }}
+        />
+      )}
     </div>
   );
 }

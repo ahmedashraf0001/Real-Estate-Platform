@@ -121,7 +121,7 @@ export const QuickTransactionModal: React.FC<QuickTransactionModalProps> = ({
   const [customSubCategory, setCustomSubCategory] = useState<string>('');
   const [isCustomSubCategory, setIsCustomSubCategory] = useState<boolean>(false);
   const [selectedPropertyId, setSelectedPropertyId] = useState<string>('');
-  const [paymentAccount, setPaymentAccount] = useState<'101000' | '102000' | '201000'>('102000'); // Default to bank
+  const [paymentAccount, setPaymentAccount] = useState<'101000' | '201000'>('101000'); // Default to Safe Cash [101000] - No Bank Link
   const [selectedPartnerName, setSelectedPartnerName] = useState<string>('زكريا فريد');
   const [customPartnerInput, setCustomPartnerInput] = useState<string>('');
   const [lenderName, setLenderName] = useState<string>('');
@@ -156,16 +156,16 @@ export const QuickTransactionModal: React.FC<QuickTransactionModalProps> = ({
       const propTag = targetProp ? ` [مشروع: ${isAr ? targetProp.title_ar : targetProp.title_en}]` : '';
       description = `${currentPreset.mainCategory} - ${finalSub}${propTag}${memo ? ` (${memo})` : ''}`;
       debitAccount = currentPreset.accountCode; // 150000, 151000, 152000, 153000
-      creditAccount = paymentAccount; // 101000 Safe, 102000 Bank, 201000 Payable
+      creditAccount = paymentAccount; // 101000 Safe, 201000 Payable
       sourceModule = 'WIP_ALLOCATION';
     } else if (transactionType === 'PARTNER_FUNDING') {
       description = `ضخ تمويل رأسمالي - الشريك: ${finalPartnerName || (isAr ? 'شريك ممول' : 'Partner')}${memo ? ` (${memo})` : ''}`;
-      debitAccount = paymentAccount === '201000' ? '102000' : paymentAccount;
+      debitAccount = '101000'; // 101000 Main Safe Cash on Hand
       creditAccount = '301000'; // Partner Capital
       sourceModule = 'CAPITAL_CALL';
     } else if (transactionType === 'LOAN') {
       description = `سلفة / تمويل ائتماني دائن - الجهة: ${lenderName || (isAr ? 'جهة تمويل' : 'Lender')}${memo ? ` (${memo})` : ''}`;
-      debitAccount = paymentAccount === '201000' ? '102000' : paymentAccount;
+      debitAccount = '101000'; // 101000 Main Safe Cash on Hand
       creditAccount = '201000'; // Trade Accounts Payable / Creditor
       sourceModule = 'MANUAL';
     }
@@ -981,30 +981,7 @@ export const QuickTransactionModal: React.FC<QuickTransactionModalProps> = ({
                     ? (isAr ? 'طريقة السداد وخروج النقدية:' : 'Payment Account Source:')
                     : (isAr ? 'حساب إيداع النقدية الواردة:' : 'Receiving Cash Account:')}
                 </label>
-                <div style={{ display: 'grid', gridTemplateColumns: transactionType === 'EXPENSE' ? 'repeat(3, 1fr)' : 'repeat(2, 1fr)', gap: '0.65rem' }}>
-                  {/* Bank */}
-                  <div
-                    onClick={() => setPaymentAccount('102000')}
-                    style={{
-                      background: paymentAccount === '102000' ? 'rgba(56, 189, 248, 0.15)' : 'rgba(255, 255, 255, 0.03)',
-                      border: paymentAccount === '102000' ? '1px solid #38bdf8' : '1px solid rgba(255, 255, 255, 0.08)',
-                      borderRadius: '10px',
-                      padding: '0.75rem',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.5rem'
-                    }}
-                  >
-                    <Landmark size={18} color="#38bdf8" />
-                    <div>
-                      <span style={{ fontWeight: 700, fontSize: '0.78rem', color: '#ffffff', display: 'block' }}>
-                        {isAr ? 'البنك التشغيلي' : 'Operating Bank'}
-                      </span>
-                      <span style={{ fontFamily: 'monospace', fontSize: '0.66rem', color: '#94a3b8' }}>[102000]</span>
-                    </div>
-                  </div>
-
+                <div style={{ display: 'grid', gridTemplateColumns: transactionType === 'EXPENSE' ? 'repeat(2, 1fr)' : '1fr', gap: '0.65rem' }}>
                   {/* Cash Safe */}
                   <div
                     onClick={() => setPaymentAccount('101000')}
@@ -1022,7 +999,7 @@ export const QuickTransactionModal: React.FC<QuickTransactionModalProps> = ({
                     <Wallet size={18} color="#34d399" />
                     <div>
                       <span style={{ fontWeight: 700, fontSize: '0.78rem', color: '#ffffff', display: 'block' }}>
-                        {isAr ? 'الخزينة النقدية (كاش)' : 'Cash Safe'}
+                        {isAr ? 'الخزينة النقدية (سداد نقدي باليد)' : 'Main Cash Safe (By Hand)'}
                       </span>
                       <span style={{ fontFamily: 'monospace', fontSize: '0.66rem', color: '#94a3b8' }}>[101000]</span>
                     </div>

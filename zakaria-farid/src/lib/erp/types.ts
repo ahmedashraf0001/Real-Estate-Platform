@@ -94,7 +94,10 @@ export interface ERPContract {
   buyer_phone?: string;
   buyer_email?: string;
   buyer_national_id?: string;
-  gross_contract_value: string; // Fixed-point string
+  base_price?: string;         // Base unit price before manual tax
+  tax_amount?: string;         // Manual tax added per apartment (not static)
+  tax_description?: string;    // Description of manual apartment tax
+  gross_contract_value: string; // Fixed-point string (Base Price + Tax Amount)
   currency: CurrencyCode;
   exchange_rate: string;        // e.g. "1.0000" or "48.5000"
   contract_date: string;
@@ -104,6 +107,9 @@ export interface ERPContract {
   status: ContractStatus;
   payment_plan_type?: 'FULL_CASH' | 'UPFRONT_HANDOVER' | 'INSTALLMENTS';
   partner_splits?: ERPContractPartnerSplit[];
+  is_whole_building_sale?: boolean;
+  building_unit_id?: string;
+  building_unit_number?: string;
 }
 
 export type InstallmentStatus = 
@@ -192,7 +198,9 @@ export type TaxType =
   | 'Disposal 2.5% Case A' 
   | 'Disposal 2.5% Case B' 
   | 'Form 41 1%' 
-  | 'Form 41 3%';
+  | 'Form 41 3%'
+  | 'Custom Apartment Tax'
+  | string;
 
 export type TaxRemittanceStatus = 'Pending' | 'Remitted to ETA';
 
@@ -274,5 +282,53 @@ export interface ERPNotification {
   actionLabelEn?: string;
   targetModule?: string;
   metadata?: Record<string, any>;
+}
+
+// ============================================================================
+// Property Lifecycle Material & Cost Audit Types (بنود التكاليف ودورة حياة العقار)
+// ============================================================================
+
+export type PropertyCostCategory = 
+  | 'civil_structure'       // خرسانات وحديد وبناء
+  | 'mep_infrastructure'     // كهروميكانيك، سباكة، عزل
+  | 'finishing_interior'    // تشطيبات معمارية، سيراميك، دهانات، نجارة
+  | 'site_facade'           // واجهات، مداخل رخام، مصاعد، لاندسكيب
+  | 'permits_engineering'   // تراخيص، استشارات ومخططات، إشراف
+  | 'taxes_fees'            // ضرائب ورسوم إنشائية وحكومية على البناء/الشقق
+  | 'land_allocation'       // حصة الأرض المخصصة للعقار
+  | 'labor_subcontractor';   // مصنعيات ومقاولو باطن
+
+export type PropertyLifecyclePhase = 
+  | 'planning_permits'          // التراخيص والتخطيط
+  | 'excavation_foundation'     // الحفر والأساسات
+  | 'structural_skeleton'       // الهيكل الإنشائي والأسقف
+  | 'masonry_roughing'          // المباني وتأسيس التمديدات
+  | 'finishing_interiors'       // التشطيبات والكسوات والدهانات
+  | 'final_inspection_handover'; // المعاينة النهائية والجاهزية للبيع
+
+export interface ERPPropertyCostItem {
+  item_id: string;
+  id?: string;
+  property_id: string;
+  building_unit_id?: string;
+  unit_number?: string;
+  is_unit_specific?: boolean;
+  category: PropertyCostCategory;
+  phase: PropertyLifecyclePhase;
+  item_name_ar: string;
+  item_name_en: string;
+  supplier_contractor?: string;
+  invoice_ref?: string;
+  quantity: number;
+  unit: string;
+  unit_cost_egp: string;  // Fixed-point string "12345.67"
+  total_cost_egp: string; // Fixed-point string "12345.67"
+  total_amount?: string | number; // Compatibility alias
+  logged_date: string;    // ISO Date YYYY-MM-DD
+  logged_by: string;
+  linked_account_code?: string;
+  status: 'verified' | 'pending_audit' | 'capitalized';
+  notes?: string;
+  created_at?: string;
 }
 

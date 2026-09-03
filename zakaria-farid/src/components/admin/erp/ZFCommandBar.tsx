@@ -119,12 +119,12 @@ export const ZFCommandBar: React.FC<ZFCommandBarProps> = ({
           type="button"
           className={styles.omniSearchBar}
           onClick={onOpenQuickSearch}
-          title={isAr ? 'بحث سريع في العقود، القيود والأوامر المالية (⌘K)' : 'Search contracts, ledger, cheques, or actions... (⌘K)'}
+          title={isAr ? 'بحث سريع في العقود، الأقساط والقيود والأوامر المالية (⌘K)' : 'Search contracts, dues, ledger, or actions... (⌘K)'}
         >
           <div className={styles.searchInnerLeft}>
             <Search size={14} className={styles.searchIcon} />
             <span className={styles.searchPlaceholder}>
-              {isAr ? 'بحث سريع في العقود، الشيكات، القيود والأوامر المالية...' : 'Search contracts, ledger entries, cheques, or commands...'}
+              {isAr ? 'بحث سريع في العقود، الأقساط باليد، القيود والأوامر المالية...' : 'Search contracts, hand dues, ledger entries, or commands...'}
             </span>
           </div>
           <kbd className={styles.kbdKey}>⌘K</kbd>

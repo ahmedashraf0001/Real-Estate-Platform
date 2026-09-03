@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { Search, X, FileText, BookOpen, Landmark } from 'lucide-react';
+import { Search, X, FileText, BookOpen, Landmark, Wallet } from 'lucide-react';
 import { ERPContract, ERPPDCRecord } from '@/lib/erp/types';
 import { CANONICAL_COA } from '@/lib/erp/ledger';
 import { ERPNavModule } from './ZFNavigationDock';
@@ -89,10 +89,9 @@ export const ZFQuickSearchModal: React.FC<ZFQuickSearchModalProps> = ({
       { id: 'cockpit', nameEn: 'Financial Cockpit & Horizon', nameAr: 'لوحة القيادة المالية والمنحنى' },
       { id: 'ledger', nameEn: 'General Ledger & Chart of Accounts', nameAr: 'دفتر الأستاذ ودليل الحسابات' },
       { id: 'contracts', nameEn: 'Sales Contracts & Installment Pipeline', nameAr: 'سجل العقود وتتبع الأقساط' },
-      { id: 'pdc', nameEn: 'PDC Cheques Vault', nameAr: 'خزينة الشيكات المؤجلة' },
+      { id: 'pdc', nameEn: 'Hand Installments & Cash Dues Vault', nameAr: 'حافظة بنود التحصيل والأقساط باليد' },
       { id: 'rescissions', nameEn: 'Rescission & Forfeiture Floor', nameAr: 'فسخ العقود والحد الأدنى للرد' },
-      { id: 'cost-allocation', nameEn: 'Cost Allocation & RSV Factor', nameAr: 'تخصيص التكاليف ومعامل RSV' },
-      { id: 'tax', nameEn: 'Statutory Taxes & Form 41', nameAr: 'الضرائب واستقطاعات نموذج ٤١' },
+      { id: 'cost-allocation', nameEn: 'Cost Allocation & RSV Factor', nameAr: 'تخصيص التكاليف ومعامل RSV' }
     ];
 
     modules.forEach(m => {
@@ -141,10 +140,10 @@ export const ZFQuickSearchModal: React.FC<ZFQuickSearchModalProps> = ({
       ) {
         matches.push({
           id: `pdc-${ch.cheque_id}`,
-          category: isAr ? 'الشيكات' : 'Cheques',
-          title: `${isAr ? 'شيك رقم' : 'Cheque'} #${ch.cheque_number} (${ch.bank_name})`,
-          subtitle: `${ch.nominal_value} EGP | ${ch.drawer_name} | ${ch.status}`,
-          icon: Landmark,
+          category: isAr ? 'أقساط وتحصيل باليد' : 'Hand Installments',
+          title: `${isAr ? 'بند قسط رقم' : 'Installment Due'} #${ch.cheque_number} (${isAr ? 'نقداً باليد' : 'Cash by Hand'})`,
+          subtitle: `${ch.nominal_value} EGP | ${ch.drawer_name} | ${ch.status === 'Cleared' ? (isAr ? 'تم التحصيل باليد' : 'Collected') : (isAr ? 'مستحق لاحقاً باليد' : 'Due Later')}`,
+          icon: Wallet,
           action: () => {
             onSelectModule('pdc');
             onClose();
@@ -219,7 +218,7 @@ export const ZFQuickSearchModal: React.FC<ZFQuickSearchModalProps> = ({
           <input 
             autoFocus
             type="text"
-            placeholder={isAr ? 'ابحث عن عقد، كود حساب، شيك، أو قسم مالي...' : 'Search contracts, accounts, cheques, or jump to module...'}
+            placeholder={isAr ? 'ابحث عن عقد، كود حساب، قسط مستحق، أو قسم مالي...' : 'Search contracts, accounts, dues, or jump to module...'}
             value={query}
             onChange={e => setQuery(e.target.value)}
             style={{

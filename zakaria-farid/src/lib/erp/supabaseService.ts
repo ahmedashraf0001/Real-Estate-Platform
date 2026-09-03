@@ -28,10 +28,15 @@ import {
   TaxType,
   TaxRemittanceStatus,
   CapitalCallStatus,
-  MakerCheckerStatus
+  MakerCheckerStatus,
+  ERPPropertyCostItem,
+  PropertyCostCategory,
+  PropertyLifecyclePhase
 } from './types';
-import { Property, Lead } from '@/lib/supabase/types';
+import { Property, Lead, BuildingUnitItem } from '@/lib/supabase/types';
 import { D, generateUUID, isUUID, ensureUUID } from './math';
+import { generateMockPropertyCosts } from './propertyCostEngine';
+import { FALLBACK_PROPERTIES } from '@/lib/data/fallbackProperties';
 
 export interface LiveERPDataset {
   periods: ERPAccountingPeriod[];
@@ -47,6 +52,7 @@ export interface LiveERPDataset {
   makerCheckerRequests: ERPMakerCheckerRequest[];
   properties: Property[];
   leads: Lead[];
+  propertyCosts: ERPPropertyCostItem[];
   isSchemaMigrated: boolean;
 }
 
@@ -62,7 +68,43 @@ export class ERPSupabaseService {
       .select('*, property_images(*)')
       .order('created_at', { ascending: false });
 
-    const properties = (propertiesData as Property[]) || [];
+    const rawProps = (propertiesData as Property[]) || [];
+    const baseProperties = rawProps.length > 0 ? rawProps : (FALLBACK_PROPERTIES as Property[]);
+
+    const properties: Property[] = baseProperties.map(p => {
+      const isBuilding = p.type === 'building' || (p.title_ar || '').includes('عمارة') || (p.title_en || '').toLowerCase().includes('building');
+      if (isBuilding) {
+        const unitsCount = p.total_units_count && p.total_units_count > 1 ? p.total_units_count : 6;
+        const saleMode = p.sale_mode || 'both_flexible';
+        let units: BuildingUnitItem[] = (p.building_units as BuildingUnitItem[]) || [];
+        if (!units || units.length === 0) {
+          const unitArea = Math.round((p.area_sqm || 1200) / unitsCount);
+          const unitPrice = Math.round((p.price_egp || 35000000) / unitsCount);
+          units = Array.from({ length: unitsCount }, (_, i) => {
+            const floor = Math.floor(i / 2) + 1;
+            const letter = (i % 2 === 0) ? 'A' : 'B';
+            return {
+              unit_id: `${p.id}-apt-${i + 1}`,
+              unit_number: `شقة ${floor}${letter} - الدور ${floor}`,
+              floor,
+              area_sqm: unitArea,
+              bedrooms: 3,
+              bathrooms: 2,
+              price_egp: unitPrice,
+              status: 'available' as const
+            };
+          });
+        }
+        return {
+          ...p,
+          type: 'building' as const,
+          sale_mode: saleMode,
+          total_units_count: units.length,
+          building_units: units
+        };
+      }
+      return p;
+    });
 
     // 1b. Fetch Active CRM Leads from Supabase
     let leads: Lead[] = [];
@@ -187,6 +229,7 @@ export class ERPSupabaseService {
     let taxData: Record<string, unknown>[] | null = null;
     let callsData: Record<string, unknown>[] | null = null;
     let makerCheckerData: Record<string, unknown>[] | null = null;
+    let propertyCostsData: Record<string, unknown>[] | null = null;
 
     if (isSchemaMigrated) {
       try {
@@ -212,6 +255,15 @@ export class ERPSupabaseService {
         taxData = tRes.data;
         callsData = pcRes.data;
         makerCheckerData = mcRes.data;
+
+        try {
+          const costRes = await supabase.from('erp_property_costs').select('*').order('logged_date', { ascending: false });
+          if (costRes.data && costRes.data.length > 0) {
+            propertyCostsData = costRes.data;
+          }
+        } catch {
+          // erp_property_costs table not yet created
+        }
       } catch (err) {
         console.warn('Error querying migrated tables:', err);
       }
@@ -225,6 +277,9 @@ export class ERPSupabaseService {
       property_id: (c.property_id as string) || undefined,
       buyer_name: c.buyer_name as string,
       buyer_national_id: c.buyer_national_id as string | undefined,
+      base_price: c.base_price ? D(c.base_price as string | number).toFixed() : undefined,
+      tax_amount: c.tax_amount ? D(c.tax_amount as string | number).toFixed() : undefined,
+      tax_description: (c.tax_description as string) || undefined,
       gross_contract_value: D((c.gross_contract_value as string | number) || 0).toFixed(),
       currency: (c.currency as CurrencyCode) || 'EGP',
       exchange_rate: D((c.exchange_rate as string | number) || 1).toFixed(),
@@ -415,22 +470,25 @@ export class ERPSupabaseService {
     }));
 
     if (taxRecords.length === 0 && contracts.length > 0) {
-      const generatedTaxes: ERPTaxRecord[] = contracts.map((ct, idx) => {
-        const taxId = generateUUID();
-        const base = ct.gross_contract_value;
-        const amt = D(base).times('0.0250').toFixed(2);
-        const isRemitted = idx === 1;
-        return {
-          tax_id: taxId,
-          contract_id: ct.contract_id,
-          tax_type: 'Disposal 2.5% Case A',
-          taxable_base: base,
-          tax_rate: '0.0250',
-          tax_amount: amt,
-          remittance_status: isRemitted ? 'Remitted to ETA' : 'Pending',
-          created_at: ct.contract_date || new Date().toISOString()
-        };
-      });
+      const generatedTaxes: ERPTaxRecord[] = contracts
+        .filter(ct => (ct.tax_amount && D(ct.tax_amount).gt(0)) || !ct.tax_amount)
+        .map((ct, idx) => {
+          const taxId = generateUUID();
+          const base = ct.base_price ? D(ct.base_price).toFixed(2) : ct.gross_contract_value;
+          const amt = ct.tax_amount ? D(ct.tax_amount).toFixed(2) : D(base).times('0.0250').toFixed(2);
+          const rate = D(base).gt(0) ? D(amt).div(base).toFixed(4) : '0.0250';
+          const isRemitted = idx === 1;
+          return {
+            tax_id: taxId,
+            contract_id: ct.contract_id,
+            tax_type: (ct.tax_description as TaxType) || 'Disposal 2.5% Case A',
+            taxable_base: base,
+            tax_rate: rate,
+            tax_amount: amt,
+            remittance_status: isRemitted ? 'Remitted to ETA' : 'Pending',
+            created_at: ct.contract_date || new Date().toISOString()
+          };
+        });
 
       if (generatedTaxes.length > 0) {
         taxRecords = generatedTaxes;
@@ -478,6 +536,36 @@ export class ERPSupabaseService {
       created_at: (mc.created_at as string) || new Date().toISOString()
     }));
 
+    // 13. Property Lifecycle Material & Cost Items
+    let propertyCosts: ERPPropertyCostItem[] = [];
+    if (propertyCostsData && propertyCostsData.length > 0) {
+      propertyCosts = propertyCostsData.map(c => ({
+        item_id: c.item_id as string,
+        property_id: c.property_id as string,
+        building_unit_id: c.building_unit_id as string | undefined,
+        unit_number: c.unit_number as string | undefined,
+        is_unit_specific: !!c.building_unit_id,
+        category: c.category as PropertyCostCategory,
+        phase: c.phase as PropertyLifecyclePhase,
+        item_name_ar: c.item_name_ar as string,
+        item_name_en: c.item_name_en as string,
+        supplier_contractor: c.supplier_contractor as string | undefined,
+        invoice_ref: c.invoice_ref as string | undefined,
+        quantity: Number(c.quantity || 1),
+        unit: (c.unit as string) || 'مقطوعية',
+        unit_cost_egp: D(c.unit_cost_egp as string | number || 0).toFixed(2),
+        total_cost_egp: D(c.total_cost_egp as string | number || 0).toFixed(2),
+        logged_date: c.logged_date as string,
+        logged_by: (c.logged_by as string) || 'SYSTEM',
+        linked_account_code: (c.linked_account_code as string) || '151000',
+        status: (c.status as 'verified' | 'pending_audit' | 'capitalized') || 'verified',
+        notes: c.notes as string | undefined,
+        created_at: c.created_at as string | undefined
+      }));
+    } else {
+      propertyCosts = generateMockPropertyCosts(properties);
+    }
+
     return {
       periods,
       contracts,
@@ -492,6 +580,7 @@ export class ERPSupabaseService {
       makerCheckerRequests,
       properties,
       leads,
+      propertyCosts,
       isSchemaMigrated
     };
   }
@@ -545,20 +634,35 @@ export class ERPSupabaseService {
       if (contract.partner_splits) {
         contractPayload.partner_splits = contract.partner_splits;
       }
+      if (contract.base_price) {
+        contractPayload.base_price = contract.base_price;
+      }
+      if (contract.tax_amount) {
+        contractPayload.tax_amount = contract.tax_amount;
+      }
+      if (contract.tax_description) {
+        contractPayload.tax_description = contract.tax_description;
+      }
 
       let { error: contractError } = await supabase.from('erp_contracts').insert(contractPayload);
 
-      // Resilient fallback if optional columns (property_id, lead_id, etc.) are not yet in Supabase schema
+      // Resilient fallback if optional columns are not yet in Supabase schema
       if (contractError && (
         contractError.message?.includes('property_id') || 
         contractError.message?.includes('lead_id') || 
         contractError.message?.includes('payment_plan_type') || 
-        contractError.message?.includes('partner_splits')
+        contractError.message?.includes('partner_splits') ||
+        contractError.message?.includes('base_price') ||
+        contractError.message?.includes('tax_amount') ||
+        contractError.message?.includes('tax_description')
       )) {
         delete contractPayload.property_id;
         delete contractPayload.lead_id;
         delete contractPayload.payment_plan_type;
         delete contractPayload.partner_splits;
+        delete contractPayload.base_price;
+        delete contractPayload.tax_amount;
+        delete contractPayload.tax_description;
         const retryRes = await supabase.from('erp_contracts').insert(contractPayload);
         contractError = retryRes.error;
       }
@@ -625,20 +729,26 @@ export class ERPSupabaseService {
         }
       }
 
-      // Auto-generate Statutory 2.5% Real Estate Disposal Tax
-      try {
-        const taxRow = {
-          tax_id: generateUUID(),
-          contract_id: contractId,
-          tax_type: 'Disposal 2.5% Case A',
-          taxable_base: contract.gross_contract_value,
-          tax_rate: '0.0250',
-          tax_amount: D(contract.gross_contract_value).times('0.0250').toFixed(2),
-          remittance_status: 'Pending'
-        };
-        await supabase.from('erp_tax_records').insert([taxRow]);
-      } catch (e) {
-        console.warn('Could not auto-generate statutory tax on contract creation:', e);
+      // Save Manual Apartment Tax (Not static, added by hand per apartment, calculated in pricing)
+      if (contract.tax_amount && D(contract.tax_amount).gt(0)) {
+        try {
+          const manualTaxAmt = D(contract.tax_amount).toFixed(2);
+          const basePrice = contract.base_price ? D(contract.base_price).toFixed(2) : contract.gross_contract_value;
+          const taxRate = D(basePrice).gt(0) ? D(manualTaxAmt).div(basePrice).toFixed(4) : '0.0000';
+
+          const taxRow = {
+            tax_id: generateUUID(),
+            contract_id: contractId,
+            tax_type: 'Disposal 2.5% Case A',
+            taxable_base: basePrice,
+            tax_rate: taxRate,
+            tax_amount: manualTaxAmt,
+            remittance_status: 'Pending'
+          };
+          await supabase.from('erp_tax_records').insert([taxRow]);
+        } catch (e) {
+          console.warn('Could not insert manual apartment tax record:', e);
+        }
       }
 
       // If contract has lead_id, mark lead as closed_won in CRM
@@ -1156,4 +1266,138 @@ export class ERPSupabaseService {
 
     if (error) throw error;
   }
+
+  /**
+   * Add a new Property Lifecycle Material/Cost Item (بند تكلفة جديد).
+   */
+  static async addPropertyCostItem(
+    supabase: SupabaseClient,
+    item: ERPPropertyCostItem
+  ): Promise<void> {
+    try {
+      const payload: Record<string, unknown> = {
+        item_id: item.item_id,
+        property_id: item.property_id,
+        building_unit_id: item.building_unit_id || null,
+        unit_number: item.unit_number || null,
+        category: item.category,
+        phase: item.phase,
+        item_name_ar: item.item_name_ar,
+        item_name_en: item.item_name_en,
+        supplier_contractor: item.supplier_contractor || null,
+        invoice_ref: item.invoice_ref || null,
+        quantity: item.quantity,
+        unit: item.unit || 'مقطوعية',
+        unit_cost_egp: item.unit_cost_egp,
+        total_cost_egp: item.total_cost_egp,
+        logged_date: item.logged_date,
+        logged_by: item.logged_by || 'SYSTEM',
+        linked_account_code: item.linked_account_code || '151000',
+        status: item.status || 'verified',
+        notes: item.notes || null
+      };
+
+      await supabase.from('erp_property_costs').insert([payload]);
+    } catch (err) {
+      console.warn('Silent fallback on erp_property_costs insert:', err);
+    }
+  }
+
+  /**
+   * Delete a Property Lifecycle Cost Item.
+   */
+  static async deletePropertyCostItem(
+    supabase: SupabaseClient,
+    itemId: string
+  ): Promise<void> {
+    try {
+      await supabase.from('erp_property_costs').delete().eq('item_id', itemId);
+    } catch (err) {
+      console.warn('Silent fallback on erp_property_costs delete:', err);
+    }
+  }
+
+  /**
+   * Update Property Catalog Selling Price (from Calculator).
+   */
+  static async updatePropertySellingPrice(
+    supabase: SupabaseClient,
+    propertyId: string,
+    newPriceEgp: number
+  ): Promise<void> {
+    try {
+      const { error } = await supabase
+        .from('properties')
+        .update({ price_egp: newPriceEgp })
+        .eq('id', propertyId);
+      if (error) throw error;
+    } catch (err) {
+      console.warn('Silent fallback on property price_egp update:', err);
+    }
+  }
+
+  /**
+   * Update the status of a specific building unit (apartment) inside a building property.
+   */
+  static async updateBuildingUnitStatus(
+    supabase: SupabaseClient,
+    propertyId: string,
+    unitId: string,
+    newStatus: 'available' | 'reserved' | 'contracted',
+    contractId?: string,
+    contractNumber?: string,
+    buyerName?: string
+  ): Promise<void> {
+    try {
+      const { data: prop } = await supabase.from('properties').select('building_units').eq('id', propertyId).single();
+      if (prop && Array.isArray(prop.building_units)) {
+        const updatedUnits = prop.building_units.map((u: any) => {
+          if (u.unit_id === unitId) {
+            return {
+              ...u,
+              status: newStatus,
+              contract_id: contractId,
+              contract_number: contractNumber,
+              buyer_name: buyerName
+            };
+          }
+          return u;
+        });
+        await supabase.from('properties').update({ building_units: updatedUnits }).eq('id', propertyId);
+      }
+    } catch (err) {
+      console.warn('Silent fallback on updateBuildingUnitStatus:', err);
+    }
+  }
+
+  /**
+   * Update manual tax and pricing of a specific apartment inside a building property.
+   */
+  static async updateBuildingUnitTax(
+    supabase: SupabaseClient,
+    propertyId: string,
+    unitId: string,
+    taxAmountEgp: number,
+    taxDescription?: string
+  ): Promise<void> {
+    try {
+      const { data: prop } = await supabase.from('properties').select('building_units').eq('id', propertyId).single();
+      if (prop && Array.isArray(prop.building_units)) {
+        const updatedUnits = prop.building_units.map((u: any) => {
+          if (u.unit_id === unitId) {
+            return {
+              ...u,
+              tax_amount_egp: taxAmountEgp,
+              tax_description: taxDescription
+            };
+          }
+          return u;
+        });
+        await supabase.from('properties').update({ building_units: updatedUnits }).eq('id', propertyId);
+      }
+    } catch (err) {
+      console.warn('Silent fallback on updateBuildingUnitTax:', err);
+    }
+  }
 }
+

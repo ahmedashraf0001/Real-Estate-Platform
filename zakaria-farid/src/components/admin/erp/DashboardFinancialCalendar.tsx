@@ -5,19 +5,15 @@ import {
   Calendar as CalendarIcon, 
   ChevronLeft, 
   ChevronRight, 
-  Landmark, 
+  Wallet,
   FileText, 
-  ShieldCheck, 
   Clock, 
   ArrowUpRight, 
-  DollarSign, 
-  Layers, 
   List, 
   Grid, 
   CheckCircle2, 
-  AlertCircle,
-  X,
-  Sparkles
+  AlertTriangle,
+  X
 } from 'lucide-react';
 import { 
   ERPPDCRecord, 
@@ -31,39 +27,41 @@ interface DashboardFinancialCalendarProps {
   pdcRecords: ERPPDCRecord[];
   contracts: ERPContract[];
   schedules: ERPInstallmentSchedule[];
-  taxRecords: ERPTaxRecord[];
-  onInspectCheque: (cheque: ERPPDCRecord) => void;
+  taxRecords?: ERPTaxRecord[];
+  onInspectCheque?: (cheque: ERPPDCRecord) => void;
   onInspectContract: (contract: ERPContract) => void;
-  onInspectTax: (tax: ERPTaxRecord) => void;
+  onInspectTax?: (tax: ERPTaxRecord) => void;
+  onCollectItem?: (item: ERPPDCRecord) => void;
   isAr?: boolean;
 }
 
 export interface CalendarEvent {
   id: string;
   date: string; // YYYY-MM-DD
-  type: 'cheque' | 'installment' | 'tax';
+  type: 'installment';
   title: string;
   subtitle: string;
   amount: string;
   status: string;
+  statusKey: 'cleared' | 'overdue' | 'due_today' | 'due_later';
   isOverdue: boolean;
-  rawEntity: any;
+  isCollected: boolean;
+  rawEntity: { pdc?: ERPPDCRecord; schedule?: ERPInstallmentSchedule; contract?: ERPContract };
 }
 
 export const DashboardFinancialCalendar: React.FC<DashboardFinancialCalendarProps> = ({
-  pdcRecords,
-  contracts,
-  schedules,
-  taxRecords,
+  pdcRecords = [],
+  contracts = [],
+  schedules = [],
   onInspectCheque,
   onInspectContract,
-  onInspectTax,
+  onCollectItem,
   isAr = false
 }) => {
   const [currentDate, setCurrentDate] = useState<Date>(() => new Date());
   const [selectedDayStr, setSelectedDayStr] = useState<string | null>(() => new Date().toISOString().split('T')[0]);
   const [viewMode, setViewMode] = useState<'grid' | 'timeline'>('grid');
-  const [filterType, setFilterType] = useState<'all' | 'cheque' | 'installment' | 'tax'>('all');
+  const [filterType, setFilterType] = useState<'all' | 'cleared' | 'due_later' | 'overdue'>('all');
 
   const formatMoney = (val: string | number) => {
     return D(val).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
@@ -98,78 +96,105 @@ export const DashboardFinancialCalendar: React.FC<DashboardFinancialCalendarProp
     return new Date().toISOString().split('T')[0];
   }, []);
 
-  // Map all financial events across the system
+  // Map only contract installment dues - Zero Cheques & Zero Taxes
   const allEvents = useMemo<CalendarEvent[]>(() => {
     const events: CalendarEvent[] = [];
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const coveredScheduleIds = new Set<string>();
 
-    // 1. PDC Cheques
+    // 1. Primary Source: PDC Records (tracks live hand collection status)
     pdcRecords.forEach(pdc => {
       if (!pdc.due_date) return;
-      const d = new Date(pdc.due_date);
-      d.setHours(0, 0, 0, 0);
-      const isOverdue = pdc.status === 'In Safe' && d < today;
+      if (pdc.schedule_id) coveredScheduleIds.add(pdc.schedule_id);
 
-      events.push({
-        id: `cheque_${pdc.cheque_id}`,
-        date: pdc.due_date,
-        type: 'cheque',
-        title: isAr ? `شيك #${pdc.cheque_number}` : `Cheque #${pdc.cheque_number}`,
-        subtitle: `${pdc.bank_name} · ${pdc.drawer_name}`,
-        amount: pdc.nominal_value,
-        status: pdc.status,
-        isOverdue,
-        rawEntity: pdc
-      });
-    });
-
-    // 2. Contract Installment Schedules
-    schedules.forEach(schedule => {
-      if (!schedule.due_date) return;
-      const contract = contracts.find(c => c.contract_id === schedule.contract_id);
+      const contract = contracts.find(c => c.contract_id === pdc.contract_id);
       if (contract && contract.status === 'Rescinded') return;
 
-      const d = new Date(schedule.due_date);
-      d.setHours(0, 0, 0, 0);
-      const isOverdue = schedule.status === 'Pending' && d < today;
+      const isCollected = pdc.status === 'Cleared';
+      const isOverdue = !isCollected && pdc.due_date < todayStr;
+      const isDueToday = !isCollected && pdc.due_date === todayStr;
 
-      const contractNum = contract ? contract.contract_number : 'N/A';
-      const buyerName = contract ? contract.buyer_name : '';
+      const statusKey: 'cleared' | 'overdue' | 'due_today' | 'due_later' = isCollected
+        ? 'cleared'
+        : isOverdue
+        ? 'overdue'
+        : isDueToday
+        ? 'due_today'
+        : 'due_later';
+
+      const statusLabel = isCollected
+        ? (isAr ? 'تم التحصيل باليد (بالخزينة)' : 'Collected in Safe')
+        : isOverdue
+        ? (isAr ? 'متأخر عن موعد التحصيل' : 'Overdue')
+        : isDueToday
+        ? (isAr ? 'يستحق التحصيل اليوم' : 'Due Today')
+        : (isAr ? 'مستحق لاحقاً باليد' : 'Due Later');
+
+      const contractNum = contract ? `#${contract.contract_number}` : '';
+      const unitText = contract?.unit_id ? ` · ${contract.unit_id}` : '';
+      const buyerText = pdc.drawer_name || contract?.buyer_name || (isAr ? 'عميل' : 'Client');
 
       events.push({
-        id: `schedule_${schedule.schedule_id}`,
-        date: schedule.due_date,
+        id: `pdc_${pdc.cheque_id}`,
+        date: pdc.due_date,
         type: 'installment',
-        title: isAr ? `قسط عقد ${contractNum}` : `Tranche ${schedule.tranche_number}`,
-        subtitle: buyerName,
-        amount: schedule.nominal_value,
-        status: schedule.status,
+        title: isAr ? `قسط عقد ${contractNum}` : `Installment ${contractNum}`,
+        subtitle: `${buyerText}${unitText}`,
+        amount: pdc.nominal_value,
+        status: statusLabel,
+        statusKey,
         isOverdue,
-        rawEntity: { schedule, contract }
+        isCollected,
+        rawEntity: { pdc, contract }
       });
     });
 
-    // 3. Tax Records
-    taxRecords.forEach(tax => {
-      const dateStr = tax.created_at ? tax.created_at.split('T')[0] : '';
-      if (!dateStr) return;
+    // 2. Secondary Fallback: Contract Installment Schedules not covered by PDC records
+    schedules.forEach(sched => {
+      if (!sched.due_date || coveredScheduleIds.has(sched.schedule_id)) return;
+      const contract = contracts.find(c => c.contract_id === sched.contract_id);
+      if (contract && contract.status === 'Rescinded') return;
+
+      const isCollected = sched.status === 'Paid';
+      const isOverdue = !isCollected && sched.due_date < todayStr;
+      const isDueToday = !isCollected && sched.due_date === todayStr;
+
+      const statusKey: 'cleared' | 'overdue' | 'due_today' | 'due_later' = isCollected
+        ? 'cleared'
+        : isOverdue
+        ? 'overdue'
+        : isDueToday
+        ? 'due_today'
+        : 'due_later';
+
+      const statusLabel = isCollected
+        ? (isAr ? 'تم التحصيل باليد (بالخزينة)' : 'Collected in Safe')
+        : isOverdue
+        ? (isAr ? 'متأخر عن موعد التحصيل' : 'Overdue')
+        : isDueToday
+        ? (isAr ? 'يستحق التحصيل اليوم' : 'Due Today')
+        : (isAr ? 'مستحق لاحقاً باليد' : 'Due Later');
+
+      const contractNum = contract ? `#${contract.contract_number}` : '';
+      const unitText = contract?.unit_id ? ` · ${contract.unit_id}` : '';
+      const buyerText = contract?.buyer_name || (isAr ? 'عميل' : 'Client');
 
       events.push({
-        id: `tax_${tax.tax_id}`,
-        date: dateStr,
-        type: 'tax',
-        title: tax.tax_type,
-        subtitle: isAr ? 'مستحق لمصلحة الضرائب' : 'ETA Liability',
-        amount: tax.tax_amount,
-        status: tax.remittance_status,
-        isOverdue: false,
-        rawEntity: tax
+        id: `sched_${sched.schedule_id}`,
+        date: sched.due_date,
+        type: 'installment',
+        title: isAr ? `قسط عقد ${contractNum} (دفعة ${sched.tranche_number})` : `Tranche ${sched.tranche_number} (${contractNum})`,
+        subtitle: `${buyerText}${unitText}`,
+        amount: sched.nominal_value,
+        status: statusLabel,
+        statusKey,
+        isOverdue,
+        isCollected,
+        rawEntity: { schedule: sched, contract }
       });
     });
 
     return events;
-  }, [pdcRecords, schedules, contracts, taxRecords, isAr]);
+  }, [pdcRecords, schedules, contracts, todayStr, isAr]);
 
   // Filter events for the current displayed month
   const monthEvents = useMemo(() => {
@@ -177,30 +202,38 @@ export const DashboardFinancialCalendar: React.FC<DashboardFinancialCalendarProp
     return allEvents.filter(e => {
       if (!e.date.startsWith(prefix)) return false;
       if (filterType === 'all') return true;
-      return e.type === filterType;
+      if (filterType === 'cleared') return e.isCollected;
+      if (filterType === 'overdue') return e.isOverdue;
+      if (filterType === 'due_later') return !e.isCollected && !e.isOverdue;
+      return true;
     });
   }, [allEvents, currentYear, currentMonth, filterType]);
 
   // Aggregate stats for the current month
   const monthStats = useMemo(() => {
-    const chequesInMonth = monthEvents.filter(e => e.type === 'cheque');
-    const installmentsInMonth = monthEvents.filter(e => e.type === 'installment');
+    const prefix = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`;
+    const allCurrentMonthEvents = allEvents.filter(e => e.date.startsWith(prefix));
 
-    const totalChequesValue = chequesInMonth.reduce((acc, c) => acc.plus(c.amount || 0), D(0));
-    const totalInstallmentsValue = installmentsInMonth.reduce((acc, i) => acc.plus(i.amount || 0), D(0));
-    const totalProjectedInflow = totalChequesValue.plus(totalInstallmentsValue);
+    const totalMonthValue = allCurrentMonthEvents.reduce((acc, e) => acc.plus(e.amount || 0), D(0));
+    const collectedInMonth = allCurrentMonthEvents.filter(e => e.isCollected);
+    const overdueInMonth = allCurrentMonthEvents.filter(e => e.isOverdue);
+    const pendingInMonth = allCurrentMonthEvents.filter(e => !e.isCollected && !e.isOverdue);
 
-    const clearedChequesCount = chequesInMonth.filter(c => c.status === 'Cleared').length;
+    const collectedSum = collectedInMonth.reduce((acc, e) => acc.plus(e.amount || 0), D(0));
+    const overdueSum = overdueInMonth.reduce((acc, e) => acc.plus(e.amount || 0), D(0));
+    const pendingSum = pendingInMonth.reduce((acc, e) => acc.plus(e.amount || 0), D(0));
 
     return {
-      totalProjectedInflow: totalProjectedInflow.toFixed(2),
-      totalChequesValue: totalChequesValue.toFixed(2),
-      chequesCount: chequesInMonth.length,
-      clearedChequesCount,
-      totalInstallmentsValue: totalInstallmentsValue.toFixed(2),
-      installmentsCount: installmentsInMonth.length
+      totalMonthValue: totalMonthValue.toFixed(2),
+      totalCount: allCurrentMonthEvents.length,
+      collectedSum: collectedSum.toFixed(2),
+      collectedCount: collectedInMonth.length,
+      overdueSum: overdueSum.toFixed(2),
+      overdueCount: overdueInMonth.length,
+      pendingSum: pendingSum.toFixed(2),
+      pendingCount: pendingInMonth.length
     };
-  }, [monthEvents]);
+  }, [allEvents, currentYear, currentMonth]);
 
   // Group month events by date (YYYY-MM-DD)
   const eventsByDate = useMemo(() => {
@@ -213,11 +246,18 @@ export const DashboardFinancialCalendar: React.FC<DashboardFinancialCalendarProp
     return map;
   }, [monthEvents]);
 
-  // Selected Day Events
+  // Selected Day Events (filter according to active category or all)
   const selectedDayEvents = useMemo(() => {
     if (!selectedDayStr) return [];
-    return allEvents.filter(e => e.date === selectedDayStr);
-  }, [allEvents, selectedDayStr]);
+    return allEvents.filter(e => {
+      if (e.date !== selectedDayStr) return false;
+      if (filterType === 'all') return true;
+      if (filterType === 'cleared') return e.isCollected;
+      if (filterType === 'overdue') return e.isOverdue;
+      if (filterType === 'due_later') return !e.isCollected && !e.isOverdue;
+      return true;
+    });
+  }, [allEvents, selectedDayStr, filterType]);
 
   // Calendar Grid Days Calculation
   const calendarDays = useMemo(() => {
@@ -225,14 +265,7 @@ export const DashboardFinancialCalendar: React.FC<DashboardFinancialCalendarProp
     const lastDayOfMonth = new Date(currentYear, currentMonth + 1, 0);
 
     const totalDaysInMonth = lastDayOfMonth.getDate();
-    
-    // In Arabic (Egypt/Middle East), week starts on Saturday (Day 6 of standard JS Date)
-    // 0 = Sunday, 1 = Monday, 2 = Tuesday, 3 = Wednesday, 4 = Thursday, 5 = Friday, 6 = Saturday
-    let startDayOfWeek = firstDayOfMonth.getDay(); 
-    // Shift so Saturday is index 0:
-    // Saturday (6) -> 0
-    // Sunday (0) -> 1
-    // Monday (1) -> 2, etc.
+    const startDayOfWeek = firstDayOfMonth.getDay(); 
     const startOffset = isAr ? (startDayOfWeek + 1) % 7 : startDayOfWeek;
 
     const days: Array<{
@@ -244,7 +277,6 @@ export const DashboardFinancialCalendar: React.FC<DashboardFinancialCalendarProp
       totalAmount: string;
     }> = [];
 
-    // Days from current month
     for (let day = 1; day <= totalDaysInMonth; day++) {
       const dateStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
       const dayEvents = eventsByDate.get(dateStr) || [];
@@ -312,10 +344,10 @@ export const DashboardFinancialCalendar: React.FC<DashboardFinancialCalendarProp
           </div>
           <div>
             <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: '#ffffff' }}>
-              {isAr ? 'التقويم المالي وجدول استحقاق الشيكات' : 'Monthly Financial & Cheque Maturity Calendar'}
+              {isAr ? 'التقويم المالي وجدول استحقاق الأقساط' : 'Monthly Financial & Installment Dues Calendar'}
             </h3>
             <span style={{ fontSize: '0.72rem', color: '#94a3b8' }}>
-              {isAr ? 'خريطة زمنية متكاملة لجميع استحقاقات الشيكات وتدفقات الأقساط الشهرية' : 'Comprehensive timeline of cheque maturities and installment cashflows'}
+              {isAr ? 'خريطة زمنية متكاملة لجميع استحقاقات وتدفقات الأقساط التعاقدية نقداً باليد' : 'Comprehensive timeline of contract installment dues and hand collections'}
             </span>
           </div>
         </div>
@@ -458,71 +490,99 @@ export const DashboardFinancialCalendar: React.FC<DashboardFinancialCalendarProp
         </div>
       </div>
 
-      {/* Monthly Summary Telemetry Strip */}
+      {/* Monthly Hand Installments Telemetry Strip */}
       <div style={{
         display: 'grid',
         gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
         gap: '0.75rem'
       }}>
-        {/* Tile 1: Projected Month Inflow */}
+        {/* Tile 1: Total Projected Month Inflows */}
         <div style={{
           background: 'rgba(0, 0, 0, 0.35)',
           border: '1px solid rgba(212, 175, 55, 0.25)',
           borderRadius: '10px',
           padding: '0.75rem 0.95rem'
         }}>
-          <span style={{ fontSize: '0.68rem', color: '#e2c974', fontWeight: 700, display: 'block' }}>
-            {isAr ? 'إجمالي التدفقات المتوقعة للشهر' : 'Projected Inflows'}
-          </span>
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.3rem', marginTop: '0.2rem' }}>
-            <span style={{ fontSize: '1.25rem', fontWeight: 800, color: '#ffffff', fontFamily: 'monospace' }}>
-              {formatMoney(monthStats.totalProjectedInflow)}
-            </span>
-            <span style={{ fontSize: '0.68rem', color: '#94a3b8' }}>{isAr ? 'ج.م' : 'EGP'}</span>
-          </div>
-        </div>
-
-        {/* Tile 2: Cheques in Safe this month */}
-        <div style={{
-          background: 'rgba(0, 0, 0, 0.35)',
-          border: '1px solid rgba(255, 255, 255, 0.08)',
-          borderRadius: '10px',
-          padding: '0.75rem 0.95rem'
-        }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '0.68rem', color: '#94a3b8', fontWeight: 700 }}>
-              {isAr ? 'شيكات تستحق هذا الشهر' : 'PDCs Due This Month'}
+            <span style={{ fontSize: '0.68rem', color: '#e2c974', fontWeight: 700 }}>
+              {isAr ? 'إجمالي أقساط الشهر المجدولة' : 'Projected Month Dues'}
             </span>
             <span style={{ fontSize: '0.65rem', color: '#e2c974', fontWeight: 800 }}>
-              {monthStats.chequesCount} {isAr ? 'شيك' : 'cheques'}
+              {monthStats.totalCount} {isAr ? 'قسط' : 'dues'}
             </span>
           </div>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.3rem', marginTop: '0.2rem' }}>
-            <span style={{ fontSize: '1.25rem', fontWeight: 800, color: '#cbd5e1', fontFamily: 'monospace' }}>
-              {formatMoney(monthStats.totalChequesValue)}
+            <span style={{ fontSize: '1.25rem', fontWeight: 800, color: '#ffffff', fontFamily: 'monospace' }}>
+              {formatMoney(monthStats.totalMonthValue)}
             </span>
             <span style={{ fontSize: '0.68rem', color: '#94a3b8' }}>{isAr ? 'ج.م' : 'EGP'}</span>
           </div>
         </div>
 
-        {/* Tile 3: Installments scheduled */}
+        {/* Tile 2: Collected in Safe */}
         <div style={{
           background: 'rgba(0, 0, 0, 0.35)',
-          border: '1px solid rgba(255, 255, 255, 0.08)',
+          border: '1px solid rgba(16, 185, 129, 0.25)',
           borderRadius: '10px',
           padding: '0.75rem 0.95rem'
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '0.68rem', color: '#94a3b8', fontWeight: 700 }}>
-              {isAr ? 'أقساط مجدولة للتحصيل' : 'Installments Scheduled'}
+            <span style={{ fontSize: '0.68rem', color: '#6ee7b7', fontWeight: 700 }}>
+              {isAr ? 'تم التحصيل باليد (بالخزينة)' : 'Collected by Hand'}
             </span>
-            <span style={{ fontSize: '0.65rem', color: '#10b981', fontWeight: 800 }}>
-              {monthStats.installmentsCount} {isAr ? 'قسط' : 'tranches'}
+            <span style={{ fontSize: '0.65rem', color: '#34d399', fontWeight: 800 }}>
+              {monthStats.collectedCount} {isAr ? 'محصل' : 'collected'}
             </span>
           </div>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.3rem', marginTop: '0.2rem' }}>
-            <span style={{ fontSize: '1.25rem', fontWeight: 800, color: '#cbd5e1', fontFamily: 'monospace' }}>
-              {formatMoney(monthStats.totalInstallmentsValue)}
+            <span style={{ fontSize: '1.25rem', fontWeight: 800, color: '#34d399', fontFamily: 'monospace' }}>
+              {formatMoney(monthStats.collectedSum)}
+            </span>
+            <span style={{ fontSize: '0.68rem', color: '#94a3b8' }}>{isAr ? 'ج.م' : 'EGP'}</span>
+          </div>
+        </div>
+
+        {/* Tile 3: Due Later */}
+        <div style={{
+          background: 'rgba(0, 0, 0, 0.35)',
+          border: '1px solid rgba(56, 189, 248, 0.25)',
+          borderRadius: '10px',
+          padding: '0.75rem 0.95rem'
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: '0.68rem', color: '#93c5fd', fontWeight: 700 }}>
+              {isAr ? 'أقساط مستحقة لاحقاً باليد' : 'Due Later by Hand'}
+            </span>
+            <span style={{ fontSize: '0.65rem', color: '#38bdf8', fontWeight: 800 }}>
+              {monthStats.pendingCount} {isAr ? 'قادم' : 'upcoming'}
+            </span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.3rem', marginTop: '0.2rem' }}>
+            <span style={{ fontSize: '1.25rem', fontWeight: 800, color: '#38bdf8', fontFamily: 'monospace' }}>
+              {formatMoney(monthStats.pendingSum)}
+            </span>
+            <span style={{ fontSize: '0.68rem', color: '#94a3b8' }}>{isAr ? 'ج.م' : 'EGP'}</span>
+          </div>
+        </div>
+
+        {/* Tile 4: Overdue */}
+        <div style={{
+          background: 'rgba(0, 0, 0, 0.35)',
+          border: '1px solid rgba(239, 68, 68, 0.25)',
+          borderRadius: '10px',
+          padding: '0.75rem 0.95rem'
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: '0.68rem', color: '#fca5a5', fontWeight: 700 }}>
+              {isAr ? 'أقساط متأخرة عن موعدها' : 'Overdue Hand Dues'}
+            </span>
+            <span style={{ fontSize: '0.65rem', color: '#f87171', fontWeight: 800 }}>
+              {monthStats.overdueCount} {isAr ? 'متأخر' : 'overdue'}
+            </span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.3rem', marginTop: '0.2rem' }}>
+            <span style={{ fontSize: '1.25rem', fontWeight: 800, color: '#f87171', fontFamily: 'monospace' }}>
+              {formatMoney(monthStats.overdueSum)}
             </span>
             <span style={{ fontSize: '0.68rem', color: '#94a3b8' }}>{isAr ? 'ج.م' : 'EGP'}</span>
           </div>
@@ -532,10 +592,10 @@ export const DashboardFinancialCalendar: React.FC<DashboardFinancialCalendarProp
       {/* Filter Category Chips */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', flexWrap: 'wrap' }}>
         {[
-          { id: 'all', labelAr: 'كل الاستحقاقات', labelEn: 'All Events' },
-          { id: 'cheque', labelAr: 'شيكات مؤجلة (PDC)', labelEn: 'PDC Cheques', color: '#d4af37' },
-          { id: 'installment', labelAr: 'أقساط تعاقدية', labelEn: 'Installments', color: '#10b981' },
-          { id: 'tax', labelAr: 'استحقاقات ضرائب', labelEn: 'Tax Liabilities', color: '#3b82f6' }
+          { id: 'all', labelAr: 'كل الأقساط', labelEn: 'All Installments' },
+          { id: 'cleared', labelAr: 'تم التحصيل باليد', labelEn: 'Collected', color: '#10b981' },
+          { id: 'due_later', labelAr: 'مستحقة لاحقاً باليد', labelEn: 'Due Later', color: '#38bdf8' },
+          { id: 'overdue', labelAr: 'متأخرة عن موعدها', labelEn: 'Overdue', color: '#ef4444' }
         ].map(chip => {
           const isActive = filterType === chip.id;
           return (
@@ -672,12 +732,16 @@ export const DashboardFinancialCalendar: React.FC<DashboardFinancialCalendarProp
                             fontWeight: 700,
                             padding: '0.12rem 0.35rem',
                             borderRadius: '4px',
-                            background: ev.type === 'cheque' 
-                              ? (ev.isOverdue ? 'rgba(239, 68, 68, 0.25)' : 'rgba(212, 175, 55, 0.2)') 
-                              : (ev.type === 'installment' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(59, 130, 246, 0.2)'),
-                            color: ev.type === 'cheque' 
-                              ? (ev.isOverdue ? '#fca5a5' : '#e2c974') 
-                              : (ev.type === 'installment' ? '#6ee7b7' : '#93c5fd'),
+                            background: ev.isCollected
+                              ? 'rgba(16, 185, 129, 0.2)'
+                              : ev.isOverdue
+                              ? 'rgba(239, 68, 68, 0.25)'
+                              : 'rgba(56, 189, 248, 0.2)',
+                            color: ev.isCollected
+                              ? '#6ee7b7'
+                              : ev.isOverdue
+                              ? '#fca5a5'
+                              : '#93c5fd',
                             whiteSpace: 'nowrap',
                             overflow: 'hidden',
                             textOverflow: 'ellipsis'
@@ -732,7 +796,7 @@ export const DashboardFinancialCalendar: React.FC<DashboardFinancialCalendarProp
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   <Clock size={16} color="#d4af37" />
                   <h4 style={{ margin: 0, fontSize: '0.92rem', fontWeight: 800, color: '#ffffff' }}>
-                    {isAr ? `جدول استحقاقات يوم: ${selectedDayStr}` : `Schedule for: ${selectedDayStr}`}
+                    {isAr ? `جدول استحقاقات أقساط يوم: ${selectedDayStr}` : `Installment Dues for: ${selectedDayStr}`}
                   </h4>
                   <span style={{
                     fontSize: '0.65rem',
@@ -743,7 +807,7 @@ export const DashboardFinancialCalendar: React.FC<DashboardFinancialCalendarProp
                     color: '#e2c974',
                     fontFamily: 'monospace'
                   }}>
-                    {selectedDayEvents.length} {isAr ? 'عنصر' : 'items'}
+                    {selectedDayEvents.length} {isAr ? 'أقساط' : 'dues'}
                   </span>
                 </div>
 
@@ -763,7 +827,7 @@ export const DashboardFinancialCalendar: React.FC<DashboardFinancialCalendarProp
 
               {selectedDayEvents.length === 0 ? (
                 <div style={{ fontSize: '0.78rem', color: '#64748b', textAlign: 'center', padding: '1.25rem 0' }}>
-                  {isAr ? 'لا توجد شيكات أو أقساط مستحقة في هذا اليوم المختار.' : 'No cheques or installment dues on this selected date.'}
+                  {isAr ? 'لا توجد أقساط تعاقدية مستحقة في هذا اليوم المختار.' : 'No contract installments due on this selected date.'}
                 </div>
               ) : (
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '0.65rem' }}>
@@ -772,26 +836,42 @@ export const DashboardFinancialCalendar: React.FC<DashboardFinancialCalendarProp
                       key={ev.id}
                       style={{
                         background: 'rgba(0, 0, 0, 0.35)',
-                        border: '1px solid rgba(255, 255, 255, 0.08)',
+                        border: ev.isCollected 
+                          ? '1px solid rgba(16, 185, 129, 0.35)'
+                          : ev.isOverdue 
+                          ? '1px solid rgba(239, 68, 68, 0.4)' 
+                          : '1px solid rgba(255, 255, 255, 0.08)',
                         borderRadius: '9px',
                         padding: '0.75rem 0.95rem',
                         display: 'flex',
                         flexDirection: 'column',
-                        gap: '0.4rem'
+                        gap: '0.45rem'
                       }}
                     >
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                          {ev.type === 'cheque' && <Landmark size={14} color="#e2c974" />}
-                          {ev.type === 'installment' && <FileText size={14} color="#6ee7b7" />}
-                          {ev.type === 'tax' && <ShieldCheck size={14} color="#93c5fd" />}
+                          <Wallet size={14} color="var(--zf-gold, #d4af37)" />
                           <span style={{ fontSize: '0.8rem', fontWeight: 800, color: '#ffffff' }}>
                             {ev.title}
                           </span>
                         </div>
-                        <span style={{ fontSize: '0.64rem', fontWeight: 700, color: '#94a3b8' }}>
-                          {ev.status}
-                        </span>
+                        {ev.isCollected ? (
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.65rem', fontWeight: 800, color: '#34d399', background: 'rgba(16, 185, 129, 0.15)', padding: '0.12rem 0.45rem', borderRadius: '4px', border: '1px solid rgba(16, 185, 129, 0.3)' }}>
+                            <CheckCircle2 size={10} /> {isAr ? 'تم التحصيل باليد' : 'Collected'}
+                          </span>
+                        ) : ev.isOverdue ? (
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.65rem', fontWeight: 800, color: '#f87171', background: 'rgba(239, 68, 68, 0.15)', padding: '0.12rem 0.45rem', borderRadius: '4px', border: '1px solid rgba(239, 68, 68, 0.3)' }}>
+                            <AlertTriangle size={10} /> {isAr ? 'متأخر' : 'Overdue'}
+                          </span>
+                        ) : ev.statusKey === 'due_today' ? (
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.65rem', fontWeight: 800, color: '#fbbf24', background: 'rgba(245, 158, 11, 0.15)', padding: '0.12rem 0.45rem', borderRadius: '4px', border: '1px solid rgba(245, 158, 11, 0.3)' }}>
+                            <Clock size={10} /> {isAr ? 'يستحق اليوم' : 'Due Today'}
+                          </span>
+                        ) : (
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.65rem', fontWeight: 800, color: '#93c5fd', background: 'rgba(56, 189, 248, 0.15)', padding: '0.12rem 0.45rem', borderRadius: '4px', border: '1px solid rgba(56, 189, 248, 0.3)' }}>
+                            <CalendarIcon size={10} /> {isAr ? 'مستحق لاحقاً' : 'Due Later'}
+                          </span>
+                        )}
                       </div>
 
                       <div style={{ fontSize: '0.72rem', color: '#94a3b8' }}>
@@ -810,30 +890,54 @@ export const DashboardFinancialCalendar: React.FC<DashboardFinancialCalendarProp
                           {formatMoney(ev.amount)} {isAr ? 'ج.م' : 'EGP'}
                         </span>
 
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (ev.type === 'cheque') onInspectCheque(ev.rawEntity);
-                            else if (ev.type === 'installment') ev.rawEntity.contract && onInspectContract(ev.rawEntity.contract);
-                            else if (ev.type === 'tax') onInspectTax(ev.rawEntity);
-                          }}
-                          style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '0.3rem',
-                            background: 'rgba(212, 175, 55, 0.12)',
-                            border: '1px solid rgba(212, 175, 55, 0.35)',
-                            color: '#e2c974',
-                            padding: '0.22rem 0.5rem',
-                            borderRadius: '5px',
-                            fontSize: '0.68rem',
-                            fontWeight: 700,
-                            cursor: 'pointer'
-                          }}
-                        >
-                          <span>{isAr ? 'فحص ومعاينة' : 'Inspect'}</span>
-                          <ArrowUpRight size={11} />
-                        </button>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                          {!ev.isCollected && ev.rawEntity?.pdc && onCollectItem && (
+                            <button
+                              type="button"
+                              onClick={() => onCollectItem(ev.rawEntity.pdc!)}
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '0.3rem',
+                                background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.25) 0%, rgba(5, 150, 105, 0.35) 100%)',
+                                border: '1px solid rgba(16, 185, 129, 0.5)',
+                                color: '#6ee7b7',
+                                padding: '0.22rem 0.55rem',
+                                borderRadius: '5px',
+                                fontSize: '0.68rem',
+                                fontWeight: 800,
+                                cursor: 'pointer'
+                              }}
+                            >
+                              <Wallet size={11} />
+                              <span>{isAr ? 'تحصيل نقداً باليد' : 'Collect Cash'}</span>
+                            </button>
+                          )}
+
+                          {ev.rawEntity?.contract && (
+                            <button
+                              type="button"
+                              onClick={() => onInspectContract(ev.rawEntity.contract!)}
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '0.25rem',
+                                background: 'rgba(255, 255, 255, 0.06)',
+                                border: '1px solid rgba(255, 255, 255, 0.12)',
+                                color: '#cbd5e1',
+                                padding: '0.22rem 0.45rem',
+                                borderRadius: '5px',
+                                fontSize: '0.66rem',
+                                fontWeight: 700,
+                                cursor: 'pointer'
+                              }}
+                              title={isAr ? 'معاينة ملف العقد' : 'Inspect Contract'}
+                            >
+                              <FileText size={11} />
+                              <span>{isAr ? 'العقد' : 'Contract'}</span>
+                            </button>
+                          )}
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -856,7 +960,7 @@ export const DashboardFinancialCalendar: React.FC<DashboardFinancialCalendarProp
         }}>
           {monthEvents.length === 0 ? (
             <div style={{ fontSize: '0.82rem', color: '#64748b', textAlign: 'center', padding: '2rem 0' }}>
-              {isAr ? 'لا توجد استحقاقات مالية مجدولة في هذا الشهر.' : 'No financial dues scheduled in this month.'}
+              {isAr ? 'لا توجد أقساط مجدولة في هذا الشهر.' : 'No installments scheduled in this month.'}
             </div>
           ) : (
             monthEvents.map(ev => (
@@ -865,9 +969,9 @@ export const DashboardFinancialCalendar: React.FC<DashboardFinancialCalendarProp
                 style={{
                   background: 'rgba(12, 16, 25, 0.8)',
                   border: '1px solid rgba(255, 255, 255, 0.08)',
-                  borderInlineStart: ev.type === 'cheque' 
-                    ? '3px solid #d4af37' 
-                    : (ev.type === 'installment' ? '3px solid #10b981' : '3px solid #3b82f6'),
+                  borderInlineStart: ev.isCollected 
+                    ? '3px solid #10b981' 
+                    : (ev.isOverdue ? '3px solid #ef4444' : '3px solid #38bdf8'),
                   borderRadius: '10px',
                   padding: '0.85rem 1.15rem',
                   display: 'flex',
@@ -908,8 +1012,8 @@ export const DashboardFinancialCalendar: React.FC<DashboardFinancialCalendarProp
                         fontWeight: 700,
                         padding: '0.08rem 0.35rem',
                         borderRadius: '4px',
-                        background: 'rgba(255, 255, 255, 0.06)',
-                        color: '#94a3b8'
+                        background: ev.isCollected ? 'rgba(16, 185, 129, 0.15)' : (ev.isOverdue ? 'rgba(239, 68, 68, 0.15)' : 'rgba(56, 189, 248, 0.15)'),
+                        color: ev.isCollected ? '#34d399' : (ev.isOverdue ? '#f87171' : '#93c5fd')
                       }}>
                         {ev.status}
                       </span>
@@ -928,30 +1032,53 @@ export const DashboardFinancialCalendar: React.FC<DashboardFinancialCalendarProp
                     <span style={{ fontSize: '0.68rem', color: '#94a3b8' }}>{isAr ? 'ج.م' : 'EGP'}</span>
                   </div>
 
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (ev.type === 'cheque') onInspectCheque(ev.rawEntity);
-                      else if (ev.type === 'installment') ev.rawEntity.contract && onInspectContract(ev.rawEntity.contract);
-                      else if (ev.type === 'tax') onInspectTax(ev.rawEntity);
-                    }}
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '0.3rem',
-                      background: 'rgba(212, 175, 55, 0.12)',
-                      border: '1px solid rgba(212, 175, 55, 0.35)',
-                      color: '#e2c974',
-                      padding: '0.3rem 0.6rem',
-                      borderRadius: '6px',
-                      fontSize: '0.72rem',
-                      fontWeight: 700,
-                      cursor: 'pointer'
-                    }}
-                  >
-                    <span>{isAr ? 'فحص' : 'Inspect'}</span>
-                    <ArrowUpRight size={12} />
-                  </button>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                    {!ev.isCollected && ev.rawEntity?.pdc && onCollectItem && (
+                      <button
+                        type="button"
+                        onClick={() => onCollectItem(ev.rawEntity.pdc!)}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '0.3rem',
+                          background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.2) 0%, rgba(5, 150, 105, 0.3) 100%)',
+                          border: '1px solid rgba(16, 185, 129, 0.45)',
+                          color: '#6ee7b7',
+                          padding: '0.3rem 0.6rem',
+                          borderRadius: '6px',
+                          fontSize: '0.72rem',
+                          fontWeight: 800,
+                          cursor: 'pointer'
+                        }}
+                      >
+                        <Wallet size={12} />
+                        <span>{isAr ? 'تحصيل باليد' : 'Collect'}</span>
+                      </button>
+                    )}
+
+                    {ev.rawEntity?.contract && (
+                      <button
+                        type="button"
+                        onClick={() => onInspectContract(ev.rawEntity.contract!)}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '0.3rem',
+                          background: 'rgba(255, 255, 255, 0.05)',
+                          border: '1px solid rgba(255, 255, 255, 0.15)',
+                          color: '#cbd5e1',
+                          padding: '0.3rem 0.6rem',
+                          borderRadius: '6px',
+                          fontSize: '0.72rem',
+                          fontWeight: 700,
+                          cursor: 'pointer'
+                        }}
+                      >
+                        <span>{isAr ? 'العقد' : 'Contract'}</span>
+                        <ArrowUpRight size={12} />
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
             ))

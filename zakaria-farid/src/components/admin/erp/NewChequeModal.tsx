@@ -2,21 +2,19 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { 
-  Landmark, 
+  Wallet, 
   X, 
-  Plus, 
   Check, 
   Calendar, 
   FileText, 
   DollarSign, 
   ShieldCheck, 
-  Sparkles, 
   Loader2,
   Building2,
-  ChevronDown,
+  Receipt,
   Clock
 } from 'lucide-react';
-import { ERPContract, ERPInstallmentSchedule, ERPPDCRecord } from '@/lib/erp/types';
+import { ERPContract, ERPInstallmentSchedule } from '@/lib/erp/types';
 import { tafqeetEGP } from '@/lib/erp/tafqeet';
 import { D } from '@/lib/erp/math';
 
@@ -25,7 +23,7 @@ interface NewChequeModalProps {
   onClose: () => void;
   contracts: ERPContract[];
   schedules: ERPInstallmentSchedule[];
-  onSaveCheque: (chequeData: {
+  onSaveCheque: (itemData: {
     contractId: string;
     scheduleId?: string;
     chequeNumber: string;
@@ -38,18 +36,6 @@ interface NewChequeModalProps {
   isAr?: boolean;
 }
 
-const EGYPTIAN_BANKS = [
-  { id: 'CIB', nameAr: 'البنك التجاري الدولي (CIB)', nameEn: 'Commercial International Bank (CIB)', code: 'CIB' },
-  { id: 'NBE', nameAr: 'البنك الأهلي المصري (NBE)', nameEn: 'National Bank of Egypt (NBE)', code: 'NBE' },
-  { id: 'BM', nameAr: 'بنك مصر (Banque Misr)', nameEn: 'Banque Misr', code: 'BM' },
-  { id: 'QNB', nameAr: 'بنك قطر الوطني (QNB)', nameEn: 'QNB Alahli', code: 'QNB' },
-  { id: 'ADIB', nameAr: 'مصرف أبوظبي الإسلامي (ADIB)', nameEn: 'ADIB Egypt', code: 'ADIB' },
-  { id: 'ALEX', nameAr: 'بنك الإسكندرية (AlexBank)', nameEn: 'Bank of Alexandria', code: 'ALEX' },
-  { id: 'HSBC', nameAr: 'إتش إس بي سي مصر (HSBC)', nameEn: 'HSBC Egypt', code: 'HSBC' },
-  { id: 'FAISAL', nameAr: 'بنك فيصل الإسلامي', nameEn: 'Faisal Islamic Bank', code: 'FAISAL' },
-  { id: 'OTHER', nameAr: 'بنك آخر...', nameEn: 'Other Bank...', code: 'OTHER' }
-];
-
 export const NewChequeModal: React.FC<NewChequeModalProps> = ({
   isOpen,
   onClose,
@@ -61,12 +47,11 @@ export const NewChequeModal: React.FC<NewChequeModalProps> = ({
 }) => {
   const [selectedContractId, setSelectedContractId] = useState<string>('');
   const [selectedScheduleId, setSelectedScheduleId] = useState<string>('');
-  const [chequeNumber, setChequeNumber] = useState<string>('');
-  const [selectedBankId, setSelectedBankId] = useState<string>('CIB');
-  const [customBankName, setCustomBankName] = useState<string>('');
+  const [itemCode, setItemCode] = useState<string>('');
   const [drawerName, setDrawerName] = useState<string>('');
   const [nominalValue, setNominalValue] = useState<string>('250000');
   const [dueDate, setDueDate] = useState<string>(() => new Date().toISOString().split('T')[0]);
+  const [collectionTiming, setCollectionTiming] = useState<'intime' | 'later'>('later');
   const [contractSearchQuery, setContractSearchQuery] = useState<string>('');
 
   // Reset or initialize on open
@@ -77,12 +62,12 @@ export const NewChequeModal: React.FC<NewChequeModalProps> = ({
         setSelectedContractId(firstContract.contract_id);
         setDrawerName(firstContract.buyer_name || '');
       }
-      if (!chequeNumber) {
-        const randomNum = Math.floor(100000 + Math.random() * 900000);
-        setChequeNumber(`CHQ-${randomNum}`);
+      if (!itemCode) {
+        const randomNum = Math.floor(10000 + Math.random() * 90000);
+        setItemCode(`DUE-${randomNum}`);
       }
     }
-  }, [isOpen, contracts, selectedContractId, chequeNumber]);
+  }, [isOpen, contracts, selectedContractId, itemCode]);
 
   // Active Contract
   const activeContract = useMemo(() => {
@@ -96,15 +81,6 @@ export const NewChequeModal: React.FC<NewChequeModalProps> = ({
       .filter(s => s.contract_id === selectedContractId && s.status === 'Pending')
       .sort((a, b) => a.tranche_number - b.tranche_number);
   }, [schedules, selectedContractId]);
-
-  // Bank name resolution
-  const resolvedBankName = useMemo(() => {
-    if (selectedBankId === 'OTHER') {
-      return customBankName.trim() || (isAr ? 'بنك تجاري معتمد' : 'Authorized Commercial Bank');
-    }
-    const b = EGYPTIAN_BANKS.find(item => item.id === selectedBankId);
-    return b ? (isAr ? b.nameAr : b.nameEn) : 'CIB';
-  }, [selectedBankId, customBankName, isAr]);
 
   // Tafqeet in Arabic
   const tafqeetText = useMemo(() => {
@@ -140,32 +116,33 @@ export const NewChequeModal: React.FC<NewChequeModalProps> = ({
     setDueDate(schedule.due_date);
   };
 
-  const handleClearScheduleSelection = () => {
-    setSelectedScheduleId('');
-  };
-
-  // Handle submit
+  // Submit Handler
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedContractId) {
-      alert(isAr ? 'يرجى اختيار العقد المرتبط بالشيك' : 'Please select a linked contract');
+      alert(isAr ? 'يرجى اختيار العقد المرتبط' : 'Please select a contract');
       return;
     }
-    if (!chequeNumber.trim()) {
-      alert(isAr ? 'يرجى إدخال رقم الشيك' : 'Please enter cheque number');
+    if (!itemCode.trim()) {
+      alert(isAr ? 'يرجى إدخال كود البند / رقم الإيصال' : 'Item code is required');
       return;
     }
-    if (!nominalValue || parseFloat(nominalValue) <= 0) {
-      alert(isAr ? 'يرجى إدخال قيمة صحيحة للشيك' : 'Please enter a valid amount');
+    if (!drawerName.trim()) {
+      alert(isAr ? 'يرجى إدخال اسم العميل الملتزم بالسداد' : 'Payer name is required');
+      return;
+    }
+    const val = parseFloat(nominalValue);
+    if (isNaN(val) || val <= 0) {
+      alert(isAr ? 'يرجى إدخال قيمة صحيحة للبند' : 'Invalid value');
       return;
     }
 
     await onSaveCheque({
       contractId: selectedContractId,
       scheduleId: selectedScheduleId || undefined,
-      chequeNumber: chequeNumber.trim(),
-      bankName: resolvedBankName,
-      drawerName: drawerName.trim() || (activeContract?.buyer_name || 'العميل'),
+      chequeNumber: itemCode.trim(),
+      bankName: isAr ? 'الخزينة الرئيسية (نقداً باليد - 101000)' : 'Main Safe (Cash by Hand - 101000)',
+      drawerName: drawerName.trim(),
       nominalValue: D(nominalValue).toFixed(2),
       dueDate
     });
@@ -176,27 +153,25 @@ export const NewChequeModal: React.FC<NewChequeModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div 
-      style={{
-        position: 'fixed',
-        inset: 0,
-        backgroundColor: 'rgba(3, 5, 10, 0.85)',
-        backdropFilter: 'blur(10px)',
-        zIndex: 1000,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '1rem',
-        boxSizing: 'border-box'
-      }}
-      onClick={onClose}
-    >
+    <div style={{
+      position: 'fixed',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      background: 'rgba(3, 7, 18, 0.85)',
+      backdropFilter: 'blur(8px)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      zIndex: 9999,
+      padding: '1rem'
+    }}>
       <div 
-        onClick={e => e.stopPropagation()}
         style={{
-          background: 'linear-gradient(180deg, #0e1320 0%, #080c14 100%)',
+          background: 'linear-gradient(145deg, #0f1624 0%, #080d17 100%)',
           border: '1px solid rgba(212, 175, 55, 0.35)',
-          borderRadius: '18px',
+          borderRadius: '16px',
           width: '100%',
           maxWidth: '720px',
           maxHeight: '92vh',
@@ -228,16 +203,16 @@ export const NewChequeModal: React.FC<NewChequeModalProps> = ({
               justifyContent: 'center',
               color: '#d4af37'
             }}>
-              <Landmark size={22} />
+              <Wallet size={22} />
             </div>
             <div>
               <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: '#ffffff' }}>
-                {isAr ? 'استلام وتسجيل شيك بالخزينة' : 'Receive & Vault Client Cheque'}
+                {isAr ? 'تسجيل بند قسط واستحقاق نقدي جديد' : 'Record New Hand Installment Due'}
               </h3>
               <p style={{ margin: 0, fontSize: '0.74rem', color: '#94a3b8' }}>
                 {isAr 
-                  ? 'إيداع شيك ورقي مستلم من العميل في خزينة الشركة لحين حلول تاريخ الاستحقاق والمقاصة البنكية.' 
-                  : 'Register a physical client cheque in company safe custody until maturity and clearing.'}
+                  ? 'إثبات قسط أو دفعة تعاقدية مستحقة التحصيل نقداً باليد (سواء مسددة في حينها أو لاحقاً).' 
+                  : 'Record a cash installment due by hand (collected in-time or scheduled for later).'}
               </p>
             </div>
           </div>
@@ -270,7 +245,7 @@ export const NewChequeModal: React.FC<NewChequeModalProps> = ({
           flexDirection: 'column',
           gap: '1.25rem'
         }}>
-          {/* 1. INTERACTIVE REALISTIC CHEQUE PREVIEW CARD */}
+          {/* 1. REALISTIC HAND INSTALLMENT VOUCHER PREVIEW CARD */}
           <div style={{
             background: 'linear-gradient(135deg, #162032 0%, #0d1424 50%, #111a2c 100%)',
             border: '1.5px solid rgba(212, 175, 55, 0.45)',
@@ -280,7 +255,7 @@ export const NewChequeModal: React.FC<NewChequeModalProps> = ({
             boxShadow: '0 8px 24px rgba(0, 0, 0, 0.5), inset 0 0 20px rgba(212, 175, 55, 0.05)',
             overflow: 'hidden'
           }}>
-            {/* Cheque Security Micro-Pattern Watermark */}
+            {/* Voucher Watermark */}
             <div style={{
               position: 'absolute',
               inset: 0,
@@ -290,12 +265,12 @@ export const NewChequeModal: React.FC<NewChequeModalProps> = ({
               pointerEvents: 'none'
             }} />
 
-            {/* Cheque Header Row */}
+            {/* Voucher Header Row */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid rgba(212, 175, 55, 0.2)', paddingBottom: '0.65rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <Building2 size={16} color="#d4af37" />
+                <Wallet size={16} color="#d4af37" />
                 <span style={{ fontSize: '0.86rem', fontWeight: 900, color: '#f8fafc', letterSpacing: '0.02em' }}>
-                  {resolvedBankName}
+                  {isAr ? 'الخزينة الرئيسية (تحصيل نقدي باليد - 101000)' : 'Main Cash Safe [101000]'}
                 </span>
               </div>
 
@@ -310,11 +285,11 @@ export const NewChequeModal: React.FC<NewChequeModalProps> = ({
                   borderRadius: '4px',
                   border: '1px solid rgba(212, 175, 55, 0.3)'
                 }}>
-                  {chequeNumber || 'CHQ-000000'}
+                  {itemCode || 'DUE-00000'}
                 </span>
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                  <span style={{ fontSize: '0.68rem', color: '#94a3b8' }}>{isAr ? 'تاريخ الاستحقاق:' : 'Date:'}</span>
+                  <span style={{ fontSize: '0.68rem', color: '#94a3b8' }}>{isAr ? 'تاريخ الاستحقاق:' : 'Due Date:'}</span>
                   <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#ffffff', fontFamily: 'monospace' }}>
                     {dueDate}
                   </span>
@@ -322,275 +297,241 @@ export const NewChequeModal: React.FC<NewChequeModalProps> = ({
               </div>
             </div>
 
-            {/* Cheque Body Row */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', marginTop: '0.85rem' }}>
-              {/* Payee + Amount Box */}
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: 1, minWidth: 0 }}>
-                  <span style={{ fontSize: '0.74rem', color: '#94a3b8', flexShrink: 0 }}>
-                    {isAr ? 'ادفعوا لأمر:' : 'Pay to the order of:'}
-                  </span>
-                  <span style={{
-                    fontSize: '0.88rem',
-                    fontWeight: 900,
-                    color: '#ffffff',
-                    borderBottom: '1px dashed rgba(255, 255, 255, 0.25)',
-                    paddingBottom: '0.15rem',
-                    flex: 1,
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis'
-                  }}>
-                    {isAr ? 'شركة زكريا فريد للتطوير العقاري (ش.م.م)' : 'Zakaria Farid Real Estate Developments'}
-                  </span>
-                </div>
-
-                {/* Amount in Box */}
-                <div style={{
-                  background: 'rgba(0, 0, 0, 0.65)',
-                  border: '1.5px solid #d4af37',
-                  borderRadius: '6px',
-                  padding: '0.35rem 0.75rem',
-                  display: 'flex',
-                  alignItems: 'baseline',
-                  gap: '0.35rem',
-                  flexShrink: 0
-                }}>
-                  <span style={{ fontSize: '0.68rem', color: '#e2c974', fontWeight: 700 }}>{isAr ? 'مبلغ' : 'EGP'}</span>
-                  <span style={{ fontSize: '1.25rem', fontWeight: 900, color: '#ffffff', fontFamily: 'monospace' }}>
-                    {formatMoney(nominalValue || '0')}
-                  </span>
-                  <span style={{ fontSize: '0.68rem', color: '#94a3b8' }}>{isAr ? 'ج.م' : ''}</span>
-                </div>
-              </div>
-
-              {/* Tafqeet in Words */}
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem' }}>
-                <span style={{ fontSize: '0.72rem', color: '#94a3b8', flexShrink: 0 }}>
-                  {isAr ? 'مبلغ وقدره:' : 'The sum of:'}
+            {/* Middle Row: Pay to the Order of & Amount */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', margin: '0.85rem 0' }}>
+              <div style={{ flex: 1 }}>
+                <span style={{ fontSize: '0.68rem', color: '#94a3b8', display: 'block', marginBottom: '0.15rem' }}>
+                  {isAr ? 'العميل الملتزم بالسداد نقدياً:' : 'Payer / Client Name:'}
                 </span>
-                <span style={{
-                  fontSize: '0.8rem',
-                  fontWeight: 700,
-                  color: '#e2c974',
-                  borderBottom: '1px dashed rgba(212, 175, 55, 0.3)',
-                  paddingBottom: '0.15rem',
-                  flex: 1
-                }}>
-                  {tafqeetText}
+                <span style={{ fontSize: '1rem', fontWeight: 900, color: '#ffffff' }}>
+                  {drawerName || (isAr ? 'اسم العميل الملتزم' : 'Client Name')}
                 </span>
               </div>
 
-              {/* Drawer & Signature Line */}
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '0.35rem', paddingTop: '0.45rem', borderTop: '1px solid rgba(255, 255, 255, 0.06)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                  <span style={{ fontSize: '0.7rem', color: '#94a3b8' }}>{isAr ? 'الساحب الملتزم:' : 'Drawer:'}</span>
-                  <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#f1f5f9' }}>
-                    {drawerName || (isAr ? 'اسم العميل' : 'Client Name')}
-                  </span>
-                </div>
-
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                  <span style={{ fontSize: '0.68rem', color: '#64748b' }}>{isAr ? 'توقيع الساحب:' : 'Signature:'}</span>
-                  <span style={{ fontFamily: 'cursive', fontSize: '0.9rem', color: '#94a3b8', fontStyle: 'italic' }}>
-                    {drawerName || 'Signed'}
-                  </span>
-                </div>
+              {/* Amount Box */}
+              <div style={{
+                background: 'rgba(0, 0, 0, 0.55)',
+                border: '1.5px solid rgba(212, 175, 55, 0.4)',
+                borderRadius: '8px',
+                padding: '0.55rem 1rem',
+                textAlign: 'center',
+                minWidth: '180px'
+              }}>
+                <span style={{ fontSize: '0.62rem', color: '#d4af37', display: 'block', fontWeight: 800 }}>
+                  {isAr ? 'قيمة القسط المطلوبة (ج.م)' : 'INSTALLMENT DUE VALUE (EGP)'}
+                </span>
+                <span style={{ fontSize: '1.35rem', fontWeight: 900, color: '#34d399', letterSpacing: '-0.02em' }}>
+                  {formatMoney(nominalValue || '0')}
+                </span>
               </div>
             </div>
 
-            {/* Bottom Monospace MICR Band */}
+            {/* Bottom Row: Tafqeet & Safe Custody Tag */}
             <div style={{
-              marginTop: '0.75rem',
-              paddingTop: '0.45rem',
-              borderTop: '1px solid rgba(255, 255, 255, 0.05)',
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'center',
-              fontFamily: 'monospace',
-              fontSize: '0.74rem',
-              color: 'rgba(212, 175, 55, 0.55)',
-              letterSpacing: '0.25em'
+              justifyContent: 'space-between',
+              gap: '1rem',
+              borderTop: '1px dashed rgba(212, 175, 55, 0.25)',
+              paddingTop: '0.65rem'
             }}>
-              ⑈ 023 ⑉ 10456 ⑈ {chequeNumber.replace(/\D/g, '') || '789012'} ⑈ 25
+              <div style={{ flex: 1, fontSize: '0.72rem', color: '#cbd5e1', fontStyle: 'italic' }}>
+                <span style={{ color: '#94a3b8', marginLeft: '0.35rem', fontStyle: 'normal' }}>
+                  {isAr ? 'فقط وقدره:' : 'Sum of:'}
+                </span>
+                <strong style={{ color: '#e2c974' }}>{tafqeetText}</strong>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                <span style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.3rem',
+                  fontSize: '0.68rem',
+                  fontWeight: 800,
+                  color: collectionTiming === 'intime' ? '#34d399' : '#38bdf8',
+                  background: collectionTiming === 'intime' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(56, 189, 248, 0.15)',
+                  padding: '0.2rem 0.6rem',
+                  borderRadius: '999px',
+                  border: collectionTiming === 'intime' ? '1px solid rgba(16, 185, 129, 0.35)' : '1px solid rgba(56, 189, 248, 0.35)'
+                }}>
+                  {collectionTiming === 'intime' ? (
+                    <>
+                      <Check size={11} />
+                      <span>{isAr ? 'تحصيل فوري في حينه' : 'In-time Hand Collection'}</span>
+                    </>
+                  ) : (
+                    <>
+                      <Clock size={11} />
+                      <span>{isAr ? 'قسط مستحق لاحقاً باليد' : 'Due Later on Schedule'}</span>
+                    </>
+                  )}
+                </span>
+              </div>
             </div>
           </div>
 
-          {/* FORM FIELDS */}
-          <form id="newChequeForm" onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.1rem' }}>
-            {/* STEP 1: LINKED CONTRACT SELECTOR */}
+          {/* 2. FORM CONFIGURATION */}
+          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.15rem' }}>
+            {/* STEP 1: CONTRACT & TRANCHE SELECTION */}
             <div>
               <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#cbd5e1', marginBottom: '0.4rem' }}>
-                {isAr ? '1. عقد البيع المرتبط بهذا الشيك:' : '1. Linked Sales Contract:'}
+                {isAr ? '١. العقد والوحدة المرتبطة:' : '1. Linked Contract & Unit:'}
               </label>
+
               <select
                 value={selectedContractId}
                 onChange={e => handleContractSelect(e.target.value)}
                 style={{
                   width: '100%',
                   background: 'rgba(0, 0, 0, 0.45)',
-                  border: '1px solid rgba(212, 175, 55, 0.3)',
-                  borderRadius: '9px',
-                  padding: '0.65rem 0.85rem',
+                  border: '1px solid rgba(255, 255, 255, 0.12)',
+                  borderRadius: '8px',
+                  padding: '0.6rem 0.85rem',
                   fontSize: '0.82rem',
                   color: '#ffffff',
-                  outline: 'none',
-                  cursor: 'pointer'
+                  outline: 'none'
                 }}
-                required
               >
-                <option value="">{isAr ? '-- اختر العقد المرتبط بالعميل --' : '-- Select Contract --'}</option>
                 {contracts.map(c => (
                   <option key={c.contract_id} value={c.contract_id}>
-                    {c.contract_number} — {c.buyer_name} ({c.unit_id})
+                    {isAr ? `عقد #${c.contract_number} — ${c.buyer_name} (${c.unit_id})` : `Contract #${c.contract_number} - ${c.buyer_name} (${c.unit_id})`}
                   </option>
                 ))}
               </select>
             </div>
 
-            {/* STEP 1.5: UPCOMING INSTALLMENT TRANCHES AUTOFILL */}
-            {selectedContractId && (
+            {/* Tranche Buttons (if available) */}
+            {pendingContractSchedules.length > 0 && (
               <div style={{
                 background: 'rgba(0, 0, 0, 0.25)',
-                border: '1px solid rgba(255, 255, 255, 0.08)',
-                borderRadius: '10px',
-                padding: '0.85rem',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '0.5rem'
+                border: '1px solid rgba(255, 255, 255, 0.06)',
+                borderRadius: '8px',
+                padding: '0.65rem 0.85rem'
               }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <span style={{ fontSize: '0.74rem', fontWeight: 700, color: '#e2c974', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                    <Clock size={13} />
-                    {isAr ? 'أقساط هذا العقد المتبقية (اختر لملء المبلغ والتاريخ تلقائياً):' : 'Pending Installments (Click to Auto-fill):'}
-                  </span>
-                  {selectedScheduleId && (
-                    <button
-                      type="button"
-                      onClick={handleClearScheduleSelection}
-                      style={{
-                        background: 'transparent',
-                        border: 'none',
-                        color: '#94a3b8',
-                        fontSize: '0.68rem',
-                        cursor: 'pointer',
-                        textDecoration: 'underline'
-                      }}
-                    >
-                      {isAr ? 'إلغاء الربط (مبلغ مخصص)' : 'Unlink (Custom Amount)'}
-                    </button>
-                  )}
+                <span style={{ fontSize: '0.7rem', color: '#94a3b8', display: 'block', marginBottom: '0.4rem' }}>
+                  {isAr ? 'أقساط مجدولة غير مسددة في العقد:' : 'Unpaid Scheduled Tranches:'}
+                </span>
+                <div style={{ display: 'flex', gap: '0.45rem', flexWrap: 'wrap' }}>
+                  {pendingContractSchedules.map(sch => {
+                    const isSelected = selectedScheduleId === sch.schedule_id;
+                    return (
+                      <button
+                        key={sch.schedule_id}
+                        type="button"
+                        onClick={() => handleSelectSchedule(sch)}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.4rem',
+                          padding: '0.35rem 0.65rem',
+                          borderRadius: '7px',
+                          fontSize: '0.72rem',
+                          fontWeight: 700,
+                          border: isSelected ? '1.5px solid #d4af37' : '1px solid rgba(255, 255, 255, 0.1)',
+                          background: isSelected ? 'rgba(212, 175, 55, 0.22)' : 'rgba(255, 255, 255, 0.04)',
+                          color: isSelected ? '#ffffff' : '#94a3b8',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        {isSelected && <Check size={12} color="#d4af37" />}
+                        <span>{isAr ? `قسط ${sch.tranche_number}` : `Tranche ${sch.tranche_number}`}</span>
+                        <span style={{ fontFamily: 'monospace', color: isSelected ? '#e2c974' : '#cbd5e1' }}>
+                          {formatMoney(sch.nominal_value)} {isAr ? 'ج.م' : ''}
+                        </span>
+                        <span style={{ fontSize: '0.64rem', color: '#64748b' }}>({sch.due_date})</span>
+                      </button>
+                    );
+                  })}
                 </div>
-
-                {pendingContractSchedules.length === 0 ? (
-                  <span style={{ fontSize: '0.72rem', color: '#64748b' }}>
-                    {isAr ? 'لا توجد أقساط معلقة مسجلة لهذا العقد — يمكنك إدخال المبلغ والتاريخ يدوياً.' : 'No pending tranches found for this contract.'}
-                  </span>
-                ) : (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap' }}>
-                    {pendingContractSchedules.map(sch => {
-                      const isSelected = selectedScheduleId === sch.schedule_id;
-                      return (
-                        <button
-                          key={sch.schedule_id}
-                          type="button"
-                          onClick={() => handleSelectSchedule(sch)}
-                          style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '0.4rem',
-                            padding: '0.35rem 0.65rem',
-                            borderRadius: '7px',
-                            fontSize: '0.72rem',
-                            fontWeight: 700,
-                            border: isSelected ? '1.5px solid #d4af37' : '1px solid rgba(255, 255, 255, 0.1)',
-                            background: isSelected ? 'rgba(212, 175, 55, 0.22)' : 'rgba(255, 255, 255, 0.04)',
-                            color: isSelected ? '#ffffff' : '#94a3b8',
-                            cursor: 'pointer',
-                            transition: 'all 0.15s ease'
-                          }}
-                        >
-                          {isSelected && <Check size={12} color="#d4af37" />}
-                          <span>{isAr ? `قسط ${sch.tranche_number}` : `Tranche ${sch.tranche_number}`}</span>
-                          <span style={{ fontFamily: 'monospace', color: isSelected ? '#e2c974' : '#cbd5e1' }}>
-                            {formatMoney(sch.nominal_value)} {isAr ? 'ج.م' : ''}
-                          </span>
-                          <span style={{ fontSize: '0.64rem', color: '#64748b' }}>
-                            ({sch.due_date})
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
               </div>
             )}
 
-            {/* STEP 2: BANK SELECTION PILLS */}
+            {/* STEP 2: TIMING & ROUTING */}
             <div>
               <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#cbd5e1', marginBottom: '0.4rem' }}>
-                {isAr ? '2. البنك المسحوب عليه الشيك:' : '2. Drawee Bank:'}
+                {isAr ? '٢. توقيت الاستلام وطريقة السداد نقداً:' : '2. Collection Timing & Cash Route:'}
               </label>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap', marginBottom: '0.5rem' }}>
-                {EGYPTIAN_BANKS.map(bank => {
-                  const isActive = selectedBankId === bank.id;
-                  return (
-                    <button
-                      key={bank.id}
-                      type="button"
-                      onClick={() => setSelectedBankId(bank.id)}
-                      style={{
-                        padding: '0.35rem 0.65rem',
-                        borderRadius: '7px',
-                        fontSize: '0.72rem',
-                        fontWeight: 700,
-                        border: isActive ? '1px solid rgba(212, 175, 55, 0.5)' : '1px solid rgba(255, 255, 255, 0.08)',
-                        background: isActive ? 'rgba(212, 175, 55, 0.2)' : 'rgba(0, 0, 0, 0.3)',
-                        color: isActive ? '#ffffff' : '#94a3b8',
-                        cursor: 'pointer'
-                      }}
-                    >
-                      {isAr ? bank.nameAr : bank.nameEn}
-                    </button>
-                  );
-                })}
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.65rem', marginBottom: '0.5rem' }}>
+                <div
+                  onClick={() => setCollectionTiming('later')}
+                  style={{
+                    padding: '0.65rem 0.85rem',
+                    borderRadius: '8px',
+                    border: collectionTiming === 'later' ? '1.5px solid #38bdf8' : '1px solid rgba(255, 255, 255, 0.08)',
+                    background: collectionTiming === 'later' ? 'rgba(56, 189, 248, 0.15)' : 'rgba(0, 0, 0, 0.25)',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.45rem'
+                  }}
+                >
+                  <Clock size={16} color="#38bdf8" />
+                  <div>
+                    <strong style={{ fontSize: '0.78rem', color: '#ffffff', display: 'block' }}>
+                      {isAr ? 'مستحق لاحقاً باليد' : 'Due Later on Schedule'}
+                    </strong>
+                    <span style={{ fontSize: '0.66rem', color: '#94a3b8' }}>
+                      {isAr ? 'يُحصّل في موعد استحقاقه' : 'Scheduled future collection'}
+                    </span>
+                  </div>
+                </div>
+
+                <div
+                  onClick={() => setCollectionTiming('intime')}
+                  style={{
+                    padding: '0.65rem 0.85rem',
+                    borderRadius: '8px',
+                    border: collectionTiming === 'intime' ? '1.5px solid #34d399' : '1px solid rgba(255, 255, 255, 0.08)',
+                    background: collectionTiming === 'intime' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(0, 0, 0, 0.25)',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.45rem'
+                  }}
+                >
+                  <Check size={16} color="#34d399" />
+                  <div>
+                    <strong style={{ fontSize: '0.78rem', color: '#ffffff', display: 'block' }}>
+                      {isAr ? 'مسدد فوراً في حينه' : 'Collected In-Time'}
+                    </strong>
+                    <span style={{ fontSize: '0.66rem', color: '#94a3b8' }}>
+                      {isAr ? 'استلام فوري بالخزينة' : 'Direct cash on signing'}
+                    </span>
+                  </div>
+                </div>
               </div>
 
-              {selectedBankId === 'OTHER' && (
-                <input
-                  type="text"
-                  placeholder={isAr ? 'اكتب اسم البنك المسحوب عليه...' : 'Enter custom bank name...'}
-                  value={customBankName}
-                  onChange={e => setCustomBankName(e.target.value)}
-                  style={{
-                    width: '100%',
-                    background: 'rgba(0, 0, 0, 0.45)',
-                    border: '1px solid rgba(255, 255, 255, 0.12)',
-                    borderRadius: '8px',
-                    padding: '0.55rem 0.75rem',
-                    fontSize: '0.8rem',
-                    color: '#ffffff',
-                    outline: 'none',
-                    marginTop: '0.35rem',
-                    boxSizing: 'border-box'
-                  }}
-                  required={selectedBankId === 'OTHER'}
-                />
-              )}
+              {/* Fixed Safe routing info */}
+              <div style={{
+                padding: '0.5rem 0.75rem',
+                borderRadius: '8px',
+                background: 'rgba(16, 185, 129, 0.06)',
+                border: '1px solid rgba(16, 185, 129, 0.2)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.45rem',
+                fontSize: '0.74rem',
+                color: '#6ee7b7'
+              }}>
+                <Wallet size={14} />
+                <span>{isAr ? 'جهة التحصيل: الخزينة الرئيسية [101000] — استلام نقدي مباشر بدون أي وسائط بنكية' : 'Destination: Main Safe [101000] - Direct Cash Hand Collection'}</span>
+              </div>
             </div>
 
-            {/* STEP 3: CHEQUE DETAILS (NUMBER, DRAWER, AMOUNT, DUE DATE) */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0.85rem' }}>
-              {/* Cheque # */}
+            {/* STEP 3: DETAILS (CODE, DRAWER, AMOUNT, DUE DATE) */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.85rem' }}>
+              {/* Item Code */}
               <div>
                 <label style={{ display: 'block', fontSize: '0.76rem', fontWeight: 700, color: '#cbd5e1', marginBottom: '0.35rem' }}>
-                  {isAr ? 'رقم الشيك البنكي:' : 'Cheque Number:'}
+                  {isAr ? 'كود / رقم البند الدفتري:' : 'Item Code #:'}
                 </label>
                 <input
                   type="text"
-                  value={chequeNumber}
-                  onChange={e => setChequeNumber(e.target.value)}
-                  placeholder="CHQ-789012"
+                  value={itemCode}
+                  onChange={e => setItemCode(e.target.value)}
+                  placeholder="DUE-54321"
                   style={{
                     width: '100%',
                     background: 'rgba(0, 0, 0, 0.45)',
@@ -599,24 +540,22 @@ export const NewChequeModal: React.FC<NewChequeModalProps> = ({
                     padding: '0.55rem 0.75rem',
                     fontSize: '0.82rem',
                     color: '#ffffff',
-                    fontFamily: 'monospace',
-                    outline: 'none',
-                    boxSizing: 'border-box'
+                    fontFamily: 'monospace'
                   }}
                   required
                 />
               </div>
 
-              {/* Drawer Legal Name */}
+              {/* Drawer Name */}
               <div>
                 <label style={{ display: 'block', fontSize: '0.76rem', fontWeight: 700, color: '#cbd5e1', marginBottom: '0.35rem' }}>
-                  {isAr ? 'اسم الساحب (المشتري الموقع):' : 'Drawer Legal Name:'}
+                  {isAr ? 'العميل الملتزم بالسداد:' : 'Payer Name:'}
                 </label>
                 <input
                   type="text"
                   value={drawerName}
                   onChange={e => setDrawerName(e.target.value)}
-                  placeholder={isAr ? 'اسم العميل المثبت بالشيك' : 'Drawer name'}
+                  placeholder={isAr ? 'اسم العميل' : 'Client Name'}
                   style={{
                     width: '100%',
                     background: 'rgba(0, 0, 0, 0.45)',
@@ -624,9 +563,7 @@ export const NewChequeModal: React.FC<NewChequeModalProps> = ({
                     borderRadius: '8px',
                     padding: '0.55rem 0.75rem',
                     fontSize: '0.82rem',
-                    color: '#ffffff',
-                    outline: 'none',
-                    boxSizing: 'border-box'
+                    color: '#ffffff'
                   }}
                   required
                 />
@@ -635,26 +572,22 @@ export const NewChequeModal: React.FC<NewChequeModalProps> = ({
               {/* Nominal Value */}
               <div>
                 <label style={{ display: 'block', fontSize: '0.76rem', fontWeight: 700, color: '#cbd5e1', marginBottom: '0.35rem' }}>
-                  {isAr ? 'قيمة الشيك الاسمية (بالجنيه):' : 'Nominal Value (EGP):'}
+                  {isAr ? 'قيمة القسط المطلوبة (ج.م):' : 'Installment Value (EGP):'}
                 </label>
                 <input
                   type="number"
-                  step="100"
+                  step="1000"
                   value={nominalValue}
                   onChange={e => setNominalValue(e.target.value)}
-                  placeholder="250000"
                   style={{
                     width: '100%',
                     background: 'rgba(0, 0, 0, 0.45)',
                     border: '1px solid rgba(212, 175, 55, 0.4)',
                     borderRadius: '8px',
                     padding: '0.55rem 0.75rem',
-                    fontSize: '0.9rem',
+                    fontSize: '0.92rem',
                     fontWeight: 800,
-                    color: '#ffffff',
-                    fontFamily: 'monospace',
-                    outline: 'none',
-                    boxSizing: 'border-box'
+                    color: '#34d399'
                   }}
                   required
                 />
@@ -663,7 +596,7 @@ export const NewChequeModal: React.FC<NewChequeModalProps> = ({
               {/* Due Date */}
               <div>
                 <label style={{ display: 'block', fontSize: '0.76rem', fontWeight: 700, color: '#cbd5e1', marginBottom: '0.35rem' }}>
-                  {isAr ? 'تاريخ استحقاق الشيك:' : 'Maturity / Due Date:'}
+                  {isAr ? 'تاريخ الاستحقاق الدفتري:' : 'Due Date:'}
                 </label>
                 <input
                   type="date"
@@ -676,86 +609,62 @@ export const NewChequeModal: React.FC<NewChequeModalProps> = ({
                     borderRadius: '8px',
                     padding: '0.55rem 0.75rem',
                     fontSize: '0.82rem',
-                    color: '#ffffff',
-                    outline: 'none',
-                    boxSizing: 'border-box'
+                    color: '#ffffff'
                   }}
                   required
                 />
               </div>
             </div>
 
-            {/* Regulatory Safeguard Notice */}
+            {/* Modal Actions Footer */}
             <div style={{
-              background: 'linear-gradient(90deg, rgba(212, 175, 55, 0.12) 0%, rgba(212, 175, 55, 0.04) 100%)',
-              border: '1px solid rgba(212, 175, 55, 0.3)',
-              borderRadius: '9px',
-              padding: '0.75rem 0.95rem',
               display: 'flex',
               alignItems: 'center',
-              gap: '0.65rem',
-              fontSize: '0.75rem',
-              color: '#e2c974'
+              justifyContent: 'flex-end',
+              gap: '0.75rem',
+              paddingTop: '0.85rem',
+              borderTop: '1px solid rgba(255, 255, 255, 0.08)'
             }}>
-              <ShieldCheck size={18} color="#d4af37" style={{ flexShrink: 0 }} />
-              <span>
-                {isAr 
-                  ? 'سيتم تسجيل هذا الشيك بحالة [في الخزينة In Safe] كأوراق قبض تحت الحيازة. سيتولى محرك التنبيهات المالي إشعارك تلقائياً قبل 7 أيام من موعد حلول الصرف.' 
-                  : 'This cheque will be held In Safe custody. FIN-OS alert engine will automatically trigger reminders 7 days prior to maturity.'}
-              </span>
+              <button
+                type="button"
+                onClick={onClose}
+                style={{
+                  background: 'rgba(255, 255, 255, 0.05)',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  borderRadius: '8px',
+                  color: '#94a3b8',
+                  padding: '0.55rem 1.15rem',
+                  fontSize: '0.82rem',
+                  cursor: 'pointer'
+                }}
+              >
+                {isAr ? 'إلغاء' : 'Cancel'}
+              </button>
+
+              <button
+                type="submit"
+                disabled={isMutating}
+                style={{
+                  background: 'linear-gradient(135deg, #d4af37 0%, #b8972e 100%)',
+                  border: 'none',
+                  borderRadius: '8px',
+                  color: '#07080b',
+                  padding: '0.55rem 1.45rem',
+                  fontSize: '0.84rem',
+                  fontWeight: 900,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.45rem',
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 20px rgba(212, 175, 55, 0.3)',
+                  opacity: isMutating ? 0.6 : 1
+                }}
+              >
+                {isMutating ? <Loader2 size={16} className="animate-spin" /> : <ShieldCheck size={16} />}
+                <span>{isAr ? 'حفظ وتوثيق بند القسط' : 'Save Installment Due'}</span>
+              </button>
             </div>
           </form>
-        </div>
-
-        {/* Modal Footer */}
-        <div style={{
-          padding: '1.1rem 1.5rem',
-          borderTop: '1px solid rgba(255, 255, 255, 0.08)',
-          background: 'rgba(0, 0, 0, 0.35)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'flex-end',
-          gap: '0.75rem'
-        }}>
-          <button
-            type="button"
-            onClick={onClose}
-            style={{
-              padding: '0.55rem 1.15rem',
-              borderRadius: '8px',
-              border: '1px solid rgba(255, 255, 255, 0.12)',
-              background: 'transparent',
-              color: '#94a3b8',
-              fontSize: '0.82rem',
-              fontWeight: 700,
-              cursor: 'pointer'
-            }}
-          >
-            {isAr ? 'إلغاء' : 'Cancel'}
-          </button>
-
-          <button
-            type="submit"
-            form="newChequeForm"
-            disabled={isMutating}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-              padding: '0.55rem 1.35rem',
-              borderRadius: '8px',
-              border: '1px solid rgba(212, 175, 55, 0.45)',
-              background: 'linear-gradient(135deg, #d4af37 0%, #aa820a 100%)',
-              color: '#07080b',
-              fontSize: '0.84rem',
-              fontWeight: 800,
-              cursor: isMutating ? 'not-allowed' : 'pointer',
-              boxShadow: '0 4px 15px rgba(212, 175, 55, 0.3)'
-            }}
-          >
-            {isMutating ? <Loader2 size={15} className="animate-spin" /> : <Plus size={15} />}
-            <span>{isAr ? 'حفظ وإيداع الشيك بالخزينة' : 'Save & Vault Cheque'}</span>
-          </button>
         </div>
       </div>
     </div>

@@ -148,5 +148,39 @@ export const FALLBACK_PROPERTIES: Property[] = [
       { id: 'img-601', property_id: 'madinaty-four-seasons-mansion', url: 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=1600&q=85', alt_text_en: 'Grand Exterior', alt_text_ar: 'الواجهة الرئيسية', sort_order: 0 },
       { id: 'img-602', property_id: 'madinaty-four-seasons-mansion', url: 'https://images.unsplash.com/photo-1613977257363-707ba9348227?auto=format&fit=crop&w=1200&q=85', alt_text_en: 'Interior Hall', alt_text_ar: 'البهو الداخلي', sort_order: 1 },
     ]
+  },
+  {
+    id: 'al-yasmin-grand-residence',
+    slug: 'al-yasmin-grand-residence',
+    title_en: 'Al-Yasmin Grand Residential Building',
+    title_ar: 'عمارة الياسمين ريزيدنس الفاخرة بالشيخ زايد',
+    description_en: 'Architectural residential building offering 6 luxury apartments or acquisition as a private entire block.',
+    description_ar: 'مبنى سكني فاخر متكامل يتكون من أرضي و٣ أدوار متكررة بإجمالي ٦ شقق فاخرة وجراج، متاح للبيع كعمارة كاملة أو بنظام الشقق المنفصلة.',
+    price_egp: 38000000,
+    location: 'District 9, Sheikh Zayed',
+    bedrooms: 18,
+    bathrooms: 14,
+    area_sqm: 1350,
+    type: 'building',
+    sale_mode: 'both_flexible',
+    total_units_count: 6,
+    building_units: [
+      { unit_id: 'yasmin-apt-101', unit_number: 'شقة 101 - الدور الأول', floor: 1, area_sqm: 220, bedrooms: 3, bathrooms: 2, price_egp: 6200000, status: 'available' },
+      { unit_id: 'yasmin-apt-102', unit_number: 'شقة 102 - الدور الأول', floor: 1, area_sqm: 220, bedrooms: 3, bathrooms: 2, price_egp: 6200000, status: 'available' },
+      { unit_id: 'yasmin-apt-201', unit_number: 'شقة 201 - الدور الثاني', floor: 2, area_sqm: 225, bedrooms: 3, bathrooms: 2, price_egp: 6400000, status: 'contracted', contract_number: 'ZF-CON-2025-001', buyer_name: 'المهندس حسام الدين عثمان' },
+      { unit_id: 'yasmin-apt-202', unit_number: 'شقة 202 - الدور الثاني', floor: 2, area_sqm: 225, bedrooms: 3, bathrooms: 2, price_egp: 6400000, status: 'available' },
+      { unit_id: 'yasmin-apt-301', unit_number: 'شقة 301 - الدور الثالث', floor: 3, area_sqm: 230, bedrooms: 3, bathrooms: 3, price_egp: 6600000, status: 'available' },
+      { unit_id: 'yasmin-apt-302', unit_number: 'شقة 302 - الدور الثالث (بنتهاوس)', floor: 3, area_sqm: 230, bedrooms: 3, bathrooms: 3, price_egp: 6800000, status: 'available' },
+    ],
+    listing_status: 'active',
+    is_featured: true,
+    completion_status: 'ready',
+    latitude: 30.0520,
+    longitude: 30.9830,
+    created_at: '2025-01-07T00:00:00Z',
+    property_images: [
+      { id: 'img-701', property_id: 'al-yasmin-grand-residence', url: 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=1600&q=85', alt_text_en: 'Building Elevation', alt_text_ar: 'الواجهة المعمارية للعمارة', sort_order: 0 },
+      { id: 'img-702', property_id: 'al-yasmin-grand-residence', url: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=85', alt_text_en: 'Apartment Interior', alt_text_ar: 'صالون الشقة النموذجية', sort_order: 1 },
+    ]
   }
 ];

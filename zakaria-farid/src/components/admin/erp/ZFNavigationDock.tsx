@@ -11,7 +11,8 @@ import {
   ShieldCheck, 
   Layers, 
   Building2, 
-  Calculator 
+  Calculator,
+  Wallet
 } from 'lucide-react';
 import styles from './ZFSubprogram.module.css';
 
@@ -23,8 +24,7 @@ export type ERPNavModule =
   | 'contracts'
   | 'pdc'
   | 'rescissions'
-  | 'cost-allocation'
-  | 'tax';
+  | 'cost-allocation';
 
 interface DockItemDef {
   id: ERPNavModule;
@@ -102,9 +102,9 @@ export const ZFNavigationDock: React.FC<ZFNavigationDockProps> = ({
         },
         { 
           id: 'pdc', 
-          labelEn: 'PDC Cheques Vault', 
-          labelAr: 'حافظة شيكات الخزينة (PDC)', 
-          icon: Landmark,
+          labelEn: 'Hand Installments Vault', 
+          labelAr: 'حافظة بنود التحصيل والأقساط باليد', 
+          icon: Wallet,
           badge: pdcSafeCount && pdcSafeCount > 0 ? pdcSafeCount : undefined,
           badgeVariant: 'emerald'
         }
@@ -125,12 +125,6 @@ export const ZFNavigationDock: React.FC<ZFNavigationDockProps> = ({
           labelEn: 'WIP Cost Allocation (RSV)', 
           labelAr: 'تخصيص التكاليف (RSV)', 
           icon: PieChart 
-        },
-        { 
-          id: 'tax', 
-          labelEn: 'Statutory Taxes & ETA', 
-          labelAr: 'الضرائب والخصم (نموذج ٤١)', 
-          icon: ShieldCheck 
         },
         { 
           id: 'rescissions', 

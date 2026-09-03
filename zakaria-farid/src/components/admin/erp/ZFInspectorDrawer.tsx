@@ -160,7 +160,7 @@ export const ZFInspectorDrawer: React.FC<ZFInspectorDrawerProps> = ({
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
               <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: '#ffffff', letterSpacing: '-0.01em' }}>
                 {payload.type === 'contract' && `${isAr ? 'عقد بيع #' : 'Contract #'}${payload.contract.contract_number}`}
-                {payload.type === 'cheque' && `${isAr ? 'شيك بنكي #' : 'PDC Cheque #'}${payload.cheque.cheque_number}`}
+                {payload.type === 'cheque' && `${isAr ? 'بند قسط واستحقاق باليد #' : 'Hand Installment Due #'}${payload.cheque.cheque_number}`}
                 {payload.type === 'tax' && `${isAr ? 'ملف ضريبي #' : 'Tax File #'}${payload.tax.tax_id.slice(0, 10)}`}
                 {payload.type === 'rsv' && `${isAr ? 'رسملة المشروع: ' : 'RSV: '}${payload.allocation.project_name}`}
                 {payload.type === 'rescission' && `${isAr ? 'سجل فسخ #' : 'Rescission #'}${payload.rescission.rescission_id.slice(0, 8)}`}
@@ -197,7 +197,7 @@ export const ZFInspectorDrawer: React.FC<ZFInspectorDrawerProps> = ({
                     setCopiedChequeNum(true);
                     setTimeout(() => setCopiedChequeNum(false), 2000);
                   }}
-                  title={isAr ? 'نسخ رقم الشيك' : 'Copy cheque number'}
+                  title={isAr ? 'نسخ كود البند' : 'Copy item code'}
                   style={{
                     background: 'rgba(255, 255, 255, 0.06)',
                     border: '1px solid rgba(255, 255, 255, 0.1)',
@@ -451,7 +451,7 @@ export const ZFInspectorDrawer: React.FC<ZFInspectorDrawerProps> = ({
                     </div>
                     <MoneyCell amount={contract.total_cash_collected} isAr={isAr} />
                     <div style={{ fontSize: '0.65rem', color: '#10b981', marginTop: '0.35rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                      {isAr ? 'نقدية بالبنك 102000' : 'In Bank 102000'}
+                      {isAr ? 'محصل باليد (خزينة الشركة)' : 'Collected by Hand (Safe)'}
                     </div>
                   </div>
 
@@ -549,10 +549,10 @@ export const ZFInspectorDrawer: React.FC<ZFInspectorDrawerProps> = ({
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.78rem' }}>
                     <div style={{ display: 'flex', gap: '0.5rem' }}>
                       <span style={{ padding: '0.2rem 0.6rem', borderRadius: '6px', background: 'rgba(16, 185, 129, 0.1)', color: '#10b981', fontWeight: 700 }}>
-                        {paidSchedules.length} {isAr ? 'أقساط مسددة' : 'Paid'}
+                        {paidSchedules.length} {isAr ? 'تم التحصيل' : 'Collected'}
                       </span>
                       <span style={{ padding: '0.2rem 0.6rem', borderRadius: '6px', background: 'rgba(245, 158, 11, 0.1)', color: '#fbbf24', fontWeight: 700 }}>
-                        {pendingSchedules.length} {isAr ? 'أقساط متبقية' : 'Pending'}
+                        {pendingSchedules.length} {isAr ? 'لم يتم التحصيل' : 'Not Collected'}
                       </span>
                     </div>
 
@@ -634,7 +634,7 @@ export const ZFInspectorDrawer: React.FC<ZFInspectorDrawerProps> = ({
                               <div style={{ fontSize: '0.68rem', marginTop: '0.15rem', whiteSpace: 'nowrap' }}>
                                 {isPaid ? (
                                   <span style={{ color: '#10b981', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '0.2rem' }}>
-                                    <CheckCircle2 size={11} /> {isAr ? 'مسدد بالكامل' : 'Paid'}
+                                    <CheckCircle2 size={11} /> {isAr ? 'تم التحصيل' : 'Collected'}
                                   </span>
                                 ) : isVoid ? (
                                   <span style={{ color: '#ef4444', fontWeight: 600 }}>
@@ -642,7 +642,7 @@ export const ZFInspectorDrawer: React.FC<ZFInspectorDrawerProps> = ({
                                   </span>
                                 ) : (
                                   <span style={{ color: '#fbbf24', fontWeight: 600 }}>
-                                    {isAr ? 'قيد الاستحقاق' : 'Pending'}
+                                    {isAr ? 'لم يتم التحصيل' : 'Not Collected'}
                                   </span>
                                 )}
                               </div>
@@ -670,7 +670,7 @@ export const ZFInspectorDrawer: React.FC<ZFInspectorDrawerProps> = ({
                                 }}
                               >
                                 <DollarSign size={13} />
-                                <span>{isAr ? 'تحصيل' : 'Collect'}</span>
+                                <span>{isAr ? 'تحصيل باليد (تم التحصيل)' : 'Collect by Hand'}</span>
                               </button>
                             )}
                           </div>
@@ -946,7 +946,7 @@ export const ZFInspectorDrawer: React.FC<ZFInspectorDrawerProps> = ({
                   zIndex: 1
                 }}>
                   <span style={{ fontSize: '0.74rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: 700 }}>
-                    {isAr ? 'القيمة الاسمية للشيك' : 'Cheque Nominal Value'}
+                    {isAr ? 'قيمة القسط / البند المطلوب تحصيله' : 'Installment Due Amount'}
                   </span>
                   <div style={{ fontSize: '1.5rem', fontWeight: 900, color: '#ffffff', letterSpacing: '-0.02em' }}>
                     <MoneyCell amount={chq.nominal_value} isAr={isAr} highlight />
@@ -990,7 +990,7 @@ export const ZFInspectorDrawer: React.FC<ZFInspectorDrawerProps> = ({
                     zIndex: 1
                   }}>
                     <AlertTriangle size={14} />
-                    <span>{isAr ? 'تنبيه: هذا الشيك متأخر عن تاريخ استحقاقه ويتطلب إيداعاً عاجلاً!' : 'Overdue for deposit!'}</span>
+                    <span>{isAr ? 'تنبيه: هذا البند متأخر عن موعد استحقاقه ويتطلب التحصيل العاجل باليد!' : 'Overdue for hand collection!'}</span>
                   </div>
                 )}
                 {isDueToday && (
@@ -1008,7 +1008,7 @@ export const ZFInspectorDrawer: React.FC<ZFInspectorDrawerProps> = ({
                     zIndex: 1
                   }}>
                     <Clock size={14} />
-                    <span>{isAr ? 'يستحق الإيداع بالبنك اليوم!' : 'Due for deposit today!'}</span>
+                    <span>{isAr ? 'يستحق التحصيل نقداً باليد اليوم!' : 'Due for hand collection today!'}</span>
                   </div>
                 )}
               </div>
@@ -1079,7 +1079,7 @@ export const ZFInspectorDrawer: React.FC<ZFInspectorDrawerProps> = ({
                   </div>
                 ) : (
                   <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
-                    {isAr ? 'شيك مسجل بدون ربط تعاقدي مباشر' : 'Unlinked direct custody cheque'}
+                    {isAr ? 'بند استحقاق وقسط مسجل بالعقد' : 'Contract installment due'}
                   </div>
                 )}
               </div>
@@ -1096,7 +1096,7 @@ export const ZFInspectorDrawer: React.FC<ZFInspectorDrawerProps> = ({
               }}>
                 <div style={{ fontSize: '0.75rem', fontWeight: 800, color: '#e2e8f0', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                   <Clock size={14} color="#60a5fa" />
-                  <span>{isAr ? 'المسار الزمني والمحاسبي للشيك:' : 'Cheque Accounting Lifecycle:'}</span>
+                  <span>{isAr ? 'دورة استحقاق وتحصيل البند نقداً باليد:' : 'Hand Due Collection Lifecycle:'}</span>
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
@@ -1120,10 +1120,10 @@ export const ZFInspectorDrawer: React.FC<ZFInspectorDrawerProps> = ({
                     </div>
                     <div style={{ flex: 1 }}>
                       <div style={{ fontSize: '0.78rem', fontWeight: 700, color: step >= 1 ? '#ffffff' : '#64748b' }}>
-                        {isAr ? 'استلام الشيك بالخزينة الحديدية' : 'Physical Safe Custody'}
+                        {isAr ? 'إدراج وجدولة القسط بالعقد' : 'Contract Installment Scheduled'}
                       </div>
                       <div style={{ fontSize: '0.7rem', color: '#94a3b8' }}>
-                        {isAr ? 'حساب أوراق قبض بعهدة خزينة الشركة' : 'GL Cheques in company safe'}
+                        {isAr ? 'استحقاق آجل بانتظار موعد السداد' : 'Scheduled future hand installment'}
                       </div>
                     </div>
                     {step === 1 && (
@@ -1153,12 +1153,10 @@ export const ZFInspectorDrawer: React.FC<ZFInspectorDrawerProps> = ({
                     </div>
                     <div style={{ flex: 1 }}>
                       <div style={{ fontSize: '0.78rem', fontWeight: 700, color: step >= 2 ? '#ffffff' : '#64748b' }}>
-                        {isAr ? 'إيداع برسم التحصيل بالبنك (١٠٤٠٠٠)' : 'Bank Collection Transit (104000)'}
+                        {isAr ? 'حلول موعد التحصيل نقداً باليد' : 'Due for Hand Collection'}
                       </div>
                       <div style={{ fontSize: '0.7rem', color: '#94a3b8' }}>
-                        {chq.deposited_date 
-                          ? (isAr ? `تاريخ الإيداع: ${chq.deposited_date}` : `Deposited: ${chq.deposited_date}`)
-                          : (isAr ? 'إرسال حافظة الشيكات لغرفة المقاصة بالبنك' : 'Sent to bank clearing')}
+                        {isAr ? 'تواصل مع العميل واستلام النقدية باليد' : 'Contact client for hand cash collection'}
                       </div>
                     </div>
                     {step === 2 && (
@@ -1188,17 +1186,17 @@ export const ZFInspectorDrawer: React.FC<ZFInspectorDrawerProps> = ({
                     </div>
                     <div style={{ flex: 1 }}>
                       <div style={{ fontSize: '0.78rem', fontWeight: 700, color: step >= 3 ? '#ffffff' : '#64748b' }}>
-                        {isAr ? 'المقاصة البنكية وإضافة الرصيد (١٠٢٠٠٠)' : 'Bank Clearing & Settlement (102000)'}
+                        {isAr ? 'تم التحصيل باليد والتوريد بالخزينة (١٠١٠٠٠)' : 'Collected by Hand into Safe (101000)'}
                       </div>
                       <div style={{ fontSize: '0.7rem', color: '#94a3b8' }}>
                         {chq.cleared_date 
-                          ? (isAr ? `تمت المقاصة والإضافة بتاريخ: ${chq.cleared_date}` : `Cleared date: ${chq.cleared_date}`)
-                          : (isAr ? 'إضافة السيولة النقدية للحساب البنكي الجاري' : 'Cash posted to operating bank')}
+                          ? (isAr ? `تم الاستلام والتوريد بالخزينة بتاريخ: ${chq.cleared_date}` : `Hand collected date: ${chq.cleared_date}`)
+                          : (isAr ? 'استلام النقدية يدوياً بدون ربط بنكي' : 'Cash collected by hand without bank link')}
                       </div>
                     </div>
                     {step === 3 && (
                       <span style={{ fontSize: '0.68rem', padding: '0.15rem 0.45rem', borderRadius: '4px', background: 'rgba(16, 185, 129, 0.15)', color: '#10b981', fontWeight: 700 }}>
-                        {isAr ? 'تم التحصيل بالكامل' : 'Settled'}
+                        {isAr ? 'تم التحصيل' : 'Collected'}
                       </span>
                     )}
                   </div>
@@ -1305,12 +1303,12 @@ export const ZFInspectorDrawer: React.FC<ZFInspectorDrawerProps> = ({
                   <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: 800, color: '#ffffff' }}>
                     {isAr 
                       ? (isDisposal 
-                          ? 'ضريبة التصرفات العقارية (المادة ٤٢ من القانون ٩١ لسنة ٢٠٠٥)' 
-                          : `استقطاعات الخصم والتحصيل - نموذج ٤١ (${ratePct}٪)`)
+                          ? 'ضريبة ورسوم محددة يدوياً للشقة (ضمن سعر التعاقد)' 
+                          : t.tax_type)
                       : t.tax_type}
                   </h4>
                   <div style={{ fontSize: '0.74rem', color: '#94a3b8', marginTop: '0.2rem' }}>
-                    {isAr ? `تاريخ نشوء الالتزام الضريبي: ${t.created_at || 'معتمد بالدفاتر'}` : `Assessment Date: ${t.created_at}`}
+                    {isAr ? `تاريخ اعتماد الضريبة: ${t.created_at || 'معتمد بالدفاتر'}` : `Assessment Date: ${t.created_at}`}
                   </div>
                 </div>
 
@@ -1327,15 +1325,15 @@ export const ZFInspectorDrawer: React.FC<ZFInspectorDrawerProps> = ({
                 }}>
                   <div>
                     <span style={{ fontSize: '0.72rem', color: '#94a3b8', display: 'block', fontWeight: 700 }}>
-                      {isAr ? 'قيمة الضريبة المستحقة للسداد' : 'Statutory Tax Due'}
+                      {isAr ? 'قيمة الضريبة المضافة للشقة (يدوياً)' : 'Manual Apartment Tax'}
                     </span>
-                    <div style={{ fontSize: '1.5rem', fontWeight: 900, color: '#10b981', letterSpacing: '-0.02em', marginTop: '0.15rem' }}>
+                    <div style={{ fontSize: '1.5rem', fontWeight: 900, color: '#38bdf8', letterSpacing: '-0.02em', marginTop: '0.15rem' }}>
                       <MoneyCell amount={t.tax_amount} isAr={isAr} highlight />
                     </div>
                   </div>
                   <div style={{ textAlign: isAr ? 'left' : 'right' }}>
                     <span style={{ fontSize: '0.7rem', color: '#94a3b8', display: 'block' }}>
-                      {isAr ? 'النسبة القانونية' : 'Statutory Rate'}
+                      {isAr ? 'النسبة المحسوبة' : 'Calculated Rate'}
                     </span>
                     <div style={{
                       fontSize: '1.1rem',
@@ -1357,7 +1355,7 @@ export const ZFInspectorDrawer: React.FC<ZFInspectorDrawerProps> = ({
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', fontSize: '0.76rem', zIndex: 1 }}>
                   <div>
                     <span style={{ color: '#64748b', display: 'block', fontSize: '0.68rem' }}>
-                      {isAr ? 'الوعاء الخاضع للضريبة (Base):' : 'Taxable Base:'}
+                      {isAr ? 'سعر الشقة الأساسي (Base):' : 'Base Apartment Price:'}
                     </span>
                     <strong style={{ color: '#e2e8f0', fontSize: '0.85rem' }}>
                       <MoneyCell amount={t.taxable_base} isAr={isAr} />
@@ -1365,10 +1363,10 @@ export const ZFInspectorDrawer: React.FC<ZFInspectorDrawerProps> = ({
                   </div>
                   <div>
                     <span style={{ color: '#64748b', display: 'block', fontSize: '0.68rem' }}>
-                      {isAr ? 'حساب الالتزام الضريبي بالدليل:' : 'GL Liability Account:'}
+                      {isAr ? 'حساب الالتزام بالدليل المحاسبي:' : 'GL Liability Account:'}
                     </span>
                     <strong style={{ color: '#ffffff', fontFamily: 'monospace', fontSize: '0.82rem' }}>
-                      {isDisposal ? '204000 - مصلحة الضرائب' : '204000 - استقطاعات نموذج 41'}
+                      204000 - الضرائب والرسوم المستحقة
                     </strong>
                   </div>
                 </div>
@@ -1430,7 +1428,7 @@ export const ZFInspectorDrawer: React.FC<ZFInspectorDrawerProps> = ({
                       <strong style={{ color: '#ffffff' }}>{contract.buyer_name}</strong>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px dashed rgba(255,255,255,0.08)', paddingTop: '0.4rem' }}>
-                      <span style={{ color: '#94a3b8' }}>{isAr ? 'إجمالي قيمة التعاقد:' : 'Contract Value:'}</span>
+                      <span style={{ color: '#94a3b8' }}>{isAr ? 'إجمالي قيمة التعاقد (شامل الضريبة):' : 'Gross Contract Value:'}</span>
                       <span style={{ color: '#10b981', fontWeight: 800 }}>
                         <MoneyCell amount={contract.gross_contract_value} isAr={isAr} />
                       </span>
@@ -1443,7 +1441,7 @@ export const ZFInspectorDrawer: React.FC<ZFInspectorDrawerProps> = ({
                 )}
               </div>
 
-              {/* 3. STATUTORY LAW & REGULATORY FRAMEWORK */}
+              {/* 3. FINANCIAL POLICY & ACCOUNTING RULES */}
               <div style={{
                 background: 'rgba(56, 189, 248, 0.06)',
                 border: '1px solid rgba(56, 189, 248, 0.25)',
@@ -1456,18 +1454,12 @@ export const ZFInspectorDrawer: React.FC<ZFInspectorDrawerProps> = ({
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#38bdf8', fontWeight: 800 }}>
                   <BookOpen size={14} />
-                  <span>{isAr ? 'السند القانوني والتشريعي (مصلحة الضرائب):' : 'Statutory Legal Framework:'}</span>
+                  <span>{isAr ? 'المحددات المالية والسياسة المحاسبية:' : 'Financial & Accounting Policy:'}</span>
                 </div>
                 <div style={{ color: '#cbd5e1', lineHeight: 1.55 }}>
-                  {isDisposal ? (
-                    isAr 
-                      ? 'تفرض ضريبة التصرفات العقارية بنسبة 2.5% بغير أي تخفيض على إجمالي قيمة التصرف في العقارات المبنية أو الأراضي للبناء طبقاً للمادة 42 من قانون الضريبة على الدخل 91 لسنة 2005 وتعديلاته. تلتزم الشركة بتوريد الضريبة لمأمورية الضرائب خلال 30 يوماً من تحرير العقد، لتجنب مقابل التأخير وتسهيل شهر وتوثيق العقد للمشتري.'
-                      : 'Statutory 2.5% Real Estate Disposal Tax is levied under Article 42 of Egyptian Income Tax Law 91/2005 without deductible relief. Must be remitted to ETA within 30 days.'
-                  ) : (
-                    isAr 
-                      ? 'تلتزم المنشأة بنظام الخصم تحت حساب الضريبة (نموذج 41) بنسبة 1% على التوريدات والمقاولات و3% على المهن الحرة والخدمات وفقاً للمادة 59، ويتم توريد المبالغ المستقطعة ربع سنوياً على النموذج 41 لمصلحة الضرائب المصرية.'
-                      : 'Withholding tax under Article 59 remitted quarterly to ETA on Form 41.'
-                  )}
+                  {isAr 
+                    ? 'تم تحديد هذه الضريبة والرسوم يدوياً للشقة من قبل الإدارة المالية، وتُحسب مباشرة ضمن إجمالي سعر بيع الوحدة وقيمة التعاقد. يتم تحصيلها باليد مع الدفعة المقدمة وأقساط العقد وتوريدها للخزينة الرئيسية (حساب 101000).'
+                    : 'This tax/fee amount was set manually per apartment by the financial administration and is calculated directly into the gross unit selling price.'}
                 </div>
               </div>
 
@@ -1970,63 +1962,39 @@ export const ZFInspectorDrawer: React.FC<ZFInspectorDrawerProps> = ({
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-              {payload.cheque.status === 'In Safe' && (
+              {payload.cheque.status !== 'Cleared' ? (
                 <button 
                   className={styles.actionBtnPrimary}
-                  onClick={() => onUpdateChequeStatus && onUpdateChequeStatus(payload.cheque.cheque_id, 'Deposited')}
+                  onClick={() => onUpdateChequeStatus && onUpdateChequeStatus(payload.cheque.cheque_id, 'Cleared')}
                   disabled={isMutating}
                   style={{
-                    background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.25) 0%, rgba(37, 99, 235, 0.4) 100%)',
-                    border: '1px solid rgba(59, 130, 246, 0.5)',
-                    color: '#93c5fd',
-                    padding: '0.55rem 0.95rem',
-                    fontSize: '0.78rem'
+                    padding: '0.55rem 1.15rem',
+                    fontSize: '0.8rem',
+                    fontWeight: 800,
+                    background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.25) 0%, rgba(5, 150, 105, 0.35) 100%)',
+                    border: '1px solid rgba(16, 185, 129, 0.45)',
+                    color: '#6ee7b7'
                   }}
                 >
-                  <Landmark size={14} />
-                  <span>{isAr ? 'إيداع برسم التحصيل' : 'Deposit to Bank'}</span>
+                  <CheckCircle2 size={14} />
+                  <span>{isAr ? 'إثبات تحصيل البند نقداً باليد' : 'Mark Collected by Hand'}</span>
                 </button>
-              )}
-
-              {payload.cheque.status === 'Deposited' && (
-                <>
-                  <button 
-                    className={styles.actionBtnSecondary}
-                    style={{ borderColor: '#ef4444', color: '#f87171', padding: '0.55rem 0.85rem', fontSize: '0.78rem' }}
-                    onClick={() => onUpdateChequeStatus && onUpdateChequeStatus(payload.cheque.cheque_id, 'Bounced')}
-                    disabled={isMutating}
-                  >
-                    <AlertCircle size={14} />
-                    <span>{isAr ? 'ارتداد الشيك' : 'Bounce'}</span>
-                  </button>
-                  <button 
-                    className={styles.actionBtnPrimary}
-                    onClick={() => onUpdateChequeStatus && onUpdateChequeStatus(payload.cheque.cheque_id, 'Cleared')}
-                    disabled={isMutating}
-                    style={{ padding: '0.55rem 0.95rem', fontSize: '0.78rem' }}
-                  >
-                    <CheckCircle2 size={14} />
-                    <span>{isAr ? 'تأكيد الصرف والمقاصة' : 'Clear Cheque'}</span>
-                  </button>
-                </>
-              )}
-
-              {payload.cheque.status === 'Bounced' && (
-                <button 
-                  className={styles.actionBtnPrimary}
-                  onClick={() => onUpdateChequeStatus && onUpdateChequeStatus(payload.cheque.cheque_id, 'In Safe')}
-                  disabled={isMutating}
-                  style={{
-                    background: 'rgba(245, 158, 11, 0.2)',
-                    border: '1px solid rgba(245, 158, 11, 0.5)',
-                    color: '#fbbf24',
-                    padding: '0.55rem 0.95rem',
-                    fontSize: '0.78rem'
-                  }}
-                >
-                  <RotateCcw size={14} />
-                  <span>{isAr ? 'إعادة استلام بالخزينة' : 'Return to Safe'}</span>
-                </button>
+              ) : (
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.4rem',
+                  padding: '0.5rem 0.85rem',
+                  borderRadius: '8px',
+                  background: 'rgba(16, 185, 129, 0.1)',
+                  color: '#34d399',
+                  fontSize: '0.76rem',
+                  fontWeight: 800,
+                  border: '1px solid rgba(16, 185, 129, 0.25)'
+                }}>
+                  <CheckCircle2 size={14} />
+                  <span>{isAr ? 'تم التحصيل باليد ومورد بالخزينة (١٠١٠٠٠)' : 'Collected by hand in safe (101000)'}</span>
+                </div>
               )}
 
               <button className={styles.actionBtnSecondary} onClick={onClose} style={{ fontSize: '0.78rem', padding: '0.55rem 0.85rem' }}>

@@ -103,6 +103,10 @@ export class Decimal {
     return Decimal.fromCents(sign * rounded);
   }
 
+  dividedBy(divisor: number | string | Decimal): Decimal {
+    return this.div(divisor);
+  }
+
   equals(other: Decimal | string | number): boolean {
     const o = other instanceof Decimal ? other : new Decimal(other);
     return this.cents === o.cents;
@@ -113,9 +117,17 @@ export class Decimal {
     return this.cents > o.cents;
   }
 
+  gt(other: Decimal | string | number): boolean {
+    return this.greaterThan(other);
+  }
+
   greaterThanOrEqual(other: Decimal | string | number): boolean {
     const o = other instanceof Decimal ? other : new Decimal(other);
     return this.cents >= o.cents;
+  }
+
+  gte(other: Decimal | string | number): boolean {
+    return this.greaterThanOrEqual(other);
   }
 
   lessThan(other: Decimal | string | number): boolean {
@@ -123,9 +135,17 @@ export class Decimal {
     return this.cents < o.cents;
   }
 
+  lt(other: Decimal | string | number): boolean {
+    return this.lessThan(other);
+  }
+
   lessThanOrEqual(other: Decimal | string | number): boolean {
     const o = other instanceof Decimal ? other : new Decimal(other);
     return this.cents <= o.cents;
+  }
+
+  lte(other: Decimal | string | number): boolean {
+    return this.lessThanOrEqual(other);
   }
 
   isZero(): boolean {
@@ -176,6 +196,10 @@ export class Decimal {
 
 export function D(val: number | string | Decimal | bigint): Decimal {
   return new Decimal(val);
+}
+
+export function formatEGP(val: number | string | Decimal | bigint, isAr = false): string {
+  return D(val).formatEGP(isAr);
 }
 
 /**

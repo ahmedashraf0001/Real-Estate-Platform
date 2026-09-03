@@ -10,7 +10,8 @@ import {
   ArrowUpRight, 
   FileText, 
   Calendar,
-  Sparkles
+  Sparkles,
+  Wallet
 } from 'lucide-react';
 import { ERPPDCRecord, ERPContract, ERPTaxRecord } from '@/lib/erp/types';
 import { MoneyCell } from '@/components/erp/MoneyCell';
@@ -128,25 +129,25 @@ export const DashboardOperationsRadar: React.FC<DashboardOperationsRadarProps> =
           <div>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', color: '#cbd5e1', fontWeight: 700, fontSize: '0.8rem' }}>
-                <Landmark size={15} color="#94a3b8" />
-                <span>{isAr ? 'شيكات مستحقة الصرف بالخزينة' : 'PDCs Due for Clearance'}</span>
+                <Wallet size={15} color="var(--zf-gold, #d4af37)" />
+                <span>{isAr ? 'أقساط وبنود مستحقة التحصيل باليد' : 'Installments Due for Hand Collection'}</span>
               </div>
               <span style={{
-                background: dueCheques.length > 0 ? 'rgba(255, 255, 255, 0.06)' : 'rgba(255, 255, 255, 0.03)',
-                color: dueCheques.length > 0 ? '#f8fafc' : '#64748b',
+                background: dueCheques.length > 0 ? 'rgba(212, 175, 55, 0.15)' : 'rgba(255, 255, 255, 0.03)',
+                color: dueCheques.length > 0 ? 'var(--zf-gold, #d4af37)' : '#64748b',
                 borderRadius: '6px',
-                border: '1px solid rgba(255, 255, 255, 0.08)',
+                border: '1px solid rgba(212, 175, 55, 0.25)',
                 padding: '0.15rem 0.5rem',
                 fontSize: '0.7rem',
                 fontWeight: 700
               }}>
-                {dueCheques.length} {isAr ? 'شيك' : 'PDCs'}
+                {dueCheques.length} {isAr ? 'بند قسط' : 'dues'}
               </span>
             </div>
 
             <div style={{ marginTop: '0.6rem' }}>
               <span style={{ fontSize: '0.68rem', color: '#64748b', display: 'block' }}>
-                {isAr ? 'إجمالي قيمة الشيكات المستحقة:' : 'Total due value:'}
+                {isAr ? 'إجمالي قيمة الأقساط المستحقة:' : 'Total due installments:'}
               </span>
               <div style={{ fontSize: '1.35rem', fontWeight: 800, color: '#f8fafc', fontFamily: 'monospace' }}>
                 {totalDueChequesAmount.formatEGP(isAr)}
@@ -177,12 +178,12 @@ export const DashboardOperationsRadar: React.FC<DashboardOperationsRadarProps> =
               >
                 <div>
                   <strong style={{ color: '#f8fafc', display: 'block' }}>#{ch.cheque_number}</strong>
-                  <span style={{ color: '#64748b', fontSize: '0.66rem' }}>{ch.bank_name || 'البنك المسحوب'}</span>
+                  <span style={{ color: '#64748b', fontSize: '0.66rem' }}>{ch.drawer_name || (isAr ? 'سداد نقدي باليد' : 'Hand Cash')}</span>
                 </div>
                 <div style={{ textAlign: isAr ? 'left' : 'right' }}>
                   <span style={{ color: '#f8fafc', fontWeight: 700 }}>{D(ch.nominal_value).formatEGP(isAr)}</span>
                   <span style={{ color: ch.due_date <= todayStr ? '#f87171' : '#cbd5e1', fontSize: '0.66rem', display: 'block' }}>
-                    {ch.due_date <= todayStr ? (isAr ? 'مستحق اليوم' : 'Due Today') : ch.due_date}
+                    {ch.due_date <= todayStr ? (isAr ? 'يستحق التحصيل اليوم' : 'Due Today') : ch.due_date}
                   </span>
                 </div>
               </div>
@@ -191,7 +192,7 @@ export const DashboardOperationsRadar: React.FC<DashboardOperationsRadarProps> =
             {dueCheques.length === 0 && (
               <div style={{ fontSize: '0.72rem', color: '#10b981', display: 'flex', alignItems: 'center', gap: '0.35rem', padding: '0.4rem 0' }}>
                 <CheckCircle2 size={13} />
-                <span>{isAr ? 'لا توجد شيكات متأخرة أو مستحقة حالياً' : 'All safe cheques are clear'}</span>
+                <span>{isAr ? 'كافة الأقساط والبنود محصلة ومسددة' : 'All hand dues are clear'}</span>
               </div>
             )}
           </div>
@@ -336,7 +337,7 @@ export const DashboardOperationsRadar: React.FC<DashboardOperationsRadarProps> =
               >
                 <div>
                   <strong style={{ color: '#f8fafc', display: 'block' }}>
-                    {tx.tax_type.includes('Disposal') ? (isAr ? 'تصرفات عقارية (٢.٥٪)' : 'Disposal Tax (2.5%)') : 'نموذج 41'}
+                    {tx.tax_type.includes('Disposal') ? (isAr ? 'ضريبة مضافة للشقة (يدوياً)' : 'Manual Apartment Tax') : tx.tax_type}
                   </strong>
                   <span style={{ color: '#64748b', fontSize: '0.66rem' }}>#{tx.tax_id.slice(0, 8)}</span>
                 </div>

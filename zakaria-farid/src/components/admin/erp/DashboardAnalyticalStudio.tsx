@@ -284,7 +284,7 @@ export const DashboardAnalyticalStudio: React.FC<DashboardAnalyticalStudioProps>
             }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ fontSize: '0.72rem', color: '#6ee7b7', fontWeight: 700 }}>
-                  {isAr ? 'السيولة البنكية الجارية (حساب ١٠٢٠٠٠)' : 'Operating Bank Cash (102000)'}
+                  {isAr ? 'السيولة النقدية المحصلة بالخزينة (حساب ١٠١٠٠٠)' : 'Cash on Hand & Safe Liquidity (101000)'}
                 </span>
                 <span style={{ fontSize: '0.64rem', color: '#10b981', background: 'rgba(16, 185, 129, 0.12)', padding: '0.1rem 0.4rem', borderRadius: '4px', fontWeight: 700 }}>
                   {isAr ? 'سيولة فورية' : 'Liquid'}

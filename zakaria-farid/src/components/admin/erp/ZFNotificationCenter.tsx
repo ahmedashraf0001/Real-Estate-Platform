@@ -244,7 +244,7 @@ export const ZFNotificationCenter: React.FC<ZFNotificationCenterProps> = ({
           {[
             { id: 'all', labelAr: 'الكل', labelEn: 'All', count: notifications.length },
             { id: 'critical', labelAr: 'عاجل وحرج', labelEn: 'Critical', count: criticalCount, color: '#ef4444' },
-            { id: 'cheque', labelAr: 'شيكات', labelEn: 'PDCs', count: chequeCount },
+            { id: 'cheque', labelAr: 'أقساط مستحقة', labelEn: 'Hand Dues', count: chequeCount },
             { id: 'approval', labelAr: 'موافقات', labelEn: 'Approvals', count: approvalCount }
           ].map(tab => {
             const isActive = activeFilter === tab.id;

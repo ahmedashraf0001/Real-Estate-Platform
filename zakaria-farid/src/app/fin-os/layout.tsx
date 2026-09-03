@@ -25,7 +25,7 @@ export default async function FinOSLayout({ children }: { children: React.ReactN
   }
 
   return (
-    <html lang="ar" dir="rtl" data-theme="dark">
+    <html lang="ar" dir="rtl" data-theme="dark" style={{ height: '100%', overflow: 'hidden' }}>
       <body style={{ margin: 0, padding: 0, height: '100vh', width: '100vw', overflow: 'hidden', background: '#07080b', fontFamily: "'ThmanyahSans', 'Cairo', 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif", WebkitFontSmoothing: 'antialiased' }}>
         {children}
         <Toaster position="top-right" richColors />

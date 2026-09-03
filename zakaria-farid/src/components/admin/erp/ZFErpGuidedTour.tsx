@@ -19,7 +19,8 @@ import {
   Layers,
   ArrowRight,
   ArrowLeft,
-  Check
+  Check,
+  Wallet
 } from 'lucide-react';
 import { ERPNavModule } from './ZFNavigationDock';
 
@@ -63,13 +64,13 @@ const SIDEBAR_TOUR_STEPS: TourStep[] = [
     purposeEn: 'Executive cockpit providing real-time panoramic telemetry across platform liquidity, capital mindmap, monthly calendar, and today’s action ledger.',
     capabilitiesAr: [
       'خريطة تدفقات رأس المال (Mindmap) لرصد المبيعات والسيولة النقدية وتكاليف WIP',
-      'التقويم المالي التفاعلي لشهر كامل لمتابعة استحقاقات الشيكات والأقساط يوماً بيوم',
+      'التقويم المالي التفاعلي لشهر كامل لمتابعة استحقاقات الأقساط والتحصيل باليد يوماً بيوم',
       'أجندة واستحقاقات اليوم والتحذيرات الرقابية مع أزرار التحصيل والمعاينة الفورية',
       'استوديو التحليل المالي ومنحنيات هورايزون للتنبؤ المستقبلي (IFRS 15 Horizon)'
     ],
     capabilitiesEn: [
       'Capital Flow Mindmap tracking booked sales, liquidity, and WIP outflows',
-      'Full monthly financial calendar mapping cheque maturities and contract tranches',
+      'Full monthly financial calendar mapping contract installment dues and hand collections',
       'Today’s Action Ledger with instant collection and contract inspection buttons',
       'Analytical Studio with IFRS 15 Cashflow Horizon & S-Curve projections'
     ],
@@ -163,27 +164,27 @@ const SIDEBAR_TOUR_STEPS: TourStep[] = [
     targetSelector: '[data-tour="nav-item-pdc"]',
     groupAr: 'المبيعات والعمليات التعاقدية',
     groupEn: 'SALES & DEALS PIPELINE',
-    titleAr: 'حافظة شيكات الخزينة المؤجلة (PDC)',
-    titleEn: 'PDC Cheques Vault & Life-Cycle',
-    badgeLabelAr: 'الخزينة والشيكات',
-    badgeLabelEn: 'CHEQUES VAULT',
-    purposeAr: 'الخزينة الإلكترونية للشيكات المؤجلة (حساب ١٠٤٠٠٠)؛ إدارة دورة حياة الشيك كاملة (بالخزينة، مودع، محصل، مرتد) مع استوديو الشيك الواقعي والتفقيط العربي.',
-    purposeEn: 'Central electronic safe for post-dated cheques (GL 104000); tracks full lifecycle (In Safe, Deposited, Cleared, Bounced) with realistic cheque studio.',
+    titleAr: 'حافظة بنود التحصيل والأقساط باليد',
+    titleEn: 'Hand Installments & Cash Dues Vault',
+    badgeLabelAr: 'الخزينة والأقساط باليد',
+    badgeLabelEn: 'HAND INSTALLMENTS',
+    purposeAr: 'منظومة إدارة ومتابعة الأقساط وبنود الاستحقاق المستلمة نقداً باليد (حساب ١٠٤٠٠٠)؛ مع معالجة التحصيل اليدوي المباشر وتوريد النقدية بالخزينة الرئيسية [١٠١٠٠٠] بدون أي تعاملات بنكية.',
+    purposeEn: 'Management of contract installment items collected in cash by hand (GL 104000); records physical receipts directly into Main Safe [101000] with no banking intermediaries.',
     capabilitiesAr: [
-      'استلام وحفظ شيكات العملاء بالخزينة الحديدية مع ربطها تلقائياً بالقسط التعاقدي',
-      'استوديو المعاينة الواقعية للشيك البنكي الورقي مع التفقيط التلقائي بالجنيه المصري',
-      'تحصيل الشيك بضغطة زر واحدة وترحيل القيد لحساب البنك (١٠٢٠٠٠)',
-      'إدارة حالات الارتداد والتحصيل وإعادة الإيداع وحصر الشيكات حسب البنك المسحوب عليه'
+      'جدولة وحصر بنود الأقساط المستحقة باليد وربطها التلقائي بالعقود',
+      'تصنيف فوري للحالة: مسدد في حينه، مستحق لاحقاً باليد، أو متأخر عن موعده',
+      'إجراء تحصيل نقدي باليد بضغطة زر مع تسجيل رقم إيصال الاستلام والتوريد بالخزينة',
+      'إنشاء قيود يومية تلقائية متوازنة لحساب الخزينة الرئيسية (١٠١٠٠٠)'
     ],
     capabilitiesEn: [
-      'Vault incoming client cheques with automatic linkage to contract schedules',
-      'Realistic physical cheque studio with automatic Arabic Tafqeet currency phrasing',
-      'One-click cheque clearance automatically posting entries to Bank Cash (102000)',
-      'Manage bank deposits, bounces, representation, and drawer bank analytics'
+      'Schedule and track installment dues linked directly to sales contracts',
+      'Status tracking: Paid in-time, Due later by hand, or Overdue',
+      'Interactive hand collection modal capturing receipt voucher #, date, and safe deposit',
+      'Automated balanced GL journal entry posting to Main Safe (101000)'
     ],
-    accountingImpactAr: 'إيداع الشيك بالخزينة (مدين أوراق قبض 104000) وتحصيله بالبنك (مدين بنك 102000 ودائن 104000).',
-    accountingImpactEn: 'Safe deposit (Dr Cheques Vault 104000) and clearance (Dr Operating Bank 102000 / Cr 104000).',
-    icon: Landmark
+    accountingImpactAr: 'تحصيل القسط نقداً باليد (مدين الخزينة الرئيسية 101000 ودائن أقساط مستحقة 104000).',
+    accountingImpactEn: 'Hand cash collection (Dr Main Cash Safe 101000 / Cr Installments Receivable 104000).',
+    icon: Wallet
   },
   {
     moduleId: 'ledger',
@@ -238,33 +239,6 @@ const SIDEBAR_TOUR_STEPS: TourStep[] = [
     accountingImpactAr: 'استنزال تكلفة الوحدة المسلمة بالقيد: مدين تكلفة مبيعات 501000 ودائن أعمال تحت التنفيذ 105000.',
     accountingImpactEn: 'Relieves unit cost: Dr Cost of Goods Sold (501000) / Cr Work in Progress (105000).',
     icon: PieChart
-  },
-  {
-    moduleId: 'tax',
-    targetSelector: '[data-tour="nav-item-tax"]',
-    groupAr: 'المحاسبة والرقابة المالية',
-    groupEn: 'ACCOUNTING & GOVERNANCE',
-    titleAr: 'الضرائب السيادية واستقطاعات نموذج ٤١',
-    titleEn: 'Statutory Taxes & ETA Form 41',
-    badgeLabelAr: 'الضرائب السيادية',
-    badgeLabelEn: 'STATUTORY TAXES',
-    purposeAr: 'المركز الرقابي للالتزامات الضريبية؛ حصر ضريبة التصرفات العقارية (٢.٥٪) واستقطاعات نموذج ٤١ (١٪) من المقاولين، وتوثيق السداد لمصلحة الضرائب المصرية.',
-    purposeEn: 'Statutory tax governance; tracking 2.5% real estate disposal tax, Form 41 contractor withholding (1%), and remittance to the Egyptian Tax Authority.',
-    capabilitiesAr: [
-      'حصر واستقطاع مبالغ نموذج ٤١ القانونية على مستخلصات المقاولين والموردين',
-      'احتساب وتوثيق ضريبة التصرفات العقارية الرسمية (٢.٥٪) المقررة قانوناً',
-      'إدارة عمليات التوريد المباشر لمصلحة الضرائب وتوثيق أرقام وتواريخ الإيصالات',
-      'تصدير الكشوفات الضريبية الرسمية الجاهزة للفحص الضريبي والتقديم الربع سنوي'
-    ],
-    capabilitiesEn: [
-      'Withhold statutory Form 41 tax on sub-contractor and vendor invoices',
-      'Calculate and track statutory 2.5% real estate disposal tax on sales contracts',
-      'Record direct remittances to the tax authority with receipt numbers and dates',
-      'Export quarterly tax audit schedules compliant with ETA regulatory standards'
-    ],
-    accountingImpactAr: 'إثبات التزام الضريبة (دائن مصلحة الضرائب 205000) وسدادها (دائن البنك 102000 ومدين 205000).',
-    accountingImpactEn: 'Tax liability recognized (Cr Tax Authority 205000) and settled (Dr 205000 / Cr Bank 102000).',
-    icon: ShieldCheck
   },
   {
     moduleId: 'rescissions',
@@ -337,7 +311,7 @@ export const ZFErpGuidedTour: React.FC<ZFErpGuidedTourProps> = ({
 
     const el = document.querySelector(currentStep.targetSelector);
     if (el) {
-      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
       // Short delay for smooth scroll to settle
       const t = setTimeout(() => {
         const rect = el.getBoundingClientRect();

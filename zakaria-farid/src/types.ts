@@ -57,6 +57,10 @@ export interface Property {
   spec_layers?: any;
   property_images?: any[];
   property_amenities?: any[];
+  sale_mode?: 'whole_building' | 'individual_units' | 'both_flexible';
+  total_units_count?: number;
+  building_units?: any[];
+  parent_property_id?: string | null;
   created_at?: string;
 }
 

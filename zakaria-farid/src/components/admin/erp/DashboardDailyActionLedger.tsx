@@ -100,12 +100,12 @@ export const DashboardDailyActionLedger: React.FC<DashboardDailyActionLedgerProp
         items.push({
           id: `cheque_today_${pdc.cheque_id}`,
           type: 'cheque',
-          title: isAr ? `شيك مستحق الإيداع اليوم #${pdc.cheque_number}` : `Cheque Due for Deposit Today #${pdc.cheque_number}`,
+          title: isAr ? `شيك مستحق التحصيل باليد اليوم #${pdc.cheque_number}` : `Cheque Due for Hand Collection Today #${pdc.cheque_number}`,
           subtitle: `${pdc.bank_name} · ${isAr ? 'الساحب:' : 'Drawer:'} ${pdc.drawer_name}`,
           amount: pdc.nominal_value,
-          statusText: isAr ? 'يستحق اليوم' : 'Due Today',
+          statusText: isAr ? 'لم يتم التحصيل (يستحق اليوم)' : 'Due Today',
           isOverdue: false,
-          actionLabel: isAr ? 'تحصيل الشيك' : 'Clear Cheque',
+          actionLabel: isAr ? 'تحصيل باليد' : 'Collect by Hand',
           onAction: () => onInspectCheque(pdc),
           originalEntity: pdc
         });
@@ -113,12 +113,12 @@ export const DashboardDailyActionLedger: React.FC<DashboardDailyActionLedgerProp
         items.push({
           id: `cheque_overdue_${pdc.cheque_id}`,
           type: 'cheque',
-          title: isAr ? `شيك متأخر التحصيل #${pdc.cheque_number}` : `Overdue Cheque #${pdc.cheque_number}`,
+          title: isAr ? `شيك متأخر التحصيل باليد #${pdc.cheque_number}` : `Overdue Cheque #${pdc.cheque_number}`,
           subtitle: `${pdc.bank_name} · ${isAr ? 'تأخير' : 'Delayed'} ${diffDays} ${isAr ? 'يوم' : 'days'} (${pdc.due_date})`,
           amount: pdc.nominal_value,
-          statusText: isAr ? `متأخر ${diffDays} يوم` : `${diffDays}d overdue`,
+          statusText: isAr ? `لم يتم التحصيل (متأخر ${diffDays} يوم)` : `${diffDays}d overdue`,
           isOverdue: true,
-          actionLabel: isAr ? 'إجراءات التحصيل' : 'Action Cheque',
+          actionLabel: isAr ? 'تحصيل باليد' : 'Collect by Hand',
           onAction: () => onInspectCheque(pdc),
           originalEntity: pdc
         });
@@ -143,12 +143,12 @@ export const DashboardDailyActionLedger: React.FC<DashboardDailyActionLedgerProp
         items.push({
           id: `schedule_today_${schedule.schedule_id}`,
           type: 'installment',
-          title: isAr ? `قسط تعاقدي مستحق التحصيل اليوم (قسط ${schedule.tranche_number})` : `Contract Installment Due Today (Tranche ${schedule.tranche_number})`,
+          title: isAr ? `قسط مستحق التحصيل باليد اليوم (قسط ${schedule.tranche_number})` : `Installment Due for Hand Collection (Tranche ${schedule.tranche_number})`,
           subtitle: `${isAr ? 'عقد' : 'Contract'} ${contractNum} · ${unitId} · ${buyerName}`,
           amount: schedule.nominal_value,
-          statusText: isAr ? 'يستحق اليوم' : 'Due Today',
+          statusText: isAr ? 'لم يتم التحصيل (يستحق اليوم)' : 'Due Today',
           isOverdue: false,
-          actionLabel: isAr ? 'معاينة العقد' : 'View Contract',
+          actionLabel: isAr ? 'تحصيل باليد' : 'Collect by Hand',
           onAction: () => contract && onInspectContract(contract),
           originalEntity: schedule
         });
@@ -156,12 +156,12 @@ export const DashboardDailyActionLedger: React.FC<DashboardDailyActionLedgerProp
         items.push({
           id: `schedule_overdue_${schedule.schedule_id}`,
           type: 'installment',
-          title: isAr ? `قسط تعاقدي متأخر (قسط ${schedule.tranche_number})` : `Overdue Tranche #${schedule.tranche_number}`,
+          title: isAr ? `قسط متأخر لم يتم تحصيله (قسط ${schedule.tranche_number})` : `Overdue Tranche #${schedule.tranche_number}`,
           subtitle: `${isAr ? 'عقد' : 'Contract'} ${contractNum} · ${unitId} · ${buyerName} (${isAr ? 'متأخر' : 'late'} ${diffDays}d)`,
           amount: schedule.nominal_value,
-          statusText: isAr ? `متأخر ${diffDays} يوم` : `${diffDays}d late`,
+          statusText: isAr ? `لم يتم التحصيل (متأخر ${diffDays} يوم)` : `${diffDays}d late`,
           isOverdue: true,
-          actionLabel: isAr ? 'متابعة السداد' : 'Inspect Contract',
+          actionLabel: isAr ? 'تحصيل باليد' : 'Collect by Hand',
           onAction: () => contract && onInspectContract(contract),
           originalEntity: schedule
         });

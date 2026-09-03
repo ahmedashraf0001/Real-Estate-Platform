@@ -49,6 +49,24 @@ export interface PropertyVideo {
   category?: 'tour' | 'drone' | 'cad' | 'spec';
 }
 
+export type BuildingSaleMode = 'whole_building' | 'individual_units' | 'both_flexible';
+
+export interface BuildingUnitItem {
+  unit_id: string;
+  unit_number: string; // e.g. "Flat 1A", "شقة 101"
+  floor: number;
+  area_sqm: number;
+  bedrooms: number;
+  bathrooms: number;
+  price_egp: number; // Base price
+  tax_amount_egp?: number; // Manual tax per apartment (not static)
+  tax_description?: string; // e.g. "ضريبة ورسوم محددة يدوياً"
+  status: 'available' | 'reserved' | 'contracted';
+  contract_id?: string;
+  contract_number?: string;
+  buyer_name?: string;
+}
+
 export interface Property {
   id: string;
   slug: string;
@@ -80,6 +98,11 @@ export interface Property {
   property_images?: PropertyImage[];
   property_amenities?: PropertyAmenity[];
   partner_splits?: Array<{ partner_name: string; share_percentage: number }>;
+  sale_mode?: BuildingSaleMode;
+  total_units_count?: number;
+  building_units?: BuildingUnitItem[];
+  parent_property_id?: string | null;
+  tax_amount_egp?: number;
 }
 
 export interface Lead {
