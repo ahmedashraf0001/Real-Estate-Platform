@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { 
   X, 
   ChevronRight, 
@@ -304,8 +304,25 @@ export const ZFErpGuidedTour: React.FC<ZFErpGuidedTourProps> = ({
 }) => {
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [targetRect, setTargetRect] = useState<DOMRect | null>(null);
+  const cardRef = useRef<HTMLDivElement>(null);
+  const [cardMeasuredHeight, setCardMeasuredHeight] = useState(460);
 
   const currentStep = SIDEBAR_TOUR_STEPS[currentStepIndex];
+
+  // Dynamically measure actual card height so placement never overflows viewport
+  useEffect(() => {
+    if (!cardRef.current) return;
+    const ro = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const height = entry.borderBoxSize?.[0]?.blockSize || entry.contentRect.height;
+        if (height > 50) {
+          setCardMeasuredHeight(height);
+        }
+      }
+    });
+    ro.observe(cardRef.current);
+    return () => ro.disconnect();
+  }, [currentStepIndex]);
 
   // Navigate to module automatically when active step changes
   useEffect(() => {
@@ -371,24 +388,38 @@ export const ZFErpGuidedTour: React.FC<ZFErpGuidedTourProps> = ({
   const Icon = currentStep.icon;
 
   // Calculate Tooltip Box Coordinates adjacent to the sidebar
-  const tooltipWidth = 430;
-  let tooltipTop = 80;
-  let tooltipLeft = 80;
+  const tooltipWidth = 420;
+  let tooltipTop = 20;
+  let tooltipLeft = 20;
 
-  if (targetRect) {
+  if (targetRect && typeof window !== 'undefined') {
     // Determine whether the dock is on the right (Arabic RTL) or left (LTR)
     const isDockOnRight = targetRect.left > (window.innerWidth / 2);
 
     if (isDockOnRight) {
-      // Place tooltip to the left of the sidebar dock
-      tooltipLeft = Math.max(20, targetRect.left - tooltipWidth - 24);
+      // Place tooltip to the left of the sidebar dock with comfortable clearance
+      tooltipLeft = Math.max(16, targetRect.left - tooltipWidth - 20);
     } else {
-      // Place tooltip to the right of the sidebar dock
-      tooltipLeft = Math.min(window.innerWidth - tooltipWidth - 20, targetRect.right + 24);
+      // Place tooltip to the right of the sidebar dock with comfortable clearance
+      tooltipLeft = Math.min(window.innerWidth - tooltipWidth - 16, targetRect.right + 20);
     }
 
-    // Align vertically near the targeted button
-    tooltipTop = Math.max(20, Math.min(window.innerHeight - 480, targetRect.top - 20));
+    // Vertical placement:
+    // Try to align with the top of the highlighted target item
+    let desiredTop = targetRect.top - 10;
+
+    // Strict boundary enforcement: NEVER allow card bottom to clip past window bottom
+    const maxAllowedTop = Math.max(16, window.innerHeight - cardMeasuredHeight - 20);
+    if (desiredTop > maxAllowedTop) {
+      desiredTop = maxAllowedTop;
+    }
+
+    // Strict boundary enforcement: NEVER allow card top to clip past window top
+    if (desiredTop < 16) {
+      desiredTop = 16;
+    }
+
+    tooltipTop = desiredTop;
   }
 
   return (
@@ -458,30 +489,36 @@ export const ZFErpGuidedTour: React.FC<ZFErpGuidedTourProps> = ({
 
       {/* FLOATING GLASSMORPHIC TOUR TOOLTIP CARD */}
       <div 
+        ref={cardRef}
         style={{
           position: 'fixed',
           top: tooltipTop,
           left: tooltipLeft,
           width: `${tooltipWidth}px`,
-          maxWidth: 'calc(100vw - 40px)',
-          background: 'linear-gradient(145deg, rgba(15, 23, 42, 0.96) 0%, rgba(9, 13, 22, 0.98) 100%)',
+          maxWidth: 'calc(100vw - 32px)',
+          maxHeight: 'calc(100vh - 36px)',
+          overflowY: 'auto',
+          background: 'linear-gradient(145deg, rgba(15, 23, 42, 0.97) 0%, rgba(9, 13, 22, 0.99) 100%)',
           border: '1px solid rgba(212, 175, 55, 0.38)',
-          borderRadius: '18px',
-          padding: '1.35rem 1.45rem',
-          boxShadow: '0 24px 60px rgba(0, 0, 0, 0.85), 0 0 35px rgba(212, 175, 55, 0.14)',
+          borderRadius: '16px',
+          padding: '1.15rem 1.25rem',
+          boxShadow: '0 24px 60px rgba(0, 0, 0, 0.9), 0 0 35px rgba(212, 175, 55, 0.14)',
           backdropFilter: 'blur(24px)',
           color: '#ffffff',
           zIndex: 1000001,
-          animation: 'fadeIn 0.25s ease-out'
+          animation: 'fadeIn 0.25s ease-out',
+          transition: 'top 0.2s cubic-bezier(0.16, 1, 0.3, 1), left 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+          scrollbarWidth: 'thin',
+          scrollbarColor: 'rgba(212, 175, 55, 0.35) transparent'
         }}
       >
         {/* Card Header: Group Badge & Step Counter & Close */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.85rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.65rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <span style={{
               fontSize: '0.66rem',
               fontWeight: 800,
-              padding: '0.2rem 0.6rem',
+              padding: '0.18rem 0.55rem',
               borderRadius: '999px',
               background: 'rgba(212, 175, 55, 0.15)',
               border: '1px solid rgba(212, 175, 55, 0.35)',
@@ -521,11 +558,11 @@ export const ZFErpGuidedTour: React.FC<ZFErpGuidedTourProps> = ({
         </div>
 
         {/* Card Title & Icon */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', marginBottom: '0.55rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', marginBottom: '0.45rem' }}>
           <div style={{
-            width: '32px',
-            height: '32px',
-            borderRadius: '9px',
+            width: '30px',
+            height: '30px',
+            borderRadius: '8px',
             background: 'linear-gradient(135deg, rgba(212, 175, 55, 0.25) 0%, rgba(212, 175, 55, 0.08) 100%)',
             border: '1px solid rgba(212, 175, 55, 0.4)',
             display: 'flex',
@@ -534,15 +571,15 @@ export const ZFErpGuidedTour: React.FC<ZFErpGuidedTourProps> = ({
             color: '#e2c974',
             flexShrink: 0
           }}>
-            <Icon size={16} />
+            <Icon size={15} />
           </div>
-          <h3 style={{ margin: 0, fontSize: '1.02rem', fontWeight: 800, color: '#f8fafc', lineHeight: 1.3 }}>
+          <h3 style={{ margin: 0, fontSize: '0.96rem', fontWeight: 800, color: '#f8fafc', lineHeight: 1.3 }}>
             {isAr ? currentStep.titleAr : currentStep.titleEn}
           </h3>
         </div>
 
         {/* Card Purpose Brief */}
-        <p style={{ margin: '0 0 0.85rem 0', fontSize: '0.8rem', color: '#cbd5e1', lineHeight: 1.6 }}>
+        <p style={{ margin: '0 0 0.65rem 0', fontSize: '0.78rem', color: '#cbd5e1', lineHeight: 1.55 }}>
           {isAr ? currentStep.purposeAr : currentStep.purposeEn}
         </p>
 
@@ -550,18 +587,18 @@ export const ZFErpGuidedTour: React.FC<ZFErpGuidedTourProps> = ({
         <div style={{
           background: 'rgba(255, 255, 255, 0.03)',
           border: '1px solid rgba(255, 255, 255, 0.07)',
-          borderRadius: '12px',
-          padding: '0.75rem 0.9rem',
-          marginBottom: '0.85rem'
+          borderRadius: '11px',
+          padding: '0.65rem 0.8rem',
+          marginBottom: '0.65rem'
         }}>
-          <span style={{ fontSize: '0.7rem', fontWeight: 800, color: '#e2c974', display: 'block', marginBottom: '0.45rem' }}>
+          <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#e2c974', display: 'block', marginBottom: '0.35rem' }}>
             {isAr ? 'أبرز الإجراءات والعمليات المتاحة في هذه الشاشة:' : 'Key Capabilities & Workflows:'}
           </span>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.28rem' }}>
             {(isAr ? currentStep.capabilitiesAr : currentStep.capabilitiesEn).map((cap, cIdx) => (
-              <div key={cIdx} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.45rem', fontSize: '0.74rem', color: '#94a3b8', lineHeight: 1.45 }}>
+              <div key={cIdx} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.45rem', fontSize: '0.72rem', color: '#94a3b8', lineHeight: 1.4 }}>
                 <span style={{ color: '#10b981', flexShrink: 0, marginTop: '2px' }}>
-                  <Check size={12} />
+                  <Check size={11} />
                 </span>
                 <span>{cap}</span>
               </div>
@@ -574,21 +611,21 @@ export const ZFErpGuidedTour: React.FC<ZFErpGuidedTourProps> = ({
           background: 'linear-gradient(135deg, rgba(212, 175, 55, 0.1) 0%, rgba(212, 175, 55, 0.02) 100%)',
           border: '1px solid rgba(212, 175, 55, 0.22)',
           borderRadius: '9px',
-          padding: '0.55rem 0.8rem',
+          padding: '0.45rem 0.75rem',
           display: 'flex',
           alignItems: 'center',
           gap: '0.45rem',
-          marginBottom: '1rem'
+          marginBottom: '0.75rem'
         }}>
-          <Sparkles size={13} color="#d4af37" style={{ flexShrink: 0 }} />
-          <span style={{ fontSize: '0.7rem', color: '#e2e8f0', lineHeight: 1.4 }}>
+          <Sparkles size={12} color="#d4af37" style={{ flexShrink: 0 }} />
+          <span style={{ fontSize: '0.68rem', color: '#e2e8f0', lineHeight: 1.4 }}>
             <strong style={{ color: '#e2c974' }}>{isAr ? 'الأثر المالي والرقابي: ' : 'Financial Impact: '}</strong>
             {isAr ? currentStep.accountingImpactAr : currentStep.accountingImpactEn}
           </span>
         </div>
 
         {/* Progress Bar Indicators */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', marginBottom: '1.1rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', marginBottom: '0.85rem' }}>
           {SIDEBAR_TOUR_STEPS.map((step, idx) => (
             <div
               key={step.moduleId}
