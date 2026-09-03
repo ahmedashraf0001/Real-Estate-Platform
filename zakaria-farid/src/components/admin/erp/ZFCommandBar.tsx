@@ -11,7 +11,9 @@ import {
   RefreshCw,
   Coins,
   ArrowLeft,
-  FileSpreadsheet
+  FileSpreadsheet,
+  ShieldCheck,
+  LogOut
 } from 'lucide-react';
 import { ERPAccountingPeriod } from '@/lib/erp/types';
 import styles from './ZFSubprogram.module.css';
@@ -25,6 +27,8 @@ interface ZFCommandBarProps {
   onRefreshData: () => void;
   onExportExcel?: () => void;
   isMutating?: boolean;
+  currentUser?: { email?: string } | null;
+  onSignOut?: () => void;
 }
 
 export const ZFCommandBar: React.FC<ZFCommandBarProps> = ({
@@ -35,7 +39,9 @@ export const ZFCommandBar: React.FC<ZFCommandBarProps> = ({
   onOpenQuickSearch,
   onRefreshData,
   onExportExcel,
-  isMutating = false
+  isMutating = false,
+  currentUser,
+  onSignOut
 }) => {
   const [cairoTime, setCairoTime] = useState<string>('');
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
@@ -199,6 +205,75 @@ export const ZFCommandBar: React.FC<ZFCommandBarProps> = ({
         >
           {isFullscreen ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
         </button>
+
+        {/* Authenticated Admin Badge & Sign Out */}
+        {currentUser && (
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.45rem',
+            paddingInlineStart: '0.4rem',
+            borderInlineStart: '1px solid rgba(255, 255, 255, 0.1)'
+          }}>
+            <div 
+              title={currentUser.email || 'Authenticated Admin'}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.35rem',
+                background: 'rgba(212, 175, 55, 0.1)',
+                border: '1px solid rgba(212, 175, 55, 0.3)',
+                padding: '0.2rem 0.55rem',
+                borderRadius: '6px',
+                color: '#e2c974',
+                fontSize: '0.72rem',
+                fontWeight: 700,
+                maxWidth: '160px',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              <ShieldCheck size={13} style={{ flexShrink: 0 }} />
+              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {currentUser.email ? currentUser.email.split('@')[0] : (isAr ? 'مسؤول معتمد' : 'Admin')}
+              </span>
+            </div>
+
+            {onSignOut && (
+              <button
+                type="button"
+                onClick={onSignOut}
+                title={isAr ? 'تسجيل الخروج وإنهاء الجلسة' : 'Sign Out'}
+                style={{
+                  background: 'rgba(239, 68, 68, 0.1)',
+                  border: '1px solid rgba(239, 68, 68, 0.25)',
+                  color: '#f87171',
+                  borderRadius: '6px',
+                  padding: '0.25rem 0.55rem',
+                  fontSize: '0.72rem',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.3rem',
+                  transition: 'all 0.15s ease'
+                }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.background = 'rgba(239, 68, 68, 0.2)';
+                  e.currentTarget.style.borderColor = 'rgba(239, 68, 68, 0.5)';
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)';
+                  e.currentTarget.style.borderColor = 'rgba(239, 68, 68, 0.25)';
+                }}
+              >
+                <LogOut size={12} />
+                <span>{isAr ? 'خروج' : 'Exit'}</span>
+              </button>
+            )}
+          </div>
+        )}
       </div>
     </header>
   );

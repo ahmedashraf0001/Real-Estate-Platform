@@ -1,4 +1,6 @@
 import type { Metadata } from 'next';
+import { redirect } from 'next/navigation';
+import { createClient } from '@/lib/supabase/server';
 import '@/app/globals.css';
 import { Toaster } from 'sonner';
 
@@ -14,9 +16,16 @@ export const metadata: Metadata = {
   },
 };
 
-export default function FinOSLayout({ children }: { children: React.ReactNode }) {
+export default async function FinOSLayout({ children }: { children: React.ReactNode }) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect('/admin/login?next=/fin-os');
+  }
+
   return (
-    <html lang="en" data-theme="dark">
+    <html lang="ar" dir="rtl" data-theme="dark">
       <body style={{ margin: 0, padding: 0, height: '100vh', width: '100vw', overflow: 'hidden', background: '#07080b', fontFamily: "'ThmanyahSans', 'Cairo', 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif", WebkitFontSmoothing: 'antialiased' }}>
         {children}
         <Toaster position="top-right" richColors />

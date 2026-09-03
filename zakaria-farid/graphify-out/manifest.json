@@ -732,9 +732,9 @@
     "semantic_hash": ""
   },
   "src/app/admin/login/page.tsx": {
-    "mtime": 1788035950.4067633,
-    "seen": 1788036185.8677042,
-    "ast_hash": "f3bf8fc76d28447cb69ce306e2a2bd71",
+    "mtime": 1788435186.9917264,
+    "seen": 1788435452.3958247,
+    "ast_hash": "1016e6fcd44d11c2d397a284ecbe16f0",
     "semantic_hash": ""
   },
   "src/app/admin/page.tsx": {
@@ -1290,9 +1290,9 @@
     "semantic_hash": ""
   },
   "src/middleware.ts": {
-    "mtime": 1788375038.6746812,
-    "seen": 1788392751.790447,
-    "ast_hash": "2327e9a4022ea69a7bacfc015a4e857b",
+    "mtime": 1788435150.3762186,
+    "seen": 1788435452.3960068,
+    "ast_hash": "d007daa4334939c9b20430fcad9b0693",
     "semantic_hash": ""
   },
   "src/types.ts": {
@@ -5016,9 +5016,9 @@
     "semantic_hash": ""
   },
   "src/app/fin-os/layout.tsx": {
-    "mtime": 1788374633.944029,
-    "seen": 1788392751.7902963,
-    "ast_hash": "cc945fbc0d8765d540baba2008048c8d",
+    "mtime": 1788435198.7934747,
+    "seen": 1788435452.3958378,
+    "ast_hash": "2df803038d9d89abab9668f9a5b7c632",
     "semantic_hash": ""
   },
   "src/app/fin-os/page.tsx": {
@@ -5040,9 +5040,9 @@
     "semantic_hash": ""
   },
   "src/components/admin/erp/AdminERPHub.tsx": {
-    "mtime": 1788404604.2957075,
-    "seen": 1788404715.7208924,
-    "ast_hash": "c6f00ca9c79d3cdf7a6d1221060b7f34",
+    "mtime": 1788435293.7648976,
+    "seen": 1788435452.3958914,
+    "ast_hash": "bb6c91eeb9abaf85eb3f24cf664729e1",
     "semantic_hash": ""
   },
   "src/components/admin/erp/CockpitAnalyticsCharts.tsx": {
@@ -5088,9 +5088,9 @@
     "semantic_hash": ""
   },
   "src/components/admin/erp/ZFCommandBar.tsx": {
-    "mtime": 1788403760.8781817,
-    "seen": 1788404715.720904,
-    "ast_hash": "4250dccd31587d936e31d892782bdbbb",
+    "mtime": 1788435244.4834092,
+    "seen": 1788435452.3959045,
+    "ast_hash": "ac2123047a54a93ed84d4de9947a4c0c",
     "semantic_hash": ""
   },
   "src/components/admin/erp/ZFInspectorDrawer.tsx": {
@@ -5325,6 +5325,18 @@
     "mtime": 1788403648.101306,
     "seen": 1788404715.7208972,
     "ast_hash": "7383b40834cfdc0d39b7af126974de43",
+    "semantic_hash": ""
+  },
+  "src/lib/supabase/middleware.ts": {
+    "mtime": 1788435136.7275763,
+    "seen": 1788435452.3959951,
+    "ast_hash": "36ee8c83d6dfbd9834bae004ae5205ef",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/008_enforce_admin_erp_security.sql": {
+    "mtime": 1788435319.4967167,
+    "seen": 1788435452.3960204,
+    "ast_hash": "647edb4642040115f510dd871d107804",
     "semantic_hash": ""
   }
 }

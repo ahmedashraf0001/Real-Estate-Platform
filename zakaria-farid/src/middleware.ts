@@ -2,15 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import createMiddleware from 'next-intl/middleware';
 import { routing } from './i18n/routing';
 
+import { updateSession } from './lib/supabase/middleware';
+
 // ─── next-intl locale middleware (used for all normal traffic) ────────────────
 const intlMiddleware = createMiddleware(routing);
 
 // ─── Routes that must NEVER be blocked by maintenance mode ───────────────────
-// Admin dashboard, specific admin-critical API routes, and static assets pass through.
-// NOTE: /api/search is intentionally NOT exempted — it powers the public-facing search
-// dock (SmartSearchDock.tsx) and has no function the admin dashboard depends on during
-// maintenance. Only /api/leads (lead submission) and /api/properties (admin CRUD) are
-// admin-critical and exempted.
 function isExempt(pathname: string): boolean {
   return (
     pathname.startsWith('/admin') ||
@@ -29,9 +26,35 @@ export default async function middleware(req: NextRequest) {
     return NextResponse.redirect(new URL(cleanPath, req.url));
   }
 
+  // ── Enforce Authentication on Admin & FIN-OS Engine ────────────────────────
+  const isEngineRoute = pathname.startsWith('/fin-os');
+  const isAdminRoute = pathname.startsWith('/admin');
+  const isLoginPage = pathname === '/admin/login';
+
+  if (isEngineRoute || isAdminRoute) {
+    const { res, user } = await updateSession(req);
+
+    if (isLoginPage) {
+      // If user is already authenticated and visits login page, redirect them to dashboard
+      if (user) {
+        const nextUrl = req.nextUrl.searchParams.get('next') || '/admin';
+        return NextResponse.redirect(new URL(nextUrl, req.url));
+      }
+      return res;
+    }
+
+    // Protected admin & engine routes: require active user session
+    if (!user) {
+      const loginUrl = new URL('/admin/login', req.url);
+      loginUrl.searchParams.set('next', pathname);
+      return NextResponse.redirect(loginUrl);
+    }
+
+    return res;
+  }
+
   // Always pass exempt routes through without any maintenance check.
   if (isExempt(pathname)) {
-    // Admin, FIN-OS, and API routes handle their own routing, so just return next().
     return NextResponse.next();
   }
 

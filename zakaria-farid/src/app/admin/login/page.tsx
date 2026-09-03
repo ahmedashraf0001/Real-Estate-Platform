@@ -1,17 +1,18 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { Loader2, LogIn, Lock, Mail, ShieldCheck } from 'lucide-react';
 import { BrandLogo } from '@/components/BrandLogo';
 
-export default function AdminLoginPage() {
+function LoginForm() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -23,7 +24,9 @@ export default function AdminLoginPage() {
       setError(err.message);
       setLoading(false);
     } else {
-      router.push('/admin');
+      const nextUrl = searchParams.get('next') || '/admin';
+      router.push(nextUrl);
+      router.refresh();
     }
   }
 
@@ -171,5 +174,17 @@ export default function AdminLoginPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function AdminLoginPage() {
+  return (
+    <Suspense fallback={
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#07090D' }}>
+        <Loader2 size={24} style={{ color: '#DDA752', animation: 'spin 0.8s linear infinite' }} />
+      </div>
+    }>
+      <LoginForm />
+    </Suspense>
   );
 }

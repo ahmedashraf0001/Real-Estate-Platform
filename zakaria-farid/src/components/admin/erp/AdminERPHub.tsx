@@ -96,6 +96,44 @@ interface AdminERPHubProps {
 export default function AdminERPHub({ adminLocale }: AdminERPHubProps) {
   const isAr = adminLocale === 'ar';
   const supabase = useMemo(() => createClient(), []);
+  const [currentUser, setCurrentUser] = useState<any>(null);
+
+  // Enforce active administrator authentication in client shell
+  useEffect(() => {
+    let isMounted = true;
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!isMounted) return;
+      if (!user) {
+        window.location.href = '/admin/login?next=/fin-os';
+      } else {
+        setCurrentUser(user);
+      }
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (!isMounted) return;
+      if (event === 'SIGNED_OUT' || !session) {
+        window.location.href = '/admin/login';
+      } else if (session?.user) {
+        setCurrentUser(session.user);
+      }
+    });
+
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
+  }, [supabase]);
+
+  const handleSignOut = useCallback(async () => {
+    try {
+      await supabase.auth.signOut();
+      window.location.href = '/admin/login';
+    } catch (err) {
+      console.error('Sign out error:', err);
+      window.location.href = '/admin/login';
+    }
+  }, [supabase]);
 
   // Live Database State
   const [data, setData] = useState<LiveERPDataset>({
@@ -1384,6 +1422,8 @@ export default function AdminERPHub({ adminLocale }: AdminERPHubProps) {
         onRefreshData={loadLiveData}
         onExportExcel={handleExportExcel}
         isMutating={isMutating}
+        currentUser={currentUser}
+        onSignOut={handleSignOut}
       />
 
       {/* Schema Migration Advisory Banner (Only shown if tables have not been created yet) */}
