@@ -159,6 +159,7 @@ export const ZFNavigationDock: React.FC<ZFNavigationDockProps> = ({
                 <button
                   key={item.id}
                   type="button"
+                  data-tour={`nav-item-${item.id}`}
                   className={`${styles.dockItem} ${isActive ? styles.dockItemActive : ''}`}
                   onClick={() => onSelectModule(item.id)}
                   title={isAr ? item.labelAr : item.labelEn}

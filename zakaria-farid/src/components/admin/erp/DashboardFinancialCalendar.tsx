@@ -36,7 +36,6 @@ interface DashboardFinancialCalendarProps {
   onInspectContract: (contract: ERPContract) => void;
   onInspectTax: (tax: ERPTaxRecord) => void;
   isAr?: boolean;
-  theme?: 'dark' | 'light';
 }
 
 export interface CalendarEvent {
@@ -59,10 +58,8 @@ export const DashboardFinancialCalendar: React.FC<DashboardFinancialCalendarProp
   onInspectCheque,
   onInspectContract,
   onInspectTax,
-  isAr = false,
-  theme = 'dark'
+  isAr = false
 }) => {
-  const isLight = theme === 'light';
   const [currentDate, setCurrentDate] = useState<Date>(() => new Date());
   const [selectedDayStr, setSelectedDayStr] = useState<string | null>(() => new Date().toISOString().split('T')[0]);
   const [viewMode, setViewMode] = useState<'grid' | 'timeline'>('grid');
@@ -278,14 +275,12 @@ export const DashboardFinancialCalendar: React.FC<DashboardFinancialCalendarProp
 
   return (
     <div style={{
-      background: isLight 
-        ? '#ffffff' 
-        : 'linear-gradient(180deg, rgba(16, 22, 36, 0.85) 0%, rgba(10, 14, 24, 0.95) 100%)',
-      border: isLight ? '1px solid #e2e8f0' : '1px solid rgba(255, 255, 255, 0.08)',
-      borderTop: isLight ? '3px solid #b48512' : '3px solid #d4af37',
+      background: 'linear-gradient(180deg, rgba(16, 22, 36, 0.85) 0%, rgba(10, 14, 24, 0.95) 100%)',
+      border: '1px solid rgba(255, 255, 255, 0.08)',
+      borderTop: '3px solid #d4af37',
       borderRadius: '16px',
       padding: '1.35rem 1.5rem',
-      boxShadow: isLight ? '0 4px 20px rgba(15, 23, 42, 0.06)' : '0 8px 30px rgba(0, 0, 0, 0.5)',
+      boxShadow: '0 8px 30px rgba(0, 0, 0, 0.5)',
       display: 'flex',
       flexDirection: 'column',
       gap: '1.25rem'
@@ -316,10 +311,10 @@ export const DashboardFinancialCalendar: React.FC<DashboardFinancialCalendarProp
             <CalendarIcon size={20} />
           </div>
           <div>
-            <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: isLight ? '#0f172a' : '#ffffff' }}>
+            <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: '#ffffff' }}>
               {isAr ? 'التقويم المالي وجدول استحقاق الشيكات' : 'Monthly Financial & Cheque Maturity Calendar'}
             </h3>
-            <span style={{ fontSize: '0.72rem', color: isLight ? '#64748b' : '#94a3b8' }}>
+            <span style={{ fontSize: '0.72rem', color: '#94a3b8' }}>
               {isAr ? 'خريطة زمنية متكاملة لجميع استحقاقات الشيكات وتدفقات الأقساط الشهرية' : 'Comprehensive timeline of cheque maturities and installment cashflows'}
             </span>
           </div>
@@ -330,10 +325,10 @@ export const DashboardFinancialCalendar: React.FC<DashboardFinancialCalendarProp
           display: 'flex',
           alignItems: 'center',
           gap: '0.45rem',
-          background: isLight ? '#f1f5f9' : 'rgba(0, 0, 0, 0.45)',
+          background: 'rgba(0, 0, 0, 0.45)',
           padding: '0.25rem 0.45rem',
           borderRadius: '10px',
-          border: isLight ? '1px solid #e2e8f0' : '1px solid rgba(255, 255, 255, 0.08)'
+          border: '1px solid rgba(255, 255, 255, 0.08)'
         }}>
           <button
             type="button"
@@ -358,10 +353,10 @@ export const DashboardFinancialCalendar: React.FC<DashboardFinancialCalendarProp
           </button>
 
           <span style={{
-            fontSize: '0.86rem',
+            fontSize: '0.82rem',
             fontWeight: 800,
-            color: isLight ? '#0f172a' : '#ffffff',
-            minWidth: '135px',
+            color: '#ffffff',
+            minWidth: '130px',
             textAlign: 'center',
             letterSpacing: '0.02em'
           }}>
@@ -414,10 +409,10 @@ export const DashboardFinancialCalendar: React.FC<DashboardFinancialCalendarProp
           display: 'flex',
           alignItems: 'center',
           gap: '0.25rem',
-          background: isLight ? '#f1f5f9' : 'rgba(0, 0, 0, 0.4)',
+          background: 'rgba(0, 0, 0, 0.4)',
           padding: '0.2rem',
           borderRadius: '8px',
-          border: isLight ? '1px solid #e2e8f0' : '1px solid rgba(255, 255, 255, 0.08)'
+          border: '1px solid rgba(255, 255, 255, 0.08)'
         }}>
           <button
             type="button"
@@ -430,13 +425,9 @@ export const DashboardFinancialCalendar: React.FC<DashboardFinancialCalendarProp
               borderRadius: '6px',
               fontSize: '0.72rem',
               fontWeight: 700,
-              border: viewMode === 'grid' 
-                ? (isLight ? '1px solid rgba(180, 133, 18, 0.4)' : '1px solid rgba(212, 175, 55, 0.4)') 
-                : '1px solid transparent',
-              background: viewMode === 'grid' 
-                ? (isLight ? 'rgba(180, 133, 18, 0.16)' : 'rgba(212, 175, 55, 0.18)') 
-                : 'transparent',
-              color: viewMode === 'grid' ? (isLight ? '#0f172a' : '#ffffff') : (isLight ? '#64748b' : '#94a3b8'),
+              border: viewMode === 'grid' ? '1px solid rgba(212, 175, 55, 0.4)' : '1px solid transparent',
+              background: viewMode === 'grid' ? 'rgba(212, 175, 55, 0.18)' : 'transparent',
+              color: viewMode === 'grid' ? '#ffffff' : '#94a3b8',
               cursor: 'pointer'
             }}
           >
@@ -455,13 +446,9 @@ export const DashboardFinancialCalendar: React.FC<DashboardFinancialCalendarProp
               borderRadius: '6px',
               fontSize: '0.72rem',
               fontWeight: 700,
-              border: viewMode === 'timeline' 
-                ? (isLight ? '1px solid rgba(180, 133, 18, 0.4)' : '1px solid rgba(212, 175, 55, 0.4)') 
-                : '1px solid transparent',
-              background: viewMode === 'timeline' 
-                ? (isLight ? 'rgba(180, 133, 18, 0.16)' : 'rgba(212, 175, 55, 0.18)') 
-                : 'transparent',
-              color: viewMode === 'timeline' ? (isLight ? '#0f172a' : '#ffffff') : (isLight ? '#64748b' : '#94a3b8'),
+              border: viewMode === 'timeline' ? '1px solid rgba(212, 175, 55, 0.4)' : '1px solid transparent',
+              background: viewMode === 'timeline' ? 'rgba(212, 175, 55, 0.18)' : 'transparent',
+              color: viewMode === 'timeline' ? '#ffffff' : '#94a3b8',
               cursor: 'pointer'
             }}
           >
@@ -479,54 +466,54 @@ export const DashboardFinancialCalendar: React.FC<DashboardFinancialCalendarProp
       }}>
         {/* Tile 1: Projected Month Inflow */}
         <div style={{
-          background: isLight ? '#f8fafc' : 'rgba(0, 0, 0, 0.35)',
-          border: isLight ? '1px solid #e2e8f0' : '1px solid rgba(212, 175, 55, 0.25)',
+          background: 'rgba(0, 0, 0, 0.35)',
+          border: '1px solid rgba(212, 175, 55, 0.25)',
           borderRadius: '10px',
           padding: '0.75rem 0.95rem'
         }}>
-          <span style={{ fontSize: '0.68rem', color: isLight ? '#b48512' : '#e2c974', fontWeight: 700, display: 'block' }}>
+          <span style={{ fontSize: '0.68rem', color: '#e2c974', fontWeight: 700, display: 'block' }}>
             {isAr ? 'إجمالي التدفقات المتوقعة للشهر' : 'Projected Inflows'}
           </span>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.3rem', marginTop: '0.2rem' }}>
-            <span style={{ fontSize: '1.25rem', fontWeight: 800, color: isLight ? '#0f172a' : '#ffffff', fontFamily: 'monospace' }}>
+            <span style={{ fontSize: '1.25rem', fontWeight: 800, color: '#ffffff', fontFamily: 'monospace' }}>
               {formatMoney(monthStats.totalProjectedInflow)}
             </span>
-            <span style={{ fontSize: '0.68rem', color: isLight ? '#64748b' : '#94a3b8' }}>{isAr ? 'ج.م' : 'EGP'}</span>
+            <span style={{ fontSize: '0.68rem', color: '#94a3b8' }}>{isAr ? 'ج.م' : 'EGP'}</span>
           </div>
         </div>
 
         {/* Tile 2: Cheques in Safe this month */}
         <div style={{
-          background: isLight ? '#f8fafc' : 'rgba(0, 0, 0, 0.35)',
-          border: isLight ? '1px solid #e2e8f0' : '1px solid rgba(255, 255, 255, 0.08)',
+          background: 'rgba(0, 0, 0, 0.35)',
+          border: '1px solid rgba(255, 255, 255, 0.08)',
           borderRadius: '10px',
           padding: '0.75rem 0.95rem'
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '0.68rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: 700 }}>
+            <span style={{ fontSize: '0.68rem', color: '#94a3b8', fontWeight: 700 }}>
               {isAr ? 'شيكات تستحق هذا الشهر' : 'PDCs Due This Month'}
             </span>
-            <span style={{ fontSize: '0.65rem', color: isLight ? '#b48512' : '#e2c974', fontWeight: 800 }}>
+            <span style={{ fontSize: '0.65rem', color: '#e2c974', fontWeight: 800 }}>
               {monthStats.chequesCount} {isAr ? 'شيك' : 'cheques'}
             </span>
           </div>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.3rem', marginTop: '0.2rem' }}>
-            <span style={{ fontSize: '1.25rem', fontWeight: 800, color: isLight ? '#0f172a' : '#cbd5e1', fontFamily: 'monospace' }}>
+            <span style={{ fontSize: '1.25rem', fontWeight: 800, color: '#cbd5e1', fontFamily: 'monospace' }}>
               {formatMoney(monthStats.totalChequesValue)}
             </span>
-            <span style={{ fontSize: '0.68rem', color: isLight ? '#64748b' : '#94a3b8' }}>{isAr ? 'ج.م' : 'EGP'}</span>
+            <span style={{ fontSize: '0.68rem', color: '#94a3b8' }}>{isAr ? 'ج.م' : 'EGP'}</span>
           </div>
         </div>
 
         {/* Tile 3: Installments scheduled */}
         <div style={{
-          background: isLight ? '#f8fafc' : 'rgba(0, 0, 0, 0.35)',
-          border: isLight ? '1px solid #e2e8f0' : '1px solid rgba(255, 255, 255, 0.08)',
+          background: 'rgba(0, 0, 0, 0.35)',
+          border: '1px solid rgba(255, 255, 255, 0.08)',
           borderRadius: '10px',
           padding: '0.75rem 0.95rem'
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '0.68rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: 700 }}>
+            <span style={{ fontSize: '0.68rem', color: '#94a3b8', fontWeight: 700 }}>
               {isAr ? 'أقساط مجدولة للتحصيل' : 'Installments Scheduled'}
             </span>
             <span style={{ fontSize: '0.65rem', color: '#10b981', fontWeight: 800 }}>
@@ -534,10 +521,10 @@ export const DashboardFinancialCalendar: React.FC<DashboardFinancialCalendarProp
             </span>
           </div>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.3rem', marginTop: '0.2rem' }}>
-            <span style={{ fontSize: '1.25rem', fontWeight: 800, color: isLight ? '#0f172a' : '#cbd5e1', fontFamily: 'monospace' }}>
+            <span style={{ fontSize: '1.25rem', fontWeight: 800, color: '#cbd5e1', fontFamily: 'monospace' }}>
               {formatMoney(monthStats.totalInstallmentsValue)}
             </span>
-            <span style={{ fontSize: '0.68rem', color: isLight ? '#64748b' : '#94a3b8' }}>{isAr ? 'ج.م' : 'EGP'}</span>
+            <span style={{ fontSize: '0.68rem', color: '#94a3b8' }}>{isAr ? 'ج.م' : 'EGP'}</span>
           </div>
         </div>
       </div>
@@ -564,13 +551,9 @@ export const DashboardFinancialCalendar: React.FC<DashboardFinancialCalendarProp
                 borderRadius: '6px',
                 fontSize: '0.72rem',
                 fontWeight: 700,
-                border: isActive 
-                  ? (isLight ? '1px solid rgba(180, 133, 18, 0.45)' : '1px solid rgba(212, 175, 55, 0.45)') 
-                  : (isLight ? '1px solid #cbd5e1' : '1px solid rgba(255, 255, 255, 0.08)'),
-                background: isActive 
-                  ? (isLight ? 'rgba(180, 133, 18, 0.15)' : 'rgba(212, 175, 55, 0.15)') 
-                  : (isLight ? '#f1f5f9' : 'rgba(0, 0, 0, 0.3)'),
-                color: isActive ? (isLight ? '#b48512' : '#ffffff') : (isLight ? '#475569' : '#94a3b8'),
+                border: isActive ? '1px solid rgba(212, 175, 55, 0.45)' : '1px solid rgba(255, 255, 255, 0.08)',
+                background: isActive ? 'rgba(212, 175, 55, 0.15)' : 'rgba(0, 0, 0, 0.3)',
+                color: isActive ? '#ffffff' : '#94a3b8',
                 cursor: 'pointer'
               }}
             >
@@ -588,8 +571,8 @@ export const DashboardFinancialCalendar: React.FC<DashboardFinancialCalendarProp
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           {/* Calendar Grid Container */}
           <div style={{
-            background: isLight ? '#ffffff' : 'rgba(10, 14, 22, 0.9)',
-            border: isLight ? '1px solid #e2e8f0' : '1px solid rgba(255, 255, 255, 0.08)',
+            background: 'rgba(10, 14, 22, 0.9)',
+            border: '1px solid rgba(255, 255, 255, 0.08)',
             borderRadius: '12px',
             overflow: 'hidden'
           }}>
@@ -597,13 +580,13 @@ export const DashboardFinancialCalendar: React.FC<DashboardFinancialCalendarProp
             <div style={{
               display: 'grid',
               gridTemplateColumns: 'repeat(7, 1fr)',
-              background: isLight ? '#f8fafc' : 'rgba(0, 0, 0, 0.5)',
-              borderBottom: isLight ? '1px solid #e2e8f0' : '1px solid rgba(255, 255, 255, 0.08)',
+              background: 'rgba(0, 0, 0, 0.5)',
+              borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
               padding: '0.55rem 0',
               textAlign: 'center'
             }}>
               {weekDayHeaders.map((dayName, idx) => (
-                <span key={idx} style={{ fontSize: '0.74rem', fontWeight: 800, color: isLight ? '#475569' : '#94a3b8' }}>
+                <span key={idx} style={{ fontSize: '0.74rem', fontWeight: 800, color: '#94a3b8' }}>
                   {dayName}
                 </span>
               ))}
@@ -614,11 +597,11 @@ export const DashboardFinancialCalendar: React.FC<DashboardFinancialCalendarProp
               display: 'grid',
               gridTemplateColumns: 'repeat(7, 1fr)',
               gap: '1px',
-              background: isLight ? '#e2e8f0' : 'rgba(255, 255, 255, 0.06)'
+              background: 'rgba(255, 255, 255, 0.06)'
             }}>
               {/* Blank offset padding cells */}
               {Array.from({ length: calendarDays.startOffset }).map((_, idx) => (
-                <div key={`blank_${idx}`} style={{ background: isLight ? '#f8fafc' : 'rgba(8, 11, 18, 0.95)', minHeight: '90px' }} />
+                <div key={`blank_${idx}`} style={{ background: 'rgba(8, 11, 18, 0.95)', minHeight: '90px' }} />
               ))}
 
               {/* Month Day Cells */}
@@ -632,9 +615,9 @@ export const DashboardFinancialCalendar: React.FC<DashboardFinancialCalendarProp
                     onClick={() => setSelectedDayStr(dayObj.dateStr)}
                     style={{
                       background: isSelected 
-                        ? (isLight ? 'rgba(180, 133, 18, 0.12)' : 'linear-gradient(145deg, rgba(212, 175, 55, 0.16) 0%, rgba(14, 18, 28, 0.98) 100%)') 
-                        : (dayObj.isToday ? (isLight ? 'rgba(180, 133, 18, 0.08)' : 'rgba(212, 175, 55, 0.05)') : (isLight ? '#ffffff' : 'rgba(10, 14, 22, 0.98)')),
-                      border: isSelected ? (isLight ? '1.5px solid #b48512' : '1.5px solid #d4af37') : '1px solid transparent',
+                        ? 'linear-gradient(145deg, rgba(212, 175, 55, 0.16) 0%, rgba(14, 18, 28, 0.98) 100%)' 
+                        : (dayObj.isToday ? 'rgba(212, 175, 55, 0.05)' : 'rgba(10, 14, 22, 0.98)'),
+                      border: isSelected ? '1.5px solid #d4af37' : '1px solid transparent',
                       minHeight: '95px',
                       padding: '0.45rem 0.55rem',
                       display: 'flex',
@@ -645,11 +628,11 @@ export const DashboardFinancialCalendar: React.FC<DashboardFinancialCalendarProp
                       position: 'relative'
                     }}
                     onMouseEnter={e => {
-                      if (!isSelected) e.currentTarget.style.background = isLight ? '#f8fafc' : 'rgba(255, 255, 255, 0.04)';
+                      if (!isSelected) e.currentTarget.style.background = 'rgba(255, 255, 255, 0.04)';
                     }}
                     onMouseLeave={e => {
                       if (!isSelected) {
-                        e.currentTarget.style.background = dayObj.isToday ? (isLight ? 'rgba(180, 133, 18, 0.08)' : 'rgba(212, 175, 55, 0.05)') : (isLight ? '#ffffff' : 'rgba(10, 14, 22, 0.98)');
+                        e.currentTarget.style.background = dayObj.isToday ? 'rgba(212, 175, 55, 0.05)' : 'rgba(10, 14, 22, 0.98)';
                       }
                     }}
                   >
@@ -658,7 +641,7 @@ export const DashboardFinancialCalendar: React.FC<DashboardFinancialCalendarProp
                       <span style={{
                         fontSize: '0.78rem',
                         fontWeight: dayObj.isToday ? 900 : 700,
-                        color: dayObj.isToday ? (isLight ? '#b48512' : '#d4af37') : (hasEvents ? (isLight ? '#0f172a' : '#ffffff') : '#64748b'),
+                        color: dayObj.isToday ? '#d4af37' : (hasEvents ? '#ffffff' : '#64748b'),
                         fontFamily: 'monospace'
                       }}>
                         {dayObj.dayNumber}
@@ -736,21 +719,19 @@ export const DashboardFinancialCalendar: React.FC<DashboardFinancialCalendarProp
           {/* Selected Day Detailed Schedule Drawer */}
           {selectedDayStr && (
             <div style={{
-              background: isLight 
-                ? '#ffffff' 
-                : 'linear-gradient(145deg, rgba(20, 26, 42, 0.95) 0%, rgba(12, 16, 26, 0.98) 100%)',
-              border: isLight ? '1px solid #e2e8f0' : '1px solid rgba(212, 175, 55, 0.35)',
+              background: 'linear-gradient(145deg, rgba(20, 26, 42, 0.95) 0%, rgba(12, 16, 26, 0.98) 100%)',
+              border: '1px solid rgba(212, 175, 55, 0.35)',
               borderRadius: '12px',
               padding: '1.15rem 1.35rem',
               display: 'flex',
               flexDirection: 'column',
               gap: '0.75rem',
-              boxShadow: isLight ? '0 4px 20px rgba(15, 23, 42, 0.08)' : '0 4px 20px rgba(0, 0, 0, 0.4)'
+              boxShadow: '0 4px 20px rgba(0, 0, 0, 0.4)'
             }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: isLight ? '1px solid #e2e8f0' : '1px solid rgba(255, 255, 255, 0.07)', paddingBottom: '0.65rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid rgba(255, 255, 255, 0.07)', paddingBottom: '0.65rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <Clock size={16} color={isLight ? '#b48512' : '#d4af37'} />
-                  <h4 style={{ margin: 0, fontSize: '0.92rem', fontWeight: 800, color: isLight ? '#0f172a' : '#ffffff' }}>
+                  <Clock size={16} color="#d4af37" />
+                  <h4 style={{ margin: 0, fontSize: '0.92rem', fontWeight: 800, color: '#ffffff' }}>
                     {isAr ? `جدول استحقاقات يوم: ${selectedDayStr}` : `Schedule for: ${selectedDayStr}`}
                   </h4>
                   <span style={{
@@ -790,8 +771,8 @@ export const DashboardFinancialCalendar: React.FC<DashboardFinancialCalendarProp
                     <div
                       key={ev.id}
                       style={{
-                        background: isLight ? '#f8fafc' : 'rgba(0, 0, 0, 0.4)',
-                        border: isLight ? '1px solid #e2e8f0' : '1px solid rgba(255, 255, 255, 0.06)',
+                        background: 'rgba(0, 0, 0, 0.35)',
+                        border: '1px solid rgba(255, 255, 255, 0.08)',
                         borderRadius: '9px',
                         padding: '0.75rem 0.95rem',
                         display: 'flex',
@@ -801,10 +782,10 @@ export const DashboardFinancialCalendar: React.FC<DashboardFinancialCalendarProp
                     >
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                          {ev.type === 'cheque' && <Landmark size={14} color={isLight ? '#b48512' : '#e2c974'} />}
+                          {ev.type === 'cheque' && <Landmark size={14} color="#e2c974" />}
                           {ev.type === 'installment' && <FileText size={14} color="#6ee7b7" />}
                           {ev.type === 'tax' && <ShieldCheck size={14} color="#93c5fd" />}
-                          <span style={{ fontSize: '0.8rem', fontWeight: 800, color: isLight ? '#0f172a' : '#ffffff' }}>
+                          <span style={{ fontSize: '0.8rem', fontWeight: 800, color: '#ffffff' }}>
                             {ev.title}
                           </span>
                         </div>
@@ -823,9 +804,9 @@ export const DashboardFinancialCalendar: React.FC<DashboardFinancialCalendarProp
                         justifyContent: 'space-between',
                         marginTop: '0.2rem',
                         paddingTop: '0.35rem',
-                        borderTop: isLight ? '1px solid #e2e8f0' : '1px solid rgba(255, 255, 255, 0.04)'
+                        borderTop: '1px solid rgba(255, 255, 255, 0.04)'
                       }}>
-                        <span style={{ fontSize: '0.95rem', fontWeight: 800, color: isLight ? '#0f172a' : '#ffffff', fontFamily: 'monospace' }}>
+                        <span style={{ fontSize: '0.95rem', fontWeight: 800, color: '#ffffff', fontFamily: 'monospace' }}>
                           {formatMoney(ev.amount)} {isAr ? 'ج.م' : 'EGP'}
                         </span>
 
@@ -882,10 +863,10 @@ export const DashboardFinancialCalendar: React.FC<DashboardFinancialCalendarProp
               <div
                 key={ev.id}
                 style={{
-                  background: isLight ? '#ffffff' : 'rgba(12, 16, 25, 0.8)',
-                  border: isLight ? '1px solid #e2e8f0' : '1px solid rgba(255, 255, 255, 0.08)',
+                  background: 'rgba(12, 16, 25, 0.8)',
+                  border: '1px solid rgba(255, 255, 255, 0.08)',
                   borderInlineStart: ev.type === 'cheque' 
-                    ? (isLight ? '3px solid #b48512' : '3px solid #d4af37') 
+                    ? '3px solid #d4af37' 
                     : (ev.type === 'installment' ? '3px solid #10b981' : '3px solid #3b82f6'),
                   borderRadius: '10px',
                   padding: '0.85rem 1.15rem',
@@ -893,7 +874,7 @@ export const DashboardFinancialCalendar: React.FC<DashboardFinancialCalendarProp
                   alignItems: 'center',
                   justifyContent: 'space-between',
                   gap: '1rem',
-                  boxShadow: isLight ? '0 2px 8px rgba(15, 23, 42, 0.05)' : '0 2px 8px rgba(0, 0, 0, 0.3)'
+                  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3)'
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
@@ -906,20 +887,20 @@ export const DashboardFinancialCalendar: React.FC<DashboardFinancialCalendarProp
                     minWidth: '52px',
                     padding: '0.3rem 0.45rem',
                     borderRadius: '7px',
-                    background: isLight ? '#f1f5f9' : 'rgba(255, 255, 255, 0.04)',
-                    border: isLight ? '1px solid #e2e8f0' : '1px solid rgba(255, 255, 255, 0.08)'
+                    background: 'rgba(255, 255, 255, 0.04)',
+                    border: '1px solid rgba(255, 255, 255, 0.08)'
                   }}>
-                    <span style={{ fontSize: '0.62rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: 600 }}>
+                    <span style={{ fontSize: '0.62rem', color: '#94a3b8', fontWeight: 600 }}>
                       {ev.date.split('-')[1]}/{ev.date.split('-')[0].slice(2)}
                     </span>
-                    <span style={{ fontSize: '1rem', fontWeight: 800, color: isLight ? '#0f172a' : '#ffffff', fontFamily: 'monospace' }}>
+                    <span style={{ fontSize: '1rem', fontWeight: 800, color: '#ffffff', fontFamily: 'monospace' }}>
                       {ev.date.split('-')[2]}
                     </span>
                   </div>
 
                   <div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                      <span style={{ fontSize: '0.82rem', fontWeight: 800, color: isLight ? '#0f172a' : '#ffffff' }}>
+                      <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#ffffff' }}>
                         {ev.title}
                       </span>
                       <span style={{

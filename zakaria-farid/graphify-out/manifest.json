@@ -5040,9 +5040,9 @@
     "semantic_hash": ""
   },
   "src/components/admin/erp/AdminERPHub.tsx": {
-    "mtime": 1788439783.414466,
-    "seen": 1788439873.442074,
-    "ast_hash": "f0303b66c5a4bbdfde8fcbff6ef7d81e",
+    "mtime": 1788441503.5942638,
+    "seen": 1788441608.8823912,
+    "ast_hash": "6c8f4731d55bf34974e1efeef42ae4bc",
     "semantic_hash": ""
   },
   "src/components/admin/erp/CockpitAnalyticsCharts.tsx": {
@@ -5088,8 +5088,8 @@
     "semantic_hash": ""
   },
   "src/components/admin/erp/ZFCommandBar.tsx": {
-    "mtime": 1788438556.4512372,
-    "seen": 1788438939.612862,
+    "mtime": 1788441248.8801138,
+    "seen": 1788441608.8824115,
     "ast_hash": "8e262f73239e2c24c62b2387a9ff7393",
     "semantic_hash": ""
   },
@@ -5100,14 +5100,14 @@
     "semantic_hash": ""
   },
   "src/components/admin/erp/ZFNavigationDock.tsx": {
-    "mtime": 1788438583.4527397,
-    "seen": 1788438939.6128674,
-    "ast_hash": "71da936ab26a6d0d33a70c14dfcc9bb6",
+    "mtime": 1788441409.691131,
+    "seen": 1788441608.882417,
+    "ast_hash": "225f7bac5f0f65512ca7e0497e995add",
     "semantic_hash": ""
   },
   "src/components/admin/erp/ZFQuickSearchModal.tsx": {
-    "mtime": 1788438626.0735016,
-    "seen": 1788438939.61287,
+    "mtime": 1788441248.8791165,
+    "seen": 1788441608.8824198,
     "ast_hash": "9ca9a19d17bcea21f0bbf6f28bfe86ce",
     "semantic_hash": ""
   },
@@ -5316,8 +5316,8 @@
     "semantic_hash": ""
   },
   "src/components/admin/erp/DashboardAnalyticalStudio.tsx": {
-    "mtime": 1788439761.4467702,
-    "seen": 1788439873.442079,
+    "mtime": 1788441248.8109026,
+    "seen": 1788441608.8823972,
     "ast_hash": "5760d320904f0a81a3f5bc5ea86a3860",
     "semantic_hash": ""
   },
@@ -5340,8 +5340,8 @@
     "semantic_hash": ""
   },
   "src/components/erp/CapitalFlowMindmap.tsx": {
-    "mtime": 1788438054.8672016,
-    "seen": 1788438278.6004236,
+    "mtime": 1788441248.873911,
+    "seen": 1788441608.8824282,
     "ast_hash": "6fcbb74cc60737c2bebec67b10c1d370",
     "semantic_hash": ""
   },
@@ -5358,14 +5358,14 @@
     "semantic_hash": ""
   },
   "src/components/admin/erp/DashboardDailyActionLedger.tsx": {
-    "mtime": 1788437290.0934055,
-    "seen": 1788437446.1515765,
+    "mtime": 1788441248.8160887,
+    "seen": 1788441608.8823986,
     "ast_hash": "4efeb27ad6055b6882ce9955a387c88c",
     "semantic_hash": ""
   },
   "src/components/admin/erp/DashboardFinancialCalendar.tsx": {
-    "mtime": 1788437324.078566,
-    "seen": 1788437446.1515782,
+    "mtime": 1788441248.8707097,
+    "seen": 1788441608.8824003,
     "ast_hash": "6c832a070ec4ce920dc5d7edd3b384d8",
     "semantic_hash": ""
   },
@@ -5382,15 +5382,15 @@
     "semantic_hash": ""
   },
   "src/components/admin/erp/ZFErpAcademyModal.tsx": {
-    "mtime": 1788438492.3827622,
-    "seen": 1788438939.6128638,
+    "mtime": 1788441248.7778523,
+    "seen": 1788441608.882413,
     "ast_hash": "3e339f3eb81b1d400b100dc2cf8024a3",
     "semantic_hash": ""
   },
   "src/components/admin/erp/ZFErpGuidedTour.tsx": {
-    "mtime": 1788438514.7024908,
-    "seen": 1788438939.612865,
-    "ast_hash": "08ffddccd9cf3f2148d1daced9c987de",
+    "mtime": 1788441491.699319,
+    "seen": 1788441608.882414,
+    "ast_hash": "7a3656801ddb09c63c716a72b9336e6c",
     "semantic_hash": ""
   }
 }

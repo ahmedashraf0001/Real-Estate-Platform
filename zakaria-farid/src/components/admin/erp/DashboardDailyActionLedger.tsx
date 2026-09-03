@@ -35,7 +35,6 @@ interface DashboardDailyActionLedgerProps {
   onInspectTax: (tax: ERPTaxRecord) => void;
   onNavigateToModule?: (module: string) => void;
   isAr?: boolean;
-  theme?: 'dark' | 'light';
 }
 
 interface ActionLedgerItem {
@@ -61,10 +60,8 @@ export const DashboardDailyActionLedger: React.FC<DashboardDailyActionLedgerProp
   onInspectContract,
   onInspectTax,
   onNavigateToModule,
-  isAr = false,
-  theme = 'dark'
+  isAr = false
 }) => {
-  const isLight = theme === 'light';
   const [activeFilter, setActiveFilter] = useState<'all' | 'cheque' | 'installment' | 'approval'>('all');
 
   const todayStr = useMemo(() => {
@@ -222,16 +219,12 @@ export const DashboardDailyActionLedger: React.FC<DashboardDailyActionLedgerProp
 
   return (
     <div style={{
-      background: isLight 
-        ? '#ffffff' 
-        : 'linear-gradient(180deg, rgba(16, 22, 36, 0.85) 0%, rgba(10, 14, 24, 0.95) 100%)',
-      border: isLight ? '1px solid #e2e8f0' : '1px solid rgba(212, 175, 55, 0.3)',
-      borderTop: isLight ? '3px solid #b48512' : '3px solid #d4af37',
+      background: 'linear-gradient(180deg, rgba(16, 22, 36, 0.85) 0%, rgba(10, 14, 24, 0.95) 100%)',
+      border: '1px solid rgba(212, 175, 55, 0.3)',
+      borderTop: '3px solid #d4af37',
       borderRadius: '16px',
       padding: '1.35rem 1.5rem',
-      boxShadow: isLight 
-        ? '0 4px 20px rgba(15, 23, 42, 0.06)' 
-        : '0 8px 30px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(212, 175, 55, 0.2)',
+      boxShadow: '0 8px 30px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(212, 175, 55, 0.2)',
       display: 'flex',
       flexDirection: 'column',
       gap: '1.25rem',
@@ -277,7 +270,7 @@ export const DashboardDailyActionLedger: React.FC<DashboardDailyActionLedgerProp
           </div>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: isLight ? '#0f172a' : '#ffffff', letterSpacing: '0.01em' }}>
+              <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: '#ffffff', letterSpacing: '0.01em' }}>
                 {isAr ? 'أجندة اليوم التنفيذية والاستحقاقات المالية' : 'Today’s Executive Financial Action Ledger'}
               </h3>
               {ledgerItems.length > 0 && (
@@ -371,13 +364,11 @@ export const DashboardDailyActionLedger: React.FC<DashboardDailyActionLedgerProp
                 borderRadius: '8px',
                 fontSize: '0.74rem',
                 fontWeight: 700,
-                border: isActive 
-                  ? (isLight ? '1px solid rgba(180, 133, 18, 0.45)' : '1px solid rgba(212, 175, 55, 0.45)') 
-                  : (isLight ? '1px solid #cbd5e1' : '1px solid rgba(255, 255, 255, 0.08)'),
+                border: isActive ? '1px solid rgba(212, 175, 55, 0.45)' : '1px solid rgba(255, 255, 255, 0.08)',
                 background: isActive 
-                  ? (isLight ? 'linear-gradient(135deg, rgba(180, 133, 18, 0.18) 0%, rgba(180, 133, 18, 0.06) 100%)' : 'linear-gradient(135deg, rgba(212, 175, 55, 0.2) 0%, rgba(212, 175, 55, 0.06) 100%)') 
-                  : (isLight ? '#f1f5f9' : 'rgba(0, 0, 0, 0.25)'),
-                color: isActive ? (isLight ? '#0f172a' : '#ffffff') : (isLight ? '#475569' : '#94a3b8'),
+                  ? 'linear-gradient(135deg, rgba(212, 175, 55, 0.2) 0%, rgba(212, 175, 55, 0.06) 100%)' 
+                  : 'rgba(0, 0, 0, 0.25)',
+                color: isActive ? '#ffffff' : '#94a3b8',
                 cursor: 'pointer',
                 transition: 'all 0.15s ease'
               }}
@@ -387,10 +378,8 @@ export const DashboardDailyActionLedger: React.FC<DashboardDailyActionLedgerProp
                 fontSize: '0.64rem',
                 padding: '0.05rem 0.35rem',
                 borderRadius: '4px',
-                background: isActive 
-                  ? (isLight ? 'rgba(180, 133, 18, 0.2)' : 'rgba(212, 175, 55, 0.35)') 
-                  : (isLight ? '#e2e8f0' : 'rgba(255, 255, 255, 0.06)'),
-                color: isActive ? (isLight ? '#b48512' : '#ffffff') : (isLight ? '#64748b' : '#64748b'),
+                background: isActive ? 'rgba(212, 175, 55, 0.35)' : 'rgba(255, 255, 255, 0.06)',
+                color: isActive ? '#ffffff' : '#64748b',
                 fontFamily: 'monospace'
               }}>
                 {tab.count}
@@ -411,9 +400,9 @@ export const DashboardDailyActionLedger: React.FC<DashboardDailyActionLedgerProp
           alignItems: 'center',
           justifyContent: 'center',
           gap: '0.65rem',
-          background: isLight ? '#f8fafc' : 'rgba(0, 0, 0, 0.2)',
+          background: 'rgba(0, 0, 0, 0.2)',
           borderRadius: '12px',
-          border: isLight ? '1px dashed #cbd5e1' : '1px dashed rgba(255, 255, 255, 0.1)'
+          border: '1px dashed rgba(255, 255, 255, 0.1)'
         }}>
           <div style={{
             width: '46px',
@@ -428,7 +417,7 @@ export const DashboardDailyActionLedger: React.FC<DashboardDailyActionLedgerProp
           }}>
             <CheckCircle2 size={24} />
           </div>
-          <span style={{ fontSize: '0.92rem', fontWeight: 800, color: isLight ? '#0f172a' : '#ffffff' }}>
+          <span style={{ fontSize: '0.92rem', fontWeight: 800, color: '#ffffff' }}>
             {isAr ? 'جميع استحقاقات اليوم مستوفاة ومحصلة' : 'All Daily Obligations Fully Met'}
           </span>
           <span style={{ fontSize: '0.74rem', color: '#64748b', maxWidth: '340px' }}>
@@ -449,20 +438,20 @@ export const DashboardDailyActionLedger: React.FC<DashboardDailyActionLedgerProp
                 key={item.id}
                 style={{
                   background: item.isOverdue 
-                    ? (isLight ? '#fff5f5' : 'linear-gradient(145deg, rgba(28, 16, 20, 0.75) 0%, rgba(16, 12, 18, 0.95) 100%)')
-                    : (isLight ? '#ffffff' : 'linear-gradient(145deg, rgba(20, 26, 42, 0.75) 0%, rgba(12, 16, 26, 0.95) 100%)'),
+                    ? 'linear-gradient(145deg, rgba(28, 16, 20, 0.75) 0%, rgba(16, 12, 18, 0.95) 100%)' 
+                    : 'linear-gradient(145deg, rgba(20, 26, 42, 0.75) 0%, rgba(12, 16, 26, 0.95) 100%)',
                   border: item.isOverdue 
                     ? '1px solid rgba(239, 68, 68, 0.35)' 
-                    : (isLight ? '1px solid #e2e8f0' : '1px solid rgba(255, 255, 255, 0.08)'),
+                    : '1px solid rgba(255, 255, 255, 0.08)',
                   borderInlineStart: item.isOverdue 
-                    ? '3.5px solid #dc2626' 
-                    : (isLight ? '3.5px solid #b48512' : '3.5px solid #d4af37'),
+                    ? '3.5px solid #ef4444' 
+                    : '3.5px solid #d4af37',
                   borderRadius: '12px',
                   padding: '1rem 1.15rem',
                   display: 'flex',
                   flexDirection: 'column',
                   gap: '0.65rem',
-                  boxShadow: isLight ? '0 2px 10px rgba(15, 23, 42, 0.05)' : '0 4px 16px rgba(0, 0, 0, 0.3)',
+                  boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)',
                   transition: 'transform 0.15s ease, border-color 0.15s ease'
                 }}
               >
@@ -488,7 +477,7 @@ export const DashboardDailyActionLedger: React.FC<DashboardDailyActionLedgerProp
                     <span style={{
                       fontSize: '0.82rem',
                       fontWeight: 800,
-                      color: isLight ? '#0f172a' : '#ffffff',
+                      color: '#ffffff',
                       whiteSpace: 'nowrap',
                       overflow: 'hidden',
                       textOverflow: 'ellipsis'
@@ -526,10 +515,10 @@ export const DashboardDailyActionLedger: React.FC<DashboardDailyActionLedgerProp
                   marginTop: '0.2rem'
                 }}>
                   <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.25rem' }}>
-                    <span style={{ fontSize: '1.1rem', fontWeight: 800, color: isLight ? '#0f172a' : '#ffffff', fontFamily: 'monospace' }}>
+                    <span style={{ fontSize: '1.1rem', fontWeight: 800, color: '#ffffff', fontFamily: 'monospace' }}>
                       {formatMoney(item.amount)}
                     </span>
-                    <span style={{ fontSize: '0.66rem', color: isLight ? '#64748b' : '#94a3b8' }}>{isAr ? 'ج.م' : 'EGP'}</span>
+                    <span style={{ fontSize: '0.66rem', color: '#94a3b8' }}>{isAr ? 'ج.م' : 'EGP'}</span>
                   </div>
 
                   <button

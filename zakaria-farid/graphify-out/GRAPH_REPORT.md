@@ -1,25 +1,25 @@
 # Graph Report - zakaria-farid  (2026-09-03)
 
 ## Corpus Check
-- 297 files · ~22,858,812 words
+- 297 files · ~22,860,479 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 9836 nodes · 30891 edges · 387 communities (318 shown, 69 thin omitted)
+- 9836 nodes · 30895 edges · 385 communities (316 shown, 69 thin omitted)
 - Extraction: 87% EXTRACTED · 13% INFERRED · 0% AMBIGUOUS · INFERRED: 3936 edges (avg confidence: 0.85)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `25c7e136`
+- Built from commit: `2c138d4d`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
 ## Community Hubs (Navigation)
 - default/handler.mjs
 - ".open-next/server-functions/default/.next/server/chunks/[root-of-the-server]__0l3yhx4._.js"
-- ".open-next/server-functions/default/node_modules/next/dist/compiled/next-server/app-route-turbo.runtime.prod.js"
+- get
 - slice
-- as
+- dv
 - E
 - _
 - 3sjcqlf80ao-h.js
@@ -28,21 +28,21 @@
 - ".open-next/server-functions/default/node_modules/next/dist/compiled/jsonwebtoken/index.js"
 - rv
 - _export
-- ERPContract
+- baseToString
 - ".open-next/server-functions/default/.next/server/chunks/ssr/_060hm4p._.js"
 - ey
 - .resolve
 - ".open-next/server-functions/default/.next/server/chunks/ssr/_18a86hl._.js"
-- nk
+- D
 - 1tbft4yoe-aqs.js
 - .constructor
-- CADBlueprintBuilder.tsx
+- aa
 - 2e6s_bzdfiozj.js
 - middleware/handler.mjs
 - performWork
 - _interop_require_default
 - instances.ts
-- ZoneInspector.tsx
+- ERPJournalEntry
 - eC
 - ".open-next/server-functions/default/node_modules/next/dist/compiled/next-server/app-page-turbo.runtime.prod.js"
 - eL
@@ -54,17 +54,17 @@
 - ng
 - .toString
 - ".open-next/server-functions/default/node_modules/next/dist/server/dynamic-rendering-utils.js"
-- queries.ts
+- createClient
 - id
 - 0xmckmn224y77.js
-- L
+- e
 - l
 - 1kw2s1qfzu5zd.js
 - apply
-- getIteratee
+- r4
 - index.mjs
-- a2
-- LeadPipeline.tsx
+- o2
+- supabase/types.ts
 - eM
 - ".open-next/server-functions/default/node_modules/next/dist/compiled/@mswjs/interceptors/ClientRequest/index.js"
 - 3em9_gjupwbtr.js
@@ -87,7 +87,7 @@
 - k5
 - sy
 - then
-- clone
+- baseExtremum
 - ".open-next/server-functions/default/node_modules/next/dist/server/stream-utils/node-web-streams-helper.js"
 - AdminERPHub.tsx
 - copyArray
@@ -99,9 +99,9 @@
 - fe
 - eX
 - nx
-- al
+- as
 - compilerOptions
-- e0
+- compile
 - .get
 - flushCompletedQueues
 - dependencies
@@ -110,9 +110,9 @@
 - ".open-next/server-functions/default/node_modules/react/cjs/react.production.js"
 - ".open-next/server-functions/default/node_modules/next/dist/compiled/@opentelemetry/api/index.js"
 - pushStartInstance
-- supabase/types.ts
+- Property
 - ".open-next/server-functions/default/node_modules/react-dom/cjs/react-dom-server.edge.production.js"
-- math.ts
+- ZFErpAcademyModal.tsx
 - AdminPropertyForm.tsx
 - analytics/page.tsx
 - co
@@ -121,9 +121,9 @@
 - default/cache.cjs
 - ".open-next/server-functions/default/node_modules/next/dist/server/node-environment-extensions/process-error-handlers.js"
 - ".open-next/server-functions/default/node_modules/next/dist/shared/lib/utils.js"
-- PropertyDetailView.tsx
+- os
 - ".open-next/server-functions/default/node_modules/next/dist/compiled/debug/index.js"
-- r4
+- ".open-next/server-functions/default/node_modules/next/dist/server/internal-utils.js"
 - 13nak4sldrlos.js
 - sg
 - cloudflare-templates/images.js
@@ -155,7 +155,7 @@
 - 11a1uepdbmvg6.js
 - tn
 - ".open-next/server-functions/default/node_modules/next/dist/server/lib/trace/request-insights.js"
-- e7
+- ".open-next/server-functions/default/node_modules/next/dist/server/lib/experimental/ppr.js"
 - ri
 - ".open-next/server-functions/default/node_modules/next/dist/server/app-render/blocking-route-messages.js"
 - error
@@ -169,7 +169,7 @@
 - default/open-next.config.mjs
 - 1e1_tav4y3tcm.js
 - createWriterFromResponse
-- addProseMirrorPlugins
+- .forEach
 - .build/composable-cache.cjs
 - ".open-next/server-functions/default/node_modules/next/dist/server/node-environment-extensions/fast-set-immediate.external.js"
 - default/composable-cache.cjs
@@ -180,8 +180,8 @@
 - detectLocale
 - arrayMap
 - 42_fjgwg_g1k1.js
-- get
-- catalog/CatalogView.tsx
+- ".open-next/server-functions/default/.next/server/chunks/ssr/node_modules_framer-motion_dist_es_02-md49._.js"
+- queries.ts
 - ".open-next/server-functions/default/node_modules/next/dist/server/app-render/manifests-singleton.js"
 - 0b13n8do1_1p3.js
 - 20p3jvm900at1.js
@@ -222,7 +222,7 @@
 - sync_all_views.js
 - eh
 - t9
-- ERPJournalEntry
+- ledger.ts
 - images.d.ts
 - cloudflare-templates/init.js
 - error
@@ -240,7 +240,7 @@
 - normalizeInput
 - ".open-next/server-functions/default/node_modules/next/dist/lib/is-error.js"
 - properties
-- .err
+- take_screenshot.js
 - ".open-next/server-functions/default/node_modules/next/dist/server/node-environment-extensions/unhandled-rejection.external.js"
 - ".open-next/server-functions/default/node_modules/next/dist/build/output/log.js"
 - ".open-next/server-functions/default/node_modules/next/dist/shared/lib/router/utils/is-bot.js"
@@ -255,7 +255,7 @@
 - ".open-next/server-functions/default/node_modules/next/dist/server/use-cache/tiered-cache-handler.js"
 - cm
 - @tiptap/react
-- ClientAppShell.tsx
+- [locale]/layout.tsx
 - d
 - build_pristine_property_detail.js
 - ".open-next/server-functions/default/node_modules/next/dist/server/use-cache/handlers.js"
@@ -268,7 +268,7 @@
 - instantiateModule
 - parseRequest
 - ".open-next/server-functions/default/.next/server/chunks/ssr/[turbopack]_runtime.js"
-- cY
+- ".open-next/server-functions/default/node_modules/next/dist/server/lib/server-action-request-meta.js"
 - NewChequeModal.tsx
 - fu
 - r2
@@ -280,16 +280,16 @@
 - fix_leaflet_ssr.js
 - esm
 - cloudflare-templates/skew-protection.js
-- ERPInstallmentSchedule
+- ZFInspectorDrawer.tsx
 - home/StatsSection.tsx
 - ".open-next/server-functions/default/node_modules/next/dist/server/async-storage/work-store.js"
-- ".open-next/server-functions/default/node_modules/next/dist/server/route-modules/checks.js"
+- ".open-next/server-functions/default/node_modules/next/dist/shared/lib/hash.js"
 - ".open-next/server-functions/default/node_modules/next/dist/server/lib/incremental-cache/memory-cache.external.js"
 - ".open-next/server-functions/default/node_modules/next/dist/client/lib/console.js"
 - queue.js
-- ".open-next/server-functions/default/node_modules/next/dist/shared/lib/server-reference-info.js"
+- ".open-next/server-functions/default/node_modules/next/dist/shared/lib/is-plain-object.js"
 - ".open-next/server-functions/default/node_modules/next/dist/server/app-render/sync-io-messages.js"
-- ERPSupabaseService
+- generateUUID
 - ".open-next/server-functions/default/node_modules/next/dist/shared/lib/router/utils/relativize-url.js"
 - hq
 - ".open-next/server-functions/default/node_modules/next/dist/shared/lib/router/utils/route-match-utils.js"
@@ -303,7 +303,7 @@
 - next.config.ts
 - ".open-next/server-functions/default/node_modules/next/dist/server/lib/incremental-cache/index.js"
 - ".open-next/server-functions/default/node_modules/next/dist/server/stream-utils/uint8array-helpers.js"
-- ".open-next/server-functions/default/node_modules/next/dist/server/lib/trace/tracer.js"
+- ".open-next/server-functions/default/node_modules/next/dist/shared/lib/utils/reflect-utils.js"
 - ia
 - cache-assets-manifest.sql
 - ./server-functions/default/handler.mjs
@@ -327,11 +327,10 @@
 - lq
 - ".open-next/server-functions/default/node_modules/next/dist/server/web/spec-extension/adapters/next-request.js"
 - eslint.config.mjs
-- ".open-next/server-functions/default/node_modules/next/dist/server/web/web-on-close.js"
+- AuditTrailRail.tsx
 - @hookform/resolvers
 - lenis
 - leaflet
-- ".open-next/server-functions/default/node_modules/next/dist/shared/lib/request-insights.js"
 - @radix-ui/react-accordion
 - @radix-ui/react-checkbox
 - @radix-ui/react-dialog
@@ -349,7 +348,6 @@
 - ".open-next/server-functions/default/.next/server/chunks/ssr/[root-of-the-server]__1h214jq._.js"
 - erp/page.tsx
 - @tiptap/pm
-- ".open-next/server-functions/default/node_modules/next/dist/shared/lib/router/utils/sorted-routes.js"
 - @tiptap/starter-kit
 - embla-carousel-react
 - framer-motion
@@ -391,27 +389,27 @@
 ## Import Cycles
 - None detected.
 
-## Communities (387 total, 69 thin omitted)
+## Communities (385 total, 69 thin omitted)
 
 ### Community 0 - "default/handler.mjs"
 Cohesion: 0.01
-Nodes (172): acceptLanguage(), addCloudflareContextToNodejsGlobal(), addOpenNextHeader(), awaitAllDetachedPromise(), constructNextUrl(), convertRes(), convertToQuery(), convertToQueryString() (+164 more)
+Nodes (171): acceptLanguage(), addCloudflareContextToNodejsGlobal(), addOpenNextHeader(), awaitAllDetachedPromise(), constructNextUrl(), convertRes(), convertToQuery(), convertToQueryString() (+163 more)
 
 ### Community 1 - "".open-next/server-functions/default/.next/server/chunks/[root-of-the-server]__0l3yhx4._.js""
 Cohesion: 0.06
-Nodes (54): flushHeaders(), decode(), t2(), ".open-next/server-functions/default/.next/server/chunks/[root-of-the-server]__0l3yhx4._.js"(), B(), c(), d(), e$() (+46 more)
+Nodes (38): g(), t2(), ".open-next/server-functions/default/.next/server/chunks/[root-of-the-server]__0l3yhx4._.js"(), B(), c(), d(), e$(), ec() (+30 more)
 
-### Community 2 - "".open-next/server-functions/default/node_modules/next/dist/compiled/next-server/app-route-turbo.runtime.prod.js""
+### Community 2 - "get"
 Cohesion: 0.05
-Nodes (20): hj(), ab(), values(), ak(), ".open-next/server-functions/default/node_modules/next/dist/compiled/next-server/app-route-turbo.runtime.prod.js"(), eD(), ei(), en() (+12 more)
+Nodes (86): appendHeader(), await(), error(), getHeader(), "node_modules/@opennextjs/aws/dist/http/util.js"(), E(), y(), M() (+78 more)
 
 ### Community 3 - "slice"
 Cohesion: 0.02
-Nodes (245): add(), isUserWorkerFirst(), "node_modules/@opennextjs/aws/dist/overrides/converters/edge.js"(), n(), o(), eB(), eU(), r7() (+237 more)
+Nodes (222): isUserWorkerFirst(), "node_modules/@opennextjs/aws/dist/overrides/converters/edge.js"(), n(), o(), r7(), ri(), so(), A() (+214 more)
 
-### Community 4 - "as"
+### Community 4 - "dv"
 Cohesion: 0.11
-Nodes (47): a0(), a2(), a5(), a6(), a7(), aC(), aL(), az() (+39 more)
+Nodes (40): a0(), a2(), a5(), a6(), a7(), aC(), aL(), az() (+32 more)
 
 ### Community 5 - "E"
 Cohesion: 0.10
@@ -423,19 +421,19 @@ Nodes (82): _, ajax(), appendParams(), assertFieldSize(), batchSend(), binaryEnc
 
 ### Community 7 - "3sjcqlf80ao-h.js"
 Cohesion: 0.02
-Nodes (149): accepts(), addExtensions(), addGlobalAttributes(), addPasteRules(), an(), attributes(), buildProps(), c4() (+141 more)
+Nodes (142): accepts(), addExtensions(), addGlobalAttributes(), addPasteRules(), an(), attributes(), buildProps(), c4() (+134 more)
 
 ### Community 8 - "".open-next/server-functions/default/.next/server/chunks/ssr/[root-of-the-server]__15ypo8t._.js""
-Cohesion: 0.02
-Nodes (315): j(), tY(), es(), O(), c2(), b$(), G(), i2() (+307 more)
+Cohesion: 0.03
+Nodes (289): j(), tY(), es(), O(), c2(), b$(), G(), i2() (+281 more)
 
 ### Community 9 - "2_281ds7wuzm6.js"
 Cohesion: 0.09
-Nodes (42): a_(), an(), at(), et(), n2(), n3(), n6(), nj() (+34 more)
+Nodes (44): a_(), af(), aj(), an(), ap(), ar(), at(), aw() (+36 more)
 
 ### Community 10 - "".open-next/server-functions/default/node_modules/next/dist/compiled/jsonwebtoken/index.js""
 Cohesion: 0.02
-Nodes (82): x(), fa(), ".open-next/server-functions/default/node_modules/next/dist/compiled/jsonwebtoken/index.js"(), arrayAggregator(), arrayEachRight(), arrayEvery(), arrayIncludesWith(), arrayReduce() (+74 more)
+Nodes (89): x(), fa(), ".open-next/server-functions/default/node_modules/next/dist/compiled/jsonwebtoken/index.js"(), arrayAggregator(), arrayEachRight(), arrayEvery(), arrayIncludesWith(), arrayReduce() (+81 more)
 
 ### Community 11 - "rv"
 Cohesion: 0.06
@@ -445,9 +443,9 @@ Nodes (18): createNewAbortSignal(), rd(), rE(), rf(), rk(), ro(), rp(), rq() (+1
 Cohesion: 0.01
 Nodes (70): ".open-next/server-functions/default/node_modules/next/dist/client/components/app-router-headers.js"(), ".open-next/server-functions/default/node_modules/next/dist/client/components/hooks-server-context.js"(), ".open-next/server-functions/default/node_modules/next/dist/client/components/router-reducer/set-cache-busting-search-param.js"(), ".open-next/server-functions/default/node_modules/next/dist/client/components/static-generation-bailout.js"(), _export(), ".open-next/server-functions/default/node_modules/next/dist/lib/client-and-server-references.js"(), getUseCacheFunctionInfo(), isServerReference() (+62 more)
 
-### Community 13 - "ERPContract"
-Cohesion: 0.24
-Nodes (13): ContractsEngine, GeneralLedgerEngine, generateUUID(), minDecimal(), RescissionEngine, RSVEngine, createInitialERPState(), ERPStoreState (+5 more)
+### Community 13 - "baseToString"
+Cohesion: 0.13
+Nodes (25): asciiToArray(), baseFindIndex(), baseIndexOf(), baseIsNaN(), baseToString(), castSlice(), charsEndIndex(), charsStartIndex() (+17 more)
 
 ### Community 14 - "".open-next/server-functions/default/.next/server/chunks/ssr/_060hm4p._.js""
 Cohesion: 0.04
@@ -459,27 +457,27 @@ Nodes (7): e3(), e5, ey, handleExit(), ix(), se(), tn
 
 ### Community 16 - ".resolve"
 Cohesion: 0.05
-Nodes (50): addCommands(), addInputRules(), addKeyboardShortcuts(), after(), before(), cg, cH(), cJ() (+42 more)
+Nodes (51): addCommands(), addInputRules(), addKeyboardShortcuts(), after(), before(), cg, cH(), cJ() (+43 more)
 
 ### Community 17 - "".open-next/server-functions/default/.next/server/chunks/ssr/_18a86hl._.js""
 Cohesion: 0.02
 Nodes (63): ".open-next/server-functions/default/.next/server/chunks/ssr/_18a86hl._.js"(), ab(), ag(), aj(), aL(), aS(), aT(), aU() (+55 more)
 
-### Community 18 - "nk"
-Cohesion: 0.03
-Nodes (15): extend(), na(), nB(), nD(), nE, nI(), nj(), nk (+7 more)
+### Community 18 - "D"
+Cohesion: 0.04
+Nodes (12): D, dM(), na(), nB(), nD(), nE, nI(), nj() (+4 more)
 
 ### Community 19 - "1tbft4yoe-aqs.js"
 Cohesion: 0.03
-Nodes (96): a1(), a3(), a4(), a8(), a9(), aa(), aD(), aF() (+88 more)
+Nodes (83): aF(), b(), c2(), cc(), ce(), cN(), ct(), e3() (+75 more)
 
 ### Community 20 - ".constructor"
-Cohesion: 0.04
-Nodes (30): cS(), element(), has(), ie, ii(), io(), ir(), is() (+22 more)
+Cohesion: 0.02
+Nodes (34): element(), extend(), has(), ie, ii(), io(), ir(), is() (+26 more)
 
-### Community 21 - "CADBlueprintBuilder.tsx"
-Cohesion: 0.08
-Nodes (30): ADAPTIVE_WIZARD_DEFAULTS, AdaptiveWizardAnswers, CADBlueprintBuilder(), rec(), updateRecursive(), DEFAULT_DIMENSIONS, DimStepper(), DimStepperProps (+22 more)
+### Community 21 - "aa"
+Cohesion: 0.12
+Nodes (20): a1(), a3(), a4(), a8(), a9(), aa(), aD(), aG() (+12 more)
 
 ### Community 22 - "2e6s_bzdfiozj.js"
 Cohesion: 0.04
@@ -487,7 +485,7 @@ Nodes (50): createPanHandlers(), e0(), e1(), e3(), eG(), eK(), eq(), i2() (+42 m
 
 ### Community 23 - "middleware/handler.mjs"
 Cohesion: 0.05
-Nodes (71): acceptLanguage(), applyMiddlewareHeaders(), arrayToRegexp(), cacheInterceptor(), checkHas(), compareSemver(), compile(), computeCacheControl() (+63 more)
+Nodes (60): acceptLanguage(), applyMiddlewareHeaders(), cacheInterceptor(), checkHas(), compareSemver(), computeCacheControl(), constructNextUrl(), convertBodyToReadableStream() (+52 more)
 
 ### Community 24 - "performWork"
 Cohesion: 0.16
@@ -498,20 +496,20 @@ Cohesion: 0.04
 Nodes (31): ".open-next/server-functions/default/node_modules/next/dist/lib/find-pages-dir.js"(), findDir(), findPagesDir(), ".open-next/server-functions/default/node_modules/next/dist/lib/format-dynamic-import-path.js"(), resolveCacheHandlerPathToFilesystem(), ".open-next/server-functions/default/node_modules/next/dist/lib/metadata/get-metadata-route.js"(), fillMetadataSegment(), fillStaticMetadataSegment() (+23 more)
 
 ### Community 26 - "instances.ts"
-Cohesion: 0.08
-Nodes (42): DEMO_PROPERTIES, seedDatabase(), supabase, addOptionalZone(), ApartmentSubType, applyGlobalState(), applyGlobalStateToZone(), AttributeValue (+34 more)
+Cohesion: 0.04
+Nodes (91): DEMO_PROPERTIES, seedDatabase(), supabase, ADAPTIVE_WIZARD_DEFAULTS, AdaptiveWizardAnswers, CADBlueprintBuilder(), rec(), updateRecursive() (+83 more)
 
-### Community 27 - "ZoneInspector.tsx"
-Cohesion: 0.11
-Nodes (25): findZone(), prettify(), STATUS_LABELS, statusLabel(), TIER_STYLES, tradeTemplateFor(), ZoneInspector(), ZoneInspectorBody() (+17 more)
+### Community 27 - "ERPJournalEntry"
+Cohesion: 0.30
+Nodes (5): EscalationEngine, InvariantsValidator, ERPInstallmentSchedule, ERPJournalEntry, InvariantValidationResult
 
 ### Community 28 - "eC"
 Cohesion: 0.08
 Nodes (7): canPush(), eA(), eC, eR(), eT, leaveOpenTopic(), rejoin()
 
 ### Community 29 - "".open-next/server-functions/default/node_modules/next/dist/compiled/next-server/app-page-turbo.runtime.prod.js""
-Cohesion: 0.02
-Nodes (337): getHeaders(), ".open-next/server-functions/default/.next/server/chunks/_17qm_ju._.js"(), e0(), e1(), eD(), eE(), eF(), eJ() (+329 more)
+Cohesion: 0.03
+Nodes (299): flushHeaders(), getHeaders(), decode(), ".open-next/server-functions/default/.next/server/chunks/_17qm_ju._.js"(), a2(), e1(), eB(), eD() (+291 more)
 
 ### Community 30 - "eL"
 Cohesion: 0.06
@@ -538,8 +536,8 @@ Cohesion: 0.06
 Nodes (43): alarm(), debug(), error(), getOpenNextErrorLogLevel(), internalPurgeCacheByTags(), isOpenNextError(), warn(), getLastRevalidated() (+35 more)
 
 ### Community 36 - "ng"
-Cohesion: 0.15
-Nodes (33): nU(), ab(), e5(), ea(), eI(), M(), n_(), na() (+25 more)
+Cohesion: 0.17
+Nodes (29): nU(), ab(), eI(), M(), n_(), na(), nb(), nc() (+21 more)
 
 ### Community 37 - ".toString"
 Cohesion: 0.06
@@ -549,9 +547,9 @@ Nodes (4): t_, td, to, tS
 Cohesion: 0.11
 Nodes (16): ".open-next/server-functions/default/node_modules/next/dist/server/app-render/staged-rendering.js"(), cancelStageTrigger(), ".open-next/server-functions/default/node_modules/next/dist/server/dynamic-rendering-utils.js"(), ignoreReject(), makeClientHookHangingPromise(), makeDevtoolsIOAwarePromise(), makeDynamicHangingPromise(), makeFallbackParamsHangingPromise() (+8 more)
 
-### Community 39 - "queries.ts"
-Cohesion: 0.06
-Nodes (39): DashboardGroupLayout(), LayoutProps, AdminLeadsPage(), Props, EditPropertyPage(), Props, AdminPropertiesPage(), Props (+31 more)
+### Community 39 - "createClient"
+Cohesion: 0.10
+Nodes (21): DashboardGroupLayout(), LayoutProps, EditPropertyPage(), Props, GET(), FinOSLayout(), metadata, FinOSPage() (+13 more)
 
 ### Community 40 - "id"
 Cohesion: 0.08
@@ -561,13 +559,13 @@ Nodes (52): ae(), ak(), an(), aP(), aS(), at(), ax(), ch() (+44 more)
 Cohesion: 0.20
 Nodes (47): a(), b(), C(), d(), E(), ea(), eb(), ec() (+39 more)
 
-### Community 42 - "L"
-Cohesion: 0.03
-Nodes (15): b(), getJSON(), I, iB(), iL(), J(), L, M (+7 more)
+### Community 42 - "e"
+Cohesion: 0.02
+Nodes (21): b(), captureTransaction(), componentDidMount(), componentDidUpdate(), createNodeViews(), e(), getJSON(), I (+13 more)
 
 ### Community 43 - "l"
-Cohesion: 0.13
-Nodes (45): ci(), co(), cu(), ej(), eM(), fJ(), iN(), lB() (+37 more)
+Cohesion: 0.14
+Nodes (42): ci(), co(), cu(), eM(), fJ(), iN(), lB(), a() (+34 more)
 
 ### Community 44 - "1kw2s1qfzu5zd.js"
 Cohesion: 0.05
@@ -575,23 +573,23 @@ Nodes (19): ec(), ed(), ef(), eg(), eo(), eu(), P(), tA (+11 more)
 
 ### Community 45 - "apply"
 Cohesion: 0.05
-Nodes (55): c(), eW(), aS(), cY(), F(), apply(), ary(), baseDelay() (+47 more)
+Nodes (53): c(), eW(), aS(), cY(), F(), apply(), ary(), baseDelay() (+45 more)
 
-### Community 46 - "getIteratee"
-Cohesion: 0.06
-Nodes (47): baseAssignValue(), baseExtremum(), baseFindKey(), baseForOwn(), baseForOwnRight(), baseGt(), baseLt(), baseMean() (+39 more)
+### Community 46 - "r4"
+Cohesion: 0.05
+Nodes (59): r4(), arrayLikeKeys(), baseAggregator(), baseAssignValue(), baseEvery(), baseFilter(), baseFindKey(), baseForOwn() (+51 more)
 
 ### Community 47 - "index.mjs"
 Cohesion: 0.05
 Nodes (12): createMainHandler(), emptyReadableStream(), generateUniqueId(), "node_modules/@opennextjs/aws/dist/overrides/proxyExternalRequest/fetch.js"(), resolveAssetResolver(), resolveCdnInvalidation(), resolveConverter(), resolveIncrementalCache() (+4 more)
 
-### Community 48 - "a2"
-Cohesion: 0.07
-Nodes (151): a2(), d(), g(), h(), l(), l2(), m(), o2() (+143 more)
+### Community 48 - "o2"
+Cohesion: 0.03
+Nodes (164): e0(), r1(), r9(), rd(), ru(), sd(), se(), sl() (+156 more)
 
-### Community 49 - "LeadPipeline.tsx"
-Cohesion: 0.13
-Nodes (29): createLead(), deleteLeadPermanently(), getAdminClient(), normalizeString(), toggleArchiveLead(), updateLeadDetails(), updateLeadStage(), getAdminClient() (+21 more)
+### Community 49 - "supabase/types.ts"
+Cohesion: 0.09
+Nodes (39): createLead(), deleteLeadPermanently(), getAdminClient(), normalizeString(), toggleArchiveLead(), updateLeadDetails(), updateLeadStage(), getAdminClient() (+31 more)
 
 ### Community 50 - "eM"
 Cohesion: 0.16
@@ -622,12 +620,12 @@ Cohesion: 0.07
 Nodes (31): q(), u(), v(), ".open-next/server-functions/default/node_modules/next/dist/server/app-render/dynamic-rendering.js"(), abortAndThrowOnSynchronousRequestDataAccess(), abortOnSynchronousDynamicDataAccess(), abortOnSynchronousPlatformIOAccess(), addErrorContext() (+23 more)
 
 ### Community 57 - "FinishingDetailsDisplay.tsx"
-Cohesion: 0.11
-Nodes (32): BADGE_CONFIG, DEFAULT_ZONE_PHOTOS, FinishingDetailsDisplay(), formatAttrValue(), getAttrLabel(), getDominantFinishTier(), collect(), getStatusPosition() (+24 more)
+Cohesion: 0.10
+Nodes (33): BADGE_CONFIG, DEFAULT_ZONE_PHOTOS, FinishingDetailsDisplay(), formatAttrValue(), getAttrLabel(), getDominantFinishTier(), collect(), getStatusPosition() (+25 more)
 
 ### Community 58 - "s"
 Cohesion: 0.02
-Nodes (185): appendHeader(), await(), error(), getCloudflareContext(), getHeader(), "node_modules/@opennextjs/aws/dist/http/util.js"(), ".open-next/server-functions/default/.next/server/chunks/_017z-_d._.js"(), E() (+177 more)
+Nodes (218): add(), getCloudflareContext(), ".open-next/server-functions/default/.next/server/chunks/_017z-_d._.js"(), ".open-next/server-functions/default/.next/server/chunks/_0muyrbf._.js"(), l(), o(), d(), h() (+210 more)
 
 ### Community 59 - "ep"
 Cohesion: 0.09
@@ -638,8 +636,8 @@ Cohesion: 0.14
 Nodes (14): a(), b(), onClose(), onError(), onMessage(), onOpen(), sb(), sh() (+6 more)
 
 ### Community 61 - "n"
-Cohesion: 0.10
-Nodes (48): a(), aM(), aw(), cj(), D(), E(), f4(), f5() (+40 more)
+Cohesion: 0.11
+Nodes (43): a(), aM(), aw(), cj(), D(), E(), f4(), f5() (+35 more)
 
 ### Community 62 - "isObjectLike"
 Cohesion: 0.08
@@ -659,15 +657,15 @@ Nodes (15): clone(), eI, finally(), _initRealtimeClient(), _initSupabaseAuthClie
 
 ### Community 66 - "abort"
 Cohesion: 0.03
-Nodes (93): q(), ".open-next/server-functions/default/.next/server/chunks/ssr/1daa_next-intl_dist_esm_production_server_react-server_getTranslations_161amqn.js"(), aa(), ag(), f(), g(), L(), n2() (+85 more)
+Nodes (83): q(), ag(), ".open-next/server-functions/default/.next/server/chunks/ssr/node_modules_next_06lxapa._.js"(), ae(), ah(), ai(), aj(), ak() (+75 more)
 
 ### Community 67 - "ex"
 Cohesion: 0.06
 Nodes (7): connectWithFallback(), ex, ping(), remove(), replaceTransport(), storeSession(), transportName()
 
 ### Community 68 - "test_invariants.ts"
-Cohesion: 0.13
-Nodes (14): activeSchedules, audits, branch1Rescission, branch2Rescission, contract1Schedules, contract2Schedules, crSum, drSum (+6 more)
+Cohesion: 0.09
+Nodes (24): activeSchedules, audits, branch1Rescission, branch2Rescission, contract1Schedules, contract2Schedules, crSum, drSum (+16 more)
 
 ### Community 69 - "k5"
 Cohesion: 0.23
@@ -681,17 +679,17 @@ Nodes (29): ao(), ar(), c1(), c3(), ca(), cF(), cg(), cl() (+21 more)
 Cohesion: 0.11
 Nodes (35): a(), l(), o(), c(), catch(), d(), e6(), e8() (+27 more)
 
-### Community 72 - "clone"
-Cohesion: 0.22
-Nodes (9): chain(), clone(), getHolder(), lazyReverse(), lodash(), wrapperChain(), wrapperClone(), wrapperPlant() (+1 more)
+### Community 72 - "baseExtremum"
+Cohesion: 0.13
+Nodes (19): baseExtremum(), baseGt(), baseLt(), baseMean(), baseSortedIndex(), baseSum(), identity(), max() (+11 more)
 
 ### Community 73 - "".open-next/server-functions/default/node_modules/next/dist/server/stream-utils/node-web-streams-helper.js""
 Cohesion: 0.13
 Nodes (33): ".open-next/server-functions/default/node_modules/next/dist/server/stream-utils/node-web-streams-helper.js"(), chainStreams(), chainTransformers(), concatUint8Arrays(), continueDynamicHTMLResume(), continueDynamicPrerender(), continueFizzStream(), continueStaticFallbackPrerender() (+25 more)
 
 ### Community 74 - "AdminERPHub.tsx"
-Cohesion: 0.06
-Nodes (35): AdminERPHubProps, ZFCommandBar(), ZFCommandBarProps, AcademyTrack, ArticleRendererProps, SingleChapterViewProps, SubIndexItemProps, ZFErpAcademyModal() (+27 more)
+Cohesion: 0.07
+Nodes (32): AdminERPHub(), handleDepositDuePDCs(), handleExecuteRescission(), handleSaveNewCheque(), AdminERPHubProps, DashboardDailyActionLedger(), DashboardFinancialCalendar(), SIDEBAR_TOUR_STEPS (+24 more)
 
 ### Community 75 - "copyArray"
 Cohesion: 0.09
@@ -702,8 +700,8 @@ Cohesion: 0.07
 Nodes (8): ec(), ei(), en(), et(), ic(), id(), t5(), y()
 
 ### Community 77 - ".slice"
-Cohesion: 0.04
-Nodes (15): c(), cT, df(), dt(), ev, ez(), rH(), rq (+7 more)
+Cohesion: 0.03
+Nodes (24): addProseMirrorPlugins(), c(), cF(), closest(), cO(), cT, cZ(), df() (+16 more)
 
 ### Community 78 - "isSymbol"
 Cohesion: 0.08
@@ -725,17 +723,17 @@ Nodes (8): fD(), fe(), fL(), fM(), fw(), fy(), fz(), ff()
 Cohesion: 0.09
 Nodes (3): eX, tj, tq()
 
-### Community 84 - "al"
-Cohesion: 0.25
-Nodes (20): nA(), al(), ao(), E(), e0(), e1(), e2(), e3() (+12 more)
+### Community 84 - "as"
+Cohesion: 0.22
+Nodes (30): eH(), eV(), ao(), as(), E(), e0(), e1(), e2() (+22 more)
 
 ### Community 85 - "compilerOptions"
 Cohesion: 0.07
 Nodes (28): dom, dom.iterable, esnext, **/*.mts, .next/dev/types/**/*.ts, next-env.d.ts, .next/types/**/*.ts, node_modules (+20 more)
 
-### Community 86 - "e0"
-Cohesion: 0.10
-Nodes (5): e0, iH(), iK(), ti, tl
+### Community 86 - "compile"
+Cohesion: 0.24
+Nodes (11): arrayToRegexp(), compile(), escapeString(), flags(), lexer(), parse2(), pathToRegexp(), regexpToRegexp() (+3 more)
 
 ### Community 87 - ".get"
 Cohesion: 0.08
@@ -769,29 +767,29 @@ Nodes (18): ".open-next/server-functions/default/node_modules/next/dist/compiled
 Cohesion: 0.14
 Nodes (42): u(), assign(), adoptPreloadCredentials(), createRenderState(), endChunkForTag(), enqueueFlush(), escapeHrefForLinkHeaderURLContextReplacer(), escapeStringForLinkHeaderQuotedParamValueContextReplacer() (+34 more)
 
-### Community 95 - "supabase/types.ts"
-Cohesion: 0.10
-Nodes (21): ConstructionCostCalculator(), ConstructionCostCalculatorProps, FINISHING_TIER_COSTS, FinishingTier, PropertyConstructionType, PropertyFinancialMatrix(), PropertyFinancialMatrixProps, CategoryPreset (+13 more)
+### Community 95 - "Property"
+Cohesion: 0.15
+Nodes (13): ConstructionCostCalculator(), ConstructionCostCalculatorProps, FINISHING_TIER_COSTS, FinishingTier, PropertyConstructionType, PropertyFinancialMatrix(), PropertyFinancialMatrixProps, CategoryPreset (+5 more)
 
 ### Community 96 - "".open-next/server-functions/default/node_modules/react-dom/cjs/react-dom-server.edge.production.js""
 Cohesion: 0.08
 Nodes (29): init(), ".open-next/server-functions/default/node_modules/react-dom/cjs/react-dom-server.edge.production.js"(), createHook(), createWorkInProgressHook(), dispatchAction(), flattenOptionChildren(), handleErrorInNextTick(), hoistHoistables() (+21 more)
 
-### Community 97 - "math.ts"
-Cohesion: 0.08
-Nodes (32): RFC-4122, DashboardAnalyticalStudio(), DashboardAnalyticalStudioProps, ActionLedgerItem, DashboardDailyActionLedger(), DashboardDailyActionLedgerProps, CalendarEvent, DashboardFinancialCalendar() (+24 more)
+### Community 97 - "ZFErpAcademyModal.tsx"
+Cohesion: 0.20
+Nodes (6): AcademyTrack, ArticleRendererProps, SingleChapterViewProps, SubIndexItemProps, ZFErpAcademyModal(), ZFErpAcademyModalProps
 
 ### Community 98 - "AdminPropertyForm.tsx"
-Cohesion: 0.09
-Nodes (30): Props, AdminPropertyForm(), applyPriceMagnitude(), handleAddViewTag(), handlePriceChange(), onSubmit(), parsePriceDraft(), syncViewTags() (+22 more)
+Cohesion: 0.08
+Nodes (35): Props, AdminPropertyForm(), applyPriceMagnitude(), handleAddViewTag(), handlePriceChange(), onSubmit(), parsePriceDraft(), syncViewTags() (+27 more)
 
 ### Community 99 - "analytics/page.tsx"
-Cohesion: 0.11
-Nodes (25): AnalyticsPage(), isStale(), Props, AdminDashboard(), formatTimeAgo(), isStale(), Props, STAGE_CONFIG (+17 more)
+Cohesion: 0.09
+Nodes (31): AnalyticsPage(), isStale(), Props, AdminLeadsPage(), Props, AdminDashboard(), formatTimeAgo(), isStale() (+23 more)
 
 ### Community 100 - "co"
-Cohesion: 0.16
-Nodes (22): b6(), b7(), b8(), b9(), ca(), cl(), bt(), bX() (+14 more)
+Cohesion: 0.12
+Nodes (28): b6(), b7(), b8(), b9(), ca(), cl(), cZ(), bt() (+20 more)
 
 ### Community 101 - "1qaott5y6o0us.js"
 Cohesion: 0.15
@@ -813,17 +811,13 @@ Nodes (22): ".open-next/server-functions/default/node_modules/next/dist/server/b
 Cohesion: 0.13
 Nodes (14): fn(), ".open-next/server-functions/default/node_modules/next/dist/experimental/testmode/context.js"(), extractTestInfoFromRequest(), getTestReqInfo(), withRequest(), ".open-next/server-functions/default/node_modules/next/dist/server/app-render/async-local-storage.js"(), createSnapshot(), ".open-next/server-functions/default/node_modules/next/dist/shared/lib/utils.js"() (+6 more)
 
-### Community 106 - "PropertyDetailView.tsx"
-Cohesion: 0.08
-Nodes (32): MapPage(), Props, HomePage(), Props, PropertiesPage(), Props, generateMetadata(), PropertyDetailPage() (+24 more)
+### Community 106 - "os"
+Cohesion: 0.50
+Nodes (5): n$(), nQ(), os(), ou(), se()
 
 ### Community 107 - "".open-next/server-functions/default/node_modules/next/dist/compiled/debug/index.js""
 Cohesion: 0.15
 Nodes (21): ".open-next/server-functions/default/node_modules/next/dist/compiled/debug/index.js"(), envForceColor(), fmtLong(), fmtShort(), formatArgs(), getDate(), getSupportLevel(), load() (+13 more)
-
-### Community 108 - "r4"
-Cohesion: 0.11
-Nodes (26): r4(), baseAggregator(), baseEvery(), baseFilter(), baseInverter(), baseSome(), baseSortedUniq(), createAggregator() (+18 more)
 
 ### Community 109 - "13nak4sldrlos.js"
 Cohesion: 0.16
@@ -855,7 +849,7 @@ Nodes (8): binaryDecode(), decode(), decodeBroadcast(), decodePush(), decodeRepl
 
 ### Community 116 - "from"
 Cohesion: 0.04
-Nodes (18): eh(), en, ep(), eu, from(), getHTML(), i5(), oE() (+10 more)
+Nodes (22): addAttributes(), e7, eh(), en, ep(), eu, from(), getHTML() (+14 more)
 
 ### Community 117 - "turbopack-25xr6jfn3ws4v.js"
 Cohesion: 0.19
@@ -863,7 +857,7 @@ Nodes (18): a(), b(), d(), E(), f(), g(), get(), h() (+10 more)
 
 ### Community 118 - "create"
 Cohesion: 0.03
-Nodes (17): addNodeView(), create(), e8, ea, ec(), ee, eg, em() (+9 more)
+Nodes (19): addNodeView(), create(), cS(), e8, ea, ec(), ee, eg (+11 more)
 
 ### Community 119 - "_"
 Cohesion: 0.14
@@ -874,16 +868,16 @@ Cohesion: 0.11
 Nodes (8): c(), nf(), nm(), np(), nS(), R(), t6(), u()
 
 ### Community 121 - "baseClone"
-Cohesion: 0.07
-Nodes (42): assignMergeValue(), assignValue(), baseAssign(), baseAssignIn(), baseClone(), baseFunctions(), baseIsNative(), baseMerge() (+34 more)
+Cohesion: 0.08
+Nodes (38): assignMergeValue(), assignValue(), baseAssign(), baseAssignIn(), baseClone(), baseFunctions(), baseIsNative(), baseMerge() (+30 more)
 
 ### Community 122 - "".open-next/server-functions/default/.next/server/chunks/[turbopack]_runtime.js""
 Cohesion: 0.10
 Nodes (6): ".open-next/server-functions/default/.next/server/chunks/[turbopack]_runtime.js"(), asyncLoader(), createNS(), parseRequest(), resolveAbsolutePath(), resolvePathFromModule()
 
 ### Community 123 - "createClient"
-Cohesion: 0.23
-Nodes (8): LoginForm(), onSubmit(), AdminSidebar(), signOut(), AdminSidebarProps, BrandLogo(), BrandLogoProps, createClient()
+Cohesion: 0.18
+Nodes (10): LoginForm(), onSubmit(), AdminSidebar(), signOut(), AdminSidebarProps, BrandLogo(), BrandLogoProps, Navbar() (+2 more)
 
 ### Community 124 - "devDependencies"
 Cohesion: 0.11
@@ -894,8 +888,8 @@ Cohesion: 0.14
 Nodes (12): a(), b, c(), E, f(), h(), i(), o() (+4 more)
 
 ### Community 126 - "sw"
-Cohesion: 0.15
-Nodes (19): cN(), cR(), fv(), fy(), i, i5(), iF(), ij() (+11 more)
+Cohesion: 0.19
+Nodes (15): cR(), i, i5(), iF(), ij(), iQ(), iw(), ri() (+7 more)
 
 ### Community 127 - "Production Deployment & Maintenance Runbook"
 Cohesion: 0.11
@@ -993,9 +987,9 @@ Nodes (12): ec(), ed(), ef(), eg(), eh(), em(), en(), eo() (+4 more)
 Cohesion: 0.24
 Nodes (7): ".open-next/server-functions/default/node_modules/next/dist/server/pipe-readable.js"(), createWriterFromResponse(), isAbortError(), pipeToNodeResponse(), ".open-next/server-functions/default/node_modules/next/dist/server/send-payload.js"(), sendEtagResponse(), sendRenderResult()
 
-### Community 154 - "addProseMirrorPlugins"
-Cohesion: 0.04
-Nodes (94): A, addAttributes(), addProseMirrorPlugins(), cF(), closest(), cO(), commands(), content() (+86 more)
+### Community 154 - ".forEach"
+Cohesion: 0.05
+Nodes (88): A, commands(), content(), dispatchTransaction(), dn(), ed(), F(), H() (+80 more)
 
 ### Community 155 - ".build/composable-cache.cjs"
 Cohesion: 0.24
@@ -1030,20 +1024,20 @@ Cohesion: 0.33
 Nodes (6): detectDomainLocale(), detectLocale(), fixCacheHeaderForHtmlPages(), getLocaleFromCookie(), isLocalizedPath(), localizePath()
 
 ### Community 163 - "arrayMap"
-Cohesion: 0.11
-Nodes (22): arrayFilter(), arrayLikeKeys(), arrayMap(), baseDifference(), baseIntersection(), baseMap(), baseOrderBy(), basePullAll() (+14 more)
+Cohesion: 0.13
+Nodes (19): arrayFilter(), arrayMap(), baseDifference(), baseIntersection(), baseMap(), baseOrderBy(), basePullAll(), baseSortBy() (+11 more)
 
 ### Community 164 - "42_fjgwg_g1k1.js"
 Cohesion: 0.18
 Nodes (4): c(), i(), s(), u
 
-### Community 165 - "get"
-Cohesion: 0.03
-Nodes (81): f(), sd(), sl(), sn(), a1(), aT(), b0(), di() (+73 more)
+### Community 165 - "".open-next/server-functions/default/.next/server/chunks/ssr/node_modules_framer-motion_dist_es_02-md49._.js""
+Cohesion: 0.02
+Nodes (83): rs(), eb(), a1(), cg(), E(), hj(), aa(), L() (+75 more)
 
-### Community 166 - "catalog/CatalogView.tsx"
-Cohesion: 0.06
-Nodes (47): BEDROOM_FILTER_OPTIONS, cardsContainerVariants, CatalogView(), CatalogViewProps, PRICE_FILTER_OPTIONS, SORT_OPTIONS, SortOption, TYPE_FILTER_OPTIONS (+39 more)
+### Community 166 - "queries.ts"
+Cohesion: 0.04
+Nodes (97): GET(), POST(), MapPage(), Props, HomePage(), Props, ComparePage(), Props (+89 more)
 
 ### Community 167 - "".open-next/server-functions/default/node_modules/next/dist/server/app-render/manifests-singleton.js""
 Cohesion: 0.27
@@ -1078,8 +1072,8 @@ Cohesion: 0.23
 Nodes (12): b(), d(), e(), g(), I(), ip(), n(), t() (+4 more)
 
 ### Community 175 - "toInteger"
-Cohesion: 0.07
-Nodes (48): arrayPush(), asciiToArray(), baseFill(), baseFlatten(), baseNth(), baseRepeat(), baseRest(), baseSlice() (+40 more)
+Cohesion: 0.08
+Nodes (36): arrayPush(), baseFill(), baseFlatten(), baseNth(), baseRepeat(), baseRest(), baseSlice(), chunk() (+28 more)
 
 ### Community 177 - "ep"
 Cohesion: 0.24
@@ -1118,8 +1112,8 @@ Cohesion: 0.12
 Nodes (18): bI(), cB(), db(), di(), cE(), cJ(), dd(), dK() (+10 more)
 
 ### Community 187 - "nf"
-Cohesion: 0.14
-Nodes (40): eH(), eV(), D(), e6(), eb(), ec(), ed(), ef() (+32 more)
+Cohesion: 0.13
+Nodes (39): nA(), al(), D(), e5(), e9(), eb(), ec(), ed() (+31 more)
 
 ### Community 188 - "createServerResponse"
 Cohesion: 0.20
@@ -1193,9 +1187,9 @@ Nodes (7): eF(), eh(), ej(), eK(), eq(), eu(), q()
 Cohesion: 0.43
 Nodes (7): t4(), t6(), t7(), t8(), t9(), w(), x()
 
-### Community 207 - "ERPJournalEntry"
-Cohesion: 0.19
-Nodes (14): ACCOUNT_EXPLANATIONS, AccountLedgerModal(), AccountLedgerModalProps, GeneralLedgerView(), GeneralLedgerViewProps, JournalEntryPreview(), JournalEntryPreviewProps, localizeJournalDescription() (+6 more)
+### Community 207 - "ledger.ts"
+Cohesion: 0.18
+Nodes (15): ACCOUNT_EXPLANATIONS, AccountLedgerModal(), AccountLedgerModalProps, GeneralLedgerView(), GeneralLedgerViewProps, ZFQuickSearchModal(), ImmutableRecordFrame(), ImmutableRecordFrameProps (+7 more)
 
 ### Community 208 - "images.d.ts"
 Cohesion: 0.29
@@ -1234,8 +1228,8 @@ Cohesion: 0.08
 Nodes (6): ng(), nK(), nT, t0, t9, tX()
 
 ### Community 217 - "D"
-Cohesion: 0.06
-Nodes (34): AdminERPHub(), handleCreateRealContract(), handleDepositDuePDCs(), handleExecuteRescission(), handleSaveNewCheque(), CockpitAnalyticsCharts(), CockpitAnalyticsChartsProps, CustomDarkTooltip() (+26 more)
+Cohesion: 0.07
+Nodes (41): RFC-4122, CockpitAnalyticsCharts(), CockpitAnalyticsChartsProps, CustomDarkTooltip(), CustomTooltipProps, TooltipPayloadItem, DashboardAnalyticalStudio(), DashboardOperationsRadar() (+33 more)
 
 ### Community 218 - "".open-next/server-functions/default/node_modules/next/dist/server/revalidation-utils.js""
 Cohesion: 0.48
@@ -1265,9 +1259,9 @@ Nodes (3): ".open-next/server-functions/default/node_modules/next/dist/lib/is-er
 Cohesion: 0.48
 Nodes (5): leads, properties, property_amenities, property_images, bookings
 
-### Community 226 - ".err"
-Cohesion: 0.18
-Nodes (8): { execSync }, fs, fullScreenshotPath, path, { execSync }, fs, path, screenshotPath
+### Community 226 - "take_screenshot.js"
+Cohesion: 0.40
+Nodes (4): { execSync }, fs, path, screenshotPath
 
 ### Community 227 - "".open-next/server-functions/default/node_modules/next/dist/server/node-environment-extensions/unhandled-rejection.external.js""
 Cohesion: 0.67
@@ -1283,7 +1277,7 @@ Nodes (5): ".open-next/server-functions/default/node_modules/next/dist/shared/li
 
 ### Community 231 - "Decimal"
 Cohesion: 0.08
-Nodes (5): ApprovalRule, GovernanceEngine, MAKER_CHECKER_RULES, Decimal, maxDecimal()
+Nodes (6): MoneyCellProps, ApprovalRule, GovernanceEngine, MAKER_CHECKER_RULES, Decimal, maxDecimal()
 
 ### Community 232 - "".open-next/server-functions/default/node_modules/next/dist/server/load-manifest.external.js""
 Cohesion: 0.47
@@ -1302,8 +1296,8 @@ Cohesion: 0.60
 Nodes (4): ".open-next/server-functions/default/node_modules/next/dist/server/lib/trace/request-insights-identity.js"(), getRequestInsightsIdentity(), getRequestInsightsIdentityStorage(), runWithRequestInsightsIdentity()
 
 ### Community 236 - "template"
-Cohesion: 0.13
-Nodes (15): arrayEach(), arrayIncludes(), baseFindIndex(), baseIndexOf(), baseIsNaN(), baseValues(), charsEndIndex(), charsStartIndex() (+7 more)
+Cohesion: 0.25
+Nodes (8): arrayEach(), arrayIncludes(), baseValues(), customDefaultsAssignIn(), escapeStringChar(), template(), updateWrapDetails(), valuesIn()
 
 ### Community 237 - "".open-next/server-functions/default/node_modules/next/dist/experimental/testmode/fetch.js""
 Cohesion: 0.53
@@ -1313,9 +1307,9 @@ Nodes (5): ".open-next/server-functions/default/node_modules/next/dist/experimen
 Cohesion: 0.40
 Nodes (5): ".open-next/server-functions/default/node_modules/next/dist/server/use-cache/tiered-cache-handler.js"(), createTieredCacheHandler(), scheduleBackgroundSync(), reconcileFrontFromBacking(), toExpiredEntry()
 
-### Community 241 - "ClientAppShell.tsx"
-Cohesion: 0.09
-Nodes (18): Props, ClientAppShell(), ClientAppShellProps, LenisProvider(), LenisProviderProps, LuxuryCursor(), Navbar(), NavbarProps (+10 more)
+### Community 241 - "[locale]/layout.tsx"
+Cohesion: 0.15
+Nodes (9): Props, LenisProvider(), LenisProviderProps, routing, updateSession(), config, intlMiddleware, isExempt() (+1 more)
 
 ### Community 243 - "build_pristine_property_detail.js"
 Cohesion: 0.33
@@ -1361,9 +1355,9 @@ Nodes (6): moduleContext(), moduleContext2(), parseRequest(), moduleContext(), m
 Cohesion: 0.15
 Nodes (9): ".open-next/server-functions/default/.next/server/chunks/ssr/[turbopack]_runtime.js"(), asyncLoader(), getOrInstantiateRuntimeModule(), instantiateRuntimeModule(), resolveAbsolutePath(), resolveFileUrl(), resolvePathFromModule(), getOrInstantiateRuntimeModule() (+1 more)
 
-### Community 254 - "cY"
-Cohesion: 0.33
-Nodes (6): cZ(), cW(), cX(), cY(), d9(), cy()
+### Community 254 - "".open-next/server-functions/default/node_modules/next/dist/server/lib/server-action-request-meta.js""
+Cohesion: 0.67
+Nodes (3): ".open-next/server-functions/default/node_modules/next/dist/server/lib/server-action-request-meta.js"(), getIsPossibleServerAction(), getServerActionRequestMetadata()
 
 ### Community 255 - "NewChequeModal.tsx"
 Cohesion: 0.21
@@ -1393,9 +1387,9 @@ Nodes (3): files, fs, path
 Cohesion: 0.29
 Nodes (7): createGetter(), defineProp(), esm(), esmExport(), esm(), esmExport(), interopEsm()
 
-### Community 267 - "ERPInstallmentSchedule"
-Cohesion: 0.17
-Nodes (13): InspectorPayload, ZFInspectorDrawer(), ZFInspectorDrawerProps, LegalVerificationTag(), LegalVerificationTagProps, BadgeDomain, StatusBadge(), StatusBadgeProps (+5 more)
+### Community 267 - "ZFInspectorDrawer.tsx"
+Cohesion: 0.20
+Nodes (11): InspectorPayload, ZFInspectorDrawer(), ZFInspectorDrawerProps, LegalVerificationTag(), LegalVerificationTagProps, BadgeDomain, StatusBadge(), StatusBadgeProps (+3 more)
 
 ### Community 268 - "home/StatsSection.tsx"
 Cohesion: 0.38
@@ -1404,6 +1398,10 @@ Nodes (4): getStatsItems(), STATS_ITEMS, StatsSection(), StatsSectionProps
 ### Community 269 - "".open-next/server-functions/default/node_modules/next/dist/server/async-storage/work-store.js""
 Cohesion: 0.83
 Nodes (4): ".open-next/server-functions/default/node_modules/next/dist/server/async-storage/work-store.js"(), createAfterContext(), createRefreshTagsByCacheKind(), createWorkStore()
+
+### Community 270 - "".open-next/server-functions/default/node_modules/next/dist/shared/lib/hash.js""
+Cohesion: 0.67
+Nodes (3): ".open-next/server-functions/default/node_modules/next/dist/shared/lib/hash.js"(), djb2Hash(), hexHash()
 
 ### Community 271 - "".open-next/server-functions/default/node_modules/next/dist/server/lib/incremental-cache/memory-cache.external.js""
 Cohesion: 1.00
@@ -1417,13 +1415,17 @@ Nodes (4): ".open-next/server-functions/default/node_modules/next/dist/client/li
 Cohesion: 0.32
 Nodes (14): addAlarm(), addToFailedState(), alarm(), checkSyncTable(), constructor(), debug(), error(), executeRevalidation() (+6 more)
 
+### Community 274 - "".open-next/server-functions/default/node_modules/next/dist/shared/lib/is-plain-object.js""
+Cohesion: 0.67
+Nodes (3): ".open-next/server-functions/default/node_modules/next/dist/shared/lib/is-plain-object.js"(), getObjectClassLabel(), isPlainObject()
+
 ### Community 276 - "".open-next/server-functions/default/node_modules/next/dist/server/app-render/sync-io-messages.js""
 Cohesion: 0.48
 Nodes (6): ".open-next/server-functions/default/node_modules/next/dist/server/app-render/sync-io-messages.js"(), createSyncIOClientError(), createSyncIOError(), createSyncIOErrorImpl(), createSyncIORuntimeError(), elapsedTimeBullet()
 
-### Community 277 - "ERPSupabaseService"
-Cohesion: 0.32
-Nodes (3): ensureUUID(), isUUID(), ERPSupabaseService
+### Community 277 - "generateUUID"
+Cohesion: 0.25
+Nodes (5): handleCreateRealContract(), ensureUUID(), generateUUID(), isUUID(), ERPSupabaseService
 
 ### Community 278 - "".open-next/server-functions/default/node_modules/next/dist/shared/lib/router/utils/relativize-url.js""
 Cohesion: 0.67
@@ -1443,7 +1445,7 @@ Nodes (3): ".open-next/server-functions/default/node_modules/next/dist/server/af
 
 ### Community 283 - "erp/types.ts"
 Cohesion: 0.11
-Nodes (24): ZFNotificationCenter(), ZFNotificationCenterProps, AuditTrailRailProps, AccountType, CapitalCallStatus, ContractStatus, CurrencyCode, ERPAuditLog (+16 more)
+Nodes (39): DashboardAnalyticalStudioProps, ActionLedgerItem, DashboardDailyActionLedgerProps, CalendarEvent, DashboardFinancialCalendarProps, DashboardOperationsRadarProps, ZFQuickSearchModalProps, BranchDecisionCard() (+31 more)
 
 ### Community 284 - "README.md"
 Cohesion: 0.50
@@ -1493,41 +1495,29 @@ Nodes (4): ll(), lm(), ln(), lq()
 Cohesion: 0.67
 Nodes (3): ".open-next/server-functions/default/node_modules/next/dist/server/web/spec-extension/adapters/next-request.js"(), createAbortController(), signalFromNodeResponse()
 
-### Community 315 - "".open-next/server-functions/default/node_modules/next/dist/server/web/web-on-close.js""
-Cohesion: 0.67
-Nodes (3): ".open-next/server-functions/default/node_modules/next/dist/server/web/web-on-close.js"(), trackBodyConsumed(), trackStreamConsumed()
-
-### Community 325 - "".open-next/server-functions/default/node_modules/next/dist/shared/lib/request-insights.js""
-Cohesion: 0.67
-Nodes (3): ".open-next/server-functions/default/node_modules/next/dist/shared/lib/request-insights.js"(), getRequestInsightKey(), getRequestInsightKind()
-
-### Community 343 - "".open-next/server-functions/default/node_modules/next/dist/shared/lib/router/utils/sorted-routes.js""
-Cohesion: 0.67
-Nodes (3): ".open-next/server-functions/default/node_modules/next/dist/shared/lib/router/utils/sorted-routes.js"(), getSortedRouteObjects(), getSortedRoutes()
-
 ### Community 383 - "".open-next/server-functions/default/node_modules/next/dist/lib/format-server-error.js""
 Cohesion: 0.50
 Nodes (4): ".open-next/server-functions/default/node_modules/next/dist/lib/format-server-error.js"(), formatServerError(), getStackWithoutErrorMessage(), setMessage()
 
 ## Knowledge Gaps
-- **436 isolated node(s):** `require`, `__dirname`, `b`, `b`, `g` (+431 more)
+- **434 isolated node(s):** `require`, `__dirname`, `b`, `b`, `g` (+429 more)
   These have ≤1 connection - possible missing edges or undocumented components.
 - **69 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `constructor()` connect `tl` to `default/handler.mjs`, `".open-next/server-functions/default/.next/server/chunks/[root-of-the-server]__0l3yhx4._.js"`?**
+- **Why does `constructor()` connect `tl` to `default/handler.mjs`, `".open-next/server-functions/default/node_modules/next/dist/compiled/next-server/app-page-turbo.runtime.prod.js"`?**
   _High betweenness centrality (0.202) - this node is a cross-community bridge._
-- **Why does `createClient()` connect `createClient` to `D`, `AdminPropertyForm.tsx`, `ZoneInspector.tsx`, `AdminERPHub.tsx`?**
+- **Why does `createClient()` connect `createClient` to `AdminPropertyForm.tsx`, `instances.ts`, `AdminERPHub.tsx`?**
   _High betweenness centrality (0.172) - this node is a cross-community bridge._
 - **Are the 32 inferred relationships involving `".open-next/server-functions/default/node_modules/next/dist/compiled/jsonwebtoken/index.js"()` (e.g. with `arrayEvery()` and `arraySome()`) actually correct?**
   _`".open-next/server-functions/default/node_modules/next/dist/compiled/jsonwebtoken/index.js"()` has 32 INFERRED edges - model-reasoned connections that need verification._
 - **Are the 20 inferred relationships involving `".open-next/server-functions/default/.next/server/chunks/ssr/_18a86hl._.js"()` (e.g. with `aC()` and `aY()`) actually correct?**
   _`".open-next/server-functions/default/.next/server/chunks/ssr/_18a86hl._.js"()` has 20 INFERRED edges - model-reasoned connections that need verification._
 - **What connects `require`, `__dirname`, `b` to the rest of the system?**
-  _436 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _434 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `default/handler.mjs` be split into smaller, more focused modules?**
-  _Cohesion score 0.006546438800239197 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.006567494856781137 - nodes in this community are weakly interconnected._
 - **Should `".open-next/server-functions/default/.next/server/chunks/[root-of-the-server]__0l3yhx4._.js"` be split into smaller, more focused modules?**
-  _Cohesion score 0.05625 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.0596078431372549 - nodes in this community are weakly interconnected._

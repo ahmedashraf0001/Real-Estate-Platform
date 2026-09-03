@@ -57,7 +57,6 @@ interface DashboardAnalyticalStudioProps {
   registeredPartners: Array<{ name: string; role: string }>;
   onInjectCapital: (partnerName: string) => void;
   onInspectRSV: (allocation: ERPCostAllocation) => void;
-  theme?: 'dark' | 'light';
 }
 
 export const DashboardAnalyticalStudio: React.FC<DashboardAnalyticalStudioProps> = ({
@@ -75,10 +74,8 @@ export const DashboardAnalyticalStudio: React.FC<DashboardAnalyticalStudioProps>
   taxRecords = [],
   registeredPartners,
   onInjectCapital,
-  onInspectRSV,
-  theme = 'dark'
+  onInspectRSV
 }) => {
-  const isLight = theme === 'light';
   const [activeStudioTab, setActiveStudioTab] = useState<'cashflow' | 'wip' | 'sales' | 'partners'>('cashflow');
 
   const renderMoneyParts = (val: string | number) => {
@@ -86,9 +83,9 @@ export const DashboardAnalyticalStudio: React.FC<DashboardAnalyticalStudioProps>
     const integerPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
     return (
       <div style={{ display: 'inline-flex', alignItems: 'baseline', gap: '0.2rem' }}>
-        <span style={{ fontWeight: 800, color: isLight ? '#0f172a' : '#ffffff', fontFamily: 'monospace' }}>{integerPart}</span>
-        <span style={{ fontSize: '0.68rem', color: isLight ? '#94a3b8' : 'rgba(255,255,255,0.4)', fontFamily: 'monospace' }}>.{parts[1]}</span>
-        <span style={{ fontSize: '0.66rem', color: isLight ? '#64748b' : '#94a3b8', marginInlineStart: '0.2rem' }}>{isAr ? 'ج.م' : 'EGP'}</span>
+        <span style={{ fontWeight: 800, color: '#ffffff', fontFamily: 'monospace' }}>{integerPart}</span>
+        <span style={{ fontSize: '0.68rem', color: 'rgba(255,255,255,0.4)', fontFamily: 'monospace' }}>.{parts[1]}</span>
+        <span style={{ fontSize: '0.66rem', color: '#94a3b8', marginInlineStart: '0.2rem' }}>{isAr ? 'ج.م' : 'EGP'}</span>
       </div>
     );
   };
@@ -146,11 +143,11 @@ export const DashboardAnalyticalStudio: React.FC<DashboardAnalyticalStudioProps>
             }}>
               <Layers size={16} />
             </div>
-            <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: isLight ? '#0f172a' : '#ffffff' }}>
+            <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: '#ffffff' }}>
               {isAr ? 'استوديو التحليل المالي والمخططات التنفيذية' : 'Executive Financial Analytics Studio'}
             </h3>
           </div>
-          <span style={{ fontSize: '0.72rem', color: isLight ? '#64748b' : '#94a3b8', display: 'block', marginTop: '0.2rem' }}>
+          <span style={{ fontSize: '0.72rem', color: '#94a3b8', display: 'block', marginTop: '0.2rem' }}>
             {isAr ? 'نمذجة رسومية ديناميكية متخصصة لمسار السيولة والتكاليف والمبيعات' : 'Dynamic domain-focused visualizations and projections'}
           </span>
         </div>
@@ -160,10 +157,10 @@ export const DashboardAnalyticalStudio: React.FC<DashboardAnalyticalStudioProps>
           display: 'flex',
           alignItems: 'center',
           gap: '0.25rem',
-          background: isLight ? '#f1f5f9' : 'rgba(0, 0, 0, 0.55)',
+          background: 'rgba(0, 0, 0, 0.55)',
           padding: '0.25rem',
           borderRadius: '12px',
-          border: isLight ? '1px solid #e2e8f0' : '1px solid rgba(255, 255, 255, 0.08)',
+          border: '1px solid rgba(255, 255, 255, 0.08)',
           flexWrap: 'wrap'
         }}>
           {[
@@ -183,35 +180,33 @@ export const DashboardAnalyticalStudio: React.FC<DashboardAnalyticalStudioProps>
                   display: 'flex',
                   alignItems: 'center',
                   gap: '0.45rem',
-                  padding: '0.45rem 0.85rem',
+                  padding: '0.45rem 0.95rem',
                   borderRadius: '9px',
                   fontSize: '0.75rem',
                   fontWeight: 700,
+                  border: isActive ? '1px solid rgba(212, 175, 55, 0.45)' : '1px solid transparent',
                   cursor: 'pointer',
-                  border: isActive 
-                    ? (isLight ? '1px solid rgba(180, 133, 18, 0.45)' : '1px solid rgba(212, 175, 55, 0.45)') 
-                    : '1px solid transparent',
                   background: isActive 
-                    ? (isLight ? 'rgba(180, 133, 18, 0.16)' : 'linear-gradient(135deg, rgba(212, 175, 55, 0.22) 0%, rgba(212, 175, 55, 0.06) 100%)') 
+                    ? 'linear-gradient(135deg, rgba(212, 175, 55, 0.22) 0%, rgba(212, 175, 55, 0.08) 100%)' 
                     : 'transparent',
-                  color: isActive ? (isLight ? '#0f172a' : '#ffffff') : (isLight ? '#64748b' : '#94a3b8'),
-                  boxShadow: isActive ? (isLight ? '0 2px 8px rgba(180, 133, 18, 0.15)' : '0 2px 8px rgba(212, 175, 55, 0.25)') : 'none',
-                  transition: 'all 0.15s ease'
+                  color: isActive ? '#f8fafc' : '#94a3b8',
+                  boxShadow: isActive ? '0 4px 14px rgba(212, 175, 55, 0.12)' : 'none',
+                  transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)'
                 }}
                 onMouseEnter={e => {
                   if (!isActive) {
-                    e.currentTarget.style.color = isLight ? '#0f172a' : '#ffffff';
-                    e.currentTarget.style.background = isLight ? '#e2e8f0' : 'rgba(255, 255, 255, 0.04)';
+                    e.currentTarget.style.color = '#ffffff';
+                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.04)';
                   }
                 }}
                 onMouseLeave={e => {
                   if (!isActive) {
-                    e.currentTarget.style.color = isLight ? '#64748b' : '#94a3b8';
+                    e.currentTarget.style.color = '#94a3b8';
                     e.currentTarget.style.background = 'transparent';
                   }
                 }}
               >
-                <Icon size={14} color={isActive ? (isLight ? '#b48512' : '#e2c974') : undefined} />
+                <Icon size={14} color={isActive ? '#e2c974' : undefined} />
                 <span>{isAr ? tab.labelAr : tab.labelEn}</span>
               </button>
             );
@@ -226,20 +221,20 @@ export const DashboardAnalyticalStudio: React.FC<DashboardAnalyticalStudioProps>
         <div key="cashflow" className="studio-tab-content" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
           {/* Hero Spline Chart */}
           <div style={{
-            background: isLight ? '#ffffff' : 'linear-gradient(180deg, rgba(20, 26, 42, 0.75) 0%, rgba(12, 16, 26, 0.95) 100%)',
-            border: isLight ? '1px solid #e2e8f0' : '1px solid rgba(255, 255, 255, 0.08)',
+            background: 'linear-gradient(180deg, rgba(20, 26, 42, 0.75) 0%, rgba(12, 16, 26, 0.95) 100%)',
+            border: '1px solid rgba(255, 255, 255, 0.08)',
             borderTop: '2.5px solid #10b981',
             borderRadius: '16px',
             padding: '1.35rem',
             position: 'relative',
-            boxShadow: isLight ? '0 4px 18px rgba(15, 23, 42, 0.05)' : '0 8px 24px rgba(0,0,0,0.4)'
+            boxShadow: '0 8px 24px rgba(0,0,0,0.4)'
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.85rem', flexWrap: 'wrap', gap: '0.5rem' }}>
               <div>
-                <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: 800, color: isLight ? '#0f172a' : '#ffffff' }}>
+                <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: 800, color: '#ffffff' }}>
                   {isAr ? 'منحنى التدفقات النقدية وتوقيت الاعتراف بالإيراد (IFRS 15 Horizon)' : 'Cashflow Horizon & Revenue Recognition Trajectory'}
                 </h4>
-                <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.72rem', color: isLight ? '#64748b' : '#94a3b8' }}>
+                <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.72rem', color: '#94a3b8' }}>
                   {isAr ? 'مقارنة حية: إجمالي المبيعات التعاقدية مقابل المتحصلات الفعلية والالتزام المؤجل' : 'Spline projection: Gross commitments vs actual cash collected vs deferred revenue'}
                 </p>
               </div>
@@ -250,11 +245,11 @@ export const DashboardAnalyticalStudio: React.FC<DashboardAnalyticalStudioProps>
                 gap: '0.35rem',
                 fontSize: '0.7rem',
                 fontWeight: 700,
-                color: isLight ? '#b48512' : '#e2c974',
-                background: isLight ? 'rgba(180, 133, 18, 0.08)' : 'rgba(212, 175, 55, 0.1)',
+                color: '#e2c974',
+                background: 'rgba(212, 175, 55, 0.1)',
                 padding: '0.25rem 0.65rem',
                 borderRadius: '999px',
-                border: isLight ? '1px solid rgba(180, 133, 18, 0.2)' : '1px solid rgba(212, 175, 55, 0.25)'
+                border: '1px solid rgba(212, 175, 55, 0.25)'
               }}>
                 <Sparkles size={12} />
                 <span>{isAr ? 'محاكاة ديناميكية متصلة بالدفاتر' : 'Ledger-Connected Model'}</span>
@@ -278,8 +273,8 @@ export const DashboardAnalyticalStudio: React.FC<DashboardAnalyticalStudioProps>
           }}>
             {/* Pillar 1: Bank Cash */}
             <div style={{
-              background: isLight ? '#f8fafc' : 'linear-gradient(180deg, rgba(16, 185, 129, 0.08) 0%, rgba(15, 20, 32, 0.75) 100%)',
-              border: isLight ? '1px solid #e2e8f0' : '1px solid rgba(255, 255, 255, 0.08)',
+              background: 'linear-gradient(180deg, rgba(16, 185, 129, 0.08) 0%, rgba(15, 20, 32, 0.75) 100%)',
+              border: '1px solid rgba(255, 255, 255, 0.08)',
               borderTop: '2px solid #10b981',
               borderRadius: '12px',
               padding: '1rem 1.15rem',
@@ -288,25 +283,25 @@ export const DashboardAnalyticalStudio: React.FC<DashboardAnalyticalStudioProps>
               gap: '0.35rem'
             }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: '0.72rem', color: isLight ? '#059669' : '#6ee7b7', fontWeight: 700 }}>
+                <span style={{ fontSize: '0.72rem', color: '#6ee7b7', fontWeight: 700 }}>
                   {isAr ? 'السيولة البنكية الجارية (حساب ١٠٢٠٠٠)' : 'Operating Bank Cash (102000)'}
                 </span>
-                <span style={{ fontSize: '0.64rem', color: isLight ? '#059669' : '#10b981', background: isLight ? 'rgba(16, 185, 129, 0.1)' : 'rgba(16, 185, 129, 0.12)', padding: '0.1rem 0.4rem', borderRadius: '4px', fontWeight: 700 }}>
+                <span style={{ fontSize: '0.64rem', color: '#10b981', background: 'rgba(16, 185, 129, 0.12)', padding: '0.1rem 0.4rem', borderRadius: '4px', fontWeight: 700 }}>
                   {isAr ? 'سيولة فورية' : 'Liquid'}
                 </span>
               </div>
               <div style={{ fontSize: '1.35rem' }}>
                 {renderMoneyParts(kpis.cashBank || totalCollectedCash)}
               </div>
-              <span style={{ fontSize: '0.68rem', color: isLight ? '#64748b' : '#94a3b8' }}>
+              <span style={{ fontSize: '0.68rem', color: '#64748b' }}>
                 {isAr ? 'نقدية سائلة جاهزة للصرف التشغيلي' : 'Immediately deployable operating cash'}
               </span>
             </div>
 
             {/* Pillar 2: Safe Vault PDCs */}
             <div style={{
-              background: isLight ? '#f8fafc' : 'linear-gradient(180deg, rgba(56, 189, 248, 0.08) 0%, rgba(15, 20, 32, 0.75) 100%)',
-              border: isLight ? '1px solid #e2e8f0' : '1px solid rgba(255, 255, 255, 0.08)',
+              background: 'linear-gradient(180deg, rgba(56, 189, 248, 0.08) 0%, rgba(15, 20, 32, 0.75) 100%)',
+              border: '1px solid rgba(255, 255, 255, 0.08)',
               borderTop: '2px solid #38bdf8',
               borderRadius: '12px',
               padding: '1rem 1.15rem',
@@ -315,25 +310,25 @@ export const DashboardAnalyticalStudio: React.FC<DashboardAnalyticalStudioProps>
               gap: '0.35rem'
             }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: '0.72rem', color: isLight ? '#0284c7' : '#7dd3fc', fontWeight: 700 }}>
+                <span style={{ fontSize: '0.72rem', color: '#7dd3fc', fontWeight: 700 }}>
                   {isAr ? 'شيكات الخزينة الحديدية (حساب ١٠٤٠٠٠)' : 'Safe Vault PDCs (104000)'}
                 </span>
-                <span style={{ fontSize: '0.64rem', color: isLight ? '#0284c7' : '#38bdf8', background: isLight ? 'rgba(56, 189, 248, 0.1)' : 'rgba(56, 189, 248, 0.12)', padding: '0.1rem 0.4rem', borderRadius: '4px', fontWeight: 700 }}>
+                <span style={{ fontSize: '0.64rem', color: '#38bdf8', background: 'rgba(56, 189, 248, 0.12)', padding: '0.1rem 0.4rem', borderRadius: '4px', fontWeight: 700 }}>
                   {isAr ? 'بالخزينة' : 'In Vault'}
                 </span>
               </div>
               <div style={{ fontSize: '1.35rem' }}>
                 {renderMoneyParts(totalSafePDCs)}
               </div>
-              <span style={{ fontSize: '0.68rem', color: isLight ? '#64748b' : '#94a3b8' }}>
+              <span style={{ fontSize: '0.68rem', color: '#64748b' }}>
                 {isAr ? 'شيكات مودعة بالخزينة لحين تاريخ الاستحقاق' : 'Cheques held in safe awaiting due dates'}
               </span>
             </div>
 
             {/* Pillar 3: Receivables */}
             <div style={{
-              background: isLight ? '#f8fafc' : 'linear-gradient(180deg, rgba(212, 175, 55, 0.08) 0%, rgba(15, 20, 32, 0.75) 100%)',
-              border: isLight ? '1px solid #e2e8f0' : '1px solid rgba(255, 255, 255, 0.08)',
+              background: 'linear-gradient(180deg, rgba(212, 175, 55, 0.08) 0%, rgba(15, 20, 32, 0.75) 100%)',
+              border: '1px solid rgba(255, 255, 255, 0.08)',
               borderTop: '2px solid #d4af37',
               borderRadius: '12px',
               padding: '1rem 1.15rem',
@@ -342,10 +337,10 @@ export const DashboardAnalyticalStudio: React.FC<DashboardAnalyticalStudioProps>
               gap: '0.35rem'
             }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: '0.72rem', color: isLight ? '#b48512' : '#fcd34d', fontWeight: 700 }}>
+                <span style={{ fontSize: '0.72rem', color: '#fcd34d', fontWeight: 700 }}>
                   {isAr ? 'مستحقات تعاقدية قادمة (مدينو عقود ١٠٣٠٠٠)' : 'Contract Receivables (103000)'}
                 </span>
-                <span style={{ fontSize: '0.64rem', color: isLight ? '#b48512' : '#d4af37', background: isLight ? 'rgba(212, 175, 55, 0.1)' : 'rgba(212, 175, 55, 0.12)', padding: '0.1rem 0.4rem', borderRadius: '4px', fontWeight: 700 }}>
+                <span style={{ fontSize: '0.64rem', color: '#d4af37', background: 'rgba(212, 175, 55, 0.12)', padding: '0.1rem 0.4rem', borderRadius: '4px', fontWeight: 700 }}>
                   {isAr ? 'أقساط مجدولة' : 'Pipeline'}
                 </span>
               </div>
@@ -372,20 +367,20 @@ export const DashboardAnalyticalStudio: React.FC<DashboardAnalyticalStudioProps>
           }}>
             {/* WIP Cost Allocation Ring */}
             <div style={{
-              background: isLight ? '#ffffff' : 'linear-gradient(180deg, rgba(20, 26, 42, 0.75) 0%, rgba(12, 16, 26, 0.95) 100%)',
-              border: isLight ? '1px solid #e2e8f0' : '1px solid rgba(255, 255, 255, 0.08)',
-              borderTop: isLight ? '2.5px solid #b48512' : '2.5px solid #d4af37',
+              background: 'linear-gradient(180deg, rgba(20, 26, 42, 0.75) 0%, rgba(12, 16, 26, 0.95) 100%)',
+              border: '1px solid rgba(255, 255, 255, 0.08)',
+              borderTop: '2.5px solid #d4af37',
               borderRadius: '16px',
               padding: '1.35rem',
-              boxShadow: isLight ? '0 4px 18px rgba(15, 23, 42, 0.05)' : '0 8px 24px rgba(0,0,0,0.4)'
+              boxShadow: '0 8px 24px rgba(0,0,0,0.4)'
             }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', color: isLight ? '#b48512' : '#e2c974', marginBottom: '0.25rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', color: '#e2c974', marginBottom: '0.25rem' }}>
                 <PieIcon size={17} />
-                <h4 style={{ margin: 0, fontSize: '0.98rem', fontWeight: 800, color: isLight ? '#0f172a' : '#ffffff' }}>
+                <h4 style={{ margin: 0, fontSize: '0.98rem', fontWeight: 800, color: '#ffffff' }}>
                   {isAr ? 'توزيع تكاليف الإنشاء المتكبدة (WIP Accounts)' : 'WIP Cost Element Distribution'}
                 </h4>
               </div>
-              <p style={{ margin: '0 0 1rem 0', fontSize: '0.72rem', color: isLight ? '#64748b' : '#94a3b8' }}>
+              <p style={{ margin: '0 0 1rem 0', fontSize: '0.72rem', color: '#94a3b8' }}>
                 {isAr ? 'توزيع التكاليف المباشرة بين الأراضي، الأعمال المدنية، الكهروميكانيك، والتشطيبات' : 'Capitalized project assets across Land, Civil, MEP & Finishing'}
               </p>
 
@@ -399,8 +394,8 @@ export const DashboardAnalyticalStudio: React.FC<DashboardAnalyticalStudioProps>
 
             {/* Active RSV Projects Overview */}
             <div style={{
-              background: isLight ? '#ffffff' : 'linear-gradient(180deg, rgba(20, 26, 42, 0.75) 0%, rgba(12, 16, 26, 0.95) 100%)',
-              border: isLight ? '1px solid #e2e8f0' : '1px solid rgba(255, 255, 255, 0.08)',
+              background: 'linear-gradient(180deg, rgba(20, 26, 42, 0.75) 0%, rgba(12, 16, 26, 0.95) 100%)',
+              border: '1px solid rgba(255, 255, 255, 0.08)',
               borderTop: '2.5px solid #38bdf8',
               borderRadius: '16px',
               padding: '1.35rem',
@@ -408,13 +403,13 @@ export const DashboardAnalyticalStudio: React.FC<DashboardAnalyticalStudioProps>
               flexDirection: 'column',
               justifyContent: 'space-between',
               gap: '1rem',
-              boxShadow: isLight ? '0 4px 18px rgba(15, 23, 42, 0.05)' : '0 8px 24px rgba(0,0,0,0.4)'
+              boxShadow: '0 8px 24px rgba(0,0,0,0.4)'
             }}>
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', color: '#0284c7' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', color: '#7dd3fc' }}>
                     <Calculator size={17} />
-                    <h4 style={{ margin: 0, fontSize: '0.98rem', fontWeight: 800, color: isLight ? '#0f172a' : '#ffffff' }}>
+                    <h4 style={{ margin: 0, fontSize: '0.98rem', fontWeight: 800, color: '#ffffff' }}>
                       {isAr ? 'معاملات الرسملة المعتمدة للمشاريع (RSV Factors)' : 'Audited Project RSV Allocations'}
                     </h4>
                   </div>
@@ -446,8 +441,8 @@ export const DashboardAnalyticalStudio: React.FC<DashboardAnalyticalStudioProps>
                       key={ca.allocation_id}
                       onClick={() => onInspectRSV(ca)}
                       style={{
-                        background: isLight ? '#f8fafc' : 'rgba(0, 0, 0, 0.45)',
-                        border: isLight ? '1px solid #e2e8f0' : '1px solid rgba(255, 255, 255, 0.07)',
+                        background: 'rgba(0, 0, 0, 0.45)',
+                        border: '1px solid rgba(255, 255, 255, 0.07)',
                         borderRadius: '12px',
                         padding: '0.85rem 1rem',
                         display: 'flex',
@@ -457,16 +452,16 @@ export const DashboardAnalyticalStudio: React.FC<DashboardAnalyticalStudioProps>
                         transition: 'all 0.2s ease'
                       }}
                       onMouseEnter={e => {
-                        e.currentTarget.style.borderColor = isLight ? '#b48512' : 'rgba(212, 175, 55, 0.4)';
+                        e.currentTarget.style.borderColor = 'rgba(212, 175, 55, 0.4)';
                         e.currentTarget.style.transform = 'translateY(-2px)';
                       }}
                       onMouseLeave={e => {
-                        e.currentTarget.style.borderColor = isLight ? '#e2e8f0' : 'rgba(255, 255, 255, 0.07)';
+                        e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.07)';
                         e.currentTarget.style.transform = 'translateY(0)';
                       }}
                     >
                       <div>
-                        <strong style={{ color: isLight ? '#0f172a' : '#ffffff', fontSize: '0.85rem', display: 'block' }}>{ca.project_name}</strong>
+                        <strong style={{ color: '#ffffff', fontSize: '0.85rem', display: 'block' }}>{ca.project_name}</strong>
                         <span style={{ color: '#94a3b8', fontSize: '0.7rem' }}>
                           WIP: <span style={{ color: '#e2c974', fontWeight: 700 }}>{D(ca.total_incurred_wip).formatEGP(isAr)}</span>
                         </span>
@@ -510,16 +505,16 @@ export const DashboardAnalyticalStudio: React.FC<DashboardAnalyticalStudioProps>
       {activeStudioTab === 'sales' && (
         <div key="sales" className="studio-tab-content" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
           <div style={{
-            background: isLight ? '#ffffff' : 'linear-gradient(180deg, rgba(20, 26, 42, 0.75) 0%, rgba(12, 16, 26, 0.95) 100%)',
-            border: isLight ? '1px solid #e2e8f0' : '1px solid rgba(255, 255, 255, 0.08)',
-            borderTop: isLight ? '2.5px solid #b48512' : '2.5px solid #d4af37',
+            background: 'linear-gradient(180deg, rgba(20, 26, 42, 0.75) 0%, rgba(12, 16, 26, 0.95) 100%)',
+            border: '1px solid rgba(255, 255, 255, 0.08)',
+            borderTop: '2.5px solid #d4af37',
             borderRadius: '16px',
             padding: '1.35rem',
-            boxShadow: isLight ? '0 4px 18px rgba(15, 23, 42, 0.05)' : '0 8px 24px rgba(0,0,0,0.4)'
+            boxShadow: '0 8px 24px rgba(0,0,0,0.4)'
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', color: isLight ? '#b48512' : '#e2c974', marginBottom: '0.25rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', color: '#e2c974', marginBottom: '0.25rem' }}>
               <BarChart3 size={17} />
-              <h4 style={{ margin: 0, fontSize: '0.98rem', fontWeight: 800, color: isLight ? '#0f172a' : '#ffffff' }}>
+              <h4 style={{ margin: 0, fontSize: '0.98rem', fontWeight: 800, color: '#ffffff' }}>
                 {isAr ? 'دورة حياة أقساط العقود والتدفقات النقدية' : 'Tranche Maturity & Cash Collection Pipeline'}
               </h4>
             </div>

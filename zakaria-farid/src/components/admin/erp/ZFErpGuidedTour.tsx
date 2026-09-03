@@ -7,87 +7,291 @@ import {
   ChevronLeft, 
   Sparkles, 
   CheckCircle2, 
-  Command, 
-  Play, 
-  HelpCircle,
   TrendingUp,
+  Building2,
+  FileText,
+  Calculator,
+  Landmark,
+  BookOpen,
+  PieChart,
+  ShieldCheck,
+  RotateCcw,
   Layers,
-  Calendar,
-  Clock,
-  Plus
+  ArrowRight,
+  ArrowLeft,
+  Check
 } from 'lucide-react';
+import { ERPNavModule } from './ZFNavigationDock';
 
 export interface TourStep {
+  moduleId: ERPNavModule;
   targetSelector: string;
+  groupAr: string;
+  groupEn: string;
   titleAr: string;
   titleEn: string;
-  contentAr: string;
-  contentEn: string;
+  badgeLabelAr: string;
+  badgeLabelEn: string;
+  purposeAr: string;
+  purposeEn: string;
+  capabilitiesAr: string[];
+  capabilitiesEn: string[];
+  accountingImpactAr: string;
+  accountingImpactEn: string;
   icon: React.ElementType;
-  position?: 'top' | 'bottom' | 'left' | 'right';
 }
 
 interface ZFErpGuidedTourProps {
   isActive: boolean;
   onComplete: () => void;
   onSkip: () => void;
+  onNavigateToModule?: (module: ERPNavModule) => void;
   isAr?: boolean;
 }
 
-const TOUR_STEPS: TourStep[] = [
+const SIDEBAR_TOUR_STEPS: TourStep[] = [
   {
-    targetSelector: '[data-tour="command-bar"]',
-    titleAr: '1. شريط الأوامر والمراقبة المركزية (⌘K)',
-    titleEn: '1. Command Bar & Telemetry (⌘K)',
-    contentAr: 'شريط الأوامر يتيح لك البحث الفوري (⌘K) في العقود والشيكات والقيود، متابعة حالة الاتصال الحي بقاعدة البيانات، والاطلاع على التنبيهات المالية العاجلة عبر جرس الإشعارات.',
-    contentEn: 'The global Command Bar powers instant search (⌘K) across contracts, cheques, and ledger entries, tracks live telemetry and period locks, and signals urgent alerts via the bell.',
-    icon: Command,
-    position: 'bottom'
+    moduleId: 'cockpit',
+    targetSelector: '[data-tour="nav-item-cockpit"]',
+    groupAr: 'القيادة والتحليل المالي',
+    groupEn: 'COMMAND & ANALYTICS',
+    titleAr: 'لوحة القيادة المالية والمنحنى المالي',
+    titleEn: 'Financial Cockpit & Horizon Forecast',
+    badgeLabelAr: 'المركز الرئيسي',
+    badgeLabelEn: 'COMMAND HUB',
+    purposeAr: 'شاشة القيادة والمراقبة التنفيذية البانورامية للمنظومة بالكامل؛ تعرض التدفقات النقدية اللحظية، والتقويم المالي الشهري، وأجندة العمليات اليومية.',
+    purposeEn: 'Executive cockpit providing real-time panoramic telemetry across platform liquidity, capital mindmap, monthly calendar, and today’s action ledger.',
+    capabilitiesAr: [
+      'خريطة تدفقات رأس المال (Mindmap) لرصد المبيعات والسيولة النقدية وتكاليف WIP',
+      'التقويم المالي التفاعلي لشهر كامل لمتابعة استحقاقات الشيكات والأقساط يوماً بيوم',
+      'أجندة واستحقاقات اليوم والتحذيرات الرقابية مع أزرار التحصيل والمعاينة الفورية',
+      'استوديو التحليل المالي ومنحنيات هورايزون للتنبؤ المستقبلي (IFRS 15 Horizon)'
+    ],
+    capabilitiesEn: [
+      'Capital Flow Mindmap tracking booked sales, liquidity, and WIP outflows',
+      'Full monthly financial calendar mapping cheque maturities and contract tranches',
+      'Today’s Action Ledger with instant collection and contract inspection buttons',
+      'Analytical Studio with IFRS 15 Cashflow Horizon & S-Curve projections'
+    ],
+    accountingImpactAr: 'المراقبة المستمرة لتوازن الأستاذ العام (مدين = دائن 0.00) وحجم السيولة النقدية الحرة بالخزينة.',
+    accountingImpactEn: 'Continuous monitoring of Double-Entry invariant (Dr = Cr 0.00) and unallocated treasury liquidity.',
+    icon: TrendingUp
   },
   {
-    targetSelector: '[data-tour="nav-dock"]',
-    titleAr: '2. القائمة الجانبية ووحدات العمل (Navigation Dock)',
-    titleEn: '2. Navigation Dock & ERP Modules',
-    contentAr: 'تنظيم هرمي متطور يضم 9 وحدات متخصصة مقسمة بدقة: القيادة والتحليل المالي، المبيعات والعمليات التعاقدية، والمحاسبة والرقابة المالية.',
-    contentEn: 'Structured domain navigation grouping 9 specialized modules: Command & Analytics, Sales & Deals Pipeline, and Accounting & Governance.',
-    icon: Layers,
-    position: 'right'
+    moduleId: 'properties',
+    targetSelector: '[data-tour="nav-item-properties"]',
+    groupAr: 'القيادة والتحليل المالي',
+    groupEn: 'COMMAND & ANALYTICS',
+    titleAr: 'المشاريع والأصول الإنشائية (WIP)',
+    titleEn: 'Projects & Capitalized Assets (WIP)',
+    badgeLabelAr: 'الأصول والمشروعات',
+    badgeLabelEn: 'WIP ASSETS',
+    purposeAr: 'السجل الشامل لمحفظة المشروعات والأصول العقارية؛ يتيح تتبع تكاليف التطوير المتكبدة (WIP)، حصر الوحدات المتاحة والمباعة، وتوزيع نسب أرباح الشركاء.',
+    purposeEn: 'Comprehensive project catalog tracking incurred development costs (WIP), inventory status, and shareholder equity distributions.',
+    capabilitiesAr: [
+      'متابعة التكاليف الإنشائية المتراكمة على كل مشروع عبر حسابات الأصول (120100 - 120400)',
+      'حصر حالة كل وحدة عقارية بدقة (متاحة للبيع، محجوزة، متعاقد عليها، مسلمة)',
+      'إدارة وتوزيع نسب الشركاء وحصص رأس المال لكل مشروع استثماري',
+      'استعراض القيمة التقديرية للمحفظة الإجمالية ومؤشرات التسعير'
+    ],
+    capabilitiesEn: [
+      'Track capitalized construction WIP across Land, Civil, MEP & Finishes',
+      'Monitor real-time unit statuses (Available, Reserved, Contracted, Handed Over)',
+      'Manage partner equity splits and capital calls per project',
+      'Review total catalog valuation and inventory pricing'
+    ],
+    accountingImpactAr: 'رسملة نفقات المقاولين والمواد الخام في حساب مخزون تطوير عقاري (WIP 105000) كأصول متداولة.',
+    accountingImpactEn: 'Capitalizes raw contractor and material expenses into GL 105000 project inventory.',
+    icon: Building2
   },
   {
-    targetSelector: '[data-tour="capital-mindmap"]',
-    titleAr: '3. خريطة التدفقات المالية وتوزيعات رأس المال',
-    titleEn: '3. Capital Flow Mindmap & Treasury Topology',
-    contentAr: 'مخطط شجري تفاعلي حي يربط مصادر الأموال الداخلة (Inflows) وانصبابها في الخزينة المركزية، ثم توجيهات الصرف على مشروعات التطوير الأربعة والضرائب السيادية مع مسارات ضوئية متحركة.',
-    contentEn: 'Directed interactive tree connecting capital inflows directly into the central treasury, routing expenditures across the 4 capitalized WIP project accounts.',
-    icon: TrendingUp,
-    position: 'bottom'
+    moduleId: 'contracts',
+    targetSelector: '[data-tour="nav-item-contracts"]',
+    groupAr: 'المبيعات والعمليات التعاقدية',
+    groupEn: 'SALES & DEALS PIPELINE',
+    titleAr: 'سجل عقود البيع وتتبع الأقساط',
+    titleEn: 'Sales Contracts Registry & Pipeline',
+    badgeLabelAr: 'العقود والبيع',
+    badgeLabelEn: 'SALES DEALS',
+    purposeAr: 'المركز القانوني والمالي الموثق لكافة عقود البيع؛ تحرير العقود الجديدة عبر معالج ذكي من ٣ خطوات، متابعة خطط السداد، وجداول الأقساط، وإدارة التسليمات.',
+    purposeEn: 'Audited legal and financial registry for all sales contracts; book new contracts via 3-step wizard, manage installments, and track handovers.',
+    capabilitiesAr: [
+      'تحرير عقود بيع رسمية بمعالج تنفيذي فاخر مع منع تكرار بيع الوحدة المتعاقد عليها',
+      'توليد جداول الأقساط الربع سنوية ونصف السنوية وتواريخ استحقاقها آلياً',
+      'إدارة محاضر تسليم الوحدات (Handover) والتحول من مرحلة الإنشاء للتشغيل',
+      'توثيق التعديلات السعرية (Escalations) بملحق رسمي واعتماد محاسبي'
+    ],
+    capabilitiesEn: [
+      'Book sales contracts with validation preventing duplicate unit sales',
+      'Automatically generate quarterly installment schedules and maturity dates',
+      'Process unit handovers to trigger completion and delivery recognition',
+      'Document construction cost escalations with formal addenda'
+    ],
+    accountingImpactAr: 'قيد إثبات المديونية التعاقدية (مدينو عقود 103000) والتزام إيراد مؤجل (203000) حتى التسليم الفعلي.',
+    accountingImpactEn: 'Recognizes contract receivables (103000) and deferred revenue liability (203000) until delivery.',
+    icon: FileText
   },
   {
-    targetSelector: '[data-tour="financial-calendar"]',
-    titleAr: '4. التقويم المالي وجدول استحقاق الشيكات الشهري',
-    titleEn: '4. Monthly Financial & Cheque Maturity Calendar',
-    contentAr: 'تقويم شامل يعرض أيام الشهر مدمجاً بها مواعيد صرف شيكات الخزينة وأقساط العقود والضرائب. يمكنك النقر على أي يوم لفتح درج الأجندة التفصيلية.',
-    contentEn: 'Full interactive monthly calendar mapping PDC maturities and contract dues day-by-day. Click any date to open the Day Agenda Inspector Drawer.',
-    icon: Calendar,
-    position: 'bottom'
+    moduleId: 'calculator',
+    targetSelector: '[data-tour="nav-item-calculator"]',
+    groupAr: 'المبيعات والعمليات التعاقدية',
+    groupEn: 'SALES & DEALS PIPELINE',
+    titleAr: 'حاسبة وهيكلة الأقساط المالية',
+    titleEn: 'Installment Structuring & Calculator',
+    badgeLabelAr: 'الهيكلة والتسعير',
+    badgeLabelEn: 'STRUCTURING',
+    purposeAr: 'المحاكي المالي لتسعير وتصميم عروض السداد؛ يتيح هيكلة الأقساط، تخصيص نسب المقدم والاستلام، واحتساب خصومات الدفع الفوري (Cash Discounts).',
+    purposeEn: 'Financial pricing simulator to design installment schedules, customize down payments, handover tranches, and compute upfront cash discounts.',
+    capabilitiesAr: [
+      'محاكاة خطط السداد وتوليد سيناريوهات أقساط مرنة تناسب المشتري',
+      'احتساب نسب الدفعة المقدمة ودفعات الاستلام وضبط التوزيع الزمني',
+      'محاكاة واحتساب خصومات السداد الكاش الفوري بدقة محاسبية',
+      'المعاينة الفورية لجدول الدفعات ومقارنتها بالتدفقات النقدية المستهدفة'
+    ],
+    capabilitiesEn: [
+      'Simulate flexible payment plans and custom installment scenarios',
+      'Calculate down payment and delivery balloon payments with precise timing',
+      'Compute upfront cash discounts with audited financial accuracy',
+      'Preview cash inflow schedules against project construction milestones'
+    ],
+    accountingImpactAr: 'ضمان توافق فترات استحقاق الأقساط مع احتياجات السيولة التشغيلية للمشروع.',
+    accountingImpactEn: 'Aligns installment inflow maturities directly with project operational cash expenditure milestones.',
+    icon: Calculator
   },
   {
-    targetSelector: '[data-tour="action-ledger"]',
-    titleAr: '5. أجندة واستحقاقات اليوم والتحذيرات الرقابية',
-    titleEn: '5. Today\'s Financial Action Ledger',
-    contentAr: 'كشف فوري للشيكات المستحقة بالخزينة اليوم، والأقساط المتأخرة، وطلبات الاعتماد الثنائي المعلقة، مزوداً بأزرار سريعة للتحصيل المباشر ومعاينة العقود.',
-    contentEn: 'Real-time briefing of cheques in safe maturing today, overdue arrears, and pending Maker-Checker dual approvals with instant collection triggers.',
-    icon: Clock,
-    position: 'bottom'
+    moduleId: 'pdc',
+    targetSelector: '[data-tour="nav-item-pdc"]',
+    groupAr: 'المبيعات والعمليات التعاقدية',
+    groupEn: 'SALES & DEALS PIPELINE',
+    titleAr: 'حافظة شيكات الخزينة المؤجلة (PDC)',
+    titleEn: 'PDC Cheques Vault & Life-Cycle',
+    badgeLabelAr: 'الخزينة والشيكات',
+    badgeLabelEn: 'CHEQUES VAULT',
+    purposeAr: 'الخزينة الإلكترونية للشيكات المؤجلة (حساب ١٠٤٠٠٠)؛ إدارة دورة حياة الشيك كاملة (بالخزينة، مودع، محصل، مرتد) مع استوديو الشيك الواقعي والتفقيط العربي.',
+    purposeEn: 'Central electronic safe for post-dated cheques (GL 104000); tracks full lifecycle (In Safe, Deposited, Cleared, Bounced) with realistic cheque studio.',
+    capabilitiesAr: [
+      'استلام وحفظ شيكات العملاء بالخزينة الحديدية مع ربطها تلقائياً بالقسط التعاقدي',
+      'استوديو المعاينة الواقعية للشيك البنكي الورقي مع التفقيط التلقائي بالجنيه المصري',
+      'تحصيل الشيك بضغطة زر واحدة وترحيل القيد لحساب البنك (١٠٢٠٠٠)',
+      'إدارة حالات الارتداد والتحصيل وإعادة الإيداع وحصر الشيكات حسب البنك المسحوب عليه'
+    ],
+    capabilitiesEn: [
+      'Vault incoming client cheques with automatic linkage to contract schedules',
+      'Realistic physical cheque studio with automatic Arabic Tafqeet currency phrasing',
+      'One-click cheque clearance automatically posting entries to Bank Cash (102000)',
+      'Manage bank deposits, bounces, representation, and drawer bank analytics'
+    ],
+    accountingImpactAr: 'إيداع الشيك بالخزينة (مدين أوراق قبض 104000) وتحصيله بالبنك (مدين بنك 102000 ودائن 104000).',
+    accountingImpactEn: 'Safe deposit (Dr Cheques Vault 104000) and clearance (Dr Operating Bank 102000 / Cr 104000).',
+    icon: Landmark
   },
   {
-    targetSelector: '[data-tour="quick-actions"]',
-    titleAr: '6. أزرار الإجراءات السريعة الفورية',
-    titleEn: '6. Global Quick Action Triggers',
-    contentAr: 'سجل قيداً أو مصروف موقع مباشر، استلم شيكاً بالخزينة مع معاينة واقعية وتفقيط عربي ذكي، أو أبرم عقد بيع جديد بضغطة زر واحدة من أي مكان.',
-    contentEn: 'Record quick site expenses, vault client cheques with realistic live preview and Arabic Tafqeet, or book a new contract with one click.',
-    icon: Plus,
-    position: 'bottom'
+    moduleId: 'ledger',
+    targetSelector: '[data-tour="nav-item-ledger"]',
+    groupAr: 'المحاسبة والرقابة المالية',
+    groupEn: 'ACCOUNTING & GOVERNANCE',
+    titleAr: 'دفتر الأستاذ والدليل المحاسبي (COA)',
+    titleEn: 'General Ledger & Chart of Accounts',
+    badgeLabelAr: 'الأستاذ والميزان',
+    badgeLabelEn: 'GENERAL LEDGER',
+    purposeAr: 'العصب المحاسبي الصارم للمنظومة؛ دليل الحسابات الموحد (COA)، ميزان المراجعة الرباعي، والتحقق الحتمي من قاعدة القيد المزدوج (مدين = دائن 0.00).',
+    purposeEn: 'The core accounting engine; canonical Chart of Accounts, live trial balance, and absolute double-entry balance verification (Dr = Cr 0.00).',
+    capabilitiesAr: [
+      'دليل الحسابات المالي القياسي الموحد (أصول، التزامات، حقوق ملكية، إيرادات، تكاليف)',
+      'ميزان المراجعة الرباعي الحي الشامل للأرصدة الافتتاحية والحركات والأرصدة الختامية',
+      'سجل القيود اليومية التلقائية واليدوية مع كشف موازنة القيود اللحظي',
+      'آلية إقفال الفترات المحاسبية لمنع التعديل بأثر رجعي وحماية سلامة الدفاتر'
+    ],
+    capabilitiesEn: [
+      'Standard canonical Chart of Accounts (Assets, Liabilities, Equity, Revenue, WIP)',
+      'Live 4-column Trial Balance tracking opening balances, debits, credits, and ending totals',
+      'Immutable journal ledger with live verification tag (Dr = Cr invariant)',
+      'Fiscal period lock mechanism preventing unauthorized retroactive tampering'
+    ],
+    accountingImpactAr: 'حظر الحذف نهائياً في النظام المالي، وتصحيح أي خطأ يتم عبر القيود العكسية المعتمدة فقط.',
+    accountingImpactEn: 'Immutable accounting invariant: deletion is prohibited; corrections require reverse entries.',
+    icon: BookOpen
+  },
+  {
+    moduleId: 'cost-allocation',
+    targetSelector: '[data-tour="nav-item-cost-allocation"]',
+    groupAr: 'المحاسبة والرقابة المالية',
+    groupEn: 'ACCOUNTING & GOVERNANCE',
+    titleAr: 'تخصيص التكاليف ومعامل الرسملة (RSV)',
+    titleEn: 'WIP Cost Allocation & RSV Factor',
+    badgeLabelAr: 'تكاليف المشروعات',
+    badgeLabelEn: 'COST ALLOCATION',
+    purposeAr: 'تطبيق معيار المحاسبة المصري ٤٨ (EAS 48 / IFRS 15)؛ احتساب معامل RSV المعتمد لاستنزال التكاليف الإنشائية من حساب WIP إلى تكلفة المبيعات (COGS) عند التسليم.',
+    purposeEn: 'Implementation of EAS 48 / IFRS 15; computes Relative Sales Value (RSV) factor to relieve capitalized WIP into COGS upon unit handover.',
+    capabilitiesAr: [
+      'تخصيص التكاليف الإنشائية المباشرة (أراضي، خرسانات، كهروميكانيك، تشطيبات)',
+      'احتساب وتحديث معامل RSV (Relative Sales Value) المعتمد لكل مشروع',
+      'الاستنزال الآلي لتكلفة البضاعة المباعة (COGS 501000) فور تسليم كل وحدة',
+      'حماية ومراقبة هوامش الربح الإجمالية للمشروع طوال فترة التنفيذ'
+    ],
+    capabilitiesEn: [
+      'Allocate direct development costs across Land, Civil, MEP, and Finishes',
+      'Calculate and audit project-specific RSV factors',
+      'Automate cost of sales relief (COGS 501000) upon unit delivery',
+      'Preserve and audit project gross profit margins across execution milestones'
+    ],
+    accountingImpactAr: 'استنزال تكلفة الوحدة المسلمة بالقيد: مدين تكلفة مبيعات 501000 ودائن أعمال تحت التنفيذ 105000.',
+    accountingImpactEn: 'Relieves unit cost: Dr Cost of Goods Sold (501000) / Cr Work in Progress (105000).',
+    icon: PieChart
+  },
+  {
+    moduleId: 'tax',
+    targetSelector: '[data-tour="nav-item-tax"]',
+    groupAr: 'المحاسبة والرقابة المالية',
+    groupEn: 'ACCOUNTING & GOVERNANCE',
+    titleAr: 'الضرائب السيادية واستقطاعات نموذج ٤١',
+    titleEn: 'Statutory Taxes & ETA Form 41',
+    badgeLabelAr: 'الضرائب السيادية',
+    badgeLabelEn: 'STATUTORY TAXES',
+    purposeAr: 'المركز الرقابي للالتزامات الضريبية؛ حصر ضريبة التصرفات العقارية (٢.٥٪) واستقطاعات نموذج ٤١ (١٪) من المقاولين، وتوثيق السداد لمصلحة الضرائب المصرية.',
+    purposeEn: 'Statutory tax governance; tracking 2.5% real estate disposal tax, Form 41 contractor withholding (1%), and remittance to the Egyptian Tax Authority.',
+    capabilitiesAr: [
+      'حصر واستقطاع مبالغ نموذج ٤١ القانونية على مستخلصات المقاولين والموردين',
+      'احتساب وتوثيق ضريبة التصرفات العقارية الرسمية (٢.٥٪) المقررة قانوناً',
+      'إدارة عمليات التوريد المباشر لمصلحة الضرائب وتوثيق أرقام وتواريخ الإيصالات',
+      'تصدير الكشوفات الضريبية الرسمية الجاهزة للفحص الضريبي والتقديم الربع سنوي'
+    ],
+    capabilitiesEn: [
+      'Withhold statutory Form 41 tax on sub-contractor and vendor invoices',
+      'Calculate and track statutory 2.5% real estate disposal tax on sales contracts',
+      'Record direct remittances to the tax authority with receipt numbers and dates',
+      'Export quarterly tax audit schedules compliant with ETA regulatory standards'
+    ],
+    accountingImpactAr: 'إثبات التزام الضريبة (دائن مصلحة الضرائب 205000) وسدادها (دائن البنك 102000 ومدين 205000).',
+    accountingImpactEn: 'Tax liability recognized (Cr Tax Authority 205000) and settled (Dr 205000 / Cr Bank 102000).',
+    icon: ShieldCheck
+  },
+  {
+    moduleId: 'rescissions',
+    targetSelector: '[data-tour="nav-item-rescissions"]',
+    groupAr: 'المحاسبة والرقابة المالية',
+    groupEn: 'ACCOUNTING & GOVERNANCE',
+    titleAr: 'فسخ واسترداد العقود (Rescissions Floor)',
+    titleEn: 'Rescissions & Settlement Governance',
+    badgeLabelAr: 'الإقالات والفسخ',
+    badgeLabelEn: 'RESCISSIONS',
+    purposeAr: 'منظومة الإقالات والفسخ الرقابي المتوافقة مع المادة ١٥ من قانون حماية المستهلك المصري؛ احتساب الحد الأدنى لرد أموال العميل، الخصم الإداري، والاعتماد الثنائي.',
+    purposeEn: 'Rescission & refund engine compliant with Egyptian Consumer Protection Law Art. 15; statutory refund floor, administrative fee, and Maker-Checker dual control.',
+    capabilitiesAr: [
+      'تطبيق الحد الأدنى القانوني الصارم للرد النقدي للعميل وفقاً لمرحلة التسليم',
+      'احتساب وتطبيق الخصم الإداري ورسم الاسترداد القانوني المعتمد',
+      'رد وإلغاء شيكات الخزينة المتبقية في ذمة العميل بأمان وتأكيد تسليمها',
+      'دورة الاعتماد الثنائي الإلزامية (Maker-Checker) لمنع أي صرف نقدي غير معتمد'
+    ],
+    capabilitiesEn: [
+      'Enforce statutory refund floor (Pre-Delivery vs Post-Delivery handover rules)',
+      'Deduct allowable administrative penalty fees with legal documentation',
+      'Safely void and return outstanding safe vault PDCs to the buyer',
+      'Mandatory Maker-Checker dual approval workflow before any cash disbursement'
+    ],
+    accountingImpactAr: 'إلغاء المديونية وإجراء التسوية العكسية بين المبالغ المستردة، الخصم الإداري، والوحدة المطروحة مجدداً.',
+    accountingImpactEn: 'Reverses contract receivables, records administrative penalty revenue, and restores property availability.',
+    icon: RotateCcw
   }
 ];
 
@@ -95,25 +299,33 @@ export const ZFErpGuidedTour: React.FC<ZFErpGuidedTourProps> = ({
   isActive,
   onComplete,
   onSkip,
+  onNavigateToModule,
   isAr = true
 }) => {
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [targetRect, setTargetRect] = useState<DOMRect | null>(null);
 
-  const currentStep = TOUR_STEPS[currentStepIndex];
+  const currentStep = SIDEBAR_TOUR_STEPS[currentStepIndex];
 
-  // Update target rect & scroll into view
+  // Navigate to module automatically when active step changes
+  useEffect(() => {
+    if (isActive && currentStep && onNavigateToModule) {
+      onNavigateToModule(currentStep.moduleId);
+    }
+  }, [isActive, currentStep, onNavigateToModule]);
+
+  // Update target rect & scroll into view smoothly
   const updateSpotlight = useCallback(() => {
     if (!isActive || !currentStep) return;
 
     const el = document.querySelector(currentStep.targetSelector);
     if (el) {
       el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      // Short delay for smooth scroll to finish
+      // Short delay for smooth scroll to settle
       const t = setTimeout(() => {
         const rect = el.getBoundingClientRect();
         setTargetRect(rect);
-      }, 250);
+      }, 150);
       return () => clearTimeout(t);
     } else {
       setTargetRect(null);
@@ -133,7 +345,7 @@ export const ZFErpGuidedTour: React.FC<ZFErpGuidedTourProps> = ({
   if (!isActive || !currentStep) return null;
 
   const handleNext = () => {
-    if (currentStepIndex < TOUR_STEPS.length - 1) {
+    if (currentStepIndex < SIDEBAR_TOUR_STEPS.length - 1) {
       setCurrentStepIndex(prev => prev + 1);
     } else {
       if (typeof window !== 'undefined') {
@@ -158,18 +370,25 @@ export const ZFErpGuidedTour: React.FC<ZFErpGuidedTourProps> = ({
 
   const Icon = currentStep.icon;
 
-  // Calculate Tooltip Box Coordinates
-  let tooltipTop = 100;
-  let tooltipLeft = 100;
-  if (targetRect) {
-    // Default position below element
-    tooltipTop = targetRect.bottom + 16;
-    tooltipLeft = Math.max(20, Math.min(window.innerWidth - 420, targetRect.left));
+  // Calculate Tooltip Box Coordinates adjacent to the sidebar
+  const tooltipWidth = 430;
+  let tooltipTop = 80;
+  let tooltipLeft = 80;
 
-    // If bottom runs off screen, position above
-    if (tooltipTop + 240 > window.innerHeight) {
-      tooltipTop = Math.max(20, targetRect.top - 250);
+  if (targetRect) {
+    // Determine whether the dock is on the right (Arabic RTL) or left (LTR)
+    const isDockOnRight = targetRect.left > (window.innerWidth / 2);
+
+    if (isDockOnRight) {
+      // Place tooltip to the left of the sidebar dock
+      tooltipLeft = Math.max(20, targetRect.left - tooltipWidth - 24);
+    } else {
+      // Place tooltip to the right of the sidebar dock
+      tooltipLeft = Math.min(window.innerWidth - tooltipWidth - 20, targetRect.right + 24);
     }
+
+    // Align vertically near the targeted button
+    tooltipTop = Math.max(20, Math.min(window.innerHeight - 480, targetRect.top - 20));
   }
 
   return (
@@ -198,11 +417,11 @@ export const ZFErpGuidedTour: React.FC<ZFErpGuidedTourProps> = ({
             <rect x="0" y="0" width="100%" height="100%" fill="white" />
             {targetRect && (
               <rect
-                x={targetRect.left - 8}
-                y={targetRect.top - 8}
-                width={targetRect.width + 16}
-                height={targetRect.height + 16}
-                rx="14"
+                x={targetRect.left - 6}
+                y={targetRect.top - 4}
+                width={targetRect.width + 12}
+                height={targetRect.height + 8}
+                rx="10"
                 fill="black"
               />
             )}
@@ -213,23 +432,23 @@ export const ZFErpGuidedTour: React.FC<ZFErpGuidedTourProps> = ({
           y="0"
           width="100%"
           height="100%"
-          fill="rgba(3, 7, 18, 0.78)"
+          fill="rgba(3, 7, 18, 0.76)"
           mask="url(#spotlight-mask)"
         />
       </svg>
 
-      {/* GLOWING SPOTLIGHT BORDER AROUND TARGET ELEMENT */}
+      {/* GLOWING SPOTLIGHT BORDER AROUND TARGETED SIDEBAR BUTTON */}
       {targetRect && (
         <div
           style={{
             position: 'fixed',
-            left: targetRect.left - 8,
-            top: targetRect.top - 8,
-            width: targetRect.width + 16,
-            height: targetRect.height + 16,
-            borderRadius: '14px',
-            border: '2px solid rgba(212, 175, 55, 0.85)',
-            boxShadow: '0 0 30px rgba(212, 175, 55, 0.4), inset 0 0 15px rgba(212, 175, 55, 0.2)',
+            left: targetRect.left - 6,
+            top: targetRect.top - 4,
+            width: targetRect.width + 12,
+            height: targetRect.height + 8,
+            borderRadius: '10px',
+            border: '2px solid rgba(212, 175, 55, 0.95)',
+            boxShadow: '0 0 24px rgba(212, 175, 55, 0.5), inset 0 0 12px rgba(212, 175, 55, 0.25)',
             pointerEvents: 'none',
             transition: 'all 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
             zIndex: 1000000
@@ -243,43 +462,41 @@ export const ZFErpGuidedTour: React.FC<ZFErpGuidedTourProps> = ({
           position: 'fixed',
           top: tooltipTop,
           left: tooltipLeft,
-          width: '390px',
+          width: `${tooltipWidth}px`,
           maxWidth: 'calc(100vw - 40px)',
-          background: 'linear-gradient(145deg, rgba(15, 23, 42, 0.95) 0%, rgba(9, 13, 22, 0.98) 100%)',
-          border: '1px solid rgba(212, 175, 55, 0.35)',
+          background: 'linear-gradient(145deg, rgba(15, 23, 42, 0.96) 0%, rgba(9, 13, 22, 0.98) 100%)',
+          border: '1px solid rgba(212, 175, 55, 0.38)',
           borderRadius: '18px',
-          padding: '1.25rem 1.4rem',
-          boxShadow: '0 20px 50px rgba(0, 0, 0, 0.85), 0 0 30px rgba(212, 175, 55, 0.12)',
-          backdropFilter: 'blur(20px)',
+          padding: '1.35rem 1.45rem',
+          boxShadow: '0 24px 60px rgba(0, 0, 0, 0.85), 0 0 35px rgba(212, 175, 55, 0.14)',
+          backdropFilter: 'blur(24px)',
           color: '#ffffff',
           zIndex: 1000001,
           animation: 'fadeIn 0.25s ease-out'
         }}
       >
-        {/* Card Header: Step Counter & Close */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-            <div style={{
-              width: '28px',
-              height: '28px',
-              borderRadius: '8px',
-              background: 'rgba(212, 175, 55, 0.18)',
-              border: '1px solid rgba(212, 175, 55, 0.35)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: '#d4af37'
-            }}>
-              <Icon size={14} />
-            </div>
+        {/* Card Header: Group Badge & Step Counter & Close */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.85rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <span style={{
-              fontSize: '0.7rem',
+              fontSize: '0.66rem',
               fontWeight: 800,
-              color: '#d4af37',
-              fontFamily: 'monospace',
-              letterSpacing: '0.05em'
+              padding: '0.2rem 0.6rem',
+              borderRadius: '999px',
+              background: 'rgba(212, 175, 55, 0.15)',
+              border: '1px solid rgba(212, 175, 55, 0.35)',
+              color: '#e2c974',
+              letterSpacing: '0.04em'
             }}>
-              {isAr ? `خطوة ${currentStepIndex + 1} من ${TOUR_STEPS.length}` : `STEP ${currentStepIndex + 1} OF ${TOUR_STEPS.length}`}
+              {isAr ? currentStep.groupAr : currentStep.groupEn}
+            </span>
+            <span style={{
+              fontSize: '0.68rem',
+              fontWeight: 800,
+              color: '#94a3b8',
+              fontFamily: 'monospace'
+            }}>
+              {isAr ? `صفحة ${currentStepIndex + 1} من ${SIDEBAR_TOUR_STEPS.length}` : `PAGE ${currentStepIndex + 1} OF ${SIDEBAR_TOUR_STEPS.length}`}
             </span>
           </div>
 
@@ -303,28 +520,92 @@ export const ZFErpGuidedTour: React.FC<ZFErpGuidedTourProps> = ({
           </button>
         </div>
 
-        {/* Card Title */}
-        <h3 style={{ margin: '0 0 0.45rem 0', fontSize: '0.98rem', fontWeight: 800, color: '#f8fafc' }}>
-          {isAr ? currentStep.titleAr : currentStep.titleEn}
-        </h3>
+        {/* Card Title & Icon */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', marginBottom: '0.55rem' }}>
+          <div style={{
+            width: '32px',
+            height: '32px',
+            borderRadius: '9px',
+            background: 'linear-gradient(135deg, rgba(212, 175, 55, 0.25) 0%, rgba(212, 175, 55, 0.08) 100%)',
+            border: '1px solid rgba(212, 175, 55, 0.4)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: '#e2c974',
+            flexShrink: 0
+          }}>
+            <Icon size={16} />
+          </div>
+          <h3 style={{ margin: 0, fontSize: '1.02rem', fontWeight: 800, color: '#f8fafc', lineHeight: 1.3 }}>
+            {isAr ? currentStep.titleAr : currentStep.titleEn}
+          </h3>
+        </div>
 
-        {/* Card Content */}
-        <p style={{ margin: '0 0 1.25rem 0', fontSize: '0.8rem', color: '#94a3b8', lineHeight: 1.65 }}>
-          {isAr ? currentStep.contentAr : currentStep.contentEn}
+        {/* Card Purpose Brief */}
+        <p style={{ margin: '0 0 0.85rem 0', fontSize: '0.8rem', color: '#cbd5e1', lineHeight: 1.6 }}>
+          {isAr ? currentStep.purposeAr : currentStep.purposeEn}
         </p>
 
-        {/* Progress Bar Dots */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', marginBottom: '1.1rem' }}>
-          {TOUR_STEPS.map((_, idx) => (
+        {/* Key Capabilities List */}
+        <div style={{
+          background: 'rgba(255, 255, 255, 0.03)',
+          border: '1px solid rgba(255, 255, 255, 0.07)',
+          borderRadius: '12px',
+          padding: '0.75rem 0.9rem',
+          marginBottom: '0.85rem'
+        }}>
+          <span style={{ fontSize: '0.7rem', fontWeight: 800, color: '#e2c974', display: 'block', marginBottom: '0.45rem' }}>
+            {isAr ? 'أبرز الإجراءات والعمليات المتاحة في هذه الشاشة:' : 'Key Capabilities & Workflows:'}
+          </span>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+            {(isAr ? currentStep.capabilitiesAr : currentStep.capabilitiesEn).map((cap, cIdx) => (
+              <div key={cIdx} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.45rem', fontSize: '0.74rem', color: '#94a3b8', lineHeight: 1.45 }}>
+                <span style={{ color: '#10b981', flexShrink: 0, marginTop: '2px' }}>
+                  <Check size={12} />
+                </span>
+                <span>{cap}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Accounting & Governance Impact Pill */}
+        <div style={{
+          background: 'linear-gradient(135deg, rgba(212, 175, 55, 0.1) 0%, rgba(212, 175, 55, 0.02) 100%)',
+          border: '1px solid rgba(212, 175, 55, 0.22)',
+          borderRadius: '9px',
+          padding: '0.55rem 0.8rem',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.45rem',
+          marginBottom: '1rem'
+        }}>
+          <Sparkles size={13} color="#d4af37" style={{ flexShrink: 0 }} />
+          <span style={{ fontSize: '0.7rem', color: '#e2e8f0', lineHeight: 1.4 }}>
+            <strong style={{ color: '#e2c974' }}>{isAr ? 'الأثر المالي والرقابي: ' : 'Financial Impact: '}</strong>
+            {isAr ? currentStep.accountingImpactAr : currentStep.accountingImpactEn}
+          </span>
+        </div>
+
+        {/* Progress Bar Indicators */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', marginBottom: '1.1rem' }}>
+          {SIDEBAR_TOUR_STEPS.map((step, idx) => (
             <div
-              key={idx}
+              key={step.moduleId}
+              onClick={() => setCurrentStepIndex(idx)}
               style={{
                 height: '4px',
                 flex: 1,
                 borderRadius: '999px',
-                background: idx <= currentStepIndex ? '#d4af37' : 'rgba(255, 255, 255, 0.1)',
-                transition: 'background 0.2s ease'
+                background: idx === currentStepIndex 
+                  ? '#d4af37' 
+                  : idx < currentStepIndex 
+                    ? 'rgba(212, 175, 55, 0.45)' 
+                    : 'rgba(255, 255, 255, 0.1)',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease'
               }}
+              title={isAr ? step.titleAr : step.titleEn}
             />
           ))}
         </div>
@@ -346,7 +627,7 @@ export const ZFErpGuidedTour: React.FC<ZFErpGuidedTourProps> = ({
             onMouseEnter={(e) => e.currentTarget.style.color = '#cbd5e1'}
             onMouseLeave={(e) => e.currentTarget.style.color = '#64748b'}
           >
-            {isAr ? 'تخطي' : 'Skip'}
+            {isAr ? 'تخطي الجولة' : 'Skip Tour'}
           </button>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
@@ -392,11 +673,11 @@ export const ZFErpGuidedTour: React.FC<ZFErpGuidedTourProps> = ({
               }}
             >
               <span>
-                {currentStepIndex === TOUR_STEPS.length - 1 
+                {currentStepIndex === SIDEBAR_TOUR_STEPS.length - 1 
                   ? (isAr ? 'إنهاء الجولة' : 'Finish Tour') 
                   : (isAr ? 'التالي' : 'Next')}
               </span>
-              {currentStepIndex === TOUR_STEPS.length - 1 ? (
+              {currentStepIndex === SIDEBAR_TOUR_STEPS.length - 1 ? (
                 <CheckCircle2 size={14} />
               ) : (
                 isAr ? <ChevronLeft size={14} /> : <ChevronRight size={14} />

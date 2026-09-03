@@ -15,9 +15,7 @@ import {
   ShieldCheck,
   LogOut,
   Bell,
-  BookOpen,
-  Sun,
-  Moon
+  BookOpen
 } from 'lucide-react';
 import { ERPAccountingPeriod } from '@/lib/erp/types';
 import styles from './ZFSubprogram.module.css';
@@ -37,8 +35,6 @@ interface ZFCommandBarProps {
   hasCriticalAlerts?: boolean;
   onOpenNotifications?: () => void;
   onOpenAcademy?: () => void;
-  theme?: 'dark' | 'light';
-  onToggleTheme?: () => void;
 }
 
 export const ZFCommandBar: React.FC<ZFCommandBarProps> = ({
@@ -55,9 +51,7 @@ export const ZFCommandBar: React.FC<ZFCommandBarProps> = ({
   unreadNotificationsCount = 0,
   hasCriticalAlerts = false,
   onOpenNotifications,
-  onOpenAcademy,
-  theme = 'dark',
-  onToggleTheme
+  onOpenAcademy
 }) => {
   const [cairoTime, setCairoTime] = useState<string>('');
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
@@ -261,21 +255,6 @@ export const ZFCommandBar: React.FC<ZFCommandBarProps> = ({
           >
             {isFullscreen ? <Minimize2 size={13} /> : <Maximize2 size={13} />}
           </button>
-
-          {/* Light / Dark Mode Toggle */}
-          {onToggleTheme && (
-            <button
-              type="button"
-              className={styles.clusterBtnIcon}
-              onClick={onToggleTheme}
-              title={isAr 
-                ? (theme === 'light' ? 'التحويل للوضع الليلي (Switch to Dark)' : 'التحويل للوضع النهاري (Switch to Light)') 
-                : (theme === 'light' ? 'Switch to Dark Mode' : 'Switch to Light Mode')}
-              style={{ color: theme === 'light' ? '#b48512' : '#e2c974' }}
-            >
-              {theme === 'light' ? <Moon size={13} /> : <Sun size={13} />}
-            </button>
-          )}
         </div>
 
         {/* Authenticated Admin Badge & Sign Out */}
