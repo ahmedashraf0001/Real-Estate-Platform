@@ -26,17 +26,21 @@
 /* --------------------------------------------------------------------------
    TOP COMMAND & STATUS BAR
    -------------------------------------------------------------------------- */
+/* --------------------------------------------------------------------------
+   TOP COMMAND & STATUS BAR (Clean Executive Cockpit Architecture)
+   -------------------------------------------------------------------------- */
 .commandBar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  min-height: 58px;
-  height: auto;
-  padding: 0.5rem 1.5rem;
-  background: rgba(12, 15, 23, 0.98);
-  backdrop-filter: blur(20px);
-  border-bottom: 1px solid rgba(212, 175, 55, 0.2);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
+  gap: 1.25rem;
+  min-height: 56px;
+  height: 56px;
+  padding: 0 1.25rem;
+  background: rgba(9, 12, 19, 0.98);
+  backdrop-filter: blur(24px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.55);
   z-index: 50;
   flex-shrink: 0;
   box-sizing: border-box;
@@ -45,98 +49,174 @@
 .brandArea {
   display: flex;
   align-items: center;
-  gap: 0.85rem;
+  gap: 0.75rem;
+  flex-shrink: 0;
 }
 
-.exitAdminBtn {
+.adminHomeLink {
   display: inline-flex;
   align-items: center;
-  gap: 0.45rem;
-  padding: 0.35rem 0.75rem;
+  gap: 0.4rem;
+  padding: 0.32rem 0.65rem;
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  color: var(--zf-text-secondary, #a7acc0);
-  font-size: 0.75rem;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #94a3b8;
+  font-size: 0.73rem;
   font-weight: 700;
   text-decoration: none;
   cursor: pointer;
-  transition: all 0.2s ease;
-  margin-right: 0.5rem;
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.rtl .exitAdminBtn {
-  margin-right: 0;
-  margin-left: 0.5rem;
-}
-
-.exitAdminBtn:hover {
+.adminHomeLink:hover {
   background: rgba(212, 175, 55, 0.12);
-  border-color: var(--zf-gold, #d4af37);
-  color: var(--zf-gold, #d4af37);
+  border-color: rgba(212, 175, 55, 0.35);
+  color: #ffffff;
+}
+
+.brandBadge {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
 }
 
 .brandLogo {
-  width: 32px;
-  height: 32px;
+  width: 30px;
+  height: 30px;
   border-radius: 8px;
-  background: linear-gradient(135deg, #d4af37, #b8860b);
+  background: linear-gradient(135deg, #d4af37 0%, #a67c1e 100%);
   display: flex;
   align-items: center;
   justify-content: center;
   color: #07080b;
   font-weight: 900;
-  font-size: 0.95rem;
-  box-shadow: 0 0 15px rgba(212, 175, 55, 0.35);
+  font-size: 0.88rem;
+  box-shadow: 0 0 14px rgba(212, 175, 55, 0.35);
+  flex-shrink: 0;
 }
 
-.brandText {
+.brandInfo {
   display: flex;
   flex-direction: column;
+  line-height: 1.2;
 }
 
 .brandTitle {
-  font-size: 0.92rem;
+  font-size: 0.88rem;
   font-weight: 800;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.03em;
   color: #ffffff;
   display: flex;
   align-items: center;
-  gap: 0.45rem;
+  gap: 0.4rem;
 }
 
-.osBadge {
-  font-size: 0.65rem;
+.versionBadge {
+  font-size: 0.62rem;
   font-weight: 800;
-  padding: 0.1rem 0.4rem;
+  padding: 0.08rem 0.35rem;
   border-radius: 4px;
   background: rgba(212, 175, 55, 0.12);
   color: var(--zf-gold, #d4af37);
   border: 1px solid rgba(212, 175, 55, 0.3);
-  text-transform: uppercase;
+  font-family: monospace;
 }
 
-.brandSub {
-  font-size: 0.7rem;
-  color: var(--zf-text-muted, #6b7086);
+.brandSubtitle {
+  font-size: 0.65rem;
+  color: #64748b;
+  font-weight: 500;
 }
 
+/* Central Global Command Palette Bar (Spotlight / Linear Anchor) */
 .commandCenter {
+  flex: 1;
+  max-width: 520px;
+  display: flex;
+  justify-content: center;
+}
+
+.omniSearchBar {
+  width: 100%;
   display: flex;
   align-items: center;
-  gap: 1.25rem;
+  justify-content: space-between;
+  gap: 0.75rem;
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 9px;
+  padding: 0.38rem 0.85rem;
+  font-size: 0.76rem;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.4);
 }
 
-.statusPill {
+.omniSearchBar:hover {
+  border-color: rgba(212, 175, 55, 0.4);
+  background: rgba(0, 0, 0, 0.65);
+  color: #cbd5e1;
+  box-shadow: 0 0 14px rgba(212, 175, 55, 0.12), inset 0 1px 3px rgba(0, 0, 0, 0.4);
+}
+
+.searchInnerLeft {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.searchIcon {
+  color: #94a3b8;
+  flex-shrink: 0;
+  transition: color 0.15s ease;
+}
+
+.omniSearchBar:hover .searchIcon {
+  color: #e2c974;
+}
+
+.searchPlaceholder {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 0.75rem;
+}
+
+.kbdKey {
+  font-family: monospace;
+  font-size: 0.65rem;
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 5px;
+  padding: 0.1rem 0.45rem;
+  color: var(--zf-gold, #d4af37);
+  flex-shrink: 0;
+}
+
+/* Right Actions & Telemetry */
+.commandActions {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  flex-shrink: 0;
+}
+
+.telemetryCapsule {
   display: inline-flex;
   align-items: center;
-  gap: 0.45rem;
-  padding: 0.25rem 0.75rem;
+  gap: 0.55rem;
+  padding: 0.32rem 0.75rem;
   border-radius: 9999px;
-  font-size: 0.75rem;
-  font-weight: 700;
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(0, 0, 0, 0.45);
   border: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #94a3b8;
 }
 
 .pulseDot {
@@ -146,6 +226,7 @@
   background: #10b981;
   box-shadow: 0 0 8px #10b981;
   animation: pulseAnimation 2s infinite ease-in-out;
+  flex-shrink: 0;
 }
 
 @keyframes pulseAnimation {
@@ -154,60 +235,160 @@
   100% { transform: scale(0.95); opacity: 0.7; }
 }
 
-.commandActions {
-  display: flex;
-  align-items: center;
-  gap: 0.65rem;
-}
-
-.searchTrigger {
+.telemetryPeriod {
   display: inline-flex;
   align-items: center;
-  gap: 0.6rem;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 8px;
-  padding: 0.35rem 0.85rem;
-  font-size: 0.78rem;
-  color: var(--zf-text-secondary, #a7acc0);
-  cursor: pointer;
-  transition: all 0.2s ease;
+  gap: 0.35rem;
+  color: #e2e8f0;
+  font-weight: 700;
+  font-size: 0.72rem;
 }
 
-.searchTrigger:hover {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: var(--zf-gold, #d4af37);
+.telemetryDivider {
+  width: 1px;
+  height: 12px;
+  background: rgba(255, 255, 255, 0.12);
+  flex-shrink: 0;
+}
+
+.telemetryClock {
+  font-family: monospace;
+  font-weight: 800;
+  color: var(--zf-gold, #d4af37);
+  letter-spacing: 0.04em;
+  font-size: 0.72rem;
+}
+
+/* Segmented Utilities Cluster */
+.utilityCluster {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  padding: 0.18rem;
+}
+
+.excelExportBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.6rem;
+  border-radius: 6px;
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.22) 0%, rgba(5, 150, 105, 0.12) 100%);
+  border: 1px solid rgba(16, 185, 129, 0.38);
+  color: #34d399;
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.excelExportBtn:hover {
+  background: rgba(16, 185, 129, 0.32);
+  color: #ffffff;
+  border-color: rgba(16, 185, 129, 0.6);
+}
+
+.clusterBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.55rem;
+  border-radius: 6px;
+  background: transparent;
+  border: 1px solid transparent;
+  color: #cbd5e1;
+  font-size: 0.72rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.clusterBtn:hover {
+  background: rgba(255, 255, 255, 0.06);
   color: #ffffff;
 }
 
-.kbdKey {
-  font-family: monospace;
-  font-size: 0.68rem;
-  background: rgba(0, 0, 0, 0.4);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: 4px;
-  padding: 0.1rem 0.35rem;
-  color: var(--zf-gold, #d4af37);
-}
-
-.utilBtn {
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: var(--zf-text-secondary, #a7acc0);
-  border-radius: 8px;
-  width: 32px;
-  height: 32px;
+.clusterBtnIcon {
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
   display: flex;
   align-items: center;
   justify-content: center;
+  background: transparent;
+  border: 1px solid transparent;
+  color: #94a3b8;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.15s ease;
 }
 
-.utilBtn:hover {
-  background: rgba(212, 175, 55, 0.1);
-  border-color: var(--zf-gold, #d4af37);
-  color: var(--zf-gold, #d4af37);
+.clusterBtnIcon:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+}
+
+/* User Session Cluster */
+.userProfileCluster {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding-inline-start: 0.25rem;
+  border-inline-start: 1px solid rgba(255, 255, 255, 0.09);
+}
+
+.userBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  background: rgba(212, 175, 55, 0.09);
+  border: 1px solid rgba(212, 175, 55, 0.28);
+  padding: 0.22rem 0.6rem;
+  border-radius: 7px;
+  color: #e2c974;
+  font-size: 0.72rem;
+  font-weight: 700;
+  max-width: 170px;
+}
+
+.userAvatar {
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  background: rgba(212, 175, 55, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #e2c974;
+  flex-shrink: 0;
+}
+
+.userEmail {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.signOutBtn {
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.22);
+  color: #f87171;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.signOutBtn:hover {
+  background: rgba(239, 68, 68, 0.22);
+  border-color: rgba(239, 68, 68, 0.5);
+  color: #ffffff;
 }
 
 /* --------------------------------------------------------------------------

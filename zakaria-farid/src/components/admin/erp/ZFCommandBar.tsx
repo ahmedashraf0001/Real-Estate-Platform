@@ -78,164 +78,139 @@ export const ZFCommandBar: React.FC<ZFCommandBarProps> = ({
 
   return (
     <header className={styles.commandBar}>
-      {/* Brand & Subprogram Identifier */}
+      {/* 1. LEFT: Brand & Context */}
       <div className={styles.brandArea}>
         <Link 
           href={`/admin/${isAr ? 'ar' : 'en'}`} 
-          className={styles.exitAdminBtn}
+          className={styles.adminHomeLink}
           title={isAr ? 'العودة إلى لوحة الإدارة الرئيسية' : 'Return to Admin Dashboard'}
         >
-          <ArrowLeft size={14} style={{ transform: isAr ? 'rotate(180deg)' : 'none' }} />
+          <ArrowLeft size={13} style={{ transform: isAr ? 'rotate(180deg)' : 'none' }} />
           <span>{isAr ? 'لوحة الإدارة' : 'Admin'}</span>
         </Link>
-        <div className={styles.brandLogo}>ZF</div>
-        <div className={styles.brandText}>
-          <div className={styles.brandTitle}>
-            <span>{isAr ? 'نظام زكريا فريد للمالية التنفيذية' : 'ZF Financial Studio'}</span>
-            <span className={styles.osBadge}>FIN-OS v2.4</span>
+
+        <div className={styles.brandBadge}>
+          <div className={styles.brandLogo}>ZF</div>
+          <div className={styles.brandInfo}>
+            <div className={styles.brandTitle}>
+              <span>FIN-OS</span>
+              <span className={styles.versionBadge}>v2.4</span>
+            </div>
+            <span className={styles.brandSubtitle}>
+              {isAr ? 'المنظومة المالية والمحاسبية' : 'Financial Operating System'}
+            </span>
           </div>
-          <span className={styles.brandSub}>
-            {isAr ? 'منظومة المحاسبة العقارية المتكاملة ومطابقة المعايير' : 'Enterprise Real Estate Financial Operating System'}
-          </span>
         </div>
       </div>
 
-      {/* Central Telemetry: Period Status + Cairo Clock + Realtime Engine */}
+      {/* 2. CENTER: Global Command Palette Anchor (Linear / Spotlight style) */}
       <div className={styles.commandCenter}>
-        {/* Accounting Period Status Pill */}
-        {activePeriod && (
-          <div 
-            className={styles.statusPill}
-            style={{
-              borderColor: isLocked ? 'rgba(185, 140, 255, 0.4)' : 'rgba(79, 209, 197, 0.4)',
-              background: isLocked ? 'rgba(185, 140, 255, 0.08)' : 'rgba(79, 209, 197, 0.08)',
-              color: isLocked ? '#b98cff' : '#4fd1c5'
-            }}
-          >
-            {isLocked ? <Lock size={12} /> : <Unlock size={12} />}
-            <span>
-              {isAr 
-                ? `الفترة ${activePeriod.fiscal_year}/${activePeriod.period_number}: ${isLocked ? 'مقيدة ومحمية' : 'مفتوحة للقيد'}`
-                : `Period ${activePeriod.period_number}/${activePeriod.fiscal_year}: ${activePeriod.status}`}
+        <button 
+          type="button"
+          className={styles.omniSearchBar}
+          onClick={onOpenQuickSearch}
+          title={isAr ? 'بحث سريع في العقود، القيود والأوامر المالية (⌘K)' : 'Search contracts, ledger, cheques, or actions... (⌘K)'}
+        >
+          <div className={styles.searchInnerLeft}>
+            <Search size={14} className={styles.searchIcon} />
+            <span className={styles.searchPlaceholder}>
+              {isAr ? 'بحث سريع في العقود، الشيكات، القيود والأوامر المالية...' : 'Search contracts, ledger entries, cheques, or commands...'}
             </span>
           </div>
-        )}
+          <kbd className={styles.kbdKey}>⌘K</kbd>
+        </button>
+      </div>
 
-        {/* Cairo Time Clock */}
-        <div className={styles.statusPill}>
-          <span style={{ color: 'var(--zf-text-muted, #6b7086)', fontSize: '0.7rem' }}>
-            {isAr ? 'توقيت القاهرة:' : 'Cairo (EGY):'}
-          </span>
-          <span style={{ fontFamily: 'monospace', fontWeight: 800, color: 'var(--zf-gold, #d4af37)', letterSpacing: '0.05em' }}>
+      {/* 3. RIGHT: Telemetry Capsule + Utility Actions + Admin Session */}
+      <div className={styles.commandActions}>
+        {/* Unified Telemetry Capsule (Period + Live Pulse + Cairo Clock) */}
+        <div className={styles.telemetryCapsule}>
+          <span 
+            className={styles.pulseDot} 
+            title={isAr ? 'متصل بقاعدة البيانات مباشرة (PostgreSQL Live)' : 'Live PostgreSQL Connected'} 
+          />
+          
+          {activePeriod && (
+            <span 
+              className={styles.telemetryPeriod} 
+              title={isLocked 
+                ? (isAr ? `الفترة ${activePeriod.fiscal_year}/${activePeriod.period_number}: مقيدة ومحمية` : `Period ${activePeriod.fiscal_year}/${activePeriod.period_number}: Locked`) 
+                : (isAr ? `الفترة ${activePeriod.fiscal_year}/${activePeriod.period_number}: مفتوحة للقيد` : `Period ${activePeriod.fiscal_year}/${activePeriod.period_number}: Open`)}
+            >
+              {isLocked ? <Lock size={11} /> : <Unlock size={11} />}
+              <span>{activePeriod.fiscal_year}/{activePeriod.period_number}</span>
+            </span>
+          )}
+
+          <span className={styles.telemetryDivider} />
+
+          <span 
+            className={styles.telemetryClock} 
+            title={isAr ? 'توقيت القاهرة (EGY)' : 'Cairo Local Time'}
+          >
             {cairoTime || '00:00:00'}
           </span>
         </div>
 
-        {/* Realtime PostgreSQL Pulse */}
-        <div className={styles.statusPill}>
-          <span className={styles.pulseDot} />
-          <span style={{ fontSize: '0.72rem', color: '#10b981', fontWeight: 600 }}>
-            {isAr ? 'متصل بقاعدة البيانات' : 'Supabase Live'}
-          </span>
-        </div>
-      </div>
+        {/* Segmented Utility Cluster */}
+        <div className={styles.utilityCluster}>
+          {/* Excel Export Button */}
+          {onExportExcel && (
+            <button 
+              type="button"
+              onClick={onExportExcel}
+              title={isAr ? 'تصدير تقارير المحاسبة إلى Excel بالعربي' : 'Export Comprehensive Excel Reports'}
+              className={styles.excelExportBtn}
+            >
+              <FileSpreadsheet size={13} />
+              <span>Excel</span>
+            </button>
+          )}
 
-      {/* Action Triggers: Quick Search, Currency Toggle, Refresh, Fullscreen */}
-      <div className={styles.commandActions}>
-        {/* Quick Search Palette Trigger (⌘K) */}
-        <button className={styles.searchTrigger} onClick={onOpenQuickSearch} title="Open Command Palette (Ctrl+K)">
-          <Search size={14} />
-          <span>{isAr ? 'بحث سريع وأوامر...' : 'Quick Action...'}</span>
-          <span className={styles.kbdKey}>⌘K</span>
-        </button>
-
-        {/* Arabic Excel Export */}
-        {onExportExcel && (
+          {/* Currency Toggle */}
           <button 
-            onClick={onExportExcel}
-            title={isAr ? 'تصدير تقارير Excel بالعربي' : 'Export Comprehensive Excel'}
-            style={{
-              background: 'linear-gradient(135deg, #059669 0%, #047857 100%)',
-              color: '#ffffff',
-              border: '1px solid rgba(16, 185, 129, 0.4)',
-              borderRadius: '8px',
-              padding: '0 0.75rem',
-              height: '32px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.4rem',
-              fontSize: '0.75rem',
-              fontWeight: 700,
-              cursor: 'pointer',
-              transition: 'all 0.2s ease',
-              boxShadow: '0 2px 8px rgba(5, 150, 105, 0.25)'
-            }}
+            type="button"
+            className={styles.clusterBtn} 
+            onClick={onToggleCurrency} 
+            title={isAr ? 'تبديل عملة العرض (جنيه / دولار)' : 'Toggle Currency (EGP/USD)'}
           >
-            <FileSpreadsheet size={14} />
-            <span>{isAr ? 'تصدير Excel' : 'Export Excel'}</span>
+            <Coins size={12} color="var(--zf-gold, #d4af37)" />
+            <span>{currency}</span>
           </button>
-        )}
 
-        {/* Dual Currency Switcher */}
-        <button 
-          className={styles.utilBtn} 
-          onClick={onToggleCurrency} 
-          title={isAr ? 'تبديل العملة (جنيه / دولار)' : 'Toggle Display Currency (EGP/USD)'}
-          style={{ width: 'auto', padding: '0 0.6rem', gap: '0.35rem', fontWeight: 800, fontSize: '0.75rem' }}
-        >
-          <Coins size={13} color="var(--zf-gold, #d4af37)" />
-          <span>{currency}</span>
-        </button>
+          {/* Live Refresh Button */}
+          <button 
+            type="button"
+            className={styles.clusterBtnIcon} 
+            onClick={onRefreshData} 
+            disabled={isMutating} 
+            title={isAr ? 'تحديث البيانات الحية' : 'Refresh Live Dataset'}
+          >
+            <RefreshCw size={13} className={isMutating ? 'animate-spin' : ''} />
+          </button>
 
-        {/* Live Refresh Button */}
-        <button 
-          className={styles.utilBtn} 
-          onClick={onRefreshData} 
-          disabled={isMutating} 
-          title={isAr ? 'تحديث البيانات الحية' : 'Refresh Live Dataset'}
-        >
-          <RefreshCw size={14} className={isMutating ? 'animate-spin' : ''} />
-        </button>
-
-        {/* Fullscreen Workstation Toggle */}
-        <button 
-          className={styles.utilBtn} 
-          onClick={toggleFullscreen} 
-          title={isAr ? 'شاشة كاملة' : 'Toggle Fullscreen'}
-        >
-          {isFullscreen ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
-        </button>
+          {/* Fullscreen Toggle */}
+          <button 
+            type="button"
+            className={styles.clusterBtnIcon} 
+            onClick={toggleFullscreen} 
+            title={isFullscreen ? (isAr ? 'إنهاء ملء الشاشة' : 'Exit Fullscreen') : (isAr ? 'ملء الشاشة' : 'Fullscreen')}
+          >
+            {isFullscreen ? <Minimize2 size={13} /> : <Maximize2 size={13} />}
+          </button>
+        </div>
 
         {/* Authenticated Admin Badge & Sign Out */}
         {currentUser && (
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.45rem',
-            paddingInlineStart: '0.4rem',
-            borderInlineStart: '1px solid rgba(255, 255, 255, 0.1)'
-          }}>
+          <div className={styles.userProfileCluster}>
             <div 
+              className={styles.userBadge} 
               title={currentUser.email || 'Authenticated Admin'}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.35rem',
-                background: 'rgba(212, 175, 55, 0.1)',
-                border: '1px solid rgba(212, 175, 55, 0.3)',
-                padding: '0.2rem 0.55rem',
-                borderRadius: '6px',
-                color: '#e2c974',
-                fontSize: '0.72rem',
-                fontWeight: 700,
-                maxWidth: '160px',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap'
-              }}
             >
-              <ShieldCheck size={13} style={{ flexShrink: 0 }} />
-              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              <div className={styles.userAvatar}>
+                <ShieldCheck size={12} />
+              </div>
+              <span className={styles.userEmail}>
                 {currentUser.email ? currentUser.email.split('@')[0] : (isAr ? 'مسؤول معتمد' : 'Admin')}
               </span>
             </div>
@@ -245,31 +220,9 @@ export const ZFCommandBar: React.FC<ZFCommandBarProps> = ({
                 type="button"
                 onClick={onSignOut}
                 title={isAr ? 'تسجيل الخروج وإنهاء الجلسة' : 'Sign Out'}
-                style={{
-                  background: 'rgba(239, 68, 68, 0.1)',
-                  border: '1px solid rgba(239, 68, 68, 0.25)',
-                  color: '#f87171',
-                  borderRadius: '6px',
-                  padding: '0.25rem 0.55rem',
-                  fontSize: '0.72rem',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.3rem',
-                  transition: 'all 0.15s ease'
-                }}
-                onMouseEnter={e => {
-                  e.currentTarget.style.background = 'rgba(239, 68, 68, 0.2)';
-                  e.currentTarget.style.borderColor = 'rgba(239, 68, 68, 0.5)';
-                }}
-                onMouseLeave={e => {
-                  e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)';
-                  e.currentTarget.style.borderColor = 'rgba(239, 68, 68, 0.25)';
-                }}
+                className={styles.signOutBtn}
               >
                 <LogOut size={12} />
-                <span>{isAr ? 'خروج' : 'Exit'}</span>
               </button>
             )}
           </div>
