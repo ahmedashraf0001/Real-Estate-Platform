@@ -27,7 +27,9 @@ import {
   Layers,
   BookOpen,
   ShieldCheck,
-  ArrowUpRight
+  ArrowUpRight,
+  Sparkles,
+  X
 } from 'lucide-react';
 import subStyles from './ZFSubprogram.module.css';
 import legacyStyles from './AdminERPHub.module.css';
@@ -93,6 +95,8 @@ import { ZFNavigationDock, ERPNavModule } from './ZFNavigationDock';
 import { ZFInspectorDrawer, InspectorPayload } from './ZFInspectorDrawer';
 import { ZFQuickSearchModal } from './ZFQuickSearchModal';
 import { ZFNotificationCenter } from './ZFNotificationCenter';
+import { ZFErpAcademyModal } from './ZFErpAcademyModal';
+import { ZFErpGuidedTour } from './ZFErpGuidedTour';
 import { 
   evaluateFinancialAlerts, 
   getPersistedNotificationState, 
@@ -239,6 +243,20 @@ export default function AdminERPHub({ adminLocale }: AdminERPHubProps) {
   const [buyerEmail, setBuyerEmail] = useState<string>('');
   const [contractWizardStep, setContractWizardStep] = useState<1 | 2 | 3>(1);
   const [contractErrors, setContractErrors] = useState<{ [key: string]: string }>({});
+
+  // FIN-OS Academy & Guided Tour States
+  const [isAcademyOpen, setIsAcademyOpen] = useState(false);
+  const [isGuidedTourActive, setIsGuidedTourActive] = useState(false);
+  const [showFirstTimeTourPrompt, setShowFirstTimeTourPrompt] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const completed = localStorage.getItem('zf_fin_os_tour_completed_v1');
+      if (!completed) {
+        setShowFirstTimeTourPrompt(true);
+      }
+    }
+  }, []);
 
   const unifiedPartners = useMemo(() => {
     return getUnifiedPartnersDirectory(data.partnerCalls, data.properties, data.contracts);
@@ -1539,6 +1557,7 @@ export default function AdminERPHub({ adminLocale }: AdminERPHubProps) {
         unreadNotificationsCount={unreadNotificationsCount}
         hasCriticalAlerts={hasCriticalAlerts}
         onOpenNotifications={() => setShowNotificationCenter(true)}
+        onOpenAcademy={() => setIsAcademyOpen(true)}
       />
 
       {/* Schema Migration Advisory Banner (Only shown if tables have not been created yet) */}
@@ -1580,6 +1599,7 @@ export default function AdminERPHub({ adminLocale }: AdminERPHubProps) {
           pendingApprovalsCount={data.makerCheckerRequests.filter(r => r.status === 'Pending').length}
           openQuestionsCount={10}
           isAr={isAr}
+          onOpenAcademy={() => setIsAcademyOpen(true)}
         />
 
         {/* Main Workstation Stage */}
@@ -1621,7 +1641,7 @@ export default function AdminERPHub({ adminLocale }: AdminERPHubProps) {
                   </div>
                 </div>
 
-                <div className={subStyles.stageActions} style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
+                <div className={subStyles.stageActions} data-tour="quick-actions" style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
                   <button 
                     type="button"
                     className={subStyles.actionBtnPrimary}
@@ -1664,50 +1684,139 @@ export default function AdminERPHub({ adminLocale }: AdminERPHubProps) {
                 </div>
               </div>
 
+              {/* First-Time User Interactive Onboarding Welcome Pill */}
+              {showFirstTimeTourPrompt && (
+                <div style={{
+                  background: 'linear-gradient(135deg, rgba(212, 175, 55, 0.15) 0%, rgba(212, 175, 55, 0.05) 100%)',
+                  border: '1px solid rgba(212, 175, 55, 0.35)',
+                  borderRadius: '12px',
+                  padding: '0.75rem 1.25rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: '1rem',
+                  flexWrap: 'wrap'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                    <Sparkles size={18} color="#d4af37" />
+                    <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#f8fafc' }}>
+                      {isAr 
+                        ? 'مرحباً بك في منظومة FIN-OS! هل ترغب في جولة تدريبية استرشادية مدتها دقيقتان للتعرف على المنظومة؟' 
+                        : 'Welcome to FIN-OS! Would you like a 2-minute interactive guided tour of the platform?'}
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowFirstTimeTourPrompt(false);
+                        setIsGuidedTourActive(true);
+                      }}
+                      style={{
+                        background: 'linear-gradient(135deg, #d4af37 0%, #b38f26 100%)',
+                        border: 'none',
+                        color: '#000000',
+                        fontWeight: 800,
+                        fontSize: '0.75rem',
+                        padding: '0.4rem 0.85rem',
+                        borderRadius: '8px',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      {isAr ? 'ابدأ الجولة التفاعلية' : 'Start Tour'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowFirstTimeTourPrompt(false);
+                        setIsAcademyOpen(true);
+                      }}
+                      style={{
+                        background: 'rgba(255, 255, 255, 0.06)',
+                        border: '1px solid rgba(255, 255, 255, 0.12)',
+                        color: '#cbd5e1',
+                        fontWeight: 700,
+                        fontSize: '0.75rem',
+                        padding: '0.4rem 0.85rem',
+                        borderRadius: '8px',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      {isAr ? 'دليل المنظومة' : 'Academy'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowFirstTimeTourPrompt(false);
+                        if (typeof window !== 'undefined') {
+                          localStorage.setItem('zf_fin_os_tour_completed_v1', 'true');
+                        }
+                      }}
+                      style={{
+                        background: 'transparent',
+                        border: 'none',
+                        color: '#64748b',
+                        cursor: 'pointer',
+                        padding: '0.2rem'
+                      }}
+                      title={isAr ? 'إغلاق' : 'Dismiss'}
+                    >
+                      <X size={15} />
+                    </button>
+                  </div>
+                </div>
+              )}
+
               {/* 1. FINANCIAL FLOW & CAPITAL ALLOCATION MINDMAP (First Priority Overview) */}
-              <CapitalFlowMindmap 
-                isAr={isAr}
-                kpis={kpis}
-                totalGrossContractValue={totalGrossContractValue}
-                totalCollectedCash={totalCollectedCash}
-                totalWipIncurred={totalWipIncurred}
-                totalSafePDCs={data.pdcRecords
-                  .filter(p => p.status === 'In Safe')
-                  .reduce((acc, p) => acc.plus(p.nominal_value || '0'), D(0))
-                  .toFixed(2)}
-                totalInjectedCapital={data.partnerCalls
-                  .reduce((acc, c) => acc.plus(c.paid_amount || c.call_amount || '0'), D(0))
-                  .toFixed(2)}
-                wipAccounts={wipAccounts}
-                taxRecords={data.taxRecords}
-                partnerCalls={data.partnerCalls}
-              />
+              <div data-tour="capital-mindmap">
+                <CapitalFlowMindmap 
+                  isAr={isAr}
+                  kpis={kpis}
+                  totalGrossContractValue={totalGrossContractValue}
+                  totalCollectedCash={totalCollectedCash}
+                  totalWipIncurred={totalWipIncurred}
+                  totalSafePDCs={data.pdcRecords
+                    .filter(p => p.status === 'In Safe')
+                    .reduce((acc, p) => acc.plus(p.nominal_value || '0'), D(0))
+                    .toFixed(2)}
+                  totalInjectedCapital={data.partnerCalls
+                    .reduce((acc, c) => acc.plus(c.paid_amount || c.call_amount || '0'), D(0))
+                    .toFixed(2)}
+                  wipAccounts={wipAccounts}
+                  taxRecords={data.taxRecords}
+                  partnerCalls={data.partnerCalls}
+                />
+              </div>
 
               {/* 2. MONTHLY FINANCIAL & CHEQUE MATURITY CALENDAR (Work & Schedule for the Month) */}
-              <DashboardFinancialCalendar 
-                pdcRecords={data.pdcRecords}
-                contracts={data.contracts}
-                schedules={data.schedules}
-                taxRecords={data.taxRecords}
-                onInspectCheque={handleInspectCheque}
-                onInspectContract={handleInspectContract}
-                onInspectTax={handleInspectTax}
-                isAr={isAr}
-              />
+              <div data-tour="financial-calendar">
+                <DashboardFinancialCalendar 
+                  pdcRecords={data.pdcRecords}
+                  contracts={data.contracts}
+                  schedules={data.schedules}
+                  taxRecords={data.taxRecords}
+                  onInspectCheque={handleInspectCheque}
+                  onInspectContract={handleInspectContract}
+                  onInspectTax={handleInspectTax}
+                  isAr={isAr}
+                />
+              </div>
 
               {/* 3. TODAY'S EXECUTIVE FINANCIAL ACTION LEDGER (Daily Action Items & Approvals) */}
-              <DashboardDailyActionLedger 
-                pdcRecords={data.pdcRecords}
-                contracts={data.contracts}
-                schedules={data.schedules}
-                makerCheckerRequests={data.makerCheckerRequests}
-                taxRecords={data.taxRecords}
-                onInspectCheque={handleInspectCheque}
-                onInspectContract={handleInspectContract}
-                onInspectTax={handleInspectTax}
-                onNavigateToModule={(mod) => setActiveTab(mod === 'cockpit' ? 'dashboard' : mod as any)}
-                isAr={isAr}
-              />
+              <div data-tour="action-ledger">
+                <DashboardDailyActionLedger 
+                  pdcRecords={data.pdcRecords}
+                  contracts={data.contracts}
+                  schedules={data.schedules}
+                  makerCheckerRequests={data.makerCheckerRequests}
+                  taxRecords={data.taxRecords}
+                  onInspectCheque={handleInspectCheque}
+                  onInspectContract={handleInspectContract}
+                  onInspectTax={handleInspectTax}
+                  onNavigateToModule={(mod) => setActiveTab(mod === 'cockpit' ? 'dashboard' : mod as any)}
+                  isAr={isAr}
+                />
+              </div>
 
               {/* 4. ACTIONABLE OPERATIONS RADAR (Alert Checks & Priorities) */}
               <DashboardOperationsRadar 
@@ -6023,6 +6132,25 @@ export default function AdminERPHub({ adminLocale }: AdminERPHubProps) {
         cheques={data.pdcRecords}
         onSelectModule={(mod) => setActiveTab(mod === 'cockpit' ? 'dashboard' : mod)}
         onSelectContract={(c) => handleInspectContract(c)}
+        onOpenAcademy={() => setIsAcademyOpen(true)}
+        onStartGuidedTour={() => setIsGuidedTourActive(true)}
+        isAr={isAr}
+      />
+
+      {/* 4.25 FIN-OS MASTER ACADEMY & TUTORIAL MODAL */}
+      <ZFErpAcademyModal 
+        isOpen={isAcademyOpen}
+        onClose={() => setIsAcademyOpen(false)}
+        onStartGuidedTour={() => setIsGuidedTourActive(true)}
+        onNavigateToModule={(mod) => setActiveTab(mod === 'cockpit' ? 'dashboard' : mod as any)}
+        isAr={isAr}
+      />
+
+      {/* 4.35 INTERACTIVE ON-SCREEN GUIDED SPOTLIGHT TOUR */}
+      <ZFErpGuidedTour 
+        isActive={isGuidedTourActive}
+        onComplete={() => setIsGuidedTourActive(false)}
+        onSkip={() => setIsGuidedTourActive(false)}
         isAr={isAr}
       />
 

@@ -50,6 +50,7 @@ interface ZFNavigationDockProps {
   pdcSafeCount?: number;
   propertiesCount?: number;
   isAr?: boolean;
+  onOpenAcademy?: () => void;
 }
 
 export const ZFNavigationDock: React.FC<ZFNavigationDockProps> = ({
@@ -58,7 +59,8 @@ export const ZFNavigationDock: React.FC<ZFNavigationDockProps> = ({
   contractsCount,
   pdcSafeCount,
   propertiesCount,
-  isAr = false
+  isAr = false,
+  onOpenAcademy
 }) => {
   const GROUPS: DockGroupDef[] = [
     {
@@ -141,7 +143,7 @@ export const ZFNavigationDock: React.FC<ZFNavigationDockProps> = ({
   ];
 
   return (
-    <aside className={styles.navigationDock}>
+    <aside className={styles.navigationDock} data-tour="nav-dock">
       <div style={{ display: 'flex', flexDirection: 'column' }}>
         {GROUPS.map((grp, gIdx) => (
           <div key={gIdx} className={styles.dockGroup}>
@@ -189,8 +191,43 @@ export const ZFNavigationDock: React.FC<ZFNavigationDockProps> = ({
         ))}
       </div>
 
-      {/* Dock Footer: Audited Financial Engine Status */}
+      {/* Dock Footer: Audited Financial Engine Status + Academy Button */}
       <div className={styles.dockFooter}>
+        {onOpenAcademy && (
+          <button
+            type="button"
+            onClick={onOpenAcademy}
+            style={{
+              width: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '0.45rem',
+              background: 'linear-gradient(135deg, rgba(212, 175, 55, 0.18) 0%, rgba(212, 175, 55, 0.05) 100%)',
+              border: '1px solid rgba(212, 175, 55, 0.35)',
+              borderRadius: '10px',
+              padding: '0.55rem 0.8rem',
+              color: '#e2c974',
+              fontSize: '0.74rem',
+              fontWeight: 800,
+              cursor: 'pointer',
+              marginBottom: '0.75rem',
+              transition: 'all 0.15s ease'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'linear-gradient(135deg, rgba(212, 175, 55, 0.28) 0%, rgba(212, 175, 55, 0.1) 100%)';
+              e.currentTarget.style.transform = 'translateY(-1px)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'linear-gradient(135deg, rgba(212, 175, 55, 0.18) 0%, rgba(212, 175, 55, 0.05) 100%)';
+              e.currentTarget.style.transform = 'translateY(0)';
+            }}
+          >
+            <BookOpen size={14} />
+            <span>{isAr ? 'دليل المنظومة والأكاديمية' : 'ERP Academy & Guide'}</span>
+          </button>
+        )}
+
         <div className={styles.dockFiscalCard}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.35rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', color: '#e2c974', fontWeight: 800, fontSize: '0.74rem' }}>

@@ -13,6 +13,8 @@ interface ZFQuickSearchModalProps {
   cheques: ERPPDCRecord[];
   onSelectModule: (mod: ERPNavModule) => void;
   onSelectContract: (contract: ERPContract) => void;
+  onOpenAcademy?: () => void;
+  onStartGuidedTour?: () => void;
   isAr?: boolean;
 }
 
@@ -23,6 +25,8 @@ export const ZFQuickSearchModal: React.FC<ZFQuickSearchModalProps> = ({
   cheques,
   onSelectModule,
   onSelectContract,
+  onOpenAcademy,
+  onStartGuidedTour,
   isAr = false
 }) => {
   const [query, setQuery] = useState('');
@@ -50,6 +54,35 @@ export const ZFQuickSearchModal: React.FC<ZFQuickSearchModalProps> = ({
       icon: typeof Search;
       action: () => void;
     }> = [];
+
+    // 0. Academy & Guided Tour Commands
+    if (onOpenAcademy && ('academy'.includes(q) || 'help'.includes(q) || 'guide'.includes(q) || 'tutorial'.includes(q) || 'دليل'.includes(q) || 'شرح'.includes(q) || 'أكاديمية'.includes(q) || 'تعليم'.includes(q))) {
+      matches.push({
+        id: 'cmd-academy',
+        category: isAr ? 'المساعدة والتدريب' : 'Help & Learning',
+        title: isAr ? 'أكاديمية المنظومة ودليل الاستخدام الشامل' : 'FIN-OS Master Academy & Guide',
+        subtitle: isAr ? 'شرح دورة العمل العقارية، الشاشات، والروتين اليومي' : 'Learn end-to-end workflows & modules',
+        icon: BookOpen,
+        action: () => {
+          onOpenAcademy();
+          onClose();
+        }
+      });
+    }
+
+    if (onStartGuidedTour && ('tour'.includes(q) || 'walkthrough'.includes(q) || 'جولة'.includes(q) || 'استرشاد'.includes(q) || 'بداية'.includes(q))) {
+      matches.push({
+        id: 'cmd-tour',
+        category: isAr ? 'المساعدة والتدريب' : 'Help & Learning',
+        title: isAr ? 'بدء الجولة التفاعلية المباشرة للشاشة' : 'Start Live Screen Guided Tour',
+        subtitle: isAr ? 'شرح مرئي خطوة بخطوة لمكونات لوحة القيادة' : 'Step-by-step visual spotlight of cockpit components',
+        icon: BookOpen,
+        action: () => {
+          onStartGuidedTour();
+          onClose();
+        }
+      });
+    }
 
     // 1. Navigation Modules
     const modules: Array<{ id: ERPNavModule; nameEn: string; nameAr: string }> = [

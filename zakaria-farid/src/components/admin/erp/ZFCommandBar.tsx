@@ -14,7 +14,8 @@ import {
   FileSpreadsheet,
   ShieldCheck,
   LogOut,
-  Bell
+  Bell,
+  BookOpen
 } from 'lucide-react';
 import { ERPAccountingPeriod } from '@/lib/erp/types';
 import styles from './ZFSubprogram.module.css';
@@ -33,6 +34,7 @@ interface ZFCommandBarProps {
   unreadNotificationsCount?: number;
   hasCriticalAlerts?: boolean;
   onOpenNotifications?: () => void;
+  onOpenAcademy?: () => void;
 }
 
 export const ZFCommandBar: React.FC<ZFCommandBarProps> = ({
@@ -48,7 +50,8 @@ export const ZFCommandBar: React.FC<ZFCommandBarProps> = ({
   onSignOut,
   unreadNotificationsCount = 0,
   hasCriticalAlerts = false,
-  onOpenNotifications
+  onOpenNotifications,
+  onOpenAcademy
 }) => {
   const [cairoTime, setCairoTime] = useState<string>('');
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
@@ -84,7 +87,7 @@ export const ZFCommandBar: React.FC<ZFCommandBarProps> = ({
   const isLocked = activePeriod?.status === 'LOCKED' || activePeriod?.status === 'CLOSED';
 
   return (
-    <header className={styles.commandBar}>
+    <header className={styles.commandBar} data-tour="command-bar">
       {/* 1. LEFT: Brand & Context */}
       <div className={styles.brandArea}>
         <Link 
@@ -227,6 +230,19 @@ export const ZFCommandBar: React.FC<ZFCommandBarProps> = ({
                   {unreadNotificationsCount > 9 ? '9+' : unreadNotificationsCount}
                 </span>
               )}
+            </button>
+          )}
+
+          {/* ERP Academy & Tutorial Trigger */}
+          {onOpenAcademy && (
+            <button
+              type="button"
+              className={styles.clusterBtnIcon}
+              onClick={onOpenAcademy}
+              title={isAr ? 'دليل المنظومة وجولة التدريب (ERP Academy & Tour)' : 'ERP Academy & Tutorial Guide'}
+              style={{ color: '#e2c974' }}
+            >
+              <BookOpen size={13} />
             </button>
           )}
 
