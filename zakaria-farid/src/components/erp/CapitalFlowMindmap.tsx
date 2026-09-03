@@ -79,6 +79,7 @@ export const CapitalFlowMindmap: React.FC<CapitalFlowMindmapProps> = ({
   partnerCalls = []
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
+  const gridRef = useRef<HTMLDivElement>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [activeFilter, setActiveFilter] = useState<'all' | 'inflows' | 'outflows' | 'net'>('all');
@@ -279,11 +280,11 @@ export const CapitalFlowMindmap: React.FC<CapitalFlowMindmapProps> = ({
 
   // Recalculate SVG connector bezier paths dynamically based on active DOM coordinates
   const updateConnections = useCallback(() => {
-    if (!containerRef.current) return;
-    const container = containerRef.current;
-    const containerRect = container.getBoundingClientRect();
+    const gridEl = gridRef.current || containerRef.current;
+    if (!gridEl) return;
+    const gridRect = gridEl.getBoundingClientRect();
 
-    const coreEl = container.querySelector(`[data-flow-node="core-treasury"]`);
+    const coreEl = gridEl.querySelector(`[data-flow-node="core-treasury"]`);
     if (!coreEl) return;
     const coreRect = coreEl.getBoundingClientRect();
 
@@ -295,42 +296,44 @@ export const CapitalFlowMindmap: React.FC<CapitalFlowMindmapProps> = ({
       isInbound: boolean;
     }> = [];
 
-    // Core anchor points relative to container
+    // Core anchor points relative to the grid container
     // In RTL: Inflows on Right, Core in Middle, Outflows on Left.
-    // Core Inbound Anchor = Right Center (in RTL) or Left Center (in LTR)
     const coreInboundX = isAr 
-      ? (coreRect.right - containerRect.left)
-      : (coreRect.left - containerRect.left);
-    const coreInboundY = (coreRect.top + coreRect.height / 2) - containerRect.top;
+      ? (coreRect.right - gridRect.left)
+      : (coreRect.left - gridRect.left);
+    const coreInboundY = (coreRect.top + coreRect.height / 2) - gridRect.top;
 
     const coreOutboundX = isAr 
-      ? (coreRect.left - containerRect.left)
-      : (coreRect.right - containerRect.left);
-    const coreOutboundY = (coreRect.top + coreRect.height / 2) - containerRect.top;
+      ? (coreRect.left - gridRect.left)
+      : (coreRect.right - gridRect.left);
+    const coreOutboundY = (coreRect.top + coreRect.height / 2) - gridRect.top;
+
+    // Helper: Build symmetric smooth cubic Bézier curve
+    const buildCubicPath = (startX: number, startY: number, endX: number, endY: number) => {
+      const deltaX = Math.abs(endX - startX) * 0.45;
+      const cp1x = startX > endX ? (startX - deltaX) : (startX + deltaX);
+      const cp2x = startX > endX ? (endX + deltaX) : (endX - deltaX);
+      return `M ${startX} ${startY} C ${cp1x} ${startY}, ${cp2x} ${endY}, ${endX} ${endY}`;
+    };
 
     // 1. Compute Inbound Flows -> Core
     if (activeFilter === 'all' || activeFilter === 'inflows' || activeFilter === 'net') {
       inflowNodes.forEach(node => {
-        const el = container.querySelector(`[data-flow-node="${node.id}"]`);
+        const el = gridEl.querySelector(`[data-flow-node="${node.id}"]`);
         if (!el) return;
         const r = el.getBoundingClientRect();
 
         // Source Anchor: Left edge in RTL (facing center), Right edge in LTR
-        const startX = isAr ? (r.left - containerRect.left) : (r.right - containerRect.left);
-        const startY = (r.top + r.height / 2) - containerRect.top;
-        const endX = coreInboundX;
+        const startX = isAr ? (r.left - gridRect.left) : (r.right - gridRect.left);
+        const startY = (r.top + r.height / 2) - gridRect.top;
+        // Stop 3px outside core to let arrowhead render crisply
+        const endX = isAr ? (coreInboundX + 3) : (coreInboundX - 3);
         const endY = coreInboundY;
 
-        // Smooth Cubic Bézier Curve
-        const deltaX = Math.abs(endX - startX) * 0.55;
-        const cp1x = isAr ? (startX - deltaX) : (startX + deltaX);
-        const cp2x = isAr ? (endX + deltaX) : (endX - deltaX);
-
-        const pathStr = `M ${startX} ${startY} C ${cp1x} ${startY}, ${cp2x} ${endY}, ${endX} ${endY}`;
         newConns.push({
           fromId: node.id,
           toId: 'core-treasury',
-          path: pathStr,
+          path: buildCubicPath(startX, startY, endX, endY),
           color: node.accentColor,
           isInbound: true
         });
@@ -340,26 +343,20 @@ export const CapitalFlowMindmap: React.FC<CapitalFlowMindmapProps> = ({
     // 2. Compute Core -> Outbound Flows
     if (activeFilter === 'all' || activeFilter === 'outflows' || activeFilter === 'net') {
       outflowNodes.forEach(node => {
-        const el = container.querySelector(`[data-flow-node="${node.id}"]`);
+        const el = gridEl.querySelector(`[data-flow-node="${node.id}"]`);
         if (!el) return;
         const r = el.getBoundingClientRect();
 
         // Target Anchor: Right edge in RTL (facing center), Left edge in LTR
         const startX = coreOutboundX;
         const startY = coreOutboundY;
-        const endX = isAr ? (r.right - containerRect.left) : (r.left - containerRect.left);
-        const endY = (r.top + r.height / 2) - containerRect.top;
+        const endX = isAr ? (r.right - gridRect.left + 3) : (r.left - gridRect.left - 3);
+        const endY = (r.top + r.height / 2) - gridRect.top;
 
-        // Smooth Cubic Bézier Curve
-        const deltaX = Math.abs(endX - startX) * 0.55;
-        const cp1x = isAr ? (startX - deltaX) : (startX + deltaX);
-        const cp2x = isAr ? (endX + deltaX) : (endX - deltaX);
-
-        const pathStr = `M ${startX} ${startY} C ${cp1x} ${startY}, ${cp2x} ${endY}, ${endX} ${endY}`;
         newConns.push({
           fromId: 'core-treasury',
           toId: node.id,
-          path: pathStr,
+          path: buildCubicPath(startX, startY, endX, endY),
           color: node.accentColor,
           isInbound: false
         });
@@ -375,11 +372,25 @@ export const CapitalFlowMindmap: React.FC<CapitalFlowMindmapProps> = ({
     const handleResize = () => updateConnections();
     window.addEventListener('resize', handleResize);
     
-    // Slight timeout to let DOM render
-    const t = setTimeout(updateConnections, 120);
+    // Multiple staggered timeouts to ensure accurate bounding rect after layout settles
+    const t1 = setTimeout(updateConnections, 50);
+    const t2 = setTimeout(updateConnections, 150);
+    const t3 = setTimeout(updateConnections, 400);
+
+    let resizeObserver: ResizeObserver | null = null;
+    if (typeof ResizeObserver !== 'undefined' && gridRef.current) {
+      resizeObserver = new ResizeObserver(() => {
+        updateConnections();
+      });
+      resizeObserver.observe(gridRef.current);
+    }
+
     return () => {
       window.removeEventListener('resize', handleResize);
-      clearTimeout(t);
+      clearTimeout(t1);
+      clearTimeout(t2);
+      clearTimeout(t3);
+      if (resizeObserver) resizeObserver.disconnect();
     };
   }, [updateConnections, isFullscreen]);
 
@@ -545,16 +556,19 @@ export const CapitalFlowMindmap: React.FC<CapitalFlowMindmapProps> = ({
       </div>
 
       {/* Main Mindmap Canvas Area with Dynamic SVG Connectors */}
-      <div style={{
-        position: 'relative',
-        display: 'grid',
-        gridTemplateColumns: 'minmax(280px, 1fr) minmax(320px, 1.2fr) minmax(280px, 1fr)',
-        gap: '2.5rem',
-        alignItems: 'center',
-        padding: '1.5rem 0',
-        minHeight: '580px',
-        zIndex: 5
-      }}>
+      <div 
+        ref={gridRef}
+        style={{
+          position: 'relative',
+          display: 'grid',
+          gridTemplateColumns: 'minmax(280px, 1fr) minmax(320px, 1.2fr) minmax(280px, 1fr)',
+          gap: '2.5rem',
+          alignItems: 'center',
+          padding: '1.5rem 0',
+          minHeight: '580px',
+          zIndex: 5
+        }}
+      >
         {/* SVG CONNECTOR OVERLAY WITH DIRECTED ARROWS & GLOW PARTICLES */}
         <svg 
           style={{
@@ -575,11 +589,11 @@ export const CapitalFlowMindmap: React.FC<CapitalFlowMindmapProps> = ({
               viewBox="0 0 10 10"
               refX="8"
               refY="5"
-              markerWidth="6"
-              markerHeight="6"
-              orient="auto-start-reverse"
+              markerWidth="7"
+              markerHeight="7"
+              orient="auto"
             >
-              <path d="M 0 1 L 10 5 L 0 9 z" fill="#10b981" />
+              <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#10b981" />
             </marker>
 
             {/* Gold Arrow Marker (Inbound / Partner) */}
@@ -588,11 +602,11 @@ export const CapitalFlowMindmap: React.FC<CapitalFlowMindmapProps> = ({
               viewBox="0 0 10 10"
               refX="8"
               refY="5"
-              markerWidth="6"
-              markerHeight="6"
-              orient="auto-start-reverse"
+              markerWidth="7"
+              markerHeight="7"
+              orient="auto"
             >
-              <path d="M 0 1 L 10 5 L 0 9 z" fill="#d4af37" />
+              <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#d4af37" />
             </marker>
 
             {/* Amber Arrow Marker (Outbound WIP) */}
@@ -601,11 +615,11 @@ export const CapitalFlowMindmap: React.FC<CapitalFlowMindmapProps> = ({
               viewBox="0 0 10 10"
               refX="8"
               refY="5"
-              markerWidth="6"
-              markerHeight="6"
-              orient="auto-start-reverse"
+              markerWidth="7"
+              markerHeight="7"
+              orient="auto"
             >
-              <path d="M 0 1 L 10 5 L 0 9 z" fill="#f59e0b" />
+              <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#f59e0b" />
             </marker>
 
             {/* Red Arrow Marker (Taxes) */}
@@ -614,11 +628,11 @@ export const CapitalFlowMindmap: React.FC<CapitalFlowMindmapProps> = ({
               viewBox="0 0 10 10"
               refX="8"
               refY="5"
-              markerWidth="6"
-              markerHeight="6"
-              orient="auto-start-reverse"
+              markerWidth="7"
+              markerHeight="7"
+              orient="auto"
             >
-              <path d="M 0 1 L 10 5 L 0 9 z" fill="#f87171" />
+              <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#f87171" />
             </marker>
 
             {/* Indigo Arrow Marker */}
@@ -627,11 +641,11 @@ export const CapitalFlowMindmap: React.FC<CapitalFlowMindmapProps> = ({
               viewBox="0 0 10 10"
               refX="8"
               refY="5"
-              markerWidth="6"
-              markerHeight="6"
-              orient="auto-start-reverse"
+              markerWidth="7"
+              markerHeight="7"
+              orient="auto"
             >
-              <path d="M 0 1 L 10 5 L 0 9 z" fill="#818cf8" />
+              <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#818cf8" />
             </marker>
           </defs>
 

@@ -5040,9 +5040,9 @@
     "semantic_hash": ""
   },
   "src/components/admin/erp/AdminERPHub.tsx": {
-    "mtime": 1788437659.7097573,
-    "seen": 1788437755.430993,
-    "ast_hash": "1a07d191543430c341d74578a97b7f8d",
+    "mtime": 1788438182.404807,
+    "seen": 1788438278.600393,
+    "ast_hash": "b74061eefa8647896b131344092551ab",
     "semantic_hash": ""
   },
   "src/components/admin/erp/CockpitAnalyticsCharts.tsx": {
@@ -5340,9 +5340,9 @@
     "semantic_hash": ""
   },
   "src/components/erp/CapitalFlowMindmap.tsx": {
-    "mtime": 1788435952.3408418,
-    "seen": 1788436241.9488368,
-    "ast_hash": "9e76abf7a324584b7d9fc2a118a94108",
+    "mtime": 1788438054.8672016,
+    "seen": 1788438278.6004236,
+    "ast_hash": "6fcbb74cc60737c2bebec67b10c1d370",
     "semantic_hash": ""
   },
   "src/components/admin/erp/ZFNotificationCenter.tsx": {

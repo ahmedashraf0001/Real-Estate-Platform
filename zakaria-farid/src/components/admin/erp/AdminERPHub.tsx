@@ -79,6 +79,7 @@ import { CockpitAnalyticsCharts } from './CockpitAnalyticsCharts';
 import { DashboardOperationsRadar } from './DashboardOperationsRadar';
 import { DashboardDailyActionLedger } from './DashboardDailyActionLedger';
 import { DashboardFinancialCalendar } from './DashboardFinancialCalendar';
+import { CapitalFlowMindmap } from '@/components/erp/CapitalFlowMindmap';
 import { DashboardAnalyticalStudio } from './DashboardAnalyticalStudio';
 import { exportComprehensiveArabicExcel } from '@/lib/erp/excelExporter';
 import { ConstructionCostCalculator } from './ConstructionCostCalculator';
@@ -1663,7 +1664,64 @@ export default function AdminERPHub({ adminLocale }: AdminERPHubProps) {
                 </div>
               </div>
 
-              {/* Real-time KPI Metric Tiles (Quiet Luxury Banking Standard) */}
+              {/* 1. FINANCIAL FLOW & CAPITAL ALLOCATION MINDMAP (First Priority Overview) */}
+              <CapitalFlowMindmap 
+                isAr={isAr}
+                kpis={kpis}
+                totalGrossContractValue={totalGrossContractValue}
+                totalCollectedCash={totalCollectedCash}
+                totalWipIncurred={totalWipIncurred}
+                totalSafePDCs={data.pdcRecords
+                  .filter(p => p.status === 'In Safe')
+                  .reduce((acc, p) => acc.plus(p.nominal_value || '0'), D(0))
+                  .toFixed(2)}
+                totalInjectedCapital={data.partnerCalls
+                  .reduce((acc, c) => acc.plus(c.paid_amount || c.call_amount || '0'), D(0))
+                  .toFixed(2)}
+                wipAccounts={wipAccounts}
+                taxRecords={data.taxRecords}
+                partnerCalls={data.partnerCalls}
+              />
+
+              {/* 2. MONTHLY FINANCIAL & CHEQUE MATURITY CALENDAR (Work & Schedule for the Month) */}
+              <DashboardFinancialCalendar 
+                pdcRecords={data.pdcRecords}
+                contracts={data.contracts}
+                schedules={data.schedules}
+                taxRecords={data.taxRecords}
+                onInspectCheque={handleInspectCheque}
+                onInspectContract={handleInspectContract}
+                onInspectTax={handleInspectTax}
+                isAr={isAr}
+              />
+
+              {/* 3. TODAY'S EXECUTIVE FINANCIAL ACTION LEDGER (Daily Action Items & Approvals) */}
+              <DashboardDailyActionLedger 
+                pdcRecords={data.pdcRecords}
+                contracts={data.contracts}
+                schedules={data.schedules}
+                makerCheckerRequests={data.makerCheckerRequests}
+                taxRecords={data.taxRecords}
+                onInspectCheque={handleInspectCheque}
+                onInspectContract={handleInspectContract}
+                onInspectTax={handleInspectTax}
+                onNavigateToModule={(mod) => setActiveTab(mod === 'cockpit' ? 'dashboard' : mod as any)}
+                isAr={isAr}
+              />
+
+              {/* 4. ACTIONABLE OPERATIONS RADAR (Alert Checks & Priorities) */}
+              <DashboardOperationsRadar 
+                pdcRecords={data.pdcRecords}
+                contracts={data.contracts}
+                taxRecords={data.taxRecords}
+                onInspectCheque={handleInspectCheque}
+                onInspectContract={handleInspectContract}
+                onInspectTax={handleInspectTax}
+                onRemitTax={handleRemitTax}
+                isAr={isAr}
+              />
+
+              {/* 5. Real-time KPI Metric Tiles (Quiet Luxury Banking Standard) */}
               {(() => {
                 const collectionRate = D(totalGrossContractValue).isZero() 
                   ? 0 
@@ -1915,44 +1973,6 @@ export default function AdminERPHub({ adminLocale }: AdminERPHubProps) {
                   </div>
                 );
               })()}
-
-              {/* SECTION 1: TODAY'S EXECUTIVE FINANCIAL ACTION LEDGER */}
-              <DashboardDailyActionLedger 
-                pdcRecords={data.pdcRecords}
-                contracts={data.contracts}
-                schedules={data.schedules}
-                makerCheckerRequests={data.makerCheckerRequests}
-                taxRecords={data.taxRecords}
-                onInspectCheque={handleInspectCheque}
-                onInspectContract={handleInspectContract}
-                onInspectTax={handleInspectTax}
-                onNavigateToModule={(mod) => setActiveTab(mod === 'cockpit' ? 'dashboard' : mod as any)}
-                isAr={isAr}
-              />
-
-              {/* SECTION 2: MONTHLY FINANCIAL & CHEQUE MATURITY CALENDAR */}
-              <DashboardFinancialCalendar 
-                pdcRecords={data.pdcRecords}
-                contracts={data.contracts}
-                schedules={data.schedules}
-                taxRecords={data.taxRecords}
-                onInspectCheque={handleInspectCheque}
-                onInspectContract={handleInspectContract}
-                onInspectTax={handleInspectTax}
-                isAr={isAr}
-              />
-
-              {/* Actionable Operations Priority Radar */}
-              <DashboardOperationsRadar 
-                pdcRecords={data.pdcRecords}
-                contracts={data.contracts}
-                taxRecords={data.taxRecords}
-                onInspectCheque={handleInspectCheque}
-                onInspectContract={handleInspectContract}
-                onInspectTax={handleInspectTax}
-                onRemitTax={handleRemitTax}
-                isAr={isAr}
-              />
 
               {/* Unified Domain-Focused Analytical Studio */}
               <DashboardAnalyticalStudio 
