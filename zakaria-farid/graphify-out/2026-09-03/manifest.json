@@ -5040,9 +5040,9 @@
     "semantic_hash": ""
   },
   "src/components/admin/erp/AdminERPHub.tsx": {
-    "mtime": 1788437066.534873,
-    "seen": 1788437163.5966609,
-    "ast_hash": "d3ecd36f4ca048cee6a3f88d642ec85d",
+    "mtime": 1788437351.5534968,
+    "seen": 1788437446.1515694,
+    "ast_hash": "1b07bbb4c2dadb234884b0428c057cfe",
     "semantic_hash": ""
   },
   "src/components/admin/erp/CockpitAnalyticsCharts.tsx": {
@@ -5355,6 +5355,18 @@
     "mtime": 1788437051.5704427,
     "seen": 1788437163.5967412,
     "ast_hash": "b7ccfff78abe01a8cd904c2c93c3c3a5",
+    "semantic_hash": ""
+  },
+  "src/components/admin/erp/DashboardDailyActionLedger.tsx": {
+    "mtime": 1788437290.0934055,
+    "seen": 1788437446.1515765,
+    "ast_hash": "4efeb27ad6055b6882ce9955a387c88c",
+    "semantic_hash": ""
+  },
+  "src/components/admin/erp/DashboardFinancialCalendar.tsx": {
+    "mtime": 1788437324.078566,
+    "seen": 1788437446.1515782,
+    "ast_hash": "6c832a070ec4ce920dc5d7edd3b384d8",
     "semantic_hash": ""
   }
 }

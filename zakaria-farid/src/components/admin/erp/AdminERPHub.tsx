@@ -73,6 +73,7 @@ import { ERPFinancialCharts } from './ERPFinancialCharts';
 
 // Client Mockup Components & Exporter
 import { QuickTransactionModal } from './QuickTransactionModal';
+import { NewChequeModal } from './NewChequeModal';
 import { PartnerCapitalCards } from './PartnerCapitalCards';
 import { CockpitAnalyticsCharts } from './CockpitAnalyticsCharts';
 import { DashboardOperationsRadar } from './DashboardOperationsRadar';
@@ -1049,33 +1050,31 @@ export default function AdminERPHub({ adminLocale }: AdminERPHubProps) {
   }
 
   // Handler: Register New Incoming Cheque into Safe
-  async function handleCreatePDCRecord() {
-    if (!newPdcNumber.trim() || !newPdcValue.trim() || parseFloat(newPdcValue) <= 0) {
-      alert(isAr ? 'يرجى إدخال رقم الشيك وقيمة مالية صحيحة' : 'Please enter valid cheque number and amount');
-      return;
-    }
+  async function handleSaveNewCheque(chequeData: {
+    contractId: string;
+    scheduleId?: string;
+    chequeNumber: string;
+    bankName: string;
+    drawerName: string;
+    nominalValue: string;
+    dueDate: string;
+  }) {
     setIsMutating(true);
     try {
-      const targetContractId = newPdcContractId || data.contracts[0]?.contract_id;
-      if (!targetContractId) {
-        alert(isAr ? 'يرجى تحديد العقد المرتبط بالشيك' : 'Please select linked contract');
-        return;
-      }
       const chequeId = generateUUID();
-      const linkedContract = data.contracts.find(c => c.contract_id === targetContractId);
-
       const newCheque: ERPPDCRecord = {
         cheque_id: chequeId,
-        contract_id: targetContractId,
-        cheque_number: newPdcNumber.trim(),
-        bank_name: newPdcBank,
-        drawer_name: newPdcDrawer.trim() || (linkedContract?.buyer_name || 'العميل'),
-        nominal_value: D(newPdcValue).toFixed(2),
-        due_date: newPdcDueDate,
+        contract_id: chequeData.contractId,
+        schedule_id: chequeData.scheduleId,
+        cheque_number: chequeData.chequeNumber,
+        bank_name: chequeData.bankName,
+        drawer_name: chequeData.drawerName,
+        nominal_value: D(chequeData.nominalValue).toFixed(2),
+        due_date: chequeData.dueDate,
         status: 'In Safe'
       };
 
-      await supabase.from('erp_pdc_records').insert([{
+      const payload: any = {
         cheque_id: newCheque.cheque_id,
         contract_id: newCheque.contract_id,
         cheque_number: newCheque.cheque_number,
@@ -1084,12 +1083,12 @@ export default function AdminERPHub({ adminLocale }: AdminERPHubProps) {
         nominal_value: newCheque.nominal_value,
         due_date: newCheque.due_date,
         status: newCheque.status
-      }]);
+      };
+      if (newCheque.schedule_id) {
+        payload.schedule_id = newCheque.schedule_id;
+      }
 
-      setShowNewPDCModal(false);
-      setNewPdcNumber('');
-      setNewPdcValue('');
-      setNewPdcDrawer('');
+      await supabase.from('erp_pdc_records').insert([payload]);
       await loadLiveData();
     } catch (err: unknown) {
       alert((err as Error).message);
@@ -7855,156 +7854,16 @@ export default function AdminERPHub({ adminLocale }: AdminERPHubProps) {
         </div>
       )}
 
-      {/* RECORD NEW CHEQUE MODAL (خزينة الشيكات الواردة) */}
-      {showNewPDCModal && (
-        <div className={legacyStyles.modalOverlay} onClick={() => setShowNewPDCModal(false)}>
-          <div className={legacyStyles.modalContent} onClick={e => e.stopPropagation()} style={{ maxWidth: '540px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.25rem' }}>
-              <h3 className={legacyStyles.modalTitle} style={{ margin: 0 }}>
-                {isAr ? 'استلام وتسجيل شيك بالخزينة' : 'Record New Cheque in Safe'}
-              </h3>
-              <button
-                type="button"
-                onClick={() => setShowNewPDCModal(false)}
-                style={{ background: 'transparent', border: 'none', color: '#94a3b8', fontSize: '1.2rem', cursor: 'pointer' }}
-              >
-                ✕
-              </button>
-            </div>
-            <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--zf-text-muted, #6b7086)' }}>
-              {isAr 
-                ? 'إيداع شيك ورقي مستلم من العميل في خزينة الشركة لحين حلول تاريخ الاستحقاق والمقاصة.' 
-                : 'Deposit a physical client cheque into company safe custody until maturity date.'}
-            </p>
-
-            <form onSubmit={e => { e.preventDefault(); handleCreatePDCRecord(); }} style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '1rem' }}>
-              {/* Linked Contract */}
-              <div className={legacyStyles.formGroup}>
-                <label className={legacyStyles.formLabel}>
-                  {isAr ? 'عقد البيع المرتبط بهذا الشيك:' : 'Linked Sales Contract:'}
-                </label>
-                <select
-                  className={legacyStyles.formInput}
-                  value={newPdcContractId}
-                  onChange={e => {
-                    setNewPdcContractId(e.target.value);
-                    const ct = data.contracts.find(c => c.contract_id === e.target.value);
-                    if (ct) {
-                      setNewPdcDrawer(ct.buyer_name || '');
-                    }
-                  }}
-                  required
-                >
-                  <option value="">{isAr ? '-- اختر العقد المرتبط --' : '-- Select Contract --'}</option>
-                  {data.contracts.map(c => (
-                    <option key={c.contract_id} value={c.contract_id}>
-                      {c.contract_number} — {c.buyer_name} ({c.unit_id})
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Cheque # & Bank */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
-                <div className={legacyStyles.formGroup}>
-                  <label className={legacyStyles.formLabel}>
-                    {isAr ? 'رقم الشيك البنكي:' : 'Cheque Number:'}
-                  </label>
-                  <input
-                    type="text"
-                    className={legacyStyles.formInput}
-                    placeholder="CHQ-789012"
-                    value={newPdcNumber}
-                    onChange={e => setNewPdcNumber(e.target.value)}
-                    required
-                  />
-                </div>
-                <div className={legacyStyles.formGroup}>
-                  <label className={legacyStyles.formLabel}>
-                    {isAr ? 'البنك المسحوب عليه (اختياري):' : 'Bank Name (Optional):'}
-                  </label>
-                  <input
-                    type="text"
-                    className={legacyStyles.formInput}
-                    placeholder={isAr ? 'مثال: البنك الأهلي، CIB...' : 'e.g. NBE, CIB...'}
-                    value={newPdcBank}
-                    onChange={e => setNewPdcBank(e.target.value)}
-                  />
-                </div>
-              </div>
-
-              {/* Drawer Name */}
-              <div className={legacyStyles.formGroup}>
-                <label className={legacyStyles.formLabel}>
-                  {isAr ? 'اسم الساحب (المشتري المثبت بالشيك):' : 'Drawer Legal Name:'}
-                </label>
-                <input
-                  type="text"
-                  className={legacyStyles.formInput}
-                  placeholder={isAr ? 'اسم العميل الموقع على الشيك' : 'Client full legal name'}
-                  value={newPdcDrawer}
-                  onChange={e => setNewPdcDrawer(e.target.value)}
-                  required
-                />
-              </div>
-
-              {/* Amount & Due Date */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
-                <div className={legacyStyles.formGroup}>
-                  <label className={legacyStyles.formLabel}>
-                    {isAr ? 'قيمة الشيك الاسمية (بالجنيه):' : 'Nominal Value (EGP):'}
-                  </label>
-                  <input
-                    type="number"
-                    step="100"
-                    className={legacyStyles.formInput}
-                    placeholder="250000"
-                    value={newPdcValue}
-                    onChange={e => setNewPdcValue(e.target.value)}
-                    required
-                  />
-                </div>
-                <div className={legacyStyles.formGroup}>
-                  <label className={legacyStyles.formLabel}>
-                    {isAr ? 'تاريخ استحقاق الشيك:' : 'Maturity / Due Date:'}
-                  </label>
-                  <input
-                    type="date"
-                    className={legacyStyles.formInput}
-                    value={newPdcDueDate}
-                    onChange={e => setNewPdcDueDate(e.target.value)}
-                    required
-                  />
-                </div>
-              </div>
-
-              {/* Safe Custody Notice */}
-              <div style={{
-                background: 'rgba(212, 175, 55, 0.08)',
-                border: '1px solid rgba(212, 175, 55, 0.25)',
-                borderRadius: '8px',
-                padding: '0.75rem',
-                fontSize: '0.76rem',
-                color: '#cbd5e1'
-              }}>
-                {isAr 
-                  ? 'سيتم تسجيل هذا الشيك بحالة [في الخزينة In Safe] كأوراق قبض تحت الحيازة لحين حلول تاريخ الصرف.' 
-                  : 'This cheque will be registered under In Safe status until deposit and clearing.'}
-              </div>
-
-              <div className={legacyStyles.modalFooter} style={{ marginTop: '0.5rem' }}>
-                <button type="button" className={legacyStyles.actionBtnGhost} onClick={() => setShowNewPDCModal(false)}>
-                  {isAr ? 'إلغاء' : 'Cancel'}
-                </button>
-                <button type="submit" className={legacyStyles.actionBtnGold} disabled={isMutating}>
-                  {isMutating ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
-                  <span>{isAr ? 'حفظ وإيداع بالخزينة' : 'Save to Safe'}</span>
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      {/* RECORD NEW CHEQUE MODAL (خزينة الشيكات الواردة) — Luxury Intuitive Digital Cheque Studio */}
+      <NewChequeModal 
+        isOpen={showNewPDCModal}
+        onClose={() => setShowNewPDCModal(false)}
+        contracts={data.contracts}
+        schedules={data.schedules}
+        onSaveCheque={handleSaveNewCheque}
+        isMutating={isMutating}
+        isAr={isAr}
+      />
 
       {/* QUICK TRANSACTION & SITE EXPENSE MODAL (Client Mockup) */}
       <QuickTransactionModal 
