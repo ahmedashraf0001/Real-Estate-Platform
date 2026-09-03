@@ -88,6 +88,15 @@ import { ZFCommandBar } from './ZFCommandBar';
 import { ZFNavigationDock, ERPNavModule } from './ZFNavigationDock';
 import { ZFInspectorDrawer, InspectorPayload } from './ZFInspectorDrawer';
 import { ZFQuickSearchModal } from './ZFQuickSearchModal';
+import { ZFNotificationCenter } from './ZFNotificationCenter';
+import { 
+  evaluateFinancialAlerts, 
+  getPersistedNotificationState, 
+  persistNotificationRead, 
+  persistMarkAllRead, 
+  persistNotificationDismiss, 
+  persistClearAll 
+} from '@/lib/erp/notificationEngine';
 
 interface AdminERPHubProps {
   adminLocale: string;
@@ -167,6 +176,16 @@ export default function AdminERPHub({ adminLocale }: AdminERPHubProps) {
   // Workstation Inspector & Command Palette State
   const [inspectorPayload, setInspectorPayload] = useState<InspectorPayload | null>(null);
   const [showQuickSearch, setShowQuickSearch] = useState(false);
+  const [showNotificationCenter, setShowNotificationCenter] = useState(false);
+  const [persistedNotificationState, setPersistedNotificationState] = useState<{ readIds: Set<string>; dismissedIds: Set<string> }>({
+    readIds: new Set(),
+    dismissedIds: new Set()
+  });
+
+  // Hydrate persisted notification read/dismiss states on client mount
+  useEffect(() => {
+    setPersistedNotificationState(getPersistedNotificationState());
+  }, []);
   const [contractViewMode, setContractViewMode] = useState<'cards' | 'table'>('cards');
   const [chequeViewMode, setChequeViewMode] = useState<'cards' | 'table'>('cards');
   const [contractFilter, setContractFilter] = useState<'All' | 'Delivered' | 'Pending' | 'Rescinded'>('All');
@@ -544,6 +563,97 @@ export default function AdminERPHub({ adminLocale }: AdminERPHubProps) {
       rescission
     });
   };
+
+  // Executive Notification Engine Computations
+  const liveNotifications = useMemo(() => {
+    return evaluateFinancialAlerts({
+      pdcRecords: data.pdcRecords,
+      contracts: data.contracts,
+      schedules: data.schedules,
+      makerCheckerRequests: data.makerCheckerRequests,
+      taxRecords: data.taxRecords,
+      activePeriod: activePeriod,
+      readIds: persistedNotificationState.readIds,
+      dismissedIds: persistedNotificationState.dismissedIds
+    });
+  }, [data.pdcRecords, data.contracts, data.schedules, data.makerCheckerRequests, data.taxRecords, activePeriod, persistedNotificationState]);
+
+  const unreadNotificationsCount = useMemo(() => {
+    return liveNotifications.filter(n => !n.read).length;
+  }, [liveNotifications]);
+
+  const hasCriticalAlerts = useMemo(() => {
+    return liveNotifications.some(n => n.severity === 'critical' && !n.read);
+  }, [liveNotifications]);
+
+  const handleMarkNotificationRead = useCallback((id: string) => {
+    persistNotificationRead(id);
+    setPersistedNotificationState(prev => {
+      const nextRead = new Set(prev.readIds);
+      nextRead.add(id);
+      return { ...prev, readIds: nextRead };
+    });
+  }, []);
+
+  const handleMarkAllNotificationsRead = useCallback(() => {
+    const ids = liveNotifications.map(n => n.id);
+    persistMarkAllRead(ids);
+    setPersistedNotificationState(prev => {
+      const nextRead = new Set(prev.readIds);
+      ids.forEach(id => nextRead.add(id));
+      return { ...prev, readIds: nextRead };
+    });
+  }, [liveNotifications]);
+
+  const handleDismissNotification = useCallback((id: string) => {
+    persistNotificationDismiss(id);
+    setPersistedNotificationState(prev => {
+      const nextDismissed = new Set(prev.dismissedIds);
+      nextDismissed.add(id);
+      return { ...prev, dismissedIds: nextDismissed };
+    });
+  }, []);
+
+  const handleClearAllNotifications = useCallback(() => {
+    const ids = liveNotifications.map(n => n.id);
+    persistClearAll(ids);
+    setPersistedNotificationState(prev => {
+      const nextDismissed = new Set(prev.dismissedIds);
+      ids.forEach(id => nextDismissed.add(id));
+      return { ...prev, dismissedIds: nextDismissed };
+    });
+  }, [liveNotifications]);
+
+  const handleNotificationAction = useCallback((targetModule: string, metadata?: Record<string, any>) => {
+    if (targetModule === 'dashboard' || targetModule === 'cockpit') {
+      setActiveTab('dashboard');
+    } else if (targetModule === 'pdc') {
+      setActiveTab('pdc');
+      if (metadata?.chequeId) {
+        const cheque = data.pdcRecords.find(p => p.cheque_id === metadata.chequeId);
+        if (cheque) handleInspectCheque(cheque);
+      }
+    } else if (targetModule === 'contracts') {
+      setActiveTab('contracts');
+      if (metadata?.contractId) {
+        const contract = data.contracts.find(c => c.contract_id === metadata.contractId);
+        if (contract) handleInspectContract(contract);
+      }
+    } else if (targetModule === 'tax') {
+      setActiveTab('tax');
+      if (metadata?.taxId) {
+        const tax = data.taxRecords.find(t => t.tax_id === metadata.taxId);
+        if (tax) handleInspectTax(tax);
+      }
+    } else if (targetModule === 'rescissions' || targetModule === 'approvals') {
+      setActiveTab('rescissions');
+    } else if (targetModule === 'ledger') {
+      setActiveTab('ledger');
+    } else if (targetModule === 'properties') {
+      setActiveTab('properties');
+    }
+  }, [data.pdcRecords, data.contracts, data.taxRecords, handleInspectCheque, handleInspectContract, handleInspectTax]);
+
 
   // Handler: Create Real Contract & Persist to Supabase
   async function handleCreateRealContract(e: React.FormEvent) {
@@ -1424,6 +1534,9 @@ export default function AdminERPHub({ adminLocale }: AdminERPHubProps) {
         isMutating={isMutating}
         currentUser={currentUser}
         onSignOut={handleSignOut}
+        unreadNotificationsCount={unreadNotificationsCount}
+        hasCriticalAlerts={hasCriticalAlerts}
+        onOpenNotifications={() => setShowNotificationCenter(true)}
       />
 
       {/* Schema Migration Advisory Banner (Only shown if tables have not been created yet) */}
@@ -5863,6 +5976,19 @@ export default function AdminERPHub({ adminLocale }: AdminERPHubProps) {
         cheques={data.pdcRecords}
         onSelectModule={(mod) => setActiveTab(mod === 'cockpit' ? 'dashboard' : mod)}
         onSelectContract={(c) => handleInspectContract(c)}
+        isAr={isAr}
+      />
+
+      {/* 4.5 EXECUTIVE NOTIFICATION & ALERT CENTER */}
+      <ZFNotificationCenter 
+        isOpen={showNotificationCenter}
+        onClose={() => setShowNotificationCenter(false)}
+        notifications={liveNotifications}
+        onMarkRead={handleMarkNotificationRead}
+        onMarkAllRead={handleMarkAllNotificationsRead}
+        onDismiss={handleDismissNotification}
+        onClearAll={handleClearAllNotifications}
+        onNavigateAction={handleNotificationAction}
         isAr={isAr}
       />
 

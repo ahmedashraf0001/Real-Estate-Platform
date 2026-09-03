@@ -13,7 +13,8 @@ import {
   ArrowLeft,
   FileSpreadsheet,
   ShieldCheck,
-  LogOut
+  LogOut,
+  Bell
 } from 'lucide-react';
 import { ERPAccountingPeriod } from '@/lib/erp/types';
 import styles from './ZFSubprogram.module.css';
@@ -29,6 +30,9 @@ interface ZFCommandBarProps {
   isMutating?: boolean;
   currentUser?: { email?: string } | null;
   onSignOut?: () => void;
+  unreadNotificationsCount?: number;
+  hasCriticalAlerts?: boolean;
+  onOpenNotifications?: () => void;
 }
 
 export const ZFCommandBar: React.FC<ZFCommandBarProps> = ({
@@ -41,7 +45,10 @@ export const ZFCommandBar: React.FC<ZFCommandBarProps> = ({
   onExportExcel,
   isMutating = false,
   currentUser,
-  onSignOut
+  onSignOut,
+  unreadNotificationsCount = 0,
+  hasCriticalAlerts = false,
+  onOpenNotifications
 }) => {
   const [cairoTime, setCairoTime] = useState<string>('');
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
@@ -188,6 +195,40 @@ export const ZFCommandBar: React.FC<ZFCommandBarProps> = ({
           >
             <RefreshCw size={13} className={isMutating ? 'animate-spin' : ''} />
           </button>
+
+          {/* Notification Center Bell Trigger */}
+          {onOpenNotifications && (
+            <button
+              type="button"
+              className={styles.clusterBtnIcon}
+              onClick={onOpenNotifications}
+              title={isAr ? 'مركز الإشعارات والتنبيهات المالية' : 'Notification & Alert Center'}
+              style={{ position: 'relative' }}
+            >
+              <Bell size={13} color={hasCriticalAlerts ? '#f87171' : (unreadNotificationsCount > 0 ? '#e2c974' : undefined)} />
+              {unreadNotificationsCount > 0 && (
+                <span style={{
+                  position: 'absolute',
+                  top: '-3px',
+                  [isAr ? 'left' : 'right']: '-3px',
+                  width: '13px',
+                  height: '13px',
+                  borderRadius: '50%',
+                  background: hasCriticalAlerts ? '#ef4444' : '#d4af37',
+                  color: hasCriticalAlerts ? '#ffffff' : '#000000',
+                  fontSize: '0.56rem',
+                  fontWeight: 900,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  boxShadow: hasCriticalAlerts ? '0 0 8px #ef4444' : '0 0 6px rgba(212, 175, 55, 0.6)',
+                  fontFamily: 'monospace'
+                }}>
+                  {unreadNotificationsCount > 9 ? '9+' : unreadNotificationsCount}
+                </span>
+              )}
+            </button>
+          )}
 
           {/* Fullscreen Toggle */}
           <button 

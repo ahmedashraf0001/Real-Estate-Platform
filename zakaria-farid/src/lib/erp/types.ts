@@ -254,3 +254,25 @@ export interface ERPAuditLog {
   new_state?: Record<string, unknown> | null;
   ip_address?: string | null;
 }
+
+export type ERPNotificationSeverity = 'critical' | 'warning' | 'info' | 'success';
+
+export type ERPNotificationCategory = 'cheque' | 'approval' | 'tax' | 'contract' | 'period' | 'system';
+
+export interface ERPNotification {
+  id: string;
+  titleAr: string;
+  titleEn: string;
+  messageAr: string;
+  messageEn: string;
+  severity: ERPNotificationSeverity;
+  category: ERPNotificationCategory;
+  createdAt: string;
+  read: boolean;
+  dismissed?: boolean;
+  actionLabelAr?: string;
+  actionLabelEn?: string;
+  targetModule?: string;
+  metadata?: Record<string, any>;
+}
+
