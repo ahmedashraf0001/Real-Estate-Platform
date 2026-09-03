@@ -33,6 +33,7 @@ import {
 import { Property } from '@/lib/supabase/types';
 import { GeneralLedgerEngine, CANONICAL_COA } from '@/lib/erp/ledger';
 import { D } from '@/lib/erp/math';
+import { ZFCustomSelect, ZFCustomSelectSection } from './v2/common/ZFCustomSelect';
 
 interface QuickTransactionModalProps {
   isOpen: boolean;
@@ -280,13 +281,53 @@ export const QuickTransactionModal: React.FC<QuickTransactionModalProps> = ({
 
   if (!isOpen) return null;
 
+  // Custom Sectioned Dropdown for Properties
+  const targetPropertySections: ZFCustomSelectSection[] = useMemo(() => {
+    const generalSection: ZFCustomSelectSection = {
+      sectionId: 'general',
+      titleAr: 'المصروفات العامة والتشغيلية',
+      titleEn: 'General & Site Overhead',
+      icon: Building2,
+      items: [
+        {
+          value: '',
+          labelAr: '-- مصروف عام لكافة مواقع المشاريع (Overhead) --',
+          labelEn: '-- General Project Overhead --',
+          sublabelAr: 'لا يتم توجيهه لعقار محدد بل يسجل كنفقات عامة',
+          sublabelEn: 'Unallocated general development overhead',
+          badge: isAr ? 'مصروف عام' : 'Overhead'
+        }
+      ]
+    };
+
+    const propItems = (properties || []).map(p => ({
+      value: p.id,
+      labelAr: p.title_ar,
+      labelEn: p.title_en,
+      sublabelAr: p.location || (isAr ? 'الموقع مسجل' : 'Registered Location'),
+      sublabelEn: p.location || 'Location',
+      badge: p.listing_status === 'sold' ? (isAr ? 'مباع' : 'Sold') : (isAr ? 'قيد التنفيذ' : 'In Progress'),
+      icon: Building2
+    }));
+
+    const projectsSection: ZFCustomSelectSection = {
+      sectionId: 'projects',
+      titleAr: 'المشروعات ومواقع العمل الإنشائية',
+      titleEn: 'Active Construction Sites & Projects',
+      icon: Building2,
+      items: propItems
+    };
+
+    return [generalSection, projectsSection];
+  }, [properties, isAr]);
+
   return (
     <div 
       style={{
         position: 'fixed',
         inset: 0,
         zIndex: 9999,
-        background: 'rgba(5, 7, 12, 0.85)',
+        background: 'rgba(15, 23, 42, 0.45)',
         backdropFilter: 'blur(8px)',
         display: 'flex',
         alignItems: 'center',
@@ -299,15 +340,15 @@ export const QuickTransactionModal: React.FC<QuickTransactionModalProps> = ({
     >
       <div 
         style={{
-          background: 'linear-gradient(145deg, #111522 0%, #0a0c13 100%)',
-          border: '1px solid rgba(212, 175, 55, 0.3)',
+          background: '#ffffff',
+          border: '1px solid #e2e8f0',
           borderRadius: '20px',
           width: '100%',
           maxWidth: '740px',
           maxHeight: '92vh',
           display: 'flex',
           flexDirection: 'column',
-          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.85), 0 0 40px rgba(212, 175, 55, 0.12)',
+          boxShadow: '0 25px 60px -15px rgba(0, 0, 0, 0.15)',
           overflow: 'hidden'
         }}
         onClick={e => e.stopPropagation()}
@@ -315,17 +356,17 @@ export const QuickTransactionModal: React.FC<QuickTransactionModalProps> = ({
         {/* Modal Top Header */}
         <div style={{
           padding: '1.25rem 1.5rem',
-          borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+          borderBottom: '1px solid #e2e8f0',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          background: 'rgba(255, 255, 255, 0.02)'
+          background: '#fafaf9'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
             <div style={{
               background: 'linear-gradient(135deg, rgba(212, 175, 55, 0.2) 0%, rgba(212, 175, 55, 0.05) 100%)',
               border: '1px solid rgba(212, 175, 55, 0.35)',
-              color: 'var(--zf-gold, #d4af37)',
+              color: '#946f23',
               padding: '0.65rem',
               borderRadius: '12px'
             }}>
@@ -333,13 +374,13 @@ export const QuickTransactionModal: React.FC<QuickTransactionModalProps> = ({
             </div>
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: '#ffffff' }}>
+                <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: '#0f172a' }}>
                   {isAr ? 'تسجيل قيد محاسبي / مصروف موقع جديد' : 'New General Journal Entry / Site Expense'}
                 </h3>
                 <span style={{
                   fontSize: '0.68rem',
                   fontWeight: 700,
-                  color: 'var(--zf-gold, #d4af37)',
+                  color: '#946f23',
                   background: 'rgba(212, 175, 55, 0.12)',
                   padding: '0.15rem 0.5rem',
                   borderRadius: '6px'
@@ -347,7 +388,7 @@ export const QuickTransactionModal: React.FC<QuickTransactionModalProps> = ({
                   {activePeriod.period_id}
                 </span>
               </div>
-              <p style={{ margin: '0.25rem 0 0', fontSize: '0.75rem', color: '#94a3b8' }}>
+              <p style={{ margin: '0.25rem 0 0', fontSize: '0.75rem', color: '#64748b' }}>
                 {isAr 
                   ? 'معالج توجيه القيود اليومية بنظام القيد المزدوج المحصن ضد التلاعب (GAAP / IFRS 15)'
                   : 'Direct double-entry ledger posting with project WIP cost allocation'}
@@ -358,9 +399,9 @@ export const QuickTransactionModal: React.FC<QuickTransactionModalProps> = ({
           <button 
             onClick={onClose}
             style={{
-              background: 'rgba(255, 255, 255, 0.05)',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
-              color: '#94a3b8',
+              background: '#ffffff',
+              border: '1px solid #cbd5e1',
+              color: '#64748b',
               borderRadius: '10px',
               padding: '0.5rem',
               cursor: 'pointer',
@@ -378,7 +419,7 @@ export const QuickTransactionModal: React.FC<QuickTransactionModalProps> = ({
         <div style={{
           display: 'grid',
           gridTemplateColumns: '1fr 1fr 1fr',
-          background: 'rgba(0, 0, 0, 0.25)',
+          background: '#f1f5f9',
           borderBottom: '1px solid rgba(255, 255, 255, 0.06)'
         }}>
           {[
@@ -402,8 +443,8 @@ export const QuickTransactionModal: React.FC<QuickTransactionModalProps> = ({
                   alignItems: 'center',
                   gap: '0.5rem',
                   cursor: 'pointer',
-                  borderBottom: isActive ? '2px solid var(--zf-gold, #d4af37)' : '2px solid transparent',
-                  background: isActive ? 'rgba(212, 175, 55, 0.08)' : 'transparent',
+                  background: isActive ? '#ffffff' : isCompleted ? '#f8fafc' : 'transparent',
+                  borderBottom: isActive ? '2.5px solid #946f23' : '2.5px solid transparent',
                   transition: 'all 0.2s ease'
                 }}
               >
@@ -424,7 +465,7 @@ export const QuickTransactionModal: React.FC<QuickTransactionModalProps> = ({
                 <span style={{
                   fontSize: '0.76rem',
                   fontWeight: isActive ? 800 : 600,
-                  color: isActive ? '#ffffff' : '#94a3b8'
+                  color: isActive ? '#946f23' : isCompleted ? '#059669' : '#64748b'
                 }}>
                   {isAr ? s.titleAr : s.titleEn}
                 </span>
@@ -441,7 +482,7 @@ export const QuickTransactionModal: React.FC<QuickTransactionModalProps> = ({
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
               {/* Transaction Type Segmented Cards */}
               <div>
-                <label style={{ display: 'block', fontSize: '0.76rem', fontWeight: 700, color: '#94a3b8', marginBottom: '0.5rem' }}>
+                <label style={{ display: 'block', fontSize: '0.76rem', fontWeight: 700, color: '#64748b', marginBottom: '0.5rem' }}>
                   {isAr ? 'اختر نوع المعاملة المالية المحاسبية:' : 'Select Transaction Category:'}
                 </label>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.75rem' }}>
@@ -473,10 +514,10 @@ export const QuickTransactionModal: React.FC<QuickTransactionModalProps> = ({
                         - صادر
                       </span>
                     </div>
-                    <span style={{ fontWeight: 800, fontSize: '0.85rem', color: '#ffffff' }}>
+                    <span style={{ fontWeight: 800, fontSize: '0.85rem', color: '#0f172a' }}>
                       {isAr ? 'مصروف موقع وإنشاءات' : 'Site Expense'}
                     </span>
-                    <span style={{ fontSize: '0.7rem', color: '#94a3b8' }}>
+                    <span style={{ fontSize: '0.7rem', color: '#64748b' }}>
                       {isAr ? 'مواد، مقاولات، أجور، تشطيب (WIP)' : 'Materials, Labor, Finishing (WIP)'}
                     </span>
                   </div>
@@ -509,10 +550,10 @@ export const QuickTransactionModal: React.FC<QuickTransactionModalProps> = ({
                         + وارد
                       </span>
                     </div>
-                    <span style={{ fontWeight: 800, fontSize: '0.85rem', color: '#ffffff' }}>
+                    <span style={{ fontWeight: 800, fontSize: '0.85rem', color: '#0f172a' }}>
                       {isAr ? 'ضخ تمويل رأسمالي' : 'Partner Capital'}
                     </span>
-                    <span style={{ fontSize: '0.7rem', color: '#94a3b8' }}>
+                    <span style={{ fontSize: '0.7rem', color: '#64748b' }}>
                       {isAr ? 'زيادة مساهمة ونقدية الشركاء' : 'Contributed Partner Capital'}
                     </span>
                   </div>
@@ -545,10 +586,10 @@ export const QuickTransactionModal: React.FC<QuickTransactionModalProps> = ({
                         + التزام
                       </span>
                     </div>
-                    <span style={{ fontWeight: 800, fontSize: '0.85rem', color: '#ffffff' }}>
+                    <span style={{ fontWeight: 800, fontSize: '0.85rem', color: '#0f172a' }}>
                       {isAr ? 'سلفة / تمويل خارجي' : 'Loan / Payable'}
                     </span>
-                    <span style={{ fontSize: '0.7rem', color: '#94a3b8' }}>
+                    <span style={{ fontSize: '0.7rem', color: '#64748b' }}>
                       {isAr ? 'قرض أو ائتمان مالي مستحق' : 'External Credit / Liability'}
                     </span>
                   </div>
@@ -566,54 +607,64 @@ export const QuickTransactionModal: React.FC<QuickTransactionModalProps> = ({
                 gap: '0.75rem'
               }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <label style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--zf-gold, #d4af37)' }}>
+                  <label style={{ fontSize: '0.8rem', fontWeight: 800, color: '#946f23' }}>
                     {isAr ? 'قيمة المبلغ المالي للحركة:' : 'Transaction Amount:'}
                   </label>
                   {amount && parseFloat(amount) > 0 && (
-                    <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#34d399', fontFamily: 'monospace' }}>
+                    <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#15803d', fontVariantNumeric: 'tabular-nums' }}>
                       {D(amount).formatEGP(isAr)}
                     </span>
                   )}
                 </div>
 
-                <div style={{ position: 'relative' }}>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  background: '#ffffff',
+                  border: '1.5px solid rgba(184, 144, 62, 0.45)',
+                  borderRadius: '12px',
+                  overflow: 'hidden',
+                  boxShadow: '0 2px 6px rgba(184, 144, 62, 0.08)'
+                }}>
                   <input
-                    type="number"
-                    step="any"
-                    min="1"
+                    type="text"
+                    inputMode="decimal"
                     value={amount}
-                    onChange={e => setAmount(e.target.value)}
+                    onChange={e => {
+                      const val = e.target.value.replace(/[^0-9.]/g, '');
+                      setAmount(val);
+                    }}
                     placeholder="0.00"
                     autoFocus
                     style={{
-                      width: '100%',
-                      background: 'rgba(0, 0, 0, 0.4)',
-                      border: '1px solid rgba(212, 175, 55, 0.4)',
-                      borderRadius: '12px',
-                      padding: '0.75rem 1rem',
-                      fontSize: '1.5rem',
-                      fontWeight: 800,
-                      color: 'var(--zf-gold, #d4af37)',
+                      flex: 1,
+                      border: 'none',
+                      padding: '0.75rem 1.15rem',
+                      fontSize: '1.6rem',
+                      fontWeight: 900,
+                      color: '#0f172a',
                       outline: 'none',
-                      fontFamily: 'monospace'
+                      fontVariantNumeric: 'tabular-nums',
+                      background: 'transparent'
                     }}
                   />
-                  <span style={{
-                    position: 'absolute',
-                    top: '50%',
-                    transform: 'translateY(-50%)',
-                    [isAr ? 'left' : 'right']: '1rem',
-                    fontSize: '0.9rem',
-                    color: '#94a3b8',
-                    fontWeight: 700
+                  <div style={{
+                    padding: '0.75rem 1.25rem',
+                    background: '#f8fafc',
+                    borderLeft: isAr ? '1px solid #e2e8f0' : 'none',
+                    borderRight: !isAr ? '1px solid #e2e8f0' : 'none',
+                    fontSize: '0.95rem',
+                    fontWeight: 800,
+                    color: '#946f23',
+                    flexShrink: 0
                   }}>
                     {isAr ? 'ج.م' : 'EGP'}
-                  </span>
+                  </div>
                 </div>
 
                 {/* Quick Add Chips */}
                 <div>
-                  <span style={{ fontSize: '0.7rem', color: '#94a3b8', display: 'block', marginBottom: '0.4rem' }}>
+                  <span style={{ fontSize: '0.7rem', color: '#64748b', display: 'block', marginBottom: '0.4rem' }}>
                     {isAr ? 'إضافة سريعة للمبلغ:' : 'Quick Add Amounts:'}
                   </span>
                   <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
@@ -623,15 +674,15 @@ export const QuickTransactionModal: React.FC<QuickTransactionModalProps> = ({
                         type="button"
                         onClick={() => handleAddQuickAmount(val)}
                         style={{
-                          background: 'rgba(255, 255, 255, 0.05)',
-                          border: '1px solid rgba(255, 255, 255, 0.1)',
-                          color: '#e2e8f0',
+                          background: '#ffffff',
+                          border: '1px solid #cbd5e1',
+                          color: '#334155',
                           borderRadius: '6px',
                           padding: '0.25rem 0.55rem',
                           fontSize: '0.7rem',
                           fontWeight: 700,
                           cursor: 'pointer',
-                          fontFamily: 'monospace',
+                          fontVariantNumeric: 'tabular-nums',
                           transition: 'all 0.15s ease'
                         }}
                       >
@@ -663,7 +714,7 @@ export const QuickTransactionModal: React.FC<QuickTransactionModalProps> = ({
               {/* Date Input */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                  <label style={{ fontSize: '0.76rem', fontWeight: 700, color: '#94a3b8' }}>
+                  <label style={{ fontSize: '0.76rem', fontWeight: 700, color: '#64748b' }}>
                     {isAr ? 'تاريخ المعاملة والحركة:' : 'Transaction Date:'}
                   </label>
                   <input
@@ -671,11 +722,11 @@ export const QuickTransactionModal: React.FC<QuickTransactionModalProps> = ({
                     value={entryDate}
                     onChange={e => setEntryDate(e.target.value)}
                     style={{
-                      background: 'rgba(255, 255, 255, 0.04)',
-                      border: '1px solid rgba(255, 255, 255, 0.1)',
+                      background: '#f8fafc',
+                      border: '1px solid #cbd5e1',
                       borderRadius: '8px',
                       padding: '0.55rem 0.75rem',
-                      color: '#ffffff',
+                      color: '#0f172a',
                       fontSize: '0.8rem',
                       outline: 'none',
                       colorScheme: 'dark'
@@ -684,7 +735,7 @@ export const QuickTransactionModal: React.FC<QuickTransactionModalProps> = ({
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                  <label style={{ fontSize: '0.76rem', fontWeight: 700, color: '#94a3b8' }}>
+                  <label style={{ fontSize: '0.76rem', fontWeight: 700, color: '#64748b' }}>
                     {isAr ? 'الفترة المحاسبية النشطة:' : 'Active Fiscal Period:'}
                   </label>
                   <div style={{
@@ -692,7 +743,7 @@ export const QuickTransactionModal: React.FC<QuickTransactionModalProps> = ({
                     border: '1px solid rgba(16, 185, 129, 0.25)',
                     borderRadius: '8px',
                     padding: '0.55rem 0.75rem',
-                    color: '#34d399',
+                    color: '#15803d',
                     fontSize: '0.8rem',
                     fontWeight: 700,
                     display: 'flex',
@@ -717,7 +768,7 @@ export const QuickTransactionModal: React.FC<QuickTransactionModalProps> = ({
                 <>
                   {/* Category Selection Cards */}
                   <div>
-                    <label style={{ display: 'block', fontSize: '0.76rem', fontWeight: 700, color: '#94a3b8', marginBottom: '0.5rem' }}>
+                    <label style={{ display: 'block', fontSize: '0.76rem', fontWeight: 700, color: '#64748b', marginBottom: '0.5rem' }}>
                       {isAr ? 'بند المصروف الإنشائي الرئيسي (دليل الحسابات COA):' : 'Main Construction WIP Category:'}
                     </label>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.65rem' }}>
@@ -745,9 +796,9 @@ export const QuickTransactionModal: React.FC<QuickTransactionModalProps> = ({
                                 {preset.mainCategory}
                               </span>
                               <span style={{
-                                fontFamily: 'monospace',
+                                fontVariantNumeric: 'tabular-nums',
                                 fontSize: '0.68rem',
-                                color: 'var(--zf-gold, #d4af37)',
+                                color: '#946f23',
                                 background: 'rgba(212, 175, 55, 0.12)',
                                 padding: '0.1rem 0.35rem',
                                 borderRadius: '4px'
@@ -755,7 +806,7 @@ export const QuickTransactionModal: React.FC<QuickTransactionModalProps> = ({
                                 [{preset.accountCode}]
                               </span>
                             </div>
-                            <span style={{ fontSize: '0.68rem', color: '#94a3b8', display: 'block', marginTop: '0.25rem' }}>
+                            <span style={{ fontSize: '0.68rem', color: '#64748b', display: 'block', marginTop: '0.25rem' }}>
                               {preset.descriptionAr}
                             </span>
                           </div>
@@ -766,7 +817,7 @@ export const QuickTransactionModal: React.FC<QuickTransactionModalProps> = ({
 
                   {/* Sub-Category Pills */}
                   <div>
-                    <label style={{ display: 'block', fontSize: '0.76rem', fontWeight: 700, color: '#94a3b8', marginBottom: '0.5rem' }}>
+                    <label style={{ display: 'block', fontSize: '0.76rem', fontWeight: 700, color: '#64748b', marginBottom: '0.5rem' }}>
                       {isAr ? 'البند الفرعي الميداني المباشر:' : 'Sub-Category:'}
                     </label>
                     <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
@@ -823,12 +874,12 @@ export const QuickTransactionModal: React.FC<QuickTransactionModalProps> = ({
                         style={{
                           width: '100%',
                           marginTop: '0.5rem',
-                          background: 'rgba(255, 255, 255, 0.04)',
+                          background: '#f8fafc',
                           border: '1px solid rgba(212, 175, 55, 0.4)',
                           borderRadius: '8px',
                           padding: '0.45rem 0.75rem',
                           fontSize: '0.78rem',
-                          color: '#ffffff',
+                          color: '#0f172a',
                           outline: 'none'
                         }}
                       />
@@ -837,31 +888,17 @@ export const QuickTransactionModal: React.FC<QuickTransactionModalProps> = ({
 
                   {/* Target Property Allocation */}
                   <div>
-                    <label style={{ display: 'block', fontSize: '0.76rem', fontWeight: 700, color: '#94a3b8', marginBottom: '0.4rem' }}>
+                    <label style={{ display: 'block', fontSize: '0.76rem', fontWeight: 700, color: '#64748b', marginBottom: '0.4rem' }}>
                       {isAr ? 'المشروع / العقار المستهدف (توجيه تكلفة الأعمال WIP):' : 'Target Project Allocation:'}
                     </label>
-                    <select
+                    <ZFCustomSelect 
                       value={selectedPropertyId}
-                      onChange={e => setSelectedPropertyId(e.target.value)}
-                      style={{
-                        width: '100%',
-                        background: 'rgba(255, 255, 255, 0.04)',
-                        border: '1px solid rgba(255, 255, 255, 0.1)',
-                        borderRadius: '8px',
-                        padding: '0.55rem 0.75rem',
-                        fontSize: '0.8rem',
-                        color: '#ffffff',
-                        outline: 'none',
-                        colorScheme: 'dark'
-                      }}
-                    >
-                      <option value="">{isAr ? '-- مصروف عام لكافة مواقع المشاريع (Overhead) --' : '-- General Project Overhead --'}</option>
-                      {properties?.map(p => (
-                        <option key={p.id} value={p.id}>
-                          {isAr ? p.title_ar : p.title_en} — ({p.location || (isAr ? 'الشيخ زايد' : 'Sheikh Zayed')})
-                        </option>
-                      ))}
-                    </select>
+                      onChange={setSelectedPropertyId}
+                      sections={targetPropertySections}
+                      placeholderAr="-- اختر المشروع المستهدف --"
+                      placeholderEn="-- Select Target Project --"
+                      isAr={isAr}
+                    />
                   </div>
                 </>
               )}
@@ -869,7 +906,7 @@ export const QuickTransactionModal: React.FC<QuickTransactionModalProps> = ({
               {/* PARTNER FUNDING BRANCH */}
               {transactionType === 'PARTNER_FUNDING' && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
-                  <label style={{ fontSize: '0.76rem', fontWeight: 700, color: '#94a3b8' }}>
+                  <label style={{ fontSize: '0.76rem', fontWeight: 700, color: '#64748b' }}>
                     {isAr ? 'اختر الشريك الممول لحساب رأس المال:' : 'Select Partner:'}
                   </label>
                   <select
@@ -877,12 +914,12 @@ export const QuickTransactionModal: React.FC<QuickTransactionModalProps> = ({
                     onChange={e => setSelectedPartnerName(e.target.value)}
                     style={{
                       width: '100%',
-                      background: 'rgba(255, 255, 255, 0.04)',
-                      border: '1px solid rgba(255, 255, 255, 0.1)',
+                      background: '#f8fafc',
+                      border: '1px solid #cbd5e1',
                       borderRadius: '8px',
                       padding: '0.55rem 0.75rem',
                       fontSize: '0.8rem',
-                      color: '#ffffff',
+                      color: '#0f172a',
                       outline: 'none',
                       colorScheme: 'dark'
                     }}
@@ -937,12 +974,12 @@ export const QuickTransactionModal: React.FC<QuickTransactionModalProps> = ({
                       value={customPartnerInput}
                       onChange={e => setCustomPartnerInput(e.target.value)}
                       style={{
-                        background: 'rgba(255, 255, 255, 0.04)',
+                        background: '#f8fafc',
                         border: '1px solid rgba(56, 189, 248, 0.4)',
                         borderRadius: '8px',
                         padding: '0.5rem 0.75rem',
                         fontSize: '0.78rem',
-                        color: '#ffffff',
+                        color: '#0f172a',
                         outline: 'none'
                       }}
                     />
@@ -953,7 +990,7 @@ export const QuickTransactionModal: React.FC<QuickTransactionModalProps> = ({
               {/* LOAN BRANCH */}
               {transactionType === 'LOAN' && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
-                  <label style={{ fontSize: '0.76rem', fontWeight: 700, color: '#94a3b8' }}>
+                  <label style={{ fontSize: '0.76rem', fontWeight: 700, color: '#64748b' }}>
                     {isAr ? 'اسم الجهة أو الشخص المقرض / الدائن:' : 'Lender / Creditor Name:'}
                   </label>
                   <input
@@ -962,12 +999,12 @@ export const QuickTransactionModal: React.FC<QuickTransactionModalProps> = ({
                     value={lenderName}
                     onChange={e => setLenderName(e.target.value)}
                     style={{
-                      background: 'rgba(255, 255, 255, 0.04)',
+                      background: '#f8fafc',
                       border: '1px solid rgba(245, 158, 11, 0.4)',
                       borderRadius: '8px',
                       padding: '0.55rem 0.75rem',
                       fontSize: '0.8rem',
-                      color: '#ffffff',
+                      color: '#0f172a',
                       outline: 'none'
                     }}
                   />
@@ -976,7 +1013,7 @@ export const QuickTransactionModal: React.FC<QuickTransactionModalProps> = ({
 
               {/* Funding Source / Payment Method (All Types) */}
               <div>
-                <label style={{ display: 'block', fontSize: '0.76rem', fontWeight: 700, color: '#94a3b8', marginBottom: '0.45rem' }}>
+                <label style={{ display: 'block', fontSize: '0.76rem', fontWeight: 700, color: '#64748b', marginBottom: '0.45rem' }}>
                   {transactionType === 'EXPENSE'
                     ? (isAr ? 'طريقة السداد وخروج النقدية:' : 'Payment Account Source:')
                     : (isAr ? 'حساب إيداع النقدية الواردة:' : 'Receiving Cash Account:')}
@@ -998,10 +1035,10 @@ export const QuickTransactionModal: React.FC<QuickTransactionModalProps> = ({
                   >
                     <Wallet size={18} color="#34d399" />
                     <div>
-                      <span style={{ fontWeight: 700, fontSize: '0.78rem', color: '#ffffff', display: 'block' }}>
+                      <span style={{ fontWeight: 700, fontSize: '0.78rem', color: '#0f172a', display: 'block' }}>
                         {isAr ? 'الخزينة النقدية (سداد نقدي باليد)' : 'Main Cash Safe (By Hand)'}
                       </span>
-                      <span style={{ fontFamily: 'monospace', fontSize: '0.66rem', color: '#94a3b8' }}>[101000]</span>
+                      <span style={{ fontVariantNumeric: 'tabular-nums', fontSize: '0.66rem', color: '#64748b' }}>[101000]</span>
                     </div>
                   </div>
 
@@ -1022,10 +1059,10 @@ export const QuickTransactionModal: React.FC<QuickTransactionModalProps> = ({
                     >
                       <CreditCard size={18} color="#fbbf24" />
                       <div>
-                        <span style={{ fontWeight: 700, fontSize: '0.78rem', color: '#ffffff', display: 'block' }}>
+                        <span style={{ fontWeight: 700, fontSize: '0.78rem', color: '#0f172a', display: 'block' }}>
                           {isAr ? 'آجل / موردين (A/P)' : 'Accounts Payable'}
                         </span>
-                        <span style={{ fontFamily: 'monospace', fontSize: '0.66rem', color: '#94a3b8' }}>[201000]</span>
+                        <span style={{ fontVariantNumeric: 'tabular-nums', fontSize: '0.66rem', color: '#64748b' }}>[201000]</span>
                       </div>
                     </div>
                   )}
@@ -1034,7 +1071,7 @@ export const QuickTransactionModal: React.FC<QuickTransactionModalProps> = ({
 
               {/* Memo & Invoices */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                <label style={{ fontSize: '0.76rem', fontWeight: 700, color: '#94a3b8' }}>
+                <label style={{ fontSize: '0.76rem', fontWeight: 700, color: '#64748b' }}>
                   {isAr ? 'البيان وملاحظات الفاتورة:' : 'Memo / Notes:'}
                 </label>
                 <input
@@ -1043,12 +1080,12 @@ export const QuickTransactionModal: React.FC<QuickTransactionModalProps> = ({
                   value={memo}
                   onChange={e => setMemo(e.target.value)}
                   style={{
-                    background: 'rgba(255, 255, 255, 0.04)',
-                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    background: '#f8fafc',
+                    border: '1px solid #cbd5e1',
                     borderRadius: '8px',
                     padding: '0.55rem 0.75rem',
                     fontSize: '0.78rem',
-                    color: '#ffffff',
+                    color: '#0f172a',
                     outline: 'none'
                   }}
                 />
@@ -1069,7 +1106,7 @@ export const QuickTransactionModal: React.FC<QuickTransactionModalProps> = ({
                 gap: '0.65rem'
               }}>
                 <Sparkles size={18} color="#34d399" />
-                <span style={{ fontSize: '0.78rem', color: '#e2e8f0', fontWeight: 600 }}>
+                <span style={{ fontSize: '0.78rem', color: '#334155', fontWeight: 600 }}>
                   {isAr 
                     ? 'المعاينة المحاسبية اللحظية: تم توليد القيد المزدوج المتوازن تلقائياً وفقاً لمعايير الحوكمة المالية.'
                     : 'Live double-entry preview: Automatically balanced according to financial governance rules.'}
@@ -1078,65 +1115,65 @@ export const QuickTransactionModal: React.FC<QuickTransactionModalProps> = ({
 
               {/* T-Account Review Card */}
               <div style={{
-                background: 'rgba(18, 22, 34, 0.9)',
-                border: '1px solid rgba(212, 175, 55, 0.35)',
+                background: '#ffffff',
+                border: '1.5px solid #e2e8f0',
                 borderRadius: '14px',
                 overflow: 'hidden',
-                boxShadow: '0 10px 30px rgba(0, 0, 0, 0.5)'
+                boxShadow: '0 4px 16px rgba(0, 0, 0, 0.04)'
               }}>
                 {/* Entry Header */}
                 <div style={{
                   padding: '0.85rem 1.15rem',
-                  borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+                  borderBottom: '1px solid #e2e8f0',
                   display: 'flex',
                   justifyContent: 'space-between',
                   alignItems: 'center',
-                  background: 'rgba(255, 255, 255, 0.02)'
+                  background: '#f8fafc'
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                     <FileCheck2 size={16} color="var(--zf-gold, #d4af37)" />
-                    <span style={{ fontFamily: 'monospace', fontWeight: 700, color: 'var(--zf-gold, #d4af37)', fontSize: '0.82rem' }}>
+                    <span style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 700, color: '#946f23', fontSize: '0.82rem' }}>
                       {previewEntry.entry_number}
                     </span>
                   </div>
-                  <span style={{ fontSize: '0.74rem', color: '#94a3b8' }}>
+                  <span style={{ fontSize: '0.74rem', color: '#64748b' }}>
                     {previewEntry.entry_date} — {activePeriod.period_id}
                   </span>
                 </div>
 
                 {/* Entry Description */}
-                <div style={{ padding: '0.75rem 1.15rem', fontSize: '0.82rem', color: '#ffffff', fontWeight: 600, borderBottom: '1px solid rgba(255, 255, 255, 0.06)' }}>
+                <div style={{ padding: '0.75rem 1.15rem', fontSize: '0.82rem', color: '#0f172a', fontWeight: 600, borderBottom: '1px solid rgba(255, 255, 255, 0.06)' }}>
                   {previewEntry.description}
                 </div>
 
                 {/* T-Account Table */}
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.78rem' }}>
                   <thead>
-                    <tr style={{ background: 'rgba(0, 0, 0, 0.3)', borderBottom: '1px solid rgba(255, 255, 255, 0.08)' }}>
-                      <th style={{ padding: '0.65rem 1.15rem', textAlign: isAr ? 'right' : 'left', color: '#94a3b8' }}>
+                    <tr style={{ background: '#f8fafc', borderBottom: '1.5px solid #e2e8f0' }}>
+                      <th style={{ padding: '0.65rem 1.15rem', textAlign: isAr ? 'right' : 'left', color: '#64748b' }}>
                         {isAr ? 'كود الحساب واسمه بالدفاتر' : 'Account & Title'}
                       </th>
-                      <th style={{ padding: '0.65rem 1.15rem', textAlign: isAr ? 'left' : 'right', color: '#38bdf8' }}>
+                      <th style={{ padding: '0.65rem 1.15rem', textAlign: isAr ? 'left' : 'right', color: '#15803d' }}>
                         {isAr ? 'مدين (DEBIT)' : 'Debit'}
                       </th>
-                      <th style={{ padding: '0.65rem 1.15rem', textAlign: isAr ? 'left' : 'right', color: '#a78bfa' }}>
+                      <th style={{ padding: '0.65rem 1.15rem', textAlign: isAr ? 'left' : 'right', color: '#0f172a' }}>
                         {isAr ? 'دائن (CREDIT)' : 'Credit'}
                       </th>
                     </tr>
                   </thead>
                   <tbody>
                     {/* Debit Line */}
-                    <tr style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.04)' }}>
+                    <tr style={{ borderBottom: '1px solid #f1f5f9', background: '#ffffff' }}>
                       <td style={{ padding: '0.75rem 1.15rem' }}>
-                        <span style={{ fontFamily: 'monospace', color: 'var(--zf-gold, #d4af37)', fontWeight: 800, marginRight: '0.35rem' }}>
+                        <span style={{ fontVariantNumeric: 'tabular-nums', color: '#946f23', fontWeight: 800, marginRight: '0.35rem' }}>
                           {previewEntry.debitAccount}
                         </span>
-                        <span style={{ color: '#ffffff', fontWeight: 600 }}>{previewEntry.debitTitle}</span>
-                        <span style={{ display: 'block', fontSize: '0.7rem', color: '#94a3b8', marginTop: '2px' }}>
+                        <span style={{ color: '#0f172a', fontWeight: 600 }}>{previewEntry.debitTitle}</span>
+                        <span style={{ display: 'block', fontSize: '0.7rem', color: '#64748b', marginTop: '2px' }}>
                           {transactionType === 'EXPENSE' ? 'زيادة في أصل وتكلفة المشروع (WIP)' : 'إيداع نقدي في السيولة'}
                         </span>
                       </td>
-                      <td style={{ padding: '0.75rem 1.15rem', textAlign: isAr ? 'left' : 'right', fontFamily: 'monospace', fontWeight: 800, color: '#38bdf8' }}>
+                      <td style={{ padding: '0.75rem 1.15rem', textAlign: isAr ? 'left' : 'right', fontVariantNumeric: 'tabular-nums', fontWeight: 800, color: '#0f172a' }}>
                         {D(previewEntry.amount).formatEGP(isAr)}
                       </td>
                       <td style={{ padding: '0.75rem 1.15rem', textAlign: isAr ? 'left' : 'right', color: '#475569' }}>
@@ -1145,33 +1182,33 @@ export const QuickTransactionModal: React.FC<QuickTransactionModalProps> = ({
                     </tr>
 
                     {/* Credit Line */}
-                    <tr>
+                    <tr style={{ background: '#fcfcfc' }}>
                       <td style={{ padding: '0.75rem 1.15rem' }}>
-                        <span style={{ fontFamily: 'monospace', color: 'var(--zf-gold, #d4af37)', fontWeight: 800, marginRight: '0.35rem' }}>
+                        <span style={{ fontVariantNumeric: 'tabular-nums', color: '#946f23', fontWeight: 800, marginRight: '0.35rem' }}>
                           {previewEntry.creditAccount}
                         </span>
-                        <span style={{ color: '#ffffff', fontWeight: 600 }}>{previewEntry.creditTitle}</span>
-                        <span style={{ display: 'block', fontSize: '0.7rem', color: '#94a3b8', marginTop: '2px' }}>
+                        <span style={{ color: '#0f172a', fontWeight: 600 }}>{previewEntry.creditTitle}</span>
+                        <span style={{ display: 'block', fontSize: '0.7rem', color: '#64748b', marginTop: '2px' }}>
                           {transactionType === 'EXPENSE' ? 'خروج نقدية من حساب الشركة' : 'إثبات مساهمة رأس مال الشريك'}
                         </span>
                       </td>
                       <td style={{ padding: '0.75rem 1.15rem', textAlign: isAr ? 'left' : 'right', color: '#475569' }}>
                         —
                       </td>
-                      <td style={{ padding: '0.75rem 1.15rem', textAlign: isAr ? 'left' : 'right', fontFamily: 'monospace', fontWeight: 800, color: '#a78bfa' }}>
+                      <td style={{ padding: '0.75rem 1.15rem', textAlign: isAr ? 'left' : 'right', fontVariantNumeric: 'tabular-nums', fontWeight: 800, color: '#15803d' }}>
                         {D(previewEntry.amount).formatEGP(isAr)}
                       </td>
                     </tr>
                   </tbody>
                   <tfoot>
-                    <tr style={{ background: 'rgba(0, 0, 0, 0.4)', borderTop: '1px solid rgba(255, 255, 255, 0.08)' }}>
-                      <td style={{ padding: '0.75rem 1.15rem', fontWeight: 700, color: '#94a3b8' }}>
+                    <tr style={{ background: '#ffffff', borderTop: '1px solid #e2e8f0' }}>
+                      <td style={{ padding: '0.75rem 1.15rem', fontWeight: 700, color: '#64748b' }}>
                         {isAr ? 'الإجمالي والتوازن:' : 'Totals & Balance:'}
                       </td>
-                      <td style={{ padding: '0.75rem 1.15rem', textAlign: isAr ? 'left' : 'right', fontFamily: 'monospace', fontWeight: 800, color: '#38bdf8' }}>
+                      <td style={{ padding: '0.75rem 1.15rem', textAlign: isAr ? 'left' : 'right', fontVariantNumeric: 'tabular-nums', fontWeight: 800, color: '#0f172a' }}>
                         {D(previewEntry.amount).formatEGP(isAr)}
                       </td>
-                      <td style={{ padding: '0.75rem 1.15rem', textAlign: isAr ? 'left' : 'right', fontFamily: 'monospace', fontWeight: 800, color: '#a78bfa' }}>
+                      <td style={{ padding: '0.75rem 1.15rem', textAlign: isAr ? 'left' : 'right', fontVariantNumeric: 'tabular-nums', fontWeight: 800, color: '#15803d' }}>
                         {D(previewEntry.amount).formatEGP(isAr)}
                       </td>
                     </tr>
@@ -1181,19 +1218,20 @@ export const QuickTransactionModal: React.FC<QuickTransactionModalProps> = ({
                 {/* Audit Pill */}
                 <div style={{
                   padding: '0.65rem 1.15rem',
-                  background: 'rgba(16, 185, 129, 0.1)',
+                  background: 'rgba(16, 185, 129, 0.08)',
+                  borderTop: '1px solid rgba(16, 185, 129, 0.2)',
                   display: 'flex',
                   justifyContent: 'space-between',
                   alignItems: 'center',
                   fontSize: '0.72rem',
-                  color: '#34d399',
+                  color: '#15803d',
                   fontWeight: 700
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
                     <CheckCircle2 size={13} />
                     <span>{isAr ? 'القيد متوازن تماماً (0.00 Delta)' : 'Double-entry balanced perfectly'}</span>
                   </div>
-                  <span style={{ color: '#94a3b8', fontFamily: 'monospace' }}>
+                  <span style={{ color: '#64748b', fontVariantNumeric: 'tabular-nums' }}>
                     {previewEntry.targetProp ? `المشروع: ${previewEntry.targetProp.title_ar || previewEntry.targetProp.title_en}` : (isAr ? 'مصروف عام' : 'General')}
                   </span>
                 </div>
@@ -1205,8 +1243,8 @@ export const QuickTransactionModal: React.FC<QuickTransactionModalProps> = ({
         {/* Modal Navigation Footer */}
         <div style={{
           padding: '1.1rem 1.5rem',
-          borderTop: '1px solid rgba(255, 255, 255, 0.08)',
-          background: 'rgba(255, 255, 255, 0.02)',
+          borderTop: '1px solid #e2e8f0',
+          background: '#f8fafc',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center'
@@ -1218,9 +1256,9 @@ export const QuickTransactionModal: React.FC<QuickTransactionModalProps> = ({
               onClick={() => setStep((s) => (s - 1) as 1 | 2)}
               disabled={isSubmitting}
               style={{
-                background: 'rgba(255, 255, 255, 0.05)',
-                border: '1px solid rgba(255, 255, 255, 0.12)',
-                color: '#cbd5e1',
+                background: '#ffffff',
+                border: '1px solid #cbd5e1',
+                color: '#334155',
                 borderRadius: '8px',
                 padding: '0.55rem 1rem',
                 fontSize: '0.78rem',
@@ -1242,8 +1280,8 @@ export const QuickTransactionModal: React.FC<QuickTransactionModalProps> = ({
               disabled={isSubmitting}
               style={{
                 background: 'transparent',
-                border: '1px solid rgba(255, 255, 255, 0.1)',
-                color: '#94a3b8',
+                border: '1px solid #cbd5e1',
+                color: '#64748b',
                 borderRadius: '8px',
                 padding: '0.55rem 1rem',
                 fontSize: '0.78rem',
@@ -1291,7 +1329,7 @@ export const QuickTransactionModal: React.FC<QuickTransactionModalProps> = ({
                 background: isSubmitting 
                   ? '#64748b' 
                   : 'linear-gradient(135deg, #059669 0%, #047857 100%)',
-                color: '#ffffff',
+                color: '#0f172a',
                 border: '1px solid rgba(16, 185, 129, 0.5)',
                 borderRadius: '8px',
                 padding: '0.6rem 1.65rem',

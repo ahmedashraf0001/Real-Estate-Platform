@@ -204,12 +204,12 @@ export const AccountLedgerModal: React.FC<AccountLedgerModalProps> = ({
   };
 
   const typeColorMap: Record<string, { bg: string; text: string; border: string }> = {
-    ASSET: { bg: 'rgba(16, 185, 129, 0.15)', text: '#34d399', border: 'rgba(16, 185, 129, 0.35)' },
-    LIABILITY: { bg: 'rgba(245, 158, 11, 0.15)', text: '#fbbf24', border: 'rgba(245, 158, 11, 0.35)' },
-    CONTRA_LIABILITY: { bg: 'rgba(239, 68, 68, 0.15)', text: '#f87171', border: 'rgba(239, 68, 68, 0.35)' },
-    EQUITY: { bg: 'rgba(99, 102, 241, 0.15)', text: '#818cf8', border: 'rgba(99, 102, 241, 0.35)' },
-    REVENUE: { bg: 'rgba(56, 189, 248, 0.15)', text: '#38bdf8', border: 'rgba(56, 189, 248, 0.35)' },
-    EXPENSE: { bg: 'rgba(168, 85, 247, 0.15)', text: '#c084fc', border: 'rgba(168, 85, 247, 0.35)' }
+    ASSET: { bg: '#f0fdf4', text: '#15803d', border: '#bbf7d0' },
+    LIABILITY: { bg: '#fffbeb', text: '#b45309', border: 'rgba(217, 119, 6, 0.25)' },
+    CONTRA_LIABILITY: { bg: '#fef2f2', text: '#dc2626', border: '#fecaca' },
+    EQUITY: { bg: '#f8fafc', text: '#946f23', border: 'rgba(184, 144, 62, 0.25)' },
+    REVENUE: { bg: '#f0fdf4', text: '#15803d', border: '#bbf7d0' },
+    EXPENSE: { bg: '#fffbeb', text: '#946f23', border: 'rgba(184, 144, 62, 0.25)' }
   };
 
   const colors = typeColorMap[account.account_type] || typeColorMap.ASSET;
@@ -220,8 +220,8 @@ export const AccountLedgerModal: React.FC<AccountLedgerModalProps> = ({
         position: 'fixed',
         inset: 0,
         zIndex: 9999,
-        background: 'rgba(5, 7, 12, 0.85)',
-        backdropFilter: 'blur(8px)',
+        background: 'rgba(15, 23, 42, 0.65)',
+        backdropFilter: 'blur(6px)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -233,15 +233,15 @@ export const AccountLedgerModal: React.FC<AccountLedgerModalProps> = ({
     >
       <div 
         style={{
-          background: 'linear-gradient(145deg, #111522 0%, #0a0c13 100%)',
-          border: '1px solid rgba(212, 175, 55, 0.25)',
+          background: '#ffffff',
+          border: '1px solid #e2e8f0',
           borderRadius: '20px',
           width: '100%',
           maxWidth: '860px',
           maxHeight: '90vh',
           display: 'flex',
           flexDirection: 'column',
-          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 40px rgba(212, 175, 55, 0.12)',
+          boxShadow: '0 25px 60px rgba(0, 0, 0, 0.15)',
           overflow: 'hidden'
         }}
         onClick={e => e.stopPropagation()}
@@ -249,11 +249,11 @@ export const AccountLedgerModal: React.FC<AccountLedgerModalProps> = ({
         {/* Modal Header */}
         <div style={{
           padding: '1.25rem 1.5rem',
-          borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+          borderBottom: '1px solid #e2e8f0',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          background: 'rgba(255, 255, 255, 0.02)'
+          background: '#f8fafc'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
             <div style={{
@@ -268,11 +268,12 @@ export const AccountLedgerModal: React.FC<AccountLedgerModalProps> = ({
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
                 <span style={{
-                  fontFamily: 'monospace',
+                  fontVariantNumeric: 'tabular-nums',
                   fontSize: '0.9rem',
                   fontWeight: 800,
-                  color: 'var(--zf-gold, #d4af37)',
-                  background: 'rgba(212, 175, 55, 0.12)',
+                  color: '#946f23',
+                  background: '#fffbeb',
+                  border: '1px solid rgba(184, 144, 62, 0.25)',
                   padding: '0.15rem 0.5rem',
                   borderRadius: '6px'
                 }}>
@@ -292,18 +293,18 @@ export const AccountLedgerModal: React.FC<AccountLedgerModalProps> = ({
                 <span style={{
                   fontSize: '0.72rem',
                   fontWeight: 700,
-                  color: '#94a3b8',
-                  background: 'rgba(255, 255, 255, 0.06)',
+                  color: '#475569',
+                  background: '#f1f5f9',
                   padding: '0.15rem 0.55rem',
                   borderRadius: '6px'
                 }}>
                   {account.normal_balance}
                 </span>
               </div>
-              <h2 style={{ margin: '0.35rem 0 0', fontSize: '1.25rem', fontWeight: 800, color: '#ffffff' }}>
+              <h2 style={{ margin: '0.35rem 0 0', fontSize: '1.25rem', fontWeight: 800, color: '#0f172a' }}>
                 {isAr ? account.account_name_ar : account.account_name_en}
               </h2>
-              <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
+              <span style={{ fontSize: '0.75rem', color: '#64748b' }}>
                 {isAr ? account.account_name_en : account.account_name_ar}
               </span>
             </div>
@@ -312,9 +313,9 @@ export const AccountLedgerModal: React.FC<AccountLedgerModalProps> = ({
           <button
             onClick={onClose}
             style={{
-              background: 'rgba(255, 255, 255, 0.06)',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
-              color: '#94a3b8',
+              background: '#ffffff',
+              border: '1px solid #cbd5e1',
+              color: '#64748b',
               borderRadius: '10px',
               padding: '0.5rem',
               cursor: 'pointer',
@@ -338,22 +339,23 @@ export const AccountLedgerModal: React.FC<AccountLedgerModalProps> = ({
           }}>
             {/* Net Balance Card */}
             <div style={{
-              background: 'rgba(255, 255, 255, 0.03)',
-              border: isPositive ? '1px solid rgba(16, 185, 129, 0.35)' : '1px solid rgba(255, 255, 255, 0.08)',
+              background: isPositive ? '#f0fdf4' : '#f8fafc',
+              border: isPositive ? '1px solid #bbf7d0' : '1px solid #e2e8f0',
               borderRadius: '14px',
               padding: '1rem',
               display: 'flex',
               flexDirection: 'column',
               gap: '0.3rem'
             }}>
-              <span style={{ fontSize: '0.72rem', color: '#94a3b8', fontWeight: 700 }}>
+              <span style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 700 }}>
                 {isAr ? 'الرصيد الدفتري الحالي (Net Balance)' : 'Current Ledger Balance'}
               </span>
               <div style={{
                 fontSize: '1.45rem',
-                fontWeight: 800,
-                fontFamily: 'monospace',
-                color: isZero ? '#94a3b8' : (isPositive ? '#34d399' : '#f87171'),
+                fontWeight: 900,
+                fontFamily: 'var(--font-sans), sans-serif',
+                fontVariantNumeric: 'tabular-nums',
+                color: isZero ? '#64748b' : (isPositive ? '#15803d' : '#dc2626'),
                 marginTop: '0.2rem'
               }}>
                 {netBalance.formatEGP(isAr)}
@@ -365,22 +367,22 @@ export const AccountLedgerModal: React.FC<AccountLedgerModalProps> = ({
 
             {/* Total Debits Card */}
             <div style={{
-              background: 'rgba(255, 255, 255, 0.03)',
-              border: '1px solid rgba(255, 255, 255, 0.08)',
+              background: '#f8fafc',
+              border: '1px solid #e2e8f0',
               borderRadius: '14px',
               padding: '1rem',
               display: 'flex',
               flexDirection: 'column',
               gap: '0.3rem'
             }}>
-              <span style={{ fontSize: '0.72rem', color: '#94a3b8', fontWeight: 700 }}>
+              <span style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 700 }}>
                 {isAr ? 'إجمالي الحركات المدينة (Σ Debits)' : 'Total Cumulative Debits'}
               </span>
               <div style={{
                 fontSize: '1.25rem',
                 fontWeight: 800,
-                fontFamily: 'monospace',
-                color: '#38bdf8',
+                fontVariantNumeric: 'tabular-nums',
+                color: '#0f172a',
                 marginTop: '0.2rem'
               }}>
                 {totalDebits.formatEGP(isAr)}
@@ -392,22 +394,22 @@ export const AccountLedgerModal: React.FC<AccountLedgerModalProps> = ({
 
             {/* Total Credits Card */}
             <div style={{
-              background: 'rgba(255, 255, 255, 0.03)',
-              border: '1px solid rgba(255, 255, 255, 0.08)',
+              background: '#f8fafc',
+              border: '1px solid #e2e8f0',
               borderRadius: '14px',
               padding: '1rem',
               display: 'flex',
               flexDirection: 'column',
               gap: '0.3rem'
             }}>
-              <span style={{ fontSize: '0.72rem', color: '#94a3b8', fontWeight: 700 }}>
+              <span style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 700 }}>
                 {isAr ? 'إجمالي الحركات الدائنة (Σ Credits)' : 'Total Cumulative Credits'}
               </span>
               <div style={{
                 fontSize: '1.25rem',
                 fontWeight: 800,
-                fontFamily: 'monospace',
-                color: '#a78bfa',
+                fontVariantNumeric: 'tabular-nums',
+                color: '#15803d',
                 marginTop: '0.2rem'
               }}>
                 {totalCredits.formatEGP(isAr)}
@@ -420,21 +422,21 @@ export const AccountLedgerModal: React.FC<AccountLedgerModalProps> = ({
 
           {/* Business Explanation Card */}
           <div style={{
-            background: 'rgba(212, 175, 55, 0.06)',
-            border: '1px solid rgba(212, 175, 55, 0.25)',
+            background: '#fffbeb',
+            border: '1px solid rgba(184, 144, 62, 0.25)',
             borderRadius: '14px',
             padding: '1.1rem',
             display: 'flex',
             flexDirection: 'column',
             gap: '0.75rem'
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--zf-gold, #d4af37)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#946f23' }}>
               <BookOpen size={16} />
               <h4 style={{ margin: 0, fontSize: '0.85rem', fontWeight: 800 }}>
                 {isAr ? 'الوظيفة والدور المحاسبي في التطوير العقاري:' : 'Real Estate Accounting Function:'}
               </h4>
             </div>
-            <p style={{ margin: 0, fontSize: '0.82rem', color: '#e2e8f0', lineHeight: 1.6 }}>
+            <p style={{ margin: 0, fontSize: '0.82rem', color: '#475569', lineHeight: 1.6 }}>
               {isAr ? explanation.roleAr : explanation.roleEn}
             </p>
 
@@ -443,14 +445,14 @@ export const AccountLedgerModal: React.FC<AccountLedgerModalProps> = ({
               gridTemplateColumns: '1fr 1fr',
               gap: '0.75rem',
               paddingTop: '0.5rem',
-              borderTop: '1px solid rgba(212, 175, 55, 0.15)'
+              borderTop: '1px solid rgba(184, 144, 62, 0.2)'
             }}>
-              <div style={{ fontSize: '0.75rem', color: '#cbd5e1' }}>
-                <span style={{ color: '#38bdf8', fontWeight: 700 }}>{isAr ? 'متى يكون مديناً؟ ' : 'When Debited: '}</span>
+              <div style={{ fontSize: '0.75rem', color: '#334155' }}>
+                <span style={{ color: '#0f172a', fontWeight: 700 }}>{isAr ? 'متى يكون مديناً؟ ' : 'When Debited: '}</span>
                 <span>{isAr ? explanation.whenDebitedAr : 'Increases / Debited on inflows.'}</span>
               </div>
-              <div style={{ fontSize: '0.75rem', color: '#cbd5e1' }}>
-                <span style={{ color: '#a78bfa', fontWeight: 700 }}>{isAr ? 'متى يكون دائناً؟ ' : 'When Credited: '}</span>
+              <div style={{ fontSize: '0.75rem', color: '#334155' }}>
+                <span style={{ color: '#15803d', fontWeight: 700 }}>{isAr ? 'متى يكون دائناً؟ ' : 'When Credited: '}</span>
                 <span>{isAr ? explanation.whenCreditedAr : 'Decreases / Credited on outflows.'}</span>
               </div>
             </div>
@@ -461,14 +463,15 @@ export const AccountLedgerModal: React.FC<AccountLedgerModalProps> = ({
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <FileText size={16} color="var(--zf-gold, #d4af37)" />
-                <h3 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 800, color: '#ffffff' }}>
+                <h3 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 800, color: '#0f172a' }}>
                   {isAr ? 'كشف حساب الحركات والقيود المرحلة (Account Statement)' : 'Account Statement Transactions'}
                 </h3>
               </div>
               <span style={{
                 fontSize: '0.72rem',
-                color: 'var(--zf-gold, #d4af37)',
-                background: 'rgba(212, 175, 55, 0.12)',
+                color: '#946f23',
+                background: '#fffbeb',
+                border: '1px solid rgba(184, 144, 62, 0.25)',
                 padding: '0.2rem 0.55rem',
                 borderRadius: '6px',
                 fontWeight: 700
@@ -481,8 +484,8 @@ export const AccountLedgerModal: React.FC<AccountLedgerModalProps> = ({
               <div style={{
                 padding: '2.5rem 1.5rem',
                 textAlign: 'center',
-                background: 'rgba(255, 255, 255, 0.02)',
-                border: '1px dashed rgba(255, 255, 255, 0.1)',
+                background: '#f8fafc',
+                border: '1px dashed #cbd5e1',
                 borderRadius: '12px',
                 color: '#64748b',
                 fontSize: '0.82rem'
@@ -493,24 +496,24 @@ export const AccountLedgerModal: React.FC<AccountLedgerModalProps> = ({
               </div>
             ) : (
               <div style={{
-                border: '1px solid rgba(255, 255, 255, 0.08)',
+                border: '1px solid #e2e8f0',
                 borderRadius: '12px',
                 overflow: 'hidden',
-                background: 'rgba(255, 255, 255, 0.02)'
+                background: '#ffffff'
               }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.78rem' }}>
                   <thead>
-                    <tr style={{ background: 'rgba(255, 255, 255, 0.04)', borderBottom: '1px solid rgba(255, 255, 255, 0.08)' }}>
-                      <th style={{ padding: '0.65rem 0.85rem', textAlign: isAr ? 'right' : 'left', color: '#94a3b8' }}>
+                    <tr style={{ background: '#f8fafc', borderBottom: '1.5px solid #e2e8f0' }}>
+                      <th style={{ padding: '0.65rem 0.85rem', textAlign: isAr ? 'right' : 'left', color: '#64748b' }}>
                         {isAr ? 'التاريخ ورقم القيد' : 'Date & Entry #'}
                       </th>
-                      <th style={{ padding: '0.65rem 0.85rem', textAlign: isAr ? 'right' : 'left', color: '#94a3b8' }}>
+                      <th style={{ padding: '0.65rem 0.85rem', textAlign: isAr ? 'right' : 'left', color: '#64748b' }}>
                         {isAr ? 'بيان وشرح الحركة' : 'Description & Memo'}
                       </th>
-                      <th style={{ padding: '0.65rem 0.85rem', textAlign: isAr ? 'left' : 'right', color: '#38bdf8' }}>
+                      <th style={{ padding: '0.65rem 0.85rem', textAlign: isAr ? 'left' : 'right', color: '#0f172a' }}>
                         {isAr ? 'مدين (Debit)' : 'Debit'}
                       </th>
-                      <th style={{ padding: '0.65rem 0.85rem', textAlign: isAr ? 'left' : 'right', color: '#a78bfa' }}>
+                      <th style={{ padding: '0.65rem 0.85rem', textAlign: isAr ? 'left' : 'right', color: '#15803d' }}>
                         {isAr ? 'دائن (Credit)' : 'Credit'}
                       </th>
                     </tr>
@@ -524,30 +527,30 @@ export const AccountLedgerModal: React.FC<AccountLedgerModalProps> = ({
                         <tr 
                           key={`${line.entry_id}-${idx}`}
                           style={{
-                            borderBottom: idx < accountLines.length - 1 ? '1px solid rgba(255, 255, 255, 0.04)' : 'none',
-                            background: idx % 2 === 0 ? 'transparent' : 'rgba(255, 255, 255, 0.01)'
+                            borderBottom: '1px solid #f1f5f9',
+                            background: idx % 2 === 0 ? '#ffffff' : '#f8fafc'
                           }}
                         >
                           <td style={{ padding: '0.75rem 0.85rem' }}>
-                            <div style={{ fontSize: '0.72rem', color: '#94a3b8' }}>{line.entry_date}</div>
-                            <div style={{ fontFamily: 'monospace', fontWeight: 700, color: 'var(--zf-gold, #d4af37)', fontSize: '0.76rem', marginTop: '2px' }}>
+                            <div style={{ fontSize: '0.72rem', color: '#64748b' }}>{line.entry_date}</div>
+                            <div style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 700, color: '#946f23', fontSize: '0.76rem', marginTop: '2px' }}>
                               {line.entry_number}
                             </div>
                           </td>
                           <td style={{ padding: '0.75rem 0.85rem' }}>
-                            <div style={{ fontWeight: 600, color: '#ffffff' }}>
+                            <div style={{ fontWeight: 600, color: '#0f172a' }}>
                               {localizeJournalDescription(line.description, isAr)}
                             </div>
                             {line.memo && (
-                              <div style={{ fontSize: '0.7rem', color: '#94a3b8', marginTop: '2px' }}>
+                              <div style={{ fontSize: '0.7rem', color: '#64748b', marginTop: '2px' }}>
                                 ↳ {localizeJournalMemo(line.memo, isAr)}
                               </div>
                             )}
                           </td>
-                          <td style={{ padding: '0.75rem 0.85rem', textAlign: isAr ? 'left' : 'right', fontFamily: 'monospace', fontWeight: 700, color: hasDebit ? '#38bdf8' : '#475569' }}>
+                          <td style={{ padding: '0.75rem 0.85rem', textAlign: isAr ? 'left' : 'right', fontVariantNumeric: 'tabular-nums', fontWeight: 700, color: hasDebit ? '#0f172a' : '#94a3b8' }}>
                             {hasDebit ? D(line.debit_amount).formatEGP(isAr) : '—'}
                           </td>
-                          <td style={{ padding: '0.75rem 0.85rem', textAlign: isAr ? 'left' : 'right', fontFamily: 'monospace', fontWeight: 700, color: hasCredit ? '#a78bfa' : '#475569' }}>
+                          <td style={{ padding: '0.75rem 0.85rem', textAlign: isAr ? 'left' : 'right', fontVariantNumeric: 'tabular-nums', fontWeight: 700, color: hasCredit ? '#15803d' : '#94a3b8' }}>
                             {hasCredit ? D(line.credit_amount).formatEGP(isAr) : '—'}
                           </td>
                         </tr>
@@ -563,8 +566,8 @@ export const AccountLedgerModal: React.FC<AccountLedgerModalProps> = ({
         {/* Modal Footer */}
         <div style={{
           padding: '1rem 1.5rem',
-          borderTop: '1px solid rgba(255, 255, 255, 0.08)',
-          background: 'rgba(255, 255, 255, 0.02)',
+          borderTop: '1px solid #e2e8f0',
+          background: '#f8fafc',
           display: 'flex',
           justifyContent: 'flex-end'
         }}>

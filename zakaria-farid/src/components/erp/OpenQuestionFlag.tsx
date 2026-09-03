@@ -36,15 +36,15 @@ export const OpenQuestionFlag: React.FC<OpenQuestionFlagProps> = ({
           display: 'inline-flex',
           alignItems: 'center',
           gap: '0.25rem',
-          background: 'rgba(245, 158, 11, 0.15)',
-          color: '#fbbf24',
-          border: '1px solid rgba(245, 158, 11, 0.35)',
-          borderRadius: '4px',
-          padding: '0.15rem 0.4rem',
-          fontSize: '0.7rem',
-          fontWeight: 700,
+          background: '#fffbeb',
+          color: '#b45309',
+          border: '1px solid rgba(217, 119, 6, 0.35)',
+          borderRadius: '6px',
+          padding: '0.18rem 0.45rem',
+          fontSize: '0.72rem',
+          fontWeight: 800,
           cursor: 'pointer',
-          fontFamily: 'monospace'
+          fontVariantNumeric: 'tabular-nums'
         }}
         title={`${questionId}: ${summary}`}
       >
@@ -62,26 +62,26 @@ export const OpenQuestionFlag: React.FC<OpenQuestionFlagProps> = ({
             right: isAr ? '0' : undefined,
             marginBottom: '0.4rem',
             width: '260px',
-            background: 'var(--zf-bg-panel-raised, #171c2b)',
-            border: '1px solid var(--zf-border-hairline, rgba(212, 175, 55, 0.25))',
-            borderRadius: '8px',
-            padding: '0.65rem 0.85rem',
-            boxShadow: '0 10px 25px rgba(0,0,0,0.8)',
+            background: '#ffffff',
+            border: '1px solid #e2e8f0',
+            borderRadius: '10px',
+            padding: '0.75rem 0.95rem',
+            boxShadow: '0 10px 25px rgba(0, 0, 0, 0.08)',
             zIndex: 100,
             fontSize: '0.75rem',
             pointerEvents: 'none'
           }}
         >
-          <div style={{ fontWeight: 700, color: '#fbbf24', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+          <div style={{ fontWeight: 800, color: '#b45309', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
             <AlertTriangle size={12} />
             <span>{isAr ? `مسألة معلقة ${questionId}` : `Open Question ${questionId}`}</span>
           </div>
-          <div style={{ color: 'var(--zf-text-primary, #eef0f4)', marginTop: '0.25rem', lineHeight: 1.3 }}>
+          <div style={{ color: '#0f172a', marginTop: '0.3rem', lineHeight: 1.4, fontWeight: 500 }}>
             {summary}
           </div>
           {interimDefault && (
-            <div style={{ color: 'var(--zf-text-muted, #6b7086)', marginTop: '0.35rem', fontSize: '0.7rem' }}>
-              <strong>{isAr ? 'الإجراء المؤقت:' : 'Interim Default:'}</strong> {interimDefault}
+            <div style={{ color: '#64748b', marginTop: '0.4rem', fontSize: '0.7rem', borderTop: '1px dashed #e2e8f0', paddingTop: '0.35rem' }}>
+              <strong style={{ color: '#334155' }}>{isAr ? 'الإجراء المؤقت:' : 'Interim Default:'}</strong> {interimDefault}
             </div>
           )}
         </div>

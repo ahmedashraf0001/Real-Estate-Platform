@@ -261,14 +261,14 @@ export const OpenQuestionsConsole: React.FC<OpenQuestionsConsoleProps> = ({
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', direction: isAr ? 'rtl' : 'ltr', textAlign: isAr ? 'right' : 'left' }}>
       {/* Header */}
-      <div style={{ background: 'var(--zf-bg-panel, #121622)', border: '1px solid var(--zf-border-hairline, rgba(212, 175, 55, 0.12))', borderRadius: '16px', padding: '1.5rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', color: 'var(--zf-gold, #d4af37)' }}>
+      <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '16px', padding: '1.5rem', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', color: '#946f23' }}>
           <AlertTriangle size={20} />
-          <h2 style={{ margin: 0, fontSize: '1.3rem', fontWeight: 800, color: '#ffffff' }}>
+          <h2 style={{ margin: 0, fontSize: '1.3rem', fontWeight: 900, color: '#0f172a' }}>
             {isAr ? 'لوحة المسائل المفتوحة والحوكمة القانونية (OPEN_QUESTIONS.md)' : 'Open Questions & Statutory Gating Console'}
           </h2>
         </div>
-        <p style={{ margin: '0.4rem 0 0 0', fontSize: '0.85rem', color: 'var(--zf-text-secondary, #a7acc0)' }}>
+        <p style={{ margin: '0.4rem 0 0 0', fontSize: '0.85rem', color: '#475569' }}>
           {isAr 
             ? 'سجل الحوكمة الصارمة: منع الاجتهاد البرمجي والتخمين الافتراضي في المسائل المالية والقانونية الجوهرية (UI_BUILD.md §5.5).'
             : 'Operational Boundary Register: Eliminating silent assumptions and plausible-sounding guesses on critical financial & statutory logic.'}
@@ -276,47 +276,47 @@ export const OpenQuestionsConsole: React.FC<OpenQuestionsConsoleProps> = ({
 
         {/* 5 Core Architectural Boundaries Callout Grid */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0.75rem', marginTop: '1rem' }}>
-          <div style={{ background: 'rgba(0, 0, 0, 0.35)', border: '1px solid rgba(255, 255, 255, 0.06)', borderRadius: '10px', padding: '0.75rem' }}>
-            <div style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--zf-gold, #d4af37)' }}>
+          <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '0.75rem' }}>
+            <div style={{ fontSize: '0.75rem', fontWeight: 800, color: '#946f23' }}>
               {isAr ? '١. استئصال الاختراع الصامت' : '1. Zero Silent Invention'}
             </div>
-            <div style={{ fontSize: '0.7rem', color: 'var(--zf-text-secondary, #a7acc0)', marginTop: '0.2rem' }}>
+            <div style={{ fontSize: '0.7rem', color: '#64748b', marginTop: '0.2rem' }}>
               {isAr ? 'لا تخمين للنسب أو الحسابات؛ يُسجل الفارق فوراً كمسألة معلقة.' : 'Ambiguity halts code. No AI or engineer guessing on COA or tax rates.'}
             </div>
           </div>
 
-          <div style={{ background: 'rgba(0, 0, 0, 0.35)', border: '1px solid rgba(255, 255, 255, 0.06)', borderRadius: '10px', padding: '0.75rem' }}>
-            <div style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--zf-state-open, #4fd1c5)' }}>
+          <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '0.75rem' }}>
+            <div style={{ fontSize: '0.75rem', fontWeight: 800, color: '#0f172a' }}>
               {isAr ? '٢. عزل المعوقات دون تعطيل' : '2. Quarantined Blockers'}
             </div>
-            <div style={{ fontSize: '0.7rem', color: 'var(--zf-text-secondary, #a7acc0)', marginTop: '0.2rem' }}>
+            <div style={{ fontSize: '0.7rem', color: '#64748b', marginTop: '0.2rem' }}>
               {isAr ? 'حجر الحالات الشائكة مؤقتاً مع مواصلة بناء بقية المنظومة.' : 'Isolates blocked sub-tasks while unaffected modules run smoothly.'}
             </div>
           </div>
 
-          <div style={{ background: 'rgba(0, 0, 0, 0.35)', border: '1px solid rgba(255, 255, 255, 0.06)', borderRadius: '10px', padding: '0.75rem' }}>
-            <div style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--zf-state-defaulted, #eb5757)' }}>
+          <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '0.75rem' }}>
+            <div style={{ fontSize: '0.75rem', fontWeight: 800, color: '#dc2626' }}>
               {isAr ? '٣. تعثر صريح (Hard Fail)' : '3. Hard-Failing Stubs'}
             </div>
-            <div style={{ fontSize: '0.7rem', color: 'var(--zf-text-secondary, #a7acc0)', marginTop: '0.2rem' }}>
+            <div style={{ fontSize: '0.7rem', color: '#64748b', marginTop: '0.2rem' }}>
               {isAr ? 'استدعاء المسارات غير المحسومة يطلق خطأ نظامياً صريحاً.' : 'Throws explicit invariant errors instead of dangerous silent fallbacks.'}
             </div>
           </div>
 
-          <div style={{ background: 'rgba(0, 0, 0, 0.35)', border: '1px solid rgba(255, 255, 255, 0.06)', borderRadius: '10px', padding: '0.75rem' }}>
-            <div style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--zf-flag-legal, #ff8a3d)' }}>
+          <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '0.75rem' }}>
+            <div style={{ fontSize: '0.75rem', fontWeight: 800, color: '#b45309' }}>
               {isAr ? '٤. فصل الملكية القانونية' : '4. Legal / Business Ownership'}
             </div>
-            <div style={{ fontSize: '0.7rem', color: 'var(--zf-text-secondary, #a7acc0)', marginTop: '0.2rem' }}>
+            <div style={{ fontSize: '0.7rem', color: '#64748b', marginTop: '0.2rem' }}>
               {isAr ? 'السياسات العقارية والضريبية حصرياً بيد أصحاب المصلحة.' : 'Engineers implement rules; human CFO/counsel sets statutory policy.'}
             </div>
           </div>
 
-          <div style={{ background: 'rgba(0, 0, 0, 0.35)', border: '1px solid rgba(255, 255, 255, 0.06)', borderRadius: '10px', padding: '0.75rem' }}>
-            <div style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--zf-state-paid, #6fcf97)' }}>
+          <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '0.75rem' }}>
+            <div style={{ fontSize: '0.75rem', fontWeight: 800, color: '#15803d' }}>
               {isAr ? '٥. مسار رقابي موثق' : '5. Traceable Audit Trail'}
             </div>
-            <div style={{ fontSize: '0.7rem', color: 'var(--zf-text-secondary, #a7acc0)', marginTop: '0.2rem' }}>
+            <div style={{ fontSize: '0.7rem', color: '#64748b', marginTop: '0.2rem' }}>
               {isAr ? 'الإغلاق يتم فقط بقرار رسمي موثق يُعدل المواصفة.' : 'Closed only via explicit business directive, permanently verifiable.'}
             </div>
           </div>
@@ -338,11 +338,12 @@ export const OpenQuestionsConsole: React.FC<OpenQuestionsConsoleProps> = ({
             <div 
               key={q.id}
               style={{
-                background: 'var(--zf-bg-panel, #121622)',
-                border: isExpanded ? '1px solid var(--zf-gold, #d4af37)' : '1px solid var(--zf-border-hairline, rgba(212, 175, 55, 0.12))',
+                background: '#ffffff',
+                border: isExpanded ? '1.5px solid #946f23' : '1px solid #e2e8f0',
                 borderRadius: '12px',
                 overflow: 'hidden',
-                transition: 'all 0.2s ease'
+                transition: 'all 0.2s ease',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.03)'
               }}
             >
               <div 
@@ -353,24 +354,25 @@ export const OpenQuestionsConsole: React.FC<OpenQuestionsConsoleProps> = ({
                   justifyContent: 'space-between',
                   alignItems: 'center',
                   cursor: 'pointer',
-                  background: isExpanded ? 'rgba(212, 175, 55, 0.04)' : 'transparent'
+                  background: isExpanded ? 'rgba(148, 111, 35, 0.04)' : 'transparent'
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                   <span 
                     style={{ 
-                      fontFamily: 'monospace', 
+                      fontVariantNumeric: 'tabular-nums', 
                       fontSize: '0.85rem', 
                       fontWeight: 800, 
-                      color: isClosed ? 'var(--zf-state-paid, #6fcf97)' : '#fbbf24',
-                      background: isClosed ? 'rgba(111, 207, 151, 0.12)' : 'rgba(245, 158, 11, 0.12)',
+                      color: isClosed ? '#15803d' : '#b45309',
+                      background: isClosed ? '#f0fdf4' : '#fffbeb',
+                      border: isClosed ? '1px solid #bbf7d0' : '1px solid rgba(217, 119, 6, 0.3)',
                       padding: '0.2rem 0.5rem',
                       borderRadius: '6px'
                     }}
                   >
                     {q.id}
                   </span>
-                  <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 700, color: '#ffffff' }}>
+                  <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 800, color: '#0f172a' }}>
                     {title}
                   </h4>
                 </div>
@@ -379,60 +381,60 @@ export const OpenQuestionsConsole: React.FC<OpenQuestionsConsoleProps> = ({
                   <span 
                     style={{
                       fontSize: '0.7rem',
-                      fontWeight: 700,
+                      fontWeight: 800,
                       textTransform: 'uppercase',
-                      color: isClosed ? 'var(--zf-state-paid, #6fcf97)' : '#fbbf24',
-                      background: isClosed ? 'rgba(111, 207, 151, 0.1)' : 'rgba(245, 158, 11, 0.1)',
+                      color: isClosed ? '#15803d' : '#b45309',
+                      background: isClosed ? '#f0fdf4' : '#fffbeb',
                       padding: '0.2rem 0.55rem',
                       borderRadius: '9999px',
-                      border: `1px solid ${isClosed ? 'rgba(111, 207, 151, 0.3)' : 'rgba(245, 158, 11, 0.3)'}`
+                      border: `1px solid ${isClosed ? '#bbf7d0' : 'rgba(217, 119, 6, 0.3)'}`
                     }}
                   >
                     {isClosed ? (isAr ? 'محسوم' : 'CLOSED') : (isAr ? 'معلق قيد الحسم' : 'OPEN')}
                   </span>
-                  {isExpanded ? <ChevronUp size={16} color="#9ca3af" /> : <ChevronDown size={16} color="#9ca3af" />}
+                  {isExpanded ? <ChevronUp size={16} color="#64748b" /> : <ChevronDown size={16} color="#64748b" />}
                 </div>
               </div>
 
               {isExpanded && (
-                <div style={{ padding: '1.25rem', borderTop: '1px solid rgba(255,255,255,0.06)', display: 'flex', flexDirection: 'column', gap: '1rem', fontSize: '0.85rem' }}>
+                <div style={{ padding: '1.25rem', borderTop: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '1rem', fontSize: '0.85rem' }}>
                   <div>
-                    <div style={{ color: 'var(--zf-text-muted, #6b7086)', fontSize: '0.75rem', textTransform: 'uppercase' }}>
+                    <div style={{ color: '#64748b', fontSize: '0.75rem', textTransform: 'uppercase', fontWeight: 700 }}>
                       {isAr ? 'البيان والمسألة المطروحة:' : 'Detailed Question:'}
                     </div>
-                    <div style={{ color: 'var(--zf-text-primary, #eef0f4)', marginTop: '0.25rem', lineHeight: 1.5 }}>
+                    <div style={{ color: '#0f172a', marginTop: '0.25rem', lineHeight: 1.5, fontWeight: 500 }}>
                       {desc}
                     </div>
                   </div>
 
-                  <div style={{ background: 'rgba(0,0,0,0.3)', padding: '0.85rem', borderRadius: '8px' }}>
-                    <div style={{ color: 'var(--zf-gold, #d4af37)', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase' }}>
+                  <div style={{ background: '#fffbeb', border: '1px solid rgba(217, 119, 6, 0.25)', padding: '0.85rem', borderRadius: '8px' }}>
+                    <div style={{ color: '#946f23', fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase' }}>
                       {isAr ? 'الإجراء المؤقت المطبق بالنظام حالياً (Interim Default):' : 'Active Interim Default in System:'}
                     </div>
-                    <div style={{ color: '#ffffff', marginTop: '0.25rem', fontWeight: 600, lineHeight: 1.4 }}>
+                    <div style={{ color: '#78350f', marginTop: '0.25rem', fontWeight: 700, lineHeight: 1.4 }}>
                       {interim}
                     </div>
-                    <div style={{ color: 'var(--zf-text-muted, #6b7086)', fontSize: '0.72rem', marginTop: '0.25rem' }}>
+                    <div style={{ color: '#92400e', fontSize: '0.72rem', marginTop: '0.25rem' }}>
                       {isAr ? 'المرجع بالمواصفة:' : 'Spec Citation:'} {q.specCitation}
                     </div>
                   </div>
 
                   <div>
-                    <div style={{ color: 'var(--zf-text-muted, #6b7086)', fontSize: '0.75rem', textTransform: 'uppercase', marginBottom: '0.35rem' }}>
+                    <div style={{ color: '#64748b', fontSize: '0.75rem', textTransform: 'uppercase', marginBottom: '0.35rem', fontWeight: 700 }}>
                       {isAr ? 'الخيارات المعروضة على الإدارة القانونية والمالية:' : 'Proposed Options for Stakeholder Resolution:'}
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
                       {options.map((opt, idx) => (
-                        <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: 'var(--zf-text-secondary, #a7acc0)' }}>
-                          <span style={{ color: 'var(--zf-gold, #d4af37)' }}>•</span>
+                        <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#334155' }}>
+                          <span style={{ color: '#946f23', fontWeight: 800 }}>•</span>
                           <span>{opt}</span>
                         </div>
                       ))}
                     </div>
                   </div>
 
-                  <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center', borderTop: '1px solid rgba(255,255,255,0.04)', paddingTop: '0.75rem' }}>
-                    <span style={{ fontSize: '0.75rem', color: 'var(--zf-text-muted, #6b7086)' }}>
+                  <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center', borderTop: '1px solid #e2e8f0', paddingTop: '0.75rem' }}>
+                    <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 600 }}>
                       {isAr ? 'الوحدات المقيدة بهذا القرار:' : 'Gated Modules:'}
                     </span>
                     {modules.map(m => (
@@ -442,9 +444,9 @@ export const OpenQuestionsConsole: React.FC<OpenQuestionsConsoleProps> = ({
                           fontSize: '0.68rem',
                           fontWeight: 700,
                           padding: '0.15rem 0.45rem',
-                          color: 'var(--zf-gold, #d4af37)',
-                          background: 'rgba(212, 175, 55, 0.08)',
-                          border: '1px solid rgba(212, 175, 55, 0.2)',
+                          color: '#946f23',
+                          background: 'rgba(148, 111, 35, 0.08)',
+                          border: '1px solid rgba(148, 111, 35, 0.25)',
                           borderRadius: '4px'
                         }}
                       >

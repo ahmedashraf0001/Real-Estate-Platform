@@ -730,13 +730,26 @@ html[lang="ar"] {
 }
 
 /* ─────────────────────────────────────────────────────────────────
-   GLOBAL SELECT & OPTION ACCESSIBILITY (DARK MODE POPUP FIX)
+   GLOBAL INPUT SPINNER RESET & SELECT STYLING
 ───────────────────────────────────────────────────────────────── */
-select {
-  color-scheme: dark;
+input[type=number]::-webkit-inner-spin-button,
+input[type=number]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
 }
 
-select option {
-  background-color: #121622 !important;
-  color: #ffffff !important;
+input[type=number] {
+  -moz-appearance: textfield;
 }
+
+select {
+  color-scheme: light dark;
+}
+
+[data-theme="light"] select,
+.light select,
+div[style*="background: #ffffff"] select,
+div[style*="background:#ffffff"] select {
+  color-scheme: light;
+}
+

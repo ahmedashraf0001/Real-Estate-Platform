@@ -57,10 +57,9 @@ export const ERPFinancialCharts: React.FC<ERPFinancialChartsProps> = ({
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
         style={{
-          background: 'linear-gradient(135deg, rgba(23, 28, 43, 0.75) 0%, rgba(18, 22, 34, 0.9) 100%)',
-          backdropFilter: 'blur(16px)',
-          border: '1px solid rgba(212, 175, 55, 0.18)',
-          boxShadow: '0 20px 45px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.06)',
+          background: '#ffffff',
+          border: '1px solid #e2e8f0',
+          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04)',
           borderRadius: '18px',
           padding: '1.5rem'
         }}
@@ -69,11 +68,11 @@ export const ERPFinancialCharts: React.FC<ERPFinancialChartsProps> = ({
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--zf-gold, #d4af37)' }}>
               <TrendingUp size={20} />
-              <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: '#ffffff' }}>
+              <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: '#0f172a' }}>
                 {isAr ? 'مسار التدفقات النقدية وتوقيت الاعتراف بالإيراد (IFRS 15 / Model B)' : 'Cashflow Horizon & Revenue Recognition Trajectory'}
               </h3>
             </div>
-            <p style={{ margin: '0.35rem 0 0 0', fontSize: '0.8rem', color: 'var(--zf-text-secondary, #a7acc0)' }}>
+            <p style={{ margin: '0.35rem 0 0 0', fontSize: '0.8rem', color: '#64748b' }}>
               {isAr 
                 ? 'محاكاة ديناميكية للمقبوضات الفعلية والالتزامات التعاقدية عبر الأرباع السنوية'
                 : 'Interactive dynamic spline: Gross sales commitments vs actual collections vs deferred contract liability'}
@@ -87,11 +86,11 @@ export const ERPFinancialCharts: React.FC<ERPFinancialChartsProps> = ({
               gap: '0.35rem', 
               fontSize: '0.72rem', 
               fontWeight: 700, 
-              color: 'var(--zf-gold, #d4af37)',
-              background: 'rgba(212, 175, 55, 0.1)',
+              color: '#946f23',
+              background: '#fffbeb',
               padding: '0.25rem 0.6rem',
               borderRadius: '9999px',
-              border: '1px solid rgba(212, 175, 55, 0.25)'
+              border: '1px solid rgba(184, 144, 62, 0.25)'
             }}>
               <Sparkles size={12} />
               <span>{isAr ? 'رسم بياني حي تفاعلي' : 'Live Recharts Engine'}</span>
@@ -117,21 +116,20 @@ export const ERPFinancialCharts: React.FC<ERPFinancialChartsProps> = ({
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.45, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
           style={{
-            background: 'linear-gradient(135deg, rgba(23, 28, 43, 0.75) 0%, rgba(18, 22, 34, 0.9) 100%)',
-            backdropFilter: 'blur(16px)',
-            border: '1px solid rgba(212, 175, 55, 0.18)',
-            boxShadow: '0 20px 45px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.06)',
+            background: '#ffffff',
+            border: '1px solid #e2e8f0',
+            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04)',
             borderRadius: '18px',
             padding: '1.5rem'
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--zf-gold, #d4af37)', marginBottom: '0.25rem' }}>
             <PieIcon size={18} />
-            <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: '#ffffff' }}>
+            <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: '#0f172a' }}>
               {isAr ? 'توزيع تكاليف التنفيذ ومعامل RSV' : 'WIP Cost Allocation Ring (RSV)'}
             </h3>
           </div>
-          <p style={{ margin: '0 0 1rem 0', fontSize: '0.78rem', color: 'var(--zf-text-secondary, #a7acc0)' }}>
+          <p style={{ margin: '0 0 1rem 0', fontSize: '0.78rem', color: '#64748b' }}>
             {isAr 
               ? 'توزيع تكاليف الأراضي والإنشاءات والتشطيبات والتمويل مع حساب معامل الاسترداد'
               : 'Capitalized development assets across Land, Civil, MEP, Finishing & Financing.'}
@@ -152,21 +150,20 @@ export const ERPFinancialCharts: React.FC<ERPFinancialChartsProps> = ({
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.45, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
           style={{
-            background: 'linear-gradient(135deg, rgba(23, 28, 43, 0.75) 0%, rgba(18, 22, 34, 0.9) 100%)',
-            backdropFilter: 'blur(16px)',
-            border: '1px solid rgba(212, 175, 55, 0.18)',
-            boxShadow: '0 20px 45px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.06)',
+            background: '#ffffff',
+            border: '1px solid #e2e8f0',
+            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04)',
             borderRadius: '18px',
             padding: '1.5rem'
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--zf-gold, #d4af37)', marginBottom: '0.25rem' }}>
             <BarChart3 size={18} />
-            <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: '#ffffff' }}>
+            <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: '#0f172a' }}>
               {isAr ? 'حالة محفظة الأقساط والسيولة' : 'Tranche Lifecycle & Cash Pipeline'}
             </h3>
           </div>
-          <p style={{ margin: '0 0 1rem 0', fontSize: '0.78rem', color: 'var(--zf-text-secondary, #a7acc0)' }}>
+          <p style={{ margin: '0 0 1rem 0', fontSize: '0.78rem', color: '#64748b' }}>
             {isAr 
               ? 'توزيع الأقساط المحصلة والجارية وتلك المستبدلة بالتصعيد'
               : 'Volume comparison of Settled Cash vs Active Receivables vs Superseded.'}

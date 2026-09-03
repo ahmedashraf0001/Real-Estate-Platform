@@ -70,18 +70,18 @@ export const JournalEntryPreview: React.FC<JournalEntryPreviewProps> = ({
               <span>{isAr ? 'قيد مرحل بالدفاتر' : 'Posted — Immutable'}</span>
             </span>
           )}
-          <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--zf-text-primary, #eef0f4)' }}>
+          <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#0f172a', fontVariantNumeric: 'tabular-nums' }}>
             {entry.entry_number}
           </span>
         </div>
 
-        <span style={{ fontSize: '0.75rem', color: 'var(--zf-text-muted, #6b7086)' }}>
+        <span style={{ fontSize: '0.75rem', color: '#64748b', fontVariantNumeric: 'tabular-nums' }}>
           {entry.entry_date}
         </span>
       </div>
 
       {/* Description */}
-      <div style={{ padding: '0.5rem 0.85rem', fontSize: '0.8rem', color: 'var(--zf-text-secondary, #a7acc0)' }}>
+      <div style={{ padding: '0.65rem 0.85rem', fontSize: '0.8rem', color: '#334155', lineHeight: 1.4 }}>
         {localizeJournalDescription(entry.description, isAr)}
       </div>
 
@@ -104,20 +104,20 @@ export const JournalEntryPreview: React.FC<JournalEntryPreviewProps> = ({
             return (
               <tr key={line.line_id}>
                 <td style={{ textAlign: isAr ? 'right' : 'left' }}>
-                  <span style={{ fontFamily: 'monospace', color: 'var(--zf-gold, #d4af37)', fontWeight: 700, marginRight: '0.4rem' }}>
+                  <span style={{ fontVariantNumeric: 'tabular-nums', color: '#946f23', fontWeight: 800, marginInlineEnd: '0.45rem' }}>
                     {line.account_code}
                   </span>
-                  <span>{accTitle}</span>
+                  <span style={{ fontWeight: 600, color: '#0f172a' }}>{accTitle}</span>
                   {line.memo && (
-                    <span style={{ display: 'block', fontSize: '0.7rem', color: 'var(--zf-text-muted, #6b7086)' }}>
+                    <span style={{ display: 'block', fontSize: '0.7rem', color: '#64748b', marginTop: '0.15rem' }}>
                       {localizeJournalMemo(line.memo, isAr)}
                     </span>
                   )}
                 </td>
-                <td style={{ textAlign: isAr ? 'left' : 'right', color: hasDebit ? 'var(--zf-state-open, #4fd1c5)' : 'var(--zf-text-muted, #6b7086)' }}>
+                <td style={{ textAlign: isAr ? 'left' : 'right', color: hasDebit ? '#0f172a' : '#94a3b8', fontWeight: hasDebit ? 700 : 400 }}>
                   {hasDebit ? D(line.debit_amount).formatEGP(isAr) : '—'}
                 </td>
-                <td style={{ textAlign: isAr ? 'left' : 'right', color: hasCredit ? 'var(--zf-state-paid, #6fcf97)' : 'var(--zf-text-muted, #6b7086)' }}>
+                <td style={{ textAlign: isAr ? 'left' : 'right', color: hasCredit ? '#15803d' : '#94a3b8', fontWeight: hasCredit ? 700 : 400 }}>
                   {hasCredit ? D(line.credit_amount).formatEGP(isAr) : '—'}
                 </td>
               </tr>
@@ -128,12 +128,12 @@ export const JournalEntryPreview: React.FC<JournalEntryPreviewProps> = ({
 
       {/* Footer Totals */}
       <div className={styles.footerTotals}>
-        <span style={{ color: isBalanced ? 'var(--zf-state-paid, #6fcf97)' : 'var(--zf-state-defaulted, #eb5757)' }}>
+        <span style={{ color: isBalanced ? '#15803d' : '#dc2626', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
           {isBalanced ? (isAr ? '✓ القيد متوازن تماماً (0.00)' : '✓ Balanced (0.00 Delta)') : (isAr ? '⚠ غير متوازن' : '⚠ Unbalanced')}
         </span>
-        <div style={{ display: 'flex', gap: '1.5rem' }}>
+        <div style={{ display: 'flex', gap: '1.5rem', fontVariantNumeric: 'tabular-nums' }}>
           <span>{isAr ? 'إجمالي المدين:' : 'Dr:'} {totalDebit.formatEGP(isAr)}</span>
-          <span>{isAr ? 'إجمالي الدائن:' : 'Cr:'} {totalCredit.formatEGP(isAr)}</span>
+          <span style={{ color: '#15803d' }}>{isAr ? 'إجمالي الدائن:' : 'Cr:'} {totalCredit.formatEGP(isAr)}</span>
         </div>
       </div>
     </div>

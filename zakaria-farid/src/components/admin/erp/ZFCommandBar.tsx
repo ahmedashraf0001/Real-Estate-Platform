@@ -225,7 +225,7 @@ export const ZFCommandBar: React.FC<ZFCommandBarProps> = ({
                   alignItems: 'center',
                   justifyContent: 'center',
                   boxShadow: hasCriticalAlerts ? '0 0 8px #ef4444' : '0 0 6px rgba(212, 175, 55, 0.6)',
-                  fontFamily: 'monospace'
+                  fontVariantNumeric: 'tabular-nums'
                 }}>
                   {unreadNotificationsCount > 9 ? '9+' : unreadNotificationsCount}
                 </span>

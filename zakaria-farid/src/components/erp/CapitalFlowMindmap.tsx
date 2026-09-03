@@ -397,6 +397,7 @@ export const CapitalFlowMindmap: React.FC<CapitalFlowMindmapProps> = ({
   return (
     <div 
       ref={containerRef}
+      className="mindmap-container"
       style={{
         position: isFullscreen ? 'fixed' : 'relative',
         top: isFullscreen ? 0 : 'auto',
@@ -405,16 +406,16 @@ export const CapitalFlowMindmap: React.FC<CapitalFlowMindmapProps> = ({
         height: isFullscreen ? '100vh' : 'auto',
         minHeight: isFullscreen ? '100vh' : '720px',
         zIndex: isFullscreen ? 9999 : 1,
-        background: 'linear-gradient(145deg, #090b11 0%, #06080d 50%, #0c0f17 100%)',
-        border: isFullscreen ? 'none' : '1px solid rgba(255, 255, 255, 0.08)',
-        borderRadius: isFullscreen ? 0 : '20px',
+        background: '#ffffff',
+        border: isFullscreen ? 'none' : '1px solid #e2e8f0',
+        borderRadius: isFullscreen ? 0 : '16px',
         padding: isFullscreen ? '2.5rem 3.5rem' : '1.75rem',
         boxSizing: 'border-box',
         overflow: 'auto',
         display: 'flex',
         flexDirection: 'column',
         gap: '1.5rem',
-        boxShadow: '0 20px 50px rgba(0, 0, 0, 0.7)'
+        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04), 0 8px 24px -4px rgba(0, 0, 0, 0.03)'
       }}
     >
       <style>{`
@@ -426,20 +427,16 @@ export const CapitalFlowMindmap: React.FC<CapitalFlowMindmapProps> = ({
           from { stroke-dashoffset: 32; }
           to { stroke-dashoffset: 0; }
         }
-        @keyframes coreGlowPulse {
-          0%, 100% {
-            box-shadow: 0 0 25px rgba(212, 175, 55, 0.25), inset 0 0 20px rgba(212, 175, 55, 0.1);
-          }
-          50% {
-            box-shadow: 0 0 45px rgba(212, 175, 55, 0.5), inset 0 0 35px rgba(212, 175, 55, 0.2);
-          }
-        }
         .flow-card-interactive {
           transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease, border-color 0.2s ease;
+          background: #ffffff !important;
+          border-color: #e2e8f0 !important;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
         }
         .flow-card-interactive:hover {
           transform: translateY(-2px);
-          box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+          box-shadow: 0 6px 18px rgba(0, 0, 0, 0.06);
+          border-color: #cbd5e1 !important;
         }
       `}</style>
 
@@ -450,7 +447,7 @@ export const CapitalFlowMindmap: React.FC<CapitalFlowMindmapProps> = ({
         justifyContent: 'space-between',
         flexWrap: 'wrap',
         gap: '1rem',
-        borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+        borderBottom: '1px solid #e2e8f0',
         paddingBottom: '1.25rem',
         zIndex: 10
       }}>
@@ -458,23 +455,23 @@ export const CapitalFlowMindmap: React.FC<CapitalFlowMindmapProps> = ({
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
             <span style={{
-              background: 'linear-gradient(135deg, rgba(212, 175, 55, 0.2) 0%, rgba(212, 175, 55, 0.05) 100%)',
-              border: '1px solid rgba(212, 175, 55, 0.35)',
+              background: '#fefce8',
+              border: '1px solid #fef08a',
               borderRadius: '8px',
               padding: '0.35rem 0.55rem',
-              color: '#d4af37',
+              color: '#946f23',
               display: 'flex',
               alignItems: 'center'
             }}>
               <TrendingUp size={16} />
             </span>
-            <h4 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: '#ffffff', letterSpacing: '-0.01em' }}>
+            <h4 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: '#0f172a', letterSpacing: '-0.01em' }}>
               {isAr ? 'خريطة التدفقات المالية وتوزيعات رأس المال' : 'Capital Flow Mindmap & Treasury Topology'}
             </h4>
             <span style={{
-              background: 'rgba(16, 185, 129, 0.1)',
-              border: '1px solid rgba(16, 185, 129, 0.25)',
-              color: '#10b981',
+              background: '#f0fdf4',
+              border: '1px solid #bbf7d0',
+              color: '#15803d',
               borderRadius: '999px',
               padding: '0.15rem 0.6rem',
               fontSize: '0.68rem',
@@ -483,7 +480,7 @@ export const CapitalFlowMindmap: React.FC<CapitalFlowMindmapProps> = ({
               {isAr ? 'مسارات موجهة نشطة' : 'Live Directed Conduits'}
             </span>
           </div>
-          <p style={{ margin: 0, fontSize: '0.74rem', color: '#94a3b8' }}>
+          <p style={{ margin: 0, fontSize: '0.74rem', color: '#64748b' }}>
             {isAr 
               ? 'مخطط شجري تفاعلي يربط مصادر الأموال الداخلة بالخزينة المركزية وتوجيهات الصرف على مشروعات التطوير والضرائب' 
               : 'Interactive directed topology connecting capital sources into central treasury and project allocations'}
@@ -496,9 +493,9 @@ export const CapitalFlowMindmap: React.FC<CapitalFlowMindmapProps> = ({
           <div style={{
             display: 'flex',
             alignItems: 'center',
-            background: 'rgba(0, 0, 0, 0.6)',
-            border: '1px solid rgba(255, 255, 255, 0.08)',
-            borderRadius: '10px',
+            background: '#f1f5f9',
+            border: '1px solid #e2e8f0',
+            borderRadius: '8px',
             padding: '0.2rem',
             gap: '0.2rem'
           }}>
@@ -513,13 +510,13 @@ export const CapitalFlowMindmap: React.FC<CapitalFlowMindmapProps> = ({
                 type="button"
                 onClick={() => setActiveFilter(f.id as any)}
                 style={{
-                  background: activeFilter === f.id ? 'rgba(212, 175, 55, 0.18)' : 'transparent',
-                  border: activeFilter === f.id ? '1px solid rgba(212, 175, 55, 0.4)' : '1px solid transparent',
-                  color: activeFilter === f.id ? '#e2c974' : '#94a3b8',
-                  borderRadius: '7px',
+                  background: activeFilter === f.id ? '#0f172a' : 'transparent',
+                  border: activeFilter === f.id ? '1px solid #0f172a' : '1px solid transparent',
+                  color: activeFilter === f.id ? '#ffffff' : '#475569',
+                  borderRadius: '6px',
                   padding: '0.3rem 0.75rem',
                   fontSize: '0.72rem',
-                  fontWeight: 700,
+                  fontWeight: 600,
                   cursor: 'pointer',
                   transition: 'all 0.15s ease'
                 }}
@@ -535,18 +532,19 @@ export const CapitalFlowMindmap: React.FC<CapitalFlowMindmapProps> = ({
             onClick={() => setIsFullscreen(prev => !prev)}
             title={isFullscreen ? (isAr ? 'إنهاء وضع ملء الشاشة' : 'Exit Fullscreen') : (isAr ? 'عرض خريطة التدفقات بملء الشاشة' : 'Expand Fullscreen')}
             style={{
-              background: 'rgba(255, 255, 255, 0.05)',
-              border: '1px solid rgba(255, 255, 255, 0.12)',
-              color: '#cbd5e1',
-              borderRadius: '10px',
+              background: '#ffffff',
+              border: '1px solid #e2e8f0',
+              color: '#334155',
+              borderRadius: '8px',
               padding: '0.5rem 0.75rem',
               display: 'flex',
               alignItems: 'center',
               gap: '0.4rem',
               fontSize: '0.74rem',
-              fontWeight: 700,
+              fontWeight: 600,
               cursor: 'pointer',
-              transition: 'all 0.15s ease'
+              transition: 'all 0.15s ease',
+              boxShadow: '0 1px 2px rgba(0, 0, 0, 0.04)'
             }}
           >
             {isFullscreen ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
@@ -687,17 +685,6 @@ export const CapitalFlowMindmap: React.FC<CapitalFlowMindmapProps> = ({
                   }}
                   markerEnd={`url(#${markerId})`}
                 />
-
-                {/* Luminous Flow Particle Traveling Along Conduit */}
-                {isHighlighted && (
-                  <circle r="3" fill="#ffffff">
-                    <animateMotion
-                      dur={conn.isInbound ? '2.4s' : '2.8s'}
-                      repeatCount="indefinite"
-                      path={conn.path}
-                    />
-                  </circle>
-                )}
               </g>
             );
           })}
@@ -715,13 +702,13 @@ export const CapitalFlowMindmap: React.FC<CapitalFlowMindmapProps> = ({
             alignItems: 'center',
             justifyContent: 'space-between',
             paddingBottom: '0.4rem',
-            borderBottom: '1px solid rgba(16, 185, 129, 0.2)'
+            borderBottom: '1px solid #e2e8f0'
           }}>
-            <span style={{ fontSize: '0.78rem', fontWeight: 800, color: '#10b981', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+            <span style={{ fontSize: '0.78rem', fontWeight: 800, color: '#15803d', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
               <ArrowDownRight size={14} style={{ transform: isAr ? 'scaleX(-1)' : 'none' }} />
               {isAr ? 'مصادر التدفقات الداخلة (Inflows)' : 'Capital Inflow Sources'}
             </span>
-            <span style={{ fontSize: '0.7rem', color: '#94a3b8', fontFamily: 'monospace', fontWeight: 700 }}>
+            <span style={{ fontSize: '0.72rem', color: '#0f172a', fontVariantNumeric: 'tabular-nums', fontWeight: 700 }}>
               {formatCleanWholeNumber(totalInflowVolume.toString())} {isAr ? 'ج.م' : 'EGP'}
             </span>
           </div>
@@ -736,14 +723,13 @@ export const CapitalFlowMindmap: React.FC<CapitalFlowMindmapProps> = ({
                 className="flow-card-interactive"
                 onClick={() => setSelectedNodeId(prev => prev === node.id ? null : node.id)}
                 style={{
-                  background: 'rgba(13, 17, 26, 0.88)',
-                  border: `1px solid ${isSelected ? node.accentColor : 'rgba(255, 255, 255, 0.08)'}`,
-                  borderRadius: '14px',
+                  background: '#ffffff',
+                  border: `1px solid ${isSelected ? node.accentColor : '#e2e8f0'}`,
+                  borderRadius: '12px',
                   padding: '0.95rem 1.1rem',
                   cursor: 'pointer',
                   position: 'relative',
-                  backdropFilter: 'blur(12px)',
-                  boxShadow: isSelected ? `0 0 20px ${node.accentColor}33` : '0 4px 14px rgba(0,0,0,0.4)'
+                  boxShadow: isSelected ? `0 0 0 2px ${node.accentColor}33, 0 4px 12px rgba(0,0,0,0.05)` : '0 1px 3px rgba(0,0,0,0.04)'
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '0.6rem' }}>
@@ -752,8 +738,8 @@ export const CapitalFlowMindmap: React.FC<CapitalFlowMindmapProps> = ({
                       width: '32px',
                       height: '32px',
                       borderRadius: '8px',
-                      background: `${node.accentColor}18`,
-                      border: `1px solid ${node.accentColor}35`,
+                      background: `${node.accentColor}12`,
+                      border: `1px solid ${node.accentColor}30`,
                       color: node.accentColor,
                       display: 'flex',
                       alignItems: 'center',
@@ -763,10 +749,10 @@ export const CapitalFlowMindmap: React.FC<CapitalFlowMindmapProps> = ({
                       <Icon size={16} />
                     </div>
                     <div>
-                      <div style={{ fontSize: '0.82rem', fontWeight: 800, color: '#ffffff' }}>
+                      <div style={{ fontSize: '0.82rem', fontWeight: 800, color: '#0f172a' }}>
                         {isAr ? node.titleAr : node.titleEn}
                       </div>
-                      <div style={{ fontSize: '0.68rem', color: '#94a3b8' }}>
+                      <div style={{ fontSize: '0.68rem', color: '#64748b' }}>
                         {isAr ? node.subtitleAr : node.subtitleEn}
                       </div>
                     </div>
@@ -776,7 +762,8 @@ export const CapitalFlowMindmap: React.FC<CapitalFlowMindmapProps> = ({
                     <span style={{
                       fontSize: '0.65rem',
                       fontWeight: 800,
-                      background: 'rgba(255, 255, 255, 0.05)',
+                      background: '#f1f5f9',
+                      border: '1px solid #e2e8f0',
                       padding: '0.15rem 0.45rem',
                       borderRadius: '4px',
                       color: node.accentColor
@@ -787,11 +774,11 @@ export const CapitalFlowMindmap: React.FC<CapitalFlowMindmapProps> = ({
                 </div>
 
                 <div style={{ marginTop: '0.65rem', display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
-                  <span style={{ fontSize: '1.05rem', fontWeight: 800, color: '#ffffff', fontFamily: 'monospace' }}>
+                  <span style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0f172a', fontVariantNumeric: 'tabular-nums' }}>
                     {formatCleanWholeNumber(node.amount)}
                     <span style={{ fontSize: '0.68rem', color: '#64748b', marginInlineStart: '0.3rem' }}>{isAr ? 'ج.م' : 'EGP'}</span>
                   </span>
-                  <span style={{ fontSize: '0.64rem', color: node.accentColor, fontWeight: 700 }}>
+                  <span style={{ fontSize: '0.66rem', color: node.accentColor, fontWeight: 700 }}>
                     {isAr ? node.tagAr : node.tagEn}
                   </span>
                 </div>
@@ -806,71 +793,69 @@ export const CapitalFlowMindmap: React.FC<CapitalFlowMindmapProps> = ({
           className="flow-card-interactive"
           onClick={() => setSelectedNodeId(prev => prev === coreNode.id ? null : coreNode.id)}
           style={{
-            background: 'radial-gradient(ellipse at 50% 30%, rgba(212, 175, 55, 0.15) 0%, rgba(13, 17, 26, 0.95) 100%)',
-            border: '1.5px solid rgba(212, 175, 55, 0.45)',
-            borderRadius: '20px',
+            background: '#ffffff',
+            border: '1.5px solid #d4af37',
+            borderRadius: '16px',
             padding: '1.75rem',
             textAlign: 'center',
             cursor: 'pointer',
             position: 'relative',
-            backdropFilter: 'blur(20px)',
-            animation: 'coreGlowPulse 4s ease-in-out infinite',
+            boxShadow: '0 4px 20px -2px rgba(212, 175, 55, 0.15), 0 1px 3px rgba(0, 0, 0, 0.04)',
             zIndex: 6
           }}
         >
           {/* Core HUD Emblem */}
           <div style={{
-            width: '54px',
-            height: '54px',
-            margin: '0 auto 1rem',
-            borderRadius: '16px',
-            background: 'linear-gradient(135deg, rgba(212, 175, 55, 0.25) 0%, rgba(212, 175, 55, 0.08) 100%)',
-            border: '1px solid rgba(212, 175, 55, 0.5)',
+            width: '48px',
+            height: '48px',
+            margin: '0 auto 0.75rem',
+            borderRadius: '12px',
+            background: '#fefce8',
+            border: '1px solid #fef08a',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            color: '#e2c974',
-            boxShadow: '0 0 25px rgba(212, 175, 55, 0.35)'
+            color: '#946f23'
           }}>
-            <ShieldCheck size={28} />
+            <ShieldCheck size={24} />
           </div>
 
           <div style={{
             display: 'inline-flex',
             alignItems: 'center',
             gap: '0.4rem',
-            background: 'rgba(212, 175, 55, 0.12)',
-            border: '1px solid rgba(212, 175, 55, 0.3)',
+            background: '#fefce8',
+            border: '1px solid #fef08a',
             borderRadius: '999px',
             padding: '0.2rem 0.75rem',
             fontSize: '0.68rem',
             fontWeight: 800,
-            color: '#e2c974',
-            marginBottom: '0.6rem'
+            color: '#946f23',
+            marginBottom: '0.5rem'
           }}>
             <Sparkles size={12} />
             <span>{isAr ? coreNode.tagAr : coreNode.tagEn}</span>
           </div>
 
-          <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: '#ffffff' }}>
+          <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: '#0f172a' }}>
             {isAr ? coreNode.titleAr : coreNode.titleEn}
           </h3>
-          <p style={{ margin: '0.35rem 0 1.25rem', fontSize: '0.72rem', color: '#94a3b8' }}>
+          <p style={{ margin: '0.35rem 0 1.25rem', fontSize: '0.72rem', color: '#64748b' }}>
             {isAr ? coreNode.subtitleAr : coreNode.subtitleEn}
           </p>
 
           {/* Large Hero Metric */}
           <div style={{
-            background: 'rgba(0, 0, 0, 0.45)',
-            border: '1px solid rgba(255, 255, 255, 0.08)',
-            borderRadius: '14px',
+            background: '#f8fafc',
+            border: '1px solid #e2e8f0',
+            borderRadius: '12px',
             padding: '1rem',
             marginBottom: '1.25rem'
           }}>
-            <div style={{ fontSize: '0.7rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: 700, marginBottom: '0.25rem' }}>
+            <div style={{ fontSize: '0.7rem', color: '#64748b', textTransform: 'uppercase', fontWeight: 700, marginBottom: '0.25rem' }}>
               {isAr ? 'الرصيد النقدي الحر المتاح بالخزينة والبنوك' : 'Total Unrestricted Liquid Capital'}
             </div>
-            <div style={{ fontSize: '1.75rem', fontWeight: 900, color: '#ffffff', fontFamily: 'monospace' }}>
+            <div style={{ fontSize: '1.75rem', fontWeight: 900, color: '#0f172a', fontVariantNumeric: 'tabular-nums' }}>
               {formatCleanWholeNumber(coreNode.amount)}
               <span style={{ fontSize: '0.82rem', color: '#64748b', marginInlineStart: '0.35rem' }}>{isAr ? 'ج.م' : 'EGP'}</span>
             </div>
@@ -879,29 +864,29 @@ export const CapitalFlowMindmap: React.FC<CapitalFlowMindmapProps> = ({
           {/* Financial Telemetry Sub-row */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', textAlign: 'center' }}>
             <div style={{
-              background: 'rgba(16, 185, 129, 0.08)',
-              border: '1px solid rgba(16, 185, 129, 0.2)',
-              borderRadius: '10px',
+              background: '#f0fdf4',
+              border: '1px solid #bbf7d0',
+              borderRadius: '8px',
               padding: '0.65rem 0.5rem'
             }}>
-              <div style={{ fontSize: '0.66rem', color: '#6ee7b7', fontWeight: 700 }}>
+              <div style={{ fontSize: '0.66rem', color: '#15803d', fontWeight: 700 }}>
                 {isAr ? 'إجمالي التدفق الداخل' : 'Total Inflows'}
               </div>
-              <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#ffffff', fontFamily: 'monospace', marginTop: '0.2rem' }}>
+              <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#15803d', fontVariantNumeric: 'tabular-nums', marginTop: '0.2rem' }}>
                 {formatCleanWholeNumber(totalInflowVolume.toString())}
               </div>
             </div>
 
             <div style={{
-              background: 'rgba(245, 158, 11, 0.08)',
-              border: '1px solid rgba(245, 158, 11, 0.2)',
-              borderRadius: '10px',
+              background: '#fffbeb',
+              border: '1px solid #fde68a',
+              borderRadius: '8px',
               padding: '0.65rem 0.5rem'
             }}>
-              <div style={{ fontSize: '0.66rem', color: '#fcd34d', fontWeight: 700 }}>
+              <div style={{ fontSize: '0.66rem', color: '#b45309', fontWeight: 700 }}>
                 {isAr ? 'إجمالي توجيهات الصرف' : 'Total Outflows'}
               </div>
-              <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#ffffff', fontFamily: 'monospace', marginTop: '0.2rem' }}>
+              <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#b45309', fontVariantNumeric: 'tabular-nums', marginTop: '0.2rem' }}>
                 {formatCleanWholeNumber(totalOutflowVolume.toString())}
               </div>
             </div>
@@ -920,13 +905,13 @@ export const CapitalFlowMindmap: React.FC<CapitalFlowMindmapProps> = ({
             alignItems: 'center',
             justifyContent: 'space-between',
             paddingBottom: '0.4rem',
-            borderBottom: '1px solid rgba(245, 158, 11, 0.2)'
+            borderBottom: '1px solid #e2e8f0'
           }}>
-            <span style={{ fontSize: '0.78rem', fontWeight: 800, color: '#f59e0b', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+            <span style={{ fontSize: '0.78rem', fontWeight: 800, color: '#d97706', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
               <ArrowUpRight size={14} style={{ transform: isAr ? 'scaleX(-1)' : 'none' }} />
               {isAr ? 'توجيهات الصرف والمشاريع (Outflows)' : 'Project Allocations & Costs'}
             </span>
-            <span style={{ fontSize: '0.7rem', color: '#94a3b8', fontFamily: 'monospace', fontWeight: 700 }}>
+            <span style={{ fontSize: '0.72rem', color: '#0f172a', fontVariantNumeric: 'tabular-nums', fontWeight: 700 }}>
               {formatCleanWholeNumber(totalOutflowVolume.toString())} {isAr ? 'ج.م' : 'EGP'}
             </span>
           </div>
@@ -941,14 +926,13 @@ export const CapitalFlowMindmap: React.FC<CapitalFlowMindmapProps> = ({
                 className="flow-card-interactive"
                 onClick={() => setSelectedNodeId(prev => prev === node.id ? null : node.id)}
                 style={{
-                  background: 'rgba(13, 17, 26, 0.88)',
-                  border: `1px solid ${isSelected ? node.accentColor : 'rgba(255, 255, 255, 0.08)'}`,
-                  borderRadius: '14px',
+                  background: '#ffffff',
+                  border: `1px solid ${isSelected ? node.accentColor : '#e2e8f0'}`,
+                  borderRadius: '12px',
                   padding: '0.95rem 1.1rem',
                   cursor: 'pointer',
                   position: 'relative',
-                  backdropFilter: 'blur(12px)',
-                  boxShadow: isSelected ? `0 0 20px ${node.accentColor}33` : '0 4px 14px rgba(0,0,0,0.4)'
+                  boxShadow: isSelected ? `0 0 0 2px ${node.accentColor}33, 0 4px 12px rgba(0,0,0,0.05)` : '0 1px 3px rgba(0,0,0,0.04)'
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '0.6rem' }}>
@@ -957,8 +941,8 @@ export const CapitalFlowMindmap: React.FC<CapitalFlowMindmapProps> = ({
                       width: '32px',
                       height: '32px',
                       borderRadius: '8px',
-                      background: `${node.accentColor}18`,
-                      border: `1px solid ${node.accentColor}35`,
+                      background: `${node.accentColor}12`,
+                      border: `1px solid ${node.accentColor}30`,
                       color: node.accentColor,
                       display: 'flex',
                       alignItems: 'center',
@@ -968,10 +952,10 @@ export const CapitalFlowMindmap: React.FC<CapitalFlowMindmapProps> = ({
                       <Icon size={16} />
                     </div>
                     <div>
-                      <div style={{ fontSize: '0.82rem', fontWeight: 800, color: '#ffffff' }}>
+                      <div style={{ fontSize: '0.82rem', fontWeight: 800, color: '#0f172a' }}>
                         {isAr ? node.titleAr : node.titleEn}
                       </div>
-                      <div style={{ fontSize: '0.68rem', color: '#94a3b8' }}>
+                      <div style={{ fontSize: '0.68rem', color: '#64748b' }}>
                         {isAr ? node.subtitleAr : node.subtitleEn}
                       </div>
                     </div>
@@ -981,7 +965,8 @@ export const CapitalFlowMindmap: React.FC<CapitalFlowMindmapProps> = ({
                     <span style={{
                       fontSize: '0.65rem',
                       fontWeight: 800,
-                      background: 'rgba(255, 255, 255, 0.05)',
+                      background: '#f1f5f9',
+                      border: '1px solid #e2e8f0',
                       padding: '0.15rem 0.45rem',
                       borderRadius: '4px',
                       color: node.accentColor
@@ -992,11 +977,11 @@ export const CapitalFlowMindmap: React.FC<CapitalFlowMindmapProps> = ({
                 </div>
 
                 <div style={{ marginTop: '0.65rem', display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
-                  <span style={{ fontSize: '1.05rem', fontWeight: 800, color: '#ffffff', fontFamily: 'monospace' }}>
+                  <span style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0f172a', fontVariantNumeric: 'tabular-nums' }}>
                     {formatCleanWholeNumber(node.amount)}
                     <span style={{ fontSize: '0.68rem', color: '#64748b', marginInlineStart: '0.3rem' }}>{isAr ? 'ج.م' : 'EGP'}</span>
                   </span>
-                  <span style={{ fontSize: '0.64rem', color: node.accentColor, fontWeight: 700 }}>
+                  <span style={{ fontSize: '0.66rem', color: node.accentColor, fontWeight: 700 }}>
                     {isAr ? node.tagAr : node.tagEn}
                   </span>
                 </div>
@@ -1008,8 +993,8 @@ export const CapitalFlowMindmap: React.FC<CapitalFlowMindmapProps> = ({
 
       {/* Detail Inspector Drawer / Explanatory Bottom Strip */}
       <div style={{
-        background: 'rgba(0, 0, 0, 0.4)',
-        border: '1px solid rgba(255, 255, 255, 0.06)',
+        background: '#f8fafc',
+        border: '1px solid #e2e8f0',
         borderRadius: '12px',
         padding: '0.85rem 1.25rem',
         display: 'flex',
@@ -1018,11 +1003,11 @@ export const CapitalFlowMindmap: React.FC<CapitalFlowMindmapProps> = ({
         flexWrap: 'wrap',
         gap: '1rem',
         fontSize: '0.74rem',
-        color: '#94a3b8',
+        color: '#64748b',
         zIndex: 10
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-          <Info size={15} style={{ color: '#d4af37', flexShrink: 0 }} />
+          <Info size={15} style={{ color: '#946f23', flexShrink: 0 }} />
           <span>
             {isAr 
               ? 'تتحرك النبضات الضوئية على المسارات التفاعلية لتمثيل سرعة واتجاه السيولة الفعلية. انقر على أي بند لإضاءة المسار المتصل به حصرياً.'

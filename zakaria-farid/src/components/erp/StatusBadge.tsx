@@ -151,6 +151,10 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ domain, status, isAr =
         styleClass = styles.statePaid;
         IconComponent = CheckCircle2;
         label = isAr ? 'مباع' : 'Sold';
+      } else if (norm.toUpperCase().includes('RESCISSION')) {
+        styleClass = styles.statePartial;
+        IconComponent = RotateCcw;
+        label = isAr ? 'قيد تدقيق الاسترداد' : 'Under Rescission Audit';
       } else {
         styleClass = styles.statePartial;
         IconComponent = RotateCcw;

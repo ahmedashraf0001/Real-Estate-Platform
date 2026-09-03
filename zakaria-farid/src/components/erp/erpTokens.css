@@ -5,34 +5,34 @@
 
 :root {
   /* Surfaces */
-  --zf-bg-void: #0a0b0e;        /* app shell background */
-  --zf-bg-panel: #121622;       /* cards, table containers */
-  --zf-bg-panel-raised: #171c2b;/* modals, popovers */
+  --zf-bg-void: #f8fafc;        /* app shell background */
+  --zf-bg-panel: #ffffff;       /* cards, table containers */
+  --zf-bg-panel-raised: #ffffff;/* modals, popovers */
   --zf-glass-blur: 14px;
-  --zf-border-hairline: rgba(212, 175, 55, 0.12);
+  --zf-border-hairline: #e2e8f0;
 
   /* Accent */
-  --zf-gold: #d4af37;
-  --zf-gold-dim: rgba(212, 175, 55, 0.35);
-  --zf-gold-wash: rgba(212, 175, 55, 0.08);
+  --zf-gold: #946f23;
+  --zf-gold-dim: rgba(148, 111, 35, 0.16);
+  --zf-gold-wash: rgba(148, 111, 35, 0.08);
 
   /* Semantic state (financial) */
-  --zf-state-open: #4fd1c5;      /* period OPEN, cheque In Safe */
-  --zf-state-pending: #f0c674;   /* Pending, Deposited, Issued */
-  --zf-state-paid: #6fcf97;      /* Paid, Cleared, Funded, Approved */
-  --zf-state-partial: #f2a65a;   /* Partially Paid */
-  --zf-state-defaulted: #eb5757; /* Defaulted, Bounced, Rejected */
-  --zf-state-superseded: #8b8fa3;/* SUPERSEDED — muted, historical gray */
-  --zf-state-void: #5a5f73;      /* Void — muted, terminal, low-emphasis */
-  --zf-state-locked: #b98cff;    /* LOCKED / CLOSED period, immutable record */
+  --zf-state-open: #0369a1;      /* period OPEN, cheque In Safe */
+  --zf-state-pending: #b45309;   /* Pending, Deposited, Issued */
+  --zf-state-paid: #15803d;      /* Paid, Cleared, Funded, Approved */
+  --zf-state-partial: #946f23;   /* Partially Paid */
+  --zf-state-defaulted: #b91c1c; /* Defaulted, Bounced, Rejected */
+  --zf-state-superseded: #64748b;/* SUPERSEDED — muted, historical gray */
+  --zf-state-void: #475569;      /* Void — muted, terminal, low-emphasis */
+  --zf-state-locked: #b45309;    /* LOCKED / CLOSED period, immutable record (Executive Amber) */
 
   /* Text */
-  --zf-text-primary: #eef0f4;
-  --zf-text-secondary: #a7acc0;
-  --zf-text-muted: #6b7086;
+  --zf-text-primary: #0f172a;
+  --zf-text-secondary: #475569;
+  --zf-text-muted: #64748b;
 
   /* Legal / verification flag */
-  --zf-flag-legal: #ff8a3d;      /* [NEEDS LEGAL VERIFICATION] tag */
+  --zf-flag-legal: #b45309;      /* [NEEDS LEGAL VERIFICATION] tag */
 }
 
 /* Mandatory Tabular Numerals for Currency and Figures (UI_BUILD.md §3.2) */

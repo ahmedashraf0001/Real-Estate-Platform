@@ -584,7 +584,7 @@ const ArticleRenderer: React.FC<ArticleRendererProps> = ({
                     background: 'rgba(212, 175, 55, 0.15)',
                     border: '1px solid rgba(212, 175, 55, 0.35)',
                     color: '#e2c974',
-                    fontFamily: 'monospace',
+                    fontVariantNumeric: 'tabular-nums',
                     fontSize: '1rem',
                     fontWeight: 900,
                     display: 'flex',

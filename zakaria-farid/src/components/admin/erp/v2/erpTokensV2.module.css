@@ -1,0 +1,118 @@
+/**
+ * Zakaria Farid Real Estate ERP — Design System Tokens v2
+ * "Calm Obsidian & Egyptian Champagne Gold"
+ * Replaces high-saturation neon AI-slop with restrained, ultra-premium executive styling.
+ */
+
+:root {
+  /* Surfaces & Canvas — Architectural Alabaster & Crisp White */
+  --zf2-bg-canvas: #f8f9fa;
+  --zf2-bg-header: #ffffff;
+  --zf2-bg-dock: #ffffff;
+  --zf2-bg-surface: #ffffff;
+  --zf2-bg-surface-raised: #f1f5f9;
+  --zf2-bg-surface-hover: #e2e8f0;
+  --zf2-bg-surface-active: #cbd5e1;
+  
+  /* Hairline Borders */
+  --zf2-border-subtle: #e2e8f0;
+  --zf2-border-medium: #cbd5e1;
+  --zf2-border-focus: rgba(148, 111, 35, 0.45);
+
+  /* Primary Accent: Architectural Egyptian Bronze-Gold */
+  --zf2-gold: #946f23;
+  --zf2-gold-light: #b48c36;
+  --zf2-gold-dark: #6e5114;
+  --zf2-gold-dim: rgba(148, 111, 35, 0.16);
+  --zf2-gold-wash: rgba(148, 111, 35, 0.08);
+
+  /* High Contrast Deep Slate Typography */
+  --zf2-text-primary: #0f172a;
+  --zf2-text-secondary: #475569;
+  --zf2-text-muted: #64748b;
+  --zf2-text-inverse: #ffffff;
+
+  /* Semantic Financial State Colors (Refined Matte) */
+  --zf2-state-success: #059669;
+  --zf2-state-success-wash: rgba(5, 150, 105, 0.08);
+  --zf2-state-success-border: rgba(5, 150, 105, 0.25);
+
+  --zf2-state-warning: #d97706;
+  --zf2-state-warning-wash: rgba(217, 119, 6, 0.08);
+  --zf2-state-warning-border: rgba(217, 119, 6, 0.25);
+
+  --zf2-state-danger: #dc2626;
+  --zf2-state-danger-wash: rgba(220, 38, 38, 0.08);
+  --zf2-state-danger-border: rgba(220, 38, 38, 0.25);
+
+  --zf2-state-info: #0284c7;
+  --zf2-state-info-wash: rgba(2, 132, 199, 0.08);
+  --zf2-state-info-border: rgba(2, 132, 199, 0.25);
+
+  --zf2-state-locked: #b45309;
+  --zf2-state-locked-wash: #fffbeb;
+  --zf2-state-locked-border: rgba(217, 119, 6, 0.3);
+
+  /* Shadows */
+  --zf2-shadow-card: 0 1px 3px 0 rgba(0, 0, 0, 0.04), 0 1px 2px -1px rgba(0, 0, 0, 0.04);
+  --zf2-shadow-hover: 0 10px 20px -5px rgba(0, 0, 0, 0.06), 0 6px 8px -6px rgba(0, 0, 0, 0.04);
+}
+
+/* Secondary Dark Theme Support */
+:global([data-theme="dark"]) {
+  --zf2-bg-canvas: #111622;
+  --zf2-bg-header: #161c2b;
+  --zf2-bg-dock: #141a27;
+  --zf2-bg-surface: #1a2232;
+  --zf2-bg-surface-raised: #222c40;
+  --zf2-bg-surface-hover: #263248;
+  --zf2-bg-surface-active: #2d3b55;
+  
+  --zf2-border-subtle: rgba(255, 255, 255, 0.09);
+  --zf2-border-medium: rgba(255, 255, 255, 0.16);
+  --zf2-border-focus: rgba(212, 175, 55, 0.55);
+
+  --zf2-gold: #d4af37;
+  --zf2-gold-light: #f3cf7a;
+  --zf2-gold-dark: #b89328;
+  --zf2-gold-dim: rgba(212, 175, 55, 0.22);
+  --zf2-gold-wash: rgba(212, 175, 55, 0.10);
+
+  --zf2-text-primary: #ffffff;
+  --zf2-text-secondary: #cbd5e1;
+  --zf2-text-muted: #8a99ad;
+  --zf2-text-inverse: #111622;
+
+  --zf2-state-success: #10b981;
+  --zf2-state-success-wash: rgba(16, 185, 129, 0.14);
+  --zf2-state-success-border: rgba(16, 185, 129, 0.35);
+
+  --zf2-state-warning: #f59e0b;
+  --zf2-state-warning-wash: rgba(245, 158, 11, 0.14);
+  --zf2-state-warning-border: rgba(245, 158, 11, 0.35);
+
+  --zf2-state-danger: #f87171;
+  --zf2-state-danger-wash: rgba(248, 113, 113, 0.14);
+  --zf2-state-danger-border: rgba(248, 113, 113, 0.35);
+
+  --zf2-state-info: #38bdf8;
+  --zf2-state-info-wash: rgba(56, 189, 248, 0.14);
+  --zf2-state-info-border: rgba(56, 189, 248, 0.35);
+
+  --zf2-state-locked: #a78bfa;
+  --zf2-state-locked-wash: rgba(167, 139, 250, 0.14);
+  --zf2-state-locked-border: rgba(167, 139, 250, 0.35);
+
+  --zf2-shadow-card: 0 4px 16px rgba(0, 0, 0, 0.22);
+  --zf2-shadow-hover: 0 10px 25px rgba(0, 0, 0, 0.35);
+}
+
+.tabularNums {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}
+
+.monoCode {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-variant-numeric: tabular-nums;
+}

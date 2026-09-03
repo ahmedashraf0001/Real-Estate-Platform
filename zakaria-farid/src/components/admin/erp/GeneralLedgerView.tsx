@@ -272,7 +272,7 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
             style={{
               background: 'linear-gradient(135deg, #059669 0%, #047857 100%)',
               border: '1px solid rgba(16, 185, 129, 0.4)',
-              color: '#ffffff'
+              color: '#0f172a'
             }}
           >
             <Plus size={14} />
@@ -305,8 +305,9 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
       }}>
         {/* Cash & Bank Balances */}
         <div style={{
-          background: 'rgba(18, 22, 34, 0.75)',
-          border: '1px solid rgba(16, 185, 129, 0.3)',
+          background: '#ffffff',
+          border: '1px solid #e2e8f0',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
           borderRadius: '14px',
           padding: '1rem 1.25rem',
           display: 'flex',
@@ -316,7 +317,7 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
           <div style={{
             background: 'rgba(16, 185, 129, 0.15)',
             border: '1px solid rgba(16, 185, 129, 0.35)',
-            color: '#34d399',
+            color: '#15803d',
             padding: '0.65rem',
             borderRadius: '10px'
           }}>
@@ -326,7 +327,7 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
             <span style={{ fontSize: '0.72rem', color: '#94a3b8', fontWeight: 700, display: 'block' }}>
               {isAr ? 'السيولة النقدية المتاحة (خزينة وبنوك)' : 'Available Liquid Cash'}
             </span>
-            <span style={{ fontSize: '1.25rem', fontWeight: 800, color: '#34d399', fontFamily: 'monospace' }}>
+            <span style={{ fontSize: '1.25rem', fontWeight: 800, color: '#15803d', fontVariantNumeric: 'tabular-nums' }}>
               {kpis.totalCash.formatEGP(isAr)}
             </span>
           </div>
@@ -334,8 +335,9 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
 
         {/* Total Assets */}
         <div style={{
-          background: 'rgba(18, 22, 34, 0.75)',
-          border: '1px solid rgba(56, 189, 248, 0.25)',
+          background: '#ffffff',
+          border: '1px solid #e2e8f0',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
           borderRadius: '14px',
           padding: '1rem 1.25rem',
           display: 'flex',
@@ -345,7 +347,7 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
           <div style={{
             background: 'rgba(56, 189, 248, 0.15)',
             border: '1px solid rgba(56, 189, 248, 0.35)',
-            color: '#38bdf8',
+            color: '#946f23',
             padding: '0.65rem',
             borderRadius: '10px'
           }}>
@@ -355,7 +357,7 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
             <span style={{ fontSize: '0.72rem', color: '#94a3b8', fontWeight: 700, display: 'block' }}>
               {isAr ? 'إجمالي الأصول المدارة (Total Assets)' : 'Total Capital Assets'}
             </span>
-            <span style={{ fontSize: '1.25rem', fontWeight: 800, color: '#38bdf8', fontFamily: 'monospace' }}>
+            <span style={{ fontSize: '1.25rem', fontWeight: 800, color: '#946f23', fontVariantNumeric: 'tabular-nums' }}>
               {kpis.totalAssets.formatEGP(isAr)}
             </span>
           </div>
@@ -363,8 +365,9 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
 
         {/* Total Liabilities & Deferred Revenue */}
         <div style={{
-          background: 'rgba(18, 22, 34, 0.75)',
-          border: '1px solid rgba(245, 158, 11, 0.25)',
+          background: '#ffffff',
+          border: '1px solid #e2e8f0',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
           borderRadius: '14px',
           padding: '1rem 1.25rem',
           display: 'flex',
@@ -374,7 +377,7 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
           <div style={{
             background: 'rgba(245, 158, 11, 0.15)',
             border: '1px solid rgba(245, 158, 11, 0.35)',
-            color: '#fbbf24',
+            color: '#b45309',
             padding: '0.65rem',
             borderRadius: '10px'
           }}>
@@ -384,7 +387,7 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
             <span style={{ fontSize: '0.72rem', color: '#94a3b8', fontWeight: 700, display: 'block' }}>
               {isAr ? 'الالتزامات وإيرادات العقود المؤجلة' : 'Liabilities & Advances'}
             </span>
-            <span style={{ fontSize: '1.25rem', fontWeight: 800, color: '#fbbf24', fontFamily: 'monospace' }}>
+            <span style={{ fontSize: '1.25rem', fontWeight: 800, color: '#b45309', fontVariantNumeric: 'tabular-nums' }}>
               {kpis.totalLiabilities.formatEGP(isAr)}
             </span>
           </div>
@@ -392,8 +395,9 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
 
         {/* Posted Journal Entries Count */}
         <div style={{
-          background: 'rgba(18, 22, 34, 0.75)',
-          border: '1px solid rgba(212, 175, 55, 0.25)',
+          background: '#ffffff',
+          border: '1px solid #e2e8f0',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
           borderRadius: '14px',
           padding: '1rem 1.25rem',
           display: 'flex',
@@ -413,7 +417,7 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
             <span style={{ fontSize: '0.72rem', color: '#94a3b8', fontWeight: 700, display: 'block' }}>
               {isAr ? 'القيود المحصنة بالدفاتر' : 'Posted Ledger Entries'}
             </span>
-            <span style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--zf-gold, #d4af37)', fontFamily: 'monospace' }}>
+            <span style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--zf-gold, #d4af37)', fontVariantNumeric: 'tabular-nums' }}>
               {kpis.entriesCount} {isAr ? 'قيد مرحل' : 'Entries'}
             </span>
           </div>
@@ -422,8 +426,8 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
 
       {/* 3. Search & Filter Bar for Chart of Accounts */}
       <div style={{
-        background: 'rgba(18, 22, 34, 0.8)',
-        border: '1px solid rgba(255, 255, 255, 0.08)',
+        background: '#ffffff',
+        border: '1px solid #e2e8f0',
         borderRadius: '14px',
         padding: '0.85rem 1.25rem',
         display: 'flex',
@@ -493,7 +497,7 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
               padding: '0.45rem 0.75rem',
               [isAr ? 'paddingRight' : 'paddingLeft']: '2rem',
               fontSize: '0.76rem',
-              color: '#ffffff',
+              color: '#0f172a',
               outline: 'none'
             }}
           />
@@ -540,7 +544,7 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
                   {/* Account Code */}
                   <td>
                     <span style={{
-                      fontFamily: 'monospace',
+                      fontVariantNumeric: 'tabular-nums',
                       fontWeight: 800,
                       color: isGated ? '#f87171' : 'var(--zf-gold, #d4af37)',
                       background: isGated ? 'rgba(239, 68, 68, 0.1)' : 'rgba(212, 175, 55, 0.1)',
@@ -556,7 +560,7 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
                   {/* Account Title */}
                   <td>
                     <div style={{ display: 'flex', flexDirection: 'column' }}>
-                      <span style={{ fontWeight: 700, color: '#ffffff', fontSize: '0.82rem' }}>
+                      <span style={{ fontWeight: 700, color: '#0f172a', fontSize: '0.82rem' }}>
                         {isAr ? acc.account_name_ar : acc.account_name_en}
                       </span>
                       <span style={{ fontSize: '0.7rem', color: '#94a3b8', marginTop: '1px' }}>
@@ -591,7 +595,7 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
                   {/* Live Balance */}
                   <td style={{ textAlign: isAr ? 'left' : 'right' }}>
                     <span style={{
-                      fontFamily: 'monospace',
+                      fontVariantNumeric: 'tabular-nums',
                       fontWeight: 800,
                       fontSize: '0.84rem',
                       color: isZero ? '#64748b' : (isPositive ? '#34d399' : '#f87171')
@@ -658,7 +662,7 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
                           style={{
                             background: 'rgba(56, 189, 248, 0.1)',
                             border: '1px solid rgba(56, 189, 248, 0.25)',
-                            color: '#38bdf8',
+                            color: '#946f23',
                             borderRadius: '6px',
                             padding: '0.25rem 0.4rem',
                             cursor: 'pointer',
@@ -687,15 +691,15 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
           alignItems: 'center',
           flexWrap: 'wrap',
           gap: '1rem',
-          background: 'rgba(18, 22, 34, 0.8)',
-          border: '1px solid rgba(255, 255, 255, 0.08)',
+          background: '#ffffff',
+          border: '1px solid #e2e8f0',
           borderRadius: '16px',
           padding: '1.15rem 1.35rem'
         }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <ShieldCheck size={18} color="var(--zf-gold, #d4af37)" />
-              <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: '#ffffff' }}>
+              <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: '#0f172a' }}>
                 {isAr ? 'سجل قيود اليومية المرحلة والمحصنة (General Journal Register)' : 'Posted Immutable Journal Register'}
               </h3>
             </div>
@@ -883,7 +887,7 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
                 padding: '0.35rem 0.65rem',
                 [isAr ? 'paddingRight' : 'paddingLeft']: '1.85rem',
                 fontSize: '0.74rem',
-                color: '#ffffff',
+                color: '#0f172a',
                 outline: 'none'
               }}
             />
@@ -941,7 +945,7 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
                           <td>
                             <div style={{ display: 'flex', flexDirection: 'column' }}>
                               <span style={{
-                                fontFamily: 'monospace',
+                                fontVariantNumeric: 'tabular-nums',
                                 fontWeight: 800,
                                 fontSize: '0.78rem',
                                 color: 'var(--zf-gold, #d4af37)',
@@ -976,7 +980,7 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
 
                           {/* Description */}
                           <td>
-                            <span style={{ fontWeight: 600, color: '#ffffff', fontSize: '0.8rem' }}>
+                            <span style={{ fontWeight: 600, color: '#0f172a', fontSize: '0.8rem' }}>
                               {localizeJournalDescription(entry.description, isAr)}
                             </span>
                           </td>
@@ -994,7 +998,7 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
                                   }}
                                   title={isAr ? 'اضغط لفتح كشف حساب البند' : 'Click to inspect account'}
                                   style={{
-                                    fontFamily: 'monospace',
+                                    fontVariantNumeric: 'tabular-nums',
                                     fontSize: '0.68rem',
                                     fontWeight: 700,
                                     color: '#cbd5e1',
@@ -1014,7 +1018,7 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
                           {/* Total Amount */}
                           <td style={{ textAlign: isAr ? 'left' : 'right' }}>
                             <span style={{
-                              fontFamily: 'monospace',
+                              fontVariantNumeric: 'tabular-nums',
                               fontWeight: 800,
                               fontSize: '0.84rem',
                               color: 'var(--zf-gold, #d4af37)'
@@ -1028,7 +1032,7 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
                             {isBalanced ? (
                               <span style={{
                                 fontSize: '0.66rem',
-                                color: '#34d399',
+                                color: '#15803d',
                                 background: 'rgba(16, 185, 129, 0.12)',
                                 border: '1px solid rgba(16, 185, 129, 0.3)',
                                 padding: '0.15rem 0.45rem',
@@ -1066,8 +1070,8 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
                           <tr style={{ background: 'rgba(10, 12, 18, 0.6)' }}>
                             <td colSpan={7} style={{ padding: '1rem 1.5rem', borderBottom: '1px solid rgba(212, 175, 55, 0.15)' }}>
                               <div style={{
-                                background: 'rgba(18, 22, 34, 0.85)',
-                                border: '1px solid rgba(212, 175, 55, 0.25)',
+                                background: '#ffffff',
+                                border: '1px solid #e2e8f0',
                                 borderRadius: '12px',
                                 overflow: 'hidden',
                                 boxShadow: '0 8px 25px rgba(0, 0, 0, 0.4)'
@@ -1091,8 +1095,8 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
               <div style={{
                 padding: '2.5rem 1.5rem',
                 textAlign: 'center',
-                background: 'rgba(18, 22, 34, 0.5)',
-                border: '1px dashed rgba(255, 255, 255, 0.1)',
+                background: '#f8fafc',
+                border: '1px dashed #cbd5e1',
                 borderRadius: '14px',
                 color: '#64748b'
               }}>
@@ -1121,8 +1125,8 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
           flexWrap: 'wrap',
           gap: '1rem',
           padding: '0.75rem 1rem',
-          background: 'rgba(18, 22, 34, 0.6)',
-          border: '1px solid rgba(255, 255, 255, 0.06)',
+          background: '#f8fafc',
+          border: '1px solid #e2e8f0',
           borderRadius: '12px'
         }}>
           {/* Info Text */}

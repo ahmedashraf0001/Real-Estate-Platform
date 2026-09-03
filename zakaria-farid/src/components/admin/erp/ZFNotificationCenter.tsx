@@ -191,7 +191,7 @@ export const ZFNotificationCenter: React.FC<ZFNotificationCenterProps> = ({
                     background: 'rgba(239, 68, 68, 0.2)',
                     color: '#f87171',
                     border: '1px solid rgba(239, 68, 68, 0.4)',
-                    fontFamily: 'monospace'
+                    fontVariantNumeric: 'tabular-nums'
                   }}>
                     {unreadCount} {isAr ? 'جديد' : 'new'}
                   </span>
@@ -275,7 +275,7 @@ export const ZFNotificationCenter: React.FC<ZFNotificationCenterProps> = ({
                   borderRadius: '4px',
                   background: isActive ? 'rgba(212, 175, 55, 0.3)' : 'rgba(255, 255, 255, 0.06)',
                   color: tab.color || (isActive ? '#ffffff' : '#64748b'),
-                  fontFamily: 'monospace'
+                  fontVariantNumeric: 'tabular-nums'
                 }}>
                   {tab.count}
                 </span>

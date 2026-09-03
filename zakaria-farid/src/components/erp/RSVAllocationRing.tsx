@@ -50,12 +50,11 @@ const CustomTooltip = ({ active, payload }: CustomTooltipProps) => {
     const pct = item.payload?.pct || 0;
     return (
       <div style={{
-        background: 'rgba(15, 20, 32, 0.95)',
-        backdropFilter: 'blur(20px)',
-        border: `1px solid ${color}`,
+        background: '#ffffff',
+        border: '1px solid #e2e8f0',
         borderRadius: '12px',
         padding: '0.75rem 1rem',
-        boxShadow: '0 20px 40px rgba(0,0,0,0.8), 0 0 15px rgba(212,175,55,0.1)',
+        boxShadow: '0 12px 30px rgba(0, 0, 0, 0.08)',
         fontSize: '0.78rem',
         minWidth: '170px'
       }}>
@@ -63,7 +62,7 @@ const CustomTooltip = ({ active, payload }: CustomTooltipProps) => {
           <span>{item.name}</span>
           <span style={{ fontSize: '0.7rem', color: '#94a3b8' }}>{item.payload?.code}</span>
         </div>
-        <div style={{ fontWeight: 800, color: '#ffffff', fontVariantNumeric: 'tabular-nums', fontSize: '0.95rem' }}>
+        <div style={{ fontWeight: 800, color: '#0f172a', fontVariantNumeric: 'tabular-nums', fontSize: '0.95rem' }}>
           {D(Number(item.value) || 0).formatEGP()}
         </div>
         <div style={{ fontSize: '0.68rem', color: '#64748b', marginTop: '0.25rem' }}>
@@ -158,10 +157,10 @@ export const RSVAllocationRing: React.FC<RSVAllocationRingProps> = ({
           <span style={{ fontSize: '0.68rem', color: '#94a3b8', fontWeight: 700, letterSpacing: '0.04em' }}>
             {isAr ? 'معامل RSV' : 'RSV Factor'}
           </span>
-          <span style={{ fontSize: '1.45rem', fontWeight: 900, color: 'var(--zf-gold, #d4af37)', fontFamily: 'monospace', lineHeight: 1.1 }}>
+          <span style={{ fontSize: '1.45rem', fontWeight: 900, color: 'var(--zf-gold, #d4af37)', fontVariantNumeric: 'tabular-nums', lineHeight: 1.1 }}>
             {rsvFactor}
           </span>
-          <span style={{ fontSize: '0.68rem', color: '#cbd5e1', fontWeight: 600, background: 'rgba(255,255,255,0.06)', padding: '0.1rem 0.45rem', borderRadius: '4px', marginTop: '0.15rem' }}>
+          <span style={{ fontSize: '0.68rem', color: '#475569', fontWeight: 700, background: '#f1f5f9', padding: '0.1rem 0.45rem', borderRadius: '4px', marginTop: '0.15rem' }}>
             {totalWipD.formatEGP(isAr)}
           </span>
         </div>
@@ -182,8 +181,8 @@ export const RSVAllocationRing: React.FC<RSVAllocationRingProps> = ({
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
-              background: 'rgba(255, 255, 255, 0.025)',
-              border: '1px solid rgba(255, 255, 255, 0.06)',
+              background: '#f8fafc',
+              border: '1px solid #e2e8f0',
               borderRadius: '8px',
               padding: '0.45rem 0.65rem',
               fontSize: '0.72rem',
@@ -193,11 +192,11 @@ export const RSVAllocationRing: React.FC<RSVAllocationRingProps> = ({
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
               <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: item.color, flexShrink: 0 }} />
               <div style={{ display: 'flex', flexDirection: 'column' }}>
-                <span style={{ color: '#ffffff', fontWeight: 600 }}>{item.name}</span>
+                <span style={{ color: '#0f172a', fontWeight: 700 }}>{item.name}</span>
                 <span style={{ fontSize: '0.64rem', color: '#64748b' }}>{item.code}</span>
               </div>
             </div>
-            <span style={{ color: item.color, fontWeight: 800, fontFamily: 'monospace' }}>
+            <span style={{ color: item.color, fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}>
               {item.pct.toFixed(0)}%
             </span>
           </div>

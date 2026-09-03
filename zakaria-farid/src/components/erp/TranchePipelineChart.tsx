@@ -49,20 +49,19 @@ const CustomTooltip = ({ active, payload }: CustomTooltipProps) => {
     const d = payload[0].payload;
     return (
       <div style={{
-        background: 'rgba(15, 20, 32, 0.95)',
-        backdropFilter: 'blur(20px)',
-        border: `1px solid ${d.fill}`,
+        background: '#ffffff',
+        border: '1px solid #e2e8f0',
         borderRadius: '12px',
         padding: '0.75rem 1rem',
-        boxShadow: '0 20px 40px rgba(0,0,0,0.8), 0 0 15px rgba(212,175,55,0.1)',
+        boxShadow: '0 12px 30px rgba(0, 0, 0, 0.08)',
         fontSize: '0.78rem',
         minWidth: '180px'
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.35rem', borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '0.35rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.35rem', borderBottom: '1px solid #f1f5f9', paddingBottom: '0.35rem' }}>
           <span style={{ fontWeight: 800, color: d.fill }}>{d.category}</span>
-          <span style={{ fontSize: '0.7rem', color: '#94a3b8' }}>{d.count} tranches</span>
+          <span style={{ fontSize: '0.7rem', color: '#64748b' }}>{d.count} tranches</span>
         </div>
-        <div style={{ fontWeight: 800, color: '#ffffff', fontSize: '0.95rem', fontVariantNumeric: 'tabular-nums' }}>
+        <div style={{ fontWeight: 800, color: '#0f172a', fontSize: '0.95rem', fontVariantNumeric: 'tabular-nums' }}>
           {D(d.amount).formatEGP()}
         </div>
         <div style={{ fontSize: '0.68rem', color: '#64748b', marginTop: '0.2rem' }}>
@@ -146,17 +145,17 @@ export const TranchePipelineChart: React.FC<TranchePipelineChartProps> = ({
                 <stop offset="100%" stopColor="#475569" stopOpacity={0.5} />
               </linearGradient>
             </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255, 255, 255, 0.04)" vertical={false} />
+            <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
             <XAxis 
               dataKey="category" 
               stroke="#64748b" 
-              tick={{ fill: '#cbd5e1', fontSize: 11, fontWeight: 600 }}
-              axisLine={{ stroke: 'rgba(255, 255, 255, 0.08)' }}
+              tick={{ fill: '#64748b', fontSize: 11, fontWeight: 600 }}
+              axisLine={{ stroke: '#e2e8f0' }}
               tickLine={false}
             />
             <YAxis 
               stroke="#64748b" 
-              tick={{ fill: '#94a3b8', fontSize: 10, fontFamily: 'monospace' }}
+              tick={{ fill: '#64748b', fontSize: 10 }}
               axisLine={false}
               tickLine={false}
               tickFormatter={(val) => `${(val / 1000000).toFixed(0)}M`}
@@ -185,8 +184,8 @@ export const TranchePipelineChart: React.FC<TranchePipelineChartProps> = ({
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
         {/* Metric 1: Settled */}
         <div style={{
-          background: 'rgba(16, 185, 129, 0.06)',
-          border: '1px solid rgba(16, 185, 129, 0.25)',
+          background: '#f0fdf4',
+          border: '1px solid #bbf7d0',
           borderRadius: '12px',
           padding: '0.85rem 1rem',
           display: 'flex',
@@ -195,15 +194,15 @@ export const TranchePipelineChart: React.FC<TranchePipelineChartProps> = ({
           transition: 'all 0.2s ease'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span style={{ fontSize: '0.74rem', color: '#6ee7b7', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+            <span style={{ fontSize: '0.74rem', color: '#15803d', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
               <CheckCircle2 size={13} />
               {isAr ? 'الأقساط المسددة' : 'Settled Tranches'}
             </span>
-            <span style={{ fontSize: '0.7rem', color: '#10b981', fontWeight: 800 }}>
+            <span style={{ fontSize: '0.7rem', color: '#15803d', fontWeight: 800 }}>
               {chartData[0].pct.toFixed(1)}%
             </span>
           </div>
-          <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#ffffff', fontFamily: 'monospace' }}>
+          <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0f172a', fontVariantNumeric: 'tabular-nums' }}>
             {D(collectedAmt).formatEGP(isAr)}
           </div>
           <span style={{ fontSize: '0.68rem', color: '#94a3b8' }}>
@@ -213,8 +212,8 @@ export const TranchePipelineChart: React.FC<TranchePipelineChartProps> = ({
 
         {/* Metric 2: Active Pending */}
         <div style={{
-          background: 'rgba(212, 175, 55, 0.06)',
-          border: '1px solid rgba(212, 175, 55, 0.25)',
+          background: '#fffbeb',
+          border: '1px solid rgba(184, 144, 62, 0.25)',
           borderRadius: '12px',
           padding: '0.85rem 1rem',
           display: 'flex',
@@ -223,15 +222,15 @@ export const TranchePipelineChart: React.FC<TranchePipelineChartProps> = ({
           transition: 'all 0.2s ease'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span style={{ fontSize: '0.74rem', color: '#fcd34d', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+            <span style={{ fontSize: '0.74rem', color: '#946f23', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
               <Clock size={13} />
               {isAr ? 'أقساط تعاقدية جارية' : 'Pending Receivables'}
             </span>
-            <span style={{ fontSize: '0.7rem', color: '#d4af37', fontWeight: 800 }}>
+            <span style={{ fontSize: '0.7rem', color: '#946f23', fontWeight: 800 }}>
               {chartData[1].pct.toFixed(1)}%
             </span>
           </div>
-          <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#ffffff', fontFamily: 'monospace' }}>
+          <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0f172a', fontVariantNumeric: 'tabular-nums' }}>
             {D(pendingAmt).formatEGP(isAr)}
           </div>
           <span style={{ fontSize: '0.68rem', color: '#94a3b8' }}>
@@ -241,8 +240,8 @@ export const TranchePipelineChart: React.FC<TranchePipelineChartProps> = ({
 
         {/* Metric 3: Superseded */}
         <div style={{
-          background: 'rgba(255, 255, 255, 0.025)',
-          border: '1px solid rgba(255, 255, 255, 0.08)',
+          background: '#f8fafc',
+          border: '1px solid #e2e8f0',
           borderRadius: '12px',
           padding: '0.75rem 1rem',
           display: 'flex',
@@ -251,11 +250,11 @@ export const TranchePipelineChart: React.FC<TranchePipelineChartProps> = ({
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
             <RotateCcw size={13} color="#94a3b8" />
-            <span style={{ fontSize: '0.72rem', color: '#cbd5e1' }}>
+            <span style={{ fontSize: '0.72rem', color: '#64748b' }}>
               {isAr ? 'أقساط مستبدلة عبر التصعيد:' : 'Superseded versions:'}
             </span>
           </div>
-          <span style={{ fontSize: '0.76rem', fontWeight: 700, color: '#94a3b8', fontFamily: 'monospace' }}>
+          <span style={{ fontSize: '0.76rem', fontWeight: 700, color: '#94a3b8', fontVariantNumeric: 'tabular-nums' }}>
             {trancheStats.superseded} {isAr ? 'قسط' : 'tranches'}
           </span>
         </div>

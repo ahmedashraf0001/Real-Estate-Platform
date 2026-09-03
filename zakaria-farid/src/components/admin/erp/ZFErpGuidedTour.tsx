@@ -505,7 +505,7 @@ export const ZFErpGuidedTour: React.FC<ZFErpGuidedTourProps> = ({
               fontSize: '0.68rem',
               fontWeight: 800,
               color: '#94a3b8',
-              fontFamily: 'monospace'
+              fontVariantNumeric: 'tabular-nums'
             }}>
               {isAr ? `صفحة ${currentStepIndex + 1} من ${SIDEBAR_TOUR_STEPS.length}` : `PAGE ${currentStepIndex + 1} OF ${SIDEBAR_TOUR_STEPS.length}`}
             </span>

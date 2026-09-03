@@ -14,35 +14,35 @@
   transition: all 0.15s ease;
 }
 
-/* Financial State Colors from UI_BUILD.md §3.1 */
+/* Financial State Colors (Refined Executive Palette) */
 .stateOpen {
-  color: var(--zf-state-open, #4fd1c5);
-  background: rgba(79, 209, 197, 0.12);
-  border-color: rgba(79, 209, 197, 0.3);
+  color: #0369a1;
+  background: #f0f9ff;
+  border-color: rgba(2, 132, 199, 0.25);
 }
 
 .statePending {
-  color: var(--zf-state-pending, #f0c674);
-  background: rgba(240, 198, 116, 0.12);
-  border-color: rgba(240, 198, 116, 0.3);
+  color: #b45309;
+  background: #fffbeb;
+  border-color: rgba(245, 158, 11, 0.3);
 }
 
 .statePaid {
-  color: var(--zf-state-paid, #6fcf97);
-  background: rgba(111, 207, 151, 0.12);
-  border-color: rgba(111, 207, 151, 0.3);
+  color: #15803d;
+  background: #f0fdf4;
+  border-color: rgba(22, 163, 74, 0.25);
 }
 
 .statePartial {
-  color: var(--zf-state-partial, #f2a65a);
-  background: rgba(242, 166, 90, 0.12);
-  border-color: rgba(242, 166, 90, 0.3);
+  color: #946f23;
+  background: rgba(184, 144, 62, 0.08);
+  border-color: rgba(184, 144, 62, 0.25);
 }
 
 .stateDefaulted {
-  color: var(--zf-state-defaulted, #eb5757);
-  background: rgba(235, 87, 87, 0.12);
-  border-color: rgba(235, 87, 87, 0.3);
+  color: #b91c1c;
+  background: #fef2f2;
+  border-color: rgba(220, 38, 38, 0.25);
 }
 
 /* Desaturated Grays for Versioning & Terminal States - UI_BUILD.md §3.1 */
@@ -60,7 +60,7 @@
 }
 
 .stateLocked {
-  color: var(--zf-state-locked, #b98cff);
-  background: rgba(185, 140, 255, 0.12);
-  border-color: rgba(185, 140, 255, 0.3);
+  color: #92400e;
+  background: #fffbeb;
+  border-color: rgba(217, 119, 6, 0.35);
 }

@@ -35,28 +35,29 @@ export const BranchDecisionCard: React.FC<BranchDecisionCardProps> = ({
         <div
           onClick={() => onSelectBranch('Branch1_PreDelivery')}
           style={{
-            background: selectedBranch === 'Branch1_PreDelivery' ? 'rgba(212, 175, 55, 0.08)' : 'var(--zf-bg-panel, #121622)',
-            border: selectedBranch === 'Branch1_PreDelivery' ? '2px solid var(--zf-gold, #d4af37)' : '1px solid rgba(255, 255, 255, 0.08)',
+            background: selectedBranch === 'Branch1_PreDelivery' ? 'rgba(148, 111, 35, 0.06)' : '#ffffff',
+            border: selectedBranch === 'Branch1_PreDelivery' ? '2px solid #946f23' : '1px solid #e2e8f0',
             borderRadius: '12px',
             padding: '1.25rem',
             cursor: 'pointer',
             transition: 'all 0.2s ease',
-            position: 'relative'
+            position: 'relative',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.03)'
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.5rem' }}>
-            <Undo2 size={18} color="#f0c674" />
-            <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 700, color: '#ffffff' }}>
+            <Undo2 size={18} color="#946f23" />
+            <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 800, color: '#0f172a' }}>
               {isAr ? 'المسار ١: إلغاء قبل التسليم' : 'Branch 1: Pre-Delivery Cancellation'}
             </h4>
           </div>
-          <div style={{ fontSize: '0.78rem', color: 'var(--zf-text-secondary, #a7acc0)', lineHeight: 1.4 }}>
+          <div style={{ fontSize: '0.78rem', color: '#475569', lineHeight: 1.5 }}>
             {isAr
               ? 'الوحدة لم تُسلّم للعميل. لا يوجد اعتراف بالإيراد. النقدية محتجزة في الإيرادات المؤجلة (حساب 203000).'
               : 'Physical handover has NOT occurred. Revenue not recognized. Cash rests in Deferred Revenue (203000).'}
           </div>
           {selectedBranch === 'Branch1_PreDelivery' && (
-            <div style={{ position: 'absolute', top: '12px', right: isAr ? undefined : '12px', left: isAr ? '12px' : undefined, color: 'var(--zf-gold, #d4af37)' }}>
+            <div style={{ position: 'absolute', top: '12px', right: isAr ? undefined : '12px', left: isAr ? '12px' : undefined, color: '#946f23' }}>
               <CheckCircle2 size={18} />
             </div>
           )}
@@ -66,28 +67,29 @@ export const BranchDecisionCard: React.FC<BranchDecisionCardProps> = ({
         <div
           onClick={() => onSelectBranch('Branch2_PostDelivery')}
           style={{
-            background: selectedBranch === 'Branch2_PostDelivery' ? 'rgba(212, 175, 55, 0.08)' : 'var(--zf-bg-panel, #121622)',
-            border: selectedBranch === 'Branch2_PostDelivery' ? '2px solid var(--zf-gold, #d4af37)' : '1px solid rgba(255, 255, 255, 0.08)',
+            background: selectedBranch === 'Branch2_PostDelivery' ? 'rgba(21, 128, 61, 0.06)' : '#ffffff',
+            border: selectedBranch === 'Branch2_PostDelivery' ? '2px solid #15803d' : '1px solid #e2e8f0',
             borderRadius: '12px',
             padding: '1.25rem',
             cursor: 'pointer',
             transition: 'all 0.2s ease',
-            position: 'relative'
+            position: 'relative',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.03)'
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.5rem' }}>
-            <Building2 size={18} color="#6fcf97" />
-            <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 700, color: '#ffffff' }}>
+            <Building2 size={18} color="#15803d" />
+            <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 800, color: '#0f172a' }}>
               {isAr ? 'المسار ٢: استرداد بعد التسليم' : 'Branch 2: Post-Delivery Repossession'}
             </h4>
           </div>
-          <div style={{ fontSize: '0.78rem', color: 'var(--zf-text-secondary, #a7acc0)', lineHeight: 1.4 }}>
+          <div style={{ fontSize: '0.78rem', color: '#475569', lineHeight: 1.5 }}>
             {isAr
               ? 'تم تسليم الوحدة مسبقاً والاعتراف بالإيراد (401000). يتطلب عكس الإيراد، تسوية المدينين (103000)، واستعادة أصل WIP.'
               : 'Handover occurred; revenue recognized in 401000. Reverses revenue, clears A/R (103000), restores inventory asset.'}
           </div>
           {selectedBranch === 'Branch2_PostDelivery' && (
-            <div style={{ position: 'absolute', top: '12px', right: isAr ? undefined : '12px', left: isAr ? '12px' : undefined, color: 'var(--zf-gold, #d4af37)' }}>
+            <div style={{ position: 'absolute', top: '12px', right: isAr ? undefined : '12px', left: isAr ? '12px' : undefined, color: '#15803d' }}>
               <CheckCircle2 size={18} />
             </div>
           )}

@@ -39,25 +39,25 @@ const CustomTooltip = ({ active, payload, label }: CustomTooltipProps) => {
   if (active && payload && payload.length) {
     return (
       <div style={{
-        background: 'rgba(18, 22, 34, 0.92)',
+        background: 'rgba(255, 255, 255, 0.98)',
         backdropFilter: 'blur(16px)',
-        border: '1px solid rgba(212, 175, 55, 0.25)',
+        border: '1px solid #e2e8f0',
         borderRadius: '12px',
         padding: '0.85rem 1.15rem',
-        boxShadow: '0 20px 40px rgba(0,0,0,0.8), 0 0 15px rgba(212,175,55,0.15)',
+        boxShadow: '0 12px 30px rgba(0,0,0,0.08)',
         fontSize: '0.78rem',
         fontVariantNumeric: 'tabular-nums'
       }}>
-        <div style={{ fontWeight: 800, color: 'var(--zf-gold, #d4af37)', marginBottom: '0.5rem', borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '0.35rem' }}>
+        <div style={{ fontWeight: 800, color: '#946f23', marginBottom: '0.5rem', borderBottom: '1px solid #e2e8f0', paddingBottom: '0.35rem' }}>
           {label}
         </div>
         {payload.map((entry, index) => (
           <div key={`item-${index}`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1.25rem', margin: '0.3rem 0' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
               <span style={{ width: 8, height: 8, borderRadius: '50%', background: entry.color }} />
-              <span style={{ color: 'var(--zf-text-secondary, #a7acc0)' }}>{entry.name}:</span>
+              <span style={{ color: '#475569', fontWeight: 600 }}>{entry.name}:</span>
             </div>
-            <span style={{ fontWeight: 700, color: '#ffffff' }}>
+            <span style={{ fontWeight: 800, color: '#0f172a' }}>
               {D(Number(entry.value) || 0).formatEGP()}
             </span>
           </div>
@@ -96,7 +96,7 @@ export const CashflowHorizonChart: React.FC<CashflowHorizonChartProps> = ({
 
   if (!isMounted) {
     return (
-      <div style={{ height: 320, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--zf-text-muted, #6b7086)' }}>
+      <div style={{ height: 320, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b' }}>
         {isAr ? 'جاري تحميل المنحنى المالي التفاعلي...' : 'Loading interactive financial horizon...'}
       </div>
     );
@@ -108,35 +108,35 @@ export const CashflowHorizonChart: React.FC<CashflowHorizonChartProps> = ({
         <AreaChart data={horizonData} margin={{ top: 15, right: 20, left: 10, bottom: 0 }}>
           <defs>
             <linearGradient id="goldGradient" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor="#d4af37" stopOpacity={0.4} />
-              <stop offset="95%" stopColor="#d4af37" stopOpacity={0.0} />
+              <stop offset="5%" stopColor="#946f23" stopOpacity={0.35} />
+              <stop offset="95%" stopColor="#946f23" stopOpacity={0.0} />
             </linearGradient>
             <linearGradient id="emeraldGradient" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor="#10b981" stopOpacity={0.4} />
-              <stop offset="95%" stopColor="#10b981" stopOpacity={0.0} />
+              <stop offset="5%" stopColor="#15803d" stopOpacity={0.35} />
+              <stop offset="95%" stopColor="#15803d" stopOpacity={0.0} />
             </linearGradient>
-            <linearGradient id="cyanGradient" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor="#38bdf8" stopOpacity={0.3} />
-              <stop offset="95%" stopColor="#38bdf8" stopOpacity={0.0} />
+            <linearGradient id="sandGradient" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%" stopColor="#b8903e" stopOpacity={0.3} />
+              <stop offset="95%" stopColor="#b8903e" stopOpacity={0.0} />
             </linearGradient>
-            <linearGradient id="purpleGradient" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor="#c084fc" stopOpacity={0.35} />
-              <stop offset="95%" stopColor="#c084fc" stopOpacity={0.0} />
+            <linearGradient id="amberGradient" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%" stopColor="#b45309" stopOpacity={0.3} />
+              <stop offset="95%" stopColor="#b45309" stopOpacity={0.0} />
             </linearGradient>
           </defs>
 
-          <CartesianGrid strokeDasharray="3 3" stroke="rgba(255, 255, 255, 0.05)" vertical={false} />
+          <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
           
           <XAxis 
             dataKey="period" 
-            stroke="var(--zf-text-muted, #6b7086)" 
-            tick={{ fill: 'var(--zf-text-secondary, #a7acc0)', fontSize: 11 }}
-            axisLine={{ stroke: 'rgba(255, 255, 255, 0.1)' }}
+            stroke="#94a3b8" 
+            tick={{ fill: '#475569', fontSize: 11 }}
+            axisLine={{ stroke: '#e2e8f0' }}
             tickLine={false}
           />
           <YAxis 
-            stroke="var(--zf-text-muted, #6b7086)" 
-            tick={{ fill: 'var(--zf-text-secondary, #a7acc0)', fontSize: 10 }}
+            stroke="#94a3b8" 
+            tick={{ fill: '#475569', fontSize: 10 }}
             axisLine={false}
             tickLine={false}
             tickFormatter={(val) => `${(val / 1000000).toFixed(0)}M`}
@@ -148,14 +148,14 @@ export const CashflowHorizonChart: React.FC<CashflowHorizonChartProps> = ({
             verticalAlign="top" 
             align="right" 
             iconType="circle"
-            wrapperStyle={{ paddingBottom: '10px', fontSize: '0.75rem', color: 'var(--zf-text-secondary, #a7acc0)' }}
+            wrapperStyle={{ paddingBottom: '10px', fontSize: '0.75rem', color: '#475569' }}
           />
 
           <Area 
             type="monotone" 
             dataKey="gross" 
             name={isAr ? 'إجمالي التعاقدات (V)' : 'Gross Contract Value'} 
-            stroke="#d4af37" 
+            stroke="#946f23" 
             strokeWidth={2.5}
             fillOpacity={1} 
             fill="url(#goldGradient)"
@@ -167,7 +167,7 @@ export const CashflowHorizonChart: React.FC<CashflowHorizonChartProps> = ({
             type="monotone" 
             dataKey="collected" 
             name={isAr ? 'المحصل نقداً (C)' : 'Collected Cash'} 
-            stroke="#10b981" 
+            stroke="#15803d" 
             strokeWidth={2.5}
             fillOpacity={1} 
             fill="url(#emeraldGradient)"
@@ -179,11 +179,11 @@ export const CashflowHorizonChart: React.FC<CashflowHorizonChartProps> = ({
             type="monotone" 
             dataKey="deferred" 
             name={isAr ? 'إيراد مؤجل (203000)' : 'Deferred Revenue'} 
-            stroke="#38bdf8" 
+            stroke="#b8903e" 
             strokeWidth={2}
             strokeDasharray="4 4"
             fillOpacity={1} 
-            fill="url(#cyanGradient)"
+            fill="url(#sandGradient)"
             isAnimationActive={true}
             animationDuration={1100}
             animationEasing="ease-out"
@@ -192,10 +192,10 @@ export const CashflowHorizonChart: React.FC<CashflowHorizonChartProps> = ({
             type="monotone" 
             dataKey="realized" 
             name={isAr ? 'إيراد محقق (401000)' : 'Realized Sales (Model B)'} 
-            stroke="#c084fc" 
+            stroke="#b45309" 
             strokeWidth={2.2}
             fillOpacity={1} 
-            fill="url(#purpleGradient)"
+            fill="url(#amberGradient)"
             isAnimationActive={true}
             animationDuration={1200}
             animationEasing="ease-out"

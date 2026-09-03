@@ -17,6 +17,7 @@ import {
 import { ERPContract, ERPInstallmentSchedule } from '@/lib/erp/types';
 import { tafqeetEGP } from '@/lib/erp/tafqeet';
 import { D } from '@/lib/erp/math';
+import { ZFCustomSelect, ZFCustomSelectSection, ZFCustomSelectItem } from './v2/common/ZFCustomSelect';
 
 interface NewChequeModalProps {
   isOpen: boolean;
@@ -152,6 +153,53 @@ export const NewChequeModal: React.FC<NewChequeModalProps> = ({
 
   if (!isOpen) return null;
 
+  // Sectioned Contracts for Custom Dropdown
+  const contractSections: ZFCustomSelectSection[] = useMemo(() => {
+    const activeItems: ZFCustomSelectItem[] = [];
+    const deliveredItems: ZFCustomSelectItem[] = [];
+
+    (contracts || []).forEach(c => {
+      const item: ZFCustomSelectItem = {
+        value: c.contract_id,
+        labelAr: `عقد #${c.contract_number} — ${c.buyer_name}`,
+        labelEn: `Contract #${c.contract_number} — ${c.buyer_name}`,
+        sublabelAr: `الوحدة: ${c.unit_id} • إجمالي العقد: ${D(c.gross_contract_value).formatEGP(true)}`,
+        sublabelEn: `Unit: ${c.unit_id} • Gross: ${D(c.gross_contract_value).formatEGP(false)}`,
+        price: c.gross_contract_value,
+        badge: c.handover_status === 'Delivered' ? (isAr ? 'مُسلَم' : 'Delivered') : (isAr ? 'قيد السداد' : 'Active'),
+        badgeColor: c.handover_status === 'Delivered' ? '#dcfce7' : '#fef9c3',
+        icon: FileText
+      };
+
+      if (c.handover_status === 'Delivered') {
+        deliveredItems.push(item);
+      } else {
+        activeItems.push(item);
+      }
+    });
+
+    const res: ZFCustomSelectSection[] = [];
+    if (activeItems.length > 0) {
+      res.push({
+        sectionId: 'active',
+        titleAr: 'عقود بيع جارية قيد سداد الأقساط',
+        titleEn: 'Active Contracts Under Installments',
+        icon: FileText,
+        items: activeItems
+      });
+    }
+    if (deliveredItems.length > 0) {
+      res.push({
+        sectionId: 'delivered',
+        titleAr: 'عقود تم تسليم وحداتها',
+        titleEn: 'Delivered Unit Contracts',
+        icon: FileText,
+        items: deliveredItems
+      });
+    }
+    return res;
+  }, [contracts, isAr]);
+
   return (
     <div style={{
       position: 'fixed',
@@ -159,7 +207,7 @@ export const NewChequeModal: React.FC<NewChequeModalProps> = ({
       left: 0,
       right: 0,
       bottom: 0,
-      background: 'rgba(3, 7, 18, 0.85)',
+      background: 'rgba(15, 23, 42, 0.45)',
       backdropFilter: 'blur(8px)',
       display: 'flex',
       alignItems: 'center',
@@ -169,15 +217,15 @@ export const NewChequeModal: React.FC<NewChequeModalProps> = ({
     }}>
       <div 
         style={{
-          background: 'linear-gradient(145deg, #0f1624 0%, #080d17 100%)',
-          border: '1px solid rgba(212, 175, 55, 0.35)',
-          borderRadius: '16px',
+          background: '#ffffff',
+          border: '1px solid #e2e8f0',
+          borderRadius: '20px',
           width: '100%',
           maxWidth: '720px',
           maxHeight: '92vh',
           display: 'flex',
           flexDirection: 'column',
-          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.75), 0 0 35px rgba(212, 175, 55, 0.15)',
+          boxShadow: '0 25px 60px -15px rgba(0, 0, 0, 0.15)',
           overflow: 'hidden',
           direction: isAr ? 'rtl' : 'ltr'
         }}
@@ -185,11 +233,11 @@ export const NewChequeModal: React.FC<NewChequeModalProps> = ({
         {/* Modal Header */}
         <div style={{
           padding: '1.25rem 1.5rem',
-          borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+          borderBottom: '1px solid #e2e8f0',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          background: 'rgba(0, 0, 0, 0.25)'
+          background: '#fafaf9'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
             <div style={{
@@ -201,15 +249,15 @@ export const NewChequeModal: React.FC<NewChequeModalProps> = ({
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              color: '#d4af37'
+              color: '#946f23'
             }}>
               <Wallet size={22} />
             </div>
             <div>
-              <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: '#ffffff' }}>
+              <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: '#0f172a' }}>
                 {isAr ? 'تسجيل بند قسط واستحقاق نقدي جديد' : 'Record New Hand Installment Due'}
               </h3>
-              <p style={{ margin: 0, fontSize: '0.74rem', color: '#94a3b8' }}>
+              <p style={{ margin: 0, fontSize: '0.74rem', color: '#64748b' }}>
                 {isAr 
                   ? 'إثبات قسط أو دفعة تعاقدية مستحقة التحصيل نقداً باليد (سواء مسددة في حينها أو لاحقاً).' 
                   : 'Record a cash installment due by hand (collected in-time or scheduled for later).'}
@@ -221,10 +269,10 @@ export const NewChequeModal: React.FC<NewChequeModalProps> = ({
             type="button"
             onClick={onClose}
             style={{
-              background: 'rgba(255, 255, 255, 0.05)',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
+              background: '#ffffff',
+              border: '1px solid #cbd5e1',
               borderRadius: '8px',
-              color: '#94a3b8',
+              color: '#64748b',
               width: '32px',
               height: '32px',
               display: 'flex',
@@ -247,12 +295,12 @@ export const NewChequeModal: React.FC<NewChequeModalProps> = ({
         }}>
           {/* 1. REALISTIC HAND INSTALLMENT VOUCHER PREVIEW CARD */}
           <div style={{
-            background: 'linear-gradient(135deg, #162032 0%, #0d1424 50%, #111a2c 100%)',
-            border: '1.5px solid rgba(212, 175, 55, 0.45)',
+            background: 'linear-gradient(135deg, #ffffff 0%, #fefdfa 100%)',
+            border: '1.5px solid rgba(184, 144, 62, 0.35)',
             borderRadius: '12px',
             padding: '1.15rem 1.35rem',
             position: 'relative',
-            boxShadow: '0 8px 24px rgba(0, 0, 0, 0.5), inset 0 0 20px rgba(212, 175, 55, 0.05)',
+            boxShadow: '0 4px 16px rgba(184, 144, 62, 0.08)',
             overflow: 'hidden'
           }}>
             {/* Voucher Watermark */}
@@ -266,21 +314,21 @@ export const NewChequeModal: React.FC<NewChequeModalProps> = ({
             }} />
 
             {/* Voucher Header Row */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid rgba(212, 175, 55, 0.2)', paddingBottom: '0.65rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #f1f5f9', paddingBottom: '0.65rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <Wallet size={16} color="#d4af37" />
-                <span style={{ fontSize: '0.86rem', fontWeight: 900, color: '#f8fafc', letterSpacing: '0.02em' }}>
+                <span style={{ fontSize: '0.86rem', fontWeight: 900, color: '#0f172a', letterSpacing: '0.02em' }}>
                   {isAr ? 'الخزينة الرئيسية (تحصيل نقدي باليد - 101000)' : 'Main Cash Safe [101000]'}
                 </span>
               </div>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                 <span style={{
-                  fontFamily: 'monospace',
+                  fontVariantNumeric: 'tabular-nums',
                   fontSize: '0.8rem',
                   fontWeight: 800,
-                  color: '#e2c974',
-                  background: 'rgba(0, 0, 0, 0.4)',
+                  color: '#946f23',
+                  background: '#ffffff',
                   padding: '0.2rem 0.55rem',
                   borderRadius: '4px',
                   border: '1px solid rgba(212, 175, 55, 0.3)'
@@ -289,8 +337,8 @@ export const NewChequeModal: React.FC<NewChequeModalProps> = ({
                 </span>
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                  <span style={{ fontSize: '0.68rem', color: '#94a3b8' }}>{isAr ? 'تاريخ الاستحقاق:' : 'Due Date:'}</span>
-                  <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#ffffff', fontFamily: 'monospace' }}>
+                  <span style={{ fontSize: '0.68rem', color: '#64748b' }}>{isAr ? 'تاريخ الاستحقاق:' : 'Due Date:'}</span>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#0f172a', fontVariantNumeric: 'tabular-nums' }}>
                     {dueDate}
                   </span>
                 </div>
@@ -300,10 +348,10 @@ export const NewChequeModal: React.FC<NewChequeModalProps> = ({
             {/* Middle Row: Pay to the Order of & Amount */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', margin: '0.85rem 0' }}>
               <div style={{ flex: 1 }}>
-                <span style={{ fontSize: '0.68rem', color: '#94a3b8', display: 'block', marginBottom: '0.15rem' }}>
+                <span style={{ fontSize: '0.68rem', color: '#64748b', display: 'block', marginBottom: '0.15rem' }}>
                   {isAr ? 'العميل الملتزم بالسداد نقدياً:' : 'Payer / Client Name:'}
                 </span>
-                <span style={{ fontSize: '1rem', fontWeight: 900, color: '#ffffff' }}>
+                <span style={{ fontSize: '1rem', fontWeight: 900, color: '#0f172a' }}>
                   {drawerName || (isAr ? 'اسم العميل الملتزم' : 'Client Name')}
                 </span>
               </div>
@@ -335,8 +383,8 @@ export const NewChequeModal: React.FC<NewChequeModalProps> = ({
               borderTop: '1px dashed rgba(212, 175, 55, 0.25)',
               paddingTop: '0.65rem'
             }}>
-              <div style={{ flex: 1, fontSize: '0.72rem', color: '#cbd5e1', fontStyle: 'italic' }}>
-                <span style={{ color: '#94a3b8', marginLeft: '0.35rem', fontStyle: 'normal' }}>
+              <div style={{ flex: 1, fontSize: '0.72rem', color: '#334155', fontStyle: 'italic' }}>
+                <span style={{ color: '#64748b', marginLeft: '0.35rem', fontStyle: 'normal' }}>
                   {isAr ? 'فقط وقدره:' : 'Sum of:'}
                 </span>
                 <strong style={{ color: '#e2c974' }}>{tafqeetText}</strong>
@@ -375,41 +423,29 @@ export const NewChequeModal: React.FC<NewChequeModalProps> = ({
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.15rem' }}>
             {/* STEP 1: CONTRACT & TRANCHE SELECTION */}
             <div>
-              <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#cbd5e1', marginBottom: '0.4rem' }}>
+              <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#334155', marginBottom: '0.4rem' }}>
                 {isAr ? '١. العقد والوحدة المرتبطة:' : '1. Linked Contract & Unit:'}
               </label>
 
-              <select
+              <ZFCustomSelect 
                 value={selectedContractId}
-                onChange={e => handleContractSelect(e.target.value)}
-                style={{
-                  width: '100%',
-                  background: 'rgba(0, 0, 0, 0.45)',
-                  border: '1px solid rgba(255, 255, 255, 0.12)',
-                  borderRadius: '8px',
-                  padding: '0.6rem 0.85rem',
-                  fontSize: '0.82rem',
-                  color: '#ffffff',
-                  outline: 'none'
-                }}
-              >
-                {contracts.map(c => (
-                  <option key={c.contract_id} value={c.contract_id}>
-                    {isAr ? `عقد #${c.contract_number} — ${c.buyer_name} (${c.unit_id})` : `Contract #${c.contract_number} - ${c.buyer_name} (${c.unit_id})`}
-                  </option>
-                ))}
-              </select>
+                onChange={(val) => handleContractSelect(val)}
+                sections={contractSections}
+                placeholderAr="-- اختر العقد التعاقدي المعتمد --"
+                placeholderEn="-- Select Sales Contract --"
+                isAr={isAr}
+              />
             </div>
 
             {/* Tranche Buttons (if available) */}
             {pendingContractSchedules.length > 0 && (
               <div style={{
-                background: 'rgba(0, 0, 0, 0.25)',
-                border: '1px solid rgba(255, 255, 255, 0.06)',
+                background: '#f8fafc',
+                border: '1px solid #e2e8f0',
                 borderRadius: '8px',
                 padding: '0.65rem 0.85rem'
               }}>
-                <span style={{ fontSize: '0.7rem', color: '#94a3b8', display: 'block', marginBottom: '0.4rem' }}>
+                <span style={{ fontSize: '0.7rem', color: '#64748b', display: 'block', marginBottom: '0.4rem' }}>
                   {isAr ? 'أقساط مجدولة غير مسددة في العقد:' : 'Unpaid Scheduled Tranches:'}
                 </span>
                 <div style={{ display: 'flex', gap: '0.45rem', flexWrap: 'wrap' }}>
@@ -428,15 +464,15 @@ export const NewChequeModal: React.FC<NewChequeModalProps> = ({
                           borderRadius: '7px',
                           fontSize: '0.72rem',
                           fontWeight: 700,
-                          border: isSelected ? '1.5px solid #d4af37' : '1px solid rgba(255, 255, 255, 0.1)',
-                          background: isSelected ? 'rgba(212, 175, 55, 0.22)' : 'rgba(255, 255, 255, 0.04)',
-                          color: isSelected ? '#ffffff' : '#94a3b8',
+                          border: isSelected ? '1.5px solid #946f23' : '1px solid #cbd5e1',
+                          background: isSelected ? 'rgba(184, 144, 62, 0.12)' : '#ffffff',
+                          color: isSelected ? '#946f23' : '#475569',
                           cursor: 'pointer'
                         }}
                       >
                         {isSelected && <Check size={12} color="#d4af37" />}
                         <span>{isAr ? `قسط ${sch.tranche_number}` : `Tranche ${sch.tranche_number}`}</span>
-                        <span style={{ fontFamily: 'monospace', color: isSelected ? '#e2c974' : '#cbd5e1' }}>
+                        <span style={{ fontVariantNumeric: 'tabular-nums', color: isSelected ? '#946f23' : '#64748b' }}>
                           {formatMoney(sch.nominal_value)} {isAr ? 'ج.م' : ''}
                         </span>
                         <span style={{ fontSize: '0.64rem', color: '#64748b' }}>({sch.due_date})</span>
@@ -449,7 +485,7 @@ export const NewChequeModal: React.FC<NewChequeModalProps> = ({
 
             {/* STEP 2: TIMING & ROUTING */}
             <div>
-              <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#cbd5e1', marginBottom: '0.4rem' }}>
+              <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#334155', marginBottom: '0.4rem' }}>
                 {isAr ? '٢. توقيت الاستلام وطريقة السداد نقداً:' : '2. Collection Timing & Cash Route:'}
               </label>
 
@@ -459,20 +495,20 @@ export const NewChequeModal: React.FC<NewChequeModalProps> = ({
                   style={{
                     padding: '0.65rem 0.85rem',
                     borderRadius: '8px',
-                    border: collectionTiming === 'later' ? '1.5px solid #38bdf8' : '1px solid rgba(255, 255, 255, 0.08)',
-                    background: collectionTiming === 'later' ? 'rgba(56, 189, 248, 0.15)' : 'rgba(0, 0, 0, 0.25)',
+                    border: collectionTiming === 'later' ? '1.5px solid #946f23' : '1px solid #e2e8f0',
+                    background: collectionTiming === 'later' ? '#fffbeb' : '#f8fafc',
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
                     gap: '0.45rem'
                   }}
                 >
-                  <Clock size={16} color="#38bdf8" />
+                  <Clock size={16} color="#946f23" />
                   <div>
-                    <strong style={{ fontSize: '0.78rem', color: '#ffffff', display: 'block' }}>
+                    <strong style={{ fontSize: '0.78rem', color: '#0f172a', display: 'block' }}>
                       {isAr ? 'مستحق لاحقاً باليد' : 'Due Later on Schedule'}
                     </strong>
-                    <span style={{ fontSize: '0.66rem', color: '#94a3b8' }}>
+                    <span style={{ fontSize: '0.66rem', color: '#64748b' }}>
                       {isAr ? 'يُحصّل في موعد استحقاقه' : 'Scheduled future collection'}
                     </span>
                   </div>
@@ -483,20 +519,20 @@ export const NewChequeModal: React.FC<NewChequeModalProps> = ({
                   style={{
                     padding: '0.65rem 0.85rem',
                     borderRadius: '8px',
-                    border: collectionTiming === 'intime' ? '1.5px solid #34d399' : '1px solid rgba(255, 255, 255, 0.08)',
-                    background: collectionTiming === 'intime' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(0, 0, 0, 0.25)',
+                    border: collectionTiming === 'intime' ? '1.5px solid #15803d' : '1px solid #e2e8f0',
+                    background: collectionTiming === 'intime' ? '#f0fdf4' : '#f8fafc',
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
                     gap: '0.45rem'
                   }}
                 >
-                  <Check size={16} color="#34d399" />
+                  <Check size={16} color="#15803d" />
                   <div>
-                    <strong style={{ fontSize: '0.78rem', color: '#ffffff', display: 'block' }}>
+                    <strong style={{ fontSize: '0.78rem', color: '#0f172a', display: 'block' }}>
                       {isAr ? 'مسدد فوراً في حينه' : 'Collected In-Time'}
                     </strong>
-                    <span style={{ fontSize: '0.66rem', color: '#94a3b8' }}>
+                    <span style={{ fontSize: '0.66rem', color: '#64748b' }}>
                       {isAr ? 'استلام فوري بالخزينة' : 'Direct cash on signing'}
                     </span>
                   </div>
@@ -507,13 +543,14 @@ export const NewChequeModal: React.FC<NewChequeModalProps> = ({
               <div style={{
                 padding: '0.5rem 0.75rem',
                 borderRadius: '8px',
-                background: 'rgba(16, 185, 129, 0.06)',
-                border: '1px solid rgba(16, 185, 129, 0.2)',
+                background: '#f0fdf4',
+                border: '1px solid #bbf7d0',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '0.45rem',
                 fontSize: '0.74rem',
-                color: '#6ee7b7'
+                color: '#15803d',
+                fontWeight: 700
               }}>
                 <Wallet size={14} />
                 <span>{isAr ? 'جهة التحصيل: الخزينة الرئيسية [101000] — استلام نقدي مباشر بدون أي وسائط بنكية' : 'Destination: Main Safe [101000] - Direct Cash Hand Collection'}</span>
@@ -524,7 +561,7 @@ export const NewChequeModal: React.FC<NewChequeModalProps> = ({
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.85rem' }}>
               {/* Item Code */}
               <div>
-                <label style={{ display: 'block', fontSize: '0.76rem', fontWeight: 700, color: '#cbd5e1', marginBottom: '0.35rem' }}>
+                <label style={{ display: 'block', fontSize: '0.76rem', fontWeight: 700, color: '#334155', marginBottom: '0.35rem' }}>
                   {isAr ? 'كود / رقم البند الدفتري:' : 'Item Code #:'}
                 </label>
                 <input
@@ -534,13 +571,13 @@ export const NewChequeModal: React.FC<NewChequeModalProps> = ({
                   placeholder="DUE-54321"
                   style={{
                     width: '100%',
-                    background: 'rgba(0, 0, 0, 0.45)',
-                    border: '1px solid rgba(255, 255, 255, 0.12)',
+                    background: '#ffffff',
+                    border: '1px solid #cbd5e1',
                     borderRadius: '8px',
                     padding: '0.55rem 0.75rem',
                     fontSize: '0.82rem',
-                    color: '#ffffff',
-                    fontFamily: 'monospace'
+                    color: '#0f172a',
+                    fontVariantNumeric: 'tabular-nums'
                   }}
                   required
                 />
@@ -548,7 +585,7 @@ export const NewChequeModal: React.FC<NewChequeModalProps> = ({
 
               {/* Drawer Name */}
               <div>
-                <label style={{ display: 'block', fontSize: '0.76rem', fontWeight: 700, color: '#cbd5e1', marginBottom: '0.35rem' }}>
+                <label style={{ display: 'block', fontSize: '0.76rem', fontWeight: 700, color: '#334155', marginBottom: '0.35rem' }}>
                   {isAr ? 'العميل الملتزم بالسداد:' : 'Payer Name:'}
                 </label>
                 <input
@@ -558,12 +595,12 @@ export const NewChequeModal: React.FC<NewChequeModalProps> = ({
                   placeholder={isAr ? 'اسم العميل' : 'Client Name'}
                   style={{
                     width: '100%',
-                    background: 'rgba(0, 0, 0, 0.45)',
-                    border: '1px solid rgba(255, 255, 255, 0.12)',
+                    background: '#ffffff',
+                    border: '1px solid #cbd5e1',
                     borderRadius: '8px',
                     padding: '0.55rem 0.75rem',
                     fontSize: '0.82rem',
-                    color: '#ffffff'
+                    color: '#0f172a'
                   }}
                   required
                 />
@@ -571,7 +608,7 @@ export const NewChequeModal: React.FC<NewChequeModalProps> = ({
 
               {/* Nominal Value */}
               <div>
-                <label style={{ display: 'block', fontSize: '0.76rem', fontWeight: 700, color: '#cbd5e1', marginBottom: '0.35rem' }}>
+                <label style={{ display: 'block', fontSize: '0.76rem', fontWeight: 700, color: '#334155', marginBottom: '0.35rem' }}>
                   {isAr ? 'قيمة القسط المطلوبة (ج.م):' : 'Installment Value (EGP):'}
                 </label>
                 <input
@@ -581,7 +618,7 @@ export const NewChequeModal: React.FC<NewChequeModalProps> = ({
                   onChange={e => setNominalValue(e.target.value)}
                   style={{
                     width: '100%',
-                    background: 'rgba(0, 0, 0, 0.45)',
+                    background: '#ffffff',
                     border: '1px solid rgba(212, 175, 55, 0.4)',
                     borderRadius: '8px',
                     padding: '0.55rem 0.75rem',
@@ -595,7 +632,7 @@ export const NewChequeModal: React.FC<NewChequeModalProps> = ({
 
               {/* Due Date */}
               <div>
-                <label style={{ display: 'block', fontSize: '0.76rem', fontWeight: 700, color: '#cbd5e1', marginBottom: '0.35rem' }}>
+                <label style={{ display: 'block', fontSize: '0.76rem', fontWeight: 700, color: '#334155', marginBottom: '0.35rem' }}>
                   {isAr ? 'تاريخ الاستحقاق الدفتري:' : 'Due Date:'}
                 </label>
                 <input
@@ -604,12 +641,12 @@ export const NewChequeModal: React.FC<NewChequeModalProps> = ({
                   onChange={e => setDueDate(e.target.value)}
                   style={{
                     width: '100%',
-                    background: 'rgba(0, 0, 0, 0.45)',
-                    border: '1px solid rgba(255, 255, 255, 0.12)',
+                    background: '#ffffff',
+                    border: '1px solid #cbd5e1',
                     borderRadius: '8px',
                     padding: '0.55rem 0.75rem',
                     fontSize: '0.82rem',
-                    color: '#ffffff'
+                    color: '#0f172a'
                   }}
                   required
                 />
@@ -623,16 +660,16 @@ export const NewChequeModal: React.FC<NewChequeModalProps> = ({
               justifyContent: 'flex-end',
               gap: '0.75rem',
               paddingTop: '0.85rem',
-              borderTop: '1px solid rgba(255, 255, 255, 0.08)'
+              borderTop: '1px solid #e2e8f0'
             }}>
               <button
                 type="button"
                 onClick={onClose}
                 style={{
-                  background: 'rgba(255, 255, 255, 0.05)',
-                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  background: '#ffffff',
+                  border: '1px solid #cbd5e1',
                   borderRadius: '8px',
-                  color: '#94a3b8',
+                  color: '#64748b',
                   padding: '0.55rem 1.15rem',
                   fontSize: '0.82rem',
                   cursor: 'pointer'
