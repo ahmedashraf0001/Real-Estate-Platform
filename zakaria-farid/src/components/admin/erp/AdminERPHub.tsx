@@ -76,6 +76,8 @@ import { QuickTransactionModal } from './QuickTransactionModal';
 import { PartnerCapitalCards } from './PartnerCapitalCards';
 import { CockpitAnalyticsCharts } from './CockpitAnalyticsCharts';
 import { DashboardOperationsRadar } from './DashboardOperationsRadar';
+import { DashboardDailyActionLedger } from './DashboardDailyActionLedger';
+import { DashboardFinancialCalendar } from './DashboardFinancialCalendar';
 import { DashboardAnalyticalStudio } from './DashboardAnalyticalStudio';
 import { exportComprehensiveArabicExcel } from '@/lib/erp/excelExporter';
 import { ConstructionCostCalculator } from './ConstructionCostCalculator';
@@ -1914,6 +1916,32 @@ export default function AdminERPHub({ adminLocale }: AdminERPHubProps) {
                   </div>
                 );
               })()}
+
+              {/* SECTION 1: TODAY'S EXECUTIVE FINANCIAL ACTION LEDGER */}
+              <DashboardDailyActionLedger 
+                pdcRecords={data.pdcRecords}
+                contracts={data.contracts}
+                schedules={data.schedules}
+                makerCheckerRequests={data.makerCheckerRequests}
+                taxRecords={data.taxRecords}
+                onInspectCheque={handleInspectCheque}
+                onInspectContract={handleInspectContract}
+                onInspectTax={handleInspectTax}
+                onNavigateToModule={(mod) => setActiveTab(mod === 'cockpit' ? 'dashboard' : mod as any)}
+                isAr={isAr}
+              />
+
+              {/* SECTION 2: MONTHLY FINANCIAL & CHEQUE MATURITY CALENDAR */}
+              <DashboardFinancialCalendar 
+                pdcRecords={data.pdcRecords}
+                contracts={data.contracts}
+                schedules={data.schedules}
+                taxRecords={data.taxRecords}
+                onInspectCheque={handleInspectCheque}
+                onInspectContract={handleInspectContract}
+                onInspectTax={handleInspectTax}
+                isAr={isAr}
+              />
 
               {/* Actionable Operations Priority Radar */}
               <DashboardOperationsRadar 
