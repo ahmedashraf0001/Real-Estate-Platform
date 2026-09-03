@@ -1,15 +1,19 @@
 /**
  * Zakaria Farid Real Estate ERP — Design System Tokens
  * Master CSS Custom Properties specified in UI_BUILD.md §3.1 & §3.2
+ * Supports Dark Mode (Default) and Swiss Banking Executive Light Mode
  */
 
-:root {
+:root,
+[data-theme="dark"] {
   /* Surfaces */
   --zf-bg-void: #0a0b0e;        /* app shell background */
   --zf-bg-panel: #121622;       /* cards, table containers */
   --zf-bg-panel-raised: #171c2b;/* modals, popovers */
+  --zf-bg-elevated: #1a2030;
   --zf-glass-blur: 14px;
   --zf-border-hairline: rgba(212, 175, 55, 0.12);
+  --zf-border-subtle: rgba(255, 255, 255, 0.08);
 
   /* Accent */
   --zf-gold: #d4af37;
@@ -33,6 +37,53 @@
 
   /* Legal / verification flag */
   --zf-flag-legal: #ff8a3d;      /* [NEEDS LEGAL VERIFICATION] tag */
+
+  /* Shadows */
+  --zf-shadow-card: 0 8px 24px -6px rgba(0, 0, 0, 0.55);
+  --zf-shadow-raised: 0 16px 40px -10px rgba(0, 0, 0, 0.75);
+}
+
+/* ==========================================================================
+   EXECUTIVE SWISS BANKING LIGHT THEME
+   ========================================================================== */
+[data-theme="light"],
+.workstation[data-theme="light"],
+[data-erp-workstation="true"][data-theme="light"] {
+  /* Surfaces */
+  --zf-bg-void: #f8fafc;        /* crisp executive paper canvas (slate-50) */
+  --zf-bg-panel: #ffffff;       /* pure white clinical cards & table rows */
+  --zf-bg-panel-raised: #ffffff;/* elevated modals, popovers */
+  --zf-bg-elevated: #f1f5f9;    /* slate-100 for subtle contrast items */
+  --zf-glass-blur: 16px;
+  --zf-border-hairline: rgba(180, 133, 18, 0.28);
+  --zf-border-subtle: #e2e8f0;   /* slate-200 */
+
+  /* High-Contrast Polished Bronze Gold for Light Mode Readability */
+  --zf-gold: #b48512;
+  --zf-gold-dim: rgba(180, 133, 18, 0.4);
+  --zf-gold-wash: rgba(180, 133, 18, 0.08);
+
+  /* Semantic state (financial) tailored for light mode contrast */
+  --zf-state-open: #0d9488;      /* deep teal-600 */
+  --zf-state-pending: #d97706;   /* amber-600 */
+  --zf-state-paid: #059669;      /* rich emerald-600 */
+  --zf-state-partial: #ea580c;   /* orange-600 */
+  --zf-state-defaulted: #dc2626; /* red-600 */
+  --zf-state-superseded: #64748b;/* slate-500 */
+  --zf-state-void: #94a3b8;      /* slate-400 */
+  --zf-state-locked: #7c3aed;    /* deep royal violet-600 */
+
+  /* High-Contrast Modern Slate Typography */
+  --zf-text-primary: #0f172a;    /* slate-900 */
+  --zf-text-secondary: #334155;  /* slate-700 */
+  --zf-text-muted: #64748b;      /* slate-500 */
+
+  /* Legal / verification flag */
+  --zf-flag-legal: #ea580c;      /* deep orange-600 */
+
+  /* Light Elevation Shadows */
+  --zf-shadow-card: 0 4px 20px -2px rgba(15, 23, 42, 0.06), 0 1px 3px rgba(15, 23, 42, 0.04);
+  --zf-shadow-raised: 0 20px 45px -10px rgba(15, 23, 42, 0.12), 0 0 1px rgba(15, 23, 42, 0.15);
 }
 
 /* Mandatory Tabular Numerals for Currency and Figures (UI_BUILD.md §3.2) */
@@ -40,4 +91,9 @@
 [data-zf-money] {
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum";
+}
+
+/* Global Smooth Color-Scheme Transition */
+[data-erp-workstation="true"] {
+  transition: background-color 0.25s ease, color 0.25s ease;
 }

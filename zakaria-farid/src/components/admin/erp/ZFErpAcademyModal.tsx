@@ -29,6 +29,7 @@ interface ZFErpAcademyModalProps {
   onStartGuidedTour: () => void;
   onNavigateToModule?: (modId: string) => void;
   isAr?: boolean;
+  theme?: 'dark' | 'light';
 }
 
 type AcademyTrack = 'workflow' | 'modules' | 'sop' | 'rules' | 'shortcuts';
@@ -38,8 +39,10 @@ export const ZFErpAcademyModal: React.FC<ZFErpAcademyModalProps> = ({
   onClose,
   onStartGuidedTour,
   onNavigateToModule,
-  isAr = true
+  isAr = true,
+  theme = 'dark'
 }) => {
+  const isLight = theme === 'light';
   const [activeTrack, setActiveTrack] = useState<AcademyTrack>('workflow');
   const [activeArticleId, setActiveArticleId] = useState<string>('wf-overview');
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -70,27 +73,31 @@ export const ZFErpAcademyModal: React.FC<ZFErpAcademyModalProps> = ({
           maxWidth: '1280px',
           height: '90vh',
           maxHeight: '860px',
-          background: 'linear-gradient(145deg, #0b0f19 0%, #070a12 100%)',
-          border: '1px solid rgba(212, 175, 55, 0.25)',
+          background: isLight 
+            ? '#ffffff' 
+            : 'linear-gradient(145deg, #0b0f19 0%, #070a12 100%)',
+          border: isLight ? '1px solid #e2e8f0' : '1px solid rgba(212, 175, 55, 0.25)',
           borderRadius: '24px',
-          boxShadow: '0 25px 60px -12px rgba(0, 0, 0, 0.8), 0 0 40px rgba(212, 175, 55, 0.08)',
+          boxShadow: isLight 
+            ? '0 25px 60px -12px rgba(15, 23, 42, 0.25)' 
+            : '0 25px 60px -12px rgba(0, 0, 0, 0.8), 0 0 40px rgba(212, 175, 55, 0.08)',
           display: 'flex',
           flexDirection: 'column',
           overflow: 'hidden',
-          color: '#f8fafc',
+          color: isLight ? '#0f172a' : '#f8fafc',
           direction: isAr ? 'rtl' : 'ltr'
         }}
       >
         {/* TOP BAR */}
         <div style={{
           padding: '1.2rem 1.75rem',
-          borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+          borderBottom: isLight ? '1px solid #e2e8f0' : '1px solid rgba(255, 255, 255, 0.08)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
           gap: '1rem',
           flexWrap: 'wrap',
-          background: 'rgba(15, 23, 42, 0.5)'
+          background: isLight ? '#f8fafc' : 'rgba(15, 23, 42, 0.5)'
         }}>
           {/* Brand & Title */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
@@ -109,7 +116,7 @@ export const ZFErpAcademyModal: React.FC<ZFErpAcademyModalProps> = ({
             </div>
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, letterSpacing: '-0.01em', color: '#ffffff' }}>
+                <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, letterSpacing: '-0.01em', color: isLight ? '#0f172a' : '#ffffff' }}>
                   {isAr ? 'أكاديمية المنظومة ودليل الاستخدام الشامل' : 'FIN-OS Master Academy & System Guide'}
                 </h3>
                 <span style={{
@@ -138,8 +145,8 @@ export const ZFErpAcademyModal: React.FC<ZFErpAcademyModalProps> = ({
             <div style={{
               display: 'flex',
               alignItems: 'center',
-              background: 'rgba(0, 0, 0, 0.45)',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
+              background: isLight ? '#ffffff' : 'rgba(0, 0, 0, 0.45)',
+              border: isLight ? '1px solid #cbd5e1' : '1px solid rgba(255, 255, 255, 0.1)',
               borderRadius: '10px',
               padding: '0.4rem 0.75rem',
               gap: '0.5rem',
@@ -155,7 +162,7 @@ export const ZFErpAcademyModal: React.FC<ZFErpAcademyModalProps> = ({
                   background: 'transparent',
                   border: 'none',
                   outline: 'none',
-                  color: '#ffffff',
+                  color: isLight ? '#0f172a' : '#ffffff',
                   fontSize: '0.78rem',
                   width: '100%'
                 }}
@@ -236,8 +243,8 @@ export const ZFErpAcademyModal: React.FC<ZFErpAcademyModalProps> = ({
           alignItems: 'center',
           gap: '0.35rem',
           padding: '0.6rem 1.75rem',
-          borderBottom: '1px solid rgba(255, 255, 255, 0.06)',
-          background: 'rgba(10, 15, 26, 0.8)',
+          borderBottom: isLight ? '1px solid #e2e8f0' : '1px solid rgba(255, 255, 255, 0.06)',
+          background: isLight ? '#f8fafc' : 'rgba(10, 15, 26, 0.8)',
           overflowX: 'auto'
         }}>
           {[
@@ -293,8 +300,8 @@ export const ZFErpAcademyModal: React.FC<ZFErpAcademyModalProps> = ({
         }}>
           {/* LEFT/RIGHT SUB-INDEX NAV */}
           <div style={{
-            borderInlineEnd: '1px solid rgba(255, 255, 255, 0.06)',
-            background: 'rgba(9, 13, 22, 0.6)',
+            borderInlineEnd: isLight ? '1px solid #e2e8f0' : '1px solid rgba(255, 255, 255, 0.06)',
+            background: isLight ? '#f8fafc' : 'rgba(9, 13, 22, 0.6)',
             padding: '1rem',
             overflowY: 'auto',
             display: 'flex',
@@ -363,7 +370,7 @@ export const ZFErpAcademyModal: React.FC<ZFErpAcademyModalProps> = ({
           <div style={{
             padding: '2rem 2.5rem',
             overflowY: 'auto',
-            background: '#070a12',
+            background: isLight ? '#ffffff' : '#070a12',
             lineHeight: 1.7
           }}>
             <ArticleRenderer 
@@ -371,6 +378,7 @@ export const ZFErpAcademyModal: React.FC<ZFErpAcademyModalProps> = ({
               isAr={isAr} 
               onNavigateToModule={onNavigateToModule}
               onCloseModal={onClose}
+              isLight={isLight}
             />
           </div>
         </div>
@@ -464,13 +472,15 @@ interface ArticleRendererProps {
   isAr: boolean;
   onNavigateToModule?: (modId: string) => void;
   onCloseModal: () => void;
+  isLight?: boolean;
 }
 
 const ArticleRenderer: React.FC<ArticleRendererProps> = ({
   articleId,
   isAr,
   onNavigateToModule,
-  onCloseModal
+  onCloseModal,
+  isLight = false
 }) => {
   const jumpTo = (modId: string) => {
     onCloseModal();

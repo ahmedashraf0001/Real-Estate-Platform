@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { Search, X, FileText, BookOpen, Landmark } from 'lucide-react';
+import { Search, X, FileText, BookOpen, Landmark, Sun, Moon } from 'lucide-react';
 import { ERPContract, ERPPDCRecord } from '@/lib/erp/types';
 import { CANONICAL_COA } from '@/lib/erp/ledger';
 import { ERPNavModule } from './ZFNavigationDock';
@@ -15,6 +15,8 @@ interface ZFQuickSearchModalProps {
   onSelectContract: (contract: ERPContract) => void;
   onOpenAcademy?: () => void;
   onStartGuidedTour?: () => void;
+  theme?: 'dark' | 'light';
+  onToggleTheme?: () => void;
   isAr?: boolean;
 }
 
@@ -27,6 +29,8 @@ export const ZFQuickSearchModal: React.FC<ZFQuickSearchModalProps> = ({
   onSelectContract,
   onOpenAcademy,
   onStartGuidedTour,
+  theme = 'dark',
+  onToggleTheme,
   isAr = false
 }) => {
   const [query, setQuery] = useState('');
@@ -79,6 +83,22 @@ export const ZFQuickSearchModal: React.FC<ZFQuickSearchModalProps> = ({
         icon: BookOpen,
         action: () => {
           onStartGuidedTour();
+          onClose();
+        }
+      });
+    }
+
+    if (onToggleTheme && ('theme'.includes(q) || 'light'.includes(q) || 'dark'.includes(q) || 'نهاري'.includes(q) || 'ليلي'.includes(q) || 'مظهر'.includes(q) || 'الوضع'.includes(q) || 'سمة'.includes(q))) {
+      matches.push({
+        id: 'cmd-theme',
+        category: isAr ? 'المظهر والإعدادات' : 'Theme & Display',
+        title: isAr 
+          ? (theme === 'light' ? 'التحويل إلى الوضع الليلي (Dark Mode)' : 'التحويل إلى الوضع النهاري (Light Mode)') 
+          : (theme === 'light' ? 'Switch to Dark Mode' : 'Switch to Light Mode'),
+        subtitle: isAr ? 'تبديل مظهر المنظومة بين النمط النهاري السويسري والليلي' : 'Toggle between executive Swiss light and obsidian dark theme',
+        icon: theme === 'light' ? Moon : Sun,
+        action: () => {
+          onToggleTheme();
           onClose();
         }
       });

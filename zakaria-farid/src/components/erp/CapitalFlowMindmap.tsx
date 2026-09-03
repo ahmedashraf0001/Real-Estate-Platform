@@ -48,6 +48,7 @@ interface CapitalFlowMindmapProps {
   };
   taxRecords?: ERPTaxRecord[];
   partnerCalls?: ERPPartnerCall[];
+  theme?: 'dark' | 'light';
 }
 
 interface FlowNode {
@@ -76,8 +77,10 @@ export const CapitalFlowMindmap: React.FC<CapitalFlowMindmapProps> = ({
   totalInjectedCapital = '0.00',
   wipAccounts,
   taxRecords = [],
-  partnerCalls = []
+  partnerCalls = [],
+  theme = 'dark'
 }) => {
+  const isLight = theme === 'light';
   const containerRef = useRef<HTMLDivElement>(null);
   const gridRef = useRef<HTMLDivElement>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -405,8 +408,10 @@ export const CapitalFlowMindmap: React.FC<CapitalFlowMindmapProps> = ({
         height: isFullscreen ? '100vh' : 'auto',
         minHeight: isFullscreen ? '100vh' : '720px',
         zIndex: isFullscreen ? 9999 : 1,
-        background: 'linear-gradient(145deg, #090b11 0%, #06080d 50%, #0c0f17 100%)',
-        border: isFullscreen ? 'none' : '1px solid rgba(255, 255, 255, 0.08)',
+        background: isLight 
+          ? 'linear-gradient(145deg, #ffffff 0%, #f8fafc 50%, #f1f5f9 100%)' 
+          : 'linear-gradient(145deg, #090b11 0%, #06080d 50%, #0c0f17 100%)',
+        border: isFullscreen ? 'none' : (isLight ? '1px solid #e2e8f0' : '1px solid rgba(255, 255, 255, 0.08)'),
         borderRadius: isFullscreen ? 0 : '20px',
         padding: isFullscreen ? '2.5rem 3.5rem' : '1.75rem',
         boxSizing: 'border-box',
@@ -414,7 +419,7 @@ export const CapitalFlowMindmap: React.FC<CapitalFlowMindmapProps> = ({
         display: 'flex',
         flexDirection: 'column',
         gap: '1.5rem',
-        boxShadow: '0 20px 50px rgba(0, 0, 0, 0.7)'
+        boxShadow: isLight ? '0 8px 30px rgba(15, 23, 42, 0.06)' : '0 20px 50px rgba(0, 0, 0, 0.7)'
       }}
     >
       <style>{`
@@ -468,7 +473,7 @@ export const CapitalFlowMindmap: React.FC<CapitalFlowMindmapProps> = ({
             }}>
               <TrendingUp size={16} />
             </span>
-            <h4 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: '#ffffff', letterSpacing: '-0.01em' }}>
+            <h4 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: isLight ? '#0f172a' : '#ffffff', letterSpacing: '-0.01em' }}>
               {isAr ? 'خريطة التدفقات المالية وتوزيعات رأس المال' : 'Capital Flow Mindmap & Treasury Topology'}
             </h4>
             <span style={{
@@ -496,8 +501,8 @@ export const CapitalFlowMindmap: React.FC<CapitalFlowMindmapProps> = ({
           <div style={{
             display: 'flex',
             alignItems: 'center',
-            background: 'rgba(0, 0, 0, 0.6)',
-            border: '1px solid rgba(255, 255, 255, 0.08)',
+            background: isLight ? '#f1f5f9' : 'rgba(0, 0, 0, 0.6)',
+            border: isLight ? '1px solid #e2e8f0' : '1px solid rgba(255, 255, 255, 0.08)',
             borderRadius: '10px',
             padding: '0.2rem',
             gap: '0.2rem'
@@ -513,9 +518,15 @@ export const CapitalFlowMindmap: React.FC<CapitalFlowMindmapProps> = ({
                 type="button"
                 onClick={() => setActiveFilter(f.id as any)}
                 style={{
-                  background: activeFilter === f.id ? 'rgba(212, 175, 55, 0.18)' : 'transparent',
-                  border: activeFilter === f.id ? '1px solid rgba(212, 175, 55, 0.4)' : '1px solid transparent',
-                  color: activeFilter === f.id ? '#e2c974' : '#94a3b8',
+                  background: activeFilter === f.id 
+                    ? (isLight ? 'rgba(180, 133, 18, 0.16)' : 'rgba(212, 175, 55, 0.18)') 
+                    : 'transparent',
+                  border: activeFilter === f.id 
+                    ? (isLight ? '1px solid rgba(180, 133, 18, 0.4)' : '1px solid rgba(212, 175, 55, 0.4)') 
+                    : '1px solid transparent',
+                  color: activeFilter === f.id 
+                    ? (isLight ? '#b48512' : '#e2c974') 
+                    : (isLight ? '#64748b' : '#94a3b8'),
                   borderRadius: '7px',
                   padding: '0.3rem 0.75rem',
                   fontSize: '0.72rem',
@@ -535,9 +546,9 @@ export const CapitalFlowMindmap: React.FC<CapitalFlowMindmapProps> = ({
             onClick={() => setIsFullscreen(prev => !prev)}
             title={isFullscreen ? (isAr ? 'إنهاء وضع ملء الشاشة' : 'Exit Fullscreen') : (isAr ? 'عرض خريطة التدفقات بملء الشاشة' : 'Expand Fullscreen')}
             style={{
-              background: 'rgba(255, 255, 255, 0.05)',
-              border: '1px solid rgba(255, 255, 255, 0.12)',
-              color: '#cbd5e1',
+              background: isLight ? '#f1f5f9' : 'rgba(255, 255, 255, 0.05)',
+              border: isLight ? '1px solid #cbd5e1' : '1px solid rgba(255, 255, 255, 0.12)',
+              color: isLight ? '#334155' : '#cbd5e1',
               borderRadius: '10px',
               padding: '0.5rem 0.75rem',
               display: 'flex',
@@ -736,14 +747,16 @@ export const CapitalFlowMindmap: React.FC<CapitalFlowMindmapProps> = ({
                 className="flow-card-interactive"
                 onClick={() => setSelectedNodeId(prev => prev === node.id ? null : node.id)}
                 style={{
-                  background: 'rgba(13, 17, 26, 0.88)',
-                  border: `1px solid ${isSelected ? node.accentColor : 'rgba(255, 255, 255, 0.08)'}`,
+                  background: isLight ? '#ffffff' : 'rgba(13, 17, 26, 0.88)',
+                  border: `1px solid ${isSelected ? node.accentColor : (isLight ? '#e2e8f0' : 'rgba(255, 255, 255, 0.08)')}`,
                   borderRadius: '14px',
                   padding: '0.95rem 1.1rem',
                   cursor: 'pointer',
                   position: 'relative',
                   backdropFilter: 'blur(12px)',
-                  boxShadow: isSelected ? `0 0 20px ${node.accentColor}33` : '0 4px 14px rgba(0,0,0,0.4)'
+                  boxShadow: isSelected 
+                    ? `0 0 20px ${node.accentColor}33` 
+                    : (isLight ? '0 2px 10px rgba(15, 23, 42, 0.05)' : '0 4px 14px rgba(0,0,0,0.4)')
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '0.6rem' }}>
@@ -763,10 +776,10 @@ export const CapitalFlowMindmap: React.FC<CapitalFlowMindmapProps> = ({
                       <Icon size={16} />
                     </div>
                     <div>
-                      <div style={{ fontSize: '0.82rem', fontWeight: 800, color: '#ffffff' }}>
+                      <div style={{ fontSize: '0.82rem', fontWeight: 800, color: isLight ? '#0f172a' : '#ffffff' }}>
                         {isAr ? node.titleAr : node.titleEn}
                       </div>
-                      <div style={{ fontSize: '0.68rem', color: '#94a3b8' }}>
+                      <div style={{ fontSize: '0.68rem', color: isLight ? '#64748b' : '#94a3b8' }}>
                         {isAr ? node.subtitleAr : node.subtitleEn}
                       </div>
                     </div>
@@ -787,9 +800,9 @@ export const CapitalFlowMindmap: React.FC<CapitalFlowMindmapProps> = ({
                 </div>
 
                 <div style={{ marginTop: '0.65rem', display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
-                  <span style={{ fontSize: '1.05rem', fontWeight: 800, color: '#ffffff', fontFamily: 'monospace' }}>
+                  <span style={{ fontSize: '1.05rem', fontWeight: 800, color: isLight ? '#0f172a' : '#ffffff', fontFamily: 'monospace' }}>
                     {formatCleanWholeNumber(node.amount)}
-                    <span style={{ fontSize: '0.68rem', color: '#64748b', marginInlineStart: '0.3rem' }}>{isAr ? 'ج.م' : 'EGP'}</span>
+                    <span style={{ fontSize: '0.68rem', color: isLight ? '#94a3b8' : '#64748b', marginInlineStart: '0.3rem' }}>{isAr ? 'ج.م' : 'EGP'}</span>
                   </span>
                   <span style={{ fontSize: '0.64rem', color: node.accentColor, fontWeight: 700 }}>
                     {isAr ? node.tagAr : node.tagEn}
@@ -806,8 +819,10 @@ export const CapitalFlowMindmap: React.FC<CapitalFlowMindmapProps> = ({
           className="flow-card-interactive"
           onClick={() => setSelectedNodeId(prev => prev === coreNode.id ? null : coreNode.id)}
           style={{
-            background: 'radial-gradient(ellipse at 50% 30%, rgba(212, 175, 55, 0.15) 0%, rgba(13, 17, 26, 0.95) 100%)',
-            border: '1.5px solid rgba(212, 175, 55, 0.45)',
+            background: isLight 
+              ? 'radial-gradient(ellipse at 50% 30%, rgba(180, 133, 18, 0.12) 0%, #ffffff 100%)' 
+              : 'radial-gradient(ellipse at 50% 30%, rgba(212, 175, 55, 0.15) 0%, rgba(13, 17, 26, 0.95) 100%)',
+            border: isLight ? '1.5px solid rgba(180, 133, 18, 0.45)' : '1.5px solid rgba(212, 175, 55, 0.45)',
             borderRadius: '20px',
             padding: '1.75rem',
             textAlign: 'center',
@@ -815,6 +830,7 @@ export const CapitalFlowMindmap: React.FC<CapitalFlowMindmapProps> = ({
             position: 'relative',
             backdropFilter: 'blur(20px)',
             animation: 'coreGlowPulse 4s ease-in-out infinite',
+            boxShadow: isLight ? '0 10px 30px rgba(180, 133, 18, 0.1)' : undefined,
             zIndex: 6
           }}
         >
@@ -852,16 +868,15 @@ export const CapitalFlowMindmap: React.FC<CapitalFlowMindmapProps> = ({
             <span>{isAr ? coreNode.tagAr : coreNode.tagEn}</span>
           </div>
 
-          <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: '#ffffff' }}>
+          <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: isLight ? '#0f172a' : '#ffffff' }}>
             {isAr ? coreNode.titleAr : coreNode.titleEn}
           </h3>
-          <p style={{ margin: '0.35rem 0 1.25rem', fontSize: '0.72rem', color: '#94a3b8' }}>
+          <p style={{ margin: '0.35rem 0 1.25rem', fontSize: '0.72rem', color: isLight ? '#64748b' : '#94a3b8' }}>
             {isAr ? coreNode.subtitleAr : coreNode.subtitleEn}
           </p>
 
           {/* Large Hero Metric */}
           <div style={{
-            background: 'rgba(0, 0, 0, 0.45)',
             border: '1px solid rgba(255, 255, 255, 0.08)',
             borderRadius: '14px',
             padding: '1rem',
@@ -941,14 +956,16 @@ export const CapitalFlowMindmap: React.FC<CapitalFlowMindmapProps> = ({
                 className="flow-card-interactive"
                 onClick={() => setSelectedNodeId(prev => prev === node.id ? null : node.id)}
                 style={{
-                  background: 'rgba(13, 17, 26, 0.88)',
-                  border: `1px solid ${isSelected ? node.accentColor : 'rgba(255, 255, 255, 0.08)'}`,
+                  background: isLight ? '#ffffff' : 'rgba(13, 17, 26, 0.88)',
+                  border: `1px solid ${isSelected ? node.accentColor : (isLight ? '#e2e8f0' : 'rgba(255, 255, 255, 0.08)')}`,
                   borderRadius: '14px',
                   padding: '0.95rem 1.1rem',
                   cursor: 'pointer',
                   position: 'relative',
                   backdropFilter: 'blur(12px)',
-                  boxShadow: isSelected ? `0 0 20px ${node.accentColor}33` : '0 4px 14px rgba(0,0,0,0.4)'
+                  boxShadow: isSelected 
+                    ? `0 0 20px ${node.accentColor}33` 
+                    : (isLight ? '0 2px 10px rgba(15, 23, 42, 0.05)' : '0 4px 14px rgba(0,0,0,0.4)')
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '0.6rem' }}>
@@ -968,10 +985,10 @@ export const CapitalFlowMindmap: React.FC<CapitalFlowMindmapProps> = ({
                       <Icon size={16} />
                     </div>
                     <div>
-                      <div style={{ fontSize: '0.82rem', fontWeight: 800, color: '#ffffff' }}>
+                      <div style={{ fontSize: '0.82rem', fontWeight: 800, color: isLight ? '#0f172a' : '#ffffff' }}>
                         {isAr ? node.titleAr : node.titleEn}
                       </div>
-                      <div style={{ fontSize: '0.68rem', color: '#94a3b8' }}>
+                      <div style={{ fontSize: '0.68rem', color: isLight ? '#64748b' : '#94a3b8' }}>
                         {isAr ? node.subtitleAr : node.subtitleEn}
                       </div>
                     </div>
@@ -992,9 +1009,9 @@ export const CapitalFlowMindmap: React.FC<CapitalFlowMindmapProps> = ({
                 </div>
 
                 <div style={{ marginTop: '0.65rem', display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
-                  <span style={{ fontSize: '1.05rem', fontWeight: 800, color: '#ffffff', fontFamily: 'monospace' }}>
+                  <span style={{ fontSize: '1.05rem', fontWeight: 800, color: isLight ? '#0f172a' : '#ffffff', fontFamily: 'monospace' }}>
                     {formatCleanWholeNumber(node.amount)}
-                    <span style={{ fontSize: '0.68rem', color: '#64748b', marginInlineStart: '0.3rem' }}>{isAr ? 'ج.م' : 'EGP'}</span>
+                    <span style={{ fontSize: '0.68rem', color: isLight ? '#94a3b8' : '#64748b', marginInlineStart: '0.3rem' }}>{isAr ? 'ج.م' : 'EGP'}</span>
                   </span>
                   <span style={{ fontSize: '0.64rem', color: node.accentColor, fontWeight: 700 }}>
                     {isAr ? node.tagAr : node.tagEn}
@@ -1008,8 +1025,8 @@ export const CapitalFlowMindmap: React.FC<CapitalFlowMindmapProps> = ({
 
       {/* Detail Inspector Drawer / Explanatory Bottom Strip */}
       <div style={{
-        background: 'rgba(0, 0, 0, 0.4)',
-        border: '1px solid rgba(255, 255, 255, 0.06)',
+        background: isLight ? '#ffffff' : 'rgba(0, 0, 0, 0.4)',
+        border: isLight ? '1px solid #e2e8f0' : '1px solid rgba(255, 255, 255, 0.06)',
         borderRadius: '12px',
         padding: '0.85rem 1.25rem',
         display: 'flex',
@@ -1018,7 +1035,7 @@ export const CapitalFlowMindmap: React.FC<CapitalFlowMindmapProps> = ({
         flexWrap: 'wrap',
         gap: '1rem',
         fontSize: '0.74rem',
-        color: '#94a3b8',
+        color: isLight ? '#475569' : '#94a3b8',
         zIndex: 10
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>

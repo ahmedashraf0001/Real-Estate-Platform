@@ -247,13 +247,30 @@ export default function AdminERPHub({ adminLocale }: AdminERPHubProps) {
   const [isGuidedTourActive, setIsGuidedTourActive] = useState(false);
   const [showFirstTimeTourPrompt, setShowFirstTimeTourPrompt] = useState(false);
 
+  // FIN-OS Theme State: 'dark' (obsidian luxury) | 'light' (Swiss banking paper)
+  const [theme, setTheme] = useState<'dark' | 'light'>('dark');
+
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const completed = localStorage.getItem('zf_fin_os_tour_completed_v1');
       if (!completed) {
         setShowFirstTimeTourPrompt(true);
       }
+      const savedTheme = localStorage.getItem('zf_fin_os_theme') as 'dark' | 'light' | null;
+      if (savedTheme === 'light' || savedTheme === 'dark') {
+        setTheme(savedTheme);
+      }
     }
+  }, []);
+
+  const handleToggleTheme = useCallback(() => {
+    setTheme(prev => {
+      const next = prev === 'light' ? 'dark' : 'light';
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('zf_fin_os_theme', next);
+      }
+      return next;
+    });
   }, []);
 
   const unifiedPartners = useMemo(() => {
@@ -1539,7 +1556,11 @@ export default function AdminERPHub({ adminLocale }: AdminERPHubProps) {
   }
 
   return (
-    <div className={`${subStyles.workstation} ${isAr ? subStyles.rtl : ''}`} data-erp-workstation="true">
+    <div 
+      className={`${subStyles.workstation} ${isAr ? subStyles.rtl : ''} ${theme === 'light' ? subStyles.lightMode : ''}`} 
+      data-theme={theme}
+      data-erp-workstation="true"
+    >
       {/* 1. TOP COMMAND & TELEMETRY BAR */}
       <ZFCommandBar 
         activePeriod={activePeriod}
@@ -1556,6 +1577,8 @@ export default function AdminERPHub({ adminLocale }: AdminERPHubProps) {
         hasCriticalAlerts={hasCriticalAlerts}
         onOpenNotifications={() => setShowNotificationCenter(true)}
         onOpenAcademy={() => setIsAcademyOpen(true)}
+        theme={theme}
+        onToggleTheme={handleToggleTheme}
       />
 
       {/* Schema Migration Advisory Banner (Only shown if tables have not been created yet) */}
@@ -1783,6 +1806,7 @@ export default function AdminERPHub({ adminLocale }: AdminERPHubProps) {
                   wipAccounts={wipAccounts}
                   taxRecords={data.taxRecords}
                   partnerCalls={data.partnerCalls}
+                  theme={theme}
                 />
               </div>
 
@@ -1797,6 +1821,7 @@ export default function AdminERPHub({ adminLocale }: AdminERPHubProps) {
                   onInspectContract={handleInspectContract}
                   onInspectTax={handleInspectTax}
                   isAr={isAr}
+                  theme={theme}
                 />
               </div>
 
@@ -1813,6 +1838,7 @@ export default function AdminERPHub({ adminLocale }: AdminERPHubProps) {
                   onInspectTax={handleInspectTax}
                   onNavigateToModule={(mod) => setActiveTab(mod === 'cockpit' ? 'dashboard' : mod as any)}
                   isAr={isAr}
+                  theme={theme}
                 />
               </div>
 
@@ -1838,6 +1864,7 @@ export default function AdminERPHub({ adminLocale }: AdminERPHubProps) {
                 registeredPartners={unifiedPartners}
                 onInjectCapital={() => setShowQuickTransactionModal(true)}
                 onInspectRSV={handleInspectRSV}
+                theme={theme}
               />
             </div>
           )}
@@ -5867,6 +5894,8 @@ export default function AdminERPHub({ adminLocale }: AdminERPHubProps) {
         onSelectContract={(c) => handleInspectContract(c)}
         onOpenAcademy={() => setIsAcademyOpen(true)}
         onStartGuidedTour={() => setIsGuidedTourActive(true)}
+        theme={theme}
+        onToggleTheme={handleToggleTheme}
         isAr={isAr}
       />
 
@@ -5876,6 +5905,7 @@ export default function AdminERPHub({ adminLocale }: AdminERPHubProps) {
         onClose={() => setIsAcademyOpen(false)}
         onStartGuidedTour={() => setIsGuidedTourActive(true)}
         onNavigateToModule={(mod) => setActiveTab(mod === 'cockpit' ? 'dashboard' : mod as any)}
+        theme={theme}
         isAr={isAr}
       />
 
