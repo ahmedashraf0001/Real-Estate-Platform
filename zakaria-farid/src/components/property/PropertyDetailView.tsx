@@ -633,14 +633,14 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
         <div className="property-top-header">
           {/* Top Breadcrumb & Badge Metadata Bar */}
           <div className="header-meta-top-row">
-            <div className="breadcrumb-bar">
+            <div className="breadcrumb-bar" dir={isAr ? 'rtl' : 'ltr'}>
               <button className="back-link-btn" onClick={onBack} type="button">
-                <ArrowLeft size={14} />
+                {isAr ? <ChevronRight size={14} /> : <ArrowLeft size={14} />}
                 <span>{isAr ? 'الكتالوج' : 'Catalog'}</span>
               </button>
-              <ChevronRight size={13} className="crumb-chevron" />
+              <span className="crumb-chevron">{isAr ? '‹' : '›'}</span>
               <span className="crumb-text">{property.district}</span>
-              <ChevronRight size={13} className="crumb-chevron" />
+              <span className="crumb-chevron">{isAr ? '‹' : '›'}</span>
               <span className="crumb-text active">{property.title}</span>
             </div>
 
@@ -797,7 +797,7 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
 
                 <div className="gallery-stage-overlay">
                   <div className="gallery-counter-pill">
-                    <span>{String(activeImageIndex + 1).padStart(2, '0')} / {String(property.images.length).padStart(2, '0')}</span>
+                    <span dir="ltr" className="tabular-nums">{String(activeImageIndex + 1).padStart(2, '0')} / {String(property.images.length).padStart(2, '0')}</span>
                     <span className="counter-vista-label"> • ARCHITECTURAL VISTA</span>
                   </div>
 
@@ -956,8 +956,8 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
                         <ShieldCheck size={14} className="tag-gold-icon" />
                         <span>PROPERTY PHOTOS</span>
                       </span>
-                      <span className="lightbox-counter-pill">
-                        {String(activeImageIndex + 1).padStart(2, '0')} / {String(property.images.length).padStart(2, '0')}
+                      <span className="lightbox-counter-pill" dir="ltr">
+                        <span className="tabular-nums">{String(activeImageIndex + 1).padStart(2, '0')} / {String(property.images.length).padStart(2, '0')}</span>
                       </span>
                     </div>
 

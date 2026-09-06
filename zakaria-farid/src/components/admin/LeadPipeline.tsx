@@ -1303,29 +1303,35 @@ export default function LeadPipeline({ initialLeads, properties, adminLocale }: 
                             }}>
                               {initials}
                             </div>
-                            <strong style={{
-                              fontSize: '12.5px',
-                              fontWeight: 700,
-                              color: '#FFFFFF',
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                              whiteSpace: 'nowrap'
-                            }}>
+                            <strong
+                              dir="auto"
+                              style={{
+                                fontSize: '12.5px',
+                                fontWeight: 700,
+                                color: '#FFFFFF',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap',
+                                unicodeBidi: 'plaintext'
+                              }}>
                               {lead.name}
                             </strong>
                           </div>
 
                           {stale && (
-                            <span style={{
-                              fontSize: '8.5px',
-                              fontWeight: 800,
-                              color: '#FB7185',
-                              background: 'rgba(244, 63, 94, 0.12)',
-                              border: '1px solid rgba(244, 63, 94, 0.3)',
-                              padding: '1px 5px',
-                              borderRadius: '4px',
-                              flexShrink: 0
-                            }}>
+                            <span
+                              dir="ltr"
+                              style={{
+                                fontSize: '8.5px',
+                                fontWeight: 800,
+                                color: '#FB7185',
+                                background: 'rgba(244, 63, 94, 0.12)',
+                                border: '1px solid rgba(244, 63, 94, 0.3)',
+                                padding: '1px 5px',
+                                borderRadius: '4px',
+                                flexShrink: 0,
+                                unicodeBidi: 'isolate'
+                              }}>
                               &gt;24h
                             </span>
                           )}

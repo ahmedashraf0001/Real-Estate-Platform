@@ -35,6 +35,7 @@ interface CashFlowForecastChartProps {
   pdcRecords?: ERPPDCRecord[];
   currentCashBalance?: number;
   isAr?: boolean;
+  embeddedInStudio?: boolean;
   onInspectContract?: (contract: ERPContract) => void;
 }
 
@@ -71,6 +72,7 @@ export const CashFlowForecastChart: React.FC<CashFlowForecastChartProps> = ({
   pdcRecords = [],
   currentCashBalance = 0,
   isAr = true,
+  embeddedInStudio = false,
   onInspectContract
 }) => {
   // Configurable burn-rate percentage for construction disbursements (Default 45%)
@@ -179,53 +181,84 @@ export const CashFlowForecastChart: React.FC<CashFlowForecastChartProps> = ({
 
   return (
     <div style={{
-      background: '#ffffff',
-      border: '1px solid #e2e8f0',
-      borderRadius: '16px',
-      padding: '1.5rem',
-      boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04)',
+      background: embeddedInStudio ? 'transparent' : '#ffffff',
+      border: embeddedInStudio ? 'none' : '1px solid #e2e8f0',
+      borderRadius: embeddedInStudio ? 0 : '16px',
+      padding: embeddedInStudio ? 0 : '1.5rem',
+      boxShadow: embeddedInStudio ? 'none' : '0 1px 3px rgba(0, 0, 0, 0.04)',
       display: 'flex',
       flexDirection: 'column',
-      gap: '1.25rem'
+      gap: embeddedInStudio ? '0.85rem' : '1.25rem'
     }}>
       
       {/* 1. Header & Stage Breadcrumb */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
+        {embeddedInStudio ? (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <div style={{
-              width: '34px',
-              height: '34px',
-              borderRadius: '10px',
+              width: '28px',
+              height: '28px',
+              borderRadius: '8px',
               background: 'rgba(184, 144, 62, 0.12)',
               color: '#946f23',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center'
             }}>
-              <TrendingUp size={18} />
+              <TrendingUp size={15} />
             </div>
-            <h2 style={{ fontSize: '1.15rem', fontWeight: 800, margin: 0, color: '#0f172a' }}>
-              {isAr ? 'توقعات التدفقات النقدية والسيولة المستقبلية (6 أشهر)' : 'Cash Flow Forecast & 6-Month Inflow Timeline'}
-            </h2>
+            <span style={{ fontSize: '0.85rem', fontWeight: 800, color: '#0f172a' }}>
+              {isAr ? 'توقعات الكاش والتحصيلات (الـ 6 شهور الجاية)' : 'Cash Flow Forecast & 6-Month Timeline'}
+            </span>
             <span style={{
-              fontSize: '0.68rem',
+              fontSize: '0.66rem',
               fontWeight: 800,
-              padding: '0.15rem 0.55rem',
+              padding: '0.15rem 0.5rem',
               borderRadius: '6px',
               background: 'rgba(184, 144, 62, 0.1)',
               border: '1px solid rgba(184, 144, 62, 0.25)',
               color: '#946f23'
             }}>
-              {isAr ? 'نموذج تنبؤي دقيق' : 'Predictive Runway'}
+              {isAr ? 'رؤية مستقبلية' : 'Predictive Runway'}
             </span>
           </div>
-          <p style={{ fontSize: '0.78rem', color: '#64748b', margin: '0.25rem 0 0 0' }}>
-            {isAr 
-              ? 'مقارنة دقيقة بين تواريخ استحقاق الأقساط التعاقدية ومصروفات تنفيذ المشروعات لتأكيد تغطية الخزينة لكافة التزامات المقاولين'
-              : 'Forward-looking installment dues vs construction WIP disbursements ensuring contractor milestone coverage'}
-          </p>
-        </div>
+        ) : (
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+              <div style={{
+                width: '34px',
+                height: '34px',
+                borderRadius: '10px',
+                background: 'rgba(184, 144, 62, 0.12)',
+                color: '#946f23',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <TrendingUp size={18} />
+              </div>
+              <h2 style={{ fontSize: '1.15rem', fontWeight: 800, margin: 0, color: '#0f172a' }}>
+                {isAr ? 'توقعات الكاش والتحصيلات (الـ 6 شهور الجاية)' : 'Cash Flow Forecast & 6-Month Inflow Timeline'}
+              </h2>
+              <span style={{
+                fontSize: '0.68rem',
+                fontWeight: 800,
+                padding: '0.15rem 0.55rem',
+                borderRadius: '6px',
+                background: 'rgba(184, 144, 62, 0.1)',
+                border: '1px solid rgba(184, 144, 62, 0.25)',
+                color: '#946f23'
+              }}>
+                {isAr ? 'رؤية مستقبلية' : 'Predictive Runway'}
+              </span>
+            </div>
+            <p style={{ fontSize: '0.78rem', color: '#64748b', margin: '0.25rem 0 0 0' }}>
+              {isAr 
+                ? 'مقارنة بين مواعيد تحصيل أقساط الزباين ومصاريف المباني عشان نتأكد إن في كاش كافي دايماً'
+                : 'Forward-looking installment dues vs construction WIP disbursements ensuring contractor milestone coverage'}
+            </p>
+          </div>
+        )}
 
         {/* Burn-rate percentage control */}
         <div style={{
@@ -235,10 +268,10 @@ export const CashFlowForecastChart: React.FC<CashFlowForecastChartProps> = ({
           background: '#f8fafc',
           border: '1px solid #e2e8f0',
           borderRadius: '8px',
-          padding: '0.35rem 0.65rem'
+          padding: embeddedInStudio ? '0.25rem 0.55rem' : '0.35rem 0.65rem'
         }}>
           <span style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 600 }}>
-            {isAr ? 'نسبة صرف الإنشاءات المقدرة:' : 'Est. WIP Burn Rate:'}
+            {isAr ? 'نسبة الصرف على المباني:' : 'Est. WIP Burn Rate:'}
           </span>
           {[35, 45, 55].map(rate => (
             <button
@@ -263,24 +296,24 @@ export const CashFlowForecastChart: React.FC<CashFlowForecastChartProps> = ({
       </div>
 
       {/* 2. Top 3 Quick Summary KPI Metric Chips */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: embeddedInStudio ? '0.75rem' : '1rem' }}>
         
         {/* Chip 1: Total 6-Month Inflows */}
         <div style={{
           background: 'linear-gradient(135deg, #ffffff 0%, #fefdfa 100%)',
           border: '1px solid rgba(184, 144, 62, 0.3)',
           borderRadius: '12px',
-          padding: '0.85rem 1.15rem',
+          padding: embeddedInStudio ? '0.65rem 0.95rem' : '0.85rem 1.15rem',
           boxShadow: '0 2px 8px rgba(184, 144, 62, 0.06)'
         }}>
           <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#946f23', display: 'block' }}>
-            {isAr ? 'إجمالي المتحصلات المتوقعة (6 أشهر):' : 'Total 6-Month Inflows:'}
+            {isAr ? 'إجمالي الفلوس المتوقع تحصيلها (6 شهور):' : 'Total 6-Month Inflows:'}
           </span>
-          <div style={{ fontSize: '1.45rem', fontWeight: 900, color: '#0f172a', marginTop: '0.15rem', fontVariantNumeric: 'tabular-nums' }}>
+          <div style={{ fontSize: embeddedInStudio ? '1.25rem' : '1.45rem', fontWeight: 900, color: '#0f172a', marginTop: '0.15rem', fontVariantNumeric: 'tabular-nums' }}>
             {D(summary.totalInflows).formatEGP(isAr)}
           </div>
           <span style={{ fontSize: '0.68rem', color: '#64748b', marginTop: '0.2rem', display: 'block' }}>
-            {isAr ? 'بموجب جداول استحقاق العقود الموثقة' : 'From verified contract schedules'}
+            {isAr ? 'حسب مواعيد أقساط عقود البيع' : 'From verified contract schedules'}
           </span>
         </div>
 
@@ -289,13 +322,13 @@ export const CashFlowForecastChart: React.FC<CashFlowForecastChartProps> = ({
           background: '#ffffff',
           border: '1px solid #e2e8f0',
           borderRadius: '12px',
-          padding: '0.85rem 1.15rem',
+          padding: embeddedInStudio ? '0.65rem 0.95rem' : '0.85rem 1.15rem',
           boxShadow: '0 1px 2px rgba(0,0,0,0.02)'
         }}>
           <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#946f23', display: 'block' }}>
-            {isAr ? 'أعلى شهر في التدفقات النقدية:' : 'Peak Inflow Month:'}
+            {isAr ? 'أكتر شهر هيدخل فيه فلوس:' : 'Peak Inflow Month:'}
           </span>
-          <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0f172a', marginTop: '0.15rem' }}>
+          <div style={{ fontSize: embeddedInStudio ? '1.15rem' : '1.25rem', fontWeight: 800, color: '#0f172a', marginTop: '0.15rem' }}>
             {summary.peakMonth?.label || '—'}
           </div>
           <span style={{ fontSize: '0.74rem', fontWeight: 700, color: '#946f23', fontVariantNumeric: 'tabular-nums', marginTop: '0.2rem', display: 'block' }}>
@@ -308,17 +341,17 @@ export const CashFlowForecastChart: React.FC<CashFlowForecastChartProps> = ({
           background: '#ffffff',
           border: '1px solid #e2e8f0',
           borderRadius: '12px',
-          padding: '0.85rem 1.15rem',
+          padding: embeddedInStudio ? '0.65rem 0.95rem' : '0.85rem 1.15rem',
           boxShadow: '0 1px 2px rgba(0,0,0,0.02)'
         }}>
           <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#15803d', display: 'block' }}>
-            {isAr ? 'صافي فائض السيولة المتوقع:' : 'Net Projected Surplus:'}
+            {isAr ? 'صافي الفلوس الزيادة المتوقعة:' : 'Net Projected Surplus:'}
           </span>
-          <div style={{ fontSize: '1.45rem', fontWeight: 900, color: '#15803d', marginTop: '0.15rem', fontVariantNumeric: 'tabular-nums' }}>
+          <div style={{ fontSize: embeddedInStudio ? '1.25rem' : '1.45rem', fontWeight: 900, color: '#15803d', marginTop: '0.15rem', fontVariantNumeric: 'tabular-nums' }}>
             {D(summary.netSurplus).formatEGP(isAr)}
           </div>
           <span style={{ fontSize: '0.68rem', color: '#64748b', marginTop: '0.2rem', display: 'block' }}>
-            {isAr ? `بعد اقتطاع ${disbursementRate}% لمستخلصات التنفيذ` : `After ${disbursementRate}% WIP disbursements`}
+            {isAr ? `بعد خصم ${disbursementRate}% لمصاريف المباني والتشطيب` : `After ${disbursementRate}% WIP disbursements`}
           </span>
         </div>
 
@@ -327,7 +360,7 @@ export const CashFlowForecastChart: React.FC<CashFlowForecastChartProps> = ({
           background: summary.isSafe ? 'rgba(21, 128, 61, 0.06)' : 'rgba(239, 68, 68, 0.05)',
           border: `1px solid ${summary.isSafe ? 'rgba(21, 128, 61, 0.25)' : 'rgba(239, 68, 68, 0.25)'}`,
           borderRadius: '12px',
-          padding: '0.85rem 1.15rem',
+          padding: embeddedInStudio ? '0.65rem 0.95rem' : '0.85rem 1.15rem',
           display: 'flex',
           flexDirection: 'column',
           justifyContent: 'center'
@@ -336,21 +369,21 @@ export const CashFlowForecastChart: React.FC<CashFlowForecastChartProps> = ({
             {summary.isSafe ? <ShieldCheck size={16} /> : <AlertCircle size={16} />}
             <span style={{ fontSize: '0.78rem', fontWeight: 800 }}>
               {summary.isSafe 
-                ? (isAr ? 'مستوى أمان السيولة: مغطى بالكامل' : 'Runway Health: Fully Covered') 
-                : (isAr ? 'تنبيه عجز مؤقت في السيولة' : 'Deficit Warning in Runway')}
+                ? (isAr ? 'حالة الكاش: متغطي ومطمئن' : 'Runway Health: Fully Covered') 
+                : (isAr ? 'تنبيه: عجز مؤقت متوقع في الرصيد' : 'Deficit Warning in Runway')}
             </span>
           </div>
           <span style={{ fontSize: '0.7rem', color: '#64748b', marginTop: '0.25rem' }}>
             {summary.isSafe 
-              ? (isAr ? 'رصيد الخزينة يظل إيجابياً طوال الـ 6 أشهر القادمة' : 'Treasury cash remains positive across all 6 months')
-              : (isAr ? 'يرجى مراجعة مواعيد صرف مستخلصات التنفيذ' : 'Consider staggering contractor disbursements')}
+              ? (isAr ? 'الكاش في الخزنة والبنك مكفي وزيادة طول الـ 6 شهور الجاية' : 'Treasury cash remains positive across all 6 months')
+              : (isAr ? 'محتاجين نوزع بعض دفعات مقاولين البناء عشان الكاش يفضل مرتاح' : 'Consider staggering contractor disbursements')}
           </span>
         </div>
 
       </div>
 
       {/* 3. Interactive Chart (Recharts) */}
-      <div style={{ width: '100%', height: 320, marginTop: '0.5rem' }}>
+      <div style={{ width: '100%', height: embeddedInStudio ? 270 : 320, marginTop: embeddedInStudio ? '0.25rem' : '0.5rem' }}>
         <ResponsiveContainer width="100%" height="100%">
           <ComposedChart data={forecastData} margin={{ top: 15, right: 10, left: 10, bottom: 5 }}>
             <defs>
@@ -389,22 +422,22 @@ export const CashFlowForecastChart: React.FC<CashFlowForecastChartProps> = ({
                       minWidth: '200px'
                     }}>
                       <div style={{ fontWeight: 800, color: '#0f172a', marginBottom: '0.45rem', borderBottom: '1px solid #f1f5f9', paddingBottom: '0.35rem' }}>
-                        {data.label} ({data.dealCount} {isAr ? 'أقساط مجدولة' : 'deals'})
+                        {data.label} ({data.dealCount} {isAr ? 'أقساط مستحقة' : 'deals'})
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', color: '#946f23', fontWeight: 700, margin: '0.2rem 0' }}>
-                        <span>{isAr ? 'المتحصلات التعاقدية:' : 'Expected Inflow:'}</span>
+                        <span>{isAr ? 'الفلوس المتوقع تحصيلها:' : 'Expected Inflow:'}</span>
                         <span style={{ fontVariantNumeric: 'tabular-nums' }}>{D(data.inflows).formatEGP(isAr)}</span>
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', color: '#64748b', margin: '0.2rem 0' }}>
-                        <span>{isAr ? 'مصروفات التنفيذ المقدرة:' : 'Disbursements:'}</span>
+                        <span>{isAr ? 'مصاريف المباني التقديرية:' : 'Disbursements:'}</span>
                         <span style={{ fontVariantNumeric: 'tabular-nums' }}>{D(data.outflows).formatEGP(isAr)}</span>
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', color: data.netFlow >= 0 ? '#15803d' : '#dc2626', fontWeight: 700, margin: '0.2rem 0', borderTop: '1px dashed #e2e8f0', paddingTop: '0.25rem' }}>
-                        <span>{isAr ? 'صافي التدفق الشهري:' : 'Net Monthly Flow:'}</span>
+                        <span>{isAr ? 'صافي الفلوس للشهر ده:' : 'Net Monthly Flow:'}</span>
                         <span style={{ fontVariantNumeric: 'tabular-nums' }}>{D(data.netFlow).formatEGP(isAr)}</span>
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', color: '#0f172a', fontWeight: 800, margin: '0.2rem 0', paddingTop: '0.25rem' }}>
-                        <span>{isAr ? 'رصيد الخزينة التراكمي:' : 'Rolling Treasury:'}</span>
+                        <span>{isAr ? 'الكاش المتوقع في الخزنة والبنك:' : 'Rolling Treasury:'}</span>
                         <span style={{ fontVariantNumeric: 'tabular-nums' }}>{D(data.cumulative).formatEGP(isAr)}</span>
                       </div>
                     </div>
@@ -425,7 +458,7 @@ export const CashFlowForecastChart: React.FC<CashFlowForecastChartProps> = ({
               fill="url(#goldAreaGrad)" 
               stroke="#c5a059" 
               strokeWidth={2.5} 
-              name={isAr ? 'المتحصلات التعاقدية المتوقعة (Inflows)' : 'Expected Collections'} 
+              name={isAr ? 'الفلوس المتوقع تحصيلها' : 'Expected Collections'} 
             />
 
             {/* Outflows Bar */}
@@ -434,7 +467,7 @@ export const CashFlowForecastChart: React.FC<CashFlowForecastChartProps> = ({
               fill="#cbd5e1" 
               radius={[6, 6, 0, 0]} 
               barSize={20} 
-              name={isAr ? 'المصروفات ومستخلصات التنفيذ المقدرة (Outflows)' : 'Projected Disbursements'} 
+              name={isAr ? 'مصاريف المباني التقديرية' : 'Projected Disbursements'} 
             />
 
             {/* Rolling Cumulative Cash Balance Line */}
@@ -444,7 +477,7 @@ export const CashFlowForecastChart: React.FC<CashFlowForecastChartProps> = ({
               stroke="#0f172a" 
               strokeWidth={3} 
               dot={{ r: 4, fill: '#0f172a', strokeWidth: 1, stroke: '#ffffff' }} 
-              name={isAr ? 'الرصيد التراكمي للخزينة (Rolling Cash)' : 'Rolling Cash Balance'} 
+              name={isAr ? 'الكاش المتوقع في الخزنة والبنك' : 'Rolling Cash Balance'} 
             />
           </ComposedChart>
         </ResponsiveContainer>
@@ -481,7 +514,7 @@ export const CashFlowForecastChart: React.FC<CashFlowForecastChartProps> = ({
                   borderRadius: '4px',
                   fontWeight: 700
                 }}>
-                  {m.dealCount} {isAr ? 'عقود' : 'tranches'}
+                  {m.dealCount} {isAr ? 'أقساط' : 'tranches'}
                 </span>
               </div>
 
@@ -513,7 +546,7 @@ export const CashFlowForecastChart: React.FC<CashFlowForecastChartProps> = ({
         }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <span style={{ fontSize: '0.76rem', fontWeight: 800, color: '#0f172a' }}>
-              {isAr ? `العقود والأقساط المستحقة خلال (${activeMonthData.label}):` : `Contracts & Installments Due in (${activeMonthData.label}):`}
+              {isAr ? `تفاصيل الأقساط المستحقة خلال (${activeMonthData.label}):` : `Contracts & Installments Due in (${activeMonthData.label}):`}
             </span>
             <span style={{ fontSize: '0.72rem', color: '#946f23', fontWeight: 700 }}>
               {isAr ? 'إجمالي الشهر: ' : 'Total: '} {D(activeMonthData.inflows).formatEGP(isAr)}

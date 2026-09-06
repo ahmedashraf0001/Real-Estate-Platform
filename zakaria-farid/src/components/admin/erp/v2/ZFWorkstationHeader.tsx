@@ -7,24 +7,26 @@ import {
   Unlock, 
   Search, 
   RefreshCw,
-  Coins,
-  ArrowLeft,
-  FileSpreadsheet,
-  LogOut,
-  Bell,
-  BookOpen,
-  UserCheck,
-  Sun,
-  Moon
+  ArrowLeft, 
+  FileSpreadsheet, 
+  LogOut, 
+  Bell, 
+  BookOpen, 
+  UserCheck, 
+  Sun, 
+  Moon, 
+  PanelLeftClose, 
+  PanelLeftOpen
 } from 'lucide-react';
+import { BrandLogo } from '@/components/BrandLogo';
 import { ERPAccountingPeriod } from '@/lib/erp/types';
 import styles from './ZFWorkstationShell.module.css';
 
 interface ZFWorkstationHeaderProps {
   activePeriod?: ERPAccountingPeriod;
   isAr?: boolean;
-  currency: 'EGP' | 'USD';
-  onToggleCurrency: () => void;
+  currency?: 'EGP' | 'USD';
+  onToggleCurrency?: () => void;
   onOpenQuickSearch: () => void;
   onRefreshData: () => void;
   onExportExcel?: () => void;
@@ -35,6 +37,8 @@ interface ZFWorkstationHeaderProps {
   hasCriticalAlerts?: boolean;
   onOpenNotifications?: () => void;
   onOpenAcademy?: () => void;
+  isDockCollapsed?: boolean;
+  onToggleDock?: () => void;
 }
 
 export const ZFWorkstationHeader: React.FC<ZFWorkstationHeaderProps> = ({
@@ -51,7 +55,9 @@ export const ZFWorkstationHeader: React.FC<ZFWorkstationHeaderProps> = ({
   unreadNotificationsCount = 0,
   hasCriticalAlerts = false,
   onOpenNotifications,
-  onOpenAcademy
+  onOpenAcademy,
+  isDockCollapsed = false,
+  onToggleDock
 }) => {
   const [cairoTime, setCairoTime] = useState<string>('');
   const [theme, setTheme] = useState<'dark' | 'light'>('light');
@@ -92,27 +98,49 @@ export const ZFWorkstationHeader: React.FC<ZFWorkstationHeaderProps> = ({
 
   return (
     <header className={styles.header}>
-      {/* 1. LEFT: Brand Context & Navigation back */}
+      {/* 1. LEFT: Brand Context & Navigation Back */}
       <div className={styles.headerBrand}>
+        {onToggleDock && (
+          <button
+            type="button"
+            className={styles.dockToggleBtn}
+            onClick={onToggleDock}
+            title={isDockCollapsed 
+              ? (isAr ? 'توسيع القائمة الجانبية (شريط الأدوات)' : 'Expand Navigation Dock')
+              : (isAr ? 'طي القائمة الجانبية (مساحة عمل واسعة)' : 'Collapse Navigation Dock')}
+          >
+            {isDockCollapsed ? <PanelLeftOpen size={15} /> : <PanelLeftClose size={15} />}
+          </button>
+        )}
+
         <Link 
           href={`/admin/${isAr ? 'ar' : 'en'}`} 
           className={styles.adminReturnLink}
-          title={isAr ? 'العودة إلى لوحة الإدارة العامة' : 'Return to Main Admin'}
+          title={isAr ? 'العودة إلى لوحة القيادة التنفيذية' : 'Return to Executive Dashboard'}
         >
           <ArrowLeft size={13} style={{ transform: isAr ? 'rotate(180deg)' : 'none' }} />
           <span>{isAr ? 'لوحة الإدارة' : 'Admin'}</span>
         </Link>
 
-        <div className={styles.brandPill}>
-          <div className={styles.brandLogo}>ZF</div>
-          <div className={styles.brandText}>
-            <div className={styles.brandName}>
-              <span>FIN-OS</span>
-              <span className={styles.versionTag}>v2.4</span>
-            </div>
-            <span className={styles.brandSubtext}>
-              {isAr ? 'المنظومة المالية والمحاسبية' : 'Financial Operating System'}
-            </span>
+        {/* Official Al Zakaria Brand Logo from Main Website */}
+        <div className={styles.brandLockup}>
+          <Link 
+            href={`/admin/${isAr ? 'ar' : 'en'}`} 
+            className={styles.brandLink}
+            title={isAr ? 'آل زكريا للعقارات الفاخرة' : 'Al Zakaria Luxury Estates'}
+          >
+            <BrandLogo size="sm" locale={isAr ? 'ar' : 'en'} />
+          </Link>
+
+          <span className={styles.brandDivider} />
+
+          <div 
+            className={styles.erpBadge} 
+            title={isAr ? 'المنظومة المالية والمحاسبية FIN-OS الإصدار 2.4' : 'FIN-OS Financial Operating System v2.4'}
+          >
+            <span className={styles.erpLiveDot} />
+            <span className={styles.erpBadgeText}>FIN-OS</span>
+            <span className={styles.erpBadgeVersion}>v2.4</span>
           </div>
         </div>
       </div>
@@ -122,12 +150,12 @@ export const ZFWorkstationHeader: React.FC<ZFWorkstationHeaderProps> = ({
         type="button"
         className={styles.searchAnchor}
         onClick={onOpenQuickSearch}
-        title={isAr ? 'بحث سريع في العقود، الأقساط، والقيود المحاسبية (⌘K)' : 'Quick search contracts, dues, ledger... (⌘K)'}
+        title={isAr ? 'بحث سريع في العقود، الأقساط، وحركة الخزنة (⌘K)' : 'Quick search contracts, dues, ledger... (⌘K)'}
       >
         <div className={styles.searchIconText}>
           <Search size={14} style={{ color: '#64748b' }} />
           <span>
-            {isAr ? 'بحث سريع في العقود، الأقساط باليد، والقيود المحاسبية...' : 'Search contracts, dues, journal entries...'}
+            {isAr ? 'دوّر في العقود، الأقساط، أو حركة الخزنة...' : 'Search contracts, dues, journal entries...'}
           </span>
         </div>
         <kbd className={styles.kbd}>⌘K</kbd>
@@ -146,8 +174,8 @@ export const ZFWorkstationHeader: React.FC<ZFWorkstationHeaderProps> = ({
             <span 
               className={styles.periodBadge}
               title={isLocked 
-                ? (isAr ? `الفترة ${activePeriod.fiscal_year}/${activePeriod.period_number} مقفلة ومحمية` : `Period ${activePeriod.fiscal_year}/${activePeriod.period_number} Locked`)
-                : (isAr ? `الفترة ${activePeriod.fiscal_year}/${activePeriod.period_number} مفتوحة للقيد` : `Period ${activePeriod.fiscal_year}/${activePeriod.period_number} Open`)}
+                ? (isAr ? `الفترة ${activePeriod.fiscal_year}/${activePeriod.period_number} مقفولة ومحمية` : `Period ${activePeriod.fiscal_year}/${activePeriod.period_number} Locked`)
+                : (isAr ? `الفترة ${activePeriod.fiscal_year}/${activePeriod.period_number} مفتوحة لتسجيل العمليات` : `Period ${activePeriod.fiscal_year}/${activePeriod.period_number} Open`)}
             >
               {isLocked ? <Lock size={11} color="#8b5cf6" /> : <Unlock size={11} color="#10b981" />}
               <span className={styles.tabularNums}>{activePeriod.fiscal_year}/{activePeriod.period_number}</span>
@@ -161,29 +189,23 @@ export const ZFWorkstationHeader: React.FC<ZFWorkstationHeaderProps> = ({
           </span>
         </div>
 
-        {/* Excel Export */}
+        {/* Executive Excel Export Button */}
         {onExportExcel && (
           <button 
             type="button"
-            className={styles.utilityBtn}
+            className={styles.excelExportBtn}
             onClick={onExportExcel}
-            title={isAr ? 'تصدير التقارير المحاسبية إلى Excel' : 'Export Reports to Excel'}
+            title={isAr ? 'تنزيل تقرير إكسيل بكل الحسابات (.xlsx)' : 'Export Accounting Ledger & Reports to Excel (.xlsx)'}
           >
-            <FileSpreadsheet size={13} color="#10b981" />
-            <span>Excel</span>
+            <div className={styles.excelIconBox}>
+              <FileSpreadsheet size={15} strokeWidth={2.2} />
+            </div>
+            <span className={styles.excelExportText}>
+              {isAr ? 'تصدير التقارير' : 'Export Reports'}
+            </span>
+            <span className={styles.excelFormatPill}>XLSX</span>
           </button>
         )}
-
-        {/* Currency Switcher */}
-        <button 
-          type="button"
-          className={styles.utilityBtn}
-          onClick={onToggleCurrency}
-          title={isAr ? 'تبديل عملة العرض (جنيه / دولار)' : 'Toggle Currency'}
-        >
-          <Coins size={12} color="#c5a059" />
-          <span>{currency}</span>
-        </button>
 
         {/* Data Refresh */}
         <button 
@@ -191,10 +213,9 @@ export const ZFWorkstationHeader: React.FC<ZFWorkstationHeaderProps> = ({
           className={styles.utilityBtn}
           onClick={onRefreshData}
           disabled={isMutating}
-          title={isAr ? 'تحديث البيانات الحية' : 'Refresh Data'}
-          style={{ width: '28px', padding: 0 }}
+          title={isAr ? 'تحديث البيانات' : 'Refresh Data'}
         >
-          <RefreshCw size={12} className={isMutating ? 'animate-spin' : ''} />
+          <RefreshCw size={13} className={isMutating ? 'animate-spin' : ''} />
         </button>
 
         {/* Notification Bell */}
@@ -203,17 +224,17 @@ export const ZFWorkstationHeader: React.FC<ZFWorkstationHeaderProps> = ({
             type="button"
             className={styles.utilityBtn}
             onClick={onOpenNotifications}
-            title={isAr ? 'مركز التنبيهات' : 'Notifications'}
-            style={{ width: '28px', padding: 0, position: 'relative' }}
+            title={isAr ? 'مركز التنبيهات والإشعارات' : 'Notification Center'}
+            style={{ position: 'relative' }}
           >
-            <Bell size={13} color={hasCriticalAlerts ? '#ef4444' : undefined} />
+            <Bell size={14} color={hasCriticalAlerts ? '#ef4444' : undefined} />
             {unreadNotificationsCount > 0 && (
               <span style={{
                 position: 'absolute',
                 top: '-2px',
                 right: '-2px',
-                width: '12px',
-                height: '12px',
+                width: '13px',
+                height: '13px',
                 borderRadius: '50%',
                 background: hasCriticalAlerts ? '#ef4444' : '#c5a059',
                 color: '#ffffff',
@@ -236,10 +257,9 @@ export const ZFWorkstationHeader: React.FC<ZFWorkstationHeaderProps> = ({
             type="button"
             className={styles.utilityBtn}
             onClick={onOpenAcademy}
-            title={isAr ? 'دليل المنظومة والأكاديمية' : 'Academy & Guide'}
-            style={{ width: '28px', padding: 0 }}
+            title={isAr ? 'دليل واستخدام النظام' : 'Academy & Guide'}
           >
-            <BookOpen size={13} color="#c5a059" />
+            <BookOpen size={14} color="#946f23" />
           </button>
         )}
 
@@ -251,19 +271,18 @@ export const ZFWorkstationHeader: React.FC<ZFWorkstationHeaderProps> = ({
           title={isAr 
             ? (theme === 'dark' ? 'التبديل إلى النمط الفاتح (Light Mode)' : 'التبديل إلى النمط الداكن (Dark Mode)')
             : (theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode')}
-          style={{ width: '28px', padding: 0 }}
         >
           {theme === 'dark' ? (
-            <Sun size={13} color="#f59e0b" />
+            <Sun size={14} color="#f59e0b" />
           ) : (
-            <Moon size={13} color="#64748b" />
+            <Moon size={14} color="#64748b" />
           )}
         </button>
 
         {/* Authenticated Admin Badge */}
         {currentUser && (
           <div className={styles.userBadge} title={currentUser.email || 'Admin'}>
-            <UserCheck size={12} />
+            <UserCheck size={13} color="#059669" />
             <span className={styles.userEmail}>
               {currentUser.email ? currentUser.email.split('@')[0] : (isAr ? 'مسؤول' : 'Admin')}
             </span>
@@ -278,7 +297,7 @@ export const ZFWorkstationHeader: React.FC<ZFWorkstationHeaderProps> = ({
             className={styles.logoutBtn}
             title={isAr ? 'تسجيل الخروج' : 'Sign Out'}
           >
-            <LogOut size={12} />
+            <LogOut size={13} />
           </button>
         )}
       </div>

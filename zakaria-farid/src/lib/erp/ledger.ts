@@ -51,12 +51,12 @@ export const CANONICAL_COA: Record<string, ERPAccount> = {
   },
   '103200': {
     account_code: '103200',
-    account_name_en: 'PDC Cheques in Safe',
-    account_name_ar: 'شيكات مؤجلة الخزينة (PDC)',
+    account_name_en: 'Hand Installments & Safe Dues',
+    account_name_ar: 'أقساط وسندات قبض الخزينة',
     account_type: 'ASSET',
     normal_balance: 'DEBIT',
     is_active: true,
-    notes: 'Physical cheques in safe custody (§14.F)'
+    notes: 'Contractual installment dues in safe agenda (§14.F)'
   },
   '103300': {
     account_code: '103300',
@@ -66,6 +66,24 @@ export const CANONICAL_COA: Record<string, ERPAccount> = {
     normal_balance: 'DEBIT',
     is_active: true,
     notes: 'UNRESOLVED (OPEN_QUESTIONS Q4) — Do not post'
+  },
+  '104000': {
+    account_code: '104000',
+    account_name_en: 'Installments & Notes Under Collection (Safe)',
+    account_name_ar: 'أقساط وأوراق قبض تحت التحصيل بالخزينة',
+    account_type: 'ASSET',
+    normal_balance: 'DEBIT',
+    is_active: true,
+    notes: 'Installments and notes under collection in safe custody (§14.F)'
+  },
+  '105000': {
+    account_code: '105000',
+    account_name_en: 'Projects Under Construction (Consolidated WIP)',
+    account_name_ar: 'مشروعات تحت التنفيذ - مجمع تكاليف البناء (WIP)',
+    account_type: 'ASSET',
+    normal_balance: 'DEBIT',
+    is_active: true,
+    notes: 'Consolidated real estate development work-in-progress'
   },
   '150000': {
     account_code: '150000',
@@ -147,6 +165,15 @@ export const CANONICAL_COA: Record<string, ERPAccount> = {
     normal_balance: 'CREDIT',
     is_active: true,
     notes: 'Pre-handover customer advances and collections'
+  },
+  '204000': {
+    account_code: '204000',
+    account_name_en: 'Accrued Real Estate Disposition Taxes & Fees',
+    account_name_ar: 'مستحقات ضريبة التصرفات العقارية والرسوم',
+    account_type: 'LIABILITY',
+    normal_balance: 'CREDIT',
+    is_active: true,
+    notes: 'Real estate disposition tax (2.5%) and governmental fee obligations'
   },
   '206200': {
     account_code: '206200',
@@ -264,6 +291,15 @@ export const CANONICAL_COA: Record<string, ERPAccount> = {
     normal_balance: 'DEBIT',
     is_active: true,
     notes: 'Administrative overhead'
+  },
+  '603000': {
+    account_code: '603000',
+    account_name_en: 'Utilities & Site Administration Expenses',
+    account_name_ar: 'مصروفات مرافق وفواتير تشغيل الموقع',
+    account_type: 'EXPENSE',
+    normal_balance: 'DEBIT',
+    is_active: true,
+    notes: 'Site utilities, corporate overhead bills and running expenses'
   }
 };
 

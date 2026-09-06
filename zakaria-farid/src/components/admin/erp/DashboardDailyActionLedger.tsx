@@ -100,8 +100,8 @@ export const DashboardDailyActionLedger: React.FC<DashboardDailyActionLedgerProp
         items.push({
           id: `cheque_today_${pdc.cheque_id}`,
           type: 'cheque',
-          title: isAr ? `شيك مستحق التحصيل باليد اليوم #${pdc.cheque_number}` : `Cheque Due for Hand Collection Today #${pdc.cheque_number}`,
-          subtitle: `${pdc.bank_name} · ${isAr ? 'الساحب:' : 'Drawer:'} ${pdc.drawer_name}`,
+          title: isAr ? `قسط مستحق التحصيل باليد اليوم #${pdc.cheque_number}` : `Installment Due for Hand Collection Today #${pdc.cheque_number}`,
+          subtitle: `${pdc.bank_name || (isAr ? 'نقدي / باليد' : 'Cash')} · ${isAr ? 'العميل:' : 'Client:'} ${pdc.drawer_name}`,
           amount: pdc.nominal_value,
           statusText: isAr ? 'لم يتم التحصيل (يستحق اليوم)' : 'Due Today',
           isOverdue: false,
@@ -113,8 +113,8 @@ export const DashboardDailyActionLedger: React.FC<DashboardDailyActionLedgerProp
         items.push({
           id: `cheque_overdue_${pdc.cheque_id}`,
           type: 'cheque',
-          title: isAr ? `شيك متأخر التحصيل باليد #${pdc.cheque_number}` : `Overdue Cheque #${pdc.cheque_number}`,
-          subtitle: `${pdc.bank_name} · ${isAr ? 'تأخير' : 'Delayed'} ${diffDays} ${isAr ? 'يوم' : 'days'} (${pdc.due_date})`,
+          title: isAr ? `قسط متأخر التحصيل باليد #${pdc.cheque_number}` : `Overdue Installment #${pdc.cheque_number}`,
+          subtitle: `${pdc.bank_name || (isAr ? 'نقدي / باليد' : 'Cash')} · ${isAr ? 'تأخير' : 'Delayed'} ${diffDays} ${isAr ? 'يوم' : 'days'} (${pdc.due_date})`,
           amount: pdc.nominal_value,
           statusText: isAr ? `لم يتم التحصيل (متأخر ${diffDays} يوم)` : `${diffDays}d overdue`,
           isOverdue: true,
@@ -289,7 +289,7 @@ export const DashboardDailyActionLedger: React.FC<DashboardDailyActionLedgerProp
               )}
             </div>
             <span style={{ fontSize: '0.72rem', color: '#94a3b8' }}>
-              {todayFormatted} · {isAr ? 'رصد لحظي للشيكات والأقساط المستحقة والرقابة المزدوجة' : 'Real-time tracking of cheques, dues, and approvals'}
+              {todayFormatted} · {isAr ? 'رصد لحظي للأقساط ومواعيد السداد المستحقة والرقابة المزدوجة' : 'Real-time tracking of hand dues, receipts, and approvals'}
             </span>
           </div>
         </div>
@@ -346,7 +346,7 @@ export const DashboardDailyActionLedger: React.FC<DashboardDailyActionLedgerProp
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', flexWrap: 'wrap' }}>
         {[
           { id: 'all', labelAr: 'كل مهام اليوم', labelEn: 'All Actions', count: ledgerItems.length },
-          { id: 'cheque', labelAr: 'شيكات الخزينة', labelEn: 'Cheques', count: chequeCount },
+          { id: 'cheque', labelAr: 'أقساط الخزينة', labelEn: 'Hand Dues', count: chequeCount },
           { id: 'installment', labelAr: 'أقساط العملاء', labelEn: 'Installments', count: installmentCount },
           { id: 'approval', labelAr: 'موافقات معلقة', labelEn: 'Approvals', count: approvalCount }
         ].map(tab => {
@@ -422,8 +422,8 @@ export const DashboardDailyActionLedger: React.FC<DashboardDailyActionLedgerProp
           </span>
           <span style={{ fontSize: '0.74rem', color: '#64748b', maxWidth: '340px' }}>
             {isAr 
-              ? 'الخزينة متطابقة ولا توجد شيكات أو أقساط متأخرة تتطلب التدخل الفوري لليوم.'
-              : 'Vault is balanced and no overdue cheques or customer instalments require immediate recovery today.'}
+              ? 'الخزينة متطابقة ولا توجد أقساط أو مستحقات متأخرة تتطلب التدخل الفوري لليوم.'
+              : 'Vault is balanced and no overdue customer instalments require immediate recovery today.'}
           </span>
         </div>
       ) : (

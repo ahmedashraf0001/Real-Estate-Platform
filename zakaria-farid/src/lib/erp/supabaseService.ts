@@ -35,6 +35,7 @@ import {
 } from './types';
 import { Property, Lead, BuildingUnitItem } from '@/lib/supabase/types';
 import { D, generateUUID, isUUID, ensureUUID } from './math';
+import { CANONICAL_COA } from './ledger';
 import { generateMockPropertyCosts } from './propertyCostEngine';
 import { FALLBACK_PROPERTIES } from '@/lib/data/fallbackProperties';
 
@@ -915,7 +916,30 @@ export class ERPSupabaseService {
         };
       });
 
-      const { error: lineError } = await supabase.from('erp_journal_lines').insert(lineRows);
+      let { error: lineError } = await supabase.from('erp_journal_lines').insert(lineRows);
+      if (lineError && (lineError.code === '23503' || lineError.message?.includes('foreign key') || lineError.message?.includes('erp_accounts') || lineError.message?.includes('account_code'))) {
+        try {
+          // Self-heal: ensure all referenced accounts in lines exist in erp_accounts
+          for (const l of entry.lines) {
+            const acc = CANONICAL_COA[l.account_code];
+            if (acc) {
+              await supabase.from('erp_accounts').upsert({
+                account_code: acc.account_code,
+                account_name_en: acc.account_name_en,
+                account_name_ar: acc.account_name_ar,
+                account_type: acc.account_type,
+                normal_balance: acc.normal_balance,
+                is_active: acc.is_active,
+                notes: acc.notes
+              }, { onConflict: 'account_code' });
+            }
+          }
+          const retryRes = await supabase.from('erp_journal_lines').insert(lineRows);
+          lineError = retryRes.error;
+        } catch {
+          // Allow original error handling if upsert fails
+        }
+      }
       if (lineError) {
         if (this.isSchemaCacheError(lineError)) return;
         throw lineError;

@@ -196,32 +196,14 @@ export const Footer: React.FC<FooterProps> = ({
           </div>
           <div className="footer-credits">
             <span>{isAr ? 'تصميم وإدارة تنفيذية بمعايير الفخامة العالمية. جميع الحقوق محفوظة.' : 'Designed by luxury operators. All rights reserved.'}</span>
-            {!isStatusPage && (
-              <>
-                {onOpenAdmin && (
-                  <button
-                    onClick={onOpenAdmin}
-                    className="footer-admin-link"
-                    title={isAr ? 'الدخول لبوابة الإدارة والمكتب الخاص' : 'Enter Secure Admin Entrance'}
-                  >
-                    {isAr ? 'بوابة الإدارة' : 'Admin Entrance'}
-                  </button>
-                )}
-                <button
-                  onClick={() => onNavigate('maintenance' as any)}
-                  className="footer-admin-link"
-                  title={isAr ? 'معاينة وضع الصيانة 503' : 'Preview 503 Maintenance Mode'}
-                >
-                  503 Status
-                </button>
-                <button
-                  onClick={() => onNavigate('not-found' as any)}
-                  className="footer-admin-link"
-                  title={isAr ? 'معاينة صفحة 404' : 'Preview 404 Not Found'}
-                >
-                  404 Status
-                </button>
-              </>
+            {onOpenAdmin && (
+              <button
+                onClick={onOpenAdmin}
+                className="footer-admin-link"
+                title={isAr ? 'الدخول لبوابة الإدارة والمكتب الخاص' : 'Enter Secure Admin Entrance'}
+              >
+                {isAr ? 'بوابة الإدارة' : 'Admin Entrance'}
+              </button>
             )}
           </div>
         </div>

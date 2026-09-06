@@ -109,7 +109,7 @@ export default function DistrictDemandMatrix({ metrics, adminLocale }: DistrictD
                   <div className="bar-label-group">
                     <span className="bar-tag">{isAr ? 'حصة المعروض بالمحفظة' : 'Active Listed Value Share'}</span>
                     <strong className="bar-val" style={{ color: '#E5B869' }}>
-                      {dist.supplySharePct}% ({new Intl.NumberFormat(isAr ? 'ar-EG' : 'en-EG', { notation: 'compact' }).format(dist.listedSupplyValueEgp)} EGP)
+                      {dist.supplySharePct}% ({new Intl.NumberFormat(isAr ? 'ar-EG' : 'en-EG', { notation: 'compact' }).format(dist.listedSupplyValueEgp)} {isAr ? 'ج.م' : 'EGP'})
                     </strong>
                   </div>
                   <div className="bar-track">

@@ -11,11 +11,16 @@ import {
   Clock, 
   ArrowUpRight, 
   ShieldCheck,
-  Building
+  Building,
+  RotateCcw,
+  ArrowUpDown
 } from 'lucide-react';
 import { ERPTaxRecord, ERPContract } from '@/lib/erp/types';
 import { D } from '@/lib/erp/math';
 import { MoneyCell } from '@/components/erp/MoneyCell';
+import { ZFPagination } from '../ZFPagination';
+import { ZFKpiCard } from '../ZFKpiCard';
+import { ZFFilterToolbar } from '../ZFFilterToolbar';
 import styles from '../ZFWorkstationShell.module.css';
 
 interface ApartmentTaxesViewProps {
@@ -37,7 +42,20 @@ export const ApartmentTaxesView: React.FC<ApartmentTaxesViewProps> = ({
 }) => {
   const [viewMode, setViewMode] = useState<'cards' | 'table'>('table');
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'remitted'>('all');
+  const [typeFilter, setTypeFilter] = useState<string>('all');
+  const [sortBy, setSortBy] = useState<'amount_desc' | 'amount_asc' | 'rate_desc' | 'unit_asc'>('amount_desc');
   const [searchQuery, setSearchQuery] = useState<string>('');
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [pageSize, setPageSize] = useState<number>(10);
+
+  // Available Tax Types for dropdown
+  const availableTaxTypes = useMemo(() => {
+    const set = new Set<string>();
+    taxRecords.forEach(t => {
+      if (t.tax_type) set.add(t.tax_type);
+    });
+    return Array.from(set);
+  }, [taxRecords]);
 
   // 3 Executive KPIs
   const kpis = useMemo(() => {
@@ -54,7 +72,8 @@ export const ApartmentTaxesView: React.FC<ApartmentTaxesViewProps> = ({
       remittedTax,
       totalTax,
       totalCount: taxRecords.length,
-      pendingCount: taxRecords.filter(t => t.remittance_status !== 'Remitted to ETA').length
+      pendingCount: taxRecords.filter(t => t.remittance_status !== 'Remitted to ETA').length,
+      remittedCount: taxRecords.filter(t => t.remittance_status === 'Remitted to ETA').length
     };
   }, [taxRecords]);
 
@@ -64,6 +83,7 @@ export const ApartmentTaxesView: React.FC<ApartmentTaxesViewProps> = ({
       const isRemitted = t.remittance_status === 'Remitted to ETA';
       if (statusFilter === 'pending' && isRemitted) return false;
       if (statusFilter === 'remitted' && !isRemitted) return false;
+      if (typeFilter !== 'all' && t.tax_type !== typeFilter) return false;
 
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
@@ -78,7 +98,44 @@ export const ApartmentTaxesView: React.FC<ApartmentTaxesViewProps> = ({
 
       return true;
     });
-  }, [taxRecords, contracts, statusFilter, searchQuery]);
+  }, [taxRecords, contracts, statusFilter, typeFilter, searchQuery]);
+
+  // Sorted Taxes
+  const sortedTaxes = useMemo(() => {
+    const list = [...filteredTaxes];
+    list.sort((a, b) => {
+      if (sortBy === 'amount_desc') return D(b.tax_amount || '0').minus(D(a.tax_amount || '0')).toNumber();
+      if (sortBy === 'amount_asc') return D(a.tax_amount || '0').minus(D(b.tax_amount || '0')).toNumber();
+      if (sortBy === 'rate_desc') return D(b.tax_rate || '0').minus(D(a.tax_rate || '0')).toNumber();
+      if (sortBy === 'unit_asc') {
+        const cA = contracts.find(c => c.contract_id === a.contract_id)?.unit_id || '';
+        const cB = contracts.find(c => c.contract_id === b.contract_id)?.unit_id || '';
+        return cA.localeCompare(cB);
+      }
+      return 0;
+    });
+    return list;
+  }, [filteredTaxes, sortBy, contracts]);
+
+  // Pagination
+  const totalPages = Math.ceil(sortedTaxes.length / pageSize) || 1;
+  const paginatedTaxes = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return sortedTaxes.slice(start, start + pageSize);
+  }, [sortedTaxes, currentPage, pageSize]);
+
+  const activeFiltersCount = (statusFilter !== 'all' ? 1 : 0) +
+    (typeFilter !== 'all' ? 1 : 0) +
+    (searchQuery.trim() ? 1 : 0) +
+    (sortBy !== 'amount_desc' ? 1 : 0);
+
+  const handleResetFilters = () => {
+    setStatusFilter('all');
+    setTypeFilter('all');
+    setSortBy('amount_desc');
+    setSearchQuery('');
+    setCurrentPage(1);
+  };
 
   // Format helper for calm executive KPI typography
   const splitAmount = (dec: any) => {
@@ -96,11 +153,11 @@ export const ApartmentTaxesView: React.FC<ApartmentTaxesViewProps> = ({
           <div className={styles.stageBreadcrumb}>
             <span>FIN-OS</span>
             <span>/</span>
-            <span>{isAr ? 'الضرائب والرسوم المضافة' : 'Apartment Taxes & Fees'}</span>
+            <span>{isAr ? 'الضرائب والرسوم على الشقق' : 'Apartment Taxes & Fees'}</span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
             <h1 className={styles.stageTitle}>
-              {isAr ? 'سجل الضرائب والرسوم المضافة للوحدات والعقود' : 'Manual Apartment Taxes & Fees Ledger'}
+              {isAr ? 'الضرائب والرسوم على الشقق وعقود البيع' : 'Manual Apartment Taxes & Fees Ledger'}
             </h1>
             <span style={{
               background: 'rgba(184, 144, 62, 0.08)',
@@ -111,170 +168,113 @@ export const ApartmentTaxesView: React.FC<ApartmentTaxesViewProps> = ({
               fontSize: '0.72rem',
               fontWeight: 800
             }}>
-              {isAr ? 'حسابات أستاذ ٢٠٤٠٠٠' : 'GL 204000 Ledger'}
+              {isAr ? 'ضريبة التصرفات العقارية (2.5%) ورسوم العقود' : 'GL 204000 Ledger'}
             </span>
           </div>
           <p style={{ margin: '0.35rem 0 0', fontSize: '0.82rem', color: '#64748b' }}>
             {isAr 
-              ? 'سجل متابعة تفصيلي بالضرائب والرسوم المضافة يدوياً لكل شقة والمحسوبة تلقائياً ضمن إجمالي سعر التعاقد.' 
+              ? 'متابعة ضريبة التصرفات العقارية (2.5%) ورسوم العقود، وموقف تحصيلها وسدادها.' 
               : 'Detailed tracking ledger of custom taxes added manually per apartment and calculated directly into gross contract pricing.'}
           </p>
         </div>
       </div>
 
-      {/* 2. 3 Executive Tax KPI Cards */}
-      <div className={styles.kpiGrid} style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))' }}>
-        {/* Card 1: Pending Taxes */}
-        <div className={styles.kpiCard}>
-          <div className={styles.kpiHeader}>
-            <span className={styles.kpiLabel}>{isAr ? 'الضرائب والرسوم قيد الاستيفاء' : 'Pending Taxes & Fees'}</span>
-            <div style={{
-              width: '38px',
-              height: '38px',
-              borderRadius: '10px',
-              background: 'rgba(239, 68, 68, 0.08)',
-              color: '#dc2626',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}>
-              <Landmark size={18} />
-            </div>
-          </div>
-          <div className={styles.kpiValue}>
-            <span>{splitAmount(kpis.pendingTax).num}</span>
-            <span className={styles.kpiCurrency}>{splitAmount(kpis.pendingTax).cur}</span>
-          </div>
-          <div className={styles.kpiMeta}>
-            <span className={styles.kpiBadge} style={{ background: 'rgba(239, 68, 68, 0.08)', color: '#dc2626', borderColor: 'rgba(239, 68, 68, 0.2)' }}>
-              {isAr ? 'حساب ٢٠٤٠٠٠' : 'GL 204000'}
-            </span>
-            <span className={styles.kpiNote}>{isAr ? `${kpis.pendingCount} قيد تحصيل مع السداد` : `${kpis.pendingCount} pending collection`}</span>
-          </div>
-        </div>
+      {/* 2. ASYMMETRIC TAX COMPLIANCE & POOL RADAR (Tax & Regulatory Archetype) */}
+      <div className={styles.asymmetricBentoGrid}>
+        {/* Left / Hero Card: Total Taxes Pool & Settlement Progress */}
+        <ZFKpiCard
+          variant="double-bezel"
+          isFlagship={true}
+          title={isAr ? 'إجمالي الضرائب والرسوم' : 'Total Apartment Taxes Pool'}
+          value={kpis.totalTax.formatEGP(isAr)}
+          icon={<Landmark size={20} />}
+          accentColor="gold"
+          progress={kpis.totalTax.isZero() ? 0 : kpis.remittedTax.div(kpis.totalTax).times(100).toFixed(1)}
+          progressColor="#10b981"
+          badge={{ text: `${kpis.totalCount} ${isAr ? 'شقة وعقد' : 'tax records'}`, variant: 'gold' }}
+          subtitleLabel={isAr ? 'المسدد فعلياً' : 'Settlement Ratio'}
+          subtitleValue={`${kpis.totalTax.isZero() ? '0' : kpis.remittedTax.div(kpis.totalTax).times(100).toFixed(1)}% (${kpis.remittedTax.formatEGP(isAr)})`}
+        />
 
-        {/* Card 2: Settled / Collected Taxes */}
-        <div className={styles.kpiCard}>
-          <div className={styles.kpiHeader}>
-            <span className={styles.kpiLabel}>{isAr ? 'الضرائب والرسوم المستوفاة' : 'Settled / Collected Taxes'}</span>
-            <div style={{
-              width: '38px',
-              height: '38px',
-              borderRadius: '10px',
-              background: 'rgba(16, 185, 129, 0.08)',
-              color: '#059669',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}>
-              <CheckCircle2 size={18} />
-            </div>
-          </div>
-          <div className={styles.kpiValue}>
-            <span>{splitAmount(kpis.remittedTax).num}</span>
-            <span className={styles.kpiCurrency}>{splitAmount(kpis.remittedTax).cur}</span>
-          </div>
-          <div className={styles.kpiMeta}>
-            <span className={styles.kpiBadge} style={{ background: 'rgba(16, 185, 129, 0.08)', color: '#059669', borderColor: 'rgba(16, 185, 129, 0.2)' }}>
-              {isAr ? 'مستوفاة بالخزينة' : 'Settled in Safe'}
-            </span>
-            <span className={styles.kpiNote}>{isAr ? 'محصلة بحساب ١٠١٠٠٠' : 'GL 101000 collected'}</span>
-          </div>
-        </div>
+        {/* Right Stack: 2 Compact Telemetry Instruments */}
+        <div className={styles.telemetryStack}>
+          <ZFKpiCard
+            variant="compact"
+            title={isAr ? 'ضرائب ورسوم باقية ما اتسددتش' : 'Pending Taxes & Fees'}
+            value={kpis.pendingTax.formatEGP(isAr)}
+            icon={<FileText size={16} />}
+            accentColor="rose"
+            subtitleLabel={isAr ? 'الموقف الحالي' : 'Status'}
+            subtitleValue={`${kpis.pendingCount} ${isAr ? 'عقود لسه عليها رسوم' : 'pending collection'}`}
+          />
 
-        {/* Card 3: Total Tax Pool (Flagship Gold Card) */}
-        <div className={`${styles.kpiCard} ${styles.flagshipCard}`}>
-          <div className={styles.kpiHeader}>
-            <span className={`${styles.kpiLabel} ${styles.flagshipLabel}`}>
-              {isAr ? 'إجمالي محفظة الضرائب المضافة للشقق' : 'Total Apartment Taxes Pool'}
-            </span>
-            <div style={{
-              width: '38px',
-              height: '38px',
-              borderRadius: '10px',
-              background: 'rgba(184, 144, 62, 0.12)',
-              color: '#946f23',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}>
-              <FileText size={18} />
-            </div>
-          </div>
-          <div className={styles.kpiValue}>
-            <span>{splitAmount(kpis.totalTax).num}</span>
-            <span className={styles.kpiCurrency}>{splitAmount(kpis.totalTax).cur}</span>
-          </div>
-          <div className={styles.kpiMeta}>
-            <span className={styles.kpiBadge} style={{ background: 'rgba(184, 144, 62, 0.1)', color: '#946f23', borderColor: 'rgba(184, 144, 62, 0.25)' }}>
-              {kpis.totalCount} {isAr ? 'سجلات ضريبية' : 'tax records'}
-            </span>
-            <span className={styles.kpiNote}>{isAr ? 'ضمن أسعار البيع الإجمالية' : 'in gross prices'}</span>
-          </div>
+          <ZFKpiCard
+            variant="compact"
+            title={isAr ? 'اتحصلت ودخلت الخزنة' : 'Settled Taxes in Safe'}
+            value={kpis.remittedTax.formatEGP(isAr)}
+            icon={<CheckCircle2 size={16} />}
+            accentColor="emerald"
+            subtitleLabel={isAr ? 'حساب الإيداع' : 'GL Account'}
+            subtitleValue={isAr ? 'اتحصلت في الخزنة' : 'collected in 101000'}
+          />
         </div>
       </div>
 
       {/* 3. Toolbar: Status Tabs, Search & View Switcher */}
-      <div className={styles.toolbar}>
-        <div className={styles.tabBar}>
-          <button
-            className={`${styles.tabBtn} ${statusFilter === 'all' ? styles.tabBtnActive : ''}`}
-            onClick={() => setStatusFilter('all')}
-          >
-            {isAr ? 'كافة السجلات' : 'All Records'}
-          </button>
-          <button
-            className={`${styles.tabBtn} ${statusFilter === 'pending' ? styles.tabBtnActive : ''}`}
-            onClick={() => setStatusFilter('pending')}
-          >
-            {isAr ? 'قيد الاستيفاء والتحصيل' : 'Pending'}
-          </button>
-          <button
-            className={`${styles.tabBtn} ${statusFilter === 'remitted' ? styles.tabBtnActive : ''}`}
-            onClick={() => setStatusFilter('remitted')}
-          >
-            {isAr ? 'مستوفاة ومسددة بالخزينة' : 'Settled'}
-          </button>
-        </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-          <div className={styles.searchBox}>
-            <Search size={15} color="#94a3b8" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder={isAr ? 'بحث بكود الضريبة، العقد، أو الوحدة...' : 'Search taxes...'}
-              className={styles.searchInput}
-            />
-            {searchQuery && (
-              <button 
-                onClick={() => setSearchQuery('')}
-                style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: '0.8rem' }}
-              >
-                ✕
-              </button>
-            )}
-          </div>
-
-          <div className={styles.viewModeGroup}>
-            <button
-              className={`${styles.viewModeBtn} ${viewMode === 'cards' ? styles.viewModeBtnActive : ''}`}
-              onClick={() => setViewMode('cards')}
-              title={isAr ? 'عرض البطاقات' : 'Cards'}
-            >
-              <LayoutGrid size={15} />
-            </button>
-            <button
-              className={`${styles.viewModeBtn} ${viewMode === 'table' ? styles.viewModeBtnActive : ''}`}
-              onClick={() => setViewMode('table')}
-              title={isAr ? 'عرض الجدول' : 'Table'}
-            >
-              <List size={15} />
-            </button>
-          </div>
-        </div>
-      </div>
+      <ZFFilterToolbar
+        tabs={[
+          { id: 'all', label: isAr ? 'كل الشقق والعقود' : 'All Records', count: taxRecords.length },
+          { id: 'pending', label: isAr ? 'مستحق وما اتسددش' : 'Pending', count: kpis.pendingCount },
+          { id: 'remitted', label: isAr ? 'متسدد خلاص' : 'Settled', count: kpis.remittedCount }
+        ]}
+        activeTab={statusFilter}
+        onTabChange={(tabId) => {
+          setStatusFilter(tabId as any);
+          setCurrentPage(1);
+        }}
+        searchQuery={searchQuery}
+        onSearchChange={(q) => {
+          setSearchQuery(q);
+          setCurrentPage(1);
+        }}
+        searchPlaceholder={isAr ? 'دوّر برقم العقد، الشقة، أو اسم العميل...' : 'Search taxes...'}
+        filters={
+          availableTaxTypes.length > 1
+            ? [
+                {
+                  id: 'tax_type',
+                  value: typeFilter,
+                  onChange: (val) => {
+                    setTypeFilter(val);
+                    setCurrentPage(1);
+                  },
+                  ariaLabel: isAr ? 'نوع الرسم' : 'Tax Type',
+                  options: [
+                    { value: 'all', label: isAr ? 'كل الرسوم والضرائب' : 'All Tax Types' },
+                    ...availableTaxTypes.map(t => ({ value: t, label: t }))
+                  ]
+                }
+              ]
+            : undefined
+        }
+        sortBy={sortBy}
+        onSortChange={(val) => {
+          setSortBy(val as any);
+          setCurrentPage(1);
+        }}
+        sortOptions={[
+          { value: 'amount_desc', label: isAr ? 'المبلغ: الأكبر الأول' : 'Highest Tax Amount' },
+          { value: 'amount_asc', label: isAr ? 'المبلغ: الأقل الأول' : 'Lowest Tax Amount' },
+          { value: 'rate_desc', label: isAr ? 'النسبة: الأكبر الأول' : 'Highest Rate' },
+          { value: 'unit_asc', label: isAr ? 'رقم الشقة: أ - ي' : 'Unit ID (A-Z)' }
+        ]}
+        sortAriaLabel={isAr ? 'ترتيب الرسوم' : 'Sort Taxes'}
+        activeFiltersCount={activeFiltersCount}
+        onResetFilters={handleResetFilters}
+        viewMode={viewMode}
+        onViewModeChange={(mode) => setViewMode(mode as any)}
+        isAr={isAr}
+      />
 
       {/* 4. Main Content: Table or Cards */}
       {filteredTaxes.length === 0 ? (
@@ -286,12 +286,12 @@ export const ApartmentTaxesView: React.FC<ApartmentTaxesViewProps> = ({
           textAlign: 'center',
           color: '#64748b'
         }}>
-          <Landmark size={36} color="#94a3b8" style={{ margin: '0 auto 0.75rem' }} />
+          <Landmark size={36} color="#946f23" style={{ margin: '0 auto 0.75rem' }} />
           <h3 style={{ margin: 0, color: '#0f172a', fontSize: '1rem', fontWeight: 800 }}>
-            {isAr ? 'لا توجد سجلات ضريبية مطابقة لمعايير البحث' : 'No matching tax records found'}
+            {isAr ? 'مفيش ضرائب أو رسوم مطابقة للبحث أو الفلتر' : 'No matching tax records found'}
           </h3>
           <p style={{ margin: '0.35rem 0 0', fontSize: '0.82rem' }}>
-            {isAr ? 'كافة الرسوم والضرائب مستوفاة ومسجلة بحالة نظامية.' : 'All apartment tax records have been reconciled.'}
+            {isAr ? 'كل الضرائب والرسوم متسددة ومضبوطة بالدفاتر.' : 'All apartment tax records have been reconciled.'}
           </p>
         </div>
       ) : viewMode === 'table' ? (
@@ -299,19 +299,19 @@ export const ApartmentTaxesView: React.FC<ApartmentTaxesViewProps> = ({
           <table className={styles.table}>
             <thead>
               <tr>
-                <th>{isAr ? 'كود القيد' : 'Tax ID'}</th>
-                <th>{isAr ? 'بيان / مسمى الضريبة' : 'Tax Label'}</th>
-                <th>{isAr ? 'العقد والوحدة' : 'Contract & Unit'}</th>
-                <th>{isAr ? 'سعر الشقة الأساسي' : 'Base Price'}</th>
-                <th>{isAr ? 'النسبة المحسوبة' : 'Rate'}</th>
-                <th>{isAr ? 'الضريبة المضافة (يدوياً)' : 'Manual Tax'}</th>
-                <th>{isAr ? 'إجمالي السعر شامل الضريبة' : 'Total Price with Tax'}</th>
-                <th>{isAr ? 'حالة الاستيفاء' : 'Status'}</th>
-                <th style={{ textAlign: 'center' }}>{isAr ? 'إجراء التسوية' : 'Action'}</th>
+                <th>{isAr ? 'رقم القيد' : 'Tax ID'}</th>
+                <th>{isAr ? 'نوع الرسم أو الضريبة' : 'Tax Label'}</th>
+                <th>{isAr ? 'الشقة والعقد' : 'Contract & Unit'}</th>
+                <th>{isAr ? 'سعر الشقة الأصلي' : 'Base Price'}</th>
+                <th>{isAr ? 'نسبة الرسم / الضريبة' : 'Rate'}</th>
+                <th>{isAr ? 'قيمة الضريبة' : 'Manual Tax'}</th>
+                <th>{isAr ? 'إجمالي السعر شامل الرسوم' : 'Total Price with Tax'}</th>
+                <th>{isAr ? 'موقف السداد' : 'Status'}</th>
+                <th style={{ textAlign: 'center' }}>{isAr ? 'الإجراء' : 'Action'}</th>
               </tr>
             </thead>
             <tbody>
-              {filteredTaxes.map(t => {
+              {paginatedTaxes.map(t => {
                 const linkedContract = contracts.find(c => c.contract_id === t.contract_id);
                 const totalVal = D(t.taxable_base).plus(t.tax_amount).toFixed(2);
                 const isRemitted = t.remittance_status === 'Remitted to ETA';
@@ -337,13 +337,13 @@ export const ApartmentTaxesView: React.FC<ApartmentTaxesViewProps> = ({
                         #{t.tax_id.slice(0, 8)}
                       </span>
                     </td>
-                    <td style={{ minWidth: '160px', fontWeight: 700, color: '#0f172a', fontSize: '0.8rem' }}>
-                      {isAr ? 'رسوم وضرائب تصرفات للوحدة' : t.tax_type}
+                    <td style={{ minWidth: '130px', fontWeight: 700, color: '#0f172a', fontSize: '0.8rem' }}>
+                      {isAr ? 'ضريبة تصرفات عقارية (2.5%)' : t.tax_type}
                     </td>
-                    <td style={{ minWidth: '220px' }}>
+                    <td style={{ minWidth: '150px' }}>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem' }}>
                         <span style={{ fontWeight: 800, color: '#0f172a', fontSize: '0.82rem', lineHeight: 1.35 }}>
-                          {linkedContract?.unit_id || (isAr ? 'تسوية مباشرة' : 'Direct')}
+                          {linkedContract?.unit_id || (isAr ? 'عقد مباشر' : 'Direct')}
                         </span>
                         <span style={{ fontSize: '0.68rem', color: '#64748b', fontVariantNumeric: 'tabular-nums' }}>
                           #{linkedContract?.contract_number || '—'}
@@ -376,38 +376,24 @@ export const ApartmentTaxesView: React.FC<ApartmentTaxesViewProps> = ({
                         border: isRemitted ? '1px solid rgba(22, 163, 74, 0.25)' : '1px solid rgba(245, 158, 11, 0.3)'
                       }}>
                         <span style={{ width: 6, height: 6, borderRadius: '50%', background: isRemitted ? '#15803d' : '#b45309', display: 'inline-block' }} />
-                        <span>{isRemitted ? (isAr ? 'مستوفاة بالخزينة' : 'Settled in Safe') : (isAr ? 'قيد التحصيل' : 'Pending')}</span>
+                        <span>{isRemitted ? (isAr ? 'اتسددت في الخزنة' : 'Settled in Safe') : (isAr ? 'مستحق وما اتسددش' : 'Pending')}</span>
                       </span>
                     </td>
                     <td style={{ textAlign: 'center', whiteSpace: 'nowrap' }} onClick={(e) => e.stopPropagation()}>
                       {isRemitted ? (
                         <span style={{ color: '#15803d', fontWeight: 800, fontSize: '0.72rem', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
                           <CheckCircle2 size={13} color="#15803d" />
-                          <span>{isAr ? 'مسدد ومستوفى' : 'Settled'}</span>
+                          <span>{isAr ? 'متسدد خلاص' : 'Settled'}</span>
                         </span>
                       ) : (
                         <button
                           type="button"
                           onClick={() => onRemitTax(t.tax_id)}
                           disabled={isMutating}
-                          style={{
-                            background: '#0f172a',
-                            border: '1px solid #0f172a',
-                            borderRadius: '8px',
-                            color: '#ffffff',
-                            padding: '0.35rem 0.85rem',
-                            fontSize: '0.74rem',
-                            fontWeight: 800,
-                            cursor: isMutating ? 'not-allowed' : 'pointer',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '0.35rem',
-                            boxShadow: '0 2px 6px rgba(15, 23, 42, 0.15)',
-                            transition: 'all 0.15s ease'
-                          }}
+                          className={styles.settleBtn}
                         >
-                          <CheckCircle2 size={12} color="#10b981" />
-                          <span>{isAr ? 'إثبات الاستيفاء' : 'Settle'}</span>
+                          <CheckCircle2 size={12} color="#ffffff" />
+                          <span>{isAr ? 'تسجيل السداد كاش' : 'Settle'}</span>
                         </button>
                       )}
                     </td>
@@ -418,8 +404,8 @@ export const ApartmentTaxesView: React.FC<ApartmentTaxesViewProps> = ({
           </table>
         </div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))', gap: '1.25rem' }}>
-          {filteredTaxes.map(t => {
+        <div className={styles.cardsGrid}>
+          {paginatedTaxes.map(t => {
             const linkedContract = contracts.find(c => c.contract_id === t.contract_id);
             const totalVal = D(t.taxable_base).plus(t.tax_amount).toFixed(2);
             const isRemitted = t.remittance_status === 'Remitted to ETA';
@@ -445,7 +431,7 @@ export const ApartmentTaxesView: React.FC<ApartmentTaxesViewProps> = ({
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
                     <ShieldCheck size={14} color="#946f23" />
                     <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#946f23' }}>
-                      {isAr ? 'حافظة الرسوم والضرائب المضافة' : 'TAX & FEES LEDGER'}
+                      {isAr ? 'تفاصيل الضريبة والرسوم' : 'TAX & FEES LEDGER'}
                     </span>
                   </div>
                   <span style={{
@@ -461,17 +447,25 @@ export const ApartmentTaxesView: React.FC<ApartmentTaxesViewProps> = ({
                     gap: '0.35rem'
                   }}>
                     <span style={{ width: 6, height: 6, borderRadius: '50%', background: isRemitted ? '#15803d' : '#b45309', display: 'inline-block' }} />
-                    <span>{isRemitted ? (isAr ? 'مُستوفاة ومسددة' : 'Settled') : (isAr ? 'قيد الاستيفاء' : 'Pending')}</span>
+                    <span>{isRemitted ? (isAr ? 'متسدد خلاص' : 'Settled') : (isAr ? 'مستحق وما اتسددش' : 'Pending')}</span>
                   </span>
                 </div>
 
                 <div>
                   <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: '#0f172a', lineHeight: 1.4 }}>
-                    {linkedContract?.unit_id || (isAr ? 'وحدة عقارية' : 'Unit')}
+                    {linkedContract?.unit_id || (isAr ? 'شقة' : 'Unit')}
                   </h3>
                   <div style={{ fontSize: '0.74rem', color: '#64748b', marginTop: '0.25rem' }}>
                     {isAr ? 'رقم العقد: ' : 'Contract: '}
-                    <span style={{ fontVariantNumeric: 'tabular-nums', color: '#946f23', fontWeight: 700 }}>
+                    <span style={{
+                      fontVariantNumeric: 'tabular-nums',
+                      color: '#946f23',
+                      fontWeight: 700,
+                      whiteSpace: 'nowrap',
+                      direction: 'ltr',
+                      unicodeBidi: 'isolate',
+                      display: 'inline-block'
+                    }}>
                       #{linkedContract?.contract_number || t.contract_id.slice(0, 8)}
                     </span>
                   </div>
@@ -488,7 +482,7 @@ export const ApartmentTaxesView: React.FC<ApartmentTaxesViewProps> = ({
                 }}>
                   <div>
                     <span style={{ fontSize: '0.72rem', color: '#64748b', display: 'block', fontWeight: 700 }}>
-                      {isAr ? 'الضريبة المضافة للوحدة:' : 'Manual Tax Added:'}
+                      {isAr ? 'قيمة الضريبة والرسوم:' : 'Manual Tax Added:'}
                     </span>
                     <div style={{ fontSize: '1.35rem', fontWeight: 900, color: '#0f172a', marginTop: '0.2rem' }}>
                       <MoneyCell amount={t.tax_amount} isAr={isAr} highlight />
@@ -511,7 +505,7 @@ export const ApartmentTaxesView: React.FC<ApartmentTaxesViewProps> = ({
                   borderTop: '1px solid #f1f5f9',
                   paddingTop: '0.75rem'
                 }}>
-                  <span style={{ color: '#64748b' }}>{isAr ? 'الإجمالي مع الضريبة:' : 'Total with tax:'}</span>
+                  <span style={{ color: '#64748b' }}>{isAr ? 'إجمالي السعر شامل الرسوم:' : 'Total with tax:'}</span>
                   <strong style={{ color: '#0f172a' }}><MoneyCell amount={totalVal} isAr={isAr} /></strong>
                 </div>
 
@@ -519,7 +513,7 @@ export const ApartmentTaxesView: React.FC<ApartmentTaxesViewProps> = ({
                   {isRemitted ? (
                     <span style={{ color: '#15803d', fontWeight: 800, fontSize: '0.74rem', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
                       <CheckCircle2 size={13} color="#15803d" />
-                      <span>{isAr ? 'مسدد ومستوفى' : 'Settled in Safe'}</span>
+                      <span>{isAr ? 'متسدد خلاص' : 'Settled in Safe'}</span>
                     </span>
                   ) : (
                     <button
@@ -529,29 +523,15 @@ export const ApartmentTaxesView: React.FC<ApartmentTaxesViewProps> = ({
                         onRemitTax(t.tax_id);
                       }}
                       disabled={isMutating}
-                      style={{
-                        background: '#0f172a',
-                        border: '1px solid #0f172a',
-                        borderRadius: '8px',
-                        color: '#ffffff',
-                        padding: '0.4rem 0.85rem',
-                        fontSize: '0.74rem',
-                        fontWeight: 800,
-                        cursor: isMutating ? 'not-allowed' : 'pointer',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '0.35rem',
-                        boxShadow: '0 2px 6px rgba(15, 23, 42, 0.15)',
-                        transition: 'all 0.15s ease'
-                      }}
+                      className={styles.settleBtn}
                     >
-                      <CheckCircle2 size={13} color="#10b981" />
-                      <span>{isAr ? 'إثبات الاستيفاء بالخزينة' : 'Settle in Safe'}</span>
+                      <CheckCircle2 size={13} color="#ffffff" />
+                      <span>{isAr ? 'تسجيل السداد في الخزنة' : 'Settle in Safe'}</span>
                     </button>
                   )}
 
                   <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', color: '#946f23', fontSize: '0.74rem', fontWeight: 800 }}>
-                    <span>{isAr ? 'فحص التفاصيل' : 'Inspect'}</span>
+                    <span>{isAr ? 'عرض التفاصيل' : 'Inspect'}</span>
                     <ArrowUpRight size={13} color="#946f23" />
                   </div>
                 </div>
@@ -560,6 +540,22 @@ export const ApartmentTaxesView: React.FC<ApartmentTaxesViewProps> = ({
           })}
         </div>
       )}
+
+      {/* Unified Pagination Bar */}
+      <ZFPagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        totalItems={sortedTaxes.length}
+        pageSize={pageSize}
+        pageSizeOptions={[10, 25, 50]}
+        onPageChange={setCurrentPage}
+        onPageSizeChange={sz => {
+          setPageSize(sz);
+          setCurrentPage(1);
+        }}
+        isAr={isAr}
+        itemLabel={{ ar: 'شقة وعقد', en: 'tax records' }}
+      />
     </div>
   );
 };

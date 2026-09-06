@@ -20,7 +20,8 @@ import {
   Layers, 
   ExternalLink,
   Info,
-  CheckCircle2
+  CheckCircle2,
+  Wallet
 } from 'lucide-react';
 
 interface ZFErpAcademyModalProps {
@@ -312,7 +313,7 @@ export const ZFErpAcademyModal: React.FC<ZFErpAcademyModalProps> = ({
                 <SubIndexItem id="wf-phase1" titleAr="المرحلة 1: تكويد المشروع ومصروفات الإنشاء" titleEn="Phase 1: Project & WIP Cost Routing" icon={Building2} activeId={activeArticleId} onSelect={setActiveArticleId} isAr={isAr} />
                 <SubIndexItem id="wf-phase2" titleAr="المرحلة 2: دراسة الجدوى وهيكلة الأقساط" titleEn="Phase 2: Pricing & Installment Structuring" icon={Calculator} activeId={activeArticleId} onSelect={setActiveArticleId} isAr={isAr} />
                 <SubIndexItem id="wf-phase3" titleAr="المرحلة 3: تحرير وإبرام عقد البيع" titleEn="Phase 3: Sales Contract Booking" icon={FileText} activeId={activeArticleId} onSelect={setActiveArticleId} isAr={isAr} />
-                <SubIndexItem id="wf-phase4" titleAr="المرحلة 4: استلام الشيكات وإيداع الخزينة" titleEn="Phase 4: PDC Vaulting & Tranche Autolink" icon={Landmark} activeId={activeArticleId} onSelect={setActiveArticleId} isAr={isAr} />
+                <SubIndexItem id="wf-phase4" titleAr="المرحلة 4: جدول الأقساط وسندات القبض" titleEn="Phase 4: Installment Scheduling & Hand Receipts" icon={Wallet} activeId={activeArticleId} onSelect={setActiveArticleId} isAr={isAr} />
                 <SubIndexItem id="wf-phase5" titleAr="المرحلة 5: المتابعة اليومية والتحصيل والمطابقة" titleEn="Phase 5: Daily Dues & Bank Clearing" icon={Clock} activeId={activeArticleId} onSelect={setActiveArticleId} isAr={isAr} />
                 <SubIndexItem id="wf-phase6" titleAr="المرحلة 6: سجل الضرائب والرسوم المضافة" titleEn="Phase 6: Apartment Taxes & Fees Ledger" icon={ShieldCheck} activeId={activeArticleId} onSelect={setActiveArticleId} isAr={isAr} />
                 <SubIndexItem id="wf-phase7" titleAr="المرحلة 7: الفسخ والإقالات والتسويات" titleEn="Phase 7: Rescissions & Forfeitures" icon={RotateCcw} activeId={activeArticleId} onSelect={setActiveArticleId} isAr={isAr} />
@@ -326,7 +327,7 @@ export const ZFErpAcademyModal: React.FC<ZFErpAcademyModalProps> = ({
                 <SubIndexItem id="mod-properties" titleAr="02. المشاريع والأصول الإنشائية (WIP)" titleEn="02. Projects & WIP Assets" icon={Building2} activeId={activeArticleId} onSelect={setActiveArticleId} isAr={isAr} />
                 <SubIndexItem id="mod-contracts" titleAr="03. سجل عقود البيع والحجوزات" titleEn="03. Sales Contracts Registry" icon={FileText} activeId={activeArticleId} onSelect={setActiveArticleId} isAr={isAr} />
                 <SubIndexItem id="mod-calculator" titleAr="04. حاسبة وهيكلة الأقساط" titleEn="04. Installment Structuring" icon={Calculator} activeId={activeArticleId} onSelect={setActiveArticleId} isAr={isAr} />
-                <SubIndexItem id="mod-pdc" titleAr="05. حافظة وخزينة الشيكات (PDC)" titleEn="05. PDC Cheques Vault" icon={Landmark} activeId={activeArticleId} onSelect={setActiveArticleId} isAr={isAr} />
+                <SubIndexItem id="mod-pdc" titleAr="05. أجندة ومواعيد الأقساط وسندات القبض" titleEn="05. Hand Installments Agenda" icon={Wallet} activeId={activeArticleId} onSelect={setActiveArticleId} isAr={isAr} />
                 <SubIndexItem id="mod-cost" titleAr="06. تخصيص التكاليف (WIP RSV)" titleEn="06. WIP Cost Allocation (RSV)" icon={PieChart} activeId={activeArticleId} onSelect={setActiveArticleId} isAr={isAr} />
                 <SubIndexItem id="mod-tax" titleAr="07. سجل الضرائب والرسوم المضافة" titleEn="07. Apartment Taxes & Fees Ledger" icon={ShieldCheck} activeId={activeArticleId} onSelect={setActiveArticleId} isAr={isAr} />
                 <SubIndexItem id="mod-rescissions" titleAr="08. فسخ واسترداد العقود والتسويات" titleEn="08. Rescissions & Settlement" icon={RotateCcw} activeId={activeArticleId} onSelect={setActiveArticleId} isAr={isAr} />
@@ -337,7 +338,7 @@ export const ZFErpAcademyModal: React.FC<ZFErpAcademyModalProps> = ({
             {activeTrack === 'sop' && (
               <>
                 <SubIndexItem id="sop-morning" titleAr="روتين الصباح: فحص الأجندة والمستحقات" titleEn="Daily Morning SOP: Action Ledger & Dues" icon={Clock} activeId={activeArticleId} onSelect={setActiveArticleId} isAr={isAr} badge={isAr ? 'يومي' : 'Daily'} />
-                <SubIndexItem id="sop-midday" titleAr="عمليات وسط اليوم: الشيكات والمصروفات" titleEn="Midday Operations: Cheques & Entries" icon={DollarSign} activeId={activeArticleId} onSelect={setActiveArticleId} isAr={isAr} />
+                <SubIndexItem id="sop-midday" titleAr="عمليات وسط اليوم: التحصيل والمصروفات" titleEn="Midday Operations: Collections & Expenses" icon={DollarSign} activeId={activeArticleId} onSelect={setActiveArticleId} isAr={isAr} />
                 <SubIndexItem id="sop-monthend" titleAr="روتين نهاية الشهر: التحصيل والضرائب والقفل" titleEn="Month-End SOP: Clearing & Period Lock" icon={CheckCircle2} activeId={activeArticleId} onSelect={setActiveArticleId} isAr={isAr} badge={isAr ? 'شهري' : 'Monthly'} />
               </>
             )}
@@ -492,8 +493,8 @@ const ArticleRenderer: React.FC<ArticleRendererProps> = ({
           </h2>
           <p style={{ color: '#94a3b8', fontSize: '0.88rem' }}>
             {isAr 
-              ? 'صُممت منظومة FIN-OS لتغطي بدقة متناهية كافة مراحل الاستثمار والتطوير العقاري، بدءاً من شراء الأرض وتوجيه تكاليف الخرسانات والتشطيبات، مروراً بهيكلة الأقساط وإبرام العقود واستلام شيكات الخزينة، وانتهاءً بالتوريدات الضريبية وميزان المراجعة.'
-              : 'FIN-OS covers the complete real estate lifecycle: from land acquisition and construction cost allocation (WIP), installment pricing and sales contracts, to cheque vaulting, daily collection agendas, statutory taxes, and general ledger trial balance.'}
+              ? 'صُممت منظومة FIN-OS لتغطي بدقة متناهية كافة مراحل الاستثمار والتطوير العقاري، بدءاً من شراء الأرض وتوجيه تكاليف الخرسانات والتشطيبات، مروراً بهيكلة الأقساط وإبرام العقود وتوثيق سندات القبض، وانتهاءً بالتوريدات الضريبية وميزان المراجعة.'
+              : 'FIN-OS covers the complete real estate lifecycle: from land acquisition and construction cost allocation (WIP), installment pricing and sales contracts, to hand dues vaulting, daily collection agendas, statutory taxes, and general ledger trial balance.'}
           </p>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '1.5rem' }}>
@@ -524,18 +525,18 @@ const ArticleRenderer: React.FC<ArticleRendererProps> = ({
               },
               {
                 step: '04',
-                titleAr: 'استلام الشيكات بالخزينة والتفقيط التلقائي (PDC Vaulting)',
-                titleEn: 'PDC Vaulting & Tranche Autolink',
-                descAr: 'استلام الشيكات عبر "استوديو الشيكات البنكية المباشر". اختيار العقد يُظهر الأقساط المتبقية تلقائياً، والضغط على أي قسط يملأ القيمة وتاريخ الاستحقاق والتفقيط العربي بدقة.',
-                descEn: 'Vault client cheques with realistic live cheque preview. Selecting a contract detects pending tranches and auto-populates amounts and Arabic Tafqeet.',
+                titleAr: 'جدولة الأقساط وسندات القبض بالخزينة (Hand Installments & Receipts)',
+                titleEn: 'Installment Scheduling & Hand Receipts',
+                descAr: 'توثيق مواعيد الأقساط وسندات القبض. اختيار العقد يُظهر الأقساط المتبقية تلقائياً، والضغط على أي قسط يملأ القيمة وتاريخ الاستحقاق والتفقيط العربي بدقة.',
+                descEn: 'Track customer installment tranches and receipt vouchers. Selecting a contract detects pending tranches and auto-populates amounts and Arabic Tafqeet.',
                 mod: 'pdc'
               },
               {
                 step: '05',
                 titleAr: 'المتابعة اليومية والتحصيل والمطابقة (Daily Action Ledger)',
-                titleEn: 'Daily Action Ledger & Bank Clearing',
-                descAr: 'لوحة القيادة تبرز يومياً "شيكات مستحقة الصرف اليوم" وأقساط العملاء المتأخرة. عند التحصيل يتم التحويل إلى "تم الصرف" وترحيل القيد للبنك تلقائياً.',
-                descEn: 'Executive dashboard surfaces today\'s dues. Marking cheques as cleared generates automatic bank debit journal entries.',
+                titleEn: 'Daily Action Ledger & Vault Clearing',
+                descAr: 'لوحة القيادة تبرز يومياً "أقساط مستحقة التحصيل اليوم" وأقساط العملاء المتأخرة. عند التحصيل يتم إثبات سند القبض وترحيل القيد للخزينة تلقائياً.',
+                descEn: 'Executive dashboard surfaces today\'s dues. Marking installments as collected generates automatic safe debit journal entries.',
                 mod: 'cockpit'
               },
               {
@@ -550,8 +551,8 @@ const ArticleRenderer: React.FC<ArticleRendererProps> = ({
                 step: '07',
                 titleAr: 'الفسخ والإقالات والتسويات المحاسبية (Rescissions & Settlements)',
                 titleEn: 'Rescissions & Contract Settlements',
-                descAr: 'في حال تعثر العميل، يتم تطبيق الإقالة الرقابية عبر نظام الاعتماد الثنائي، مع خصم مصاريف إدارية وقيد رد الشيكات المتبقية دون حذف السجل القديم.',
-                descEn: 'Handle defaults and cancellations through Maker-Checker workflow, applying legal forfeitures and safely voiding remaining PDCs.',
+                descAr: 'في حال تعثر العميل، يتم تطبيق الإقالة الرقابية عبر نظام الاعتماد الثنائي، مع خصم مصاريف إدارية وإلغاء الأقساط المتبقية دون حذف السجل القديم.',
+                descEn: 'Handle defaults and cancellations through Maker-Checker workflow, applying legal forfeitures and safely voiding remaining installment dues.',
                 mod: 'rescissions'
               },
               {
@@ -680,30 +681,30 @@ const ArticleRenderer: React.FC<ArticleRendererProps> = ({
     case 'wf-phase4':
       return (
         <SingleChapterView
-          titleAr="المرحلة 4: استلام الشيكات بالخزينة واستوديو الشيكات الذكي"
-          titleEn="Phase 4: PDC Vaulting & Tranche Autolink Studio"
-          categoryAr="الخزينة وأوراق القبض"
-          categoryEn="Treasury & PDC Receivables"
-          summaryAr="شرح استوديو تسجيل الشيكات المباشر، وكيفية ربط الشيك بالقسط التعاقدي تلقائياً والتفقيط باللغة العربية."
-          summaryEn="Mastering the realistic digital cheque preview studio, installment tranche autolinking, and Egyptian legal Tafqeet."
+          titleAr="المرحلة 4: جدول الأقساط وسندات القبض بالخزينة"
+          titleEn="Phase 4: Installment Scheduling & Hand Receipts Studio"
+          categoryAr="الخزينة والأقساط باليد"
+          categoryEn="Treasury & Hand Receivables"
+          summaryAr="شرح استوديو تسجيل الأقساط وسندات القبض المباشر، وكيفية ربط السند بالقسط التعاقدي تلقائياً والتفقيط باللغة العربية."
+          summaryEn="Mastering the digital receipt preview studio, installment tranche autolinking, and Egyptian legal Tafqeet."
           sections={[
             {
-              headingAr: '1. استوديو معاينة الشيك البنكي المباشر',
-              headingEn: '1. Interactive Physical Cheque Preview',
-              contentAr: 'في أعلى نافذة تسجيل الشيك، يُعرض نموذج شيك بنكي واقعي يعكس مباشرة البنك المختار، اسم العميل، رقم الشيك، القيمة المذهبة، والتفقيط القانوني التلقائي (فقط مائتان وخمسون ألف جنيه مصري لا غير) وفقاً لأدق قواعد الصرف البنكي في مصر.',
-              contentEn: 'The modal renders a realistic bank cheque updating live with bank logos, gold amounts, drawer names, and legal Arabic Tafqeet.'
+              headingAr: '1. استوديو معاينة سند القبض والإيصال المباشر',
+              headingEn: '1. Interactive Receipt Voucher Preview',
+              contentAr: 'في أعلى نافذة تسجيل السند، يُعرض نموذج إيصال استلام وسند قبض واقعي يعكس مباشرة طريقة التحصيل المحددة، اسم العميل، رقم السند، القيمة المذهبة، والتفقيط القانوني التلقائي (فقط مائتان وخمسون ألف جنيه مصري لا غير) وفقاً لأدق أصول المعاملات.',
+              contentEn: 'The modal renders a realistic payment receipt voucher updating live with methods, gold amounts, client names, and legal Arabic Tafqeet.'
             },
             {
               headingAr: '2. الربط الذكي بأقساط العقود (Tranche Autolinking)',
               headingEn: '2. Contract Installment Autolinking',
-              contentAr: 'بمجرد اختيار عقد البيع، يقرأ النظام جدول الأقساط ويستخرج الأقساط غير المسددة ويعرضها كأزرار سريعة (مثل: قسط 1: 250,000 ج.م - 15/09/2026). النقر على القسط يملأ القيمة وتاريخ الاستحقاق واسم الساحب ويربط الشيك بالقسط في قاعدة البيانات تلقائياً!',
-              contentEn: 'Selecting a contract automatically displays pending installment chips. Clicking any chip auto-fills the amount, due date, drawer name, and links the foreign key schedule_id.'
+              contentAr: 'بمجرد اختيار عقد البيع، يقرأ النظام جدول الأقساط ويستخرج الأقساط غير المسددة ويعرضها كأزرار سريعة (مثل: قسط 1: 250,000 ج.م - 15/09/2026). النقر على القسط يملأ القيمة وتاريخ الاستحقاق واسم العميل ويربط السند بالقسط في قاعدة البيانات تلقائياً!',
+              contentEn: 'Selecting a contract automatically displays pending installment chips. Clicking any chip auto-fills the amount, due date, client name, and links the foreign key schedule_id.'
             },
             {
-              headingAr: '3. بنوك مصر المعتمدة وأزرار الاختيار السريع',
-              headingEn: '3. Egyptian Bank Presets',
-              contentAr: 'بدلاً من كتابة اسم البنك يدوياً، توفر الشاشة أزراراً بضغطة واحدة لأكبر البنوك المصرية: CIB، الأهلي المصري، بنك مصر، QNB، مصرف أبوظبي الإسلامي، بنك الإسكندرية، HSBC، وبنك فيصل الإسلامي.',
-              contentEn: 'One-click preset pills for leading Egyptian banks (CIB, NBE, Banque Misr, QNB, ADIB, AlexBank, HSBC, Faisal).'
+              headingAr: '3. طرق التحصيل المعتمدة (نقدي باليد / إنستاباي / بنكي)',
+              headingEn: '3. Egyptian Payment Method Presets',
+              contentAr: 'توفر الشاشة خيارات سريعة لطريقة التحصيل المتبعة: تحصيل نقدي باليد في الخزينة، أو تحويل فوري عبر تطبيق إنستاباي (InstaPay)، أو إيداع بنكي مباشر مع تسجيل رقم مرجع السند.',
+              contentEn: 'Quick presets for practical payment methods: Hand Cash at Safe, InstaPay instant transfer, or direct bank deposit.'
             }
           ]}
           targetModule="pdc"
@@ -723,9 +724,15 @@ const ArticleRenderer: React.FC<ArticleRendererProps> = ({
           summaryEn="The executive command center showing capital mindmaps, 30-day maturity calendar, and today's urgent dues."
           sections={[
             {
+              headingAr: 'المكون 0: بطاقات الفلوس والمؤشرات الأربعة (شرح مصري بسيط ومباشر)',
+              headingEn: 'Core Financial Metrics (Simplified Egyptian Guide)',
+              contentAr: '1. الكاش الجاهز (البنك والخزنة): ده ببساطة كل قرش حقيقي دخل جيب الشركة لحد دلوقتي (مقدمات كاش + أقساط ادفعت يدوي بالخزنة أو إنستاباي). ده الكاش الحي المتاح اللي تقدر تصرف منه دلوقتي حالاً.\n• إيه اللي بيزوده؟ تحصيل قسط، مقدم عقد جديد، أو تمويل شركاء.\n• إيه اللي بينقصه؟ أي صرفية على المقاولين أو الموردين أو مصاريف الموقع.\n\n2. أقساط لسه عند العملاء: دي كل الفلوس اللي لينا بره في ذمة المشترين على كل العقود المتباعة. بتشمل الأقساط اللي لسه ميعادها مجاش، وكمان الأقساط المتأخرة اللي جه ميعادها والعميل لسه مسددهاش.\n• بتزيد إمتى؟ لما نبيع شقة أو عمارة جديدة بالقسط، أو نعمل ملحق زيادة سعر.\n• بتقل إمتى؟ كل ما عميل يسدد قسط، الفلوس بتخرج من هنا وتدخل فوراً على خانة (الكاش الجاهز).\n\n3. المصروف على المباني والتشطيب (WIP): دي كل تكلفة البُنا والصرف على المشاريع الجارية (ثمن الأرض، الحفر، الخرسانات، تأسيس الكهرباء والسباكة، والتشطيبات). ده مش مصروف ضاع، ده أصل استثماري ملك الشركة بيزود قيمة العمارات لحد ما نسلمها للعميل.\n• بيزيد إمتى؟ مع كل فاتورة حديد أو أسمنت أو مستخلص مقاول بتسجله في السيستم.\n• بيقل إمتى؟ لما نسلم الشقق للعملاء نهائياً (Handover)، التكلفة دي بتتحول لمحاسبة تكلفة المبيعات.\n\n4. إجمالي مبيعات العقود: ده إجمالي فلوس كل العقود اللي اتباعت من أول ما بدأنا، سواء فلوسها اتجمعت كاش أو لسه أقساط ومستحقات للمستقبل. ده السقف الكلي لمبيعات الشركة.\n• بيزيد إمتى؟ لما نكتب عقد بيع جديد، قيمته بالكامل بتنزل هنا.\n• بينقص إمتى؟ لو عقد اتفسخ واتلغى، قيمته بتتشال من هنا وترجع الشقة للبيع.\n• مبيأثرش فيه إيه؟ تحصيل الأقساط مبيغيرش الرقم ده، لأنه بس بينقل الفلوس من (أقساط عند العملاء) إلى (الكاش الجاهز).\n\n💡 المعادلة الذهبية اللي بتجمعهم:\nإجمالي مبيعات العقود = الكاش الجاهز المحصل + أقساط لسه عند العملاء.',
+              contentEn: '1. Available Cash: Realized liquid cash in vaults & bank accounts.\n2. Receivables: Outstanding installments owed by clients (future + overdue).\n3. Construction WIP: Capital expenditures on land, civil works, & finishes.\n4. Gross Sales: Total nominal value across all signed contracts.\nGolden Formula: Gross Contract Sales = Collected Cash + Customer Receivables.'
+            },
+            {
               headingAr: 'المكون 1: خريطة التدفقات المالية وتوزيعات رأس المال (Mindmap)',
               headingEn: 'Component 1: Capital Flow Mindmap',
-              contentAr: 'مخطط شجري تفاعلي بألوان زاهية ومسارات ضوئية يربط: مصادر الأموال الداخلة (متحصلات بيع، شيكات الخزينة، رأس مال الشركاء) -> الخزينة المركزية والسيولة المتاحة -> توجيهات الصرف على مشروعات التطوير الأربعة والضرائب السيادية.',
+              contentAr: 'مخطط شجري تفاعلي بألوان زاهية ومسارات ضوئية يربط: مصادر الأموال الداخلة (متحصلات بيع، أقساط عند العملاء، رأس مال الشركاء) -> الخزينة المركزية والسيولة المتاحة -> توجيهات الصرف على مشروعات التطوير والتشييد والضرائب.',
               contentEn: 'Directed interactive tree connecting Inflows -> Central Treasury Liquidity -> Outflows onto capitalized development projects and taxes.'
             },
             {
@@ -754,26 +761,26 @@ const ArticleRenderer: React.FC<ArticleRendererProps> = ({
           titleEn="Daily Morning SOP: Action Ledger & Collections"
           categoryAr="إجراءات العمل القياسية (SOP)"
           categoryEn="Standard Operating Procedures"
-          summaryAr="الخطوات الإلزامية التي يبدأ بها المحاسب والمدير المالي يوم العمل لضمان عدم فوات أي موعد استحقاق شيك أو قسط عميل."
-          summaryEn="Mandatory morning sequence to verify cheque maturities, overdue arrears, and collection priorities."
+          summaryAr="الخطوات الإلزامية التي يبدأ بها المحاسب والمدير المالي يوم العمل لضمان عدم فوات أي موعد استحقاق لقسط عميل أو متابعة تحصيل باليد."
+          summaryEn="Mandatory morning sequence to verify customer installment maturities, overdue arrears, and collection priorities."
           sections={[
             {
               headingAr: 'الخطوة 1: فحص جرس التنبيهات في شريط الأوامر (⌘K)',
               headingEn: 'Step 1: Check Notification Bell in Command Bar',
-              contentAr: 'انظر إلى جرس التنبيهات أعلى اليمين. إذا وُجدت شارة حمراء نابضة، فهذا يعني وجود شيكات متأخرة أو فترات محاسبية تحتاج مراجعة أو طلبات اعتماد ثنائي عاجلة.',
-              contentEn: 'Check the bell icon. Red pulses signify overdue cheques, unremitted taxes, or pending dual-approvals.'
+              contentAr: 'انظر إلى جرس التنبيهات أعلى اليمين. إذا وُجدت شارة حمراء نابضة، فهذا يعني وجود أقساط متأخرة أو فترات محاسبية تحتاج مراجعة أو طلبات اعتماد ثنائي عاجلة.',
+              contentEn: 'Check the bell icon. Red pulses signify overdue installments, unremitted taxes, or pending dual-approvals.'
             },
             {
               headingAr: 'الخطوة 2: مراجعة بطاقة "استحقاقات وأجندة اليوم"',
               headingEn: 'Step 2: Review Today\'s Financial Action Ledger',
-              contentAr: 'تصفح قائمة الشيكات بالخزينة المستحقة اليوم. اتصل بالبنك أو جهز حافظة الإيداع المصرفي لإرسال الشيكات للتحصيل.',
-              contentEn: 'Inspect cheques maturing today. Prepare deposit slips to dispatch cheques to their respective banks.'
+              contentAr: 'تصفح قائمة الأقساط المستحقة اليوم. تواصل مع العميل لتنسيق موعد ومكان التحصيل نقداً باليد أو عبر إنستاباي.',
+              contentEn: 'Inspect installments maturing today. Coordinate with clients to organize cash collections or digital transfers.'
             },
             {
               headingAr: 'الخطوة 3: مطابقة تحصيلات الأمس وإثبات الصرف',
-              headingEn: 'Step 3: Clear Matured Cheques from Yesterday',
-              contentAr: 'افتح كشف حساب البنك، وفي شاشة "حافظة الشيكات" حول الشيكات المصروفة من حالة "أرسل للتحصيل" إلى "تم الصرف" لتسجيل قيد الترحيل للبنك تلقائياً.',
-              contentEn: 'Cross-check bank statement and mark cleared PDCs as Cleared in the Cheque Vault to book the automatic bank debit entry.'
+              headingEn: 'Step 3: Clear Matured Installments from Yesterday',
+              contentAr: 'افتح الخزينة وسجل سندات القبض، وفي شاشة "أجندة ومواعيد الأقساط" حول الأقساط المستلمة من حالة "معلق" إلى "تم التحصيل" لتسجيل قيد التوريد بالخزينة تلقائياً.',
+              contentEn: 'Cross-check receipt vouchers and mark collected installments as Cleared in the agenda to book the automatic safe debit entry.'
             }
           ]}
           targetModule="cockpit"
@@ -795,14 +802,14 @@ const ArticleRenderer: React.FC<ArticleRendererProps> = ({
             {
               headingAr: '1. مبدأ الرقابة الثنائية (Segregation of Duties)',
               headingEn: '1. Segregation of Duties',
-              contentAr: 'لا يمكن لمحاسب واحد إتمام عمليات مالية حساسة (مثل فسخ عقد عميل، أو صرف شيك مرتجع، أو إقفال فترة محاسبية) بمفرده. يقوم المحاسب (Maker) بإنشاء الطلب وإرفاق المبررات، بينما يقوم المدير المالي أو المراجع (Checker) بمراجعة الأثر المحاسبي واعتماده أو رفضه.',
-              contentEn: 'Sensitive operations (contract rescissions, bounced cheque write-offs, period locks) require two distinct individuals: a Maker who drafts, and a Checker who approves.'
+              contentAr: 'لا يمكن لمحاسب واحد إتمام عمليات مالية حساسة (مثل فسخ عقد عميل، أو تسوية قسط متعثر، أو إقفال فترة محاسبية) بمفرده. يقوم المحاسب (Maker) بإنشاء الطلب وإرفاق المبررات، بينما يقوم المدير المالي أو المراجع (Checker) بمراجعة الأثر المحاسبي واعتماده أو رفضه.',
+              contentEn: 'Sensitive operations (contract rescissions, defaulted installment write-offs, period locks) require two distinct individuals: a Maker who drafts, and a Checker who approves.'
             },
             {
               headingAr: '2. العمليات الخاضعة للاعتماد الإلزامي',
               headingEn: '2. Regulated Workflows',
-              contentAr: '• فسخ عقود البيع واسترداد المبالغ المدفوعة.\n• إسقاط أو إعدام شيكات مرتجعة.\n• إقفال أو إعادة فتح الفترات المحاسبية المقفلة.\n• تسوية الحسابات الدائنة والمدينة للشخصيات ذات الصلة.',
-              contentEn: '• Contract cancellations and customer refunds\n• Bounced cheque write-offs\n• Locking or reopening accounting periods\n• Related-party partner equity settlements'
+              contentAr: '• فسخ عقود البيع واسترداد المبالغ المدفوعة.\n• إسقاط أو إعادة جدولة أقساط متعثرة.\n• إقفال أو إعادة فتح الفترات المحاسبية المقفلة.\n• تسوية الحسابات الدائنة والمدينة للشخصيات ذات الصلة.',
+              contentEn: '• Contract cancellations and customer refunds\n• Defaulted installment restructuring\n• Locking or reopening accounting periods\n• Related-party partner equity settlements'
             }
           ]}
           targetModule="rescissions"
@@ -824,14 +831,61 @@ const ArticleRenderer: React.FC<ArticleRendererProps> = ({
             {
               headingAr: '1. لوحة البحث والأوامر السريعة (⌘K / Ctrl+K)',
               headingEn: '1. Global Omni-Search (⌘K)',
-              contentAr: 'في أي شاشة بالمنظومة، اضغط على ⌘K (أو Ctrl+K في ويندوز) لفتح لوحة البحث الفوري. يمكنك كتابة اسم أي عميل، أو رقم أي شيك (مثل CHQ-001)، أو رقم قيد، أو كتابة أمر مثل "استلام شيك" للانتقال فوراً.',
-              contentEn: 'Press ⌘K / Ctrl+K anywhere to search across contracts, cheque serials, journal entries, or trigger direct commands.'
+              contentAr: 'في أي شاشة بالمنظومة، اضغط على ⌘K (أو Ctrl+K في ويندوز) لفتح لوحة البحث الفوري. يمكنك كتابة اسم أي عميل، أو رقم أي سند/إيصال (مثل REC-001)، أو رقم قيد، أو كتابة أمر مثل "تسجيل قسط" للانتقال فوراً.',
+              contentEn: 'Press ⌘K / Ctrl+K anywhere to search across contracts, receipt serials, journal entries, or trigger direct commands.'
             },
             {
               headingAr: '2. قائمة مفاتيح الاختصار الرئيسية',
               headingEn: '2. Key Shortcuts Cheat Sheet',
               contentAr: '• ⌘K أو Ctrl+K: فتح لوحة البحث السريع.\n• ESC: إغلاق النوافذ المنبثقة والرجوع للشاشة السابقة.\n• Enter: تأكيد الحفظ في النماذج السريعة.\n• Tab: الانتقال السلس بين خانات الإدخال.',
               contentEn: '• ⌘K / Ctrl+K: Open Omni-Search\n• ESC: Close modals & drawers\n• Enter: Submit active form\n• Tab: Next input field'
+            }
+          ]}
+          targetModule="cockpit"
+          jumpTo={jumpTo}
+          isAr={isAr}
+        />
+      );
+
+    case 'sc-cheatsheet':
+      return (
+        <SingleChapterView
+          titleAr="دليل ومؤشرات الفلوس في المنظومة (شرح مصري بلدي بسيط)"
+          titleEn="Financial Metrics & Indicators (Simplified Guide)"
+          categoryAr="دليل المؤشرات المالية"
+          categoryEn="Financial Glossary"
+          summaryAr="دليل سريع بالعامية المصرية يوضح لك بطاقات شاشة النظرة العامة، إيه معنى كل رقم، إيه اللي بيزوده وإيه اللي بينقصه، وإزاي الأرقام مربوطة ببعض."
+          summaryEn="A plain-language guide explaining how the 4 financial KPI cards move, their business meaning, and how they balance."
+          sections={[
+            {
+              headingAr: '1. الكاش الجاهز (البنك والخزنة) — فلوس في إيدك',
+              headingEn: '1. Available Cash & Bank Vault',
+              contentAr: '• معناه إيه؟ كل مليم حقيقي دخل الشركة فعلاً وبقى كاش متاح تحت إيدك في الخزنة أو البنك (مقدمات كاش، أقساط استلمتها كاش أو إنستاباي).\n• بيزيد إمتى؟ مع كل عملية تحصيل كاش، أو تمويل داخل من الشركاء.\n• بيقل إمتى؟ مع أي صرفية بتخرج من الخزنة على مقاولين، مواد بناء، أو مصاريف تشغيل.\n• ملحوظة: مؤشر النسبة تحته بيقولك إحنا جمعنا كام في المية كاش من إجمالي المبيعات لحد دلوقتي.',
+              contentEn: 'Total liquid funds physically collected to date across cash vaults and commercial bank accounts.'
+            },
+            {
+              headingAr: '2. أقساط لسه عند العملاء — فلوسنا بره في السوق',
+              headingEn: '2. Customer Receivables (A/R)',
+              contentAr: '• معناه إيه؟ دي كل الفلوس اللي باقية لينا في ذمة العملاء المشترين على كل العقود الموقعة. بتشمل الأقساط اللي لسه ميعادها مجاش، وكمان الأقساط المتأخرة اللي كان المفروض تدفع وما اتدفعتش.\n• بيزيد إمتى؟ لما نبيع شقة أو عمارة جديدة بالتقسيط، أو نعمل ملحق زيادة سعر.\n• بيقل إمتى؟ كل ما عميل يدفع قسط، المبلغ بيتنقل فوراً من الخانة دي ويروح على خانة (الكاش الجاهز).\n• مع فسخ العقد: لو العقد اتلغى، المديونية دي بتتسقط وتتصفر.',
+              contentEn: 'Remaining contractual installments owed by buyers across all active deals, including overdue tranches.'
+            },
+            {
+              headingAr: '3. المصروف على المباني والتشطيب — أصول مشروعات تحت التنفيذ (WIP)',
+              headingEn: '3. Construction WIP Assets',
+              contentAr: '• معناه إيه؟ دي كل تكلفة البناء والصرف اللي اتصرفت على المشاريع اللي شغالة حالياً (ثمن الأرض، الحفر والتراخيص، الخرسانات المسلحة، السباكة والكهرباء، والتشطيبات).\n• هل ده مصروف ضاع؟ لأ خالص! ده محاسبياً أصل استثماري ملك الشركة، بيزود قيمة المبنى وبيفضل متجمع لحد ما نسلم الشقق لأصحابها.\n• بيزيد إمتى؟ مع كل مستخلص مقاول، أو فاتورة حديد وأسمنت، أو مصاريف موقع بتسجلها في السيستم.\n• بيقل إمتى؟ لما نسلم الوحدات للعملاء تسليم نهائي (Handover)، وقتها التكلفة بتتحول لتكلفة مبيعات.',
+              contentEn: 'Capitalized work-in-progress expenditures on land, civil construction, MEP, and luxury finishing.'
+            },
+            {
+              headingAr: '4. إجمالي مبيعات العقود — حجم الشغل اللي اتقفل',
+              headingEn: '4. Gross Contracted Sales',
+              contentAr: '• معناه إيه؟ ده إجمالي فلوس كل العقود اللي اتباعت بالكامل من أول ما بدأنا، سواء فلوسها اتجمعت كاش، أو لسه بتتسدد على سنين كأقساط ومستحقات. ده السقف الكلي لمبيعات الشركة.\n• بيزيد إمتى؟ لما نكتب ونمضي عقد بيع جديد، قيمته الإجمالية بتنزل هنا كاملة.\n• بينقص إمتى؟ في حالة واحدة بس: لو عقد اتفسخ واتلغى رسمياً، فقيمته بتتشال وترجع الشقة معروضة للبيع.\n• ليه مبيتأثرش بالتحصيل؟ لأن تحصيل الأقساط مبيعملش بيع جديد، هو بس بينقل الفلوس من (أقساط عند العملاء) إلى (الكاش الجاهز).',
+              contentEn: 'Total nominal value of all active contracts signed to date, regardless of collection status.'
+            },
+            {
+              headingAr: '5. المعادلة الذهبية لتوازن الفلوس والمبيعات',
+              headingEn: '5. The Balancing Formula',
+              contentAr: 'إجمالي مبيعات العقود = الكاش الجاهز المحصل + أقساط لسه عند العملاء\n\nيعني لو بايعين بـ 20 مليون، وحصلنا 6 مليون كاش، يبقى طبيعي وبديهي إن الأقساط اللي عند العملاء تكون 14 مليون. وكل ما العميل يدفع، الرقم بيتحرك من الشمال لليمين والمجموع يفضل 20 مليون زي ما هو!',
+              contentEn: 'Gross Contract Sales = Total Cash Collected + Customer Receivables.'
             }
           ]}
           targetModule="cockpit"

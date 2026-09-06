@@ -303,6 +303,29 @@
   transform: translateY(-1px);
 }
 
+.pdfDownloadBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #DDA752;
+  background: rgba(201, 169, 106, 0.12);
+  border: 1px solid rgba(201, 169, 106, 0.35);
+  padding: 8px 18px;
+  border-radius: 20px;
+  width: fit-content;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.pdfDownloadBtn:hover {
+  background: #DDA752;
+  color: #0A0C10;
+  border-color: #DDA752;
+}
+
 /* ─── Prominent Section Headers ───────────────── */
 .sectionHeaderRow td {
   background: linear-gradient(135deg, #0A0C10 0%, #11141B 100%);

@@ -311,7 +311,7 @@ export const DashboardAnalyticalStudio: React.FC<DashboardAnalyticalStudioProps>
             }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ fontSize: '0.72rem', color: '#7dd3fc', fontWeight: 700 }}>
-                  {isAr ? 'شيكات الخزينة الحديدية (حساب ١٠٤٠٠٠)' : 'Safe Vault PDCs (104000)'}
+                  {isAr ? 'أقساط ومستندات الخزينة (حساب ١٠٤٠٠٠)' : 'Safe Vault Installments (104000)'}
                 </span>
                 <span style={{ fontSize: '0.64rem', color: '#38bdf8', background: 'rgba(56, 189, 248, 0.12)', padding: '0.1rem 0.4rem', borderRadius: '4px', fontWeight: 700 }}>
                   {isAr ? 'بالخزينة' : 'In Vault'}
@@ -321,7 +321,7 @@ export const DashboardAnalyticalStudio: React.FC<DashboardAnalyticalStudioProps>
                 {renderMoneyParts(totalSafePDCs)}
               </div>
               <span style={{ fontSize: '0.68rem', color: '#64748b' }}>
-                {isAr ? 'شيكات مودعة بالخزينة لحين تاريخ الاستحقاق' : 'Cheques held in safe awaiting due dates'}
+                {isAr ? 'أقساط تعاقدية مسجلة لحين تاريخ الاستحقاق' : 'Contractual dues held in agenda awaiting due dates'}
               </span>
             </div>
 

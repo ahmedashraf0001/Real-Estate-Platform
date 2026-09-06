@@ -186,7 +186,7 @@ export default function PropertyEngagementLeaderboard({ metrics, adminLocale }: 
                   <div className="price-col">
                     <span className="price-label">{isAr ? 'السعر المعروض' : 'Listing Value'}</span>
                     <span className="price-val">
-                      {new Intl.NumberFormat(isAr ? 'ar-EG' : 'en-EG', { notation: 'compact' }).format(item.priceEgp)} EGP
+                      {new Intl.NumberFormat(isAr ? 'ar-EG' : 'en-EG', { notation: 'compact' }).format(item.priceEgp)} {isAr ? 'ج.م' : 'EGP'}
                     </span>
                   </div>
 

@@ -221,7 +221,7 @@
 /* Financial KPIs Grid */
 .kpiGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
   gap: 1.25rem;
 }
 
@@ -404,7 +404,7 @@
 /* Contracts Visual Card Grid */
 .contractCardsGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 360px), 1fr));
   gap: 1.25rem;
 }
 
@@ -527,7 +527,7 @@
 /* Clean Tables */
 .tableCard {
   background: #ffffff;
-  border: 1px solid #e2e8f0;
+  border: 1.5px solid #cbd5e1;
   border-radius: 18px;
   overflow: hidden;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
@@ -557,13 +557,13 @@
   font-size: 0.75rem;
   letter-spacing: 0.05em;
   padding: 1rem 1.25rem;
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1.5px solid #cbd5e1;
   white-space: nowrap;
 }
 
 .erpTable td {
   padding: 1rem 1.25rem;
-  border-bottom: 1px solid #f1f5f9;
+  border-bottom: 1px solid #cbd5e1;
   color: #0f172a;
   font-variant-numeric: tabular-nums;
 }

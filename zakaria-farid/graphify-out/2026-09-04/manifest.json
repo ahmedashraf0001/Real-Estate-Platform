@@ -5034,39 +5034,39 @@
     "semantic_hash": ""
   },
   "src/components/admin/erp/AccountLedgerModal.tsx": {
-    "mtime": 1788474448.8855891,
-    "seen": 1788474530.319174,
-    "ast_hash": "3cdb0cc37ecafa58d02b337999b81d56",
+    "mtime": 1788476416.8670964,
+    "seen": 1788478075.306982,
+    "ast_hash": "ef24121946d0af1ef60be51e4e739626",
     "semantic_hash": ""
   },
   "src/components/admin/erp/AdminERPHub.tsx": {
-    "mtime": 1788470767.3764498,
-    "seen": 1788470916.7382205,
-    "ast_hash": "8a5f7421f0e6bd2bcf92e303722d8c58",
+    "mtime": 1788476416.8776176,
+    "seen": 1788478075.3069847,
+    "ast_hash": "bf943ac6cd8e6fbb14dc68f3d4e53969",
     "semantic_hash": ""
   },
   "src/components/admin/erp/CockpitAnalyticsCharts.tsx": {
-    "mtime": 1788403913.2058196,
-    "seen": 1788404715.7208936,
-    "ast_hash": "1a434f89ed8a90ace6f7b2c9131cad6b",
+    "mtime": 1788476328.7161472,
+    "seen": 1788478075.3069863,
+    "ast_hash": "1c30872c5e058fcb0fe8aa8808246dc0",
     "semantic_hash": ""
   },
   "src/components/admin/erp/ConstructionCostCalculator.tsx": {
-    "mtime": 1788467130.8238323,
-    "seen": 1788467212.2991607,
-    "ast_hash": "32f7841bbcdf2f79b43a10ef46196359",
+    "mtime": 1788476328.7142682,
+    "seen": 1788478075.3069873,
+    "ast_hash": "eeacaaeab18cdb9dfc7e8febf7d79fe7",
     "semantic_hash": ""
   },
   "src/components/admin/erp/ERPFinancialCharts.tsx": {
-    "mtime": 1788370551.3558836,
-    "seen": 1788392751.7903476,
-    "ast_hash": "6127628fabfe02389a9c7328b9316b71",
+    "mtime": 1788476328.721138,
+    "seen": 1788478075.3069954,
+    "ast_hash": "1bee1bec984df0ae7748738d57277ffb",
     "semantic_hash": ""
   },
   "src/components/admin/erp/GeneralLedgerView.tsx": {
-    "mtime": 1788403954.358092,
-    "seen": 1788404715.7208996,
-    "ast_hash": "696ad86d1807d289c3ddcc76aaca3333",
+    "mtime": 1788476466.1443927,
+    "seen": 1788478075.3069968,
+    "ast_hash": "32a9b139116a1202206cd70572ae69c2",
     "semantic_hash": ""
   },
   "src/components/admin/erp/PartnerCapitalCards.tsx": {
@@ -5076,27 +5076,27 @@
     "semantic_hash": ""
   },
   "src/components/admin/erp/PropertyFinancialMatrix.tsx": {
-    "mtime": 1788469436.7625818,
-    "seen": 1788469716.5354953,
-    "ast_hash": "988a79b89083a4921953f087f445b6fc",
+    "mtime": 1788476328.7010078,
+    "seen": 1788478075.3070025,
+    "ast_hash": "4caa21b08959e27ffbaf81f140335c53",
     "semantic_hash": ""
   },
   "src/components/admin/erp/QuickTransactionModal.tsx": {
-    "mtime": 1788471166.1741655,
-    "seen": 1788471398.0251262,
-    "ast_hash": "ebccc7f705d7a9fc4defae6ce9074410",
+    "mtime": 1788476328.7191398,
+    "seen": 1788478075.3070054,
+    "ast_hash": "5b69ab12ce925880ca24f661c677d192",
     "semantic_hash": ""
   },
   "src/components/admin/erp/ZFCommandBar.tsx": {
-    "mtime": 1788461650.9386797,
-    "seen": 1788463220.7597682,
-    "ast_hash": "787191e5807e33ac87ee28a18949bc06",
+    "mtime": 1788476328.735958,
+    "seen": 1788478075.3070068,
+    "ast_hash": "92ab38fbc3c169677316e0efdd936256",
     "semantic_hash": ""
   },
   "src/components/admin/erp/ZFInspectorDrawer.tsx": {
-    "mtime": 1788467900.4286158,
-    "seen": 1788468490.295278,
-    "ast_hash": "b46dfcdf2111036ff5b63cfc412ae834",
+    "mtime": 1788475907.430192,
+    "seen": 1788478075.3070111,
+    "ast_hash": "415f259cba4bafad3f6b0c1fcb9d36a4",
     "semantic_hash": ""
   },
   "src/components/admin/erp/ZFNavigationDock.tsx": {
@@ -5112,39 +5112,39 @@
     "semantic_hash": ""
   },
   "src/components/erp/ApprovalStepper.tsx": {
-    "mtime": 1788370817.2135894,
-    "seen": 1788392751.7903597,
-    "ast_hash": "c348fe257f3cb1761f88c42f6358d48c",
+    "mtime": 1788475759.3567352,
+    "seen": 1788478075.3070536,
+    "ast_hash": "c8a951d2a7ffcb6d8f98e5a8ac387677",
     "semantic_hash": ""
   },
   "src/components/erp/AuditTrailRail.tsx": {
-    "mtime": 1788371005.2787454,
-    "seen": 1788392751.790361,
-    "ast_hash": "d2b6feaf8c6c1cb6051bb15f551f0844",
+    "mtime": 1788475741.9585924,
+    "seen": 1788478075.3070548,
+    "ast_hash": "be72bbe28aee760d879cef65ce3542f3",
     "semantic_hash": ""
   },
   "src/components/erp/BranchDecisionCard.tsx": {
-    "mtime": 1788370845.416989,
-    "seen": 1788392751.7903616,
-    "ast_hash": "c9a730c4731947c67f14a111f8dde4bc",
+    "mtime": 1788475688.1713066,
+    "seen": 1788478075.3070562,
+    "ast_hash": "fcd008bfd793ef3556b7cc9952e4c1c9",
     "semantic_hash": ""
   },
   "src/components/erp/CashflowHorizonChart.tsx": {
-    "mtime": 1788404408.4664757,
-    "seen": 1788404715.7209146,
-    "ast_hash": "669469441f9188f9108b3bcfeb456b5f",
+    "mtime": 1788475729.7276914,
+    "seen": 1788478075.3070586,
+    "ast_hash": "86b60b9254197086d80d72a3573021a4",
     "semantic_hash": ""
   },
   "src/components/erp/ImmutableRecordFrame.tsx": {
-    "mtime": 1788370988.6123402,
-    "seen": 1788392751.7903636,
-    "ast_hash": "be0fca8e8e90088b5276c9237c1577e0",
+    "mtime": 1788475453.740977,
+    "seen": 1788478075.3070602,
+    "ast_hash": "e166628082ec50d9663a3d064d6eb01c",
     "semantic_hash": ""
   },
   "src/components/erp/JournalEntryPreview.tsx": {
-    "mtime": 1788392223.8744917,
-    "seen": 1788392751.790365,
-    "ast_hash": "7d2876f990c68e91f5c76f720de8a837",
+    "mtime": 1788475678.4323113,
+    "seen": 1788478075.3070614,
+    "ast_hash": "c4cc617a9563a1c0b49a479a00512e89",
     "semantic_hash": ""
   },
   "src/components/erp/LegalVerificationTag.tsx": {
@@ -5154,9 +5154,9 @@
     "semantic_hash": ""
   },
   "src/components/erp/LockedPeriodBanner.tsx": {
-    "mtime": 1788369822.0813472,
-    "seen": 1788392751.7903666,
-    "ast_hash": "8b31017707a5e6484f6f7b50f8dd8908",
+    "mtime": 1788475003.713202,
+    "seen": 1788478075.3070638,
+    "ast_hash": "fa46ba5468d9a4f713b35129389abb4c",
     "semantic_hash": ""
   },
   "src/components/erp/MoneyCell.tsx": {
@@ -5166,21 +5166,21 @@
     "semantic_hash": ""
   },
   "src/components/erp/OpenQuestionFlag.tsx": {
-    "mtime": 1788369829.5769694,
-    "seen": 1788392751.790369,
-    "ast_hash": "02356691fd2487f031c77e23c289679e",
+    "mtime": 1788475699.0720544,
+    "seen": 1788478075.3070667,
+    "ast_hash": "e1cae5df511f8fc5709ea18bc0c84ca5",
     "semantic_hash": ""
   },
   "src/components/erp/OpenQuestionsConsole.tsx": {
-    "mtime": 1788370789.0591414,
-    "seen": 1788392751.79037,
-    "ast_hash": "89f75583557763efea2ec8bd1d9b87fa",
+    "mtime": 1788475785.5669837,
+    "seen": 1788478075.3070679,
+    "ast_hash": "8db9bd491943e6e7bed832dd7cdbb997",
     "semantic_hash": ""
   },
   "src/components/erp/RSVAllocationRing.tsx": {
-    "mtime": 1788404353.5948374,
-    "seen": 1788404715.7209246,
-    "ast_hash": "608a7c6fa487408e92992129f1cf5e4c",
+    "mtime": 1788476328.7271097,
+    "seen": 1788478075.3070693,
+    "ast_hash": "1e71d8a0fa9e02d2ef76ce9a34df5d59",
     "semantic_hash": ""
   },
   "src/components/erp/StatusBadge.tsx": {
@@ -5190,9 +5190,9 @@
     "semantic_hash": ""
   },
   "src/components/erp/TranchePipelineChart.tsx": {
-    "mtime": 1788404328.4707468,
-    "seen": 1788404715.7209268,
-    "ast_hash": "a3d927db412200e13b7c0213ce46791e",
+    "mtime": 1788476466.1362603,
+    "seen": 1788478075.3070717,
+    "ast_hash": "87cecc665f6f499233f29fc86528bcda",
     "semantic_hash": ""
   },
   "src/components/erp/VersionTimeline.tsx": {
@@ -5340,15 +5340,15 @@
     "semantic_hash": ""
   },
   "src/components/erp/CapitalFlowMindmap.tsx": {
-    "mtime": 1788464131.2514403,
-    "seen": 1788464194.44481,
-    "ast_hash": "bd292d859aded53f6307df823365bab9",
+    "mtime": 1788476328.7298965,
+    "seen": 1788478075.3070576,
+    "ast_hash": "8f39cfe8f9b0b5255c433c1566af1f8c",
     "semantic_hash": ""
   },
   "src/components/admin/erp/ZFNotificationCenter.tsx": {
-    "mtime": 1788461600.0428936,
-    "seen": 1788463220.7597737,
-    "ast_hash": "3050fabd13dcbc07e6610d6fdb37f8be",
+    "mtime": 1788476328.7389815,
+    "seen": 1788478075.3070147,
+    "ast_hash": "c5e791ef3eacdfe032068128719ccae3",
     "semantic_hash": ""
   },
   "src/lib/erp/notificationEngine.ts": {
@@ -5370,9 +5370,9 @@
     "semantic_hash": ""
   },
   "src/components/admin/erp/NewChequeModal.tsx": {
-    "mtime": 1788471292.568641,
-    "seen": 1788471398.0251193,
-    "ast_hash": "328baf2398283233225c656d3de28f8b",
+    "mtime": 1788476416.875134,
+    "seen": 1788478075.3069992,
+    "ast_hash": "b199317f6c2b39c5f3879760c7a35591",
     "semantic_hash": ""
   },
   "src/lib/erp/tafqeet.ts": {
@@ -5382,21 +5382,21 @@
     "semantic_hash": ""
   },
   "src/components/admin/erp/ZFErpAcademyModal.tsx": {
-    "mtime": 1788462173.5054188,
-    "seen": 1788463220.7597697,
-    "ast_hash": "9a27c8cb00d176cfca25c798d6b388d5",
+    "mtime": 1788476328.7414937,
+    "seen": 1788478075.3070078,
+    "ast_hash": "efe52f536f1474118939161b7545cd73",
     "semantic_hash": ""
   },
   "src/components/admin/erp/ZFErpGuidedTour.tsx": {
-    "mtime": 1788462186.975917,
-    "seen": 1788463220.7597706,
-    "ast_hash": "b577177fb40f92cbded6ea40cedb240b",
+    "mtime": 1788476328.740496,
+    "seen": 1788478075.3070092,
+    "ast_hash": "67cc601d112b18ecfade0968f7a7acdd",
     "semantic_hash": ""
   },
   "src/components/admin/erp/HandCollectionModal.tsx": {
-    "mtime": 1788468012.1430805,
-    "seen": 1788468490.2952664,
-    "ast_hash": "2b3d978b1864f2b01be52cc4ad557fc8",
+    "mtime": 1788476328.7340264,
+    "seen": 1788478075.306998,
+    "ast_hash": "30271ef61850f40b4ec99c49ac1ce7d0",
     "semantic_hash": ""
   },
   "src/components/admin/erp/PropertyLifecycleAuditModal.tsx": {
@@ -5412,15 +5412,15 @@
     "semantic_hash": ""
   },
   "src/components/admin/erp/v2/ZFWorkstationHeader.tsx": {
-    "mtime": 1788464096.827782,
-    "seen": 1788464194.444802,
-    "ast_hash": "b234d62b58bff22dc8b71c66cf9f678a",
+    "mtime": 1788476416.8792398,
+    "seen": 1788478075.3070197,
+    "ast_hash": "3c3da8fc05ee0a1c37dc8feedf79a917",
     "semantic_hash": ""
   },
   "src/components/admin/erp/v2/views/CockpitView.tsx": {
-    "mtime": 1788470815.052345,
-    "seen": 1788470916.7382655,
-    "ast_hash": "def5629b23864b2bdbeaf410b629074c",
+    "mtime": 1788476328.745368,
+    "seen": 1788478075.307036,
+    "ast_hash": "e2efa38c9cb33efc59d2a70ec02bb3ec",
     "semantic_hash": ""
   },
   "src/lib/erp/propertyCostEngine.ts": {
@@ -5454,21 +5454,21 @@
     "semantic_hash": ""
   },
   "src/components/admin/erp/v2/views/PropertiesPortfolioView.tsx": {
-    "mtime": 1788465688.3921423,
-    "seen": 1788466014.644031,
-    "ast_hash": "bf2840adab9f1f2f28450b529702c1db",
+    "mtime": 1788475400.031453,
+    "seen": 1788478075.307049,
+    "ast_hash": "0d1c3b2e2c4328dea87427ed006c0e30",
     "semantic_hash": ""
   },
   "src/components/admin/erp/v2/views/ContractsRegistryView.tsx": {
-    "mtime": 1788466905.9276862,
-    "seen": 1788466985.6653364,
-    "ast_hash": "d6945c1b7f5f772981c3a908c39ff69d",
+    "mtime": 1788475221.4779713,
+    "seen": 1788478075.3070412,
+    "ast_hash": "549e48e13deb960472ae80eaa5c21f71",
     "semantic_hash": ""
   },
   "src/components/admin/erp/v2/views/HandInstallmentsVaultView.tsx": {
-    "mtime": 1788469566.0977104,
-    "seen": 1788469716.535525,
-    "ast_hash": "8c989b7200b9c75716e504e1972131e1",
+    "mtime": 1788475311.9639997,
+    "seen": 1788478075.3070476,
+    "ast_hash": "92b7ad9f6eb67bb5092324519715c864",
     "semantic_hash": ""
   },
   "src/components/admin/erp/v2/views/ConstructionFeasibilityView.tsx": {
@@ -5478,33 +5478,33 @@
     "semantic_hash": ""
   },
   "src/components/admin/erp/v2/views/ContractRescissionsView.tsx": {
-    "mtime": 1788474408.5329716,
-    "seen": 1788474530.3192236,
-    "ast_hash": "4dcf3ab595149ed7472edfc07f316b74",
+    "mtime": 1788475386.3060474,
+    "seen": 1788478075.3070393,
+    "ast_hash": "45fa1dd99df69d77aa161f5650e33369",
     "semantic_hash": ""
   },
   "src/components/admin/erp/v2/views/CostAllocationView.tsx": {
-    "mtime": 1788472846.9536283,
-    "seen": 1788473009.979521,
-    "ast_hash": "f410e7b1e273ceae777759169e8fd127",
+    "mtime": 1788475349.462464,
+    "seen": 1788478075.3070426,
+    "ast_hash": "954294fbf45a8d2e1e4f620e6a4e4fd2",
     "semantic_hash": ""
   },
   "src/components/admin/erp/v2/views/GeneralLedgerView.tsx": {
-    "mtime": 1788474689.9323733,
-    "seen": 1788474778.6207297,
-    "ast_hash": "34450061932407bcf27b2bf5c9f9b228",
+    "mtime": 1788476328.7673326,
+    "seen": 1788478075.3070464,
+    "ast_hash": "78b5998dc112dcef159b23290d49254e",
     "semantic_hash": ""
   },
   "src/components/admin/erp/v2/views/ApartmentTaxesView.tsx": {
-    "mtime": 1788472884.115879,
-    "seen": 1788473009.9795103,
-    "ast_hash": "4c1a951b68f6930d982c7c338bc25d47",
+    "mtime": 1788476328.7471087,
+    "seen": 1788478075.3070347,
+    "ast_hash": "e41a84a72e06af3311150835e8f9e594",
     "semantic_hash": ""
   },
   "src/components/admin/erp/v2/modals/CashCollectionReceiptModal.tsx": {
-    "mtime": 1788468056.8357227,
-    "seen": 1788468490.295286,
-    "ast_hash": "7d74defe1b85aa06ae1ab9501b28611e",
+    "mtime": 1788476328.7526433,
+    "seen": 1788478075.3070252,
+    "ast_hash": "03d77b9e808da18dba1dddf00e73d688",
     "semantic_hash": ""
   },
   "src/components/admin/erp/v2/modals/ContractEscalationModal.tsx": {
@@ -5514,15 +5514,15 @@
     "semantic_hash": ""
   },
   "src/components/admin/erp/v2/modals/NewContractWizardModal.tsx": {
-    "mtime": 1788471241.9426053,
-    "seen": 1788471398.0251508,
-    "ast_hash": "ea3054dd8b65da5cc8d9ded4e9f121e8",
+    "mtime": 1788476328.751135,
+    "seen": 1788478075.3070285,
+    "ast_hash": "5bdf9ecb1f05ffb7435bae427c20926b",
     "semantic_hash": ""
   },
   "src/components/admin/erp/v2/modals/RSVAllocationModal.tsx": {
-    "mtime": 1788468164.0848422,
-    "seen": 1788468490.2952888,
-    "ast_hash": "03ff75ebf9660e89c9284b54a3fa9b87",
+    "mtime": 1788475950.024447,
+    "seen": 1788478075.3070302,
+    "ast_hash": "f748483cd50a9d89a067bec950e72124",
     "semantic_hash": ""
   },
   "src/components/admin/erp/v2/modals/RescissionSettlementModal.tsx": {
@@ -5532,21 +5532,21 @@
     "semantic_hash": ""
   },
   "src/components/admin/erp/v2/views/DailyOperationsView.tsx": {
-    "mtime": 1788470757.8579779,
-    "seen": 1788470916.7382724,
-    "ast_hash": "121bf7ce8386bc378cea0c2f89045748",
+    "mtime": 1788475993.1052203,
+    "seen": 1788478075.3070452,
+    "ast_hash": "01b14ddd9bf6ea298b906184082e25e3",
     "semantic_hash": ""
   },
   "src/components/admin/erp/v2/charts/CashFlowForecastChart.tsx": {
-    "mtime": 1788470532.4101574,
-    "seen": 1788470668.3812559,
-    "ast_hash": "a520cf152e89ee974835991ad1689112",
+    "mtime": 1788476416.8809552,
+    "seen": 1788478075.3070214,
+    "ast_hash": "2194a8241bcff5e49166de78da2e45b9",
     "semantic_hash": ""
   },
   "src/components/admin/erp/v2/charts/RealEstateValueWaterfall.tsx": {
-    "mtime": 1788470843.9470713,
-    "seen": 1788470916.738255,
-    "ast_hash": "6c6b387304f621461590dd0333b058ed",
+    "mtime": 1788476047.0301137,
+    "seen": 1788478075.307022,
+    "ast_hash": "b4cec21cc0c023c34bb7fe5801339fd3",
     "semantic_hash": ""
   },
   "src/components/admin/erp/v2/common/ZFCustomSelect.tsx": {

@@ -13,16 +13,124 @@ interface JournalEntryPreviewProps {
   isAr?: boolean;
 }
 
-// Helper functions to translate standard English accounting descriptions & memos to Arabic
+// Helper to convert English titles and common customer names to friendly Arabic
+export const localizeBuyerName = (str: string): string => {
+  if (!str) return str;
+  let out = str
+    .replace(/\bEng\.\s*/gi, 'م. ')
+    .replace(/\bDr\.\s*/gi, 'د. ')
+    .replace(/\bMr\.\s*/gi, 'أ. ')
+    .replace(/\bMrs\.\s*/gi, 'أ. ')
+    .replace(/\bEng\b/gi, 'م.')
+    .replace(/\bDr\b/gi, 'د.');
+
+  const names: Record<string, string> = {
+    'Mahmoud El-Sayed': 'محمود السيد',
+    'Karim Hassan': 'كريم حسن',
+    'Karim El-Mansouri': 'كريم المنصوري',
+    'Ahmed Mostafa': 'أحمد مصطفى',
+    'Mohamed Ali': 'محمد علي',
+    'Tamer Hosny': 'تامر حسني',
+    'Sherif Amer': 'شريف عامر',
+    'Youssef Farouk': 'يوسف فاروق',
+    'Omar Khaled': 'عمر خالد',
+    'Mona Zaki': 'منى زكي'
+  };
+
+  Object.entries(names).forEach(([en, ar]) => {
+    out = out.replace(new RegExp(en, 'gi'), ar);
+  });
+
+  return out;
+};
+
+// Helper functions to translate standard English accounting descriptions & memos to simple Egyptian Arabic
 export const localizeJournalDescription = (desc: string, isAr: boolean): string => {
   if (!isAr || !desc) return desc;
-  return desc
-    .replace(/^Advance Collection for Contract (ZF-\d+-\d+) \((.*?)\)/i, 'تحصيل الدفعة المقدمة لعقد البيع رقم $1 ($2)')
-    .replace(/^Handover & Revenue Recognition for Contract (ZF-\d+-\d+) \((.*?)\)/i, 'محضر تسليم نهائي واعتراف بالإيراد للعقد $1 ($2)')
-    .replace(/^Contract Rescission & Cancellation \(Branch 1 - Pre-Delivery\) for (ZF-\d+-\d+) \((.*?)\)/i, 'فسخ وإلغاء التعاقد (الفرع 1 - قبل التسليم) للعقد $1 ($2)')
-    .replace(/^Contract Rescission & Repossession \(Branch 2 - Post-Delivery\) for (ZF-\d+-\d+) \((.*?)\)/i, 'فسخ واسترداد حيازة (الفرع 2 - بعد التسليم) للعقد $1 ($2)')
-    .replace(/^Initial Opening Balance/i, 'قيد الأرصدة الافتتاحية الأولية')
-    .replace(/^Quick Expense \/ Transaction/i, 'مصروف / حركة تشغيلية سريعة');
+
+  let text = desc;
+
+  // 1. Installment / tranche collections
+  // Case A: Down payment / Tranche 0: "Installment #0 collected - Contract ZF-2026-2986"
+  text = text.replace(/Installment\s*#0\s*(?:collected\s*(?:by\s*hand\s*)?[-–—]\s*)Contract\s*([A-Za-z0-9_-]+)/gi, 
+    'تحصيل دفعة مقدم الحجز (قسط رقم 0) - عقد رقم $1');
+
+  // Case B: Tranche N collected by hand: "Installment #3 collected by hand - Contract ZF-2026-4651"
+  text = text.replace(/Installment\s*#(\d+)\s*collected\s*by\s*hand\s*[-–—]\s*Contract\s*([A-Za-z0-9_-]+)/gi, 
+    'تحصيل القسط رقم $1 كاش باليد - عقد رقم $2');
+
+  // Case C: General tranche: "Installment #3 collected - Contract ZF-2026-4651"
+  text = text.replace(/Installment\s*#(\d+)\s*collected\s*[-–—]\s*Contract\s*([A-Za-z0-9_-]+)/gi, 
+    'تحصيل القسط رقم $1 - عقد رقم $2');
+
+  // Case D: Hand collection into Treasury Safe
+  text = text.replace(/Installment\s*#([A-Za-z0-9_-]+)\s*collected\s*by\s*hand\s*into\s*Treasury\s*Safe/gi, 
+    'توريد القسط رقم $1 كاش باليد في خزينة الشركة');
+
+  // Case E: Safe clearance
+  text = text.replace(/Installment\s*#([A-Za-z0-9_-]+)\s*cleared\s*from\s*Safe\s*custody/gi, 
+    'صرف وتوريد القسط رقم $1 من عهدة الخزينة');
+
+  // Case F: Generic installment collection
+  text = text.replace(/Installment\s*#(\d+)\s*collected/gi, 'تحصيل القسط رقم $1');
+
+  // 2. Advance Collections: "Advance Collection for Contract ZF-2026-2986 (Eng. Mahmoud El-Sayed)"
+  text = text.replace(/Advance Collection for Contract\s*([A-Za-z0-9_-]+)\s*\((.*?)\)/gi, (match, contractNum, buyer) => {
+    const cleanBuyer = localizeBuyerName(buyer);
+    return `تحصيل الدفعة المقدمة لعقد البيع رقم ${contractNum} (${cleanBuyer})`;
+  });
+
+  text = text.replace(/Advance Collection for Contract\s*([A-Za-z0-9_-]+)/gi, 
+    'تحصيل الدفعة المقدمة لعقد البيع رقم $1');
+
+  // 3. Handover & Revenue Recognition
+  text = text.replace(/(?:Physical\s+)?Handover\s*(?:Protocol\s*)?(?:&\s*Revenue\s*Recognition\s*)?(?:\(Model\s*B\)\s*)?for\s*Contract\s*([A-Za-z0-9_-]+)\s*\((.*?)\)/gi, (match, contractNum, buyer) => {
+    const cleanBuyer = localizeBuyerName(buyer);
+    return `محضر تسليم الشقة النهائي واعتراف بإيراد المبيعات للعقد ${contractNum} (${cleanBuyer})`;
+  });
+
+  text = text.replace(/(?:Physical\s+)?Handover\s*(?:Protocol\s*)?(?:&\s*Revenue\s*Recognition\s*)?(?:\(Model\s*B\)\s*)?for\s*Contract\s*([A-Za-z0-9_-]+)/gi, 
+    'محضر تسليم الشقة واعتراف بإيراد المبيعات للعقد $1');
+
+  // 4. Contract Rescissions: "Contract Rescission & Cancellation (Branch 1 - Pre-Delivery) for ZF-2026-8522 (Forfeiture Floor Applied)"
+  text = text.replace(/Contract Rescission & Cancellation \(Branch 1 - Pre-Delivery\) for\s*([A-Za-z0-9_-]+)\s*\((.*?)\)/gi, (match, contractNum, extra) => {
+    const localizedExtra = extra.includes('Forfeiture') 
+      ? 'مع استقطاع نسبة الفسخ القانونية' 
+      : localizeBuyerName(extra);
+    return `فسخ وإلغاء التعاقد (قبل استلام الشقة) للعقد رقم ${contractNum} (${localizedExtra})`;
+  });
+
+  text = text.replace(/Contract Rescission & Repossession \(Branch 2 - Post-Delivery\) for\s*([A-Za-z0-9_-]+)\s*\((.*?)\)/gi, (match, contractNum, extra) => {
+    const localizedExtra = extra.includes('Forfeiture') 
+      ? 'مع استقطاع نسبة الفسخ القانونية' 
+      : localizeBuyerName(extra);
+    return `فسخ واسترداد الشقة (بعد الاستلام) للعقد رقم ${contractNum} (${localizedExtra})`;
+  });
+
+  text = text.replace(/Contract Rescission & Cancellation \(Branch 1 - Pre-Delivery\)/gi,
+    'فسخ وإلغاء التعاقد (قبل استلام الشقة)');
+
+  text = text.replace(/Contract Rescission & Repossession \(Branch 2 - Post-Delivery\)/gi,
+    'فسخ واسترداد الشقة (بعد الاستلام)');
+
+  // 5. Cleanup remaining English legal / accounting terms inside Arabic strings
+  text = text.replace(/\(Forfeiture Floor Applied\)/gi, '(مع استقطاع نسبة الفسخ القانونية)');
+  text = text.replace(/Forfeiture Floor Applied/gi, 'استقطاع نسبة الفسخ القانونية');
+  text = text.replace(/\(Branch 1 - Pre-Delivery\)/gi, '(قبل استلام الشقة)');
+  text = text.replace(/\(Branch 2 - Post-Delivery\)/gi, '(بعد تسليم الشقة)');
+
+  // 6. Titles and names cleanup
+  text = localizeBuyerName(text);
+
+  // 7. General & Opening balances
+  text = text.replace(/^Initial Opening Balance/gi, 'قيد الأرصدة الافتتاحية الأولية للشركة');
+  text = text.replace(/^Quick Expense \/ Transaction/gi, 'مصروف ونثريات تشغيلية سريعة');
+  text = text.replace(/Direct cash disbursement/gi, 'صرف نقدية مباشرة من الخزينة');
+  text = text.replace(/Cash collection by hand into Treasury Safe for Contract/gi, 'توريد كاش باليد لخزينة الشركة للعقد');
+  text = text.replace(/Cash collection by hand/gi, 'توريد كاش باليد');
+  text = text.replace(/\bContract\b/gi, 'عقد');
+
+  return text;
 };
 
 export const localizeJournalMemo = (memo: string | undefined, isAr: boolean): string | undefined => {
@@ -37,9 +145,23 @@ export const localizeJournalMemo = (memo: string | undefined, isAr: boolean): st
     'Relieve WIP cost to COGS': 'تخفيض حساب الأعمال تحت التنفيذ بعد التسليم',
     'Clear collected advances from Deferred Revenue': 'تسوية الدفعات المحصلة من الإيراد المؤجل',
     'Recognize retained forfeiture penalty': 'إثبات غرامة الفسخ المستقطعة كإيراد للشركة',
-    'Customer net refund liability payable': 'إثبات التزام صافي المسترد المستحق للعميل'
+    'Customer net refund liability payable': 'إثبات التزام صافي المسترد المستحق للعميل',
+    'Settlement of Customer Accounts Receivable': 'تسوية مديونية باقي ثمن الشقة على العميل',
+    'Credit to Deferred Contract Revenue': 'إثبات إيراد مؤجل لدفعة حجز الوحدة',
+    'Contractor Trade Payables': 'مستحقات وفواتير مقاولي الباطن والموردين',
+    'WIP Direct Construction Cost': 'تكاليف مباني وخرسانات قيد التنفيذ بالموقع',
+    'Clear uncollected Accounts Receivable off balance sheet': 'إسقاط باقي أقساط العقد غير المحصلة من الدفاتر'
   };
-  return map[memo] || memo;
+  
+  if (map[memo]) return map[memo];
+
+  let text = memo;
+  text = text.replace(/Cash collection by hand into Treasury Safe for Contract\s*([A-Za-z0-9_-]+)/gi, 'توريد كاش باليد لخزينة الشركة للعقد رقم $1');
+  text = text.replace(/Installment\s*#([A-Za-z0-9_-]+)\s*collected\s*by\s*hand\s*into\s*Treasury\s*Safe/gi, 'توريد القسط رقم $1 كاش باليد في خزينة الشركة');
+  text = text.replace(/Installment\s*#([A-Za-z0-9_-]+)\s*cleared\s*from\s*Safe\s*custody/gi, 'صرف القسط رقم $1 من عهدة الخزينة');
+  text = text.replace(/Customer advance cash received/gi, 'استلام كاش الدفعة المقدمة من العميل');
+  
+  return text;
 };
 
 export const JournalEntryPreview: React.FC<JournalEntryPreviewProps> = ({

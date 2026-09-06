@@ -4,23 +4,14 @@ import React, { useState, useMemo } from 'react';
 import { 
   X, 
   DollarSign, 
-  ShieldCheck, 
   Building2, 
   Wallet, 
-  Landmark, 
   CheckCircle2, 
   ArrowRight, 
   ArrowLeft, 
-  Calendar, 
-  FileText, 
   Sparkles, 
-  Layers, 
   HardHat, 
-  Truck, 
-  Wrench, 
-  Paintbrush, 
   FileCheck2,
-  AlertCircle,
   CreditCard,
   UserCheck
 } from 'lucide-react';
@@ -279,8 +270,6 @@ export const QuickTransactionModal: React.FC<QuickTransactionModalProps> = ({
     }
   };
 
-  if (!isOpen) return null;
-
   // Custom Sectioned Dropdown for Properties
   const targetPropertySections: ZFCustomSelectSection[] = useMemo(() => {
     const generalSection: ZFCustomSelectSection = {
@@ -320,6 +309,8 @@ export const QuickTransactionModal: React.FC<QuickTransactionModalProps> = ({
 
     return [generalSection, projectsSection];
   }, [properties, isAr]);
+
+  if (!isOpen) return null;
 
   return (
     <div 
@@ -1142,7 +1133,7 @@ export const QuickTransactionModal: React.FC<QuickTransactionModalProps> = ({
                 </div>
 
                 {/* Entry Description */}
-                <div style={{ padding: '0.75rem 1.15rem', fontSize: '0.82rem', color: '#0f172a', fontWeight: 600, borderBottom: '1px solid rgba(255, 255, 255, 0.06)' }}>
+                <div style={{ padding: '0.75rem 1.15rem', fontSize: '0.82rem', color: '#0f172a', fontWeight: 600, borderBottom: '1px solid #e2e8f0' }}>
                   {previewEntry.description}
                 </div>
 

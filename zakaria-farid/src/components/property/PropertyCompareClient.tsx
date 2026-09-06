@@ -16,11 +16,12 @@ import styles from '@/app/[locale]/properties/compare/compare.module.css';
 
 interface PropertyCompareClientProps {
   properties: Property[];
+  allAvailableProperties?: Property[];
   locale: string;
   tProps: Record<string, string>;
 }
 
-export default function PropertyCompareClient({ properties, locale }: PropertyCompareClientProps) {
+export default function PropertyCompareClient({ properties = [], allAvailableProperties = [], locale }: PropertyCompareClientProps) {
   const isAr = locale === 'ar';
   const [showDock, setShowDock] = useState(true);
 
@@ -34,6 +35,90 @@ export default function PropertyCompareClient({ properties, locale }: PropertyCo
       window.print();
     }
   };
+
+  // Empty State if fewer than 2 properties selected
+  if (!properties || properties.length < 2) {
+    return (
+      <div className={styles.page}>
+        <div className={styles.pageHeader}>
+          <div className={`container ${styles.headerInner}`}>
+            <Link href={`/${locale}/properties`} className={styles.backBtn}>
+              {isAr ? <ArrowRight size={15} strokeWidth={2.5} /> : <ArrowLeft size={15} strokeWidth={2.5} />}
+              <span>{isAr ? 'العودة إلى الكتالوج' : 'Back to Catalog'}</span>
+            </Link>
+            <div>
+              <div className={styles.labelBadge}>
+                <Sparkles size={13} />
+                <span>{isAr ? 'مصفوفة التقييم والتحليل المقارن' : 'Side-by-Side Estate Matrix'}</span>
+              </div>
+              <h1 className={styles.pageTitle}>
+                {isAr ? 'مقارنة العقارات الفاخرة' : 'Luxury Property Comparison Matrix'}
+              </h1>
+              <p className={styles.pageSub}>
+                {isAr
+                  ? 'اختر صرحين معماريين على الأقل من المحفظة للمقارنة المباشرة بين الأسعار والمواصفات.'
+                  : 'Select at least two luxury estates from the portfolio to compare pricing and architectural specifications.'}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="container" style={{ paddingBottom: '120px' }}>
+          <div style={{
+            background: '#ffffff',
+            borderRadius: '24px',
+            border: '1.5px solid rgba(201, 169, 106, 0.35)',
+            boxShadow: '0 20px 45px rgba(0, 0, 0, 0.06)',
+            padding: '3.5rem 2rem',
+            textAlign: 'center',
+            maxWidth: '760px',
+            margin: '0 auto'
+          }}>
+            <div style={{
+              width: '70px',
+              height: '70px',
+              borderRadius: '50%',
+              background: 'rgba(201, 169, 106, 0.12)',
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginBottom: '1.25rem',
+              color: '#946f23'
+            }}>
+              <Layers size={32} />
+            </div>
+            <h2 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#0f172a', marginBottom: '0.75rem' }}>
+              {isAr ? 'لم تقم بتحديد عقارات للمقارنة بعد' : 'No Estates Selected for Comparison'}
+            </h2>
+            <p style={{ color: '#64748b', fontSize: '1rem', lineHeight: '1.6', maxWidth: '520px', margin: '0 auto 2rem' }}>
+              {isAr 
+                ? 'استعرض كتالوج الصروح المعمارية الفاخرة واضغط على أيقونة المقارنة (⚖️) في بطاقة أي عقار لإضافته إلى المصفوفة.'
+                : 'Browse the luxury architectural catalog and click the comparison icon (⚖️) on any property card to compare side-by-side.'}
+            </p>
+            <Link
+              href={`/${locale}/properties`}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                background: 'linear-gradient(135deg, #DDA752 0%, #C5A059 100%)',
+                color: '#0A0C10',
+                padding: '0.85rem 2rem',
+                borderRadius: '9999px',
+                fontWeight: 700,
+                fontSize: '0.95rem',
+                textDecoration: 'none',
+                boxShadow: '0 10px 25px rgba(221, 167, 82, 0.35)'
+              }}
+            >
+              <span>{isAr ? 'استعراض الكتالوج الآن' : 'Browse Catalog Now'}</span>
+              {isAr ? <ArrowLeft size={16} /> : <ArrowRight size={16} />}
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // Find best metrics across compare set
   const minPrice = Math.min(...properties.map((p) => Number(p.price_egp)));
@@ -360,15 +445,14 @@ export default function PropertyCompareClient({ properties, locale }: PropertyCo
         <div className={`container ${styles.headerInner}`}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap', marginBottom: '16px' }}>
             <Link href={`/${locale}/properties`} className={styles.backBtn}>
-              <ArrowLeft size={15} strokeWidth={2.5} className={isAr ? styles.arrowRtl : ''} />
-              {isAr ? 'العودة إلى العقارات' : 'Back to Properties'}
+              {isAr ? <ArrowRight size={15} strokeWidth={2.5} /> : <ArrowLeft size={15} strokeWidth={2.5} />}
+              <span>{isAr ? 'العودة إلى العقارات' : 'Back to Properties'}</span>
             </Link>
 
             <button
               type="button"
               onClick={handlePrintPdf}
-              className={styles.headerWaBtn}
-              style={{ background: '#0A0C10', border: '1px solid rgba(201, 169, 106, 0.4)' }}
+              className={styles.pdfDownloadBtn}
             >
               <Download size={15} />
               <span>{isAr ? 'تحميل جدول المقارنة (PDF)' : 'Download Comparison PDF'}</span>
@@ -392,7 +476,7 @@ export default function PropertyCompareClient({ properties, locale }: PropertyCo
         </div>
       </div>
 
-      <div className="container">
+      <div className="container" style={{ paddingBottom: '140px' }}>
         {/* Comparison Matrix Table */}
         <div className={styles.tableWrap}>
           <table className={styles.table}>

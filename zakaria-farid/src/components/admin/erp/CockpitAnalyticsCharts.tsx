@@ -136,7 +136,7 @@ export const CockpitAnalyticsCharts: React.FC<CockpitAnalyticsChartsProps> = ({
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
       {/* Top Row: Donut + Sales Analytics */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(380px, 1fr))', gap: '1.25rem' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 380px), 1fr))', gap: '1.25rem' }}>
         
         {/* CHART 1: Donut Chart */}
         <div style={{

@@ -22,7 +22,9 @@ import {
   ChevronUp,
   ChevronLeft,
   ChevronRight,
-  ShieldCheck
+  ShieldCheck,
+  RotateCcw,
+  ArrowUpDown
 } from 'lucide-react';
 import { 
   ERPAccount, 
@@ -33,6 +35,10 @@ import { CANONICAL_COA } from '@/lib/erp/ledger';
 import { D } from '@/lib/erp/math';
 import { JournalEntryPreview, localizeJournalDescription } from '@/components/erp/JournalEntryPreview';
 import { AccountLedgerModal } from '../../AccountLedgerModal';
+import { ZFPagination } from '../ZFPagination';
+import { ZFKpiCard } from '../ZFKpiCard';
+import { ZFFilterToolbar } from '../ZFFilterToolbar';
+import { GeneralLedgerMindmap } from './GeneralLedgerMindmap';
 import styles from '../ZFWorkstationShell.module.css';
 
 interface GeneralLedgerViewProps {
@@ -55,16 +61,23 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
 }) => {
   // Main Switch State: 'coa' | 'journal'
   const [activeTab, setActiveTab] = useState<'coa' | 'journal'>('coa');
+  // Chart of Accounts View Mode: 'mindmap' (default interactive flow map) | 'table' (dense table)
+  const [coaViewMode, setCoaViewMode] = useState<'mindmap' | 'table'>('mindmap');
 
   // Chart of Accounts State
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [coaActivityFilter, setCoaActivityFilter] = useState<'all' | 'active' | 'zero'>('all');
+  const [coaSortBy, setCoaSortBy] = useState<'code_asc' | 'code_desc' | 'name_asc' | 'balance_desc' | 'activity_desc'>('code_asc');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [selectedAccountForModal, setSelectedAccountForModal] = useState<ERPAccount | null>(null);
+  const [coaCurrentPage, setCoaCurrentPage] = useState<number>(1);
+  const [coaPageSize, setCoaPageSize] = useState<number>(15);
 
   // Journal Entries Interactive State
   const [entriesViewMode, setEntriesViewMode] = useState<'table' | 'cards'>('table');
   const [entriesSearchQuery, setEntriesSearchQuery] = useState<string>('');
   const [selectedModuleFilter, setSelectedModuleFilter] = useState<string>('all');
+  const [entriesSortBy, setEntriesSortBy] = useState<'date_desc' | 'date_asc' | 'entry_desc' | 'amount_desc' | 'amount_asc'>('date_desc');
   const [filterAccountInEntries, setFilterAccountInEntries] = useState<string | null>(null);
   const [expandedEntryIds, setExpandedEntryIds] = useState<Set<string>>(new Set());
   const [currentPage, setCurrentPage] = useState<number>(1);
@@ -111,19 +124,19 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
       if (acc.account_type === 'ASSET') {
         totalAssets = totalAssets.plus(netBalance);
       }
+      if (acc.account_type === 'LIABILITY') {
+        totalLiabilities = totalLiabilities.plus(netBalance);
+      }
       if (acc.account_code === '105000') {
         totalWip = totalWip.plus(netBalance);
-      }
-      if (acc.account_type === 'LIABILITY' || acc.account_type === 'CONTRA_LIABILITY') {
-        totalLiabilities = totalLiabilities.plus(netBalance);
       }
     });
 
     return {
-      totalCash,
-      totalAssets,
-      totalLiabilities,
-      totalWip,
+      totalCash: totalCash.toFixed(2),
+      totalAssets: totalAssets.toFixed(2),
+      totalLiabilities: totalLiabilities.toFixed(2),
+      totalWip: totalWip.toFixed(2),
       entriesCount: journalEntries.length
     };
   }, [accountStats, journalEntries]);
@@ -139,6 +152,14 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
         }
       }
 
+      const stats = accountStats[acc.account_code] || { debits: D(0), credits: D(0), count: 0 };
+      const netBalance = acc.normal_balance === 'DEBIT'
+        ? stats.debits.minus(stats.credits)
+        : stats.credits.minus(stats.debits);
+
+      if (coaActivityFilter === 'active' && stats.count === 0) return false;
+      if (coaActivityFilter === 'zero' && !netBalance.isZero()) return false;
+
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
         const code = acc.account_code.toLowerCase();
@@ -149,7 +170,49 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
 
       return true;
     });
-  }, [selectedCategory, searchQuery]);
+  }, [selectedCategory, coaActivityFilter, searchQuery, accountStats]);
+
+  // Sorted Chart of Accounts
+  const sortedAccounts = useMemo(() => {
+    const list = [...filteredAccounts];
+    list.sort((a, b) => {
+      const statsA = accountStats[a.account_code] || { debits: D(0), credits: D(0), count: 0 };
+      const statsB = accountStats[b.account_code] || { debits: D(0), credits: D(0), count: 0 };
+      const netA = a.normal_balance === 'DEBIT' ? statsA.debits.minus(statsA.credits) : statsA.credits.minus(statsA.debits);
+      const netB = b.normal_balance === 'DEBIT' ? statsB.debits.minus(statsB.credits) : statsB.credits.minus(statsB.debits);
+
+      if (coaSortBy === 'code_asc') return a.account_code.localeCompare(b.account_code);
+      if (coaSortBy === 'code_desc') return b.account_code.localeCompare(a.account_code);
+      if (coaSortBy === 'name_asc') {
+        const nameA = isAr ? a.account_name_ar : a.account_name_en;
+        const nameB = isAr ? b.account_name_ar : b.account_name_en;
+        return nameA.localeCompare(nameB, isAr ? 'ar' : 'en');
+      }
+      if (coaSortBy === 'balance_desc') return netB.abs().minus(netA.abs()).toNumber();
+      if (coaSortBy === 'activity_desc') return statsB.count - statsA.count;
+      return 0;
+    });
+    return list;
+  }, [filteredAccounts, coaSortBy, accountStats, isAr]);
+
+  const coaTotalPages = Math.ceil(sortedAccounts.length / coaPageSize) || 1;
+  const paginatedAccounts = useMemo(() => {
+    const start = (coaCurrentPage - 1) * coaPageSize;
+    return sortedAccounts.slice(start, start + coaPageSize);
+  }, [sortedAccounts, coaCurrentPage, coaPageSize]);
+
+  const coaActiveFiltersCount = (selectedCategory !== 'all' ? 1 : 0) +
+    (coaActivityFilter !== 'all' ? 1 : 0) +
+    (searchQuery.trim() ? 1 : 0) +
+    (coaSortBy !== 'code_asc' ? 1 : 0);
+
+  const handleResetCoaFilters = () => {
+    setSelectedCategory('all');
+    setCoaActivityFilter('all');
+    setCoaSortBy('code_asc');
+    setSearchQuery('');
+    setCoaCurrentPage(1);
+  };
 
   // Filtered Journal Entries
   const filteredEntries = useMemo(() => {
@@ -178,12 +241,47 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
     });
   }, [journalEntries, selectedModuleFilter, filterAccountInEntries, entriesSearchQuery]);
 
+  // Sorted Journal Entries
+  const sortedEntries = useMemo(() => {
+    const list = [...filteredEntries];
+    list.sort((a, b) => {
+      if (entriesSortBy === 'date_desc') return (b.entry_date || '').localeCompare(a.entry_date || '');
+      if (entriesSortBy === 'date_asc') return (a.entry_date || '').localeCompare(b.entry_date || '');
+      if (entriesSortBy === 'entry_desc') return (b.entry_number || '').localeCompare(a.entry_number || '');
+      if (entriesSortBy === 'amount_desc') {
+        const sumA = (a.lines || []).reduce((acc, l) => acc.plus(D(l.debit_amount || '0')), D(0));
+        const sumB = (b.lines || []).reduce((acc, l) => acc.plus(D(l.debit_amount || '0')), D(0));
+        return sumB.minus(sumA).toNumber();
+      }
+      if (entriesSortBy === 'amount_asc') {
+        const sumA = (a.lines || []).reduce((acc, l) => acc.plus(D(l.debit_amount || '0')), D(0));
+        const sumB = (b.lines || []).reduce((acc, l) => acc.plus(D(l.debit_amount || '0')), D(0));
+        return sumA.minus(sumB).toNumber();
+      }
+      return 0;
+    });
+    return list;
+  }, [filteredEntries, entriesSortBy]);
+
   // Pagination for entries
-  const totalPages = Math.ceil(filteredEntries.length / pageSize) || 1;
+  const totalPages = Math.ceil(sortedEntries.length / pageSize) || 1;
   const paginatedEntries = useMemo(() => {
     const start = (currentPage - 1) * pageSize;
-    return filteredEntries.slice(start, start + pageSize);
-  }, [filteredEntries, currentPage, pageSize]);
+    return sortedEntries.slice(start, start + pageSize);
+  }, [sortedEntries, currentPage, pageSize]);
+
+  const entriesActiveFiltersCount = (selectedModuleFilter !== 'all' ? 1 : 0) +
+    (filterAccountInEntries ? 1 : 0) +
+    (entriesSearchQuery.trim() ? 1 : 0) +
+    (entriesSortBy !== 'date_desc' ? 1 : 0);
+
+  const handleResetEntriesFilters = () => {
+    setSelectedModuleFilter('all');
+    setFilterAccountInEntries(null);
+    setEntriesSortBy('date_desc');
+    setEntriesSearchQuery('');
+    setCurrentPage(1);
+  };
 
   // Expand / Collapse Handlers
   const toggleExpand = (entryId: string) => {
@@ -216,18 +314,40 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
   const getModuleBadge = (mod: string) => {
     switch (mod) {
       case 'SALES':
-        return { label: isAr ? 'عقود بيع' : 'Sales', bg: 'rgba(184, 144, 62, 0.08)', text: '#946f23', border: 'rgba(184, 144, 62, 0.25)' };
+        return { label: isAr ? 'عقود بيع ومقدمات' : 'Sales', bg: 'rgba(184, 144, 62, 0.08)', text: '#946f23', border: 'rgba(184, 144, 62, 0.25)' };
       case 'HANDOVER':
-        return { label: isAr ? 'محضر تسليم' : 'Handover', bg: '#f0fdf4', text: '#15803d', border: 'rgba(22, 163, 74, 0.25)' };
+        return { label: isAr ? 'تسليم شقق' : 'Handover', bg: '#f0fdf4', text: '#15803d', border: 'rgba(22, 163, 74, 0.25)' };
       case 'RESCISSION':
-        return { label: isAr ? 'فسخ تعاقد' : 'Rescission', bg: '#fef2f2', text: '#b91c1c', border: 'rgba(220, 38, 38, 0.25)' };
+        return { label: isAr ? 'إلغاء عقود' : 'Rescission', bg: '#fef2f2', text: '#b91c1c', border: 'rgba(220, 38, 38, 0.25)' };
       case 'EXPENSE':
-        return { label: isAr ? 'مصروف تشغيل' : 'Expense', bg: '#f8fafc', text: '#334155', border: '#cbd5e1' };
+        return { label: isAr ? 'مصاريف تشغيل' : 'Expense', bg: '#f8fafc', text: '#334155', border: '#cbd5e1' };
       case 'SYSTEM':
         return { label: isAr ? 'رصيد افتتاحي' : 'Opening', bg: 'rgba(184, 144, 62, 0.08)', text: '#946f23', border: 'rgba(184, 144, 62, 0.25)' };
+      case 'WIP_ALLOCATION':
+        return { label: isAr ? 'مصاريف مباني (WIP)' : 'WIP Costs', bg: '#fffbeb', text: '#b45309', border: 'rgba(245, 158, 11, 0.3)' };
+      case 'PDC':
+        return { label: isAr ? 'أقساط الخزنة' : 'Installments', bg: '#f0f9ff', text: '#0284c7', border: 'rgba(2, 132, 199, 0.25)' };
+      case 'ESCALATION':
+        return { label: isAr ? 'فروق أسعار' : 'Price Escalation', bg: '#fff7ed', text: '#c2410c', border: 'rgba(234, 88, 12, 0.25)' };
+      case 'TAX':
+        return { label: isAr ? 'ضرائب ورسوم' : 'Taxes', bg: '#fdf4ff', text: '#a21caf', border: 'rgba(162, 28, 175, 0.25)' };
+      case 'CAPITAL_CALL':
+        return { label: isAr ? 'ضخ الشركاء' : 'Capital Call', bg: 'rgba(184, 144, 62, 0.08)', text: '#946f23', border: 'rgba(184, 144, 62, 0.25)' };
+      case 'MANUAL':
+        return { label: isAr ? 'قيد يدوي' : 'Manual Entry', bg: '#f8fafc', text: '#475569', border: '#cbd5e1' };
       default:
         return { label: mod, bg: '#f1f5f9', text: '#475569', border: '#e2e8f0' };
     }
+  };
+
+  const getEntryTypeLabel = (entryNum: string) => {
+    if (entryNum.startsWith('JE-PAY')) return isAr ? 'سند قبض وتحصيل' : 'Payment Receipt';
+    if (entryNum.startsWith('JE-WIP')) return isAr ? 'مصروف مباني ومواد' : 'WIP Cost Entry';
+    if (entryNum.startsWith('JE-RESC')) return isAr ? 'تسوية فسخ عقد' : 'Rescission Settlement';
+    if (entryNum.startsWith('JE-HANDOVER')) return isAr ? 'محضر تسليم شقة' : 'Handover Protocol';
+    if (entryNum.startsWith('JE-OPEN')) return isAr ? 'رصيد أول المدة' : 'Opening Balance';
+    if (entryNum.startsWith('JE-EXP')) return isAr ? 'مصروف تشغيل' : 'Operating Expense';
+    return null;
   };
 
   const typeColorMap: Record<string, { bg: string; text: string; border: string }> = {
@@ -255,11 +375,11 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
           <div className={styles.stageBreadcrumb}>
             <span>FIN-OS</span>
             <span>/</span>
-            <span>{isAr ? 'دفتر الأستاذ العام' : 'General Ledger'}</span>
+            <span>{isAr ? 'حسابات الشركة ودفتر اليومية' : 'General Ledger'}</span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
             <h1 className={styles.stageTitle}>
-              {isAr ? 'دليل الحسابات وقيود اليومية المحصنة' : 'Chart of Accounts & Immutable Ledger'}
+              {isAr ? 'حسابات الشركة ودفتر اليومية' : 'Chart of Accounts & Immutable Ledger'}
             </h1>
             <span style={{
               background: 'rgba(184, 144, 62, 0.08)',
@@ -270,12 +390,12 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
               fontSize: '0.72rem',
               fontWeight: 800
             }}>
-              {isAr ? 'نظام القيد المزدوج' : 'Double Entry System'}
+              {isAr ? 'حسابات مضبوطة بالمليم' : 'Double Entry System'}
             </span>
           </div>
           <p style={{ margin: '0.35rem 0 0', fontSize: '0.82rem', color: '#64748b' }}>
             {isAr 
-              ? 'انقر على أي بند أو حساب لاستعراض وظيفته، دوره في التطوير العقاري، وكشف حسابه الدفتري التفصيلي.'
+              ? 'اضغط على أي حساب عشان تشوف تفاصيله، رصيده الحالي، وكشف حساب بكل الحركات المتسجلة عليه.'
               : 'Click any account row to inspect its business purpose, real estate role, and detailed statement of postings.'}
           </p>
         </div>
@@ -300,7 +420,7 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
             }}
           >
             <Plus size={15} />
-            <span>{isAr ? '+ قيد / مصروف جديد' : '+ New Entry'}</span>
+            <span>{isAr ? '+ تسجيل حركة / مصروف جديد' : '+ New Entry'}</span>
           </button>
 
           <button 
@@ -328,144 +448,56 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
             {activePeriod.status === 'OPEN' ? <Lock size={15} color="#b45309" /> : <Unlock size={15} color="#946f23" />}
             <span>
               {activePeriod.status === 'OPEN'
-                ? (isAr ? 'إقفال الفترة المحاسبية' : 'Lock Period (Inv 0.9)')
-                : (isAr ? 'إعادة فتح الفترة' : 'Unlock Period')}
+                ? (isAr ? 'قفل الفترة (حماية من التعديل)' : 'Lock Period (Inv 0.9)')
+                : (isAr ? 'فتح الفترة للتسجيل' : 'Unlock Period')}
             </span>
           </button>
         </div>
       </div>
 
-      {/* 2. 4 Executive KPI Cards (Calm Architectural Alabaster Aesthetic) */}
-      <div className={styles.kpiGrid}>
-        {/* Card 1: Available Liquid Cash */}
-        <div className={styles.kpiCard}>
-          <div className={styles.kpiHeader}>
-            <span className={styles.kpiLabel}>{isAr ? 'السيولة النقدية المتاحة (خزينة وبنوك)' : 'Available Liquid Cash'}</span>
-            <div style={{
-              width: '36px',
-              height: '36px',
-              borderRadius: '9px',
-              background: '#f8fafc',
-              border: '1px solid #e2e8f0',
-              color: '#15803d',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}>
-              <Wallet size={17} />
-            </div>
+      {/* 2. AUDITED CAPITAL BALANCE RIBBON (Corporate Accounting Archetype) */}
+      <div className={styles.auditedBalanceRibbon}>
+        <div className={styles.auditedBalanceItem}>
+          <span className={styles.auditedBalanceLabel}>{isAr ? 'ممتلكات وفلوس الشركة' : 'Total Assets'}</span>
+          <div className={styles.auditedBalanceValue}>
+            <span>{D(kpis.totalAssets).formatEGP(isAr)}</span>
           </div>
-          <div className={styles.kpiValue}>
-            <span>{splitAmount(kpis.totalCash).num}</span>
-            <span className={styles.kpiCurrency}>{splitAmount(kpis.totalCash).cur}</span>
-          </div>
-          <div className={styles.kpiMeta}>
-            <span className={styles.kpiBadge}>
-              <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#15803d', display: 'inline-block' }} />
-              {isAr ? 'خزينة وبنوك [101+102]' : 'Safe & Banks'}
-            </span>
-            <span className={styles.kpiNote}>{isAr ? 'سيولة جاهزة للصرف' : 'cleared liquidity'}</span>
-          </div>
+          <span className={styles.auditedBalanceSubtext}>
+            {isAr ? 'كاش جاهز بالبنك والخزنة: ' : 'Liquid portion: '}
+            <strong className={styles.auditedCashHighlight}>{D(kpis.totalCash).formatEGP(isAr)}</strong>
+          </span>
         </div>
 
-        {/* Card 2: Total Assets */}
-        <div className={styles.kpiCard}>
-          <div className={styles.kpiHeader}>
-            <span className={styles.kpiLabel}>{isAr ? 'إجمالي الأصول المدارة (Total Assets)' : 'Total Capital Assets'}</span>
-            <div style={{
-              width: '36px',
-              height: '36px',
-              borderRadius: '9px',
-              background: '#f8fafc',
-              border: '1px solid #e2e8f0',
-              color: '#475569',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}>
-              <Landmark size={17} />
-            </div>
+        <div className={styles.auditedBalanceItem}>
+          <span className={styles.auditedBalanceLabel}>{isAr ? 'الالتزامات ومستحقات على الشركة' : 'Liabilities & Advances'}</span>
+          <div className={styles.auditedBalanceValue}>
+            <span>{D(kpis.totalLiabilities).formatEGP(isAr)}</span>
           </div>
-          <div className={styles.kpiValue}>
-            <span>{splitAmount(kpis.totalAssets).num}</span>
-            <span className={styles.kpiCurrency}>{splitAmount(kpis.totalAssets).cur}</span>
-          </div>
-          <div className={styles.kpiMeta}>
-            <span className={styles.kpiBadge}>
-              <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#475569', display: 'inline-block' }} />
-              {isAr ? 'أصول ومشروعات WIP' : 'Assets & WIP'}
-            </span>
-            <span className={styles.kpiNote}>{isAr ? 'محفظة الأصول الرأسمالية' : 'capital portfolio'}</span>
-          </div>
+          <span className={styles.auditedBalanceSubtext}>
+            {isAr ? 'مقدمات حجز وفلوس مؤجلة' : 'Advance deposits & maturities'}
+          </span>
         </div>
 
-        {/* Card 3: Liabilities & Advances */}
-        <div className={styles.kpiCard}>
-          <div className={styles.kpiHeader}>
-            <span className={styles.kpiLabel}>{isAr ? 'الالتزامات وإيرادات العقود المؤجلة' : 'Liabilities & Advances'}</span>
-            <div style={{
-              width: '36px',
-              height: '36px',
-              borderRadius: '9px',
-              background: '#f8fafc',
-              border: '1px solid #e2e8f0',
-              color: '#d97706',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}>
-              <Scale size={17} />
-            </div>
-          </div>
-          <div className={styles.kpiValue}>
-            <span>{splitAmount(kpis.totalLiabilities).num}</span>
-            <span className={styles.kpiCurrency}>{splitAmount(kpis.totalLiabilities).cur}</span>
-          </div>
-          <div className={styles.kpiMeta}>
-            <span className={styles.kpiBadge}>
-              <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#d97706', display: 'inline-block' }} />
-              {isAr ? 'دفعات مقدمة ومستحقات' : 'Payables & Advances'}
+        <div className={styles.auditedBalanceItem}>
+          <span className={styles.auditedBalanceLabel}>{isAr ? 'صافي رأس مال الشركة' : 'Net Equity Position'}</span>
+          <div className={styles.auditedBalanceValue}>
+            <span className={styles.auditedEquityValue}>
+              {D(kpis.totalAssets).minus(D(kpis.totalLiabilities)).formatEGP(isAr)}
             </span>
-            <span className={styles.kpiNote}>{isAr ? 'التزامات حتى التسليم' : 'due at delivery'}</span>
           </div>
+          <span className={styles.auditedBalanceSubtext}>
+            {isAr ? 'ممتلكات الشركة بعد خصم الالتزامات' : 'Assets minus Liabilities'}
+          </span>
         </div>
 
-        {/* Card 4: Immutable Ledger Entries Count (Flagship Gold Card) */}
-        <div 
-          className={`${styles.kpiCard} ${styles.flagshipCard}`}
-          onClick={() => setActiveTab('journal')}
-          style={{ cursor: 'pointer' }}
-          title={isAr ? 'اضغط لعرض سجل القيود المحصنة' : 'Click to view journal entries'}
-        >
-          <div className={styles.kpiHeader}>
-            <span className={`${styles.kpiLabel} ${styles.flagshipLabel}`}>
-              {isAr ? 'القيود المحصنة بالدفاتر' : 'Posted Ledger Entries'}
-            </span>
-            <div style={{
-              width: '36px',
-              height: '36px',
-              borderRadius: '9px',
-              background: 'rgba(184, 144, 62, 0.1)',
-              border: '1px solid rgba(184, 144, 62, 0.3)',
-              color: '#946f23',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}>
-              <FileText size={17} />
-            </div>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: isAr ? 'flex-start' : 'flex-end', gap: '0.45rem' }}>
+          <div className={styles.auditedStampBadge}>
+            <ShieldCheck size={14} />
+            <span>{isAr ? 'دفتر حسابات مضبوط بالمليم' : 'Audited Immutable Ledger'}</span>
           </div>
-          <div className={styles.kpiValue} style={{ color: '#946f23' }}>
-            <span>{kpis.entriesCount}</span>
-            <span className={styles.kpiCurrency} style={{ color: '#946f23' }}>{isAr ? 'قيد مرحل' : 'Entries'}</span>
-          </div>
-          <div className={styles.kpiMeta}>
-            <span className={styles.kpiBadge} style={{ borderColor: 'rgba(184, 144, 62, 0.3)', background: 'rgba(184, 144, 62, 0.06)' }}>
-              <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#946f23', display: 'inline-block' }} />
-              <span style={{ color: '#946f23', fontWeight: 800 }}>{isAr ? 'غير قابلة للتعديل' : 'Immutable'}</span>
-            </span>
-            <span className={styles.kpiNote}>{isAr ? 'سجل تدقيق كامل' : 'audit-logged'}</span>
-          </div>
+          <span className={styles.auditedEntryCount}>
+            {kpis.entriesCount} {isAr ? 'حركة متسجلة ومعتمدة' : 'Posted journal entries'}
+          </span>
         </div>
       </div>
 
@@ -512,7 +544,7 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
             }}
           >
             <BookOpen size={15} color={activeTab === 'coa' ? '#946f23' : '#64748b'} />
-            <span>{isAr ? 'دليل الحسابات والأرصدة' : 'Chart of Accounts'}</span>
+            <span>{isAr ? 'شجرة الحسابات' : 'Chart of Accounts'}</span>
             <span style={{
               fontSize: '0.68rem',
               fontWeight: 800,
@@ -545,7 +577,7 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
             }}
           >
             <ShieldCheck size={15} color={activeTab === 'journal' ? '#946f23' : '#64748b'} />
-            <span>{isAr ? 'سجل قيود اليومية المحصنة' : 'Posted Journal Register'}</span>
+            <span>{isAr ? 'دفتر اليومية والحركات' : 'Posted Journal Register'}</span>
             <span style={{
               fontSize: '0.68rem',
               fontWeight: 800,
@@ -559,12 +591,64 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
           </button>
         </div>
 
-        {/* Right Info / Status */}
+        {/* Right Info / View Mode Switcher */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
           {activeTab === 'coa' ? (
-            <span style={{ fontSize: '0.74rem', color: '#64748b' }}>
-              {isAr ? 'عرض الأرصدة الحية والحركات وفق شجرة الحسابات' : 'Live balances and activity across canonical accounts'}
-            </span>
+            <div style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.25rem',
+              background: '#f1f5f9',
+              padding: '0.2rem',
+              borderRadius: '8px',
+              border: '1px solid #e2e8f0'
+            }}>
+              <button
+                type="button"
+                onClick={() => setCoaViewMode('mindmap')}
+                style={{
+                  padding: '0.35rem 0.85rem',
+                  borderRadius: '6px',
+                  border: 'none',
+                  background: coaViewMode === 'mindmap' ? '#ffffff' : 'transparent',
+                  color: coaViewMode === 'mindmap' ? '#0f172a' : '#64748b',
+                  fontWeight: coaViewMode === 'mindmap' ? 800 : 700,
+                  fontSize: '0.74rem',
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.4rem',
+                  boxShadow: coaViewMode === 'mindmap' ? '0 1px 2px rgba(0, 0, 0, 0.08)' : 'none',
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                <TrendingUp size={13} color={coaViewMode === 'mindmap' ? '#946f23' : '#64748b'} />
+                <span>{isAr ? 'لوحة الميزان والحسابات' : 'Visual Balance Sheet'}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setCoaViewMode('table')}
+                style={{
+                  padding: '0.35rem 0.85rem',
+                  borderRadius: '6px',
+                  border: 'none',
+                  background: coaViewMode === 'table' ? '#ffffff' : 'transparent',
+                  color: coaViewMode === 'table' ? '#0f172a' : '#64748b',
+                  fontWeight: coaViewMode === 'table' ? 800 : 700,
+                  fontSize: '0.74rem',
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.4rem',
+                  boxShadow: coaViewMode === 'table' ? '0 1px 2px rgba(0, 0, 0, 0.08)' : 'none',
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                <Table size={13} color={coaViewMode === 'table' ? '#946f23' : '#64748b'} />
+                <span>{isAr ? 'جدول الحسابات المفصل' : 'Table View'}</span>
+              </button>
+            </div>
           ) : (
             filterAccountInEntries ? (
               <div style={{
@@ -579,7 +663,7 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
                 color: '#946f23',
                 fontWeight: 700
               }}>
-                <span>{isAr ? `تصفية بحساب: ${filterAccountInEntries}` : `Filtered by: ${filterAccountInEntries}`}</span>
+                <span>{isAr ? `حركات حساب: ${filterAccountInEntries}` : `Filtered by: ${filterAccountInEntries}`}</span>
                 <button
                   onClick={() => setFilterAccountInEntries(null)}
                   style={{ background: 'none', border: 'none', color: '#946f23', cursor: 'pointer', fontWeight: 900 }}
@@ -589,7 +673,7 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
               </div>
             ) : (
               <span style={{ fontSize: '0.74rem', color: '#64748b' }}>
-                {isAr ? 'قيود دفترية مزدوجة معتمدة وغير قابلة للتعديل IFRS 15' : 'Immutable double-entry journal register compliant with IFRS 15'}
+                {isAr ? 'دفتر يومية موثق ومدين = دائن بالمليم' : 'Immutable double-entry journal register compliant with IFRS 15'}
               </span>
             )
           )}
@@ -598,51 +682,76 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
 
       {/* 4. ACTIVE VIEW: EITHER COA OR JOURNAL REGISTER */}
       {activeTab === 'coa' ? (
-        <>
-          {/* Search & Filter Bar for Chart of Accounts */}
-      <div className={styles.toolbar}>
-        <div className={styles.tabBar}>
-          {[
-            { id: 'all', labelAr: 'كافة الحسابات (الكل)', labelEn: 'All Accounts' },
-            { id: 'ASSET', labelAr: 'الأصول والسيولة', labelEn: 'Assets' },
-            { id: 'WIP', labelAr: 'مشاريع تحت التنفيذ (WIP)', labelEn: 'WIP Projects' },
-            { id: 'LIABILITY', labelAr: 'الالتزامات والدفعات', labelEn: 'Liabilities' },
-            { id: 'EQUITY', labelAr: 'حقوق الملكية', labelEn: 'Equity' },
-            { id: 'REVENUE', labelAr: 'الإيرادات', labelEn: 'Revenue' },
-            { id: 'EXPENSE', labelAr: 'المصروفات والتكاليف', labelEn: 'Expenses' }
-          ].map(tab => {
-            const isActive = selectedCategory === tab.id;
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setSelectedCategory(tab.id)}
-                className={`${styles.tabBtn} ${isActive ? styles.tabBtnActive : ''}`}
-              >
-                {isAr ? tab.labelAr : tab.labelEn}
-              </button>
-            );
-          })}
-        </div>
-
-        <div className={styles.searchBox}>
-          <Search size={15} color="#94a3b8" />
-          <input
-            type="text"
-            placeholder={isAr ? 'بحث بالكود أو اسم الحساب...' : 'Search by code or title...'}
-            value={searchQuery}
-            onChange={e => setSearchQuery(e.target.value)}
-            className={styles.searchInput}
+        coaViewMode === 'mindmap' ? (
+          <GeneralLedgerMindmap
+            isAr={isAr}
+            journalEntries={journalEntries}
+            accountStats={accountStats}
+            onSelectAccountForModal={(acc) => setSelectedAccountForModal(acc)}
+            onFilterAccountInJournal={(accountCode) => {
+              setFilterAccountInEntries(accountCode);
+              setActiveTab('journal');
+              const el = document.getElementById('journal-entries-section');
+              if (el) el.scrollIntoView({ behavior: 'smooth' });
+            }}
           />
-          {searchQuery && (
-            <button 
-              onClick={() => setSearchQuery('')}
-              style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: '0.8rem' }}
-            >
-              ✕
-            </button>
-          )}
-        </div>
-      </div>
+        ) : (
+          <>
+            {/* Search & Filter Bar for Chart of Accounts */}
+            <ZFFilterToolbar
+        tabs={[
+          { id: 'all', label: isAr ? 'كل الحسابات' : 'All Accounts' },
+          { id: 'ASSET', label: isAr ? 'فلوس وأصول الشركة' : 'Assets' },
+          { id: 'WIP', label: isAr ? 'مصاريف المباني والمشاريع' : 'WIP Projects' },
+          { id: 'LIABILITY', label: isAr ? 'الالتزامات اللي علينا' : 'Liabilities' },
+          { id: 'EQUITY', label: isAr ? 'رأس مال الشركاء' : 'Equity' },
+          { id: 'REVENUE', label: isAr ? 'المبيعات والإيرادات' : 'Revenue' },
+          { id: 'EXPENSE', label: isAr ? 'المصاريف والتشغيل' : 'Expenses' }
+        ]}
+        activeTab={selectedCategory}
+        onTabChange={(tabId) => {
+          setSelectedCategory(tabId);
+          setCoaCurrentPage(1);
+        }}
+        searchQuery={searchQuery}
+        onSearchChange={(q) => {
+          setSearchQuery(q);
+          setCoaCurrentPage(1);
+        }}
+        searchPlaceholder={isAr ? 'دوّر برقم الكود أو اسم الحساب...' : 'Search by code or title...'}
+        filters={[
+          {
+            id: 'coa_activity',
+            value: coaActivityFilter,
+            onChange: (val) => {
+              setCoaActivityFilter(val as any);
+              setCoaCurrentPage(1);
+            },
+            ariaLabel: isAr ? 'تصفية النشاط' : 'Activity Filter',
+            options: [
+              { value: 'all', label: isAr ? 'كل الحسابات' : 'All Activity' },
+              { value: 'active', label: isAr ? 'حسابات عليها حركات بس' : 'Active Only (>0 tx)' },
+              { value: 'zero', label: isAr ? 'حسابات رصيدها صفر' : 'Zero Balance Only' }
+            ]
+          }
+        ]}
+        sortBy={coaSortBy}
+        onSortChange={(val) => {
+          setCoaSortBy(val as any);
+          setCoaCurrentPage(1);
+        }}
+        sortOptions={[
+          { value: 'code_asc', label: isAr ? 'الكود: من الأصغر' : 'Code (Ascending)' },
+          { value: 'code_desc', label: isAr ? 'الكود: من الأكبر' : 'Code (Descending)' },
+          { value: 'name_asc', label: isAr ? 'اسم الحساب: أ - ي' : 'Account Name (A-Z)' },
+          { value: 'balance_desc', label: isAr ? 'الرصيد: الأكبر الأول' : 'Highest Balance' },
+          { value: 'activity_desc', label: isAr ? 'الأكتر حركات الأول' : 'Most Active' }
+        ]}
+        sortAriaLabel={isAr ? 'ترتيب الحسابات' : 'Sort Accounts'}
+        activeFiltersCount={coaActiveFiltersCount}
+        onResetFilters={handleResetCoaFilters}
+        isAr={isAr}
+      />
 
       {/* 4. Interactive Chart of Accounts Grid */}
       <div className={styles.tableCard}>
@@ -650,16 +759,23 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
           <thead>
             <tr>
               <th style={{ width: '110px' }}>{isAr ? 'كود الحساب' : 'Code'}</th>
-              <th>{isAr ? 'اسم وتوصيف الحساب (اضغط للتفاصيل)' : 'Account Title (Click for details)'}</th>
-              <th style={{ width: '130px' }}>{isAr ? 'التصنيف' : 'Category'}</th>
+              <th>{isAr ? 'اسم الحساب (اضغط للتفاصيل)' : 'Account Title (Click for details)'}</th>
+              <th style={{ width: '130px' }}>{isAr ? 'نوع الحساب' : 'Category'}</th>
               <th style={{ width: '110px' }}>{isAr ? 'طبيعة الرصيد' : 'Normal'}</th>
-              <th style={{ minWidth: '180px', textAlign: isAr ? 'left' : 'right', whiteSpace: 'nowrap' }}>{isAr ? 'الرصيد الدفتري الحالي' : 'Live Balance'}</th>
-              <th style={{ width: '110px', textAlign: 'center' }}>{isAr ? 'الحركات' : 'Activity'}</th>
+              <th style={{ minWidth: '180px', textAlign: isAr ? 'left' : 'right', whiteSpace: 'nowrap' }}>{isAr ? 'الرصيد الحالي' : 'Live Balance'}</th>
+              <th style={{ width: '110px', textAlign: 'center' }}>{isAr ? 'عدد الحركات' : 'Activity'}</th>
               <th style={{ width: '130px', textAlign: 'center' }}>{isAr ? 'الإجراء' : 'Action'}</th>
             </tr>
           </thead>
           <tbody>
-            {filteredAccounts.map(acc => {
+            {paginatedAccounts.length === 0 ? (
+              <tr>
+                <td colSpan={7} style={{ textAlign: 'center', padding: '2.5rem 1rem', color: '#64748b' }}>
+                  {isAr ? 'مفيش حسابات مطابقة للبحث أو الفلتر.' : 'No accounts match the current filters.'}
+                </td>
+              </tr>
+            ) : (
+              paginatedAccounts.map(acc => {
               const isGated = acc.account_code === '103300';
               const stats = accountStats[acc.account_code] || { debits: D(0), credits: D(0), count: 0 };
               const netBalance = acc.normal_balance === 'DEBIT'
@@ -751,7 +867,7 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
                       <span style={{
                         fontWeight: 900,
                         fontSize: '0.92rem',
-                        color: isZero ? '#94a3b8' : (isPositive ? '#0f172a' : '#b91c1c'),
+                        color: isZero ? '#943b8' : (isPositive ? '#0f172a' : '#b91c1c'),
                         letterSpacing: '-0.02em'
                       }}>
                         {netBalance.toFixed(2).split('.')[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',')}.{netBalance.toFixed(2).split('.')[1]}
@@ -810,7 +926,7 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
                         }}
                       >
                         <Eye size={12} />
-                        <span>{isAr ? 'كشف الحساب' : 'Statement'}</span>
+                        <span>{isAr ? 'كشف حساب' : 'Statement'}</span>
                       </button>
 
                       {stats.count > 0 && (
@@ -820,7 +936,7 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
                             setFilterAccountInEntries(acc.account_code);
                             setActiveTab('journal');
                           }}
-                          title={isAr ? 'تصفية قيود اليومية بهذا الحساب' : 'Filter journal entries by this account'}
+                          title={isAr ? 'عرض حركات الحساب ده' : 'Filter journal entries by this account'}
                           style={{
                             background: 'rgba(148, 111, 35, 0.08)',
                             border: '1px solid rgba(148, 111, 35, 0.25)',
@@ -839,11 +955,28 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
                   </td>
                 </tr>
               );
-            })}
+            })
+          )}
           </tbody>
         </table>
       </div>
-        </>
+
+      <ZFPagination
+        currentPage={coaCurrentPage}
+        totalPages={coaTotalPages}
+        totalItems={sortedAccounts.length}
+        pageSize={coaPageSize}
+        pageSizeOptions={[10, 15, 25, 50]}
+        onPageChange={setCoaCurrentPage}
+        onPageSizeChange={sz => {
+          setCoaPageSize(sz);
+          setCoaCurrentPage(1);
+        }}
+        isAr={isAr}
+        itemLabel={{ ar: 'حساب', en: 'accounts' }}
+      />
+          </>
+        )
       ) : (
         <div id="journal-entries-section" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
         {/* Register Section Header */}
@@ -863,135 +996,117 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <ShieldCheck size={18} color="#946f23" />
               <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: '#0f172a' }}>
-                {isAr ? 'سجل قيود اليومية المرحلة والمحصنة (General Journal Register)' : 'Posted Immutable Journal Register'}
+                {isAr ? 'دفتر اليومية والحركات' : 'Posted Immutable Journal Register'}
               </h3>
             </div>
             <span style={{ fontSize: '0.74rem', color: '#64748b', marginTop: '0.25rem', display: 'block' }}>
               {filterAccountInEntries ? (
                 <span>
-                  {isAr ? `تصفية القيود لحساب: ${filterAccountInEntries}` : `Filtered by account: ${filterAccountInEntries}`}
+                  {isAr ? `حركات حساب: ${filterAccountInEntries}` : `Filtered by account: ${filterAccountInEntries}`}
                   {' — '}
                   <button 
                     onClick={() => setFilterAccountInEntries(null)}
                     style={{ background: 'none', border: 'none', color: '#946f23', cursor: 'pointer', textDecoration: 'underline', fontSize: '0.74rem', fontWeight: 700 }}
                   >
-                    {isAr ? 'إلغاء التصفية وعرض الكل' : 'Clear Filter & Show All'}
+                    {isAr ? 'مسح الفلتر وعرض الكل' : 'Clear Filter & Show All'}
                   </button>
                 </span>
               ) : (
-                isAr ? 'سجل محاسبي منظم بنظام القيد المزدوج وفق معايير المحاسبة العقارية IFRS 15.' : 'Organized double-entry journal register compliant with IFRS 15.'
+                isAr ? 'دفتر يومية موثق ومدين = دائن 0.00 بالمليم.' : 'Organized double-entry journal register compliant with IFRS 15.'
               )}
             </span>
           </div>
 
-          {/* View Mode & Expand Controls */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'wrap' }}>
-            {entriesViewMode === 'table' && (
-              <div style={{ display: 'flex', gap: '0.35rem' }}>
-                <button
-                  onClick={expandAll}
-                  style={{
-                    background: '#ffffff',
-                    border: '1px solid #e2e8f0',
-                    color: '#475569',
-                    borderRadius: '8px',
-                    padding: '0.35rem 0.65rem',
-                    fontSize: '0.72rem',
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '0.3rem'
-                  }}
-                >
-                  <ChevronDown size={13} />
-                  <span>{isAr ? 'توسيع الكل' : 'Expand All'}</span>
-                </button>
-                <button
-                  onClick={collapseAll}
-                  style={{
-                    background: '#ffffff',
-                    border: '1px solid #e2e8f0',
-                    color: '#475569',
-                    borderRadius: '8px',
-                    padding: '0.35rem 0.65rem',
-                    fontSize: '0.72rem',
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '0.3rem'
-                  }}
-                >
-                  <ChevronUp size={13} />
-                  <span>{isAr ? 'طي الكل' : 'Collapse All'}</span>
-                </button>
-              </div>
-            )}
-
-            {/* View Mode Switcher (Table vs Cards) */}
-            <div className={styles.viewModeGroup}>
+          {/* Expand Controls for Table Mode */}
+          {entriesViewMode === 'table' && (
+            <div style={{ display: 'flex', gap: '0.35rem' }}>
               <button
-                className={`${styles.viewModeBtn} ${entriesViewMode === 'table' ? styles.viewModeBtnActive : ''}`}
-                onClick={() => setEntriesViewMode('table')}
-                title={isAr ? 'عرض جدول القيود المدمج' : 'Dense Register Table'}
+                onClick={expandAll}
+                style={{
+                  background: '#ffffff',
+                  border: '1px solid #e2e8f0',
+                  color: '#475569',
+                  borderRadius: '8px',
+                  padding: '0.35rem 0.65rem',
+                  fontSize: '0.72rem',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.3rem'
+                }}
               >
-                <Table size={13} />
-                <span>{isAr ? 'جدول مدمج' : 'Table'}</span>
+                <ChevronDown size={13} />
+                <span>{isAr ? 'فتح الكل' : 'Expand All'}</span>
               </button>
-
               <button
-                className={`${styles.viewModeBtn} ${entriesViewMode === 'cards' ? styles.viewModeBtnActive : ''}`}
-                onClick={() => setEntriesViewMode('cards')}
-                title={isAr ? 'عرض البطاقات' : 'Cards View'}
+                onClick={collapseAll}
+                style={{
+                  background: '#ffffff',
+                  border: '1px solid #e2e8f0',
+                  color: '#475569',
+                  borderRadius: '8px',
+                  padding: '0.35rem 0.65rem',
+                  fontSize: '0.72rem',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.3rem'
+                }}
               >
-                <LayoutGrid size={13} />
-                <span>{isAr ? 'بطاقات' : 'Cards'}</span>
+                <ChevronUp size={13} />
+                <span>{isAr ? 'قفل الكل' : 'Collapse All'}</span>
               </button>
             </div>
-          </div>
+          )}
         </div>
 
-        {/* Journal Filter & Search Sub-bar */}
-        <div className={styles.toolbar}>
-          <div className={styles.tabBar}>
-            {[
-              { id: 'all', labelAr: 'كافة المعاملات', labelEn: 'All Types' },
-              { id: 'SALES', labelAr: 'عقود بيع ومقدمات', labelEn: 'Sales & Advances' },
-              { id: 'HANDOVER', labelAr: 'تسليم وحدات', labelEn: 'Handovers' },
-              { id: 'RESCISSION', labelAr: 'فسخ عقود', labelEn: 'Rescissions' },
-              { id: 'EXPENSE', labelAr: 'مصروفات تشغيل', labelEn: 'Expenses' }
-            ].map(pill => {
-              const active = selectedModuleFilter === pill.id;
-              return (
-                <button
-                  key={pill.id}
-                  onClick={() => {
-                    setSelectedModuleFilter(pill.id);
-                    setCurrentPage(1);
-                  }}
-                  className={`${styles.tabBtn} ${active ? styles.tabBtnActive : ''}`}
-                >
-                  {isAr ? pill.labelAr : pill.labelEn}
-                </button>
-              );
-            })}
-          </div>
-
-          <div className={styles.searchBox}>
-            <Search size={13} color="#94a3b8" />
-            <input
-              type="text"
-              placeholder={isAr ? 'بحث برقم القيد أو الوصف...' : 'Search entry number or desc...'}
-              value={entriesSearchQuery}
-              onChange={e => {
-                setEntriesSearchQuery(e.target.value);
-                setCurrentPage(1);
-              }}
-              className={styles.searchInput}
-            />
-          </div>
-        </div>
+        {/* Journal Filter & Search Bar */}
+        <ZFFilterToolbar
+          tabs={[
+            { id: 'all', label: isAr ? 'كل الحركات' : 'All Types' },
+            { id: 'SALES', label: isAr ? 'عقود بيع ومقدمات' : 'Sales & Advances' },
+            { id: 'WIP_ALLOCATION', label: isAr ? 'مصاريف مباني (WIP)' : 'WIP Costs' },
+            { id: 'HANDOVER', label: isAr ? 'تسليم شقق' : 'Handovers' },
+            { id: 'RESCISSION', label: isAr ? 'إلغاء عقود وترجيع فلوس' : 'Rescissions' },
+            { id: 'EXPENSE', label: isAr ? 'مصاريف وتشغيل' : 'Expenses' },
+            { id: 'PDC', label: isAr ? 'أقساط الخزنة' : 'Installments' }
+          ]}
+          activeTab={selectedModuleFilter}
+          onTabChange={(tabId) => {
+            setSelectedModuleFilter(tabId);
+            setCurrentPage(1);
+          }}
+          searchQuery={entriesSearchQuery}
+          onSearchChange={(q) => {
+            setEntriesSearchQuery(q);
+            setCurrentPage(1);
+          }}
+          searchPlaceholder={isAr ? 'دوّر برقم القيد أو الشرح...' : 'Search entry number or desc...'}
+          sortBy={entriesSortBy}
+          onSortChange={(val) => {
+            setEntriesSortBy(val as any);
+            setCurrentPage(1);
+          }}
+          sortOptions={[
+            { value: 'date_desc', label: isAr ? 'التاريخ: الأحدث الأول' : 'Date: Newest First' },
+            { value: 'date_asc', label: isAr ? 'التاريخ: الأقدم الأول' : 'Date: Oldest First' },
+            { value: 'entry_desc', label: isAr ? 'رقم القيد: الأكبر الأول' : 'Entry Number (Desc)' },
+            { value: 'amount_desc', label: isAr ? 'المبلغ: الأكبر الأول' : 'Amount: Highest First' },
+            { value: 'amount_asc', label: isAr ? 'المبلغ: الأقل الأول' : 'Amount: Lowest First' }
+          ]}
+          sortAriaLabel={isAr ? 'ترتيب القيود' : 'Sort Journal Entries'}
+          activeFiltersCount={entriesActiveFiltersCount}
+          onResetFilters={handleResetEntriesFilters}
+          viewMode={entriesViewMode}
+          onViewModeChange={(mode) => setEntriesViewMode(mode as any)}
+          viewModeOptions={[
+            { mode: 'table', label: isAr ? 'جدول' : 'Table', icon: <Table size={13} /> },
+            { mode: 'cards', label: isAr ? 'كروت' : 'Cards', icon: <LayoutGrid size={13} /> }
+          ]}
+          isAr={isAr}
+        />
 
         {/* VIEW 1: DENSE REGISTER TABLE (Default & Highly Scalable) */}
         {entriesViewMode === 'table' ? (
@@ -1000,19 +1115,19 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
               <thead>
                 <tr>
                   <th style={{ width: '40px', textAlign: 'center' }}></th>
-                  <th style={{ width: '190px' }}>{isAr ? 'رقم القيد والتاريخ' : 'Entry # & Date'}</th>
-                  <th style={{ width: '130px' }}>{isAr ? 'المعاملة' : 'Source'}</th>
-                  <th>{isAr ? 'بيان وشرح القيد المحاسبي' : 'Description'}</th>
-                  <th style={{ width: '160px' }}>{isAr ? 'الحسابات المتأثرة' : 'Accounts Involved'}</th>
-                  <th style={{ width: '150px', textAlign: isAr ? 'left' : 'right' }}>{isAr ? 'قيمة القيد' : 'Amount'}</th>
-                  <th style={{ width: '110px', textAlign: 'center' }}>{isAr ? 'التوازن' : 'Balance'}</th>
+                  <th style={{ width: '220px' }}>{isAr ? 'رقم القيد والتاريخ' : 'Entry # & Date'}</th>
+                  <th style={{ width: '140px' }}>{isAr ? 'نوع الحركة' : 'Source'}</th>
+                  <th>{isAr ? 'بيان القيد' : 'Description'}</th>
+                  <th style={{ width: '160px' }}>{isAr ? 'الحسابات' : 'Accounts Involved'}</th>
+                  <th style={{ width: '150px', textAlign: isAr ? 'left' : 'right' }}>{isAr ? 'المبلغ' : 'Amount'}</th>
+                  <th style={{ width: '110px', textAlign: 'center' }}>{isAr ? 'مضبوط؟' : 'Balance'}</th>
                 </tr>
               </thead>
               <tbody>
                 {paginatedEntries.length === 0 ? (
                   <tr>
                     <td colSpan={7} style={{ padding: '2.5rem 1rem', textAlign: 'center', color: '#64748b' }}>
-                      {isAr ? 'لا توجد قيود مطابقة لمعايير البحث الحالية.' : 'No journal entries match the current filter.'}
+                      {isAr ? 'مفيش قيود مطابقة للبحث أو الفلتر.' : 'No journal entries match the current filter.'}
                     </td>
                   </tr>
                 ) : (
@@ -1022,6 +1137,7 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
                     const isBalanced = isEntryBalanced(entry);
                     const modBadge = getModuleBadge(entry.source_module);
                     const accountsInvolved = Array.from(new Set((entry.lines || []).map(l => l.account_code)));
+                    const typeLabel = getEntryTypeLabel(entry.entry_number);
 
                     return (
                       <React.Fragment key={entry.entry_id}>
@@ -1039,20 +1155,35 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
 
                           {/* Entry Number & Date */}
                           <td>
-                            <div style={{ display: 'flex', flexDirection: 'column' }}>
-                              <span style={{
-                                fontVariantNumeric: 'tabular-nums',
-                                fontWeight: 800,
-                                fontSize: '0.8rem',
-                                color: '#946f23',
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '0.35rem'
-                              }}>
-                                <Lock size={12} color="#946f23" />
-                                <span>{entry.entry_number}</span>
-                              </span>
-                              <span style={{ fontSize: '0.7rem', color: '#64748b', marginTop: '2px', fontVariantNumeric: 'tabular-nums' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', flexWrap: 'wrap' }}>
+                                <span style={{
+                                  fontVariantNumeric: 'tabular-nums',
+                                  fontWeight: 800,
+                                  fontSize: '0.78rem',
+                                  color: '#946f23',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '0.25rem'
+                                }}>
+                                  <Lock size={11} color="#946f23" />
+                                  <span>{entry.entry_number}</span>
+                                </span>
+                                {typeLabel && (
+                                  <span style={{
+                                    fontSize: '0.64rem',
+                                    fontWeight: 700,
+                                    color: '#475569',
+                                    background: '#f1f5f9',
+                                    border: '1px solid #e2e8f0',
+                                    padding: '0.08rem 0.35rem',
+                                    borderRadius: '4px'
+                                  }}>
+                                    {typeLabel}
+                                  </span>
+                                )}
+                              </div>
+                              <span style={{ fontSize: '0.7rem', color: '#64748b', fontVariantNumeric: 'tabular-nums' }}>
                                 {entry.entry_date}
                               </span>
                             </div>
@@ -1092,7 +1223,7 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
                                     const acc = CANONICAL_COA[accCode];
                                     if (acc) setSelectedAccountForModal(acc);
                                   }}
-                                  title={isAr ? 'اضغط لفتح كشف حساب البند' : 'Click to inspect account'}
+                                  title={isAr ? 'اضغط عشان تفتح كشف الحساب' : 'Click to inspect account'}
                                   style={{
                                     fontVariantNumeric: 'tabular-nums',
                                     fontSize: '0.7rem',
@@ -1143,7 +1274,7 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
                                 gap: '0.25rem'
                               }}>
                                 <CheckCircle2 size={10} />
-                                <span>{isAr ? 'متوازن' : 'OK'}</span>
+                                <span>{isAr ? 'مضبوط' : 'OK'}</span>
                               </span>
                             ) : (
                               <span style={{
@@ -1159,7 +1290,7 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
                                 gap: '0.2rem'
                               }}>
                                 <AlertCircle size={10} />
-                                <span>{isAr ? 'غير متوازن' : 'Unbalanced'}</span>
+                                <span>{isAr ? 'مش متطابق' : 'Unbalanced'}</span>
                               </span>
                             )}
                           </td>
@@ -1171,7 +1302,7 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
                             <td colSpan={7} style={{ padding: '1rem 1.5rem', borderBottom: '1px solid #e2e8f0' }}>
                               <div style={{
                                 background: '#ffffff',
-                                border: '1px solid #e2e8f0',
+                                border: '1.5px solid #cbd5e1',
                                 borderRadius: '12px',
                                 overflow: 'hidden',
                                 boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04)'
@@ -1200,7 +1331,7 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
                 borderRadius: '14px',
                 color: '#64748b'
               }}>
-                {isAr ? 'لا توجد قيود يومية مسجلة تطابق التصفية الحالية.' : 'No journal entries match the current filter.'}
+                {isAr ? 'مفيش حركات مطابقة للفلتر.' : 'No journal entries match the current filter.'}
               </div>
             ) : (
               paginatedEntries.map(entry => (
@@ -1208,7 +1339,7 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
                   key={entry.entry_id}
                   style={{
                     background: '#ffffff',
-                    border: '1px solid #e2e8f0',
+                    border: '1.5px solid #cbd5e1',
                     borderRadius: '14px',
                     overflow: 'hidden',
                     boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04)'
@@ -1221,91 +1352,21 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
           </div>
         )}
 
-        {/* Pagination Bar */}
-        {filteredEntries.length > pageSize && (
-          <div style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            flexWrap: 'wrap',
-            gap: '0.75rem',
-            background: '#ffffff',
-            border: '1px solid #e2e8f0',
-            borderRadius: '12px',
-            padding: '0.65rem 1.25rem'
-          }}>
-            <div style={{ fontSize: '0.74rem', color: '#64748b' }}>
-              {isAr ? (
-                <span>
-                  عرض <strong>{(currentPage - 1) * pageSize + 1}</strong> إلى <strong>{Math.min(currentPage * pageSize, filteredEntries.length)}</strong> من أصل <strong>{filteredEntries.length}</strong> قيد مرحل
-                </span>
-              ) : (
-                <span>
-                  Showing <strong>{(currentPage - 1) * pageSize + 1}</strong> to <strong>{Math.min(currentPage * pageSize, filteredEntries.length)}</strong> of <strong>{filteredEntries.length}</strong> entries
-                </span>
-              )}
-            </div>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <select
-                value={pageSize}
-                onChange={e => {
-                  setPageSize(Number(e.target.value));
-                  setCurrentPage(1);
-                }}
-                style={{
-                  background: '#ffffff',
-                  border: '1px solid #cbd5e1',
-                  borderRadius: '6px',
-                  color: '#0f172a',
-                  padding: '0.25rem 0.5rem',
-                  fontSize: '0.74rem',
-                  outline: 'none'
-                }}
-              >
-                <option value={10}>10 {isAr ? 'قيود' : '/ page'}</option>
-                <option value={25}>25 {isAr ? 'قيداً' : '/ page'}</option>
-                <option value={50}>50 {isAr ? 'قيداً' : '/ page'}</option>
-              </select>
-
-              <div style={{ display: 'flex', gap: '0.25rem' }}>
-                <button
-                  disabled={currentPage <= 1}
-                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                  style={{
-                    background: '#ffffff',
-                    border: '1px solid #e2e8f0',
-                    color: currentPage <= 1 ? '#cbd5e1' : '#0f172a',
-                    padding: '0.25rem 0.5rem',
-                    borderRadius: '6px',
-                    cursor: currentPage <= 1 ? 'not-allowed' : 'pointer'
-                  }}
-                >
-                  {isAr ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
-                </button>
-
-                <span style={{ fontSize: '0.74rem', fontWeight: 700, color: '#0f172a', padding: '0.25rem 0.6rem' }}>
-                  {currentPage} / {totalPages}
-                </span>
-
-                <button
-                  disabled={currentPage >= totalPages}
-                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                  style={{
-                    background: '#ffffff',
-                    border: '1px solid #e2e8f0',
-                    color: currentPage >= totalPages ? '#cbd5e1' : '#0f172a',
-                    padding: '0.25rem 0.5rem',
-                    borderRadius: '6px',
-                    cursor: currentPage >= totalPages ? 'not-allowed' : 'pointer'
-                  }}
-                >
-                  {isAr ? <ChevronLeft size={14} /> : <ChevronRight size={14} />}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+        {/* Unified Pagination Bar */}
+        <ZFPagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          totalItems={sortedEntries.length}
+          pageSize={pageSize}
+          pageSizeOptions={[10, 25, 50]}
+          onPageChange={setCurrentPage}
+          onPageSizeChange={sz => {
+            setPageSize(sz);
+            setCurrentPage(1);
+          }}
+          isAr={isAr}
+          itemLabel={{ ar: 'قيد', en: 'entries' }}
+        />
         </div>
       )}
 

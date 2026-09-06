@@ -11,7 +11,7 @@ interface ZFQuickSearchModalProps {
   onClose: () => void;
   contracts: ERPContract[];
   cheques: ERPPDCRecord[];
-  onSelectModule: (mod: ERPNavModule) => void;
+  onSelectModule: (mod: string) => void;
   onSelectContract: (contract: ERPContract) => void;
   onOpenAcademy?: () => void;
   onStartGuidedTour?: () => void;
@@ -84,23 +84,38 @@ export const ZFQuickSearchModal: React.FC<ZFQuickSearchModalProps> = ({
       });
     }
 
-    // 1. Navigation Modules
-    const modules: Array<{ id: ERPNavModule; nameEn: string; nameAr: string }> = [
-      { id: 'cockpit', nameEn: 'Financial Cockpit & Horizon', nameAr: 'لوحة القيادة المالية والمنحنى' },
-      { id: 'ledger', nameEn: 'General Ledger & Chart of Accounts', nameAr: 'دفتر الأستاذ ودليل الحسابات' },
-      { id: 'contracts', nameEn: 'Sales Contracts & Installment Pipeline', nameAr: 'سجل العقود وتتبع الأقساط' },
-      { id: 'pdc', nameEn: 'Hand Installments & Cash Dues Vault', nameAr: 'حافظة بنود التحصيل والأقساط باليد' },
-      { id: 'rescissions', nameEn: 'Rescission & Forfeiture Floor', nameAr: 'فسخ العقود والحد الأدنى للرد' },
-      { id: 'cost-allocation', nameEn: 'Cost Allocation & RSV Factor', nameAr: 'تخصيص التكاليف ومعامل RSV' }
+    // 1. Navigation Modules & 4-Hubs
+    const modules: Array<{ id: string; nameEn: string; nameAr: string; categoryEn: string; categoryAr: string }> = [
+      // 4 Main Hubs
+      { id: 'operations', nameEn: 'Daily Desk & Cashier', nameAr: 'المكتب اليومي والخزينة', categoryEn: 'Core Hubs', categoryAr: 'المحطات الرئيسية' },
+      { id: 'projects', nameEn: 'Cockpit & Projects (WIP)', nameAr: 'القيادة والمشاريع (WIP)', categoryEn: 'Core Hubs', categoryAr: 'المحطات الرئيسية' },
+      { id: 'contracts', nameEn: 'Sales & Contracts', nameAr: 'عقود المبيعات والتحصيل', categoryEn: 'Core Hubs', categoryAr: 'المحطات الرئيسية' },
+      { id: 'ledger', nameEn: 'General Ledger & Audit', nameAr: 'الحسابات العامة والرقابة', categoryEn: 'Core Hubs', categoryAr: 'المحطات الرئيسية' },
+
+      // Sub-views & Screens
+      { id: 'cockpit', nameEn: 'Financial Cockpit & Horizon', nameAr: 'لوحة القيادة المالية والمنحنى', categoryEn: 'Projects Sub-views', categoryAr: 'أقسام المشاريع' },
+      { id: 'properties', nameEn: 'Properties & Units Portfolio', nameAr: 'محفظة المشروعات والأصول العقارية', categoryEn: 'Projects Sub-views', categoryAr: 'أقسام المشاريع' },
+      { id: 'calculator', nameEn: 'Construction Costs & WIP Feasibility', nameAr: 'تكاليف البناء والجدوى الإنشائية', categoryEn: 'Projects Sub-views', categoryAr: 'أقسام المشاريع' },
+      { id: 'cost-allocation', nameEn: 'Cost Allocation & RSV Factor', nameAr: 'تخصيص التكاليف ومعامل الرسملة RSV', categoryEn: 'Projects Sub-views', categoryAr: 'أقسام المشاريع' },
+      { id: 'contracts', nameEn: 'Sales Contracts Registry & Schedules', nameAr: 'سجل عقود البيع وجداول الأقساط', categoryEn: 'Contracts Sub-views', categoryAr: 'أقسام العقود' },
+      { id: 'pdc', nameEn: 'Hand Installments & Dues Agenda', nameAr: 'أجندة الأقساط وسندات القبض باليد', categoryEn: 'Contracts Sub-views', categoryAr: 'أقسام العقود' },
+      { id: 'rescissions', nameEn: 'Contract Rescissions & Settlements', nameAr: 'فسخ واسترداد العقود والإقالات', categoryEn: 'Contracts Sub-views', categoryAr: 'أقسام العقود' },
+      { id: 'ledger', nameEn: 'General Ledger & Trial Balance', nameAr: 'دفتر اليومية العامة وميزان المراجعة', categoryEn: 'Ledger Sub-views', categoryAr: 'أقسام الحسابات' },
+      { id: 'tax', nameEn: 'Apartment Property Taxes & Unit Fees', nameAr: 'الضرائب العقارية ورسوم الوحدات', categoryEn: 'Ledger Sub-views', categoryAr: 'أقسام الحسابات' }
     ];
 
+    // Filter duplicates by title/id match
+    const seenIds = new Set<string>();
     modules.forEach(m => {
-      if (m.nameEn.toLowerCase().includes(q) || m.nameAr.toLowerCase().includes(q)) {
+      const key = `${m.id}-${m.nameEn}`;
+      if (seenIds.has(key)) return;
+      if (m.nameEn.toLowerCase().includes(q) || m.nameAr.toLowerCase().includes(q) || m.id.toLowerCase().includes(q)) {
+        seenIds.add(key);
         matches.push({
-          id: `mod-${m.id}`,
-          category: isAr ? 'الوحدات والأقسام' : 'Modules',
+          id: `mod-${m.id}-${m.categoryEn}`,
+          category: isAr ? m.categoryAr : m.categoryEn,
           title: isAr ? m.nameAr : m.nameEn,
-          subtitle: isAr ? 'الانتقال المباشر' : 'Navigate to module',
+          subtitle: isAr ? 'الانتقال المباشر' : 'Navigate to screen',
           icon: BookOpen,
           action: () => {
             onSelectModule(m.id);

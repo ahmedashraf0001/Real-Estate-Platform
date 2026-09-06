@@ -27,7 +27,14 @@ yarn-error.log*
 *.pem
 capture_*.js
 *.png
-!public/images/*.png
-!public/*.png
 !zakaria-farid/public/images/*.png
 !zakaria-farid/public/*.png
+
+# Temporary and build directories
+.open-next/
+zakaria-farid/.open-next/
+chrome/
+zakaria-farid/chrome/
+graphify-out/
+zakaria-farid/graphify-out/
+

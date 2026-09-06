@@ -492,14 +492,33 @@ export const MapView: React.FC<MapViewProps> = ({
                     <div className="estate-thumb-overlay" />
                     <span className="estate-district-pill">
                       <MapPin size={11} className="pin-icon" />
-                      <span>{property.district}</span>
+                      <span>{locale === 'ar' ? (
+                        property.district === 'Abu Tig Marina' ? 'مارينا أبو تيج' :
+                        property.district === 'Hacienda Waters' ? 'هاسيندا واترز' :
+                        property.district === 'Al-Narges Sector 2' ? 'النرجس الجديدة' :
+                        property.district === 'Monte Galala Peak' ? 'جبل الجلالة' :
+                        property.district === 'Sodic East Estate' ? 'سوديك إيست' :
+                        property.district === 'Aurum Tower' ? 'برج أوروم' :
+                        property.district === 'Al-Bostan Axis' ? 'محور البستان' :
+                        property.district
+                      ) : property.district}</span>
                     </span>
                   </div>
 
                   <div className="estate-content-wrap">
                     <div className="estate-title-row">
                       <h3 className="estate-card-title">{property.title}</h3>
-                      <span className="estate-type-tag">{property.propertyType}</span>
+                      <span className="estate-type-tag">
+                        {locale === 'ar' ? (
+                          property.propertyType?.toLowerCase() === 'apartment' ? 'شقة سكنية' :
+                          property.propertyType?.toLowerCase() === 'building' ? 'عمارة كاملة' :
+                          property.propertyType?.toLowerCase() === 'duplex' ? 'دوبلكس' :
+                          property.propertyType?.toLowerCase() === 'penthouse' ? 'بنتهاوس' :
+                          property.propertyType?.toLowerCase() === 'villa' ? 'فيلا فاخرة' :
+                          property.propertyType?.toLowerCase() === 'garage' ? 'جراج خاص' :
+                          property.propertyType
+                        ) : property.propertyType}
+                      </span>
                     </div>
 
                     <div className="estate-price-row">

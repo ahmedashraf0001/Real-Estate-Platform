@@ -35,7 +35,7 @@ export const MoneyCell: React.FC<MoneyCellProps> = ({
         display: 'inline-flex', 
         flexDirection: 'column',
         fontWeight: highlight ? 700 : 600,
-        color: highlight ? 'var(--zf-gold, #d4af37)' : 'inherit'
+        color: highlight ? 'var(--zf-gold, #946f23)' : 'inherit'
       }}
     >
       <span>{formattedEGP}</span>

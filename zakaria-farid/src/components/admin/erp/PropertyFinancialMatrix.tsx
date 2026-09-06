@@ -24,6 +24,8 @@ import {
 import { Property, BuildingUnitItem } from '@/lib/supabase/types';
 import { ERPContract, ERPPropertyCostItem } from '@/lib/erp/types';
 import { D } from '@/lib/erp/math';
+import { ZFPagination } from './v2/ZFPagination';
+import { ZFFilterToolbar } from './v2/ZFFilterToolbar';
 
 interface PropertyFinancialMatrixProps {
   properties: Property[];
@@ -47,8 +49,10 @@ export const PropertyFinancialMatrix: React.FC<PropertyFinancialMatrixProps> = (
   isAr
 }) => {
   const [filterType, setFilterType] = useState<string>('all');
-  const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [filterStatus, setFilterStatus] = useState<string>('available');
   const [searchQuery, setSearchQuery] = useState<string>('');
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [pageSize, setPageSize] = useState<number>(6);
   const [selectedBuildingModal, setSelectedBuildingModal] = useState<Property | null>(null);
 
   // Manual apartment tax editing state
@@ -179,6 +183,50 @@ export const PropertyFinancialMatrix: React.FC<PropertyFinancialMatrixProps> = (
 
   const availableProperties = baseFilteredProperties.filter(p => !isPropertyFullyContracted(p));
   const contractedProperties = baseFilteredProperties.filter(p => isPropertyFullyContracted(p));
+
+  const currentPropertyList = React.useMemo(() => {
+    if (filterStatus === 'available') return availableProperties;
+    if (filterStatus === 'sold') return contractedProperties;
+    return baseFilteredProperties;
+  }, [filterStatus, availableProperties, contractedProperties, baseFilteredProperties]);
+
+  const totalPages = Math.max(1, Math.ceil(currentPropertyList.length / pageSize));
+  const paginatedProperties = React.useMemo(() => {
+    const startIndex = (currentPage - 1) * pageSize;
+    return currentPropertyList.slice(startIndex, startIndex + pageSize);
+  }, [currentPropertyList, currentPage, pageSize]);
+
+  React.useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(1);
+    }
+  }, [totalPages, currentPage]);
+
+  const handleFilterStatusChange = (status: string) => {
+    setFilterStatus(status);
+    setCurrentPage(1);
+  };
+
+  const handleFilterTypeChange = (type: string) => {
+    setFilterType(type);
+    setCurrentPage(1);
+  };
+
+  const handleSearchChange = (query: string) => {
+    setSearchQuery(query);
+    setCurrentPage(1);
+  };
+
+  const activeFiltersCount = (filterStatus !== 'available' ? 1 : 0) +
+    (filterType !== 'all' ? 1 : 0) +
+    (searchQuery.trim() ? 1 : 0);
+
+  const handleResetFilters = () => {
+    setFilterStatus('available');
+    setFilterType('all');
+    setSearchQuery('');
+    setCurrentPage(1);
+  };
 
   const contractedAggregates = React.useMemo(() => {
     let totalGross = D(0);
@@ -618,180 +666,34 @@ export const PropertyFinancialMatrix: React.FC<PropertyFinancialMatrixProps> = (
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-      {/* Top Header & Search / Filter Bar */}
+      {/* ─── PROPERTIES PORTFOLIO WORKBENCH HEADER & COMMAND BAR ─── */}
       <div style={{
         background: '#ffffff',
         border: '1px solid #e2e8f0',
         borderRadius: '16px',
-        padding: '1.25rem',
+        padding: '1.1rem 1.35rem',
         display: 'flex',
-        flexWrap: 'wrap',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        gap: '1rem',
-        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04)'
+        flexDirection: 'column',
+        gap: '0.85rem',
+        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.03)'
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-          <div style={{
-            background: 'rgba(184, 144, 62, 0.10)',
-            color: '#946f23',
-            padding: '0.55rem',
-            borderRadius: '10px'
-          }}>
-            <Building2 size={22} />
-          </div>
-          <div>
-            <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 800, color: '#0f172a' }}>
-              {isAr ? 'لوحة الموقف المالي والتعاقدي للعقارات والمشاريع' : 'Property Portfolio Financial Status'}
-            </h3>
-            <span style={{ fontSize: '0.74rem', color: '#64748b' }}>
-              {isAr 
-                ? `إجمالي المحفظة: ${properties.length} وحدة (${availableProperties.length} متاح — ${contractedProperties.length} تم التعاقد)` 
-                : `Total: ${properties.length} units (${availableProperties.length} available — ${contractedProperties.length} contracted)`}
-            </span>
-          </div>
-        </div>
-
-        {/* Filters, Search and Segmented Switcher */}
-        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '0.65rem' }}>
-          {/* Search Box */}
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.4rem',
-            background: '#ffffff',
-            border: '1px solid #e2e8f0',
-            borderRadius: '8px',
-            padding: '0.4rem 0.75rem',
-            boxShadow: '0 1px 2px rgba(0,0,0,0.03)'
-          }}>
-            <Search size={14} color="#64748b" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
-              placeholder={isAr ? 'بحث بالاسم أو المنطقة...' : 'Search unit or location...'}
-              style={{
-                background: 'transparent',
-                border: 'none',
-                color: '#0f172a',
-                fontSize: '0.76rem',
-                outline: 'none',
-                width: '200px',
-                minWidth: '150px'
-              }}
-            />
-          </div>
-
-          {/* Type Filter */}
-          <select
-            value={filterType}
-            onChange={e => setFilterType(e.target.value)}
-            style={{
-              background: '#ffffff',
-              border: '1px solid #e2e8f0',
-              borderRadius: '8px',
-              padding: '0.4rem 0.65rem',
-              color: '#0f172a',
-              fontSize: '0.76rem',
-              outline: 'none',
-              colorScheme: 'light',
-              boxShadow: '0 1px 2px rgba(0,0,0,0.03)'
-            }}
-          >
-            <option value="all">{isAr ? 'جميع الفئات' : 'All Categories'}</option>
-            <option value="standard">{isAr ? 'شقق سكنية عادية' : 'Standard Flats'}</option>
-            <option value="duplex">{isAr ? 'دوبلكس' : 'Duplex'}</option>
-            <option value="roof">{isAr ? 'شقق رووف مع السطح' : 'Roof Suites'}</option>
-            <option value="building">{isAr ? 'عمارات ومباني كاملة' : 'Buildings'}</option>
-            <option value="garage">{isAr ? 'جراجات سيارات' : 'Garages'}</option>
-          </select>
-
-          {/* Segmented Portfolio Quick Tabs */}
-          <div style={{
-            display: 'flex',
-            background: '#f1f5f9',
-            border: '1px solid #e2e8f0',
-            borderRadius: '8px',
-            padding: '2px'
-          }}>
-            <button
-              type="button"
-              onClick={() => setFilterStatus('all')}
-              style={{
-                background: filterStatus === 'all' ? '#0f172a' : 'transparent',
-                color: filterStatus === 'all' ? '#ffffff' : '#64748b',
-                border: 'none',
-                borderRadius: '6px',
-                padding: '0.35rem 0.65rem',
-                fontSize: '0.72rem',
-                fontWeight: 700,
-                cursor: 'pointer',
-                transition: 'all 0.15s'
-              }}
-            >
-              {isAr ? `الكل (${baseFilteredProperties.length})` : `All (${baseFilteredProperties.length})`}
-            </button>
-            <button
-              type="button"
-              onClick={() => setFilterStatus('available')}
-              style={{
-                background: filterStatus === 'available' ? '#946f23' : 'transparent',
-                color: filterStatus === 'available' ? '#ffffff' : '#64748b',
-                border: 'none',
-                borderRadius: '6px',
-                padding: '0.35rem 0.65rem',
-                fontSize: '0.72rem',
-                fontWeight: 700,
-                cursor: 'pointer',
-                transition: 'all 0.15s'
-              }}
-            >
-              {isAr ? `المتاحة للتعاقد (${availableProperties.length})` : `Available (${availableProperties.length})`}
-            </button>
-            <button
-              type="button"
-              onClick={() => setFilterStatus('sold')}
-              style={{
-                background: filterStatus === 'sold' ? '#15803d' : 'transparent',
-                color: filterStatus === 'sold' ? '#ffffff' : '#64748b',
-                border: 'none',
-                borderRadius: '6px',
-                padding: '0.35rem 0.65rem',
-                fontSize: '0.72rem',
-                fontWeight: 700,
-                cursor: 'pointer',
-                transition: 'all 0.15s'
-              }}
-            >
-              {isAr ? `تم التعاقد (${contractedProperties.length})` : `Contracted (${contractedProperties.length})`}
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* ─── PART 1: AVAILABLE PROPERTIES PORTFOLIO ─── */}
-      {(filterStatus === 'all' || filterStatus === 'available') && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          {/* Section Header */}
+        {/* ROW 1: DYNAMIC SECTION TITLE & INVENTORY TELEMETRY */}
+        {filterStatus === 'available' && (
           <div style={{
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
-            background: '#ffffff',
-            border: '1px solid #e2e8f0',
-            borderRadius: '12px',
-            padding: '0.85rem 1.25rem',
-            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04)'
+            flexWrap: 'wrap',
+            gap: '0.75rem'
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
               <div style={{ background: 'rgba(184, 144, 62, 0.10)', color: '#946f23', padding: '0.45rem', borderRadius: '8px' }}>
                 <Clock size={18} />
               </div>
               <div>
-                <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 800, color: '#0f172a' }}>
+                <h3 style={{ margin: 0, fontSize: '0.98rem', fontWeight: 800, color: '#0f172a' }}>
                   {isAr ? 'الوحدات والمشاريع المتاحة للتعاقد والبيع' : 'Available Properties & Open Inventory'}
-                </h4>
+                </h3>
                 <span style={{ fontSize: '0.72rem', color: '#64748b' }}>
                   {isAr ? 'عقارات ووحدات شاغرة جاهزة للتعاقد الفوري أو قيد الإنشاء' : 'Unsold units and properties ready for contract execution'}
                 </span>
@@ -809,45 +711,13 @@ export const PropertyFinancialMatrix: React.FC<PropertyFinancialMatrixProps> = (
               {availableProperties.length} {isAr ? 'عقار متاح' : 'Available'}
             </span>
           </div>
+        )}
 
-          {availableProperties.length > 0 ? (
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
-              gap: '1.25rem',
-              alignItems: 'stretch'
-            }}>
-              {availableProperties.map(renderPropertyCard)}
-            </div>
-          ) : (
-            <div style={{
-              textAlign: 'center',
-              padding: '2.5rem',
-              background: '#f8fafc',
-              border: '1px dashed #cbd5e1',
-              borderRadius: '12px',
-              color: '#64748b',
-              fontSize: '0.84rem'
-            }}>
-              {isAr ? 'لا توجد عقارات متاحة حالياً وفق شروط البحث والفلاتر.' : 'No available properties match the current filters.'}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* ─── PART 2: CONTRACTED & SOLD PORTFOLIO (تم التعاقد) ─── */}
-      {(filterStatus === 'all' || filterStatus === 'sold') && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: filterStatus === 'all' ? '1.5rem' : '0' }}>
-          {/* Section Container & Financial Metrics Summary */}
+        {filterStatus === 'sold' && (
           <div style={{
-            background: '#ffffff',
-            border: '1px solid #e2e8f0',
-            borderRadius: '14px',
-            padding: '1rem 1.25rem',
             display: 'flex',
             flexDirection: 'column',
-            gap: '0.85rem',
-            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04)'
+            gap: '0.85rem'
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
@@ -855,9 +725,9 @@ export const PropertyFinancialMatrix: React.FC<PropertyFinancialMatrixProps> = (
                   <CheckCircle2 size={20} />
                 </div>
                 <div>
-                  <h4 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: '#0f172a' }}>
+                  <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: '#0f172a' }}>
                     {isAr ? 'محفظة العقارات والمشاريع المُتعاقد عليها (تم التعاقد)' : 'Contracted & Sold Portfolio (Closed Deals)'}
-                  </h4>
+                  </h3>
                   <span style={{ fontSize: '0.74rem', color: '#15803d', fontWeight: 600 }}>
                     {isAr ? 'عقارات ومشاريع تم توثيق عقود بيعها بالكامل وإلحاقها بدفاتر الحسابات' : 'Fully contracted and closed real estate inventory registered in ERP'}
                   </span>
@@ -880,7 +750,6 @@ export const PropertyFinancialMatrix: React.FC<PropertyFinancialMatrixProps> = (
               </span>
             </div>
 
-            {/* Financial Aggregate Strip for Contracted Inventory */}
             {contractedProperties.length > 0 && (
               <div style={{
                 display: 'grid',
@@ -926,31 +795,167 @@ export const PropertyFinancialMatrix: React.FC<PropertyFinancialMatrixProps> = (
               </div>
             )}
           </div>
+        )}
 
-          {contractedProperties.length > 0 ? (
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
-              gap: '1.25rem',
-              alignItems: 'stretch'
-            }}>
-              {contractedProperties.map(renderPropertyCard)}
+        {filterStatus === 'all' && (
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: '0.75rem'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+              <div style={{ background: 'rgba(15, 23, 42, 0.08)', color: '#0f172a', padding: '0.5rem', borderRadius: '10px' }}>
+                <Layers size={18} />
+              </div>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 800, color: '#0f172a' }}>
+                  {isAr ? 'كافة وحدات وأصول المحفظة المعمارية' : 'Complete Architecture Portfolio'}
+                </h3>
+                <span style={{ fontSize: '0.72rem', color: '#64748b' }}>
+                  {isAr ? 'عرض مدمج يشمل كافة الوحدات المتاحة للبيع والمشاريع المتعاقد عليها' : 'Integrated inventory of available units and contracted assets'}
+                </span>
+              </div>
             </div>
-          ) : (
-            <div style={{
-              textAlign: 'center',
-              padding: '2.5rem',
-              background: 'rgba(255, 255, 255, 0.02)',
-              border: '1px dashed rgba(255, 255, 255, 0.08)',
-              borderRadius: '12px',
-              color: '#94a3b8',
-              fontSize: '0.84rem'
+            <span style={{
+              background: '#f1f5f9',
+              color: '#0f172a',
+              border: '1px solid #e2e8f0',
+              padding: '0.35rem 0.85rem',
+              borderRadius: '20px',
+              fontSize: '0.76rem',
+              fontWeight: 800
             }}>
-              {isAr ? 'لا توجد عقارات مُتعاقد عليها حالياً وفق شروط البحث والفلاتر.' : 'No contracted properties match the current filters.'}
-            </div>
+              {baseFilteredProperties.length} {isAr ? 'عقار في المحفظة' : 'Properties'}
+            </span>
+          </div>
+        )}
+
+        {/* HAIRLINE DIVIDER */}
+        <div style={{ borderTop: '1px solid #f1f5f9', margin: '0.15rem 0' }} />
+
+        {/* ROW 2: SEARCH & FILTER CONTROLS (Below Title) */}
+        <ZFFilterToolbar
+          tabs={[
+            { id: 'available', label: isAr ? 'المتاحة للتعاقد' : 'Available', count: availableProperties.length },
+            { id: 'sold', label: isAr ? 'تم التعاقد' : 'Contracted', count: contractedProperties.length },
+            { id: 'all', label: isAr ? 'كافة المحفظة' : 'All', count: baseFilteredProperties.length }
+          ]}
+          activeTab={filterStatus}
+          onTabChange={handleFilterStatusChange}
+          searchQuery={searchQuery}
+          onSearchChange={handleSearchChange}
+          searchPlaceholder={isAr ? 'بحث سريع باسم العقار أو المنطقة...' : 'Search unit or location...'}
+          filters={[
+            {
+              id: 'category_filter',
+              value: filterType,
+              onChange: handleFilterTypeChange,
+              ariaLabel: isAr ? 'الفئة والتصنيف' : 'Category Filter',
+              options: [
+                { value: 'all', label: isAr ? 'جميع الفئات والأصناف' : 'All Categories' },
+                { value: 'standard', label: isAr ? 'شقق سكنية عادية' : 'Standard Flats' },
+                { value: 'duplex', label: isAr ? 'دوبلكس' : 'Duplex' },
+                { value: 'roof', label: isAr ? 'شقق رووف مع السطح' : 'Roof Suites' },
+                { value: 'building', label: isAr ? 'عمارات ومباني كاملة' : 'Buildings' },
+                { value: 'garage', label: isAr ? 'جراجات سيارات' : 'Garages' }
+              ]
+            }
+          ]}
+          activeFiltersCount={activeFiltersCount}
+          onResetFilters={handleResetFilters}
+          isAr={isAr}
+        />
+      </div>
+
+      {/* ─── PROPERTIES GRID (PAGINATED) ─── */}
+      {paginatedProperties.length > 0 ? (
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
+          gap: '1.25rem',
+          alignItems: 'stretch'
+        }}>
+          {paginatedProperties.map(renderPropertyCard)}
+        </div>
+      ) : (
+        <div style={{
+          textAlign: 'center',
+          padding: '3rem 1.5rem',
+          background: '#ffffff',
+          border: '1px dashed #cbd5e1',
+          borderRadius: '16px',
+          color: '#64748b',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: '0.75rem'
+        }}>
+          <div style={{
+            background: '#f1f5f9',
+            borderRadius: '50%',
+            width: '48px',
+            height: '48px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: '#94a3b8'
+          }}>
+            <Building2 size={24} />
+          </div>
+          <div>
+            <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 700, color: '#0f172a' }}>
+              {isAr ? 'لا توجد عقارات مطابقة' : 'No properties found'}
+            </h4>
+            <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.78rem', color: '#64748b' }}>
+              {isAr 
+                ? 'لا توجد عقارات أو وحدات تطابق معايير البحث والتصنيف الحالية.' 
+                : 'No properties match the selected category, status, or search query.'}
+            </p>
+          </div>
+          {(searchQuery || filterType !== 'all') && (
+            <button
+              type="button"
+              onClick={() => {
+                setSearchQuery('');
+                setFilterType('all');
+                setCurrentPage(1);
+              }}
+              style={{
+                background: '#ffffff',
+                color: '#334155',
+                border: '1px solid #cbd5e1',
+                borderRadius: '8px',
+                padding: '0.45rem 1rem',
+                fontSize: '0.76rem',
+                fontWeight: 700,
+                cursor: 'pointer',
+                marginTop: '0.5rem',
+                boxShadow: '0 1px 2px rgba(0, 0, 0, 0.04)'
+              }}
+            >
+              {isAr ? 'إعادة ضبط البحث والتصنيف' : 'Reset Filters'}
+            </button>
           )}
         </div>
       )}
+
+      {/* ─── PAGINATION TELEMETRY & CONTROLS ─── */}
+      <ZFPagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        totalItems={currentPropertyList.length}
+        pageSize={pageSize}
+        onPageChange={setCurrentPage}
+        onPageSizeChange={newSize => {
+          setPageSize(newSize);
+          setCurrentPage(1);
+        }}
+        pageSizeOptions={[6, 12, 24, 48]}
+        isAr={isAr}
+        itemLabel={{ ar: 'عقار', en: 'properties' }}
+      />
 
       {/* BUILDING APARTMENTS & UNITS DOSSIER MODAL */}
       {selectedBuildingModal && (

@@ -4,6 +4,7 @@ import AdminERPHub from '@/components/admin/erp/AdminERPHub';
 
 interface Props {
   params: Promise<{ locale: string }>;
+  searchParams?: Promise<{ tab?: string }>;
 }
 
 export async function generateMetadata({ params }: Props) {
@@ -14,7 +15,7 @@ export async function generateMetadata({ params }: Props) {
   };
 }
 
-export default async function FinOSPage({ params }: Props) {
+export default async function FinOSPage({ params, searchParams }: Props) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
@@ -23,6 +24,8 @@ export default async function FinOSPage({ params }: Props) {
   }
 
   const { locale } = await params;
+  const sp = searchParams ? await searchParams : {};
+  const initialTab = typeof sp.tab === 'string' ? sp.tab : undefined;
 
-  return <AdminERPHub adminLocale={locale} />;
+  return <AdminERPHub adminLocale={locale} initialTab={initialTab} />;
 }

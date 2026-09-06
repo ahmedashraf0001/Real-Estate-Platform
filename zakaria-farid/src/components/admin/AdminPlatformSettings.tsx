@@ -374,6 +374,8 @@ export default function AdminPlatformSettings({ adminLocale }: AdminPlatformSett
                     <label>{isAr ? 'النمو خلال ٥ سنوات' : '5-Year Compound Gain'}</label>
                     <input 
                       type="text" 
+                      dir="ltr"
+                      style={{ textAlign: 'left' }}
                       value={newDistrict.fiveYearGain || '+60.0%'} 
                       onChange={(e) => setNewDistrict({ ...newDistrict, fiveYearGain: e.target.value })}
                     />
@@ -437,6 +439,8 @@ export default function AdminPlatformSettings({ adminLocale }: AdminPlatformSett
                       <label>{isAr ? 'النمو (٥ سنوات)' : '5Y Growth'}</label>
                       <input 
                         type="text" 
+                        dir="ltr"
+                        style={{ textAlign: 'left' }}
                         value={district.fiveYearGain} 
                         onChange={(e) => handleDistrictChange(district.id, 'fiveYearGain', e.target.value)}
                       />

@@ -27,9 +27,13 @@ import {
   ShieldCheck, 
   Calculator,
   Search,
-  Filter,
-  DollarSign
+  DollarSign,
+  Hammer,
+  Paintbrush,
+  Sparkles,
+  ChevronDown
 } from 'lucide-react';
+import styles from './PropertyLifecycleAuditModal.module.css';
 
 interface PropertyLifecycleAuditModalProps {
   property: Property | null;
@@ -164,81 +168,53 @@ export function PropertyLifecycleAuditModal({
     return PROPERTY_LIFECYCLE_PHASES.find(p => p.key === phaseKey) || PROPERTY_LIFECYCLE_PHASES[0];
   };
 
+  // Professional SVG Icons mapping (Replaces cheap emojis)
+  const getPhaseIcon = (phaseKey: PropertyLifecyclePhase, size = 15) => {
+    switch (phaseKey) {
+      case 'planning_permits':
+        return <FileText size={size} />;
+      case 'excavation_foundation':
+        return <Layers size={size} />;
+      case 'structural_skeleton':
+        return <Building2 size={size} />;
+      case 'masonry_roughing':
+        return <Hammer size={size} />;
+      case 'finishing_interiors':
+        return <Paintbrush size={size} />;
+      case 'final_inspection_handover':
+        return <ShieldCheck size={size} />;
+      default:
+        return <HardHat size={size} />;
+    }
+  };
+
   return (
     <div 
-      style={{
-        position: 'fixed',
-        inset: 0,
-        zIndex: 9999,
-        background: 'rgba(5, 7, 10, 0.85)',
-        backdropFilter: 'blur(12px)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '1.5rem',
-        animation: 'fadeIn 0.2s ease-out'
-      }}
+      className={styles.backdrop}
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
+      dir={isAr ? 'rtl' : 'ltr'}
     >
-      <div 
-        style={{
-          width: '100%',
-          maxWidth: '1240px',
-          maxHeight: '92vh',
-          background: 'linear-gradient(180deg, #0d121c 0%, #080c14 100%)',
-          border: '1px solid rgba(212, 175, 55, 0.25)',
-          borderRadius: '20px',
-          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.7), 0 0 40px rgba(212, 175, 55, 0.08)',
-          display: 'flex',
-          flexDirection: 'column',
-          overflow: 'hidden',
-          direction: isAr ? 'rtl' : 'ltr'
-        }}
-      >
+      <div className={styles.modalDialog}>
         {/* Top Header */}
-        <div style={{
-          padding: '1.25rem 1.75rem',
-          borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          background: 'rgba(255, 255, 255, 0.02)'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-            <div style={{
-              width: '44px',
-              height: '44px',
-              borderRadius: '12px',
-              background: 'linear-gradient(135deg, rgba(212, 175, 55, 0.2) 0%, rgba(212, 175, 55, 0.05) 100%)',
-              border: '1px solid rgba(212, 175, 55, 0.35)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: '#d4af37'
-            }}>
+        <div className={styles.modalHeader}>
+          <div className={styles.headerBrand}>
+            <div className={styles.headerIcon}>
               <HardHat size={22} />
             </div>
             <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-                <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#f8fafc', margin: 0 }}>
+              <div className={styles.headerTitleWrap}>
+                <h2 className={styles.headerTitle}>
                   {isAr ? 'سجل التدقيق الشامل لبنود التكاليف ومواد البناء' : 'Property Lifecycle Cost & Material Audit'}
                 </h2>
-                <span style={{
-                  fontSize: '0.7rem',
-                  padding: '0.2rem 0.6rem',
-                  borderRadius: '999px',
-                  background: 'rgba(16, 185, 129, 0.15)',
-                  color: '#10b981',
-                  border: '1px solid rgba(16, 185, 129, 0.3)',
-                  fontWeight: 700
-                }}>
-                  {isAr ? 'دورة حياة كاملة موثقة' : 'Full Lifecycle Audited'}
+                <span className={styles.verifiedBadge}>
+                  <CheckCircle2 size={12} />
+                  <span>{isAr ? 'دورة حياة موثقة' : 'Full Lifecycle Audited'}</span>
                 </span>
               </div>
-              <div style={{ fontSize: '0.85rem', color: '#94a3b8', marginTop: '0.2rem', display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
-                <span style={{ color: '#e2e8f0', fontWeight: 600 }}>
+              <div className={styles.propertyMeta}>
+                <span className={styles.propertyMetaStrong}>
                   {isAr ? property.title_ar : property.title_en}
                 </span>
                 <span>•</span>
@@ -249,26 +225,13 @@ export function PropertyLifecycleAuditModal({
             </div>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          <div className={styles.headerActions}>
             <button
               onClick={() => {
                 onClose();
                 onOpenCalculatorForProperty(property.id);
               }}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.45rem',
-                background: 'linear-gradient(135deg, #d4af37 0%, #b8860b 100%)',
-                color: '#080c14',
-                padding: '0.55rem 1rem',
-                borderRadius: '10px',
-                border: 'none',
-                fontWeight: 800,
-                fontSize: '0.85rem',
-                cursor: 'pointer',
-                boxShadow: '0 4px 14px rgba(212, 175, 55, 0.3)'
-              }}
+              className={styles.calcBtn}
             >
               <Calculator size={16} />
               <span>{isAr ? 'حاسبة تسعير العقار القائم' : 'Built Property Pricing Calculator'}</span>
@@ -276,19 +239,8 @@ export function PropertyLifecycleAuditModal({
 
             <button
               onClick={onClose}
-              style={{
-                width: '36px',
-                height: '36px',
-                borderRadius: '8px',
-                background: 'rgba(255, 255, 255, 0.05)',
-                border: '1px solid rgba(255, 255, 255, 0.1)',
-                color: '#94a3b8',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                cursor: 'pointer',
-                transition: 'all 0.15s'
-              }}
+              className={styles.closeBtn}
+              title={isAr ? 'إغلاق' : 'Close'}
             >
               <X size={18} />
             </button>
@@ -296,131 +248,91 @@ export function PropertyLifecycleAuditModal({
         </div>
 
         {/* Scrollable Body */}
-        <div style={{ flex: 1, overflowY: 'auto', padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+        <div className={styles.scrollBody}>
           
           {/* Executive KPI Pods */}
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-            gap: '1rem'
-          }}>
+          <div className={styles.kpiGrid}>
             {/* Total Incurred Capital */}
-            <div style={{
-              background: 'linear-gradient(135deg, rgba(212, 175, 55, 0.1) 0%, rgba(212, 175, 55, 0.02) 100%)',
-              border: '1px solid rgba(212, 175, 55, 0.3)',
-              borderRadius: '14px',
-              padding: '1.1rem'
-            }}>
-              <div style={{ fontSize: '0.78rem', color: '#d4af37', fontWeight: 700, marginBottom: '0.35rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+            <div className={`${styles.kpiCard} ${styles.kpiCardGold}`}>
+              <div className={styles.kpiLabel} style={{ color: '#946f23' }}>
                 <DollarSign size={14} />
                 <span>{isAr ? 'إجمالي المنصرف الفعلي المسجل' : 'Total Incurred Logged Cost'}</span>
               </div>
-              <div style={{ fontSize: '1.5rem', fontWeight: 900, color: '#f8fafc' }}>
-                {formatEGP(metrics.totalLoggedCost)} <span style={{ fontSize: '0.8rem', color: '#94a3b8' }}>ج.م</span>
+              <div className={styles.kpiValue}>
+                {formatEGP(metrics.totalLoggedCost)} <span className={styles.kpiValueUnit}>ج.م</span>
               </div>
-              <div style={{ fontSize: '0.72rem', color: '#94a3b8', marginTop: '0.3rem' }}>
-                {isAr ? 'إجمالي الأموال المنفقة على بنود هذا العقار' : 'Accumulated money thrown into property'}
+              <div className={styles.kpiSub}>
+                {isAr ? 'إجمالي الأموال المنفقة على بنود هذا العقار' : 'Accumulated expenditure on property'}
               </div>
             </div>
 
             {/* Actual Cost per Sqm */}
-            <div style={{
-              background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(59, 130, 246, 0.02) 100%)',
-              border: '1px solid rgba(59, 130, 246, 0.3)',
-              borderRadius: '14px',
-              padding: '1.1rem'
-            }}>
-              <div style={{ fontSize: '0.78rem', color: '#60a5fa', fontWeight: 700, marginBottom: '0.35rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+            <div className={`${styles.kpiCard} ${styles.kpiCardBlue}`}>
+              <div className={styles.kpiLabel} style={{ color: '#2563eb' }}>
                 <Building2 size={14} />
                 <span>{isAr ? 'تكلفة المتر الفعلي المنفذة' : 'Actual Cost Per Sqm'}</span>
               </div>
-              <div style={{ fontSize: '1.5rem', fontWeight: 900, color: '#f8fafc' }}>
-                {formatEGP(metrics.costPerSqm)} <span style={{ fontSize: '0.8rem', color: '#94a3b8' }}>ج.م/م²</span>
+              <div className={styles.kpiValue}>
+                {formatEGP(metrics.costPerSqm)} <span className={styles.kpiValueUnit}>ج.م/م²</span>
               </div>
-              <div style={{ fontSize: '0.72rem', color: '#94a3b8', marginTop: '0.3rem' }}>
+              <div className={styles.kpiSub}>
                 {isAr ? `على مساحة إجمالية ${property.area_sqm} متر مربع` : `Based on ${property.area_sqm} m² built-up area`}
               </div>
             </div>
 
             {/* Audited Items Count */}
-            <div style={{
-              background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(16, 185, 129, 0.02) 100%)',
-              border: '1px solid rgba(16, 185, 129, 0.3)',
-              borderRadius: '14px',
-              padding: '1.1rem'
-            }}>
-              <div style={{ fontSize: '0.78rem', color: '#34d399', fontWeight: 700, marginBottom: '0.35rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+            <div className={`${styles.kpiCard} ${styles.kpiCardGreen}`}>
+              <div className={styles.kpiLabel} style={{ color: '#059669' }}>
                 <ShieldCheck size={14} />
                 <span>{isAr ? 'البنود المعتمدة في الدفاتر' : 'Audited Ledger Items'}</span>
               </div>
-              <div style={{ fontSize: '1.5rem', fontWeight: 900, color: '#f8fafc' }}>
-                {metrics.itemsCount} <span style={{ fontSize: '0.8rem', color: '#94a3b8' }}>{isAr ? 'بند موثق' : 'items'}</span>
+              <div className={styles.kpiValue}>
+                {metrics.itemsCount} <span className={styles.kpiValueUnit}>{isAr ? 'بند موثق' : 'items'}</span>
               </div>
-              <div style={{ fontSize: '0.72rem', color: '#94a3b8', marginTop: '0.3rem' }}>
+              <div className={styles.kpiSub}>
                 {isAr ? 'مستندة لفواتير ومستخلصات رسمية' : 'Backed by invoices and site audits'}
               </div>
             </div>
 
             {/* Catalog Benchmark Ratio */}
-            <div style={{
-              background: 'rgba(255, 255, 255, 0.03)',
-              border: '1px solid rgba(255, 255, 255, 0.08)',
-              borderRadius: '14px',
-              padding: '1.1rem'
-            }}>
-              <div style={{ fontSize: '0.78rem', color: '#a78bfa', fontWeight: 700, marginBottom: '0.35rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+            <div className={`${styles.kpiCard} ${styles.kpiCardPurple}`}>
+              <div className={styles.kpiLabel} style={{ color: '#7c3aed' }}>
                 <Layers size={14} />
-                <span>{isAr ? 'سعر القائمة الحالي في الكتالوج' : 'Catalog List Price'}</span>
+                <span>{isAr ? 'سعر القائمة في الكتالوج' : 'Catalog List Price'}</span>
               </div>
-              <div style={{ fontSize: '1.5rem', fontWeight: 900, color: '#f8fafc' }}>
-                {formatEGP(property.price_egp)} <span style={{ fontSize: '0.8rem', color: '#94a3b8' }}>ج.م</span>
+              <div className={styles.kpiValue}>
+                {formatEGP(property.price_egp)} <span className={styles.kpiValueUnit}>ج.م</span>
               </div>
-              <div style={{ fontSize: '0.72rem', color: '#94a3b8', marginTop: '0.3rem' }}>
+              <div className={styles.kpiSub}>
                 {isAr ? (
-                  <>نسبة التكلفة للبيع الحالي: <strong style={{ color: '#d4af37' }}>{D(metrics.totalLoggedCost).dividedBy(property.price_egp || 1).times(100).toFixed(1)}%</strong></>
+                  <>نسبة التكلفة للبيع: <strong style={{ color: '#946f23' }}>{D(metrics.totalLoggedCost).dividedBy(property.price_egp || 1).times(100).toFixed(1)}%</strong></>
                 ) : (
-                  <>Cost-to-List Ratio: <strong style={{ color: '#d4af37' }}>{D(metrics.totalLoggedCost).dividedBy(property.price_egp || 1).times(100).toFixed(1)}%</strong></>
+                  <>Cost-to-List Ratio: <strong style={{ color: '#946f23' }}>{D(metrics.totalLoggedCost).dividedBy(property.price_egp || 1).times(100).toFixed(1)}%</strong></>
                 )}
               </div>
             </div>
           </div>
 
           {/* Lifecycle Milestones Stepper */}
-          <div style={{
-            background: 'rgba(15, 23, 42, 0.6)',
-            border: '1px solid rgba(255, 255, 255, 0.07)',
-            borderRadius: '16px',
-            padding: '1.25rem'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
-              <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#f8fafc', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <span>{isAr ? 'مراحل دورة حياة العقار والتشييد' : 'Construction & Lifecycle Milestones'}</span>
-                <span style={{ fontSize: '0.72rem', color: '#94a3b8', fontWeight: 400 }}>
+          <div className={styles.sectionBox}>
+            <div className={styles.sectionHeader}>
+              <div className={styles.sectionTitle}>
+                <span>{isAr ? 'مراحل دورة حياة التشييد' : 'Construction Lifecycle Milestones'}</span>
+                <span className={styles.sectionSub}>
                   ({isAr ? 'اضغط لتصفية البنود حسب المرحلة' : 'click stage to filter'})
                 </span>
               </div>
               {selectedPhaseFilter !== 'all' && (
                 <button
                   onClick={() => setSelectedPhaseFilter('all')}
-                  style={{
-                    fontSize: '0.75rem',
-                    color: '#d4af37',
-                    background: 'none',
-                    border: 'none',
-                    cursor: 'pointer',
-                    textDecoration: 'underline'
-                  }}
+                  className={styles.clearFilterBtn}
                 >
                   {isAr ? 'عرض جميع المراحل' : 'Show All Phases'}
                 </button>
               )}
             </div>
 
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
-              gap: '0.75rem'
-            }}>
+            <div className={styles.stepperGrid}>
               {PROPERTY_LIFECYCLE_PHASES.map((phase) => {
                 const phaseData = metrics.byPhase[phase.key];
                 const isSelected = selectedPhaseFilter === phase.key;
@@ -430,36 +342,21 @@ export function PropertyLifecycleAuditModal({
                   <button
                     key={phase.key}
                     onClick={() => setSelectedPhaseFilter(isSelected ? 'all' : phase.key)}
-                    style={{
-                      background: isSelected 
-                        ? 'rgba(212, 175, 55, 0.15)' 
-                        : hasCosts 
-                          ? 'rgba(255, 255, 255, 0.03)' 
-                          : 'rgba(255, 255, 255, 0.01)',
-                      border: isSelected 
-                        ? '1px solid rgba(212, 175, 55, 0.6)' 
-                        : '1px solid rgba(255, 255, 255, 0.06)',
-                      borderRadius: '12px',
-                      padding: '0.85rem 0.75rem',
-                      textAlign: isAr ? 'right' : 'left',
-                      cursor: 'pointer',
-                      transition: 'all 0.15s',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: '0.35rem'
-                    }}
+                    className={`${styles.stepperCard} ${isSelected ? styles.stepperCardActive : ''}`}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <span style={{ fontSize: '1.1rem' }}>{phase.icon}</span>
-                      <CheckCircle2 size={14} color={hasCosts ? '#10b981' : '#64748b'} />
+                    <div className={styles.stepperTop}>
+                      <div className={`${styles.stageIconBox} ${isSelected ? styles.stageIconBoxActive : ''}`}>
+                        {getPhaseIcon(phase.key, 15)}
+                      </div>
+                      <CheckCircle2 size={13} color={hasCosts ? '#10b981' : '#94a3b8'} />
                     </div>
-                    <div style={{ fontSize: '0.78rem', fontWeight: 700, color: isSelected ? '#d4af37' : '#e2e8f0' }}>
+                    <div className={styles.stageName}>
                       {isAr ? phase.shortAr : phase.nameEn}
                     </div>
-                    <div style={{ fontSize: '0.75rem', fontWeight: 800, color: hasCosts ? '#f8fafc' : '#64748b' }}>
+                    <div className={styles.stageAmount}>
                       {hasCosts ? `${formatEGP(phaseData.total)} ج.م` : '—'}
                     </div>
-                    <div style={{ fontSize: '0.68rem', color: '#94a3b8' }}>
+                    <div className={styles.stageCount}>
                       {phaseData?.count || 0} {isAr ? 'بند مسجل' : 'items'}
                     </div>
                   </button>
@@ -469,25 +366,23 @@ export function PropertyLifecycleAuditModal({
           </div>
 
           {/* Spending Distribution by Category */}
-          <div style={{
-            background: 'rgba(15, 23, 42, 0.6)',
-            border: '1px solid rgba(255, 255, 255, 0.07)',
-            borderRadius: '16px',
-            padding: '1.25rem'
-          }}>
-            <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#f8fafc', marginBottom: '0.75rem' }}>
-              {isAr ? 'توزيع التكلفة المنفقة حسب طبيعة البند (Category Breakdown)' : 'Cost Breakdown by Material Category'}
+          <div className={styles.sectionBox}>
+            <div className={styles.sectionHeader}>
+              <div className={styles.sectionTitle}>
+                <span>{isAr ? 'توزيع التكلفة حسب تصنيف المادة' : 'Cost Breakdown by Material Category'}</span>
+              </div>
+              {selectedCategoryFilter !== 'all' && (
+                <button
+                  onClick={() => setSelectedCategoryFilter('all')}
+                  className={styles.clearFilterBtn}
+                >
+                  {isAr ? 'إلغاء تصفية التصنيف' : 'Clear Category Filter'}
+                </button>
+              )}
             </div>
 
             {/* Visual Multi-color Progress Bar */}
-            <div style={{
-              height: '12px',
-              borderRadius: '6px',
-              background: 'rgba(255, 255, 255, 0.05)',
-              display: 'flex',
-              overflow: 'hidden',
-              marginBottom: '1rem'
-            }}>
+            <div className={styles.catProgressBar}>
               {PROPERTY_COST_CATEGORIES.map((cat) => {
                 const catData = metrics.byCategory[cat.key];
                 if (!catData || D(catData.total).isZero()) return null;
@@ -509,7 +404,7 @@ export function PropertyLifecycleAuditModal({
             </div>
 
             {/* Chips */}
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.6rem' }}>
+            <div className={styles.catChipsWrap}>
               {PROPERTY_COST_CATEGORIES.map((cat) => {
                 const catData = metrics.byCategory[cat.key];
                 const hasCosts = !!catData && D(catData.total).gt(0);
@@ -522,136 +417,78 @@ export function PropertyLifecycleAuditModal({
                   <button
                     key={cat.key}
                     onClick={() => setSelectedCategoryFilter(isSelected ? 'all' : cat.key)}
+                    className={styles.catChip}
                     style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.5rem',
-                      padding: '0.4rem 0.75rem',
-                      borderRadius: '8px',
-                      background: isSelected ? cat.badgeBg : 'rgba(255, 255, 255, 0.03)',
-                      border: `1px solid ${isSelected ? cat.color : 'rgba(255, 255, 255, 0.08)'}`,
-                      cursor: 'pointer',
-                      transition: 'all 0.15s'
+                      borderColor: isSelected ? cat.color : undefined,
+                      background: isSelected ? cat.badgeBg : undefined
                     }}
                   >
-                    <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: cat.color }} />
-                    <span style={{ fontSize: '0.78rem', color: isSelected ? '#f8fafc' : '#cbd5e1', fontWeight: 600 }}>
+                    <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: cat.color, flexShrink: 0 }} />
+                    <span className={styles.catChipName}>
                       {isAr ? cat.nameAr : cat.nameEn}
                     </span>
                     {hasCosts && (
-                      <span style={{ fontSize: '0.72rem', color: cat.color, fontWeight: 800 }}>
+                      <span className={styles.catChipAmount} style={{ color: cat.color }}>
                         {formatEGP(catData.total)} ج.م ({pct}%)
                       </span>
                     )}
                   </button>
                 );
               })}
-              {selectedCategoryFilter !== 'all' && (
-                <button
-                  onClick={() => setSelectedCategoryFilter('all')}
-                  style={{
-                    fontSize: '0.75rem',
-                    color: '#94a3b8',
-                    background: 'none',
-                    border: 'none',
-                    cursor: 'pointer',
-                    textDecoration: 'underline',
-                    padding: '0.4rem 0.5rem'
-                  }}
-                >
-                  {isAr ? 'إلغاء التصفية' : 'Clear Filter'}
-                </button>
-              )}
             </div>
           </div>
 
           {/* Audited Line Items List & Toolbar */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              flexWrap: 'wrap',
-              gap: '0.75rem'
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flex: 1, minWidth: '280px' }}>
-                <div style={{
-                  position: 'relative',
-                  flex: 1
-                }}>
-                  <Search size={15} style={{ position: 'absolute', [isAr ? 'right' : 'left']: '12px', top: '50%', transform: 'translateY(-50%)', color: '#64748b' }} />
-                  <input
-                    type="text"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder={isAr ? 'بحث في اسم البند، المورد، أو رقم الفاتورة...' : 'Search items, suppliers, invoices...'}
-                    style={{
-                      width: '100%',
-                      padding: '0.55rem 0.85rem',
-                      [isAr ? 'paddingRight' : 'paddingLeft']: '2.2rem',
-                      background: 'rgba(255, 255, 255, 0.04)',
-                      border: '1px solid rgba(255, 255, 255, 0.1)',
-                      borderRadius: '10px',
-                      color: '#f8fafc',
-                      fontSize: '0.82rem',
-                      outline: 'none'
-                    }}
-                  />
-                </div>
-                <div style={{ fontSize: '0.8rem', color: '#94a3b8' }}>
-                  {isAr ? `${filteredItems.length} بند معروض` : `${filteredItems.length} items`}
-                </div>
+            <div className={styles.toolbar}>
+              <div className={styles.searchInputWrap}>
+                <Search 
+                  size={15} 
+                  className={styles.searchIcon} 
+                  style={{ [isAr ? 'right' : 'left']: '12px' }} 
+                />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder={isAr ? 'بحث في اسم البند، المورد، أو رقم الفاتورة...' : 'Search items, suppliers, invoices...'}
+                  className={styles.searchInput}
+                  style={{
+                    [isAr ? 'paddingRight' : 'paddingLeft']: '2.2rem'
+                  }}
+                />
               </div>
 
-              <button
-                onClick={() => setShowAddForm(prev => !prev)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.4rem',
-                  padding: '0.55rem 1rem',
-                  borderRadius: '10px',
-                  background: showAddForm ? 'rgba(239, 68, 68, 0.15)' : 'rgba(212, 175, 55, 0.15)',
-                  border: `1px solid ${showAddForm ? 'rgba(239, 68, 68, 0.4)' : 'rgba(212, 175, 55, 0.4)'}`,
-                  color: showAddForm ? '#f87171' : '#d4af37',
-                  fontSize: '0.82rem',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  transition: 'all 0.15s'
-                }}
-              >
-                {showAddForm ? <X size={15} /> : <Plus size={15} />}
-                <span>{showAddForm ? (isAr ? 'إلغاء الإضافة' : 'Cancel') : (isAr ? 'إضافة بند تكلفة / مادة جديد' : 'Log New Material / Cost Item')}</span>
-              </button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
+                <span className={styles.itemCountBadge}>
+                  {isAr ? `${filteredItems.length} بند معروض` : `${filteredItems.length} items`}
+                </span>
+
+                <button
+                  onClick={() => setShowAddForm(prev => !prev)}
+                  className={`${styles.addBtn} ${showAddForm ? styles.addBtnCancel : ''}`}
+                >
+                  {showAddForm ? <X size={15} /> : <Plus size={15} />}
+                  <span>{showAddForm ? (isAr ? 'إلغاء الإضافة' : 'Cancel') : (isAr ? 'إضافة بند تكلفة / مادة جديد' : 'Log New Material / Cost Item')}</span>
+                </button>
+              </div>
             </div>
 
             {/* Inline Add Cost Form Drawer */}
             {showAddForm && (
               <form 
                 onSubmit={handleAddNewItem}
-                style={{
-                  background: 'rgba(212, 175, 55, 0.04)',
-                  border: '1px solid rgba(212, 175, 55, 0.3)',
-                  borderRadius: '16px',
-                  padding: '1.25rem',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '1rem',
-                  animation: 'fadeIn 0.2s ease-out'
-                }}
+                className={styles.addForm}
               >
-                <div style={{ fontSize: '0.9rem', fontWeight: 800, color: '#d4af37' }}>
-                  {isAr ? 'تسجيل بند مالي / مادة بناء جديدة في سجل العقار' : 'Log New Construction / Material Item'}
+                <div className={styles.formTitle}>
+                  <Plus size={16} />
+                  <span>{isAr ? 'تسجيل بند مالي / مادة بناء جديدة في سجل العقار' : 'Log New Construction / Material Item'}</span>
                 </div>
 
-                <div style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
-                  gap: '0.85rem'
-                }}>
+                <div className={styles.formGrid}>
                   {/* Name AR */}
                   <div>
-                    <label style={{ display: 'block', fontSize: '0.74rem', color: '#cbd5e1', marginBottom: '0.3rem' }}>
+                    <label className={styles.formLabel}>
                       {isAr ? 'اسم البند / المادة (عربي) *' : 'Item Name (Arabic) *'}
                     </label>
                     <input
@@ -660,35 +497,19 @@ export function PropertyLifecycleAuditModal({
                       value={newItemNameAr}
                       onChange={(e) => setNewItemNameAr(e.target.value)}
                       placeholder={isAr ? 'مثال: توريد حديد عز تسليح 12 طن' : 'e.g. High-Tensile Steel Rebar'}
-                      style={{
-                        width: '100%',
-                        padding: '0.55rem 0.75rem',
-                        background: 'rgba(0, 0, 0, 0.4)',
-                        border: '1px solid rgba(255, 255, 255, 0.12)',
-                        borderRadius: '8px',
-                        color: '#f8fafc',
-                        fontSize: '0.82rem'
-                      }}
+                      className={styles.formInput}
                     />
                   </div>
 
                   {/* Category */}
                   <div>
-                    <label style={{ display: 'block', fontSize: '0.74rem', color: '#cbd5e1', marginBottom: '0.3rem' }}>
+                    <label className={styles.formLabel}>
                       {isAr ? 'التصنيف والمجال *' : 'Category *'}
                     </label>
                     <select
                       value={newCategory}
                       onChange={(e) => setNewCategory(e.target.value as PropertyCostCategory)}
-                      style={{
-                        width: '100%',
-                        padding: '0.55rem 0.75rem',
-                        background: '#0d121c',
-                        border: '1px solid rgba(255, 255, 255, 0.12)',
-                        borderRadius: '8px',
-                        color: '#f8fafc',
-                        fontSize: '0.82rem'
-                      }}
+                      className={styles.formSelect}
                     >
                       {PROPERTY_COST_CATEGORIES.map(c => (
                         <option key={c.key} value={c.key}>{isAr ? c.nameAr : c.nameEn}</option>
@@ -699,24 +520,16 @@ export function PropertyLifecycleAuditModal({
                   {/* Unit Allocation */}
                   {property.building_units && property.building_units.length > 0 && (
                     <div>
-                      <label style={{ display: 'block', fontSize: '0.74rem', color: '#38bdf8', marginBottom: '0.3rem', fontWeight: 700 }}>
+                      <label className={styles.formLabel} style={{ color: '#0284c7' }}>
                         {isAr ? 'تحميل البند على (شقة محددة أم كامل العقار) *' : 'Cost Allocation (Unit / General) *'}
                       </label>
                       <select
                         value={newSelectedUnitId}
                         onChange={(e) => setNewSelectedUnitId(e.target.value)}
-                        style={{
-                          width: '100%',
-                          padding: '0.55rem 0.75rem',
-                          background: '#0d121c',
-                          border: '1px solid rgba(56, 189, 248, 0.35)',
-                          borderRadius: '8px',
-                          color: '#38bdf8',
-                          fontSize: '0.82rem',
-                          fontWeight: 700
-                        }}
+                        className={styles.formSelect}
+                        style={{ borderColor: 'rgba(2, 132, 199, 0.4)', color: '#0284c7', fontWeight: 700 }}
                       >
-                        <option value="all">{isAr ? '🏢 تكلفة عامة مشتركة (توزع بالنسب على كافة الشقق)' : 'General Shared Building Cost (Apportioned)'}</option>
+                        <option value="all">{isAr ? 'تكلفة عامة مشتركة (توزع بالنسب على كافة الشقق)' : 'General Shared Building Cost (Apportioned)'}</option>
                         {property.building_units.map(u => (
                           <option key={u.unit_id} value={u.unit_id}>
                             {isAr ? `خاص بشقة ${u.unit_number} (الدور ${u.floor} - ${u.area_sqm} م²)` : `Specific to Unit ${u.unit_number} (Floor ${u.floor})`}
@@ -728,21 +541,13 @@ export function PropertyLifecycleAuditModal({
 
                   {/* Phase */}
                   <div>
-                    <label style={{ display: 'block', fontSize: '0.74rem', color: '#cbd5e1', marginBottom: '0.3rem' }}>
+                    <label className={styles.formLabel}>
                       {isAr ? 'مرحلة التشييد *' : 'Lifecycle Phase *'}
                     </label>
                     <select
                       value={newPhase}
                       onChange={(e) => setNewPhase(e.target.value as PropertyLifecyclePhase)}
-                      style={{
-                        width: '100%',
-                        padding: '0.55rem 0.75rem',
-                        background: '#0d121c',
-                        border: '1px solid rgba(255, 255, 255, 0.12)',
-                        borderRadius: '8px',
-                        color: '#f8fafc',
-                        fontSize: '0.82rem'
-                      }}
+                      className={styles.formSelect}
                     >
                       {PROPERTY_LIFECYCLE_PHASES.map(p => (
                         <option key={p.key} value={p.key}>{isAr ? p.nameAr : p.nameEn}</option>
@@ -752,7 +557,7 @@ export function PropertyLifecycleAuditModal({
 
                   {/* Supplier / Contractor */}
                   <div>
-                    <label style={{ display: 'block', fontSize: '0.74rem', color: '#cbd5e1', marginBottom: '0.3rem' }}>
+                    <label className={styles.formLabel}>
                       {isAr ? 'المورد / المقاول المنفذ' : 'Supplier / Contractor'}
                     </label>
                     <input
@@ -760,21 +565,13 @@ export function PropertyLifecycleAuditModal({
                       value={newSupplier}
                       onChange={(e) => setNewSupplier(e.target.value)}
                       placeholder={isAr ? 'مثال: شركة حديد عز للدخيلة' : 'e.g. Ezz Steel / Lafarge'}
-                      style={{
-                        width: '100%',
-                        padding: '0.55rem 0.75rem',
-                        background: 'rgba(0, 0, 0, 0.4)',
-                        border: '1px solid rgba(255, 255, 255, 0.12)',
-                        borderRadius: '8px',
-                        color: '#f8fafc',
-                        fontSize: '0.82rem'
-                      }}
+                      className={styles.formInput}
                     />
                   </div>
 
                   {/* Invoice Ref */}
                   <div>
-                    <label style={{ display: 'block', fontSize: '0.74rem', color: '#cbd5e1', marginBottom: '0.3rem' }}>
+                    <label className={styles.formLabel}>
                       {isAr ? 'رقم الفاتورة / المستخلص' : 'Invoice Ref #'}
                     </label>
                     <input
@@ -782,22 +579,14 @@ export function PropertyLifecycleAuditModal({
                       value={newInvoiceRef}
                       onChange={(e) => setNewInvoiceRef(e.target.value)}
                       placeholder="INV-2025-XXXX"
-                      style={{
-                        width: '100%',
-                        padding: '0.55rem 0.75rem',
-                        background: 'rgba(0, 0, 0, 0.4)',
-                        border: '1px solid rgba(255, 255, 255, 0.12)',
-                        borderRadius: '8px',
-                        color: '#f8fafc',
-                        fontSize: '0.82rem'
-                      }}
+                      className={styles.formInput}
                     />
                   </div>
 
                   {/* Quantity & Unit */}
                   <div style={{ display: 'flex', gap: '0.5rem' }}>
                     <div style={{ flex: 1 }}>
-                      <label style={{ display: 'block', fontSize: '0.74rem', color: '#cbd5e1', marginBottom: '0.3rem' }}>
+                      <label className={styles.formLabel}>
                         {isAr ? 'الكمية *' : 'Quantity *'}
                       </label>
                       <input
@@ -806,19 +595,11 @@ export function PropertyLifecycleAuditModal({
                         required
                         value={newQuantity}
                         onChange={(e) => setNewQuantity(e.target.value)}
-                        style={{
-                          width: '100%',
-                          padding: '0.55rem 0.75rem',
-                          background: 'rgba(0, 0, 0, 0.4)',
-                          border: '1px solid rgba(255, 255, 255, 0.12)',
-                          borderRadius: '8px',
-                          color: '#f8fafc',
-                          fontSize: '0.82rem'
-                        }}
+                        className={styles.formInput}
                       />
                     </div>
                     <div style={{ width: '100px' }}>
-                      <label style={{ display: 'block', fontSize: '0.74rem', color: '#cbd5e1', marginBottom: '0.3rem' }}>
+                      <label className={styles.formLabel}>
                         {isAr ? 'الوحدة' : 'Unit'}
                       </label>
                       <input
@@ -826,22 +607,14 @@ export function PropertyLifecycleAuditModal({
                         value={newUnit}
                         onChange={(e) => setNewUnit(e.target.value)}
                         placeholder="طن / م³ / م²"
-                        style={{
-                          width: '100%',
-                          padding: '0.55rem 0.75rem',
-                          background: 'rgba(0, 0, 0, 0.4)',
-                          border: '1px solid rgba(255, 255, 255, 0.12)',
-                          borderRadius: '8px',
-                          color: '#f8fafc',
-                          fontSize: '0.82rem'
-                        }}
+                        className={styles.formInput}
                       />
                     </div>
                   </div>
 
                   {/* Unit Cost */}
                   <div>
-                    <label style={{ display: 'block', fontSize: '0.74rem', color: '#cbd5e1', marginBottom: '0.3rem' }}>
+                    <label className={styles.formLabel}>
                       {isAr ? 'سعر الوحدة (ج.م) *' : 'Unit Cost (EGP) *'}
                     </label>
                     <input
@@ -851,50 +624,27 @@ export function PropertyLifecycleAuditModal({
                       value={newUnitCost}
                       onChange={(e) => setNewUnitCost(e.target.value)}
                       placeholder="41500"
-                      style={{
-                        width: '100%',
-                        padding: '0.55rem 0.75rem',
-                        background: 'rgba(0, 0, 0, 0.4)',
-                        border: '1px solid rgba(255, 255, 255, 0.12)',
-                        borderRadius: '8px',
-                        color: '#f8fafc',
-                        fontSize: '0.82rem'
-                      }}
+                      className={styles.formInput}
                     />
                   </div>
 
                   {/* Computed Total Cost */}
                   <div>
-                    <label style={{ display: 'block', fontSize: '0.74rem', color: '#cbd5e1', marginBottom: '0.3rem' }}>
+                    <label className={styles.formLabel}>
                       {isAr ? 'إجمالي التكلفة المحسوبة' : 'Calculated Total'}
                     </label>
-                    <div style={{
-                      padding: '0.55rem 0.75rem',
-                      background: 'rgba(212, 175, 55, 0.08)',
-                      border: '1px solid rgba(212, 175, 55, 0.25)',
-                      borderRadius: '8px',
-                      color: '#d4af37',
-                      fontSize: '0.9rem',
-                      fontWeight: 800
-                    }}>
-                      {formatEGP(D(parseFloat(newQuantity) || 1).times(D(newUnitCost || 0)).toFixed(2))} ج.م
+                    <div className={styles.calcTotalBox}>
+                      <span>{formatEGP(D(parseFloat(newQuantity) || 1).times(D(newUnitCost || 0)).toFixed(2))}</span>
+                      <span style={{ fontSize: '0.75rem', fontWeight: 600 }}>ج.م</span>
                     </div>
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '0.5rem' }}>
+                <div className={styles.formFooterActions}>
                   <button
                     type="button"
                     onClick={() => setShowAddForm(false)}
-                    style={{
-                      padding: '0.55rem 1.25rem',
-                      borderRadius: '8px',
-                      background: 'rgba(255, 255, 255, 0.05)',
-                      border: '1px solid rgba(255, 255, 255, 0.1)',
-                      color: '#94a3b8',
-                      fontSize: '0.82rem',
-                      cursor: 'pointer'
-                    }}
+                    className={styles.formCancelBtn}
                   >
                     {isAr ? 'إلغاء' : 'Cancel'}
                   </button>
@@ -902,17 +652,7 @@ export function PropertyLifecycleAuditModal({
                   <button
                     type="submit"
                     disabled={isSubmitting}
-                    style={{
-                      padding: '0.55rem 1.5rem',
-                      borderRadius: '8px',
-                      background: 'linear-gradient(135deg, #d4af37 0%, #b8860b 100%)',
-                      border: 'none',
-                      color: '#080c14',
-                      fontWeight: 800,
-                      fontSize: '0.82rem',
-                      cursor: 'pointer',
-                      opacity: isSubmitting ? 0.6 : 1
-                    }}
+                    className={styles.formSubmitBtn}
                   >
                     {isSubmitting ? (isAr ? 'جاري الحفظ...' : 'Saving...') : (isAr ? 'حفظ وتوثيق البند' : 'Confirm & Log Item')}
                   </button>
@@ -921,191 +661,156 @@ export function PropertyLifecycleAuditModal({
             )}
 
             {/* Dense Audit Table */}
-            <div style={{
-              background: 'rgba(15, 23, 42, 0.6)',
-              border: '1px solid rgba(255, 255, 255, 0.07)',
-              borderRadius: '16px',
-              overflow: 'hidden'
-            }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: isAr ? 'right' : 'left', fontSize: '0.82rem' }}>
-                <thead>
-                  <tr style={{ background: 'rgba(255, 255, 255, 0.03)', borderBottom: '1px solid rgba(255, 255, 255, 0.08)', color: '#94a3b8' }}>
-                    <th style={{ padding: '0.85rem 1rem', fontWeight: 700 }}>{isAr ? 'التاريخ' : 'Date'}</th>
-                    <th style={{ padding: '0.85rem 1rem', fontWeight: 700 }}>{isAr ? 'المرحلة والتصنيف' : 'Phase & Category'}</th>
-                    <th style={{ padding: '0.85rem 1rem', fontWeight: 700 }}>{isAr ? 'بيان البند والمواد' : 'Item Description'}</th>
-                    <th style={{ padding: '0.85rem 1rem', fontWeight: 700 }}>{isAr ? 'المورد / الفاتورة' : 'Supplier / Invoice'}</th>
-                    <th style={{ padding: '0.85rem 1rem', fontWeight: 700 }}>{isAr ? 'الكمية' : 'Qty'}</th>
-                    <th style={{ padding: '0.85rem 1rem', fontWeight: 700 }}>{isAr ? 'سعر الوحدة' : 'Unit Price'}</th>
-                    <th style={{ padding: '0.85rem 1rem', fontWeight: 700 }}>{isAr ? 'إجمالي التكلفة' : 'Total Cost'}</th>
-                    <th style={{ padding: '0.85rem 1rem', fontWeight: 700 }}>{isAr ? 'الحالة' : 'Status'}</th>
-                    <th style={{ padding: '0.85rem 1rem', fontWeight: 700 }}></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredItems.length === 0 ? (
+            <div className={styles.tableBox}>
+              <div className={styles.tableWrapper}>
+                <table className={styles.table} style={{ textAlign: isAr ? 'right' : 'left' }}>
+                  <thead>
                     <tr>
-                      <td colSpan={9} style={{ padding: '3rem', textAlign: 'center', color: '#64748b' }}>
-                        {isAr ? 'لا توجد بنود تطابق معايير البحث والتصفية' : 'No items match the selected filter'}
-                      </td>
+                      <th className={styles.th}>{isAr ? 'التاريخ' : 'Date'}</th>
+                      <th className={styles.th}>{isAr ? 'المرحلة والتصنيف' : 'Phase & Category'}</th>
+                      <th className={styles.th}>{isAr ? 'بيان البند والمواد' : 'Item Description'}</th>
+                      <th className={styles.th}>{isAr ? 'المورد / الفاتورة' : 'Supplier / Invoice'}</th>
+                      <th className={styles.th}>{isAr ? 'الكمية' : 'Qty'}</th>
+                      <th className={styles.th}>{isAr ? 'سعر الوحدة' : 'Unit Price'}</th>
+                      <th className={styles.th}>{isAr ? 'إجمالي التكلفة' : 'Total Cost'}</th>
+                      <th className={styles.th}>{isAr ? 'الحالة' : 'Status'}</th>
+                      <th className={styles.th} style={{ width: '40px' }}></th>
                     </tr>
-                  ) : (
-                    filteredItems.map((item) => {
-                      const catMeta = getCategoryMeta(item.category);
-                      const phaseMeta = getPhaseMeta(item.phase);
+                  </thead>
+                  <tbody>
+                    {filteredItems.length === 0 ? (
+                      <tr>
+                        <td colSpan={9} style={{ padding: '3rem', textAlign: 'center', color: '#64748b' }}>
+                          {isAr ? 'لا توجد بنود تطابق معايير البحث والتصفية' : 'No items match the selected filter'}
+                        </td>
+                      </tr>
+                    ) : (
+                      filteredItems.map((item) => {
+                        const catMeta = getCategoryMeta(item.category);
+                        const phaseMeta = getPhaseMeta(item.phase);
 
-                      return (
-                        <tr 
-                          key={item.item_id}
-                          style={{
-                            borderBottom: '1px solid rgba(255, 255, 255, 0.04)',
-                            transition: 'background 0.15s'
-                          }}
-                        >
-                          {/* Date */}
-                          <td style={{ padding: '0.75rem 1rem', color: '#94a3b8', whiteSpace: 'nowrap' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                              <Calendar size={13} color="#64748b" />
-                              <span>{item.logged_date}</span>
-                            </div>
-                          </td>
-
-                          {/* Phase & Category */}
-                          <td style={{ padding: '0.75rem 1rem' }}>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
-                              <span style={{
-                                display: 'inline-block',
-                                fontSize: '0.7rem',
-                                padding: '0.15rem 0.45rem',
-                                borderRadius: '4px',
-                                background: catMeta.badgeBg,
-                                color: catMeta.color,
-                                border: `1px solid ${catMeta.badgeBorder}`,
-                                fontWeight: 700,
-                                width: 'fit-content'
-                              }}>
-                                {isAr ? catMeta.nameAr : catMeta.nameEn}
-                              </span>
-                              <span style={{ fontSize: '0.7rem', color: '#64748b' }}>
-                                {isAr ? phaseMeta.shortAr : phaseMeta.nameEn}
-                              </span>
-                            </div>
-                          </td>
-
-                          {/* Description */}
-                          <td style={{ padding: '0.75rem 1rem', maxWidth: '340px' }}>
-                            {item.unit_number && (
-                              <span style={{
-                                fontSize: '0.66rem',
-                                background: 'rgba(14, 165, 233, 0.15)',
-                                color: '#38bdf8',
-                                border: '1px solid rgba(14, 165, 233, 0.35)',
-                                padding: '0.1rem 0.4rem',
-                                borderRadius: '4px',
-                                fontWeight: 700,
-                                display: 'inline-block',
-                                marginBottom: '0.25rem'
-                              }}>
-                                {isAr ? `🏢 مخصص لشقة ${item.unit_number}` : `Unit ${item.unit_number}`}
-                              </span>
-                            )}
-                            <div style={{ fontWeight: 600, color: '#f8fafc', lineHeight: 1.35 }}>
-                              {isAr ? item.item_name_ar : item.item_name_en}
-                            </div>
-                            {item.notes && (
-                              <div style={{ fontSize: '0.7rem', color: '#94a3b8', marginTop: '0.2rem' }}>
-                                {item.notes}
+                        return (
+                          <tr key={item.item_id} className={styles.tr}>
+                            {/* Date */}
+                            <td className={styles.td} style={{ color: '#64748b', whiteSpace: 'nowrap' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                                <Calendar size={13} color="#94a3b8" />
+                                <span>{item.logged_date}</span>
                               </div>
-                            )}
-                          </td>
+                            </td>
 
-                          {/* Supplier / Invoice */}
-                          <td style={{ padding: '0.75rem 1rem', color: '#cbd5e1' }}>
-                            <div style={{ fontWeight: 500 }}>{item.supplier_contractor || '—'}</div>
-                            {item.invoice_ref && (
-                              <div style={{ fontSize: '0.7rem', color: '#64748b' }}>
-                                {item.invoice_ref}
+                            {/* Phase & Category */}
+                            <td className={styles.td}>
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+                                <span style={{
+                                  display: 'inline-block',
+                                  fontSize: '0.7rem',
+                                  padding: '0.15rem 0.45rem',
+                                  borderRadius: '4px',
+                                  background: catMeta.badgeBg,
+                                  color: catMeta.color,
+                                  border: `1px solid ${catMeta.badgeBorder}`,
+                                  fontWeight: 700,
+                                  width: 'fit-content'
+                                }}>
+                                  {isAr ? catMeta.nameAr : catMeta.nameEn}
+                                </span>
+                                <span style={{ fontSize: '0.7rem', color: '#64748b' }}>
+                                  {isAr ? phaseMeta.shortAr : phaseMeta.nameEn}
+                                </span>
                               </div>
-                            )}
-                          </td>
+                            </td>
 
-                          {/* Quantity */}
-                          <td style={{ padding: '0.75rem 1rem', color: '#cbd5e1', whiteSpace: 'nowrap' }}>
-                            {item.quantity} {item.unit}
-                          </td>
+                            {/* Description */}
+                            <td className={styles.td} style={{ maxWidth: '340px' }}>
+                              {item.unit_number && (
+                                <span className={styles.unitBadge}>
+                                  <Building2 size={11} />
+                                  <span>{isAr ? `مخصص لشقة ${item.unit_number}` : `Unit ${item.unit_number}`}</span>
+                                </span>
+                              )}
+                              <div className={styles.itemTitle}>
+                                {isAr ? item.item_name_ar : item.item_name_en}
+                              </div>
+                              {item.notes && (
+                                <div className={styles.itemNotes}>
+                                  {item.notes}
+                                </div>
+                              )}
+                            </td>
 
-                          {/* Unit Cost */}
-                          <td style={{ padding: '0.75rem 1rem', color: '#94a3b8', whiteSpace: 'nowrap' }}>
-                            {formatEGP(item.unit_cost_egp)} ج.م
-                          </td>
+                            {/* Supplier / Invoice */}
+                            <td className={styles.td}>
+                              <div style={{ fontWeight: 600, color: '#334155' }}>{item.supplier_contractor || '—'}</div>
+                              {item.invoice_ref && (
+                                <div style={{ fontSize: '0.7rem', color: '#94a3b8' }}>
+                                  {item.invoice_ref}
+                                </div>
+                              )}
+                            </td>
 
-                          {/* Total Cost */}
-                          <td style={{ padding: '0.75rem 1rem', whiteSpace: 'nowrap' }}>
-                            <span style={{ fontWeight: 800, color: '#d4af37', fontSize: '0.9rem' }}>
-                              {formatEGP(item.total_cost_egp)} <span style={{ fontSize: '0.7rem', color: '#94a3b8' }}>ج.م</span>
-                            </span>
-                          </td>
+                            {/* Quantity */}
+                            <td className={styles.td} style={{ color: '#475569', whiteSpace: 'nowrap' }}>
+                              {item.quantity} {item.unit}
+                            </td>
 
-                          {/* Status */}
-                          <td style={{ padding: '0.75rem 1rem', whiteSpace: 'nowrap' }}>
-                            <span style={{
-                              fontSize: '0.68rem',
-                              padding: '0.2rem 0.5rem',
-                              borderRadius: '999px',
-                              background: item.status === 'capitalized' 
-                                ? 'rgba(16, 185, 129, 0.12)' 
-                                : 'rgba(59, 130, 246, 0.12)',
-                              color: item.status === 'capitalized' ? '#10b981' : '#60a5fa',
-                              border: `1px solid ${item.status === 'capitalized' ? 'rgba(16, 185, 129, 0.3)' : 'rgba(59, 130, 246, 0.3)'}`,
-                              fontWeight: 700
-                            }}>
-                              {item.status === 'capitalized' ? (isAr ? 'مرسمل بالأصول' : 'Capitalized') : (isAr ? 'معتمد وموثق' : 'Verified')}
-                            </span>
-                          </td>
+                            {/* Unit Cost */}
+                            <td className={styles.td} style={{ color: '#64748b', whiteSpace: 'nowrap' }}>
+                              {formatEGP(item.unit_cost_egp)} ج.م
+                            </td>
 
-                          {/* Actions */}
-                          <td style={{ padding: '0.75rem 1rem', textAlign: 'center' }}>
-                            <button
-                              onClick={() => onDeleteCostItem(item.item_id)}
-                              title={isAr ? 'حذف البند' : 'Delete item'}
-                              style={{
-                                background: 'none',
-                                border: 'none',
-                                color: '#64748b',
-                                cursor: 'pointer',
-                                padding: '0.3rem',
-                                borderRadius: '4px',
-                                transition: 'color 0.15s'
-                              }}
-                              onMouseEnter={(e) => e.currentTarget.style.color = '#ef4444'}
-                              onMouseLeave={(e) => e.currentTarget.style.color = '#64748b'}
-                            >
-                              <Trash2 size={14} />
-                            </button>
-                          </td>
-                        </tr>
-                      );
-                    })
-                  )}
-                </tbody>
-              </table>
+                            {/* Total Cost */}
+                            <td className={styles.td} style={{ whiteSpace: 'nowrap' }}>
+                              <span className={styles.costHighlight}>
+                                {formatEGP(item.total_cost_egp)} <span style={{ fontSize: '0.72rem', color: '#64748b' }}>ج.م</span>
+                              </span>
+                            </td>
+
+                            {/* Status */}
+                            <td className={styles.td} style={{ whiteSpace: 'nowrap' }}>
+                              <span style={{
+                                fontSize: '0.68rem',
+                                padding: '0.2rem 0.5rem',
+                                borderRadius: '999px',
+                                background: item.status === 'capitalized' 
+                                  ? 'rgba(16, 185, 129, 0.12)' 
+                                  : 'rgba(59, 130, 246, 0.12)',
+                                color: item.status === 'capitalized' ? '#047857' : '#1d4ed8',
+                                border: `1px solid ${item.status === 'capitalized' ? 'rgba(16, 185, 129, 0.3)' : 'rgba(59, 130, 246, 0.3)'}`,
+                                fontWeight: 700
+                              }}>
+                                {item.status === 'capitalized' ? (isAr ? 'مرسمل بالأصول' : 'Capitalized') : (isAr ? 'معتمد وموثق' : 'Verified')}
+                              </span>
+                            </td>
+
+                            {/* Actions */}
+                            <td className={styles.td} style={{ textAlign: 'center' }}>
+                              <button
+                                onClick={() => onDeleteCostItem(item.item_id)}
+                                title={isAr ? 'حذف البند' : 'Delete item'}
+                                className={styles.trashBtn}
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         </div>
 
         {/* Footer */}
-        <div style={{
-          padding: '1rem 1.75rem',
-          borderTop: '1px solid rgba(255, 255, 255, 0.08)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          background: 'rgba(255, 255, 255, 0.02)'
-        }}>
-          <div style={{ fontSize: '0.8rem', color: '#94a3b8' }}>
+        <div className={styles.modalFooter}>
+          <div className={styles.footerSummary}>
             {isAr ? (
-              <>إجمالي التكلفة المنفقة الموثقة: <strong style={{ color: '#d4af37' }}>{formatEGP(metrics.totalLoggedCost)} ج.م</strong> عبر {metrics.itemsCount} بنداً معتمداً</>
+              <>إجمالي التكلفة المنفقة الموثقة: <strong className={styles.footerSummaryHighlight}>{formatEGP(metrics.totalLoggedCost)} ج.م</strong> عبر {metrics.itemsCount} بنداً معتمداً</>
             ) : (
-              <>Total audited expenditure: <strong style={{ color: '#d4af37' }}>{formatEGP(metrics.totalLoggedCost)} EGP</strong> across {metrics.itemsCount} items</>
+              <>Total audited expenditure: <strong className={styles.footerSummaryHighlight}>{formatEGP(metrics.totalLoggedCost)} EGP</strong> across {metrics.itemsCount} items</>
             )}
           </div>
 
@@ -1115,20 +820,7 @@ export function PropertyLifecycleAuditModal({
                 onClose();
                 onOpenCalculatorForProperty(property.id);
               }}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.45rem',
-                background: 'linear-gradient(135deg, #d4af37 0%, #b8860b 100%)',
-                color: '#080c14',
-                padding: '0.6rem 1.25rem',
-                borderRadius: '10px',
-                border: 'none',
-                fontWeight: 800,
-                fontSize: '0.85rem',
-                cursor: 'pointer',
-                boxShadow: '0 4px 14px rgba(212, 175, 55, 0.3)'
-              }}
+              className={styles.calcBtn}
             >
               <Calculator size={16} />
               <span>{isAr ? 'الانتقال إلى حاسبة تسعير العقار القائم' : 'Proceed to Selling Price Calculator'}</span>

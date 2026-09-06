@@ -11,12 +11,17 @@ import {
   List, 
   Eye, 
   ShieldAlert,
-  ArrowRight
+  ArrowRight,
+  ArrowUpDown,
+  TrendingUp
 } from 'lucide-react';
 import { ERPRescissionRecord, ERPContract } from '@/lib/erp/types';
 import { D } from '@/lib/erp/math';
 import { MoneyCell } from '@/components/erp/MoneyCell';
 import { StatusBadge } from '@/components/erp/StatusBadge';
+import { ZFPagination } from '../ZFPagination';
+import { ZFKpiCard } from '../ZFKpiCard';
+import { ZFFilterToolbar } from '../ZFFilterToolbar';
 import styles from '../ZFWorkstationShell.module.css';
 
 interface ContractRescissionsViewProps {
@@ -36,25 +41,34 @@ export const ContractRescissionsView: React.FC<ContractRescissionsViewProps> = (
 }) => {
   const [viewMode, setViewMode] = useState<'cards' | 'table'>('table');
   const [branchFilter, setBranchFilter] = useState<'all' | 'Pre-Delivery' | 'Post-Delivery'>('all');
+  const [sortBy, setSortBy] = useState<'date_desc' | 'date_asc' | 'refund_desc' | 'refund_asc' | 'penalty_desc' | 'gross_desc'>('date_desc');
   const [searchQuery, setSearchQuery] = useState<string>('');
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [pageSize, setPageSize] = useState<number>(10);
 
   // 4 Executive KPIs
   const kpis = useMemo(() => {
     let totalPenalty = D(0);
     let totalRefund = D(0);
     let totalGrossVoid = D(0);
+    let preDeliveryCount = 0;
+    let postDeliveryCount = 0;
 
     rescissions.forEach(r => {
       totalPenalty = totalPenalty.plus(r.penalty_retained || '0');
       totalRefund = totalRefund.plus(r.net_refund_liability || '0');
       totalGrossVoid = totalGrossVoid.plus(r.gross_contract_value || '0');
+      if (r.branch === 'Pre-Delivery') preDeliveryCount++;
+      if (r.branch === 'Post-Delivery') postDeliveryCount++;
     });
 
     return {
       totalPenalty,
       totalRefund,
       totalGrossVoid,
-      count: rescissions.length
+      count: rescissions.length,
+      preDeliveryCount,
+      postDeliveryCount
     };
   }, [rescissions]);
 
@@ -75,6 +89,38 @@ export const ContractRescissionsView: React.FC<ContractRescissionsViewProps> = (
     });
   }, [rescissions, contracts, branchFilter, searchQuery]);
 
+  // Sorted list
+  const sortedRescissions = useMemo(() => {
+    const list = [...filteredRescissions];
+    list.sort((a, b) => {
+      if (sortBy === 'date_desc') return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      if (sortBy === 'date_asc') return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+      if (sortBy === 'refund_desc') return D(b.net_refund_liability || '0').minus(D(a.net_refund_liability || '0')).toNumber();
+      if (sortBy === 'refund_asc') return D(a.net_refund_liability || '0').minus(D(b.net_refund_liability || '0')).toNumber();
+      if (sortBy === 'penalty_desc') return D(b.penalty_retained || '0').minus(D(a.penalty_retained || '0')).toNumber();
+      if (sortBy === 'gross_desc') return D(b.gross_contract_value || '0').minus(D(a.gross_contract_value || '0')).toNumber();
+      return 0;
+    });
+    return list;
+  }, [filteredRescissions, sortBy]);
+
+  const totalPages = Math.ceil(sortedRescissions.length / pageSize) || 1;
+  const paginatedRescissions = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return sortedRescissions.slice(start, start + pageSize);
+  }, [sortedRescissions, currentPage, pageSize]);
+
+  const activeFiltersCount = (branchFilter !== 'all' ? 1 : 0) +
+    (searchQuery.trim() ? 1 : 0) +
+    (sortBy !== 'date_desc' ? 1 : 0);
+
+  const handleResetFilters = () => {
+    setBranchFilter('all');
+    setSortBy('date_desc');
+    setSearchQuery('');
+    setCurrentPage(1);
+  };
+
   // Format helper for calm executive KPI typography
   const splitAmount = (dec: any) => {
     const str = dec.formatEGP(isAr);
@@ -91,11 +137,11 @@ export const ContractRescissionsView: React.FC<ContractRescissionsViewProps> = (
           <div className={styles.stageBreadcrumb}>
             <span>FIN-OS</span>
             <span>/</span>
-            <span>{isAr ? 'فسخ العقود' : 'Contract Rescissions'}</span>
+            <span>{isAr ? 'إلغاء العقود وترجيع الفلوس' : 'Contract Rescissions'}</span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
             <h1 className={styles.stageTitle}>
-              {isAr ? 'سجل فسخ العقود وتطبيق الحد الأدنى للاسترداد (Forfeiture Floor)' : 'Contract Rescissions & Forfeiture Floor'}
+              {isAr ? 'إلغاء العقود وترجيع الفلوس' : 'Contract Rescissions & Forfeiture Floor'}
             </h1>
             <span style={{
               background: 'rgba(239, 68, 68, 0.08)',
@@ -106,12 +152,12 @@ export const ContractRescissionsView: React.FC<ContractRescissionsViewProps> = (
               fontSize: '0.72rem',
               fontWeight: 800
             }}>
-              {isAr ? 'تسوية قانونية معتمدة' : 'Audited Legal Settlement'}
+              {isAr ? 'تسوية عقود وإعادة الشقق للمعروض' : 'Audited Legal Settlement'}
             </span>
           </div>
           <p style={{ margin: '0.35rem 0 0', fontSize: '0.82rem', color: '#64748b' }}>
             {isAr 
-              ? 'السجل الرسمي لكافة العقود المفسوخة، احتجاز غرامة الـ 10%، تسوية حساب رد العملاء 206200، واسترداد الوحدات للمخزون.' 
+              ? 'تسوية العقود الملغاة: خصم غرامة الإلغاء، حساب الفلوس اللي هترجع للعميل، وتنزيل الشقة للبيع تاني.' 
               : 'Official registry for rescinded contracts, 10% forfeiture retention, customer refund liability (206200), and unit repossession.'}
           </p>
         </div>
@@ -134,193 +180,89 @@ export const ContractRescissionsView: React.FC<ContractRescissionsViewProps> = (
               boxShadow: '0 1px 2px rgba(0,0,0,0.04)'
             }}
           >
-            <span>{isAr ? 'العودة لسجل العقود السارية' : 'Back to Active Contracts'}</span>
+            <span>{isAr ? 'الرجوع لعقود البيع' : 'Back to Active Contracts'}</span>
             <ArrowRight size={14} />
           </button>
         </div>
       </div>
 
-      {/* 2. 4 Executive Rescission KPI Cards */}
-      <div className={styles.kpiGrid}>
-        {/* Card 1: Rescissions Count */}
-        <div className={styles.kpiCard}>
-          <div className={styles.kpiHeader}>
-            <span className={styles.kpiLabel}>{isAr ? 'إجمالي العقود المفسوخة' : 'Total Rescissions'}</span>
-            <div style={{
-              width: '38px',
-              height: '38px',
-              borderRadius: '10px',
-              background: 'rgba(239, 68, 68, 0.08)',
-              color: '#dc2626',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}>
-              <RotateCcw size={18} />
-            </div>
-          </div>
-          <div className={styles.kpiValue}>
-            {kpis.count}
-          </div>
-          <div className={styles.kpiMeta}>
-            <span className={styles.kpiBadge} style={{ background: 'rgba(239, 68, 68, 0.08)', color: '#dc2626', borderColor: 'rgba(239, 68, 68, 0.2)' }}>
-              {isAr ? 'فسخ قانوني' : 'Legal Rescission'}
-            </span>
-            <span className={styles.kpiNote}>{isAr ? 'وحدات مستردة للمخزون' : 'repossessed'}</span>
-          </div>
-        </div>
+      {/* 2. ASYMMETRIC LEGAL SETTLEMENT RADAR (Legal Disputes Archetype) */}
+      <div className={styles.asymmetricBentoGrid}>
+        {/* Left / Hero Card: Retained Penalties & Income Yield */}
+        <ZFKpiCard
+          variant="double-bezel"
+          isFlagship={true}
+          title={isAr ? 'غرامات الإلغاء المستحقة للشركة' : 'Retained Penalties & Settlement Yield'}
+          value={kpis.totalPenalty.formatEGP(isAr)}
+          icon={<DollarSign size={20} />}
+          accentColor="gold"
+          badge={{ text: isAr ? 'غرامات إلغاء' : 'Retained Earnings', variant: 'gold' }}
+          subtitleLabel={isAr ? 'عقود اتلغت' : 'Total Rescissions'}
+          subtitleValue={`${kpis.count} ${isAr ? 'عقود ملغاة' : 'deals legally voided'}`}
+        />
 
-        {/* Card 2: Voided Gross Sales (Gold Card) */}
-        <div className={`${styles.kpiCard} ${styles.flagshipCard}`}>
-          <div className={styles.kpiHeader}>
-            <span className={`${styles.kpiLabel} ${styles.flagshipLabel}`}>
-              {isAr ? 'إجمالي المبيعات الملغاة (V)' : 'Voided Sales Value (V)'}
-            </span>
-            <div style={{
-              width: '38px',
-              height: '38px',
-              borderRadius: '10px',
-              background: 'rgba(184, 144, 62, 0.12)',
-              color: '#946f23',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}>
-              <FileText size={18} />
-            </div>
-          </div>
-          <div className={styles.kpiValue}>
-            <span>{splitAmount(kpis.totalGrossVoid).num}</span>
-            <span className={styles.kpiCurrency}>{splitAmount(kpis.totalGrossVoid).cur}</span>
-          </div>
-          <div className={styles.kpiMeta}>
-            <span className={styles.kpiBadge} style={{ background: 'rgba(184, 144, 62, 0.1)', color: '#946f23', borderColor: 'rgba(184, 144, 62, 0.25)' }}>
-              {isAr ? 'إعادة طرح' : 'Re-listing'}
-            </span>
-            <span className={styles.kpiNote}>{isAr ? 'أصول استردت لمحفظة الشركة' : 'restored to inventory'}</span>
-          </div>
-        </div>
+        {/* Right Stack: 2 Compact Telemetry Instruments */}
+        <div className={styles.telemetryStack}>
+          <ZFKpiCard
+            variant="compact"
+            title={isAr ? 'الفلوس اللي هترجع للعميل' : 'Customer Refund Liability'}
+            value={kpis.totalRefund.formatEGP(isAr)}
+            icon={<CheckCircle2 size={16} />}
+            accentColor="emerald"
+            subtitleLabel={isAr ? 'موقف الفلوس' : 'Status'}
+            subtitleValue={isAr ? 'باقي الفلوس اللي هترجع بعد خصم الغرامة' : 'due for refund'}
+          />
 
-        {/* Card 3: Retained Penalty (10%) */}
-        <div className={styles.kpiCard}>
-          <div className={styles.kpiHeader}>
-            <span className={styles.kpiLabel}>{isAr ? 'الغرامات المحتجزة للشركة (10%)' : 'Retained Penalties (10%)'}</span>
-            <div style={{
-              width: '38px',
-              height: '38px',
-              borderRadius: '10px',
-              background: 'rgba(217, 119, 6, 0.08)',
-              color: '#d97706',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}>
-              <DollarSign size={18} />
-            </div>
-          </div>
-          <div className={styles.kpiValue}>
-            <span>{splitAmount(kpis.totalPenalty).num}</span>
-            <span className={styles.kpiCurrency}>{splitAmount(kpis.totalPenalty).cur}</span>
-          </div>
-          <div className={styles.kpiMeta}>
-            <span className={styles.kpiBadge} style={{ background: 'rgba(217, 119, 6, 0.08)', color: '#d97706', borderColor: 'rgba(217, 119, 6, 0.2)' }}>
-              {isAr ? 'إيراد قطعي ٤٣٠١٠٠' : 'GL 430100'}
-            </span>
-            <span className={styles.kpiNote}>{isAr ? 'أرباح تعويضية للشركة' : 'retained earnings'}</span>
-          </div>
-        </div>
-
-        {/* Card 4: Customer Refund Liability */}
-        <div className={styles.kpiCard}>
-          <div className={styles.kpiHeader}>
-            <span className={styles.kpiLabel}>{isAr ? 'صافي الرد للعملاء (206200)' : 'Customer Refund Liability'}</span>
-            <div style={{
-              width: '38px',
-              height: '38px',
-              borderRadius: '10px',
-              background: '#f0fdf4',
-              color: '#15803d',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}>
-              <CheckCircle2 size={18} />
-            </div>
-          </div>
-          <div className={styles.kpiValue}>
-            <span>{splitAmount(kpis.totalRefund).num}</span>
-            <span className={styles.kpiCurrency}>{splitAmount(kpis.totalRefund).cur}</span>
-          </div>
-          <div className={styles.kpiMeta}>
-            <span className={styles.kpiBadge} style={{ background: '#f0fdf4', color: '#15803d', borderColor: 'rgba(22, 163, 74, 0.25)' }}>
-              {isAr ? 'حسابات ٢٠٦٢٠٠' : 'GL 206200'}
-            </span>
-            <span className={styles.kpiNote}>{isAr ? 'مستحقات عملاء للرد' : 'refundable'}</span>
-          </div>
+          <ZFKpiCard
+            variant="compact"
+            title={isAr ? 'قيمة الشقق اللي رجعت للمعروض' : 'Voided Sales & Asset Recovery'}
+            value={kpis.totalGrossVoid.formatEGP(isAr)}
+            icon={<FileText size={16} />}
+            accentColor="rose"
+            subtitleLabel={isAr ? 'موقف الشقق' : 'Inventory'}
+            subtitleValue={isAr ? 'شقق رجعت للمعروض ومتاحة للبيع' : 'restored to inventory'}
+          />
         </div>
       </div>
 
-      {/* 3. Toolbar: Filter Tabs, Search & View Switcher */}
-      <div className={styles.toolbar}>
-        <div className={styles.tabBar}>
-          <button
-            className={`${styles.tabBtn} ${branchFilter === 'all' ? styles.tabBtnActive : ''}`}
-            onClick={() => setBranchFilter('all')}
-          >
-            {isAr ? 'كافة المسارات' : 'All Branches'}
-          </button>
-          <button
-            className={`${styles.tabBtn} ${branchFilter === 'Pre-Delivery' ? styles.tabBtnActive : ''}`}
-            onClick={() => setBranchFilter('Pre-Delivery')}
-          >
-            {isAr ? 'المسار ١ (قبل التسليم)' : 'Pre-Delivery'}
-          </button>
-          <button
-            className={`${styles.tabBtn} ${branchFilter === 'Post-Delivery' ? styles.tabBtnActive : ''}`}
-            onClick={() => setBranchFilter('Post-Delivery')}
-          >
-            {isAr ? 'المسار ٢ (بعد التسليم)' : 'Post-Delivery'}
-          </button>
-        </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-          <div className={styles.searchBox}>
-            <Search size={15} color="#94a3b8" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder={isAr ? 'بحث برقم الفسخ، العقد، أو اسم العميل...' : 'Search rescissions...'}
-              className={styles.searchInput}
-            />
-            {searchQuery && (
-              <button 
-                onClick={() => setSearchQuery('')}
-                style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: '0.8rem' }}
-              >
-                ✕
-              </button>
-            )}
-          </div>
-
-          <div className={styles.viewModeGroup}>
-            <button
-              className={`${styles.viewModeBtn} ${viewMode === 'cards' ? styles.viewModeBtnActive : ''}`}
-              onClick={() => setViewMode('cards')}
-              title={isAr ? 'عرض البطاقات' : 'Cards'}
-            >
-              <LayoutGrid size={15} />
-            </button>
-            <button
-              className={`${styles.viewModeBtn} ${viewMode === 'table' ? styles.viewModeBtnActive : ''}`}
-              onClick={() => setViewMode('table')}
-              title={isAr ? 'عرض الجدول' : 'Table'}
-            >
-              <List size={15} />
-            </button>
-          </div>
-        </div>
-      </div>
+      {/* 3. Toolbar: Filter Tabs, Sort, Search & View Switcher */}
+      <ZFFilterToolbar
+        tabs={[
+          { id: 'all', label: isAr ? 'كل العقود الملغاة' : 'All Branches', count: rescissions.length },
+          { id: 'Pre-Delivery', label: isAr ? 'إلغاء قبل استلام الشقة' : 'Pre-Delivery', count: kpis.preDeliveryCount },
+          { id: 'Post-Delivery', label: isAr ? 'إلغاء بعد استلام الشقة' : 'Post-Delivery', count: kpis.postDeliveryCount }
+        ]}
+        activeTab={branchFilter}
+        onTabChange={(tabId) => {
+          setBranchFilter(tabId as any);
+          setCurrentPage(1);
+        }}
+        searchQuery={searchQuery}
+        onSearchChange={(q) => {
+          setSearchQuery(q);
+          setCurrentPage(1);
+        }}
+        searchPlaceholder={isAr ? 'دوّر برقم العقد، الشقة، أو اسم العميل...' : 'Search rescissions...'}
+        sortBy={sortBy}
+        onSortChange={(val) => {
+          setSortBy(val as any);
+          setCurrentPage(1);
+        }}
+        sortOptions={[
+          { value: 'date_desc', label: isAr ? 'التاريخ: الأحدث الأول' : 'Newest Date' },
+          { value: 'date_asc', label: isAr ? 'التاريخ: الأقدم الأول' : 'Oldest Date' },
+          { value: 'refund_desc', label: isAr ? 'المبلغ المسترد: الأكبر الأول' : 'Highest Net Refund' },
+          { value: 'refund_asc', label: isAr ? 'المبلغ المسترد: الأقل الأول' : 'Lowest Net Refund' },
+          { value: 'penalty_desc', label: isAr ? 'الغرامة: الأكبر الأول' : 'Highest Penalty Retained' },
+          { value: 'gross_desc', label: isAr ? 'سعر العقد: الأكبر الأول' : 'Highest Gross Contract' }
+        ]}
+        sortAriaLabel={isAr ? 'ترتيب العقود الملغاة' : 'Sort Rescissions'}
+        activeFiltersCount={activeFiltersCount}
+        onResetFilters={handleResetFilters}
+        viewMode={viewMode}
+        onViewModeChange={(mode) => setViewMode(mode as any)}
+        isAr={isAr}
+      />
 
       {/* 4. Main Content: Cards or Dense Table */}
       {filteredRescissions.length === 0 ? (
@@ -332,33 +274,33 @@ export const ContractRescissionsView: React.FC<ContractRescissionsViewProps> = (
           textAlign: 'center',
           color: '#64748b'
         }}>
-          <ShieldAlert size={36} color="#94a3b8" style={{ margin: '0 auto 0.75rem' }} />
+          <ShieldAlert size={36} color="#946f23" style={{ margin: '0 auto 0.75rem' }} />
           <h3 style={{ margin: 0, color: '#0f172a', fontSize: '1rem', fontWeight: 800 }}>
-            {isAr ? 'لا توجد عقود مفسوخة مسجلة مطابقة للبحث' : 'No matching rescinded contracts recorded'}
+            {isAr ? 'مفيش عقود ملغاة مطابقة للبحث أو الفلتر' : 'No matching rescinded contracts recorded'}
           </h3>
           <p style={{ margin: '0.35rem 0 0', fontSize: '0.82rem' }}>
-            {isAr ? 'جميع العقود السارية موثقة بحالة منتظمة في الدفاتر المحاسبية.' : 'All registered contracts remain in active status.'}
+            {isAr ? 'كل العقود شغالة ومفيش أي إلغاءات مسجلة.' : 'All registered contracts remain in active status.'}
           </p>
         </div>
       ) : viewMode === 'table' ? (
         <div className={styles.tableCard}>
-          <table className={styles.table} style={{ minWidth: '1240px' }}>
+          <table className={styles.table} style={{ minWidth: '960px' }}>
             <thead>
               <tr>
-                <th style={{ width: '95px', whiteSpace: 'nowrap' }}>{isAr ? 'كود الفسخ' : 'Rescission ID'}</th>
-                <th style={{ minWidth: '260px' }}>{isAr ? 'العقد والوحدة' : 'Contract & Unit'}</th>
-                <th style={{ minWidth: '160px' }}>{isAr ? 'العميل' : 'Customer'}</th>
-                <th style={{ minWidth: '150px' }}>{isAr ? 'المسار' : 'Branch'}</th>
-                <th style={{ minWidth: '130px' }}>{isAr ? 'قيمة العقد (V)' : 'Gross (V)'}</th>
-                <th style={{ minWidth: '130px' }}>{isAr ? 'المحصل (C)' : 'Collected (C)'}</th>
-                <th style={{ minWidth: '140px' }}>{isAr ? 'الغرامة المحتجزة' : 'Penalty Retained'}</th>
-                <th style={{ minWidth: '140px' }}>{isAr ? 'صافي الرد (206200)' : 'Net Refund'}</th>
-                <th style={{ minWidth: '170px' }}>{isAr ? 'حالة الوحدة' : 'Unit State'}</th>
-                <th style={{ width: '90px', textAlign: 'center' }}>{isAr ? 'إجراء' : 'Action'}</th>
+                <th style={{ width: '80px', whiteSpace: 'nowrap' }}>{isAr ? 'رقم الإلغاء' : 'Rescission ID'}</th>
+                <th style={{ minWidth: '160px' }}>{isAr ? 'الشقة ورقم العقد' : 'Contract & Unit'}</th>
+                <th style={{ minWidth: '130px' }}>{isAr ? 'العميل' : 'Customer'}</th>
+                <th style={{ minWidth: '110px' }}>{isAr ? 'وقت الإلغاء' : 'Branch'}</th>
+                <th style={{ minWidth: '100px' }}>{isAr ? 'سعر العقد' : 'Gross (V)'}</th>
+                <th style={{ minWidth: '100px' }}>{isAr ? 'المتحصل كاش' : 'Collected (C)'}</th>
+                <th style={{ minWidth: '110px' }}>{isAr ? 'غرامة الإلغاء (10%)' : 'Penalty Retained'}</th>
+                <th style={{ minWidth: '110px' }}>{isAr ? 'المسترد للعميل' : 'Net Refund'}</th>
+                <th style={{ minWidth: '110px' }}>{isAr ? 'حالة الشقة' : 'Unit State'}</th>
+                <th style={{ width: '70px', textAlign: 'center' }}>{isAr ? 'تفاصيل' : 'Action'}</th>
               </tr>
             </thead>
             <tbody>
-              {filteredRescissions.map(r => {
+              {paginatedRescissions.map(r => {
                 const linked = contracts.find(ct => ct.contract_id === r.contract_id);
                 return (
                   <tr key={r.rescission_id} onClick={() => onInspectRescission(r)} style={{ cursor: 'pointer' }}>
@@ -376,47 +318,54 @@ export const ContractRescissionsView: React.FC<ContractRescissionsViewProps> = (
                         #{r.rescission_id.slice(0, 8)}
                       </span>
                     </td>
-                    <td style={{ minWidth: '260px' }}>
+                    <td>
                       <div style={{ fontWeight: 800, color: '#0f172a', fontSize: '0.82rem', lineHeight: 1.4 }}>
-                        {linked?.unit_id || (isAr ? 'وحدة عقارية' : 'Property Unit')}
+                        {linked?.unit_id || (isAr ? 'شقة' : 'Property Unit')}
                       </div>
                       <div style={{ fontSize: '0.7rem', color: '#64748b', fontVariantNumeric: 'tabular-nums', marginTop: '0.15rem', fontWeight: 600 }}>
                         #{linked?.contract_number || r.contract_id.slice(0, 8)}
                       </div>
                     </td>
-                    <td style={{ fontWeight: 700, color: '#334155', minWidth: '160px' }}>
+                    <td style={{ fontWeight: 700, color: '#334155' }}>
                       {linked?.buyer_name || '—'}
                     </td>
-                    <td style={{ whiteSpace: 'nowrap' }}>
+                    <td>
                       <span style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '0.35rem',
-                        padding: '0.2rem 0.6rem',
-                        borderRadius: '6px',
                         fontSize: '0.72rem',
                         fontWeight: 800,
-                        background: r.branch === 'Pre-Delivery' ? '#f8fafc' : 'rgba(184, 144, 62, 0.08)',
-                        color: r.branch === 'Pre-Delivery' ? '#475569' : '#946f23',
-                        border: r.branch === 'Pre-Delivery' ? '1px solid #e2e8f0' : '1px solid rgba(184, 144, 62, 0.25)'
+                        color: r.branch === 'Pre-Delivery' ? '#0369a1' : '#b45309',
+                        background: r.branch === 'Pre-Delivery' ? '#f0f9ff' : '#fffbeb',
+                        border: `1px solid ${r.branch === 'Pre-Delivery' ? 'rgba(3, 105, 161, 0.25)' : 'rgba(245, 158, 11, 0.25)'}`,
+                        padding: '0.2rem 0.55rem',
+                        borderRadius: '6px',
+                        display: 'inline-block',
+                        whiteSpace: 'nowrap'
                       }}>
-                        <span style={{ width: 6, height: 6, borderRadius: '50%', background: r.branch === 'Pre-Delivery' ? '#475569' : '#946f23', display: 'inline-block' }} />
-                        <span>{r.branch === 'Pre-Delivery' ? (isAr ? 'المسار ١ (قبل التسليم)' : 'Pre-Delivery') : (isAr ? 'المسار ٢ (بعد التسليم)' : 'Post-Delivery')}</span>
+                        {r.branch === 'Pre-Delivery' ? (isAr ? 'قبل الاستلام' : 'Pre-Delivery') : (isAr ? 'بعد الاستلام' : 'Post-Delivery')}
                       </span>
                     </td>
-                    <td style={{ whiteSpace: 'nowrap' }}><MoneyCell amount={r.gross_contract_value} isAr={isAr} /></td>
-                    <td style={{ whiteSpace: 'nowrap' }}><MoneyCell amount={r.total_cash_collected} isAr={isAr} /></td>
                     <td style={{ whiteSpace: 'nowrap' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                        <MoneyCell amount={r.penalty_retained} isAr={isAr} highlight />
+                      <strong style={{ color: '#0f172a' }}>
+                        <MoneyCell amount={r.gross_contract_value} isAr={isAr} />
+                      </strong>
+                    </td>
+                    <td style={{ whiteSpace: 'nowrap' }}>
+                      <span style={{ color: '#475569', fontWeight: 700 }}>
+                        <MoneyCell amount={r.total_cash_collected} isAr={isAr} />
+                      </span>
+                    </td>
+                    <td style={{ whiteSpace: 'nowrap' }}>
+                      <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+                        <strong style={{ color: '#d97706' }}>
+                          <MoneyCell amount={r.penalty_retained} isAr={isAr} />
+                        </strong>
                         <span style={{
-                          fontSize: '0.68rem',
-                          background: 'rgba(184, 144, 62, 0.1)',
-                          color: '#946f23',
-                          border: '1px solid rgba(184, 144, 62, 0.25)',
-                          borderRadius: '4px',
+                          fontSize: '0.65rem',
+                          fontWeight: 800,
+                          color: '#d97706',
+                          background: 'rgba(217, 119, 6, 0.08)',
                           padding: '0.1rem 0.35rem',
-                          fontWeight: 800
+                          borderRadius: '4px'
                         }}>
                           {isAr ? '١٠٪' : '10%'}
                         </span>
@@ -427,7 +376,7 @@ export const ContractRescissionsView: React.FC<ContractRescissionsViewProps> = (
                         <MoneyCell amount={r.net_refund_liability} isAr={isAr} />
                       </strong>
                     </td>
-                    <td style={{ whiteSpace: 'nowrap', minWidth: '170px' }}>
+                    <td style={{ whiteSpace: 'nowrap' }}>
                       <StatusBadge domain="unit" status={r.unit_state} isAr={isAr} />
                     </td>
                     <td style={{ textAlign: 'center', whiteSpace: 'nowrap', width: '90px' }}>
@@ -452,7 +401,7 @@ export const ContractRescissionsView: React.FC<ContractRescissionsViewProps> = (
                         }}
                       >
                         <Eye size={12} color="#946f23" />
-                        <span>{isAr ? 'فحص' : 'View'}</span>
+                        <span>{isAr ? 'عرض' : 'View'}</span>
                       </button>
                     </td>
                   </tr>
@@ -462,8 +411,8 @@ export const ContractRescissionsView: React.FC<ContractRescissionsViewProps> = (
           </table>
         </div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: '1.25rem' }}>
-          {filteredRescissions.map(r => {
+        <div className={styles.cardsGrid}>
+          {paginatedRescissions.map(r => {
             const linked = contracts.find(ct => ct.contract_id === r.contract_id);
             return (
               <div 
@@ -494,12 +443,15 @@ export const ContractRescissionsView: React.FC<ContractRescissionsViewProps> = (
                       borderRadius: '6px',
                       padding: '0.15rem 0.45rem',
                       display: 'inline-block',
-                      marginBottom: '0.35rem'
+                      marginBottom: '0.35rem',
+                      whiteSpace: 'nowrap',
+                      direction: 'ltr',
+                      unicodeBidi: 'isolate'
                     }}>
                       #{r.rescission_id.slice(0, 8)}
                     </span>
                     <h3 style={{ margin: 0, fontSize: '1.02rem', fontWeight: 800, color: '#0f172a', lineHeight: 1.4 }}>
-                      {linked?.unit_id || (isAr ? 'وحدة عقارية' : 'Property Unit')}
+                      {linked?.unit_id || (isAr ? 'شقة' : 'Property Unit')}
                     </h3>
                   </div>
                   <StatusBadge domain="unit" status={r.unit_state} isAr={isAr} />
@@ -516,24 +468,24 @@ export const ContractRescissionsView: React.FC<ContractRescissionsViewProps> = (
                   borderRadius: '12px',
                   padding: '0.85rem',
                   display: 'grid',
-                  gridTemplateColumns: '1fr 1fr',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 120px), 1fr))',
                   gap: '0.5rem',
                   fontSize: '0.75rem'
                 }}>
                   <div>
-                    <span style={{ color: '#64748b', display: 'block', fontSize: '0.7rem' }}>{isAr ? 'قيمة العقد (V):' : 'Gross:'}</span>
+                    <span style={{ color: '#64748b', display: 'block', fontSize: '0.7rem' }}>{isAr ? 'سعر العقد:' : 'Gross:'}</span>
                     <strong style={{ color: '#0f172a' }}><MoneyCell amount={r.gross_contract_value} isAr={isAr} /></strong>
                   </div>
                   <div>
-                    <span style={{ color: '#64748b', display: 'block', fontSize: '0.7rem' }}>{isAr ? 'المحصل (C):' : 'Collected:'}</span>
+                    <span style={{ color: '#64748b', display: 'block', fontSize: '0.7rem' }}>{isAr ? 'المتحصل كاش:' : 'Collected:'}</span>
                     <strong style={{ color: '#0f172a' }}><MoneyCell amount={r.total_cash_collected} isAr={isAr} /></strong>
                   </div>
                   <div>
-                    <span style={{ color: '#64748b', display: 'block', fontSize: '0.7rem' }}>{isAr ? 'الغرامة (10%):' : 'Penalty:'}</span>
+                    <span style={{ color: '#64748b', display: 'block', fontSize: '0.7rem' }}>{isAr ? 'غرامة الإلغاء (10%):' : 'Penalty:'}</span>
                     <strong style={{ color: '#946f23' }}><MoneyCell amount={r.penalty_retained} isAr={isAr} /></strong>
                   </div>
                   <div>
-                    <span style={{ color: '#64748b', display: 'block', fontSize: '0.7rem' }}>{isAr ? 'صافي الرد:' : 'Refund:'}</span>
+                    <span style={{ color: '#64748b', display: 'block', fontSize: '0.7rem' }}>{isAr ? 'المسترد للعميل:' : 'Refund:'}</span>
                     <strong style={{ color: '#0f172a', fontWeight: 900 }}><MoneyCell amount={r.net_refund_liability} isAr={isAr} /></strong>
                   </div>
                 </div>
@@ -562,13 +514,29 @@ export const ContractRescissionsView: React.FC<ContractRescissionsViewProps> = (
                   }}
                 >
                   <Eye size={13} color="#946f23" />
-                  <span>{isAr ? 'فحص ملف وتفاصيل الفسخ' : 'Inspect Rescission'}</span>
+                  <span>{isAr ? 'عرض تفاصيل الإلغاء والتسوية' : 'Inspect Rescission'}</span>
                 </button>
               </div>
             );
           })}
         </div>
       )}
+
+      {/* Unified Pagination Bar */}
+      <ZFPagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        totalItems={sortedRescissions.length}
+        pageSize={pageSize}
+        pageSizeOptions={[10, 25, 50]}
+        onPageChange={setCurrentPage}
+        onPageSizeChange={sz => {
+          setPageSize(sz);
+          setCurrentPage(1);
+        }}
+        isAr={isAr}
+        itemLabel={{ ar: 'عقد ملغي', en: 'rescissions' }}
+      />
     </div>
   );
 };

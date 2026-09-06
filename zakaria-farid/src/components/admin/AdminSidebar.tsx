@@ -32,44 +32,59 @@ export default function AdminSidebar({ adminLocale }: AdminSidebarProps) {
 
   const isAr = adminLocale === 'ar';
 
-  const navItems = [
-    { 
-      href: `/admin/${adminLocale}`, 
-      label: isAr ? 'لوحة القيادة التنفيذية' : 'Executive Overview', 
-      icon: LayoutDashboard, 
-      exact: true 
+  const navGroups = [
+    {
+      title: isAr ? 'القيادة التنفيذية' : 'EXECUTIVE COMMAND',
+      items: [
+        { 
+          href: `/admin/${adminLocale}`, 
+          label: isAr ? 'لوحة القيادة التنفيذية' : 'Executive Overview', 
+          icon: LayoutDashboard, 
+          exact: true 
+        },
+        { 
+          href: `/fin-os/${adminLocale}`, 
+          label: isAr ? 'النظام المالي والـ ERP' : 'Financial ERP & Ledger', 
+          icon: Landmark, 
+          exact: false 
+        },
+      ]
     },
-    { 
-      href: `/fin-os/${adminLocale}`, 
-      label: isAr ? 'النظام المالي والـ ERP' : 'Financial ERP & Ledger', 
-      icon: Landmark, 
-      exact: false 
+    {
+      title: isAr ? 'العمليات والعملاء' : 'OPERATIONS & CRM',
+      items: [
+        { 
+          href: `/admin/${adminLocale}/leads`, 
+          label: isAr ? 'إدارة العملاء والصفقات' : 'Client Inquiries & CRM', 
+          icon: Users, 
+          exact: false 
+        },
+        { 
+          href: `/admin/${adminLocale}/properties`, 
+          label: isAr ? 'محفظة العقارات' : 'Properties Portfolio', 
+          icon: Building2, 
+          exact: false 
+        },
+      ]
     },
-    { 
-      href: `/admin/${adminLocale}/properties`, 
-      label: isAr ? 'محفظة العقارات' : 'Properties Portfolio', 
-      icon: Building2, 
-      exact: false 
-    },
-    { 
-      href: `/admin/${adminLocale}/leads`, 
-      label: isAr ? 'إدارة العملاء والصفقات' : 'Client Inquiries & CRM', 
-      icon: Users, 
-      exact: false 
-    },
-    { 
-      href: `/admin/${adminLocale}/analytics`, 
-      label: isAr ? 'تحليلات العقارات والذكاء السوقي' : 'Property Analytics', 
-      icon: TrendingUp, 
-      exact: false 
-    },
-    { 
-      href: `/admin/${adminLocale}/settings`, 
-      label: isAr ? 'إعدادات المنصة والسوق' : 'Platform & Market Radar', 
-      icon: Sliders, 
-      exact: false 
-    },
-  ] as const;
+    {
+      title: isAr ? 'الذكاء والإعدادات' : 'INTELLIGENCE & CONFIG',
+      items: [
+        { 
+          href: `/admin/${adminLocale}/analytics`, 
+          label: isAr ? 'تحليلات العقارات والذكاء السوقي' : 'Market Intelligence', 
+          icon: TrendingUp, 
+          exact: false 
+        },
+        { 
+          href: `/admin/${adminLocale}/settings`, 
+          label: isAr ? 'إعدادات المنصة والسوق' : 'Platform & Market Radar', 
+          icon: Sliders, 
+          exact: false 
+        },
+      ]
+    }
+  ];
 
   async function signOut() {
     const supabase = createClient();
@@ -107,41 +122,33 @@ export default function AdminSidebar({ adminLocale }: AdminSidebarProps) {
           </Link>
         </div>
 
-        {/* Quick Add CTA */}
-        <div className={styles.quickActionBox}>
-          <Link 
-            href={`/admin/${adminLocale}/properties/new`} 
-            className={styles.quickAddBtn}
-            onClick={() => setIsOpen(false)}
-          >
-            <Plus size={16} strokeWidth={2.5} />
-            <span>{isAr ? 'إدراج عقار جديد' : 'New Property'}</span>
-          </Link>
-        </div>
-
-        {/* Navigation Section */}
+        {/* Grouped Navigation Sections */}
         <div className={styles.navSection}>
-          <span className={styles.sectionHeading}>
-            {isAr ? 'القائمة الرئيسية' : 'MAIN NAVIGATION'}
-          </span>
           <nav className={styles.nav}>
-            {navItems.map(({ href, label, icon: Icon, exact }) => {
-              const isActive = exact ? pathname === href : pathname.startsWith(href);
-              return (
-                <Link 
-                  key={href} 
-                  href={href} 
-                  className={`${styles.navItem} ${isActive ? styles.navItemActive : ''}`}
-                  onClick={() => setIsOpen(false)}
-                >
-                  <div className={styles.navIconBox}>
-                    <Icon size={17} strokeWidth={isActive ? 2.2 : 1.7} />
-                  </div>
-                  <span className={styles.navLabel}>{label}</span>
-                  {isActive && <div className={styles.activeDot} />}
-                </Link>
-              );
-            })}
+            {navGroups.map((grp, gIdx) => (
+              <div key={gIdx} style={{ marginBottom: '1.25rem' }}>
+                <span className={styles.sectionHeading} style={{ display: 'block', marginBottom: '0.45rem', padding: '0 0.5rem' }}>
+                  {grp.title}
+                </span>
+                {grp.items.map(({ href, label, icon: Icon, exact }) => {
+                  const isActive = exact ? pathname === href : pathname.startsWith(href);
+                  return (
+                    <Link 
+                      key={href} 
+                      href={href} 
+                      className={`${styles.navItem} ${isActive ? styles.navItemActive : ''}`}
+                      onClick={() => setIsOpen(false)}
+                    >
+                      <div className={styles.navIconBox}>
+                        <Icon size={17} strokeWidth={isActive ? 2.2 : 1.7} />
+                      </div>
+                      <span className={styles.navLabel}>{label}</span>
+                      {isActive && <div className={styles.activeDot} />}
+                    </Link>
+                  );
+                })}
+              </div>
+            ))}
           </nav>
         </div>
 

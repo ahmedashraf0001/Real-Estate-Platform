@@ -11,13 +11,26 @@ export default async function ComparePage({ params, searchParams }: Props) {
   const { locale } = await params;
   const { ids } = await searchParams;
 
-  if (!ids) notFound();
+  const idList = ids ? ids.split(',').slice(0, 3).filter(Boolean) : [];
+  let properties: any[] = [];
 
-  const idList = ids.split(',').slice(0, 3).filter(Boolean);
-  if (idList.length < 2) notFound();
+  if (idList.length >= 2) {
+    properties = await getPropertiesByIds(idList).catch(() => []);
+  }
 
-  const properties = await getPropertiesByIds(idList).catch(() => []);
-  if (properties.length < 2) notFound();
+  // If no properties or less than 2, fetch all properties so user can pick
+  let allProps: any[] = [];
+  if (properties.length < 2) {
+    const { getAllProperties } = await import('@/lib/supabase/queries');
+    allProps = await getAllProperties().catch(() => []);
+  }
 
-  return <PropertyCompareClient properties={properties} locale={locale} tProps={{}} />;
+  return (
+    <PropertyCompareClient 
+      properties={properties} 
+      allAvailableProperties={allProps} 
+      locale={locale} 
+      tProps={{}} 
+    />
+  );
 }

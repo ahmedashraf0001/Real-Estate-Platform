@@ -108,7 +108,7 @@ export const ERPFinancialCharts: React.FC<ERPFinancialChartsProps> = ({
       </motion.div>
 
       {/* Grid: 2 Side-by-Side Luxury Analytics Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '1.5rem' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 360px), 1fr))', gap: '1.5rem' }}>
         {/* Ring Chart: WIP Allocation Ring & RSV */}
         <motion.div 
           className={styles.chartCard}

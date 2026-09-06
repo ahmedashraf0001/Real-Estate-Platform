@@ -29,12 +29,13 @@ import {
 import * as XLSX from 'xlsx';
 import { Property } from '@/lib/supabase/types';
 import { ERPPropertyCostItem } from '@/lib/erp/types';
-import { D, formatEGP } from '@/lib/erp/math';
+import { D, Decimal } from '@/lib/erp/math';
 import { 
   calculatePropertyAuditMetrics,
   calculateBuiltPropertySellingPrice,
   PROPERTY_COST_CATEGORIES
 } from '@/lib/erp/propertyCostEngine';
+import styles from './v2/ZFWorkstationShell.module.css';
 
 export interface ConstructionCostCalculatorProps {
   properties: Property[];
@@ -60,27 +61,27 @@ export type FinishingTier = 'core_and_shell' | 'semi_finished' | 'lux' | 'super_
 export const FINISHING_TIER_COSTS: Record<FinishingTier, { costPerSqm: number; labelAr: string; labelEn: string; descAr: string }> = {
   core_and_shell: {
     costPerSqm: 2800,
-    labelAr: 'طوب أحمر وعظم (Core & Shell)',
+    labelAr: 'طوب أحمر وعضم (Core & Shell)',
     labelEn: 'Core & Shell / Red Brick',
-    descAr: 'هيكل خرساني مسلّح ومباني طوب أحمر وحلوق خشب بدون تشطيب داخلي'
+    descAr: 'خرسانة مسلحة ومباني طوب أحمر وحلوق خشب من غير أي تشطيب داخلي'
   },
   semi_finished: {
     costPerSqm: 4500,
-    labelAr: 'نصف تشطيب (Semi-Finished) — الأكثر طلباً',
+    labelAr: 'نص تشطيب (Semi-Finished) — الأكثر طلباً',
     labelEn: 'Semi-Finished (Standard)',
-    descAr: 'محارة أسمنتية كاملة، حلوق خشبية، تأسيس كهرباء وعلب، وتمديدات مواسير سباكة'
+    descAr: 'محارة كاملة، حلوق خشب، تأسيس كهرباء وعلب، ومواسير السباكة'
   },
   lux: {
     costPerSqm: 7500,
-    labelAr: 'تشطيب لوكس (Lux Finished)',
+    labelAr: 'تشطيب لوكس جاهز على السكن',
     labelEn: 'Lux Finished',
-    descAr: 'أرضيات سيراميك فرز أول، دهانات بلاستيك جوتن، أطقم صحي، وشبابيك ألوميتال'
+    descAr: 'سيراميك فرز أول، دهانات جوتن، أطقم حمامات ومطابخ، وشبابيك ألوميتال'
   },
   super_lux: {
     costPerSqm: 10500,
-    labelAr: 'تشطيب سوبر لوكس (Super Lux)',
+    labelAr: 'تشطيب سوبر لوكس عالي',
     labelEn: 'Super Lux Finished',
-    descAr: 'أرضيات بورسلين، أسقف ساقطة وجبسوم بورد ليد، دهانات كمبيوتر، وقطاعات جامبو'
+    descAr: 'بورسلين، جبسوم بورد وإضاءة ليد مخفية، دهانات كمبيوتر، وشبابيك جامبو'
   }
 };
 
@@ -93,6 +94,66 @@ export const ConstructionCostCalculator: React.FC<ConstructionCostCalculatorProp
   initialPropertyId,
   isAr
 }) => {
+  // Dedicated single-currency fluid formatter (guarantees zero duplicate EGP ج.م and zero orphan wrapping)
+  const renderMoney = (
+    val: number | string | Decimal | bigint,
+    unitSuffix?: string,
+    options?: {
+      color?: string;
+      size?: string;
+      weight?: number | string;
+    }
+  ) => {
+    const d = D(val || 0);
+    const isNegative = d.isNegative();
+    const absD = d.abs();
+    const parts = absD.toFixed(2).split('.');
+    const intPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    const formattedNum = `${isNegative ? '-' : ''}${intPart}.${parts[1]}`;
+    const currencySymbol = isAr ? 'ج.م' : 'EGP';
+    const suffix = unitSuffix ? `${currencySymbol}/${unitSuffix}` : currencySymbol;
+
+    return (
+      <span
+        dir="ltr"
+        style={{
+          display: 'inline-flex',
+          alignItems: 'baseline',
+          whiteSpace: 'nowrap',
+          gap: '0.28rem',
+          fontVariantNumeric: 'tabular-nums',
+          unicodeBidi: 'isolate',
+          color: options?.color,
+          fontSize: options?.size,
+          fontWeight: options?.weight || 'inherit'
+        }}
+      >
+        <span style={{ fontWeight: 'inherit', letterSpacing: '-0.01em' }}>{formattedNum}</span>
+        <span
+          style={{
+            fontSize: '0.72em',
+            fontWeight: 700,
+            opacity: 0.85,
+            letterSpacing: 'normal'
+          }}
+        >
+          {suffix}
+        </span>
+      </span>
+    );
+  };
+
+  const formatMoneyText = (val: number | string | Decimal | bigint, unitSuffix?: string) => {
+    const d = D(val || 0);
+    const isNegative = d.isNegative();
+    const absD = d.abs();
+    const parts = absD.toFixed(2).split('.');
+    const intPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    const currencySymbol = isAr ? 'ج.م' : 'EGP';
+    const suffix = unitSuffix ? `${currencySymbol}/${unitSuffix}` : currencySymbol;
+    return `${isNegative ? '-' : ''}${intPart}.${parts[1]} ${suffix}`;
+  };
+
   // Main Mode Toggle: Default to 'BUILT_PROPERTY_PRICING' as requested by user
   const [calculatorMode, setCalculatorMode] = useState<CalculatorMode>('BUILT_PROPERTY_PRICING');
 
@@ -278,38 +339,38 @@ export const ConstructionCostCalculator: React.FC<ConstructionCostCalculatorProp
     if (!selectedProperty) return;
     const wb = XLSX.utils.book_new();
     const rows = [
-      [isAr ? 'تقرير تسعير العقار القائم المبني استناداً لتكاليف البناء الفعلية' : 'Built Property Pricing Analysis Report'],
+      [isAr ? 'تقرير تسعير العقار بناءً على مصاريف المباني الفعلية' : 'Built Property Pricing Analysis Report'],
       [isAr ? 'شركة زكريا فريد للتطوير العقاري — نظام FIN-OS' : 'Zakaria Farid Real Estate Developments — FIN-OS'],
       [isAr ? 'تاريخ التقرير:' : 'Report Date:', new Date().toLocaleDateString(isAr ? 'ar-EG' : 'en-US')],
       [],
-      [isAr ? 'بيانات العقار الأساسية' : 'Property Dossier'],
-      [isAr ? 'اسم العقار' : 'Property Title', isAr ? selectedProperty.title_ar : selectedProperty.title_en],
+      [isAr ? 'بيانات العقار' : 'Property Dossier'],
+      [isAr ? 'اسم العقار / المشروع' : 'Property Title', isAr ? selectedProperty.title_ar : selectedProperty.title_en],
       [isAr ? 'الموقع' : 'Location', selectedProperty.location],
-      [isAr ? 'المساحة المبنية الإجمالية (م²)' : 'Built-up Area (sqm)', selectedProperty.area_sqm],
-      [isAr ? 'سعر القائمة الحالي بالكتالوج (ج.م)' : 'Current Catalog List Price (EGP)', selectedProperty.price_egp],
+      [isAr ? 'إجمالي مساحة المباني (م²)' : 'Built-up Area (sqm)', selectedProperty.area_sqm],
+      [isAr ? 'السعر الحالي في الكتالوج (ج.م)' : 'Current Catalog List Price (EGP)', selectedProperty.price_egp],
       [],
-      [isAr ? 'أولاً: التكاليف المنفقة الفعلية الموثقة (Audit Logs)' : '1. Actual Incurred Logged Costs'],
-      [isAr ? 'إجمالي التكلفة المنفقة المسجلة (ج.م)' : 'Total Incurred Capital (EGP)', parseFloat(builtPricing.totalLoggedCost)],
-      [isAr ? 'تكلفة المتر المنفذة الفعلية (ج.م/م²)' : 'Actual Cost per Sqm (EGP/m²)', parseFloat(builtPricing.costPerSqm)],
-      [isAr ? 'عدد بنود ومواد البناء المعتمدة' : 'Audited Ledger Items Count', propertyAudit.itemsCount],
+      [isAr ? 'أولاً: مصاريف المباني اللي اتصرفت فعلياً' : '1. Actual Incurred Logged Costs'],
+      [isAr ? 'إجمالي الفلوس المصروفة (ج.م)' : 'Total Incurred Capital (EGP)', parseFloat(builtPricing.totalLoggedCost)],
+      [isAr ? 'تكلفة متر المباني الفعلي (ج.م/م²)' : 'Actual Cost per Sqm (EGP/m²)', parseFloat(builtPricing.costPerSqm)],
+      [isAr ? 'عدد فواتير ومصاريف المباني المسجلة' : 'Audited Ledger Items Count', propertyAudit.itemsCount],
       [],
-      [isAr ? 'ثانياً: مؤشرات السوق والربح المستهدف' : '2. Market Benchmark & Profit Targets'],
+      [isAr ? 'ثانياً: أسعار السوق والربح المطلوب' : '2. Market Benchmark & Profit Targets'],
       [isAr ? 'سعر المتر الحالي في السوق (ج.م/م²)' : 'Current Market Meter Price (EGP/m²)', marketMeterPrice],
-      [isAr ? 'القيمة السوقية المرجعية للعقار (ج.م)' : 'Benchmark Market Value (EGP)', parseFloat(builtPricing.marketBenchmarkValue)],
-      [isAr ? 'طريقة احتساب الربح' : 'Profit Mode', profitMode === 'PERCENTAGE' ? `${targetProfitPercent}% هامش على التكلفة` : 'مبلغ مقطوع'],
-      [isAr ? 'مبلغ الربح المستهدف (ج.م)' : 'Target Profit Money (EGP)', parseFloat(builtPricing.targetProfitMoney)],
+      [isAr ? 'قيمة العقار بأسعار السوق اليومين دول (ج.م)' : 'Benchmark Market Value (EGP)', parseFloat(builtPricing.marketBenchmarkValue)],
+      [isAr ? 'طريقة حساب الربح' : 'Profit Mode', profitMode === 'PERCENTAGE' ? `${targetProfitPercent}% نسبة فوق التكلفة` : 'مبلغ كاش مقطوع'],
+      [isAr ? 'مبلغ الربح المطلوب (ج.م)' : 'Target Profit Money (EGP)', parseFloat(builtPricing.targetProfitMoney)],
       [],
-      [isAr ? 'ثالثاً: نتائج التسعير التقديري المعتمدة' : '3. Final Estimated Selling Price Results'],
-      [isAr ? 'سعر البيع التقديري المقترح (ج.م)' : 'Estimated Selling Price (EGP)', parseFloat(builtPricing.estimatedSellingPrice)],
-      [isAr ? 'سعر البيع التقديري للمتر المربع (ج.م/م²)' : 'Estimated Selling Price per Sqm (EGP/m²)', parseFloat(builtPricing.estimatedSellingPricePerSqm)],
-      [isAr ? 'الفارق عن سعر السوق الحالي' : 'Variance vs Current Market Price', `${builtPricing.marketVariancePct}%`],
-      [isAr ? 'هامش الربح الإجمالي (Gross Margin %)' : 'Gross Margin %', `${builtPricing.grossMarginPct}%`],
-      [isAr ? 'العائد على التكلفة المنفقة (ROI on Cost %)' : 'Return on Incurred Cost %', `${builtPricing.returnOnCostPct}%`]
+      [isAr ? 'ثالثاً: سعر البيع المقترح النهائي' : '3. Final Estimated Selling Price Results'],
+      [isAr ? 'سعر بيع العقار المقترح (ج.م)' : 'Estimated Selling Price (EGP)', parseFloat(builtPricing.estimatedSellingPrice)],
+      [isAr ? 'سعر بيع المتر المقترح (ج.م/م²)' : 'Estimated Selling Price per Sqm (EGP/m²)', parseFloat(builtPricing.estimatedSellingPricePerSqm)],
+      [isAr ? 'الفرق عن سعر السوق الحالي' : 'Variance vs Current Market Price', `${builtPricing.marketVariancePct}%`],
+      [isAr ? 'نسبة صافي الربح (%):' : 'Gross Margin %', `${builtPricing.grossMarginPct}%`],
+      [isAr ? 'العائد على المصاريف (ROI %):' : 'Return on Incurred Cost %', `${builtPricing.returnOnCostPct}%`]
     ];
 
     const ws = XLSX.utils.aoa_to_sheet(rows);
     ws['!cols'] = [{ wch: 38 }, { wch: 28 }, { wch: 20 }];
-    XLSX.utils.book_append_sheet(wb, ws, isAr ? 'تسعير العقار القائم' : 'Built Pricing');
+    XLSX.utils.book_append_sheet(wb, ws, isAr ? 'تسعير العقار' : 'Built Pricing');
     XLSX.writeFile(wb, `تسعير_عقار_${selectedProperty.title_ar?.replace(/\s+/g, '_') || 'وحدة'}_${Date.now()}.xlsx`);
   };
 
@@ -423,181 +484,181 @@ export const ConstructionCostCalculator: React.FC<ConstructionCostCalculatorProp
   const handleExportFeasibilityExcel = () => {
     const wb = XLSX.utils.book_new();
     const rows = [
-      [isAr ? 'دراسة الجدوى وحاسبة تكاليف التشييد التقديرية' : 'Construction Feasibility & Cost Estimation'],
+      [isAr ? 'حسبة ودراسة تكلفة المباني الجديدة' : 'Construction Feasibility & Cost Estimation'],
       [isAr ? 'شركة زكريا فريد للتطوير العقاري' : 'Zakaria Farid Real Estate Developments'],
       [isAr ? 'تاريخ الحساب:' : 'Calculation Date:', new Date().toLocaleDateString(isAr ? 'ar-EG' : 'en-US')],
       [],
-      [isAr ? 'المواصفات الفنية والمساحات' : 'Technical Specifications'],
-      [isAr ? 'المساحة المبنية الإجمالية (م²)' : 'Built-up Area (sqm)', builtUpAreaSqm],
+      [isAr ? 'المواصفات والمساحات' : 'Technical Specifications'],
+      [isAr ? 'إجمالي مساحة المباني (م²)' : 'Built-up Area (sqm)', builtUpAreaSqm],
       [isAr ? 'مساحة الأرض (م²)' : 'Land Area (sqm)', landAreaSqm],
       [isAr ? 'عدد الأدوار' : 'Number of Floors', floorsCount],
-      [isAr ? 'مستوى التشطيب المختار' : 'Finishing Tier', FINISHING_TIER_COSTS[finishingTier].labelAr],
+      [isAr ? 'نوع التشطيب المطلوب' : 'Finishing Tier', FINISHING_TIER_COSTS[finishingTier].labelAr],
       [],
-      [isAr ? 'تقديرات المواد والإنشاءات' : 'Material & Structural Estimates', isAr ? 'الكمية' : 'Quantity', isAr ? 'التكلفة الإجمالية (ج.م)' : 'Total Cost (EGP)'],
+      [isAr ? 'حسبة الخامات والمباني' : 'Material & Structural Estimates', isAr ? 'الكمية' : 'Quantity', isAr ? 'إجمالي التكلفة (ج.م)' : 'Total Cost (EGP)'],
       [isAr ? 'حديد التسليح المقدر' : 'Steel Rebar', `${feasibilityCalculations.steelTons} طن`, feasibilityCalculations.totalSteelCost],
       [isAr ? 'خرسانة مسلحة جاهزة' : 'Ready-mix Concrete', `${feasibilityCalculations.concreteVolumeM3} م³`, feasibilityCalculations.totalConcreteCost],
-      [isAr ? 'أجور مصنعيات الهيكل' : 'Skeleton Labor', `${builtUpAreaSqm} م²`, feasibilityCalculations.totalLaborCost],
-      [isAr ? 'إجمالي تكلفة العظم والخرسانات' : 'Total Skeleton Cost', '', feasibilityCalculations.skeletonTotal],
-      [isAr ? 'التأسيس والكهروميكانيك (MEP)' : 'MEP & Utilities', '', feasibilityCalculations.totalMepCost],
-      [isAr ? 'أعمال التشطيبات المعمارية' : 'Architectural Finishing', '', feasibilityCalculations.totalFinishingCost],
-      [isAr ? 'المصاعد والواجهات وتنسيق الموقع' : 'Elevator, Facade & Landscape', '', feasibilityCalculations.elevatorCost + feasibilityCalculations.facadeAndLandscapeCost],
-      [isAr ? 'إجمالي تكلفة البناء والتشييد (WIP)' : 'Total Construction Cost (WIP)', '', feasibilityCalculations.totalConstructionWip],
-      [isAr ? 'تكلفة الأرض المخصصة' : 'Allocated Land Cost', '', feasibilityCalculations.totalLandCost],
-      [isAr ? 'إجمالي الاستثمار والتكلفة الكلية' : 'Grand Total Investment', '', feasibilityCalculations.grandProjectCost],
+      [isAr ? 'مصنعيات وأجور البنا والصب' : 'Skeleton Labor', `${builtUpAreaSqm} م²`, feasibilityCalculations.totalLaborCost],
+      [isAr ? 'إجمالي الخرسانات والمباني (العضم)' : 'Total Skeleton Cost', '', feasibilityCalculations.skeletonTotal],
+      [isAr ? 'تأسيس الكهرباء والسباكة' : 'MEP & Utilities', '', feasibilityCalculations.totalMepCost],
+      [isAr ? 'مصاريف التشطيبات' : 'Architectural Finishing', '', feasibilityCalculations.totalFinishingCost],
+      [isAr ? 'الأسانسير والواجهات والمداخل' : 'Elevator, Facade & Landscape', '', feasibilityCalculations.elevatorCost + feasibilityCalculations.facadeAndLandscapeCost],
+      [isAr ? 'إجمالي تكلفة المباني والإنشاءات' : 'Total Construction Cost (WIP)', '', feasibilityCalculations.totalConstructionWip],
+      [isAr ? 'تكلفة الأرض' : 'Allocated Land Cost', '', feasibilityCalculations.totalLandCost],
+      [isAr ? 'إجمالي تكلفة المشروع كله (أرض + مباني)' : 'Grand Total Investment', '', feasibilityCalculations.grandProjectCost],
       [],
-      [isAr ? 'المؤشرات المالية وهامش الربح' : 'Financial Indicators & Margins'],
-      [isAr ? 'تكلفة المتر الإجمالية (ج.م/م²)' : 'Total Cost / sqm', feasibilityCalculations.grandCostPerSqm],
-      [isAr ? 'سعر البيع المستهدف للمتر (ج.م/م²)' : 'Target Sale Price / sqm', targetSalePricePerSqm],
+      [isAr ? 'الأرباح وحسبة المتر' : 'Financial Indicators & Margins'],
+      [isAr ? 'تكلفة المتر الإجمالية (أرض + مباني)' : 'Total Cost / sqm', feasibilityCalculations.grandCostPerSqm],
+      [isAr ? 'سعر بيع المتر المستهدف (ج.م/م²)' : 'Target Sale Price / sqm', targetSalePricePerSqm],
       [isAr ? 'إجمالي المبيعات المتوقعة' : 'Projected Sales Revenue', feasibilityCalculations.projectedGrossRevenue],
-      [isAr ? 'صافي أرباح المطور المتوقعة' : 'Projected Net Developer Profit', feasibilityCalculations.projectedNetProfit],
+      [isAr ? 'صافي الربح المتوقع' : 'Projected Net Developer Profit', feasibilityCalculations.projectedNetProfit],
       [isAr ? 'العائد على الاستثمار (ROI %)' : 'Return on Investment (ROI %)', `${feasibilityCalculations.developerMarginPercent}%`]
     ];
 
     const ws = XLSX.utils.aoa_to_sheet(rows);
     ws['!cols'] = [{ wch: 35 }, { wch: 22 }, { wch: 25 }];
-    XLSX.utils.book_append_sheet(wb, ws, isAr ? 'دراسة الجدوى التقديرية' : 'Feasibility Study');
+    XLSX.utils.book_append_sheet(wb, ws, isAr ? 'دراسة تكلفة المشروع' : 'Feasibility Study');
     XLSX.writeFile(wb, `دراسة_جدوى_بناء_${builtUpAreaSqm}متر_${Date.now()}.xlsx`);
   };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', direction: isAr ? 'rtl' : 'ltr' }}>
       
-      {/* Top Banner & Mode Toggle */}
+      {/* 1. TOP STAGE HEADER & MODE SWITCHER */}
       <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        flexWrap: 'wrap',
+        gap: '1rem',
         background: '#ffffff',
         border: '1px solid #e2e8f0',
         borderRadius: '16px',
-        padding: '1.25rem 1.5rem',
-        display: 'flex',
-        flexWrap: 'wrap',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        gap: '1rem',
-        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04)'
+        padding: '1.15rem 1.4rem',
+        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.03)'
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
           <div style={{
-            background: 'linear-gradient(135deg, #c5a059 0%, #a48135 100%)',
-            color: '#ffffff',
-            padding: '0.85rem',
-            borderRadius: '12px',
-            boxShadow: '0 4px 14px rgba(197, 160, 89, 0.35)',
+            width: '40px',
+            height: '40px',
+            borderRadius: '10px',
+            background: 'rgba(184, 144, 62, 0.1)',
+            border: '1px solid rgba(184, 144, 62, 0.25)',
+            color: '#946f23',
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'center'
+            justifyContent: 'center',
+            flexShrink: 0
           }}>
-            <Calculator size={26} />
+            <Calculator size={20} />
           </div>
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-              <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 900, color: '#0f172a' }}>
-                {isAr ? 'حاسبة تسعير العقارات وتكاليف التشييد الميدانية' : 'Property Pricing & Construction Cost Engine'}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
+              <h2 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800, color: '#0f172a', letterSpacing: '-0.02em' }}>
+                {isAr ? 'حاسبة مصاريف المباني وتسعير الشقق والعماير' : 'Property Pricing & Construction Cost Engine'}
               </h2>
               <span style={{
-                background: 'rgba(184, 144, 62, 0.08)',
-                color: '#946f23',
-                border: '1px solid rgba(184, 144, 62, 0.25)',
-                padding: '0.15rem 0.55rem',
+                fontSize: '0.68rem',
+                fontWeight: 700,
+                padding: '0.18rem 0.55rem',
                 borderRadius: '6px',
-                fontSize: '0.72rem',
-                fontWeight: 800
+                background: 'rgba(184, 144, 62, 0.09)',
+                border: '1px solid rgba(184, 144, 62, 0.28)',
+                color: '#946f23'
               }}>
                 {calculatorMode === 'BUILT_PROPERTY_PRICING' 
-                  ? (isAr ? 'سجل التدقيق الفعلي' : 'Actual Lifecycle Audit') 
-                  : (isAr ? 'معايير السوق المصري' : 'Egypt Market Rates')}
+                  ? (isAr ? 'تسعير على المصاريف الفعلية' : 'Actual Audit Basis') 
+                  : (isAr ? 'تقدير تكلفة وأرباح مشروع جديد' : 'Market Feasibility')}
               </span>
             </div>
-            <p style={{ margin: '0.25rem 0 0', fontSize: '0.82rem', color: '#64748b' }}>
+            <p style={{ margin: '0.2rem 0 0', fontSize: '0.78rem', color: '#64748b' }}>
               {calculatorMode === 'BUILT_PROPERTY_PRICING'
                 ? (isAr 
-                    ? 'تسعير العقار القائم استناداً لسجل تكاليف ومواد البناء المنفقة + سعر المتر الحالي بالسوق + هامش الربح المستهدف' 
-                    : 'Estimate selling price for an already built property based on accumulated cost logs + market meter rate + profit')
+                    ? 'تسعير الشقق والعماير بناءً على مصاريف المباني اللي اتصرفت فعلياً + سعر السوق النهاردة + مكسبك المطلوب' 
+                    : 'Determine optimal selling price from verified incurred ledger costs + market benchmark + target profit')
                 : (isAr 
-                    ? 'حساب أطنان الحديد وحجوم الخرسانات ومستويات التشطيب وحساب هوامش الربح للمطور العقاري' 
-                    : 'Structural engineering estimations, steel tonnage, concrete volume, and developer feasibility')}
+                    ? 'حسبة تقديرية لكميات الحديد والخرسانة ومصاريف التشطيب والأرباح المتوقعة قبل ما تبدأ المشروع' 
+                    : 'Estimate structural steel, ready-mix concrete, finishing tiers, and development ROI')}
             </p>
           </div>
         </div>
 
-        {/* Dual Mode Switcher & Export */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+        {/* Mode Switcher & Excel Export */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'wrap' }}>
           <div style={{
+            display: 'flex',
             background: '#f1f5f9',
             border: '1px solid #e2e8f0',
-            borderRadius: '10px',
-            padding: '3px',
-            display: 'flex',
-            gap: '3px'
+            borderRadius: '9px',
+            padding: '3px'
           }}>
             <button
+              type="button"
               onClick={() => setCalculatorMode('BUILT_PROPERTY_PRICING')}
               style={{
-                background: calculatorMode === 'BUILT_PROPERTY_PRICING' 
-                  ? '#0f172a' 
-                  : 'transparent',
-                color: calculatorMode === 'BUILT_PROPERTY_PRICING' ? '#ffffff' : '#64748b',
+                background: calculatorMode === 'BUILT_PROPERTY_PRICING' ? '#ffffff' : 'transparent',
+                color: calculatorMode === 'BUILT_PROPERTY_PRICING' ? '#946f23' : '#64748b',
                 border: 'none',
-                borderRadius: '8px',
-                padding: '0.5rem 0.9rem',
-                fontSize: '0.78rem',
-                fontWeight: 800,
+                borderRadius: '7px',
+                padding: '0.45rem 0.9rem',
+                fontSize: '0.76rem',
+                fontWeight: calculatorMode === 'BUILT_PROPERTY_PRICING' ? 800 : 600,
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '0.4rem',
-                boxShadow: calculatorMode === 'BUILT_PROPERTY_PRICING' ? '0 1px 3px rgba(0,0,0,0.12)' : 'none',
-                transition: 'all 0.15s'
+                boxShadow: calculatorMode === 'BUILT_PROPERTY_PRICING' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
+                transition: 'all 0.15s ease'
               }}
             >
-              <ShieldCheck size={14} />
-              <span>{isAr ? 'تسعير العقار القائم الفعلي' : 'Built Property Pricing'}</span>
+              <ShieldCheck size={14} color={calculatorMode === 'BUILT_PROPERTY_PRICING' ? '#946f23' : '#64748b'} />
+              <span>{isAr ? 'تسعير عقار مبني (مصاريف فعلية)' : 'Built Property Pricing'}</span>
             </button>
 
             <button
+              type="button"
               onClick={() => setCalculatorMode('FEASIBILITY_ESTIMATOR')}
               style={{
-                background: calculatorMode === 'FEASIBILITY_ESTIMATOR' 
-                  ? '#0f172a' 
-                  : 'transparent',
-                color: calculatorMode === 'FEASIBILITY_ESTIMATOR' ? '#ffffff' : '#64748b',
+                background: calculatorMode === 'FEASIBILITY_ESTIMATOR' ? '#ffffff' : 'transparent',
+                color: calculatorMode === 'FEASIBILITY_ESTIMATOR' ? '#0f172a' : '#64748b',
                 border: 'none',
-                borderRadius: '8px',
-                padding: '0.5rem 0.9rem',
-                fontSize: '0.78rem',
-                fontWeight: 800,
+                borderRadius: '7px',
+                padding: '0.45rem 0.9rem',
+                fontSize: '0.76rem',
+                fontWeight: calculatorMode === 'FEASIBILITY_ESTIMATOR' ? 800 : 600,
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '0.4rem',
-                boxShadow: calculatorMode === 'FEASIBILITY_ESTIMATOR' ? '0 1px 3px rgba(0,0,0,0.12)' : 'none',
-                transition: 'all 0.15s'
+                boxShadow: calculatorMode === 'FEASIBILITY_ESTIMATOR' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
+                transition: 'all 0.15s ease'
               }}
             >
-              <Hammer size={14} />
-              <span>{isAr ? 'دراسة الجدوى والتقدير المسبق' : 'Feasibility Estimator'}</span>
+              <Hammer size={14} color={calculatorMode === 'FEASIBILITY_ESTIMATOR' ? '#0f172a' : '#64748b'} />
+              <span>{isAr ? 'حسبة تكلفة مشروع جديد' : 'Feasibility Estimator'}</span>
             </button>
           </div>
 
           <button
+            type="button"
             onClick={calculatorMode === 'BUILT_PROPERTY_PRICING' ? handleExportBuiltPricingExcel : handleExportFeasibilityExcel}
             style={{
               background: '#ffffff',
               color: '#15803d',
-              border: '1px solid rgba(16, 185, 129, 0.4)',
-              borderRadius: '10px',
-              padding: '0.55rem 1rem',
-              fontSize: '0.8rem',
-              fontWeight: 800,
+              border: '1px solid rgba(22, 163, 74, 0.3)',
+              borderRadius: '9px',
+              padding: '0.45rem 0.85rem',
+              fontSize: '0.76rem',
+              fontWeight: 700,
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
-              gap: '0.45rem',
-              boxShadow: '0 1px 2px rgba(0, 0, 0, 0.04)',
-              transition: 'all 0.2s ease'
+              gap: '0.4rem',
+              boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
+              transition: 'all 0.15s ease'
             }}
           >
-            <FileSpreadsheet size={15} />
-            <span>{isAr ? 'تصدير التحليل Excel' : 'Export Excel'}</span>
+            <FileSpreadsheet size={15} color="#15803d" />
+            <span>{isAr ? 'تصدير شيت Excel' : 'Export'}</span>
           </button>
         </div>
       </div>
@@ -606,552 +667,623 @@ export const ConstructionCostCalculator: React.FC<ConstructionCostCalculatorProp
       {/* MODE 1: ACTUAL BUILT PROPERTY PRICING                                     */}
       {/* ========================================================================= */}
       {calculatorMode === 'BUILT_PROPERTY_PRICING' && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '1.5rem' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
           
-          {/* LEFT COLUMN: Property Selector, Logged Audit Summary & Parameters */}
+          {/* 2. PROPERTY DOSSIER SELECTION BAR */}
           <div style={{
             background: '#ffffff',
             border: '1px solid #e2e8f0',
             borderRadius: '16px',
-            padding: '1.35rem',
+            padding: '1.15rem 1.35rem',
+            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.03)',
             display: 'flex',
             flexDirection: 'column',
-            gap: '1.25rem',
-            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04)'
+            gap: '0.85rem'
           }}>
-            {/* Step 1: Select Built Property */}
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                <label style={{ fontSize: '0.82rem', fontWeight: 800, color: '#946f23', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                  <Building2 size={16} />
-                  <span>{isAr ? '1. اختيار العقار القائم المبني بالنظام' : '1. Select Built Property'}</span>
-                </label>
-                {selectedProperty && onOpenAuditForProperty && (
-                  <button
-                    onClick={() => onOpenAuditForProperty(selectedProperty)}
-                    style={{
-                      background: 'rgba(184, 144, 62, 0.08)',
-                      border: '1px solid rgba(184, 144, 62, 0.25)',
-                      color: '#946f23',
-                      fontSize: '0.72rem',
-                      fontWeight: 700,
-                      padding: '0.2rem 0.55rem',
-                      borderRadius: '6px',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.3rem'
-                    }}
-                  >
-                    <FileText size={12} />
-                    <span>{isAr ? 'فتح سجل التدقيق الكامل' : 'Open Audit Dossier'}</span>
-                  </button>
-                )}
-              </div>
-
-              <select
-                value={selectedPropertyId}
-                onChange={(e) => setSelectedPropertyId(e.target.value)}
-                style={{
-                  width: '100%',
-                  background: '#ffffff',
-                  border: '1px solid #cbd5e1',
-                  borderRadius: '10px',
-                  color: '#0f172a',
-                  fontSize: '0.85rem',
-                  padding: '0.7rem 0.85rem',
-                  fontWeight: 600,
-                  outline: 'none'
-                }}
-              >
-                {properties.map(p => (
-                  <option key={p.id} value={p.id}>
-                    {isAr ? p.title_ar : p.title_en} — ({p.area_sqm} م² • {p.location})
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Collected Audit Summary Card */}
             <div style={{
-              background: 'linear-gradient(135deg, #fefdfa 0%, #f8f9fa 100%)',
-              border: '1px solid rgba(184, 144, 62, 0.25)',
-              borderRadius: '12px',
-              padding: '1.1rem',
               display: 'flex',
-              flexDirection: 'column',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              flexWrap: 'wrap',
               gap: '0.75rem'
             }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div style={{ fontSize: '0.76rem', color: '#475569', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                  <ShieldCheck size={14} color="#946f23" />
-                  <span>{isAr ? 'إجمالي التكاليف المنفقة الفعلية الموثقة' : 'Audited Incurred Capital'}</span>
-                </div>
-                <span style={{
-                  fontSize: '0.68rem',
-                  padding: '0.15rem 0.45rem',
-                  borderRadius: '999px',
-                  background: 'rgba(16, 185, 129, 0.1)',
-                  color: '#15803d',
-                  border: '1px solid rgba(16, 185, 129, 0.25)',
-                  fontWeight: 700
-                }}>
-                  {propertyAudit.itemsCount} {isAr ? 'بند معتمد' : 'audited items'}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Building2 size={16} color="#946f23" />
+                <span style={{ fontSize: '0.88rem', fontWeight: 800, color: '#0f172a' }}>
+                  {isAr ? 'اختيار العمارة أو الشقة' : 'Select Target Property'}
                 </span>
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.4rem' }}>
-                <span style={{ fontSize: '1.75rem', fontWeight: 900, color: '#0f172a', fontVariantNumeric: 'tabular-nums' }}>
-                  {formatEGP(propertyAudit.totalLoggedCost)}
-                </span>
-                <span style={{ fontSize: '0.85rem', color: '#946f23', fontWeight: 800 }}>ج.م</span>
+              {selectedProperty && onOpenAuditForProperty && (
+                <button
+                  type="button"
+                  onClick={() => onOpenAuditForProperty(selectedProperty)}
+                  style={{
+                    background: 'rgba(184, 144, 62, 0.08)',
+                    border: '1px solid rgba(184, 144, 62, 0.25)',
+                    color: '#946f23',
+                    fontSize: '0.75rem',
+                    fontWeight: 700,
+                    padding: '0.35rem 0.75rem',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.4rem',
+                    transition: 'all 0.15s ease'
+                  }}
+                >
+                  <FileText size={13} />
+                  <span>{isAr ? 'عرض فواتير ومصاريف العقار' : 'Open Cost Audit Dossier'}</span>
+                </button>
+              )}
+            </div>
+
+            {/* Clean BiDi-isolated Property Dropdown & Telemetry */}
+            <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'center' }}>
+              <div style={{ flex: '1 1 340px' }}>
+                <select
+                  value={selectedPropertyId}
+                  onChange={(e) => setSelectedPropertyId(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '0.65rem 0.9rem',
+                    fontSize: '0.86rem',
+                    fontWeight: 700,
+                    color: '#0f172a',
+                    background: '#f8fafc',
+                    border: '1.5px solid #cbd5e1',
+                    borderRadius: '10px',
+                    outline: 'none',
+                    cursor: 'pointer'
+                  }}
+                >
+                  {properties.map(p => (
+                    <option key={p.id} value={p.id}>
+                      {isAr ? p.title_ar : p.title_en} — ({p.area_sqm} م² / {p.location})
+                    </option>
+                  ))}
+                </select>
               </div>
 
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: '1fr 1fr',
-                gap: '0.5rem',
-                borderTop: '1px solid #e2e8f0',
-                paddingTop: '0.65rem',
-                fontSize: '0.74rem'
-              }}>
-                <div>
-                  <span style={{ color: '#64748b' }}>{isAr ? 'تكلفة المتر المنفذة الفعلية:' : 'Actual Cost / Sqm:'}</span>
-                  <div style={{ color: '#2563eb', fontWeight: 800, marginTop: '0.15rem' }}>
-                    {formatEGP(propertyAudit.costPerSqm)} ج.م/م²
+              {selectedProperty && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
+                  <div style={{
+                    background: '#f1f5f9',
+                    border: '1px solid #e2e8f0',
+                    padding: '0.35rem 0.7rem',
+                    borderRadius: '8px',
+                    fontSize: '0.76rem',
+                    color: '#475569',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.35rem'
+                  }}>
+                    <span style={{ color: '#64748b' }}>{isAr ? 'مساحة المباني:' : 'Built Area:'}</span>
+                    <strong style={{ color: '#0f172a' }}>{selectedProperty.area_sqm} م²</strong>
+                  </div>
+
+                  <div style={{
+                    background: '#f1f5f9',
+                    border: '1px solid #e2e8f0',
+                    padding: '0.35rem 0.7rem',
+                    borderRadius: '8px',
+                    fontSize: '0.76rem',
+                    color: '#475569',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.35rem'
+                  }}>
+                    <span style={{ color: '#64748b' }}>{isAr ? 'الموقع:' : 'Location:'}</span>
+                    <strong style={{ color: '#0f172a' }}>{selectedProperty.location}</strong>
+                  </div>
+
+                  <div style={{
+                    background: 'rgba(22, 163, 74, 0.08)',
+                    border: '1px solid rgba(22, 163, 74, 0.25)',
+                    padding: '0.35rem 0.7rem',
+                    borderRadius: '8px',
+                    fontSize: '0.76rem',
+                    color: '#15803d',
+                    fontWeight: 700,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.35rem'
+                  }}>
+                    <CheckCircle2 size={13} />
+                    <span>{propertyAudit.itemsCount} {isAr ? 'فاتورة وبند مسجل' : 'verified items'}</span>
                   </div>
                 </div>
+              )}
+            </div>
+          </div>
+
+          {/* 3. THE 3-PILLAR EXECUTIVE WORKSPACE GRID */}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 340px), 1fr))',
+            gap: '1.25rem',
+            alignItems: 'stretch'
+          }}>
+            
+            {/* PILLAR 1: ACTUAL COST BASIS */}
+            <div style={{
+              background: '#ffffff',
+              border: '1px solid #e2e8f0',
+              borderRadius: '16px',
+              padding: '1.35rem',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '1rem',
+              boxShadow: '0 1px 3px rgba(0, 0, 0, 0.03)'
+            }}>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.45rem',
+                paddingBottom: '0.65rem',
+                borderBottom: '1px solid #f1f5f9'
+              }}>
+                <ShieldCheck size={16} color="#946f23" />
+                <span style={{ fontSize: '0.84rem', fontWeight: 800, color: '#0f172a' }}>
+                  {isAr ? '1. كل اللي اتصرف فعلياً على العقار' : '1. Incurred Capital Basis (C)'}
+                </span>
+              </div>
+
+              {/* Hero Total Incurred Capital */}
+              <div style={{
+                background: '#f8fafc',
+                border: '1px solid #e2e8f0',
+                borderRadius: '12px',
+                padding: '1rem',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.35rem'
+              }}>
+                <span style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 700 }}>
+                  {isAr ? 'إجمالي الفلوس اللي اتصرفت:' : 'Total Audited Incurred Capital:'}
+                </span>
                 <div>
-                  <span style={{ color: '#64748b' }}>{isAr ? 'المساحة المبنية الإجمالية:' : 'Total Built-up Area:'}</span>
-                  <div style={{ color: '#0f172a', fontWeight: 800, marginTop: '0.15rem' }}>
+                  {renderMoney(propertyAudit.totalLoggedCost, undefined, { size: '1.65rem', weight: 900, color: '#0f172a' })}
+                </div>
+              </div>
+
+              {/* Metric Grid: Cost / Sqm & Area */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.6rem' }}>
+                <div style={{
+                  background: 'rgba(37, 99, 235, 0.05)',
+                  border: '1px solid rgba(37, 99, 235, 0.18)',
+                  borderRadius: '10px',
+                  padding: '0.65rem 0.85rem'
+                }}>
+                  <span style={{ fontSize: '0.68rem', color: '#2563eb', fontWeight: 700, display: 'block' }}>
+                    {isAr ? 'تكلفة متر المباني الفعلي:' : 'Actual Cost / Sqm:'}
+                  </span>
+                  <div style={{ marginTop: '0.2rem' }}>
+                    {renderMoney(propertyAudit.costPerSqm, 'م²', { color: '#2563eb', weight: 800, size: '0.92rem' })}
+                  </div>
+                </div>
+
+                <div style={{
+                  background: '#f1f5f9',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '10px',
+                  padding: '0.65rem 0.85rem'
+                }}>
+                  <span style={{ fontSize: '0.68rem', color: '#64748b', fontWeight: 700, display: 'block' }}>
+                    {isAr ? 'مساحة المباني:' : 'Built Area:'}
+                  </span>
+                  <div style={{ fontSize: '0.92rem', fontWeight: 800, color: '#0f172a', marginTop: '0.2rem' }}>
                     {selectedProperty?.area_sqm || 200} م²
                   </div>
                 </div>
               </div>
+
+              {/* Expense Categories Breakdown */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem', marginTop: 'auto', paddingTop: '0.5rem', borderTop: '1px solid #f1f5f9' }}>
+                <span style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 700 }}>
+                  {isAr ? 'توزيع المصاريف على البنود:' : 'Category Breakdown:'}
+                </span>
+                {PROPERTY_COST_CATEGORIES.slice(0, 4).map(cat => {
+                  const val = propertyAudit.byCategory[cat.key]?.total || '0.00';
+                  return (
+                    <div key={cat.key} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.74rem' }}>
+                      <span style={{ color: '#475569', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                        <span style={{ width: 6, height: 6, borderRadius: '50%', background: cat.color }} />
+                        {isAr ? cat.nameAr : cat.nameEn}
+                      </span>
+                      <span style={{ fontWeight: 700, color: '#0f172a', fontVariantNumeric: 'tabular-nums' }}>
+                        {renderMoney(val)}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
 
-            {/* Step 2: Current Market Meter Price Input */}
-            <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
-                <label style={{ fontSize: '0.82rem', fontWeight: 800, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                  <Coins size={15} color="#946f23" />
-                  <span>{isAr ? '2. سعر المتر الحالي في السوق (ج.م / م²)' : '2. Current Market Meter Price (EGP/m²)'}</span>
-                </label>
-                <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#946f23', fontVariantNumeric: 'tabular-nums' }}>
-                  {formatEGP(marketMeterPrice)} ج.م
+            {/* PILLAR 2: PRICING LEVERS & TARGET PROFIT */}
+            <div style={{
+              background: '#ffffff',
+              border: '1px solid #e2e8f0',
+              borderRadius: '16px',
+              padding: '1.35rem',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '1rem',
+              boxShadow: '0 1px 3px rgba(0, 0, 0, 0.03)'
+            }}>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.45rem',
+                paddingBottom: '0.65rem',
+                borderBottom: '1px solid #f1f5f9'
+              }}>
+                <TrendingUp size={16} color="#946f23" />
+                <span style={{ fontSize: '0.84rem', fontWeight: 800, color: '#0f172a' }}>
+                  {isAr ? '2. أسعار السوق والمكسب اللي عاوزه' : '2. Pricing Levers & Margin'}
                 </span>
               </div>
-              <input
-                type="number"
-                min="5000"
-                step="500"
-                value={marketMeterPrice}
-                onChange={(e) => setMarketMeterPrice(Math.max(1, parseFloat(e.target.value) || 0))}
-                style={{
-                  width: '100%',
-                  background: '#ffffff',
-                  border: '1px solid #cbd5e1',
-                  borderRadius: '10px',
-                  color: '#0f172a',
-                  fontSize: '0.85rem',
+
+              {/* Lever 1: Current Market Benchmark Price */}
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem' }}>
+                  <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#475569' }}>
+                    {isAr ? 'سعر المتر في السوق النهاردة:' : 'Market Benchmark / Sqm:'}
+                  </label>
+                  <span style={{ fontSize: '0.78rem', fontWeight: 800, color: '#946f23' }}>
+                    {renderMoney(marketMeterPrice, 'م²')}
+                  </span>
+                </div>
+                <input
+                  type="number"
+                  min="5000"
+                  step="500"
+                  value={marketMeterPrice}
+                  onChange={(e) => setMarketMeterPrice(Math.max(1, parseFloat(e.target.value) || 0))}
+                  style={{
+                    width: '100%',
+                    padding: '0.6rem 0.85rem',
+                    fontSize: '0.86rem',
+                    fontWeight: 700,
+                    color: '#0f172a',
+                    background: '#f8fafc',
+                    border: '1px solid #cbd5e1',
+                    borderRadius: '8px',
+                    outline: 'none',
+                    boxSizing: 'border-box'
+                  }}
+                />
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.72rem', color: '#64748b', marginTop: '0.35rem' }}>
+                  <span>{isAr ? 'قيمة العقار بأسعار السوق:' : 'Market Benchmark Value:'}</span>
+                  <strong style={{ color: '#0f172a' }}>{renderMoney(builtPricing.marketBenchmarkValue)}</strong>
+                </div>
+              </div>
+
+              {/* Lever 2: Target Profit Mode */}
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.45rem' }}>
+                  <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#475569' }}>
+                    {isAr ? 'مكسبك المطلوب في العقار:' : 'Target Profit Target:'}
+                  </label>
+                </div>
+
+                {/* Segmented Profit Switcher */}
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: '1fr 1fr',
+                  gap: '0.35rem',
+                  background: '#f1f5f9',
+                  padding: '3px',
+                  borderRadius: '8px',
+                  border: '1px solid #e2e8f0',
+                  marginBottom: '0.65rem'
+                }}>
+                  <button
+                    type="button"
+                    onClick={() => setProfitMode('PERCENTAGE')}
+                    style={{
+                      background: profitMode === 'PERCENTAGE' ? '#ffffff' : 'transparent',
+                      color: profitMode === 'PERCENTAGE' ? '#15803d' : '#64748b',
+                      border: 'none',
+                      borderRadius: '6px',
+                      padding: '0.4rem',
+                      fontSize: '0.74rem',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      boxShadow: profitMode === 'PERCENTAGE' ? '0 1px 2px rgba(0,0,0,0.06)' : 'none',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '0.3rem'
+                    }}
+                  >
+                    <Percent size={12} />
+                    <span>{isAr ? 'نسبة فوق التكلفة' : 'Margin %'}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setProfitMode('FIXED_AMOUNT')}
+                    style={{
+                      background: profitMode === 'FIXED_AMOUNT' ? '#ffffff' : 'transparent',
+                      color: profitMode === 'FIXED_AMOUNT' ? '#15803d' : '#64748b',
+                      border: 'none',
+                      borderRadius: '6px',
+                      padding: '0.4rem',
+                      fontSize: '0.74rem',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      boxShadow: profitMode === 'FIXED_AMOUNT' ? '0 1px 2px rgba(0,0,0,0.06)' : 'none',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '0.3rem'
+                    }}
+                  >
+                    <DollarSign size={12} />
+                    <span>{isAr ? 'مبلغ كاش مقطوع' : 'Fixed Cash'}</span>
+                  </button>
+                </div>
+
+                {profitMode === 'PERCENTAGE' ? (
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem' }}>
+                      <span style={{ fontSize: '0.74rem', color: '#64748b' }}>{isAr ? 'نسبة المكسب:' : 'Margin Rate:'}</span>
+                      <strong style={{ fontSize: '0.88rem', color: '#15803d' }}>{targetProfitPercent}%</strong>
+                    </div>
+                    <input
+                      type="range"
+                      min="10"
+                      max="100"
+                      step="1"
+                      value={targetProfitPercent}
+                      onChange={(e) => setTargetProfitPercent(parseInt(e.target.value))}
+                      style={{ width: '100%', accentColor: '#10b981', cursor: 'pointer' }}
+                    />
+                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.35rem', marginTop: '0.4rem' }}>
+                      {[20, 25, 30, 35, 40, 50].map((pct) => (
+                        <button
+                          key={pct}
+                          type="button"
+                          onClick={() => setTargetProfitPercent(pct)}
+                          style={{
+                            flex: 1,
+                            padding: '0.25rem 0',
+                            borderRadius: '6px',
+                            fontSize: '0.72rem',
+                            fontWeight: 700,
+                            cursor: 'pointer',
+                            border: targetProfitPercent === pct ? '1px solid #10b981' : '1px solid #e2e8f0',
+                            background: targetProfitPercent === pct ? '#10b981' : '#f8fafc',
+                            color: targetProfitPercent === pct ? '#ffffff' : '#475569',
+                            transition: 'all 0.15s ease'
+                          }}
+                        >
+                          {pct}%
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <div>
+                    <input
+                      type="number"
+                      step="50000"
+                      value={targetProfitCashAmount}
+                      onChange={(e) => setTargetProfitCashAmount(e.target.value)}
+                      placeholder="مثال: 3000000"
+                      style={{
+                        width: '100%',
+                        padding: '0.6rem 0.85rem',
+                        fontSize: '0.86rem',
+                        fontWeight: 700,
+                        color: '#0f172a',
+                        background: '#f8fafc',
+                        border: '1px solid #cbd5e1',
+                        borderRadius: '8px',
+                        outline: 'none',
+                        boxSizing: 'border-box'
+                      }}
+                    />
+                  </div>
+                )}
+
+                {/* Calculated Net Profit Strip */}
+                <div style={{
+                  marginTop: '0.65rem',
                   padding: '0.65rem 0.85rem',
-                  outline: 'none'
-                }}
-              />
-              <div style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '0.35rem', display: 'flex', justifyContent: 'space-between' }}>
-                <span>{isAr ? 'القيمة السوقية المرجعية للعقار:' : 'Benchmark Market Value:'}</span>
-                <strong style={{ color: '#946f23' }}>{formatEGP(builtPricing.marketBenchmarkValue)} ج.م</strong>
+                  background: 'rgba(22, 163, 74, 0.06)',
+                  border: '1px solid rgba(22, 163, 74, 0.2)',
+                  borderRadius: '8px',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  fontSize: '0.76rem'
+                }}>
+                  <span style={{ color: '#15803d', fontWeight: 700 }}>
+                    {isAr ? 'مبلغ المكسب المضاف:' : 'Target Profit (P):'}
+                  </span>
+                  <div>
+                    <span style={{ color: '#15803d', fontWeight: 800, marginInlineEnd: '0.15rem' }}>+</span>
+                    {renderMoney(builtPricing.targetProfitMoney, undefined, { color: '#15803d', weight: 800, size: '0.9rem' })}
+                  </div>
+                </div>
               </div>
             </div>
 
-            {/* Step 3: Target Profit Money */}
-            <div>
-              <label style={{ fontSize: '0.82rem', fontWeight: 800, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.5rem' }}>
-                <TrendingUp size={15} color="#15803d" />
-                <span>{isAr ? '3. هامش ومبلغ الربح المطلوب (Profit Money)' : '3. Target Profit Money'}</span>
-              </label>
-
-              {/* Toggle Percentage vs Fixed Amount */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', marginBottom: '0.75rem' }}>
-                <button
-                  type="button"
-                  onClick={() => setProfitMode('PERCENTAGE')}
-                  style={{
-                    background: profitMode === 'PERCENTAGE' ? 'rgba(16, 185, 129, 0.1)' : '#f8fafc',
-                    border: `1px solid ${profitMode === 'PERCENTAGE' ? '#10b981' : '#e2e8f0'}`,
-                    borderRadius: '8px',
-                    padding: '0.5rem',
-                    color: profitMode === 'PERCENTAGE' ? '#15803d' : '#64748b',
-                    fontSize: '0.76rem',
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '0.35rem'
-                  }}
-                >
-                  <Percent size={13} />
-                  <span>{isAr ? 'نسبة مئوية من التكلفة' : 'Percentage on Cost'}</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setProfitMode('FIXED_AMOUNT')}
-                  style={{
-                    background: profitMode === 'FIXED_AMOUNT' ? 'rgba(16, 185, 129, 0.1)' : '#f8fafc',
-                    border: `1px solid ${profitMode === 'FIXED_AMOUNT' ? '#10b981' : '#e2e8f0'}`,
-                    borderRadius: '8px',
-                    padding: '0.5rem',
-                    color: profitMode === 'FIXED_AMOUNT' ? '#15803d' : '#64748b',
-                    fontSize: '0.76rem',
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '0.35rem'
-                  }}
-                >
-                  <DollarSign size={13} />
-                  <span>{isAr ? 'مبلغ ربح مقطوع كاش' : 'Fixed Cash Amount'}</span>
-                </button>
+            {/* PILLAR 3: STRATEGIC VALUATION & DECISION */}
+            <div style={{
+              background: '#ffffff',
+              border: '1.5px solid rgba(184, 144, 62, 0.4)',
+              borderRadius: '16px',
+              padding: '1.35rem',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '1rem',
+              boxShadow: '0 4px 18px rgba(184, 144, 62, 0.08)'
+            }}>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                paddingBottom: '0.65rem',
+                borderBottom: '1px solid #f1f5f9'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                  <Coins size={16} color="#946f23" />
+                  <span style={{ fontSize: '0.84rem', fontWeight: 800, color: '#0f172a' }}>
+                    {isAr ? '3. سعر البيع المقترح النهائي' : '3. Valuation Recommendation'}
+                  </span>
+                </div>
+                <span style={{
+                  fontSize: '0.68rem',
+                  fontWeight: 700,
+                  padding: '0.15rem 0.5rem',
+                  borderRadius: '6px',
+                  background: 'rgba(184, 144, 62, 0.1)',
+                  color: '#946f23'
+                }}>
+                  {isAr ? 'التكلفة + المكسب' : 'Cost + Profit'}
+                </span>
               </div>
 
-              {profitMode === 'PERCENTAGE' ? (
+              {/* Hero Big Selling Price */}
+              <div style={{
+                background: 'linear-gradient(135deg, rgba(254, 253, 250, 0.9) 0%, rgba(248, 249, 250, 0.95) 100%)',
+                border: '1px solid rgba(184, 144, 62, 0.22)',
+                borderRadius: '12px',
+                padding: '1rem',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.35rem'
+              }}>
+                <span style={{ fontSize: '0.72rem', color: '#946f23', fontWeight: 700, textTransform: 'uppercase' }}>
+                  {isAr ? 'سعر البيع المقترح للعقار كله:' : 'Recommended Selling Price:'}
+                </span>
                 <div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
-                    <span style={{ fontSize: '0.74rem', color: '#64748b' }}>{isAr ? 'نسبة هامش الربح المستهدف:' : 'Profit Margin %:'}</span>
-                    <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#15803d' }}>{targetProfitPercent}%</span>
-                  </div>
-                  <input
-                    type="range"
-                    min="10"
-                    max="100"
-                    step="1"
-                    value={targetProfitPercent}
-                    onChange={(e) => setTargetProfitPercent(parseInt(e.target.value))}
-                    style={{ width: '100%', accentColor: '#10b981' }}
-                  />
-                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.4rem', marginTop: '0.5rem' }}>
-                    {[20, 25, 30, 35, 40, 50].map((pct) => (
-                      <button
-                        key={pct}
-                        type="button"
-                        onClick={() => setTargetProfitPercent(pct)}
-                        style={{
-                          flex: 1,
-                          padding: '0.3rem 0',
-                          borderRadius: '6px',
-                          background: targetProfitPercent === pct ? '#10b981' : '#f1f5f9',
-                          color: targetProfitPercent === pct ? '#ffffff' : '#475569',
-                          border: `1px solid ${targetProfitPercent === pct ? '#10b981' : '#e2e8f0'}`,
-                          fontSize: '0.72rem',
-                          fontWeight: 700,
-                          cursor: 'pointer'
-                        }}
-                      >
-                        {pct}%
-                      </button>
-                    ))}
+                  {renderMoney(builtPricing.estimatedSellingPrice, undefined, { size: 'clamp(1.75rem, 2vw, 2.25rem)', weight: 900, color: '#0f172a' })}
+                </div>
+                <div style={{ fontSize: '0.78rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '0.2rem' }}>
+                  <span>{isAr ? 'سعر بيع المتر المقترح:' : 'Price / Sqm:'}</span>
+                  <strong style={{ color: '#946f23' }}>{renderMoney(builtPricing.estimatedSellingPricePerSqm, 'م²')}</strong>
+                </div>
+              </div>
+
+              {/* Profitability KPIs Split (2-Column Bento) */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.6rem' }}>
+                <div style={{
+                  background: 'rgba(22, 163, 74, 0.05)',
+                  border: '1px solid rgba(22, 163, 74, 0.2)',
+                  borderRadius: '10px',
+                  padding: '0.65rem 0.85rem'
+                }}>
+                  <span style={{ fontSize: '0.68rem', color: '#15803d', fontWeight: 700, display: 'block' }}>
+                    {isAr ? 'نسبة صافي الربح:' : 'Gross Margin:'}
+                  </span>
+                  <div style={{ fontSize: '1.15rem', fontWeight: 900, color: '#15803d', marginTop: '0.2rem', fontVariantNumeric: 'tabular-nums' }}>
+                    {builtPricing.grossMarginPct}%
                   </div>
                 </div>
-              ) : (
-                <div>
-                  <input
-                    type="number"
-                    step="50000"
-                    value={targetProfitCashAmount}
-                    onChange={(e) => setTargetProfitCashAmount(e.target.value)}
-                    placeholder="مثال: 3000000"
-                    style={{
-                      width: '100%',
-                      background: '#ffffff',
-                      border: '1px solid #cbd5e1',
-                      borderRadius: '10px',
-                      color: '#0f172a',
-                      fontSize: '0.85rem',
-                      padding: '0.65rem 0.85rem',
-                      outline: 'none'
-                    }}
-                  />
+
+                <div style={{
+                  background: 'rgba(184, 144, 62, 0.06)',
+                  border: '1px solid rgba(184, 144, 62, 0.22)',
+                  borderRadius: '10px',
+                  padding: '0.65rem 0.85rem'
+                }}>
+                  <span style={{ fontSize: '0.68rem', color: '#946f23', fontWeight: 700, display: 'block' }}>
+                    {isAr ? 'العائد على الفلوس المصروفة:' : 'Return on Cost:'}
+                  </span>
+                  <div style={{ fontSize: '1.15rem', fontWeight: 900, color: '#946f23', marginTop: '0.2rem', fontVariantNumeric: 'tabular-nums' }}>
+                    {builtPricing.returnOnCostPct}%
+                  </div>
+                </div>
+              </div>
+
+              {/* Market Intelligence Context */}
+              {selectedProperty && (
+                <div style={{
+                  background: '#f8fafc',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '10px',
+                  padding: '0.75rem',
+                  fontSize: '0.74rem',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '0.35rem'
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ color: '#64748b' }}>{isAr ? 'السعر المعروض حالياً بالكتالوج:' : 'Current Catalog Price:'}</span>
+                    <strong style={{ color: '#0f172a' }}>{renderMoney(selectedProperty.price_egp)}</strong>
+                  </div>
+                  <div style={{ fontSize: '0.72rem', color: '#15803d', lineHeight: 1.4, marginTop: '0.2rem' }}>
+                    {isAr 
+                      ? `💡 السعر ده (المصاريف + مكسبك) بيديك ميزة تنافسية وفرق ${builtPricing.marketVariancePct}% عن أسعار السوق اليومين دول.`
+                      : `💡 Cost-plus price provides a competitive ceiling buffer of ${builtPricing.marketVariancePct}%.`}
+                  </div>
                 </div>
               )}
 
-              <div style={{
-                marginTop: '0.65rem',
-                padding: '0.65rem 0.85rem',
-                background: 'rgba(16, 185, 129, 0.08)',
-                border: '1px solid rgba(16, 185, 129, 0.2)',
-                borderRadius: '8px',
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                fontSize: '0.78rem'
-              }}>
-                <span style={{ color: '#475569' }}>{isAr ? 'صافي مبلغ الربح المحسوب:' : 'Calculated Net Profit:'}</span>
-                <strong style={{ color: '#15803d', fontSize: '0.9rem' }}>
-                  +{formatEGP(builtPricing.targetProfitMoney)} ج.م
-                </strong>
-              </div>
-            </div>
-          </div>
-
-          {/* RIGHT COLUMN: The Final Estimated Selling Price & Financial Decision Engine */}
-          <div style={{
-            background: 'linear-gradient(180deg, #ffffff 0%, #fefdfa 100%)',
-            border: '1px solid rgba(184, 144, 62, 0.35)',
-            borderRadius: '16px',
-            padding: '1.5rem',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '1.25rem',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.04), 0 8px 24px -4px rgba(184, 144, 62, 0.1)'
-          }}>
-            {/* Grand Result Hero Header */}
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.35rem' }}>
-                <span style={{ fontSize: '0.8rem', color: '#946f23', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                  {isAr ? 'سعر البيع التقديري المقترح للعقار القائم' : 'Estimated Built Property Selling Price'}
-                </span>
-                <span style={{
-                  fontSize: '0.7rem',
-                  padding: '0.2rem 0.5rem',
-                  borderRadius: '999px',
-                  background: 'rgba(184, 144, 62, 0.1)',
-                  color: '#946f23',
-                  border: '1px solid rgba(184, 144, 62, 0.25)',
-                  fontWeight: 800
-                }}>
-                  {isAr ? 'التكاليف الفعلية + الربح' : 'Costs + Target Profit'}
-                </span>
-              </div>
-
-              {/* Main Big Number */}
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem', margin: '0.5rem 0' }}>
-                <span style={{ fontSize: '2.4rem', fontWeight: 900, color: '#0f172a', letterSpacing: '-0.02em', lineHeight: 1 }}>
-                  {formatEGP(builtPricing.estimatedSellingPrice)}
-                </span>
-                <span style={{ fontSize: '1.1rem', color: '#946f23', fontWeight: 800 }}>ج.م</span>
-              </div>
-
-              {/* Price Per Sqm Pill */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
-                <div style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '0.35rem',
-                  background: '#f8fafc',
-                  border: '1px solid #e2e8f0',
-                  borderRadius: '8px',
-                  padding: '0.35rem 0.65rem',
-                  fontSize: '0.8rem',
-                  color: '#334155',
-                  fontWeight: 700
-                }}>
-                  <span>{isAr ? 'سعر المتر التقديري:' : 'Est. Price / Sqm:'}</span>
-                  <strong style={{ color: '#946f23' }}>{formatEGP(builtPricing.estimatedSellingPricePerSqm)} ج.م/م²</strong>
-                </div>
-
-                {/* Market Variance Pill */}
-                {parseFloat(builtPricing.marketVariancePct) >= 0 ? (
-                  <div style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '0.3rem',
-                    background: 'rgba(16, 185, 129, 0.1)',
-                    border: '1px solid rgba(16, 185, 129, 0.25)',
-                    borderRadius: '8px',
-                    padding: '0.35rem 0.65rem',
-                    fontSize: '0.76rem',
-                    color: '#15803d',
-                    fontWeight: 800
-                  }}>
-                    <ArrowUpRight size={14} />
-                    <span>+{builtPricing.marketVariancePct}% {isAr ? 'أعلى من متوسط السوق' : 'above market rate'}</span>
-                  </div>
-                ) : (
-                  <div style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '0.3rem',
-                    background: 'rgba(59, 130, 246, 0.1)',
-                    border: '1px solid rgba(59, 130, 246, 0.25)',
-                    borderRadius: '8px',
-                    padding: '0.35rem 0.65rem',
-                    fontSize: '0.76rem',
-                    color: '#2563eb',
-                    fontWeight: 800
-                  }}>
-                    <ArrowDownRight size={14} />
-                    <span>{builtPricing.marketVariancePct}% {isAr ? 'تسعير تنافسي سريع' : 'competitive pricing'}</span>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Financial Breakdown Equation Box */}
-            <div style={{
-              background: '#f8fafc',
-              border: '1px solid #e2e8f0',
-              borderRadius: '12px',
-              padding: '1rem',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '0.65rem'
-            }}>
-              <div style={{ fontSize: '0.74rem', color: '#64748b', fontWeight: 700 }}>
-                {isAr ? 'معادلة التسعير المطبقة وفقاً لطلب المطور:' : 'Applied Real Estate Pricing Formula:'}
-              </div>
-
-              {/* Row 1: Actual Costs */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem' }}>
-                <span style={{ color: '#475569' }}>{isAr ? 'إجمالي المنصرف الفعلي المسجل (C):' : 'Total Incurred Cost (C):'}</span>
-                <span style={{ fontWeight: 800, color: '#0f172a' }}>{formatEGP(builtPricing.totalLoggedCost)} ج.م</span>
-              </div>
-
-              {/* Row 2: Target Profit Money */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem' }}>
-                <span style={{ color: '#15803d' }}>{isAr ? 'مبلغ الربح المستهدف المضاف (P):' : 'Target Profit Money (P):'}</span>
-                <span style={{ fontWeight: 800, color: '#15803d' }}>+{formatEGP(builtPricing.targetProfitMoney)} ج.م</span>
-              </div>
-
-              {/* Divider */}
-              <div style={{ height: '1px', background: '#e2e8f0' }} />
-
-              {/* Row 3: Sum */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', fontWeight: 800 }}>
-                <span style={{ color: '#946f23' }}>{isAr ? 'سعر البيع الإجمالي التقديري:' : 'Total Selling Price:'}</span>
-                <span style={{ color: '#946f23' }}>{formatEGP(builtPricing.estimatedSellingPrice)} ج.م</span>
-              </div>
-            </div>
-
-            {/* Key Profitability KPIs */}
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: '1fr 1fr',
-              gap: '0.75rem'
-            }}>
-              <div style={{
-                background: '#ffffff',
-                border: '1px solid #e2e8f0',
-                borderRadius: '10px',
-                padding: '0.85rem',
-                boxShadow: '0 1px 2px rgba(0,0,0,0.03)'
-              }}>
-                <span style={{ fontSize: '0.7rem', color: '#64748b', display: 'block' }}>
-                  {isAr ? 'هامش الربح الإجمالي (Margin %):' : 'Gross Margin %:'}
-                </span>
-                <span style={{ fontSize: '1.25rem', fontWeight: 900, color: '#15803d' }}>
-                  {builtPricing.grossMarginPct}%
-                </span>
-              </div>
-
-              <div style={{
-                background: '#ffffff',
-                border: '1px solid #e2e8f0',
-                borderRadius: '10px',
-                padding: '0.85rem',
-                boxShadow: '0 1px 2px rgba(0,0,0,0.03)'
-              }}>
-                <span style={{ fontSize: '0.7rem', color: '#64748b', display: 'block' }}>
-                  {isAr ? 'العائد على التكلفة (ROI %):' : 'Return on Cost %:'}
-                </span>
-                <span style={{ fontSize: '1.25rem', fontWeight: 900, color: '#946f23' }}>
-                  {builtPricing.returnOnCostPct}%
-                </span>
-              </div>
-            </div>
-
-            {/* Existing Catalog Price Comparison */}
-            {selectedProperty && (
-              <div style={{
-                padding: '0.75rem 0.95rem',
-                borderRadius: '10px',
-                background: '#f8fafc',
-                border: '1px solid #e2e8f0',
-                fontSize: '0.75rem',
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center'
-              }}>
-                <div>
-                  <span style={{ color: '#64748b', display: 'block' }}>{isAr ? 'سعر القائمة الحالي في الكتالوج:' : 'Current Catalog Price:'}</span>
-                  <span style={{ fontWeight: 800, color: '#0f172a' }}>{formatEGP(selectedProperty.price_egp)} ج.م</span>
-                </div>
-                <div style={{ textAlign: isAr ? 'left' : 'right' }}>
-                  <span style={{ color: '#64748b', display: 'block' }}>{isAr ? 'الفارق مع السعر التقديري:' : 'Variance vs Estimated:'}</span>
-                  <span style={{
-                    fontWeight: 800,
-                    color: D(builtPricing.estimatedSellingPrice).gte(selectedProperty.price_egp || 0) ? '#15803d' : '#dc2626'
-                  }}>
-                    {D(builtPricing.estimatedSellingPrice).minus(selectedProperty.price_egp || 0).gt(0) ? '+' : ''}
-                    {formatEGP(D(builtPricing.estimatedSellingPrice).minus(selectedProperty.price_egp || 0).toFixed(2))} ج.م
-                  </span>
-                </div>
-              </div>
-            )}
-
-            {/* Commit / Update Selling Price CTA */}
-            {onUpdateSellingPrice && selectedProperty && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: 'auto' }}>
+              {/* Commit / Save Price Button */}
+              {onUpdateSellingPrice && selectedProperty && (
                 <button
                   type="button"
                   onClick={handleApplyUpdatedSellingPrice}
                   disabled={isUpdatingPrice}
                   style={{
-                    background: priceUpdateSuccess 
-                      ? 'linear-gradient(135deg, #15803d 0%, #166534 100%)' 
+                    background: priceUpdateSuccess
+                      ? 'linear-gradient(135deg, #15803d 0%, #166534 100%)'
                       : 'linear-gradient(135deg, #c5a059 0%, #a48135 100%)',
                     color: '#ffffff',
                     border: 'none',
                     borderRadius: '10px',
-                    padding: '0.85rem',
-                    fontSize: '0.84rem',
+                    padding: '0.75rem',
+                    fontSize: '0.82rem',
                     fontWeight: 800,
                     cursor: isUpdatingPrice ? 'not-allowed' : 'pointer',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     gap: '0.45rem',
-                    boxShadow: '0 4px 14px rgba(197, 160, 89, 0.35)',
+                    boxShadow: '0 3px 12px rgba(197, 160, 89, 0.3)',
+                    marginTop: 'auto',
                     transition: 'all 0.2s ease',
                     opacity: isUpdatingPrice ? 0.7 : 1
                   }}
                 >
                   {priceUpdateSuccess ? (
                     <>
-                      <CheckCircle2 size={16} />
-                      <span>{isAr ? 'تم تحديث السعر في الكتالوج بنجاح!' : 'Catalog Price Updated!'}</span>
+                      <CheckCircle2 size={15} />
+                      <span>{isAr ? 'اتحفظ السعر الجديد واعتمدناه!' : 'Price Updated!'}</span>
                     </>
                   ) : (
                     <>
-                      <Sparkles size={16} />
+                      <Sparkles size={15} />
                       <span>
-                        {isUpdatingPrice 
-                          ? (isAr ? 'جاري الحفظ بالكتالوج...' : 'Saving...') 
-                          : (isAr ? 'اعتماد وحفظ السعر التقديري في كتالوج العقارات' : 'Save & Update Property Catalog Price')}
+                        {isUpdatingPrice
+                          ? (isAr ? 'بنحفظ السعر...' : 'Saving...')
+                          : (isAr ? 'اعتماد وحفظ السعر في الكتالوج' : 'Update Catalog Price')}
                       </span>
                     </>
                   )}
                 </button>
-              </div>
-            )}
+              )}
+            </div>
 
           </div>
 
-          {/* BUILDING WHOLE VS INDIVIDUAL APARTMENTS STUDIO */}
+          {/* 4. BUILDING WHOLE VS INDIVIDUAL APARTMENTS STUDIO */}
           {isSelectedBuilding && buildingUnitsPricing && (
             <div style={{
-              gridColumn: '1 / -1',
               background: '#ffffff',
-              border: '1px solid rgba(184, 144, 62, 0.3)',
+              border: '1px solid #e2e8f0',
               borderRadius: '16px',
               padding: '1.35rem',
               display: 'flex',
               flexDirection: 'column',
               gap: '1rem',
-              boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04)'
+              boxShadow: '0 1px 3px rgba(0, 0, 0, 0.03)'
             }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
@@ -1165,10 +1297,10 @@ export const ConstructionCostCalculator: React.FC<ConstructionCostCalculatorProp
                   </div>
                   <div>
                     <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 800, color: '#0f172a' }}>
-                      {isAr ? 'استوديو تسعير وحدات وشقق العمارة (Wholesale vs Retail Units)' : 'Building Wholesale vs Retail Units Pricing Studio'}
+                      {isAr ? 'مقارنة بيع العمارة كاملة كاش ولا بيع شقق لوحدها' : 'Building Wholesale vs Retail Units Pricing Studio'}
                     </h4>
                     <span style={{ fontSize: '0.74rem', color: '#64748b' }}>
-                      {isAr ? 'توزيع التكلفة الإجمالية المنفقة على شقق العمارة واحتساب أرباح التجزئة' : 'Apportion total incurred construction costs across individual apartments'}
+                      {isAr ? 'توزيع تكلفة المباني على كل شقة ومعرفة الربح الزيادة لو بيعنا الشقق فردانية' : 'Apportion total incurred construction costs across individual apartments'}
                     </span>
                   </div>
                 </div>
@@ -1197,7 +1329,7 @@ export const ConstructionCostCalculator: React.FC<ConstructionCostCalculatorProp
                       boxShadow: buildingPricingMode === 'whole' ? '0 1px 2px rgba(0,0,0,0.05)' : 'none'
                     }}
                   >
-                    {isAr ? '🏢 بيع العمارة بالكامل' : 'Whole Building'}
+                    {isAr ? '🏢 بيع العمارة شروة واحدة' : 'Whole Building'}
                   </button>
                   <button
                     type="button"
@@ -1214,7 +1346,7 @@ export const ConstructionCostCalculator: React.FC<ConstructionCostCalculatorProp
                       boxShadow: buildingPricingMode === 'units' ? '0 1px 2px rgba(0,0,0,0.05)' : 'none'
                     }}
                   >
-                    {isAr ? '🚪 بيع شقق منفصلة' : 'Individual Units'}
+                    {isAr ? '🚪 بيع شقق فردانية' : 'Individual Units'}
                   </button>
                 </div>
               </div>
@@ -1230,26 +1362,30 @@ export const ConstructionCostCalculator: React.FC<ConstructionCostCalculatorProp
                     {isAr ? 'عدد شقق العمارة:' : 'Total Building Units:'}
                   </span>
                   <span style={{ fontSize: '1.1rem', fontWeight: 800, color: '#0f172a' }}>
-                    {buildingUnitsPricing.totalUnits} {isAr ? 'شقق سكنية' : 'Apartments'}
+                    {buildingUnitsPricing.totalUnits} {isAr ? 'شقة' : 'Apartments'}
                   </span>
                 </div>
 
                 <div style={{ background: '#f8fafc', padding: '0.75rem', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
                   <span style={{ fontSize: '0.7rem', color: '#64748b', display: 'block' }}>
-                    {isAr ? 'إجمالي إيرادات بيع الشقق (تجزئة):' : 'Total Retail Revenue:'}
+                    {isAr ? 'إجمالي المبيعات لو بعنا الشقق فردانية:' : 'Total Retail Revenue:'}
                   </span>
-                  <span style={{ fontSize: '1.1rem', fontWeight: 900, color: '#946f23' }}>
-                    {formatEGP(buildingUnitsPricing.totalRetailRevenue)} ج.م
-                  </span>
+                  <div style={{ marginTop: '0.15rem' }}>
+                    {renderMoney(buildingUnitsPricing.totalRetailRevenue, undefined, { color: '#b8903e', size: '1.1rem', weight: 900 })}
+                  </div>
                 </div>
 
                 <div style={{ background: '#f8fafc', padding: '0.75rem', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
                   <span style={{ fontSize: '0.7rem', color: '#64748b', display: 'block' }}>
-                    {isAr ? 'الفارق والربح الإضافي للتجزئة:' : 'Retail Profit Uplift:'}
+                    {isAr ? 'الربح الزيادة من بيع الشقق فردانية:' : 'Retail Profit Uplift:'}
                   </span>
-                  <span style={{ fontSize: '1.1rem', fontWeight: 900, color: '#15803d' }}>
-                    +{formatEGP(buildingUnitsPricing.retailVsWholeUplift)} ج.م (+{buildingUnitsPricing.retailVsWholeUpliftPct}%)
-                  </span>
+                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', marginTop: '0.15rem' }}>
+                    <span style={{ color: '#15803d', fontWeight: 900 }}>+</span>
+                    {renderMoney(buildingUnitsPricing.retailVsWholeUplift, undefined, { color: '#15803d', size: '1.1rem', weight: 900 })}
+                    <span style={{ fontSize: '0.78rem', color: '#15803d', fontWeight: 800 }}>
+                      (+{buildingUnitsPricing.retailVsWholeUpliftPct}%)
+                    </span>
+                  </div>
                 </div>
               </div>
 
@@ -1265,28 +1401,28 @@ export const ConstructionCostCalculator: React.FC<ConstructionCostCalculatorProp
                       <th style={{ padding: '0.65rem 0.85rem' }}>{isAr ? 'رقم / كود الشقة' : 'Unit Code'}</th>
                       <th style={{ padding: '0.65rem 0.85rem' }}>{isAr ? 'الدور' : 'Floor'}</th>
                       <th style={{ padding: '0.65rem 0.85rem' }}>{isAr ? 'المساحة' : 'Area'}</th>
-                      <th style={{ padding: '0.65rem 0.85rem' }}>{isAr ? 'نصيب البناء العام' : 'General Cost'}</th>
-                      <th style={{ padding: '0.65rem 0.85rem' }}>{isAr ? 'ضرائب ورسوم البناء للشقة' : 'Unit Taxes/Fees'}</th>
+                      <th style={{ padding: '0.65rem 0.85rem' }}>{isAr ? 'نصيبها من مصاريف المباني' : 'General Cost'}</th>
+                      <th style={{ padding: '0.65rem 0.85rem' }}>{isAr ? 'الضرائب والرسوم' : 'Unit Taxes/Fees'}</th>
                       <th style={{ padding: '0.65rem 0.85rem' }}>{isAr ? 'إجمالي تكلفة الشقة' : 'Total Unit Cost'}</th>
                       <th style={{ padding: '0.65rem 0.85rem' }}>{isAr ? 'سعر البيع المقترح' : 'Suggested Price'}</th>
                       <th style={{ padding: '0.65rem 0.85rem' }}>{isAr ? 'سعر المتر' : 'Price / m²'}</th>
-                      <th style={{ padding: '0.65rem 0.85rem' }}>{isAr ? 'الهامش' : 'Margin'}</th>
+                      <th style={{ padding: '0.65rem 0.85rem' }}>{isAr ? 'نسبة الربح' : 'Margin'}</th>
                       <th style={{ padding: '0.65rem 0.85rem' }}>{isAr ? 'الحالة' : 'Status'}</th>
                     </tr>
                   </thead>
                   <tbody>
                     {buildingUnitsPricing.units.map((u, idx) => (
                       <tr key={u.unit_id || idx} style={{ borderTop: '1px solid #f1f5f9', background: idx % 2 === 0 ? '#ffffff' : '#f8fafc' }}>
-                        <td style={{ padding: '0.65rem 0.85rem', fontWeight: 800, color: '#0f172a' }}>{u.unit_number}</td>
+                        <td style={{ padding: '0.65rem 0.85rem', fontWeight: 800 }}>{u.unit_number}</td>
                         <td style={{ padding: '0.65rem 0.85rem', color: '#475569' }}>{isAr ? `الدور ${u.floor}` : `Floor ${u.floor}`}</td>
                         <td style={{ padding: '0.65rem 0.85rem', color: '#475569' }}>{u.area_sqm} م²</td>
-                        <td style={{ padding: '0.65rem 0.85rem', color: '#d97706', fontWeight: 700 }}>{formatEGP(u.apportionedCost)} ج.م</td>
-                        <td style={{ padding: '0.65rem 0.85rem', color: u.unitTaxesPaid > 0 ? '#946f23' : '#64748b', fontWeight: 700 }}>
-                          {u.unitTaxesPaid > 0 ? `${formatEGP(u.unitTaxesPaid)} ج.م` : (isAr ? '٠ ج.م' : '0 EGP')}
+                        <td style={{ padding: '0.65rem 0.85rem' }}>{renderMoney(u.apportionedCost, undefined, { color: '#d97706', weight: 700 })}</td>
+                        <td style={{ padding: '0.65rem 0.85rem' }}>
+                          {u.unitTaxesPaid > 0 ? renderMoney(u.unitTaxesPaid, undefined, { color: '#b8903e', weight: 700 }) : <span style={{ color: '#64748b' }}>{isAr ? '٠ ج.م' : '0 EGP'}</span>}
                         </td>
-                        <td style={{ padding: '0.65rem 0.85rem', color: '#0f172a', fontWeight: 800 }}>{formatEGP(u.totalApartmentCost)} ج.م</td>
-                        <td style={{ padding: '0.65rem 0.85rem', color: '#946f23', fontWeight: 900 }}>{formatEGP(u.suggestedPrice)} ج.م</td>
-                        <td style={{ padding: '0.65rem 0.85rem', color: '#64748b' }}>{formatEGP(u.pricePerSqm)} ج.م</td>
+                        <td style={{ padding: '0.65rem 0.85rem' }}>{renderMoney(u.totalApartmentCost, undefined, { weight: 800 })}</td>
+                        <td style={{ padding: '0.65rem 0.85rem' }}>{renderMoney(u.suggestedPrice, undefined, { color: '#b8903e', weight: 900 })}</td>
+                        <td style={{ padding: '0.65rem 0.85rem' }}>{renderMoney(u.pricePerSqm, 'م²', { color: '#64748b', weight: 700 })}</td>
                         <td style={{ padding: '0.65rem 0.85rem', color: '#15803d', fontWeight: 700 }}>{u.grossMargin}%</td>
                         <td style={{ padding: '0.65rem 0.85rem' }}>
                           <span style={{
@@ -1298,7 +1434,7 @@ export const ConstructionCostCalculator: React.FC<ConstructionCostCalculatorProp
                             color: u.status === 'contracted' ? '#15803d' : '#946f23',
                             border: u.status === 'contracted' ? '1px solid rgba(16, 185, 129, 0.25)' : '1px solid rgba(184, 144, 62, 0.25)'
                           }}>
-                            {u.status === 'contracted' ? (isAr ? 'مُتعاقد عليها' : 'Contracted') : (isAr ? 'متاحة للبيع' : 'Available')}
+                            {u.status === 'contracted' ? (isAr ? 'متباعة / متعاقد عليها' : 'Contracted') : (isAr ? 'جاهزة للبيع' : 'Available')}
                           </span>
                         </td>
                       </tr>
@@ -1316,7 +1452,7 @@ export const ConstructionCostCalculator: React.FC<ConstructionCostCalculatorProp
       {/* MODE 2: PRE-CONSTRUCTION FEASIBILITY ESTIMATOR                             */}
       {/* ========================================================================= */}
       {calculatorMode === 'FEASIBILITY_ESTIMATOR' && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '1.5rem' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 360px), 1fr))', gap: '1.5rem' }}>
           
           {/* INPUT PARAMETERS CARD */}
           <div style={{
@@ -1332,7 +1468,7 @@ export const ConstructionCostCalculator: React.FC<ConstructionCostCalculatorProp
             <div style={{ borderBottom: '1px solid #e2e8f0', paddingBottom: '0.75rem' }}>
               <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#946f23', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                 <Hammer size={16} />
-                <span>{isAr ? 'معايير العقار ومواصفات البناء' : 'Building Specs & Parameters'}</span>
+                <span>{isAr ? 'مواصفات ومساحة المشروع الجديد' : 'Building Specs & Parameters'}</span>
               </span>
             </div>
 
@@ -1340,7 +1476,7 @@ export const ConstructionCostCalculator: React.FC<ConstructionCostCalculatorProp
             {properties.length > 0 && (
               <div>
                 <label style={{ display: 'block', fontSize: '0.75rem', color: '#475569', marginBottom: '0.35rem', fontWeight: 700 }}>
-                  {isAr ? 'تحميل بيانات عقار من الكتالوج (اختياري):' : 'Pre-fill from Existing Property:'}
+                  {isAr ? 'اختيار مشروع مسجل عندنا (اختياري):' : 'Pre-fill from Existing Property:'}
                 </label>
                 <select
                   value={selectedPropertyId}
@@ -1355,7 +1491,7 @@ export const ConstructionCostCalculator: React.FC<ConstructionCostCalculatorProp
                     padding: '0.55rem 0.75rem'
                   }}
                 >
-                  <option value="">{isAr ? '-- إدخال مواصفات حرة جديدة --' : '-- Custom Specifications --'}</option>
+                  <option value="">{isAr ? '-- إدخال مواصفات مشروع جديد --' : '-- Custom Specifications --'}</option>
                   {properties.map(p => (
                     <option key={p.id} value={p.id}>
                       {isAr ? p.title_ar : p.title_en} ({p.area_sqm} م²)
@@ -1366,10 +1502,10 @@ export const ConstructionCostCalculator: React.FC<ConstructionCostCalculatorProp
             )}
 
             {/* Built-up Area & Floors */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.85rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 180px), 1fr))', gap: '0.85rem' }}>
               <div>
                 <label style={{ display: 'block', fontSize: '0.75rem', color: '#475569', marginBottom: '0.35rem', fontWeight: 700 }}>
-                  {isAr ? 'المساحة المبنية الإجمالية (م²):' : 'Built-up Area (sqm):'}
+                  {isAr ? 'إجمالي مساحة المباني (م²):' : 'Built-up Area (sqm):'}
                 </label>
                 <input
                   type="number"
@@ -1391,7 +1527,7 @@ export const ConstructionCostCalculator: React.FC<ConstructionCostCalculatorProp
 
               <div>
                 <label style={{ display: 'block', fontSize: '0.75rem', color: '#475569', marginBottom: '0.35rem', fontWeight: 700 }}>
-                  {isAr ? 'عدد الأدوار المتكررة:' : 'Floors Count:'}
+                  {isAr ? 'عدد الأدوار:' : 'Floors Count:'}
                 </label>
                 <input
                   type="number"
@@ -1413,7 +1549,7 @@ export const ConstructionCostCalculator: React.FC<ConstructionCostCalculatorProp
             </div>
 
             {/* Land Area & Land Price */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.85rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 180px), 1fr))', gap: '0.85rem' }}>
               <div>
                 <label style={{ display: 'block', fontSize: '0.75rem', color: '#475569', marginBottom: '0.35rem', fontWeight: 700 }}>
                   {isAr ? 'مساحة الأرض (م²):' : 'Land Area (sqm):'}
@@ -1461,7 +1597,7 @@ export const ConstructionCostCalculator: React.FC<ConstructionCostCalculatorProp
             {/* Finishing Tier Selection */}
             <div>
               <label style={{ display: 'block', fontSize: '0.75rem', color: '#475569', marginBottom: '0.35rem', fontWeight: 700 }}>
-                {isAr ? 'مستوى التشطيب المعماري المطلوب:' : 'Finishing Quality Tier:'}
+                {isAr ? 'مستوى التشطيب المطلوب:' : 'Finishing Quality Tier:'}
               </label>
               <select
                 value={finishingTier}
@@ -1498,12 +1634,12 @@ export const ConstructionCostCalculator: React.FC<ConstructionCostCalculatorProp
               gap: '0.75rem'
             }}>
               <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#946f23' }}>
-                {isAr ? 'أسعار الخامات في السوق المصري (قابلة للتعديل):' : 'Egyptian Market Material Rates:'}
+                {isAr ? 'أسعار خامات البناء في السوق النهاردة (تقدر تعدلها):' : 'Egyptian Market Material Rates:'}
               </span>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
                 <div>
                   <label style={{ display: 'block', fontSize: '0.7rem', color: '#64748b', marginBottom: '0.2rem' }}>
-                    {isAr ? 'طن حديد التسليح (ج.م):' : 'Steel / Ton (EGP):'}
+                    {isAr ? 'سعر طن الحديد (ج.م):' : 'Steel / Ton (EGP):'}
                   </label>
                   <input
                     type="number"
@@ -1523,7 +1659,7 @@ export const ConstructionCostCalculator: React.FC<ConstructionCostCalculatorProp
                 </div>
                 <div>
                   <label style={{ display: 'block', fontSize: '0.7rem', color: '#64748b', marginBottom: '0.2rem' }}>
-                    {isAr ? 'م³ خرسانة جاهزة (ج.م):' : 'Concrete / m³ (EGP):'}
+                    {isAr ? 'سعر متر الخرسانة الجاهزة (ج.م):' : 'Concrete / m³ (EGP):'}
                   </label>
                   <input
                     type="number"
@@ -1547,7 +1683,7 @@ export const ConstructionCostCalculator: React.FC<ConstructionCostCalculatorProp
             {/* Target Sale Price per Sqm */}
             <div>
               <label style={{ display: 'block', fontSize: '0.75rem', color: '#475569', marginBottom: '0.35rem', fontWeight: 700 }}>
-                {isAr ? 'سعر البيع المستهدف للمتر (ج.م/م²):' : 'Target Selling Price / sqm:'}
+                {isAr ? 'سعر بيع المتر المستهدف (ج.م/م²):' : 'Target Selling Price / sqm:'}
               </label>
               <input
                 type="number"
@@ -1582,7 +1718,7 @@ export const ConstructionCostCalculator: React.FC<ConstructionCostCalculatorProp
             <div style={{ borderBottom: '1px solid #e2e8f0', paddingBottom: '0.75rem' }}>
               <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#946f23', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                 <TrendingUp size={16} />
-                <span>{isAr ? 'المؤشرات الهندسية والمالية التقديرية' : 'Engineering Quantities & Financial Feasibility'}</span>
+                <span>{isAr ? 'حسبة الخامات وتكاليف المشروع والأرباح' : 'Engineering Quantities & Financial Feasibility'}</span>
               </span>
             </div>
 
@@ -1597,41 +1733,55 @@ export const ConstructionCostCalculator: React.FC<ConstructionCostCalculatorProp
               gap: '0.65rem'
             }}>
               <div style={{ fontSize: '0.74rem', fontWeight: 700, color: '#334155' }}>
-                {isAr ? 'حجوم الخامات الأساسية المقدرة:' : 'Estimated Structural Materials:'}
+                {isAr ? 'الكميات التقديرية للخامات والمباني:' : 'Estimated Structural Materials:'}
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem' }}>
-                <span style={{ color: '#64748b' }}>{isAr ? 'أطنان حديد التسليح (B500D):' : 'Steel Rebar:'}</span>
-                <span style={{ fontWeight: 800, color: '#0f172a' }}>
-                  {feasibilityCalculations.steelTons} {isAr ? 'طن' : 'Tons'} ({formatEGP(feasibilityCalculations.totalSteelCost)} ج.م)
-                </span>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.78rem' }}>
+                <span style={{ color: '#64748b' }}>{isAr ? 'حديد التسليح:' : 'Steel Rebar:'}</span>
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+                  <span style={{ fontWeight: 800, color: '#0f172a' }}>{feasibilityCalculations.steelTons} {isAr ? 'طن' : 'Tons'}</span>
+                  <span style={{ color: '#64748b' }}>(</span>
+                  {renderMoney(feasibilityCalculations.totalSteelCost, undefined, { weight: 800 })}
+                  <span style={{ color: '#64748b' }}>)</span>
+                </div>
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem' }}>
-                <span style={{ color: '#64748b' }}>{isAr ? 'خرسانة مسلحة رتبة C35:' : 'Ready-mix Concrete C35:'}</span>
-                <span style={{ fontWeight: 800, color: '#0f172a' }}>
-                  {feasibilityCalculations.concreteVolumeM3} {isAr ? 'م³' : 'm³'} ({formatEGP(feasibilityCalculations.totalConcreteCost)} ج.م)
-                </span>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.78rem' }}>
+                <span style={{ color: '#64748b' }}>{isAr ? 'خرسانة مسلحة جاهزة:' : 'Ready-mix Concrete C35:'}</span>
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+                  <span style={{ fontWeight: 800, color: '#0f172a' }}>{feasibilityCalculations.concreteVolumeM3} {isAr ? 'م³' : 'm³'}</span>
+                  <span style={{ color: '#64748b' }}>(</span>
+                  {renderMoney(feasibilityCalculations.totalConcreteCost, undefined, { weight: 800 })}
+                  <span style={{ color: '#64748b' }}>)</span>
+                </div>
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem' }}>
-                <span style={{ color: '#64748b' }}>{isAr ? 'أجور مصنعيات الهيكل الإنشائي:' : 'Skeleton Labor:'}</span>
-                <span style={{ fontWeight: 800, color: '#0f172a' }}>{formatEGP(feasibilityCalculations.totalLaborCost)} ج.م</span>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.78rem' }}>
+                <span style={{ color: '#64748b' }}>{isAr ? 'مصنعيات الخرسانة والمباني:' : 'Skeleton Labor:'}</span>
+                <div>
+                  {renderMoney(feasibilityCalculations.totalLaborCost, undefined, { weight: 800 })}
+                </div>
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem' }}>
-                <span style={{ color: '#64748b' }}>{isAr ? 'تأسيس الكهروميكانيك (MEP):' : 'MEP Infrastructure:'}</span>
-                <span style={{ fontWeight: 800, color: '#0f172a' }}>{formatEGP(feasibilityCalculations.totalMepCost)} ج.م</span>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.78rem' }}>
+                <span style={{ color: '#64748b' }}>{isAr ? 'تأسيس السباكة والكهرباء:' : 'MEP Infrastructure:'}</span>
+                <div>
+                  {renderMoney(feasibilityCalculations.totalMepCost, undefined, { weight: 800 })}
+                </div>
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem' }}>
-                <span style={{ color: '#64748b' }}>{isAr ? 'التشطيبات المعمارية المختارة:' : 'Architectural Finishing:'}</span>
-                <span style={{ fontWeight: 800, color: '#0f172a' }}>{formatEGP(feasibilityCalculations.totalFinishingCost)} ج.م</span>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.78rem' }}>
+                <span style={{ color: '#64748b' }}>{isAr ? 'تكلفة التشطيبات:' : 'Architectural Finishing:'}</span>
+                <div>
+                  {renderMoney(feasibilityCalculations.totalFinishingCost, undefined, { weight: 800 })}
+                </div>
               </div>
 
-              <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: '0.5rem', display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem', fontWeight: 800 }}>
-                <span style={{ color: '#946f23' }}>{isAr ? 'إجمالي تكلفة البناء والتشييد (WIP):' : 'Total Construction (WIP):'}</span>
-                <span style={{ color: '#946f23' }}>{formatEGP(feasibilityCalculations.totalConstructionWip)} ج.م</span>
+              <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: '0.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.82rem', fontWeight: 800 }}>
+                <span style={{ color: '#b8903e' }}>{isAr ? 'إجمالي تكلفة المباني والإنشاءات:' : 'Total Construction (WIP):'}</span>
+                <div>
+                  {renderMoney(feasibilityCalculations.totalConstructionWip, undefined, { color: '#b8903e', weight: 800 })}
+                </div>
               </div>
             </div>
 
@@ -1650,9 +1800,9 @@ export const ConstructionCostCalculator: React.FC<ConstructionCostCalculatorProp
                 <span style={{ fontSize: '0.7rem', color: '#2563eb', display: 'block', fontWeight: 700 }}>
                   {isAr ? 'تكلفة المتر الكلية (مباني + أرض):' : 'Grand Cost / sqm:'}
                 </span>
-                <span style={{ fontSize: '1.2rem', fontWeight: 900, color: '#0f172a' }}>
-                  {formatEGP(feasibilityCalculations.grandCostPerSqm)} ج.م
-                </span>
+                <div style={{ marginTop: '0.15rem' }}>
+                  {renderMoney(feasibilityCalculations.grandCostPerSqm, 'م²', { size: '1.2rem', weight: 900 })}
+                </div>
               </div>
 
               <div style={{
@@ -1662,7 +1812,7 @@ export const ConstructionCostCalculator: React.FC<ConstructionCostCalculatorProp
                 padding: '0.85rem'
               }}>
                 <span style={{ fontSize: '0.7rem', color: '#15803d', display: 'block', fontWeight: 700 }}>
-                  {isAr ? 'العائد على الاستثمار المتوقع (ROI):' : 'Developer ROI %:'}
+                  {isAr ? 'العائد المتوقع على الاستثمار (ROI):' : 'Developer ROI %:'}
                 </span>
                 <span style={{ fontSize: '1.2rem', fontWeight: 900, color: '#15803d' }}>
                   {feasibilityCalculations.developerMarginPercent}%
@@ -1683,20 +1833,21 @@ export const ConstructionCostCalculator: React.FC<ConstructionCostCalculatorProp
             }}>
               <div>
                 <span style={{ color: '#64748b', display: 'block', fontSize: '0.7rem' }}>
-                  {isAr ? 'إجمالي المبيعات المستهدفة:' : 'Projected Sales:'}
+                  {isAr ? 'إجمالي المبيعات المتوقعة:' : 'Projected Sales:'}
                 </span>
-                <span style={{ fontWeight: 800, color: '#0f172a' }}>
-                  {formatEGP(feasibilityCalculations.projectedGrossRevenue)} ج.م
-                </span>
+                <div style={{ marginTop: '0.15rem' }}>
+                  {renderMoney(feasibilityCalculations.projectedGrossRevenue, undefined, { weight: 800 })}
+                </div>
               </div>
 
               <div style={{ textAlign: isAr ? 'left' : 'right' }}>
                 <span style={{ color: '#15803d', display: 'block', fontSize: '0.7rem', fontWeight: 700 }}>
-                  {isAr ? 'صافي الربح المتوقع للمطور:' : 'Projected Net Profit:'}
+                  {isAr ? 'صافي الأرباح المتوقعة:' : 'Projected Net Profit:'}
                 </span>
-                <span style={{ fontWeight: 900, color: '#15803d', fontSize: '0.95rem' }}>
-                  +{formatEGP(feasibilityCalculations.projectedNetProfit)} ج.م
-                </span>
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.15rem', marginTop: '0.15rem' }}>
+                  <span style={{ color: '#15803d', fontWeight: 900 }}>+</span>
+                  {renderMoney(feasibilityCalculations.projectedNetProfit, undefined, { color: '#15803d', size: '0.95rem', weight: 900 })}
+                </div>
               </div>
             </div>
 
@@ -1724,7 +1875,7 @@ export const ConstructionCostCalculator: React.FC<ConstructionCostCalculatorProp
                 }}
               >
                 <CheckCircle2 size={15} />
-                <span>{isAr ? 'اعتماد هذه الحسابات كميزانية تقديرية للعقار المحدد بالدفاتر' : 'Commit as Approved WIP Budget Ceiling for Property'}</span>
+                <span>{isAr ? 'اعتماد الحسبة دي كميزانية مباني للعقار' : 'Commit as Approved WIP Budget Ceiling for Property'}</span>
               </button>
             )}
 

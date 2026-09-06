@@ -67,8 +67,8 @@ export const OPEN_QUESTIONS_DATA: OpenQuestionItem[] = [
     title: 'Down Payment & Installment Cash Receipt Account Routing',
     titleAr: 'توجيه النقدية المحصلة للمقدمات والأقساط (حساب الخزينة ١٠١٠٠٠ أم البنك ١٠٢٠٠٠)',
     status: 'OPEN',
-    blockedModules: ['Module 3 (Contracts)', 'Module 4 (PDC)'],
-    blockedModulesAr: ['الوحدة ٣ (العقود)', 'الوحدة ٤ (خزينة الشيكات)'],
+    blockedModules: ['Module 3 (Contracts)', 'Module 4 (Hand Dues)'],
+    blockedModulesAr: ['الوحدة ٣ (العقود)', 'الوحدة ٤ (أجندة الأقساط والمستحقات)'],
     interimDefault: 'Manual dropdown requiring explicit selection of 101000 vs 102000; no silent default.',
     interimDefaultAr: 'قائمة اختيار يدوية إلزامية تتطلب تحديد الحساب صراحة دون أي اختيار افتراضي صامت.',
     specCitation: 'AGENT_BUILD_SPEC.md §14.A, §14.D',
@@ -121,23 +121,23 @@ export const OPEN_QUESTIONS_DATA: OpenQuestionItem[] = [
   },
   {
     id: 'Q6',
-    title: 'PDC Bounced Cheque Operational Workflow',
-    titleAr: 'المسار الإجرائي للشيك المرتد من البنك (Bounced Cheque Protocol)',
+    title: 'Defaulted Installment Operational Workflow',
+    titleAr: 'المسار الإجرائي للقسط المتعثر أو المرفوض (Defaulted Installment Protocol)',
     status: 'OPEN',
-    blockedModules: ['Module 4 (PDC Vault)'],
-    blockedModulesAr: ['الوحدة ٤ (خزينة الشيكات)'],
-    interimDefault: 'Cheque marked Bounced; linked installment schedule remains in Pending state.',
-    interimDefaultAr: 'يُسجل الشيك كمرتد بالخزينة، ويظل القسط في حالة "معلق (Pending)" بانتظار الإجراء القانوني.',
+    blockedModules: ['Module 4 (Hand Dues Vault)'],
+    blockedModulesAr: ['الوحدة ٤ (أجندة الأقساط والمستحقات)'],
+    interimDefault: 'Installment marked Defaulted; linked installment schedule remains in Pending state.',
+    interimDefaultAr: 'يُسجل القسط كمتعثر بالخزينة، ويظل القسط في حالة "معلق (Pending)" بانتظار التسوية الودية.',
     specCitation: 'AGENT_BUILD_SPEC.md §14.F.16',
-    description: 'When a PDC bounces at the bank, does it automatically transition the installment tranche to Defaulted?',
-    descriptionAr: 'عند ارتداد الشيك من البنك لعدم كفاية الرصيد، هل ينتقل قسط العقد فوراً إلى حالة "متعثر (Defaulted)"؟',
+    description: 'When an installment is not paid on its due date, does it automatically transition to Defaulted?',
+    descriptionAr: 'عند تعذر سداد القسط في موعده المحدد، هل ينتقل قسط العقد فوراً إلى حالة "متعثر (Defaulted)"؟',
     proposedOptions: [
-      'Option A: Immediate transition to Defaulted with legal notice generation.',
-      'Option B: 15-day grace period allowing replacement cheque before defaulting.'
+      'Option A: Immediate transition to Defaulted with amicable/legal notice generation.',
+      'Option B: 15-day grace period allowing payment settlement before defaulting.'
     ],
     proposedOptionsAr: [
-      'الخيار أ: التحويل الفوري لحالة متعثر وتوجيه إنذار قانوني للمشتري.',
-      'الخيار ب: مهلة سماح ١٥ يوماً لتقديم شيك بديل قبل إعلان التعثر رسمياً.'
+      'الخيار أ: التحويل الفوري لحالة متعثر وتوجيه إشعار ودي أو قانوني للمشتري.',
+      'الخيار ب: مهلة سماح ١٥ يوماً للتسوية قبل إعلان التعثر رسمياً.'
     ]
   },
   {

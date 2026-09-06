@@ -12,12 +12,22 @@ import {
   Eye, 
   Scale, 
   Building,
-  Plus
+  Building2,
+  User,
+  Plus,
+  RotateCcw,
+  Filter,
+  ArrowUpDown,
+  TrendingUp,
+  Wallet
 } from 'lucide-react';
 import { ERPContract, ERPInstallmentSchedule } from '@/lib/erp/types';
 import { D } from '@/lib/erp/math';
 import { StatusBadge } from '@/components/erp/StatusBadge';
 import { MoneyCell } from '@/components/erp/MoneyCell';
+import { ZFPagination } from '../ZFPagination';
+import { ZFKpiCard } from '../ZFKpiCard';
+import { ZFFilterToolbar } from '../ZFFilterToolbar';
 import styles from '../ZFWorkstationShell.module.css';
 
 interface ContractsRegistryViewProps {
@@ -38,8 +48,12 @@ export const ContractsRegistryView: React.FC<ContractsRegistryViewProps> = ({
   onOpenNewContract
 }) => {
   const [contractFilter, setContractFilter] = useState<'All' | 'Delivered' | 'Pending' | 'Rescinded'>('All');
+  const [paymentFilter, setPaymentFilter] = useState<'all' | 'fully_paid' | 'partially_paid' | 'zero_paid'>('all');
+  const [contractSortBy, setContractSortBy] = useState<'date_desc' | 'date_asc' | 'gross_desc' | 'gross_asc' | 'collected_desc' | 'progress_desc' | 'buyer_asc'>('date_desc');
   const [contractSearchQuery, setContractSearchQuery] = useState('');
   const [contractViewMode, setContractViewMode] = useState<'cards' | 'table'>('cards');
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [pageSize, setPageSize] = useState<number>(10);
 
   // Calculate Contracts Portfolio KPIs
   const contractKPIs = useMemo(() => {
@@ -93,7 +107,20 @@ export const ContractsRegistryView: React.FC<ContractsRegistryViewProps> = ({
       if (contractFilter === 'Pending' && (c.status === 'Rescinded' || c.handover_status === 'Delivered')) return false;
       if (contractFilter === 'Rescinded' && c.status !== 'Rescinded') return false;
 
-      // 2. Search Query
+      // 2. Payment Filter
+      if (paymentFilter !== 'all') {
+        const gross = D(c.gross_contract_value || '0');
+        const collected = D(c.total_cash_collected || '0');
+        const isFully = gross.gt(0) && collected.gte(gross);
+        const isZero = collected.isZero();
+        const isPartial = !isFully && !isZero;
+
+        if (paymentFilter === 'fully_paid' && !isFully) return false;
+        if (paymentFilter === 'partially_paid' && !isPartial) return false;
+        if (paymentFilter === 'zero_paid' && !isZero) return false;
+      }
+
+      // 3. Search Query
       if (contractSearchQuery.trim()) {
         const q = contractSearchQuery.toLowerCase();
         const num = (c.contract_number || '').toLowerCase();
@@ -104,7 +131,46 @@ export const ContractsRegistryView: React.FC<ContractsRegistryViewProps> = ({
 
       return true;
     });
-  }, [contracts, contractFilter, contractSearchQuery]);
+  }, [contracts, contractFilter, paymentFilter, contractSearchQuery]);
+
+  // Sorted Contracts
+  const sortedContracts = useMemo(() => {
+    const list = [...filteredContracts];
+    list.sort((a, b) => {
+      if (contractSortBy === 'date_desc') return (b.contract_date || '').localeCompare(a.contract_date || '');
+      if (contractSortBy === 'date_asc') return (a.contract_date || '').localeCompare(b.contract_date || '');
+      if (contractSortBy === 'gross_desc') return D(b.gross_contract_value || '0').minus(D(a.gross_contract_value || '0')).toNumber();
+      if (contractSortBy === 'gross_asc') return D(a.gross_contract_value || '0').minus(D(b.gross_contract_value || '0')).toNumber();
+      if (contractSortBy === 'collected_desc') return D(b.total_cash_collected || '0').minus(D(a.total_cash_collected || '0')).toNumber();
+      if (contractSortBy === 'progress_desc') {
+        const pA = D(a.gross_contract_value || '0').gt(0) ? D(a.total_cash_collected || '0').dividedBy(D(a.gross_contract_value || '0')).toNumber() : 0;
+        const pB = D(b.gross_contract_value || '0').gt(0) ? D(b.total_cash_collected || '0').dividedBy(D(b.gross_contract_value || '0')).toNumber() : 0;
+        return pB - pA;
+      }
+      if (contractSortBy === 'buyer_asc') return (a.buyer_name || '').localeCompare(b.buyer_name || '', isAr ? 'ar' : 'en');
+      return 0;
+    });
+    return list;
+  }, [filteredContracts, contractSortBy, isAr]);
+
+  const totalPages = Math.ceil(sortedContracts.length / pageSize) || 1;
+  const paginatedContracts = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return sortedContracts.slice(start, start + pageSize);
+  }, [sortedContracts, currentPage, pageSize]);
+
+  const activeFiltersCount = (contractFilter !== 'All' ? 1 : 0) +
+    (paymentFilter !== 'all' ? 1 : 0) +
+    (contractSearchQuery.trim() ? 1 : 0) +
+    (contractSortBy !== 'date_desc' ? 1 : 0);
+
+  const handleResetFilters = () => {
+    setContractFilter('All');
+    setPaymentFilter('all');
+    setContractSortBy('date_desc');
+    setContractSearchQuery('');
+    setCurrentPage(1);
+  };
 
   return (
     <div className={styles.stageContainer}>
@@ -113,7 +179,7 @@ export const ContractsRegistryView: React.FC<ContractsRegistryViewProps> = ({
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
             <h1 style={{ fontSize: '1.4rem', fontWeight: 800, margin: 0, color: '#0f172a', letterSpacing: '-0.02em' }}>
-              {isAr ? 'سجل عقود البيع وتتبع إصدارات الأقساط' : 'Sales Contracts & Installment Pipeline'}
+              {isAr ? 'عقود البيع ومتابعة أقساط العملاء' : 'Sales Contracts & Installment Pipeline'}
             </h1>
             <span style={{
               fontSize: '0.68rem',
@@ -124,12 +190,12 @@ export const ContractsRegistryView: React.FC<ContractsRegistryViewProps> = ({
               border: '1px solid rgba(184, 144, 62, 0.28)',
               color: '#946f23'
             }}>
-              {isAr ? 'إدارة المبيعات والتعاقدات' : 'Contract Escrow'}
+              {isAr ? 'عقود وشقق مبيوعة' : 'Contract Escrow'}
             </span>
           </div>
           <p style={{ fontSize: '0.8rem', color: '#64748b', margin: '0.25rem 0 0 0' }}>
             {isAr 
-              ? 'المتابعة المركزية لكافة عقود البيع الموثقة، خطط التقسيط، نسب التحصيل الفعلي، وحالة تسليم الوحدات (IFRS 15)' 
+              ? 'متابعة عقود البيع، مواعيد الأقساط، الفلوس اللي ادفعت، وحالة تسليم الشقق' 
               : 'Centralized registry of booked sales contracts, installment schedules, cash collection, and unit handovers'}
           </p>
         </div>
@@ -139,10 +205,10 @@ export const ContractsRegistryView: React.FC<ContractsRegistryViewProps> = ({
             type="button"
             className={styles.btnSecondary}
             onClick={onNavigateToProperties}
-            title={isAr ? 'الانتقال إلى الموقف المالي للعقارات لتحرير عقد جديد لوحدة' : 'Go to Property Portfolio to originate a contract'}
+            title={isAr ? 'اختيار شقة لكتابة عقد بيع جديد' : 'Go to Property Portfolio to originate a contract'}
           >
             <Building size={14} color="#946f23" />
-            <span>{isAr ? 'تحرير عقد لوحدة (عبر المحفظة)' : 'Originate Contract'}</span>
+            <span>{isAr ? 'اختيار شقة لكتابة عقد' : 'Originate Contract'}</span>
           </button>
 
           {onOpenNewContract && (
@@ -158,247 +224,104 @@ export const ContractsRegistryView: React.FC<ContractsRegistryViewProps> = ({
         </div>
       </div>
 
-      {/* 2. THE 4 EXECUTIVE CONTRACT KPI CARDS (Apple / Mercury Elegance) */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '1.25rem' }}>
-        {/* KPI 1: Gross Portfolio Sales (V) */}
-        <div className={styles.card}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#64748b' }}>
-              {isAr ? 'إجمالي المبيعات التعاقدية (V)' : 'Gross Contract Value (V)'}
-            </span>
-            <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#64748b', display: 'inline-block' }} />
-          </div>
-          <div style={{ margin: '0.25rem 0' }}>
-            <div style={{ fontSize: '1.85rem', fontWeight: 800, color: '#0f172a', letterSpacing: '-0.03em', fontVariantNumeric: 'tabular-nums' }}>
-              {D(contractKPIs.totalGross).formatEGP(isAr)}
-            </div>
-          </div>
-          <div style={{ fontSize: '0.74rem', color: '#64748b', borderTop: '1px solid #f1f5f9', paddingTop: '0.65rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span>{isAr ? 'محفظة العقود السارية' : 'Active Contracts'}</span>
-            <strong style={{ color: '#0f172a' }}>{contractKPIs.activeCount} {isAr ? 'عقد موثق' : 'contracts'}</strong>
-          </div>
-        </div>
+      {/* 2. THE 4 EXECUTIVE CONTRACT KPI CARDS */}
+      <div className={styles.kpiGrid}>
+        <ZFKpiCard
+          title={isAr ? 'إجمالي مبيعات العقود' : 'Gross Contract Value (V)'}
+          value={D(contractKPIs.totalGross).formatEGP(isAr)}
+          isFlagship={true}
+          accentColor="gold"
+          icon={<TrendingUp size={16} />}
+          subtitleLabel={isAr ? 'العقود الشغالة' : 'Active Contracts'}
+          subtitleValue={`${contractKPIs.activeCount} ${isAr ? 'عقد شغال' : 'contracts'}`}
+        />
 
-        {/* KPI 2: Cash Collected (C) */}
-        <div className={styles.card}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#64748b' }}>
-              {isAr ? 'السيولة المحصلة بالبنك (C)' : 'Total Cash Collected (C)'}
-            </span>
-            <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#15803d', display: 'inline-block' }} />
-          </div>
-          <div style={{ margin: '0.25rem 0' }}>
-            <div style={{ fontSize: '1.85rem', fontWeight: 800, color: '#15803d', letterSpacing: '-0.03em', fontVariantNumeric: 'tabular-nums' }}>
-              {D(contractKPIs.totalCollected).formatEGP(isAr)}
-            </div>
-          </div>
-          <div style={{ fontSize: '0.74rem', color: '#64748b', borderTop: '1px solid #f1f5f9', paddingTop: '0.65rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span>{isAr ? 'تحصيلات نقدية مودعة' : 'Collected Cash'}</span>
-            <strong style={{ color: '#15803d' }}>{isAr ? 'حسابات البنوك [102000]' : 'GL Bank 102000'}</strong>
-          </div>
-        </div>
+        <ZFKpiCard
+          title={isAr ? 'الفلوس اللي اتحصلت كاش' : 'Total Cash Collected (C)'}
+          value={D(contractKPIs.totalCollected).formatEGP(isAr)}
+          icon={<Wallet size={16} />}
+          accentColor="emerald"
+          subtitleLabel={isAr ? 'كاش في البنك والخزنة' : 'Collected Cash'}
+          subtitleValue={isAr ? 'دخلت الحسابات' : 'GL Bank 102000'}
+        />
 
-        {/* KPI 3: Outstanding Receivables (A/R) */}
-        <div className={styles.card}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#64748b' }}>
-              {isAr ? 'أوراق القبض والذمم المدينة (A/R)' : 'Outstanding Receivables (A/R)'}
-            </span>
-            <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#946f23', display: 'inline-block' }} />
-          </div>
-          <div style={{ margin: '0.25rem 0' }}>
-            <div style={{ fontSize: '1.85rem', fontWeight: 800, color: '#0f172a', letterSpacing: '-0.03em', fontVariantNumeric: 'tabular-nums' }}>
-              {D(contractKPIs.totalRemaining).formatEGP(isAr)}
-            </div>
-          </div>
-          <div style={{ fontSize: '0.74rem', color: '#64748b', borderTop: '1px solid #f1f5f9', paddingTop: '0.65rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span>{isAr ? 'متبقي أقساط قيد التحصيل' : 'Pending Installments'}</span>
-            <strong style={{ color: '#946f23' }}>{contractKPIs.pendingCount} {isAr ? 'عقد قيد السداد' : 'in progress'}</strong>
-          </div>
-        </div>
+        <ZFKpiCard
+          title={isAr ? 'أقساط لسه عند العملاء' : 'Outstanding Receivables (A/R)'}
+          value={D(contractKPIs.totalRemaining).formatEGP(isAr)}
+          icon={<Clock size={16} />}
+          accentColor="amber"
+          subtitleLabel={isAr ? 'أقساط جاية' : 'Pending Installments'}
+          subtitleValue={`${contractKPIs.pendingCount} ${isAr ? 'عقد لسه عليه أقساط' : 'in progress'}`}
+        />
 
-        {/* KPI 4: Collection Rate — Premier Gold Accent */}
-        <div className={styles.card} style={{
-          background: 'linear-gradient(180deg, #ffffff 0%, #fefdfa 100%)',
-          border: '1px solid rgba(184, 144, 62, 0.35)',
-          boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.04), 0 4px 16px -4px rgba(184, 144, 62, 0.12)'
-        }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#946f23' }}>
-              {isAr ? 'متوسط نسبة التحصيل العام' : 'Portfolio Collection Rate'}
-            </span>
-            <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#b8903e', display: 'inline-block' }} />
-          </div>
-          <div style={{ margin: '0.25rem 0' }}>
-            <div style={{ fontSize: '1.85rem', fontWeight: 800, color: '#0f172a', letterSpacing: '-0.03em', fontVariantNumeric: 'tabular-nums' }}>
-              {contractKPIs.avgCollectionPct}%
-            </div>
-          </div>
-          <div style={{ fontSize: '0.74rem', color: '#64748b', borderTop: '1px solid rgba(184, 144, 62, 0.18)', paddingTop: '0.65rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span>{isAr ? 'المسلم / قيد الإنشاء' : 'Delivered / WIP'}</span>
-            <strong style={{ color: '#946f23' }}>{contractKPIs.deliveredCount} {isAr ? 'مسلم' : 'handed over'}</strong>
-          </div>
-        </div>
+        <ZFKpiCard
+          title={isAr ? 'نسبة التحصيل من المبيعات' : 'Portfolio Collection Rate'}
+          value={`${contractKPIs.avgCollectionPct}%`}
+          icon={<CheckCircle2 size={16} />}
+          accentColor="gold"
+          progress={contractKPIs.avgCollectionPct}
+          subtitleLabel={isAr ? 'الشقق اللي اتسلمت' : 'Delivered / WIP'}
+          subtitleValue={`${contractKPIs.deliveredCount} ${isAr ? 'متسلمة' : 'handed over'}`}
+        />
       </div>
 
-      {/* 3. FILTER TOOLBAR & VIEW SWITCHER */}
-      <div style={{
-        background: '#ffffff',
-        border: '1px solid #e2e8f0',
-        borderRadius: '14px',
-        padding: '0.85rem 1.15rem',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        flexWrap: 'wrap',
-        gap: '0.85rem',
-        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.03)'
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', flexWrap: 'wrap', flex: 1 }}>
-          {/* Status Tabs */}
-          <div style={{
-            display: 'flex',
-            background: '#f1f5f9',
-            border: '1px solid #e2e8f0',
-            borderRadius: '8px',
-            padding: '2px'
-          }}>
-            {(['All', 'Delivered', 'Pending', 'Rescinded'] as const).map(f => {
-              const count = f === 'All' ? contractKPIs.activeCount :
-                            f === 'Delivered' ? contractKPIs.deliveredCount :
-                            f === 'Pending' ? contractKPIs.pendingCount :
-                            contractKPIs.rescindedCount;
-              const isActive = contractFilter === f;
-
-              return (
-                <button
-                  key={f}
-                  type="button"
-                  onClick={() => setContractFilter(f)}
-                  style={{
-                    background: isActive ? (f === 'Rescinded' ? '#dc2626' : '#0f172a') : 'transparent',
-                    color: isActive ? '#ffffff' : '#64748b',
-                    border: 'none',
-                    borderRadius: '6px',
-                    padding: '0.35rem 0.65rem',
-                    fontSize: '0.72rem',
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '0.35rem',
-                    transition: 'all 0.15s ease'
-                  }}
-                >
-                  <span>
-                    {f === 'All' && (isAr ? 'السارية (الكل)' : 'Active Pipeline')}
-                    {f === 'Delivered' && (isAr ? 'مسلّم' : 'Delivered')}
-                    {f === 'Pending' && (isAr ? 'قيد الإنشاء' : 'Under Construction')}
-                    {f === 'Rescinded' && (isAr ? 'عقود مفسوخة' : 'Rescinded')}
-                  </span>
-                  <span style={{
-                    fontSize: '0.65rem',
-                    padding: '0.05rem 0.35rem',
-                    borderRadius: '999px',
-                    background: isActive ? 'rgba(255, 255, 255, 0.2)' : '#e2e8f0',
-                    color: isActive ? '#ffffff' : '#475569'
-                  }}>
-                    {count}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Instant Search Bar */}
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.4rem',
-            background: '#ffffff',
-            border: '1px solid #e2e8f0',
-            borderRadius: '8px',
-            padding: '0.4rem 0.75rem',
-            minWidth: '220px',
-            maxWidth: '360px',
-            flex: '1 1 auto'
-          }}>
-            <Search size={14} color="#64748b" />
-            <input
-              type="text"
-              value={contractSearchQuery}
-              onChange={(e) => setContractSearchQuery(e.target.value)}
-              placeholder={isAr ? 'بحث برقم العقد، اسم العميل، أو الوحدة...' : 'Search contract #, buyer, or unit...'}
-              style={{
-                width: '100%',
-                background: 'transparent',
-                border: 'none',
-                color: '#0f172a',
-                fontSize: '0.76rem',
-                outline: 'none'
-              }}
-            />
-            {contractSearchQuery && (
-              <button
-                type="button"
-                onClick={() => setContractSearchQuery('')}
-                style={{ background: 'transparent', border: 'none', color: '#64748b', cursor: 'pointer', fontSize: '0.75rem' }}
-              >
-                ✕
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* View Mode Toggle */}
-        <div style={{
-          display: 'flex',
-          background: '#f1f5f9',
-          border: '1px solid #e2e8f0',
-          borderRadius: '8px',
-          padding: '2px'
-        }}>
-          <button 
-            type="button"
-            onClick={() => setContractViewMode('cards')}
-            title={isAr ? 'عرض بطاقات تنفيذية' : 'Cards View'}
-            style={{
-              background: contractViewMode === 'cards' ? '#ffffff' : 'transparent',
-              color: contractViewMode === 'cards' ? '#0f172a' : '#64748b',
-              border: 'none',
-              borderRadius: '6px',
-              padding: '0.35rem 0.55rem',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              boxShadow: contractViewMode === 'cards' ? '0 1px 2px rgba(0,0,0,0.06)' : 'none'
-            }}
-          >
-            <LayoutGrid size={14} />
-          </button>
-          <button 
-            type="button"
-            onClick={() => setContractViewMode('table')}
-            title={isAr ? 'عرض جدول تفصيلي' : 'Table View'}
-            style={{
-              background: contractViewMode === 'table' ? '#ffffff' : 'transparent',
-              color: contractViewMode === 'table' ? '#0f172a' : '#64748b',
-              border: 'none',
-              borderRadius: '6px',
-              padding: '0.35rem 0.55rem',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              boxShadow: contractViewMode === 'table' ? '0 1px 2px rgba(0,0,0,0.06)' : 'none'
-            }}
-          >
-            <List size={14} />
-          </button>
-        </div>
-      </div>
+      {/* 3. UNIFIED FILTER TOOLBAR & VIEW SWITCHER */}
+      <ZFFilterToolbar
+        tabs={[
+          { id: 'All', label: isAr ? 'كل العقود الشغالة' : 'Active Pipeline', count: contractKPIs.activeCount },
+          { id: 'Delivered', label: isAr ? 'شقق اتسلمت' : 'Delivered', count: contractKPIs.deliveredCount },
+          { id: 'Pending', label: isAr ? 'شقق تحت الإنشاء' : 'Under Construction', count: contractKPIs.pendingCount },
+          { id: 'Rescinded', label: isAr ? 'عقود اتلغت' : 'Rescinded', count: contractKPIs.rescindedCount }
+        ]}
+        activeTab={contractFilter}
+        onTabChange={(tabId) => {
+          setContractFilter(tabId as any);
+          setCurrentPage(1);
+        }}
+        searchQuery={contractSearchQuery}
+        onSearchChange={(q) => {
+          setContractSearchQuery(q);
+          setCurrentPage(1);
+        }}
+        searchPlaceholder={isAr ? 'دوّر برقم العقد، اسم العميل، أو الشقة...' : 'Search contract #, buyer, unit...'}
+        filters={[
+          {
+            id: 'payment_filter',
+            value: paymentFilter,
+            onChange: (val) => {
+              setPaymentFilter(val as any);
+              setCurrentPage(1);
+            },
+            ariaLabel: isAr ? 'موقف السداد والتحصيل' : 'Payment Status',
+            options: [
+              { value: 'all', label: isAr ? 'كل حالات السداد' : 'Payment: All' },
+              { value: 'fully_paid', label: isAr ? 'مدفوع بالكامل (100%)' : 'Fully Paid' },
+              { value: 'partially_paid', label: isAr ? 'مدفوع منه جزء (شغال)' : 'Partially Paid' },
+              { value: 'zero_paid', label: isAr ? 'لسه ما اتدفعش منه حاجة (0%)' : 'Unpaid (0%)' }
+            ]
+          }
+        ]}
+        sortBy={contractSortBy}
+        onSortChange={(val) => setContractSortBy(val as any)}
+        sortOptions={[
+          { value: 'date_desc', label: isAr ? 'التاريخ: الأحدث الأول' : 'Date: Newest First' },
+          { value: 'date_asc', label: isAr ? 'التاريخ: الأقدم الأول' : 'Date: Oldest First' },
+          { value: 'gross_desc', label: isAr ? 'سعر العقد: الأكبر الأول' : 'Gross: High to Low' },
+          { value: 'gross_asc', label: isAr ? 'سعر العقد: الأقل الأول' : 'Gross: Low to High' },
+          { value: 'collected_desc', label: isAr ? 'المتحصل: الأكتر الأول' : 'Collected: High to Low' },
+          { value: 'progress_desc', label: isAr ? 'نسبة التحصيل: الأعلى الأول' : 'Collection %: Highest' },
+          { value: 'buyer_asc', label: isAr ? 'اسم العميل: أ - ي' : 'Buyer: A to Z' }
+        ]}
+        sortAriaLabel={isAr ? 'ترتيب العقود' : 'Sort contracts'}
+        activeFiltersCount={activeFiltersCount}
+        onResetFilters={handleResetFilters}
+        viewMode={contractViewMode}
+        onViewModeChange={(mode) => setContractViewMode(mode)}
+        isAr={isAr}
+      />
 
       {/* 4. EMPTY STATE */}
-      {filteredContracts.length === 0 && (
+      {sortedContracts.length === 0 && (
         <div style={{
           padding: '3.5rem 2rem',
           textAlign: 'center',
@@ -408,32 +331,33 @@ export const ContractsRegistryView: React.FC<ContractsRegistryViewProps> = ({
         }}>
           <FileText size={36} color="#94a3b8" style={{ margin: '0 auto 0.75rem auto' }} />
           <div style={{ fontSize: '1rem', fontWeight: 700, color: '#0f172a' }}>
-            {isAr ? 'لا توجد عقود مطابقة لشروط التصفية' : 'No matching contracts found'}
+            {isAr ? 'مفيش عقود مطابقة للبحث أو الفلتر' : 'No matching contracts found'}
           </div>
           <div style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '0.35rem' }}>
-            {isAr ? 'جرب تغيير التبويب أو مسح عبارة البحث.' : 'Try changing the status tab or clearing the search box.'}
+            {isAr ? 'جرب تغيّر التبويب أو الفلتر، أو تمسح خانة البحث.' : 'Try changing the status tab, payment filter, or clearing search.'}
           </div>
-          {contractSearchQuery && (
+          {activeFiltersCount > 0 && (
             <button
               type="button"
-              onClick={() => setContractSearchQuery('')}
-              className={styles.btnSecondary}
+              onClick={handleResetFilters}
+              className={styles.resetFilterBtn}
               style={{ marginTop: '1rem' }}
             >
-              {isAr ? 'مسح البحث' : 'Clear search'}
+              <RotateCcw size={13} />
+              <span>{isAr ? 'مسح الفلاتر والرجوع للكل' : 'Reset all filters'}</span>
             </button>
           )}
         </div>
       )}
 
       {/* 5. VIEW MODE 1: EXECUTIVE CARDS */}
-      {contractViewMode === 'cards' && filteredContracts.length > 0 && (
+      {contractViewMode === 'cards' && sortedContracts.length > 0 && (
         <div style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
+          gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 350px), 1fr))',
           gap: '1.25rem'
         }}>
-          {filteredContracts.map(c => {
+          {paginatedContracts.map(c => {
             const contractSchedules = schedules.filter(s => s.contract_id === c.contract_id && s.status !== 'SUPERSEDED');
             const pendingSchedules = contractSchedules.filter(s => s.status === 'Pending');
             
@@ -454,121 +378,275 @@ export const ContractsRegistryView: React.FC<ContractsRegistryViewProps> = ({
                   padding: '1.25rem',
                   display: 'flex',
                   flexDirection: 'column',
-                  gap: '1rem',
+                  gap: '0.9rem',
                   cursor: 'pointer',
-                  boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
-                  transition: 'all 0.2s ease'
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
+                  transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+                  position: 'relative'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'translateY(-2px)';
+                  e.currentTarget.style.borderColor = '#cbd5e1';
+                  e.currentTarget.style.boxShadow = '0 10px 24px -4px rgba(0,0,0,0.06)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'none';
+                  e.currentTarget.style.borderColor = '#e2e8f0';
+                  e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.03)';
                 }}
               >
-                {/* Header Row: Contract #, Unit, Status */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                  <div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                      <span style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 800, color: '#946f23', fontSize: '0.88rem' }} dir="ltr">
-                        #{c.contract_number}
-                      </span>
-                      <StatusBadge domain="unit" status={c.handover_status} isAr={isAr} />
-                    </div>
-                    <div style={{ fontSize: '0.92rem', fontWeight: 800, color: '#0f172a', marginTop: '0.25rem' }}>
-                      {c.buyer_name}
-                    </div>
-                  </div>
+                {/* 1. Top Metadata Strip: Contract # Badge & Handover Status */}
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  gap: '0.75rem',
+                  paddingBottom: '0.65rem',
+                  borderBottom: '1px solid #f1f5f9'
+                }}>
                   <div style={{
-                    fontSize: '0.74rem',
-                    fontWeight: 700,
-                    color: '#0f172a',
-                    background: '#f1f5f9',
-                    border: '1px solid #e2e8f0',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.35rem',
+                    background: 'rgba(184, 144, 62, 0.08)',
+                    border: '1px solid rgba(184, 144, 62, 0.22)',
                     padding: '0.2rem 0.55rem',
-                    borderRadius: '6px'
+                    borderRadius: '8px',
+                    fontSize: '0.78rem',
+                    fontWeight: 800,
+                    color: '#946f23',
+                    whiteSpace: 'nowrap',
+                    fontVariantNumeric: 'tabular-nums',
+                    direction: 'ltr',
+                    unicodeBidi: 'isolate'
                   }}>
-                    {c.unit_id}
+                    <FileText size={12} color="#946f23" />
+                    <span>#{c.contract_number}</span>
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', whiteSpace: 'nowrap' }}>
+                    <StatusBadge domain="unit" status={c.handover_status} isAr={isAr} />
                   </div>
                 </div>
 
-                {/* Financial Escrow Breakdown */}
+                {/* 2. Unit Title & Buyer Identity */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                  <div style={{
+                    fontSize: '0.96rem',
+                    fontWeight: 800,
+                    color: '#0f172a',
+                    lineHeight: 1.4,
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: '0.45rem'
+                  }}>
+                    <Building2 size={16} color="#946f23" style={{ flexShrink: 0, marginTop: '3px' }} />
+                    <span style={{
+                      wordBreak: 'break-word',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      display: '-webkit-box',
+                      WebkitLineClamp: 2,
+                      WebkitBoxOrient: 'vertical'
+                    }}>
+                      {c.unit_id}
+                    </span>
+                  </div>
+
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.4rem',
+                    fontSize: '0.8rem',
+                    color: '#64748b'
+                  }}>
+                    <User size={13} color="#94a3b8" style={{ flexShrink: 0 }} />
+                    <span style={{ color: '#64748b' }}>{isAr ? 'العميل:' : 'Buyer:'}</span>
+                    <strong style={{ color: '#1e293b', fontWeight: 700 }}>{c.buyer_name}</strong>
+                  </div>
+                </div>
+
+                {/* 3. Financial Escrow Breakdown (Executive Bento) */}
                 <div style={{
                   background: '#f8fafc',
                   border: '1px solid #e2e8f0',
-                  borderRadius: '10px',
-                  padding: '0.75rem',
+                  borderRadius: '12px',
+                  padding: '0.85rem',
                   display: 'flex',
                   flexDirection: 'column',
-                  gap: '0.45rem'
+                  gap: '0.65rem'
                 }}>
+                  {/* Gross Contract Value Hero */}
                   <div style={{
-                    fontSize: '0.65rem',
-                    color: '#64748b',
-                    fontWeight: 700,
                     display: 'flex',
+                    justifyContent: 'space-between',
                     alignItems: 'center',
-                    gap: '0.35rem',
-                    paddingBottom: '0.25rem',
-                    borderBottom: '1px solid #e2e8f0'
+                    paddingBottom: '0.45rem',
+                    borderBottom: '1px solid #e2e8f0',
+                    gap: '0.5rem'
                   }}>
-                    <Scale size={11} color="#946f23" />
-                    <span>{isAr ? 'الذمة المالية للتعاقد والتحصيل' : 'CONTRACT ESCROW'}</span>
-                  </div>
-
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.76rem' }}>
-                    <span style={{ color: '#64748b' }}>{isAr ? 'قيمة التعاقد (V):' : 'Gross Value (V):'}</span>
-                    <strong style={{ color: '#0f172a', fontVariantNumeric: 'tabular-nums' }}>
+                    <div style={{
+                      fontSize: '0.68rem',
+                      color: '#64748b',
+                      fontWeight: 700,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.35rem'
+                    }}>
+                      <Scale size={12} color="#946f23" />
+                      <span>{isAr ? 'إجمالي سعر العقد' : 'GROSS VALUE (V)'}</span>
+                    </div>
+                    <div style={{
+                      fontSize: '0.98rem',
+                      fontWeight: 800,
+                      color: '#0f172a',
+                      fontVariantNumeric: 'tabular-nums',
+                      whiteSpace: 'nowrap'
+                    }}>
                       {D(c.gross_contract_value || '0').formatEGP(isAr)}
-                    </strong>
+                    </div>
                   </div>
 
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.76rem' }}>
-                    <span style={{ color: '#15803d' }}>{isAr ? 'المحصل بالبنك (C):' : 'Collected (C):'}</span>
-                    <strong style={{ color: '#15803d', fontVariantNumeric: 'tabular-nums' }}>
-                      {D(c.total_cash_collected || '0').formatEGP(isAr)}
-                    </strong>
-                  </div>
+                  {/* 2-Column Metric Grid: Collected vs Remaining */}
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: '1fr 1fr',
+                    gap: '0.5rem'
+                  }}>
+                    {/* Box 1: Collected In Bank */}
+                    <div style={{
+                      background: 'rgba(22, 163, 74, 0.05)',
+                      border: '1px solid rgba(22, 163, 74, 0.18)',
+                      borderRadius: '8px',
+                      padding: '0.5rem 0.65rem'
+                    }}>
+                      <div style={{
+                        fontSize: '0.67rem',
+                        color: '#15803d',
+                        fontWeight: 700,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.25rem',
+                        whiteSpace: 'nowrap'
+                      }}>
+                        <CheckCircle2 size={11} />
+                        <span>{isAr ? 'المتحصل كاش' : 'Collected (C)'}</span>
+                      </div>
+                      <div style={{
+                        fontSize: '0.86rem',
+                        fontWeight: 800,
+                        color: '#15803d',
+                        fontVariantNumeric: 'tabular-nums',
+                        whiteSpace: 'nowrap',
+                        marginTop: '0.25rem'
+                      }}>
+                        {D(c.total_cash_collected || '0').formatEGP(isAr)}
+                      </div>
+                    </div>
 
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.76rem', borderTop: '1px dashed #e2e8f0', paddingTop: '0.35rem' }}>
-                    <span style={{ color: isFullyPaid ? '#15803d' : '#d97706' }}>{isAr ? 'المتبقي كأقساط (A/R):' : 'Remaining (A/R):'}</span>
-                    <strong style={{ color: isFullyPaid ? '#15803d' : '#0f172a', fontVariantNumeric: 'tabular-nums' }}>
-                      {D(remaining).formatEGP(isAr)}
-                    </strong>
+                    {/* Box 2: Outstanding Receivables (A/R) */}
+                    <div style={{
+                      background: isFullyPaid ? '#f1f5f9' : 'rgba(217, 119, 6, 0.05)',
+                      border: isFullyPaid ? '1px solid #e2e8f0' : '1px solid rgba(217, 119, 6, 0.2)',
+                      borderRadius: '8px',
+                      padding: '0.5rem 0.65rem'
+                    }}>
+                      <div style={{
+                        fontSize: '0.67rem',
+                        color: isFullyPaid ? '#64748b' : '#b45309',
+                        fontWeight: 700,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.25rem',
+                        whiteSpace: 'nowrap'
+                      }}>
+                        <Clock size={11} />
+                        <span>{isAr ? 'أقساط لسه باقية' : 'Pending (A/R)'}</span>
+                      </div>
+                      <div style={{
+                        fontSize: '0.86rem',
+                        fontWeight: 800,
+                        color: isFullyPaid ? '#64748b' : '#b45309',
+                        fontVariantNumeric: 'tabular-nums',
+                        whiteSpace: 'nowrap',
+                        marginTop: '0.25rem'
+                      }}>
+                        {D(remaining).formatEGP(isAr)}
+                      </div>
+                    </div>
                   </div>
                 </div>
 
-                {/* Progress Bar */}
+                {/* 4. Progress Bar & Collection Telemetry */}
                 <div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.7rem', marginBottom: '0.25rem' }}>
-                    <span style={{ color: '#64748b' }}>{isAr ? 'نسبة التحصيل التعاقدي:' : 'Collection Rate:'}</span>
-                    <strong style={{ color: isFullyPaid ? '#15803d' : '#946f23' }}>{progress.toFixed(1)}%</strong>
+                  <div style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    fontSize: '0.72rem',
+                    marginBottom: '0.35rem'
+                  }}>
+                    <span style={{ color: '#64748b', fontWeight: 600 }}>
+                      {isAr ? 'نسبة اللي اتدفع:' : 'Collection Rate:'}
+                    </span>
+                    <span style={{
+                      fontWeight: 800,
+                      color: isFullyPaid ? '#15803d' : '#946f23',
+                      fontVariantNumeric: 'tabular-nums'
+                    }}>
+                      {progress.toFixed(1)}%
+                    </span>
                   </div>
-                  <div style={{ width: '100%', height: '5px', background: '#e2e8f0', borderRadius: '999px', overflow: 'hidden' }}>
+                  <div style={{
+                    width: '100%',
+                    height: '6px',
+                    background: '#e2e8f0',
+                    borderRadius: '999px',
+                    overflow: 'hidden'
+                  }}>
                     <div style={{
                       width: `${progress}%`,
                       height: '100%',
                       background: isFullyPaid ? '#15803d' : 'linear-gradient(90deg, #c5a059, #15803d)',
-                      borderRadius: '999px'
+                      borderRadius: '999px',
+                      transition: 'width 0.4s ease'
                     }} />
                   </div>
                 </div>
 
-                {/* Footer: Tranches hint & Inspect link */}
+                {/* 5. Footer: Tranches Info & Inspect CTA */}
                 <div style={{
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
-                  fontSize: '0.72rem',
-                  paddingTop: '0.5rem',
-                  borderTop: '1px solid #f1f5f9'
+                  fontSize: '0.74rem',
+                  paddingTop: '0.65rem',
+                  borderTop: '1px solid #f1f5f9',
+                  marginTop: 'auto'
                 }}>
                   {isFullyPaid ? (
-                    <span style={{ color: '#059669', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
-                      <CheckCircle2 size={12} /> {isAr ? 'مسدد بالكامل' : 'Paid in full'}
+                    <span style={{ color: '#15803d', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
+                      <CheckCircle2 size={13} /> {isAr ? 'مدفوع بالكامل (100%)' : 'Paid in full'}
                     </span>
                   ) : (
-                    <span style={{ color: '#d97706', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
-                      <Clock size={12} /> {pendingSchedules.length} {isAr ? 'أقساط قيد السداد' : 'pending tranches'}
+                    <span style={{ color: '#d97706', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
+                      <Clock size={13} />
+                      <span>{pendingSchedules.length} {isAr ? 'أقساط لسه باقية' : 'pending tranches'}</span>
                     </span>
                   )}
 
-                  <span style={{ color: '#946f23', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
-                    <Eye size={12} /> {isAr ? 'فحص العقد' : 'Inspect'}
+                  <span style={{
+                    color: '#946f23',
+                    fontWeight: 700,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.3rem',
+                    background: 'rgba(184, 144, 62, 0.08)',
+                    padding: '0.25rem 0.6rem',
+                    borderRadius: '6px'
+                  }}>
+                    <Eye size={13} />
+                    <span>{isAr ? 'عرض تفاصيل العقد' : 'Inspect'}</span>
                   </span>
                 </div>
               </div>
@@ -578,10 +656,10 @@ export const ContractsRegistryView: React.FC<ContractsRegistryViewProps> = ({
       )}
 
       {/* 6. VIEW MODE 2: DENSE ACCOUNTING TABLE */}
-      {contractViewMode === 'table' && filteredContracts.length > 0 && (
+      {contractViewMode === 'table' && sortedContracts.length > 0 && (
         <div style={{
           background: '#ffffff',
-          border: '1px solid #e2e8f0',
+          border: '1.5px solid #cbd5e1',
           borderRadius: '16px',
           overflow: 'hidden',
           boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04)'
@@ -589,21 +667,21 @@ export const ContractsRegistryView: React.FC<ContractsRegistryViewProps> = ({
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.78rem' }}>
               <thead>
-                <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0', color: '#475569', textAlign: isAr ? 'right' : 'left' }}>
+                <tr style={{ background: '#f8fafc', borderBottom: '1.5px solid #cbd5e1', color: '#475569', textAlign: isAr ? 'right' : 'left' }}>
                   <th style={{ padding: '0.75rem 1rem' }}>{isAr ? 'رقم العقد' : 'Contract #'}</th>
-                  <th style={{ padding: '0.75rem 1rem' }}>{isAr ? 'الوحدة' : 'Unit ID'}</th>
-                  <th style={{ padding: '0.75rem 1rem' }}>{isAr ? 'العميل / المشتري' : 'Buyer'}</th>
-                  <th style={{ padding: '0.75rem 1rem' }}>{isAr ? 'قيمة العقد (V)' : 'Gross (V)'}</th>
-                  <th style={{ padding: '0.75rem 1rem' }}>{isAr ? 'المحصل (C)' : 'Collected (C)'}</th>
-                  <th style={{ padding: '0.75rem 1rem' }}>{isAr ? 'المتبقي (A/R)' : 'Remaining (A/R)'}</th>
+                  <th style={{ padding: '0.75rem 1rem' }}>{isAr ? 'الشقة / الوحدة' : 'Unit ID'}</th>
+                  <th style={{ padding: '0.75rem 1rem' }}>{isAr ? 'العميل' : 'Buyer'}</th>
+                  <th style={{ padding: '0.75rem 1rem' }}>{isAr ? 'سعر العقد' : 'Gross (V)'}</th>
+                  <th style={{ padding: '0.75rem 1rem' }}>{isAr ? 'المتحصل كاش' : 'Collected (C)'}</th>
+                  <th style={{ padding: '0.75rem 1rem' }}>{isAr ? 'الأقساط الباقية' : 'Remaining (A/R)'}</th>
                   <th style={{ padding: '0.75rem 1rem' }}>{isAr ? 'نسبة التحصيل' : 'Progress'}</th>
-                  <th style={{ padding: '0.75rem 1rem' }}>{isAr ? 'التسليم' : 'Handover'}</th>
-                  <th style={{ padding: '0.75rem 1rem' }}>{isAr ? 'التاريخ' : 'Date'}</th>
-                  <th style={{ padding: '0.75rem 1rem', textAlign: 'center' }}>{isAr ? 'إجراء' : 'Action'}</th>
+                  <th style={{ padding: '0.75rem 1rem' }}>{isAr ? 'حالة التسليم' : 'Handover'}</th>
+                  <th style={{ padding: '0.75rem 1rem' }}>{isAr ? 'تاريخ العقد' : 'Date'}</th>
+                  <th style={{ padding: '0.75rem 1rem', textAlign: 'center' }}>{isAr ? 'تفاصيل' : 'Action'}</th>
                 </tr>
               </thead>
               <tbody>
-                {filteredContracts.map(c => {
+                {paginatedContracts.map(c => {
                   const gross = D(c.gross_contract_value || '0');
                   const collected = D(c.total_cash_collected || '0');
                   const remaining = gross.minus(collected).isNegative() ? '0.00' : gross.minus(collected).toFixed(2);
@@ -612,31 +690,27 @@ export const ContractsRegistryView: React.FC<ContractsRegistryViewProps> = ({
 
                   return (
                     <tr 
-                      key={c.contract_id} 
-                      onClick={() => onInspectContract(c)} 
-                      style={{ 
-                        borderBottom: '1px solid #f1f5f9', 
-                        cursor: 'pointer',
-                        transition: 'background 0.15s ease'
-                      }}
-                      onMouseEnter={e => (e.currentTarget.style.background = '#fdfbf7')}
-                      onMouseLeave={e => (e.currentTarget.style.background = '#ffffff')}
+                      key={c.contract_id}
+                      onClick={() => onInspectContract(c)}
+                      style={{ borderBottom: '1px solid #cbd5e1', cursor: 'pointer', transition: 'background 0.15s ease' }}
+                      onMouseEnter={(e) => e.currentTarget.style.background = '#f8fafc'}
+                      onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
                     >
-                      <td style={{ padding: '0.75rem 1rem', fontVariantNumeric: 'tabular-nums', fontWeight: 800, color: '#946f23' }} dir="ltr">
-                        #{c.contract_number}
-                      </td>
-                      <td style={{ padding: '0.75rem 1rem', fontWeight: 700, color: '#0f172a' }}>{c.unit_id}</td>
-                      <td style={{ padding: '0.75rem 1rem', color: '#0f172a', fontWeight: 600 }}>{c.buyer_name}</td>
-                      <td style={{ padding: '0.75rem 1rem' }}><MoneyCell amount={c.gross_contract_value} isAr={isAr} highlight /></td>
-                      <td style={{ padding: '0.75rem 1rem' }}><MoneyCell amount={c.total_cash_collected} isAr={isAr} /></td>
                       <td style={{ padding: '0.75rem 1rem' }}>
-                        <span style={{ color: isFullyPaid ? '#15803d' : '#d97706', fontWeight: 600 }}>
-                          <MoneyCell amount={remaining} isAr={isAr} />
-                        </span>
+                        <span style={{ fontWeight: 800, color: '#0f172a' }}>{c.contract_number}</span>
+                      </td>
+                      <td style={{ padding: '0.75rem 1rem', color: '#64748b' }}>{c.unit_id}</td>
+                      <td style={{ padding: '0.75rem 1rem', fontWeight: 600, color: '#0f172a' }}>{c.buyer_name}</td>
+                      <td style={{ padding: '0.75rem 1rem' }}><MoneyCell amount={c.gross_contract_value} isAr={isAr} /></td>
+                      <td style={{ padding: '0.75rem 1rem', color: '#15803d', fontWeight: 700 }}>
+                        <MoneyCell amount={c.total_cash_collected} isAr={isAr} />
+                      </td>
+                      <td style={{ padding: '0.75rem 1rem', color: isFullyPaid ? '#15803d' : '#0f172a', fontWeight: isFullyPaid ? 700 : 500 }}>
+                        <MoneyCell amount={remaining} isAr={isAr} />
                       </td>
                       <td style={{ padding: '0.75rem 1rem' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                          <div style={{ width: '45px', height: '5px', background: '#e2e8f0', borderRadius: '999px', overflow: 'hidden' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <div style={{ width: '60px', height: '6px', background: '#e2e8f0', borderRadius: '999px', overflow: 'hidden' }}>
                             <div style={{ width: `${progress}%`, height: '100%', background: isFullyPaid ? '#15803d' : '#946f23' }} />
                           </div>
                           <span style={{ fontSize: '0.7rem', fontWeight: 700, color: isFullyPaid ? '#15803d' : '#0f172a', fontVariantNumeric: 'tabular-nums' }}>
@@ -668,7 +742,7 @@ export const ContractsRegistryView: React.FC<ContractsRegistryViewProps> = ({
                           }}
                         >
                           <Eye size={12} />
-                          <span>{isAr ? 'فحص' : 'View'}</span>
+                          <span>{isAr ? 'عرض' : 'View'}</span>
                         </button>
                       </td>
                     </tr>
@@ -678,6 +752,20 @@ export const ContractsRegistryView: React.FC<ContractsRegistryViewProps> = ({
             </table>
           </div>
         </div>
+      )}
+
+      {/* 7. PAGINATION BAR (SHARED BETWEEN CARDS AND TABLE) */}
+      {sortedContracts.length > 0 && (
+        <ZFPagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          totalItems={sortedContracts.length}
+          pageSize={pageSize}
+          onPageChange={setCurrentPage}
+          onPageSizeChange={setPageSize}
+          isAr={isAr}
+          itemLabel={{ ar: 'عقد بيع', en: 'contracts' }}
+        />
       )}
     </div>
   );

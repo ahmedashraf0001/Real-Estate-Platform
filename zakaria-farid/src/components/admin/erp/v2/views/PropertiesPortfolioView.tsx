@@ -7,12 +7,14 @@ import {
   CheckCircle2, 
   DollarSign, 
   Plus,
-  Layers
+  Layers,
+  TrendingUp
 } from 'lucide-react';
 import { Property, BuildingUnitItem } from '@/lib/supabase/types';
 import { ERPContract, ERPPropertyCostItem } from '@/lib/erp/types';
 import { D } from '@/lib/erp/math';
 import { PropertyFinancialMatrix } from '../../PropertyFinancialMatrix';
+import { ZFKpiCard } from '../ZFKpiCard';
 import styles from '../ZFWorkstationShell.module.css';
 
 interface PropertiesPortfolioViewProps {
@@ -67,7 +69,7 @@ export const PropertiesPortfolioView: React.FC<PropertiesPortfolioViewProps> = (
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
             <h1 style={{ fontSize: '1.4rem', fontWeight: 800, margin: 0, color: '#0f172a', letterSpacing: '-0.02em' }}>
-              {isAr ? 'الموقف المالي والتعاقدي لمحفظة العقارات' : 'Property Portfolio Financial Status'}
+              {isAr ? 'المشاريع والشقق المعروضة' : 'Property Portfolio Financial Status'}
             </h1>
             <span style={{
               fontSize: '0.68rem',
@@ -78,12 +80,12 @@ export const PropertiesPortfolioView: React.FC<PropertiesPortfolioViewProps> = (
               border: '1px solid rgba(184, 144, 62, 0.28)',
               color: '#946f23'
             }}>
-              {isAr ? 'حصر الأصول المعمارية' : 'Architectural Assets'}
+              {isAr ? 'العماير والشقق' : 'Architectural Assets'}
             </span>
           </div>
           <p style={{ fontSize: '0.8rem', color: '#64748b', margin: '0.25rem 0 0 0' }}>
             {isAr 
-              ? 'متابعة حصر الأصول المعمارية، تكلفة الأراضي، والإنشاءات (WIP)، وحالة التسويق والتعاقد الفعلي'
+              ? 'متابعة العماير والشقق، مصاريف المباني اللي اتصرفت، والشقق المتاحة والمباعة'
               : 'Tracking real estate assets, land & WIP construction cost basis, and contract pipeline'}
           </p>
         </div>
@@ -101,89 +103,49 @@ export const PropertiesPortfolioView: React.FC<PropertiesPortfolioViewProps> = (
         </div>
       </div>
 
-      {/* 2. THE 4 EXECUTIVE PROPERTY KPI CARDS (Apple / Mercury Elegance) */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '1.25rem' }}>
-        {/* Card 1: Total Units */}
-        <div className={styles.card}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#64748b' }}>
-              {isAr ? 'إجمالي وحدات المحفظة' : 'Total Portfolio Listings'}
-            </span>
-            <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#64748b', display: 'inline-block' }} />
-          </div>
-          <div style={{ margin: '0.25rem 0' }}>
-            <div style={{ fontSize: '1.85rem', fontWeight: 800, color: '#0f172a', letterSpacing: '-0.03em', fontVariantNumeric: 'tabular-nums' }}>
-              {totalProps} <span style={{ fontSize: '0.9rem', fontWeight: 600, color: '#64748b' }}>{isAr ? 'وحدة ومبنى' : 'Units'}</span>
-            </div>
-          </div>
-          <div style={{ fontSize: '0.74rem', color: '#64748b', borderTop: '1px solid #f1f5f9', paddingTop: '0.65rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span>{isAr ? 'كتالوج الأصول المعمارية' : 'Catalog Inventory'}</span>
-            <strong style={{ color: '#0f172a' }}>{isAr ? 'جاهزة وتحت التنفيذ' : 'Ready & WIP'}</strong>
-          </div>
-        </div>
+      {/* 2. THE 4 EXECUTIVE PROPERTY KPI CARDS */}
+      <div className={styles.kpiGrid}>
+        <ZFKpiCard
+          title={isAr ? 'عدد كل الشقق' : 'Total Portfolio Listings'}
+          value={totalProps}
+          unitLabel={isAr ? 'شقة' : 'Units'}
+          icon={<Building2 size={16} />}
+          accentColor="slate"
+          subtitleLabel={isAr ? 'حالة المعروض' : 'Catalog Inventory'}
+          subtitleValue={isAr ? 'جاهزة وشغالة في البناء' : 'Ready & WIP'}
+        />
 
-        {/* Card 2: Available Units */}
-        <div className={styles.card}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#64748b' }}>
-              {isAr ? 'الوحدات المتاحة للتعاقد' : 'Available for Sale'}
-            </span>
-            <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#946f23', display: 'inline-block' }} />
-          </div>
-          <div style={{ margin: '0.25rem 0' }}>
-            <div style={{ fontSize: '1.85rem', fontWeight: 800, color: '#0f172a', letterSpacing: '-0.03em', fontVariantNumeric: 'tabular-nums' }}>
-              {availableProps} <span style={{ fontSize: '0.9rem', fontWeight: 600, color: '#946f23' }}>{isAr ? 'وحدة متاحة' : 'Units Open'}</span>
-            </div>
-          </div>
-          <div style={{ fontSize: '0.74rem', color: '#64748b', borderTop: '1px solid #f1f5f9', paddingTop: '0.65rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span>{isAr ? 'نسبة المعروض الحر' : 'Open Inventory'}</span>
-            <strong style={{ color: '#946f23', fontVariantNumeric: 'tabular-nums' }}>
-              {totalProps > 0 ? `${Math.round((availableProps / totalProps) * 100)}%` : '0%'}
-            </strong>
-          </div>
-        </div>
+        <ZFKpiCard
+          title={isAr ? 'شقق جاهزة للبيع' : 'Available for Sale'}
+          value={availableProps}
+          unitLabel={isAr ? 'شقة متاحة' : 'Units Open'}
+          icon={<Layers size={16} />}
+          accentColor="gold"
+          progress={totalProps > 0 ? Math.round((availableProps / totalProps) * 100) : 0}
+          subtitleLabel={isAr ? 'نسبة المتاح للبيع' : 'Open Inventory'}
+          subtitleValue={totalProps > 0 ? `${Math.round((availableProps / totalProps) * 100)}%` : '0%'}
+        />
 
-        {/* Card 3: Sold / Contracted Units */}
-        <div className={styles.card}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#64748b' }}>
-              {isAr ? 'الوحدات المتعاقد عليها (المباعة)' : 'Contracted / Sold Units'}
-            </span>
-            <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#15803d', display: 'inline-block' }} />
-          </div>
-          <div style={{ margin: '0.25rem 0' }}>
-            <div style={{ fontSize: '1.85rem', fontWeight: 800, color: '#0f172a', letterSpacing: '-0.03em', fontVariantNumeric: 'tabular-nums' }}>
-              {contractedProps} <span style={{ fontSize: '0.9rem', fontWeight: 600, color: '#15803d' }}>{isAr ? 'وحدة مباعة' : 'Units Sold'}</span>
-            </div>
-          </div>
-          <div style={{ fontSize: '0.74rem', color: '#64748b', borderTop: '1px solid #f1f5f9', paddingTop: '0.65rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span>{isAr ? 'نسبة تسويق المحفظة' : 'Portfolio Sold Rate'}</span>
-            <strong style={{ color: '#15803d', fontVariantNumeric: 'tabular-nums' }}>{soldPercent}%</strong>
-          </div>
-        </div>
+        <ZFKpiCard
+          title={isAr ? 'شقق مبيوعة' : 'Contracted / Sold Units'}
+          value={contractedProps}
+          unitLabel={isAr ? 'شقة مبيوعة' : 'Units Sold'}
+          icon={<CheckCircle2 size={16} />}
+          accentColor="emerald"
+          progress={soldPercent}
+          subtitleLabel={isAr ? 'نسبة الشقق المبيوعة' : 'Portfolio Sold Rate'}
+          subtitleValue={`${soldPercent}%`}
+        />
 
-        {/* Card 4: Total Portfolio Value — Premier Gold Accent */}
-        <div className={styles.card} style={{
-          background: 'linear-gradient(180deg, #ffffff 0%, #fefdfa 100%)',
-          border: '1px solid rgba(184, 144, 62, 0.35)',
-          boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.04), 0 4px 16px -4px rgba(184, 144, 62, 0.12)'
-        }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#946f23' }}>
-              {isAr ? 'القيمة السوقية للمحفظة' : 'Gross Portfolio Valuation'}
-            </span>
-            <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#b8903e', display: 'inline-block' }} />
-          </div>
-          <div style={{ margin: '0.25rem 0' }}>
-            <div style={{ fontSize: '1.85rem', fontWeight: 800, color: '#0f172a', letterSpacing: '-0.03em', fontVariantNumeric: 'tabular-nums' }}>
-              {totalCatalogVal.formatEGP(isAr)}
-            </div>
-          </div>
-          <div style={{ fontSize: '0.74rem', color: '#64748b', borderTop: '1px solid rgba(184, 144, 62, 0.18)', paddingTop: '0.65rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span>{isAr ? 'إجمالي تقييم أسعار الوحدات' : 'Catalog Valuation'}</span>
-            <strong style={{ color: '#946f23' }}>{isAr ? 'سعر القائمة' : 'List Price'}</strong>
-          </div>
-        </div>
+        <ZFKpiCard
+          title={isAr ? 'إجمالي قيمة الشقق المعروضة' : 'Gross Portfolio Valuation'}
+          value={totalCatalogVal.formatEGP(isAr)}
+          isFlagship={true}
+          accentColor="gold"
+          icon={<TrendingUp size={16} />}
+          subtitleLabel={isAr ? 'إجمالي أسعار الشقق' : 'Catalog Valuation'}
+          subtitleValue={isAr ? 'حسب سعر البيع' : 'List Price'}
+        />
       </div>
 
       {/* 3. PROPERTY FINANCIAL MATRIX COMPONENT */}

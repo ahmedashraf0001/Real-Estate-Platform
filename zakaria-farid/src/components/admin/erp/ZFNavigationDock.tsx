@@ -12,19 +12,23 @@ import {
   Layers, 
   Building2, 
   Calculator,
-  Wallet
+  Wallet,
+  Zap,
+  X
 } from 'lucide-react';
-import styles from './ZFSubprogram.module.css';
+import styles from './v2/ZFWorkstationShell.module.css';
 
 export type ERPNavModule = 
   | 'cockpit'
+  | 'operations'
   | 'properties'
   | 'calculator'
   | 'ledger'
   | 'contracts'
   | 'pdc'
   | 'rescissions'
-  | 'cost-allocation';
+  | 'cost-allocation'
+  | 'tax';
 
 interface DockItemDef {
   id: ERPNavModule;
@@ -44,6 +48,7 @@ interface DockGroupDef {
 interface ZFNavigationDockProps {
   activeModule: ERPNavModule;
   onSelectModule: (module: ERPNavModule) => void;
+  urgentDuesCount?: number;
   pendingApprovalsCount?: number;
   openQuestionsCount?: number;
   contractsCount?: number;
@@ -51,59 +56,74 @@ interface ZFNavigationDockProps {
   propertiesCount?: number;
   isAr?: boolean;
   onOpenAcademy?: () => void;
+  isCollapsed?: boolean;
+  isMobileOpen?: boolean;
+  onCloseMobile?: () => void;
 }
 
 export const ZFNavigationDock: React.FC<ZFNavigationDockProps> = ({
   activeModule,
   onSelectModule,
+  urgentDuesCount,
   contractsCount,
   pdcSafeCount,
   propertiesCount,
   isAr = false,
-  onOpenAcademy
+  onOpenAcademy,
+  isCollapsed = false,
+  isMobileOpen = false,
+  onCloseMobile
 }) => {
   const GROUPS: DockGroupDef[] = [
     {
-      groupTitleEn: 'COMMAND & ANALYTICS',
-      groupTitleAr: 'القيادة والتحليل المالي',
+      groupTitleEn: 'COMMAND & OPERATIONS',
+      groupTitleAr: 'الإدارة وحركة الشغل',
       items: [
         { 
           id: 'cockpit', 
           labelEn: 'Executive Cockpit', 
-          labelAr: 'لوحة القيادة المالية', 
+          labelAr: 'نظرة عامة على الشغل', 
           icon: TrendingUp 
+        },
+        { 
+          id: 'operations', 
+          labelEn: 'Daily Desk & Cashier', 
+          labelAr: 'حركة الخزنة والعمليات', 
+          icon: Zap,
+          badge: urgentDuesCount && urgentDuesCount > 0 ? urgentDuesCount : undefined,
+          badgeVariant: 'gold'
         },
         { 
           id: 'properties', 
           labelEn: 'Projects & WIP Assets', 
-          labelAr: 'المشاريع والأصول (WIP)', 
+          labelAr: 'المشاريع والشقق المعروضة', 
           icon: Building2,
           badge: propertiesCount && propertiesCount > 0 ? propertiesCount : undefined
         }
       ]
     },
     {
-      groupTitleEn: 'SALES & DEALS PIPELINE',
-      groupTitleAr: 'المبيعات والعمليات التعاقدية',
+      groupTitleEn: 'SALES & CONTRACTING',
+      groupTitleAr: 'المبيعات والعملاء',
       items: [
         { 
           id: 'contracts', 
           labelEn: 'Sales Contracts Registry', 
-          labelAr: 'سجل عقود البيع', 
+          labelAr: 'عقود البيع والعملاء', 
           icon: FileText,
           badge: contractsCount && contractsCount > 0 ? contractsCount : undefined,
           badgeVariant: 'gold'
         },
         { 
           id: 'calculator', 
-          labelEn: 'Installment Structuring', 
-          labelAr: 'حاسبة وهيكلة الأقساط', 
+          labelEn: 'Calculator & Feasibility', 
+          labelAr: 'حاسبة تكلفة المباني والأقساط', 
           icon: Calculator 
         },
         { 
           id: 'pdc', 
-          labelEn: 'Hand Installments Vault', 
-          labelAr: 'حافظة بنود التحصيل والأقساط باليد', 
+          labelEn: 'Hand Installments & Dues', 
+          labelAr: 'أجندة ومواعيد الأقساط', 
           icon: Wallet,
           badge: pdcSafeCount && pdcSafeCount > 0 ? pdcSafeCount : undefined,
           badgeVariant: 'emerald'
@@ -112,32 +132,68 @@ export const ZFNavigationDock: React.FC<ZFNavigationDockProps> = ({
     },
     {
       groupTitleEn: 'ACCOUNTING & GOVERNANCE',
-      groupTitleAr: 'المحاسبة والرقابة المالية',
+      groupTitleAr: 'الحسابات ودفاتر الشركة',
       items: [
         { 
           id: 'ledger', 
           labelEn: 'General Ledger & COA', 
-          labelAr: 'دفتر الأستاذ والدليل (COA)', 
+          labelAr: 'حسابات الشركة ودفتر اليومية', 
           icon: BookOpen 
         },
         { 
           id: 'cost-allocation', 
           labelEn: 'WIP Cost Allocation (RSV)', 
-          labelAr: 'تخصيص التكاليف (RSV)', 
+          labelAr: 'توزيع مصاريف المباني على الشقق', 
           icon: PieChart 
         },
         { 
           id: 'rescissions', 
           labelEn: 'Rescissions & Settlement', 
-          labelAr: 'فسخ واسترداد العقود', 
+          labelAr: 'إلغاء العقود وترجيع الفلوس', 
           icon: RotateCcw 
+        },
+        { 
+          id: 'tax', 
+          labelEn: 'Apartment Property Taxes', 
+          labelAr: 'الضرائب والرسوم على الشقق', 
+          icon: Landmark 
         }
       ]
     }
   ];
 
   return (
-    <aside className={styles.navigationDock} data-tour="nav-dock">
+    <aside 
+      className={`
+        ${styles.dock} 
+        ${isCollapsed ? styles.dockCollapsed : ''} 
+        ${isMobileOpen ? styles.dockMobileOpen : ''}
+      `} 
+      data-tour="nav-dock"
+    >
+      {isMobileOpen && onCloseMobile && (
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '0.65rem' }}>
+          <button
+            type="button"
+            onClick={onCloseMobile}
+            style={{
+              background: '#f1f5f9',
+              border: '1px solid #e2e8f0',
+              borderRadius: '7px',
+              padding: '0.35rem',
+              cursor: 'pointer',
+              color: '#64748b',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}
+            title={isAr ? 'إغلاق القائمة' : 'Close Menu'}
+          >
+            <X size={15} />
+          </button>
+        </div>
+      )}
+
       <div style={{ display: 'flex', flexDirection: 'column' }}>
         {GROUPS.map((grp, gIdx) => (
           <div key={gIdx} className={styles.dockGroup}>
@@ -155,14 +211,17 @@ export const ZFNavigationDock: React.FC<ZFNavigationDockProps> = ({
                   type="button"
                   data-tour={`nav-item-${item.id}`}
                   className={`${styles.dockItem} ${isActive ? styles.dockItemActive : ''}`}
-                  onClick={() => onSelectModule(item.id)}
+                  onClick={() => {
+                    onSelectModule(item.id);
+                    if (onCloseMobile) onCloseMobile();
+                  }}
                   title={isAr ? item.labelAr : item.labelEn}
                 >
                   {/* Leading Active Indicator Notch */}
                   {isActive && <span className={styles.dockActiveNotch} />}
 
                   <div className={styles.dockItemContent}>
-                    <div className={styles.dockItemIconWrap}>
+                    <div className={styles.dockItemIcon}>
                       <Icon size={15} />
                     </div>
                     <span className={styles.dockItemLabel}>
@@ -192,54 +251,30 @@ export const ZFNavigationDock: React.FC<ZFNavigationDockProps> = ({
           <button
             type="button"
             onClick={onOpenAcademy}
-            style={{
-              width: '100%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '0.45rem',
-              background: 'linear-gradient(135deg, rgba(212, 175, 55, 0.18) 0%, rgba(212, 175, 55, 0.05) 100%)',
-              border: '1px solid rgba(212, 175, 55, 0.35)',
-              borderRadius: '10px',
-              padding: '0.55rem 0.8rem',
-              color: '#e2c974',
-              fontSize: '0.74rem',
-              fontWeight: 800,
-              cursor: 'pointer',
-              marginBottom: '0.75rem',
-              transition: 'all 0.15s ease'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = 'linear-gradient(135deg, rgba(212, 175, 55, 0.28) 0%, rgba(212, 175, 55, 0.1) 100%)';
-              e.currentTarget.style.transform = 'translateY(-1px)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'linear-gradient(135deg, rgba(212, 175, 55, 0.18) 0%, rgba(212, 175, 55, 0.05) 100%)';
-              e.currentTarget.style.transform = 'translateY(0)';
-            }}
+            className={styles.academyBtn}
           >
             <BookOpen size={14} />
-            <span>{isAr ? 'دليل المنظومة والأكاديمية' : 'ERP Academy & Guide'}</span>
+            <span>{isAr ? 'دليل واستخدام النظام' : 'ERP Academy & Guide'}</span>
           </button>
         )}
 
-        <div className={styles.dockFiscalCard}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.35rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', color: '#e2c974', fontWeight: 800, fontSize: '0.74rem' }}>
-              <Layers size={14} />
-              <span>{isAr ? 'حالة الرقابة المالية' : 'Financial Controls'}</span>
+        <div className={styles.dockStatusBox}>
+          <div className={styles.dockStatusTitle}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+              <Layers size={14} color="#b8903e" />
+              <span>{isAr ? 'سلامة الحسابات' : 'Financial Controls'}</span>
             </div>
             <span style={{
               width: '8px',
               height: '8px',
               borderRadius: '50%',
               background: '#10b981',
-              boxShadow: '0 0 8px #10b981',
+              boxShadow: '0 0 8px rgba(16, 185, 129, 0.45)',
               display: 'inline-block'
             }} />
           </div>
-          <div style={{ color: '#94a3b8', fontSize: '0.68rem', lineHeight: 1.4 }}>
-            {isAr ? 'القيود المحاسبية متوازنة بدقة القرش (مدين = دائن 0.00)' : 'Double-Entry Invariant 4.1 Verified (0.00)'}
+          <div className={styles.dockStatusSub}>
+            {isAr ? 'حسابات الشركة مضبوطة بالمليم (مدين = دائن 0.00)' : 'Double-Entry Invariant 4.1 Verified (0.00)'}
           </div>
         </div>
       </div>

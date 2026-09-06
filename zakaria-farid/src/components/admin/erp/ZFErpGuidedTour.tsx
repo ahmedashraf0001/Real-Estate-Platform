@@ -20,12 +20,12 @@ import {
   ArrowRight,
   ArrowLeft,
   Check,
-  Wallet
+  Wallet,
+  Zap
 } from 'lucide-react';
-import { ERPNavModule } from './ZFNavigationDock';
 
 export interface TourStep {
-  moduleId: ERPNavModule;
+  moduleId: string;
   targetSelector: string;
   groupAr: string;
   groupEn: string;
@@ -46,7 +46,7 @@ interface ZFErpGuidedTourProps {
   isActive: boolean;
   onComplete: () => void;
   onSkip: () => void;
-  onNavigateToModule?: (module: ERPNavModule) => void;
+  onNavigateToModule?: (module: string) => void;
   isAr?: boolean;
 }
 
@@ -79,10 +79,37 @@ const SIDEBAR_TOUR_STEPS: TourStep[] = [
     icon: TrendingUp
   },
   {
+    moduleId: 'operations',
+    targetSelector: '[data-tour="nav-item-operations"]',
+    groupAr: 'المكتب اليومي والعمليات الفورية',
+    groupEn: 'DAILY DESK & CASHIER',
+    titleAr: 'المكتب اليومي وحركة الخزينة',
+    titleEn: 'Daily Desk & Cashier Operations',
+    badgeLabelAr: 'الخزينة المباشرة',
+    badgeLabelEn: 'CASHIER DESK',
+    purposeAr: 'مقر العمليات اليومية السريعة لمسؤول الخزينة والتحصيل؛ حصر النقدية الحرة فورياً، تحصيل الأقساط العاجلة باليد، وتسجيل المصروفات والعهد النقدية دون تعقيد.',
+    purposeEn: 'Rapid daily operations desk for cashier and treasury; tracks unallocated safe liquidity, processes hand installment collections, and records site expenses.',
+    capabilitiesAr: [
+      'متابعة رصيد الخزينة النقدية الرئيسية (101000) والأقساط المستحقة للتحصيل اليوم',
+      'تسجيل المصروفات الموقعية والتشغيلية المباشرة مع التحقق التلقائي من إقفال الفترة',
+      'تحصيل الأقساط المستحقة نقداً باليد وطباعة سند القبض وإثبات القيد المزدوج فوراً',
+      'سجل حركات اليومية السريعة والعمليات المعلقة لليوم الجاري'
+    ],
+    capabilitiesEn: [
+      'Monitor Main Cash Safe balance (101000) and urgent due installments today',
+      'Instant site and operational expense logging with active fiscal period checks',
+      'One-click cash collection with automated receipt vouchers and GL posting',
+      'Daily quick audit register for today’s pending operations'
+    ],
+    accountingImpactAr: 'إثبات الحركات النقدية اللحظية بالخزينة (حساب 101000) مع منع التعديل بأثر رجعي للفترات المقفلة.',
+    accountingImpactEn: 'Immediate real-time posting to Main Safe (101000) with strict locked fiscal period enforcement.',
+    icon: Zap
+  },
+  {
     moduleId: 'properties',
     targetSelector: '[data-tour="nav-item-properties"]',
-    groupAr: 'القيادة والتحليل المالي',
-    groupEn: 'COMMAND & ANALYTICS',
+    groupAr: 'القيادة والمشاريع والتطوير',
+    groupEn: 'PROJECTS & INVENTORY',
     titleAr: 'المشاريع والأصول الإنشائية (WIP)',
     titleEn: 'Projects & Capitalized Assets (WIP)',
     badgeLabelAr: 'الأصول والمشروعات',
@@ -137,22 +164,22 @@ const SIDEBAR_TOUR_STEPS: TourStep[] = [
     targetSelector: '[data-tour="nav-item-calculator"]',
     groupAr: 'المبيعات والعمليات التعاقدية',
     groupEn: 'SALES & DEALS PIPELINE',
-    titleAr: 'حاسبة وهيكلة الأقساط المالية',
-    titleEn: 'Installment Structuring & Calculator',
+    titleAr: 'حاسبة وهيكلة الأقساط وتكاليف البناء',
+    titleEn: 'Installment Structuring & Construction Feasibility',
     badgeLabelAr: 'الهيكلة والتسعير',
     badgeLabelEn: 'STRUCTURING',
-    purposeAr: 'المحاكي المالي لتسعير وتصميم عروض السداد؛ يتيح هيكلة الأقساط، تخصيص نسب المقدم والاستلام، واحتساب خصومات الدفع الفوري (Cash Discounts).',
-    purposeEn: 'Financial pricing simulator to design installment schedules, customize down payments, handover tranches, and compute upfront cash discounts.',
+    purposeAr: 'المحاكي المالي لتسعير وتصميم عروض السداد وحساب تكاليف البناء الفعلية (خرسانات، تشطيبات، ومقاولات) بمعدلات استهلاك دقيقة.',
+    purposeEn: 'Financial pricing simulator to structure installments, calculate down payments, and estimate construction milestone costs (civil, MEP, finishes).',
     capabilitiesAr: [
       'محاكاة خطط السداد وتوليد سيناريوهات أقساط مرنة تناسب المشتري',
       'احتساب نسب الدفعة المقدمة ودفعات الاستلام وضبط التوزيع الزمني',
-      'محاكاة واحتساب خصومات السداد الكاش الفوري بدقة محاسبية',
+      'حساب تكاليف البناء والخرسانات والتشطيبات للمشروع بالكامل بدقة',
       'المعاينة الفورية لجدول الدفعات ومقارنتها بالتدفقات النقدية المستهدفة'
     ],
     capabilitiesEn: [
       'Simulate flexible payment plans and custom installment scenarios',
       'Calculate down payment and delivery balloon payments with precise timing',
-      'Compute upfront cash discounts with audited financial accuracy',
+      'Accurate structural and finishing cost estimation per square meter',
       'Preview cash inflow schedules against project construction milestones'
     ],
     accountingImpactAr: 'ضمان توافق فترات استحقاق الأقساط مع احتياجات السيولة التشغيلية للمشروع.',
@@ -168,8 +195,8 @@ const SIDEBAR_TOUR_STEPS: TourStep[] = [
     titleEn: 'Hand Installments & Cash Dues Vault',
     badgeLabelAr: 'الخزينة والأقساط باليد',
     badgeLabelEn: 'HAND INSTALLMENTS',
-    purposeAr: 'منظومة إدارة ومتابعة الأقساط وبنود الاستحقاق المستلمة نقداً باليد (حساب ١٠٤٠٠٠)؛ مع معالجة التحصيل اليدوي المباشر وتوريد النقدية بالخزينة الرئيسية [١٠١٠٠٠] بدون أي تعاملات بنكية.',
-    purposeEn: 'Management of contract installment items collected in cash by hand (GL 104000); records physical receipts directly into Main Safe [101000] with no banking intermediaries.',
+    purposeAr: 'منظومة إدارة ومتابعة الأقساط وبنود الاستحقاق المستلمة نقداً باليد (حساب ١٠٤٠٠٠)؛ مع معالجة التحصيل اليدوي المباشر وتوريد النقدية بالخزينة الرئيسية [١٠١٠٠٠].',
+    purposeEn: 'Management of contract installment items collected in cash by hand (GL 104000); records physical receipts directly into Main Safe [101000].',
     capabilitiesAr: [
       'جدولة وحصر بنود الأقساط المستحقة باليد وربطها التلقائي بالعقود',
       'تصنيف فوري للحالة: مسدد في حينه، مستحق لاحقاً باليد، أو متأخر عن موعده',
@@ -254,18 +281,45 @@ const SIDEBAR_TOUR_STEPS: TourStep[] = [
     capabilitiesAr: [
       'تطبيق الحد الأدنى القانوني الصارم للرد النقدي للعميل وفقاً لمرحلة التسليم',
       'احتساب وتطبيق الخصم الإداري ورسم الاسترداد القانوني المعتمد',
-      'رد وإلغاء شيكات الخزينة المتبقية في ذمة العميل بأمان وتأكيد تسليمها',
+      'إلغاء وإسقاط الأقساط والمستحقات المتبقية في ذمة العميل بأمان وتأكيد تسليم سندات القبض',
       'دورة الاعتماد الثنائي الإلزامية (Maker-Checker) لمنع أي صرف نقدي غير معتمد'
     ],
     capabilitiesEn: [
       'Enforce statutory refund floor (Pre-Delivery vs Post-Delivery handover rules)',
       'Deduct allowable administrative penalty fees with legal documentation',
-      'Safely void and return outstanding safe vault PDCs to the buyer',
+      'Safely void outstanding customer installments and return receipts to the buyer',
       'Mandatory Maker-Checker dual approval workflow before any cash disbursement'
     ],
     accountingImpactAr: 'إلغاء المديونية وإجراء التسوية العكسية بين المبالغ المستردة، الخصم الإداري، والوحدة المطروحة مجدداً.',
     accountingImpactEn: 'Reverses contract receivables, records administrative penalty revenue, and restores property availability.',
     icon: RotateCcw
+  },
+  {
+    moduleId: 'tax',
+    targetSelector: '[data-tour="nav-item-tax"]',
+    groupAr: 'المحاسبة والرقابة المالية',
+    groupEn: 'ACCOUNTING & GOVERNANCE',
+    titleAr: 'الضرائب العقارية ورسوم الوحدات',
+    titleEn: 'Apartment Property Taxes & Fees',
+    badgeLabelAr: 'الضرائب العقارية',
+    badgeLabelEn: 'PROPERTY TAX',
+    purposeAr: 'سجل حصر وسداد وتوثيق التقديرات الضريبية للوحدات العقارية ورسوم التراخيص؛ متابعة المتأخرات، التوريد لمصلحة الضرائب العقارية، وإرفاق إيصالات السداد الرسمية.',
+    purposeEn: 'Registry for property tax assessments and unit license fees; monitors arrears, remittance to the Real Estate Tax Authority, and archives official receipts.',
+    capabilitiesAr: [
+      'حصر التقديرات الضريبية السنوية لكل وحدة عقارية بالمشروع',
+      'تسجيل وتوثيق توريد الضرائب العقارية مع رقم الإشعار وتاريخ السداد',
+      'فصل الضرائب المسددة عن المبالغ المستحقة غير المسددة',
+      'ربط الرسوم الضريبية مباشرة ببيانات العقود والوحدات'
+    ],
+    capabilitiesEn: [
+      'Track annual property tax assessments per unit across all projects',
+      'Record and document tax remittances with receipt numbers and payment dates',
+      'Distinct tracking of settled taxes vs outstanding liabilities',
+      'Link tax liabilities directly to contract and property records'
+    ],
+    accountingImpactAr: 'إثبات سداد الضريبة العقارية بقيد: مدين مصروفات ضرائب عقارية 503000 ودائن الخزينة 101000.',
+    accountingImpactEn: 'Tax remittance entry: Dr Property Tax Expense 503000 / Cr Cash Safe 101000.',
+    icon: Landmark
   }
 ];
 

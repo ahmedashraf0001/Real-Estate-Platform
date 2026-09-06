@@ -809,6 +809,12 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
           alt={formattedTitle} 
           className="card-image"
           loading="lazy"
+          onError={(e) => {
+            const target = e.currentTarget;
+            if (!target.src.includes('placeholder-property.png')) {
+              target.src = '/placeholder-property.png';
+            }
+          }}
           whileHover={{ scale: 1.05 }}
           transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
         />
@@ -843,31 +849,39 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
             </button>
           </div>
         </div>
+      </div>
 
-        {/* Floating Frosted Glass Panel */}
-        <div className="card-content-overlay" dir={isAr ? 'rtl' : 'ltr'}>
-          <h3 className="card-title">{formattedTitle}</h3>
+      {/* Structured Card Body (Unblocked Photography + Dedicated High-Legibility Typography) */}
+      <div className="card-body" dir={isAr ? 'rtl' : 'ltr'}>
+        <h3 className="card-title" title={formattedTitle}>{formattedTitle}</h3>
+
+        <div className="card-specs">
+          <div className="spec-item">
+            <Bed size={15} strokeWidth={2.2} className="spec-icon" />
+            <span className="spec-label">{property.beds} {isAr ? 'غرف' : 'Beds'}</span>
+          </div>
+          <div className="spec-divider" />
+          <div className="spec-item">
+            <Bath size={15} strokeWidth={2.2} className="spec-icon" />
+            <span className="spec-label">{property.baths} {isAr ? 'حمامات' : 'Baths'}</span>
+          </div>
+          <div className="spec-divider" />
+          <div className="spec-item">
+            <Maximize2 size={14} strokeWidth={2.2} className="spec-icon" />
+            <span className="spec-label">{new Intl.NumberFormat('en-US').format(property.sqm)} {isAr ? 'م²' : 'sqm'}</span>
+          </div>
+        </div>
+
+        <div className="card-footer-row">
           <div className="card-price" dir="ltr">
-            <span className="price-amount">{formattedPrice}</span>
+            <span className="price-amount tabular-nums">{formattedPrice}</span>
             <span className="currency-unit">{isAr ? 'ج.م' : property.currency}</span>
           </div>
 
-          <div className="card-specs">
-            <div className="spec-item">
-              <Bed size={16} strokeWidth={2.2} className="spec-icon" />
-              <span className="spec-label">{property.beds} {isAr ? 'غرف' : 'Beds'}</span>
-            </div>
-
-            <div className="spec-item">
-              <Bath size={16} strokeWidth={2.2} className="spec-icon" />
-              <span className="spec-label">{property.baths} {isAr ? 'حمامات' : 'Baths'}</span>
-            </div>
-
-            <div className="spec-item">
-              <Maximize2 size={15} strokeWidth={2.2} className="spec-icon" />
-              <span className="spec-label">{new Intl.NumberFormat('en-US').format(property.sqm)} {isAr ? 'م²' : 'sqm'}</span>
-            </div>
-          </div>
+          <span className="card-cta-btn">
+            <span>{isAr ? 'معاينة الصرح' : 'Explore Estate'}</span>
+            <ArrowUpRight size={14} className="cta-arrow" />
+          </span>
         </div>
       </div>
 
@@ -876,19 +890,19 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
           position: relative;
           background: #0E121B;
           border: 1px solid rgba(255, 255, 255, 0.08);
-          border-radius: 22px;
+          border-radius: 20px;
           overflow: hidden;
           cursor: pointer;
-          height: 480px;
+          min-height: 460px;
           display: flex;
           flex-direction: column;
           transition: all var(--transition-smooth);
         }
 
         [data-theme="light"] .property-card {
-          background: #0E121B;
+          background: #ffffff;
           border: 1px solid rgba(184, 133, 48, 0.2);
-          box-shadow: 0 10px 30px rgba(30, 24, 16, 0.08), 0 2px 6px rgba(0, 0, 0, 0.04);
+          box-shadow: 0 10px 30px rgba(30, 24, 16, 0.06), 0 2px 6px rgba(0, 0, 0, 0.04);
         }
 
         .property-card:hover {
@@ -899,18 +913,16 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
 
         [data-theme="light"] .property-card:hover {
           border-color: #B8934A;
-          box-shadow: 0 20px 48px rgba(30, 24, 16, 0.14), 0 0 20px rgba(184, 133, 48, 0.18);
+          box-shadow: 0 20px 48px rgba(30, 24, 16, 0.12), 0 0 20px rgba(184, 133, 48, 0.16);
         }
 
         .card-image-wrapper {
           position: relative;
           width: 100%;
-          height: 100%;
+          height: 250px;
+          flex-shrink: 0;
           overflow: hidden;
-          display: flex;
-          flex-direction: column;
-          justify-content: space-between;
-          padding-bottom: 0.85rem;
+          background: #111622;
         }
 
         .card-image {
@@ -919,6 +931,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
           width: 100%;
           height: 100%;
           object-fit: cover;
+          color: transparent;
         }
 
         .card-top-bar {
@@ -938,12 +951,12 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
           padding: 0.35rem 0.85rem;
           font-size: 0.8125rem;
           font-weight: 700;
-          background: rgba(10, 14, 22, 0.72);
-          backdrop-filter: blur(20px) saturate(200%);
-          -webkit-backdrop-filter: blur(20px) saturate(200%);
-          border: 1px solid rgba(255, 255, 255, 0.24);
+          background: rgba(10, 14, 22, 0.75);
+          backdrop-filter: blur(16px) saturate(180%);
+          -webkit-backdrop-filter: blur(16px) saturate(180%);
+          border: 1px solid rgba(255, 255, 255, 0.2);
           color: #ffffff;
-          box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35), inset 0 1px 1px rgba(255, 255, 255, 0.4);
+          box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
           transition: all var(--transition-fast);
         }
 
@@ -964,12 +977,12 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
           display: flex;
           align-items: center;
           justify-content: center;
-          background: rgba(10, 14, 22, 0.72);
-          backdrop-filter: blur(20px) saturate(200%);
-          -webkit-backdrop-filter: blur(20px) saturate(200%);
-          border: 1px solid rgba(255, 255, 255, 0.24);
+          background: rgba(10, 14, 22, 0.75);
+          backdrop-filter: blur(16px) saturate(180%);
+          -webkit-backdrop-filter: blur(16px) saturate(180%);
+          border: 1px solid rgba(255, 255, 255, 0.2);
           color: #ffffff;
-          box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35), inset 0 1px 1px rgba(255, 255, 255, 0.4);
+          box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
           transition: all var(--transition-fast);
           cursor: pointer;
         }
@@ -987,79 +1000,55 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
           box-shadow: 0 0 12px var(--gold-glow);
         }
 
-        /* Unified Smoked Liquid Glass Overlay (Consistent across Light & Dark modes) */
-        .card-content-overlay {
-          position: relative;
-          z-index: 3;
-          margin: 0 0.85rem;
-          padding: 1.35rem 1.35rem 1.15rem;
-          background: linear-gradient(
-            135deg,
-            rgba(255, 255, 255, 0.22) 0%,
-            rgba(18, 24, 38, 0.55) 45%,
-            rgba(10, 14, 24, 0.78) 100%
-          );
-          backdrop-filter: blur(24px) saturate(210%) contrast(108%) brightness(105%);
-          -webkit-backdrop-filter: blur(24px) saturate(210%) contrast(108%) brightness(105%);
-          border: 1px solid rgba(255, 255, 255, 0.28);
-          border-radius: 18px;
-          box-shadow: 
-            0 20px 48px rgba(0, 0, 0, 0.45),
-            0 4px 14px rgba(0, 0, 0, 0.18),
-            inset 0 1.5px 2px rgba(255, 255, 255, 0.65),
-            inset 0 -1px 1px rgba(255, 255, 255, 0.15);
-          transition: all var(--transition-smooth);
+        /* Modern Split Card Body */
+        .card-body {
+          display: flex;
+          flex-direction: column;
+          flex: 1;
+          justify-content: space-between;
+          padding: 1.15rem 1.25rem;
+          background: linear-gradient(180deg, rgba(14, 18, 27, 0.98) 0%, #0A0D14 100%);
+          border-top: 1px solid rgba(255, 255, 255, 0.06);
+        }
+
+        [data-theme="light"] .card-body {
+          background: #ffffff;
+          border-top: 1px solid rgba(0, 0, 0, 0.06);
         }
 
         .card-title {
           font-family: var(--font-heading);
-          font-size: 1.0625rem;
+          font-size: 1.05rem;
           font-weight: 700;
           color: #FFFFFF;
-          line-height: 1.35;
-          margin: 0 0 0.4rem 0;
-          height: 2.85rem;
+          line-height: 1.45;
+          margin: 0 0 0.75rem 0;
+          min-height: 2.9rem;
           display: -webkit-box;
           -webkit-line-clamp: 2;
           -webkit-box-orient: vertical;
           overflow: hidden;
-          text-shadow: 0 1px 4px rgba(0, 0, 0, 0.75);
           letter-spacing: -0.015em;
         }
 
-        .card-price {
-          font-family: var(--font-heading);
-          font-size: 1.25rem;
-          font-weight: 800;
-          margin-bottom: 1.15rem;
-          display: inline-flex;
-          align-items: baseline;
-          gap: 6px;
-          letter-spacing: -0.015em;
-          line-height: 1.15;
-        }
-
-        .price-amount {
-          color: #E5B869;
-          font-weight: 800;
-          text-shadow: 0 1px 4px rgba(0, 0, 0, 0.85);
-        }
-
-        .currency-unit {
-          font-size: 0.75rem;
-          font-weight: 700;
-          letter-spacing: 0.04em;
-          color: #E5B869;
-          opacity: 0.85;
-          text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+        [data-theme="light"] .card-title {
+          color: #0f172a;
         }
 
         .card-specs {
           display: flex;
           align-items: center;
           justify-content: space-between;
-          padding-top: 0.95rem;
-          border-top: 1px solid rgba(255, 255, 255, 0.22);
+          padding: 0.65rem 0.85rem;
+          background: rgba(255, 255, 255, 0.04);
+          border: 1px solid rgba(255, 255, 255, 0.06);
+          border-radius: 12px;
+          margin-bottom: 0.95rem;
+        }
+
+        [data-theme="light"] .card-specs {
+          background: #f8fafc;
+          border-color: #e2e8f0;
         }
 
         .spec-item {
@@ -1073,7 +1062,6 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
         .spec-icon {
           flex-shrink: 0;
           color: #E5B869;
-          filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.5));
         }
 
         .spec-divider {
@@ -1081,7 +1069,11 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
           height: 14px;
           flex-shrink: 0;
           margin: 0 2px;
-          background: rgba(255, 255, 255, 0.22);
+          background: rgba(255, 255, 255, 0.12);
+        }
+
+        [data-theme="light"] .spec-divider {
+          background: #cbd5e1;
         }
 
         .spec-label {
@@ -1090,8 +1082,76 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
           white-space: nowrap;
           letter-spacing: -0.01em;
           line-height: 1;
-          color: #FFFFFF;
-          text-shadow: 0 1px 4px rgba(0, 0, 0, 0.7);
+          color: rgba(255, 255, 255, 0.88);
+        }
+
+        [data-theme="light"] .spec-label {
+          color: #334155;
+        }
+
+        .card-footer-row {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 0.75rem;
+        }
+
+        .card-price {
+          font-family: var(--font-heading);
+          font-size: 1.1875rem;
+          font-weight: 800;
+          display: inline-flex;
+          align-items: baseline;
+          gap: 6px;
+          letter-spacing: -0.015em;
+          line-height: 1.15;
+        }
+
+        .price-amount {
+          color: #E5B869;
+          font-weight: 800;
+        }
+
+        [data-theme="light"] .price-amount {
+          color: #926f24;
+        }
+
+        .currency-unit {
+          font-size: 0.75rem;
+          font-weight: 700;
+          letter-spacing: 0.04em;
+          color: #E5B869;
+          opacity: 0.9;
+        }
+
+        [data-theme="light"] .currency-unit {
+          color: #926f24;
+        }
+
+        .card-cta-btn {
+          display: inline-flex;
+          align-items: center;
+          gap: 5px;
+          font-size: 0.8125rem;
+          font-weight: 700;
+          color: #ffffff;
+          background: rgba(229, 184, 105, 0.12);
+          border: 1px solid rgba(229, 184, 105, 0.3);
+          border-radius: 9999px;
+          padding: 0.4rem 0.85rem;
+          transition: all var(--transition-fast);
+        }
+
+        [data-theme="light"] .card-cta-btn {
+          color: #926f24;
+          background: rgba(184, 147, 74, 0.1);
+          border-color: rgba(184, 147, 74, 0.25);
+        }
+
+        .property-card:hover .card-cta-btn {
+          background: linear-gradient(135deg, #E5B869 0%, #C5A059 100%);
+          color: #0A0C10;
+          border-color: transparent;
         }
 
         /* Compact High-Density Card Mode */

@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useMemo } from 'react';
 import { 
   X, 
   BookOpen, 
@@ -12,11 +12,16 @@ import {
   Landmark,
   ShieldCheck,
   Calendar,
-  FileText
+  FileText,
+  Search,
+  ArrowUpDown,
+  RotateCcw
 } from 'lucide-react';
 import { ERPAccount, ERPJournalEntry } from '@/lib/erp/types';
 import { D } from '@/lib/erp/math';
 import { localizeJournalDescription, localizeJournalMemo } from '@/components/erp/JournalEntryPreview';
+import { ZFPagination } from './v2/ZFPagination';
+import styles from './v2/ZFWorkstationShell.module.css';
 
 interface AccountLedgerModalProps {
   account: ERPAccount | null;
@@ -34,9 +39,9 @@ const ACCOUNT_EXPLANATIONS: Record<string, { roleAr: string; roleEn: string; whe
     whenCreditedAr: 'تنقص وتصبح دائنة عند سداد مصروفات نثرية أو إيداع الكاش في الحساب البنكي للشركة.'
   },
   '102000': {
-    roleAr: 'الحسابات البنكية التشغيلية: الشريان المالي للشركة؛ يستقبل تحويلات العملاء النقدية وشيكات الدفعات المقدمة، ويتم الصرف منه على المشاريع والرواتب.',
+    roleAr: 'الحسابات البنكية والتحويلات التشغيلية: الشريان المالي للشركة؛ يستقبل تحويلات العملاء والمدفوعات، ويتم الصرف منه على المشاريع والرواتب.',
     roleEn: 'Primary corporate bank accounts receiving buyer contract advances and funding operations.',
-    whenDebitedAr: 'تزيد وتصبح مدينة عند تحصيل أي دفعة تعاقدية أو شيك أو تحويل بنكي من مشتري.',
+    whenDebitedAr: 'تزيد وتصبح مدينة عند تحصيل أي دفعة تعاقدية أو قسط أو تحويل بنكي/إنستاباي من مشتري.',
     whenCreditedAr: 'تنقص وتصبح دائنة عند تحويل أموال لمقاولي البناء أو الموردين أو مصاريف التشغيل.'
   },
   '102100': {
@@ -52,16 +57,28 @@ const ACCOUNT_EXPLANATIONS: Record<string, { roleAr: string; roleEn: string; whe
     whenCreditedAr: 'تنقص وتصبح دائنة كلما قام المشتري بسداد قسط من الأقساط المستحقة عليه.'
   },
   '103200': {
-    roleAr: 'شيكات مؤجلة الخزينة (PDC): محفظة الشيكات البنكية الآجلة التي وقعها المشترون كضمان لأقساطهم المستقبلية والمحفوظة في خزنة الشركة.',
-    roleEn: 'Physical post-dated cheques vault in company custody awaiting bank presentation.',
-    whenDebitedAr: 'تزيد عند استلام دفتر الشيكات الآجلة من العميل أثناء توقيع العقد.',
-    whenCreditedAr: 'تنقص وتصبح دائنة عند استحقاق موعد الشيك وإرساله للبنك للتحصيل أو استبداله.'
+    roleAr: 'أقساط وسندات قبض الخزينة: محفظة سندات القبض والأقساط التعاقدية المجدولة التي التزم بها المشترون كاستحقاقات لأقساطهم المستقبلية.',
+    roleEn: 'Physical hand installments agenda and receipt vouchers in company custody.',
+    whenDebitedAr: 'تزيد عند إبرام العقد وتسجيل جدول الأقساط وسندات القبض في المنظومة.',
+    whenCreditedAr: 'تنقص وتصبح دائنة عند استحقاق موعد القسط وتحصيله نقداً أو عبر إنستاباي وإثباته بالخزينة.'
   },
   '103300': {
     roleAr: 'وسيط ضرائب العملاء: حساب معلق يخضع لحوكمة محاسبية مشددة (Q4) لمعالجة أي فروق ضرائبية تعاقدية محتملة.',
     roleEn: 'Gated customer tax clearing receivable under strict governance.',
     whenDebitedAr: 'يُحظر الترحيل المباشر إليه إلا بعد اعتماد سياسة الضرائب المؤسسية.',
     whenCreditedAr: 'يُسوى مع الجهات الضريبية المختصة.'
+  },
+  '104000': {
+    roleAr: 'أقساط وأوراق قبض تحت التحصيل (الخزينة): شيكات وأقساط العملاء المجدولة المحفوظة بأمانة الخزينة لمتابعة استحقاقاتها الدورية.',
+    roleEn: 'Installments and notes under collection held safely in treasury custody for scheduled collection.',
+    whenDebitedAr: 'تزيد عند استلام شيكات أو سندات الأقساط من المشتري وإيداعها في خزينة الشركة.',
+    whenCreditedAr: 'تنقص وتصبح دائنة عند تحصيل القسط نقداً باليد أو تحصيل الشيك وإيداع قيمته بالخزينة أو البنك.'
+  },
+  '105000': {
+    roleAr: 'مشروعات تحت التنفيذ - مجمع تكاليف البناء (WIP): الحساب المجمع لكافة أصول الإنشاء والتطوير العقاري تحت التنفيذ.',
+    roleEn: 'Consolidated real estate development work-in-progress capital asset account.',
+    whenDebitedAr: 'تزيد برسملة نفقات البناء والمقاولين والمواد الخام في حساب مخزون التطوير العقاري.',
+    whenCreditedAr: 'تستنزل عند تسليم الوحدات وتحويل تكلفتها إلى تكلفة المبيعات (COGS) طبقاً لمعيار IFRS 15.'
   },
   '150000': {
     roleAr: 'أعمال تحت التنفيذ - الأراضي: أصل رأسمالي تُجمع فيه تكلفة شراء قطع الأراضي للمشاريع ومصروفات التسجيل العقاري والتراخيص الأولية.',
@@ -97,7 +114,7 @@ const ACCOUNT_EXPLANATIONS: Record<string, { roleAr: string; roleEn: string; whe
     roleAr: 'موردون ومقاولون (A/P): التزامات الشركة المالية تجاه شركات المقاولات وتوريد مواد البناء واجبة السداد.',
     roleEn: 'Trade accounts payable for structural contractors, architects, and building material suppliers.',
     whenCreditedAr: 'تزيد وتصبح دائنة عند استلام فواتير ومستخلصات المقاولين المعتمدة.',
-    whenDebitedAr: 'تنقص وتصبح مدينة عند قيام الشركة بسداد الشيك أو التحويل البنكي للمقاول.'
+    whenDebitedAr: 'تنقص وتصبح مدينة عند قيام الشركة بسداد المستحق نقداً أو بالتحويل للمقاول.'
   },
   '203000': {
     roleAr: 'إيرادات عقود مؤجلة (دفعات مقدمة): المبالغ المحصلة من المشترين قبل التسليم؛ تُمثل التزاماً قانونياً على الشركة حتى تسليم المفتاح رسمياً.',
@@ -105,11 +122,17 @@ const ACCOUNT_EXPLANATIONS: Record<string, { roleAr: string; roleEn: string; whe
     whenCreditedAr: 'تزيد عند توقيع عقد بيع جديد واستلام الدفعة المقدمة أو أقساط ما قبل التسليم.',
     whenDebitedAr: 'تُقفل وتنقص عند تسليم الوحدة وتحويلها لإيراد مبيعات محقق (401000) أو في حال الفسخ.'
   },
+  '204000': {
+    roleAr: 'مستحقات ضريبة التصرفات العقارية والرسوم: الالتزام الضريبي القانوني (2.5%) المستحق على مبيعات العقارات ورسوم التوثيق.',
+    roleEn: 'Accrued real estate disposition taxes and statutory registration obligations.',
+    whenCreditedAr: 'تزيد عند استحقاق ضريبة التصرفات العقارية على عقود البيع المنفذة.',
+    whenDebitedAr: 'تنقص وتُسوى عند سداد الضريبة لمصلحة الضرائب المصرية وتوريد الإشعار من الخزينة.'
+  },
   '206200': {
     roleAr: 'التزامات استرداد العملاء: التزام مالي واجب الأداء للعميل يُمثل صافي المبالغ المستردة بعد فسخ العقد واقتطاع غرامة الـ 10%.',
     roleEn: 'Customer net refund liability payable post-rescission after deducting forfeiture penalties.',
     whenCreditedAr: 'تثبت عند فسخ العقد كالتزام واجب رده للعميل في الحسابات الدائنة.',
-    whenDebitedAr: 'تنقص وتُقفل عند تحويل الشيك أو المبلغ المالي للعميل.'
+    whenDebitedAr: 'تنقص وتُقفل عند تسليم المبلغ المالي المسترد للعميل نقداً أو بتحويل.'
   },
   '207000': {
     roleAr: 'أمانات وديعة الصيانة: التزام تعاقدي يمثل أمانة أموال الصيانة المحصلة من الملاك لصالح صندوق صيانة المجمع السكني.',
@@ -140,6 +163,24 @@ const ACCOUNT_EXPLANATIONS: Record<string, { roleAr: string; roleEn: string; whe
     roleEn: 'Cost of goods sold for structural and civil construction on delivered units.',
     whenDebitedAr: 'تُثبت كمصروف مبيعات عند تسليم الوحدة للمشتري.',
     whenCreditedAr: 'تُعكس في حال الفسخ واسترداد الوحدة.'
+  },
+  '601000': {
+    roleAr: 'مصروفات التسويق والمبيعات: عمولات المسوقين والوسطاء العقاريين ومصروفات الحملات الإعلانية.',
+    roleEn: 'Sales commission, brokerage fees, and marketing campaign expenses.',
+    whenDebitedAr: 'تزيد عند صرف عمولات البيع أو فواتير الحملات التسويقية.',
+    whenCreditedAr: 'تُقفل في حساب الأرباح والخسائر في نهاية السنة المالية.'
+  },
+  '602000': {
+    roleAr: 'مصروفات عمومية وإدارية: مرتبات الموظفين، إيجار المقر، ونثريات وإكراميات الموقع وتسيير العمل.',
+    roleEn: 'General & administrative corporate overhead, staff salaries, and office rent.',
+    whenDebitedAr: 'تزيد عند صرف الرواتب أو المصروفات الإدارية اليومية.',
+    whenCreditedAr: 'تُقفل في حساب الأرباح والخسائر بنهاية الفترة المحاسبية.'
+  },
+  '603000': {
+    roleAr: 'مصروفات مرافق وفواتير تشغيل الموقع: فواتير الكهرباء والمياه والإنترنت ومصروفات تسيير الموقع.',
+    roleEn: 'Site utilities, electricity, water, internet, and site operational running expenses.',
+    whenDebitedAr: 'تزيد عند سداد فواتير المرافق ومصاريف التشغيل للموقع.',
+    whenCreditedAr: 'تُقفل في الأرباح والخسائر بنهاية الفترة المحاسبية.'
   }
 };
 
@@ -195,6 +236,51 @@ export const AccountLedgerModal: React.FC<AccountLedgerModalProps> = ({
 
   const isPositive = netBalance.greaterThan(0);
   const isZero = netBalance.isZero();
+
+  // Search, Sort, and Pagination for Account Transactions
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [sortBy, setSortBy] = useState<'date_desc' | 'date_asc' | 'amount_desc'>('date_desc');
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [pageSize, setPageSize] = useState<number>(10);
+
+  const filteredLines = useMemo(() => {
+    if (!searchQuery.trim()) return accountLines;
+    const q = searchQuery.toLowerCase();
+    return accountLines.filter(line => 
+      (line.entry_number || '').toLowerCase().includes(q) ||
+      (line.description || '').toLowerCase().includes(q) ||
+      (line.memo || '').toLowerCase().includes(q)
+    );
+  }, [accountLines, searchQuery]);
+
+  const sortedLines = useMemo(() => {
+    const list = [...filteredLines];
+    list.sort((a, b) => {
+      if (sortBy === 'date_desc') return (b.entry_date || '').localeCompare(a.entry_date || '');
+      if (sortBy === 'date_asc') return (a.entry_date || '').localeCompare(b.entry_date || '');
+      if (sortBy === 'amount_desc') {
+        const valA = D(a.debit_amount || '0').plus(a.credit_amount || '0');
+        const valB = D(b.debit_amount || '0').plus(b.credit_amount || '0');
+        return valB.minus(valA).toNumber();
+      }
+      return 0;
+    });
+    return list;
+  }, [filteredLines, sortBy]);
+
+  const totalPages = Math.ceil(sortedLines.length / pageSize) || 1;
+  const paginatedLines = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return sortedLines.slice(start, start + pageSize);
+  }, [sortedLines, currentPage, pageSize]);
+
+  const activeFiltersCount = (searchQuery.trim() ? 1 : 0) + (sortBy !== 'date_desc' ? 1 : 0);
+
+  const handleResetFilters = () => {
+    setSortBy('date_desc');
+    setSearchQuery('');
+    setCurrentPage(1);
+  };
 
   const explanation = ACCOUNT_EXPLANATIONS[account.account_code] || {
     roleAr: `حساب ${account.account_name_ar} ضمن شجرة الحسابات المالية الموحدة للشركة.`,
@@ -460,27 +546,96 @@ export const AccountLedgerModal: React.FC<AccountLedgerModalProps> = ({
 
           {/* Account Statement (Transactions) */}
           <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: '0.75rem',
+              flexWrap: 'wrap',
+              gap: '0.65rem'
+            }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <FileText size={16} color="var(--zf-gold, #d4af37)" />
                 <h3 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 800, color: '#0f172a' }}>
-                  {isAr ? 'كشف حساب الحركات والقيود المرحلة (Account Statement)' : 'Account Statement Transactions'}
+                  {isAr ? 'كشف حساب الحركات والقيود المرحلة' : 'Account Statement Transactions'}
                 </h3>
               </div>
-              <span style={{
-                fontSize: '0.72rem',
-                color: '#946f23',
-                background: '#fffbeb',
-                border: '1px solid rgba(184, 144, 62, 0.25)',
-                padding: '0.2rem 0.55rem',
-                borderRadius: '6px',
-                fontWeight: 700
-              }}>
-                {isAr ? `${accountLines.length} حركة مسجلة` : `${accountLines.length} Entries`}
-              </span>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                {/* Sort By */}
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                  <ArrowUpDown size={12} color="#94a3b8" />
+                  <select
+                    value={sortBy}
+                    onChange={e => {
+                      setSortBy(e.target.value as any);
+                      setCurrentPage(1);
+                    }}
+                    className={styles.sortSelect}
+                    style={{ padding: '0.25rem 0.5rem', fontSize: '0.72rem' }}
+                    aria-label={isAr ? 'ترتيب الحركات' : 'Sort lines'}
+                  >
+                    <option value="date_desc">{isAr ? 'الأحدث تاريخاً' : 'Newest First'}</option>
+                    <option value="date_asc">{isAr ? 'الأقدم تاريخاً' : 'Oldest First'}</option>
+                    <option value="amount_desc">{isAr ? 'أعلى قيمة للحركة' : 'Highest Value'}</option>
+                  </select>
+                </div>
+
+                {/* Reset Filters */}
+                {activeFiltersCount > 0 && (
+                  <button
+                    onClick={handleResetFilters}
+                    className={styles.resetFilterBtn}
+                    style={{ padding: '0.25rem 0.5rem', fontSize: '0.72rem' }}
+                    title={isAr ? 'إعادة ضبط' : 'Reset'}
+                  >
+                    <RotateCcw size={11} />
+                    <span>{isAr ? 'إعادة ضبط' : 'Reset'}</span>
+                  </button>
+                )}
+
+                {/* Search Box */}
+                <div className={styles.searchBox} style={{ minWidth: '150px', height: '30px', padding: '0 0.5rem' }}>
+                  <Search size={12} color="#94a3b8" />
+                  <input
+                    type="text"
+                    placeholder={isAr ? 'بحث بالقيد أو الوصف...' : 'Search entry or memo...'}
+                    value={searchQuery}
+                    onChange={e => {
+                      setSearchQuery(e.target.value);
+                      setCurrentPage(1);
+                    }}
+                    className={styles.searchInput}
+                    style={{ fontSize: '0.72rem' }}
+                  />
+                  {searchQuery && (
+                    <button
+                      onClick={() => {
+                        setSearchQuery('');
+                        setCurrentPage(1);
+                      }}
+                      style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: '0.7rem' }}
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+
+                <span style={{
+                  fontSize: '0.72rem',
+                  color: '#946f23',
+                  background: '#fffbeb',
+                  border: '1px solid rgba(184, 144, 62, 0.25)',
+                  padding: '0.2rem 0.55rem',
+                  borderRadius: '6px',
+                  fontWeight: 700
+                }}>
+                  {isAr ? `${sortedLines.length} حركة` : `${sortedLines.length} Entries`}
+                </span>
+              </div>
             </div>
 
-            {accountLines.length === 0 ? (
+            {sortedLines.length === 0 ? (
               <div style={{
                 padding: '2.5rem 1.5rem',
                 textAlign: 'center',
@@ -490,75 +645,99 @@ export const AccountLedgerModal: React.FC<AccountLedgerModalProps> = ({
                 color: '#64748b',
                 fontSize: '0.82rem'
               }}>
-                {isAr 
-                  ? 'لم يتم ترحيل أي قيود يومية على هذا الحساب حتى الآن في الفترة الحالية.'
-                  : 'No journal transactions have been posted to this account yet in the active period.'}
+                {accountLines.length === 0 
+                  ? (isAr 
+                    ? 'لم يتم ترحيل أي قيود يومية على هذا الحساب حتى الآن في الفترة الحالية.'
+                    : 'No journal transactions have been posted to this account yet in the active period.')
+                  : (isAr
+                    ? 'لا توجد حركات تطابق نص البحث المحدد.'
+                    : 'No transactions match the specified search term.')}
               </div>
             ) : (
-              <div style={{
-                border: '1px solid #e2e8f0',
-                borderRadius: '12px',
-                overflow: 'hidden',
-                background: '#ffffff'
-              }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.78rem' }}>
-                  <thead>
-                    <tr style={{ background: '#f8fafc', borderBottom: '1.5px solid #e2e8f0' }}>
-                      <th style={{ padding: '0.65rem 0.85rem', textAlign: isAr ? 'right' : 'left', color: '#64748b' }}>
-                        {isAr ? 'التاريخ ورقم القيد' : 'Date & Entry #'}
-                      </th>
-                      <th style={{ padding: '0.65rem 0.85rem', textAlign: isAr ? 'right' : 'left', color: '#64748b' }}>
-                        {isAr ? 'بيان وشرح الحركة' : 'Description & Memo'}
-                      </th>
-                      <th style={{ padding: '0.65rem 0.85rem', textAlign: isAr ? 'left' : 'right', color: '#0f172a' }}>
-                        {isAr ? 'مدين (Debit)' : 'Debit'}
-                      </th>
-                      <th style={{ padding: '0.65rem 0.85rem', textAlign: isAr ? 'left' : 'right', color: '#15803d' }}>
-                        {isAr ? 'دائن (Credit)' : 'Credit'}
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {accountLines.map((line, idx) => {
-                      const hasDebit = D(line.debit_amount).isPositive();
-                      const hasCredit = D(line.credit_amount).isPositive();
+              <>
+                <div style={{
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '12px',
+                  overflow: 'hidden',
+                  background: '#ffffff'
+                }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.78rem' }}>
+                    <thead>
+                      <tr style={{ background: '#f8fafc', borderBottom: '1.5px solid #e2e8f0' }}>
+                        <th style={{ padding: '0.65rem 0.85rem', textAlign: isAr ? 'right' : 'left', color: '#64748b' }}>
+                          {isAr ? 'التاريخ ورقم القيد' : 'Date & Entry #'}
+                        </th>
+                        <th style={{ padding: '0.65rem 0.85rem', textAlign: isAr ? 'right' : 'left', color: '#64748b' }}>
+                          {isAr ? 'بيان وشرح الحركة' : 'Description & Memo'}
+                        </th>
+                        <th style={{ padding: '0.65rem 0.85rem', textAlign: isAr ? 'left' : 'right', color: '#0f172a' }}>
+                          {isAr ? 'مدين (Debit)' : 'Debit'}
+                        </th>
+                        <th style={{ padding: '0.65rem 0.85rem', textAlign: isAr ? 'left' : 'right', color: '#15803d' }}>
+                          {isAr ? 'دائن (Credit)' : 'Credit'}
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {paginatedLines.map((line, idx) => {
+                        const hasDebit = D(line.debit_amount).isPositive();
+                        const hasCredit = D(line.credit_amount).isPositive();
 
-                      return (
-                        <tr 
-                          key={`${line.entry_id}-${idx}`}
-                          style={{
-                            borderBottom: '1px solid #f1f5f9',
-                            background: idx % 2 === 0 ? '#ffffff' : '#f8fafc'
-                          }}
-                        >
-                          <td style={{ padding: '0.75rem 0.85rem' }}>
-                            <div style={{ fontSize: '0.72rem', color: '#64748b' }}>{line.entry_date}</div>
-                            <div style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 700, color: '#946f23', fontSize: '0.76rem', marginTop: '2px' }}>
-                              {line.entry_number}
-                            </div>
-                          </td>
-                          <td style={{ padding: '0.75rem 0.85rem' }}>
-                            <div style={{ fontWeight: 600, color: '#0f172a' }}>
-                              {localizeJournalDescription(line.description, isAr)}
-                            </div>
-                            {line.memo && (
-                              <div style={{ fontSize: '0.7rem', color: '#64748b', marginTop: '2px' }}>
-                                ↳ {localizeJournalMemo(line.memo, isAr)}
+                        return (
+                          <tr 
+                            key={`${line.entry_id}-${idx}`}
+                            style={{
+                              borderBottom: '1px solid #f1f5f9',
+                              background: idx % 2 === 0 ? '#ffffff' : '#f8fafc'
+                            }}
+                          >
+                            <td style={{ padding: '0.75rem 0.85rem' }}>
+                              <div style={{ fontSize: '0.72rem', color: '#64748b' }}>{line.entry_date}</div>
+                              <div style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 700, color: '#946f23', fontSize: '0.76rem', marginTop: '2px' }}>
+                                {line.entry_number}
                               </div>
-                            )}
-                          </td>
-                          <td style={{ padding: '0.75rem 0.85rem', textAlign: isAr ? 'left' : 'right', fontVariantNumeric: 'tabular-nums', fontWeight: 700, color: hasDebit ? '#0f172a' : '#94a3b8' }}>
-                            {hasDebit ? D(line.debit_amount).formatEGP(isAr) : '—'}
-                          </td>
-                          <td style={{ padding: '0.75rem 0.85rem', textAlign: isAr ? 'left' : 'right', fontVariantNumeric: 'tabular-nums', fontWeight: 700, color: hasCredit ? '#15803d' : '#94a3b8' }}>
-                            {hasCredit ? D(line.credit_amount).formatEGP(isAr) : '—'}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
+                            </td>
+                            <td style={{ padding: '0.75rem 0.85rem' }}>
+                              <div style={{ fontWeight: 600, color: '#0f172a' }}>
+                                {localizeJournalDescription(line.description, isAr)}
+                              </div>
+                              {line.memo && (
+                                <div style={{ fontSize: '0.7rem', color: '#64748b', marginTop: '2px' }}>
+                                  ↳ {localizeJournalMemo(line.memo, isAr)}
+                                </div>
+                              )}
+                            </td>
+                            <td style={{ padding: '0.75rem 0.85rem', textAlign: isAr ? 'left' : 'right', fontVariantNumeric: 'tabular-nums', fontWeight: 700, color: hasDebit ? '#0f172a' : '#94a3b8' }}>
+                              {hasDebit ? D(line.debit_amount).formatEGP(isAr) : '—'}
+                            </td>
+                            <td style={{ padding: '0.75rem 0.85rem', textAlign: isAr ? 'left' : 'right', fontVariantNumeric: 'tabular-nums', fontWeight: 700, color: hasCredit ? '#15803d' : '#94a3b8' }}>
+                              {hasCredit ? D(line.credit_amount).formatEGP(isAr) : '—'}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Pagination for Modal Transactions */}
+                <div style={{ marginTop: '0.75rem' }}>
+                  <ZFPagination
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    totalItems={sortedLines.length}
+                    pageSize={pageSize}
+                    pageSizeOptions={[5, 10, 25, 50]}
+                    onPageChange={setCurrentPage}
+                    onPageSizeChange={sz => {
+                      setPageSize(sz);
+                      setCurrentPage(1);
+                    }}
+                    isAr={isAr}
+                    itemLabel={{ ar: 'حركة', en: 'entries' }}
+                  />
+                </div>
+              </>
             )}
           </div>
         </div>

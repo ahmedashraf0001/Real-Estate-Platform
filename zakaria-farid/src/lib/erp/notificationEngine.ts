@@ -117,16 +117,16 @@ export function evaluateFinancialAlerts({
 
       notifications.push({
         id,
-        titleAr: `شيك مؤجل متأخر التحصيل #${pdc.cheque_number}`,
-        titleEn: `Overdue Cheque in Safe #${pdc.cheque_number}`,
-        messageAr: `الشيك رقم ${pdc.cheque_number} بمبلغ ${formatMoney(pdc.nominal_value)} ج.م على ${pdc.bank_name} تجاوز موعد استحقاقه منذ ${diffDays} يوم (${pdc.due_date}) ولم يُحصل بعد.`,
-        messageEn: `Cheque #${pdc.cheque_number} for ${formatMoney(pdc.nominal_value)} EGP on ${pdc.bank_name} is overdue by ${diffDays} days (${pdc.due_date}) and requires immediate clearing.`,
+        titleAr: `قسط تعاقدي متأخر التحصيل #${pdc.cheque_number}`,
+        titleEn: `Overdue Hand Installment #${pdc.cheque_number}`,
+        messageAr: `القسط رقم ${pdc.cheque_number} بمبلغ ${formatMoney(pdc.nominal_value)} ج.م للعميل ${pdc.drawer_name} تجاوز موعد استحقاقه منذ ${diffDays} يوم (${pdc.due_date}) ولم يُحصل بعد.`,
+        messageEn: `Installment #${pdc.cheque_number} for ${formatMoney(pdc.nominal_value)} EGP for client ${pdc.drawer_name} is overdue by ${diffDays} days (${pdc.due_date}) and requires collection.`,
         severity: 'critical',
         category: 'cheque',
         createdAt: pdc.due_date,
         read: readIds.has(id),
-        actionLabelAr: 'الانتقال إلى حافظة الشيكات',
-        actionLabelEn: 'Open Cheque Vault',
+        actionLabelAr: 'الانتقال إلى أجندة الأقساط',
+        actionLabelEn: 'Open Installments Agenda',
         targetModule: 'pdc',
         metadata: { chequeId: pdc.cheque_id }
       });
@@ -140,16 +140,16 @@ export function evaluateFinancialAlerts({
       const daysRemaining = Math.abs(diffDays);
       notifications.push({
         id,
-        titleAr: `استحقاق شيك مؤجل خلال ${daysRemaining === 0 ? 'اليوم' : `${daysRemaining} أيام`}`,
-        titleEn: `Cheque Maturing in ${daysRemaining === 0 ? 'Today' : `${daysRemaining} days`}`,
-        messageAr: `الشيك رقم ${pdc.cheque_number} بمبلغ ${formatMoney(pdc.nominal_value)} ج.م على ${pdc.bank_name} يستحق في ${pdc.due_date}. يرجى التجهيز للإيداع البنكي.`,
-        messageEn: `Cheque #${pdc.cheque_number} for ${formatMoney(pdc.nominal_value)} EGP on ${pdc.bank_name} matures on ${pdc.due_date}. Prepare for bank clearing presentation.`,
+        titleAr: `استحقاق قسط تعاقدي خلال ${daysRemaining === 0 ? 'اليوم' : `${daysRemaining} أيام`}`,
+        titleEn: `Installment Maturing in ${daysRemaining === 0 ? 'Today' : `${daysRemaining} days`}`,
+        messageAr: `القسط رقم ${pdc.cheque_number} بمبلغ ${formatMoney(pdc.nominal_value)} ج.م للعميل ${pdc.drawer_name} يستحق في ${pdc.due_date}. يرجى التجهيز للتحصيل باليد.`,
+        messageEn: `Installment #${pdc.cheque_number} for ${formatMoney(pdc.nominal_value)} EGP for client ${pdc.drawer_name} matures on ${pdc.due_date}. Prepare for hand collection.`,
         severity: 'warning',
         category: 'cheque',
         createdAt: pdc.due_date,
         read: readIds.has(id),
-        actionLabelAr: 'فحص الشيك بالحافظة',
-        actionLabelEn: 'Inspect Cheque',
+        actionLabelAr: 'فحص القسط بالأجندة',
+        actionLabelEn: 'Inspect Installment',
         targetModule: 'pdc',
         metadata: { chequeId: pdc.cheque_id }
       });

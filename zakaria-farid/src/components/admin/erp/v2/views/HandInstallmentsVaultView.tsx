@@ -11,11 +11,19 @@ import {
   CheckCircle2, 
   Clock, 
   AlertTriangle,
-  FileText
+  FileText,
+  RotateCcw,
+  ArrowUpDown,
+  Filter,
+  Calendar,
+  TrendingUp
 } from 'lucide-react';
 import { ERPPDCRecord, ERPContract } from '@/lib/erp/types';
 import { D } from '@/lib/erp/math';
 import { MoneyCell } from '@/components/erp/MoneyCell';
+import { ZFPagination } from '../ZFPagination';
+import { ZFKpiCard } from '../ZFKpiCard';
+import { ZFFilterToolbar } from '../ZFFilterToolbar';
 import styles from '../ZFWorkstationShell.module.css';
 
 interface HandInstallmentsVaultViewProps {
@@ -40,8 +48,12 @@ export const HandInstallmentsVaultView: React.FC<HandInstallmentsVaultViewProps>
   onInspectCheque
 }) => {
   const [chequeMaturityFilter, setChequeMaturityFilter] = useState<'all' | 'due_now' | 'due_30'>('all');
+  const [chequeStatusFilter, setChequeStatusFilter] = useState<'all' | 'pending' | 'cleared' | 'overdue' | 'bounced'>('all');
+  const [chequeSortBy, setChequeSortBy] = useState<'due_date_asc' | 'due_date_desc' | 'nominal_desc' | 'nominal_asc' | 'drawer_asc'>('due_date_asc');
   const [chequeSearchQuery, setChequeSearchQuery] = useState('');
   const [chequeViewMode, setChequeViewMode] = useState<'cards' | 'table'>('cards');
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [pageSize, setPageSize] = useState<number>(10);
 
   // Vault KPIs
   const vaultKPIs = useMemo(() => {
@@ -99,7 +111,18 @@ export const HandInstallmentsVaultView: React.FC<HandInstallmentsVaultViewProps>
         if (p.status === 'Cleared' || p.status === 'Bounced' || p.due_date > thirtyDaysStr) return false;
       }
 
-      // 2. Search Query
+      // 2. Cheque Status Filter
+      if (chequeStatusFilter !== 'all') {
+        const isOverdue = p.status !== 'Cleared' && p.status !== 'Bounced' && p.due_date < todayStr;
+        if (chequeStatusFilter === 'cleared' && p.status !== 'Cleared') return false;
+        if (chequeStatusFilter === 'bounced' && p.status !== 'Bounced') return false;
+        if (chequeStatusFilter === 'overdue' && !isOverdue) return false;
+        if (chequeStatusFilter === 'pending') {
+          if (p.status === 'Cleared' || p.status === 'Bounced' || isOverdue) return false;
+        }
+      }
+
+      // 3. Search Query
       if (chequeSearchQuery.trim()) {
         const q = chequeSearchQuery.toLowerCase();
         const code = (p.cheque_number || '').toLowerCase();
@@ -113,7 +136,40 @@ export const HandInstallmentsVaultView: React.FC<HandInstallmentsVaultViewProps>
 
       return true;
     });
-  }, [pdcRecords, contracts, chequeMaturityFilter, chequeSearchQuery]);
+  }, [pdcRecords, contracts, chequeMaturityFilter, chequeStatusFilter, chequeSearchQuery]);
+
+  // Sorted Cheques
+  const sortedCheques = useMemo(() => {
+    const list = [...filteredCheques];
+    list.sort((a, b) => {
+      if (chequeSortBy === 'due_date_asc') return (a.due_date || '').localeCompare(b.due_date || '');
+      if (chequeSortBy === 'due_date_desc') return (b.due_date || '').localeCompare(a.due_date || '');
+      if (chequeSortBy === 'nominal_desc') return D(b.nominal_value || '0').minus(D(a.nominal_value || '0')).toNumber();
+      if (chequeSortBy === 'nominal_asc') return D(a.nominal_value || '0').minus(D(b.nominal_value || '0')).toNumber();
+      if (chequeSortBy === 'drawer_asc') return (a.drawer_name || '').localeCompare(b.drawer_name || '', isAr ? 'ar' : 'en');
+      return 0;
+    });
+    return list;
+  }, [filteredCheques, chequeSortBy, isAr]);
+
+  const totalPages = Math.ceil(sortedCheques.length / pageSize) || 1;
+  const paginatedCheques = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return sortedCheques.slice(start, start + pageSize);
+  }, [sortedCheques, currentPage, pageSize]);
+
+  const activeFiltersCount = (chequeMaturityFilter !== 'all' ? 1 : 0) +
+    (chequeStatusFilter !== 'all' ? 1 : 0) +
+    (chequeSearchQuery.trim() ? 1 : 0) +
+    (chequeSortBy !== 'due_date_asc' ? 1 : 0);
+
+  const handleResetFilters = () => {
+    setChequeMaturityFilter('all');
+    setChequeStatusFilter('all');
+    setChequeSortBy('due_date_asc');
+    setChequeSearchQuery('');
+    setCurrentPage(1);
+  };
 
   return (
     <div className={styles.stageContainer}>
@@ -122,7 +178,7 @@ export const HandInstallmentsVaultView: React.FC<HandInstallmentsVaultViewProps>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
             <h1 style={{ fontSize: '1.4rem', fontWeight: 800, margin: 0, color: '#0f172a', letterSpacing: '-0.02em' }}>
-              {isAr ? 'حافظة بنود التحصيل والأقساط المستحقة باليد' : 'Hand Installments & Cash Dues Vault'}
+              {isAr ? 'أجندة ومواعيد الأقساط وسندات القبض' : 'Installment Dues & Cash Receipts'}
             </h1>
             <span style={{
               fontSize: '0.68rem',
@@ -133,13 +189,13 @@ export const HandInstallmentsVaultView: React.FC<HandInstallmentsVaultViewProps>
               border: '1px solid rgba(184, 144, 62, 0.28)',
               color: '#946f23'
             }}>
-              {isAr ? 'خزينة أوراق القبض' : 'Cash Receivables'}
+              {isAr ? 'متابعة وتحصيل' : 'Cash Receivables'}
             </span>
           </div>
           <p style={{ fontSize: '0.8rem', color: '#64748b', margin: '0.25rem 0 0 0' }}>
             {isAr 
-              ? 'متابعة وجدولة استحقاقات الأقساط النقدية باليد، سندات التحصيل، والإيداع الفوري بالخزينة'
-              : 'Tracking hand-collected installments, payment dues aging, and instant safe deposits'}
+              ? 'متابعة مواعيد سداد الأقساط التعاقدية، والتحصيل كاش باليد أو تحويل مع إصدار سندات القبض'
+              : 'Tracking hand-collected installments, payment dues aging, and instant safe receipts'}
           </p>
         </div>
 
@@ -149,10 +205,10 @@ export const HandInstallmentsVaultView: React.FC<HandInstallmentsVaultViewProps>
             className={styles.btnSecondary}
             onClick={onCollectDueToday}
             disabled={isMutating || vaultKPIs.dueTodayCount === 0}
-            title={isAr ? 'تحصيل كافة الأقساط المستحقة اليوم باليد دفعة واحدة' : 'Batch collect today dues'}
+            title={isAr ? 'تحصيل كل الأقساط المستحقة النهاردة مرة واحدة' : 'Batch collect today dues'}
           >
             <Wallet size={14} color="#059669" />
-            <span>{isAr ? `تحصيل مستحقات اليوم (${vaultKPIs.dueTodayCount})` : `Collect Today (${vaultKPIs.dueTodayCount})`}</span>
+            <span>{isAr ? `تحصيل فلوس النهاردة (${vaultKPIs.dueTodayCount})` : `Collect Today (${vaultKPIs.dueTodayCount})`}</span>
           </button>
 
           <button
@@ -161,258 +217,107 @@ export const HandInstallmentsVaultView: React.FC<HandInstallmentsVaultViewProps>
             onClick={onOpenNewCheque}
           >
             <Plus size={14} />
-            <span>{isAr ? 'تسجيل قسط / استحقاق جديد' : 'New Installment'}</span>
+            <span>{isAr ? 'تسجيل قسط أو سند قبض جديد' : 'New Installment Voucher'}</span>
           </button>
         </div>
       </div>
 
-      {/* 2. THE 4 EXECUTIVE VAULT KPI CARDS (Apple / Mercury Elegance) */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '1.25rem' }}>
-        {/* Card 1: Urgent Overdue / Due Today — Elevated Egyptian Gold */}
-        <div className={styles.card} style={{
-          background: 'linear-gradient(180deg, #ffffff 0%, #fefdfa 100%)',
-          border: '1px solid rgba(132, 106, 44, 0.35)',
-          boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.04), 0 4px 16px -4px rgba(132, 106, 44, 0.12)'
-        }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#846a2c' }}>
-              {isAr ? 'المستحق اليوم والمتأخرات باليد' : 'Due Today & Overdue'}
-            </span>
-            <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#846a2c', display: 'inline-block' }} />
-          </div>
-          <div style={{ margin: '0.25rem 0' }}>
-            <div style={{ fontSize: '1.85rem', fontWeight: 800, color: '#846a2c', letterSpacing: '-0.03em', fontVariantNumeric: 'tabular-nums' }}>
-              {vaultKPIs.dueTodaySum.formatEGP(isAr)}
-            </div>
-          </div>
-          <div style={{ fontSize: '0.74rem', color: '#64748b', borderTop: '1px solid rgba(132, 106, 44, 0.18)', paddingTop: '0.65rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span>{isAr ? 'جاهزة للتحصيل فوراً' : 'Ready to collect'}</span>
-            <strong style={{ color: '#846a2c' }}>{vaultKPIs.dueTodayCount} {isAr ? 'أقساط مستحقة' : 'items'}</strong>
-          </div>
-        </div>
+      {/* 2. ASYMMETRIC VAULT CASHIER RADAR */}
+      <div className={styles.asymmetricBentoGrid}>
+        {/* Left / Hero Card: Total Vault Liquidity & Clearance Progress */}
+        <ZFKpiCard
+          variant="double-bezel"
+          isFlagship={true}
+          title={isAr ? 'إجمالي الأقساط والمستحقات' : 'Total Hand Vault Portfolio'}
+          value={vaultKPIs.totalSum.formatEGP(isAr)}
+          icon={<Wallet size={20} />}
+          accentColor="gold"
+          progress={vaultKPIs.totalSum.isZero() ? 0 : vaultKPIs.clearedSum.div(vaultKPIs.totalSum).times(100).toFixed(1)}
+          progressColor="#10b981"
+          badge={{ text: `${vaultKPIs.totalCount} ${isAr ? 'قسط مسجل' : 'records'}`, variant: 'gold' }}
+          subtitleLabel={isAr ? 'اتحصل ودخل الخزنة' : 'Cleared in Safe'}
+          subtitleValue={`${vaultKPIs.clearedSum.formatEGP(isAr)} (${vaultKPIs.clearedCount} ${isAr ? 'متحصل' : 'cleared'})`}
+        />
 
-        {/* Card 2: Due This Week */}
-        <div className={styles.card}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#64748b' }}>
-              {isAr ? 'تحصيلات الأسبوع الجاري' : 'Due This Week'}
-            </span>
-            <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#946f23', display: 'inline-block' }} />
-          </div>
-          <div style={{ margin: '0.25rem 0' }}>
-            <div style={{ fontSize: '1.85rem', fontWeight: 800, color: '#0f172a', letterSpacing: '-0.03em', fontVariantNumeric: 'tabular-nums' }}>
-              {vaultKPIs.dueWeekSum.formatEGP(isAr)}
-            </div>
-          </div>
-          <div style={{ fontSize: '0.74rem', color: '#64748b', borderTop: '1px solid #f1f5f9', paddingTop: '0.65rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span>{isAr ? 'استحقاقات قريبة (خلال ٧ أيام)' : 'Next 7 days'}</span>
-            <strong style={{ color: '#946f23' }}>{vaultKPIs.dueWeekCount} {isAr ? 'بنود' : 'items'}</strong>
-          </div>
-        </div>
+        {/* Right Stack: 2 Compact Telemetry Instruments */}
+        <div className={styles.telemetryStack}>
+          <ZFKpiCard
+            variant="compact"
+            title={isAr ? 'مستحق النهاردة ومتأخرات' : 'Due Today & Overdue'}
+            value={vaultKPIs.dueTodaySum.formatEGP(isAr)}
+            icon={<Clock size={16} />}
+            accentColor={vaultKPIs.dueTodayCount > 0 ? 'rose' : 'emerald'}
+            subtitleLabel={isAr ? 'حالة التحصيل' : 'Urgency'}
+            subtitleValue={`${vaultKPIs.dueTodayCount} ${isAr ? 'أقساط جاهزة للتحصيل' : 'ready'}`}
+          />
 
-        {/* Card 3: Cleared in Safe */}
-        <div className={styles.card}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#64748b' }}>
-              {isAr ? 'المحصل بالخزينة [101000]' : 'Collected in Safe'}
-            </span>
-            <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#15803d', display: 'inline-block' }} />
-          </div>
-          <div style={{ margin: '0.25rem 0' }}>
-            <div style={{ fontSize: '1.85rem', fontWeight: 800, color: '#15803d', letterSpacing: '-0.03em', fontVariantNumeric: 'tabular-nums' }}>
-              {vaultKPIs.clearedSum.formatEGP(isAr)}
-            </div>
-          </div>
-          <div style={{ fontSize: '0.74rem', color: '#64748b', borderTop: '1px solid #f1f5f9', paddingTop: '0.65rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span>{isAr ? 'مسدد ومودع بالخزينة' : 'Cleared Cash'}</span>
-            <strong style={{ color: '#15803d' }}>{vaultKPIs.clearedCount} {isAr ? 'بند مسدد' : 'cleared'}</strong>
-          </div>
-        </div>
-
-        {/* Card 4: Total Vault Portfolio */}
-        <div className={styles.card}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#64748b' }}>
-              {isAr ? 'إجمالي محفظة الأقساط' : 'Total Hand Vault Value'}
-            </span>
-            <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#64748b', display: 'inline-block' }} />
-          </div>
-          <div style={{ margin: '0.25rem 0' }}>
-            <div style={{ fontSize: '1.85rem', fontWeight: 800, color: '#0f172a', letterSpacing: '-0.03em', fontVariantNumeric: 'tabular-nums' }}>
-              {vaultKPIs.totalSum.formatEGP(isAr)}
-            </div>
-          </div>
-          <div style={{ fontSize: '0.74rem', color: '#64748b', borderTop: '1px solid #f1f5f9', paddingTop: '0.65rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span>{isAr ? 'إجمالي عدد البنود المسجلة' : 'Total Recorded Items'}</span>
-            <strong style={{ color: '#0f172a' }}>{vaultKPIs.totalCount} {isAr ? 'بند' : 'items'}</strong>
-          </div>
+          <ZFKpiCard
+            variant="compact"
+            title={isAr ? 'مستحق خلال أسبوع' : 'Due This Week'}
+            value={vaultKPIs.dueWeekSum.formatEGP(isAr)}
+            icon={<Calendar size={16} />}
+            accentColor="amber"
+            subtitleLabel={isAr ? 'المواعيد الجاية' : 'Timeline'}
+            subtitleValue={`${vaultKPIs.dueWeekCount} ${isAr ? 'أقساط قادمة' : 'items'}`}
+          />
         </div>
       </div>
 
-      {/* 3. FILTER TOOLBAR & VIEW SWITCHER */}
-      <div style={{
-        background: '#ffffff',
-        border: '1px solid #e2e8f0',
-        borderRadius: '14px',
-        padding: '0.85rem 1.15rem',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        flexWrap: 'wrap',
-        gap: '0.85rem',
-        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.03)'
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', flexWrap: 'wrap', flex: 1 }}>
-          {/* Maturity Filter Tabs */}
-          <div style={{
-            display: 'flex',
-            background: '#f1f5f9',
-            border: '1px solid #e2e8f0',
-            borderRadius: '8px',
-            padding: '2px'
-          }}>
-            <button
-              type="button"
-              onClick={() => setChequeMaturityFilter('all')}
-              style={{
-                background: chequeMaturityFilter === 'all' ? '#0f172a' : 'transparent',
-                color: chequeMaturityFilter === 'all' ? '#ffffff' : '#64748b',
-                border: 'none',
-                borderRadius: '6px',
-                padding: '0.35rem 0.65rem',
-                fontSize: '0.72rem',
-                fontWeight: 700,
-                cursor: 'pointer',
-                transition: 'all 0.15s ease'
-              }}
-            >
-              {isAr ? 'كافة التواريخ' : 'All Dates'}
-            </button>
-            <button
-              type="button"
-              onClick={() => setChequeMaturityFilter('due_now')}
-              style={{
-                background: chequeMaturityFilter === 'due_now' ? '#946f23' : 'transparent',
-                color: chequeMaturityFilter === 'due_now' ? '#ffffff' : '#64748b',
-                border: 'none',
-                borderRadius: '6px',
-                padding: '0.35rem 0.65rem',
-                fontSize: '0.72rem',
-                fontWeight: 700,
-                cursor: 'pointer',
-                transition: 'all 0.15s ease'
-              }}
-            >
-              {isAr ? `مستحق اليوم أو متأخر (${vaultKPIs.dueTodayCount})` : `Due / Overdue (${vaultKPIs.dueTodayCount})`}
-            </button>
-            <button
-              type="button"
-              onClick={() => setChequeMaturityFilter('due_30')}
-              style={{
-                background: chequeMaturityFilter === 'due_30' ? '#946f23' : 'transparent',
-                color: chequeMaturityFilter === 'due_30' ? '#ffffff' : '#64748b',
-                border: 'none',
-                borderRadius: '6px',
-                padding: '0.35rem 0.65rem',
-                fontSize: '0.72rem',
-                fontWeight: 700,
-                cursor: 'pointer',
-                transition: 'all 0.15s ease'
-              }}
-            >
-              {isAr ? 'يستحق خلال ٣٠ يوم' : 'Next 30 Days'}
-            </button>
-          </div>
-
-          {/* Search Input */}
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.4rem',
-            background: '#ffffff',
-            border: '1px solid #e2e8f0',
-            borderRadius: '8px',
-            padding: '0.4rem 0.75rem',
-            minWidth: '240px',
-            maxWidth: '380px',
-            flex: '1 1 auto'
-          }}>
-            <Search size={14} color="#64748b" />
-            <input
-              type="text"
-              value={chequeSearchQuery}
-              onChange={e => setChequeSearchQuery(e.target.value)}
-              placeholder={isAr ? 'بحث بكود البند، اسم العميل، أو رقم العقد...' : 'Search item code, client, or contract...'}
-              style={{
-                width: '100%',
-                background: 'transparent',
-                border: 'none',
-                color: '#0f172a',
-                fontSize: '0.76rem',
-                outline: 'none'
-              }}
-            />
-            {chequeSearchQuery && (
-              <button
-                type="button"
-                onClick={() => setChequeSearchQuery('')}
-                style={{ background: 'transparent', border: 'none', color: '#64748b', cursor: 'pointer', fontSize: '0.75rem' }}
-              >
-                ✕
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* View Mode Toggle */}
-        <div style={{
-          display: 'flex',
-          background: '#f1f5f9',
-          border: '1px solid #e2e8f0',
-          borderRadius: '8px',
-          padding: '2px'
-        }}>
-          <button 
-            type="button"
-            onClick={() => setChequeViewMode('cards')}
-            title={isAr ? 'عرض بطاقات السندات والأقساط' : 'Cards view'}
-            style={{
-              background: chequeViewMode === 'cards' ? '#ffffff' : 'transparent',
-              color: chequeViewMode === 'cards' ? '#0f172a' : '#64748b',
-              border: 'none',
-              borderRadius: '6px',
-              padding: '0.35rem 0.55rem',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              boxShadow: chequeViewMode === 'cards' ? '0 1px 2px rgba(0,0,0,0.06)' : 'none'
-            }}
-          >
-            <LayoutGrid size={14} />
-          </button>
-          <button 
-            type="button"
-            onClick={() => setChequeViewMode('table')}
-            title={isAr ? 'عرض جدول محاسبي تفصيلي' : 'Table view'}
-            style={{
-              background: chequeViewMode === 'table' ? '#ffffff' : 'transparent',
-              color: chequeViewMode === 'table' ? '#0f172a' : '#64748b',
-              border: 'none',
-              borderRadius: '6px',
-              padding: '0.35rem 0.55rem',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              boxShadow: chequeViewMode === 'table' ? '0 1px 2px rgba(0,0,0,0.06)' : 'none'
-            }}
-          >
-            <List size={14} />
-          </button>
-        </div>
-      </div>
+      {/* 3. UNIFIED FILTER TOOLBAR & VIEW SWITCHER */}
+      <ZFFilterToolbar
+        tabs={[
+          { id: 'all', label: isAr ? 'كل المواعيد' : 'All Dates' },
+          { id: 'due_now', label: isAr ? 'مستحق النهاردة أو متأخر' : 'Due / Overdue', count: vaultKPIs.dueTodayCount },
+          { id: 'due_30', label: isAr ? 'مستحق خلال 30 يوم' : 'Next 30 Days' }
+        ]}
+        activeTab={chequeMaturityFilter}
+        onTabChange={(tabId) => {
+          setChequeMaturityFilter(tabId as any);
+          setCurrentPage(1);
+        }}
+        searchQuery={chequeSearchQuery}
+        onSearchChange={(q) => {
+          setChequeSearchQuery(q);
+          setCurrentPage(1);
+        }}
+        searchPlaceholder={isAr ? 'دوّر برقم الإيصال، اسم العميل، أو العقد...' : 'Search code, client, or contract...'}
+        filters={[
+          {
+            id: 'cheque_status_filter',
+            value: chequeStatusFilter,
+            onChange: (val) => {
+              setChequeStatusFilter(val as any);
+              setCurrentPage(1);
+            },
+            ariaLabel: isAr ? 'تصفية حسب حالة التحصيل' : 'Filter by installment status',
+            options: [
+              { value: 'all', label: isAr ? 'كل الحالات' : 'Status: All' },
+              { value: 'pending', label: isAr ? 'لسه ما اتحصلش' : 'Pending' },
+              { value: 'cleared', label: isAr ? 'اتحصل خلاص' : 'Cleared' },
+              { value: 'overdue', label: isAr ? 'متأخر في السداد' : 'Overdue' },
+              { value: 'bounced', label: isAr ? 'قسط متعثر / مرفوض' : 'Defaulted / Bounced' }
+            ]
+          }
+        ]}
+        sortBy={chequeSortBy}
+        onSortChange={(val) => setChequeSortBy(val as any)}
+        sortOptions={[
+          { value: 'due_date_asc', label: isAr ? 'الميعاد: الأقرب الأول' : 'Due: Soonest First' },
+          { value: 'due_date_desc', label: isAr ? 'الميعاد: الأبعد الأول' : 'Due: Latest First' },
+          { value: 'nominal_desc', label: isAr ? 'المبلغ: الأكبر الأول' : 'Amount: High to Low' },
+          { value: 'nominal_asc', label: isAr ? 'المبلغ: الأقل الأول' : 'Amount: Low to High' },
+          { value: 'drawer_asc', label: isAr ? 'اسم العميل: أ - ي' : 'Client: A to Z' }
+        ]}
+        sortAriaLabel={isAr ? 'ترتيب الأقساط وسندات القبض' : 'Sort installments'}
+        activeFiltersCount={activeFiltersCount}
+        onResetFilters={handleResetFilters}
+        viewMode={chequeViewMode}
+        onViewModeChange={(mode) => setChequeViewMode(mode)}
+        isAr={isAr}
+      />
 
       {/* 4. EMPTY STATE */}
-      {filteredCheques.length === 0 && (
+      {sortedCheques.length === 0 && (
         <div style={{
           padding: '3.5rem 2rem',
           textAlign: 'center',
@@ -422,32 +327,29 @@ export const HandInstallmentsVaultView: React.FC<HandInstallmentsVaultViewProps>
         }}>
           <Wallet size={36} color="#946f23" style={{ margin: '0 auto 0.75rem auto' }} />
           <div style={{ fontSize: '1rem', fontWeight: 700, color: '#0f172a' }}>
-            {isAr ? 'لا توجد بنود أو أقساط مطابقة' : 'No matching installment items found'}
+            {isAr ? 'مفيش أقساط مطابقة للبحث أو الفلتر' : 'No matching installment items found'}
           </div>
           <div style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '0.35rem' }}>
-            {isAr ? 'جرب تغيير شرط التصفية أو تفريغ خانة البحث.' : 'Try changing the filter or clearing the search box.'}
+            {isAr ? 'جرب تغيّر الفلتر أو تمسح خانة البحث.' : 'Try changing the filter or clearing the search box.'}
           </div>
-          {chequeSearchQuery && (
+          {activeFiltersCount > 0 && (
             <button
               type="button"
-              onClick={() => setChequeSearchQuery('')}
-              className={styles.btnSecondary}
+              onClick={handleResetFilters}
+              className={styles.resetFilterBtn}
               style={{ marginTop: '1rem' }}
             >
-              {isAr ? 'مسح البحث' : 'Clear search'}
+              <RotateCcw size={13} />
+              <span>{isAr ? 'مسح الفلاتر والرجوع للكل' : 'Reset all filters'}</span>
             </button>
           )}
         </div>
       )}
 
       {/* 5. VIEW MODE 1: EXECUTIVE CARDS */}
-      {chequeViewMode === 'cards' && filteredCheques.length > 0 && (
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(310px, 1fr))',
-          gap: '1.25rem'
-        }}>
-          {filteredCheques.map(pdc => {
+      {chequeViewMode === 'cards' && sortedCheques.length > 0 && (
+        <div className={styles.cardsGrid}>
+          {paginatedCheques.map(pdc => {
             const todayStr = new Date().toISOString().split('T')[0];
             const isOverdue = pdc.status !== 'Cleared' && pdc.due_date < todayStr;
             const isDueToday = pdc.status !== 'Cleared' && pdc.due_date === todayStr;
@@ -460,7 +362,7 @@ export const HandInstallmentsVaultView: React.FC<HandInstallmentsVaultViewProps>
                 onClick={() => onInspectCheque(pdc)}
                 style={{
                   background: '#ffffff',
-                  border: isDueToday || isOverdue ? '1px solid rgba(184, 144, 62, 0.4)' : '1px solid #e2e8f0',
+                  border: isDueToday || isOverdue ? '1.5px solid rgba(184, 144, 62, 0.6)' : '1.5px solid #cbd5e1',
                   borderRadius: '16px',
                   padding: '1.25rem',
                   display: 'flex',
@@ -472,12 +374,21 @@ export const HandInstallmentsVaultView: React.FC<HandInstallmentsVaultViewProps>
                 }}
               >
                 {/* Header: Item Code & Status */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                  <div>
-                    <span style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 800, color: '#946f23', fontSize: '0.88rem' }} dir="ltr">
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.75rem' }}>
+                  <div style={{ minWidth: 0, flex: 1 }}>
+                    <span style={{
+                      fontVariantNumeric: 'tabular-nums',
+                      fontWeight: 800,
+                      color: '#946f23',
+                      fontSize: '0.88rem',
+                      whiteSpace: 'nowrap',
+                      direction: 'ltr',
+                      unicodeBidi: 'isolate',
+                      display: 'inline-block'
+                    }}>
                       #{pdc.cheque_number}
                     </span>
-                    <div style={{ fontSize: '0.92rem', fontWeight: 800, color: '#0f172a', marginTop: '0.2rem' }}>
+                    <div style={{ fontSize: '0.96rem', fontWeight: 800, color: '#0f172a', marginTop: '0.25rem', lineHeight: 1.4 }}>
                       {pdc.drawer_name}
                     </div>
                   </div>
@@ -487,18 +398,20 @@ export const HandInstallmentsVaultView: React.FC<HandInstallmentsVaultViewProps>
                     borderRadius: '6px',
                     fontSize: '0.7rem',
                     fontWeight: 800,
+                    whiteSpace: 'nowrap',
+                    flexShrink: 0,
                     background: isCollected ? '#f0fdf4' : isOverdue ? '#fef2f2' : 'rgba(184, 144, 62, 0.08)',
                     color: isCollected ? '#15803d' : isOverdue ? '#dc2626' : '#946f23',
                     border: isCollected ? '1px solid rgba(22, 163, 74, 0.25)' : isOverdue ? '1px solid rgba(220, 38, 38, 0.25)' : '1px solid rgba(184, 144, 62, 0.25)'
                   }}>
-                    {isCollected ? (isAr ? 'تم التحصيل' : 'Cleared') : isOverdue ? (isAr ? 'متأخر' : 'Overdue') : (isAr ? 'قيد التحصيل' : 'Pending')}
+                    {isCollected ? (isAr ? 'اتحصل' : 'Cleared') : isOverdue ? (isAr ? 'متأخر' : 'Overdue') : (isAr ? 'لسه ما اتحصلش' : 'Pending')}
                   </span>
                 </div>
 
                 {/* Amount & Due Date Box */}
                 <div style={{
                   background: '#f8fafc',
-                  border: '1px solid #e2e8f0',
+                  border: '1.5px solid #cbd5e1',
                   borderRadius: '10px',
                   padding: '0.75rem',
                   display: 'flex',
@@ -507,7 +420,7 @@ export const HandInstallmentsVaultView: React.FC<HandInstallmentsVaultViewProps>
                 }}>
                   <div>
                     <span style={{ fontSize: '0.68rem', color: '#64748b', display: 'block' }}>
-                      {isAr ? 'قيمة القسط المطلوب:' : 'Due Amount:'}
+                      {isAr ? 'قيمة القسط:' : 'Due Amount:'}
                     </span>
                     <strong style={{ fontSize: '1.1rem', fontWeight: 900, color: '#0f172a', fontVariantNumeric: 'tabular-nums' }}>
                       {D(pdc.nominal_value).formatEGP(isAr)}
@@ -516,7 +429,7 @@ export const HandInstallmentsVaultView: React.FC<HandInstallmentsVaultViewProps>
 
                   <div style={{ textAlign: isAr ? 'left' : 'right' }}>
                     <span style={{ fontSize: '0.68rem', color: '#64748b', display: 'block' }}>
-                      {isAr ? 'تاريخ الاستحقاق:' : 'Due Date:'}
+                      {isAr ? 'ميعاد الاستحقاق:' : 'Due Date:'}
                     </span>
                     <span style={{ fontSize: '0.82rem', fontWeight: 700, color: isOverdue ? '#dc2626' : '#0f172a', fontVariantNumeric: 'tabular-nums' }}>
                       {pdc.due_date}
@@ -526,11 +439,32 @@ export const HandInstallmentsVaultView: React.FC<HandInstallmentsVaultViewProps>
 
                 {/* Contract Link */}
                 {linkedContract && (
-                  <div style={{ fontSize: '0.72rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                    <span>{isAr ? 'عقد:' : 'Contract:'}</span>
-                    <strong style={{ color: '#0f172a' }}>{linkedContract.contract_number}</strong>
+                  <div style={{
+                    fontSize: '0.74rem',
+                    color: '#64748b',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.4rem',
+                    background: '#f8fafc',
+                    padding: '0.4rem 0.65rem',
+                    borderRadius: '8px',
+                    border: '1px solid #f1f5f9',
+                    overflow: 'hidden'
+                  }}>
+                    <span style={{ flexShrink: 0 }}>{isAr ? 'عقد:' : 'Contract:'}</span>
+                    <strong dir="ltr" style={{ color: '#0f172a', whiteSpace: 'nowrap', unicodeBidi: 'isolate', flexShrink: 0 }}>
+                      #{linkedContract.contract_number}
+                    </strong>
                     <span>•</span>
-                    <span style={{ color: '#946f23' }}>{linkedContract.unit_id}</span>
+                    <span style={{
+                      color: '#946f23',
+                      fontWeight: 600,
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap'
+                    }}>
+                      {linkedContract.unit_id}
+                    </span>
                   </div>
                 )}
 
@@ -562,7 +496,7 @@ export const HandInstallmentsVaultView: React.FC<HandInstallmentsVaultViewProps>
                       }}
                     >
                       <Wallet size={13} />
-                      <span>{isAr ? 'تحصيل البند نقداً باليد' : 'Collect Cash by Hand'}</span>
+                      <span>{isAr ? 'تحصيل القسط كاش' : 'Collect Cash by Hand'}</span>
                     </button>
                   ) : (
                     <div style={{
@@ -580,7 +514,7 @@ export const HandInstallmentsVaultView: React.FC<HandInstallmentsVaultViewProps>
                       border: '1px solid #a7f3d0'
                     }}>
                       <CheckCircle2 size={13} />
-                      <span>{isAr ? 'مورد بالخزينة [101000]' : 'In Safe [101000]'}</span>
+                      <span>{isAr ? 'اتحصل في الخزنة' : 'In Safe [101000]'}</span>
                     </div>
                   )}
 
@@ -614,10 +548,10 @@ export const HandInstallmentsVaultView: React.FC<HandInstallmentsVaultViewProps>
       )}
 
       {/* 6. VIEW MODE 2: DENSE ACCOUNTING TABLE */}
-      {chequeViewMode === 'table' && filteredCheques.length > 0 && (
+      {chequeViewMode === 'table' && sortedCheques.length > 0 && (
         <div style={{
           background: '#ffffff',
-          border: '1px solid #e2e8f0',
+          border: '1.5px solid #cbd5e1',
           borderRadius: '16px',
           overflow: 'hidden',
           boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04)'
@@ -625,18 +559,18 @@ export const HandInstallmentsVaultView: React.FC<HandInstallmentsVaultViewProps>
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.78rem' }}>
               <thead>
-                <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0', color: '#475569', textAlign: isAr ? 'right' : 'left' }}>
-                  <th style={{ padding: '0.75rem 1rem' }}>{isAr ? 'كود البند' : 'Item Code'}</th>
-                  <th style={{ padding: '0.75rem 1rem' }}>{isAr ? 'العميل الملتزم بالسداد' : 'Client / Payer'}</th>
-                  <th style={{ padding: '0.75rem 1rem' }}>{isAr ? 'العقد والوحدة' : 'Contract & Unit'}</th>
-                  <th style={{ padding: '0.75rem 1rem' }}>{isAr ? 'قيمة القسط المطلوبة' : 'Installment Value'}</th>
-                  <th style={{ padding: '0.75rem 1rem' }}>{isAr ? 'تاريخ الاستحقاق' : 'Due Date & Aging'}</th>
+                <tr style={{ background: '#f8fafc', borderBottom: '1.5px solid #cbd5e1', color: '#475569', textAlign: isAr ? 'right' : 'left' }}>
+                  <th style={{ padding: '0.75rem 1rem' }}>{isAr ? 'رقم الإيصال / السند' : 'Item Code'}</th>
+                  <th style={{ padding: '0.75rem 1rem' }}>{isAr ? 'العميل' : 'Client / Payer'}</th>
+                  <th style={{ padding: '0.75rem 1rem' }}>{isAr ? 'العقد والشقة' : 'Contract & Unit'}</th>
+                  <th style={{ padding: '0.75rem 1rem' }}>{isAr ? 'قيمة القسط' : 'Installment Value'}</th>
+                  <th style={{ padding: '0.75rem 1rem' }}>{isAr ? 'ميعاد الاستحقاق' : 'Due Date & Aging'}</th>
                   <th style={{ padding: '0.75rem 1rem' }}>{isAr ? 'حالة التحصيل' : 'Status'}</th>
-                  <th style={{ padding: '0.75rem 1rem', textAlign: 'center' }}>{isAr ? 'الإجراء' : 'Action'}</th>
+                  <th style={{ padding: '0.75rem 1rem', textAlign: 'center' }}>{isAr ? 'حركة الخزنة' : 'Action'}</th>
                 </tr>
               </thead>
               <tbody>
-                {filteredCheques.map(pdc => {
+                {paginatedCheques.map(pdc => {
                   const todayStr = new Date().toISOString().split('T')[0];
                   const isOverdue = pdc.status !== 'Cleared' && pdc.due_date < todayStr;
                   const isCollected = pdc.status === 'Cleared';
@@ -647,7 +581,7 @@ export const HandInstallmentsVaultView: React.FC<HandInstallmentsVaultViewProps>
                       key={pdc.cheque_id} 
                       onClick={() => onInspectCheque(pdc)} 
                       style={{ 
-                        borderBottom: '1px solid #f1f5f9', 
+                        borderBottom: '1px solid #cbd5e1', 
                         cursor: 'pointer',
                         transition: 'background 0.15s ease'
                       }}
@@ -658,30 +592,25 @@ export const HandInstallmentsVaultView: React.FC<HandInstallmentsVaultViewProps>
                         #{pdc.cheque_number}
                       </td>
                       <td style={{ padding: '0.75rem 1rem', fontWeight: 700, color: '#0f172a' }}>
-                        {pdc.drawer_name}
+                        {pdc.drawer_name || (isAr ? 'مش محدد' : 'Unknown')}
                       </td>
-                      <td style={{ padding: '0.75rem 1rem' }}>
+                      <td style={{ padding: '0.75rem 1rem', color: '#64748b' }}>
                         {linkedContract ? (
-                          <div>
-                            <span style={{ color: '#946f23', fontWeight: 700, fontSize: '0.78rem' }}>{linkedContract.contract_number}</span>
-                            <div style={{ fontSize: '0.72rem', color: '#64748b' }}>{linkedContract.unit_id}</div>
-                          </div>
-                        ) : (
-                          <span style={{ color: '#64748b' }}>—</span>
-                        )}
+                          <span dir="ltr" style={{ whiteSpace: 'nowrap', unicodeBidi: 'isolate' }}>
+                            {linkedContract.contract_number} ({linkedContract.unit_id})
+                          </span>
+                        ) : '—'}
                       </td>
                       <td style={{ padding: '0.75rem 1rem' }}>
                         <MoneyCell amount={pdc.nominal_value} isAr={isAr} highlight />
                       </td>
-                      <td style={{ padding: '0.75rem 1rem' }}>
-                        <div style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 700, color: isOverdue ? '#dc2626' : '#0f172a' }}>
-                          {pdc.due_date}
-                        </div>
-                        {isOverdue && (
-                          <span style={{ color: '#dc2626', fontSize: '0.68rem', fontWeight: 800 }}>
-                            {isAr ? 'متأخر' : 'Overdue'}
+                      <td style={{ padding: '0.75rem 1rem', color: '#64748b' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                          <Clock size={12} color={isOverdue ? '#dc2626' : '#64748b'} />
+                          <span style={{ color: isOverdue ? '#dc2626' : '#0f172a', fontWeight: isOverdue ? 700 : 500 }}>
+                            {pdc.due_date}
                           </span>
-                        )}
+                        </div>
                       </td>
                       <td style={{ padding: '0.75rem 1rem' }}>
                         {isCollected ? (
@@ -691,13 +620,13 @@ export const HandInstallmentsVaultView: React.FC<HandInstallmentsVaultViewProps>
                             gap: '0.3rem',
                             padding: '0.2rem 0.55rem',
                             borderRadius: '999px',
-                            background: '#f0fdf4',
+                            background: 'rgba(21, 128, 61, 0.08)',
                             color: '#15803d',
-                            border: '1px solid rgba(22, 163, 74, 0.25)',
+                            border: '1px solid rgba(21, 128, 61, 0.25)',
                             fontSize: '0.7rem',
                             fontWeight: 800
                           }}>
-                            <CheckCircle2 size={11} /> {isAr ? 'تم التحصيل' : 'Collected'}
+                            <CheckCircle2 size={11} /> {isAr ? 'اتحصل' : 'Cleared'}
                           </span>
                         ) : isOverdue ? (
                           <span style={{
@@ -706,9 +635,9 @@ export const HandInstallmentsVaultView: React.FC<HandInstallmentsVaultViewProps>
                             gap: '0.3rem',
                             padding: '0.2rem 0.55rem',
                             borderRadius: '999px',
-                            background: '#fef2f2',
+                            background: 'rgba(220, 38, 38, 0.08)',
                             color: '#dc2626',
-                            border: '1px solid #fecaca',
+                            border: '1px solid rgba(220, 38, 38, 0.25)',
                             fontSize: '0.7rem',
                             fontWeight: 800
                           }}>
@@ -727,7 +656,7 @@ export const HandInstallmentsVaultView: React.FC<HandInstallmentsVaultViewProps>
                             fontSize: '0.7rem',
                             fontWeight: 800
                           }}>
-                            <Clock size={11} /> {isAr ? 'مستحق لاحقاً' : 'Due Later'}
+                            <Clock size={11} /> {isAr ? 'ميعاده لسه' : 'Due Later'}
                           </span>
                         )}
                       </td>
@@ -753,11 +682,11 @@ export const HandInstallmentsVaultView: React.FC<HandInstallmentsVaultViewProps>
                               }}
                             >
                               <Wallet size={12} />
-                              <span>{isAr ? 'تحصيل نقداً' : 'Collect'}</span>
+                              <span>{isAr ? 'تحصيل كاش' : 'Collect'}</span>
                             </button>
                           ) : (
                             <span style={{ fontSize: '0.72rem', color: '#15803d', fontWeight: 700 }}>
-                              {isAr ? 'مورد بالخزينة' : 'In Safe'}
+                              {isAr ? 'اتحصل في الخزنة' : 'In Safe'}
                             </span>
                           )}
 
@@ -773,7 +702,7 @@ export const HandInstallmentsVaultView: React.FC<HandInstallmentsVaultViewProps>
                               fontSize: '0.72rem',
                               cursor: 'pointer'
                             }}
-                            title={isAr ? 'فحص التفاصيل' : 'Inspect'}
+                            title={isAr ? 'عرض التفاصيل' : 'Inspect'}
                           >
                             <Eye size={12} />
                           </button>
@@ -786,6 +715,20 @@ export const HandInstallmentsVaultView: React.FC<HandInstallmentsVaultViewProps>
             </table>
           </div>
         </div>
+      )}
+
+      {/* 7. PAGINATION BAR (SHARED) */}
+      {sortedCheques.length > 0 && (
+        <ZFPagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          totalItems={sortedCheques.length}
+          pageSize={pageSize}
+          onPageChange={setCurrentPage}
+          onPageSizeChange={setPageSize}
+          isAr={isAr}
+          itemLabel={{ ar: 'قسط', en: 'installments' }}
+        />
       )}
     </div>
   );
