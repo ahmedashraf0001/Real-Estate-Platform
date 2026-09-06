@@ -287,8 +287,8 @@ export const HandCollectionModal: React.FC<HandCollectionModalProps> = ({
         border: '1px solid #cbd5e1',
         borderRadius: '24px',
         width: '100%',
-        maxWidth: '1120px',
-        height: 'min(820px, 94vh)',
+        maxWidth: '1150px',
+        height: 'min(680px, 92vh)',
         boxShadow: '0 25px 65px -15px rgba(0, 0, 0, 0.22), 0 0 0 1px rgba(0,0,0,0.04)',
         overflow: 'hidden',
         display: 'flex',
@@ -373,7 +373,7 @@ export const HandCollectionModal: React.FC<HandCollectionModalProps> = ({
             ══════════════════════════════════════════════════════════════════════════ */}
         <div style={{
           display: 'grid',
-          gridTemplateColumns: '400px 1fr',
+          gridTemplateColumns: '435px 1fr',
           flex: 1,
           minHeight: 0,
           overflow: 'hidden'
@@ -448,19 +448,20 @@ export const HandCollectionModal: React.FC<HandCollectionModalProps> = ({
             {/* Quick Filter Tabs */}
             <div style={{
               display: 'flex',
-              gap: '0.35rem',
-              padding: '0.55rem 0.85rem',
+              gap: '0.25rem',
+              padding: '0.45rem 0.65rem',
               borderBottom: '1px solid #e2e8f0',
               background: '#f8fafc',
-              overflowX: 'auto'
+              overflowX: 'auto',
+              scrollbarWidth: 'none'
             }}>
               <button
                 type="button"
                 onClick={() => setFilterTab('pending')}
                 style={{
-                  padding: '0.3rem 0.65rem',
+                  padding: '0.24rem 0.45rem',
                   borderRadius: '8px',
-                  fontSize: '0.73rem',
+                  fontSize: '0.71rem',
                   fontWeight: filterTab === 'pending' ? 800 : 600,
                   background: filterTab === 'pending' ? '#0f172a' : '#ffffff',
                   color: filterTab === 'pending' ? '#ffffff' : '#64748b',
@@ -468,16 +469,17 @@ export const HandCollectionModal: React.FC<HandCollectionModalProps> = ({
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '0.35rem',
-                  whiteSpace: 'nowrap'
+                  gap: '0.25rem',
+                  whiteSpace: 'nowrap',
+                  flexShrink: 0
                 }}
               >
                 <span>{isAr ? 'المعلقة' : 'Pending'}</span>
                 <span style={{
                   background: filterTab === 'pending' ? 'rgba(255,255,255,0.2)' : '#f1f5f9',
-                  padding: '0.1rem 0.35rem',
+                  padding: '0.06rem 0.3rem',
                   borderRadius: '10px',
-                  fontSize: '0.66rem'
+                  fontSize: '0.64rem'
                 }}>
                   {tabCounts.pending}
                 </span>
@@ -487,9 +489,9 @@ export const HandCollectionModal: React.FC<HandCollectionModalProps> = ({
                 type="button"
                 onClick={() => setFilterTab('overdue')}
                 style={{
-                  padding: '0.3rem 0.65rem',
+                  padding: '0.24rem 0.45rem',
                   borderRadius: '8px',
-                  fontSize: '0.73rem',
+                  fontSize: '0.71rem',
                   fontWeight: filterTab === 'overdue' ? 800 : 600,
                   background: filterTab === 'overdue' ? '#dc2626' : '#ffffff',
                   color: filterTab === 'overdue' ? '#ffffff' : '#dc2626',
@@ -497,17 +499,18 @@ export const HandCollectionModal: React.FC<HandCollectionModalProps> = ({
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '0.35rem',
-                  whiteSpace: 'nowrap'
+                  gap: '0.25rem',
+                  whiteSpace: 'nowrap',
+                  flexShrink: 0
                 }}
               >
                 <span>{isAr ? 'متأخرة' : 'Overdue'}</span>
                 {tabCounts.overdue > 0 && (
                   <span style={{
                     background: filterTab === 'overdue' ? 'rgba(255,255,255,0.25)' : 'rgba(239, 68, 68, 0.1)',
-                    padding: '0.1rem 0.35rem',
+                    padding: '0.06rem 0.3rem',
                     borderRadius: '10px',
-                    fontSize: '0.66rem'
+                    fontSize: '0.64rem'
                   }}>
                     {tabCounts.overdue}
                   </span>
@@ -518,9 +521,9 @@ export const HandCollectionModal: React.FC<HandCollectionModalProps> = ({
                 type="button"
                 onClick={() => setFilterTab('week')}
                 style={{
-                  padding: '0.3rem 0.65rem',
+                  padding: '0.24rem 0.45rem',
                   borderRadius: '8px',
-                  fontSize: '0.73rem',
+                  fontSize: '0.71rem',
                   fontWeight: filterTab === 'week' ? 800 : 600,
                   background: filterTab === 'week' ? '#946f23' : '#ffffff',
                   color: filterTab === 'week' ? '#ffffff' : '#64748b',
@@ -528,16 +531,17 @@ export const HandCollectionModal: React.FC<HandCollectionModalProps> = ({
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '0.35rem',
-                  whiteSpace: 'nowrap'
+                  gap: '0.25rem',
+                  whiteSpace: 'nowrap',
+                  flexShrink: 0
                 }}
               >
                 <span>{isAr ? 'خلال أسبوع' : 'This Week'}</span>
                 <span style={{
                   background: filterTab === 'week' ? 'rgba(255,255,255,0.2)' : '#f1f5f9',
-                  padding: '0.1rem 0.35rem',
+                  padding: '0.06rem 0.3rem',
                   borderRadius: '10px',
-                  fontSize: '0.66rem'
+                  fontSize: '0.64rem'
                 }}>
                   {tabCounts.week}
                 </span>
@@ -547,9 +551,9 @@ export const HandCollectionModal: React.FC<HandCollectionModalProps> = ({
                 type="button"
                 onClick={() => setFilterTab('all')}
                 style={{
-                  padding: '0.3rem 0.65rem',
+                  padding: '0.24rem 0.45rem',
                   borderRadius: '8px',
-                  fontSize: '0.73rem',
+                  fontSize: '0.71rem',
                   fontWeight: filterTab === 'all' ? 800 : 600,
                   background: filterTab === 'all' ? '#334155' : '#ffffff',
                   color: filterTab === 'all' ? '#ffffff' : '#64748b',
@@ -557,16 +561,17 @@ export const HandCollectionModal: React.FC<HandCollectionModalProps> = ({
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '0.35rem',
-                  whiteSpace: 'nowrap'
+                  gap: '0.25rem',
+                  whiteSpace: 'nowrap',
+                  flexShrink: 0
                 }}
               >
                 <span>{isAr ? 'الكل' : 'All'}</span>
                 <span style={{
                   background: filterTab === 'all' ? 'rgba(255,255,255,0.2)' : '#f1f5f9',
-                  padding: '0.1rem 0.35rem',
+                  padding: '0.06rem 0.3rem',
                   borderRadius: '10px',
-                  fontSize: '0.66rem'
+                  fontSize: '0.64rem'
                 }}>
                   {tabCounts.all}
                 </span>
@@ -576,9 +581,9 @@ export const HandCollectionModal: React.FC<HandCollectionModalProps> = ({
                 type="button"
                 onClick={() => setFilterTab('cleared')}
                 style={{
-                  padding: '0.3rem 0.65rem',
+                  padding: '0.24rem 0.45rem',
                   borderRadius: '8px',
-                  fontSize: '0.73rem',
+                  fontSize: '0.71rem',
                   fontWeight: filterTab === 'cleared' ? 800 : 600,
                   background: filterTab === 'cleared' ? '#059669' : '#ffffff',
                   color: filterTab === 'cleared' ? '#ffffff' : '#059669',
@@ -586,16 +591,17 @@ export const HandCollectionModal: React.FC<HandCollectionModalProps> = ({
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '0.35rem',
-                  whiteSpace: 'nowrap'
+                  gap: '0.25rem',
+                  whiteSpace: 'nowrap',
+                  flexShrink: 0
                 }}
               >
                 <span>{isAr ? 'المحصلة' : 'Cleared'}</span>
                 <span style={{
                   background: filterTab === 'cleared' ? 'rgba(255,255,255,0.2)' : 'rgba(16, 185, 129, 0.1)',
-                  padding: '0.1rem 0.35rem',
+                  padding: '0.06rem 0.3rem',
                   borderRadius: '10px',
-                  fontSize: '0.66rem'
+                  fontSize: '0.64rem'
                 }}>
                   {tabCounts.cleared}
                 </span>
@@ -803,199 +809,257 @@ export const HandCollectionModal: React.FC<HandCollectionModalProps> = ({
                 </p>
               </div>
             ) : (
-              <form onSubmit={handleSubmit} style={{ padding: '1.5rem 1.75rem', display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
-                
-                {error && (
+              <form 
+                onSubmit={handleSubmit} 
+                style={{ 
+                  padding: '1.25rem 1.65rem', 
+                  display: 'flex', 
+                  flexDirection: 'column', 
+                  justifyContent: 'space-between',
+                  flex: 1,
+                  minHeight: '100%',
+                  boxSizing: 'border-box'
+                }}
+              >
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+                  {error && (
+                    <div style={{
+                      background: 'rgba(239, 68, 68, 0.08)',
+                      border: '1px solid rgba(239, 68, 68, 0.25)',
+                      borderRadius: '10px',
+                      padding: '0.75rem 1rem',
+                      color: '#dc2626',
+                      fontSize: '0.78rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem'
+                    }}>
+                      <AlertCircle size={16} />
+                      <span>{error}</span>
+                    </div>
+                  )}
+
+                  {/* Target Item Details Voucher Preview - Rich Gold Accent Card */}
                   <div style={{
-                    background: 'rgba(239, 68, 68, 0.08)',
-                    border: '1px solid rgba(239, 68, 68, 0.25)',
-                    borderRadius: '10px',
-                    padding: '0.75rem 1rem',
-                    color: '#dc2626',
-                    fontSize: '0.78rem',
+                    background: 'linear-gradient(135deg, #fffdf8 0%, #fbf6ec 100%)',
+                    border: '1.5px solid #d4af37',
+                    borderRadius: '14px',
+                    overflow: 'hidden',
                     display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.5rem'
+                    flexDirection: 'column',
+                    boxShadow: '0 4px 18px -2px rgba(184, 144, 62, 0.16), 0 1px 3px rgba(0, 0, 0, 0.04)'
                   }}>
-                    <AlertCircle size={16} />
-                    <span>{error}</span>
-                  </div>
-                )}
+                    {/* Top Voucher Ribbon / Banner */}
+                    <div style={{
+                      padding: '0.65rem 1rem',
+                      background: 'linear-gradient(135deg, rgba(212, 175, 55, 0.2) 0%, rgba(184, 144, 62, 0.1) 100%)',
+                      borderBottom: '1.5px solid rgba(212, 175, 55, 0.35)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between'
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                        <div style={{
+                          width: '24px',
+                          height: '24px',
+                          borderRadius: '6px',
+                          background: 'linear-gradient(135deg, #d4af37 0%, #b8903e 100%)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          color: '#ffffff',
+                          boxShadow: '0 2px 5px rgba(184, 144, 62, 0.3)'
+                        }}>
+                          <ShieldCheck size={14} />
+                        </div>
+                        <span style={{ fontSize: '0.8rem', fontWeight: 900, color: '#785210', letterSpacing: '0.01em' }}>
+                          {isAr ? 'زكريا فريد للتطوير العقاري • إيصال تحصيل نقدية' : 'ZF REAL ESTATE • CASH VOUCHER'}
+                        </span>
+                      </div>
 
-                {/* Target Item Details Voucher Preview */}
-                <div style={{
-                  background: 'linear-gradient(135deg, #ffffff 0%, #fefdfa 100%)',
-                  border: '1.5px solid rgba(184, 144, 62, 0.3)',
-                  borderRadius: '14px',
-                  padding: '1.15rem',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '0.85rem',
-                  boxShadow: '0 2px 8px rgba(184, 144, 62, 0.06)'
-                }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #f1f5f9', paddingBottom: '0.5rem' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                      <ShieldCheck size={14} color="#946f23" />
-                      <span style={{ fontSize: '0.74rem', fontWeight: 800, color: '#946f23' }}>
-                        {isAr ? 'زكريا فريد للتطوير العقاري • إيصال تحصيل نقدية' : 'ZF REAL ESTATE • CASH VOUCHER'}
-                      </span>
-                    </div>
-                    <span style={{ fontVariantNumeric: 'tabular-nums', fontSize: '0.72rem', color: '#64748b' }}>
-                      #{selectedItem.cheque_id.slice(0, 10)}
-                    </span>
-                  </div>
-
-                  <div style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(2, 1fr)',
-                    gap: '0.85rem',
-                    fontSize: '0.76rem'
-                  }}>
-                    <div>
-                      <span style={{ color: '#64748b', fontSize: '0.7rem', display: 'block' }}>{isAr ? 'العميل الملتزم بالسداد:' : 'Client:'}</span>
-                      <strong style={{ color: '#0f172a', fontSize: '0.88rem' }}>{selectedItem.drawer_name}</strong>
-                    </div>
-
-                    <div>
-                      <span style={{ color: '#64748b', fontSize: '0.7rem', display: 'block' }}>{isAr ? 'العقد والوحدة:' : 'Contract & Unit:'}</span>
-                      <span style={{ color: '#946f23', fontWeight: 700 }}>
-                        {currentContract ? `#${currentContract.contract_number} (${currentContract.unit_id})` : `#${selectedItem.contract_id.slice(0, 8)}`}
+                      <span style={{
+                        fontVariantNumeric: 'tabular-nums',
+                        fontSize: '0.72rem',
+                        fontWeight: 800,
+                        background: '#ffffff',
+                        color: '#785210',
+                        padding: '0.12rem 0.5rem',
+                        borderRadius: '6px',
+                        border: '1px solid rgba(212, 175, 55, 0.4)',
+                        boxShadow: '0 1px 2px rgba(0, 0, 0, 0.04)'
+                      }}>
+                        #{selectedItem.cheque_id.slice(0, 10)}
                       </span>
                     </div>
 
-                    <div>
-                      <span style={{ color: '#64748b', fontSize: '0.7rem', display: 'block' }}>{isAr ? 'تاريخ الاستحقاق الدفتري:' : 'Due Date:'}</span>
-                      <span style={{ color: '#334155', fontVariantNumeric: 'tabular-nums', fontWeight: 600 }}>{selectedItem.due_date}</span>
-                    </div>
+                    {/* Voucher Body Details Grid */}
+                    <div style={{
+                      padding: '0.85rem 1rem',
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(2, 1fr)',
+                      gap: '0.75rem',
+                      fontSize: '0.76rem'
+                    }}>
+                      <div>
+                        <span style={{ color: '#785210', fontSize: '0.68rem', fontWeight: 700, display: 'block', marginBottom: '0.15rem' }}>
+                          {isAr ? 'العميل الملتزم بالسداد:' : 'Client:'}
+                        </span>
+                        <strong style={{ color: '#0f172a', fontSize: '0.9rem', fontWeight: 800 }}>
+                          {selectedItem.drawer_name}
+                        </strong>
+                      </div>
 
-                    <div>
-                      <span style={{ color: '#64748b', fontSize: '0.7rem', display: 'block' }}>{isAr ? 'قيمة القسط المطلوبة:' : 'Due Amount:'}</span>
-                      <span style={{ color: '#15803d', fontWeight: 800, fontSize: '0.95rem' }}>{nominalVal.formatEGP(isAr)}</span>
+                      <div>
+                        <span style={{ color: '#785210', fontSize: '0.68rem', fontWeight: 700, display: 'block', marginBottom: '0.15rem' }}>
+                          {isAr ? 'العقد والوحدة:' : 'Contract & Unit:'}
+                        </span>
+                        <span style={{ color: '#946f23', fontWeight: 800, fontSize: '0.8rem' }}>
+                          {currentContract ? `#${currentContract.contract_number} (${currentContract.unit_id})` : `#${selectedItem.contract_id.slice(0, 8)}`}
+                        </span>
+                      </div>
+
+                      <div>
+                        <span style={{ color: '#785210', fontSize: '0.68rem', fontWeight: 700, display: 'block', marginBottom: '0.15rem' }}>
+                          {isAr ? 'تاريخ الاستحقاق الدفتري:' : 'Due Date:'}
+                        </span>
+                        <span style={{ color: '#334155', fontVariantNumeric: 'tabular-nums', fontWeight: 700, fontSize: '0.82rem' }}>
+                          {selectedItem.due_date}
+                        </span>
+                      </div>
+
+                      <div>
+                        <span style={{ color: '#785210', fontSize: '0.68rem', fontWeight: 700, display: 'block', marginBottom: '0.15rem' }}>
+                          {isAr ? 'قيمة القسط المطلوبة:' : 'Due Amount:'}
+                        </span>
+                        <span style={{ color: '#047857', fontWeight: 900, fontSize: '1.02rem', fontVariantNumeric: 'tabular-nums' }}>
+                          {nominalVal.formatEGP(isAr)}
+                        </span>
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                {/* Form Inputs Grid */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                  {/* Actual Collection Date */}
+                  {/* Form Inputs Grid */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.85rem' }}>
+                    {/* Actual Collection Date */}
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.74rem', color: '#334155', marginBottom: '0.3rem', fontWeight: 700 }}>
+                        <Calendar size={13} style={{ display: 'inline', marginLeft: isAr ? '0.35rem' : 0, marginRight: isAr ? 0 : '0.35rem' }} />
+                        {isAr ? 'تاريخ الاستلام الفعلي باليد *' : 'Actual Cash Receipt Date *'}
+                      </label>
+                      <input 
+                        type="date"
+                        required
+                        value={collectionDate}
+                        onChange={e => setCollectionDate(e.target.value)}
+                        style={{
+                          width: '100%',
+                          padding: '0.5rem 0.75rem',
+                          background: '#ffffff',
+                          border: '1px solid #cbd5e1',
+                          borderRadius: '8px',
+                          color: '#0f172a',
+                          fontSize: '0.82rem',
+                          outline: 'none'
+                        }}
+                      />
+                    </div>
+
+                    {/* Receipt Voucher Number */}
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.74rem', color: '#334155', marginBottom: '0.3rem', fontWeight: 700 }}>
+                        <Receipt size={13} style={{ display: 'inline', marginLeft: isAr ? '0.35rem' : 0, marginRight: isAr ? 0 : '0.35rem' }} />
+                        {isAr ? 'رقم إيصال الاستلام النقدي *' : 'Receipt Voucher # *'}
+                      </label>
+                      <input 
+                        type="text"
+                        required
+                        value={receiptNo}
+                        onChange={e => setReceiptNo(e.target.value)}
+                        placeholder="RCP-2026-XXXX"
+                        style={{
+                          width: '100%',
+                          padding: '0.5rem 0.75rem',
+                          background: '#ffffff',
+                          border: '1px solid #cbd5e1',
+                          borderRadius: '8px',
+                          color: '#0f172a',
+                          fontSize: '0.82rem',
+                          fontVariantNumeric: 'tabular-nums',
+                          fontWeight: 700,
+                          outline: 'none'
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Amount Paid Field */}
                   <div>
-                    <label style={{ display: 'block', fontSize: '0.76rem', color: '#334155', marginBottom: '0.35rem', fontWeight: 700 }}>
-                      <Calendar size={13} style={{ display: 'inline', marginLeft: isAr ? '0.35rem' : 0, marginRight: isAr ? 0 : '0.35rem' }} />
-                      {isAr ? 'تاريخ الاستلام الفعلي باليد *' : 'Actual Cash Receipt Date *'}
+                    <label style={{ display: 'block', fontSize: '0.74rem', color: '#334155', marginBottom: '0.3rem', fontWeight: 700 }}>
+                      {isAr ? 'المبلغ المستلم نقداً (ج.م) *' : 'Amount Received in Cash (EGP) *'}
                     </label>
                     <input 
-                      type="date"
+                      type="number"
+                      step="0.01"
                       required
-                      value={collectionDate}
-                      onChange={e => setCollectionDate(e.target.value)}
+                      value={collectedAmount}
+                      onChange={e => setCollectedAmount(e.target.value)}
                       style={{
                         width: '100%',
-                        padding: '0.55rem 0.75rem',
+                        padding: '0.55rem 0.85rem',
                         background: '#ffffff',
-                        border: '1px solid #cbd5e1',
+                        border: '1.5px solid #059669',
                         borderRadius: '8px',
-                        color: '#0f172a',
-                        fontSize: '0.82rem',
+                        color: '#059669',
+                        fontSize: '1.1rem',
+                        fontWeight: 900,
                         outline: 'none'
                       }}
                     />
                   </div>
 
-                  {/* Receipt Voucher Number */}
+                  {/* Notes Input */}
                   <div>
-                    <label style={{ display: 'block', fontSize: '0.76rem', color: '#334155', marginBottom: '0.35rem', fontWeight: 700 }}>
-                      <Receipt size={13} style={{ display: 'inline', marginLeft: isAr ? '0.35rem' : 0, marginRight: isAr ? 0 : '0.35rem' }} />
-                      {isAr ? 'رقم إيصال الاستلام النقدي *' : 'Receipt Voucher # *'}
+                    <label style={{ display: 'block', fontSize: '0.74rem', color: '#334155', marginBottom: '0.3rem', fontWeight: 700 }}>
+                      <FileText size={13} style={{ display: 'inline', marginLeft: isAr ? '0.35rem' : 0, marginRight: isAr ? 0 : '0.35rem' }} />
+                      {isAr ? 'ملاحظات التحصيل / جهة الاستلام' : 'Collection Notes'}
                     </label>
                     <input 
                       type="text"
-                      required
-                      value={receiptNo}
-                      onChange={e => setReceiptNo(e.target.value)}
-                      placeholder="RCP-2026-XXXX"
+                      value={collectionNotes}
+                      onChange={e => setCollectionNotes(e.target.value)}
+                      placeholder={isAr ? 'سداد نقدي باليد بالخزينة' : 'Cash in safe'}
                       style={{
                         width: '100%',
-                        padding: '0.55rem 0.75rem',
+                        padding: '0.5rem 0.75rem',
                         background: '#ffffff',
                         border: '1px solid #cbd5e1',
                         borderRadius: '8px',
                         color: '#0f172a',
-                        fontSize: '0.82rem',
-                        fontVariantNumeric: 'tabular-nums',
-                        fontWeight: 700,
+                        fontSize: '0.78rem',
                         outline: 'none'
                       }}
                     />
                   </div>
-                </div>
 
-                {/* Amount Paid Field */}
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.76rem', color: '#334155', marginBottom: '0.35rem', fontWeight: 700 }}>
-                    {isAr ? 'المبلغ المستلم نقداً (ج.م) *' : 'Amount Received in Cash (EGP) *'}
-                  </label>
-                  <input 
-                    type="number"
-                    step="0.01"
-                    required
-                    value={collectedAmount}
-                    onChange={e => setCollectedAmount(e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '0.65rem 0.85rem',
-                      background: '#ffffff',
-                      border: '1.5px solid #059669',
-                      borderRadius: '8px',
-                      color: '#059669',
-                      fontSize: '1.15rem',
-                      fontWeight: 900,
-                      outline: 'none'
-                    }}
-                  />
-                </div>
-
-                {/* Notes Input */}
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.76rem', color: '#334155', marginBottom: '0.35rem', fontWeight: 700 }}>
-                    <FileText size={13} style={{ display: 'inline', marginLeft: isAr ? '0.35rem' : 0, marginRight: isAr ? 0 : '0.35rem' }} />
-                    {isAr ? 'ملاحظات التحصيل / جهة الاستلام' : 'Collection Notes'}
-                  </label>
-                  <input 
-                    type="text"
-                    value={collectionNotes}
-                    onChange={e => setCollectionNotes(e.target.value)}
-                    placeholder={isAr ? 'سداد نقدي باليد بالخزينة' : 'Cash in safe'}
-                    style={{
-                      width: '100%',
-                      padding: '0.55rem 0.75rem',
-                      background: '#ffffff',
-                      border: '1px solid #cbd5e1',
-                      borderRadius: '8px',
-                      color: '#0f172a',
-                      fontSize: '0.8rem',
-                      outline: 'none'
-                    }}
-                  />
-                </div>
-
-                {/* Automated Accounting Posting Strip */}
-                <div style={{
-                  background: 'rgba(16, 185, 129, 0.05)',
-                  border: '1px solid rgba(16, 185, 129, 0.2)',
-                  borderRadius: '10px',
-                  padding: '0.65rem 0.85rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.5rem',
-                  fontSize: '0.73rem',
-                  color: '#065f46'
-                }}>
-                  <CheckCircle2 size={15} color="#059669" />
-                  <span>
-                    {isAr 
-                      ? 'التوجيه المحاسبي: مدين حـ/ الخزينة الرئيسية (101000) • دائن حـ/ أوراق القبض (103200).'
-                      : 'GL Impact: Dr Safe (101000) • Cr Notes Receivable (103200).'}
-                  </span>
+                  {/* Automated Accounting Posting Strip */}
+                  <div style={{
+                    background: 'rgba(16, 185, 129, 0.05)',
+                    border: '1px solid rgba(16, 185, 129, 0.2)',
+                    borderRadius: '10px',
+                    padding: '0.55rem 0.8rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    fontSize: '0.72rem',
+                    color: '#065f46'
+                  }}>
+                    <CheckCircle2 size={15} color="#059669" />
+                    <span>
+                      {isAr 
+                        ? 'التوجيه المحاسبي: مدين حـ/ الخزينة الرئيسية (101000) • دائن حـ/ أوراق القبض (103200).'
+                        : 'GL Impact: Dr Safe (101000) • Cr Notes Receivable (103200).'}
+                    </span>
+                  </div>
                 </div>
 
                 {/* Modal Footer Buttons */}
@@ -1004,8 +1068,8 @@ export const HandCollectionModal: React.FC<HandCollectionModalProps> = ({
                   alignItems: 'center',
                   justifyContent: 'space-between',
                   borderTop: '1px solid #e2e8f0',
-                  paddingTop: '1.25rem',
-                  marginTop: '0.25rem'
+                  paddingTop: '0.85rem',
+                  marginTop: 'auto'
                 }}>
                   <button
                     type="button"
@@ -1014,9 +1078,9 @@ export const HandCollectionModal: React.FC<HandCollectionModalProps> = ({
                       background: '#ffffff',
                       border: '1px solid #cbd5e1',
                       color: '#334155',
-                      padding: '0.55rem 0.95rem',
+                      padding: '0.5rem 0.9rem',
                       borderRadius: '8px',
-                      fontSize: '0.78rem',
+                      fontSize: '0.76rem',
                       fontWeight: 700,
                       display: 'inline-flex',
                       alignItems: 'center',
@@ -1036,9 +1100,9 @@ export const HandCollectionModal: React.FC<HandCollectionModalProps> = ({
                         background: '#ffffff',
                         border: '1px solid #cbd5e1',
                         color: '#64748b',
-                        padding: '0.55rem 1rem',
+                        padding: '0.5rem 0.95rem',
                         borderRadius: '8px',
-                        fontSize: '0.78rem',
+                        fontSize: '0.76rem',
                         fontWeight: 700,
                         cursor: 'pointer'
                       }}
@@ -1053,9 +1117,9 @@ export const HandCollectionModal: React.FC<HandCollectionModalProps> = ({
                         background: 'linear-gradient(135deg, #059669 0%, #047857 100%)',
                         color: '#ffffff',
                         border: 'none',
-                        padding: '0.55rem 1.25rem',
+                        padding: '0.5rem 1.2rem',
                         borderRadius: '8px',
-                        fontSize: '0.8rem',
+                        fontSize: '0.78rem',
                         fontWeight: 800,
                         cursor: isMutating ? 'not-allowed' : 'pointer',
                         display: 'inline-flex',
