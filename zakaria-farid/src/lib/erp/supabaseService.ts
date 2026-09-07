@@ -103,11 +103,11 @@ export class ERPSupabaseService {
           total_units_count: units.length,
           building_units: units,
           partner_splits: p.partner_splits && p.partner_splits.length > 0 ? p.partner_splits : (
-            (p.id === 'the-obsidian-pavilion' || (p.title_ar || '').includes('الأوبسيديان') || (p.title_ar || '').includes('الفردوس'))
+            ((p.title_ar || '').includes('الشيخ زايد') || (p.title_ar || '').includes('النرجس') || (p.title_ar || '').includes('الفردوس') || (p.title_ar || '').includes('الأوبسيديان'))
               ? [{ partner_name: 'زكريا فريد', share_percentage: 65 }, { partner_name: 'م. أحمد الشريف', share_percentage: 35 }]
-              : ((p.id === 'the-sky-palace-penthouse' || (p.title_ar || '').includes('السماء') || (p.title_ar || '').includes('الصفوة'))
-                ? [{ partner_name: 'زكريا فريد', share_percentage: 70 }, { partner_name: 'د. هاني المنياوي', share_percentage: 30 }]
-                : ((p.id === 'sokhna-sea-cliff-mansion' || (p.title_ar || '').includes('السخنة'))
+              : (((p.title_ar || '').includes('الساحل') || (p.title_ar || '').includes('هاسبيندا') || (p.title_ar || '').includes('هاسيندا') || (p.title_ar || '').includes('السماء') || (p.title_ar || '').includes('الصفوة'))
+                ? [{ partner_name: 'زكريا فريد', share_percentage: 75 }, { partner_name: 'د. هاني المنياوي', share_percentage: 25 }]
+                : (((p.title_ar || '').includes('السخنة') || (p.title_ar || '').includes('البحر الأحمر'))
                   ? [{ partner_name: 'زكريا فريد', share_percentage: 70 }, { partner_name: 'الحاج رجب الصاوي', share_percentage: 30 }]
                   : [{ partner_name: 'زكريا فريد', share_percentage: 100 }]
                 )
@@ -118,11 +118,11 @@ export class ERPSupabaseService {
       return {
         ...p,
         partner_splits: p.partner_splits && p.partner_splits.length > 0 ? p.partner_splits : (
-          (p.id === 'the-obsidian-pavilion' || (p.title_ar || '').includes('الأوبسيديان') || (p.title_ar || '').includes('الفردوس'))
+          ((p.title_ar || '').includes('الشيخ زايد') || (p.title_ar || '').includes('النرجس') || (p.title_ar || '').includes('الفردوس') || (p.title_ar || '').includes('الأوبسيديان'))
             ? [{ partner_name: 'زكريا فريد', share_percentage: 65 }, { partner_name: 'م. أحمد الشريف', share_percentage: 35 }]
-            : ((p.id === 'the-sky-palace-penthouse' || (p.title_ar || '').includes('السماء') || (p.title_ar || '').includes('الصفوة'))
-              ? [{ partner_name: 'زكريا فريد', share_percentage: 70 }, { partner_name: 'د. هاني المنياوي', share_percentage: 30 }]
-              : ((p.id === 'sokhna-sea-cliff-mansion' || (p.title_ar || '').includes('السخنة'))
+            : (((p.title_ar || '').includes('الساحل') || (p.title_ar || '').includes('هاسبيندا') || (p.title_ar || '').includes('هاسيندا') || (p.title_ar || '').includes('السماء') || (p.title_ar || '').includes('الصفوة'))
+              ? [{ partner_name: 'زكريا فريد', share_percentage: 75 }, { partner_name: 'د. هاني المنياوي', share_percentage: 25 }]
+              : (((p.title_ar || '').includes('السخنة') || (p.title_ar || '').includes('البحر الأحمر'))
                 ? [{ partner_name: 'زكريا فريد', share_percentage: 70 }, { partner_name: 'الحاج رجب الصاوي', share_percentage: 30 }]
                 : [{ partner_name: 'زكريا فريد', share_percentage: 100 }]
               )

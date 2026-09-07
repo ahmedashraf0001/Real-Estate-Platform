@@ -50,6 +50,7 @@ export interface PartnersManagementViewProps {
   partnerCalls?: ERPPartnerCall[];
   isAr?: boolean;
   isMutating?: boolean;
+  onOpenNewPartnerModal?: () => void;
   onOpenPayout: (initialPartnerName?: string) => void;
   onOpenInjection: (initialPartnerName?: string) => void;
   onOpenDossier: (partner: PartnerFinancialSummary) => void;
@@ -63,6 +64,7 @@ export const PartnersManagementView: React.FC<PartnersManagementViewProps> = ({
   partnerCalls = [],
   isAr = true,
   isMutating = false,
+  onOpenNewPartnerModal,
   onOpenPayout,
   onOpenInjection,
   onOpenDossier
@@ -308,6 +310,32 @@ export const PartnersManagementView: React.FC<PartnersManagementViewProps> = ({
 
         {/* Action Buttons */}
         <div className={styles.stageActions} style={{ display: 'flex', gap: '0.65rem' }}>
+          {onOpenNewPartnerModal && (
+            <button
+              type="button"
+              onClick={onOpenNewPartnerModal}
+              disabled={isMutating}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.45rem',
+                padding: '0.6rem 1.1rem',
+                borderRadius: '10px',
+                background: '#0f172a',
+                color: '#ffffff',
+                fontWeight: 800,
+                fontSize: '0.82rem',
+                border: '1px solid #1e293b',
+                boxShadow: '0 2px 8px rgba(15, 23, 42, 0.25)',
+                cursor: isMutating ? 'not-allowed' : 'pointer',
+                transition: 'all 0.15s ease'
+              }}
+            >
+              <Plus size={16} color="#d4af37" />
+              <span>{isAr ? '+ تسجيل وتوثيق شريك جديد' : '+ Onboard Partner'}</span>
+            </button>
+          )}
+
           <button
             type="button"
             onClick={() => onOpenInjection()}
@@ -329,7 +357,7 @@ export const PartnersManagementView: React.FC<PartnersManagementViewProps> = ({
             }}
           >
             <Coins size={16} color="#946f23" />
-            <span>{isAr ? '+ ضخ رأس مال جديد' : '+ Inject Capital'}</span>
+            <span>{isAr ? '+ ضخ رأس مال' : '+ Inject Capital'}</span>
           </button>
 
           <button
@@ -702,9 +730,38 @@ export const PartnersManagementView: React.FC<PartnersManagementViewProps> = ({
                       <span style={{ fontSize: '0.7rem', color: '#94a3b8', fontWeight: 700, display: 'block', marginBottom: '0.35rem' }}>
                         {isAr ? 'المشاريع والعماير المشترك بها:' : 'Project Holdings & Equity:'}
                       </span>
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
-                        {p.holdings.length > 0 ? (
-                          p.holdings.map((h, hIdx) => (
+                      {isPrimary ? (
+                        /* Primary Developer Master Portfolio Badge */
+                        <div style={{
+                          background: 'linear-gradient(135deg, rgba(184, 144, 62, 0.08) 0%, rgba(184, 144, 62, 0.02) 100%)',
+                          border: '1px solid rgba(184, 144, 62, 0.3)',
+                          borderRadius: '8px',
+                          padding: '0.45rem 0.65rem',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          gap: '0.5rem'
+                        }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.74rem', fontWeight: 800, color: '#946f23' }}>
+                            <Building2 size={14} />
+                            <span>{isAr ? `كامل محفظة الشركة (${p.holdings.length} مشروعاً)` : `Entire Portfolio (${p.holdings.length} Projects)`}</span>
+                          </div>
+                          <span style={{
+                            fontSize: '0.68rem',
+                            fontWeight: 800,
+                            color: '#0f172a',
+                            background: '#ffffff',
+                            padding: '0.15rem 0.45rem',
+                            borderRadius: '4px',
+                            border: '1px solid rgba(184, 144, 62, 0.25)'
+                          }}>
+                            {isAr ? 'الحصة الحاكمة 65% - 100%' : 'Majority 65%-100%'}
+                          </span>
+                        </div>
+                      ) : p.holdings.length > 2 ? (
+                        /* Compact View for Multiple Holdings */
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem', alignItems: 'center' }}>
+                          {p.holdings.slice(0, 2).map((h, hIdx) => (
                             <span
                               key={hIdx}
                               style={{
@@ -724,14 +781,92 @@ export const PartnersManagementView: React.FC<PartnersManagementViewProps> = ({
                               <span>{h.propertyTitle}</span>
                               <strong style={{ color: '#0f172a' }}>({h.sharePct}%)</strong>
                             </span>
-                          ))
-                        ) : (
-                          <span style={{ fontSize: '0.72rem', color: '#94a3b8' }}>
-                            {isAr ? 'لا توجد حصص مسجلة حالياً' : 'No direct property splits'}
+                          ))}
+                          <span style={{
+                            fontSize: '0.68rem',
+                            fontWeight: 800,
+                            color: '#946f23',
+                            background: 'rgba(184, 144, 62, 0.08)',
+                            border: '1px solid rgba(184, 144, 62, 0.25)',
+                            padding: '0.2rem 0.45rem',
+                            borderRadius: '6px'
+                          }}>
+                            +{p.holdings.length - 2} {isAr ? 'مشاريع أخرى' : 'more'}
+                          </span>
+                        </div>
+                      ) : p.holdings.length > 0 ? (
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
+                          {p.holdings.map((h, hIdx) => (
+                            <span
+                              key={hIdx}
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '0.3rem',
+                                background: '#f8fafc',
+                                border: '1px solid #e2e8f0',
+                                padding: '0.2rem 0.5rem',
+                                borderRadius: '6px',
+                                fontSize: '0.72rem',
+                                color: '#334155',
+                                fontWeight: 700
+                              }}
+                            >
+                              <Building2 size={11} color="#946f23" />
+                              <span>{h.propertyTitle}</span>
+                              <strong style={{ color: '#0f172a' }}>({h.sharePct}%)</strong>
+                            </span>
+                          ))}
+                        </div>
+                      ) : (
+                        <span style={{ fontSize: '0.72rem', color: '#94a3b8' }}>
+                          {isAr ? 'مساهمة استثمارية عامة (غير مقيدة بمشروع)' : 'General portfolio contribution'}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Statutory / Payout Badges (National ID / Payout channel) */}
+                    {(p.national_id || p.instapay_handle || p.iban) && (
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem', alignItems: 'center' }}>
+                        {p.national_id && (
+                          <span style={{
+                            fontSize: '0.68rem',
+                            color: '#475569',
+                            background: '#f8fafc',
+                            border: '1px solid #e2e8f0',
+                            borderRadius: '4px',
+                            padding: '0.12rem 0.4rem',
+                            fontVariantNumeric: 'tabular-nums'
+                          }}>
+                            {isAr ? 'الرقم القومي: ' : 'ID: '}<strong style={{ color: '#0f172a' }} dir="ltr">{p.national_id}</strong>
+                          </span>
+                        )}
+                        {p.instapay_handle && (
+                          <span style={{
+                            fontSize: '0.68rem',
+                            color: '#701a75',
+                            background: 'rgba(112, 26, 117, 0.05)',
+                            border: '1px solid rgba(112, 26, 117, 0.2)',
+                            borderRadius: '4px',
+                            padding: '0.12rem 0.4rem'
+                          }}>
+                            {isAr ? 'إنستاباي: ' : 'InstaPay: '}<strong dir="ltr">{p.instapay_handle}</strong>
+                          </span>
+                        )}
+                        {p.iban && (
+                          <span style={{
+                            fontSize: '0.68rem',
+                            color: '#1d4ed8',
+                            background: 'rgba(29, 78, 216, 0.05)',
+                            border: '1px solid rgba(29, 78, 216, 0.2)',
+                            borderRadius: '4px',
+                            padding: '0.12rem 0.4rem'
+                          }}>
+                            {p.bank_name || (isAr ? 'حساب بنكي' : 'Bank')}: <strong dir="ltr">...{p.iban.slice(-6)}</strong>
                           </span>
                         )}
                       </div>
-                    </div>
+                    )}
 
                     {/* 4-Metric Grid */}
                     <div style={{
@@ -893,15 +1028,16 @@ export const PartnersManagementView: React.FC<PartnersManagementViewProps> = ({
           {/* TABLE VIEW */}
           {directoryViewMode === 'table' && (
             <div className={styles.tableCard} style={{ overflowX: 'auto' }}>
-              <table className={styles.executiveTable} style={{ minWidth: '1050px' }}>
+              <table className={styles.executiveTable} style={{ minWidth: '1150px' }}>
                 <thead>
                   <tr>
-                    <th style={{ width: '22%' }}>{isAr ? 'الشريك والصفة' : 'Partner & Role'}</th>
-                    <th style={{ width: '20%' }}>{isAr ? 'المشاريع والحصص' : 'Project Equity'}</th>
-                    <th style={{ width: '14%', textAlign: 'left' }}>{isAr ? 'رأس المال المودع (301000)' : 'Contributed Capital'}</th>
-                    <th style={{ width: '14%', textAlign: 'left' }}>{isAr ? 'نصيب التحصيلات' : 'Collections Share'}</th>
-                    <th style={{ width: '14%', textAlign: 'left' }}>{isAr ? 'الأرباح المنصرفة (303000)' : 'Payouts (303000)'}</th>
-                    <th style={{ width: '16%', textAlign: 'left' }}>{isAr ? 'صافي الرصيد المستحق' : 'Net Balance'}</th>
+                    <th style={{ width: '18%' }}>{isAr ? 'الشريك والصفة' : 'Partner & Role'}</th>
+                    <th style={{ width: '16%' }}>{isAr ? 'بيانات الاتصال والصرف' : 'Contact & Payout'}</th>
+                    <th style={{ width: '18%' }}>{isAr ? 'المشاريع والحصص' : 'Project Equity'}</th>
+                    <th style={{ width: '12%', textAlign: 'left' }}>{isAr ? 'رأس المال (301000)' : 'Capital (301000)'}</th>
+                    <th style={{ width: '11%', textAlign: 'left' }}>{isAr ? 'نصيب التحصيلات' : 'Collections'}</th>
+                    <th style={{ width: '11%', textAlign: 'left' }}>{isAr ? 'الأرباح (303000)' : 'Payouts (303000)'}</th>
+                    <th style={{ width: '14%', textAlign: 'left' }}>{isAr ? 'صافي الرصيد المستحق' : 'Net Balance'}</th>
                     <th style={{ width: '10%', textAlign: 'center' }}>{isAr ? 'الإجراءات' : 'Actions'}</th>
                   </tr>
                 </thead>
@@ -935,32 +1071,107 @@ export const PartnersManagementView: React.FC<PartnersManagementViewProps> = ({
                                 {p.partnerName}
                               </div>
                               <div style={{ fontSize: '0.72rem', color: '#64748b' }}>
-                                {p.roleTitleAr} {p.phone && `• ${p.phone}`}
+                                {p.roleTitleAr}
                               </div>
                             </div>
                           </div>
                         </td>
 
+                        {/* Contact & Payout Channel */}
+                        <td>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+                            {p.phone ? (
+                              <div style={{ fontSize: '0.74rem', color: '#0f172a', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                                <Phone size={11} color="#64748b" />
+                                <span dir="ltr">{p.phone}</span>
+                              </div>
+                            ) : (
+                              <span style={{ fontSize: '0.7rem', color: '#94a3b8' }}>-</span>
+                            )}
+                            {p.instapay_handle && (
+                              <div style={{ fontSize: '0.68rem', color: '#701a75', fontWeight: 700 }}>
+                                {isAr ? 'إنستاباي: ' : 'IPA: '}<span dir="ltr">{p.instapay_handle}</span>
+                              </div>
+                            )}
+                            {p.iban && (
+                              <div style={{ fontSize: '0.68rem', color: '#1d4ed8', fontWeight: 600 }}>
+                                {p.bank_name ? `${p.bank_name}: ` : 'IBAN: '}<span dir="ltr">...{p.iban.slice(-6)}</span>
+                              </div>
+                            )}
+                          </div>
+                        </td>
+
                         {/* Holdings */}
                         <td>
-                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem' }}>
-                            {p.holdings.map((h, i) => (
-                              <span
-                                key={i}
-                                style={{
-                                  background: '#f8fafc',
-                                  border: '1px solid #e2e8f0',
-                                  padding: '0.15rem 0.4rem',
-                                  borderRadius: '4px',
-                                  fontSize: '0.7rem',
-                                  fontWeight: 700,
-                                  color: '#334155'
-                                }}
-                              >
-                                {h.propertyTitle} ({h.sharePct}%)
+                          {isPrimary ? (
+                            <span style={{
+                              background: 'rgba(184, 144, 62, 0.08)',
+                              border: '1px solid rgba(184, 144, 62, 0.25)',
+                              padding: '0.2rem 0.5rem',
+                              borderRadius: '6px',
+                              fontSize: '0.72rem',
+                              fontWeight: 800,
+                              color: '#946f23',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '0.35rem'
+                            }}>
+                              <Building2 size={12} />
+                              <span>{isAr ? `كامل المحفظة (${p.holdings.length} مشروعاً)` : `All Portfolio (${p.holdings.length})`}</span>
+                            </span>
+                          ) : p.holdings.length > 2 ? (
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem', alignItems: 'center' }}>
+                              {p.holdings.slice(0, 2).map((h, i) => (
+                                <span
+                                  key={i}
+                                  style={{
+                                    background: '#f8fafc',
+                                    border: '1px solid #e2e8f0',
+                                    padding: '0.15rem 0.4rem',
+                                    borderRadius: '4px',
+                                    fontSize: '0.7rem',
+                                    fontWeight: 700,
+                                    color: '#334155'
+                                  }}
+                                >
+                                  {h.propertyTitle} ({h.sharePct}%)
+                                </span>
+                              ))}
+                              <span style={{
+                                fontSize: '0.66rem',
+                                fontWeight: 800,
+                                color: '#946f23',
+                                background: 'rgba(184, 144, 62, 0.08)',
+                                padding: '0.15rem 0.35rem',
+                                borderRadius: '4px'
+                              }}>
+                                +{p.holdings.length - 2}
                               </span>
-                            ))}
-                          </div>
+                            </div>
+                          ) : p.holdings.length > 0 ? (
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem' }}>
+                              {p.holdings.map((h, i) => (
+                                <span
+                                  key={i}
+                                  style={{
+                                    background: '#f8fafc',
+                                    border: '1px solid #e2e8f0',
+                                    padding: '0.15rem 0.4rem',
+                                    borderRadius: '4px',
+                                    fontSize: '0.7rem',
+                                    fontWeight: 700,
+                                    color: '#334155'
+                                  }}
+                                >
+                                  {h.propertyTitle} ({h.sharePct}%)
+                                </span>
+                              ))}
+                            </div>
+                          ) : (
+                            <span style={{ fontSize: '0.72rem', color: '#94a3b8' }}>
+                              {isAr ? 'مساهمة عامة' : 'General'}
+                            </span>
+                          )}
                         </td>
 
                         {/* Capital */}
@@ -1002,6 +1213,27 @@ export const PartnersManagementView: React.FC<PartnersManagementViewProps> = ({
                           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem' }}>
                             <button
                               type="button"
+                              onClick={() => onOpenInjection(p.partnerName)}
+                              title={isAr ? 'ضخ مساهمة جديدة' : 'Inject Capital'}
+                              style={{
+                                background: '#fffbeb',
+                                border: '1px solid #fde68a',
+                                color: '#92400e',
+                                borderRadius: '6px',
+                                padding: '0.3rem 0.5rem',
+                                cursor: 'pointer',
+                                fontSize: '0.72rem',
+                                fontWeight: 800,
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '0.2rem'
+                              }}
+                            >
+                              <Coins size={12} />
+                              <span>{isAr ? 'ضخ' : 'Inject'}</span>
+                            </button>
+                            <button
+                              type="button"
                               onClick={() => onOpenPayout(p.partnerName)}
                               title={isAr ? 'صرف أرباح' : 'Payout'}
                               style={{
@@ -1012,10 +1244,14 @@ export const PartnersManagementView: React.FC<PartnersManagementViewProps> = ({
                                 padding: '0.3rem 0.5rem',
                                 cursor: 'pointer',
                                 fontSize: '0.72rem',
-                                fontWeight: 800
+                                fontWeight: 800,
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '0.2rem'
                               }}
                             >
-                              {isAr ? 'صرف' : 'Pay'}
+                              <Receipt size={12} />
+                              <span>{isAr ? 'صرف' : 'Pay'}</span>
                             </button>
                             <button
                               type="button"

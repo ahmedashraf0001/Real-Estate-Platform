@@ -25,6 +25,7 @@ import type { ZoneInstance } from '@/lib/layering';
 import type { Property, PropertyVideo } from '@/lib/supabase/types';
 import {
   PartnerShareItem,
+  SystemPartner,
   PRIMARY_DEVELOPER_NAME,
   INITIAL_REGISTERED_PARTNERS,
   getRegisteredPartners,
@@ -263,6 +264,13 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
   });
   const [selectedPartnerToAdd, setSelectedPartnerToAdd] = useState<string>('');
   const [customPartnerNameInput, setCustomPartnerNameInput] = useState<string>('');
+  const [registeredPartners, setRegisteredPartners] = useState<SystemPartner[]>(() => {
+    return typeof window !== 'undefined' ? getRegisteredPartners() : INITIAL_REGISTERED_PARTNERS;
+  });
+
+  useEffect(() => {
+    setRegisteredPartners(getRegisteredPartners());
+  }, []);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -1251,8 +1259,7 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
 
             {/* Add Partner Bar */}
             {(() => {
-              const registeredList = typeof window !== 'undefined' ? getRegisteredPartners() : INITIAL_REGISTERED_PARTNERS;
-              const availablePartners = registeredList.filter(
+              const availablePartners = registeredPartners.filter(
                 p => !partnerSplits.some(cp => cp.partnerName.toLowerCase() === p.name.toLowerCase())
               );
 
@@ -1260,49 +1267,59 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
                 <div style={{
                   display: 'grid',
                   gridTemplateColumns: selectedPartnerToAdd === '__custom__' ? '1fr 1fr auto' : '2fr auto',
-                  gap: '0.5rem',
+                  gap: '0.65rem',
                   alignItems: 'center',
-                  marginTop: '0.25rem',
-                  padding: '0.45rem',
-                  background: 'rgba(255, 255, 255, 0.015)',
-                  border: '1px dashed rgba(255, 255, 255, 0.1)',
-                  borderRadius: '8px'
+                  marginTop: '0.35rem',
+                  padding: '0.65rem 0.85rem',
+                  background: 'rgba(15, 23, 42, 0.45)',
+                  border: '1.5px dashed rgba(221, 167, 82, 0.35)',
+                  borderRadius: '10px'
                 }}>
                   <select
                     style={{
-                      background: 'rgba(255, 255, 255, 0.04)',
-                      border: '1px solid rgba(255, 255, 255, 0.1)',
-                      borderRadius: '6px',
-                      padding: '0.35rem 0.5rem',
+                      background: '#0f172a',
+                      border: '1.5px solid rgba(221, 167, 82, 0.45)',
+                      borderRadius: '8px',
+                      padding: '0.5rem 0.75rem',
                       color: '#ffffff',
-                      fontSize: '0.75rem',
-                      colorScheme: 'dark'
+                      fontSize: '0.82rem',
+                      fontWeight: 700,
+                      outline: 'none',
+                      cursor: 'pointer'
                     }}
                     value={selectedPartnerToAdd}
                     onChange={e => setSelectedPartnerToAdd(e.target.value)}
                   >
-                    <option value="">{isAr ? '-- اختر شريكاً مسجلاً للإضافة --' : '-- Choose registered partner --'}</option>
+                    <option value="" style={{ background: '#0f172a', color: '#94a3b8' }}>
+                      {availablePartners.length > 0 
+                        ? (isAr ? '-- اختر شريكاً مسجلاً للإضافة --' : '-- Choose registered partner --')
+                        : (isAr ? '-- جميع الشركاء المسجلين مضافون لهذا العقار --' : '-- All registered partners added --')}
+                    </option>
                     {availablePartners.map(ap => (
-                      <option key={ap.name} value={ap.name}>
+                      <option key={ap.name} value={ap.name} style={{ background: '#0f172a', color: '#ffffff' }}>
                         {ap.name} ({ap.role})
                       </option>
                     ))}
-                    <option value="__custom__">{isAr ? '+ إدخال اسم شريك جديد يدوياً...' : '+ Type new custom partner...'}</option>
+                    <option value="__custom__" style={{ background: '#0f172a', color: '#d4af37', fontWeight: 800 }}>
+                      {isAr ? '+ إدخال وتوثيق اسم شريك جديد يدوياً...' : '+ Type new custom partner...'}
+                    </option>
                   </select>
 
                   {selectedPartnerToAdd === '__custom__' && (
                     <input
                       type="text"
-                      placeholder={isAr ? 'اسم الشريك الجديد' : 'New partner name'}
+                      placeholder={isAr ? 'اسم الشريك الجديد بالكامل' : 'New partner full name'}
                       value={customPartnerNameInput}
                       onChange={e => setCustomPartnerNameInput(e.target.value)}
                       style={{
-                        background: 'rgba(255, 255, 255, 0.04)',
-                        border: '1px solid rgba(255, 255, 255, 0.1)',
-                        borderRadius: '6px',
-                        padding: '0.35rem 0.5rem',
+                        background: '#0f172a',
+                        border: '1.5px solid rgba(221, 167, 82, 0.45)',
+                        borderRadius: '8px',
+                        padding: '0.5rem 0.75rem',
                         color: '#ffffff',
-                        fontSize: '0.75rem'
+                        fontSize: '0.82rem',
+                        fontWeight: 700,
+                        outline: 'none'
                       }}
                     />
                   )}
@@ -1318,6 +1335,7 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
                           role: isAr ? 'شريك ممول بالمشروع' : 'Project Equity Partner',
                           isPermanent: false
                         });
+                        setRegisteredPartners(getRegisteredPartners());
                       }
                       const updated = smartAddPartner(partnerSplits, nameToAdd, 25);
                       setPartnerSplits(updated);
@@ -1326,15 +1344,17 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
                     }}
                     disabled={!selectedPartnerToAdd || (selectedPartnerToAdd === '__custom__' && !customPartnerNameInput.trim())}
                     style={{
-                      padding: '0.35rem 0.75rem',
-                      borderRadius: '6px',
-                      fontSize: '0.75rem',
-                      fontWeight: 700,
-                      background: 'rgba(212, 175, 55, 0.15)',
-                      color: 'var(--zf-gold, #d4af37)',
-                      border: '1px solid rgba(212, 175, 55, 0.3)',
+                      padding: '0.5rem 1rem',
+                      borderRadius: '8px',
+                      fontSize: '0.8rem',
+                      fontWeight: 800,
+                      background: 'linear-gradient(135deg, #d4af37 0%, #b8903e 100%)',
+                      color: '#0f172a',
+                      border: 'none',
+                      boxShadow: '0 2px 8px rgba(212, 175, 55, 0.25)',
                       cursor: 'pointer',
-                      opacity: (!selectedPartnerToAdd || (selectedPartnerToAdd === '__custom__' && !customPartnerNameInput.trim())) ? 0.5 : 1
+                      opacity: (!selectedPartnerToAdd || (selectedPartnerToAdd === '__custom__' && !customPartnerNameInput.trim())) ? 0.5 : 1,
+                      transition: 'all 0.15s ease'
                     }}
                   >
                     {isAr ? 'إضافة الشريك' : 'Add Partner'}

@@ -5,6 +5,12 @@
 export interface SystemPartner {
   name: string;
   role: string;
+  phone?: string;
+  nationalId?: string;
+  roleKey?: 'primary_developer' | 'equity_partner' | 'land_partner' | 'silent_financier';
+  bankName?: string;
+  iban?: string;
+  instapayHandle?: string;
   isPermanent?: boolean;
 }
 
@@ -17,10 +23,46 @@ export interface PartnerShareItem {
 export const PRIMARY_DEVELOPER_NAME = 'زكريا فريد';
 
 export const INITIAL_REGISTERED_PARTNERS: SystemPartner[] = [
-  { name: PRIMARY_DEVELOPER_NAME, role: 'المطور الرئيسي / مالك المنظومة', isPermanent: true },
-  { name: 'م. أحمد الشريف', role: 'شريك ممول بالمشروع', isPermanent: false },
-  { name: 'الحاج رجب الصاوي', role: 'شريك مساهم بالأرض', isPermanent: false },
-  { name: 'د. هاني المنياوي', role: 'ممول صامت', isPermanent: false }
+  { 
+    name: PRIMARY_DEVELOPER_NAME, 
+    role: 'المطور الرئيسي / مالك المنظومة', 
+    roleKey: 'primary_developer',
+    phone: '01001234567',
+    isPermanent: true 
+  },
+  { 
+    name: 'م. أحمد الشريف', 
+    role: 'شريك ممول بالمشروع', 
+    roleKey: 'equity_partner',
+    phone: '01123456789',
+    nationalId: '28911041200345',
+    bankName: 'البنك الأهلي المصري',
+    iban: 'EG440003011200000001234567890',
+    instapayHandle: 'ahmed.elsharif@instapay',
+    isPermanent: false 
+  },
+  { 
+    name: 'الحاج رجب الصاوي', 
+    role: 'شريك مساهم بالأرض', 
+    roleKey: 'land_partner',
+    phone: '01234567890',
+    nationalId: '27508151200876',
+    bankName: 'بنك مصر',
+    iban: 'EG380002011500000009876543210',
+    instapayHandle: 'ragab.elsawy@instapay',
+    isPermanent: false 
+  },
+  { 
+    name: 'د. هاني المنياوي', 
+    role: 'ممول صامت', 
+    roleKey: 'silent_financier',
+    phone: '01555667788',
+    nationalId: '28204221200432',
+    bankName: 'البنك التجاري الدولي CIB',
+    iban: 'EG520010022000000004567891234',
+    instapayHandle: 'hany.elmeniawy@instapay',
+    isPermanent: false 
+  }
 ];
 
 export const ZF_PARTNERS_STORAGE_KEY = 'zf_registered_partners';

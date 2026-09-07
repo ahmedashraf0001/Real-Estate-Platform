@@ -30,6 +30,7 @@ interface PartnerCapitalInjectionModalProps {
   properties?: Property[];
   isAr?: boolean;
   isMutating?: boolean;
+  onOpenNewPartnerModal?: () => void;
   onConfirmInjection: (details: {
     partnerName: string;
     amount: string;
@@ -39,10 +40,6 @@ interface PartnerCapitalInjectionModalProps {
     injectionDate: string;
     receiptRef: string;
     memo: string;
-    role?: 'equity_partner' | 'land_partner' | 'silent_financier';
-    phone?: string;
-    nationalId?: string;
-    projectSharePct?: number;
   }) => Promise<void>;
 }
 
@@ -54,19 +51,11 @@ export const PartnerCapitalInjectionModal: React.FC<PartnerCapitalInjectionModal
   properties = [],
   isAr = true,
   isMutating = false,
+  onOpenNewPartnerModal,
   onConfirmInjection
 }) => {
-  const isLockedToPartner = Boolean(initialPartnerName);
-  const [partnerMode, setPartnerMode] = useState<'existing' | 'new'>('existing');
-  const [selectedPartnerName, setSelectedPartnerName] = useState<string>('');
-  
-  // Extended New Partner Profile Fields
-  const [newPartnerName, setNewPartnerName] = useState<string>('');
-  const [newPartnerRole, setNewPartnerRole] = useState<'equity_partner' | 'land_partner' | 'silent_financier'>('equity_partner');
-  const [newPartnerPhone, setNewPartnerPhone] = useState<string>('');
-  const [newPartnerNationalId, setNewPartnerNationalId] = useState<string>('');
-  const [projectSharePct, setProjectSharePct] = useState<string>('25');
-
+  const isLockedToPartner = Boolean(initialPartnerName && initialPartnerName.trim());
+  const [selectedPartnerName, setSelectedPartnerName] = useState<string>(initialPartnerName?.trim() || (partners[0]?.partnerName || ''));
   const [amount, setAmount] = useState<string>('');
   const [paymentMethod, setPaymentMethod] = useState<'CASH_101000' | 'INSTAPAY_102000' | 'BANK_102000'>('BANK_102000');
   const [selectedPropertyId, setSelectedPropertyId] = useState<string>('');
@@ -75,9 +64,8 @@ export const PartnerCapitalInjectionModal: React.FC<PartnerCapitalInjectionModal
   const [memo, setMemo] = useState<string>('');
 
   useEffect(() => {
-    if (initialPartnerName) {
-      setSelectedPartnerName(initialPartnerName);
-      setPartnerMode('existing');
+    if (initialPartnerName && initialPartnerName.trim()) {
+      setSelectedPartnerName(initialPartnerName.trim());
     } else if (partners.length > 0 && !selectedPartnerName) {
       setSelectedPartnerName(partners[0].partnerName);
     }
@@ -85,10 +73,7 @@ export const PartnerCapitalInjectionModal: React.FC<PartnerCapitalInjectionModal
 
   if (!isOpen) return null;
 
-  const effectivePartnerName = isLockedToPartner 
-    ? initialPartnerName! 
-    : (partnerMode === 'existing' ? selectedPartnerName : newPartnerName.trim());
-    
+  const effectivePartnerName = (isLockedToPartner ? initialPartnerName!.trim() : selectedPartnerName) || '';
   const selectedProperty = properties.find(p => p.id === selectedPropertyId);
   const matchedExistingPartner = partners.find(p => p.partnerName === effectivePartnerName);
 
@@ -99,8 +84,6 @@ export const PartnerCapitalInjectionModal: React.FC<PartnerCapitalInjectionModal
     e.preventDefault();
     if (!isValid || isMutating) return;
 
-    const shareNum = parseFloat(projectSharePct) || 0;
-
     await onConfirmInjection({
       partnerName: effectivePartnerName,
       amount: D(numAmount).toFixed(2),
@@ -109,11 +92,7 @@ export const PartnerCapitalInjectionModal: React.FC<PartnerCapitalInjectionModal
       propertyTitle: selectedProperty ? (selectedProperty.title_ar || selectedProperty.title_en) : undefined,
       injectionDate,
       receiptRef,
-      memo: memo || `إيداع مساهمة رأس مال جديدة من الشريك: ${effectivePartnerName}`,
-      role: partnerMode === 'new' ? newPartnerRole : undefined,
-      phone: partnerMode === 'new' ? newPartnerPhone.trim() || undefined : undefined,
-      nationalId: partnerMode === 'new' ? newPartnerNationalId.trim() || undefined : undefined,
-      projectSharePct: (partnerMode === 'new' && selectedPropertyId && shareNum > 0) ? shareNum : undefined
+      memo: memo || `إيداع مساهمة رأس مال جديدة من الشريك: ${effectivePartnerName}`
     });
 
     onClose();
@@ -287,183 +266,79 @@ export const PartnerCapitalInjectionModal: React.FC<PartnerCapitalInjectionModal
               </div>
             </div>
           ) : (
-            /* GENERAL MODE: TOGGLE BETWEEN EXISTING OR NEW PARTNER */
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-              <div style={{
-                display: 'flex',
-                background: '#f1f5f9',
-                borderRadius: '8px',
-                padding: '0.25rem',
-                gap: '0.25rem'
-              }}>
-                <button
-                  type="button"
-                  onClick={() => setPartnerMode('existing')}
-                  style={{
-                    flex: 1,
-                    padding: '0.45rem',
-                    borderRadius: '6px',
-                    border: 'none',
-                    background: partnerMode === 'existing' ? '#ffffff' : 'transparent',
-                    color: partnerMode === 'existing' ? '#0f172a' : '#64748b',
-                    fontWeight: partnerMode === 'existing' ? 800 : 600,
-                    fontSize: '0.78rem',
-                    cursor: 'pointer',
-                    boxShadow: partnerMode === 'existing' ? '0 1px 3px rgba(0,0,0,0.06)' : 'none'
-                  }}
-                >
-                  {isAr ? 'شريك مسجل بالنظام' : 'Existing Partner'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setPartnerMode('new')}
-                  style={{
-                    flex: 1,
-                    padding: '0.45rem',
-                    borderRadius: '6px',
-                    border: 'none',
-                    background: partnerMode === 'new' ? '#ffffff' : 'transparent',
-                    color: partnerMode === 'new' ? '#0f172a' : '#64748b',
-                    fontWeight: partnerMode === 'new' ? 800 : 600,
-                    fontSize: '0.78rem',
-                    cursor: 'pointer',
-                    boxShadow: partnerMode === 'new' ? '0 1px 3px rgba(0,0,0,0.06)' : 'none'
-                  }}
-                >
-                  {isAr ? '+ شريك / ممول استثماري جديد' : '+ New Partner / Financier'}
-                </button>
-              </div>
-
-              {partnerMode === 'existing' ? (
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#334155', marginBottom: '0.35rem' }}>
-                    {isAr ? 'اختار الشريك المساهم:' : 'Select Partner:'}
-                  </label>
-                  <select
-                    value={selectedPartnerName}
-                    onChange={(e) => setSelectedPartnerName(e.target.value)}
+            /* GENERAL MODE: SELECT EXISTING PARTNER + LINK TO DEDICATED ONBOARDING MODAL */
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#334155' }}>
+                  {isAr ? 'اختار الشريك / الممول المساهم *' : 'Select Contributing Partner *'}
+                </label>
+                {onOpenNewPartnerModal && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onClose();
+                      onOpenNewPartnerModal();
+                    }}
                     style={{
-                      width: '100%',
-                      background: '#ffffff',
-                      border: '1px solid #cbd5e1',
-                      borderRadius: '8px',
-                      padding: '0.55rem 0.75rem',
-                      fontSize: '0.85rem',
-                      fontWeight: 700,
-                      color: '#0f172a'
+                      background: 'none',
+                      border: 'none',
+                      color: '#946f23',
+                      fontSize: '0.74rem',
+                      fontWeight: 800,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.3rem',
+                      padding: '0.2rem 0.4rem',
+                      borderRadius: '6px'
                     }}
                   >
-                    {partners.map(p => (
-                      <option key={p.partnerName} value={p.partnerName}>
-                        {p.partnerName} ({p.roleTitleAr})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              ) : (
-                /* EXTENDED PROFILE FOR NEW PARTNER */
-                <div style={{
-                  background: '#f8fafc',
-                  border: '1px solid #e2e8f0',
+                    <PlusCircle size={14} />
+                    <span>{isAr ? '+ تسجيل وتوثيق شريك جديد' : '+ Onboard New Partner'}</span>
+                  </button>
+                )}
+              </div>
+
+              <select
+                value={selectedPartnerName}
+                onChange={(e) => setSelectedPartnerName(e.target.value)}
+                style={{
+                  width: '100%',
+                  background: '#ffffff',
+                  border: '1.5px solid #cbd5e1',
                   borderRadius: '10px',
-                  padding: '0.85rem',
+                  padding: '0.65rem 0.85rem',
+                  fontSize: '0.88rem',
+                  fontWeight: 700,
+                  color: '#0f172a',
+                  outline: 'none'
+                }}
+              >
+                {partners.map(p => (
+                  <option key={p.partnerName} value={p.partnerName}>
+                    {p.partnerName} ({p.roleTitleAr})
+                  </option>
+                ))}
+              </select>
+
+              {matchedExistingPartner && (
+                <div style={{
                   display: 'flex',
-                  flexDirection: 'column',
-                  gap: '0.75rem'
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  fontSize: '0.72rem',
+                  color: '#64748b',
+                  background: '#f8fafc',
+                  padding: '0.4rem 0.65rem',
+                  borderRadius: '6px',
+                  border: '1px solid #e2e8f0'
                 }}>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
-                    <div>
-                      <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: '#334155', marginBottom: '0.25rem' }}>
-                        {isAr ? 'اسم الشريك أو الممول بالكامل *' : 'Full Name *'}
-                      </label>
-                      <input
-                        type="text"
-                        placeholder={isAr ? 'مثال: م. سمير عبد الرازق' : 'Partner full name'}
-                        value={newPartnerName}
-                        onChange={(e) => setNewPartnerName(e.target.value)}
-                        style={{
-                          width: '100%',
-                          background: '#ffffff',
-                          border: '1px solid #cbd5e1',
-                          borderRadius: '6px',
-                          padding: '0.45rem 0.65rem',
-                          fontSize: '0.82rem',
-                          fontWeight: 700,
-                          color: '#0f172a'
-                        }}
-                        required={partnerMode === 'new'}
-                      />
-                    </div>
-
-                    <div>
-                      <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: '#334155', marginBottom: '0.25rem' }}>
-                        {isAr ? 'صفة الشراكة ودور الممول *' : 'Partnership Role *'}
-                      </label>
-                      <select
-                        value={newPartnerRole}
-                        onChange={(e) => setNewPartnerRole(e.target.value as any)}
-                        style={{
-                          width: '100%',
-                          background: '#ffffff',
-                          border: '1px solid #cbd5e1',
-                          borderRadius: '6px',
-                          padding: '0.45rem 0.65rem',
-                          fontSize: '0.82rem',
-                          color: '#0f172a'
-                        }}
-                      >
-                        <option value="equity_partner">{isAr ? 'شريك ممول بالمشروع (Equity Partner)' : 'Equity Partner'}</option>
-                        <option value="land_partner">{isAr ? 'شريك مساهم بالأرض (Land Partner)' : 'Land Partner'}</option>
-                        <option value="silent_financier">{isAr ? 'ممول صامت بنسبة أرباح (Silent Financier)' : 'Silent Financier'}</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
-                    <div>
-                      <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: '#334155', marginBottom: '0.25rem' }}>
-                        {isAr ? 'رقم الهاتف / الواتساب' : 'Phone / WhatsApp'}
-                      </label>
-                      <input
-                        type="tel"
-                        placeholder="01012345678"
-                        value={newPartnerPhone}
-                        onChange={(e) => setNewPartnerPhone(e.target.value)}
-                        style={{
-                          width: '100%',
-                          background: '#ffffff',
-                          border: '1px solid #cbd5e1',
-                          borderRadius: '6px',
-                          padding: '0.45rem 0.65rem',
-                          fontSize: '0.82rem',
-                          color: '#0f172a',
-                          direction: 'ltr'
-                        }}
-                      />
-                    </div>
-
-                    <div>
-                      <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: '#334155', marginBottom: '0.25rem' }}>
-                        {isAr ? 'الرقم القومي / السجل التجاري' : 'National ID / Tax ID'}
-                      </label>
-                      <input
-                        type="text"
-                        placeholder="29012345678901"
-                        value={newPartnerNationalId}
-                        onChange={(e) => setNewPartnerNationalId(e.target.value)}
-                        style={{
-                          width: '100%',
-                          background: '#ffffff',
-                          border: '1px solid #cbd5e1',
-                          borderRadius: '6px',
-                          padding: '0.45rem 0.65rem',
-                          fontSize: '0.82rem',
-                          color: '#0f172a',
-                          direction: 'ltr'
-                        }}
-                      />
-                    </div>
-                  </div>
+                  <ShieldCheck size={14} color="#047857" />
+                  <span>
+                    {isAr 
+                      ? `شريك معتمد: ${matchedExistingPartner.partnerName} • الدور: ${matchedExistingPartner.roleTitleAr}`
+                      : `Verified Partner: ${matchedExistingPartner.partnerName} (${matchedExistingPartner.roleTitleAr})`}
+                  </span>
                 </div>
               )}
             </div>
@@ -522,47 +397,6 @@ export const PartnerCapitalInjectionModal: React.FC<PartnerCapitalInjectionModal
               </select>
             </div>
           </div>
-
-          {/* If new partner and property is selected, show equity share % */}
-          {partnerMode === 'new' && selectedPropertyId && (
-            <div style={{
-              background: 'rgba(184, 144, 62, 0.06)',
-              border: '1px solid rgba(184, 144, 62, 0.25)',
-              borderRadius: '8px',
-              padding: '0.65rem 0.85rem',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between'
-            }}>
-              <div>
-                <div style={{ fontSize: '0.78rem', fontWeight: 800, color: '#946f23' }}>
-                  {isAr ? 'نسبة حصة الشريك في هذا العقار (%)' : 'Property Equity Share %'}
-                </div>
-                <div style={{ fontSize: '0.68rem', color: '#64748b' }}>
-                  {isAr ? 'سيتم تعديل حصة زكريا فريد تلقائياً ليظل المجموع 100%' : 'Auto-balanced with Zakaria Farid'}
-                </div>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                <input
-                  type="number"
-                  min="1"
-                  max="99"
-                  value={projectSharePct}
-                  onChange={(e) => setProjectSharePct(e.target.value)}
-                  style={{
-                    width: '70px',
-                    textAlign: 'center',
-                    fontWeight: 900,
-                    fontSize: '0.85rem',
-                    padding: '0.35rem',
-                    borderRadius: '6px',
-                    border: '1px solid #cbd5e1'
-                  }}
-                />
-                <span style={{ fontWeight: 800, color: '#946f23' }}>%</span>
-              </div>
-            </div>
-          )}
 
           {/* 3. PAYMENT DESTINATION */}
           <div>

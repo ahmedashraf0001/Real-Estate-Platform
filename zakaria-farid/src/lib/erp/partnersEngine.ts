@@ -33,6 +33,11 @@ export interface PartnerFinancialSummary {
   partnerName: string;
   roleTitleAr: string;
   phone?: string;
+  national_id?: string;
+  bank_name?: string;
+  iban?: string;
+  instapay_handle?: string;
+  preferred_payout_method?: 'CASH' | 'INSTAPAY' | 'BANK';
   isPermanent: boolean;
   holdings: PartnerProjectHolding[];
   totalContributedCapital: string;
@@ -79,7 +84,12 @@ export const INITIAL_PARTNER_PROFILES: ERPPartnerProfile[] = [
     name: 'م. أحمد الشريف',
     role: 'equity_partner',
     phone: '01123456789',
-    notes: 'شريك ممول ومساهم رئيسي في مشروعات عمارة الفردوس بحصة 35%',
+    national_id: '28911041200345',
+    bank_name: 'البنك الأهلي المصري',
+    iban: 'EG440003011200000001234567890',
+    instapay_handle: 'ahmed.elsharif@instapay',
+    preferred_payout_method: 'INSTAPAY',
+    notes: 'شريك ممول ومساهم رئيسي في مشروعات عمارة الشيخ زايد والحي الخامس بحصة 35%',
     joined_date: '2025-06-15'
   },
   {
@@ -87,7 +97,12 @@ export const INITIAL_PARTNER_PROFILES: ERPPartnerProfile[] = [
     name: 'الحاج رجب الصاوي',
     role: 'land_partner',
     phone: '01234567890',
-    notes: 'شريك بالأرض بموقع برج الصفوة - مشاركة بنسبة 30% من عوائد المبيعات',
+    national_id: '27508151200876',
+    bank_name: 'بنك مصر',
+    iban: 'EG380002011500000009876543210',
+    instapay_handle: 'ragab.elsawy@instapay',
+    preferred_payout_method: 'BANK',
+    notes: 'شريك بالأرض بموقع العين السخنة - مشاركة بنسبة 30% من عوائد المبيعات',
     joined_date: '2025-09-01'
   },
   {
@@ -95,7 +110,12 @@ export const INITIAL_PARTNER_PROFILES: ERPPartnerProfile[] = [
     name: 'د. هاني المنياوي',
     role: 'silent_financier',
     phone: '01555667788',
-    notes: 'ممول صامت بحصة نقدية بمشروع كمبوند النخيل بنسبة 25%',
+    national_id: '28204221200432',
+    bank_name: 'البنك التجاري الدولي CIB',
+    iban: 'EG520010022000000004567891234',
+    instapay_handle: 'hany.elmeniawy@instapay',
+    preferred_payout_method: 'INSTAPAY',
+    notes: 'ممول صامت بحصة نقدية بمشروع الساحل الشمالي بنسبة 25%',
     joined_date: '2025-11-20'
   }
 ];
@@ -292,6 +312,11 @@ export class PartnersEngine {
                     profile?.role === 'land_partner' ? 'شريك مساهم بالأرض' :
                     profile?.role === 'silent_financier' ? 'ممول صامت' : 'شريك مساهم',
         phone: profile?.phone,
+        national_id: profile?.national_id,
+        bank_name: profile?.bank_name,
+        iban: profile?.iban,
+        instapay_handle: profile?.instapay_handle,
+        preferred_payout_method: profile?.preferred_payout_method,
         isPermanent,
         holdings,
         totalContributedCapital: totalContributedCapital.toFixed(2),

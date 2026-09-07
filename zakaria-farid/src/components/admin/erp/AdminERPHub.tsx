@@ -108,6 +108,7 @@ import { RSVAllocationModal } from './v2/modals/RSVAllocationModal';
 import { PartnerPayoutModal } from './v2/modals/PartnerPayoutModal';
 import { PartnerCapitalInjectionModal } from './v2/modals/PartnerCapitalInjectionModal';
 import { PartnerDossierModal } from './v2/modals/PartnerDossierModal';
+import { NewPartnerProfileModal, NewPartnerSubmitPayload } from './v2/modals/NewPartnerProfileModal';
 import { ERPPartnerProfile, ERPPartnerTransaction } from '@/lib/erp/types';
 import { 
   PartnersEngine, 
@@ -519,6 +520,7 @@ export default function AdminERPHub({ adminLocale, initialTab }: AdminERPHubProp
   const [payoutInitialPartner, setPayoutInitialPartner] = useState<string | undefined>(undefined);
   const [showPartnerInjectionModal, setShowPartnerInjectionModal] = useState<boolean>(false);
   const [injectionInitialPartner, setInjectionInitialPartner] = useState<string | undefined>(undefined);
+  const [showNewPartnerModal, setShowNewPartnerModal] = useState<boolean>(false);
   const [dossierTargetPartner, setDossierTargetPartner] = useState<PartnerFinancialSummary | null>(null);
 
   const unifiedPartners = useMemo(() => {
@@ -2300,6 +2302,131 @@ export default function AdminERPHub({ adminLocale, initialTab }: AdminERPHubProp
     }
   };
 
+  // Handler: Register New Partner Profile & Allocations
+  const handleRegisterNewPartner = async (profileData: NewPartnerSubmitPayload) => {
+    setIsMutating(true);
+    try {
+      const roleArMap: Record<string, string> = {
+        equity_partner: 'شريك ممول بالمشروع',
+        land_partner: 'شريك مساهم بالأرض',
+        silent_financier: 'ممول صامت'
+      };
+
+      // 1. Save to persistent directory
+      saveRegisteredPartner({
+        name: profileData.name,
+        role: roleArMap[profileData.role] || 'شريك استثماري',
+        isPermanent: false,
+        phone: profileData.phone,
+        nationalId: profileData.nationalId,
+        bankName: profileData.bankName,
+        iban: profileData.iban,
+        instapayHandle: profileData.instapayHandle
+      });
+
+      // 2. Add to partnerProfiles state
+      const newProfile: ERPPartnerProfile = {
+        id: `pt-${Date.now()}`,
+        name: profileData.name,
+        role: profileData.role,
+        phone: profileData.phone,
+        national_id: profileData.nationalId,
+        bank_name: profileData.bankName,
+        iban: profileData.iban,
+        instapay_handle: profileData.instapayHandle,
+        preferred_payout_method: profileData.preferredPayoutMethod,
+        notes: profileData.notes || `شريك وممول استثماري تم توثيقه بالنظام`,
+        joined_date: new Date().toISOString().split('T')[0]
+      };
+      setPartnerProfiles(prev => [...prev.filter(p => p.name !== profileData.name), newProfile]);
+
+      // 3. Update property partner_splits if a project was allocated
+      if (profileData.propertyId && profileData.sharePercentage && profileData.sharePercentage > 0) {
+        const partnerShare = profileData.sharePercentage;
+        setData(prev => {
+          const updatedProps = prev.properties.map(prop => {
+            if (prop.id === profileData.propertyId) {
+              const currentSplits = (prop.partner_splits as any[]) || [];
+              const withoutPartner = currentSplits.filter(
+                s => (s.partner_name || s.partnerName) !== profileData.name && 
+                     (s.partner_name || s.partnerName) !== PRIMARY_DEVELOPER_NAME
+              );
+              const otherSharesSum = withoutPartner.reduce(
+                (sum, s) => sum + (Number(s.share_percentage || s.sharePct) || 0), 0
+              );
+              const devShare = Math.max(0, 100 - otherSharesSum - partnerShare);
+              const newSplits = [
+                { partner_name: PRIMARY_DEVELOPER_NAME, share_percentage: devShare },
+                ...withoutPartner.map(s => ({
+                  partner_name: s.partner_name || s.partnerName,
+                  share_percentage: s.share_percentage || s.sharePct
+                })),
+                { partner_name: profileData.name, share_percentage: partnerShare }
+              ];
+              return { ...prop, partner_splits: newSplits };
+            }
+            return prop;
+          });
+          return { ...prev, properties: updatedProps };
+        });
+      }
+
+      // 4. Handle optional initial deposit if provided
+      if (profileData.initialDeposit && parseFloat(profileData.initialDeposit.amount) > 0) {
+        const entry = PartnersEngine.createCapitalInjectionJournalEntry({
+          partnerName: profileData.name,
+          amount: profileData.initialDeposit.amount,
+          paymentMethod: profileData.initialDeposit.paymentMethod,
+          receiptRef: profileData.initialDeposit.receiptRef,
+          currentPeriod: activePeriod.period_id,
+          loggedBy: 'CHIEF_EXECUTIVE'
+        });
+
+        try {
+          await ERPSupabaseService.persistJournalEntry(supabase, entry);
+        } catch (dbErr) {
+          console.warn('Silent database sync for initial deposit:', dbErr);
+        }
+
+        const newTx: ERPPartnerTransaction = {
+          id: `pt-tx-${Date.now()}`,
+          transaction_number: `PT-${new Date().getFullYear()}-${Math.floor(100 + Math.random() * 900)}`,
+          partner_name: profileData.name,
+          type: 'CAPITAL_INJECTION',
+          amount: profileData.initialDeposit.amount,
+          payment_method: profileData.initialDeposit.paymentMethod,
+          journal_entry_number: entry.entry_number,
+          date: profileData.initialDeposit.date || new Date().toISOString().split('T')[0],
+          status: 'COMPLETED',
+          memo: `إيداع مساهمة رأس مال تأسيسية للشريك: ${profileData.name}`,
+          receipt_ref: profileData.initialDeposit.receiptRef
+        };
+
+        setPartnerTransactions(prev => [newTx, ...prev]);
+        setData(prev => ({ ...prev, journalEntries: [entry, ...prev.journalEntries] }));
+      }
+
+      toast.success(
+        isAr 
+          ? `تم توثيق وتسجيل الشريك: ${profileData.name} بنجاح` 
+          : `Partner ${profileData.name} registered successfully`,
+        {
+          description: isAr 
+            ? `تم ربط الحصص العقارية وتحديث دليل الشركاء المعتمد` 
+            : `Equity splits balanced and partner directory updated`,
+          duration: 4500
+        }
+      );
+    } catch (err: unknown) {
+      console.error('Error registering new partner:', err);
+      toast.error(isAr ? 'فشل تسجيل الشريك' : 'Failed to register partner', {
+        description: (err as Error).message
+      });
+    } finally {
+      setIsMutating(false);
+    }
+  };
+
   // Financial Metrics Summaries
   const totalGrossContractValue = useMemo(() => {
     return data.contracts.reduce((acc, c) => acc.plus(c.gross_contract_value), D(0)).toFixed(2);
@@ -3024,6 +3151,7 @@ export default function AdminERPHub({ adminLocale, initialTab }: AdminERPHubProp
                 partnerCalls={data.partnerCalls}
                 isAr={isAr}
                 isMutating={isMutating}
+                onOpenNewPartnerModal={() => setShowNewPartnerModal(true)}
                 onOpenPayout={(name) => {
                   setPayoutInitialPartner(name);
                   setShowPartnerPayoutModal(true);
@@ -3303,6 +3431,20 @@ export default function AdminERPHub({ adminLocale, initialTab }: AdminERPHubProp
         }}
       />
 
+      {/* DEDICATED STATUTORY PARTNER ONBOARDING MODAL */}
+      <NewPartnerProfileModal
+        isOpen={showNewPartnerModal}
+        onClose={() => setShowNewPartnerModal(false)}
+        properties={data.properties}
+        existingPartnerNames={partnerProfiles.map(p => p.name)}
+        isAr={isAr}
+        isMutating={isMutating}
+        onSubmit={async (profileData) => {
+          await handleRegisterNewPartner(profileData);
+          setShowNewPartnerModal(false);
+        }}
+      />
+
       {/* PARTNER CAPITAL INJECTION MODAL */}
       <PartnerCapitalInjectionModal 
         isOpen={showPartnerInjectionModal}
@@ -3315,6 +3457,7 @@ export default function AdminERPHub({ adminLocale, initialTab }: AdminERPHubProp
         properties={data.properties}
         isAr={isAr}
         isMutating={isMutating}
+        onOpenNewPartnerModal={() => setShowNewPartnerModal(true)}
         onConfirmInjection={async (details) => {
           await handleConfirmPartnerInjection(details);
           setShowPartnerInjectionModal(false);

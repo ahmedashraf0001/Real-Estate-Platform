@@ -236,6 +236,10 @@ export interface ERPPartnerProfile {
   role: PartnerRole;
   phone?: string;
   national_id?: string;
+  bank_name?: string;
+  iban?: string;
+  instapay_handle?: string;
+  preferred_payout_method?: 'INSTAPAY' | 'BANK' | 'CASH';
   notes?: string;
   joined_date: string;
 }
