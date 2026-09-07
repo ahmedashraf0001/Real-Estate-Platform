@@ -101,10 +101,34 @@ export class ERPSupabaseService {
           type: 'building' as const,
           sale_mode: saleMode,
           total_units_count: units.length,
-          building_units: units
+          building_units: units,
+          partner_splits: p.partner_splits && p.partner_splits.length > 0 ? p.partner_splits : (
+            (p.id === 'the-obsidian-pavilion' || (p.title_ar || '').includes('الأوبسيديان') || (p.title_ar || '').includes('الفردوس'))
+              ? [{ partner_name: 'زكريا فريد', share_percentage: 65 }, { partner_name: 'م. أحمد الشريف', share_percentage: 35 }]
+              : ((p.id === 'the-sky-palace-penthouse' || (p.title_ar || '').includes('السماء') || (p.title_ar || '').includes('الصفوة'))
+                ? [{ partner_name: 'زكريا فريد', share_percentage: 70 }, { partner_name: 'د. هاني المنياوي', share_percentage: 30 }]
+                : ((p.id === 'sokhna-sea-cliff-mansion' || (p.title_ar || '').includes('السخنة'))
+                  ? [{ partner_name: 'زكريا فريد', share_percentage: 70 }, { partner_name: 'الحاج رجب الصاوي', share_percentage: 30 }]
+                  : [{ partner_name: 'زكريا فريد', share_percentage: 100 }]
+                )
+              )
+          )
         };
       }
-      return p;
+      return {
+        ...p,
+        partner_splits: p.partner_splits && p.partner_splits.length > 0 ? p.partner_splits : (
+          (p.id === 'the-obsidian-pavilion' || (p.title_ar || '').includes('الأوبسيديان') || (p.title_ar || '').includes('الفردوس'))
+            ? [{ partner_name: 'زكريا فريد', share_percentage: 65 }, { partner_name: 'م. أحمد الشريف', share_percentage: 35 }]
+            : ((p.id === 'the-sky-palace-penthouse' || (p.title_ar || '').includes('السماء') || (p.title_ar || '').includes('الصفوة'))
+              ? [{ partner_name: 'زكريا فريد', share_percentage: 70 }, { partner_name: 'د. هاني المنياوي', share_percentage: 30 }]
+              : ((p.id === 'sokhna-sea-cliff-mansion' || (p.title_ar || '').includes('السخنة'))
+                ? [{ partner_name: 'زكريا فريد', share_percentage: 70 }, { partner_name: 'الحاج رجب الصاوي', share_percentage: 30 }]
+                : [{ partner_name: 'زكريا فريد', share_percentage: 100 }]
+              )
+            )
+        )
+      };
     });
 
     // 1b. Fetch Active CRM Leads from Supabase
@@ -350,15 +374,14 @@ export class ERPSupabaseService {
       const generatedPDCs: ERPPDCRecord[] = [];
       contracts.forEach((ct) => {
         const contractScheds = schedules.filter(s => s.contract_id === ct.contract_id);
-        const tranches = contractScheds.length > 1 ? contractScheds.slice(1) : contractScheds;
+        const tranches = contractScheds;
 
         tranches.forEach((tr, tIdx) => {
           const chqId = generateUUID();
           const numDigits = ct.contract_number.replace(/\D/g, '') || '789';
-          const chqNum = `CHQ-${numDigits}-${(tIdx + 1).toString().padStart(3, '0')}`;
+          const chqNum = `SND-${numDigits}-${(tIdx + 1).toString().padStart(3, '0')}`;
           const isCleared = tr.status === 'Paid';
-          const isDeposited = tIdx === 0 && !isCleared;
-          const status: PDCStatus = isCleared ? 'Cleared' : isDeposited ? 'Deposited' : 'In Safe';
+          const status: PDCStatus = isCleared ? 'Cleared' : 'In Safe';
 
           generatedPDCs.push({
             cheque_id: chqId,
@@ -370,7 +393,6 @@ export class ERPSupabaseService {
             nominal_value: tr.nominal_value,
             due_date: tr.due_date,
             status: status,
-            deposited_date: (isDeposited || isCleared) ? new Date(Date.now() - 15 * 86400000).toISOString().split('T')[0] : undefined,
             cleared_date: isCleared ? (tr.paid_date || new Date().toISOString().split('T')[0]) : undefined
           });
         });
@@ -396,6 +418,53 @@ export class ERPSupabaseService {
             await supabase.from('erp_pdc_records').insert(rowsToInsert);
           } catch (e) {
             console.warn('Silent auto-sync pdcRecords insert:', e);
+          }
+        }
+      }
+    } else if (pdcRecords.length > 0 && contracts.length > 0) {
+      // Reconcile any pending schedules that are missing in pdcRecords
+      const pendingScheds = schedules.filter(s => s.status === 'Pending');
+      const missingPDCs: ERPPDCRecord[] = [];
+      pendingScheds.forEach(s => {
+        const hasPdc = pdcRecords.some(p => p.schedule_id === s.schedule_id || (p.contract_id === s.contract_id && p.due_date === s.due_date));
+        if (!hasPdc) {
+          const ct = contracts.find(c => c.contract_id === s.contract_id);
+          const chqId = generateUUID();
+          const numDigits = ct?.contract_number ? ct.contract_number.replace(/\D/g, '') : '789';
+          const chqNum = `SND-${numDigits}-T${s.tranche_number}`;
+          const newPdc: ERPPDCRecord = {
+            cheque_id: chqId,
+            contract_id: s.contract_id,
+            schedule_id: s.schedule_id,
+            cheque_number: chqNum,
+            bank_name: 'الخزينة الرئيسية (أمانات نقداً باليد - 101000)',
+            drawer_name: ct?.buyer_name || 'العميل المتعاقد',
+            nominal_value: s.nominal_value,
+            due_date: s.due_date,
+            status: 'In Safe'
+          };
+          missingPDCs.push(newPdc);
+        }
+      });
+
+      if (missingPDCs.length > 0) {
+        pdcRecords = [...missingPDCs, ...pdcRecords];
+        if (isSchemaMigrated) {
+          try {
+            const rowsToInsert = missingPDCs.map(p => ({
+              cheque_id: p.cheque_id,
+              contract_id: p.contract_id,
+              schedule_id: p.schedule_id && isUUID(p.schedule_id) ? p.schedule_id : null,
+              cheque_number: p.cheque_number,
+              bank_name: p.bank_name,
+              drawer_name: p.drawer_name,
+              nominal_value: p.nominal_value,
+              due_date: p.due_date,
+              status: p.status
+            }));
+            await supabase.from('erp_pdc_records').insert(rowsToInsert);
+          } catch (e) {
+            console.warn('Silent reconcile pdcRecords insert:', e);
           }
         }
       }
@@ -717,7 +786,7 @@ export class ERPSupabaseService {
             cheque_id: generateUUID(),
             contract_id: contractId,
             schedule_id: s.schedule_id && isUUID(s.schedule_id) ? s.schedule_id : null,
-            cheque_number: `CHQ-${contract.contract_number.replace(/\D/g, '') || '789'}-${(idx + 1).toString().padStart(3, '0')}`,
+            cheque_number: `SND-${contract.contract_number.replace(/\D/g, '') || '789'}-${(idx + 1).toString().padStart(3, '0')}`,
             bank_name: '',
             drawer_name: contract.buyer_name || 'العميل المتعاقد',
             nominal_value: s.nominal_value,
@@ -1009,7 +1078,20 @@ export class ERPSupabaseService {
         .eq('contract_id', actualContractId);
     }
 
-    // 3. Insert Journal Entry
+    // 3. Mark matching PDC as Cleared if exists
+    try {
+      await supabase
+        .from('erp_pdc_records')
+        .update({
+          status: 'Cleared',
+          cleared_date: new Date().toISOString().split('T')[0]
+        })
+        .eq('schedule_id', actualScheduleId);
+    } catch {
+      // Ignore if no direct PDC link
+    }
+
+    // 4. Insert Journal Entry
     await this.persistJournalEntry(supabase, journalEntry);
   }
 
@@ -1086,6 +1168,73 @@ export class ERPSupabaseService {
       .eq('contract_id', cleanContractId);
 
     if (contractError) throw contractError;
+  }
+
+  /**
+   * Append a Contract Supplement / Extra Tranche (إضافة ملحق أو دفعة إضافية للعقد).
+   * - Increments contract gross_contract_value with D()
+   * - Inserts new installment schedule tranche (Pending)
+   * - Inserts new PDC record in safe (101000)
+   */
+  static async addContractSupplement(
+    supabase: SupabaseClient,
+    params: {
+      contractId: string;
+      newGrossValue: string;
+      newSchedule: ERPInstallmentSchedule;
+      newPdc: ERPPDCRecord;
+    }
+  ): Promise<void> {
+    const cleanContractId = ensureUUID(params.contractId);
+    params.newSchedule.schedule_id = ensureUUID(params.newSchedule.schedule_id);
+    params.newSchedule.contract_id = cleanContractId;
+    params.newPdc.cheque_id = ensureUUID(params.newPdc.cheque_id);
+    params.newPdc.contract_id = cleanContractId;
+    params.newPdc.schedule_id = params.newSchedule.schedule_id;
+
+    // 1. Update contract gross value
+    const { error: contractErr } = await supabase
+      .from('erp_contracts')
+      .update({ gross_contract_value: params.newGrossValue })
+      .eq('contract_id', cleanContractId);
+    if (contractErr) {
+      console.warn('Supabase contract update notice:', contractErr.message);
+    }
+
+    // 2. Insert new schedule tranche
+    const { error: schErr } = await supabase
+      .from('erp_installment_schedules')
+      .insert([{
+        schedule_id: params.newSchedule.schedule_id,
+        contract_id: params.newSchedule.contract_id,
+        tranche_number: params.newSchedule.tranche_number,
+        nominal_value: params.newSchedule.nominal_value,
+        amount_paid: params.newSchedule.amount_paid || '0.00',
+        due_date: params.newSchedule.due_date,
+        status: params.newSchedule.status,
+        schedule_version: params.newSchedule.schedule_version || 1
+      }]);
+    if (schErr) {
+      console.warn('Supabase schedule insert notice:', schErr.message);
+    }
+
+    // 3. Insert new PDC in safe
+    const { error: pdcErr } = await supabase
+      .from('erp_pdc_records')
+      .insert([{
+        cheque_id: params.newPdc.cheque_id,
+        contract_id: params.newPdc.contract_id,
+        schedule_id: params.newPdc.schedule_id,
+        cheque_number: params.newPdc.cheque_number,
+        bank_name: params.newPdc.bank_name,
+        drawer_name: params.newPdc.drawer_name,
+        nominal_value: params.newPdc.nominal_value,
+        due_date: params.newPdc.due_date,
+        status: params.newPdc.status
+      }]);
+    if (pdcErr) {
+      console.warn('Supabase PDC insert notice:', pdcErr.message);
+    }
   }
 
   /**

@@ -17,73 +17,73 @@ export const PROPERTY_COST_CATEGORIES: CategoryMeta[] = [
     key: 'civil_structure',
     nameAr: 'خرسانات وهيكل إنشائي',
     nameEn: 'Civil & Structure',
-    color: '#3b82f6',
+    color: '#c2410c',
     accountCode: '151000',
-    badgeBg: 'rgba(59, 130, 246, 0.12)',
-    badgeBorder: 'rgba(59, 130, 246, 0.25)'
+    badgeBg: 'rgba(194, 65, 12, 0.08)',
+    badgeBorder: 'rgba(194, 65, 12, 0.22)'
   },
   {
     key: 'mep_infrastructure',
     nameAr: 'كهروميكانيك وتأسيسات',
     nameEn: 'MEP Infrastructure',
-    color: '#06b6d4',
+    color: '#1d4ed8',
     accountCode: '152000',
-    badgeBg: 'rgba(6, 182, 212, 0.12)',
-    badgeBorder: 'rgba(6, 182, 212, 0.25)'
+    badgeBg: 'rgba(29, 78, 216, 0.08)',
+    badgeBorder: 'rgba(29, 78, 216, 0.22)'
   },
   {
     key: 'finishing_interior',
     nameAr: 'تشطيبات معمارية وديكور',
     nameEn: 'Finishing & Interiors',
-    color: '#10b981',
+    color: '#701a75',
     accountCode: '153000',
-    badgeBg: 'rgba(16, 185, 129, 0.12)',
-    badgeBorder: 'rgba(16, 185, 129, 0.25)'
+    badgeBg: 'rgba(112, 26, 117, 0.08)',
+    badgeBorder: 'rgba(112, 26, 117, 0.22)'
   },
   {
     key: 'site_facade',
     nameAr: 'واجهات ومداخل ومصاعد',
     nameEn: 'Façade & Vertical Access',
-    color: '#8b5cf6',
+    color: '#4338ca',
     accountCode: '153000',
-    badgeBg: 'rgba(139, 92, 246, 0.12)',
-    badgeBorder: 'rgba(139, 92, 246, 0.25)'
+    badgeBg: 'rgba(67, 56, 202, 0.08)',
+    badgeBorder: 'rgba(67, 56, 202, 0.22)'
   },
   {
     key: 'permits_engineering',
     nameAr: 'تراخيص ومخططات واستشارات',
     nameEn: 'Permits & Engineering',
-    color: '#d4af37',
+    color: '#946f23',
     accountCode: '150000',
-    badgeBg: 'rgba(212, 175, 55, 0.12)',
-    badgeBorder: 'rgba(212, 175, 55, 0.25)'
+    badgeBg: 'rgba(184, 144, 62, 0.08)',
+    badgeBorder: 'rgba(184, 144, 62, 0.22)'
   },
   {
     key: 'taxes_fees',
     nameAr: 'ضرائب ورسوم إنشائية وحكومية',
     nameEn: 'Taxes, Levies & Fees',
-    color: '#0ea5e9',
+    color: '#475569',
     accountCode: '150000',
-    badgeBg: 'rgba(14, 165, 233, 0.12)',
-    badgeBorder: 'rgba(14, 165, 233, 0.25)'
+    badgeBg: 'rgba(71, 85, 105, 0.08)',
+    badgeBorder: 'rgba(71, 85, 105, 0.22)'
   },
   {
     key: 'land_allocation',
     nameAr: 'حصة الأرض المحملة',
     nameEn: 'Land Cost Allocation',
-    color: '#f59e0b',
+    color: '#92400e',
     accountCode: '150000',
-    badgeBg: 'rgba(245, 158, 11, 0.12)',
-    badgeBorder: 'rgba(245, 158, 11, 0.25)'
+    badgeBg: 'rgba(146, 64, 14, 0.08)',
+    badgeBorder: 'rgba(146, 64, 14, 0.22)'
   },
   {
     key: 'labor_subcontractor',
-    nameAr: 'مصنعيات ومقاولو باطن',
+    nameAr: 'مصنعيات ومقاول باطن',
     nameEn: 'Labor & Subcontractors',
-    color: '#ec4899',
+    color: '#047857',
     accountCode: '151000',
-    badgeBg: 'rgba(236, 72, 153, 0.12)',
-    badgeBorder: 'rgba(236, 72, 153, 0.25)'
+    badgeBg: 'rgba(4, 120, 87, 0.08)',
+    badgeBorder: 'rgba(4, 120, 87, 0.22)'
   }
 ];
 
@@ -94,6 +94,9 @@ export interface PhaseMeta {
   nameEn: string;
   shortAr: string;
   icon: string;
+  color?: string;
+  bgColor?: string;
+  borderColor?: string;
 }
 
 export const PROPERTY_LIFECYCLE_PHASES: PhaseMeta[] = [
@@ -103,7 +106,10 @@ export const PROPERTY_LIFECYCLE_PHASES: PhaseMeta[] = [
     nameAr: '1. التراخيص والمخططات والجسات',
     nameEn: '1. Planning, Permits & Surveys',
     shortAr: 'التراخيص والتخطيط',
-    icon: '📋'
+    icon: '📋',
+    color: '#1e40af',
+    bgColor: 'rgba(30, 64, 175, 0.08)',
+    borderColor: 'rgba(30, 64, 175, 0.25)'
   },
   {
     key: 'excavation_foundation',
@@ -111,7 +117,10 @@ export const PROPERTY_LIFECYCLE_PHASES: PhaseMeta[] = [
     nameAr: '2. الحفر والأساسات والعزل',
     nameEn: '2. Excavation & Foundations',
     shortAr: 'الأساسات والحفر',
-    icon: '🏗️'
+    icon: '🏗️',
+    color: '#b45309',
+    bgColor: 'rgba(180, 83, 9, 0.08)',
+    borderColor: 'rgba(180, 83, 9, 0.25)'
   },
   {
     key: 'structural_skeleton',
@@ -119,7 +128,10 @@ export const PROPERTY_LIFECYCLE_PHASES: PhaseMeta[] = [
     nameAr: '3. الهيكل الخرساني وحديد التسليح',
     nameEn: '3. Structural Skeleton & Rebar',
     shortAr: 'الهيكل والخرسانات',
-    icon: '🏛️'
+    icon: '🏛️',
+    color: '#c2410c',
+    bgColor: 'rgba(194, 65, 12, 0.08)',
+    borderColor: 'rgba(194, 65, 12, 0.25)'
   },
   {
     key: 'masonry_roughing',
@@ -127,7 +139,10 @@ export const PROPERTY_LIFECYCLE_PHASES: PhaseMeta[] = [
     nameAr: '4. المباني وتأسيس الكهروميكانيك',
     nameEn: '4. Masonry & Roughing MEP',
     shortAr: 'المباني والتأسيس',
-    icon: '🧱'
+    icon: '🧱',
+    color: '#946f23',
+    bgColor: 'rgba(184, 144, 62, 0.08)',
+    borderColor: 'rgba(184, 144, 62, 0.25)'
   },
   {
     key: 'finishing_interiors',
@@ -135,15 +150,21 @@ export const PROPERTY_LIFECYCLE_PHASES: PhaseMeta[] = [
     nameAr: '5. التشطيبات المعمارية والكسوات',
     nameEn: '5. Architectural Finishing',
     shortAr: 'التشطيبات والديكور',
-    icon: '🎨'
+    icon: '🎨',
+    color: '#701a75',
+    bgColor: 'rgba(112, 26, 117, 0.08)',
+    borderColor: 'rgba(112, 26, 117, 0.25)'
   },
   {
     key: 'final_inspection_handover',
     order: 6,
     nameAr: '6. المعاينة النهائية والجاهزية للبيع',
     nameEn: '6. Handover Audit & Ready to Sell',
-    shortAr: 'الجاهزية للبيع',
-    icon: '✨'
+    shortAr: 'الجاهزية للتسليم',
+    icon: '✨',
+    color: '#047857',
+    bgColor: 'rgba(4, 120, 87, 0.08)',
+    borderColor: 'rgba(4, 120, 87, 0.25)'
   }
 ];
 
@@ -201,6 +222,47 @@ export function generateMockPropertyCosts(properties: Property[]): ERPPropertyCo
       linked_account_code: '150000',
       status: 'verified',
       notes: 'تقرير التربة يوصي بالأساسات السطحية مع لبشة مسلحة سمك 90 سم'
+    });
+
+    // 1.b Statutory Taxes, Contractor Social Insurance & Municipal Charges
+    allCosts.push({
+      item_id: `cost-${propId}-02b`,
+      property_id: propId,
+      category: 'taxes_fees',
+      phase: 'planning_permits',
+      item_name_ar: 'تأمينات مقاولات وعمالة البناء الإلزامية وصندوق العاملين بالتشييد',
+      item_name_en: 'Mandatory Contractor Social Insurance & Construction Labor Fund',
+      supplier_contractor: 'الهيئة القومية للتأمين الاجتماعي - مكتب مقاولات البناء',
+      invoice_ref: `INS-${baseYear}-${150 + propIndex}`,
+      quantity: 1,
+      unit: 'شهادة تأمينية',
+      unit_cost_egp: D(area).times(280).toFixed(2),
+      total_cost_egp: D(area).times(280).toFixed(2),
+      logged_date: `${baseYear}-03-18`,
+      logged_by: 'م. أحمد عبد العزيز - مدير المشروعات',
+      linked_account_code: '150000',
+      status: 'verified',
+      notes: 'تم سداد تأمينات عمالة البناء واستخراج شهادة السداد الرسمية لملف الترخيص'
+    });
+
+    allCosts.push({
+      item_id: `cost-${propId}-02c`,
+      property_id: propId,
+      category: 'taxes_fees',
+      phase: 'planning_permits',
+      item_name_ar: 'رسوم جهاز المدينة وتصاريح إشغال الطريق وتوصيل مرافق المياه والكهرباء الإنشائية',
+      item_name_en: 'City Council Fees, Temporary Street Occupancy & Site Utility Meters',
+      supplier_contractor: 'مجلس المدينة والإدارة الهندسية وشركات المرافق',
+      invoice_ref: `MUN-${baseYear}-${180 + propIndex}`,
+      quantity: 1,
+      unit: 'إيصال مرافق وتصريح',
+      unit_cost_egp: D(area).times(210).toFixed(2),
+      total_cost_egp: D(area).times(210).toFixed(2),
+      logged_date: `${baseYear}-03-25`,
+      logged_by: 'م. أحمد عبد العزيز - مدير المشروعات',
+      linked_account_code: '150000',
+      status: 'verified',
+      notes: 'رسوم إشغال طريق مؤقت لمعدات الحفر وعداد مياه وكهرباء موقع إنشائي'
     });
 
     // 2. Excavation & Foundations

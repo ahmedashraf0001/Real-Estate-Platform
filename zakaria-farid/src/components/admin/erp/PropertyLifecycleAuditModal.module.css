@@ -37,9 +37,9 @@
 
 /* Modal Main Dialog */
 .modalDialog {
-  width: 100%;
-  max-width: 1240px;
-  max-height: 92vh;
+  width: min(1380px, 96vw);
+  max-width: 1380px;
+  max-height: 94vh;
   background: #ffffff;
   border: 1px solid #e2e8f0;
   border-radius: 20px;
@@ -245,7 +245,7 @@
 
 .kpiCard {
   border-radius: 14px;
-  padding: 1rem 1.15rem;
+  padding: 1.1rem 1.25rem;
   background: #ffffff;
   border: 1px solid #e2e8f0;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
@@ -253,50 +253,52 @@
   flex-direction: column;
 }
 
-:global([data-theme="dark"]) .kpiCard {
-  background: rgba(255, 255, 255, 0.03);
-  border-color: rgba(255, 255, 255, 0.08);
-  box-shadow: none;
+.kpiCardGold {
+  border-top: 3px solid #946f23 !important;
 }
 
-.kpiCardGold {
-  background: linear-gradient(135deg, rgba(212, 175, 55, 0.07) 0%, #ffffff 100%);
-  border: 1px solid rgba(212, 175, 55, 0.32);
+.kpiCardNavy {
+  border-top: 3px solid #1d4ed8 !important;
+}
+
+.kpiCardEmerald {
+  border-top: 3px solid #047857 !important;
+}
+
+.kpiCardIndigo {
+  border-top: 3px solid #4338ca !important;
 }
 
 :global([data-theme="dark"]) .kpiCardGold {
-  background: linear-gradient(135deg, rgba(212, 175, 55, 0.1) 0%, rgba(212, 175, 55, 0.02) 100%);
-  border-color: rgba(212, 175, 55, 0.3);
+  border-top-color: #d4af37 !important;
 }
 
-.kpiCardBlue {
-  background: linear-gradient(135deg, rgba(59, 130, 246, 0.06) 0%, #ffffff 100%);
-  border: 1px solid rgba(59, 130, 246, 0.25);
+:global([data-theme="dark"]) .kpiCardNavy {
+  border-top-color: #3b82f6 !important;
 }
 
-:global([data-theme="dark"]) .kpiCardBlue {
-  background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(59, 130, 246, 0.02) 100%);
-  border-color: rgba(59, 130, 246, 0.3);
+:global([data-theme="dark"]) .kpiCardEmerald {
+  border-top-color: #10b981 !important;
 }
 
-.kpiCardGreen {
-  background: linear-gradient(135deg, rgba(16, 185, 129, 0.06) 0%, #ffffff 100%);
-  border: 1px solid rgba(16, 185, 129, 0.25);
+:global([data-theme="dark"]) .kpiCardIndigo {
+  border-top-color: #6366f1 !important;
 }
 
-:global([data-theme="dark"]) .kpiCardGreen {
-  background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(16, 185, 129, 0.02) 100%);
-  border-color: rgba(16, 185, 129, 0.3);
+.kpiIconBadge {
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 }
 
-.kpiCardPurple {
-  background: linear-gradient(135deg, rgba(139, 92, 246, 0.05) 0%, #ffffff 100%);
-  border: 1px solid rgba(139, 92, 246, 0.22);
-}
-
-:global([data-theme="dark"]) .kpiCardPurple {
-  background: rgba(255, 255, 255, 0.03);
-  border-color: rgba(255, 255, 255, 0.08);
+:global([data-theme="dark"]) .kpiCard {
+  background: #1e293b;
+  border-color: #334155;
+  box-shadow: none;
 }
 
 .kpiLabel {
@@ -1033,3 +1035,176 @@
 :global([data-theme="dark"]) .footerSummaryHighlight {
   color: #d4af37;
 }
+
+/* Two-Sided Master-Detail Grid */
+.modalBodyGrid {
+  display: grid;
+  grid-template-columns: 360px 1fr;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+@media (max-width: 900px) {
+  .modalBodyGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.masterSidebar {
+  background: #f8fafc;
+  border-left: 1px solid #e2e8f0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+:global([data-theme="dark"]) .masterSidebar {
+  background: rgba(15, 23, 42, 0.4);
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* Chronological Pipeline Stepper */
+.pipelineContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.pipelineGrid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 0.65rem;
+}
+
+@media (max-width: 1100px) {
+  .pipelineGrid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .pipelineGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.pipelineCard {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 0.85rem 0.8rem;
+  text-align: start;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  position: relative;
+}
+
+.pipelineCard:hover {
+  border-color: #cbd5e1;
+  background: #fdfdfd;
+  transform: translateY(-1px);
+}
+
+.pipelineCardActive {
+  background: #ffffff !important;
+}
+
+:global([data-theme="dark"]) .pipelineCard {
+  background: #1e293b;
+  border-color: #334155;
+}
+
+:global([data-theme="dark"]) .pipelineCardActive {
+  background: #1e293b !important;
+}
+
+/* Category Breakdown Grid */
+.categoryGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 0.75rem;
+}
+
+.categoryCard {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 0.8rem 0.95rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.categoryCard:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+}
+
+.categoryCardActive {
+  background: #ffffff !important;
+}
+
+:global([data-theme="dark"]) .categoryCard {
+  background: #1e293b;
+  border-color: #334155;
+}
+
+:global([data-theme="dark"]) .categoryCardActive {
+  background: #1e293b !important;
+}
+
+/* Pagination Row */
+.paginationRow {
+  display: flex;
+  align-items: center;
+  justifyContent: space-between;
+  padding: 0.75rem 1rem;
+  border-top: 1px solid #e2e8f0;
+  background: #f8fafc;
+  border-radius: 0 0 16px 16px;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+:global([data-theme="dark"]) .paginationRow {
+  background: rgba(255, 255, 255, 0.02);
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.pageBtn {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  color: #334155;
+  padding: 0.35rem 0.75rem;
+  border-radius: 8px;
+  font-size: 0.76rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  transition: all 0.15s ease;
+}
+
+.pageBtn:hover:not(:disabled) {
+  background: #f1f5f9;
+  border-color: #94a3b8;
+}
+
+.pageBtn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+:global([data-theme="dark"]) .pageBtn {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.1);
+  color: #cbd5e1;
+}
+

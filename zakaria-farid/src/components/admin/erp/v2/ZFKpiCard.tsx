@@ -30,40 +30,40 @@ export interface ZFKpiCardProps {
 
 const ACCENT_THEMES: Record<ZFKpiAccentColor, { bg: string; border: string; icon: string; text: string }> = {
   gold: {
-    bg: 'rgba(184, 144, 62, 0.12)',
-    border: 'rgba(184, 144, 62, 0.28)',
-    icon: '#b8903e',
-    text: '#946f23'
+    bg: 'rgba(184, 144, 62, 0.08)',
+    border: 'rgba(184, 144, 62, 0.22)',
+    icon: '#946f23',
+    text: '#854d0e'
   },
   emerald: {
-    bg: 'rgba(16, 185, 129, 0.1)',
-    border: 'rgba(16, 185, 129, 0.25)',
-    icon: '#059669',
-    text: '#059669'
+    bg: 'rgba(21, 128, 61, 0.06)',
+    border: 'rgba(21, 128, 61, 0.18)',
+    icon: '#15803d',
+    text: '#166534'
   },
   amber: {
-    bg: 'rgba(217, 119, 6, 0.1)',
-    border: 'rgba(217, 119, 6, 0.25)',
-    icon: '#d97706',
-    text: '#d97706'
+    bg: 'rgba(180, 83, 9, 0.06)',
+    border: 'rgba(180, 83, 9, 0.18)',
+    icon: '#b45309',
+    text: '#92400e'
   },
   slate: {
-    bg: 'rgba(15, 23, 42, 0.06)',
-    border: 'rgba(15, 23, 42, 0.15)',
+    bg: 'rgba(51, 65, 85, 0.05)',
+    border: 'rgba(51, 65, 85, 0.15)',
     icon: '#475569',
-    text: '#475569'
+    text: '#334155'
   },
   rose: {
-    bg: 'rgba(239, 68, 68, 0.08)',
-    border: 'rgba(239, 68, 68, 0.25)',
-    icon: '#dc2626',
-    text: '#dc2626'
+    bg: 'rgba(159, 18, 57, 0.05)',
+    border: 'rgba(159, 18, 57, 0.18)',
+    icon: '#9f1239',
+    text: '#881337'
   },
   blue: {
-    bg: 'rgba(59, 130, 246, 0.08)',
-    border: 'rgba(59, 130, 246, 0.25)',
-    icon: '#2563eb',
-    text: '#2563eb'
+    bg: 'rgba(30, 58, 138, 0.05)',
+    border: 'rgba(30, 58, 138, 0.18)',
+    icon: '#1e40af',
+    text: '#1e3a8a'
   }
 };
 
@@ -271,18 +271,18 @@ export const ZFKpiCard: React.FC<ZFKpiCardProps> = ({
               <span
                 className={styles.kpiBadge}
                 style={{
-                  background: badge.variant === 'positive' ? 'rgba(16, 185, 129, 0.1)' :
-                    badge.variant === 'warning' ? 'rgba(217, 119, 6, 0.1)' :
-                    badge.variant === 'danger' ? 'rgba(239, 68, 68, 0.1)' :
-                    badge.variant === 'gold' ? 'rgba(184, 144, 62, 0.12)' : undefined,
-                  color: badge.variant === 'positive' ? '#059669' :
-                    badge.variant === 'warning' ? '#d97706' :
-                    badge.variant === 'danger' ? '#dc2626' :
-                    badge.variant === 'gold' ? '#b8903e' : undefined,
-                  borderColor: badge.variant === 'positive' ? 'rgba(16, 185, 129, 0.25)' :
-                    badge.variant === 'warning' ? 'rgba(217, 119, 6, 0.25)' :
-                    badge.variant === 'danger' ? 'rgba(239, 68, 68, 0.25)' :
-                    badge.variant === 'gold' ? 'rgba(184, 144, 62, 0.3)' : undefined
+                  background: badge.variant === 'positive' ? 'rgba(21, 128, 61, 0.07)' :
+                    badge.variant === 'warning' ? 'rgba(180, 83, 9, 0.07)' :
+                    badge.variant === 'danger' ? 'rgba(159, 18, 57, 0.06)' :
+                    badge.variant === 'gold' ? 'rgba(184, 144, 62, 0.08)' : undefined,
+                  color: badge.variant === 'positive' ? '#15803d' :
+                    badge.variant === 'warning' ? '#92400e' :
+                    badge.variant === 'danger' ? '#9f1239' :
+                    badge.variant === 'gold' ? '#946f23' : undefined,
+                  borderColor: badge.variant === 'positive' ? 'rgba(21, 128, 61, 0.2)' :
+                    badge.variant === 'warning' ? 'rgba(180, 83, 9, 0.2)' :
+                    badge.variant === 'danger' ? 'rgba(159, 18, 57, 0.2)' :
+                    badge.variant === 'gold' ? 'rgba(184, 144, 62, 0.22)' : undefined
                 }}
               >
                 {badge.text}

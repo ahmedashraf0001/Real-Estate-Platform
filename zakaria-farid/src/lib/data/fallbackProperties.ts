@@ -174,13 +174,48 @@ export const FALLBACK_PROPERTIES: Property[] = [
     ],
     listing_status: 'active',
     is_featured: true,
-    completion_status: 'ready',
+    completion_status: 'off_plan',
     latitude: 30.0520,
     longitude: 30.9830,
     created_at: '2025-01-07T00:00:00Z',
     property_images: [
       { id: 'img-701', property_id: 'al-yasmin-grand-residence', url: 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=1600&q=85', alt_text_en: 'Building Elevation', alt_text_ar: 'الواجهة المعمارية للعمارة', sort_order: 0 },
       { id: 'img-702', property_id: 'al-yasmin-grand-residence', url: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=85', alt_text_en: 'Apartment Interior', alt_text_ar: 'صالون الشقة النموذجية', sort_order: 1 },
+    ]
+  },
+  {
+    id: 'andalus-residence-minya-elqamh',
+    slug: 'andalus-residence-minya-elqamh',
+    title_en: 'Al-Andalus Tower & Residence (Minya El-Qamh)',
+    title_ar: 'برج الأندلس السكني - كورنيش بحر مويس (منيا القمح)',
+    description_en: 'Architectural residential development building in Minya El Qamh overlooking Bahr Moweis Corniche, under active construction.',
+    description_ar: 'مبنى سكني تحت الإنشاء والتنفيذ في قلب مدينة منيا القمح على كورنيش بحر مويس، يتكون من أرضي و٤ أدوار متكررة وجراج.',
+    price_egp: 24500000,
+    location: 'Corniche Bahr Moweis, Minya El Qamh',
+    bedrooms: 16,
+    bathrooms: 12,
+    area_sqm: 1100,
+    type: 'building',
+    sale_mode: 'both_flexible',
+    total_units_count: 8,
+    completion_status: 'off_plan',
+    listing_status: 'active',
+    is_featured: true,
+    latitude: 30.5160,
+    longitude: 31.3480,
+    created_at: '2025-01-08T00:00:00Z',
+    building_units: [
+      { unit_id: 'andalus-apt-101', unit_number: 'شقة 101 - الدور الأول', floor: 1, area_sqm: 165, bedrooms: 3, bathrooms: 2, price_egp: 2800000, status: 'available' },
+      { unit_id: 'andalus-apt-102', unit_number: 'شقة 102 - الدور الأول', floor: 1, area_sqm: 170, bedrooms: 3, bathrooms: 2, price_egp: 2900000, status: 'available' },
+      { unit_id: 'andalus-apt-201', unit_number: 'شقة 201 - الدور الثاني', floor: 2, area_sqm: 165, bedrooms: 3, bathrooms: 2, price_egp: 2850000, status: 'available' },
+      { unit_id: 'andalus-apt-202', unit_number: 'شقة 202 - الدور الثاني', floor: 2, area_sqm: 170, bedrooms: 3, bathrooms: 2, price_egp: 2950000, status: 'available' },
+      { unit_id: 'andalus-apt-301', unit_number: 'شقة 301 - الدور الثالث', floor: 3, area_sqm: 165, bedrooms: 3, bathrooms: 2, price_egp: 2900000, status: 'available' },
+      { unit_id: 'andalus-apt-302', unit_number: 'شقة 302 - الدور الثالث', floor: 3, area_sqm: 170, bedrooms: 3, bathrooms: 2, price_egp: 3000000, status: 'available' },
+      { unit_id: 'andalus-apt-401', unit_number: 'شقة 401 - الدور الرابع', floor: 4, area_sqm: 165, bedrooms: 3, bathrooms: 2, price_egp: 2950000, status: 'available' },
+      { unit_id: 'andalus-apt-402', unit_number: 'شقة 402 - الدور الرابع (روف)', floor: 4, area_sqm: 170, bedrooms: 3, bathrooms: 2, price_egp: 3100000, status: 'available' },
+    ],
+    property_images: [
+      { id: 'img-801', property_id: 'andalus-residence-minya-elqamh', url: 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=1600&q=85', alt_text_en: 'Building Elevation', alt_text_ar: 'الواجهة المعمارية للعمارة', sort_order: 0 }
     ]
   }
 ];

@@ -17,8 +17,54 @@ export interface PartnerShareItem {
 export const PRIMARY_DEVELOPER_NAME = 'زكريا فريد';
 
 export const INITIAL_REGISTERED_PARTNERS: SystemPartner[] = [
-  { name: PRIMARY_DEVELOPER_NAME, role: 'المطور الرئيسي / مالك المنظومة', isPermanent: true }
+  { name: PRIMARY_DEVELOPER_NAME, role: 'المطور الرئيسي / مالك المنظومة', isPermanent: true },
+  { name: 'م. أحمد الشريف', role: 'شريك ممول بالمشروع', isPermanent: false },
+  { name: 'الحاج رجب الصاوي', role: 'شريك مساهم بالأرض', isPermanent: false },
+  { name: 'د. هاني المنياوي', role: 'ممول صامت', isPermanent: false }
 ];
+
+export const ZF_PARTNERS_STORAGE_KEY = 'zf_registered_partners';
+
+/**
+ * Returns registered partners from memory + localStorage
+ */
+export function getRegisteredPartners(): SystemPartner[] {
+  if (typeof window === 'undefined') {
+    return INITIAL_REGISTERED_PARTNERS;
+  }
+  try {
+    const raw = localStorage.getItem(ZF_PARTNERS_STORAGE_KEY);
+    if (!raw) return INITIAL_REGISTERED_PARTNERS;
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return INITIAL_REGISTERED_PARTNERS;
+    
+    // Merge without duplicates
+    const map = new Map<string, SystemPartner>();
+    INITIAL_REGISTERED_PARTNERS.forEach(p => map.set(p.name, p));
+    parsed.forEach((p: any) => {
+      if (p && p.name) map.set(p.name, p);
+    });
+    return Array.from(map.values());
+  } catch {
+    return INITIAL_REGISTERED_PARTNERS;
+  }
+}
+
+/**
+ * Persists a new partner to localStorage so they are instantly available everywhere
+ */
+export function saveRegisteredPartner(partner: SystemPartner): void {
+  if (typeof window === 'undefined') return;
+  try {
+    const current = getRegisteredPartners();
+    if (!current.some(p => p.name === partner.name)) {
+      const updated = [...current, partner];
+      localStorage.setItem(ZF_PARTNERS_STORAGE_KEY, JSON.stringify(updated));
+    }
+  } catch (err) {
+    console.error('Failed to save partner to localStorage:', err);
+  }
+}
 
 /**
  * Returns a unified single source of truth for all registered and active partners

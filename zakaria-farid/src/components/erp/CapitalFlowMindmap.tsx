@@ -205,8 +205,8 @@ export const CapitalFlowMindmap: React.FC<CapitalFlowMindmapProps> = ({
       amount: totalCollectedCash,
       category: 'inflow',
       icon: DollarSign,
-      accentColor: '#10b981',
-      gradient: 'linear-gradient(135deg, rgba(16, 185, 129, 0.18) 0%, rgba(16, 185, 129, 0.04) 100%)',
+      accentColor: '#047857',
+      gradient: 'linear-gradient(135deg, rgba(4, 120, 87, 0.12) 0%, rgba(4, 120, 87, 0.02) 100%)',
       percentage: totalInflowVolume.isZero() ? 0 : Math.round(D(totalCollectedCash).div(totalInflowVolume).times(100).toNumber()),
       tagAr: 'كاش وسندات قبض',
       tagEn: 'Direct Cash Inflow'
@@ -220,8 +220,8 @@ export const CapitalFlowMindmap: React.FC<CapitalFlowMindmapProps> = ({
       amount: deferredBacklog,
       category: 'inflow',
       icon: Clock,
-      accentColor: '#06b6d4',
-      gradient: 'linear-gradient(135deg, rgba(6, 182, 212, 0.18) 0%, rgba(6, 182, 212, 0.04) 100%)',
+      accentColor: '#1e40af',
+      gradient: 'linear-gradient(135deg, rgba(30, 64, 175, 0.12) 0%, rgba(30, 64, 175, 0.02) 100%)',
       percentage: totalInflowVolume.isZero() ? 0 : Math.round(D(deferredBacklog).div(totalInflowVolume).times(100).toNumber()),
       tagAr: 'أقساط قادمة بالعقود',
       tagEn: 'Contracted Receivables'
@@ -235,8 +235,8 @@ export const CapitalFlowMindmap: React.FC<CapitalFlowMindmapProps> = ({
       amount: totalInjectedCapital,
       category: 'inflow',
       icon: Users,
-      accentColor: '#d4af37',
-      gradient: 'linear-gradient(135deg, rgba(212, 175, 55, 0.18) 0%, rgba(212, 175, 55, 0.04) 100%)',
+      accentColor: '#946f23',
+      gradient: 'linear-gradient(135deg, rgba(148, 111, 35, 0.12) 0%, rgba(148, 111, 35, 0.02) 100%)',
       percentage: totalInflowVolume.isZero() ? 0 : Math.round(D(totalInjectedCapital).div(totalInflowVolume).times(100).toNumber()),
       tagAr: 'تمويل الشركاء',
       tagEn: 'Contributed Equity'
@@ -252,8 +252,8 @@ export const CapitalFlowMindmap: React.FC<CapitalFlowMindmapProps> = ({
     amount: kpis.cashBank,
     category: 'core',
     icon: ShieldCheck,
-    accentColor: '#d4af37',
-    gradient: 'linear-gradient(145deg, rgba(212, 175, 55, 0.22) 0%, rgba(13, 17, 26, 0.95) 100%)',
+    accentColor: '#946f23',
+    gradient: 'linear-gradient(145deg, rgba(148, 111, 35, 0.16) 0%, rgba(15, 23, 42, 0.95) 100%)',
     tagAr: 'إجمالي الكاش الحالي',
     tagEn: 'FIN-OS Liquidity Engine'
   }), [kpis.cashBank]);
@@ -268,8 +268,8 @@ export const CapitalFlowMindmap: React.FC<CapitalFlowMindmapProps> = ({
       amount: wipAccounts.land || '0.00',
       category: 'outflow',
       icon: Building2,
-      accentColor: '#b45309',
-      gradient: 'linear-gradient(135deg, rgba(180, 83, 9, 0.18) 0%, rgba(180, 83, 9, 0.04) 100%)',
+      accentColor: '#92400e',
+      gradient: 'linear-gradient(135deg, rgba(146, 64, 14, 0.12) 0%, rgba(146, 64, 14, 0.02) 100%)',
       percentage: totalOutflowVolume.isZero() ? 0 : Math.round(D(wipAccounts.land || 0).div(totalOutflowVolume).times(100).toNumber()),
       tagAr: 'أرض المشروع',
       tagEn: 'Capitalized WIP Land'
@@ -283,8 +283,8 @@ export const CapitalFlowMindmap: React.FC<CapitalFlowMindmapProps> = ({
       amount: wipAccounts.civil || '0.00',
       category: 'outflow',
       icon: Layers,
-      accentColor: '#64748b',
-      gradient: 'linear-gradient(135deg, rgba(100, 116, 139, 0.18) 0%, rgba(100, 116, 139, 0.04) 100%)',
+      accentColor: '#c2410c',
+      gradient: 'linear-gradient(135deg, rgba(194, 65, 12, 0.12) 0%, rgba(194, 65, 12, 0.02) 100%)',
       percentage: totalOutflowVolume.isZero() ? 0 : Math.round(D(wipAccounts.civil || 0).div(totalOutflowVolume).times(100).toNumber()),
       tagAr: 'خرسانة ومباني',
       tagEn: 'Direct Construction'
@@ -298,8 +298,8 @@ export const CapitalFlowMindmap: React.FC<CapitalFlowMindmapProps> = ({
       amount: wipAccounts.mep || '0.00',
       category: 'outflow',
       icon: Sparkles,
-      accentColor: '#059669',
-      gradient: 'linear-gradient(135deg, rgba(5, 150, 105, 0.18) 0%, rgba(5, 150, 105, 0.04) 100%)',
+      accentColor: '#1d4ed8',
+      gradient: 'linear-gradient(135deg, rgba(29, 78, 216, 0.12) 0%, rgba(29, 78, 216, 0.02) 100%)',
       percentage: totalOutflowVolume.isZero() ? 0 : Math.round(D(wipAccounts.mep || 0).div(totalOutflowVolume).times(100).toNumber()),
       tagAr: 'تأسيس وسباكة',
       tagEn: 'Engineering Infrastructure'
@@ -313,8 +313,8 @@ export const CapitalFlowMindmap: React.FC<CapitalFlowMindmapProps> = ({
       amount: wipAccounts.finishing || '0.00',
       category: 'outflow',
       icon: PieIcon,
-      accentColor: '#f59e0b',
-      gradient: 'linear-gradient(135deg, rgba(245, 158, 11, 0.18) 0%, rgba(245, 158, 11, 0.04) 100%)',
+      accentColor: '#701a75',
+      gradient: 'linear-gradient(135deg, rgba(112, 26, 117, 0.12) 0%, rgba(112, 26, 117, 0.02) 100%)',
       percentage: totalOutflowVolume.isZero() ? 0 : Math.round(D(wipAccounts.finishing || 0).div(totalOutflowVolume).times(100).toNumber()),
       tagAr: 'تشطيبات',
       tagEn: 'Architectural Delivery'
@@ -328,8 +328,8 @@ export const CapitalFlowMindmap: React.FC<CapitalFlowMindmapProps> = ({
       amount: totalTaxes,
       category: 'outflow',
       icon: FileText,
-      accentColor: '#ef4444',
-      gradient: 'linear-gradient(135deg, rgba(239, 68, 68, 0.18) 0%, rgba(239, 68, 68, 0.04) 100%)',
+      accentColor: '#475569',
+      gradient: 'linear-gradient(135deg, rgba(71, 85, 105, 0.12) 0%, rgba(71, 85, 105, 0.02) 100%)',
       percentage: totalOutflowVolume.isZero() ? 0 : Math.round(D(totalTaxes).div(totalOutflowVolume).times(100).toNumber()),
       tagAr: 'ضرائب ورسوم',
       tagEn: 'Statutory Obligation'
@@ -518,21 +518,21 @@ export const CapitalFlowMindmap: React.FC<CapitalFlowMindmapProps> = ({
         subtitleAr: 'مقدمات وأقساط محصلة فعلياً في حسابات البنوك',
         subtitleEn: 'Down payments & cleared bank tranches',
         amount: totalCollectedCash,
-        accentColor: '#10b981',
+        accentColor: '#047857',
         velocityLabelAr: 'سيولة فورية محققة',
         velocityLabelEn: 'Instant Liquid',
-        velocityBadgeColor: '#10b981',
+        velocityBadgeColor: '#047857',
         summaryAr: 'متحصلات عقود بيع الوحدات السكنية والتجارية المحصلة فعلياً والمودعة بحسابات البنوك والخزينة المركزية، وتعتبر المغذي التشغيلي الأساسي لمشاريع التطوير.',
         summaryEn: 'Actual cash collected from real estate sale contracts, representing the primary operational fuel for ongoing development.',
         metrics: [
           { labelAr: 'إجمالي العقود الموقعة', labelEn: 'Gross Contract Value', value: `${formatCleanWholeNumber(totalGrossContractValue)} ج.م` },
-          { labelAr: 'نسبة التحصيل الفعلي', labelEn: 'Realized Rate', value: collectionRate, color: '#10b981' },
+          { labelAr: 'نسبة التحصيل الفعلي', labelEn: 'Realized Rate', value: collectionRate, color: '#047857' },
           { labelAr: 'متبقي قيد التحصيل', labelEn: 'Pending Backlog', value: `${formatCleanWholeNumber(deferredBacklog)} ج.م` },
-          { labelAr: 'الحصة من التدفقات', labelEn: 'Share of Inflows', value: `${totalInflowVolume.isZero() ? 0 : Math.round(collectedVal.div(totalInflowVolume).times(100).toNumber())}%`, color: '#10b981' }
+          { labelAr: 'الحصة من التدفقات', labelEn: 'Share of Inflows', value: `${totalInflowVolume.isZero() ? 0 : Math.round(collectedVal.div(totalInflowVolume).times(100).toNumber())}%`, color: '#047857' }
         ],
         breakdowns: [
-          { labelAr: 'الدفعات المقدمة (Down payments)', labelEn: 'Down payments', amount: formatCleanWholeNumber(collectedVal.times(0.35).toString()) + ' ج.م', percentage: 35, color: '#10b981' },
-          { labelAr: 'الأقساط الربع سنوية المسددة', labelEn: 'Quarterly Cleared', amount: formatCleanWholeNumber(collectedVal.times(0.65).toString()) + ' ج.م', percentage: 65, color: '#059669' }
+          { labelAr: 'الدفعات المقدمة (Down payments)', labelEn: 'Down payments', amount: formatCleanWholeNumber(collectedVal.times(0.35).toString()) + ' ج.م', percentage: 35, color: '#047857' },
+          { labelAr: 'الأقساط الربع سنوية المسددة', labelEn: 'Quarterly Cleared', amount: formatCleanWholeNumber(collectedVal.times(0.65).toString()) + ' ج.م', percentage: 65, color: '#065f46' }
         ],
         auditContext: {
           entryTypeAr: 'مدين: الخزينة/البنوك (101000) | دائن: إيرادات عقود بيع (401000)',
@@ -553,21 +553,21 @@ export const CapitalFlowMindmap: React.FC<CapitalFlowMindmapProps> = ({
         subtitleAr: 'مواعيد ووعود سداد تعاقدية مؤكدة',
         subtitleEn: 'Contractual installment schedule tranches',
         amount: totalSafePDCs,
-        accentColor: '#06b6d4',
+        accentColor: '#1e40af',
         velocityLabelAr: 'استحقاق تعاقدي',
         velocityLabelEn: 'Contractual Maturity',
-        velocityBadgeColor: '#0891b2',
+        velocityBadgeColor: '#1e40af',
         summaryAr: 'أقساط تعاقدية مجدولة مستحقة على المشترين ومسجلة بحافظة المنظومة، تمثل التزاماً بالسداد على دفعات حسب مواعيد العقد.',
         summaryEn: 'Contractual installment receivables from contracted purchasers in company ledger, guaranteeing scheduled collection tranches.',
         metrics: [
           { labelAr: 'رصيد الأقساط المؤجلة', labelEn: 'Deferred Dues Balance', value: `${formatCleanWholeNumber(totalSafePDCs)} ج.م` },
-          { labelAr: 'الحصة من التدفقات', labelEn: 'Share of Inflows', value: `${totalInflowVolume.isZero() ? 0 : Math.round(D(totalSafePDCs).div(totalInflowVolume).times(100).toNumber())}%`, color: '#06b6d4' },
-          { labelAr: 'تكلفة الخصم التجاري', labelEn: 'Discount Burden', value: '0.00 ج.م', color: '#10b981' },
+          { labelAr: 'الحصة من التدفقات', labelEn: 'Share of Inflows', value: `${totalInflowVolume.isZero() ? 0 : Math.round(D(totalSafePDCs).div(totalInflowVolume).times(100).toNumber())}%`, color: '#1e40af' },
+          { labelAr: 'تكلفة الخصم التجاري', labelEn: 'Discount Burden', value: '0.00 ج.م', color: '#047857' },
           { labelAr: 'طريقة السداد', labelEn: 'Settlement Mode', value: 'نقدي باليد / إنستاباي', color: '#0f172a' }
         ],
         breakdowns: [
-          { labelAr: 'أقساط تستحق خلال 90 يوماً', labelEn: 'Maturing < 90 Days', amount: formatCleanWholeNumber(D(totalSafePDCs).times(0.42).toString()) + ' ج.م', percentage: 42, color: '#06b6d4' },
-          { labelAr: 'أقساط تستحق خلال 6-12 شهراً', labelEn: 'Maturing 6-12 Mos', amount: formatCleanWholeNumber(D(totalSafePDCs).times(0.58).toString()) + ' ج.م', percentage: 58, color: '#0891b2' }
+          { labelAr: 'أقساط تستحق خلال 90 يوماً', labelEn: 'Maturing < 90 Days', amount: formatCleanWholeNumber(D(totalSafePDCs).times(0.42).toString()) + ' ج.م', percentage: 42, color: '#1e40af' },
+          { labelAr: 'أقساط تستحق خلال 6-12 شهراً', labelEn: 'Maturing 6-12 Mos', amount: formatCleanWholeNumber(D(totalSafePDCs).times(0.58).toString()) + ' ج.م', percentage: 58, color: '#1e3a8a' }
         ],
         auditContext: {
           entryTypeAr: 'مدين: أقساط ومستحقات مؤجلة (104000) | دائن: إيرادات عقود مؤجلة (203000)',
@@ -588,17 +588,17 @@ export const CapitalFlowMindmap: React.FC<CapitalFlowMindmapProps> = ({
         subtitleAr: 'تمويل مباشر للمشروعات دون أعباء فوائد',
         subtitleEn: 'Direct capital calls & equity injection',
         amount: totalInjectedCapital,
-        accentColor: '#d4af37',
+        accentColor: '#946f23',
         velocityLabelAr: 'تمويل ذاتي مباشر',
         velocityLabelEn: 'Direct Equity',
-        velocityBadgeColor: '#b45309',
+        velocityBadgeColor: '#946f23',
         summaryAr: 'مبالغ التمويل الذاتي المحقونة من الشركاء والمساهمين لتغطية شراء الأراضي والإنفاق التأسيسي، مما يعزز الملاءة ويحمي هوامش الربح.',
         summaryEn: 'Equity funds injected by partners for site acquisitions and initial infrastructure, eliminating bank debt reliance.',
         metrics: [
           { labelAr: 'إجمالي رأس المال المحقون', labelEn: 'Total Injected Capital', value: `${formatCleanWholeNumber(totalInjectedCapital)} ج.م` },
-          { labelAr: 'طلبات التمويل المسجلة', labelEn: 'Logged Capital Calls', value: `${partnerCalls.length} طلبات`, color: '#d4af37' },
-          { labelAr: 'عبء الفوائد التمويلية', labelEn: 'Interest Cost', value: '0.00%', color: '#10b981' },
-          { labelAr: 'الحصة من القاعدة', labelEn: 'Share of Base', value: `${totalInflowVolume.isZero() ? 0 : Math.round(D(totalInjectedCapital).div(totalInflowVolume).times(100).toNumber())}%`, color: '#d4af37' }
+          { labelAr: 'طلبات التمويل المسجلة', labelEn: 'Logged Capital Calls', value: `${partnerCalls.length} طلبات`, color: '#946f23' },
+          { labelAr: 'عبء الفوائد التمويلية', labelEn: 'Interest Cost', value: '0.00%', color: '#047857' },
+          { labelAr: 'الحصة من القاعدة', labelEn: 'Share of Base', value: `${totalInflowVolume.isZero() ? 0 : Math.round(D(totalInjectedCapital).div(totalInflowVolume).times(100).toNumber())}%`, color: '#946f23' }
         ],
         auditContext: {
           entryTypeAr: 'مدين: البنوك (102000) | دائن: رأس مال الشركاء / جاري الشركاء (301000)',
@@ -619,17 +619,17 @@ export const CapitalFlowMindmap: React.FC<CapitalFlowMindmapProps> = ({
         subtitleAr: 'أقساط تعاقدية مؤجلة الاستحقاق بموجب عقود البيع',
         subtitleEn: 'Deferred contract receivables on sold units',
         amount: deferredBacklog,
-        accentColor: '#06b6d4',
+        accentColor: '#1e40af',
         velocityLabelAr: 'استحقاقات قادمة بالعقود',
         velocityLabelEn: 'Scheduled Dues',
-        velocityBadgeColor: '#0891b2',
+        velocityBadgeColor: '#1e40af',
         summaryAr: 'الرصيد المالي المتبقي في ذمة المشترين بموجب عقود البيع وجداول الأقساط المعتمدة. يتم تحصيله نقداً باليد أو تحويل مع إصدار سندات قبض عند حلول كل موعد سداد.',
         summaryEn: 'Committed contract receivables pipeline representing expected collections aligned with client payment schedules.',
         metrics: [
           { labelAr: 'الرصيد التعاقدي المتبقي', labelEn: 'Backlog Balance', value: `${formatCleanWholeNumber(deferredBacklog)} ج.م` },
           { labelAr: 'إجمالي مبيعات المحفظة', labelEn: 'Total Portfolio Sales', value: `${formatCleanWholeNumber(totalGrossContractValue)} ج.م` },
-          { labelAr: 'نسبة التغطية التعاقدية', labelEn: 'Backlog Coverage', value: backlogRatio, color: '#06b6d4' },
-          { labelAr: 'طريقة التحصيل', labelEn: 'Collection Mode', value: 'سندات قبض كاش / تحويل', color: '#10b981' }
+          { labelAr: 'نسبة التغطية التعاقدية', labelEn: 'Backlog Coverage', value: backlogRatio, color: '#1e40af' },
+          { labelAr: 'طريقة التحصيل', labelEn: 'Collection Mode', value: 'سندات قبض كاش / تحويل', color: '#047857' }
         ],
         auditContext: {
           entryTypeAr: 'استحقاق تعاقدي بموجب جدول أقساط العقد وسندات القبض النقدية',
@@ -650,21 +650,21 @@ export const CapitalFlowMindmap: React.FC<CapitalFlowMindmapProps> = ({
         subtitleAr: 'المحفظة المركزية للسيولة والتدفقات النقدية الحرة',
         subtitleEn: 'Consolidated real cash & liquid bank reserves',
         amount: kpis.cashBank,
-        accentColor: '#d4af37',
+        accentColor: '#946f23',
         velocityLabelAr: 'سيولة حرة غير مقيدة',
         velocityLabelEn: 'Unrestricted Liquid',
         velocityBadgeColor: '#946f23',
         summaryAr: 'مجمع السيولة المركزي المجمع لكافة الخزائن والحسابات البنكية للمؤسسة. يدير التدفقات الداخلة ويوزع الصرف على المشروعات والالتزامات وفق الأولويات الرأسمالية.',
         summaryEn: 'Centralized liquidity hub managing free cash reserves, balancing capital inflows against project construction disbursements.',
         metrics: [
-          { labelAr: 'السيولة الحرة المتاحة', labelEn: 'Free Cash Balance', value: `${formatCleanWholeNumber(kpis.cashBank)} ج.م`, color: '#d4af37' },
-          { labelAr: 'إجمالي التدفقات الداخلة', labelEn: 'Total Inflows', value: `${formatCleanWholeNumber(totalInflowVolume.toString())} ج.م`, color: '#10b981' },
-          { labelAr: 'إجمالي المصروفات المنفذة', labelEn: 'Total Outflows', value: `${formatCleanWholeNumber(totalOutflowVolume.toString())} ج.م`, color: '#f59e0b' },
-          { labelAr: 'صافي الفائض التشغيلي', labelEn: 'Net Cash Spread', value: `${netOperationalDelta.isNegative() ? '-' : '+'}${formatCleanWholeNumber(netOperationalDelta.abs().toString())} ج.م`, color: netOperationalDelta.isNegative() ? '#ef4444' : '#10b981' }
+          { labelAr: 'السيولة الحرة المتاحة', labelEn: 'Free Cash Balance', value: `${formatCleanWholeNumber(kpis.cashBank)} ج.م`, color: '#946f23' },
+          { labelAr: 'إجمالي التدفقات الداخلة', labelEn: 'Total Inflows', value: `${formatCleanWholeNumber(totalInflowVolume.toString())} ج.م`, color: '#047857' },
+          { labelAr: 'إجمالي المصروفات المنفذة', labelEn: 'Total Outflows', value: `${formatCleanWholeNumber(totalOutflowVolume.toString())} ج.م`, color: '#b45309' },
+          { labelAr: 'صافي الفائض التشغيلي', labelEn: 'Net Cash Spread', value: `${netOperationalDelta.isNegative() ? '-' : '+'}${formatCleanWholeNumber(netOperationalDelta.abs().toString())} ج.م`, color: netOperationalDelta.isNegative() ? '#c2410c' : '#047857' }
         ],
         breakdowns: [
-          { labelAr: 'معدل تغطية تكاليف المشروعات المنفذة (WIP)', labelEn: 'WIP Cost Coverage', amount: wipCoverage, percentage: Math.min(100, Math.round(parseFloat(wipCoverage) || 0)), color: '#d4af37' },
-          { labelAr: 'نسبة التدفقات الداخلة إلى المصروفات', labelEn: 'Inflow to Outflow Ratio', amount: totalOutflowVolume.isZero() ? '100%' : (totalInflowVolume.div(totalOutflowVolume).times(100).toFixed(0) + '%'), percentage: Math.min(100, Math.round(totalOutflowVolume.isZero() ? 100 : totalInflowVolume.div(totalOutflowVolume).times(100).toNumber())), color: '#10b981' }
+          { labelAr: 'معدل تغطية تكاليف المشروعات المنفذة (WIP)', labelEn: 'WIP Cost Coverage', amount: wipCoverage, percentage: Math.min(100, Math.round(parseFloat(wipCoverage) || 0)), color: '#946f23' },
+          { labelAr: 'نسبة التدفقات الداخلة إلى المصروفات', labelEn: 'Inflow to Outflow Ratio', amount: totalOutflowVolume.isZero() ? '100%' : (totalInflowVolume.div(totalOutflowVolume).times(100).toFixed(0) + '%'), percentage: Math.min(100, Math.round(totalOutflowVolume.isZero() ? 100 : totalInflowVolume.div(totalOutflowVolume).times(100).toNumber())), color: '#047857' }
         ],
         auditContext: {
           entryTypeAr: 'الأصول المتداولة: نقدية وما في حكمها وحسابات جارية واستثمارية (101000/102000)',
@@ -685,17 +685,17 @@ export const CapitalFlowMindmap: React.FC<CapitalFlowMindmapProps> = ({
         subtitleAr: 'تكاليف الأراضي الاستراتيجية وتراخيصها',
         subtitleEn: 'Strategic site purchases & title deeds',
         amount: wipAccounts.land || '0.00',
-        accentColor: '#b45309',
+        accentColor: '#92400e',
         velocityLabelAr: 'أصل رأسمالي استراتيجي',
         velocityLabelEn: 'Strategic CapEx',
-        velocityBadgeColor: '#b45309',
+        velocityBadgeColor: '#92400e',
         summaryAr: 'إجمالي الاستثمارات الرأسمالية في شراء أراضي المشروعات الاستراتيجية ورسوم التخصيص والتسجيل المحملة على تكلفة التطوير قيد التنفيذ.',
         summaryEn: 'Capitalized investments in strategic land acquisition, parcel zoning, and title registration fees.',
         metrics: [
           { labelAr: 'منصرف شراء الأراضي', labelEn: 'Land Expenditure', value: `${formatCleanWholeNumber(wipAccounts.land || '0.00')} ج.م` },
-          { labelAr: 'الحصة من تكاليف WIP', labelEn: 'Share of WIP', value: `${totalOutflowVolume.isZero() ? 0 : Math.round(D(wipAccounts.land || 0).div(totalOutflowVolume).times(100).toNumber())}%`, color: '#b45309' },
+          { labelAr: 'الحصة من تكاليف WIP', labelEn: 'Share of WIP', value: `${totalOutflowVolume.isZero() ? 0 : Math.round(D(wipAccounts.land || 0).div(totalOutflowVolume).times(100).toNumber())}%`, color: '#92400e' },
           { labelAr: 'طبيعة الأصل', labelEn: 'Asset Type', value: 'أصل استثماري غير قابل للإهلاك' },
-          { labelAr: 'الموقف القانوني', labelEn: 'Legal Status', value: 'سندات ملكية مسجلة وموثقة', color: '#10b981' }
+          { labelAr: 'الموقف القانوني', labelEn: 'Legal Status', value: 'سندات ملكية مسجلة وموثقة', color: '#047857' }
         ],
         auditContext: {
           entryTypeAr: 'مدين: مشروعات قيد التنفيذ - أراضي (120100) | دائن: البنوك/الملاك (102000)',
@@ -716,17 +716,17 @@ export const CapitalFlowMindmap: React.FC<CapitalFlowMindmapProps> = ({
         subtitleAr: 'الهيكل الخرساني وأعمال المقاولات والأساسات',
         subtitleEn: 'Excavation, footings & reinforced structure',
         amount: wipAccounts.civil || '0.00',
-        accentColor: '#64748b',
+        accentColor: '#c2410c',
         velocityLabelAr: 'صرف تنفيذي مباشر',
         velocityLabelEn: 'Direct Site Outflow',
-        velocityBadgeColor: '#475569',
+        velocityBadgeColor: '#c2410c',
         summaryAr: 'مستخلصات المقاولين المعتمدة لأعمال الحفر، الأساسات، والأعمدة والأسقف الخرسانية المسلحة والمباني بكافة المواقع قيد الإنشاء.',
         summaryEn: 'Consultant-certified contractor progress claims for earthwork, foundations, concrete frames, and masonry.',
         metrics: [
           { labelAr: 'منصرف الإنشاءات', labelEn: 'Structural Expenditure', value: `${formatCleanWholeNumber(wipAccounts.civil || '0.00')} ج.م` },
-          { labelAr: 'الحصة من تكاليف WIP', labelEn: 'Share of WIP', value: `${totalOutflowVolume.isZero() ? 0 : Math.round(D(wipAccounts.civil || 0).div(totalOutflowVolume).times(100).toNumber())}%`, color: '#64748b' },
+          { labelAr: 'الحصة من تكاليف WIP', labelEn: 'Share of WIP', value: `${totalOutflowVolume.isZero() ? 0 : Math.round(D(wipAccounts.civil || 0).div(totalOutflowVolume).times(100).toNumber())}%`, color: '#c2410c' },
           { labelAr: 'آلية الصرف', labelEn: 'Disbursement Type', value: 'مستخلصات دورية هندسية معتمدة' },
-          { labelAr: 'نسبة الإنجاز الهيكلي', labelEn: 'Structural Progress', value: 'مطابق للمخطط الزمني', color: '#10b981' }
+          { labelAr: 'نسبة الإنجاز الهيكلي', labelEn: 'Structural Progress', value: 'مطابق للمخطط الزمني', color: '#047857' }
         ],
         auditContext: {
           entryTypeAr: 'مدين: مشروعات قيد التنفيذ - إنشاءات (120200) | دائن: مقاولي الباطن (201000)',
@@ -747,17 +747,17 @@ export const CapitalFlowMindmap: React.FC<CapitalFlowMindmapProps> = ({
         subtitleAr: 'شبكات الكهرباء، المياه، التكييف، والصرف',
         subtitleEn: 'Power, water networks, HVAC & fire fighting',
         amount: wipAccounts.mep || '0.00',
-        accentColor: '#059669',
+        accentColor: '#1d4ed8',
         velocityLabelAr: 'تجهيزات متخصصة',
         velocityLabelEn: 'Specialized Utility',
-        velocityBadgeColor: '#059669',
+        velocityBadgeColor: '#1d4ed8',
         summaryAr: 'تكاليف شبكات التغذية الكهربائية، الصرف الصحي، محطات التكييف، أنظمة مكافحة الحرائق، وشبكات الاتصالات والإنترنت بالمشروعات.',
         summaryEn: 'Capital expenditure on MEP systems, plumbing, electric distribution networks, and advanced firefighting.',
         metrics: [
           { labelAr: 'منصرف الكهروميكانيك', labelEn: 'MEP Outflow', value: `${formatCleanWholeNumber(wipAccounts.mep || '0.00')} ج.م` },
-          { labelAr: 'الحصة من تكاليف WIP', labelEn: 'Share of WIP', value: `${totalOutflowVolume.isZero() ? 0 : Math.round(D(wipAccounts.mep || 0).div(totalOutflowVolume).times(100).toNumber())}%`, color: '#059669' },
+          { labelAr: 'الحصة من تكاليف WIP', labelEn: 'Share of WIP', value: `${totalOutflowVolume.isZero() ? 0 : Math.round(D(wipAccounts.mep || 0).div(totalOutflowVolume).times(100).toNumber())}%`, color: '#1d4ed8' },
           { labelAr: 'جودة التجهيز', labelEn: 'Equipment Standard', value: 'مطابق للأكواد العالمية' },
-          { labelAr: 'خطابات الضمان', labelEn: 'Warranty Slips', value: 'سارية ومودعة بالخزينة', color: '#10b981' }
+          { labelAr: 'خطابات الضمان', labelEn: 'Warranty Slips', value: 'سارية ومودعة بالخزينة', color: '#047857' }
         ],
         auditContext: {
           entryTypeAr: 'مدين: مشروعات قيد التنفيذ - كهروميكانيك (120300) | دائن: الموردون والمقاولون (201000)',
@@ -778,17 +778,17 @@ export const CapitalFlowMindmap: React.FC<CapitalFlowMindmapProps> = ({
         subtitleAr: 'واجهات حجرية، رخام، ودهانات فاخرة',
         subtitleEn: 'Stone facades, marble lobbies & premium paint',
         amount: wipAccounts.finishing || '0.00',
-        accentColor: '#f59e0b',
+        accentColor: '#701a75',
         velocityLabelAr: 'مرحلة التسليم النهائي',
         velocityLabelEn: 'Handover Stage',
-        velocityBadgeColor: '#d97706',
+        velocityBadgeColor: '#701a75',
         summaryAr: 'توريدات وتركيبات الأحجار الطبيعية للواجهات، الرخام، الألمونيوم المزدوج، والأعمال المعمارية التي تمنح المشروع مظهره الفاخر الأخير.',
         summaryEn: 'Procurement and installation of premium exterior stone, architectural marble, and interior fit-outs.',
         metrics: [
           { labelAr: 'منصرف التشطيبات', labelEn: 'Finishing Outflow', value: `${formatCleanWholeNumber(wipAccounts.finishing || '0.00')} ج.م` },
-          { labelAr: 'الحصة من تكاليف WIP', labelEn: 'Share of WIP', value: `${totalOutflowVolume.isZero() ? 0 : Math.round(D(wipAccounts.finishing || 0).div(totalOutflowVolume).times(100).toNumber())}%`, color: '#f59e0b' },
+          { labelAr: 'الحصة من تكاليف WIP', labelEn: 'Share of WIP', value: `${totalOutflowVolume.isZero() ? 0 : Math.round(D(wipAccounts.finishing || 0).div(totalOutflowVolume).times(100).toNumber())}%`, color: '#701a75' },
           { labelAr: 'نوعية المواد', labelEn: 'Material Grade', value: 'حجر طبيعي ورخام مستورد' },
-          { labelAr: 'حالة الجاهزية', labelEn: 'Handover State', value: 'المرحلة النهائية للتسليم', color: '#10b981' }
+          { labelAr: 'حالة الجاهزية', labelEn: 'Handover State', value: 'المرحلة النهائية للتسليم', color: '#047857' }
         ],
         auditContext: {
           entryTypeAr: 'مدين: مشروعات قيد التنفيذ - تشطيبات (120400) | دائن: مقاولو التشطيبات (201000)',
@@ -809,21 +809,21 @@ export const CapitalFlowMindmap: React.FC<CapitalFlowMindmapProps> = ({
         subtitleAr: 'ضريبة تصرفات عقارية (2.5%) وقيمة مضافة ورسوم',
         subtitleEn: '2.5% property disposal tax & VAT provisions',
         amount: totalTaxes,
-        accentColor: '#ef4444',
+        accentColor: '#475569',
         velocityLabelAr: 'التزام نظامي واجب الصرف',
         velocityLabelEn: 'Mandatory Legal',
-        velocityBadgeColor: '#dc2626',
+        velocityBadgeColor: '#475569',
         summaryAr: 'المبالغ المسددة والمستحقة لمصلحة الضرائب والجهات الحكومية، بما فيها ضريبة التصرفات العقارية ورسوم الشهر العقاري وتراخيص البناء.',
         summaryEn: 'Settled and accrued statutory tax liabilities including 2.5% real estate disposal tax, municipality dues, and VAT.',
         metrics: [
           { labelAr: 'إجمالي الضرائب والرسوم', labelEn: 'Total Taxes', value: `${formatCleanWholeNumber(totalTaxes)} ج.م` },
-          { labelAr: 'عدد السجلات المقيدة', labelEn: 'Logged Records', value: `${taxRecords.length} سجلات`, color: '#ef4444' },
-          { labelAr: 'الحصة من المصروفات', labelEn: 'Share of Outflows', value: `${totalOutflowVolume.isZero() ? 0 : Math.round(D(totalTaxes).div(totalOutflowVolume).times(100).toNumber())}%`, color: '#ef4444' },
-          { labelAr: 'الموقف الضريبي', labelEn: 'Tax Compliance', value: 'سجل ضريبي نظامي منتظم', color: '#10b981' }
+          { labelAr: 'عدد السجلات المقيدة', labelEn: 'Logged Records', value: `${taxRecords.length} سجلات`, color: '#475569' },
+          { labelAr: 'الحصة من المصروفات', labelEn: 'Share of Outflows', value: `${totalOutflowVolume.isZero() ? 0 : Math.round(D(totalTaxes).div(totalOutflowVolume).times(100).toNumber())}%`, color: '#475569' },
+          { labelAr: 'الموقف الضريبي', labelEn: 'Tax Compliance', value: 'سجل ضريبي نظامي منتظم', color: '#047857' }
         ],
         breakdowns: [
-          { labelAr: 'ضريبة التصرفات العقارية (2.5%)', labelEn: '2.5% Disposal Tax', amount: formatCleanWholeNumber(D(totalTaxes).times(0.8).toString()) + ' ج.م', percentage: 80, color: '#ef4444' },
-          { labelAr: 'رسوم تراخيص وتوثيق حكومية', labelEn: 'Registration & Permits', amount: formatCleanWholeNumber(D(totalTaxes).times(0.2).toString()) + ' ج.م', percentage: 20, color: '#dc2626' }
+          { labelAr: 'ضريبة التصرفات العقارية (2.5%)', labelEn: '2.5% Disposal Tax', amount: formatCleanWholeNumber(D(totalTaxes).times(0.8).toString()) + ' ج.م', percentage: 80, color: '#475569' },
+          { labelAr: 'رسوم تراخيص وتوثيق حكومية', labelEn: 'Registration & Permits', amount: formatCleanWholeNumber(D(totalTaxes).times(0.2).toString()) + ' ج.م', percentage: 20, color: '#334155' }
         ],
         auditContext: {
           entryTypeAr: 'مدين: ضرائب ورسوم مشروعات (508000) | دائن: مصلحة الضرائب (205000)',
@@ -1158,10 +1158,10 @@ export const CapitalFlowMindmap: React.FC<CapitalFlowMindmapProps> = ({
                   markerHeight="8"
                   orient="auto"
                 >
-                  <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#10b981" />
+                  <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#047857" />
                 </marker>
 
-                {/* Cyan Arrow Marker */}
+                {/* Navy / Blue Arrow Marker */}
                 <marker
                   id="arrow-cyan"
                   viewBox="0 0 10 10"
@@ -1171,7 +1171,7 @@ export const CapitalFlowMindmap: React.FC<CapitalFlowMindmapProps> = ({
                   markerHeight="8"
                   orient="auto"
                 >
-                  <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#06b6d4" />
+                  <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#1e40af" />
                 </marker>
 
                 {/* Gold Arrow Marker */}
@@ -1184,7 +1184,7 @@ export const CapitalFlowMindmap: React.FC<CapitalFlowMindmapProps> = ({
                   markerHeight="8"
                   orient="auto"
                 >
-                  <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#d4af37" />
+                  <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#946f23" />
                 </marker>
 
                 {/* Amber Arrow Marker */}
@@ -1197,10 +1197,10 @@ export const CapitalFlowMindmap: React.FC<CapitalFlowMindmapProps> = ({
                   markerHeight="8"
                   orient="auto"
                 >
-                  <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#f59e0b" />
+                  <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#b45309" />
                 </marker>
 
-                {/* Orange / Brown Arrow Marker */}
+                {/* Orange / Rust Arrow Marker */}
                 <marker
                   id="arrow-orange"
                   viewBox="0 0 10 10"
@@ -1210,10 +1210,10 @@ export const CapitalFlowMindmap: React.FC<CapitalFlowMindmapProps> = ({
                   markerHeight="8"
                   orient="auto"
                 >
-                  <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#b45309" />
+                  <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#c2410c" />
                 </marker>
 
-                {/* Red Arrow Marker */}
+                {/* Red / Deep Brick Arrow Marker */}
                 <marker
                   id="arrow-red"
                   viewBox="0 0 10 10"
@@ -1223,10 +1223,10 @@ export const CapitalFlowMindmap: React.FC<CapitalFlowMindmapProps> = ({
                   markerHeight="8"
                   orient="auto"
                 >
-                  <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#ef4444" />
+                  <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#b91c1c" />
                 </marker>
 
-                {/* Indigo Arrow Marker */}
+                {/* Indigo / Plum Arrow Marker */}
                 <marker
                   id="arrow-indigo"
                   viewBox="0 0 10 10"
@@ -1236,7 +1236,7 @@ export const CapitalFlowMindmap: React.FC<CapitalFlowMindmapProps> = ({
                   markerHeight="8"
                   orient="auto"
                 >
-                  <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#6366f1" />
+                  <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#701a75" />
                 </marker>
 
                 {/* Slate Arrow Marker */}
@@ -1249,7 +1249,7 @@ export const CapitalFlowMindmap: React.FC<CapitalFlowMindmapProps> = ({
                   markerHeight="8"
                   orient="auto"
                 >
-                  <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#64748b" />
+                  <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#475569" />
                 </marker>
 
                 {/* Teal Arrow Marker */}
@@ -1262,7 +1262,7 @@ export const CapitalFlowMindmap: React.FC<CapitalFlowMindmapProps> = ({
                   markerHeight="8"
                   orient="auto"
                 >
-                  <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#059669" />
+                  <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#047857" />
                 </marker>
               </defs>
 
@@ -1272,14 +1272,14 @@ export const CapitalFlowMindmap: React.FC<CapitalFlowMindmapProps> = ({
                   : true;
                 
                 let markerId = 'arrow-emerald';
-                if (conn.color === '#d4af37' || conn.color === '#e2c974') markerId = 'arrow-gold';
-                else if (conn.color === '#06b6d4' || conn.color === '#22d3ee') markerId = 'arrow-cyan';
-                else if (conn.color === '#f59e0b') markerId = 'arrow-amber';
-                else if (conn.color === '#b45309' || conn.color === '#d97706') markerId = 'arrow-orange';
-                else if (conn.color === '#ef4444' || conn.color === '#f87171' || conn.color === '#dc2626') markerId = 'arrow-red';
-                else if (conn.color === '#6366f1' || conn.color === '#818cf8') markerId = 'arrow-indigo';
-                else if (conn.color === '#64748b' || conn.color === '#475569') markerId = 'arrow-slate';
-                else if (conn.color === '#059669') markerId = 'arrow-teal';
+                if (conn.color === '#946f23' || conn.color === '#d4af37' || conn.color === '#e2c974') markerId = 'arrow-gold';
+                else if (conn.color === '#1e40af' || conn.color === '#1d4ed8' || conn.color === '#06b6d4' || conn.color === '#22d3ee') markerId = 'arrow-cyan';
+                else if (conn.color === '#b45309' || conn.color === '#92400e' || conn.color === '#f59e0b') markerId = 'arrow-amber';
+                else if (conn.color === '#c2410c' || conn.color === '#d97706') markerId = 'arrow-orange';
+                else if (conn.color === '#ef4444' || conn.color === '#b91c1c' || conn.color === '#dc2626') markerId = 'arrow-red';
+                else if (conn.color === '#701a75' || conn.color === '#6366f1' || conn.color === '#818cf8') markerId = 'arrow-indigo';
+                else if (conn.color === '#475569' || conn.color === '#64748b') markerId = 'arrow-slate';
+                else if (conn.color === '#047857' || conn.color === '#059669') markerId = 'arrow-teal';
 
                 return (
                   <g key={`${conn.fromId}-${conn.toId}-${idx}`}>

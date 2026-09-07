@@ -373,13 +373,14 @@ export const PropertyFinancialMatrix: React.FC<PropertyFinancialMatrixProps> = (
           {/* Type & Area Over Image Bottom */}
           <div style={{ position: 'absolute', bottom: '10px', right: '12px', left: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
             <span style={{
-              background: 'rgba(15, 23, 42, 0.75)',
-              color: '#fef08a',
-              border: '1px solid rgba(254, 240, 138, 0.3)',
-              padding: '0.15rem 0.5rem',
-              borderRadius: '4px',
+              background: 'rgba(15, 23, 42, 0.82)',
+              color: '#ffffff',
+              border: '1px solid rgba(255, 255, 255, 0.2)',
+              padding: '0.2rem 0.55rem',
+              borderRadius: '6px',
               fontSize: '0.7rem',
-              fontWeight: 800
+              fontWeight: 700,
+              backdropFilter: 'blur(6px)'
             }}>
               {(() => {
                 const title = (property.title_ar || property.title_en || '').toLowerCase();
@@ -391,9 +392,21 @@ export const PropertyFinancialMatrix: React.FC<PropertyFinancialMatrixProps> = (
               })()}
             </span>
 
-            <span style={{ fontSize: '0.72rem', color: '#ffffff', display: 'flex', alignItems: 'center', gap: '0.25rem', fontWeight: 600 }}>
-              <MapPin size={12} color="#fef08a" />
-              <span>{property.location || (isAr ? 'الشيخ زايد' : 'Sheikh Zayed')}</span>
+            <span style={{ 
+              fontSize: '0.72rem', 
+              color: '#ffffff', 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '0.25rem', 
+              fontWeight: 600,
+              background: 'rgba(15, 23, 42, 0.82)',
+              border: '1px solid rgba(255, 255, 255, 0.2)',
+              padding: '0.2rem 0.55rem',
+              borderRadius: '6px',
+              backdropFilter: 'blur(6px)'
+            }}>
+              <MapPin size={12} color="#c5a059" />
+              <span>{property.location || (isAr ? 'الشرقية' : 'Sharkia')}</span>
             </span>
           </div>
         </div>
@@ -427,7 +440,7 @@ export const PropertyFinancialMatrix: React.FC<PropertyFinancialMatrixProps> = (
               <span>
                 {property.completion_status === 'ready' 
                   ? (isAr ? 'جاهز للتسليم' : 'Ready') 
-                  : (isAr ? 'تحت الإنشاء (Off-Plan)' : 'Off-Plan')}
+                  : (isAr ? 'تحت الإنشاء والتشطيب' : 'Off-Plan')}
               </span>
             </div>
           </div>
@@ -493,22 +506,22 @@ export const PropertyFinancialMatrix: React.FC<PropertyFinancialMatrixProps> = (
           }}>
             {/* Row 1: Primary Value */}
             <div style={{ display: 'flex', justifyContent: 'space-between', color: '#64748b' }}>
-              <span>{isContracted ? (isAr ? 'قيمة التعاقد (V):' : 'Contract Value (V):') : (isAr ? 'السعر المعروض بالكتالوج:' : 'Listing Price:')}</span>
-              <span style={{ fontWeight: 800, color: '#946f23', fontVariantNumeric: 'tabular-nums' }}>
+              <span style={{ fontWeight: 600 }}>{isContracted ? (isAr ? 'إجمالي ثمن الوحدة بالعقد:' : 'Agreed Contract Price:') : (isAr ? 'إجمالي سعر بيع الوحدة:' : 'Listing Price:')}</span>
+              <span style={{ fontWeight: 900, color: '#0f172a', fontVariantNumeric: 'tabular-nums', fontSize: '0.85rem' }}>
                 {D(grossVal).formatEGP(isAr)}
               </span>
             </div>
 
             {/* Row 2: Secondary Metric */}
             {isContracted ? (
-              <div style={{ display: 'flex', justifyContent: 'space-between', color: '#15803d', fontWeight: 700 }}>
-                <span>{isAr ? 'المحصل كاش (C):' : 'Collected Cash (C):'}</span>
+              <div style={{ display: 'flex', justifyContent: 'space-between', color: '#047857', fontWeight: 700 }}>
+                <span>{isAr ? 'المسدد كاش بالخزنة والبنك:' : 'Collected Cash:'}</span>
                 <span style={{ fontVariantNumeric: 'tabular-nums' }}>{D(collectedCash).formatEGP(isAr)} ({collectionPercent}%)</span>
               </div>
             ) : (
-              <div style={{ display: 'flex', justifyContent: 'space-between', color: '#946f23', fontWeight: 600 }}>
-                <span>{isAr ? 'سعر المتر التقديري:' : 'Est. Price / SQM:'}</span>
-                <span style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 700, color: '#946f23' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', color: '#475569', fontWeight: 600 }}>
+                <span>{isAr ? 'سعر المتر المسطح:' : 'Price / m²:'}</span>
+                <span style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 700, color: '#1e40af' }}>
                   {D(pricePerSqm).formatEGP(isAr)} / م²
                 </span>
               </div>
@@ -517,15 +530,15 @@ export const PropertyFinancialMatrix: React.FC<PropertyFinancialMatrixProps> = (
             {/* Row 3: Auxiliary Financial Context */}
             {isContracted ? (
               <div style={{ display: 'flex', justifyContent: 'space-between', color: '#64748b' }}>
-                <span>{isAr ? 'المتبقي كأقساط (A/R):' : 'Remaining AR:'}</span>
-                <span style={{ fontVariantNumeric: 'tabular-nums', color: remainingAr > 0 ? '#dc2626' : '#059669' }}>
+                <span>{isAr ? 'المتبقي كأقساط مجدولة:' : 'Remaining Installments:'}</span>
+                <span style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 700, color: remainingAr > 0 ? '#b45309' : '#047857' }}>
                   {D(remainingAr).formatEGP(isAr)}
                 </span>
               </div>
             ) : (
               <div style={{ display: 'flex', justifyContent: 'space-between', color: '#64748b' }}>
-                <span>{isAr ? 'مقدم الحجز والتعاقد (15%):' : 'Booking DP (15%):'}</span>
-                <span style={{ fontVariantNumeric: 'tabular-nums', color: '#0f172a' }}>
+                <span>{isAr ? 'مقدم الحجز المطلوب (١٥٪):' : 'Down Payment (15%):'}</span>
+                <span style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 700, color: '#946f23' }}>
                   {D(suggestedDownpayment).formatEGP(isAr)}
                 </span>
               </div>
@@ -666,208 +679,38 @@ export const PropertyFinancialMatrix: React.FC<PropertyFinancialMatrixProps> = (
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-      {/* ─── PROPERTIES PORTFOLIO WORKBENCH HEADER & COMMAND BAR ─── */}
-      <div style={{
-        background: '#ffffff',
-        border: '1px solid #e2e8f0',
-        borderRadius: '16px',
-        padding: '1.1rem 1.35rem',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '0.85rem',
-        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.03)'
-      }}>
-        {/* ROW 1: DYNAMIC SECTION TITLE & INVENTORY TELEMETRY */}
-        {filterStatus === 'available' && (
-          <div style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            flexWrap: 'wrap',
-            gap: '0.75rem'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-              <div style={{ background: 'rgba(184, 144, 62, 0.10)', color: '#946f23', padding: '0.45rem', borderRadius: '8px' }}>
-                <Clock size={18} />
-              </div>
-              <div>
-                <h3 style={{ margin: 0, fontSize: '0.98rem', fontWeight: 800, color: '#0f172a' }}>
-                  {isAr ? 'الوحدات والمشاريع المتاحة للتعاقد والبيع' : 'Available Properties & Open Inventory'}
-                </h3>
-                <span style={{ fontSize: '0.72rem', color: '#64748b' }}>
-                  {isAr ? 'عقارات ووحدات شاغرة جاهزة للتعاقد الفوري أو قيد الإنشاء' : 'Unsold units and properties ready for contract execution'}
-                </span>
-              </div>
-            </div>
-            <span style={{
-              background: 'rgba(184, 144, 62, 0.08)',
-              color: '#946f23',
-              border: '1px solid rgba(184, 144, 62, 0.25)',
-              padding: '0.3rem 0.75rem',
-              borderRadius: '20px',
-              fontSize: '0.74rem',
-              fontWeight: 800
-            }}>
-              {availableProperties.length} {isAr ? 'عقار متاح' : 'Available'}
-            </span>
-          </div>
-        )}
-
-        {filterStatus === 'sold' && (
-          <div style={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '0.85rem'
-          }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-                <div style={{ background: '#f0fdf4', color: '#15803d', padding: '0.5rem', borderRadius: '10px' }}>
-                  <CheckCircle2 size={20} />
-                </div>
-                <div>
-                  <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: '#0f172a' }}>
-                    {isAr ? 'محفظة العقارات والمشاريع المُتعاقد عليها (تم التعاقد)' : 'Contracted & Sold Portfolio (Closed Deals)'}
-                  </h3>
-                  <span style={{ fontSize: '0.74rem', color: '#15803d', fontWeight: 600 }}>
-                    {isAr ? 'عقارات ومشاريع تم توثيق عقود بيعها بالكامل وإلحاقها بدفاتر الحسابات' : 'Fully contracted and closed real estate inventory registered in ERP'}
-                  </span>
-                </div>
-              </div>
-              <span style={{
-                background: '#f0fdf4',
-                color: '#15803d',
-                border: '1px solid #bbf7d0',
-                padding: '0.35rem 0.85rem',
-                borderRadius: '20px',
-                fontSize: '0.76rem',
-                fontWeight: 900,
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.35rem'
-              }}>
-                <CheckCircle2 size={13} />
-                <span>{contractedProperties.length} {isAr ? 'عقار تم التعاقد عليه' : 'Contracted'}</span>
-              </span>
-            </div>
-
-            {contractedProperties.length > 0 && (
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-                gap: '0.75rem',
-                background: '#f8fafc',
-                padding: '0.75rem 1rem',
-                borderRadius: '10px',
-                border: '1px solid #e2e8f0'
-              }}>
-                <div>
-                  <span style={{ fontSize: '0.68rem', color: '#64748b', display: 'block' }}>
-                    {isAr ? 'إجمالي قيمة التعاقدات (Gross V):' : 'Gross Contract Value:'}
-                  </span>
-                  <strong style={{ fontSize: '0.92rem', color: '#0f172a', fontVariantNumeric: 'tabular-nums' }}>
-                    {D(contractedAggregates.totalGross).formatEGP(isAr)}
-                  </strong>
-                </div>
-                <div>
-                  <span style={{ fontSize: '0.68rem', color: '#64748b', display: 'block' }}>
-                    {isAr ? 'إجمالي النقدية المحصلة فعلياً (C):' : 'Total Cash Collected:'}
-                  </span>
-                  <strong style={{ fontSize: '0.92rem', color: '#15803d', fontVariantNumeric: 'tabular-nums' }}>
-                    {D(contractedAggregates.totalCollected).formatEGP(isAr)}
-                  </strong>
-                </div>
-                <div>
-                  <span style={{ fontSize: '0.68rem', color: '#64748b', display: 'block' }}>
-                    {isAr ? 'المتبقي كأقساط وتحصيلات (A/R):' : 'Outstanding A/R:'}
-                  </span>
-                  <strong style={{ fontSize: '0.92rem', color: '#946f23', fontVariantNumeric: 'tabular-nums' }}>
-                    {D(contractedAggregates.totalRemaining).formatEGP(isAr)}
-                  </strong>
-                </div>
-                <div>
-                  <span style={{ fontSize: '0.68rem', color: '#64748b', display: 'block' }}>
-                    {isAr ? 'متوسط نسبة تحصيل المحفظة:' : 'Collection Rate:'}
-                  </span>
-                  <strong style={{ fontSize: '0.92rem', color: '#946f23', fontVariantNumeric: 'tabular-nums' }}>
-                    {contractedAggregates.avgCollectionPct}%
-                  </strong>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-
-        {filterStatus === 'all' && (
-          <div style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            flexWrap: 'wrap',
-            gap: '0.75rem'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-              <div style={{ background: 'rgba(15, 23, 42, 0.08)', color: '#0f172a', padding: '0.5rem', borderRadius: '10px' }}>
-                <Layers size={18} />
-              </div>
-              <div>
-                <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 800, color: '#0f172a' }}>
-                  {isAr ? 'كافة وحدات وأصول المحفظة المعمارية' : 'Complete Architecture Portfolio'}
-                </h3>
-                <span style={{ fontSize: '0.72rem', color: '#64748b' }}>
-                  {isAr ? 'عرض مدمج يشمل كافة الوحدات المتاحة للبيع والمشاريع المتعاقد عليها' : 'Integrated inventory of available units and contracted assets'}
-                </span>
-              </div>
-            </div>
-            <span style={{
-              background: '#f1f5f9',
-              color: '#0f172a',
-              border: '1px solid #e2e8f0',
-              padding: '0.35rem 0.85rem',
-              borderRadius: '20px',
-              fontSize: '0.76rem',
-              fontWeight: 800
-            }}>
-              {baseFilteredProperties.length} {isAr ? 'عقار في المحفظة' : 'Properties'}
-            </span>
-          </div>
-        )}
-
-        {/* HAIRLINE DIVIDER */}
-        <div style={{ borderTop: '1px solid #f1f5f9', margin: '0.15rem 0' }} />
-
-        {/* ROW 2: SEARCH & FILTER CONTROLS (Below Title) */}
-        <ZFFilterToolbar
-          tabs={[
-            { id: 'available', label: isAr ? 'المتاحة للتعاقد' : 'Available', count: availableProperties.length },
-            { id: 'sold', label: isAr ? 'تم التعاقد' : 'Contracted', count: contractedProperties.length },
-            { id: 'all', label: isAr ? 'كافة المحفظة' : 'All', count: baseFilteredProperties.length }
-          ]}
-          activeTab={filterStatus}
-          onTabChange={handleFilterStatusChange}
-          searchQuery={searchQuery}
-          onSearchChange={handleSearchChange}
-          searchPlaceholder={isAr ? 'بحث سريع باسم العقار أو المنطقة...' : 'Search unit or location...'}
-          filters={[
-            {
-              id: 'category_filter',
-              value: filterType,
-              onChange: handleFilterTypeChange,
-              ariaLabel: isAr ? 'الفئة والتصنيف' : 'Category Filter',
-              options: [
-                { value: 'all', label: isAr ? 'جميع الفئات والأصناف' : 'All Categories' },
-                { value: 'standard', label: isAr ? 'شقق سكنية عادية' : 'Standard Flats' },
-                { value: 'duplex', label: isAr ? 'دوبلكس' : 'Duplex' },
-                { value: 'roof', label: isAr ? 'شقق رووف مع السطح' : 'Roof Suites' },
-                { value: 'building', label: isAr ? 'عمارات ومباني كاملة' : 'Buildings' },
-                { value: 'garage', label: isAr ? 'جراجات سيارات' : 'Garages' }
-              ]
-            }
-          ]}
-          activeFiltersCount={activeFiltersCount}
-          onResetFilters={handleResetFilters}
-          isAr={isAr}
-        />
-      </div>
+      {/* ─── PROPERTIES PORTFOLIO TOOLBAR ─── */}
+      <ZFFilterToolbar
+        tabs={[
+          { id: 'available', label: isAr ? 'المتاحة للتعاقد' : 'Available', count: availableProperties.length },
+          { id: 'sold', label: isAr ? 'تم التعاقد' : 'Contracted', count: contractedProperties.length },
+          { id: 'all', label: isAr ? 'كافة المحفظة' : 'All', count: baseFilteredProperties.length }
+        ]}
+        activeTab={filterStatus}
+        onTabChange={handleFilterStatusChange}
+        searchQuery={searchQuery}
+        onSearchChange={handleSearchChange}
+        searchPlaceholder={isAr ? 'بحث سريع باسم العقار أو المنطقة أو رقم الشقة...' : 'Search unit or location...'}
+        filters={[
+          {
+            id: 'category_filter',
+            value: filterType,
+            onChange: handleFilterTypeChange,
+            ariaLabel: isAr ? 'الفئة والتصنيف' : 'Category Filter',
+            options: [
+              { value: 'all', label: isAr ? 'جميع الفئات والأصناف' : 'All Categories' },
+              { value: 'standard', label: isAr ? 'شقق سكنية عادية' : 'Standard Flats' },
+              { value: 'duplex', label: isAr ? 'دوبلكس' : 'Duplex' },
+              { value: 'roof', label: isAr ? 'شقق رووف مع السطح' : 'Roof Suites' },
+              { value: 'building', label: isAr ? 'عمارات ومباني كاملة' : 'Buildings' },
+              { value: 'garage', label: isAr ? 'جراجات سيارات' : 'Garages' }
+            ]
+          }
+        ]}
+        activeFiltersCount={activeFiltersCount}
+        onResetFilters={handleResetFilters}
+        isAr={isAr}
+      />
 
       {/* ─── PROPERTIES GRID (PAGINATED) ─── */}
       {paginatedProperties.length > 0 ? (
@@ -1141,75 +984,20 @@ export const PropertyFinancialMatrix: React.FC<PropertyFinancialMatrixProps> = (
                       border: '1px solid #e2e8f0',
                       display: 'flex',
                       flexDirection: 'column',
-                      gap: '0.35rem'
+                      gap: '0.25rem'
                     }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ fontSize: '0.68rem', color: '#64748b' }}>{isAr ? 'السعر الأساسي:' : 'Base Price:'}</span>
-                        <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#0f172a', fontVariantNumeric: 'tabular-nums' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                        <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#946f23' }}>
+                          {isAr ? 'سعر بيع الوحدة:' : 'Unit Sales Price:'}
+                        </span>
+                        <span style={{ fontSize: '1rem', fontWeight: 900, color: '#0f172a', fontVariantNumeric: 'tabular-nums' }}>
                           {D(unit.price_egp).formatEGP(isAr)}
                         </span>
                       </div>
-
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                          <span style={{ fontSize: '0.68rem', color: '#946f23', fontWeight: 700 }}>
-                            {isAr ? 'الضريبة (يدوياً):' : 'Tax (Manual):'}
-                          </span>
-                          {!isUnitSold && (
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setEditingTaxUnit({
-                                  unitId: unit.unit_id,
-                                  unitNumber: unit.unit_number,
-                                  propertyId: selectedBuildingModal.id,
-                                  basePrice: unit.price_egp,
-                                  taxAmount: (unit.tax_amount_egp ?? 0).toString(),
-                                  taxDesc: unit.tax_description || ''
-                                });
-                              }}
-                              style={{
-                                background: '#e0f2fe',
-                                color: '#946f23',
-                                border: '1px solid #bae6fd',
-                                borderRadius: '4px',
-                                padding: '0.1rem 0.4rem',
-                                fontSize: '0.64rem',
-                                fontWeight: 800,
-                                cursor: 'pointer'
-                              }}
-                              title={isAr ? 'تعديل الضريبة المضافة للشقة يدوياً' : 'Edit manual tax'}
-                            >
-                              {isAr ? 'تعديل الضريبة' : 'Edit Tax'}
-                            </button>
-                          )}
-                        </div>
-                        <span style={{ 
-                          fontSize: '0.82rem', 
-                          fontWeight: 700, 
-                          color: (unit.tax_amount_egp && unit.tax_amount_egp > 0) ? '#0284c7' : '#64748b', 
-                          fontVariantNumeric: 'tabular-nums' 
-                        }}>
-                          {unit.tax_amount_egp && unit.tax_amount_egp > 0 
-                            ? `+ ${D(unit.tax_amount_egp).formatEGP(isAr)}` 
-                            : (isAr ? '٠ ج.م' : '0 EGP')}
-                        </span>
-                      </div>
-
-                      <div style={{ 
-                        display: 'flex', 
-                        justifyContent: 'space-between', 
-                        alignItems: 'baseline', 
-                        borderTop: '1px solid #e2e8f0', 
-                        paddingTop: '0.35rem',
-                        marginTop: '0.1rem'
-                      }}>
-                        <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#946f23' }}>
-                          {isAr ? 'الإجمالي شامل الضريبة:' : 'Total with Tax:'}
-                        </span>
-                        <span style={{ fontSize: '1rem', fontWeight: 900, color: '#946f23', fontVariantNumeric: 'tabular-nums' }}>
-                          {D(unit.price_egp + (unit.tax_amount_egp || 0)).formatEGP(isAr)}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.67rem', color: '#64748b' }}>
+                        <span>{isAr ? 'متوسط سعر المتر:' : 'Avg. Price / m²:'}</span>
+                        <span style={{ fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>
+                          {Math.round(unit.price_egp / (unit.area_sqm || 150)).toLocaleString()} {isAr ? 'ج.م / م²' : 'EGP/m²'}
                         </span>
                       </div>
                     </div>

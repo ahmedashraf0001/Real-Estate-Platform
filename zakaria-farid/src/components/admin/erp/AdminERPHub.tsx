@@ -67,7 +67,8 @@ import {
   normalizePartnerSplits,
   smartRemovePartner,
   smartAddPartner,
-  autoBalanceShares
+  autoBalanceShares,
+  saveRegisteredPartner
 } from '@/lib/erp/partnersDirectory';
 
 // UI_BUILD.md §4 Shared Component Library
@@ -82,7 +83,7 @@ import { ImmutableRecordFrame } from '@/components/erp/ImmutableRecordFrame';
 import { ERPFinancialCharts } from './ERPFinancialCharts';
 
 import { QuickTransactionModal } from './QuickTransactionModal';
-import { NewChequeModal } from './NewChequeModal';
+import { NewChequeModal, SupplementData } from './NewChequeModal';
 import { HandCollectionModal } from './HandCollectionModal';
 import { PartnerCapitalCards } from './PartnerCapitalCards';
 import { CockpitAnalyticsCharts } from './CockpitAnalyticsCharts';
@@ -98,16 +99,27 @@ import { GeneralLedgerView } from './v2/views/GeneralLedgerView';
 import { ContractRescissionsView } from './v2/views/ContractRescissionsView';
 import { CostAllocationView } from './v2/views/CostAllocationView';
 import { ApartmentTaxesView } from './v2/views/ApartmentTaxesView';
+import { PartnersManagementView } from './v2/views/PartnersManagementView';
 import { NewContractWizardModal } from './v2/modals/NewContractWizardModal';
 import { CashCollectionReceiptModal } from './v2/modals/CashCollectionReceiptModal';
 import { ContractEscalationModal } from './v2/modals/ContractEscalationModal';
 import { RescissionSettlementModal } from './v2/modals/RescissionSettlementModal';
 import { RSVAllocationModal } from './v2/modals/RSVAllocationModal';
+import { PartnerPayoutModal } from './v2/modals/PartnerPayoutModal';
+import { PartnerCapitalInjectionModal } from './v2/modals/PartnerCapitalInjectionModal';
+import { PartnerDossierModal } from './v2/modals/PartnerDossierModal';
+import { ERPPartnerProfile, ERPPartnerTransaction } from '@/lib/erp/types';
+import { 
+  PartnersEngine, 
+  PartnerFinancialSummary, 
+  INITIAL_PARTNER_PROFILES, 
+  INITIAL_PARTNER_TRANSACTIONS 
+} from '@/lib/erp/partnersEngine';
 import { Property, BuildingUnitItem } from '@/lib/supabase/types';
 
-// FIN-OS Subprogram Workstation Shell Components
 import { ZFNavigationDock, ERPNavModule } from './ZFNavigationDock';
 import { ZFWorkstationHeader } from './v2/ZFWorkstationHeader';
+import { useERPRealtimeSync } from '@/lib/erp/useERPRealtimeSync';
 import { DailyOperationsView } from './v2/views/DailyOperationsView';
 import { CockpitView } from './v2/views/CockpitView';
 import { PropertiesPortfolioView } from './v2/views/PropertiesPortfolioView';
@@ -138,7 +150,8 @@ export type ERPWorkspaceTab =
   | 'pdc' 
   | 'rescissions' 
   | 'cost-allocation' 
-  | 'tax';
+  | 'tax'
+  | 'partners';
 
 const CANONICAL_TABS: Record<string, ERPWorkspaceTab> = {
   cockpit: 'dashboard',
@@ -160,7 +173,11 @@ const CANONICAL_TABS: Record<string, ERPWorkspaceTab> = {
   taxes: 'tax',
   tax: 'tax',
   rescissions: 'rescissions',
-  rescission: 'rescissions'
+  rescission: 'rescissions',
+  partners: 'partners',
+  partner: 'partners',
+  investors: 'partners',
+  financiers: 'partners'
 };
 
 const TAB_TITLES_AR: Record<ERPWorkspaceTab, string> = {
@@ -172,8 +189,9 @@ const TAB_TITLES_AR: Record<ERPWorkspaceTab, string> = {
   pdc: 'أجندة ومواعيد الأقساط | FIN-OS',
   ledger: 'حسابات الشركة ودفتر اليومية | FIN-OS',
   'cost-allocation': 'توزيع مصاريف المباني على الشقق | FIN-OS',
-  tax: 'الضرائب والرسوم على الشقق | FIN-OS',
+  tax: 'ضرائب وتراخيص المشاريع | FIN-OS',
   rescissions: 'إلغاء العقود وترجيع الفلوس | FIN-OS',
+  partners: 'الشركاء وممولو المشاريع | FIN-OS',
 };
 
 const TAB_TITLES_EN: Record<ERPWorkspaceTab, string> = {
@@ -185,8 +203,9 @@ const TAB_TITLES_EN: Record<ERPWorkspaceTab, string> = {
   pdc: 'Installment Dues & Hand Collections | FIN-OS',
   ledger: 'General Ledger & COA | FIN-OS',
   'cost-allocation': 'WIP Cost Allocation (RSV) | FIN-OS',
-  tax: 'Apartment Property Taxes | FIN-OS',
+  tax: 'Project Statutory Taxes & Permits | FIN-OS',
   rescissions: 'Rescissions & Settlement | FIN-OS',
+  partners: 'Partners & Financiers | FIN-OS',
 };
 
 export function resolveERPWorkspaceTab(raw?: string | null): ERPWorkspaceTab {
@@ -378,8 +397,14 @@ export default function AdminERPHub({ adminLocale, initialTab }: AdminERPHubProp
   // Actionable urgent dues count due today or earlier (for the Daily Desk dock badge)
   const urgentDuesCount = useMemo(() => {
     const todayStr = new Date().toISOString().split('T')[0];
-    return data.pdcRecords.filter(p => p.status !== 'Cleared' && p.status !== 'Void' && p.due_date <= todayStr).length;
-  }, [data.pdcRecords]);
+    const pdcDues = data.pdcRecords.filter(p => p.status !== 'Cleared' && p.status !== 'Void' && p.due_date <= todayStr);
+    const orphanSchedDues = data.schedules.filter(s => 
+      s.status === 'Pending' && 
+      s.due_date <= todayStr && 
+      !data.pdcRecords.some(p => p.schedule_id === s.schedule_id)
+    );
+    return pdcDues.length + orphanSchedDues.length;
+  }, [data.pdcRecords, data.schedules]);
 
   const [currency, setCurrency] = useState<'EGP' | 'USD'>('EGP');
   const [deepLinkedQ, setDeepLinkedQ] = useState<string | null>(null);
@@ -407,6 +432,7 @@ export default function AdminERPHub({ adminLocale, initialTab }: AdminERPHubProp
   const [chequeMaturityFilter, setChequeMaturityFilter] = useState<'all' | 'due_now' | 'due_30'>('all');
   const [collectingPDCItem, setCollectingPDCItem] = useState<ERPPDCRecord | null>(null);
   const [showNewPDCModal, setShowNewPDCModal] = useState(false);
+  const [supplementInitialContractId, setSupplementInitialContractId] = useState<string | null>(null);
   const [newPdcContractId, setNewPdcContractId] = useState('');
   const [newPdcNumber, setNewPdcNumber] = useState('');
   const [newPdcBank, setNewPdcBank] = useState('');
@@ -459,6 +485,16 @@ export default function AdminERPHub({ adminLocale, initialTab }: AdminERPHubProp
   // Property Lifecycle Audit, Calculator Focus & Dashboard View Modes
   const [calculatorPropertyId, setCalculatorPropertyId] = useState<string | undefined>(undefined);
   const [auditModalProperty, setAuditModalProperty] = useState<Property | null>(null);
+  const [selectedAuditPropertyId, setSelectedAuditPropertyId] = useState<string>('');
+  const [showCostModal, setShowCostModal] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (showCostModal) {
+      const p = (selectedAuditPropertyId ? data.properties.find(prop => prop.id === selectedAuditPropertyId) : null) || data.properties[0] || null;
+      setAuditModalProperty(p);
+      setShowCostModal(false);
+    }
+  }, [showCostModal, selectedAuditPropertyId, data.properties]);
   const [dashboardViewMode, setDashboardViewMode] = useState<'daily' | 'analytics' | 'all'>('daily');
   const [analyticsSubView, setAnalyticsSubView] = useState<'mindmap' | 'studio'>('mindmap');
 
@@ -475,6 +511,15 @@ export default function AdminERPHub({ adminLocale, initialTab }: AdminERPHubProp
       }
     }
   }, []);
+
+  // FIN-OS Partners & Project Financiers Management States
+  const [partnerProfiles, setPartnerProfiles] = useState<ERPPartnerProfile[]>(INITIAL_PARTNER_PROFILES);
+  const [partnerTransactions, setPartnerTransactions] = useState<ERPPartnerTransaction[]>(INITIAL_PARTNER_TRANSACTIONS);
+  const [showPartnerPayoutModal, setShowPartnerPayoutModal] = useState<boolean>(false);
+  const [payoutInitialPartner, setPayoutInitialPartner] = useState<string | undefined>(undefined);
+  const [showPartnerInjectionModal, setShowPartnerInjectionModal] = useState<boolean>(false);
+  const [injectionInitialPartner, setInjectionInitialPartner] = useState<string | undefined>(undefined);
+  const [dossierTargetPartner, setDossierTargetPartner] = useState<PartnerFinancialSummary | null>(null);
 
   const unifiedPartners = useMemo(() => {
     return getUnifiedPartnersDirectory(data.partnerCalls, data.properties, data.contracts);
@@ -505,12 +550,11 @@ export default function AdminERPHub({ adminLocale, initialTab }: AdminERPHubProp
 
   const modalContractValue = useMemo(() => {
     const base = parseFloat(basePriceInput) || 0;
-    const tax = parseFloat(apartmentTaxInput) || 0;
-    if (base > 0 || tax > 0) return base + tax;
+    if (base > 0) return base;
     if (customPrice && parseFloat(customPrice) > 0) return parseFloat(customPrice);
     const prop = data.properties.find(p => p.id === selectedPropertyId);
     return prop?.price_egp || 0;
-  }, [basePriceInput, apartmentTaxInput, customPrice, selectedPropertyId, data.properties]);
+  }, [basePriceInput, customPrice, selectedPropertyId, data.properties]);
 
   const handleDownPaymentPctChange = (pctStr: string) => {
     setDownPaymentInputPct(pctStr);
@@ -715,6 +759,19 @@ export default function AdminERPHub({ adminLocale, initialTab }: AdminERPHubProp
       if (!isSilent) setIsLoading(false);
     }
   }, [supabase]);
+
+  // Real-Time ERP Synchronization Engine across all tables
+  const {
+    status: realtimeStatus,
+    lastSyncTime,
+    triggerManualSync
+  } = useERPRealtimeSync({
+    supabase,
+    onSync: loadLiveData,
+    debounceMs: 250,
+    heartbeatIntervalMs: 20000,
+    enabled: true
+  });
 
   useEffect(() => {
     let isMounted = true;
@@ -1061,8 +1118,7 @@ export default function AdminERPHub({ adminLocale, initialTab }: AdminERPHubProp
         buyer_email: buyerEmail || undefined,
         buyer_national_id: buyerNationalId,
         base_price: basePriceInput ? D(basePriceInput).toFixed(2) : (prop ? D(prop.price_egp).toFixed(2) : contractValue),
-        tax_amount: apartmentTaxInput ? D(apartmentTaxInput).toFixed(2) : '0.00',
-        tax_description: apartmentTaxDesc || (isAr ? 'ضريبة ورسوم محددة يدوياً للشقة' : 'Manual Apartment Tax'),
+        tax_amount: '0.00',
         gross_contract_value: contractValue,
         currency: 'EGP',
         exchange_rate: '1.0000',
@@ -1141,19 +1197,21 @@ export default function AdminERPHub({ adminLocale, initialTab }: AdminERPHubProp
   }
 
   // Handler: Process Price Escalation (Delta V) & Persist to Supabase
-  async function handleExecuteEscalation() {
-    if (!showEscalationModal) return;
+  async function handleExecuteEscalation(overrideContract?: ERPContract, deltaParam?: string, reasonParam?: string) {
+    const contract = overrideContract || showEscalationModal;
+    if (!contract) return;
+    const delta = deltaParam ?? escalationDelta;
+    const reason = reasonParam ?? escalationReason;
 
     setIsMutating(true);
     try {
-      const contract = showEscalationModal;
       const contractSchedules = data.schedules.filter(s => s.contract_id === contract.contract_id);
 
       const result = EscalationEngine.applyEscalation(
         contract,
         contractSchedules,
-        escalationDelta,
-        escalationReason,
+        delta,
+        reason,
         new Date().toISOString().split('T')[0],
         'CFO_FARID'
       );
@@ -1186,26 +1244,28 @@ export default function AdminERPHub({ adminLocale, initialTab }: AdminERPHubProp
         isAr ? `تم تعديل أسعار وبنود العقد #${contract.contract_number} بنجاح` : `Contract #${contract.contract_number} amended successfully`,
         {
           description: isAr
-            ? `قيمة الفارق: ${parseFloat(escalationDelta) >= 0 ? '+' : ''}${parseFloat(escalationDelta).toLocaleString('ar-EG')} ج.م • تم تحديث جدول الأقساط`
-            : `Delta: ${parseFloat(escalationDelta).toLocaleString('en-US')} EGP • Schedules updated`,
+            ? `قيمة الفارق: ${parseFloat(delta) >= 0 ? '+' : ''}${parseFloat(delta).toLocaleString('ar-EG')} ج.م • تم تحديث جدول الأقساط`
+            : `Delta: ${parseFloat(delta).toLocaleString('en-US')} EGP • Schedules updated`,
           duration: 5000
         }
       );
     } catch (err: unknown) {
-      const msg = (err as Error).message;
-      toast.error(isAr ? 'فشل تعديل العقد' : 'Failed to apply contract amendment', { description: msg });
+      console.error('Failed to apply price escalation:', err);
+      toast.error(isAr ? 'تعذر إتمام تعديل العقد' : 'Failed to execute escalation', {
+        description: (err as Error).message || String(err)
+      });
     } finally {
       setIsMutating(false);
     }
   }
 
   // Handler: Process Rescission & Persist to Supabase
-  async function handleExecuteRescission() {
-    if (!showRescissionModal) return;
+  async function handleExecuteRescission(overrideContract?: ERPContract) {
+    const contract = overrideContract || showRescissionModal;
+    if (!contract) return;
 
     setIsMutating(true);
     try {
-      const contract = showRescissionModal;
       const contractSchedules = data.schedules.filter(s => s.contract_id === contract.contract_id);
 
       const result = RescissionEngine.processRescission(
@@ -1255,11 +1315,22 @@ export default function AdminERPHub({ adminLocale, initialTab }: AdminERPHubProp
   }
 
   // Handler: 10-Second Direct Cash Expense from Daily Operations Desk
-  const handleDirectExpenseSubmit = async (amount: string, categoryAccount: string, memo: string) => {
+  const handleDirectExpenseSubmit = async (
+    amount: string, 
+    categoryAccount: string, 
+    memo: string,
+    creditAccount: string = '101000'
+  ) => {
     setIsMutating(true);
     try {
       const amtStr = D(amount).toFixed(2);
       const entryNumber = `JE-EXP-${Date.now().toString(36).toUpperCase().slice(-6)}`;
+      const creditMemo = creditAccount === '101000'
+        ? `Disbursed from Treasury Safe for: ${memo}`
+        : creditAccount === '102000'
+          ? `Disbursed via InstaPay / Bank for: ${memo}`
+          : `Contractor / Supplier Payable for: ${memo}`;
+
       const entry = GeneralLedgerEngine.validateAndCreateEntry({
         entry_number: entryNumber,
         entry_date: new Date().toISOString().split('T')[0],
@@ -1276,10 +1347,10 @@ export default function AdminERPHub({ adminLocale, initialTab }: AdminERPHubProp
             memo: memo
           },
           {
-            account_code: '101000', // Main Safe / Cash on Hand
+            account_code: creditAccount,
             debit_amount: '0.00',
             credit_amount: amtStr,
-            memo: `Disbursed from Treasury Safe for: ${memo}`
+            memo: creditMemo
           }
         ]
       });
@@ -1287,8 +1358,14 @@ export default function AdminERPHub({ adminLocale, initialTab }: AdminERPHubProp
       await ERPSupabaseService.persistJournalEntry(supabase, entry);
       await loadLiveData(true);
 
+      const sourceName = creditAccount === '101000'
+        ? (isAr ? 'الخزينة الرئيسية' : 'Treasury Safe')
+        : creditAccount === '102000'
+          ? (isAr ? 'إنستاباي / البنك' : 'InstaPay / Bank')
+          : (isAr ? 'حساب الموردين والمقاولين (آجل)' : 'Accounts Payable');
+
       toast.success(
-        isAr ? 'تم صرف المبلغ وخصمه من الخزينة الرئيسية بنجاح' : 'Cash disbursed and safe debited successfully',
+        isAr ? `تم توثيق القيد وترحيله بنجاح (${sourceName})` : `Expense journal posted successfully (${sourceName})`,
         {
           description: isAr
             ? `المبلغ: ${D(amount).formatEGP(true)} • البيان: ${memo} • قيد: #${entryNumber}`
@@ -1306,39 +1383,56 @@ export default function AdminERPHub({ adminLocale, initialTab }: AdminERPHubProp
   };
 
   // Handler: Record Tranche Collection & Persist to Supabase
-  async function handleCollectPayment() {
+  async function handleCollectPayment(details?: {
+    receiptDate?: string;
+    destinationTreasury?: 'SAFE_101000' | 'BANK_102000';
+    notes?: string;
+  }) {
     if (!showPayModal) return;
 
     setIsMutating(true);
     try {
       const { contract, schedule } = showPayModal;
       const amount = schedule.nominal_value;
+      const isInstaPay = details?.destinationTreasury === 'BANK_102000';
+      const targetAccount = isInstaPay ? '102000' : '101000';
+      const payDate = details?.receiptDate || new Date().toISOString().split('T')[0];
+      const notes = details?.notes || '';
 
       const isDelivered = contract.handover_status === 'Delivered';
       const creditAccount = isDelivered ? '103000' : '203000';
 
       const randSuffix = Math.random().toString(36).substring(2, 6).toUpperCase();
       const uniqueTime = Date.now().toString(36).toUpperCase().slice(-4);
-      const entryNumber = `JE-PAY-${contract.contract_number}-T${schedule.tranche_number}-${uniqueTime}${randSuffix}`;
+      const prefix = isInstaPay ? 'JE-IP' : 'JE-RCP';
+      const entryNumber = `${prefix}-${contract.contract_number}-T${schedule.tranche_number}-${uniqueTime}${randSuffix}`;
 
       const entry = GeneralLedgerEngine.validateAndCreateEntry({
         entry_number: entryNumber,
-        entry_date: new Date().toISOString().split('T')[0],
+        entry_date: payDate,
         period: activePeriod,
         description: isAr 
-          ? (schedule.tranche_number === 0 
-              ? `تحصيل دفعة مقدم الحجز (قسط 0) كاش باليد - عقد رقم ${contract.contract_number}`
-              : `تحصيل القسط رقم ${schedule.tranche_number} كاش باليد - عقد رقم ${contract.contract_number}`)
-          : `Installment #${schedule.tranche_number} collected by hand - Contract ${contract.contract_number}`,
+          ? (isInstaPay
+              ? (schedule.tranche_number === 0
+                  ? `تحصيل دفعة مقدم التعاقد (قسط 0) عبر إنستاباي - عقد رقم ${contract.contract_number}${notes ? ` (${notes})` : ''}`
+                  : `تحصيل القسط رقم ${schedule.tranche_number} عبر إنستاباي - عقد رقم ${contract.contract_number}${notes ? ` (${notes})` : ''}`)
+              : (schedule.tranche_number === 0
+                  ? `تحصيل دفعة مقدم التعاقد (قسط 0) نقداً بالخزينة - عقد رقم ${contract.contract_number}${notes ? ` (${notes})` : ''}`
+                  : `تحصيل القسط رقم ${schedule.tranche_number} نقداً بالخزينة - عقد رقم ${contract.contract_number}${notes ? ` (${notes})` : ''}`))
+          : `Installment #${schedule.tranche_number} collected via ${isInstaPay ? 'InstaPay' : 'Safe'} - Contract ${contract.contract_number}`,
         source_module: 'SALES',
         source_entity_id: contract.contract_id,
         created_by: 'CFO_FARID',
         lines: [
           {
-            account_code: '101000', // Main Safe / Cash on Hand (Direct collection by hand, no bank link)
+            account_code: targetAccount, // 101000 Safe or 102000 Bank/InstaPay
             debit_amount: amount,
             credit_amount: '0.00',
-            memo: isAr ? `توريد كاش باليد لخزينة الشركة للعقد ${contract.contract_number}` : `Cash collection by hand into Treasury Safe for Contract ${contract.contract_number}`
+            memo: isAr 
+              ? (isInstaPay 
+                  ? `إيداع بنكي فوري بالبنك التشغيلي (إنستاباي) للعقد ${contract.contract_number}`
+                  : `توريد نقدي لخزينة الشركة الرئيسية للعقد ${contract.contract_number}`)
+              : `Collection into ${isInstaPay ? 'Operating Bank' : 'Treasury Safe'} for Contract ${contract.contract_number}`
           },
           {
             account_code: creditAccount,
@@ -1375,10 +1469,12 @@ export default function AdminERPHub({ adminLocale, initialTab }: AdminERPHubProp
       }
 
       toast.success(
-        isAr ? `تم تحصيل القسط #${schedule.tranche_number} وتوريده للخزينة بنجاح` : `Installment #${schedule.tranche_number} collected successfully`,
+        isInstaPay
+          ? (isAr ? `تم تحصيل القسط #${schedule.tranche_number} عبر إنستاباي بنجاح` : `Installment #${schedule.tranche_number} collected via InstaPay`)
+          : (isAr ? `تم تحصيل القسط #${schedule.tranche_number} وتوريده للخزينة بنجاح` : `Installment #${schedule.tranche_number} collected into Safe`),
         {
           description: isAr
-            ? `العقد: #${contract.contract_number} • المبلغ: ${D(amount).formatEGP(true)} • تم قيد اليومية`
+            ? `العقد: #${contract.contract_number} • المبلغ: ${D(amount).formatEGP(true)} • تم إثبات القيد بدفتر اليومية`
             : `Contract: #${contract.contract_number} • Amount: ${D(amount).formatEGP(false)} • GL entry posted`,
           duration: 5000
         }
@@ -1486,14 +1582,14 @@ export default function AdminERPHub({ adminLocale, initialTab }: AdminERPHubProp
       }
 
       const statusLabelsAr: Record<string, string> = {
-        'Cleared': 'تم تحصيل القسط وإيداع قيمته بالخزينة الرئيسية',
-        'Deposited': 'تم تسجيل القسط قيد التحصيل',
+        'Cleared': 'تم تحصيل القسط وتوريد قيمته بنجاح',
+        'Deposited': 'تم تسجيل القسط بانتظار تحويل إنستاباي',
         'In Safe': 'تم إرجاع القسط إلى أمانات الخزنة',
         'Bounced': 'تم إثبات تعثر / رفض القسط'
       };
       const statusLabelsEn: Record<string, string> = {
-        'Cleared': 'Installment collected and deposited to Treasury Safe',
-        'Deposited': 'Installment marked as in-collection',
+        'Cleared': 'Installment collected and settled successfully',
+        'Deposited': 'Installment awaiting InstaPay transfer',
         'In Safe': 'Installment returned to safe agenda',
         'Bounced': 'Installment marked as defaulted'
       };
@@ -1509,6 +1605,85 @@ export default function AdminERPHub({ adminLocale, initialTab }: AdminERPHubProp
     } catch (err: unknown) {
       const msg = (err as Error).message;
       toast.error(isAr ? 'فشل تحديث حالة القسط' : 'Failed to update installment status', { description: msg });
+    } finally {
+      setIsMutating(false);
+    }
+  }
+
+  // Handler: Append Contract Supplement / Extra Tranche (Zero-Float via D)
+  async function handleSaveContractSupplement(supplementData: SupplementData) {
+    setIsMutating(true);
+    try {
+      const targetContract = data.contracts.find(c => c.contract_id === supplementData.contractId);
+      if (!targetContract) {
+        throw new Error(isAr ? 'العقد المختار غير موجود في قاعدة البيانات' : 'Selected contract not found');
+      }
+
+      // 1. Calculate new gross contract value strictly via Decimal.js (Zero-Float)
+      const newGrossValue = D(targetContract.gross_contract_value || '0').plus(supplementData.amount).toFixed(2);
+
+      // 2. Determine next tranche number
+      const existingContractSchedules = data.schedules.filter(
+        s => s.contract_id === targetContract.contract_id && s.status !== 'Void'
+      );
+      const maxTranche = existingContractSchedules.length > 0 
+        ? Math.max(...existingContractSchedules.map(s => s.tranche_number))
+        : 0;
+      const newTrancheNumber = maxTranche + 1;
+
+      // 3. Construct new Installment Schedule
+      const newScheduleId = generateUUID();
+      const newSchedule: ERPInstallmentSchedule = {
+        schedule_id: newScheduleId,
+        contract_id: targetContract.contract_id,
+        tranche_number: newTrancheNumber,
+        nominal_value: D(supplementData.amount).toFixed(2),
+        amount_paid: '0.00',
+        due_date: supplementData.dueDate,
+        status: 'Pending',
+        schedule_version: 1
+      };
+
+      // 4. Construct new Safe PDC record (101000)
+      const newChequeId = generateUUID();
+      const newPdc: ERPPDCRecord = {
+        cheque_id: newChequeId,
+        contract_id: targetContract.contract_id,
+        schedule_id: newScheduleId,
+        cheque_number: supplementData.receiptNumber,
+        bank_name: isAr ? 'الخزينة الرئيسية (أمانات نقداً باليد - 101000)' : 'Main Safe (Cash by Hand - 101000)',
+        drawer_name: targetContract.buyer_name,
+        nominal_value: D(supplementData.amount).toFixed(2),
+        due_date: supplementData.dueDate,
+        status: 'In Safe'
+      };
+
+      // 5. Persist via ERPSupabaseService
+      await ERPSupabaseService.addContractSupplement(supabase, {
+        contractId: targetContract.contract_id,
+        newGrossValue,
+        newSchedule,
+        newPdc
+      });
+
+      // 6. Reload live data
+      await loadLiveData();
+      setShowNewPDCModal(false);
+      setSupplementInitialContractId(null);
+
+      // 7. Executive Toast Notification
+      toast.success(
+        isAr ? 'تم تسجيل وتثبيت ملحق العقد بنجاح' : 'Contract supplement recorded successfully',
+        {
+          description: isAr
+            ? `العميل: ${targetContract.buyer_name} • البند: ${supplementData.supplementReasonAr} • القيمة: ${D(supplementData.amount).formatEGP(true)} • إجمالي العقد الجديد: ${D(newGrossValue).formatEGP(true)}`
+            : `Client: ${targetContract.buyer_name} • Item: ${supplementData.supplementReasonAr} • Amount: ${D(supplementData.amount).formatEGP(false)} • New Gross: ${D(newGrossValue).formatEGP(false)}`,
+          duration: 6000
+        }
+      );
+    } catch (err: unknown) {
+      const msg = (err as Error).message;
+      toast.error(isAr ? 'تعذر تسجيل ملحق العقد' : 'Failed to record contract supplement', { description: msg });
     } finally {
       setIsMutating(false);
     }
@@ -1638,57 +1813,119 @@ export default function AdminERPHub({ adminLocale, initialTab }: AdminERPHubProp
     }
   }
 
-  // Handler: Execute Individual Hand Cash Collection with Official Receipt Number
+  // Handler: Execute Individual Hand Cash or InstaPay Collection with Official Receipt Number
   async function handleConfirmHandCollection(
     item: ERPPDCRecord,
     receiptNo: string,
     date: string,
     amount: string,
-    notes: string
+    notes: string,
+    method: 'CASH' | 'INSTAPAY' = 'CASH'
   ) {
+    if (item.status === 'Cleared') {
+      const msg = isAr ? 'لا يمكن إعادة تحصيل قسط تم تحصيله وإثباته دفترياً مسبقاً' : 'Cannot re-collect an already cleared installment';
+      toast.error(msg);
+      throw new Error(msg);
+    }
     setIsMutating(true);
     try {
+      const isInstaPay = method === 'INSTAPAY';
+      const targetAccount = isInstaPay ? '102000' : '101000';
+
+      // 1. Locate linked contract and schedule
+      const contract = data.contracts.find(c => c.contract_id === item.contract_id);
+      const schedule = data.schedules.find(s => 
+        (item.schedule_id && s.schedule_id === item.schedule_id) ||
+        (s.contract_id === item.contract_id && s.due_date === item.due_date && s.status === 'Pending') ||
+        (s.contract_id === item.contract_id && s.status === 'Pending')
+      );
+
+      const isDelivered = contract?.handover_status === 'Delivered';
+      const creditAccount = isDelivered ? '103000' : (item.schedule_id ? '203000' : '103200');
+
       const entry = GeneralLedgerEngine.validateAndCreateEntry({
-        entry_number: `JE-RCP-${receiptNo}`,
+        entry_number: isInstaPay ? `JE-IP-${receiptNo}` : `JE-RCP-${receiptNo}`,
         entry_date: date,
         period: activePeriod,
-        description: `تحصيل قسط نقداً باليد بموجب إيصال رقم ${receiptNo} من العميل: ${item.drawer_name}${notes ? ` - ${notes}` : ''}`,
+        description: isInstaPay
+          ? `تحصيل قسط عبر إنستاباي بموجب مرجع رقم ${receiptNo} من العميل: ${item.drawer_name}${notes ? ` - ${notes}` : ''}`
+          : `تحصيل قسط نقداً بالخزينة بموجب إيصال رقم ${receiptNo} من العميل: ${item.drawer_name}${notes ? ` - ${notes}` : ''}`,
         source_module: 'PDC',
         source_entity_id: item.cheque_id,
         created_by: 'CFO_FARID',
         lines: [
           {
-            account_code: '101000', // Main Safe / Cash on Hand
+            account_code: targetAccount, // 101000 Main Safe or 102000 Bank/InstaPay
             debit_amount: D(amount).toFixed(2),
             credit_amount: '0.00',
-            memo: isAr ? `استلام نقدي باليد - إيصال #${receiptNo}` : `Hand cash collection - Receipt #${receiptNo}`
+            memo: isInstaPay
+              ? (isAr ? `تحويل فوري إنستاباي - مرجع #${receiptNo}` : `InstaPay transfer - Ref #${receiptNo}`)
+              : (isAr ? `استلام نقدي بالخزينة - إيصال #${receiptNo}` : `Hand cash collection - Receipt #${receiptNo}`)
           },
           {
-            account_code: '103200', // Hand Installments & Safe Dues (أقساط وسندات قبض الخزينة)
+            account_code: creditAccount,
             debit_amount: '0.00',
             credit_amount: D(amount).toFixed(2),
-            memo: isAr ? `سداد قسط العميل: ${item.drawer_name}` : `Settlement of installment for client: ${item.drawer_name}`
+            memo: isDelivered
+              ? (isAr ? `تسوية مديونية باقي ثمن الشقة على العميل: ${item.drawer_name}` : `Settlement of customer receivable: ${item.drawer_name}`)
+              : (isAr ? `إثبات تحصيل قسط العميل: ${item.drawer_name}` : `Settlement of installment for client: ${item.drawer_name}`)
           }
         ]
       });
 
+      // 2. Persist PDC status
       await ERPSupabaseService.persistPDCStatus(supabase, item.cheque_id, 'Cleared');
+
+      // 3. Persist Schedule status & Contract total cash if linked
+      if (schedule) {
+        await supabase
+          .from('erp_installment_schedules')
+          .update({
+            status: 'Paid',
+            amount_paid: D(amount).toFixed(2),
+            paid_date: date
+          })
+          .eq('schedule_id', schedule.schedule_id);
+      }
+
+      if (contract) {
+        const newTotalCash = D(contract.total_cash_collected || '0').plus(amount).toFixed(2);
+        await supabase
+          .from('erp_contracts')
+          .update({ total_cash_collected: newTotalCash })
+          .eq('contract_id', contract.contract_id);
+      }
+
+      // 4. Persist Journal Entry
       await ERPSupabaseService.persistJournalEntry(supabase, entry);
 
+      // 5. Update local state optimistically so all UI cards & metrics update immediately
       setData(prev => ({
         ...prev,
-        pdcRecords: prev.pdcRecords.map(p => p.cheque_id === item.cheque_id ? { ...p, status: 'Cleared' as const } : p),
+        contracts: prev.contracts.map(c => 
+          c.contract_id === item.contract_id 
+            ? { ...c, total_cash_collected: D(c.total_cash_collected || '0').plus(amount).toFixed(2) }
+            : c
+        ),
+        schedules: prev.schedules.map(s => 
+          (schedule && s.schedule_id === schedule.schedule_id)
+            ? { ...s, status: 'Paid', amount_paid: D(amount).toFixed(2), paid_date: date }
+            : s
+        ),
+        pdcRecords: prev.pdcRecords.map(p => p.cheque_id === item.cheque_id ? { ...p, status: 'Cleared' as const, cleared_date: date } : p),
         journalEntries: [entry, ...prev.journalEntries]
       }));
 
       await loadLiveData(true);
 
       toast.success(
-        isAr ? 'تم تحصيل القسط وتوريد النقدية للخزينة بنجاح' : 'Installment collected and deposited into safe successfully',
+        isInstaPay
+          ? (isAr ? 'تم تحصيل القسط عبر إنستاباي وإثباته بحساب البنك بنجاح' : 'Installment collected via InstaPay successfully')
+          : (isAr ? 'تم تحصيل القسط وتوريد النقدية للخزينة بنجاح' : 'Installment collected and deposited into safe successfully'),
         {
           description: isAr
-            ? `إيصال #${receiptNo} • المبلغ: ${D(amount).formatEGP(true)} • العميل: ${item.drawer_name}`
-            : `Receipt #${receiptNo} • Amount: ${D(amount).formatEGP(false)} • Client: ${item.drawer_name}`,
+            ? `${isInstaPay ? 'مرجع' : 'إيصال'} #${receiptNo} • المبلغ: ${D(amount).formatEGP(true)} • العميل: ${item.drawer_name}`
+            : `Ref #${receiptNo} • Amount: ${D(amount).formatEGP(false)} • Client: ${item.drawer_name}`,
           duration: 5000
         }
       );
@@ -1755,17 +1992,17 @@ export default function AdminERPHub({ adminLocale, initialTab }: AdminERPHubProp
       handleInspectRSV(newAlloc);
 
       toast.success(
-        isAr ? `تم ترحيل أرباح نسبة الإنجاز لمشروع (${rsvProjectName.trim()})` : `RSV allocation generated for (${rsvProjectName.trim()})`,
+        isAr ? `تم حفظ وتطبيق نسبة أرباح المشروع (${rsvProjectName.trim()})` : `RSV allocation generated for (${rsvProjectName.trim()})`,
         {
           description: isAr
-            ? `معامل الإنجاز: ${(parseFloat(newAlloc.rsv_factor) * 100).toFixed(1)}% • إجمالي التكلفة المنفذة: ${D(newAlloc.total_incurred_wip).formatEGP(true)}`
+            ? `نسبة تكلفة المباني: ${(parseFloat(newAlloc.rsv_factor) * 100).toFixed(1)}% • إجمالي مصاريف المشروع: ${D(newAlloc.total_incurred_wip).formatEGP(true)}`
             : `RSV Factor: ${(parseFloat(newAlloc.rsv_factor) * 100).toFixed(1)}% • Incurred WIP: ${D(newAlloc.total_incurred_wip).formatEGP(false)}`,
           duration: 5000
         }
       );
     } catch (err: unknown) {
       const msg = (err as Error).message;
-      toast.error(isAr ? 'فشل ترحيل أرباح الإنجاز' : 'RSV allocation failed', { description: msg });
+      toast.error(isAr ? 'فشل حفظ نسبة المشروع' : 'RSV allocation failed', { description: msg });
     } finally {
       setIsMutating(false);
     }
@@ -1788,13 +2025,13 @@ export default function AdminERPHub({ adminLocale, initialTab }: AdminERPHubProp
         created_by: 'CFO_FARID',
         lines: [
           {
-            account_code: '204000', // Tax Liability
+            account_code: '150000', // WIP - Land Acquisition & Regulatory Permits
             debit_amount: tax.tax_amount,
             credit_amount: '0.00',
-            memo: `استيفاء وتسوية ضريبة ورسوم الشقة - ${tax.tax_type}`
+            memo: `استيفاء وتسوية رسوم وتراخيص المشروع - ${tax.tax_type}`
           },
           {
-            account_code: '101000', // Main Safe (Cash on Hand - No Bank Link)
+            account_code: '101000', // Main Safe (Cash on Hand)
             debit_amount: '0.00',
             credit_amount: tax.tax_amount,
             memo: `سداد / استيفاء ضريبة الوحدة نقداً باليد من الخزينة الرئيسية`
@@ -1853,6 +2090,215 @@ export default function AdminERPHub({ adminLocale, initialTab }: AdminERPHubProp
       setIsMutating(false);
     }
   }
+
+  // Handler: Confirm Partner Profit Distribution / Dividend Payout (INV-4.1)
+  const handleConfirmPartnerPayout = async (details: {
+    partnerName: string;
+    amount: string;
+    paymentMethod: 'CASH_101000' | 'INSTAPAY_102000' | 'BANK_102000';
+    propertyId?: string;
+    propertyTitle?: string;
+    payoutDate: string;
+    receiptRef: string;
+    memo: string;
+  }) => {
+    setIsMutating(true);
+    try {
+      // 1. Post GL Journal Entry: Dr 303000 (Partner Dividends) / Cr 101000 or 102000
+      const entry = PartnersEngine.createPayoutJournalEntry({
+        partnerName: details.partnerName,
+        amount: details.amount,
+        paymentMethod: details.paymentMethod,
+        propertyTitle: details.propertyTitle,
+        receiptRef: details.receiptRef,
+        currentPeriod: activePeriod.period_id,
+        loggedBy: 'CHIEF_EXECUTIVE'
+      });
+
+      try {
+        await ERPSupabaseService.persistJournalEntry(supabase, entry);
+      } catch (dbErr) {
+        console.warn('Silent database sync for partner payout:', dbErr);
+      }
+
+      const newTx: ERPPartnerTransaction = {
+        id: `pt-tx-${Date.now()}`,
+        transaction_number: `PT-${new Date().getFullYear()}-${Math.floor(100 + Math.random() * 900)}`,
+        partner_name: details.partnerName,
+        type: 'PROFIT_DISTRIBUTION',
+        amount: details.amount,
+        property_id: details.propertyId,
+        property_title: details.propertyTitle,
+        payment_method: details.paymentMethod,
+        journal_entry_number: entry.entry_number,
+        date: details.payoutDate,
+        status: 'COMPLETED',
+        memo: details.memo,
+        receipt_ref: details.receiptRef
+      };
+
+      setPartnerTransactions(prev => [newTx, ...prev]);
+      setData(prev => ({
+        ...prev,
+        journalEntries: [entry, ...prev.journalEntries]
+      }));
+
+      toast.success(
+        isAr 
+          ? `تم صرف دفعة أرباح للشريك: ${details.partnerName}` 
+          : `Profit dividend paid to ${details.partnerName}`,
+        {
+          description: isAr 
+            ? `المبلغ: ${D(details.amount).formatEGP(true)} • تم إثبات قيد اليومية #${entry.entry_number}` 
+            : `Amount: ${D(details.amount).formatEGP(false)} • Journal #${entry.entry_number}`,
+          duration: 5000
+        }
+      );
+    } catch (err: unknown) {
+      console.error('Partner payout error:', err);
+      toast.error(isAr ? 'فشل تسجيل صرف الأرباح' : 'Failed to record dividend payout', {
+        description: (err as Error).message
+      });
+    } finally {
+      setIsMutating(false);
+    }
+  };
+
+  // Handler: Confirm Partner Capital Injection (INV-4.1)
+  const handleConfirmPartnerInjection = async (details: {
+    partnerName: string;
+    amount: string;
+    paymentMethod: 'CASH_101000' | 'INSTAPAY_102000' | 'BANK_102000';
+    propertyId?: string;
+    propertyTitle?: string;
+    injectionDate: string;
+    receiptRef: string;
+    memo: string;
+    role?: 'equity_partner' | 'land_partner' | 'silent_financier';
+    phone?: string;
+    nationalId?: string;
+    projectSharePct?: number;
+  }) => {
+    setIsMutating(true);
+    try {
+      // 1. Post GL Journal Entry: Dr 101000 or 102000 / Cr 301000 (Partner Capital)
+      const entry = PartnersEngine.createCapitalInjectionJournalEntry({
+        partnerName: details.partnerName,
+        amount: details.amount,
+        paymentMethod: details.paymentMethod,
+        propertyTitle: details.propertyTitle,
+        receiptRef: details.receiptRef,
+        currentPeriod: activePeriod.period_id,
+        loggedBy: 'CHIEF_EXECUTIVE'
+      });
+
+      try {
+        await ERPSupabaseService.persistJournalEntry(supabase, entry);
+      } catch (dbErr) {
+        console.warn('Silent database sync for partner injection:', dbErr);
+      }
+
+      const newTx: ERPPartnerTransaction = {
+        id: `pt-tx-${Date.now()}`,
+        transaction_number: `PT-${new Date().getFullYear()}-${Math.floor(100 + Math.random() * 900)}`,
+        partner_name: details.partnerName,
+        type: 'CAPITAL_INJECTION',
+        amount: details.amount,
+        property_id: details.propertyId,
+        property_title: details.propertyTitle,
+        payment_method: details.paymentMethod,
+        journal_entry_number: entry.entry_number,
+        date: details.injectionDate,
+        status: 'COMPLETED',
+        memo: details.memo,
+        receipt_ref: details.receiptRef
+      };
+
+      // Register profile if new partner
+      const roleArMap: Record<string, string> = {
+        equity_partner: 'شريك ممول بالمشروع',
+        land_partner: 'شريك مساهم بالأرض',
+        silent_financier: 'ممول صامت'
+      };
+      const assignedRole = details.role || 'equity_partner';
+
+      saveRegisteredPartner({
+        name: details.partnerName,
+        role: roleArMap[assignedRole] || 'شريك استثماري',
+        isPermanent: false
+      });
+
+      setPartnerProfiles(prev => {
+        if (prev.some(p => p.name === details.partnerName)) return prev;
+        return [
+          ...prev,
+          {
+            id: `pt-${Date.now()}`,
+            name: details.partnerName,
+            role: assignedRole,
+            phone: details.phone,
+            national_id: details.nationalId,
+            notes: `شريك وممول استثماري - مساهمة مبدئية بقيمة ${details.amount} ج.م`,
+            joined_date: details.injectionDate
+          }
+        ];
+      });
+
+      // If property and share percentage specified, link partner to property in real-time
+      if (details.propertyId && details.projectSharePct && details.projectSharePct > 0) {
+        setData(prev => {
+          const updatedProps = prev.properties.map(prop => {
+            if (prop.id === details.propertyId) {
+              const currentSplits = (prop.partner_splits as any[]) || [];
+              const withoutPartner = currentSplits.filter(s => (s.partner_name || s.partnerName) !== details.partnerName && (s.partner_name || s.partnerName) !== PRIMARY_DEVELOPER_NAME);
+              const partnerShare = details.projectSharePct!;
+              const otherSharesSum = withoutPartner.reduce((sum, s) => sum + (Number(s.share_percentage || s.sharePct) || 0), 0);
+              const devShare = Math.max(0, 100 - otherSharesSum - partnerShare);
+              
+              const newSplits = [
+                { partner_name: PRIMARY_DEVELOPER_NAME, share_percentage: devShare },
+                ...withoutPartner.map(s => ({ partner_name: s.partner_name || s.partnerName, share_percentage: s.share_percentage || s.sharePct })),
+                { partner_name: details.partnerName, share_percentage: partnerShare }
+              ];
+              return { ...prop, partner_splits: newSplits };
+            }
+            return prop;
+          });
+          return {
+            ...prev,
+            properties: updatedProps,
+            journalEntries: [entry, ...prev.journalEntries]
+          };
+        });
+      } else {
+        setData(prev => ({
+          ...prev,
+          journalEntries: [entry, ...prev.journalEntries]
+        }));
+      }
+
+      setPartnerTransactions(prev => [newTx, ...prev]);
+
+      toast.success(
+        isAr 
+          ? `تم إيداع مساهمة رأس مال جديدة من الشريك: ${details.partnerName}` 
+          : `Capital contribution recorded from ${details.partnerName}`,
+        {
+          description: isAr 
+            ? `المبلغ: ${D(details.amount).formatEGP(true)} • تم إثبات قيد اليومية #${entry.entry_number}` 
+            : `Amount: ${D(details.amount).formatEGP(false)} • Journal #${entry.entry_number}`,
+          duration: 5000
+        }
+      );
+    } catch (err: unknown) {
+      console.error('Partner injection error:', err);
+      toast.error(isAr ? 'فشل تسجيل مساهمة رأس المال' : 'Failed to record capital contribution', {
+        description: (err as Error).message
+      });
+    } finally {
+      setIsMutating(false);
+    }
+  };
 
   // Financial Metrics Summaries
   const totalGrossContractValue = useMemo(() => {
@@ -2031,6 +2477,14 @@ export default function AdminERPHub({ adminLocale, initialTab }: AdminERPHubProp
     setShowNewContractModal(true);
   }, [data.contracts, isAr]);
 
+  const handleOpenGenericNewContract = useCallback(() => {
+    setSelectedPropertyId('');
+    setSelectedBuildingUnitId(undefined);
+    setSelectedBuildingUnitNumber(undefined);
+    setContractWizardStep(1);
+    setShowNewContractModal(true);
+  }, []);
+
   const handleUpdatePropertyUnitTax = useCallback(async (propertyId: string, unitId: string, taxAmount: number, taxDesc?: string) => {
     await ERPSupabaseService.updateBuildingUnitTax(supabase, propertyId, unitId, taxAmount, taxDesc);
     await loadLiveData();
@@ -2043,9 +2497,9 @@ export default function AdminERPHub({ adminLocale, initialTab }: AdminERPHubProp
     navigateToTab('calculator');
   }, [navigateToTab]);
 
-  const handleOpenAuditForProperty = useCallback((prop: Property) => {
-    setAuditModalProperty(prop);
-  }, []);
+  const handleOpenAuditForProperty = useCallback((prop?: Property) => {
+    setAuditModalProperty(prop || data.properties[0] || null);
+  }, [data.properties]);
 
   const handleAddPropertyCostItem = useCallback(async (item: ERPPropertyCostItem) => {
     setIsMutating(true);
@@ -2395,8 +2849,12 @@ export default function AdminERPHub({ adminLocale, initialTab }: AdminERPHubProp
                 onInspectContract={handleInspectContract}
                 onInspectCheque={handleInspectCheque}
                 onCollectItem={setCollectingPDCItem}
-                onOpenNewCheque={() => setShowNewPDCModal(true)}
-                onOpenNewContract={() => setShowNewContractModal(true)}
+                onOpenNewCheque={() => {
+                  setSupplementInitialContractId(null);
+                  setShowNewPDCModal(true);
+                }}
+                onOpenNewContract={handleOpenGenericNewContract}
+                onNavigateTab={(tab) => navigateToTab(tab)}
               />
             )}
 
@@ -2421,8 +2879,11 @@ export default function AdminERPHub({ adminLocale, initialTab }: AdminERPHubProp
                 propertyCosts={data.propertyCosts}
                 isMutating={isMutating}
                 onOpenQuickTransaction={() => setShowQuickTransactionModal(true)}
-                onOpenNewContract={() => setShowNewContractModal(true)}
-                onOpenNewCheque={() => setShowNewPDCModal(true)}
+                onOpenNewContract={handleOpenGenericNewContract}
+                onOpenNewCheque={() => {
+                  setSupplementInitialContractId(null);
+                  setShowNewPDCModal(true);
+                }}
                 onCollectItem={setCollectingPDCItem}
                 onInspectContract={handleInspectContract}
                 onInspectCheque={handleInspectCheque}
@@ -2445,7 +2906,7 @@ export default function AdminERPHub({ adminLocale, initialTab }: AdminERPHubProp
                 properties={data.properties}
                 contracts={data.contracts}
                 propertyCosts={data.propertyCosts}
-                onOpenNewContract={() => setShowNewContractModal(true)}
+                onOpenNewContract={handleOpenGenericNewContract}
                 onOpenContractForProperty={handleOpenContractForProperty}
                 onOpenCalculatorForProperty={handleOpenCalculatorForProperty}
                 onOpenAuditForProperty={handleOpenAuditForProperty}
@@ -2462,6 +2923,7 @@ export default function AdminERPHub({ adminLocale, initialTab }: AdminERPHubProp
                 propertyCosts={data.propertyCosts}
                 initialPropertyId={calculatorPropertyId}
                 onOpenAuditForProperty={handleOpenAuditForProperty}
+                onOpenContractForProperty={handleOpenContractForProperty}
                 onUpdateSellingPrice={handleUpdatePropertySellingPrice}
                 isAr={isAr}
               />
@@ -2475,7 +2937,7 @@ export default function AdminERPHub({ adminLocale, initialTab }: AdminERPHubProp
                 isAr={isAr}
                 onInspectContract={handleInspectContract}
                 onNavigateToProperties={() => navigateToTab('properties')}
-                onOpenNewContract={() => setShowNewContractModal(true)}
+                onOpenNewContract={handleOpenGenericNewContract}
               />
             )}
 
@@ -2503,6 +2965,7 @@ export default function AdminERPHub({ adminLocale, initialTab }: AdminERPHubProp
               <ContractRescissionsView 
                 rescissions={data.rescissions}
                 contracts={data.contracts}
+                properties={data.properties}
                 isAr={isAr}
                 onInspectRescission={handleInspectRescission}
                 onNavigateToContracts={() => navigateToTab('contracts')}
@@ -2516,6 +2979,10 @@ export default function AdminERPHub({ adminLocale, initialTab }: AdminERPHubProp
                 activePeriod={activePeriod}
                 isAr={isAr}
                 isMutating={isMutating}
+                contracts={data.contracts}
+                properties={data.properties}
+                dataset={data}
+                onExportExcel={handleExportExcel}
                 onOpenQuickTransaction={() => setShowQuickTransactionModal(true)}
                 onTogglePeriodStatus={(periodId, newStatus) => handleTogglePeriodStatus(periodId, newStatus)}
                 onNavigateToOpenQuestion={handleNavigateToOpenQuestion}
@@ -2537,10 +3004,37 @@ export default function AdminERPHub({ adminLocale, initialTab }: AdminERPHubProp
               <ApartmentTaxesView 
                 taxRecords={data.taxRecords}
                 contracts={data.contracts}
+                properties={data.properties}
+                propertyCosts={data.propertyCosts}
+                onOpenCostModal={(propId) => { setSelectedAuditPropertyId(propId || data.properties[0]?.id || ''); setShowCostModal(true); }}
                 isAr={isAr}
                 isMutating={isMutating}
                 onRemitTax={handleRemitTax}
                 onInspectTax={handleInspectTax}
+              />
+            )}
+
+            {/* MODULE 10: PARTNERS & PROJECT FINANCIERS (الشركاء وممولو المشاريع) */}
+            {activeTab === 'partners' && (
+              <PartnersManagementView 
+                partnerProfiles={partnerProfiles}
+                partnerTransactions={partnerTransactions}
+                properties={data.properties}
+                contracts={data.contracts}
+                partnerCalls={data.partnerCalls}
+                isAr={isAr}
+                isMutating={isMutating}
+                onOpenPayout={(name) => {
+                  setPayoutInitialPartner(name);
+                  setShowPartnerPayoutModal(true);
+                }}
+                onOpenInjection={(name) => {
+                  setInjectionInitialPartner(name);
+                  setShowPartnerInjectionModal(true);
+                }}
+                onOpenDossier={(partner) => {
+                  setDossierTargetPartner(partner);
+                }}
               />
             )}
           </div>
@@ -2552,6 +3046,7 @@ export default function AdminERPHub({ adminLocale, initialTab }: AdminERPHubProp
         payload={inspectorPayload}
         onClose={() => setInspectorPayload(null)}
         isAr={isAr}
+        isOverModal={!!(showNewPDCModal || showRSVModal || showQuickTransactionModal || collectingPDCItem || showEscalationModal || showRescissionModal || auditModalProperty)}
         onPayInstallment={(c, sch) => setShowPayModal({ contract: c, schedule: sch })}
         onOpenEscalation={(c) => {
           setShowEscalationModal(c);
@@ -2561,6 +3056,10 @@ export default function AdminERPHub({ adminLocale, initialTab }: AdminERPHubProp
           setShowRescissionModal(c);
           setSelectedBranch(c.handover_status === 'Delivered' ? 'Branch2_PostDelivery' : 'Branch1_PreDelivery');
           setRescissionStep(0);
+        }}
+        onOpenSupplement={(c) => {
+          setSupplementInitialContractId(c.contract_id);
+          setShowNewPDCModal(true);
         }}
         onNavigateToTab={(tab) => navigateToTab(tab)}
         onToggleHandover={handleToggleContractHandover}
@@ -2617,7 +3116,15 @@ export default function AdminERPHub({ adminLocale, initialTab }: AdminERPHubProp
       {/* 5. DEDICATED TRANSACTION & ACTION WORKFLOW MODALS (V2 ARCHITECTURAL ALABASTER) */}
       <NewContractWizardModal 
         isOpen={showNewContractModal}
-        onClose={() => { setShowNewContractModal(false); setContractWizardStep(1); }}
+        onClose={() => { 
+          setShowNewContractModal(false); 
+          setContractWizardStep(1); 
+          setSelectedPropertyId('');
+          setSelectedBuildingUnitId(undefined);
+          setSelectedBuildingUnitNumber(undefined);
+        }}
+        initialPropertyId={selectedPropertyId}
+        initialBuildingUnitId={selectedBuildingUnitId}
         properties={data.properties}
         contracts={data.contracts}
         leads={data.leads}
@@ -2627,7 +3134,9 @@ export default function AdminERPHub({ adminLocale, initialTab }: AdminERPHubProp
         isAr={isAr}
         onContractCreated={async (payload) => {
           setSelectedPropertyId(payload.propertyId);
-          setSelectedBuildingUnitId(payload.buildingUnitId || '');
+          setSelectedBuildingUnitId(payload.buildingUnitId || undefined);
+          setSelectedBuildingUnitNumber(payload.buildingUnitNumber || undefined);
+          setIsWholeBuildingContract(!payload.buildingUnitId);
           setCustomUnitName(payload.customUnitName || '');
           setBuyerName(payload.buyerName);
           setBuyerNationalId(payload.buyerNationalId);
@@ -2656,8 +3165,8 @@ export default function AdminERPHub({ adminLocale, initialTab }: AdminERPHubProp
         schedule={showPayModal?.schedule}
         isAr={isAr}
         isMutating={isMutating}
-        onConfirmCollection={async () => {
-          await handleCollectPayment();
+        onConfirmCollection={async (details) => {
+          await handleCollectPayment(details);
           setShowPayModal(null);
         }}
       />
@@ -2667,12 +3176,13 @@ export default function AdminERPHub({ adminLocale, initialTab }: AdminERPHubProp
         isOpen={!!showEscalationModal}
         onClose={() => setShowEscalationModal(null)}
         contract={showEscalationModal}
+        contracts={data.contracts}
         isAr={isAr}
         isMutating={isMutating}
-        onConfirmEscalation={async (delta, reason) => {
+        onConfirmEscalation={async (delta, reason, targetContract) => {
           setEscalationDelta(delta);
           setEscalationReason(reason);
-          await handleExecuteEscalation();
+          await handleExecuteEscalation(targetContract, delta, reason);
           setShowEscalationModal(null);
         }}
       />
@@ -2682,14 +3192,15 @@ export default function AdminERPHub({ adminLocale, initialTab }: AdminERPHubProp
         isOpen={!!showRescissionModal}
         onClose={() => setShowRescissionModal(null)}
         contract={showRescissionModal}
+        contracts={data.contracts}
         schedules={data.schedules}
         activePeriod={activePeriod}
         isAr={isAr}
         isMutating={isMutating}
-        onConfirmRescission={async ({ selectedBranch, rescissionDate: rDate }) => {
+        onConfirmRescission={async ({ selectedBranch, rescissionDate: rDate, targetContract }) => {
           setSelectedBranch(selectedBranch);
           setRescissionDate(rDate);
-          await handleExecuteRescission();
+          await handleExecuteRescission(targetContract);
           setShowRescissionModal(null);
         }}
       />
@@ -2711,13 +3222,20 @@ export default function AdminERPHub({ adminLocale, initialTab }: AdminERPHubProp
         }}
       />
 
-      {/* RECORD NEW INSTALLMENT DUE MODAL */}
+      {/* RECORD NEW INSTALLMENT DUE / CONTRACT SUPPLEMENT MODAL */}
       <NewChequeModal 
         isOpen={showNewPDCModal}
-        onClose={() => setShowNewPDCModal(false)}
+        onClose={() => {
+          setShowNewPDCModal(false);
+          setSupplementInitialContractId(null);
+        }}
         contracts={data.contracts}
         schedules={data.schedules}
+        properties={data.properties}
+        initialContractId={supplementInitialContractId}
+        onSaveSupplement={handleSaveContractSupplement}
         onSaveCheque={handleSaveNewCheque}
+        onInspectContract={handleInspectContract}
         isMutating={isMutating}
         isAr={isAr}
       />
@@ -2752,6 +3270,7 @@ export default function AdminERPHub({ adminLocale, initialTab }: AdminERPHubProp
       {auditModalProperty && (
         <PropertyLifecycleAuditModal 
           property={auditModalProperty}
+          properties={data.properties}
           allCosts={data.propertyCosts}
           isAr={isAr}
           onClose={() => setAuditModalProperty(null)}
@@ -2764,6 +3283,63 @@ export default function AdminERPHub({ adminLocale, initialTab }: AdminERPHubProp
           }}
         />
       )}
+
+      {/* PARTNER PROFIT PAYOUT MODAL */}
+      <PartnerPayoutModal 
+        isOpen={showPartnerPayoutModal}
+        onClose={() => {
+          setShowPartnerPayoutModal(false);
+          setPayoutInitialPartner(undefined);
+        }}
+        partners={PartnersEngine.calculatePartnerSummaries(partnerProfiles, data.properties, data.contracts, partnerTransactions, data.partnerCalls)}
+        properties={data.properties}
+        initialPartnerName={payoutInitialPartner}
+        isAr={isAr}
+        isMutating={isMutating}
+        onConfirmPayout={async (details) => {
+          await handleConfirmPartnerPayout(details);
+          setShowPartnerPayoutModal(false);
+          setPayoutInitialPartner(undefined);
+        }}
+      />
+
+      {/* PARTNER CAPITAL INJECTION MODAL */}
+      <PartnerCapitalInjectionModal 
+        isOpen={showPartnerInjectionModal}
+        onClose={() => {
+          setShowPartnerInjectionModal(false);
+          setInjectionInitialPartner(undefined);
+        }}
+        initialPartnerName={injectionInitialPartner}
+        partners={PartnersEngine.calculatePartnerSummaries(partnerProfiles, data.properties, data.contracts, partnerTransactions, data.partnerCalls)}
+        properties={data.properties}
+        isAr={isAr}
+        isMutating={isMutating}
+        onConfirmInjection={async (details) => {
+          await handleConfirmPartnerInjection(details);
+          setShowPartnerInjectionModal(false);
+          setInjectionInitialPartner(undefined);
+        }}
+      />
+
+      {/* PARTNER DOSSIER & STATEMENT MODAL */}
+      <PartnerDossierModal 
+        isOpen={!!dossierTargetPartner}
+        onClose={() => setDossierTargetPartner(null)}
+        partner={dossierTargetPartner}
+        transactions={partnerTransactions}
+        isAr={isAr}
+        onOpenPayout={(name) => {
+          setDossierTargetPartner(null);
+          setPayoutInitialPartner(name);
+          setShowPartnerPayoutModal(true);
+        }}
+        onOpenInjection={(name) => {
+          setDossierTargetPartner(null);
+          setInjectionInitialPartner(name);
+          setShowPartnerInjectionModal(true);
+        }}
+      />
     </div>
   );
 }

@@ -469,10 +469,10 @@ export const DashboardAnalyticalStudio: React.FC<DashboardAnalyticalStudioProps>
                       <div style={{ textAlign: isAr ? 'left' : 'right', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                         <div>
                           <span style={{ color: '#e2c974', fontWeight: 900, fontSize: '1.05rem', fontFamily: 'monospace', display: 'block', lineHeight: 1.1 }}>
-                            {ca.rsv_factor}
+                            {D(ca.rsv_factor || '0').times(100).toFixed(1)}%
                           </span>
                           <span style={{ color: '#10b981', fontSize: '0.68rem', fontWeight: 700 }}>
-                            {grossMarginPct}% {isAr ? 'هامش ربح' : 'margin'}
+                            {grossMarginPct}% {isAr ? 'مكسب صافي' : 'margin'}
                           </span>
                         </div>
                         <button

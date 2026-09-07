@@ -101,7 +101,7 @@ export default async function LocaleLayout({ children, params }: Props) {
             }}
           />
         </NextIntlClientProvider>
-        {process.env.NODE_ENV === 'development' && <Agentation />}
+        {(process.env.NODE_ENV === 'development' || process.env.NEXT_PUBLIC_ENABLE_AGENTATION === 'true') && <Agentation />}
       </body>
     </html>
   );

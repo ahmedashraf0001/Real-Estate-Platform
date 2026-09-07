@@ -82,11 +82,11 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ domain, status, isAr =
       } else if (norm === 'Deposited') {
         styleClass = styles.statePending;
         IconComponent = Clock;
-        label = isAr ? 'مودع بالبنك' : 'Deposited';
+        label = isAr ? 'بانتظار إنستاباي' : 'InstaPay Pending';
       } else if (norm === 'Cleared') {
         styleClass = styles.statePaid;
         IconComponent = CheckCircle2;
-        label = isAr ? 'تم الصرف' : 'Cleared';
+        label = isAr ? 'تم التحصيل' : 'Cleared';
       } else if (norm === 'Bounced') {
         styleClass = styles.stateDefaulted;
         IconComponent = AlertTriangle;

@@ -18,11 +18,14 @@ import {
   Clock,
   User,
   ArrowRight,
-  Filter
+  Filter,
+  Zap
 } from 'lucide-react';
 import { ERPContract, ERPInstallmentSchedule, ERPPDCRecord } from '@/lib/erp/types';
 import { D } from '@/lib/erp/math';
 import { toast } from 'sonner';
+import { tafqeetEGP } from '@/lib/erp/tafqeet';
+import { ZFPrintDocumentLayout } from './v2/common/ZFPrintDocumentLayout';
 
 interface HandCollectionModalProps {
   isOpen: boolean;
@@ -37,7 +40,8 @@ interface HandCollectionModalProps {
     receiptNo: string, 
     date: string, 
     amount: string, 
-    notes: string
+    notes: string,
+    method?: 'CASH' | 'INSTAPAY'
   ) => Promise<void>;
   isMutating?: boolean;
   isAr?: boolean;
@@ -65,11 +69,13 @@ export const HandCollectionModal: React.FC<HandCollectionModalProps> = ({
   const [filterTab, setFilterTab] = useState<FilterTab>('pending');
 
   // Form state
+  const [paymentMethod, setPaymentMethod] = useState<'CASH' | 'INSTAPAY'>('CASH');
   const [receiptNo, setReceiptNo] = useState<string>('');
   const [collectionDate, setCollectionDate] = useState<string>(() => new Date().toISOString().split('T')[0]);
   const [collectedAmount, setCollectedAmount] = useState<string>('');
   const [collectionNotes, setCollectionNotes] = useState<string>('');
   const [error, setError] = useState<string>('');
+  const [showPrintPreview, setShowPrintPreview] = useState<boolean>(false);
 
   const todayStr = useMemo(() => new Date().toISOString().split('T')[0], []);
   const nextWeekStr = useMemo(() => {
@@ -78,16 +84,43 @@ export const HandCollectionModal: React.FC<HandCollectionModalProps> = ({
     return d.toISOString().split('T')[0];
   }, []);
 
-  // Combined full list of items (incorporating item if not in allItems)
+  // Combined full list of items (incorporating item and auto-reconciling any pending schedules)
   const masterList = useMemo(() => {
-    if (!allItems || allItems.length === 0) {
-      return item ? [item] : [];
+    const existingPdcIds = new Set((allItems || []).map(p => p.cheque_id));
+    const existingTrancheKeys = new Set((allItems || []).map(p => `${p.contract_id}-${p.due_date}`));
+
+    const combined: ERPPDCRecord[] = [...(allItems || [])];
+
+    if (item && !existingPdcIds.has(item.cheque_id)) {
+      combined.unshift(item);
+      existingPdcIds.add(item.cheque_id);
     }
-    if (item && !allItems.some(p => p.cheque_id === item.cheque_id)) {
-      return [item, ...allItems];
-    }
-    return allItems;
-  }, [allItems, item]);
+
+    // Auto-synthesize any pending schedules not yet in pdcRecords
+    (schedules || []).forEach(s => {
+      if (s.status === 'Paid') return;
+      const key = `${s.contract_id}-${s.due_date}`;
+      const syntheticId = `SND-${s.contract_id.replace(/[^0-9]/g, '')}-T${s.tranche_number}`;
+      if (!existingPdcIds.has(syntheticId) && !existingTrancheKeys.has(key)) {
+        const linkedC = contracts.find(c => c.contract_id === s.contract_id);
+        combined.push({
+          cheque_id: syntheticId,
+          contract_id: s.contract_id,
+          schedule_id: s.schedule_id,
+          drawer_name: linkedC?.buyer_name || (isAr ? 'عميل متعاقد' : 'Contracted Buyer'),
+          cheque_number: `SND-${s.contract_id.slice(-4)}-T${s.tranche_number}`,
+          bank_name: isAr ? 'سند استحقاق نقدي بالخزينة' : 'Cash Safe Note',
+          due_date: s.due_date,
+          nominal_value: s.nominal_value,
+          status: 'In Safe'
+        });
+        existingPdcIds.add(syntheticId);
+        existingTrancheKeys.add(key);
+      }
+    });
+
+    return combined;
+  }, [allItems, item, schedules, contracts, isAr]);
 
   // Sync selectedItem on modal open or item prop change
   useEffect(() => {
@@ -104,18 +137,41 @@ export const HandCollectionModal: React.FC<HandCollectionModalProps> = ({
     }
   }, [isOpen, item, masterList, todayStr]);
 
+  const handlePaymentMethodChange = (newMethod: 'CASH' | 'INSTAPAY') => {
+    setPaymentMethod(newMethod);
+    if (!selectedItem) return;
+    const cleanCode = (selectedItem.cheque_number || '').replace(/[^0-9]/g, '').slice(-4) || '1001';
+    const prefix = newMethod === 'INSTAPAY' ? 'IP' : 'RCP';
+    setReceiptNo(`${prefix}-${new Date().getFullYear()}-${cleanCode}`);
+    if (selectedItem.status !== 'Cleared') {
+      setCollectionNotes(
+        newMethod === 'INSTAPAY'
+          ? (isAr ? 'تحويل فوري عبر إنستاباي بحساب البنك' : 'Instant transfer via InstaPay')
+          : (isAr ? 'تم استلام الدفعة نقدياً باليد بمقر الشركة' : 'Direct cash installment collected by hand')
+      );
+    }
+  };
+
   // Sync form inputs whenever selectedItem changes
   useEffect(() => {
     if (selectedItem) {
+      const isItemCleared = selectedItem.status === 'Cleared';
       const randomSuffix = Math.floor(1000 + Math.random() * 9000);
       const cleanCode = (selectedItem.cheque_number || '').replace(/[^0-9]/g, '').slice(-4) || randomSuffix.toString();
-      setReceiptNo(`RCP-${new Date().getFullYear()}-${cleanCode}`);
-      setCollectionDate(new Date().toISOString().split('T')[0]);
+      const prefix = paymentMethod === 'INSTAPAY' ? 'IP' : 'RCP';
+      setReceiptNo(`${prefix}-${new Date().getFullYear()}-${cleanCode}`);
+      setCollectionDate(selectedItem.cleared_date || new Date().toISOString().split('T')[0]);
       setCollectedAmount(D(selectedItem.nominal_value || '0').toFixed(2));
-      setCollectionNotes(isAr ? 'تم استلام الدفعة نقدياً باليد بمقر الشركة' : 'Direct cash installment collected by hand');
+      setCollectionNotes(
+        isItemCleared
+          ? (isAr ? 'تم التحصيل والتوريد الفعلي مسبقاً' : 'Already collected and cleared')
+          : paymentMethod === 'INSTAPAY'
+            ? (isAr ? 'تحويل فوري عبر إنستاباي بحساب البنك' : 'Instant transfer via InstaPay')
+            : (isAr ? 'تم استلام الدفعة نقدياً باليد بمقر الشركة' : 'Direct cash installment collected by hand')
+      );
       setError('');
     }
-  }, [selectedItem, isAr]);
+  }, [selectedItem, paymentMethod, isAr]);
 
   // Contract linked to the currently selected item
   const currentContract = useMemo(() => {
@@ -182,12 +238,102 @@ export const HandCollectionModal: React.FC<HandCollectionModalProps> = ({
     return filteredItems.reduce((acc, p) => acc.plus(p.nominal_value || '0'), D(0));
   }, [filteredItems]);
 
+  // Group filtered items into distinct priority sections
+  const prioritizedSections = useMemo(() => {
+    const groups: {
+      id: string;
+      title: string;
+      badgeText: string;
+      badgeBg: string;
+      badgeColor: string;
+      badgeBorder: string;
+      items: ERPPDCRecord[];
+    }[] = [
+      {
+        id: 'overdue',
+        title: isAr ? 'أقساط متأخرة واجبة التحصيل فوراً' : 'Urgent Overdue Installments',
+        badgeText: isAr ? 'متأخر' : 'Overdue',
+        badgeBg: 'rgba(239, 68, 68, 0.08)',
+        badgeColor: '#dc2626',
+        badgeBorder: 'rgba(239, 68, 68, 0.22)',
+        items: []
+      },
+      {
+        id: 'today',
+        title: isAr ? 'أقساط تستحق اليوم' : 'Due Today',
+        badgeText: isAr ? 'اليوم' : 'Today',
+        badgeBg: 'rgba(245, 158, 11, 0.08)',
+        badgeColor: '#d97706',
+        badgeBorder: 'rgba(245, 158, 11, 0.25)',
+        items: []
+      },
+      {
+        id: 'week',
+        title: isAr ? 'أقساط تستحق خلال هذا الأسبوع' : 'Due Within 7 Days',
+        badgeText: isAr ? 'خلال أسبوع' : 'This Week',
+        badgeBg: 'rgba(184, 144, 62, 0.08)',
+        badgeColor: '#946f23',
+        badgeBorder: 'rgba(184, 144, 62, 0.22)',
+        items: []
+      },
+      {
+        id: 'upcoming',
+        title: isAr ? 'أقساط مجدولة قادمة' : 'Upcoming Scheduled Dues',
+        badgeText: isAr ? 'مجدول' : 'Scheduled',
+        badgeBg: 'rgba(71, 85, 105, 0.06)',
+        badgeColor: '#475569',
+        badgeBorder: 'rgba(71, 85, 105, 0.18)',
+        items: []
+      },
+      {
+        id: 'cleared',
+        title: isAr ? 'أقساط محصلة ومثبتة دفترياً' : 'Cleared & Received Installments',
+        badgeText: isAr ? 'محصل' : 'Cleared',
+        badgeBg: 'rgba(16, 185, 129, 0.08)',
+        badgeColor: '#059669',
+        badgeBorder: 'rgba(16, 185, 129, 0.22)',
+        items: []
+      }
+    ];
+
+    filteredItems.forEach(p => {
+      if (p.status === 'Cleared') {
+        groups[4].items.push(p);
+      } else if (p.due_date < todayStr) {
+        groups[0].items.push(p);
+      } else if (p.due_date === todayStr) {
+        groups[1].items.push(p);
+      } else if (p.due_date <= nextWeekStr) {
+        groups[2].items.push(p);
+      } else {
+        groups[3].items.push(p);
+      }
+    });
+
+    return groups
+      .map(g => ({
+        ...g,
+        subtotal: g.items.reduce((acc, it) => acc.plus(it.nominal_value || '0'), D(0))
+      }))
+      .filter(g => g.items.length > 0);
+  }, [filteredItems, isAr, todayStr, nextWeekStr]);
+
   if (!isOpen) return null;
+
+  const isCleared = selectedItem?.status === 'Cleared';
+  const isVoid = selectedItem?.status === 'Void';
+  const isReadOnly = isCleared || isVoid;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedItem) {
       const msg = isAr ? 'يرجى اختيار قسط من القائمة أولاً' : 'Please select an installment first';
+      setError(msg);
+      toast.error(msg);
+      return;
+    }
+    if (isCleared) {
+      const msg = isAr ? 'هذا القسط تم تحصيله وإثباته دفترياً مسبقاً ولا يمكن تكرار تحصيله.' : 'This installment has already been cleared.';
       setError(msg);
       toast.error(msg);
       return;
@@ -207,7 +353,14 @@ export const HandCollectionModal: React.FC<HandCollectionModalProps> = ({
     }
 
     try {
-      await onConfirmCollection(selectedItem, receiptNo.trim(), collectionDate, collectedAmount, collectionNotes.trim());
+      await onConfirmCollection(
+        selectedItem, 
+        receiptNo.trim(), 
+        collectionDate, 
+        collectedAmount, 
+        collectionNotes.trim(), 
+        paymentMethod
+      );
       onClose();
     } catch (err: unknown) {
       const msg = (err as Error).message;
@@ -223,6 +376,135 @@ export const HandCollectionModal: React.FC<HandCollectionModalProps> = ({
 
   const nominalVal = selectedItem ? D(selectedItem.nominal_value || '0') : D(0);
 
+  const voucherAmount = collectedAmount || (selectedItem ? selectedItem.nominal_value : '0');
+  const voucherBuyer = selectedItem?.drawer_name || linkedContract?.buyer_name || (isAr ? 'العميل المتعاقد' : 'Client');
+  const voucherUnit = linkedContract?.unit_id || (isAr ? 'وحدة عقارية' : 'Unit');
+  const voucherContractNo = linkedContract?.contract_number || selectedItem?.contract_id || '—';
+  const effectiveVoucherCode = receiptNo || selectedItem?.cheque_number || `SND-${Date.now().toString().slice(-6)}`;
+
+  const voucherBody = (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', direction: isAr ? 'rtl' : 'ltr' }}>
+      {/* 1. Amount Box */}
+      <div style={{
+        border: '2px solid #0f172a',
+        borderRadius: '12px',
+        padding: '1.25rem 1.5rem',
+        background: '#f8fafc',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between'
+      }}>
+        <div>
+          <span style={{ fontSize: '0.8rem', fontWeight: 800, color: '#64748b', display: 'block' }}>
+            {isAr ? 'المبلغ المسدد والمثبت رسمياً:' : 'Paid & Confirmed Amount:'}
+          </span>
+          <div style={{ fontSize: '2rem', fontWeight: 900, color: '#0f172a', fontVariantNumeric: 'tabular-nums', marginTop: '0.2rem' }}>
+            {D(voucherAmount).formatEGP(isAr)}
+          </div>
+          <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#b8903e', marginTop: '0.35rem' }}>
+            {tafqeetEGP(voucherAmount)}
+          </div>
+        </div>
+        <div style={{ textAlign: isAr ? 'left' : 'right' }}>
+          <span style={{
+            display: 'inline-block',
+            background: paymentMethod === 'INSTAPAY' ? '#0284c7' : '#059669',
+            color: '#ffffff',
+            padding: '0.4rem 0.85rem',
+            borderRadius: '6px',
+            fontSize: '0.82rem',
+            fontWeight: 800
+          }}>
+            {paymentMethod === 'INSTAPAY' ? (isAr ? 'تحويل فوري إنستاباي' : 'InstaPay Transfer') : (isAr ? 'سداد نقدي بالخزينة' : 'Cash in Hand')}
+          </span>
+          <div style={{ fontSize: '0.74rem', color: '#64748b', marginTop: '0.4rem' }}>
+            {paymentMethod === 'INSTAPAY' 
+              ? (isAr ? 'حسابات البنوك والإنستاباي (102000)' : 'Corporate Bank (102000)') 
+              : (isAr ? 'الخزينة النقدية الرئيسية (101000)' : 'Corporate Cash Safe (101000)')}
+          </div>
+        </div>
+      </div>
+
+      {/* 2. Metadata Table */}
+      <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #cbd5e1', fontSize: '0.82rem' }}>
+        <tbody>
+          <tr style={{ borderBottom: '1px solid #e2e8f0', background: '#f8fafc' }}>
+            <td style={{ padding: '0.75rem 1rem', fontWeight: 800, width: '25%', color: '#334155' }}>
+              {isAr ? 'اسم العميل / المستلم منه:' : 'Payer Name:'}
+            </td>
+            <td style={{ padding: '0.75rem 1rem', fontWeight: 900, width: '35%', color: '#0f172a' }}>
+              {voucherBuyer}
+            </td>
+            <td style={{ padding: '0.75rem 1rem', fontWeight: 800, width: '20%', color: '#334155' }}>
+              {isAr ? 'الوحدة والعقد:' : 'Unit & Contract:'}
+            </td>
+            <td style={{ padding: '0.75rem 1rem', fontWeight: 800, width: '20%', color: '#0f172a' }}>
+              {voucherUnit} (#{voucherContractNo})
+            </td>
+          </tr>
+          <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
+            <td style={{ padding: '0.75rem 1rem', fontWeight: 800, color: '#334155' }}>
+              {isAr ? 'رقم السند / الشيك / الإيصال:' : 'Voucher / Instrument #:'}
+            </td>
+            <td style={{ padding: '0.75rem 1rem', fontFamily: 'monospace', fontWeight: 700, color: '#0f172a' }}>
+              {effectiveVoucherCode}
+            </td>
+            <td style={{ padding: '0.75rem 1rem', fontWeight: 800, color: '#334155' }}>
+              {isAr ? 'تاريخ الاستحقاق التعاقدي:' : 'Contract Due Date:'}
+            </td>
+            <td style={{ padding: '0.75rem 1rem', color: '#0f172a' }}>
+              {selectedItem?.due_date || collectionDate}
+            </td>
+          </tr>
+          <tr style={{ borderBottom: '1px solid #e2e8f0', background: '#f8fafc' }}>
+            <td style={{ padding: '0.75rem 1rem', fontWeight: 800, color: '#334155' }}>
+              {isAr ? 'طريقة التحصيل والاستلام:' : 'Payment Channel:'}
+            </td>
+            <td style={{ padding: '0.75rem 1rem', color: '#0f172a' }}>
+              {paymentMethod === 'INSTAPAY' 
+                ? (isAr ? 'تحويل إلكتروني فوري عبر تطبيق إنستاباي' : 'Electronic instant transfer via InstaPay') 
+                : (isAr ? 'توريد نقدي فوري بالخزينة بمقر الشركة' : 'Direct cash receipt in safe')}
+            </td>
+            <td style={{ padding: '0.75rem 1rem', fontWeight: 800, color: '#334155' }}>
+              {isAr ? 'تاريخ السداد الفعلي:' : 'Payment Date:'}
+            </td>
+            <td style={{ padding: '0.75rem 1rem', fontWeight: 700, color: '#059669' }}>
+              {collectionDate}
+            </td>
+          </tr>
+          <tr>
+            <td style={{ padding: '0.75rem 1rem', fontWeight: 800, color: '#334155' }}>
+              {isAr ? 'البيان والملاحظات:' : 'Notes / Memo:'}
+            </td>
+            <td colSpan={3} style={{ padding: '0.75rem 1rem', color: '#475569' }}>
+              {collectionNotes || (isAr ? `سداد قسط مستحق عن الوحدة ${voucherUnit} بموجب العقد رقم ${voucherContractNo}` : `Payment for unit ${voucherUnit}`)}
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      {/* 3. Posting summary */}
+      <div style={{
+        background: '#f1f5f9',
+        border: '1px solid #cbd5e1',
+        borderRadius: '8px',
+        padding: '0.75rem 1rem',
+        fontSize: '0.76rem',
+        display: 'flex',
+        justifyContent: 'space-between'
+      }}>
+        <span>
+          <strong>{isAr ? 'طرف القيد المدين: ' : 'Dr: '}</strong>
+          {paymentMethod === 'INSTAPAY' ? (isAr ? 'حـ/ البنك والتحويلات (102000)' : 'Bank (102000)') : (isAr ? 'حـ/ الخزينة النقدية الرئيسية (101000)' : 'Cash Safe (101000)')}
+        </span>
+        <span>
+          <strong>{isAr ? 'طرف القيد الدائن: ' : 'Cr: '}</strong>
+          {isAr ? 'حـ/ أوراق وقبض الخزينة (103200) وحـ/ الإيرادات المؤجلة (206100)' : 'Installments Receivable (103200) / Deferred Revenue (206100)'}
+        </span>
+      </div>
+    </div>
+  );
+
   // Helper for due badge styling
   const getDueBadge = (dueDate: string, status: string) => {
     if (status === 'Cleared') {
@@ -235,7 +517,7 @@ export const HandCollectionModal: React.FC<HandCollectionModalProps> = ({
     }
     if (status === 'Deposited') {
       return {
-        label: isAr ? 'قيد التحصيل بالبنك' : 'In Transit',
+        label: isAr ? 'بانتظار إنستاباي' : 'InstaPay Expected',
         bg: 'rgba(56, 189, 248, 0.1)',
         color: '#0284c7',
         border: 'rgba(56, 189, 248, 0.25)'
@@ -259,7 +541,7 @@ export const HandCollectionModal: React.FC<HandCollectionModalProps> = ({
       };
     }
     return {
-      label: isAr ? 'في الخزينة' : 'In Safe',
+      label: isAr ? 'في الخزينة / مستحق' : 'In Safe / Due',
       bg: 'rgba(184, 144, 62, 0.1)',
       color: '#946f23',
       border: 'rgba(184, 144, 62, 0.25)'
@@ -287,8 +569,8 @@ export const HandCollectionModal: React.FC<HandCollectionModalProps> = ({
         border: '1px solid #cbd5e1',
         borderRadius: '24px',
         width: '100%',
-        maxWidth: '1150px',
-        height: 'min(680px, 92vh)',
+        maxWidth: '1180px',
+        height: 'min(860px, 92vh)',
         boxShadow: '0 25px 65px -15px rgba(0, 0, 0, 0.22), 0 0 0 1px rgba(0,0,0,0.04)',
         overflow: 'hidden',
         display: 'flex',
@@ -325,7 +607,7 @@ export const HandCollectionModal: React.FC<HandCollectionModalProps> = ({
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
                 <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 900, color: '#0f172a' }}>
-                  {isAr ? 'إجراء تحصيل القسط / البند نقداً باليد' : 'Hand Cash Collection & Receipt Studio'}
+                  {isAr ? 'إجراء تحصيل الأقساط (نقداً باليد أو إنستاباي)' : 'Installment Collection Studio (Cash or InstaPay)'}
                 </h3>
                 <span style={{
                   background: 'rgba(184, 144, 62, 0.12)',
@@ -336,13 +618,13 @@ export const HandCollectionModal: React.FC<HandCollectionModalProps> = ({
                   fontSize: '0.72rem',
                   fontWeight: 800
                 }}>
-                  {isAr ? 'الخزينة الرئيسية [101000]' : 'Main Safe [101000]'}
+                  {isAr ? 'الخزينة [101000] • إنستاباي [102000]' : 'Safe [101000] • InstaPay [102000]'}
                 </span>
               </div>
               <p style={{ margin: '0.2rem 0 0', fontSize: '0.75rem', color: '#64748b' }}>
                 {isAr 
-                  ? 'اختر القسط المطلوب من القائمة الجانبية لإثبات استلام النقدية وتوليد إيصال الاستلام وقيد اليومية فوراً.'
-                  : 'Select any pending installment from the side agenda to record cash receipt and post balanced GL entry.'}
+                  ? 'اختر القسط المطلوب لإثبات الاستلام (نقداً بالخزينة أو عبر تحويل إنستاباي) وتوليد الإيصال وقيد اليومية فوراً.'
+                  : 'Select any installment to record collection (cash in safe or InstaPay) and post balanced GL entry.'}
               </p>
             </div>
           </div>
@@ -651,116 +933,161 @@ export const HandCollectionModal: React.FC<HandCollectionModalProps> = ({
                   <span>{isAr ? 'لا توجد أقساط مطابقة للبحث أو الفلتر المحدد.' : 'No installments match the search filter.'}</span>
                 </div>
               ) : (
-                filteredItems.map(p => {
-                  const isSelected = selectedItem?.cheque_id === p.cheque_id;
-                  const linkedC = contracts.find(c => c.contract_id === p.contract_id);
-                  const badge = getDueBadge(p.due_date, p.status);
-                  const pNominal = D(p.nominal_value || '0');
-
-                  return (
-                    <div
-                      key={p.cheque_id}
-                      onClick={() => setSelectedItem(p)}
-                      style={{
-                        padding: '0.85rem',
-                        borderRadius: '12px',
-                        cursor: 'pointer',
-                        background: isSelected ? 'linear-gradient(135deg, #ffffff 0%, #f0fdf4 100%)' : '#ffffff',
-                        border: isSelected ? '2px solid #059669' : '1px solid #e2e8f0',
-                        boxShadow: isSelected ? '0 4px 14px rgba(5, 150, 105, 0.15)' : '0 1px 3px rgba(0,0,0,0.02)',
-                        transition: 'all 0.15s ease',
-                        position: 'relative'
-                      }}
-                    >
-                      {/* Top Row: Client Name + Due Badge */}
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.5rem', marginBottom: '0.35rem' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                          <User size={13} color="#64748b" />
-                          <strong style={{ fontSize: '0.82rem', color: isSelected ? '#065f46' : '#0f172a' }}>
-                            {p.drawer_name}
-                          </strong>
-                        </div>
-
+                prioritizedSections.map(section => (
+                  <div key={section.id} style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '0.75rem' }}>
+                    {/* Priority Section Sticky Header */}
+                    <div style={{
+                      position: 'sticky',
+                      top: 0,
+                      zIndex: 3,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: '0.45rem 0.75rem',
+                      borderRadius: '8px',
+                      background: section.badgeBg,
+                      border: `1px solid ${section.badgeBorder}`,
+                      backdropFilter: 'blur(8px)'
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                        <span style={{ fontSize: '0.73rem', fontWeight: 800, color: section.badgeColor }}>
+                          {section.title}
+                        </span>
                         <span style={{
-                          fontSize: '0.66rem',
+                          background: '#ffffff',
+                          color: section.badgeColor,
                           fontWeight: 800,
-                          padding: '0.15rem 0.5rem',
+                          fontSize: '0.65rem',
+                          padding: '0.05rem 0.45rem',
                           borderRadius: '12px',
-                          background: badge.bg,
-                          color: badge.color,
-                          border: `1px solid ${badge.border}`,
-                          whiteSpace: 'nowrap'
+                          border: `1px solid ${section.badgeBorder}`
                         }}>
-                          {badge.label}
+                          {section.items.length} {isAr ? 'قسط' : 'dues'}
                         </span>
                       </div>
-
-                      {/* Middle Row: Contract / Unit Details */}
-                      <div style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.35rem',
-                        fontSize: '0.72rem',
-                        color: '#64748b',
-                        marginBottom: '0.45rem'
+                      <span style={{
+                        fontWeight: 800,
+                        color: section.badgeColor,
+                        fontVariantNumeric: 'tabular-nums',
+                        fontSize: '0.72rem'
                       }}>
-                        <Building2 size={12} color="#946f23" />
-                        <span style={{ color: '#946f23', fontWeight: 600 }}>
-                          {linkedC ? `#${linkedC.contract_number} (${linkedC.unit_id})` : `#${p.contract_id.slice(0, 8)}`}
-                        </span>
-                        <span>•</span>
-                        <span style={{ fontVariantNumeric: 'tabular-nums' }}>
-                          {isAr ? `سند #${p.cheque_number}` : `Voucher #${p.cheque_number}`}
-                        </span>
-                      </div>
-
-                      {/* Bottom Row: Due Date + Nominal Amount */}
-                      <div style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        borderTop: '1px solid #f1f5f9',
-                        paddingTop: '0.45rem'
-                      }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.7rem', color: '#64748b' }}>
-                          <Clock size={11} />
-                          <span style={{ fontVariantNumeric: 'tabular-nums' }}>{p.due_date}</span>
-                        </div>
-
-                        <div style={{
-                          fontSize: '0.86rem',
-                          fontWeight: 900,
-                          color: isSelected ? '#059669' : '#0f172a',
-                          fontVariantNumeric: 'tabular-nums'
-                        }}>
-                          {pNominal.formatEGP(isAr)}
-                        </div>
-                      </div>
-
-                      {/* Selected Ribbon Badge */}
-                      {isSelected && (
-                        <div style={{
-                          position: 'absolute',
-                          top: '-6px',
-                          [isAr ? 'left' : 'right']: '12px',
-                          background: '#059669',
-                          color: '#ffffff',
-                          padding: '0.1rem 0.45rem',
-                          borderRadius: '8px',
-                          fontSize: '0.62rem',
-                          fontWeight: 800,
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '0.25rem',
-                          boxShadow: '0 2px 6px rgba(5, 150, 105, 0.3)'
-                        }}>
-                          <Check size={10} />
-                          <span>{isAr ? 'محدد للتحصيل' : 'Active Selection'}</span>
-                        </div>
-                      )}
+                        {section.subtotal.formatEGP(isAr)}
+                      </span>
                     </div>
-                  );
-                })
+
+                    {/* Section Cards */}
+                    {section.items.map(p => {
+                      const isSelected = selectedItem?.cheque_id === p.cheque_id;
+                      const linkedC = contracts.find(c => c.contract_id === p.contract_id);
+                      const badge = getDueBadge(p.due_date, p.status);
+                      const pNominal = D(p.nominal_value || '0');
+
+                      return (
+                        <div
+                          key={p.cheque_id}
+                          onClick={() => setSelectedItem(p)}
+                          style={{
+                            padding: '0.85rem',
+                            borderRadius: '12px',
+                            cursor: 'pointer',
+                            background: isSelected ? 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)' : '#ffffff',
+                            border: isSelected ? '2px solid #0f172a' : '1px solid #e2e8f0',
+                            boxShadow: isSelected ? '0 4px 14px rgba(15, 23, 42, 0.12)' : '0 1px 3px rgba(0,0,0,0.02)',
+                            transition: 'all 0.15s ease',
+                            position: 'relative'
+                          }}
+                        >
+                          {/* Top Row: Client Name + Due Badge */}
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.5rem', marginBottom: '0.35rem' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                              <User size={13} color="#64748b" />
+                              <strong style={{ fontSize: '0.82rem', color: isSelected ? '#0f172a' : '#1e293b' }}>
+                                {p.drawer_name}
+                              </strong>
+                            </div>
+
+                            <span style={{
+                              fontSize: '0.66rem',
+                              fontWeight: 800,
+                              padding: '0.15rem 0.5rem',
+                              borderRadius: '12px',
+                              background: badge.bg,
+                              color: badge.color,
+                              border: `1px solid ${badge.border}`,
+                              whiteSpace: 'nowrap'
+                            }}>
+                              {badge.label}
+                            </span>
+                          </div>
+
+                          {/* Middle Row: Contract / Unit Details */}
+                          <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.35rem',
+                            fontSize: '0.72rem',
+                            color: '#64748b',
+                            marginBottom: '0.45rem'
+                          }}>
+                            <Building2 size={12} color="#946f23" />
+                            <span style={{ color: '#946f23', fontWeight: 600 }}>
+                              {linkedC ? `#${linkedC.contract_number} (${linkedC.unit_id})` : `#${p.contract_id.slice(0, 8)}`}
+                            </span>
+                            <span>•</span>
+                            <span style={{ fontVariantNumeric: 'tabular-nums' }}>
+                              {isAr ? `قسط #${p.cheque_number.replace(/^(CHQ|SND)-/, '')}` : `Installment #${p.cheque_number.replace(/^(CHQ|SND)-/, '')}`}
+                            </span>
+                          </div>
+
+                          {/* Bottom Row: Due Date + Nominal Amount */}
+                          <div style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            borderTop: '1px solid #f1f5f9',
+                            paddingTop: '0.45rem'
+                          }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.7rem', color: '#64748b' }}>
+                              <Clock size={11} />
+                              <span style={{ fontVariantNumeric: 'tabular-nums' }}>{p.due_date}</span>
+                            </div>
+
+                            <div style={{
+                              fontSize: '0.86rem',
+                              fontWeight: 900,
+                              color: isSelected ? '#0f172a' : '#334155',
+                              fontVariantNumeric: 'tabular-nums'
+                            }}>
+                              {pNominal.formatEGP(isAr)}
+                            </div>
+                          </div>
+
+                          {/* Selected Ribbon Badge */}
+                          {isSelected && (
+                            <div style={{
+                              position: 'absolute',
+                              top: '-6px',
+                              [isAr ? 'left' : 'right']: '12px',
+                              background: '#0f172a',
+                              color: '#ffffff',
+                              padding: '0.1rem 0.45rem',
+                              borderRadius: '8px',
+                              fontSize: '0.62rem',
+                              fontWeight: 800,
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.25rem',
+                              boxShadow: '0 2px 6px rgba(15, 23, 42, 0.25)'
+                            }}>
+                              <Check size={10} />
+                              <span>{p.status === 'Cleared' ? (isAr ? 'معاينة السند المحصل' : 'Viewing Cleared') : (isAr ? 'محدد للتحصيل' : 'Active Selection')}</span>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                ))
               )}
             </div>
           </div>
@@ -892,6 +1219,28 @@ export const HandCollectionModal: React.FC<HandCollectionModalProps> = ({
                       </span>
                     </div>
 
+                    {isCleared && (
+                      <div style={{
+                        padding: '0.45rem 1rem',
+                        background: 'rgba(16, 185, 129, 0.1)',
+                        borderBottom: '1.5px solid rgba(16, 185, 129, 0.25)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        fontSize: '0.74rem',
+                        color: '#065f46',
+                        fontWeight: 800
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                          <CheckCircle2 size={15} color="#059669" />
+                          <span>{isAr ? 'تم استلام وتوريد هذا القسط للخزينة مسبقاً (سند مقفل)' : 'Installment already collected & cleared into safe (Locked Voucher)'}</span>
+                        </div>
+                        <span style={{ fontSize: '0.7rem', color: '#047857', fontVariantNumeric: 'tabular-nums' }}>
+                          {isAr ? `تاريخ التحصيل: ${selectedItem.cleared_date || selectedItem.due_date}` : `Cleared: ${selectedItem.cleared_date || selectedItem.due_date}`}
+                        </span>
+                      </div>
+                    )}
+
                     {/* Voucher Body Details Grid */}
                     <div style={{
                       padding: '0.85rem 1rem',
@@ -938,28 +1287,94 @@ export const HandCollectionModal: React.FC<HandCollectionModalProps> = ({
                     </div>
                   </div>
 
+                  {/* Payment Method Selector Toggle */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                    <label style={{ fontSize: '0.74rem', color: '#334155', fontWeight: 700 }}>
+                      {isAr ? 'طريقة التحصيل والاستلام *' : 'Collection Method *'}
+                    </label>
+                    <div style={{
+                      display: 'grid',
+                      gridTemplateColumns: '1fr 1fr',
+                      gap: '0.65rem',
+                      background: '#f8fafc',
+                      padding: '0.35rem',
+                      borderRadius: '10px',
+                      border: '1px solid #e2e8f0'
+                    }}>
+                      <button
+                        type="button"
+                        disabled={isReadOnly}
+                        onClick={() => handlePaymentMethodChange('CASH')}
+                        style={{
+                          padding: '0.65rem 0.85rem',
+                          borderRadius: '8px',
+                          border: paymentMethod === 'CASH' ? '2px solid #0f172a' : '1px solid #e2e8f0',
+                          background: paymentMethod === 'CASH' ? 'rgba(15, 23, 42, 0.05)' : '#ffffff',
+                          color: paymentMethod === 'CASH' ? '#0f172a' : '#64748b',
+                          fontWeight: paymentMethod === 'CASH' ? 800 : 600,
+                          fontSize: '0.78rem',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '0.45rem',
+                          cursor: isReadOnly ? 'not-allowed' : 'pointer',
+                          transition: 'all 0.15s ease'
+                        }}
+                      >
+                        <Wallet size={16} color={paymentMethod === 'CASH' ? '#0f172a' : '#64748b'} />
+                        <span>{isAr ? 'نقداً باليد (الخزينة 101000)' : 'Cash in Hand (Safe 101000)'}</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        disabled={isReadOnly}
+                        onClick={() => handlePaymentMethodChange('INSTAPAY')}
+                        style={{
+                          padding: '0.65rem 0.85rem',
+                          borderRadius: '8px',
+                          border: paymentMethod === 'INSTAPAY' ? '2px solid #0284c7' : '1px solid #e2e8f0',
+                          background: paymentMethod === 'INSTAPAY' ? 'rgba(2, 132, 199, 0.08)' : '#ffffff',
+                          color: paymentMethod === 'INSTAPAY' ? '#0369a1' : '#64748b',
+                          fontWeight: paymentMethod === 'INSTAPAY' ? 800 : 600,
+                          fontSize: '0.78rem',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '0.45rem',
+                          cursor: isReadOnly ? 'not-allowed' : 'pointer',
+                          transition: 'all 0.15s ease'
+                        }}
+                      >
+                        <Zap size={16} color={paymentMethod === 'INSTAPAY' ? '#0284c7' : '#64748b'} />
+                        <span>{isAr ? 'تحويل فوري إنستاباي (102000)' : 'InstaPay Instant (102000)'}</span>
+                      </button>
+                    </div>
+                  </div>
+
                   {/* Form Inputs Grid */}
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.85rem' }}>
                     {/* Actual Collection Date */}
                     <div>
                       <label style={{ display: 'block', fontSize: '0.74rem', color: '#334155', marginBottom: '0.3rem', fontWeight: 700 }}>
                         <Calendar size={13} style={{ display: 'inline', marginLeft: isAr ? '0.35rem' : 0, marginRight: isAr ? 0 : '0.35rem' }} />
-                        {isAr ? 'تاريخ الاستلام الفعلي باليد *' : 'Actual Cash Receipt Date *'}
+                        {isAr ? 'تاريخ الاستلام الفعلي باليد *' : 'Actual Receipt Date *'}
                       </label>
                       <input 
                         type="date"
                         required
+                        disabled={isReadOnly}
                         value={collectionDate}
                         onChange={e => setCollectionDate(e.target.value)}
                         style={{
                           width: '100%',
                           padding: '0.5rem 0.75rem',
-                          background: '#ffffff',
+                          background: isReadOnly ? '#f8fafc' : '#ffffff',
                           border: '1px solid #cbd5e1',
                           borderRadius: '8px',
-                          color: '#0f172a',
+                          color: isReadOnly ? '#475569' : '#0f172a',
                           fontSize: '0.82rem',
-                          outline: 'none'
+                          outline: 'none',
+                          cursor: isReadOnly ? 'not-allowed' : 'text'
                         }}
                       />
                     </div>
@@ -968,25 +1383,29 @@ export const HandCollectionModal: React.FC<HandCollectionModalProps> = ({
                     <div>
                       <label style={{ display: 'block', fontSize: '0.74rem', color: '#334155', marginBottom: '0.3rem', fontWeight: 700 }}>
                         <Receipt size={13} style={{ display: 'inline', marginLeft: isAr ? '0.35rem' : 0, marginRight: isAr ? 0 : '0.35rem' }} />
-                        {isAr ? 'رقم إيصال الاستلام النقدي *' : 'Receipt Voucher # *'}
+                        {paymentMethod === 'INSTAPAY'
+                          ? (isAr ? 'رقم مرجع تحويل إنستاباي *' : 'InstaPay Ref # *')
+                          : (isAr ? 'رقم إيصال الاستلام النقدي *' : 'Receipt Voucher # *')}
                       </label>
                       <input 
                         type="text"
                         required
+                        disabled={isReadOnly}
                         value={receiptNo}
                         onChange={e => setReceiptNo(e.target.value)}
-                        placeholder="RCP-2026-XXXX"
+                        placeholder={paymentMethod === 'INSTAPAY' ? 'IP-2026-XXXX' : 'RCP-2026-XXXX'}
                         style={{
                           width: '100%',
                           padding: '0.5rem 0.75rem',
-                          background: '#ffffff',
+                          background: isReadOnly ? '#f8fafc' : '#ffffff',
                           border: '1px solid #cbd5e1',
                           borderRadius: '8px',
-                          color: '#0f172a',
+                          color: isReadOnly ? '#475569' : '#0f172a',
                           fontSize: '0.82rem',
                           fontVariantNumeric: 'tabular-nums',
                           fontWeight: 700,
-                          outline: 'none'
+                          outline: 'none',
+                          cursor: isReadOnly ? 'not-allowed' : 'text'
                         }}
                       />
                     </div>
@@ -995,25 +1414,34 @@ export const HandCollectionModal: React.FC<HandCollectionModalProps> = ({
                   {/* Amount Paid Field */}
                   <div>
                     <label style={{ display: 'block', fontSize: '0.74rem', color: '#334155', marginBottom: '0.3rem', fontWeight: 700 }}>
-                      {isAr ? 'المبلغ المستلم نقداً (ج.م) *' : 'Amount Received in Cash (EGP) *'}
+                      {paymentMethod === 'INSTAPAY'
+                        ? (isAr ? 'المبلغ المحول عبر إنستاباي (ج.م) *' : 'Amount Received via InstaPay (EGP) *')
+                        : (isAr ? 'المبلغ المستلم نقداً (ج.م) *' : 'Amount Received in Cash (EGP) *')}
                     </label>
                     <input 
                       type="number"
                       step="0.01"
                       required
+                      disabled={isReadOnly}
                       value={collectedAmount}
                       onChange={e => setCollectedAmount(e.target.value)}
                       style={{
                         width: '100%',
                         padding: '0.55rem 0.85rem',
-                        background: '#ffffff',
-                        border: '1.5px solid #059669',
+                        background: isReadOnly ? '#f8fafc' : '#ffffff',
+                        border: '1.5px solid #cbd5e1',
                         borderRadius: '8px',
-                        color: '#059669',
+                        color: '#0f172a',
                         fontSize: '1.1rem',
-                        fontWeight: 900,
-                        outline: 'none'
+                        fontWeight: 800,
+                        fontVariantNumeric: 'tabular-nums',
+                        outline: 'none',
+                        boxSizing: 'border-box',
+                        cursor: isReadOnly ? 'not-allowed' : 'text',
+                        transition: 'border-color 0.15s ease'
                       }}
+                      onFocus={e => e.currentTarget.style.borderColor = '#0f172a'}
+                      onBlur={e => e.currentTarget.style.borderColor = '#cbd5e1'}
                     />
                   </div>
 
@@ -1025,39 +1453,50 @@ export const HandCollectionModal: React.FC<HandCollectionModalProps> = ({
                     </label>
                     <input 
                       type="text"
+                      disabled={isReadOnly}
                       value={collectionNotes}
                       onChange={e => setCollectionNotes(e.target.value)}
-                      placeholder={isAr ? 'سداد نقدي باليد بالخزينة' : 'Cash in safe'}
+                      placeholder={paymentMethod === 'INSTAPAY' ? (isAr ? 'تحويل إنستاباي' : 'InstaPay transfer') : (isAr ? 'سداد نقدي باليد بالخزينة' : 'Cash in safe')}
                       style={{
                         width: '100%',
                         padding: '0.5rem 0.75rem',
-                        background: '#ffffff',
+                        background: isReadOnly ? '#f8fafc' : '#ffffff',
                         border: '1px solid #cbd5e1',
                         borderRadius: '8px',
-                        color: '#0f172a',
+                        color: isReadOnly ? '#475569' : '#0f172a',
                         fontSize: '0.78rem',
-                        outline: 'none'
+                        outline: 'none',
+                        cursor: isReadOnly ? 'not-allowed' : 'text'
                       }}
                     />
                   </div>
 
                   {/* Automated Accounting Posting Strip */}
                   <div style={{
-                    background: 'rgba(16, 185, 129, 0.05)',
-                    border: '1px solid rgba(16, 185, 129, 0.2)',
+                    background: isCleared ? 'rgba(16, 185, 129, 0.08)' : (paymentMethod === 'INSTAPAY' ? 'rgba(2, 132, 199, 0.08)' : 'rgba(16, 185, 129, 0.05)'),
+                    border: isCleared ? '1px solid rgba(16, 185, 129, 0.2)' : (paymentMethod === 'INSTAPAY' ? '1px solid rgba(2, 132, 199, 0.25)' : '1px solid rgba(16, 185, 129, 0.2)'),
                     borderRadius: '10px',
                     padding: '0.55rem 0.8rem',
                     display: 'flex',
                     alignItems: 'center',
                     gap: '0.5rem',
                     fontSize: '0.72rem',
-                    color: '#065f46'
+                    color: paymentMethod === 'INSTAPAY' && !isCleared ? '#0369a1' : '#065f46',
+                    fontWeight: isCleared ? 700 : 500
                   }}>
-                    <CheckCircle2 size={15} color="#059669" />
+                    <CheckCircle2 size={15} color={paymentMethod === 'INSTAPAY' && !isCleared ? '#0284c7' : '#059669'} />
                     <span>
-                      {isAr 
-                        ? 'التوجيه المحاسبي: مدين حـ/ الخزينة الرئيسية (101000) • دائن حـ/ أوراق القبض (103200).'
-                        : 'GL Impact: Dr Safe (101000) • Cr Notes Receivable (103200).'}
+                      {isCleared 
+                        ? (isAr 
+                            ? 'الحالة المحاسبية: مُثبت دفترياً ومُرحّل بالكامل مع تسوية أوراق القبض (103200).' 
+                            : 'GL Status: Cleared & settled against Notes Receivable (103200).')
+                        : paymentMethod === 'INSTAPAY'
+                          ? (isAr 
+                              ? 'التوجيه المحاسبي: مدين حـ/ بنك المعاملات والتحويلات الفورية (102000) • دائن حـ/ أوراق القبض (103200).'
+                              : 'GL Impact: Dr Instant Bank (102000) • Cr Notes Receivable (103200).')
+                          : (isAr 
+                              ? 'التوجيه المحاسبي: مدين حـ/ الخزينة الرئيسية (101000) • دائن حـ/ أوراق القبض (103200).'
+                              : 'GL Impact: Dr Safe (101000) • Cr Notes Receivable (103200).')}
                     </span>
                   </div>
                 </div>
@@ -1071,28 +1510,51 @@ export const HandCollectionModal: React.FC<HandCollectionModalProps> = ({
                   paddingTop: '0.85rem',
                   marginTop: 'auto'
                 }}>
-                  <button
-                    type="button"
-                    onClick={handlePrint}
-                    style={{
-                      background: '#ffffff',
-                      border: '1px solid #cbd5e1',
-                      color: '#334155',
-                      padding: '0.5rem 0.9rem',
-                      borderRadius: '8px',
-                      fontSize: '0.76rem',
-                      fontWeight: 700,
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '0.35rem',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    <Printer size={14} />
-                    <span>{isAr ? 'طباعة سند القبض' : 'Print Voucher'}</span>
-                  </button>
+                  <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
+                    <button
+                      type="button"
+                      onClick={handlePrint}
+                      style={{
+                        background: '#ffffff',
+                        border: '1px solid #cbd5e1',
+                        color: '#334155',
+                        padding: '0.5rem 0.9rem',
+                        borderRadius: '8px',
+                        fontSize: '0.76rem',
+                        fontWeight: 700,
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '0.35rem',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      <Printer size={14} />
+                      <span>{isAr ? 'طباعة سند القبض' : 'Print Voucher'}</span>
+                    </button>
 
-                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <button
+                      type="button"
+                      onClick={() => setShowPrintPreview(true)}
+                      style={{
+                        background: 'rgba(184, 144, 62, 0.08)',
+                        border: '1px solid rgba(184, 144, 62, 0.25)',
+                        color: '#946f23',
+                        padding: '0.5rem 0.85rem',
+                        borderRadius: '8px',
+                        fontSize: '0.76rem',
+                        fontWeight: 700,
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '0.35rem',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      <FileText size={14} />
+                      <span>{isAr ? 'معاينة السند' : 'Preview'}</span>
+                    </button>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
                     <button
                       type="button"
                       onClick={onClose}
@@ -1107,36 +1569,126 @@ export const HandCollectionModal: React.FC<HandCollectionModalProps> = ({
                         cursor: 'pointer'
                       }}
                     >
-                      {isAr ? 'إلغاء' : 'Cancel'}
+                      {isCleared ? (isAr ? 'إغلاق المعاينة' : 'Close') : (isAr ? 'إلغاء' : 'Cancel')}
                     </button>
 
-                    <button
-                      type="submit"
-                      disabled={isMutating}
-                      style={{
-                        background: 'linear-gradient(135deg, #059669 0%, #047857 100%)',
-                        color: '#ffffff',
-                        border: 'none',
-                        padding: '0.5rem 1.2rem',
-                        borderRadius: '8px',
-                        fontSize: '0.78rem',
-                        fontWeight: 800,
-                        cursor: isMutating ? 'not-allowed' : 'pointer',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '0.45rem',
-                        boxShadow: '0 2px 8px rgba(5, 150, 105, 0.3)'
-                      }}
-                    >
-                      {isMutating ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
-                      <span>{isAr ? 'تأكيد التحصيل والتوريد للخزينة' : 'Confirm Cash Collection'}</span>
-                    </button>
+                    {isCleared ? (
+                      <div
+                        style={{
+                          background: 'rgba(16, 185, 129, 0.1)',
+                          color: '#059669',
+                          border: '1px solid rgba(16, 185, 129, 0.25)',
+                          padding: '0.5rem 1.1rem',
+                          borderRadius: '8px',
+                          fontSize: '0.78rem',
+                          fontWeight: 800,
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '0.45rem',
+                          userSelect: 'none'
+                        }}
+                      >
+                        <CheckCircle2 size={14} color="#059669" />
+                        <span>{isAr ? 'تم التحصيل مسبقاً (سند مقفل)' : 'Already Cleared (Locked)'}</span>
+                      </div>
+                    ) : (
+                      <button
+                        type="submit"
+                        disabled={isMutating}
+                        style={{
+                          background: paymentMethod === 'INSTAPAY'
+                            ? 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)'
+                            : 'linear-gradient(135deg, #059669 0%, #047857 100%)',
+                          color: '#ffffff',
+                          border: 'none',
+                          padding: '0.5rem 1.2rem',
+                          borderRadius: '8px',
+                          fontSize: '0.78rem',
+                          fontWeight: 800,
+                          cursor: isMutating ? 'not-allowed' : 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '0.45rem',
+                          boxShadow: paymentMethod === 'INSTAPAY'
+                            ? '0 2px 8px rgba(2, 132, 199, 0.3)'
+                            : '0 2px 8px rgba(5, 150, 105, 0.3)'
+                        }}
+                      >
+                        {isMutating ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
+                        <span>
+                          {paymentMethod === 'INSTAPAY'
+                            ? (isAr ? 'تأكيد استلام تحويل إنستاباي' : 'Confirm InstaPay Receipt')
+                            : (isAr ? 'تأكيد التحصيل والتوريد للخزينة' : 'Confirm Cash Collection')}
+                        </span>
+                      </button>
+                    )}
                   </div>
                 </div>
               </form>
             )}
           </div>
         </div>
+      </div>
+
+      {/* Screen Preview Modal */}
+      {showPrintPreview && (
+        <div 
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 100000,
+            background: 'rgba(15, 23, 42, 0.75)',
+            backdropFilter: 'blur(6px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '1.5rem',
+            overflowY: 'auto'
+          }}
+          onClick={() => setShowPrintPreview(false)}
+        >
+          <div 
+            style={{ 
+              maxWidth: '850px', 
+              width: '100%', 
+              maxHeight: '94vh', 
+              overflowY: 'auto',
+              borderRadius: '12px',
+              boxShadow: '0 25px 50px rgba(0,0,0,0.3)'
+            }} 
+            onClick={e => e.stopPropagation()}
+          >
+            <ZFPrintDocumentLayout
+              documentTitle={paymentMethod === 'INSTAPAY' ? (isAr ? 'إشعار استلام تحويل إنستاباي' : 'InstaPay Receipt Voucher') : (isAr ? 'سند قبض نقدية رسمي' : 'Official Cash Receipt Voucher')}
+              documentSubtitle={paymentMethod === 'INSTAPAY' 
+                ? (isAr ? 'إيداع بنكي فوري - حساب الشركة (102000)' : 'Corporate Bank Deposit (102000)')
+                : (isAr ? 'توريد نقدي فوري بخزينة الشركة الرئيسية (101000)' : 'Cash Safe Deposit (101000)')
+              }
+              voucherCode={effectiveVoucherCode}
+              date={collectionDate}
+              onClose={() => setShowPrintPreview(false)}
+              isAr={isAr}
+            >
+              {voucherBody}
+            </ZFPrintDocumentLayout>
+          </div>
+        </div>
+      )}
+
+      {/* Hidden print container: rendered for @media print */}
+      <div className="zf-print-only">
+        <ZFPrintDocumentLayout
+          documentTitle={paymentMethod === 'INSTAPAY' ? (isAr ? 'إشعار استلام تحويل إنستاباي' : 'InstaPay Receipt Voucher') : (isAr ? 'سند قبض نقدية رسمي' : 'Official Cash Receipt Voucher')}
+          documentSubtitle={paymentMethod === 'INSTAPAY' 
+            ? (isAr ? 'إيداع بنكي فوري - حساب الشركة (102000)' : 'Corporate Bank Deposit (102000)')
+            : (isAr ? 'توريد نقدي فوري بخزينة الشركة الرئيسية (101000)' : 'Cash Safe Deposit (101000)')
+          }
+          voucherCode={effectiveVoucherCode}
+          date={collectionDate}
+          isAr={isAr}
+        >
+          {voucherBody}
+        </ZFPrintDocumentLayout>
       </div>
     </div>
   );

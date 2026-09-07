@@ -112,6 +112,7 @@ export const RealEstateValueWaterfall: React.FC<RealEstateValueWaterfallProps> =
   }, [grossVal, wipTotal]);
 
   // Structured Waterfall Nodes
+  // Structured Waterfall Nodes (Exactly 8 Balanced Nodes: 4 Sales/Liquidity + 4 WIP Costs)
   const nodes: WaterfallNode[] = useMemo(() => {
     return [
       // TIER 1: GROSS PORTFOLIO SALES CEILING
@@ -120,14 +121,14 @@ export const RealEstateValueWaterfall: React.FC<RealEstateValueWaterfallProps> =
         tier: 1,
         titleAr: 'إجمالي قيمة العقود المباعة',
         titleEn: 'Gross Contracted Sales Ceiling',
-        categoryAr: 'إجمالي المبيعات',
+        categoryAr: 'سقف المبيعات',
         categoryEn: 'Portfolio Source',
         amount: grossVal.toFixed(2),
         percentage: 100,
-        color: '#c5a059',
-        bgGradient: 'linear-gradient(135deg, #ffffff 0%, #fefdfa 100%)',
+        color: '#946f23',
+        bgGradient: 'linear-gradient(135deg, #ffffff 0%, #faf8f5 100%)',
         icon: Building2,
-        descriptionAr: 'كل مبيعات العقود اللي اتمضت مع العملاء شاملة الأقساط والدفعات المجدولة',
+        descriptionAr: 'كل مبيعات العقود اللي اتمضت مع العملاء شاملة الدفعات المحصلة والأقساط المجدولة للمستقبل.',
         descriptionEn: 'Total contracted revenue signed with clients across all projects',
         connectedTo: ['collected_cash', 'accounts_receivable']
       },
@@ -138,16 +139,16 @@ export const RealEstateValueWaterfall: React.FC<RealEstateValueWaterfallProps> =
         tier: 2,
         titleAr: 'المبالغ المحصلة فعلياً',
         titleEn: 'Actual Cash Collected',
-        categoryAr: 'كاش جاهز بالبنك والخزنة',
+        categoryAr: 'كاش جاهز بالخزنة والبنك',
         categoryEn: 'Liquid Cash',
         amount: collected.toFixed(2),
         percentage: grossVal.isZero() ? 0 : Math.round((collected.toNumber() / grossVal.toNumber()) * 100),
-        color: '#15803d',
+        color: '#047857',
         bgGradient: 'linear-gradient(135deg, #ffffff 0%, #f0fdf4 100%)',
         icon: Wallet,
-        descriptionAr: 'الفلوس اللي دخلت فعلاً في حسابات البنك وخزنة الشركة بسندات قبض نقدية',
+        descriptionAr: 'الفلوس اللي دخلت فعلاً في خزينة الشركة وحسابات البنك بسندات قبض نقدية وتحويلات معتمدة.',
         descriptionEn: 'Cash receipts banked in safe or commercial bank accounts',
-        connectedTo: ['wip_civil', 'wip_mep', 'wip_finishing', 'realized_profit']
+        connectedTo: ['wip_civil', 'wip_finishing', 'total_wip']
       },
       {
         id: 'accounts_receivable',
@@ -158,133 +159,99 @@ export const RealEstateValueWaterfall: React.FC<RealEstateValueWaterfallProps> =
         categoryEn: 'Receivables',
         amount: arVal.toFixed(2),
         percentage: grossVal.isZero() ? 0 : Math.round((arVal.toNumber() / grossVal.toNumber()) * 100),
-        color: '#946f23',
-        bgGradient: 'linear-gradient(135deg, #ffffff 0%, #fffdfa 100%)',
+        color: '#1e40af',
+        bgGradient: 'linear-gradient(135deg, #ffffff 0%, #f0f9ff 100%)',
         icon: Landmark,
-        descriptionAr: 'أقساط مجدولة على المشترين بموجب العقود هندخلها تباعاً في مواعيدها كاش أو تحويل',
+        descriptionAr: 'أقساط مجدولة على المشترين بموجب العقود هندخلها تباعاً في مواعيدها كاش أو تحويل إنستاباي.',
         descriptionEn: 'Scheduled contract tranches due for collection across active deals',
         connectedTo: []
       },
 
-      // TIER 3: COST ABSORPTION WATERFALL (WIP)
-      {
-        id: 'wip_land',
-        tier: 3,
-        titleAr: 'ثمن الأرض والتراخيص',
-        titleEn: 'Land Allocation & Permits',
-        categoryAr: 'مصاريف الأرض [105100]',
-        categoryEn: 'Cost Absorption',
-        amount: wipAccounts.land || '0.00',
-        percentage: wipTotal.isZero() ? 0 : Math.round((D(wipAccounts.land).toNumber() / wipTotal.toNumber()) * 100),
-        color: '#b45309',
-        bgGradient: 'linear-gradient(135deg, #ffffff 0%, #fffbeb 100%)',
-        icon: Layers,
-        descriptionAr: 'ثمن شراء أرض المشروع ومصاريف التراخيص والرسوم',
-        descriptionEn: 'Land purchase price and municipal building permit fees',
-        connectedTo: ['total_wip']
-      },
-      {
-        id: 'wip_civil',
-        tier: 3,
-        titleAr: 'شغل الخرسانة والمباني',
-        titleEn: 'Civil & Concrete Structure',
-        categoryAr: 'مصاريف المباني [105200]',
-        categoryEn: 'Cost Absorption',
-        amount: wipAccounts.civil || '0.00',
-        percentage: wipTotal.isZero() ? 0 : Math.round((D(wipAccounts.civil).toNumber() / wipTotal.toNumber()) * 100),
-        color: '#ea580c',
-        bgGradient: 'linear-gradient(135deg, #ffffff 0%, #fff7ed 100%)',
-        icon: Building2,
-        descriptionAr: 'الحفر والخرسانات المسلحة وحديد التسليح والمقاولين',
-        descriptionEn: 'Reinforced concrete, rebar, foundation, and civil excavation WIP',
-        connectedTo: ['total_wip']
-      },
-      {
-        id: 'wip_finishing',
-        tier: 3,
-        titleAr: 'التشطيبات والكهرباء والسباكة',
-        titleEn: 'Finishing & MEP Engineering',
-        categoryAr: 'مصاريف التشطيب [105300]',
-        categoryEn: 'Cost Absorption',
-        amount: D(wipAccounts.finishing).plus(wipAccounts.mep).toFixed(2),
-        percentage: wipTotal.isZero() ? 0 : Math.round((D(wipAccounts.finishing).plus(wipAccounts.mep).toNumber() / wipTotal.toNumber()) * 100),
-        color: '#b8903e',
-        bgGradient: 'linear-gradient(135deg, #ffffff 0%, #fefcf8 100%)',
-        icon: Sparkles,
-        descriptionAr: 'تشطيب الواجهات والرخام والأسانسير وشغل الكهرباء والسباكة',
-        descriptionEn: 'Architectural facades, marble cladding, elevators, and MEP systems',
-        connectedTo: ['total_wip']
-      },
-      {
-        id: 'total_wip',
-        tier: 3,
-        titleAr: 'إجمالي المصروف على المباني',
-        titleEn: 'Total WIP Incurred',
-        categoryAr: 'كل مصاريف البناء [105000]',
-        categoryEn: 'Construction Assets',
-        amount: wipTotal.toFixed(2),
-        percentage: grossVal.isZero() ? 0 : Math.round((wipTotal.toNumber() / grossVal.toNumber()) * 100),
-        color: '#0f172a',
-        bgGradient: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)',
-        icon: ShieldCheck,
-        descriptionAr: 'كل الفلوس اللي اتصرفت فعلياً في الموقع من بداية الشغل لحد دلوقتي',
-        descriptionEn: 'Cumulative physical construction expenditure absorbed into projects',
-        connectedTo: ['realized_revenue', 'realized_profit']
-      },
-
-      // TIER 4: IFRS 15 REVENUE SIPHON
-      {
-        id: 'realized_revenue',
-        tier: 4,
-        titleAr: 'إيرادات مستحقة (حسب الإنجاز)',
-        titleEn: 'Recognized Revenue (IFRS 15)',
-        categoryAr: 'مبيعات معتمدة [401000]',
-        categoryEn: 'Realized Revenue',
-        amount: realizedRev.toFixed(2),
-        percentage: grossVal.isZero() ? 0 : Math.round((realizedRev.toNumber() / grossVal.toNumber()) * 100),
-        color: '#15803d',
-        bgGradient: 'linear-gradient(135deg, #ffffff 0%, #ecfdf5 100%)',
-        icon: TrendingUp,
-        descriptionAr: 'قيمة المبيعات المستحقة كإيراد فعلي بنسبة المباني اللي خلصت على الأرض',
-        descriptionEn: 'Revenue earned and recognized based on physical construction milestones',
-        connectedTo: ['realized_profit']
-      },
-      {
-        id: 'deferred_revenue',
-        tier: 4,
-        titleAr: 'مبيعات مؤجلة لحد ما نسلم الشقق',
-        titleEn: 'Unearned Deferred Revenue',
-        categoryAr: 'مبيعات مؤجلة [206100]',
-        categoryEn: 'Deferred Backlog',
-        amount: deferredRev.toFixed(2),
-        percentage: grossVal.isZero() ? 0 : Math.round((deferredRev.toNumber() / grossVal.toNumber()) * 100),
-        color: '#64748b',
-        bgGradient: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)',
-        icon: Clock,
-        descriptionAr: 'مبيعات بتتحسب أرباحها خطوة بخطوة مع تقدم البناء وتسليم الوحدات',
-        descriptionEn: 'Unearned deferred revenue held on the balance sheet until delivery',
-        connectedTo: []
-      },
-
-      // TIER 5: NET PROFIT & EQUITY RESERVOIR
+      // TIER 3: NET PROFIT & MARGIN RESERVOIR
       {
         id: 'realized_profit',
         tier: 5,
-        titleAr: 'صافي الأرباح المحققة',
+        titleAr: 'صافي الأرباح وهوامش العائد',
         titleEn: 'Net Realized Profit Margin',
         categoryAr: 'صافي الربح',
         categoryEn: 'Realized Equity',
         amount: netRealizedProfit.toFixed(2),
         percentage: grossMarginPct,
         color: '#946f23',
-        bgGradient: 'linear-gradient(135deg, #ffffff 0%, #fefdfa 100%)',
+        bgGradient: 'linear-gradient(135deg, #ffffff 0%, #faf8f5 100%)',
         icon: Coins,
-        descriptionAr: 'الأرباح الصافية اللي طلعت من المبيعات بعد خصم كل مصاريف البناء',
+        descriptionAr: 'الأرباح الصافية المحققة من المبيعات بعد خصم كل مصاريف المباني، مع هامش ربح تقديري للمحفظة.',
         descriptionEn: 'Net realized cash margin generated by projects with ' + grossMarginPct + '% gross margin',
         connectedTo: []
+      },
+
+      // TIER 4: COST ABSORPTION WATERFALL (WIP)
+      {
+        id: 'wip_land',
+        tier: 3,
+        titleAr: 'ثمن الأرض والتراخيص',
+        titleEn: 'Land Allocation & Permits',
+        categoryAr: 'مصاريف الأرض والرخص [105100]',
+        categoryEn: 'Cost Absorption',
+        amount: wipAccounts.land || '0.00',
+        percentage: wipTotal.isZero() ? 0 : Math.round((D(wipAccounts.land).toNumber() / wipTotal.toNumber()) * 100),
+        color: '#475569',
+        bgGradient: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)',
+        icon: Layers,
+        descriptionAr: 'ثمن شراء أرض المشروع المحمل ومصاريف التراخيص والرسوم الإنشائية والتأمينات.',
+        descriptionEn: 'Land purchase price and municipal building permit fees',
+        connectedTo: ['total_wip']
+      },
+      {
+        id: 'wip_civil',
+        tier: 3,
+        titleAr: 'الهيكل والخرسانات المسلحة',
+        titleEn: 'Civil & Concrete Structure',
+        categoryAr: 'مصاريف المباني [105200]',
+        categoryEn: 'Cost Absorption',
+        amount: wipAccounts.civil || '0.00',
+        percentage: wipTotal.isZero() ? 0 : Math.round((D(wipAccounts.civil).toNumber() / wipTotal.toNumber()) * 100),
+        color: '#c2410c',
+        bgGradient: 'linear-gradient(135deg, #ffffff 0%, #fff7ed 100%)',
+        icon: Building2,
+        descriptionAr: 'أعمال الحفر والخرسانات المسلحة وحديد التسليح ومقاولي البناء والمصنعيات.',
+        descriptionEn: 'Reinforced concrete, rebar, foundation, and civil excavation WIP',
+        connectedTo: ['total_wip']
+      },
+      {
+        id: 'wip_finishing',
+        tier: 3,
+        titleAr: 'التشطيبات والشبكات (MEP)',
+        titleEn: 'Finishing & MEP Engineering',
+        categoryAr: 'مصاريف التشطيب والمرافق [105300]',
+        categoryEn: 'Cost Absorption',
+        amount: D(wipAccounts.finishing).plus(wipAccounts.mep).toFixed(2),
+        percentage: wipTotal.isZero() ? 0 : Math.round((D(wipAccounts.finishing).plus(wipAccounts.mep).toNumber() / wipTotal.toNumber()) * 100),
+        color: '#701a75',
+        bgGradient: 'linear-gradient(135deg, #ffffff 0%, #faf5ff 100%)',
+        icon: Sparkles,
+        descriptionAr: 'تشطيب الواجهات والرخام والأسانسير وشبكات الكهرباء والسباكة وتأسيسات التكييف.',
+        descriptionEn: 'Architectural facades, marble cladding, elevators, and MEP systems',
+        connectedTo: ['total_wip']
+      },
+      {
+        id: 'total_wip',
+        tier: 3,
+        titleAr: 'إجمالي المصروف على البناء',
+        titleEn: 'Total WIP Incurred',
+        categoryAr: 'رأس مال البناء [105000]',
+        categoryEn: 'Construction Assets',
+        amount: wipTotal.toFixed(2),
+        percentage: grossVal.isZero() ? 0 : Math.round((wipTotal.toNumber() / grossVal.toNumber()) * 100),
+        color: '#0f172a',
+        bgGradient: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)',
+        icon: ShieldCheck,
+        descriptionAr: 'كل الفلوس اللي اتصرفت فعلياً في المواقع من بداية الشغل لحد دلوقتي (أصل استثماري).',
+        descriptionEn: 'Cumulative physical construction expenditure absorbed into projects',
+        connectedTo: ['realized_profit']
       }
     ];
-  }, [grossVal, collected, arVal, wipTotal, safePdc, cashBank, deferredRev, realizedRev, wipAccounts, netRealizedProfit, grossMarginPct]);
+  }, [grossVal, collected, arVal, wipTotal, safePdc, cashBank, wipAccounts, netRealizedProfit, grossMarginPct]);
 
   // Selected Node Details
   const activeNode = useMemo(() => {
@@ -295,13 +262,13 @@ export const RealEstateValueWaterfall: React.FC<RealEstateValueWaterfallProps> =
   // Filtered nodes
   const visibleNodes = useMemo(() => {
     if (activeTierFilter === 'liquidity') {
-      return nodes.filter(n => n.tier === 1 || n.tier === 2 || n.id === 'realized_profit');
+      return nodes.filter(n => n.id === 'gross_portfolio' || n.id === 'collected_cash' || n.id === 'accounts_receivable' || n.id === 'realized_profit');
     }
     if (activeTierFilter === 'costs') {
-      return nodes.filter(n => n.tier === 1 || n.tier === 3);
+      return nodes.filter(n => n.id.startsWith('wip_') || n.id === 'total_wip');
     }
     if (activeTierFilter === 'profit') {
-      return nodes.filter(n => n.tier === 1 || n.tier === 4 || n.tier === 5);
+      return nodes.filter(n => n.id === 'gross_portfolio' || n.id === 'total_wip' || n.id === 'realized_profit');
     }
     return nodes;
   }, [nodes, activeTierFilter]);
@@ -422,10 +389,75 @@ export const RealEstateValueWaterfall: React.FC<RealEstateValueWaterfallProps> =
         </div>
       </div>
 
-      {/* 2. THE 5-TIER WATERFALL INTERACTIVE SCHEMATIC */}
+      {/* 2. PROMINENT ACTIVE NODE ANALYTICAL DOSSIER (Integrated Above Grid) */}
+      {activeNode && (
+        <div style={{
+          background: '#ffffff',
+          border: '1.5px solid #e2e8f0',
+          borderInlineStart: `4px solid ${activeNode.color}`,
+          borderRadius: '14px',
+          padding: embeddedInStudio ? '0.85rem 1.15rem' : '1.15rem 1.4rem',
+          boxShadow: '0 4px 16px -4px rgba(0, 0, 0, 0.05)',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: '1rem',
+          transition: 'all 0.2s ease'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
+            <div style={{
+              width: '42px',
+              height: '42px',
+              borderRadius: '10px',
+              background: `${activeNode.color}15`,
+              color: activeNode.color,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0
+            }}>
+              {React.createElement(activeNode.icon, { size: 20 })}
+            </div>
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                <span style={{ fontSize: '0.68rem', fontWeight: 800, color: activeNode.color, background: `${activeNode.color}15`, padding: '0.1rem 0.4rem', borderRadius: '4px' }}>
+                  {isAr ? activeNode.categoryAr : activeNode.categoryEn}
+                </span>
+                <span style={{ fontSize: '0.74rem', color: '#64748b' }}>•</span>
+                <span style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 600 }}>
+                  {isAr ? 'اضغط أي كارت بالأسفل لعرض تحليله هنا' : 'Click any card below to inspect'}
+                </span>
+              </div>
+              <h3 style={{ margin: '0.2rem 0 0 0', fontSize: '1.05rem', fontWeight: 800, color: '#0f172a' }}>
+                {isAr ? activeNode.titleAr : activeNode.titleEn}
+              </h3>
+              <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.74rem', color: '#475569', maxWidth: '650px', lineHeight: 1.4 }}>
+                {isAr ? activeNode.descriptionAr : activeNode.descriptionEn}
+              </p>
+            </div>
+          </div>
+
+          <div style={{ textAlign: isAr ? 'left' : 'right' }}>
+            <span style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 700, display: 'block' }}>
+              {isAr ? 'القيمة المسجلة بالدفاتر:' : 'Recorded Value:'}
+            </span>
+            <div style={{ fontSize: '1.5rem', fontWeight: 900, color: '#0f172a', letterSpacing: '-0.02em', fontVariantNumeric: 'tabular-nums' }}>
+              {D(activeNode.amount).formatEGP(isAr)}
+            </div>
+            {activeNode.percentage !== undefined && (
+              <span style={{ fontSize: '0.72rem', fontWeight: 800, color: activeNode.color }}>
+                {isAr ? `يمثل ${activeNode.percentage}% من إجمالي المحفظة` : `${activeNode.percentage}% of portfolio`}
+              </span>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* 3. THE 8 BALANCED WATERFALL STREAM CARDS (4x2 Grid) */}
       <div style={{
         display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))',
         gap: embeddedInStudio ? '0.75rem' : '1rem',
         padding: embeddedInStudio ? '0.25rem 0' : '0.5rem 0'
       }}>
@@ -536,69 +568,6 @@ export const RealEstateValueWaterfall: React.FC<RealEstateValueWaterfallProps> =
           );
         })}
       </div>
-
-      {/* 3. ACTIVE NODE ANALYTICAL DOSSIER DRAWER */}
-      {activeNode && (
-        <div style={{
-          background: 'linear-gradient(135deg, #ffffff 0%, #fefdfa 100%)',
-          border: '1.5px solid rgba(184, 144, 62, 0.35)',
-          borderRadius: '14px',
-          padding: '1.25rem 1.5rem',
-          boxShadow: '0 4px 16px rgba(184, 144, 62, 0.08)',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          flexWrap: 'wrap',
-          gap: '1rem'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
-            <div style={{
-              width: '44px',
-              height: '44px',
-              borderRadius: '12px',
-              background: `${activeNode.color}15`,
-              color: activeNode.color,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              flexShrink: 0
-            }}>
-              {React.createElement(activeNode.icon, { size: 22 })}
-            </div>
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                <span style={{ fontSize: '0.68rem', fontWeight: 800, color: activeNode.color, background: `${activeNode.color}15`, padding: '0.1rem 0.4rem', borderRadius: '4px' }}>
-                  {isAr ? activeNode.categoryAr : activeNode.categoryEn}
-                </span>
-                <span style={{ fontSize: '0.74rem', color: '#64748b' }}>•</span>
-                <span style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 600 }}>
-                  {isAr ? 'المرحلة ' : 'Tier '}{activeNode.tier}
-                </span>
-              </div>
-              <h3 style={{ margin: '0.2rem 0 0 0', fontSize: '1.05rem', fontWeight: 900, color: '#0f172a' }}>
-                {isAr ? activeNode.titleAr : activeNode.titleEn}
-              </h3>
-              <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.74rem', color: '#475569', maxWidth: '650px', lineHeight: 1.4 }}>
-                {isAr ? activeNode.descriptionAr : activeNode.descriptionEn}
-              </p>
-            </div>
-          </div>
-
-          <div style={{ textAlign: isAr ? 'left' : 'right' }}>
-            <span style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 700, display: 'block' }}>
-              {isAr ? 'المبلغ الحالي:' : 'Recorded Value:'}
-            </span>
-            <div style={{ fontSize: '1.75rem', fontWeight: 900, color: activeNode.color, letterSpacing: '-0.02em', fontVariantNumeric: 'tabular-nums' }}>
-              {D(activeNode.amount).formatEGP(isAr)}
-            </div>
-            {activeNode.percentage !== undefined && (
-              <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#64748b' }}>
-                {isAr ? `يمثل ${activeNode.percentage}% من إجمالي المبيعات` : `${activeNode.percentage}% of gross ceiling`}
-              </span>
-            )}
-          </div>
-        </div>
-      )}
 
       {/* 4. EXECUTIVE MARGIN & WATERFALL METRIC SUMMARY FOOTER */}
       <div style={{

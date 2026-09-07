@@ -16,7 +16,9 @@ import {
 } from 'lucide-react';
 import { ERPContract, ERPInstallmentSchedule, ERPPDCRecord } from '@/lib/erp/types';
 import { D } from '@/lib/erp/math';
+import { tafqeetEGP } from '@/lib/erp/tafqeet';
 import { MoneyCell } from '@/components/erp/MoneyCell';
+import { ZFPrintDocumentLayout } from '../common/ZFPrintDocumentLayout';
 import styles from '../ZFWorkstationShell.module.css';
 
 interface CashCollectionReceiptModalProps {
@@ -47,6 +49,7 @@ export const CashCollectionReceiptModal: React.FC<CashCollectionReceiptModalProp
   const [receiptDate, setReceiptDate] = useState<string>(new Date().toISOString().split('T')[0]);
   const [destinationTreasury, setDestinationTreasury] = useState<'SAFE_101000' | 'BANK_102000'>('SAFE_101000');
   const [notes, setNotes] = useState<string>('');
+  const [showPrintPreview, setShowPrintPreview] = useState<boolean>(false);
 
   if (!isOpen) return null;
 
@@ -79,6 +82,131 @@ export const CashCollectionReceiptModal: React.FC<CashCollectionReceiptModalProp
       notes
     });
   };
+
+  const voucherBody = (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', direction: isAr ? 'rtl' : 'ltr' }}>
+      {/* 1. Hero Amount Box with Tafqeet */}
+      <div style={{
+        border: '2px solid #0f172a',
+        borderRadius: '12px',
+        padding: '1.25rem 1.5rem',
+        background: '#f8fafc',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between'
+      }}>
+        <div>
+          <span style={{ fontSize: '0.8rem', fontWeight: 800, color: '#64748b', display: 'block' }}>
+            {isAr ? 'المبلغ المستلم والمثبت دفترياً:' : 'Received & Posted Amount:'}
+          </span>
+          <div style={{ fontSize: '2rem', fontWeight: 900, color: '#0f172a', fontVariantNumeric: 'tabular-nums', marginTop: '0.2rem' }}>
+            {D(amount).formatEGP(isAr)}
+          </div>
+          <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#b8903e', marginTop: '0.35rem' }}>
+            {tafqeetEGP(amount)}
+          </div>
+        </div>
+        <div style={{ textAlign: isAr ? 'left' : 'right' }}>
+          <span style={{
+            display: 'inline-block',
+            background: '#0f172a',
+            color: '#ffffff',
+            padding: '0.4rem 0.85rem',
+            borderRadius: '6px',
+            fontSize: '0.82rem',
+            fontWeight: 800
+          }}>
+            {isAr ? `القسط / الدفعة #${trancheNumber}` : `Tranche #${trancheNumber}`}
+          </span>
+          <div style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '0.4rem' }}>
+            {destinationTreasury === 'SAFE_101000' 
+              ? (isAr ? 'نقداً بالخزينة الرئيسية (101000)' : 'Cash Safe 101000') 
+              : (isAr ? 'تحويل بنكي / إنستاباي (102000)' : 'Bank/InstaPay 102000')}
+          </div>
+        </div>
+      </div>
+
+      {/* 2. Client & Contract Metadata Table */}
+      <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #cbd5e1', fontSize: '0.82rem' }}>
+        <tbody>
+          <tr style={{ borderBottom: '1px solid #e2e8f0', background: '#f8fafc' }}>
+            <td style={{ padding: '0.75rem 1rem', fontWeight: 800, width: '25%', color: '#334155' }}>
+              {isAr ? 'اسم العميل / المستلم منه:' : 'Client / Payer:'}
+            </td>
+            <td style={{ padding: '0.75rem 1rem', fontWeight: 900, width: '35%', color: '#0f172a' }}>
+              {buyerName}
+            </td>
+            <td style={{ padding: '0.75rem 1rem', fontWeight: 800, width: '20%', color: '#334155' }}>
+              {isAr ? 'رقم العقد والوحدة:' : 'Contract & Unit:'}
+            </td>
+            <td style={{ padding: '0.75rem 1rem', fontWeight: 800, width: '20%', color: '#0f172a' }}>
+              {unitId} (#{contractNumber})
+            </td>
+          </tr>
+          <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
+            <td style={{ padding: '0.75rem 1rem', fontWeight: 800, color: '#334155' }}>
+              {isAr ? 'جهة الإيداع والتوريد:' : 'Deposit Treasury:'}
+            </td>
+            <td style={{ padding: '0.75rem 1rem', color: '#0f172a' }}>
+              {destinationTreasury === 'SAFE_101000' 
+                ? (isAr ? 'خـزينة الشركة النقدية الرئيسية (كود 101000)' : 'Corporate Cash Safe (101000)')
+                : (isAr ? 'حـساب البنك التجاري والإنستاباي (كود 102000)' : 'Commercial Bank & InstaPay (102000)')}
+            </td>
+            <td style={{ padding: '0.75rem 1rem', fontWeight: 800, color: '#334155' }}>
+              {isAr ? 'تاريخ الاستحقاق:' : 'Due Date:'}
+            </td>
+            <td style={{ padding: '0.75rem 1rem', color: '#0f172a' }}>
+              {schedule?.due_date || cheque?.due_date || receiptDate}
+            </td>
+          </tr>
+          <tr style={{ borderBottom: '1px solid #e2e8f0', background: '#f8fafc' }}>
+            <td style={{ padding: '0.75rem 1rem', fontWeight: 800, color: '#334155' }}>
+              {isAr ? 'إجمالي قيمة التعاقد:' : 'Contract Gross:'}
+            </td>
+            <td style={{ padding: '0.75rem 1rem', fontWeight: 700, color: '#0f172a' }}>
+              {grossContract.formatEGP(isAr)}
+            </td>
+            <td style={{ padding: '0.75rem 1rem', fontWeight: 800, color: '#334155' }}>
+              {isAr ? 'المتبقي بعد هذا السداد:' : 'Remaining Balance:'}
+            </td>
+            <td style={{ padding: '0.75rem 1rem', fontWeight: 800, color: '#b45309' }}>
+              {remainingDue.formatEGP(isAr)}
+            </td>
+          </tr>
+          <tr>
+            <td style={{ padding: '0.75rem 1rem', fontWeight: 800, color: '#334155' }}>
+              {isAr ? 'البيان وملاحظات السداد:' : 'Memo & Description:'}
+            </td>
+            <td colSpan={3} style={{ padding: '0.75rem 1rem', color: '#475569' }}>
+              {notes || (isAr ? `سداد القسط رقم ${trancheNumber} المستحق عن الوحدة ${unitId} بموجب العقد رقم ${contractNumber}` : `Payment of tranche #${trancheNumber} for unit ${unitId}`)}
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      {/* 3. Accounting Debit/Credit Summary */}
+      <div style={{
+        background: '#f1f5f9',
+        border: '1px solid #cbd5e1',
+        borderRadius: '8px',
+        padding: '0.75rem 1rem',
+        fontSize: '0.76rem',
+        display: 'flex',
+        justifyContent: 'space-between'
+      }}>
+        <span>
+          <strong>{isAr ? 'طرف القيد المدين: ' : 'Dr: '}</strong>
+          {destinationTreasury === 'SAFE_101000' 
+            ? (isAr ? 'حـ/ الخزينة الرئيسية (101000)' : 'Cash Safe (101000)')
+            : (isAr ? 'حـ/ البنك والتحويلات (102000)' : 'Bank Account (102000)')}
+        </span>
+        <span>
+          <strong>{isAr ? 'طرف القيد الدائن: ' : 'Cr: '}</strong>
+          {isAr ? 'حـ/ الإيرادات التعاقدية المؤجلة (206100) — التزام حتى التسليم' : 'Deferred Revenue (206100)'}
+        </span>
+      </div>
+    </div>
+  );
 
   return (
     <div className={styles.modalOverlay} onClick={onClose}>
@@ -306,7 +434,7 @@ export const CashCollectionReceiptModal: React.FC<CashCollectionReceiptModalProp
                     }}
                   >
                     <Wallet size={12} color={destinationTreasury === 'SAFE_101000' ? '#059669' : '#64748b'} />
-                    <span>{isAr ? 'خزينة رئيسية 101000' : 'Safe 101000'}</span>
+                    <span>{isAr ? 'نقداً بالخزينة 101000' : 'Cash in Safe 101000'}</span>
                   </button>
 
                   <button
@@ -328,8 +456,8 @@ export const CashCollectionReceiptModal: React.FC<CashCollectionReceiptModalProp
                       gap: '0.3rem'
                     }}
                   >
-                    <Landmark size={12} color={destinationTreasury === 'BANK_102000' ? '#946f23' : '#64748b'} />
-                    <span>{isAr ? 'بنك تجاري 102000' : 'Bank 102000'}</span>
+                    <Landmark size={12} color={destinationTreasury === 'BANK_102000' ? '#1e40af' : '#64748b'} />
+                    <span>{isAr ? 'تحويل إنستاباي / بنك 102000' : 'InstaPay / Bank 102000'}</span>
                   </button>
                 </div>
               </div>
@@ -395,26 +523,49 @@ export const CashCollectionReceiptModal: React.FC<CashCollectionReceiptModalProp
           justifyContent: 'space-between',
           background: '#fafaf9'
         }}>
-          <button
-            type="button"
-            onClick={handlePrint}
-            style={{
-              background: '#ffffff',
-              border: '1px solid #cbd5e1',
-              color: '#334155',
-              padding: '0.55rem 1rem',
-              borderRadius: '8px',
-              fontSize: '0.78rem',
-              fontWeight: 700,
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '0.4rem',
-              cursor: 'pointer'
-            }}
-          >
-            <Printer size={14} />
-            <span>{isAr ? 'طباعة سند القبض' : 'Print Voucher'}</span>
-          </button>
+          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+            <button
+              type="button"
+              onClick={handlePrint}
+              style={{
+                background: '#ffffff',
+                border: '1px solid #cbd5e1',
+                color: '#334155',
+                padding: '0.55rem 1rem',
+                borderRadius: '8px',
+                fontSize: '0.78rem',
+                fontWeight: 700,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+                cursor: 'pointer'
+              }}
+            >
+              <Printer size={14} />
+              <span>{isAr ? 'طباعة سند القبض' : 'Print Voucher'}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setShowPrintPreview(true)}
+              style={{
+                background: 'rgba(184, 144, 62, 0.08)',
+                border: '1px solid rgba(184, 144, 62, 0.25)',
+                color: '#946f23',
+                padding: '0.55rem 0.95rem',
+                borderRadius: '8px',
+                fontSize: '0.78rem',
+                fontWeight: 700,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.35rem',
+                cursor: 'pointer'
+              }}
+            >
+              <FileText size={14} />
+              <span>{isAr ? 'معاينة السند المعتمد' : 'Preview Document'}</span>
+            </button>
+          </div>
 
           <div style={{ display: 'flex', gap: '0.5rem' }}>
             <button
@@ -458,6 +609,67 @@ export const CashCollectionReceiptModal: React.FC<CashCollectionReceiptModalProp
             </button>
           </div>
         </div>
+      </div>
+
+      {/* Screen Preview Modal */}
+      {showPrintPreview && (
+        <div 
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 100000,
+            background: 'rgba(15, 23, 42, 0.75)',
+            backdropFilter: 'blur(6px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '1.5rem',
+            overflowY: 'auto'
+          }}
+          onClick={() => setShowPrintPreview(false)}
+        >
+          <div 
+            style={{ 
+              maxWidth: '850px', 
+              width: '100%', 
+              maxHeight: '94vh', 
+              overflowY: 'auto',
+              borderRadius: '12px',
+              boxShadow: '0 25px 50px rgba(0,0,0,0.3)'
+            }} 
+            onClick={e => e.stopPropagation()}
+          >
+            <ZFPrintDocumentLayout
+              documentTitle={isAr ? 'سند قبض نقدية رسمي' : 'Official Cash Receipt Voucher'}
+              documentSubtitle={destinationTreasury === 'SAFE_101000' 
+                ? (isAr ? 'إيداع نقدي بخزينة الشركة الرئيسية (حساب 101000)' : 'Cash Safe Deposit (101000)')
+                : (isAr ? 'تحويل فوري بحساب الشركة بالبنك / إنستاباي (حساب 102000)' : 'Bank / InstaPay Transfer (102000)')
+              }
+              voucherCode={voucherCode}
+              date={receiptDate}
+              onClose={() => setShowPrintPreview(false)}
+              isAr={isAr}
+            >
+              {voucherBody}
+            </ZFPrintDocumentLayout>
+          </div>
+        </div>
+      )}
+
+      {/* Hidden print container: rendered for @media print */}
+      <div className="zf-print-only">
+        <ZFPrintDocumentLayout
+          documentTitle={isAr ? 'سند قبض نقدية رسمي' : 'Official Cash Receipt Voucher'}
+          documentSubtitle={destinationTreasury === 'SAFE_101000' 
+            ? (isAr ? 'إيداع نقدي بخزينة الشركة الرئيسية (حساب 101000)' : 'Cash Safe Deposit (101000)')
+            : (isAr ? 'تحويل فوري بحساب الشركة بالبنك / إنستاباي (حساب 102000)' : 'Bank / InstaPay Transfer (102000)')
+          }
+          voucherCode={voucherCode}
+          date={receiptDate}
+          isAr={isAr}
+        >
+          {voucherBody}
+        </ZFPrintDocumentLayout>
       </div>
     </div>
   );

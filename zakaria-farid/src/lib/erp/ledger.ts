@@ -16,7 +16,7 @@ export const CANONICAL_COA: Record<string, ERPAccount> = {
   '101000': {
     account_code: '101000',
     account_name_en: 'Operating Cash Vault',
-    account_name_ar: 'خزينة النقدية التشغيلية',
+    account_name_ar: 'خزينة النقدية الرئيسية (كاش باليد)',
     account_type: 'ASSET',
     normal_balance: 'DEBIT',
     is_active: true,
@@ -25,7 +25,7 @@ export const CANONICAL_COA: Record<string, ERPAccount> = {
   '102000': {
     account_code: '102000',
     account_name_en: 'Bank Accounts (Operating)',
-    account_name_ar: 'الحسابات البنكية التشغيلية',
+    account_name_ar: 'الحسابات البنكية والتحويلات (إنستاباي)',
     account_type: 'ASSET',
     normal_balance: 'DEBIT',
     is_active: true,
@@ -34,7 +34,7 @@ export const CANONICAL_COA: Record<string, ERPAccount> = {
   '102100': {
     account_code: '102100',
     account_name_en: 'Maintenance Escrow Bank Account',
-    account_name_ar: 'حساب بنكي وديعة الصيانة',
+    account_name_ar: 'حساب بنكي وديعة صيانة المشروعات',
     account_type: 'ASSET',
     normal_balance: 'DEBIT',
     is_active: true,
@@ -43,7 +43,7 @@ export const CANONICAL_COA: Record<string, ERPAccount> = {
   '103000': {
     account_code: '103000',
     account_name_en: 'Accounts Receivable (Buyers)',
-    account_name_ar: 'مدينو عقود العملاء (A/R)',
+    account_name_ar: 'باقي أقساط الشقق بعد التسليم',
     account_type: 'ASSET',
     normal_balance: 'DEBIT',
     is_active: true,
@@ -52,7 +52,7 @@ export const CANONICAL_COA: Record<string, ERPAccount> = {
   '103200': {
     account_code: '103200',
     account_name_en: 'Hand Installments & Safe Dues',
-    account_name_ar: 'أقساط وسندات قبض الخزينة',
+    account_name_ar: 'أقساط الخزينة المجدولة',
     account_type: 'ASSET',
     normal_balance: 'DEBIT',
     is_active: true,
@@ -60,17 +60,17 @@ export const CANONICAL_COA: Record<string, ERPAccount> = {
   },
   '103300': {
     account_code: '103300',
-    account_name_en: 'Customer Tax Clearing Receivable',
-    account_name_ar: 'وسيط ضرائب العملاء',
+    account_name_en: 'Customer Tax Clearing Receivable (Retired)',
+    account_name_ar: 'وسيط ضرائب العملاء (ملغي بموجب إغلاق Q4)',
     account_type: 'ASSET',
     normal_balance: 'DEBIT',
-    is_active: true,
-    notes: 'UNRESOLVED (OPEN_QUESTIONS Q4) — Do not post'
+    is_active: false,
+    notes: 'RETIRED (OPEN_QUESTIONS Q4 CLOSED) — Residential sales are VAT-exempt (Law 67/2016); project taxes route to 150000 WIP.'
   },
   '104000': {
     account_code: '104000',
     account_name_en: 'Installments & Notes Under Collection (Safe)',
-    account_name_ar: 'أقساط وأوراق قبض تحت التحصيل بالخزينة',
+    account_name_ar: 'شيكات وأوراق قبض بالخزينة',
     account_type: 'ASSET',
     normal_balance: 'DEBIT',
     is_active: true,
@@ -79,7 +79,7 @@ export const CANONICAL_COA: Record<string, ERPAccount> = {
   '105000': {
     account_code: '105000',
     account_name_en: 'Projects Under Construction (Consolidated WIP)',
-    account_name_ar: 'مشروعات تحت التنفيذ - مجمع تكاليف البناء (WIP)',
+    account_name_ar: 'مصاريف ومباني المشروعات تحت التنفيذ',
     account_type: 'ASSET',
     normal_balance: 'DEBIT',
     is_active: true,
@@ -88,7 +88,7 @@ export const CANONICAL_COA: Record<string, ERPAccount> = {
   '150000': {
     account_code: '150000',
     account_name_en: 'WIP - Land Acquisition',
-    account_name_ar: 'أعمال تحت التنفيذ - الأراضي',
+    account_name_ar: 'أراضي المشروعات والتراخيص',
     account_type: 'ASSET',
     normal_balance: 'DEBIT',
     is_active: true,
@@ -97,7 +97,7 @@ export const CANONICAL_COA: Record<string, ERPAccount> = {
   '151000': {
     account_code: '151000',
     account_name_en: 'WIP - Direct Construction',
-    account_name_ar: 'أعمال تحت التنفيذ - أعمال البناء',
+    account_name_ar: 'الخرسانات وأعمال المباني الإنشائية',
     account_type: 'ASSET',
     normal_balance: 'DEBIT',
     is_active: true,
@@ -106,7 +106,7 @@ export const CANONICAL_COA: Record<string, ERPAccount> = {
   '152000': {
     account_code: '152000',
     account_name_en: 'WIP - MEP & Infrastructure',
-    account_name_ar: 'أعمال تحت التنفيذ - الكهروميكانيك',
+    account_name_ar: 'تأسيسات السباكة والكهرباء والمصاعد',
     account_type: 'ASSET',
     normal_balance: 'DEBIT',
     is_active: true,
@@ -115,7 +115,7 @@ export const CANONICAL_COA: Record<string, ERPAccount> = {
   '153000': {
     account_code: '153000',
     account_name_en: 'WIP - Finishing & Interiors',
-    account_name_ar: 'أعمال تحت التنفيذ - التشطيبات',
+    account_name_ar: 'التشطيبات والواجهات ورخام المداخل',
     account_type: 'ASSET',
     normal_balance: 'DEBIT',
     is_active: true,
@@ -124,7 +124,7 @@ export const CANONICAL_COA: Record<string, ERPAccount> = {
   '156000': {
     account_code: '156000',
     account_name_en: 'WIP - Capitalized Financing',
-    account_name_ar: 'أعمال تحت التنفيذ - تكاليف التمويل المباشرة',
+    account_name_ar: 'تكاليف ومصاريف التمويل للمشروعات',
     account_type: 'ASSET',
     normal_balance: 'DEBIT',
     is_active: true,
@@ -133,7 +133,7 @@ export const CANONICAL_COA: Record<string, ERPAccount> = {
   '201000': {
     account_code: '201000',
     account_name_en: 'Accounts Payable',
-    account_name_ar: 'موردون ومقاولون (A/P)',
+    account_name_ar: 'مستحقات المقاولين وموردي الخامات',
     account_type: 'LIABILITY',
     normal_balance: 'CREDIT',
     is_active: true,
@@ -142,7 +142,7 @@ export const CANONICAL_COA: Record<string, ERPAccount> = {
   '202000': {
     account_code: '202000',
     account_name_en: 'Bank Term Loans',
-    account_name_ar: 'قروض بنكية طويلة الأجل',
+    account_name_ar: 'قروض وتسهيلات بنكية للمشروعات',
     account_type: 'LIABILITY',
     normal_balance: 'CREDIT',
     is_active: true,
@@ -160,7 +160,7 @@ export const CANONICAL_COA: Record<string, ERPAccount> = {
   '203000': {
     account_code: '203000',
     account_name_en: 'Deferred Contract Revenue',
-    account_name_ar: 'إيرادات عقود مؤجلة (دفعات مقدمة)',
+    account_name_ar: 'مقدمات وأقساط حجز الشقق (قبل التسليم)',
     account_type: 'LIABILITY',
     normal_balance: 'CREDIT',
     is_active: true,
@@ -169,7 +169,7 @@ export const CANONICAL_COA: Record<string, ERPAccount> = {
   '204000': {
     account_code: '204000',
     account_name_en: 'Accrued Real Estate Disposition Taxes & Fees',
-    account_name_ar: 'مستحقات ضريبة التصرفات العقارية والرسوم',
+    account_name_ar: 'مستحقات ضريبة التصرفات العقارية (2.5%)',
     account_type: 'LIABILITY',
     normal_balance: 'CREDIT',
     is_active: true,
@@ -178,7 +178,7 @@ export const CANONICAL_COA: Record<string, ERPAccount> = {
   '206200': {
     account_code: '206200',
     account_name_en: 'Customer Refund Liability',
-    account_name_ar: 'التزامات استرداد العملاء',
+    account_name_ar: 'مستحقات العميل الصافية عند فسخ العقد',
     account_type: 'LIABILITY',
     normal_balance: 'CREDIT',
     is_active: true,
@@ -187,7 +187,7 @@ export const CANONICAL_COA: Record<string, ERPAccount> = {
   '207000': {
     account_code: '207000',
     account_name_en: 'Maintenance Escrow Trust Liability',
-    account_name_ar: 'أمانات وديعة الصيانة',
+    account_name_ar: 'أمانات ودائع الصيانة المحصلة',
     account_type: 'LIABILITY',
     normal_balance: 'CREDIT',
     is_active: true,
@@ -196,7 +196,7 @@ export const CANONICAL_COA: Record<string, ERPAccount> = {
   '301000': {
     account_code: '301000',
     account_name_en: 'Partner Capital',
-    account_name_ar: 'رأس مال الشركاء',
+    account_name_ar: 'رأس مال الشركاء والمساهمين',
     account_type: 'EQUITY',
     normal_balance: 'CREDIT',
     is_active: true,
@@ -205,16 +205,25 @@ export const CANONICAL_COA: Record<string, ERPAccount> = {
   '302000': {
     account_code: '302000',
     account_name_en: 'Retained Earnings',
-    account_name_ar: 'أرباح مرحلة',
+    account_name_ar: 'أرباح مرحلة ومحتجزة بالشركة',
     account_type: 'EQUITY',
     normal_balance: 'CREDIT',
     is_active: true,
     notes: 'Accumulated business profits/losses'
   },
+  '303000': {
+    account_code: '303000',
+    account_name_en: 'Partner Profit Distributions & Withdrawals',
+    account_name_ar: 'توزيعات أرباح ومسحوبات الشركاء',
+    account_type: 'EQUITY',
+    normal_balance: 'DEBIT',
+    is_active: true,
+    notes: 'Partner dividend distributions and capital returns (§14.B)'
+  },
   '401000': {
     account_code: '401000',
     account_name_en: 'Realized Sales Revenue',
-    account_name_ar: 'إيرادات المبيعات المحققة',
+    account_name_ar: 'مبيعات الشقق المحققة (المكسب الفعلي)',
     account_type: 'REVENUE',
     normal_balance: 'CREDIT',
     is_active: true,
@@ -223,7 +232,7 @@ export const CANONICAL_COA: Record<string, ERPAccount> = {
   '430100': {
     account_code: '430100',
     account_name_en: 'Cancellation Penalty Revenue',
-    account_name_ar: 'إيرادات غرامات فسخ العقود',
+    account_name_ar: 'أرباح غرامات فسخ العقود (10%)',
     account_type: 'REVENUE',
     normal_balance: 'CREDIT',
     is_active: true,
@@ -241,7 +250,7 @@ export const CANONICAL_COA: Record<string, ERPAccount> = {
   '501000': {
     account_code: '501000',
     account_name_en: 'COGS - Palatial Villas',
-    account_name_ar: 'تكلفة مبيعات - فيلات قصور',
+    account_name_ar: 'تكلفة مباني الشقق المسلمة - فيلات قصور',
     account_type: 'EXPENSE',
     normal_balance: 'DEBIT',
     is_active: true,
@@ -250,7 +259,7 @@ export const CANONICAL_COA: Record<string, ERPAccount> = {
   '502000': {
     account_code: '502000',
     account_name_en: 'COGS - Nile Sky Penthouses',
-    account_name_ar: 'تكلفة مبيعات - بنتهاوس النيل',
+    account_name_ar: 'تكلفة مباني الشقق المسلمة - بنتهاوس النيل',
     account_type: 'EXPENSE',
     normal_balance: 'DEBIT',
     is_active: true,
@@ -259,7 +268,7 @@ export const CANONICAL_COA: Record<string, ERPAccount> = {
   '503000': {
     account_code: '503000',
     account_name_en: 'COGS - Luxury Duplexes',
-    account_name_ar: 'تكلفة مبيعات - دوبلكس فاخر',
+    account_name_ar: 'تكلفة مباني الشقق المسلمة - دوبلكس فاخر',
     account_type: 'EXPENSE',
     normal_balance: 'DEBIT',
     is_active: true,
@@ -268,7 +277,7 @@ export const CANONICAL_COA: Record<string, ERPAccount> = {
   '504000': {
     account_code: '504000',
     account_name_en: 'COGS - Royal Suites',
-    account_name_ar: 'تكلفة مبيعات - أجنحة ملكية',
+    account_name_ar: 'تكلفة مباني الشقق المسلمة - أجنحة ملكية',
     account_type: 'EXPENSE',
     normal_balance: 'DEBIT',
     is_active: true,
@@ -277,7 +286,7 @@ export const CANONICAL_COA: Record<string, ERPAccount> = {
   '601000': {
     account_code: '601000',
     account_name_en: 'Sales & Marketing Expenses',
-    account_name_ar: 'مصروفات التسويق والمبيعات',
+    account_name_ar: 'مصاريف التسويق وعمولات البيع',
     account_type: 'EXPENSE',
     normal_balance: 'DEBIT',
     is_active: true,
@@ -286,7 +295,7 @@ export const CANONICAL_COA: Record<string, ERPAccount> = {
   '602000': {
     account_code: '602000',
     account_name_en: 'General & Administrative Expenses',
-    account_name_ar: 'مصروفات عمومية وإدارية',
+    account_name_ar: 'المصاريف الإدارية والرواتب',
     account_type: 'EXPENSE',
     normal_balance: 'DEBIT',
     is_active: true,
@@ -295,7 +304,7 @@ export const CANONICAL_COA: Record<string, ERPAccount> = {
   '603000': {
     account_code: '603000',
     account_name_en: 'Utilities & Site Administration Expenses',
-    account_name_ar: 'مصروفات مرافق وفواتير تشغيل الموقع',
+    account_name_ar: 'فواتير ومصاريف موقع البناء',
     account_type: 'EXPENSE',
     normal_balance: 'DEBIT',
     is_active: true,

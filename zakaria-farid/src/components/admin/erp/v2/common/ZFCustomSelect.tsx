@@ -21,9 +21,37 @@ export interface ZFCustomSelectItem<T = string> {
   sublabelEn?: string;
   badge?: string;
   badgeColor?: string;
+  badgeBg?: string;
+  badgeTextColor?: string;
   price?: string | number;
   icon?: React.ElementType;
+  iconColor?: string;
+  iconBg?: string;
 }
+
+export const getBadgeStyle = (item: { badgeColor?: string; badgeBg?: string; badgeTextColor?: string; iconColor?: string }) => {
+  if (item.badgeBg && item.badgeTextColor) {
+    return {
+      bg: item.badgeBg,
+      color: item.badgeTextColor,
+      border: `1px solid ${item.badgeTextColor}33`
+    };
+  }
+  const color = item.badgeColor || item.iconColor || '#64748b';
+  if (color.startsWith('#f') || color.startsWith('#d') || color.startsWith('rgba')) {
+    const textColor = item.badgeTextColor || (color.includes('fee') ? '#dc2626' : color.includes('dcf') ? '#15803d' : '#946f23');
+    return {
+      bg: color,
+      color: textColor,
+      border: `1px solid ${textColor}22`
+    };
+  }
+  return {
+    bg: item.badgeBg || `${color}15`,
+    color: item.badgeTextColor || color,
+    border: `1px solid ${color}33`
+  };
+};
 
 export interface ZFCustomSelectSection<T = string> {
   sectionId: string;
@@ -158,14 +186,14 @@ export function ZFCustomSelect<T = string>({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          padding: '0.65rem 0.95rem',
+          padding: '0.48rem 0.75rem',
           background: disabled ? '#f8fafc' : '#ffffff',
           border: hasError 
             ? '1.5px solid #dc2626' 
             : isOpen 
               ? '1.5px solid #946f23' 
               : '1px solid #cbd5e1',
-          borderRadius: '10px',
+          borderRadius: '9px',
           boxShadow: isOpen 
             ? '0 0 0 3px rgba(184, 144, 62, 0.15)' 
             : '0 1px 2px rgba(0, 0, 0, 0.02)',
@@ -176,14 +204,15 @@ export function ZFCustomSelect<T = string>({
           boxSizing: 'border-box'
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', minWidth: 0, flex: 1 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', minWidth: 0, flex: 1 }}>
           {selectedItem?.icon && (
             <div style={{
-              width: '24px',
-              height: '24px',
-              borderRadius: '6px',
-              background: 'rgba(184, 144, 62, 0.1)',
-              color: '#946f23',
+              width: '26px',
+              height: '26px',
+              borderRadius: '7px',
+              background: selectedItem.iconBg || 'rgba(184, 144, 62, 0.12)',
+              color: selectedItem.iconColor || '#946f23',
+              border: `1px solid ${selectedItem.iconColor ? `${selectedItem.iconColor}33` : 'rgba(184, 144, 62, 0.25)'}`,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -194,46 +223,51 @@ export function ZFCustomSelect<T = string>({
           )}
 
           {selectedItem ? (
-            <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0, gap: '0.1rem', flex: 1 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexWrap: 'nowrap' }}>
-                <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0, gap: '0.08rem', flex: 1 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', minWidth: 0, flexWrap: 'nowrap' }}>
+                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                   {isAr ? selectedItem.labelAr : selectedItem.labelEn}
                 </span>
-                {selectedItem.badge && (
-                  <span style={{
-                    fontSize: '0.64rem',
-                    fontWeight: 800,
-                    padding: '0.05rem 0.35rem',
-                    borderRadius: '4px',
-                    background: selectedItem.badgeColor || '#f1f5f9',
-                    color: '#475569',
-                    flexShrink: 0
-                  }}>
-                    {selectedItem.badge}
-                  </span>
-                )}
+                {selectedItem.badge && (() => {
+                  const bStyle = getBadgeStyle(selectedItem);
+                  return (
+                    <span style={{
+                      fontSize: '0.58rem',
+                      fontWeight: 700,
+                      padding: '0.08rem 0.4rem',
+                      borderRadius: '4px',
+                      background: bStyle.bg,
+                      color: bStyle.color,
+                      border: bStyle.border,
+                      flexShrink: 0,
+                      whiteSpace: 'nowrap'
+                    }}>
+                      {selectedItem.badge}
+                    </span>
+                  );
+                })()}
               </div>
               {(selectedItem.sublabelAr || selectedItem.sublabelEn) && (
-                <span style={{ fontSize: '0.68rem', color: '#64748b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                <span style={{ fontSize: '0.65rem', color: '#64748b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                   {isAr ? selectedItem.sublabelAr : selectedItem.sublabelEn}
                 </span>
               )}
             </div>
           ) : (
-            <span style={{ fontSize: '0.8rem', color: '#94a3b8' }}>
+            <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
               {isAr ? placeholderAr : placeholderEn}
             </span>
           )}
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexShrink: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', flexShrink: 0 }}>
           {selectedItem?.price !== undefined && (
-            <span style={{ fontSize: '0.82rem', fontWeight: 900, color: '#946f23', fontVariantNumeric: 'tabular-nums' }}>
+            <span style={{ fontSize: '0.74rem', fontWeight: 800, color: '#946f23', fontVariantNumeric: 'tabular-nums' }}>
               {D(selectedItem.price).formatEGP(isAr)}
             </span>
           )}
           <ChevronDown 
-            size={16} 
+            size={14} 
             color="#64748b" 
             style={{ 
               transform: isOpen ? 'rotate(180deg)' : 'none',
@@ -270,14 +304,14 @@ export function ZFCustomSelect<T = string>({
           {/* Internal Search Box */}
           {searchable && (
             <div style={{
-              padding: '0.65rem 0.85rem',
+              padding: '0.45rem 0.7rem',
               borderBottom: '1px solid #f1f5f9',
               background: '#fafafa',
               display: 'flex',
               alignItems: 'center',
-              gap: '0.5rem'
+              gap: '0.45rem'
             }}>
-              <Search size={14} color="#64748b" />
+              <Search size={13} color="#64748b" />
               <input
                 ref={searchInputRef}
                 type="text"
@@ -289,7 +323,7 @@ export function ZFCustomSelect<T = string>({
                   background: 'transparent',
                   border: 'none',
                   outline: 'none',
-                  fontSize: '0.78rem',
+                  fontSize: '0.73rem',
                   color: '#0f172a'
                 }}
               />
@@ -307,7 +341,7 @@ export function ZFCustomSelect<T = string>({
                     padding: 0
                   }}
                 >
-                  <X size={13} />
+                  <X size={12} />
                 </button>
               )}
             </div>
@@ -315,7 +349,7 @@ export function ZFCustomSelect<T = string>({
 
           {/* Custom Action (e.g. + Add Custom Developer Unit) */}
           {customAction && (
-            <div style={{ padding: '0.45rem 0.65rem', borderBottom: '1px solid #f1f5f9' }}>
+            <div style={{ padding: '0.35rem 0.6rem', borderBottom: '1px solid #f1f5f9' }}>
               <button
                 type="button"
                 onClick={() => {
@@ -326,28 +360,28 @@ export function ZFCustomSelect<T = string>({
                   width: '100%',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '0.5rem',
-                  padding: '0.55rem 0.75rem',
+                  gap: '0.45rem',
+                  padding: '0.45rem 0.65rem',
                   background: 'rgba(184, 144, 62, 0.06)',
                   border: '1px dashed rgba(184, 144, 62, 0.4)',
-                  borderRadius: '8px',
+                  borderRadius: '7px',
                   color: '#946f23',
-                  fontSize: '0.76rem',
+                  fontSize: '0.73rem',
                   fontWeight: 800,
                   cursor: 'pointer',
                   textAlign: isAr ? 'right' : 'left'
                 }}
               >
-                <Plus size={14} color="#946f23" />
+                <Plus size={13} color="#946f23" />
                 <span>{isAr ? customAction.labelAr : customAction.labelEn}</span>
               </button>
             </div>
           )}
 
           {/* Scrollable Sectioned Items List */}
-          <div style={{ overflowY: 'auto', flex: 1, padding: '0.35rem 0' }}>
+          <div style={{ overflowY: 'auto', flex: 1, padding: '0.25rem 0' }}>
             {totalFilteredCount === 0 ? (
-              <div style={{ padding: '1.5rem', textAlign: 'center', color: '#64748b', fontSize: '0.76rem' }}>
+              <div style={{ padding: '1.25rem', textAlign: 'center', color: '#64748b', fontSize: '0.73rem' }}>
                 {isAr ? 'لا توجد نتائج مطابقة للبحث' : 'No matching options found'}
               </div>
             ) : (
@@ -355,28 +389,28 @@ export function ZFCustomSelect<T = string>({
                 const SectionIcon = section.icon || Layers;
 
                 return (
-                  <div key={section.sectionId} style={{ marginBottom: '0.35rem' }}>
+                  <div key={section.sectionId} style={{ marginBottom: '0.25rem' }}>
                     {/* Section Header */}
                     <div style={{
-                      padding: '0.4rem 0.95rem',
+                      padding: '0.3rem 0.75rem',
                       display: 'flex',
                       alignItems: 'center',
-                      gap: '0.45rem',
+                      gap: '0.4rem',
                       background: '#f8fafc',
                       borderTop: '1px solid #f1f5f9',
                       borderBottom: '1px solid #f1f5f9'
                     }}>
-                      <SectionIcon size={12} color="#946f23" />
-                      <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#475569', letterSpacing: '0.02em', textTransform: 'uppercase' }}>
+                      <SectionIcon size={11} color="#946f23" />
+                      <span style={{ fontSize: '0.64rem', fontWeight: 700, color: '#475569', letterSpacing: '0.02em', textTransform: 'uppercase' }}>
                         {isAr ? section.titleAr : section.titleEn}
                       </span>
                       <span style={{
-                        fontSize: '0.6rem',
+                        fontSize: '0.58rem',
                         fontWeight: 700,
                         color: '#64748b',
                         background: '#ffffff',
                         border: '1px solid #e2e8f0',
-                        padding: '0.05rem 0.35rem',
+                        padding: '0.03rem 0.3rem',
                         borderRadius: '4px',
                         marginLeft: isAr ? 'auto' : undefined,
                         marginRight: isAr ? undefined : 'auto'
@@ -402,13 +436,13 @@ export function ZFCustomSelect<T = string>({
                               display: 'flex',
                               alignItems: 'center',
                               justifyContent: 'space-between',
-                              padding: '0.55rem 0.95rem',
+                              padding: '0.42rem 0.75rem',
                               cursor: 'pointer',
                               background: isItemSelected ? 'rgba(184, 144, 62, 0.08)' : 'transparent',
                               borderRight: isAr && isItemSelected ? '3px solid #946f23' : 'none',
                               borderLeft: !isAr && isItemSelected ? '3px solid #946f23' : 'none',
                               transition: 'all 0.12s ease',
-                              gap: '0.75rem'
+                              gap: '0.55rem'
                             }}
                             onMouseEnter={e => {
                               if (!isItemSelected) e.currentTarget.style.background = '#f8fafc';
@@ -417,64 +451,78 @@ export function ZFCustomSelect<T = string>({
                               if (!isItemSelected) e.currentTarget.style.background = 'transparent';
                             }}
                           >
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', minWidth: 0, flex: 1 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', minWidth: 0, flex: 1 }}>
                               <div style={{
                                 width: '26px',
                                 height: '26px',
-                                borderRadius: '6px',
-                                background: isItemSelected ? '#946f23' : '#f1f5f9',
-                                color: isItemSelected ? '#ffffff' : '#64748b',
+                                borderRadius: '7px',
+                                background: isItemSelected 
+                                  ? (item.iconColor || '#946f23')
+                                  : (item.iconBg || '#f1f5f9'),
+                                color: isItemSelected 
+                                  ? '#ffffff'
+                                  : (item.iconColor || '#475569'),
+                                border: isItemSelected 
+                                  ? 'none'
+                                  : `1px solid ${item.iconColor ? `${item.iconColor}30` : '#e2e8f0'}`,
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
-                                flexShrink: 0
+                                flexShrink: 0,
+                                boxShadow: isItemSelected ? '0 2px 6px rgba(0,0,0,0.15)' : 'none',
+                                transition: 'all 0.15s ease'
                               }}>
-                                {React.createElement(ItemIcon, { size: 13 })}
+                                {React.createElement(ItemIcon, { size: 14 })}
                               </div>
 
-                              <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0, gap: '0.1rem', flex: 1 }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                              <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0, gap: '0.08rem', flex: 1 }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', minWidth: 0, flexWrap: 'nowrap' }}>
                                   <span style={{
-                                    fontSize: '0.78rem',
-                                    fontWeight: isItemSelected ? 800 : 700,
-                                    color: isItemSelected ? '#946f23' : '#0f172a',
+                                    fontSize: '0.75rem',
+                                    fontWeight: isItemSelected ? 700 : 600,
+                                    color: isItemSelected ? (item.iconColor || '#946f23') : '#0f172a',
                                     whiteSpace: 'nowrap',
                                     overflow: 'hidden',
                                     textOverflow: 'ellipsis'
                                   }}>
                                     {isAr ? item.labelAr : item.labelEn}
                                   </span>
-                                  {item.badge && (
-                                    <span style={{
-                                      fontSize: '0.62rem',
-                                      fontWeight: 800,
-                                      padding: '0.05rem 0.3rem',
-                                      borderRadius: '4px',
-                                      background: item.badgeColor || '#f1f5f9',
-                                      color: '#475569',
-                                      flexShrink: 0
-                                    }}>
-                                      {item.badge}
-                                    </span>
-                                  )}
+                                   {item.badge && (() => {
+                                     const bStyle = getBadgeStyle(item);
+                                     return (
+                                       <span style={{
+                                         fontSize: '0.56rem',
+                                         fontWeight: 700,
+                                         padding: '0.06rem 0.35rem',
+                                         borderRadius: '4px',
+                                         background: bStyle.bg,
+                                         color: bStyle.color,
+                                         border: bStyle.border,
+                                         flexShrink: 0,
+                                         whiteSpace: 'nowrap'
+                                       }}>
+                                         {item.badge}
+                                       </span>
+                                     );
+                                   })()}
                                 </div>
 
                                 {(item.sublabelAr || item.sublabelEn) && (
-                                  <span style={{ fontSize: '0.68rem', color: '#64748b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                  <span style={{ fontSize: '0.64rem', color: '#64748b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                                     {isAr ? item.sublabelAr : item.sublabelEn}
                                   </span>
                                 )}
                               </div>
                             </div>
 
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexShrink: 0 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', flexShrink: 0 }}>
                               {item.price !== undefined && (
-                                <span style={{ fontSize: '0.8rem', fontWeight: 800, color: '#0f172a', fontVariantNumeric: 'tabular-nums' }}>
+                                <span style={{ fontSize: '0.73rem', fontWeight: 800, color: '#0f172a', fontVariantNumeric: 'tabular-nums' }}>
                                   {D(item.price).formatEGP(isAr)}
                                 </span>
                               )}
                               {isItemSelected && (
-                                <Check size={14} color="#946f23" />
+                                <Check size={13} color="#946f23" />
                               )}
                             </div>
                           </div>

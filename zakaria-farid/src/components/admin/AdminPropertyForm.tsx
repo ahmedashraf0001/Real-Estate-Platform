@@ -27,6 +27,8 @@ import {
   PartnerShareItem,
   PRIMARY_DEVELOPER_NAME,
   INITIAL_REGISTERED_PARTNERS,
+  getRegisteredPartners,
+  saveRegisteredPartner,
   normalizePartnerSplits,
   smartRemovePartner,
   smartAddPartner,
@@ -1249,7 +1251,8 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
 
             {/* Add Partner Bar */}
             {(() => {
-              const availablePartners = INITIAL_REGISTERED_PARTNERS.filter(
+              const registeredList = typeof window !== 'undefined' ? getRegisteredPartners() : INITIAL_REGISTERED_PARTNERS;
+              const availablePartners = registeredList.filter(
                 p => !partnerSplits.some(cp => cp.partnerName.toLowerCase() === p.name.toLowerCase())
               );
 
@@ -1309,6 +1312,13 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
                     onClick={() => {
                       const nameToAdd = selectedPartnerToAdd === '__custom__' ? customPartnerNameInput.trim() : selectedPartnerToAdd;
                       if (!nameToAdd) return;
+                      if (selectedPartnerToAdd === '__custom__') {
+                        saveRegisteredPartner({
+                          name: nameToAdd,
+                          role: isAr ? 'شريك ممول بالمشروع' : 'Project Equity Partner',
+                          isPermanent: false
+                        });
+                      }
                       const updated = smartAddPartner(partnerSplits, nameToAdd, 25);
                       setPartnerSplits(updated);
                       setSelectedPartnerToAdd('');

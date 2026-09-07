@@ -13,12 +13,15 @@ import {
   ShieldAlert,
   ArrowRight,
   ArrowUpDown,
-  TrendingUp
+  TrendingUp,
+  Building2
 } from 'lucide-react';
 import { ERPRescissionRecord, ERPContract } from '@/lib/erp/types';
+import { Property } from '@/lib/supabase/types';
 import { D } from '@/lib/erp/math';
 import { MoneyCell } from '@/components/erp/MoneyCell';
 import { StatusBadge } from '@/components/erp/StatusBadge';
+import { localizeBuyerName } from '@/components/erp/JournalEntryPreview';
 import { ZFPagination } from '../ZFPagination';
 import { ZFKpiCard } from '../ZFKpiCard';
 import { ZFFilterToolbar } from '../ZFFilterToolbar';
@@ -27,6 +30,7 @@ import styles from '../ZFWorkstationShell.module.css';
 interface ContractRescissionsViewProps {
   rescissions: ERPRescissionRecord[];
   contracts: ERPContract[];
+  properties?: Property[];
   isAr?: boolean;
   onInspectRescission: (rescission: ERPRescissionRecord) => void;
   onNavigateToContracts: () => void;
@@ -35,6 +39,7 @@ interface ContractRescissionsViewProps {
 export const ContractRescissionsView: React.FC<ContractRescissionsViewProps> = ({
   rescissions,
   contracts,
+  properties = [],
   isAr = true,
   onInspectRescission,
   onNavigateToContracts
@@ -45,6 +50,13 @@ export const ContractRescissionsView: React.FC<ContractRescissionsViewProps> = (
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [pageSize, setPageSize] = useState<number>(10);
+
+  // Properties map for building title lookup
+  const propertyMap = useMemo(() => {
+    const map = new Map<string, Property>();
+    properties.forEach(p => map.set(p.id, p));
+    return map;
+  }, [properties]);
 
   // 4 Executive KPIs
   const kpis = useMemo(() => {
@@ -130,7 +142,10 @@ export const ContractRescissionsView: React.FC<ContractRescissionsViewProps> = (
   };
 
   return (
-    <div className={styles.stageContainer}>
+    <div 
+      className={styles.stageContainer}
+      style={{ width: '100%', maxWidth: '100%', minWidth: 0, boxSizing: 'border-box' }}
+    >
       {/* 1. Header & Stage Breadcrumb */}
       <div className={styles.stageHeader}>
         <div className={styles.stageTitleArea}>
@@ -144,9 +159,9 @@ export const ContractRescissionsView: React.FC<ContractRescissionsViewProps> = (
               {isAr ? 'إلغاء العقود وترجيع الفلوس' : 'Contract Rescissions & Forfeiture Floor'}
             </h1>
             <span style={{
-              background: 'rgba(239, 68, 68, 0.08)',
-              border: '1px solid rgba(239, 68, 68, 0.25)',
-              color: '#dc2626',
+              background: 'rgba(51, 65, 85, 0.06)',
+              border: '1px solid rgba(51, 65, 85, 0.18)',
+              color: '#334155',
               padding: '0.2rem 0.55rem',
               borderRadius: '6px',
               fontSize: '0.72rem',
@@ -213,12 +228,12 @@ export const ContractRescissionsView: React.FC<ContractRescissionsViewProps> = (
             subtitleValue={isAr ? 'باقي الفلوس اللي هترجع بعد خصم الغرامة' : 'due for refund'}
           />
 
-          <ZFKpiCard
+            <ZFKpiCard
             variant="compact"
             title={isAr ? 'قيمة الشقق اللي رجعت للمعروض' : 'Voided Sales & Asset Recovery'}
             value={kpis.totalGrossVoid.formatEGP(isAr)}
             icon={<FileText size={16} />}
-            accentColor="rose"
+            accentColor="slate"
             subtitleLabel={isAr ? 'موقف الشقق' : 'Inventory'}
             subtitleValue={isAr ? 'شقق رجعت للمعروض ومتاحة للبيع' : 'restored to inventory'}
           />
@@ -283,130 +298,243 @@ export const ContractRescissionsView: React.FC<ContractRescissionsViewProps> = (
           </p>
         </div>
       ) : viewMode === 'table' ? (
-        <div className={styles.tableCard}>
-          <table className={styles.table} style={{ minWidth: '960px' }}>
+        <div 
+          className={styles.tableCard}
+          style={{
+            maxWidth: '100%',
+            width: '100%',
+            minWidth: 0,
+            overflowX: 'auto',
+            WebkitOverflowScrolling: 'touch',
+            boxSizing: 'border-box'
+          }}
+        >
+          <table className={styles.table} style={{ minWidth: '1160px', width: '100%' }}>
             <thead>
               <tr>
-                <th style={{ width: '80px', whiteSpace: 'nowrap' }}>{isAr ? 'رقم الإلغاء' : 'Rescission ID'}</th>
-                <th style={{ minWidth: '160px' }}>{isAr ? 'الشقة ورقم العقد' : 'Contract & Unit'}</th>
-                <th style={{ minWidth: '130px' }}>{isAr ? 'العميل' : 'Customer'}</th>
-                <th style={{ minWidth: '110px' }}>{isAr ? 'وقت الإلغاء' : 'Branch'}</th>
-                <th style={{ minWidth: '100px' }}>{isAr ? 'سعر العقد' : 'Gross (V)'}</th>
-                <th style={{ minWidth: '100px' }}>{isAr ? 'المتحصل كاش' : 'Collected (C)'}</th>
-                <th style={{ minWidth: '110px' }}>{isAr ? 'غرامة الإلغاء (10%)' : 'Penalty Retained'}</th>
-                <th style={{ minWidth: '110px' }}>{isAr ? 'المسترد للعميل' : 'Net Refund'}</th>
-                <th style={{ minWidth: '110px' }}>{isAr ? 'حالة الشقة' : 'Unit State'}</th>
-                <th style={{ width: '70px', textAlign: 'center' }}>{isAr ? 'تفاصيل' : 'Action'}</th>
+                <th style={{ width: '115px', whiteSpace: 'nowrap' }}>{isAr ? 'كود التسوية' : 'Rescission ID'}</th>
+                <th style={{ minWidth: '200px' }}>{isAr ? 'الشقة والعقد والمشروع' : 'Contract & Property'}</th>
+                <th style={{ minWidth: '130px', whiteSpace: 'nowrap' }}>{isAr ? 'المشتري / العميل' : 'Customer'}</th>
+                <th style={{ minWidth: '140px', textAlign: 'center', whiteSpace: 'nowrap' }}>{isAr ? 'مرحلة الفسخ' : 'Branch'}</th>
+                <th style={{ minWidth: '120px', textAlign: isAr ? 'left' : 'right', whiteSpace: 'nowrap' }}>{isAr ? 'إجمالي قيمة العقد' : 'Gross Value'}</th>
+                <th style={{ minWidth: '115px', textAlign: isAr ? 'left' : 'right', whiteSpace: 'nowrap' }}>{isAr ? 'المسدد من العميل' : 'Cash Collected'}</th>
+                <th style={{ minWidth: '130px', textAlign: isAr ? 'left' : 'right', whiteSpace: 'nowrap' }}>{isAr ? 'غرامة الإلغاء (١٠٪)' : 'Penalty Retained'}</th>
+                <th style={{ minWidth: '120px', textAlign: isAr ? 'left' : 'right', whiteSpace: 'nowrap' }}>{isAr ? 'المسترد للعميل' : 'Net Refund'}</th>
+                <th style={{ minWidth: '100px', textAlign: 'center', whiteSpace: 'nowrap' }}>{isAr ? 'حالة الوحدة' : 'Unit State'}</th>
+                <th style={{ width: '95px', textAlign: 'center', whiteSpace: 'nowrap' }}>{isAr ? 'الإجراء' : 'Action'}</th>
               </tr>
             </thead>
             <tbody>
-              {paginatedRescissions.map(r => {
-                const linked = contracts.find(ct => ct.contract_id === r.contract_id);
-                return (
-                  <tr key={r.rescission_id} onClick={() => onInspectRescission(r)} style={{ cursor: 'pointer' }}>
-                    <td style={{ whiteSpace: 'nowrap' }}>
-                      <span style={{
-                        fontVariantNumeric: 'tabular-nums',
-                        fontSize: '0.72rem',
-                        fontWeight: 700,
-                        color: '#64748b',
-                        background: '#f8fafc',
-                        border: '1px solid #e2e8f0',
-                        borderRadius: '6px',
-                        padding: '0.15rem 0.45rem'
-                      }}>
-                        #{r.rescission_id.slice(0, 8)}
-                      </span>
-                    </td>
-                    <td>
-                      <div style={{ fontWeight: 800, color: '#0f172a', fontSize: '0.82rem', lineHeight: 1.4 }}>
-                        {linked?.unit_id || (isAr ? 'شقة' : 'Property Unit')}
-                      </div>
-                      <div style={{ fontSize: '0.7rem', color: '#64748b', fontVariantNumeric: 'tabular-nums', marginTop: '0.15rem', fontWeight: 600 }}>
-                        #{linked?.contract_number || r.contract_id.slice(0, 8)}
-                      </div>
-                    </td>
-                    <td style={{ fontWeight: 700, color: '#334155' }}>
-                      {linked?.buyer_name || '—'}
-                    </td>
-                    <td>
-                      <span style={{
-                        fontSize: '0.72rem',
-                        fontWeight: 800,
-                        color: r.branch === 'Pre-Delivery' ? '#0369a1' : '#b45309',
-                        background: r.branch === 'Pre-Delivery' ? '#f0f9ff' : '#fffbeb',
-                        border: `1px solid ${r.branch === 'Pre-Delivery' ? 'rgba(3, 105, 161, 0.25)' : 'rgba(245, 158, 11, 0.25)'}`,
-                        padding: '0.2rem 0.55rem',
-                        borderRadius: '6px',
-                        display: 'inline-block',
-                        whiteSpace: 'nowrap'
-                      }}>
-                        {r.branch === 'Pre-Delivery' ? (isAr ? 'قبل الاستلام' : 'Pre-Delivery') : (isAr ? 'بعد الاستلام' : 'Post-Delivery')}
-                      </span>
-                    </td>
-                    <td style={{ whiteSpace: 'nowrap' }}>
-                      <strong style={{ color: '#0f172a' }}>
-                        <MoneyCell amount={r.gross_contract_value} isAr={isAr} />
-                      </strong>
-                    </td>
-                    <td style={{ whiteSpace: 'nowrap' }}>
-                      <span style={{ color: '#475569', fontWeight: 700 }}>
-                        <MoneyCell amount={r.total_cash_collected} isAr={isAr} />
-                      </span>
-                    </td>
-                    <td style={{ whiteSpace: 'nowrap' }}>
-                      <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
-                        <strong style={{ color: '#d97706' }}>
-                          <MoneyCell amount={r.penalty_retained} isAr={isAr} />
-                        </strong>
+              {paginatedRescissions.length === 0 ? (
+                <tr>
+                  <td colSpan={10} style={{ textAlign: 'center', padding: '2.5rem 1rem', color: '#64748b' }}>
+                    {isAr ? 'مفيش عقود ملغاة مطابقة للبحث أو الفلتر.' : 'No rescinded contracts match the current filter.'}
+                  </td>
+                </tr>
+              ) : (
+                paginatedRescissions.map(r => {
+                  const linked = contracts.find(ct => ct.contract_id === r.contract_id);
+                  const propertyTitle = linked?.property_id ? (propertyMap.get(linked.property_id)?.title_ar || propertyMap.get(linked.property_id)?.title_en) : '';
+                  const buyerDisplayName = isAr ? localizeBuyerName(linked?.buyer_name || 'عميل مباشر') : (linked?.buyer_name || 'Direct Client');
+
+                  // Deduplicate unit_id and propertyTitle so it never prints twice
+                  const unitIdStr = linked?.unit_id || '';
+                  const propTitleStr = propertyTitle || '';
+                  let displayUnit = unitIdStr;
+                  let displaySubProperty = '';
+
+                  if (propTitleStr && unitIdStr) {
+                    if (unitIdStr.trim() === propTitleStr.trim() || unitIdStr.includes(propTitleStr)) {
+                      displayUnit = unitIdStr;
+                    } else if (propTitleStr.includes(unitIdStr)) {
+                      displayUnit = propTitleStr;
+                    } else {
+                      displayUnit = unitIdStr;
+                      displaySubProperty = propTitleStr;
+                    }
+                  } else {
+                    displayUnit = unitIdStr || propTitleStr || (isAr ? 'وحدة سكنية' : 'Property Unit');
+                  }
+
+                  return (
+                    <tr 
+                      key={r.rescission_id} 
+                      onClick={() => onInspectRescission(r)} 
+                      style={{ cursor: 'pointer' }}
+                    >
+                      {/* 1. Rescission ID */}
+                      <td style={{ whiteSpace: 'nowrap', width: '115px' }}>
                         <span style={{
-                          fontSize: '0.65rem',
-                          fontWeight: 800,
-                          color: '#d97706',
-                          background: 'rgba(217, 119, 6, 0.08)',
-                          padding: '0.1rem 0.35rem',
-                          borderRadius: '4px'
-                        }}>
-                          {isAr ? '١٠٪' : '10%'}
-                        </span>
-                      </div>
-                    </td>
-                    <td style={{ whiteSpace: 'nowrap' }}>
-                      <strong style={{ color: '#0f172a', fontWeight: 900 }}>
-                        <MoneyCell amount={r.net_refund_liability} isAr={isAr} />
-                      </strong>
-                    </td>
-                    <td style={{ whiteSpace: 'nowrap' }}>
-                      <StatusBadge domain="unit" status={r.unit_state} isAr={isAr} />
-                    </td>
-                    <td style={{ textAlign: 'center', whiteSpace: 'nowrap', width: '90px' }}>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onInspectRescission(r);
-                        }}
-                        style={{
-                          background: '#ffffff',
-                          border: '1px solid #e2e8f0',
-                          color: '#946f23',
-                          borderRadius: '8px',
-                          padding: '0.35rem 0.75rem',
+                          fontFamily: 'monospace',
+                          fontVariantNumeric: 'tabular-nums',
                           fontSize: '0.74rem',
                           fontWeight: 800,
+                          color: '#475569',
+                          background: '#f8fafc',
+                          border: '1px solid #e2e8f0',
+                          borderRadius: '6px',
+                          padding: '0.2rem 0.5rem',
                           display: 'inline-flex',
                           alignItems: 'center',
-                          gap: '0.35rem',
-                          cursor: 'pointer',
-                          transition: 'all 0.15s ease'
-                        }}
-                      >
-                        <Eye size={12} color="#946f23" />
-                        <span>{isAr ? 'عرض' : 'View'}</span>
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
+                          gap: '0.3rem'
+                        }}>
+                          <RotateCcw size={11} color="#64748b" />
+                          <span>#RS-{r.rescission_id.slice(0, 8).toUpperCase()}</span>
+                        </span>
+                      </td>
+
+                      {/* 2. Contract, Unit & Property */}
+                      <td style={{ minWidth: '200px', maxWidth: '300px' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+                          <div style={{ 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            gap: '0.35rem', 
+                            fontWeight: 800, 
+                            color: '#0f172a', 
+                            fontSize: '0.84rem', 
+                            lineHeight: 1.35 
+                          }}>
+                            <Building2 size={13} color="#946f23" style={{ flexShrink: 0 }} />
+                            <span 
+                              style={{ 
+                                whiteSpace: 'nowrap', 
+                                overflow: 'hidden', 
+                                textOverflow: 'ellipsis' 
+                              }}
+                              title={displayUnit}
+                            >
+                              {displayUnit}
+                            </span>
+                            {displaySubProperty && (
+                              <span 
+                                style={{ 
+                                  color: '#475569', 
+                                  fontWeight: 700, 
+                                  fontSize: '0.76rem',
+                                  whiteSpace: 'nowrap', 
+                                  overflow: 'hidden', 
+                                  textOverflow: 'ellipsis',
+                                  flexShrink: 0
+                                }}
+                                title={displaySubProperty}
+                              >
+                                • {displaySubProperty}
+                              </span>
+                            )}
+                          </div>
+                          <div style={{ fontSize: '0.7rem', color: '#64748b', fontVariantNumeric: 'tabular-nums', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                            <FileText size={11} color="#94a3b8" />
+                            <span>{isAr ? 'عقد رقم: ' : 'Contract #'}</span>
+                            <span style={{ fontWeight: 700, color: '#946f23' }}>
+                              #{linked?.contract_number || r.contract_id.slice(0, 8)}
+                            </span>
+                          </div>
+                        </div>
+                      </td>
+
+                      {/* 3. Customer */}
+                      <td style={{ minWidth: '130px', whiteSpace: 'nowrap' }}>
+                        <div style={{ fontWeight: 800, color: '#0f172a', fontSize: '0.84rem' }}>
+                          {buyerDisplayName}
+                        </div>
+                      </td>
+
+                      {/* 4. Settlement Branch Badge */}
+                      <td style={{ textAlign: 'center', whiteSpace: 'nowrap', minWidth: '140px' }}>
+                        <span style={{
+                          fontSize: '0.74rem',
+                          fontWeight: 800,
+                          color: r.branch === 'Pre-Delivery' ? '#1e40af' : '#b45309',
+                          background: r.branch === 'Pre-Delivery' ? 'rgba(30, 64, 175, 0.08)' : 'rgba(180, 83, 9, 0.08)',
+                          border: `1px solid ${r.branch === 'Pre-Delivery' ? 'rgba(30, 64, 175, 0.22)' : 'rgba(180, 83, 9, 0.22)'}`,
+                          padding: '0.22rem 0.65rem',
+                          borderRadius: '6px',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '0.35rem'
+                        }}>
+                          <span style={{ width: 6, height: 6, borderRadius: '50%', background: r.branch === 'Pre-Delivery' ? '#1e40af' : '#b45309' }} />
+                          <span>{r.branch === 'Pre-Delivery' ? (isAr ? 'قبل الاستلام (غرامة ١٠٪)' : 'Pre-Delivery (10% Floor)') : (isAr ? 'بعد الاستلام (تسوية شاملة)' : 'Post-Delivery (Full Audit)')}</span>
+                        </span>
+                      </td>
+
+                      {/* 5. Gross Contract Value */}
+                      <td style={{ whiteSpace: 'nowrap', minWidth: '120px', textAlign: isAr ? 'left' : 'right' }}>
+                        <strong style={{ color: '#0f172a', fontWeight: 800 }}>
+                          <MoneyCell amount={r.gross_contract_value} isAr={isAr} />
+                        </strong>
+                      </td>
+
+                      {/* 6. Collected Cash */}
+                      <td style={{ whiteSpace: 'nowrap', minWidth: '115px', textAlign: isAr ? 'left' : 'right' }}>
+                        <span style={{ color: '#334155', fontWeight: 700 }}>
+                          <MoneyCell amount={r.total_cash_collected} isAr={isAr} />
+                        </span>
+                      </td>
+
+                      {/* 7. Retained Penalty */}
+                      <td style={{ whiteSpace: 'nowrap', minWidth: '130px', textAlign: isAr ? 'left' : 'right' }}>
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+                          <strong style={{ color: '#946f23', fontWeight: 800 }}>
+                            <MoneyCell amount={r.penalty_retained} isAr={isAr} highlight />
+                          </strong>
+                          <span style={{
+                            fontSize: '0.65rem',
+                            fontWeight: 800,
+                            color: '#946f23',
+                            background: 'rgba(184, 144, 62, 0.08)',
+                            padding: '0.1rem 0.35rem',
+                            borderRadius: '4px',
+                            border: '1px solid rgba(184, 144, 62, 0.22)'
+                          }}>
+                            {isAr ? '١٠٪' : '10%'}
+                          </span>
+                        </div>
+                      </td>
+
+                      {/* 8. Net Refund Liability */}
+                      <td style={{ whiteSpace: 'nowrap', minWidth: '120px', textAlign: isAr ? 'left' : 'right' }}>
+                        <strong style={{ color: '#0f172a', fontWeight: 900 }}>
+                          <MoneyCell amount={r.net_refund_liability} isAr={isAr} />
+                        </strong>
+                      </td>
+
+                      {/* 9. Unit State */}
+                      <td style={{ whiteSpace: 'nowrap', textAlign: 'center', minWidth: '100px' }}>
+                        <StatusBadge domain="unit" status={r.unit_state} isAr={isAr} />
+                      </td>
+
+                      {/* 10. Action Button */}
+                      <td style={{ textAlign: 'center', whiteSpace: 'nowrap', width: '95px' }} onClick={(e) => e.stopPropagation()}>
+                        <button
+                          type="button"
+                          onClick={() => onInspectRescission(r)}
+                          style={{
+                            background: '#ffffff',
+                            border: '1px solid #e2e8f0',
+                            color: '#946f23',
+                            borderRadius: '7px',
+                            padding: '0.32rem 0.75rem',
+                            fontSize: '0.72rem',
+                            fontWeight: 800,
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '0.35rem',
+                            cursor: 'pointer',
+                            boxShadow: '0 1px 2px rgba(0,0,0,0.02)',
+                            transition: 'all 0.15s ease'
+                          }}
+                          title={isAr ? 'عرض تفاصيل الفسخ وحساب المسترد' : 'Inspect Rescission Settlement'}
+                        >
+                          <Eye size={12} color="#946f23" />
+                          <span>{isAr ? 'عرض التسوية' : 'Inspect'}</span>
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
             </tbody>
           </table>
         </div>
@@ -414,6 +542,9 @@ export const ContractRescissionsView: React.FC<ContractRescissionsViewProps> = (
         <div className={styles.cardsGrid}>
           {paginatedRescissions.map(r => {
             const linked = contracts.find(ct => ct.contract_id === r.contract_id);
+            const propertyTitle = linked?.property_id ? (propertyMap.get(linked.property_id)?.title_ar || propertyMap.get(linked.property_id)?.title_en) : '';
+            const buyerDisplayName = isAr ? localizeBuyerName(linked?.buyer_name || 'عميل مباشر') : (linked?.buyer_name || 'Direct Client');
+
             return (
               <div 
                 key={r.rescission_id}
@@ -434,32 +565,53 @@ export const ContractRescissionsView: React.FC<ContractRescissionsViewProps> = (
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.75rem' }}>
                   <div style={{ minWidth: 0, flex: 1 }}>
                     <span style={{
+                      fontFamily: 'monospace',
                       fontVariantNumeric: 'tabular-nums',
                       fontSize: '0.72rem',
                       fontWeight: 700,
-                      color: '#64748b',
+                      color: '#475569',
                       background: '#f8fafc',
                       border: '1px solid #e2e8f0',
                       borderRadius: '6px',
                       padding: '0.15rem 0.45rem',
-                      display: 'inline-block',
-                      marginBottom: '0.35rem',
-                      whiteSpace: 'nowrap',
-                      direction: 'ltr',
-                      unicodeBidi: 'isolate'
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.25rem',
+                      marginBottom: '0.4rem',
+                      whiteSpace: 'nowrap'
                     }}>
-                      #{r.rescission_id.slice(0, 8)}
+                      <RotateCcw size={10} color="#64748b" />
+                      <span>#RS-{r.rescission_id.slice(0, 8).toUpperCase()}</span>
                     </span>
-                    <h3 style={{ margin: 0, fontSize: '1.02rem', fontWeight: 800, color: '#0f172a', lineHeight: 1.4 }}>
-                      {linked?.unit_id || (isAr ? 'شقة' : 'Property Unit')}
+                    <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: '#0f172a', lineHeight: 1.4 }}>
+                      {buyerDisplayName}
                     </h3>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.74rem', color: '#64748b', marginTop: '0.25rem', flexWrap: 'wrap' }}>
+                      <Building2 size={12} color="#946f23" />
+                      <span style={{ fontWeight: 700, color: '#334155' }}>
+                        {linked?.unit_id || (isAr ? 'شقة' : 'Property Unit')}
+                      </span>
+                      {propertyTitle && (
+                        <>
+                          <span>•</span>
+                          <span style={{ color: '#475569' }}>{propertyTitle}</span>
+                        </>
+                      )}
+                      {linked?.contract_number && (
+                        <>
+                          <span>•</span>
+                          <span style={{
+                            fontVariantNumeric: 'tabular-nums',
+                            color: '#946f23',
+                            fontWeight: 700
+                          }}>
+                            #{linked.contract_number}
+                          </span>
+                        </>
+                      )}
+                    </div>
                   </div>
                   <StatusBadge domain="unit" status={r.unit_state} isAr={isAr} />
-                </div>
-
-                <div style={{ fontSize: '0.78rem', color: '#475569' }}>
-                  <span style={{ color: '#64748b' }}>{isAr ? 'العميل: ' : 'Buyer: '}</span>
-                  <strong>{linked?.buyer_name || '—'}</strong>
                 </div>
 
                 <div style={{
@@ -473,19 +625,19 @@ export const ContractRescissionsView: React.FC<ContractRescissionsViewProps> = (
                   fontSize: '0.75rem'
                 }}>
                   <div>
-                    <span style={{ color: '#64748b', display: 'block', fontSize: '0.7rem' }}>{isAr ? 'سعر العقد:' : 'Gross:'}</span>
+                    <span style={{ color: '#64748b', display: 'block', fontSize: '0.7rem', fontWeight: 700 }}>{isAr ? 'قيمة العقد:' : 'Gross:'}</span>
                     <strong style={{ color: '#0f172a' }}><MoneyCell amount={r.gross_contract_value} isAr={isAr} /></strong>
                   </div>
                   <div>
-                    <span style={{ color: '#64748b', display: 'block', fontSize: '0.7rem' }}>{isAr ? 'المتحصل كاش:' : 'Collected:'}</span>
+                    <span style={{ color: '#64748b', display: 'block', fontSize: '0.7rem', fontWeight: 700 }}>{isAr ? 'المسدد من العميل:' : 'Collected:'}</span>
                     <strong style={{ color: '#0f172a' }}><MoneyCell amount={r.total_cash_collected} isAr={isAr} /></strong>
                   </div>
                   <div>
-                    <span style={{ color: '#64748b', display: 'block', fontSize: '0.7rem' }}>{isAr ? 'غرامة الإلغاء (10%):' : 'Penalty:'}</span>
-                    <strong style={{ color: '#946f23' }}><MoneyCell amount={r.penalty_retained} isAr={isAr} /></strong>
+                    <span style={{ color: '#64748b', display: 'block', fontSize: '0.7rem', fontWeight: 700 }}>{isAr ? 'غرامة الإلغاء (١٠٪):' : 'Penalty:'}</span>
+                    <strong style={{ color: '#946f23' }}><MoneyCell amount={r.penalty_retained} isAr={isAr} highlight /></strong>
                   </div>
                   <div>
-                    <span style={{ color: '#64748b', display: 'block', fontSize: '0.7rem' }}>{isAr ? 'المسترد للعميل:' : 'Refund:'}</span>
+                    <span style={{ color: '#64748b', display: 'block', fontSize: '0.7rem', fontWeight: 700 }}>{isAr ? 'المسترد للعميل:' : 'Refund:'}</span>
                     <strong style={{ color: '#0f172a', fontWeight: 900 }}><MoneyCell amount={r.net_refund_liability} isAr={isAr} /></strong>
                   </div>
                 </div>

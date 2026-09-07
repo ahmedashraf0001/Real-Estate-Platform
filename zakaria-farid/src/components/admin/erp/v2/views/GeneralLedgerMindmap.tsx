@@ -24,7 +24,9 @@ import {
   Info, 
   Check, 
   FileText,
-  AlertCircle
+  AlertCircle,
+  HardHat,
+  Key
 } from 'lucide-react';
 import { ERPAccount, ERPJournalEntry } from '@/lib/erp/types';
 import { CANONICAL_COA } from '@/lib/erp/ledger';
@@ -309,7 +311,7 @@ export const GeneralLedgerMindmap: React.FC<GeneralLedgerMindmapProps> = ({
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
                 <span style={{ width: '9px', height: '9px', borderRadius: '50%', background: '#10b981' }} />
                 <span style={{ fontSize: '0.78rem', fontWeight: 800, color: '#065f46' }}>
-                  {isAr ? 'كفة الأصول وموجودات الشركة (Assets)' : 'Company Assets Portfolio'}
+                  {isAr ? 'فلوس وممتلكات الشركة (كل اللي نملكه في السوق والمواقع)' : 'Company Assets Portfolio'}
                 </span>
               </div>
               <span style={{
@@ -380,7 +382,7 @@ export const GeneralLedgerMindmap: React.FC<GeneralLedgerMindmapProps> = ({
               <span>{isAr ? 'الميزان متزن 100%' : 'Balanced'}</span>
             </div>
             <span style={{ fontSize: '0.64rem', color: '#94a3b8', marginTop: '0.2rem' }}>
-              {isAr ? 'فارق الميزان: 0.00 ج.م' : 'Zero variance'}
+              {isAr ? 'الميزان مضبوط بالمليم: مفيش مليم ضايع' : 'Zero variance'}
             </span>
           </div>
 
@@ -398,7 +400,7 @@ export const GeneralLedgerMindmap: React.FC<GeneralLedgerMindmapProps> = ({
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
                 <span style={{ width: '9px', height: '9px', borderRadius: '50%', background: '#946f23' }} />
                 <span style={{ fontSize: '0.78rem', fontWeight: 800, color: '#946f23' }}>
-                  {isAr ? 'كفة الالتزامات والتمويل (Liabilities & Equity)' : 'Financing & Liabilities'}
+                  {isAr ? 'مصادر الفلوس والالتزامات (الفلوس دي جاية منين ومين له عندنا)' : 'Financing & Liabilities'}
                 </span>
               </div>
               <span style={{
@@ -455,7 +457,7 @@ export const GeneralLedgerMindmap: React.FC<GeneralLedgerMindmapProps> = ({
             {/* Segment 1: Bank Accounts (91.9%) */}
             <div 
               onClick={() => setSelectedCode('102000')}
-              title={`الحسابات والتحويلات البنكية: ${formatMoney(balances.bankCash)} ج.م (${balances.liquidShare > 4 ? (balances.bankCash.toNumber() / balances.totalAssets.toNumber() * 100).toFixed(1) : 0}%)`}
+              title={isAr ? `الحسابات والتحويلات البنكية (إنستاباي): ${formatMoney(balances.bankCash)} ج.م (${balances.liquidShare > 4 ? (balances.bankCash.toNumber() / balances.totalAssets.toNumber() * 100).toFixed(1) : 0}%)` : `Operating Bank Accounts: ${formatMoney(balances.bankCash)} EGP`}
               style={{
                 width: `${(balances.bankCash.toNumber() / balances.totalAssets.toNumber()) * 100}%`,
                 background: 'linear-gradient(90deg, #0284c7 0%, #38bdf8 100%)',
@@ -468,7 +470,7 @@ export const GeneralLedgerMindmap: React.FC<GeneralLedgerMindmapProps> = ({
             {/* Segment 2: Construction Civil WIP (4.3%) */}
             <div 
               onClick={() => setSelectedCode('151000')}
-              title={`الخرسانات وأعمال المباني: ${formatMoney(balances.wipCivil)} ج.م (${balances.wipShare.toFixed(1)}%)`}
+              title={isAr ? `الخرسانات وأعمال المباني والخامات: ${formatMoney(balances.wipCivil)} ج.م (${balances.wipShare.toFixed(1)}%)` : `Construction WIP: ${formatMoney(balances.wipCivil)} EGP`}
               style={{
                 width: `${balances.wipShare}%`,
                 background: 'linear-gradient(90deg, #d97706 0%, #fbbf24 100%)',
@@ -481,7 +483,7 @@ export const GeneralLedgerMindmap: React.FC<GeneralLedgerMindmapProps> = ({
             {/* Segment 3: Operating Safe Cash (3.8%) */}
             <div 
               onClick={() => setSelectedCode('101000')}
-              title={`خزينة النقدية الرئيسية: ${formatMoney(balances.safeCash)} ج.م (${(balances.safeCash.toNumber() / balances.totalAssets.toNumber() * 100).toFixed(1)}%)`}
+              title={isAr ? `خزينة النقدية الرئيسية (كاش باليد): ${formatMoney(balances.safeCash)} ج.م (${(balances.safeCash.toNumber() / balances.totalAssets.toNumber() * 100).toFixed(1)}%)` : `Physical Cash Safe: ${formatMoney(balances.safeCash)} EGP`}
               style={{
                 width: `${(balances.safeCash.toNumber() / balances.totalAssets.toNumber()) * 100}%`,
                 background: 'linear-gradient(90deg, #10b981 0%, #34d399 100%)',
@@ -510,7 +512,7 @@ export const GeneralLedgerMindmap: React.FC<GeneralLedgerMindmapProps> = ({
             >
               <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#0284c7' }} />
               <span style={{ fontSize: '0.74rem', fontWeight: 700, color: '#0f172a' }}>
-                {isAr ? 'الحسابات والتحويلات البنكية' : 'Operating Bank Accounts'}
+                {isAr ? 'الحسابات والتحويلات البنكية (إنستاباي)' : 'Operating Bank Accounts'}
               </span>
               <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#0284c7', direction: 'ltr' }}>
                 91.9%
@@ -533,7 +535,7 @@ export const GeneralLedgerMindmap: React.FC<GeneralLedgerMindmapProps> = ({
             >
               <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#d97706' }} />
               <span style={{ fontSize: '0.74rem', fontWeight: 700, color: '#0f172a' }}>
-                {isAr ? 'الخرسانات وأعمال المباني (WIP)' : 'Construction WIP'}
+                {isAr ? 'الخرسانات وأعمال المباني والخامات' : 'Construction WIP'}
               </span>
               <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#d97706', direction: 'ltr' }}>
                 4.3%
@@ -573,243 +575,284 @@ export const GeneralLedgerMindmap: React.FC<GeneralLedgerMindmapProps> = ({
       <div style={{
         background: '#ffffff',
         border: '1px solid #e2e8f0',
-        borderRadius: '18px',
+        borderRadius: '20px',
         padding: '1.25rem 1.5rem',
-        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.02)',
+        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.02)',
         display: 'flex',
         flexDirection: 'column',
-        gap: '0.85rem'
+        gap: '1.1rem'
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+        {/* Header Bar */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem', borderBottom: '1px solid #f1f5f9', paddingBottom: '0.85rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
             <div style={{
-              width: '28px',
-              height: '28px',
-              borderRadius: '8px',
-              background: 'rgba(184, 144, 62, 0.1)',
+              width: '36px',
+              height: '36px',
+              borderRadius: '10px',
+              background: 'linear-gradient(135deg, rgba(184, 144, 62, 0.14) 0%, rgba(184, 144, 62, 0.04) 100%)',
+              border: '1px solid rgba(184, 144, 62, 0.25)',
               color: '#946f23',
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'center'
+              justifyContent: 'center',
+              flexShrink: 0
             }}>
-              <Layers size={15} />
+              <Layers size={18} />
             </div>
-            <span style={{ fontSize: '0.88rem', fontWeight: 800, color: '#0f172a' }}>
-              {isAr ? 'دورة وشريان حركة الفلوس بين الحسابات' : 'Capital Flow Cycle'}
-            </span>
-            <span style={{
-              fontSize: '0.66rem',
-              fontWeight: 700,
-              color: '#64748b',
-              background: '#f1f5f9',
-              padding: '0.15rem 0.5rem',
-              borderRadius: '6px'
-            }}>
-              {isAr ? 'مسار تمويل وبناء المشروعات' : 'Value Pipeline'}
-            </span>
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                <h4 style={{ margin: 0, fontSize: '0.98rem', fontWeight: 800, color: '#0f172a' }}>
+                  {isAr ? 'دورة وشريان حركة الفلوس بين الحسابات' : 'Capital Flow Cycle'}
+                </h4>
+                <span style={{
+                  fontSize: '0.68rem',
+                  fontWeight: 800,
+                  color: '#946f23',
+                  background: 'rgba(184, 144, 62, 0.08)',
+                  border: '1px solid rgba(184, 144, 62, 0.2)',
+                  padding: '0.12rem 0.55rem',
+                  borderRadius: '6px'
+                }}>
+                  {isAr ? 'مسار تمويل وبناء المشروعات' : 'Value Pipeline'}
+                </span>
+              </div>
+              <p style={{ margin: '0.2rem 0 0', fontSize: '0.74rem', color: '#64748b' }}>
+                {isAr ? 'المسار المحاسبي الفعلي لتدفق أموال العقود: من مقدم الحجز ➔ سيولة الخزينة والبنك ➔ خرسانات ومباني ➔ تسليم الوحدات والمبيعات' : 'Contract capital lifecycle from customer advances through treasury liquidity, construction WIP, to handover recognition'}
+              </p>
+            </div>
           </div>
 
-          <span style={{ fontSize: '0.7rem', color: '#64748b' }}>
-            {isAr ? 'المسار الفعلي لدخول وصرف أموال العقود' : 'Contract execution trace'}
-          </span>
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.4rem',
+            fontSize: '0.72rem',
+            color: '#64748b',
+            background: '#f8fafc',
+            padding: '0.3rem 0.75rem',
+            borderRadius: '8px',
+            border: '1px solid #e2e8f0'
+          }}>
+            <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#946f23' }} />
+            <span>{isAr ? 'اضغط على أي مرحلة لعرض حساباتها وقيودها بالأسفل' : 'Click any stage to inspect dossier'}</span>
+          </div>
         </div>
 
-        {/* 4 Steps Row */}
+        {/* 4 Steps Row with Visual Stepper & Connectors */}
         <div style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))',
-          gap: '0.75rem',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))',
+          gap: '0.85rem',
           alignItems: 'stretch'
         }}>
-          
-          {/* Node 1: Inflow from Buyers */}
-          <div 
-            onClick={() => setSelectedCode('203000')}
-            style={{
-              background: selectedCode === '203000' ? 'rgba(16, 185, 129, 0.08)' : '#fcfdfd',
-              border: `1.5px solid ${selectedCode === '203000' ? '#10b981' : '#e2e8f0'}`,
-              borderRadius: '12px',
-              padding: '0.85rem 1rem',
-              cursor: 'pointer',
-              transition: 'all 0.15s ease',
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'space-between',
-              gap: '0.5rem'
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span style={{
-                fontSize: '0.66rem',
-                fontWeight: 800,
-                color: '#065f46',
-                background: '#ecfdf5',
-                padding: '0.15rem 0.45rem',
-                borderRadius: '4px'
-              }}>
-                1. البداية: مقدمات الحجز
-              </span>
-              <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#10b981' }}>203000</span>
-            </div>
+          {[
+            {
+              stepNum: '١',
+              stepNumEn: '1',
+              code: '203000',
+              accountCodes: ['203000'],
+              stageTag: isAr ? '١. استلام الحجز' : '1. Advance Inflow',
+              title: isAr ? 'مقدمات حجز العقود' : 'Deferred Advances',
+              amount: balances.customerAdvances,
+              subtext: isAr ? 'فلوس استلمناها من المشترين كالتزام مؤجل قبل التسليم' : 'Collected advances held as liability',
+              icon: Wallet,
+              accentColor: '#15803d',
+              badgeBg: 'rgba(21, 128, 61, 0.08)',
+              badgeText: '#15803d',
+              badgeBorder: 'rgba(21, 128, 61, 0.22)'
+            },
+            {
+              stepNum: '٢',
+              stepNumEn: '2',
+              code: '102000',
+              accountCodes: ['101000', '102000'],
+              stageTag: isAr ? '٢. الخزنة والبنك' : '2. Liquid Pool',
+              title: isAr ? 'السيولة الحاضرة للصرف' : 'Available Liquidity',
+              amount: balances.totalLiquid,
+              subtext: isAr ? 'الكاش الفعلي الجاهز بالخزنة والحسابات البنكية' : 'Instant cash in safe & operating bank',
+              icon: Landmark,
+              accentColor: '#0369a1',
+              badgeBg: 'rgba(2, 132, 199, 0.08)',
+              badgeText: '#0369a1',
+              badgeBorder: 'rgba(2, 132, 199, 0.22)'
+            },
+            {
+              stepNum: '٣',
+              stepNumEn: '3',
+              code: '151000',
+              accountCodes: ['151000'],
+              stageTag: isAr ? '٣. خرسانات ومباني' : '3. Construction WIP',
+              title: isAr ? 'مصروفات المباني والخامات' : 'Civil Construction WIP',
+              amount: balances.wipCivil,
+              subtext: isAr ? 'حديد وأسمنت ومستخلصات مقاولي الباطن بالموقع' : 'Capitalized structural materials & rebar',
+              icon: HardHat,
+              accentColor: '#c2410c',
+              badgeBg: 'rgba(194, 65, 12, 0.08)',
+              badgeText: '#c2410c',
+              badgeBorder: 'rgba(194, 65, 12, 0.22)'
+            },
+            {
+              stepNum: '٤',
+              stepNumEn: '4',
+              code: '401000',
+              accountCodes: ['401000'],
+              stageTag: isAr ? '٤. التسليم والمبيعات' : '4. Sales Handover',
+              title: isAr ? 'إيرادات المبيعات المحققة' : 'Recognized Revenue',
+              amount: balances.recognizedRevenue,
+              subtext: isAr ? 'عقود تم تسليم وحداتها للمشترين رسمياً وتحقيق أرباحها' : 'Realized revenue on delivered contracts',
+              icon: Key,
+              accentColor: '#946f23',
+              badgeBg: 'rgba(184, 144, 62, 0.08)',
+              badgeText: '#946f23',
+              badgeBorder: 'rgba(184, 144, 62, 0.25)'
+            }
+          ].map((step) => {
+            const isSelected = step.accountCodes.includes(selectedCode);
+            const StepIcon = step.icon;
 
-            <div style={{ display: 'flex', flexDirection: 'column' }}>
-              <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#334155' }}>
-                {isAr ? 'مقدمات حجز العقود' : 'Deferred Advances'}
-              </span>
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.25rem', direction: 'ltr', marginTop: '2px' }}>
-                <span style={{ fontSize: '1.05rem', fontWeight: 900, color: '#0f172a' }}>
-                  {formatMoney(balances.customerAdvances)}
-                </span>
-                <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#10b981' }}>ج.م</span>
+            return (
+              <div
+                key={step.code}
+                onClick={() => setSelectedCode(step.code)}
+                style={{
+                  background: isSelected 
+                    ? 'linear-gradient(135deg, #ffffff 0%, #fdf8ef 100%)' 
+                    : '#ffffff',
+                  border: isSelected 
+                    ? '1.5px solid #946f23' 
+                    : '1px solid #e2e8f0',
+                  borderRadius: '16px',
+                  padding: '1.1rem 1.15rem',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'space-between',
+                  gap: '0.75rem',
+                  position: 'relative',
+                  boxShadow: isSelected 
+                    ? '0 6px 20px -4px rgba(184, 144, 62, 0.16), 0 0 0 1px rgba(184, 144, 62, 0.15)' 
+                    : '0 1px 3px rgba(0, 0, 0, 0.02)'
+                }}
+              >
+                {/* Step Top Bar: Stage Badge + Account Pill */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                    <div style={{
+                      width: '22px',
+                      height: '22px',
+                      borderRadius: '50%',
+                      background: isSelected ? '#946f23' : '#f1f5f9',
+                      color: isSelected ? '#ffffff' : '#475569',
+                      fontSize: '0.68rem',
+                      fontWeight: 800,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0
+                    }}>
+                      {isAr ? step.stepNum : step.stepNumEn}
+                    </div>
+                    <span style={{
+                      fontSize: '0.68rem',
+                      fontWeight: 800,
+                      color: isSelected ? '#946f23' : step.badgeText,
+                      background: isSelected ? 'rgba(184, 144, 62, 0.1)' : step.badgeBg,
+                      border: `1px solid ${isSelected ? 'rgba(184, 144, 62, 0.25)' : step.badgeBorder}`,
+                      padding: '0.12rem 0.45rem',
+                      borderRadius: '6px'
+                    }}>
+                      {step.stageTag}
+                    </span>
+                  </div>
+
+                  <span style={{
+                    fontFamily: 'monospace, tabular-nums',
+                    fontSize: '0.66rem',
+                    fontWeight: 700,
+                    color: isSelected ? '#946f23' : '#64748b',
+                    background: isSelected ? 'rgba(184, 144, 62, 0.08)' : '#f8fafc',
+                    border: `1px solid ${isSelected ? 'rgba(184, 144, 62, 0.2)' : '#e2e8f0'}`,
+                    padding: '0.1rem 0.4rem',
+                    borderRadius: '5px',
+                    whiteSpace: 'nowrap',
+                    flexShrink: 0
+                  }}>
+                    {step.accountCodes.map(c => `#${c}`).join(' • ')}
+                  </span>
+                </div>
+
+                {/* Step Core: Icon + Title + Amount */}
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
+                  <div style={{
+                    width: '36px',
+                    height: '36px',
+                    borderRadius: '10px',
+                    background: isSelected ? 'rgba(184, 144, 62, 0.12)' : '#f8fafc',
+                    border: `1px solid ${isSelected ? 'rgba(184, 144, 62, 0.25)' : '#e2e8f0'}`,
+                    color: isSelected ? '#946f23' : step.accentColor,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0
+                  }}>
+                    <StepIcon size={18} />
+                  </div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0, flex: 1 }}>
+                    <span style={{ fontSize: '0.76rem', fontWeight: 700, color: '#475569' }}>
+                      {step.title}
+                    </span>
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'baseline',
+                      gap: '0.3rem',
+                      direction: 'ltr',
+                      marginTop: '0.15rem'
+                    }}>
+                      <span style={{
+                        fontSize: '1.18rem',
+                        fontWeight: 900,
+                        color: '#0f172a',
+                        fontVariantNumeric: 'tabular-nums'
+                      }}>
+                        {formatMoney(step.amount)}
+                      </span>
+                      <span style={{ fontSize: '0.7rem', fontWeight: 800, color: isSelected ? '#946f23' : '#64748b' }}>
+                        {isAr ? 'ج.م' : 'EGP'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Step Footer: Merchant Explanation */}
+                <div style={{
+                  fontSize: '0.68rem',
+                  color: '#64748b',
+                  lineHeight: 1.45,
+                  borderTop: '1px dashed #f1f5f9',
+                  paddingTop: '0.5rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between'
+                }}>
+                  <span>{step.subtext}</span>
+                  {isSelected && (
+                    <span style={{
+                      fontSize: '0.62rem',
+                      fontWeight: 800,
+                      color: '#946f23',
+                      background: 'rgba(184, 144, 62, 0.12)',
+                      padding: '0.1rem 0.35rem',
+                      borderRadius: '4px'
+                    }}>
+                      {isAr ? 'معروض' : 'Active'}
+                    </span>
+                  )}
+                </div>
               </div>
-            </div>
-
-            <span style={{ fontSize: '0.66rem', color: '#64748b' }}>
-              {isAr ? 'فلوس استلمناها من المشترين قبل التسليم' : 'Collected advances'}
-            </span>
-          </div>
-
-          {/* Node 2: Central Treasury Liquidity */}
-          <div 
-            onClick={() => setSelectedCode('102000')}
-            style={{
-              background: (selectedCode === '101000' || selectedCode === '102000') ? 'rgba(2, 132, 199, 0.08)' : '#fcfdfd',
-              border: `1.5px solid ${(selectedCode === '101000' || selectedCode === '102000') ? '#0284c7' : '#e2e8f0'}`,
-              borderRadius: '12px',
-              padding: '0.85rem 1rem',
-              cursor: 'pointer',
-              transition: 'all 0.15s ease',
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'space-between',
-              gap: '0.5rem'
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span style={{
-                fontSize: '0.66rem',
-                fontWeight: 800,
-                color: '#0369a1',
-                background: '#f0f9ff',
-                padding: '0.15rem 0.45rem',
-                borderRadius: '4px'
-              }}>
-                2. السيولة: الخزنة والبنك
-              </span>
-              <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#0284c7' }}>101000 + 102000</span>
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column' }}>
-              <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#334155' }}>
-                {isAr ? 'السيولة المتاحة للصرف' : 'Available Liquidity'}
-              </span>
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.25rem', direction: 'ltr', marginTop: '2px' }}>
-                <span style={{ fontSize: '1.05rem', fontWeight: 900, color: '#0f172a' }}>
-                  {formatMoney(balances.totalLiquid)}
-                </span>
-                <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#0284c7' }}>ج.م</span>
-              </div>
-            </div>
-
-            <span style={{ fontSize: '0.66rem', color: '#64748b' }}>
-              {isAr ? 'الكاش الجاهز بالخزنة والحسابات البنكية' : 'Ready cash & bank pool'}
-            </span>
-          </div>
-
-          {/* Node 3: Capitalized Construction WIP */}
-          <div 
-            onClick={() => setSelectedCode('151000')}
-            style={{
-              background: selectedCode === '151000' ? 'rgba(217, 119, 6, 0.08)' : '#fcfdfd',
-              border: `1.5px solid ${selectedCode === '151000' ? '#d97706' : '#e2e8f0'}`,
-              borderRadius: '12px',
-              padding: '0.85rem 1rem',
-              cursor: 'pointer',
-              transition: 'all 0.15s ease',
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'space-between',
-              gap: '0.5rem'
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span style={{
-                fontSize: '0.66rem',
-                fontWeight: 800,
-                color: '#b45309',
-                background: '#fffbeb',
-                padding: '0.15rem 0.45rem',
-                borderRadius: '4px'
-              }}>
-                3. التنفيذ: خرسانات ومباني
-              </span>
-              <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#d97706' }}>151000</span>
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column' }}>
-              <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#334155' }}>
-                {isAr ? 'مصروفات المباني الجارية' : 'Civil Construction WIP'}
-              </span>
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.25rem', direction: 'ltr', marginTop: '2px' }}>
-                <span style={{ fontSize: '1.05rem', fontWeight: 900, color: '#0f172a' }}>
-                  {formatMoney(balances.wipCivil)}
-                </span>
-                <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#d97706' }}>ج.م</span>
-              </div>
-            </div>
-
-            <span style={{ fontSize: '0.66rem', color: '#64748b' }}>
-              {isAr ? 'حديد وأسمنت ومستخلصات مقاولي الباطن' : 'Structural masonry & rebar'}
-            </span>
-          </div>
-
-          {/* Node 4: Handover & Revenue Recognition */}
-          <div 
-            onClick={() => setSelectedCode('401000')}
-            style={{
-              background: selectedCode === '401000' ? 'rgba(148, 111, 35, 0.08)' : '#fcfdfd',
-              border: `1.5px solid ${selectedCode === '401000' ? '#946f23' : '#e2e8f0'}`,
-              borderRadius: '12px',
-              padding: '0.85rem 1rem',
-              cursor: 'pointer',
-              transition: 'all 0.15s ease',
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'space-between',
-              gap: '0.5rem'
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span style={{
-                fontSize: '0.66rem',
-                fontWeight: 800,
-                color: '#78350f',
-                background: '#fefce8',
-                padding: '0.15rem 0.45rem',
-                borderRadius: '4px'
-              }}>
-                4. التسليم: إيرادات محققة
-              </span>
-              <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#946f23' }}>401000</span>
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column' }}>
-              <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#334155' }}>
-                {isAr ? 'إيرادات المبيعات المحققة' : 'Recognized Revenue'}
-              </span>
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.25rem', direction: 'ltr', marginTop: '2px' }}>
-                <span style={{ fontSize: '1.05rem', fontWeight: 900, color: '#0f172a' }}>
-                  {formatMoney(balances.recognizedRevenue)}
-                </span>
-                <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#946f23' }}>ج.م</span>
-              </div>
-            </div>
-
-            <span style={{ fontSize: '0.66rem', color: '#64748b' }}>
-              {isAr ? 'عقود تم تسليم وحداتها للمشترين رسمياً' : 'Realized handover sales'}
-            </span>
-          </div>
-
+            );
+          })}
         </div>
       </div>
 
@@ -1045,7 +1088,7 @@ export const GeneralLedgerMindmap: React.FC<GeneralLedgerMindmapProps> = ({
                   <div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
                       <span style={{ fontSize: '0.88rem', fontWeight: 800, color: '#0f172a' }}>
-                        {isAr ? 'الخرسانات وأعمال المباني (Civil WIP)' : 'Structural Concrete Construction'}
+                        {isAr ? 'الخرسانات وأعمال المباني والخامات' : 'Structural Concrete Construction'}
                       </span>
                       <span style={{
                         fontSize: '0.68rem',

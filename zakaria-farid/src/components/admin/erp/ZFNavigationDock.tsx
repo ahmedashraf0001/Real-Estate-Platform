@@ -14,6 +14,7 @@ import {
   Calculator,
   Wallet,
   Zap,
+  Users,
   X
 } from 'lucide-react';
 import styles from './v2/ZFWorkstationShell.module.css';
@@ -28,7 +29,8 @@ export type ERPNavModule =
   | 'pdc'
   | 'rescissions'
   | 'cost-allocation'
-  | 'tax';
+  | 'tax'
+  | 'partners';
 
 interface DockItemDef {
   id: ERPNavModule;
@@ -141,6 +143,12 @@ export const ZFNavigationDock: React.FC<ZFNavigationDockProps> = ({
           icon: BookOpen 
         },
         { 
+          id: 'partners', 
+          labelEn: 'Partners & Financiers', 
+          labelAr: 'الشركاء وممولو المشاريع', 
+          icon: Users 
+        },
+        { 
           id: 'cost-allocation', 
           labelEn: 'WIP Cost Allocation (RSV)', 
           labelAr: 'توزيع مصاريف المباني على الشقق', 
@@ -154,8 +162,8 @@ export const ZFNavigationDock: React.FC<ZFNavigationDockProps> = ({
         },
         { 
           id: 'tax', 
-          labelEn: 'Apartment Property Taxes', 
-          labelAr: 'الضرائب والرسوم على الشقق', 
+          labelEn: 'Project Statutory Taxes & Permits', 
+          labelAr: 'ضرائب وتراخيص المشاريع', 
           icon: Landmark 
         }
       ]

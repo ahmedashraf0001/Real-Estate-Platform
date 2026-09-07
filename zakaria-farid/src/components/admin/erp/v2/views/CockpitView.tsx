@@ -16,7 +16,13 @@ import {
   Receipt,
   Network,
   Layers,
-  Compass
+  Compass,
+  Activity,
+  BarChart3,
+  Sparkles,
+  ArrowRight,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 import { 
   ERPContract, 
@@ -69,6 +75,7 @@ interface CockpitViewProps {
   onCollectItem: (item: ERPPDCRecord) => void;
   onOpenNewCheque?: () => void;
   onOpenNewContract?: () => void;
+  onNavigateTab?: (tab: string, filterParams?: any) => void;
 }
 
 export const CockpitView: React.FC<CockpitViewProps> = ({
@@ -91,7 +98,8 @@ export const CockpitView: React.FC<CockpitViewProps> = ({
   onInspectCheque,
   onCollectItem,
   onOpenNewCheque,
-  onOpenNewContract
+  onOpenNewContract,
+  onNavigateTab
 }) => {
   // Executive Analytical Lens Switcher State ('mindmap' | 'forecast' | 'waterfall')
   const [activeStudioLens, setActiveStudioLens] = useState<'mindmap' | 'forecast' | 'waterfall'>('mindmap');
@@ -103,24 +111,43 @@ export const CockpitView: React.FC<CockpitViewProps> = ({
     return D(totalCollectedCash).div(gross).times(100).toFixed(1);
   }, [totalGrossContractValue, totalCollectedCash]);
 
-  // 2. Upcoming / Overdue Actionable Dues (next 7 days or overdue)
-  const urgentCollections = useMemo(() => {
-    const today = new Date().toISOString().split('T')[0];
-    const next7Days = new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0];
+  // 2. Liquidity Spectrum Calculations
+  const liquiditySpectrum = useMemo(() => {
+    const cash = D(kpis.cashBank);
+    const receivables = D(kpis.accountsReceivable);
+    const total = cash.plus(receivables);
+    if (total.isZero()) return { cashPct: 50, receivablesPct: 50 };
+    const cashPct = Math.min(100, Math.max(0, cash.div(total).times(100).toNumber()));
+    const receivablesPct = 100 - cashPct;
+    return { cashPct, receivablesPct };
+  }, [kpis.cashBank, kpis.accountsReceivable]);
 
-    return pdcRecords
-      .filter(p => p.status !== 'Cleared' && p.status !== 'Void')
-      .filter(p => p.due_date <= next7Days)
-      .sort((a, b) => a.due_date.localeCompare(b.due_date))
-      .slice(0, 12);
-  }, [pdcRecords]);
+  // 3. Performance Matrix Calculations
+  const perfMetrics = useMemo(() => {
+    const grossSales = D(totalGrossContractValue);
+    const wipTotal = D(totalWipIncurred);
+    const expectedGrossProfit = grossSales.minus(wipTotal);
+    const grossMarginPct = grossSales.isZero() ? '0' : expectedGrossProfit.div(grossSales).times(100).toFixed(1);
+    const avgDealSize = contracts.length > 0 ? grossSales.div(contracts.length) : D(0);
 
-  // 3. Recent Verified Journal Entries (last 15 for scrollable inspection)
-  const recentEntries = useMemo(() => {
-    return [...journalEntries]
-      .sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''))
-      .slice(0, 15);
-  }, [journalEntries]);
+    const civilPlusFinishing = D(wipAccounts.civil).plus(wipAccounts.finishing);
+    const civilFinishingPct = wipTotal.isZero() ? '0' : civilPlusFinishing.div(wipTotal).times(100).toFixed(0);
+
+    const netOperatingSurplus = D(totalCollectedCash).minus(wipTotal);
+    const liquidityCoverageRatio = wipTotal.isZero() ? '100' : D(totalCollectedCash).div(wipTotal).times(100).toFixed(0);
+
+    return {
+      grossSales,
+      wipTotal,
+      expectedGrossProfit,
+      grossMarginPct,
+      avgDealSize,
+      civilPlusFinishing,
+      civilFinishingPct,
+      netOperatingSurplus,
+      liquidityCoverageRatio
+    };
+  }, [totalGrossContractValue, totalWipIncurred, contracts.length, wipAccounts.civil, wipAccounts.finishing, totalCollectedCash]);
 
   return (
     <div className={styles.stageContainer} style={{ paddingBottom: '3rem' }}>
@@ -151,9 +178,9 @@ export const CockpitView: React.FC<CockpitViewProps> = ({
         </div>
       </div>
 
-      {/* SECTION 2: ASYMMETRIC FINANCIAL BENTO (Executive Command Archetype) */}
+      {/* SECTION 2: ASYMMETRIC FINANCIAL BENTO WITH VISUAL SPECTRUM & METRIC METERS */}
       <div className={styles.asymmetricBentoGrid}>
-        {/* Left / Hero Card (Flagship Liquidity & Financial Command) */}
+        {/* Left / Hero Card (Flagship Liquidity & Multi-Segmented Spectrum) */}
         <ZFKpiCard
           variant="double-bezel"
           isFlagship={true}
@@ -162,25 +189,55 @@ export const CockpitView: React.FC<CockpitViewProps> = ({
           icon={<Wallet size={20} />}
           accentColor="gold"
           progress={collectionRate}
-          progressColor="#b8903e"
+          progressColor="#946f23"
           badge={{ text: isAr ? 'كاش جاهز للاستخدام' : 'Ready & In-Safe', variant: 'gold' }}
           subtitleLabel={isAr ? 'نسبة اللي حَصّلناه من المبيعات' : 'Collected Sales Ratio'}
-          subtitleValue={`${collectionRate}% (${D(totalCollectedCash).formatEGP(isAr)})`}
+          subtitleValue={
+            <div style={{ width: '100%', marginTop: '0.35rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.74rem', color: '#64748b', marginBottom: '0.35rem' }}>
+                <span>{collectionRate}% ({D(totalCollectedCash).formatEGP(isAr)})</span>
+                <span style={{ fontWeight: 700, color: '#0f172a' }}>{isAr ? 'طيف السيولة والمستحقات' : 'Liquidity Spectrum'}</span>
+              </div>
+              {/* Multi-Segmented Spectrum Bar */}
+              <div style={{ height: '7px', width: '100%', background: '#e2e8f0', borderRadius: '4px', display: 'flex', overflow: 'hidden' }}>
+                <div 
+                  style={{ width: `${liquiditySpectrum.cashPct}%`, background: 'linear-gradient(90deg, #946f23, #c5a059)', transition: 'width 0.4s ease' }} 
+                  title={isAr ? `كاش جاهز: ${D(kpis.cashBank).formatEGP(true)}` : 'Cash Safe/Bank'} 
+                />
+                <div 
+                  style={{ width: `${liquiditySpectrum.receivablesPct}%`, background: 'linear-gradient(90deg, #1e40af, #3b82f6)', transition: 'width 0.4s ease' }} 
+                  title={isAr ? `أقساط عند العملاء: ${D(kpis.accountsReceivable).formatEGP(true)}` : 'Receivables'} 
+                />
+              </div>
+              <div style={{ display: 'flex', gap: '0.85rem', marginTop: '0.4rem', fontSize: '0.67rem', color: '#64748b' }}>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                  <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#946f23' }} />
+                  {isAr ? 'كاش بالخزنة والبنك' : 'Liquid'} ({Math.round(liquiditySpectrum.cashPct)}%)
+                </span>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                  <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#1e40af' }} />
+                  {isAr ? 'أقساط عند المشترين' : 'Receivables'} ({Math.round(liquiditySpectrum.receivablesPct)}%)
+                </span>
+              </div>
+            </div>
+          }
           tooltip={isAr 
             ? 'الكاش الجاهز: ده كل قرش حقيقي دخل جيب الشركة لحد دلوقتي (مقدمات كاش + أقساط ادفعت + سندات قبض نقدية). بيزيد بالتحصيل وبيقل بالصرف على المشاريع والمقاولين.'
             : 'Available Cash: Total liquid funds collected to date across cash safe and commercial bank accounts.'}
         />
 
-        {/* Right Stack: 3 Compact Telemetry Instruments */}
+        {/* Right Stack: 3 Compact Telemetry Instruments with Visual Progress Meters */}
         <div className={styles.telemetryStack}>
           <ZFKpiCard
             variant="compact"
             title={isAr ? 'أقساط لسه عند العملاء' : 'Customer Receivables'}
             value={D(kpis.accountsReceivable).formatEGP(isAr)}
             icon={<Clock size={16} />}
-            accentColor="amber"
+            accentColor="blue"
+            progress={parseFloat(collectionRate) > 100 ? 0 : 100 - parseFloat(collectionRate)}
+            progressColor="#1e40af"
             subtitleLabel={isAr ? 'عقود بيع شغالة' : 'Active Contracts'}
-            subtitleValue={`${contracts.length} ${isAr ? 'عقد' : 'deals'}`}
+            subtitleValue={`${contracts.length} ${isAr ? 'عقد بالمحفظة' : 'deals'}`}
             tooltip={isAr
               ? 'أقساط عند العملاء: كل الفلوس اللي لينا بره في ذمة المشترين (أقساط لسه ميعادها مجاش + متأخرات). بتقل فوراً كل ما العميل يدفع وتتنقل للكاش الجاهز.'
               : 'Customer Receivables: Remaining contractual balance owed by buyers across all active deals.'}
@@ -191,9 +248,11 @@ export const CockpitView: React.FC<CockpitViewProps> = ({
             title={isAr ? 'المصروف على المباني والتشطيب' : 'WIP Project Assets'}
             value={D(totalWipIncurred).formatEGP(isAr)}
             icon={<Building2 size={16} />}
-            accentColor="slate"
+            accentColor="amber"
+            progress={perfMetrics.civilFinishingPct}
+            progressColor="#b45309"
             subtitleLabel={isAr ? 'خرسانة وتشطيبات' : 'Civil & Finishing'}
-            subtitleValue={D(wipAccounts.civil).plus(wipAccounts.finishing).formatEGP(isAr)}
+            subtitleValue={`${perfMetrics.civilFinishingPct}% (${perfMetrics.civilPlusFinishing.formatEGP(isAr)})`}
             tooltip={isAr
               ? 'المصروف على المباني (WIP): كل اللي اتصرف على الأرض، الحفر، الخرسانات، تأسيس الكهرباء والسباكة والتشطيب. ده أصل استثماري ملك الشركة مش مصروف ضاع.'
               : 'WIP Project Assets: Total capital expenditure incurred on land, civil works, MEP, and luxury finishing.'}
@@ -205,8 +264,10 @@ export const CockpitView: React.FC<CockpitViewProps> = ({
             value={D(totalGrossContractValue).formatEGP(isAr)}
             icon={<TrendingUp size={16} />}
             accentColor="emerald"
-            subtitleLabel={isAr ? 'أقساط لسه عند العملاء' : 'Remaining Receivables'}
-            subtitleValue={D(kpis.accountsReceivable).formatEGP(isAr)}
+            progress={collectionRate}
+            progressColor="#047857"
+            subtitleLabel={isAr ? 'المتحصل الفعلي' : 'Realized Portion'}
+            subtitleValue={`${collectionRate}% (${D(totalCollectedCash).formatEGP(isAr)})`}
             tooltip={isAr
               ? 'إجمالي مبيعات العقود: مجموع فلوس كل العقود اللي اتباعت من أول ما بدأنا، سواء اتحصلت كاش أو لسه أقساط للمستقبل. المعادلة: (الكاش الجاهز + أقساط لسه عند العملاء).'
               : 'Gross Contracted Sales: Total nominal value of all active signed contracts. Formula: Cash Collected + Remaining Receivables.'}
@@ -291,6 +352,11 @@ export const CockpitView: React.FC<CockpitViewProps> = ({
                 isAr={isAr}
                 embeddedInStudio={true}
                 onInspectContract={onInspectContract}
+                onNavigateToMonth={(monthKey) => {
+                  if (onNavigateTab) {
+                    onNavigateTab('operations', { month: monthKey });
+                  }
+                }}
               />
             </div>
           )}
@@ -315,273 +381,381 @@ export const CockpitView: React.FC<CockpitViewProps> = ({
         </div>
       </div>
 
-      {/* SECTION 4: OPERATIONAL SPLIT (URGENT DUES & RECENT VERIFIED LEDGER ENTRIES - SCROLLABLE & COMPACT) */}
-      <div className={styles.splitGrid} style={{ marginBottom: '3.5rem' }}>
-        {/* Column A: Urgent Dues & Hand Collections */}
-        <div className={styles.card}>
-          <div className={styles.cardHeader}>
+      {/* SECTION 4: EXECUTIVE BUSINESS-WIDE PERFORMANCE MATRIX (مصفوفة مؤشرات الأداء الشاملة للأعمال) */}
+      <div style={{
+        marginTop: '2.5rem',
+        background: '#ffffff',
+        border: '1.5px solid #e2e8f0',
+        borderRadius: '16px',
+        padding: '1.5rem 1.65rem',
+        boxShadow: '0 4px 20px -4px rgba(0, 0, 0, 0.05)'
+      }}>
+        {/* Section Header */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: '1rem',
+          paddingBottom: '1.25rem',
+          borderBottom: '1px solid #e2e8f0',
+          marginBottom: '1.5rem'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <div style={{
+              width: '38px',
+              height: '38px',
+              borderRadius: '10px',
+              background: 'rgba(148, 111, 35, 0.1)',
+              color: '#946f23',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0
+            }}>
+              <Activity size={20} />
+            </div>
             <div>
-              <h3 className={styles.cardTitle}>
-                <Clock size={16} color="#f59e0b" />
-                <span>{isAr ? 'أقساط ميعادها جه للتحصيل (خلال أسبوع)' : 'Urgent Collections & Dues'}</span>
+              <h3 style={{ fontSize: '1.05rem', fontWeight: 800, margin: 0, color: '#0f172a' }}>
+                {isAr ? 'مصفوفة مؤشرات الأداء الشاملة للأعمال' : 'Executive Business-Wide Performance Matrix'}
               </h3>
-              <p className={styles.cardSubtitle}>
-                {isAr ? 'أقساط تعاقدية مستحقة للتحصيل نقداً باليد أو تحويل' : 'Installments due for collection'}
+              <p style={{ fontSize: '0.74rem', color: '#64748b', margin: '0.2rem 0 0 0' }}>
+                {isAr 
+                  ? 'تحليل استراتيجي متكامل يربط بين كفاءة الإنشاءات، سرعة التدفقات النقدية، وهوامش الربحية المحققة' 
+                  : 'Holistic strategic telemetry linking construction efficiency, cash runway, and margins'}
               </p>
             </div>
-            <span style={{ fontSize: '0.7rem', color: '#475569', background: '#f1f5f9', border: '1px solid #e2e8f0', padding: '0.2rem 0.5rem', borderRadius: '6px', fontVariantNumeric: 'tabular-nums', fontWeight: 700 }}>
-              {urgentCollections.length} {isAr ? 'بنود' : 'items'}
-            </span>
           </div>
 
-          {urgentCollections.length === 0 ? (
-            <div style={{ padding: '2.5rem 1rem', textAlign: 'center', color: '#64748b', fontSize: '0.8rem' }}>
-              <CheckCircle2 size={24} color="#10b981" style={{ margin: '0 auto 0.5rem auto', opacity: 0.8 }} />
-              <div>{isAr ? 'كله تمام ومفيش أقساط مستحقة خلال الأسبوع ده' : 'Portfolio is clean — No pending dues in the next 7 days'}</div>
-            </div>
-          ) : (
-            <div className={styles.cockpitScrollableList}>
-              {urgentCollections.map((item) => {
-                const linkedContract = contracts.find(c => c.contract_id === item.contract_id);
-                return (
-                  <div 
-                    key={item.cheque_id}
-                    style={{
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: '0.65rem',
-                      padding: '0.85rem 1.05rem',
-                      background: '#ffffff',
-                      border: '1.5px solid #cbd5e1',
-                      borderRadius: '12px',
-                      boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04)',
-                      transition: 'all 0.15s ease'
-                    }}
-                  >
-                    {/* Top Tier: Buyer / Drawer Name & Nominal Value */}
-                    <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '0.75rem' }}>
-                      <div style={{ minWidth: 0, flex: 1 }}>
-                        <div 
-                          dir="auto"
-                          style={{
-                            fontSize: '0.88rem',
-                            fontWeight: 800,
-                            color: '#0f172a',
-                            whiteSpace: 'nowrap',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            unicodeBidi: 'plaintext'
-                          }}
-                        >
-                          {item.drawer_name || linkedContract?.buyer_name || (isAr ? 'عميل مسجل' : 'Client')}
-                        </div>
-                        <div style={{
-                          fontSize: '0.7rem',
-                          color: '#64748b',
-                          fontVariantNumeric: 'tabular-nums',
-                          fontWeight: 600,
-                          marginTop: '0.15rem'
-                        }}>
-                          {item.cheque_number ? `#${item.cheque_number}` : (linkedContract?.contract_number || (isAr ? 'سند استحقاق' : 'Voucher'))}
-                        </div>
-                      </div>
-
-                      <div style={{ textAlign: isAr ? 'left' : 'right', flexShrink: 0 }}>
-                        <div style={{
-                          fontSize: '1.02rem',
-                          fontWeight: 900,
-                          color: '#946f23',
-                          fontVariantNumeric: 'tabular-nums',
-                          letterSpacing: '-0.02em',
-                          whiteSpace: 'nowrap'
-                        }}>
-                          {D(item.nominal_value).formatEGP(isAr)}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Bottom Tier: Context Details & Action CTA */}
-                    <div style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      paddingTop: '0.5rem',
-                      borderTop: '1px solid #e2e8f0',
-                      gap: '0.65rem',
-                      flexWrap: 'wrap'
-                    }}>
-                      <div style={{
-                        fontSize: '0.72rem',
-                        color: '#64748b',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '0.45rem',
-                        flexWrap: 'nowrap',
-                        whiteSpace: 'nowrap'
-                      }}>
-                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
-                          <Calendar size={12} color="#94a3b8" />
-                          <span dir="ltr" style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 600, unicodeBidi: 'isolate' }}>
-                            {item.due_date}
-                          </span>
-                        </span>
-                        <span style={{ color: '#cbd5e1' }}>•</span>
-                        <span style={{ fontWeight: 500, color: '#475569' }}>
-                          {item.bank_name || (isAr ? 'خزنة الشركة' : 'Treasury')}
-                        </span>
-                      </div>
-
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0, marginInlineStart: 'auto' }}>
-                        <StatusBadge domain="cheque" status={item.status} isAr={isAr} />
-
-                        <button
-                          type="button"
-                          onClick={() => onCollectItem(item)}
-                          style={{
-                            background: 'linear-gradient(135deg, #c5a059 0%, #946f23 100%)',
-                            color: '#ffffff',
-                            padding: '0.32rem 0.8rem',
-                            borderRadius: '6px',
-                            fontSize: '0.74rem',
-                            fontWeight: 800,
-                            border: 'none',
-                            cursor: 'pointer',
-                            boxShadow: '0 2px 6px rgba(148, 111, 35, 0.2)',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '0.35rem',
-                            transition: 'all 0.15s ease',
-                            whiteSpace: 'nowrap'
-                          }}
-                          onMouseEnter={e => e.currentTarget.style.filter = 'brightness(1.08)'}
-                          onMouseLeave={e => e.currentTarget.style.filter = 'none'}
-                        >
-                          <Receipt size={12} />
-                          <span>{isAr ? 'تحصيل' : 'Collect'}</span>
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <span style={{
+              fontSize: '0.72rem',
+              fontWeight: 700,
+              color: '#047857',
+              background: 'rgba(4, 120, 87, 0.08)',
+              border: '1px solid rgba(4, 120, 87, 0.22)',
+              padding: '0.25rem 0.65rem',
+              borderRadius: '6px',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.35rem'
+            }}>
+              <Sparkles size={12} />
+              <span>{isAr ? 'مؤشرات استراتيجية حية' : 'Live Strategic Ratios'}</span>
+            </span>
+          </div>
         </div>
 
-        {/* Column B: Recent Verified Ledger Entries */}
-        <div className={styles.card}>
-          <div className={styles.cardHeader}>
-            <div>
-              <h3 className={styles.cardTitle}>
-                <ShieldCheck size={16} color="#15803d" />
-                <span>{isAr ? 'آخر الحركات المتسجلة في الحسابات' : 'Recent Verified Journal Entries'}</span>
-              </h3>
-              <p className={styles.cardSubtitle}>
-                {isAr ? 'كل الحركات متسجلة ومضبوطة بالدفاتر' : 'Verified double-entry transactions posted to GL'}
-              </p>
+        {/* 3 Strategic Pillars Grid */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(310px, 1fr))',
+          gap: '1.25rem'
+        }}>
+          {/* Pillar 1: Projects & Capital Absorption */}
+          <div style={{
+            background: 'linear-gradient(145deg, #ffffff 0%, #f8fafc 100%)',
+            border: '1.5px solid #e2e8f0',
+            borderTop: '4px solid #1e40af',
+            borderRadius: '14px',
+            padding: '1.25rem',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '1rem',
+            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.03)'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem' }}>
+                <div style={{ width: '30px', height: '30px', borderRadius: '8px', background: 'rgba(30, 64, 175, 0.1)', color: '#1e40af', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Building2 size={16} />
+                </div>
+                <div>
+                  <h4 style={{ margin: 0, fontSize: '0.88rem', fontWeight: 800, color: '#0f172a' }}>
+                    {isAr ? 'قطاع المشروعات والإنشاءات' : 'Construction & Projects'}
+                  </h4>
+                  <span style={{ fontSize: '0.68rem', color: '#64748b' }}>
+                    {isAr ? 'امتصاص السيولة في المباني' : 'Capital absorption in WIP'}
+                  </span>
+                </div>
+              </div>
+              <span style={{ fontSize: '0.66rem', fontWeight: 700, color: '#1e40af', background: 'rgba(30, 64, 175, 0.08)', padding: '0.15rem 0.45rem', borderRadius: '4px' }}>
+                {isAr ? 'حساب 150000' : 'GL 150000'}
+              </span>
             </div>
-            <span style={{ fontSize: '0.7rem', color: '#15803d', background: '#f0fdf4', border: '1px solid rgba(22, 163, 74, 0.25)', padding: '0.2rem 0.5rem', borderRadius: '4px', fontWeight: 700 }}>
-              {isAr ? 'حسابات مضبوطة' : 'Balanced'}
-            </span>
+
+            {/* Hero Figure */}
+            <div style={{ padding: '0.75rem', background: '#ffffff', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+              <span style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: 600, display: 'block' }}>
+                {isAr ? 'إجمالي المنفذ كرأسمال مباني (WIP):' : 'Total Capital Incurred:'}
+              </span>
+              <div style={{ fontSize: '1.4rem', fontWeight: 900, color: '#1e40af', letterSpacing: '-0.02em', fontVariantNumeric: 'tabular-nums', marginTop: '0.15rem' }}>
+                {perfMetrics.wipTotal.formatEGP(isAr)}
+              </div>
+            </div>
+
+            {/* Sub-metrics breakdown */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: '0.75rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', color: '#475569' }}>
+                <span>{isAr ? 'خرسانات وهيكل مباني:' : 'Civil & Concrete:'}</span>
+                <strong style={{ color: '#0f172a', fontVariantNumeric: 'tabular-nums' }}>{D(wipAccounts.civil).formatEGP(isAr)}</strong>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', color: '#475569' }}>
+                <span>{isAr ? 'تشطيبات وواجهات معمارية:' : 'Finishing & Facades:'}</span>
+                <strong style={{ color: '#0f172a', fontVariantNumeric: 'tabular-nums' }}>{D(wipAccounts.finishing).formatEGP(isAr)}</strong>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', color: '#475569' }}>
+                <span>{isAr ? 'تأسيس شبكات ومرافق (MEP):' : 'MEP Infrastructure:'}</span>
+                <strong style={{ color: '#0f172a', fontVariantNumeric: 'tabular-nums' }}>{D(wipAccounts.mep).formatEGP(isAr)}</strong>
+              </div>
+            </div>
+
+            {/* Progress Meter */}
+            <div style={{ marginTop: 'auto', paddingTop: '0.75rem', borderTop: '1px solid #f1f5f9' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.68rem', color: '#64748b', marginBottom: '0.35rem' }}>
+                <span>{isAr ? 'نسبة الخرسانات والتشطيبات:' : 'Civil/Finish Ratio:'}</span>
+                <strong style={{ color: '#1e40af' }}>{perfMetrics.civilFinishingPct}%</strong>
+              </div>
+              <div style={{ height: '5px', width: '100%', background: '#e2e8f0', borderRadius: '3px', overflow: 'hidden' }}>
+                <div style={{ height: '100%', width: `${perfMetrics.civilFinishingPct}%`, background: '#1e40af', borderRadius: '3px' }} />
+              </div>
+            </div>
+
+            {/* Direct CTA */}
+            {onNavigateTab && (
+              <button
+                type="button"
+                onClick={() => onNavigateTab('properties')}
+                style={{
+                  width: '100%',
+                  padding: '0.45rem',
+                  fontSize: '0.72rem',
+                  fontWeight: 700,
+                  color: '#1e40af',
+                  background: 'rgba(30, 64, 175, 0.05)',
+                  border: '1px solid rgba(30, 64, 175, 0.2)',
+                  borderRadius: '7px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '0.35rem',
+                  transition: 'all 0.15s ease'
+                }}
+                onMouseEnter={e => e.currentTarget.style.background = 'rgba(30, 64, 175, 0.1)'}
+                onMouseLeave={e => e.currentTarget.style.background = 'rgba(30, 64, 175, 0.05)'}
+              >
+                <span>{isAr ? 'معاينة المشاريع وتكلفة الشقق' : 'Inspect Portfolio & WIP'}</span>
+                <span>↳</span>
+              </button>
+            )}
           </div>
 
-          {recentEntries.length === 0 ? (
-            <div style={{ padding: '2.5rem 1rem', textAlign: 'center', color: '#64748b', fontSize: '0.8rem' }}>
-              <div>{isAr ? 'مفيش حركات متسجلة لسه' : 'No journal entries recorded yet'}</div>
+          {/* Pillar 2: Liquidity Health & Cash Runway */}
+          <div style={{
+            background: 'linear-gradient(145deg, #ffffff 0%, #f0fdf4 100%)',
+            border: '1.5px solid #e2e8f0',
+            borderTop: '4px solid #047857',
+            borderRadius: '14px',
+            padding: '1.25rem',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '1rem',
+            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.03)'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem' }}>
+                <div style={{ width: '30px', height: '30px', borderRadius: '8px', background: 'rgba(4, 120, 87, 0.1)', color: '#047857', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Wallet size={16} />
+                </div>
+                <div>
+                  <h4 style={{ margin: 0, fontSize: '0.88rem', fontWeight: 800, color: '#0f172a' }}>
+                    {isAr ? 'قطاع السيولة والتدفقات النقدية' : 'Liquidity & Cash Flow'}
+                  </h4>
+                  <span style={{ fontSize: '0.68rem', color: '#64748b' }}>
+                    {isAr ? 'مدرج الأمان المالي وتغطية الصرف' : 'Cash runway & coverage'}
+                  </span>
+                </div>
+              </div>
+              <span style={{ fontSize: '0.66rem', fontWeight: 700, color: '#047857', background: 'rgba(4, 120, 87, 0.08)', padding: '0.15rem 0.45rem', borderRadius: '4px' }}>
+                {isAr ? 'فائض تشغيلي' : 'Cash Runway'}
+              </span>
             </div>
-          ) : (
-            <div className={styles.cockpitScrollableList}>
-              {recentEntries.map((entry) => {
-                const totalDebit = (entry.lines || []).reduce((sum, l) => sum.plus(l.debit_amount || '0'), D(0));
 
-                return (
-                  <div 
-                    key={entry.entry_id}
-                    style={{
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: '0.55rem',
-                      padding: '0.85rem 1.05rem',
-                      background: '#ffffff',
-                      border: '1.5px solid #cbd5e1',
-                      borderRadius: '12px',
-                      boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04)',
-                      transition: 'all 0.15s ease'
-                    }}
-                  >
-                    {/* Top Tier: Description & Debit Amount */}
-                    <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '0.75rem' }}>
-                      <div style={{ minWidth: 0, flex: 1 }}>
-                        <div style={{
-                          fontSize: '0.82rem',
-                          fontWeight: 700,
-                          color: '#0f172a',
-                          whiteSpace: 'nowrap',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis'
-                        }}>
-                          {localizeJournalDescription(entry.description, isAr)}
-                        </div>
-                        <div style={{
-                          fontSize: '0.7rem',
-                          color: '#946f23',
-                          fontWeight: 800,
-                          fontVariantNumeric: 'tabular-nums',
-                          marginTop: '0.15rem'
-                        }}>
-                          {entry.entry_number}
-                        </div>
-                      </div>
-
-                      <div style={{ textAlign: isAr ? 'left' : 'right', flexShrink: 0 }}>
-                        <div style={{
-                          fontSize: '0.98rem',
-                          fontWeight: 900,
-                          color: '#0f172a',
-                          fontVariantNumeric: 'tabular-nums',
-                          whiteSpace: 'nowrap'
-                        }}>
-                          {totalDebit.formatEGP(isAr)}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Bottom Tier: Date & Immutable Status */}
-                    <div style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      paddingTop: '0.45rem',
-                      borderTop: '1px solid #e2e8f0',
-                      fontSize: '0.7rem',
-                      gap: '0.5rem'
-                    }}>
-                      <span dir="ltr" style={{ color: '#64748b', fontVariantNumeric: 'tabular-nums', fontWeight: 600, unicodeBidi: 'isolate' }}>
-                        {entry.entry_date}
-                      </span>
-                      <span style={{
-                        fontSize: '0.66rem',
-                        color: '#15803d',
-                        background: '#f0fdf4',
-                        border: '1px solid rgba(22, 163, 74, 0.25)',
-                        padding: '0.15rem 0.5rem',
-                        borderRadius: '4px',
-                        fontWeight: 700,
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '0.25rem'
-                      }}>
-                        <ShieldCheck size={11} />
-                        <span>{isAr ? 'متسجل ومعتمد' : 'Immutable'}</span>
-                      </span>
-                    </div>
-                  </div>
-                );
-              })}
+            {/* Hero Figure */}
+            <div style={{ padding: '0.75rem', background: '#ffffff', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+              <span style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: 600, display: 'block' }}>
+                {isAr ? 'صافي الفائض التشغيلي (المتحصل - المنصرف):' : 'Net Operating Cash Surplus:'}
+              </span>
+              <div style={{
+                fontSize: '1.4rem',
+                fontWeight: 900,
+                color: perfMetrics.netOperatingSurplus.isNegative() ? '#c2410c' : '#047857',
+                letterSpacing: '-0.02em',
+                fontVariantNumeric: 'tabular-nums',
+                marginTop: '0.15rem'
+              }}>
+                {perfMetrics.netOperatingSurplus.isNegative() ? '-' : '+'}
+                {perfMetrics.netOperatingSurplus.abs().formatEGP(isAr)}
+              </div>
             </div>
-          )}
+
+            {/* Sub-metrics breakdown */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: '0.75rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', color: '#475569' }}>
+                <span>{isAr ? 'إجمالي المتحصل نقدياً وبنك:' : 'Collected Cash:'}</span>
+                <strong style={{ color: '#047857', fontVariantNumeric: 'tabular-nums' }}>{D(totalCollectedCash).formatEGP(isAr)}</strong>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', color: '#475569' }}>
+                <span>{isAr ? 'نسبة تغطية السيولة للتكاليف:' : 'Liquidity Coverage Ratio:'}</span>
+                <strong style={{ color: '#0f172a', fontVariantNumeric: 'tabular-nums' }}>{perfMetrics.liquidityCoverageRatio}%</strong>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', color: '#475569' }}>
+                <span>{isAr ? 'أقساط مجدولة قيد التحصيل:' : 'Scheduled Receivables:'}</span>
+                <strong style={{ color: '#0f172a', fontVariantNumeric: 'tabular-nums' }}>{D(totalSafePDCs).formatEGP(isAr)}</strong>
+              </div>
+            </div>
+
+            {/* Progress Meter */}
+            <div style={{ marginTop: 'auto', paddingTop: '0.75rem', borderTop: '1px solid #f1f5f9' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.68rem', color: '#64748b', marginBottom: '0.35rem' }}>
+                <span>{isAr ? 'تغطية المتحصل لمنصرف المشاريع:' : 'Inflow-to-WIP Coverage:'}</span>
+                <strong style={{ color: '#047857' }}>{perfMetrics.liquidityCoverageRatio}%</strong>
+              </div>
+              <div style={{ height: '5px', width: '100%', background: '#e2e8f0', borderRadius: '3px', overflow: 'hidden' }}>
+                <div style={{ height: '100%', width: `${Math.min(100, parseFloat(perfMetrics.liquidityCoverageRatio))}%`, background: '#047857', borderRadius: '3px' }} />
+              </div>
+            </div>
+
+            {/* Direct CTA */}
+            {onNavigateTab && (
+              <button
+                type="button"
+                onClick={() => onNavigateTab('operations')}
+                style={{
+                  width: '100%',
+                  padding: '0.45rem',
+                  fontSize: '0.72rem',
+                  fontWeight: 700,
+                  color: '#047857',
+                  background: 'rgba(4, 120, 87, 0.05)',
+                  border: '1px solid rgba(4, 120, 87, 0.2)',
+                  borderRadius: '7px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '0.35rem',
+                  transition: 'all 0.15s ease'
+                }}
+                onMouseEnter={e => e.currentTarget.style.background = 'rgba(4, 120, 87, 0.1)'}
+                onMouseLeave={e => e.currentTarget.style.background = 'rgba(4, 120, 87, 0.05)'}
+              >
+                <span>{isAr ? 'إدارة حركة الخزنة والتحصيل' : 'Manage Treasury & Inflows'}</span>
+                <span>↳</span>
+              </button>
+            )}
+          </div>
+
+          {/* Pillar 3: Profitability & Portfolio Margins */}
+          <div style={{
+            background: 'linear-gradient(145deg, #ffffff 0%, #fefdfa 100%)',
+            border: '1.5px solid #e2e8f0',
+            borderTop: '4px solid #946f23',
+            borderRadius: '14px',
+            padding: '1.25rem',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '1rem',
+            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.03)'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem' }}>
+                <div style={{ width: '30px', height: '30px', borderRadius: '8px', background: 'rgba(148, 111, 35, 0.1)', color: '#946f23', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <TrendingUp size={16} />
+                </div>
+                <div>
+                  <h4 style={{ margin: 0, fontSize: '0.88rem', fontWeight: 800, color: '#0f172a' }}>
+                    {isAr ? 'قطاع الربحية والعوائد' : 'Profitability & Returns'}
+                  </h4>
+                  <span style={{ fontSize: '0.68rem', color: '#64748b' }}>
+                    {isAr ? 'العائد على التكلفة وهامش الربح' : 'Margin & Return on Cost'}
+                  </span>
+                </div>
+              </div>
+              <span style={{ fontSize: '0.66rem', fontWeight: 700, color: '#946f23', background: 'rgba(148, 111, 35, 0.08)', padding: '0.15rem 0.45rem', borderRadius: '4px' }}>
+                {isAr ? 'هامش تعاقدي' : 'Gross Spread'}
+              </span>
+            </div>
+
+            {/* Hero Figure */}
+            <div style={{ padding: '0.75rem', background: '#ffffff', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+              <span style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: 600, display: 'block' }}>
+                {isAr ? 'إجمالي هامش الربح المتوقع للمحفظة:' : 'Expected Gross Margin:'}
+              </span>
+              <div style={{ fontSize: '1.4rem', fontWeight: 900, color: '#946f23', letterSpacing: '-0.02em', fontVariantNumeric: 'tabular-nums', marginTop: '0.15rem' }}>
+                {perfMetrics.expectedGrossProfit.formatEGP(isAr)}
+              </div>
+            </div>
+
+            {/* Sub-metrics breakdown */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: '0.75rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', color: '#475569' }}>
+                <span>{isAr ? 'نسبة هامش الربح الإجمالي:' : 'Gross Margin Ratio:'}</span>
+                <strong style={{ color: '#047857', fontVariantNumeric: 'tabular-nums' }}>{perfMetrics.grossMarginPct}%</strong>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', color: '#475569' }}>
+                <span>{isAr ? 'متوسط قيمة بيع الشقة:' : 'Average Deal Size:'}</span>
+                <strong style={{ color: '#0f172a', fontVariantNumeric: 'tabular-nums' }}>{perfMetrics.avgDealSize.formatEGP(isAr)}</strong>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', color: '#475569' }}>
+                <span>{isAr ? 'عدد العقود بالمحفظة:' : 'Active Signed Deals:'}</span>
+                <strong style={{ color: '#0f172a', fontVariantNumeric: 'tabular-nums' }}>{contracts.length} {isAr ? 'عقود بيع' : 'deals'}</strong>
+              </div>
+            </div>
+
+            {/* Progress Meter */}
+            <div style={{ marginTop: 'auto', paddingTop: '0.75rem', borderTop: '1px solid #f1f5f9' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.68rem', color: '#64748b', marginBottom: '0.35rem' }}>
+                <span>{isAr ? 'هامش الربح التعاقدي للمبيعات:' : 'Contractual Gross Margin:'}</span>
+                <strong style={{ color: '#946f23' }}>{perfMetrics.grossMarginPct}%</strong>
+              </div>
+              <div style={{ height: '5px', width: '100%', background: '#e2e8f0', borderRadius: '3px', overflow: 'hidden' }}>
+                <div style={{ height: '100%', width: `${Math.min(100, parseFloat(perfMetrics.grossMarginPct))}%`, background: '#946f23', borderRadius: '3px' }} />
+              </div>
+            </div>
+
+            {/* Direct CTA */}
+            {onNavigateTab && (
+              <button
+                type="button"
+                onClick={() => onNavigateTab('contracts')}
+                style={{
+                  width: '100%',
+                  padding: '0.45rem',
+                  fontSize: '0.72rem',
+                  fontWeight: 700,
+                  color: '#946f23',
+                  background: 'rgba(148, 111, 35, 0.05)',
+                  border: '1px solid rgba(148, 111, 35, 0.2)',
+                  borderRadius: '7px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '0.35rem',
+                  transition: 'all 0.15s ease'
+                }}
+                onMouseEnter={e => e.currentTarget.style.background = 'rgba(148, 111, 35, 0.1)'}
+                onMouseLeave={e => e.currentTarget.style.background = 'rgba(148, 111, 35, 0.05)'}
+              >
+                <span>{isAr ? 'سجل عقود البيع والأقساط' : 'Inspect Contracts & Sales'}</span>
+                <span>↳</span>
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </div>
   );
 };
+

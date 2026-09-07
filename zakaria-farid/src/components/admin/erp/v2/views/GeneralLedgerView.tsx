@@ -24,13 +24,17 @@ import {
   ChevronRight,
   ShieldCheck,
   RotateCcw,
-  ArrowUpDown
+  ArrowUpDown,
+  Printer,
+  FileSpreadsheet
 } from 'lucide-react';
 import { 
   ERPAccount, 
   ERPJournalEntry, 
-  ERPAccountingPeriod 
+  ERPAccountingPeriod,
+  ERPContract
 } from '@/lib/erp/types';
+import { Property } from '@/lib/supabase/types';
 import { CANONICAL_COA } from '@/lib/erp/ledger';
 import { D } from '@/lib/erp/math';
 import { JournalEntryPreview, localizeJournalDescription } from '@/components/erp/JournalEntryPreview';
@@ -39,6 +43,10 @@ import { ZFPagination } from '../ZFPagination';
 import { ZFKpiCard } from '../ZFKpiCard';
 import { ZFFilterToolbar } from '../ZFFilterToolbar';
 import { GeneralLedgerMindmap } from './GeneralLedgerMindmap';
+import { ZFPrintDocumentLayout } from '../common/ZFPrintDocumentLayout';
+import { exportComprehensiveArabicExcel } from '@/lib/erp/excelExporter';
+import { LiveERPDataset } from '@/lib/erp/supabaseService';
+import { toast } from 'sonner';
 import styles from '../ZFWorkstationShell.module.css';
 
 interface GeneralLedgerViewProps {
@@ -46,6 +54,10 @@ interface GeneralLedgerViewProps {
   activePeriod: ERPAccountingPeriod;
   isAr?: boolean;
   isMutating?: boolean;
+  contracts?: ERPContract[];
+  properties?: Property[];
+  dataset?: LiveERPDataset;
+  onExportExcel?: () => void;
   onOpenQuickTransaction: () => void;
   onTogglePeriodStatus: (periodId: string, newStatus: 'OPEN' | 'LOCKED') => void;
   onNavigateToOpenQuestion: (questionId: string) => void;
@@ -56,6 +68,10 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
   activePeriod,
   isAr = true,
   isMutating = false,
+  contracts = [],
+  properties = [],
+  dataset,
+  onExportExcel,
   onOpenQuickTransaction,
   onTogglePeriodStatus
 }) => {
@@ -140,6 +156,262 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
       entriesCount: journalEntries.length
     };
   }, [accountStats, journalEntries]);
+
+  // Trial Balance calculation for printable audit statement
+  const trialBalanceReport = useMemo(() => {
+    let sumDebits = D(0);
+    let sumCredits = D(0);
+    let sumEndingDebitBalances = D(0);
+    let sumEndingCreditBalances = D(0);
+
+    const rows = Object.values(CANONICAL_COA).map(acc => {
+      const stats = accountStats[acc.account_code] || { debits: D(0), credits: D(0), count: 0 };
+      sumDebits = sumDebits.plus(stats.debits);
+      sumCredits = sumCredits.plus(stats.credits);
+
+      const isDebitNormal = acc.normal_balance === 'DEBIT';
+      const net = isDebitNormal
+        ? stats.debits.minus(stats.credits)
+        : stats.credits.minus(stats.debits);
+
+      let endingDebit = D(0);
+      let endingCredit = D(0);
+
+      if (isDebitNormal) {
+        if (net.greaterThanOrEqual(0)) {
+          endingDebit = net;
+        } else {
+          endingCredit = net.abs();
+        }
+      } else {
+        if (net.greaterThanOrEqual(0)) {
+          endingCredit = net;
+        } else {
+          endingDebit = net.abs();
+        }
+      }
+
+      sumEndingDebitBalances = sumEndingDebitBalances.plus(endingDebit);
+      sumEndingCreditBalances = sumEndingCreditBalances.plus(endingCredit);
+
+      return {
+        code: acc.account_code,
+        nameAr: acc.account_name_ar,
+        nameEn: acc.account_name_en,
+        category: acc.account_type,
+        normalBalance: acc.normal_balance,
+        debitMovements: stats.debits,
+        creditMovements: stats.credits,
+        endingDebit,
+        endingCredit,
+        hasActivity: stats.count > 0 || !stats.debits.isZero() || !stats.credits.isZero()
+      };
+    });
+
+    const isMovementsBalanced = sumDebits.equals(sumCredits);
+    const isBalancesBalanced = sumEndingDebitBalances.equals(sumEndingCreditBalances);
+
+    return {
+      rows,
+      sumDebits,
+      sumCredits,
+      sumEndingDebitBalances,
+      sumEndingCreditBalances,
+      isMovementsBalanced,
+      isBalancesBalanced
+    };
+  }, [accountStats]);
+
+  const [isExportingExcel, setIsExportingExcel] = useState(false);
+  const [showPrintPreview, setShowPrintPreview] = useState(false);
+
+  const handleExportExcelClick = async () => {
+    if (onExportExcel) {
+      onExportExcel();
+      return;
+    }
+    if (!dataset) {
+      toast.error(isAr ? 'بيانات التصدير غير مكتملة' : 'Export dataset not available');
+      return;
+    }
+    try {
+      setIsExportingExcel(true);
+      await exportComprehensiveArabicExcel(
+        dataset,
+        {
+          cashBalance: kpis.totalCash,
+          accountsReceivable: '0.00',
+          totalWipIncurred: kpis.totalWip,
+          totalAssets: kpis.totalAssets,
+          totalLiabilities: kpis.totalLiabilities,
+          collectedSales: kpis.totalCash,
+          grossContractValue: '0.00',
+          partnerFunding: '0.00'
+        },
+        isAr
+      );
+      toast.success(isAr ? 'تم تصدير القوائم المالية ودفتر اليومية بنجاح إلى Excel' : 'Financial statements exported to Excel');
+    } catch (err) {
+      toast.error(isAr ? 'حدث خطأ أثناء تصدير ملف الإكسيل' : 'Failed to export Excel');
+    } finally {
+      setIsExportingExcel(false);
+    }
+  };
+
+  const statementDate = new Date().toLocaleDateString(isAr ? 'ar-EG' : 'en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  });
+  const voucherCode = `TB-${activePeriod.fiscal_year}-P${activePeriod.period_number}`;
+
+  const printableTrialBalanceBody = (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', direction: isAr ? 'rtl' : 'ltr' }}>
+      {/* 1. Summary Ribbon */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(4, 1fr)',
+        gap: '0.75rem',
+        border: '1px solid #cbd5e1',
+        borderRadius: '10px',
+        padding: '1rem',
+        background: '#f8fafc'
+      }}>
+        <div>
+          <span style={{ fontSize: '0.72rem', color: '#64748b', display: 'block', fontWeight: 700 }}>
+            {isAr ? 'فلوس وممتلكات الشركة (الأصول)' : 'Total Assets'}
+          </span>
+          <strong style={{ fontSize: '1.15rem', color: '#0f172a', fontVariantNumeric: 'tabular-nums' }}>
+            {D(kpis.totalAssets).formatEGP(isAr)}
+          </strong>
+        </div>
+        <div>
+          <span style={{ fontSize: '0.72rem', color: '#64748b', display: 'block', fontWeight: 700 }}>
+            {isAr ? 'مستحقات على الشركة (الالتزامات)' : 'Total Liabilities'}
+          </span>
+          <strong style={{ fontSize: '1.15rem', color: '#b45309', fontVariantNumeric: 'tabular-nums' }}>
+            {D(kpis.totalLiabilities).formatEGP(isAr)}
+          </strong>
+        </div>
+        <div>
+          <span style={{ fontSize: '0.72rem', color: '#64748b', display: 'block', fontWeight: 700 }}>
+            {isAr ? 'كاش جاهز بالخزنة والبنك' : 'Liquid Cash'}
+          </span>
+          <strong style={{ fontSize: '1.15rem', color: '#047857', fontVariantNumeric: 'tabular-nums' }}>
+            {D(kpis.totalCash).formatEGP(isAr)}
+          </strong>
+        </div>
+        <div>
+          <span style={{ fontSize: '0.72rem', color: '#64748b', display: 'block', fontWeight: 700 }}>
+            {isAr ? 'مصاريف وخامات المباني (WIP)' : 'Construction WIP'}
+          </span>
+          <strong style={{ fontSize: '1.15rem', color: '#1d4ed8', fontVariantNumeric: 'tabular-nums' }}>
+            {D(kpis.totalWip).formatEGP(isAr)}
+          </strong>
+        </div>
+      </div>
+
+      {/* 2. Audit Verification Callout */}
+      <div style={{
+        background: trialBalanceReport.isMovementsBalanced ? 'rgba(4, 120, 87, 0.06)' : 'rgba(220, 38, 38, 0.06)',
+        border: `1px solid ${trialBalanceReport.isMovementsBalanced ? '#a7f3d0' : '#fecaca'}`,
+        borderRadius: '8px',
+        padding: '0.65rem 1rem',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <ShieldCheck size={16} color={trialBalanceReport.isMovementsBalanced ? '#047857' : '#dc2626'} />
+          <span style={{ fontSize: '0.82rem', fontWeight: 800, color: trialBalanceReport.isMovementsBalanced ? '#047857' : '#dc2626' }}>
+            {trialBalanceReport.isMovementsBalanced
+              ? (isAr ? 'ميزان المراجعة متوازن ومطابق بالمليم (إجمالي المدين = إجمالي الدائن) • خالي من أي فروق حسابية' : 'Trial Balance is perfectly balanced with zero variance.')
+              : (isAr ? 'تنبيه: يوجد فارق محاسبي بين المدين والدائن يحتاج مراجعة فورية!' : 'Alert: Unbalanced variance detected!')}
+          </span>
+        </div>
+        <span style={{ fontSize: '0.74rem', color: '#64748b', fontWeight: 600 }}>
+          {isAr ? `إجمالي القيود المسجلة: ${journalEntries.length} قيد معتمد` : `Total entries: ${journalEntries.length}`}
+        </span>
+      </div>
+
+      {/* 3. Trial Balance Table */}
+      <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #cbd5e1', fontSize: '0.74rem' }}>
+        <thead>
+          <tr style={{ background: '#0f172a', color: '#ffffff' }}>
+            <th style={{ padding: '0.55rem 0.5rem', textAlign: 'center', width: '8%' }}>{isAr ? 'الكود' : 'Code'}</th>
+            <th style={{ padding: '0.55rem 0.75rem', textAlign: isAr ? 'right' : 'left', width: '28%' }}>{isAr ? 'اسم الحساب والدور المحاسبي' : 'Account Name'}</th>
+            <th style={{ padding: '0.55rem 0.5rem', textAlign: 'center', width: '12%' }}>{isAr ? 'طبيعة الحساب' : 'Nature'}</th>
+            <th style={{ padding: '0.55rem 0.65rem', textAlign: 'right', width: '13%' }}>{isAr ? 'حركات مدين' : 'Debit Mov.'}</th>
+            <th style={{ padding: '0.55rem 0.65rem', textAlign: 'right', width: '13%' }}>{isAr ? 'حركات دائن' : 'Credit Mov.'}</th>
+            <th style={{ padding: '0.55rem 0.65rem', textAlign: 'right', width: '13%' }}>{isAr ? 'رصيد مدين' : 'End Debit'}</th>
+            <th style={{ padding: '0.55rem 0.65rem', textAlign: 'right', width: '13%' }}>{isAr ? 'رصيد دائن' : 'End Credit'}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {trialBalanceReport.rows.map((row, idx) => (
+            <tr 
+              key={row.code}
+              style={{
+                borderBottom: '1px solid #e2e8f0',
+                background: idx % 2 === 1 ? '#f8fafc' : '#ffffff',
+                opacity: row.hasActivity ? 1 : 0.65
+              }}
+            >
+              <td style={{ padding: '0.45rem 0.5rem', textAlign: 'center', fontFamily: 'monospace', fontWeight: 700, color: '#0f172a' }}>
+                {row.code}
+              </td>
+              <td style={{ padding: '0.45rem 0.75rem', fontWeight: 600, color: '#0f172a' }}>
+                {isAr ? row.nameAr : row.nameEn}
+              </td>
+              <td style={{ padding: '0.45rem 0.5rem', textAlign: 'center' }}>
+                <span style={{
+                  fontSize: '0.68rem',
+                  padding: '0.1rem 0.4rem',
+                  borderRadius: '4px',
+                  background: row.normalBalance === 'DEBIT' ? 'rgba(30, 64, 175, 0.08)' : 'rgba(180, 83, 9, 0.08)',
+                  color: row.normalBalance === 'DEBIT' ? '#1e40af' : '#b45309',
+                  fontWeight: 700
+                }}>
+                  {isAr ? (row.normalBalance === 'DEBIT' ? 'مدين' : 'دائن') : row.normalBalance}
+                </span>
+              </td>
+              <td style={{ padding: '0.45rem 0.65rem', textAlign: 'right', fontVariantNumeric: 'tabular-nums', fontWeight: 600, color: row.debitMovements.isZero() ? '#94a3b8' : '#0f172a' }}>
+                {row.debitMovements.isZero() ? '—' : row.debitMovements.formatEGP(isAr)}
+              </td>
+              <td style={{ padding: '0.45rem 0.65rem', textAlign: 'right', fontVariantNumeric: 'tabular-nums', fontWeight: 600, color: row.creditMovements.isZero() ? '#94a3b8' : '#0f172a' }}>
+                {row.creditMovements.isZero() ? '—' : row.creditMovements.formatEGP(isAr)}
+              </td>
+              <td style={{ padding: '0.45rem 0.65rem', textAlign: 'right', fontVariantNumeric: 'tabular-nums', fontWeight: 700, color: row.endingDebit.isZero() ? '#94a3b8' : '#1e3a8a' }}>
+                {row.endingDebit.isZero() ? '—' : row.endingDebit.formatEGP(isAr)}
+              </td>
+              <td style={{ padding: '0.45rem 0.65rem', textAlign: 'right', fontVariantNumeric: 'tabular-nums', fontWeight: 700, color: row.endingCredit.isZero() ? '#94a3b8' : '#92400e' }}>
+                {row.endingCredit.isZero() ? '—' : row.endingCredit.formatEGP(isAr)}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+        <tfoot>
+          <tr style={{ background: '#f1f5f9', borderTop: '2px solid #0f172a', fontWeight: 800 }}>
+            <td colSpan={3} style={{ padding: '0.65rem 0.85rem' }}>
+              {isAr ? 'الإجمالي العام لميزان المراجعة (مطابق 100%)' : 'Trial Balance Grand Total'}
+            </td>
+            <td style={{ padding: '0.65rem', textAlign: 'right', color: '#0f172a' }}>
+              {trialBalanceReport.sumDebits.formatEGP(isAr)}
+            </td>
+            <td style={{ padding: '0.65rem', textAlign: 'right', color: '#0f172a' }}>
+              {trialBalanceReport.sumCredits.formatEGP(isAr)}
+            </td>
+            <td style={{ padding: '0.65rem', textAlign: 'right', color: '#1e3a8a' }}>
+              {trialBalanceReport.sumEndingDebitBalances.formatEGP(isAr)}
+            </td>
+            <td style={{ padding: '0.65rem', textAlign: 'right', color: '#92400e' }}>
+              {trialBalanceReport.sumEndingCreditBalances.formatEGP(isAr)}
+            </td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  );
 
   // Filtered Chart of Accounts
   const filteredAccounts = useMemo(() => {
@@ -316,17 +588,17 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
       case 'SALES':
         return { label: isAr ? 'عقود بيع ومقدمات' : 'Sales', bg: 'rgba(184, 144, 62, 0.08)', text: '#946f23', border: 'rgba(184, 144, 62, 0.25)' };
       case 'HANDOVER':
-        return { label: isAr ? 'تسليم شقق' : 'Handover', bg: '#f0fdf4', text: '#15803d', border: 'rgba(22, 163, 74, 0.25)' };
+        return { label: isAr ? 'تسليم شقق واعتراف بالمكسب' : 'Handover', bg: '#f0fdf4', text: '#15803d', border: 'rgba(22, 163, 74, 0.25)' };
       case 'RESCISSION':
-        return { label: isAr ? 'إلغاء عقود' : 'Rescission', bg: '#fef2f2', text: '#b91c1c', border: 'rgba(220, 38, 38, 0.25)' };
+        return { label: isAr ? 'فسخ عقود وترجيع فلوس' : 'Rescission', bg: '#fef2f2', text: '#b91c1c', border: 'rgba(220, 38, 38, 0.25)' };
       case 'EXPENSE':
         return { label: isAr ? 'مصاريف تشغيل' : 'Expense', bg: '#f8fafc', text: '#334155', border: '#cbd5e1' };
       case 'SYSTEM':
         return { label: isAr ? 'رصيد افتتاحي' : 'Opening', bg: 'rgba(184, 144, 62, 0.08)', text: '#946f23', border: 'rgba(184, 144, 62, 0.25)' };
       case 'WIP_ALLOCATION':
-        return { label: isAr ? 'مصاريف مباني (WIP)' : 'WIP Costs', bg: '#fffbeb', text: '#b45309', border: 'rgba(245, 158, 11, 0.3)' };
+        return { label: isAr ? 'مصاريف وخامات المباني' : 'WIP Costs', bg: '#fffbeb', text: '#b45309', border: 'rgba(245, 158, 11, 0.3)' };
       case 'PDC':
-        return { label: isAr ? 'أقساط الخزنة' : 'Installments', bg: '#f0f9ff', text: '#0284c7', border: 'rgba(2, 132, 199, 0.25)' };
+        return { label: isAr ? 'تحصيل أقساط كاش وإنستاباي' : 'Installments', bg: '#f0f9ff', text: '#0284c7', border: 'rgba(2, 132, 199, 0.25)' };
       case 'ESCALATION':
         return { label: isAr ? 'فروق أسعار' : 'Price Escalation', bg: '#fff7ed', text: '#c2410c', border: 'rgba(234, 88, 12, 0.25)' };
       case 'TAX':
@@ -342,12 +614,25 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
 
   const getEntryTypeLabel = (entryNum: string) => {
     if (entryNum.startsWith('JE-PAY')) return isAr ? 'سند قبض وتحصيل' : 'Payment Receipt';
-    if (entryNum.startsWith('JE-WIP')) return isAr ? 'مصروف مباني ومواد' : 'WIP Cost Entry';
-    if (entryNum.startsWith('JE-RESC')) return isAr ? 'تسوية فسخ عقد' : 'Rescission Settlement';
-    if (entryNum.startsWith('JE-HANDOVER')) return isAr ? 'محضر تسليم شقة' : 'Handover Protocol';
+    if (entryNum.startsWith('JE-WIP')) return isAr ? 'مصاريف وخامات المباني' : 'WIP Cost Entry';
+    if (entryNum.startsWith('JE-RESC')) return isAr ? 'فسخ عقود وترجيع فلوس' : 'Rescission Settlement';
+    if (entryNum.startsWith('JE-HANDOVER')) return isAr ? 'تسليم شقق واعتراف بالمكسب' : 'Handover Protocol';
     if (entryNum.startsWith('JE-OPEN')) return isAr ? 'رصيد أول المدة' : 'Opening Balance';
     if (entryNum.startsWith('JE-EXP')) return isAr ? 'مصروف تشغيل' : 'Operating Expense';
     return null;
+  };
+
+  const getCategoryLabel = (type: string, isArLang: boolean) => {
+    if (!isArLang) return type;
+    switch (type) {
+      case 'ASSET': return 'أصول وفلوس';
+      case 'LIABILITY': return 'التزامات علينا';
+      case 'CONTRA_LIABILITY': return 'تخفيض التزام';
+      case 'EQUITY': return 'رأس مال';
+      case 'REVENUE': return 'إيرادات ومبيعات';
+      case 'EXPENSE': return 'مصاريف وتشغيل';
+      default: return type;
+    }
   };
 
   const typeColorMap: Record<string, { bg: string; text: string; border: string }> = {
@@ -452,18 +737,63 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
                 : (isAr ? 'فتح الفترة للتسجيل' : 'Unlock Period')}
             </span>
           </button>
+
+          <button 
+            onClick={handleExportExcelClick}
+            disabled={isExportingExcel}
+            style={{
+              background: '#ffffff',
+              border: '1px solid #10b981',
+              color: '#047857',
+              borderRadius: '10px',
+              padding: '0.65rem 1.15rem',
+              fontSize: '0.82rem',
+              fontWeight: 700,
+              cursor: isExportingExcel ? 'not-allowed' : 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.45rem',
+              boxShadow: '0 1px 3px rgba(16, 185, 129, 0.1)',
+              transition: 'all 0.15s ease'
+            }}
+          >
+            <FileSpreadsheet size={15} color="#047857" />
+            <span>{isExportingExcel ? (isAr ? 'جاري التصدير...' : 'Exporting...') : (isAr ? 'تصدير القوائم المالية Excel' : 'Export Financials Excel')}</span>
+          </button>
+
+          <button 
+            onClick={() => setShowPrintPreview(true)}
+            style={{
+              background: '#ffffff',
+              border: '1px solid #cbd5e1',
+              color: '#0f172a',
+              borderRadius: '10px',
+              padding: '0.65rem 1.15rem',
+              fontSize: '0.82rem',
+              fontWeight: 700,
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.45rem',
+              boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04)',
+              transition: 'all 0.15s ease'
+            }}
+          >
+            <Printer size={15} color="#334155" />
+            <span>{isAr ? 'طباعة ميزان المراجعة والقوائم' : 'Print Trial Balance'}</span>
+          </button>
         </div>
       </div>
 
       {/* 2. AUDITED CAPITAL BALANCE RIBBON (Corporate Accounting Archetype) */}
       <div className={styles.auditedBalanceRibbon}>
         <div className={styles.auditedBalanceItem}>
-          <span className={styles.auditedBalanceLabel}>{isAr ? 'ممتلكات وفلوس الشركة' : 'Total Assets'}</span>
+          <span className={styles.auditedBalanceLabel}>{isAr ? 'فلوس وممتلكات الشركة (الأصول)' : 'Total Assets'}</span>
           <div className={styles.auditedBalanceValue}>
             <span>{D(kpis.totalAssets).formatEGP(isAr)}</span>
           </div>
           <span className={styles.auditedBalanceSubtext}>
-            {isAr ? 'كاش جاهز بالبنك والخزنة: ' : 'Liquid portion: '}
+            {isAr ? 'كاش جاهز بالخزنة والبنك: ' : 'Liquid portion: '}
             <strong className={styles.auditedCashHighlight}>{D(kpis.totalCash).formatEGP(isAr)}</strong>
           </span>
         </div>
@@ -474,26 +804,26 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
             <span>{D(kpis.totalLiabilities).formatEGP(isAr)}</span>
           </div>
           <span className={styles.auditedBalanceSubtext}>
-            {isAr ? 'مقدمات حجز وفلوس مؤجلة' : 'Advance deposits & maturities'}
+            {isAr ? 'مقدمات حجز وفلوس المقاولين' : 'Advance deposits & maturities'}
           </span>
         </div>
 
         <div className={styles.auditedBalanceItem}>
-          <span className={styles.auditedBalanceLabel}>{isAr ? 'صافي رأس مال الشركة' : 'Net Equity Position'}</span>
+          <span className={styles.auditedBalanceLabel}>{isAr ? 'صافي رأس مال الشركة الحقيقي' : 'Net Equity Position'}</span>
           <div className={styles.auditedBalanceValue}>
             <span className={styles.auditedEquityValue}>
               {D(kpis.totalAssets).minus(D(kpis.totalLiabilities)).formatEGP(isAr)}
             </span>
           </div>
           <span className={styles.auditedBalanceSubtext}>
-            {isAr ? 'ممتلكات الشركة بعد خصم الالتزامات' : 'Assets minus Liabilities'}
+            {isAr ? 'صافي قيمة الشركة (الممتلكات بعد سداد الالتزامات)' : 'Assets minus Liabilities'}
           </span>
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: isAr ? 'flex-start' : 'flex-end', gap: '0.45rem' }}>
           <div className={styles.auditedStampBadge}>
             <ShieldCheck size={14} />
-            <span>{isAr ? 'دفتر حسابات مضبوط بالمليم' : 'Audited Immutable Ledger'}</span>
+            <span>{isAr ? 'حسابات مقفولة ومضبوطة بالمليم' : 'Audited Immutable Ledger'}</span>
           </div>
           <span className={styles.auditedEntryCount}>
             {kpis.entriesCount} {isAr ? 'حركة متسجلة ومعتمدة' : 'Posted journal entries'}
@@ -544,7 +874,7 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
             }}
           >
             <BookOpen size={15} color={activeTab === 'coa' ? '#946f23' : '#64748b'} />
-            <span>{isAr ? 'شجرة الحسابات' : 'Chart of Accounts'}</span>
+            <span>{isAr ? 'دليل حسابات الشركة' : 'Chart of Accounts'}</span>
             <span style={{
               fontSize: '0.68rem',
               fontWeight: 800,
@@ -623,7 +953,7 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
                 }}
               >
                 <TrendingUp size={13} color={coaViewMode === 'mindmap' ? '#946f23' : '#64748b'} />
-                <span>{isAr ? 'لوحة الميزان والحسابات' : 'Visual Balance Sheet'}</span>
+                <span>{isAr ? 'خريطة توزيع الفلوس والحسابات' : 'Visual Balance Sheet'}</span>
               </button>
 
               <button
@@ -646,7 +976,7 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
                 }}
               >
                 <Table size={13} color={coaViewMode === 'table' ? '#946f23' : '#64748b'} />
-                <span>{isAr ? 'جدول الحسابات المفصل' : 'Table View'}</span>
+                <span>{isAr ? 'جدول كل الحسابات والأرصدة' : 'Table View'}</span>
               </button>
             </div>
           ) : (
@@ -673,7 +1003,7 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
               </div>
             ) : (
               <span style={{ fontSize: '0.74rem', color: '#64748b' }}>
-                {isAr ? 'دفتر يومية موثق ومدين = دائن بالمليم' : 'Immutable double-entry journal register compliant with IFRS 15'}
+                {isAr ? 'كل حركة متسجلة برقم قيد محمي وميزانها مضبوط (مدين = دائن بالمليم).' : 'Immutable double-entry journal register compliant with IFRS 15'}
               </span>
             )
           )}
@@ -701,12 +1031,12 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
             <ZFFilterToolbar
         tabs={[
           { id: 'all', label: isAr ? 'كل الحسابات' : 'All Accounts' },
-          { id: 'ASSET', label: isAr ? 'فلوس وأصول الشركة' : 'Assets' },
-          { id: 'WIP', label: isAr ? 'مصاريف المباني والمشاريع' : 'WIP Projects' },
-          { id: 'LIABILITY', label: isAr ? 'الالتزامات اللي علينا' : 'Liabilities' },
-          { id: 'EQUITY', label: isAr ? 'رأس مال الشركاء' : 'Equity' },
-          { id: 'REVENUE', label: isAr ? 'المبيعات والإيرادات' : 'Revenue' },
-          { id: 'EXPENSE', label: isAr ? 'المصاريف والتشغيل' : 'Expenses' }
+          { id: 'ASSET', label: isAr ? 'الخزنة والبنك والفلوس (الأصول)' : 'Assets' },
+          { id: 'WIP', label: isAr ? 'مصاريف وخامات المباني' : 'WIP Projects' },
+          { id: 'LIABILITY', label: isAr ? 'مستحقات علينا للغير (الالتزامات)' : 'Liabilities' },
+          { id: 'EQUITY', label: isAr ? 'رأس مال وأرباح الشركاء' : 'Equity' },
+          { id: 'REVENUE', label: isAr ? 'المبيعات ومكسب الشركة' : 'Revenue' },
+          { id: 'EXPENSE', label: isAr ? 'مصاريف التشغيل والموقع' : 'Expenses' }
         ]}
         activeTab={selectedCategory}
         onTabChange={(tabId) => {
@@ -759,7 +1089,7 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
           <thead>
             <tr>
               <th style={{ width: '110px' }}>{isAr ? 'كود الحساب' : 'Code'}</th>
-              <th>{isAr ? 'اسم الحساب (اضغط للتفاصيل)' : 'Account Title (Click for details)'}</th>
+              <th>{isAr ? 'اسم الحساب (اضغط للتفاصيل وكشف الحساب)' : 'Account Title (Click for details)'}</th>
               <th style={{ width: '130px' }}>{isAr ? 'نوع الحساب' : 'Category'}</th>
               <th style={{ width: '110px' }}>{isAr ? 'طبيعة الرصيد' : 'Normal'}</th>
               <th style={{ minWidth: '180px', textAlign: isAr ? 'left' : 'right', whiteSpace: 'nowrap' }}>{isAr ? 'الرصيد الحالي' : 'Live Balance'}</th>
@@ -836,7 +1166,7 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
                       borderRadius: '6px',
                       display: 'inline-block'
                     }}>
-                      {acc.account_type}
+                      {getCategoryLabel(acc.account_type, isAr)}
                     </span>
                   </td>
 
@@ -850,7 +1180,7 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
                       padding: '0.2rem 0.5rem',
                       borderRadius: '4px'
                     }}>
-                      {acc.normal_balance}
+                      {isAr ? (acc.normal_balance === 'DEBIT' ? 'مدين (له فلوس)' : 'دائن (التزام عليه)') : acc.normal_balance}
                     </span>
                   </td>
 
@@ -1012,7 +1342,7 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
                   </button>
                 </span>
               ) : (
-                isAr ? 'دفتر يومية موثق ومدين = دائن 0.00 بالمليم.' : 'Organized double-entry journal register compliant with IFRS 15.'
+                isAr ? 'كل حركة متسجلة برقم قيد محمي وميزانها مضبوط (مدين = دائن بالمليم).' : 'Organized double-entry journal register compliant with IFRS 15.'
               )}
             </span>
           </div>
@@ -1067,11 +1397,11 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
           tabs={[
             { id: 'all', label: isAr ? 'كل الحركات' : 'All Types' },
             { id: 'SALES', label: isAr ? 'عقود بيع ومقدمات' : 'Sales & Advances' },
-            { id: 'WIP_ALLOCATION', label: isAr ? 'مصاريف مباني (WIP)' : 'WIP Costs' },
-            { id: 'HANDOVER', label: isAr ? 'تسليم شقق' : 'Handovers' },
-            { id: 'RESCISSION', label: isAr ? 'إلغاء عقود وترجيع فلوس' : 'Rescissions' },
+            { id: 'WIP_ALLOCATION', label: isAr ? 'مصاريف وخامات المباني' : 'WIP Costs' },
+            { id: 'HANDOVER', label: isAr ? 'تسليم شقق واعتراف بالمكسب' : 'Handovers' },
+            { id: 'RESCISSION', label: isAr ? 'فسخ عقود وترجيع فلوس' : 'Rescissions' },
             { id: 'EXPENSE', label: isAr ? 'مصاريف وتشغيل' : 'Expenses' },
-            { id: 'PDC', label: isAr ? 'أقساط الخزنة' : 'Installments' }
+            { id: 'PDC', label: isAr ? 'تحصيل أقساط كاش وإنستاباي' : 'Installments' }
           ]}
           activeTab={selectedModuleFilter}
           onTabChange={(tabId) => {
@@ -1274,7 +1604,7 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
                                 gap: '0.25rem'
                               }}>
                                 <CheckCircle2 size={10} />
-                                <span>{isAr ? 'مضبوط' : 'OK'}</span>
+                                <span>{isAr ? 'مضبوط بالمليم' : 'OK'}</span>
                               </span>
                             ) : (
                               <span style={{
@@ -1375,10 +1705,66 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
         <AccountLedgerModal
           account={selectedAccountForModal}
           journalEntries={journalEntries}
+          contracts={contracts}
+          properties={properties}
           onClose={() => setSelectedAccountForModal(null)}
           isAr={isAr}
         />
       )}
+
+      {/* Trial Balance & Financial Statements Print Preview Modal */}
+      {showPrintPreview && (
+        <div 
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 9999,
+            background: 'rgba(15, 23, 42, 0.75)',
+            backdropFilter: 'blur(4px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '1.5rem'
+          }}
+          onClick={() => setShowPrintPreview(false)}
+        >
+          <div 
+            style={{ 
+              width: '100%', 
+              maxWidth: '960px', 
+              maxHeight: '94vh', 
+              overflowY: 'auto',
+              borderRadius: '12px',
+              boxShadow: '0 25px 50px rgba(0,0,0,0.3)'
+            }} 
+            onClick={e => e.stopPropagation()}
+          >
+            <ZFPrintDocumentLayout
+              documentTitle={isAr ? 'ميزان المراجعة والقوائم المالية الختامية' : 'Audited Trial Balance & Financial Statements'}
+              documentSubtitle={isAr ? `السنة المالية: ${activePeriod.fiscal_year} (الفترة ${activePeriod.period_number}) • الدفاتر المحاسبية لشركة زكريا فريد` : `Fiscal Year: ${activePeriod.fiscal_year} (Period ${activePeriod.period_number}) • Official Books`}
+              voucherCode={voucherCode}
+              date={statementDate}
+              onClose={() => setShowPrintPreview(false)}
+              isAr={isAr}
+            >
+              {printableTrialBalanceBody}
+            </ZFPrintDocumentLayout>
+          </div>
+        </div>
+      )}
+
+      {/* Hidden print container: rendered for @media print */}
+      <div className="zf-print-only">
+        <ZFPrintDocumentLayout
+          documentTitle={isAr ? 'ميزان المراجعة والقوائم المالية الختامية' : 'Audited Trial Balance & Financial Statements'}
+          documentSubtitle={isAr ? `السنة المالية: ${activePeriod.fiscal_year} (الفترة ${activePeriod.period_number}) • الدفاتر المحاسبية لشركة زكريا فريد` : `Fiscal Year: ${activePeriod.fiscal_year} (Period ${activePeriod.period_number}) • Official Books`}
+          voucherCode={voucherCode}
+          date={statementDate}
+          isAr={isAr}
+        >
+          {printableTrialBalanceBody}
+        </ZFPrintDocumentLayout>
+      </div>
     </div>
   );
 };

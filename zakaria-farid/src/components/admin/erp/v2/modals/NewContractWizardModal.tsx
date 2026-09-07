@@ -21,7 +21,8 @@ import {
   Coins,
   Percent,
   Wallet,
-  Landmark
+  Landmark,
+  DoorOpen
 } from 'lucide-react';
 import { Property } from '@/lib/supabase/types';
 import { 
@@ -45,6 +46,8 @@ import styles from '../ZFWorkstationShell.module.css';
 interface NewContractWizardModalProps {
   isOpen: boolean;
   onClose: () => void;
+  initialPropertyId?: string;
+  initialBuildingUnitId?: string;
   properties: Property[];
   contracts: ERPContract[];
   leads?: any[];
@@ -58,6 +61,8 @@ interface NewContractWizardModalProps {
 export const NewContractWizardModal: React.FC<NewContractWizardModalProps> = ({
   isOpen,
   onClose,
+  initialPropertyId,
+  initialBuildingUnitId,
   properties,
   contracts,
   leads = [],
@@ -83,8 +88,6 @@ export const NewContractWizardModal: React.FC<NewContractWizardModalProps> = ({
 
   // Step 2: Payment Terms
   const [basePriceInput, setBasePriceInput] = useState<string>('');
-  const [apartmentTaxInput, setApartmentTaxInput] = useState<string>('0');
-  const [apartmentTaxDesc, setApartmentTaxDesc] = useState<string>('');
   const [paymentPlanType, setPaymentPlanType] = useState<'INSTALLMENTS' | 'FULL_CASH'>('INSTALLMENTS');
   const [downPaymentInputPct, setDownPaymentInputPct] = useState<string>('15');
   const [downPaymentAmountInput, setDownPaymentAmountInput] = useState<string>('');
@@ -103,38 +106,96 @@ export const NewContractWizardModal: React.FC<NewContractWizardModalProps> = ({
   const [customPartnerNameInput, setCustomPartnerNameInput] = useState<string>('');
   const [destinationTreasury, setDestinationTreasury] = useState<'SAFE_101000' | 'BANK_102000'>('SAFE_101000');
 
-  // Reset state on modal open
+  // Handle Property & Unit Selection logic
+  const applyPropertySelection = React.useCallback((id: string, unitId?: string) => {
+    setSelectedPropertyId(id);
+    setSelectedBuildingUnitId(unitId || '');
+    setContractErrors(prev => prev.property ? { ...prev, property: '' } : prev);
+
+    if (id === 'custom_unit') {
+      setBasePriceInput('');
+      setCustomUnitName('');
+      setNumInstallments('8');
+      setPartnerSplits(normalizePartnerSplits(null));
+      return;
+    }
+
+    const prop = properties.find(p => p.id === id);
+    if (prop) {
+      if (unitId && prop.building_units) {
+        const unit = prop.building_units.find(u => u.unit_id === unitId);
+        if (unit) {
+          setBasePriceInput((unit.price_egp || 0).toString());
+        } else {
+          setBasePriceInput((prop.price_egp || 0).toString());
+        }
+      } else {
+        setBasePriceInput((prop.price_egp || 0).toString());
+      }
+      setNumInstallments(prop.completion_status === 'off_plan' ? '12' : '6');
+      if (prop.partner_splits && prop.partner_splits.length > 0) {
+        setPartnerSplits(normalizePartnerSplits(prop.partner_splits));
+      } else {
+        setPartnerSplits(normalizePartnerSplits(null));
+      }
+    }
+  }, [properties]);
+
+  const handlePropertyChange = (id: string) => {
+    applyPropertySelection(id, '');
+  };
+
+  const handleBuildingUnitChange = (unitId: string) => {
+    setSelectedBuildingUnitId(unitId);
+    const prop = properties.find(p => p.id === selectedPropertyId);
+    if (!prop) return;
+    if (unitId) {
+      const unit = (prop.building_units || []).find(u => u.unit_id === unitId);
+      if (unit) {
+        setBasePriceInput((unit.price_egp || 0).toString());
+      }
+    } else {
+      setBasePriceInput((prop.price_egp || 0).toString());
+    }
+  };
+
+  // Reset state on modal open with pre-selected property/unit support
   useEffect(() => {
     if (isOpen) {
       setStep(1);
       setContractErrors({});
-      setSelectedPropertyId('');
-      setSelectedBuildingUnitId('');
-      setCustomUnitName('');
       setLeadSelectionMode('NEW_LEAD');
       setSelectedLeadId('');
       setBuyerName('');
       setBuyerNationalId('');
       setBuyerPhone('');
       setBuyerEmail('');
-      setBasePriceInput('');
-      setApartmentTaxInput('0');
-      setApartmentTaxDesc('');
       setPaymentPlanType('INSTALLMENTS');
       setDownPaymentInputPct('15');
       setDownPaymentAmountInput('');
-      setNumInstallments('8');
       setInstallmentFrequency('QUARTERLY');
       setFirstPaymentDate(new Date().toISOString().split('T')[0]);
-      setPartnerSplits(normalizePartnerSplits(null));
+      const d = new Date();
+      d.setMonth(d.getMonth() + 3);
+      setFirstInstallmentDueDate(d.toISOString().split('T')[0]);
       setDestinationTreasury('SAFE_101000');
+
+      if (initialPropertyId) {
+        applyPropertySelection(initialPropertyId, initialBuildingUnitId);
+      } else {
+        setSelectedPropertyId('');
+        setSelectedBuildingUnitId('');
+        setCustomUnitName('');
+        setBasePriceInput('');
+        setNumInstallments('8');
+        setPartnerSplits(normalizePartnerSplits(null));
+      }
     }
-  }, [isOpen]);
+  }, [isOpen, initialPropertyId, initialBuildingUnitId, applyPropertySelection]);
 
   // Derived Pricing
   const basePrice = parseFloat(basePriceInput) || 0;
-  const taxAmount = parseFloat(apartmentTaxInput) || 0;
-  const totalNominalValue = basePrice + taxAmount;
+  const totalNominalValue = basePrice;
 
   // Derived Down Payment
   const modalDpAmount = useMemo(() => {
@@ -151,43 +212,17 @@ export const NewContractWizardModal: React.FC<NewContractWizardModalProps> = ({
     return properties.find(p => p.id === selectedPropertyId);
   }, [properties, selectedPropertyId]);
 
-  // Selected building unit (if whole building)
+  // Selected building unit (if specific apartment selected)
+  const selectedBuildingUnit = useMemo(() => {
+    if (!selectedProperty || !selectedBuildingUnitId) return null;
+    return (selectedProperty.building_units || []).find(u => u.unit_id === selectedBuildingUnitId) || null;
+  }, [selectedProperty, selectedBuildingUnitId]);
+
+  // Available building units (for selection dropdown)
   const availableBuildingUnits = useMemo(() => {
     if (!selectedProperty || selectedProperty.type !== 'building') return [];
-    return (selectedProperty.building_units || []).filter(u => u.status === 'available');
-  }, [selectedProperty]);
-
-  // Handle Property Selection
-  const handlePropertyChange = (id: string) => {
-    setSelectedPropertyId(id);
-    setSelectedBuildingUnitId('');
-    if (contractErrors.property) setContractErrors(prev => ({ ...prev, property: '' }));
-
-    if (id === 'custom_unit') {
-      setBasePriceInput('');
-      setApartmentTaxInput('0');
-      setApartmentTaxDesc('');
-      setCustomUnitName('');
-      setNumInstallments('8');
-      setPartnerSplits(normalizePartnerSplits(null));
-      return;
-    }
-
-    const prop = properties.find(p => p.id === id);
-    if (prop) {
-      const b = prop.price_egp || 0;
-      const t = prop.tax_amount_egp || 0;
-      setBasePriceInput(b.toString());
-      setApartmentTaxInput(t.toString());
-      setApartmentTaxDesc('');
-      setNumInstallments(prop.completion_status === 'off_plan' ? '12' : '6');
-      if (prop.partner_splits && prop.partner_splits.length > 0) {
-        setPartnerSplits(normalizePartnerSplits(prop.partner_splits));
-      } else {
-        setPartnerSplits(normalizePartnerSplits(null));
-      }
-    }
-  };
+    return (selectedProperty.building_units || []).filter(u => u.status === 'available' || u.unit_id === selectedBuildingUnitId);
+  }, [selectedProperty, selectedBuildingUnitId]);
 
   // Handle Lead Selection
   const handleLeadChange = (leadId: string) => {
@@ -272,14 +307,15 @@ export const NewContractWizardModal: React.FC<NewContractWizardModalProps> = ({
     const payload = {
       propertyId: selectedPropertyId,
       buildingUnitId: selectedBuildingUnitId || undefined,
+      buildingUnitNumber: selectedBuildingUnit?.unit_number || undefined,
       customUnitName: selectedPropertyId === 'custom_unit' ? customUnitName.trim() : undefined,
       buyerName: buyerName.trim(),
       buyerNationalId: buyerNationalId.trim(),
       buyerPhone: buyerPhone.trim(),
       buyerEmail: buyerEmail.trim(),
       basePrice,
-      taxAmount,
-      taxNotes: apartmentTaxDesc,
+      taxAmount: '0.00',
+      taxNotes: '',
       totalNominalValue,
       downPaymentAmount: modalDpAmount,
       paymentPlanType,
@@ -558,6 +594,63 @@ export const NewContractWizardModal: React.FC<NewContractWizardModalProps> = ({
                   }}
                 />
 
+                {/* Building Unit / Apartment Sub-Selector */}
+                {selectedProperty && selectedProperty.building_units && selectedProperty.building_units.length > 0 && (
+                  <div style={{
+                    background: '#f8fafc',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '8px',
+                    padding: '0.85rem',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '0.45rem'
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <label style={{ fontSize: '0.76rem', fontWeight: 700, color: '#334155', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                        {isAr ? 'تحديد الشقة أو التعاقد على العمارة بالكامل:' : 'Select Apartment or Whole Building:'}
+                      </label>
+                      {selectedBuildingUnitId ? (
+                        <span style={{ fontSize: '0.68rem', color: '#15803d', fontWeight: 700, background: '#dcfce7', padding: '0.15rem 0.45rem', borderRadius: '4px' }}>
+                          {isAr ? `شقة رقم ${selectedBuildingUnit?.unit_number || ''}` : `Apt #${selectedBuildingUnit?.unit_number || ''}`}
+                        </span>
+                      ) : (
+                        <span style={{ fontSize: '0.68rem', color: '#946f23', fontWeight: 700, background: '#fef3c7', padding: '0.15rem 0.45rem', borderRadius: '4px' }}>
+                          {isAr ? 'عقد بيع عمارة شروة واحدة' : 'Whole Building Sale'}
+                        </span>
+                      )}
+                    </div>
+                    <select
+                      value={selectedBuildingUnitId || 'whole'}
+                      onChange={e => handleBuildingUnitChange(e.target.value === 'whole' ? '' : e.target.value)}
+                      style={{
+                        width: '100%',
+                        padding: '0.55rem 0.75rem',
+                        borderRadius: '8px',
+                        border: '1px solid #cbd5e1',
+                        background: '#ffffff',
+                        color: '#0f172a',
+                        fontSize: '0.82rem',
+                        fontWeight: 600,
+                        outline: 'none',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      <option value="whole">
+                        {isAr ? '🏢 بيع العمارة بالكامل شروة واحدة' : '🏢 Whole Building Sale'}
+                      </option>
+                      {selectedProperty.building_units.map(u => {
+                        const isSold = u.status === 'contracted';
+                        const isSelected = u.unit_id === selectedBuildingUnitId;
+                        return (
+                          <option key={u.unit_id} value={u.unit_id} disabled={isSold && !isSelected}>
+                            {u.unit_number} (الدور {u.floor} • {u.area_sqm} م² • {D(u.price_egp).formatEGP(isAr)}) {isSold ? `[${isAr ? 'مباعة' : 'Sold'}]` : `[${isAr ? 'متاحة' : 'Available'}]`}
+                          </option>
+                        );
+                      })}
+                    </select>
+                  </div>
+                )}
+
                 {/* Custom Unit Input */}
                 {selectedPropertyId === 'custom_unit' && (
                   <div>
@@ -597,16 +690,30 @@ export const NewContractWizardModal: React.FC<NewContractWizardModalProps> = ({
                     fontSize: '0.76rem'
                   }}>
                     <div>
-                      <span style={{ color: '#64748b', fontSize: '0.7rem', display: 'block' }}>{isAr ? 'نوع العقار:' : 'Type:'}</span>
-                      <strong style={{ color: '#0f172a' }}>{selectedProperty.type}</strong>
+                      <span style={{ color: '#64748b', fontSize: '0.7rem', display: 'block' }}>{isAr ? 'الموضوع والنوع:' : 'Target & Type:'}</span>
+                      <strong style={{ color: '#0f172a' }}>
+                        {selectedBuildingUnit 
+                          ? `${isAr ? 'شقة منفصلة:' : 'Apartment:'} ${selectedBuildingUnit.unit_number}` 
+                          : selectedProperty.type === 'building' 
+                            ? (isAr ? 'عمارة بالكامل (شروة واحدة)' : 'Entire Building') 
+                            : selectedProperty.type}
+                      </strong>
                     </div>
                     <div>
                       <span style={{ color: '#64748b', fontSize: '0.7rem', display: 'block' }}>{isAr ? 'المساحة الصافية:' : 'Net Area:'}</span>
-                      <strong style={{ color: '#0f172a' }}>{selectedProperty.area_sqm || '—'} م²</strong>
+                      <strong style={{ color: '#0f172a' }}>
+                        {selectedBuildingUnit 
+                          ? `${selectedBuildingUnit.area_sqm} م² (${isAr ? 'الدور' : 'Floor'} ${selectedBuildingUnit.floor})` 
+                          : `${selectedProperty.area_sqm || '—'} م²`}
+                      </strong>
                     </div>
                     <div>
                       <span style={{ color: '#64748b', fontSize: '0.7rem', display: 'block' }}>{isAr ? 'السعر المقترح بالكتالوج:' : 'Catalog Price:'}</span>
-                      <strong style={{ color: '#946f23' }}>{D(selectedProperty.price_egp || 0).formatEGP(isAr)}</strong>
+                      <strong style={{ color: '#946f23' }}>
+                        {selectedBuildingUnit 
+                          ? D(selectedBuildingUnit.price_egp || 0).formatEGP(isAr) 
+                          : D(selectedProperty.price_egp || 0).formatEGP(isAr)}
+                      </strong>
                     </div>
                   </div>
                 )}
@@ -845,28 +952,6 @@ export const NewContractWizardModal: React.FC<NewContractWizardModalProps> = ({
                       color: '#0f172a',
                       fontSize: '0.95rem',
                       fontWeight: 700,
-                      outline: 'none'
-                    }}
-                  />
-                </div>
-
-                <div>
-                  <label style={{ fontSize: '0.74rem', fontWeight: 700, color: '#334155', marginBottom: '0.25rem', display: 'block' }}>
-                    {isAr ? 'رسوم وضرائب الوحدة (ج.م):' : 'Unit Taxes & Fees (EGP):'}
-                  </label>
-                  <input
-                    type="number"
-                    step="100"
-                    value={apartmentTaxInput}
-                    onChange={e => setApartmentTaxInput(e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '0.55rem 0.75rem',
-                      borderRadius: '8px',
-                      border: '1px solid #cbd5e1',
-                      background: '#ffffff',
-                      color: '#0f172a',
-                      fontSize: '0.95rem',
                       outline: 'none'
                     }}
                   />
@@ -1360,13 +1445,23 @@ export const NewContractWizardModal: React.FC<NewContractWizardModalProps> = ({
 
                 <div style={{
                   display: 'grid',
-                  gridTemplateColumns: 'repeat(4, 1fr)',
+                  gridTemplateColumns: 'repeat(5, 1fr)',
                   gap: '0.75rem',
                   fontSize: '0.74rem',
                   background: '#f8fafc',
                   padding: '0.65rem 0.85rem',
                   borderRadius: '8px'
                 }}>
+                  <div>
+                    <span style={{ color: '#64748b', display: 'block', fontSize: '0.68rem' }}>{isAr ? 'الوحدة / المشروع:' : 'Unit / Project:'}</span>
+                    <strong style={{ color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'block' }}>
+                      {selectedBuildingUnit 
+                        ? `${selectedProperty?.title_ar || selectedProperty?.title_en} - ${selectedBuildingUnit.unit_number}`
+                        : selectedProperty 
+                          ? (selectedProperty.title_ar || selectedProperty.title_en)
+                          : (customUnitName || '—')}
+                    </strong>
+                  </div>
                   <div>
                     <span style={{ color: '#64748b', display: 'block', fontSize: '0.68rem' }}>{isAr ? 'المشتري:' : 'Buyer:'}</span>
                     <strong style={{ color: '#0f172a' }}>{buyerName || '—'}</strong>

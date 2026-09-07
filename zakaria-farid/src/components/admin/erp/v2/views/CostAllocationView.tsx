@@ -259,15 +259,15 @@ export const CostAllocationView: React.FC<CostAllocationViewProps> = ({
                 <th>{isAr ? 'المشروع' : 'Project'}</th>
                 <th>{isAr ? 'المصروف على المباني' : 'Incurred WIP'}</th>
                 <th>{isAr ? 'إجمالي سعر بيع الشقق' : 'Sales Value Ceiling'}</th>
-                <th>{isAr ? 'نسبة التكلفة (RSV)' : 'RSV Factor'}</th>
-                <th>{isAr ? 'تكلفة المباني من السعر' : 'COGS Relief Rate'}</th>
-                <th>{isAr ? 'صافي الربح المتوقع' : 'Gross Margin'}</th>
+                <th>{isAr ? 'نسبة تكلفة المباني' : 'Building Cost Ratio'}</th>
+                <th>{isAr ? 'صافي مكسب المكتب' : 'Gross Margin'}</th>
                 <th>{isAr ? 'تاريخ الحساب' : 'Calculated Date'}</th>
                 <th style={{ textAlign: 'center' }}>{isAr ? 'تفاصيل' : 'Action'}</th>
               </tr>
             </thead>
             <tbody>
               {paginatedCostAllocations.map(ca => {
+                const rsvPct = D(ca.rsv_factor || '0').times(100).toFixed(2);
                 const grossMarginPct = D(1).minus(ca.rsv_factor || '0').times(100).toFixed(2);
                 return (
                   <tr 
@@ -284,20 +284,23 @@ export const CostAllocationView: React.FC<CostAllocationViewProps> = ({
                         fontWeight: 800,
                         color: '#946f23',
                         background: 'rgba(184, 144, 62, 0.08)',
-                        padding: '0.15rem 0.45rem',
+                        padding: '0.2rem 0.55rem',
                         borderRadius: '6px',
-                        border: '1px solid rgba(184, 144, 62, 0.2)'
+                        border: '1px solid rgba(184, 144, 62, 0.25)'
                       }}>
-                        {ca.rsv_factor}
+                        {rsvPct}%
                       </span>
                     </td>
                     <td>
-                      <span style={{ color: '#1e293b', fontWeight: 800 }}>
-                        {D(ca.rsv_factor || '0').times(100).toFixed(2)}% {isAr ? 'من سعر البيع' : 'of contract'}
-                      </span>
-                    </td>
-                    <td>
-                      <span style={{ color: '#946f23', fontWeight: 800 }}>
+                      <span style={{
+                        fontVariantNumeric: 'tabular-nums',
+                        fontWeight: 800,
+                        color: '#15803d',
+                        background: 'rgba(21, 128, 61, 0.08)',
+                        padding: '0.2rem 0.55rem',
+                        borderRadius: '6px',
+                        border: '1px solid rgba(21, 128, 61, 0.25)'
+                      }}>
                         {grossMarginPct}%
                       </span>
                     </td>
@@ -384,61 +387,66 @@ export const CostAllocationView: React.FC<CostAllocationViewProps> = ({
                   </span>
                 </div>
 
-                {/* Dual Split Analytics HUD Pods (Calm Alabaster & Egyptian Gold) */}
+                {/* Dual Split Analytics HUD Pods - Unified with RSVAllocationModal */}
                 <div style={{
                   display: 'grid',
                   gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 130px), 1fr))',
                   gap: '0.75rem'
                 }}>
-                  {/* Pod 1: WIP Ratio */}
+                  {/* Pod 1: Building Cost Ratio (Brand Gold) */}
                   <div style={{
-                    background: '#f8fafc',
-                    border: '1px solid #e2e8f0',
+                    background: 'linear-gradient(135deg, #ffffff 0%, #fefdfa 100%)',
+                    border: '1.5px solid rgba(184, 144, 62, 0.3)',
                     borderRadius: '12px',
-                    padding: '0.85rem 1rem'
+                    padding: '0.85rem 1rem',
+                    boxShadow: '0 2px 8px rgba(184, 144, 62, 0.04)'
                   }}>
-                    <span style={{ fontSize: '0.72rem', color: '#64748b', display: 'block', fontWeight: 700 }}>
-                      {isAr ? 'نسبة تكلفة المباني من السعر:' : 'RSV Factor (COGS):'}
+                    <span style={{ fontSize: '0.72rem', color: '#946f23', display: 'block', fontWeight: 800 }}>
+                      {isAr ? 'نسبة تكلفة المباني من السعر:' : 'Building Cost Ratio:'}
                     </span>
-                    <div style={{ fontSize: '1.45rem', fontWeight: 900, color: '#0f172a', fontVariantNumeric: 'tabular-nums', margin: '0.2rem 0' }}>
-                      {ca.rsv_factor}
+                    <div style={{ fontSize: '1.55rem', fontWeight: 900, color: '#946f23', fontVariantNumeric: 'tabular-nums', margin: '0.2rem 0' }}>
+                      {rsvPct}%
                     </div>
-                    <span style={{ fontSize: '0.72rem', color: '#475569', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
-                      <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#1e293b', display: 'inline-block' }} />
-                      {rsvPct}% {isAr ? 'تكلفة مباني' : 'cost ratio'}
+                    <span style={{ fontSize: '0.72rem', color: '#946f23', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+                      <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#946f23', display: 'inline-block' }} />
+                      {isAr ? 'من ثمن الشقة مباني وخامات' : 'construction cost'}
                     </span>
                   </div>
 
-                  {/* Pod 2: Gross Profit Margin */}
+                  {/* Pod 2: Gross Profit Margin (Forest Jade) */}
                   <div style={{
-                    background: 'linear-gradient(135deg, #ffffff 0%, #fefdfa 100%)',
-                    border: '1.5px solid rgba(184, 144, 62, 0.35)',
+                    background: 'linear-gradient(135deg, #ffffff 0%, #f7fdf9 100%)',
+                    border: '1.5px solid rgba(21, 128, 61, 0.3)',
                     borderRadius: '12px',
                     padding: '0.85rem 1rem',
-                    boxShadow: '0 2px 8px rgba(184, 144, 62, 0.06)'
+                    boxShadow: '0 2px 8px rgba(21, 128, 61, 0.04)'
                   }}>
-                    <span style={{ fontSize: '0.72rem', color: '#946f23', display: 'block', fontWeight: 800 }}>
-                      {isAr ? 'صافي الربح المتوقع:' : 'Gross Profit Margin:'}
+                    <span style={{ fontSize: '0.72rem', color: '#15803d', display: 'block', fontWeight: 800 }}>
+                      {isAr ? 'مكسبنا الصافي المتوقع:' : 'Net Profit Margin:'}
                     </span>
-                    <div style={{ fontSize: '1.45rem', fontWeight: 900, color: '#946f23', fontVariantNumeric: 'tabular-nums', margin: '0.2rem 0' }}>
+                    <div style={{ fontSize: '1.55rem', fontWeight: 900, color: '#15803d', fontVariantNumeric: 'tabular-nums', margin: '0.2rem 0' }}>
                       {grossMarginPct}%
                     </div>
-                    <span style={{ fontSize: '0.72rem', color: '#946f23', fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
-                      <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#946f23', display: 'inline-block' }} />
-                      {isAr ? 'هامش ربح المشروع' : 'profit margin'}
+                    <span style={{ fontSize: '0.72rem', color: '#15803d', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+                      <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#15803d', display: 'inline-block' }} />
+                      {isAr ? 'مكسب صافي للمكتب' : 'net profit'}
                     </span>
                   </div>
                 </div>
 
-                {/* Dual Spectrum Progress Bar (Obsidian Slate vs Egyptian Gold) */}
+                {/* Dual Spectrum Progress Bar (Brand Gold vs Forest Jade) */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.72rem' }}>
-                    <span style={{ color: '#1e293b', fontWeight: 800 }}>{isAr ? `تكلفة المباني: ${rsvPct}%` : `WIP: ${rsvPct}%`}</span>
-                    <span style={{ color: '#946f23', fontWeight: 800 }}>{isAr ? `صافي الربح: ${grossMarginPct}%` : `Margin: ${grossMarginPct}%`}</span>
+                    <span style={{ color: '#946f23', fontWeight: 800 }}>
+                      {isAr ? `تكلفة المباني: ${rsvPct}%` : `WIP: ${rsvPct}%`}
+                    </span>
+                    <span style={{ color: '#15803d', fontWeight: 800 }}>
+                      {isAr ? `مكسبنا الصافي: ${grossMarginPct}%` : `Margin: ${grossMarginPct}%`}
+                    </span>
                   </div>
-                  <div style={{ width: '100%', height: '8px', borderRadius: '999px', background: '#e2e8f0', overflow: 'hidden', display: 'flex' }}>
-                    <div style={{ width: `${Math.min(parseFloat(rsvPct) || 0, 100)}%`, background: '#1e293b', height: '100%' }} />
-                    <div style={{ flex: 1, background: 'linear-gradient(90deg, #c5a059, #946f23)', height: '100%' }} />
+                  <div style={{ width: '100%', height: '8px', borderRadius: '999px', background: '#f1f5f9', overflow: 'hidden', display: 'flex' }}>
+                    <div style={{ width: `${Math.min(parseFloat(rsvPct) || 0, 100)}%`, background: 'linear-gradient(90deg, #c5a059, #946f23)', height: '100%' }} />
+                    <div style={{ flex: 1, background: 'linear-gradient(90deg, #15803d, #16a34a)', height: '100%' }} />
                   </div>
                 </div>
 
@@ -447,23 +455,27 @@ export const CostAllocationView: React.FC<CostAllocationViewProps> = ({
                   background: '#f8fafc',
                   border: '1px solid #e2e8f0',
                   borderRadius: '10px',
-                  padding: '0.85rem',
+                  padding: '0.85rem 1rem',
                   display: 'grid',
                   gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 130px), 1fr))',
                   gap: '0.75rem',
                   fontSize: '0.74rem'
                 }}>
                   <div>
-                    <span style={{ color: '#64748b', fontSize: '0.68rem', display: 'block', marginBottom: '0.15rem' }}>
+                    <span style={{ color: '#64748b', fontSize: '0.7rem', display: 'block', marginBottom: '0.2rem', fontWeight: 600 }}>
                       {isAr ? 'المصروف على المباني:' : 'Incurred WIP:'}
                     </span>
-                    <strong style={{ color: '#0f172a', fontSize: '0.82rem' }}><MoneyCell amount={ca.total_incurred_wip} isAr={isAr} /></strong>
+                    <strong style={{ color: '#946f23', fontSize: '0.88rem', fontVariantNumeric: 'tabular-nums' }}>
+                      <MoneyCell amount={ca.total_incurred_wip} isAr={isAr} />
+                    </strong>
                   </div>
                   <div>
-                    <span style={{ color: '#64748b', fontSize: '0.68rem', display: 'block', marginBottom: '0.15rem' }}>
+                    <span style={{ color: '#64748b', fontSize: '0.7rem', display: 'block', marginBottom: '0.2rem', fontWeight: 600 }}>
                       {isAr ? 'إجمالي مبيعات الشقق:' : 'Sales Ceiling:'}
                     </span>
-                    <strong style={{ color: '#0f172a', fontSize: '0.82rem' }}><MoneyCell amount={ca.total_sales_value} isAr={isAr} /></strong>
+                    <strong style={{ color: '#0f172a', fontSize: '0.88rem', fontVariantNumeric: 'tabular-nums' }}>
+                      <MoneyCell amount={ca.total_sales_value} isAr={isAr} />
+                    </strong>
                   </div>
                 </div>
 
@@ -475,11 +487,11 @@ export const CostAllocationView: React.FC<CostAllocationViewProps> = ({
                   }}
                   style={{
                     background: '#ffffff',
-                    border: '1px solid #e2e8f0',
+                    border: '1.5px solid rgba(184, 144, 62, 0.35)',
                     color: '#946f23',
-                    borderRadius: '9px',
-                    padding: '0.55rem',
-                    fontSize: '0.78rem',
+                    borderRadius: '10px',
+                    padding: '0.6rem',
+                    fontSize: '0.8rem',
                     fontWeight: 800,
                     display: 'flex',
                     alignItems: 'center',
@@ -487,10 +499,11 @@ export const CostAllocationView: React.FC<CostAllocationViewProps> = ({
                     gap: '0.45rem',
                     cursor: 'pointer',
                     marginTop: 'auto',
+                    boxShadow: '0 1px 2px rgba(184, 144, 62, 0.08)',
                     transition: 'all 0.15s ease'
                   }}
                 >
-                  <Eye size={13} color="#946f23" />
+                  <Eye size={14} color="#946f23" />
                   <span>{isAr ? 'عرض تفاصيل تكلفة العمارة والشقق' : 'Inspect Factor & Release'}</span>
                 </button>
               </div>

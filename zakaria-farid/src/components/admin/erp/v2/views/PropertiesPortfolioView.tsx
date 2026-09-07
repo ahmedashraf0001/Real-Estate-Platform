@@ -6,9 +6,11 @@ import {
   Clock, 
   CheckCircle2, 
   DollarSign, 
-  Plus,
-  Layers,
-  TrendingUp
+  Plus, 
+  Layers, 
+  TrendingUp,
+  Compass,
+  Wallet
 } from 'lucide-react';
 import { Property, BuildingUnitItem } from '@/lib/supabase/types';
 import { ERPContract, ERPPropertyCostItem } from '@/lib/erp/types';
@@ -42,25 +44,60 @@ export const PropertiesPortfolioView: React.FC<PropertiesPortfolioViewProps> = (
   onOpenAuditForProperty,
   onUpdatePropertyUnitTax
 }) => {
-  // Financial Portfolio KPI Calculations
-  const { totalProps, contractedProps, availableProps, totalCatalogVal, soldPercent } = useMemo(() => {
+  // Financial Portfolio Telemetry Calculations (Real Investment Metrics)
+  const { 
+    totalProps, 
+    contractedPropsCount, 
+    availablePropsCount, 
+    totalCatalogVal, 
+    availableInventoryVal,
+    contractedSalesVal,
+    soldValuePct,
+    avgPricePerSqm,
+    totalAreaSqm,
+    totalWipInvested
+  } = useMemo(() => {
     const total = properties.length;
-    const contracted = properties.filter(p => 
-      contracts.some(c => c.status !== 'Rescinded' && (c.property_id === p.id || c.unit_id === p.title_ar || c.unit_id === p.title_en)) || 
-      p.listing_status === 'sold'
-    ).length;
-    const available = Math.max(0, total - contracted);
+    
+    // Check if property is contracted
+    const isContractedProp = (p: Property) => {
+      if (p.listing_status === 'sold') return true;
+      return contracts.some(c => 
+        c.status !== 'Rescinded' && (
+          (c.property_id && c.property_id === p.id) ||
+          (c.unit_id && (c.unit_id === p.title_ar || c.unit_id === p.title_en))
+        )
+      );
+    };
+
+    const contractedProps = properties.filter(isContractedProp);
+    const availableProps = properties.filter(p => !isContractedProp(p));
+
     const catalogVal = properties.reduce((acc, p) => acc.plus(p.price_egp || 0), D(0));
-    const percent = total > 0 ? Math.round((contracted / total) * 100) : 0;
+    const availableVal = availableProps.reduce((acc, p) => acc.plus(p.price_egp || 0), D(0));
+    const contractedVal = catalogVal.minus(availableVal);
+
+    const totalArea = properties.reduce((acc, p) => acc.plus(p.area_sqm || 0), D(0));
+    const avgPriceSqm = totalArea.isZero() ? D(0) : catalogVal.div(totalArea);
+
+    const soldPct = catalogVal.isZero() ? 0 : Math.round(contractedVal.div(catalogVal).times(100).toNumber());
+
+    // Total WIP costs from propertyCosts
+    const wipTotal = propertyCosts.reduce((acc, c) => acc.plus(c.total_cost_egp || c.total_amount || 0), D(0));
 
     return {
       totalProps: total,
-      contractedProps: contracted,
-      availableProps: available,
+      contractedPropsCount: contractedProps.length,
+      availablePropsCount: availableProps.length,
       totalCatalogVal: catalogVal,
-      soldPercent: percent
+      availableInventoryVal: availableVal,
+      contractedSalesVal: contractedVal,
+      soldValuePct: soldPct,
+      avgPricePerSqm: avgPriceSqm,
+      totalAreaSqm: totalArea,
+      totalWipInvested: wipTotal
     };
-  }, [properties, contracts]);
+  }, [properties, contracts, propertyCosts]);
 
   return (
     <div className={styles.stageContainer}>
@@ -80,13 +117,13 @@ export const PropertiesPortfolioView: React.FC<PropertiesPortfolioViewProps> = (
               border: '1px solid rgba(184, 144, 62, 0.28)',
               color: '#946f23'
             }}>
-              {isAr ? 'العماير والشقق' : 'Architectural Assets'}
+              {isAr ? 'المحفظة الاستثمارية' : 'Investment Portfolio'}
             </span>
           </div>
           <p style={{ fontSize: '0.8rem', color: '#64748b', margin: '0.25rem 0 0 0' }}>
             {isAr 
-              ? 'متابعة العماير والشقق، مصاريف المباني اللي اتصرفت، والشقق المتاحة والمباعة'
-              : 'Tracking real estate assets, land & WIP construction cost basis, and contract pipeline'}
+              ? 'متابعة مؤشرات أسعار المتر، المخزون المتاح، رأس المال المنفذ بالبناء، ومعدل حجز الشقق'
+              : 'Tracking price/sqm benchmarks, available inventory, WIP capital absorption, and sales velocity'}
           </p>
         </div>
 
@@ -103,48 +140,64 @@ export const PropertiesPortfolioView: React.FC<PropertiesPortfolioViewProps> = (
         </div>
       </div>
 
-      {/* 2. THE 4 EXECUTIVE PROPERTY KPI CARDS */}
+      {/* 2. THE 4 EXECUTIVE PORTFOLIO INVESTMENT METRICS */}
       <div className={styles.kpiGrid}>
+        {/* Metric 1: Avg Price / SQM */}
         <ZFKpiCard
-          title={isAr ? 'عدد كل الشقق' : 'Total Portfolio Listings'}
-          value={totalProps}
-          unitLabel={isAr ? 'شقة' : 'Units'}
-          icon={<Building2 size={16} />}
-          accentColor="slate"
-          subtitleLabel={isAr ? 'حالة المعروض' : 'Catalog Inventory'}
-          subtitleValue={isAr ? 'جاهزة وشغالة في البناء' : 'Ready & WIP'}
+          title={isAr ? 'متوسط سعر المتر البيعي' : 'Portfolio Avg Price / m²'}
+          value={`${avgPricePerSqm.formatEGP(isAr)} / م²`}
+          icon={<Compass size={16} />}
+          accentColor="blue"
+          subtitleLabel={isAr ? 'إجمالي مساحات المحفظة' : 'Recorded Area'}
+          subtitleValue={`${totalAreaSqm.toNumber().toLocaleString()} م² (${totalProps} ${isAr ? 'عقار' : 'units'})`}
+          tooltip={isAr 
+            ? 'متوسط سعر بيع المتر المربع عبر كافة شقق ووحدات المحفظة المعروضة بالمتر المسطح.' 
+            : 'Weighted average selling price per square meter across total portfolio catalog.'}
         />
 
+        {/* Metric 2: Available Inventory Market Value */}
         <ZFKpiCard
-          title={isAr ? 'شقق جاهزة للبيع' : 'Available for Sale'}
-          value={availableProps}
-          unitLabel={isAr ? 'شقة متاحة' : 'Units Open'}
+          title={isAr ? 'قيمة المخزون المتاح للبيع' : 'Available Inventory Value'}
+          value={availableInventoryVal.formatEGP(isAr)}
           icon={<Layers size={16} />}
           accentColor="gold"
-          progress={totalProps > 0 ? Math.round((availableProps / totalProps) * 100) : 0}
-          subtitleLabel={isAr ? 'نسبة المتاح للبيع' : 'Open Inventory'}
-          subtitleValue={totalProps > 0 ? `${Math.round((availableProps / totalProps) * 100)}%` : '0%'}
+          progress={100 - soldValuePct}
+          progressColor="#946f23"
+          subtitleLabel={isAr ? 'متاح للتعاقد الفوري' : 'Open for Contracts'}
+          subtitleValue={`${availablePropsCount} ${isAr ? 'عقار شاغر' : 'open units'}`}
+          tooltip={isAr 
+            ? 'إجمالي القيمة النقدية المتوقع تحصيلها من بيع كافة الشقق والوحدات الشاغرة المتبقية.' 
+            : 'Total aggregate list value of unsold units currently available for immediate booking.'}
         />
 
+        {/* Metric 3: Absorbed Construction WIP Capital */}
         <ZFKpiCard
-          title={isAr ? 'شقق مبيوعة' : 'Contracted / Sold Units'}
-          value={contractedProps}
-          unitLabel={isAr ? 'شقة مبيوعة' : 'Units Sold'}
-          icon={<CheckCircle2 size={16} />}
-          accentColor="emerald"
-          progress={soldPercent}
-          subtitleLabel={isAr ? 'نسبة الشقق المبيوعة' : 'Portfolio Sold Rate'}
-          subtitleValue={`${soldPercent}%`}
+          title={isAr ? 'رأس المال المستثمر في المباني' : 'Absorbed WIP Capital'}
+          value={totalWipInvested.formatEGP(isAr)}
+          icon={<Building2 size={16} />}
+          accentColor="amber"
+          subtitleLabel={isAr ? 'أصل استثماري محمل' : 'Capitalized WIP'}
+          subtitleValue={`${propertyCosts.length} ${isAr ? 'فاتورة وبند تكلفة' : 'cost items'}`}
+          tooltip={isAr 
+            ? 'إجمالي ما تم صرفه فعلياً من خرسانات وتشطيبات ورسوم مواقع محملة كرأسمال استثماري (حساب 150000).' 
+            : 'Total capital expenditure incurred on land, structural concrete, and architectural fit-out.'}
         />
 
+        {/* Metric 4: Portfolio Sales Velocity */}
         <ZFKpiCard
-          title={isAr ? 'إجمالي قيمة الشقق المعروضة' : 'Gross Portfolio Valuation'}
-          value={totalCatalogVal.formatEGP(isAr)}
+          title={isAr ? 'إجمالي مبيعات المحفظة' : 'Contracted Sales Volume'}
+          value={contractedSalesVal.formatEGP(isAr)}
           isFlagship={true}
-          accentColor="gold"
+          accentColor="emerald"
+          progress={soldValuePct}
+          progressColor="#047857"
           icon={<TrendingUp size={16} />}
-          subtitleLabel={isAr ? 'إجمالي أسعار الشقق' : 'Catalog Valuation'}
-          subtitleValue={isAr ? 'حسب سعر البيع' : 'List Price'}
+          badge={{ text: `${soldValuePct}% ${isAr ? 'مبيوع' : 'Sold'}`, variant: 'positive' }}
+          subtitleLabel={isAr ? 'نسبة المبيعات من المحفظة' : 'Portfolio Sold Rate'}
+          subtitleValue={`${soldValuePct}% (${contractedPropsCount} ${isAr ? 'عقار متعاقد عليه' : 'closed'})`}
+          tooltip={isAr 
+            ? 'مجموع أسعار العقود التي تم توثيقها وبيعها بالفعل، ونسبتها من إجمالي قيمة المحفظة.' 
+            : 'Total gross value of contracted deals and the percentage sold against total portfolio ceiling.'}
         />
       </div>
 

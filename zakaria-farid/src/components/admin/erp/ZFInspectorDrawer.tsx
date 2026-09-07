@@ -24,7 +24,9 @@ import {
   AlertTriangle,
   ArrowUpRight,
   Sparkles,
-  Calculator
+  Calculator,
+  Plus,
+  Receipt
 } from 'lucide-react';
 import { 
   ERPContract, 
@@ -81,12 +83,14 @@ interface ZFInspectorDrawerProps {
   onPayInstallment?: (contract: ERPContract, schedule: ERPInstallmentSchedule) => void;
   onOpenEscalation?: (contract: ERPContract) => void;
   onOpenRescission?: (contract: ERPContract) => void;
+  onOpenSupplement?: (contract: ERPContract) => void;
   onNavigateToTab?: (tab: string) => void;
   onToggleHandover?: (contract: ERPContract) => void;
   onUpdateChequeStatus?: (chequeId: string, newStatus: 'In Safe' | 'Deposited' | 'Cleared' | 'Bounced') => void;
   onInspectContract?: (contract: ERPContract) => void;
   onRemitTax?: (taxId: string) => void;
   isMutating?: boolean;
+  isOverModal?: boolean;
 }
 
 export const ZFInspectorDrawer: React.FC<ZFInspectorDrawerProps> = ({
@@ -96,12 +100,14 @@ export const ZFInspectorDrawer: React.FC<ZFInspectorDrawerProps> = ({
   onPayInstallment,
   onOpenEscalation,
   onOpenRescission,
+  onOpenSupplement,
   onNavigateToTab,
   onToggleHandover,
   onUpdateChequeStatus,
   onInspectContract,
   onRemitTax,
-  isMutating = false
+  isMutating = false,
+  isOverModal = false
 }) => {
   const [activeContractTab, setActiveContractTab] = useState<'schedule' | 'dossier' | 'ledger'>('schedule');
   const [copiedContractNum, setCopiedContractNum] = useState(false);
@@ -135,9 +141,18 @@ export const ZFInspectorDrawer: React.FC<ZFInspectorDrawerProps> = ({
         className={styles.inspectorBackdrop} 
         onClick={onClose} 
         aria-hidden="true" 
+        style={isOverModal ? { zIndex: 10001, top: 0, height: '100vh' } : undefined}
       />
 
-      <div className={styles.inspectorDrawer} style={{ transform: 'translateX(0)' }} role="dialog" aria-modal="true">
+      <div 
+        className={styles.inspectorDrawer} 
+        style={{ 
+          transform: 'translateX(0)',
+          ...(isOverModal ? { zIndex: 10002, top: 0, height: '100vh', maxHeight: '100vh' } : {})
+        }} 
+        role="dialog" 
+        aria-modal="true"
+      >
         {/* 1. TOP EXECUTIVE DRAWER HEADER */}
         <div className={styles.inspectorHeader}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', minWidth: 0 }}>
@@ -154,6 +169,8 @@ export const ZFInspectorDrawer: React.FC<ZFInspectorDrawerProps> = ({
                 ? 'rgba(56, 189, 248, 0.12)' 
                 : payload.type === 'rescission' 
                 ? 'rgba(239, 68, 68, 0.12)' 
+                : payload.type === 'rsv'
+                ? 'rgba(184, 144, 62, 0.12)'
                 : 'rgba(79, 209, 197, 0.12)',
               border: `1px solid ${
                 payload.type === 'contract' 
@@ -162,6 +179,8 @@ export const ZFInspectorDrawer: React.FC<ZFInspectorDrawerProps> = ({
                   ? 'rgba(56, 189, 248, 0.25)' 
                   : payload.type === 'rescission' 
                   ? 'rgba(239, 68, 68, 0.25)' 
+                  : payload.type === 'rsv'
+                  ? 'rgba(184, 144, 62, 0.25)'
                   : 'rgba(79, 209, 197, 0.25)'
               }`,
               flexShrink: 0
@@ -169,7 +188,7 @@ export const ZFInspectorDrawer: React.FC<ZFInspectorDrawerProps> = ({
               {payload.type === 'contract' && <FileText size={19} color="#946f23" />}
               {payload.type === 'cheque' && <Landmark size={19} color="#38bdf8" />}
               {payload.type === 'tax' && <ShieldCheck size={19} color="#10b981" />}
-              {payload.type === 'rsv' && <PieChart size={19} color="#60a5fa" />}
+              {payload.type === 'rsv' && <Calculator size={19} color="#946f23" />}
               {payload.type === 'rescission' && <RotateCcw size={19} color="#f87171" />}
               {payload.type === 'journal' && <BookOpen size={19} color="#4fd1c5" />}
             </div>
@@ -210,7 +229,7 @@ export const ZFInspectorDrawer: React.FC<ZFInspectorDrawerProps> = ({
                       <span dir="ltr" style={{ unicodeBidi: 'isolate', fontFamily: 'monospace' }}>#{payload.tax.tax_id.slice(0, 10)}</span>
                     </>
                   )}
-                  {payload.type === 'rsv' && `${isAr ? 'رسملة المشروع: ' : 'RSV: '}${payload.allocation.project_name}`}
+                  {payload.type === 'rsv' && `${isAr ? 'تفاصيل تكلفة وأرباح: ' : 'Cost Allocation: '}${payload.allocation.project_name}`}
                   {payload.type === 'rescission' && (
                     <>
                       <span>{isAr ? 'سجل فسخ: ' : 'Rescission: '}</span>
@@ -436,7 +455,7 @@ export const ZFInspectorDrawer: React.FC<ZFInspectorDrawerProps> = ({
                       onClick={() => onToggleHandover(contract)}
                       disabled={isMutating}
                       title={isAr 
-                        ? (contract.handover_status === 'Delivered' ? 'إعادة الوحدة إلى قيد التنفيذ (لم تستلم بعد)' : 'إثبات تسليم الوحدة للمشتري (محضر استلام)') 
+                        ? (contract.handover_status === 'Delivered' ? 'إعادة الوحدة إلى قيد التنفيذ والتشطيب' : 'تسجيل محضر استلام الشقة للعميل') 
                         : (contract.handover_status === 'Delivered' ? 'Revert to Pending Handover' : 'Mark as Delivered')}
                       style={{
                         background: '#ffffff',
@@ -453,7 +472,7 @@ export const ZFInspectorDrawer: React.FC<ZFInspectorDrawerProps> = ({
                       }}
                     >
                       <RotateCcw size={10} />
-                      <span>{isAr ? (contract.handover_status === 'Delivered' ? 'تعديل لقيد التسليم' : 'إثبات التسليم') : 'Toggle Handover'}</span>
+                      <span>{isAr ? (contract.handover_status === 'Delivered' ? 'تعديل محضر الاستلام' : 'تسجيل محضر استلام الشقة') : 'Toggle Handover'}</span>
                     </button>
                   )}
                   <span style={{
@@ -470,7 +489,7 @@ export const ZFInspectorDrawer: React.FC<ZFInspectorDrawerProps> = ({
                 </div>
               </div>
 
-              {/* FINANCIAL PANORAMA: REAL ESTATE EQUATION (V = C + A/R) */}
+              {/* FINANCIAL PANORAMA: REAL ESTATE EQUATION */}
               <div style={{
                 background: '#ffffff',
                 border: '1px solid #e2e8f0',
@@ -484,42 +503,42 @@ export const ZFInspectorDrawer: React.FC<ZFInspectorDrawerProps> = ({
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <div style={{ fontSize: '0.8rem', fontWeight: 800, color: '#946f23', display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
                     <CreditCard size={15} />
-                    <span>{isAr ? 'المعادلة المالية للعقد (V = C + A/R)' : 'Contract Financial Horizon (V = C + A/R)'}</span>
+                    <span>{isAr ? 'موقف فلوس العقد وسداد الأقساط' : 'Contract Financial Horizon'}</span>
                   </div>
                   <div style={{ fontSize: '0.72rem', color: '#64748b', fontVariantNumeric: 'tabular-nums', fontWeight: 600 }}>
-                    IFRS 15 / Model B
+                    {isAr ? 'حسابات معتمدة ومسجلة بالدفاتر ✓' : 'Audited Ledger Position'}
                   </div>
                 </div>
 
                 {/* 3 Metric Cards */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '0.65rem' }}>
-                  {/* Card 1: Gross Contract Value (V) */}
+                  {/* Card 1: Gross Contract Value */}
                   <div style={{ background: '#f8fafc', padding: '0.75rem 0.85rem', borderRadius: '10px', border: '1px solid #e2e8f0', minWidth: 0 }}>
                     <div style={{ fontSize: '0.68rem', color: '#64748b', marginBottom: '0.25rem', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                      {isAr ? 'قيمة العقد (V):' : 'Gross Value (V):'}
+                      {isAr ? 'إجمالي ثمن الشقة المتفق عليه:' : 'Gross Value:'}
                     </div>
                     <div style={{ fontSize: '0.98rem', fontWeight: 800, color: '#0f172a' }}>
                       <MoneyCell amount={contract.gross_contract_value} isAr={isAr} />
                     </div>
                     <div style={{ fontSize: '0.65rem', color: '#64748b', marginTop: '0.35rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                      {isAr ? 'القيمة المتفق عليها' : 'Contract price'}
+                      {isAr ? 'سعر البيع النهائي بالعقد' : 'Contract price'}
                     </div>
                   </div>
 
-                  {/* Card 2: Cash Collected (C) */}
+                  {/* Card 2: Cash Collected */}
                   <div style={{ background: 'rgba(22, 163, 74, 0.04)', padding: '0.75rem 0.85rem', borderRadius: '10px', border: '1px solid rgba(22, 163, 74, 0.2)', minWidth: 0 }}>
                     <div style={{ fontSize: '0.68rem', color: '#15803d', marginBottom: '0.25rem', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                      {isAr ? 'المحصل (C):' : 'Collected (C):'}
+                      {isAr ? 'اللي العميل دفعه كاش لحد دلوقتي:' : 'Collected Cash:'}
                     </div>
                     <div style={{ fontSize: '0.98rem', fontWeight: 800, color: '#15803d' }}>
                       <MoneyCell amount={contract.total_cash_collected} isAr={isAr} />
                     </div>
                     <div style={{ fontSize: '0.65rem', color: '#166534', marginTop: '0.35rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                      {isAr ? 'محصل باليد (خزينة الشركة)' : 'Collected by Hand (Safe)'}
+                      {isAr ? 'كاش دخل الخزنة وحسابات الشركة' : 'Collected into Bank & Safe'}
                     </div>
                   </div>
 
-                  {/* Card 3: Remaining Receivables (A/R) */}
+                  {/* Card 3: Remaining Receivables */}
                   <div style={{ 
                     background: isFullyCollected ? 'rgba(22, 163, 74, 0.04)' : 'rgba(217, 119, 6, 0.04)', 
                     padding: '0.75rem 0.85rem', 
@@ -528,14 +547,14 @@ export const ZFInspectorDrawer: React.FC<ZFInspectorDrawerProps> = ({
                     minWidth: 0
                   }}>
                     <div style={{ fontSize: '0.68rem', color: isFullyCollected ? '#15803d' : '#b45309', marginBottom: '0.25rem', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                      {isAr ? 'المتبقي (A/R):' : 'Remaining (A/R):'}
+                      {isAr ? 'الباقي على العميل كأقساط مجدولة:' : 'Remaining Receivables:'}
                     </div>
                     <div style={{ fontSize: '0.98rem', fontWeight: 800, color: isFullyCollected ? '#15803d' : '#b45309' }}>
                       <MoneyCell amount={remainingAR} isAr={isAr} />
                     </div>
                     <div style={{ fontSize: '0.65rem', color: isFullyCollected ? '#15803d' : '#b45309', marginTop: '0.35rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       {isFullyCollected 
-                        ? (isAr ? 'مسدد بالكامل' : 'Fully Settled') 
+                        ? (isAr ? 'مسدد بالكامل ✓' : 'Fully Settled') 
                         : (isAr ? `${pendingSchedules.length} أقساط متبقية` : `${pendingSchedules.length} tranches left`)}
                     </div>
                   </div>
@@ -545,10 +564,10 @@ export const ZFInspectorDrawer: React.FC<ZFInspectorDrawerProps> = ({
                 <div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.72rem', marginBottom: '0.4rem' }}>
                     <span style={{ color: '#64748b' }}>
-                      {isAr ? 'نسبة التحصيل الفعلي من إجمالي العقد:' : 'Cash Collection Progress:'}
+                      {isAr ? 'نسبة ما سدده العميل من إجمالي ثمن الشقة:' : 'Cash Collection Progress:'}
                     </span>
                     <span style={{ fontWeight: 800, color: isFullyCollected ? '#15803d' : '#946f23' }}>
-                      {collectionProgress.toFixed(1)}% {isFullyCollected ? (isAr ? '(مسدد بالكامل)' : '(100% Cleared)') : ''}
+                      {collectionProgress.toFixed(1)}% {isFullyCollected ? (isAr ? '(مسدد بالكامل ✓)' : '(100% Cleared)') : ''}
                     </span>
                   </div>
                   <div style={{ width: '100%', height: '8px', background: '#e2e8f0', borderRadius: '999px', overflow: 'hidden' }}>
@@ -686,9 +705,9 @@ export const ZFInspectorDrawer: React.FC<ZFInspectorDrawerProps> = ({
               {/* 4. TAB 1: INSTALLMENT SCHEDULE & RECORDING */}
               {activeContractTab === 'schedule' && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                  {/* Summary Bar */}
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.78rem' }}>
-                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  {/* Summary Bar & Supplement Button */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.78rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
                       <span style={{ padding: '0.22rem 0.6rem', borderRadius: '6px', background: '#f0fdf4', border: '1px solid #bbf7d0', color: '#15803d', fontWeight: 700 }}>
                         {paidSchedules.length} {isAr ? 'تم التحصيل' : 'Collected'}
                       </span>
@@ -697,9 +716,36 @@ export const ZFInspectorDrawer: React.FC<ZFInspectorDrawerProps> = ({
                       </span>
                     </div>
 
-                    <span style={{ color: '#64748b', fontSize: '0.72rem' }}>
-                      {isAr ? 'إصدار الجدول:' : 'Version:'} v{payload.schedules[0]?.schedule_version || 1}
-                    </span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                      {onOpenSupplement && (
+                        <button
+                          type="button"
+                          onClick={() => onOpenSupplement(payload.contract)}
+                          disabled={isMutating || payload.contract.status !== 'Active'}
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '0.35rem',
+                            padding: '0.32rem 0.75rem',
+                            borderRadius: '8px',
+                            background: '#fdf8ef',
+                            border: '1px solid rgba(184, 144, 62, 0.4)',
+                            color: '#946f23',
+                            fontSize: '0.74rem',
+                            fontWeight: 800,
+                            cursor: isMutating || payload.contract.status !== 'Active' ? 'not-allowed' : 'pointer',
+                            opacity: isMutating || payload.contract.status !== 'Active' ? 0.6 : 1,
+                            transition: 'all 0.15s ease'
+                          }}
+                        >
+                          <Plus size={13} />
+                          <span>{isAr ? '+ إضافة ملحق أو دفعة' : '+ Add Supplement'}</span>
+                        </button>
+                      )}
+                      <span style={{ color: '#64748b', fontSize: '0.72rem' }}>
+                        {isAr ? `جدول الأقساط (تعديل رقم ${payload.schedules[0]?.schedule_version || 1})` : `Schedule Version: v${payload.schedules[0]?.schedule_version || 1}`}
+                      </span>
+                    </div>
                   </div>
 
                   {/* Tranches Stack */}
@@ -748,7 +794,7 @@ export const ZFInspectorDrawer: React.FC<ZFInspectorDrawerProps> = ({
                               <div style={{ 
                                 fontWeight: 700, 
                                 fontSize: '0.88rem', 
-                                color: isVoid && !isPaid ? '#94a3b8' : '#0f172a',
+                                color: isVoid && !isPaid ? '#946f23' : '#0f172a',
                                 textDecoration: isVoid && !isPaid ? 'line-through' : 'none',
                                 whiteSpace: 'nowrap',
                                 overflow: 'hidden',
@@ -814,8 +860,8 @@ export const ZFInspectorDrawer: React.FC<ZFInspectorDrawerProps> = ({
                                   boxShadow: '0 1px 3px rgba(21, 128, 61, 0.25)'
                                 }}
                               >
-                                <DollarSign size={13} />
-                                <span>{isAr ? 'تحصيل باليد (تم التحصيل)' : 'Collect by Hand'}</span>
+                                <Receipt size={13} />
+                                <span>{isAr ? 'تحصيل القسط (كاش / إنستاباي)' : 'Collect Installment (Cash / InstaPay)'}</span>
                               </button>
                             )}
                           </div>
@@ -828,7 +874,7 @@ export const ZFInspectorDrawer: React.FC<ZFInspectorDrawerProps> = ({
                   {payload.amendments.length > 0 && (
                     <div style={{ marginTop: '0.5rem' }}>
                       <div style={{ fontSize: '0.82rem', fontWeight: 800, color: '#946f23', marginBottom: '0.65rem' }}>
-                        {isAr ? 'سجل تصعيد وتعديل الأسعار (Version Timeline):' : 'Escalation Version Timeline:'}
+                        {isAr ? 'سجل تعديلات وزيادة سعر العقد:' : 'Escalation Version Timeline:'}
                       </div>
                       <VersionTimeline 
                         schedules={payload.schedules}
@@ -857,7 +903,7 @@ export const ZFInspectorDrawer: React.FC<ZFInspectorDrawerProps> = ({
                   }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#946f23', fontWeight: 800, fontSize: '0.85rem' }}>
                       <User size={15} />
-                      <span>{isAr ? 'بيانات المشتري والطرف الثاني' : 'Buyer & Purchaser Dossier'}</span>
+                      <span>{isAr ? 'بيانات العميل والمشتري' : 'Buyer & Purchaser Dossier'}</span>
                     </div>
 
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.85rem', fontSize: '0.82rem' }}>
@@ -904,7 +950,7 @@ export const ZFInspectorDrawer: React.FC<ZFInspectorDrawerProps> = ({
                   }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#0284c7', fontWeight: 800, fontSize: '0.85rem' }}>
                       <Building size={15} />
-                      <span>{isAr ? 'محددات التعاقد ومحضر التسليم' : 'Contract & Delivery Specifications'}</span>
+                      <span>{isAr ? 'بيانات التعاقد وموقف استلام الشقة' : 'Contract & Delivery Specifications'}</span>
                     </div>
 
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.85rem', fontSize: '0.82rem' }}>
@@ -927,17 +973,17 @@ export const ZFInspectorDrawer: React.FC<ZFInspectorDrawerProps> = ({
                       </div>
 
                       <div style={{ gridColumn: 'span 2' }}>
-                        <span style={{ color: '#64748b' }}>{isAr ? 'الأثر المحاسبي للتسليم (IFRS 15 Model B):' : 'Revenue Recognition (IFRS 15):'}</span>
+                        <span style={{ color: '#64748b' }}>{isAr ? 'الموقف القانوني والمحاسبي للتسليم:' : 'Revenue Recognition (IFRS 15):'}</span>
                         {contract.handover_status === 'Delivered' ? (
                           <div style={{ marginTop: '0.25rem', padding: '0.65rem 0.85rem', borderRadius: '8px', background: '#f0fdf4', border: '1px solid #bbf7d0', color: '#15803d', lineHeight: 1.45, fontSize: '0.78rem', fontWeight: 600 }}>
                             {isAr 
-                              ? 'تم تحرير محضر التسليم الفعلي للوحدة. بموجب المعيار IFRS 15، تم إقفال حساب إيرادات العقود المؤجلة (203000) وقيد الإيراد المحقق بالكامل بحساب المبيعات (401000).'
+                              ? 'تم تحرير محضر استلام الشقة رسمياً للعميل، وتعتبر الوحدة مُسلمة بالكامل وقُيّد الإيراد بحساب المبيعات.'
                               : 'Physical Handover Completed. Under IFRS 15, Deferred Revenue (203000) was relieved and 100% Realized Revenue recognized in Sales (401000).'}
                           </div>
                         ) : (
                           <div style={{ marginTop: '0.25rem', padding: '0.65rem 0.85rem', borderRadius: '8px', background: '#fffbeb', border: '1px solid rgba(217, 119, 6, 0.3)', color: '#92400e', lineHeight: 1.45, fontSize: '0.78rem', fontWeight: 600 }}>
                             {isAr 
-                              ? 'الوحدة قيد الإنشاء ولم تسلم للعميل بعد. كافة التدفقات النقدية المحصلة تُقيد بحساب التزام تعاقدي (203000 إيرادات عقود مؤجلة) ولا يُعترف بأي مبيعات حتى تاريخ محضر الاستلام.'
+                              ? 'الوحدة قيد الإنشاء والتشطيب ولم تُسلّم للعميل بعد. كافة المبالغ المحصلة مقيدة كالتزام تعاقدي حتى تاريخ تحرير محضر الاستلام.'
                               : 'Asset under construction. Collections are credited to Contract Liability (203000 Deferred Revenue) until handover completion.'}
                           </div>
                         )}
@@ -1033,7 +1079,12 @@ export const ZFInspectorDrawer: React.FC<ZFInspectorDrawerProps> = ({
           const todayStr = new Date().toISOString().split('T')[0];
           const isOverdue = chq.status !== 'Cleared' && chq.due_date < todayStr;
           const isDueToday = chq.status !== 'Cleared' && chq.due_date === todayStr;
-          const step = chq.status === 'Cleared' ? 3 : chq.status === 'Deposited' ? 2 : 1;
+          const isMatured = chq.due_date <= todayStr;
+          const step = chq.status === 'Cleared' 
+            ? 3 
+            : (isOverdue || isDueToday || isMatured || chq.status === 'Deposited') 
+              ? 2 
+              : 1;
 
           return (
             <>
@@ -1127,7 +1178,7 @@ export const ZFInspectorDrawer: React.FC<ZFInspectorDrawerProps> = ({
                     zIndex: 1
                   }}>
                     <AlertTriangle size={15} color="#dc2626" />
-                    <span>{isAr ? 'تنبيه: هذا البند متأخر عن موعد استحقاقه ويتطلب التحصيل العاجل باليد!' : 'Overdue for hand collection!'}</span>
+                    <span>{isAr ? 'تنبيه: هذا القسط متأخر عن موعد استحقاقه ويحتاج تحصيل سريع (كاش أو إنستاباي)!' : 'Overdue for collection!'}</span>
                   </div>
                 )}
                 {isDueToday && (
@@ -1145,7 +1196,7 @@ export const ZFInspectorDrawer: React.FC<ZFInspectorDrawerProps> = ({
                     zIndex: 1
                   }}>
                     <Clock size={15} color="#d97706" />
-                    <span>{isAr ? 'يستحق التحصيل نقداً باليد اليوم!' : 'Due for hand collection today!'}</span>
+                    <span>{isAr ? 'يستحق التحصيل اليوم (كاش أو إنستاباي)!' : 'Due for collection today!'}</span>
                   </div>
                 )}
               </div>
@@ -1235,7 +1286,7 @@ export const ZFInspectorDrawer: React.FC<ZFInspectorDrawerProps> = ({
               }}>
                 <div style={{ fontSize: '0.78rem', fontWeight: 800, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                   <Clock size={15} color="#0284c7" />
-                  <span>{isAr ? 'دورة استحقاق وتحصيل البند نقداً باليد:' : 'Hand Due Collection Lifecycle:'}</span>
+                  <span>{isAr ? 'مراحل ومتابعة سداد القسط:' : 'Installment Collection Lifecycle:'}</span>
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
@@ -1272,18 +1323,18 @@ export const ZFInspectorDrawer: React.FC<ZFInspectorDrawerProps> = ({
                     )}
                   </div>
 
-                  {/* Step 2: Deposited */}
+                  {/* Step 2: Deposited / Matured */}
                   <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
                     <div style={{
                       width: '24px',
                       height: '24px',
                       borderRadius: '50%',
-                      background: step > 2 ? '#dcfce7' : step === 2 ? '#dbeafe' : '#f1f5f9',
-                      border: `1.5px solid ${step > 2 ? '#10b981' : step === 2 ? '#2563eb' : '#cbd5e1'}`,
+                      background: step > 2 ? '#dcfce7' : step === 2 ? (isOverdue ? 'rgba(220, 38, 38, 0.08)' : isDueToday ? 'rgba(184, 144, 62, 0.12)' : '#dbeafe') : '#f1f5f9',
+                      border: `1.5px solid ${step > 2 ? '#10b981' : step === 2 ? (isOverdue ? '#dc2626' : isDueToday ? '#946f23' : '#2563eb') : '#cbd5e1'}`,
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      color: step > 2 ? '#15803d' : step === 2 ? '#1e40af' : '#64748b',
+                      color: step > 2 ? '#15803d' : step === 2 ? (isOverdue ? '#dc2626' : isDueToday ? '#946f23' : '#1e40af') : '#64748b',
                       fontSize: '0.72rem',
                       fontWeight: 800,
                       flexShrink: 0
@@ -1292,15 +1343,26 @@ export const ZFInspectorDrawer: React.FC<ZFInspectorDrawerProps> = ({
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontSize: '0.8rem', fontWeight: 700, color: step >= 2 ? '#0f172a' : '#64748b' }}>
-                        {isAr ? 'حلول موعد التحصيل نقداً باليد' : 'Due for Hand Collection'}
+                        {isAr 
+                          ? (isOverdue ? 'حلول موعد استحقاق القسط (متأخر)' : isDueToday ? 'حلول موعد استحقاق القسط (مستحق اليوم)' : 'حلول موعد استحقاق القسط') 
+                          : 'Due for Hand Collection'}
                       </div>
                       <div style={{ fontSize: '0.72rem', color: step >= 2 ? '#475569' : '#94a3b8', marginTop: '0.1rem' }}>
-                        {isAr ? 'تواصل مع العميل واستلام النقدية باليد' : 'Contact client for hand cash collection'}
+                        {isAr ? 'التواصل مع العميل للتحصيل كاش أو تحويل إنستاباي' : 'Contact client for hand cash collection'}
                       </div>
                     </div>
                     {step === 2 && (
-                      <span style={{ fontSize: '0.68rem', padding: '0.2rem 0.5rem', borderRadius: '6px', background: '#dbeafe', color: '#1e40af', border: '1px solid #bfdbfe', fontWeight: 700, flexShrink: 0 }}>
-                        {isAr ? 'الحالة الحالية' : 'Current'}
+                      <span style={{ 
+                        fontSize: '0.68rem', 
+                        padding: '0.2rem 0.5rem', 
+                        borderRadius: '6px', 
+                        background: isOverdue ? 'rgba(220, 38, 38, 0.08)' : isDueToday ? 'rgba(184, 144, 62, 0.12)' : '#dbeafe', 
+                        color: isOverdue ? '#dc2626' : isDueToday ? '#946f23' : '#1e40af', 
+                        border: `1px solid ${isOverdue ? 'rgba(220, 38, 38, 0.25)' : isDueToday ? 'rgba(184, 144, 62, 0.3)' : '#bfdbfe'}`, 
+                        fontWeight: 700, 
+                        flexShrink: 0 
+                      }}>
+                        {isAr ? (isOverdue ? 'متأخر واجب التحصيل' : isDueToday ? 'مستحق اليوم' : 'الحالة الحالية') : (isOverdue ? 'Overdue' : isDueToday ? 'Due Today' : 'Current')}
                       </span>
                     )}
                   </div>
@@ -1325,12 +1387,12 @@ export const ZFInspectorDrawer: React.FC<ZFInspectorDrawerProps> = ({
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontSize: '0.8rem', fontWeight: 700, color: step >= 3 ? '#0f172a' : '#64748b' }}>
-                        {isAr ? 'تم التحصيل باليد والتوريد بالخزينة (١٠١٠٠٠)' : 'Collected by Hand into Safe (101000)'}
+                        {isAr ? 'تم التحصيل وتوريد الفلوس بالخزينة (١٠١٠٠٠) أو البنك' : 'Collected by Hand into Safe (101000)'}
                       </div>
                       <div style={{ fontSize: '0.72rem', color: step >= 3 ? '#475569' : '#94a3b8', marginTop: '0.1rem' }}>
                         {chq.cleared_date 
                           ? (isAr ? `تم الاستلام والتوريد بالخزينة بتاريخ: ${chq.cleared_date}` : `Hand collected date: ${chq.cleared_date}`)
-                          : (isAr ? 'استلام النقدية يدوياً بدون ربط بنكي' : 'Cash collected by hand without bank link')}
+                          : (isAr ? 'استلام النقدية وتوريدها لحسابات الشركة' : 'Cash collected without bank link')}
                       </div>
                     </div>
                     {step === 3 && (
@@ -1626,13 +1688,13 @@ export const ZFInspectorDrawer: React.FC<ZFInspectorDrawerProps> = ({
               {/* 1. EXECUTIVE RSV FACTOR & MARGIN BANNER */}
               <div style={{
                 background: '#ffffff',
-                border: '1px solid rgba(59, 130, 246, 0.35)',
+                border: '1.5px solid rgba(184, 144, 62, 0.3)',
                 borderRadius: '14px',
                 padding: '1.25rem',
                 display: 'flex',
                 flexDirection: 'column',
                 gap: '1rem',
-                boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04)',
+                boxShadow: '0 2px 10px rgba(184, 144, 62, 0.05)',
                 position: 'relative'
               }}>
                 {/* Top Badge: Standard & Date */}
@@ -1640,17 +1702,17 @@ export const ZFInspectorDrawer: React.FC<ZFInspectorDrawerProps> = ({
                   <div style={{
                     padding: '0.3rem 0.65rem',
                     borderRadius: '8px',
-                    background: 'rgba(59, 130, 246, 0.1)',
-                    border: '1px solid rgba(59, 130, 246, 0.3)',
+                    background: 'rgba(184, 144, 62, 0.08)',
+                    border: '1px solid rgba(184, 144, 62, 0.25)',
                     display: 'flex',
                     alignItems: 'center',
                     gap: '0.4rem',
                     fontSize: '0.74rem',
                     fontWeight: 800,
-                    color: '#1d4ed8'
+                    color: '#946f23'
                   }}>
-                    <PieChart size={13} />
-                    <span>{isAr ? 'معيار IFRS 15 / EAS 48 (رسملة واستنزال WIP)' : 'IFRS 15 / EAS 48 Cost Allocation'}</span>
+                    <Calculator size={13} />
+                    <span>{isAr ? 'توزيع مصاريف المباني وحساب الأرباح' : 'Cost Allocation & Unit Handover'}</span>
                   </div>
 
                   <span style={{ fontSize: '0.72rem', color: '#64748b' }}>
@@ -1663,74 +1725,89 @@ export const ZFInspectorDrawer: React.FC<ZFInspectorDrawerProps> = ({
                   <h4 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: '#0f172a' }}>
                     {alloc.project_name}
                   </h4>
-                  <span style={{ fontSize: '0.74rem', color: '#64748b', display: 'block', marginTop: '0.15rem' }}>
-                    {isAr ? 'معامل استنزال تكلفة البضاعة المباعة (COGS) مقابل الإيراد المحقق عند التسليم' : 'Relative Sales Value ratio to relieve WIP into COGS upon Handover'}
+                  <span style={{ fontSize: '0.74rem', color: '#64748b', display: 'block', marginTop: '0.2rem' }}>
+                    {isAr 
+                      ? 'توزيع تكلفة المباني والخامات على كل شقة لتحديد صافي أرباح المكتب عند البيع والتسليم بدقة.' 
+                      : 'Relative Sales Value ratio to relieve WIP into COGS upon Handover'}
                   </span>
                 </div>
 
                 {/* Main Factor & Margin Highlight Box */}
                 <div style={{
-                  background: '#f8fafc',
-                  border: '1px solid #e2e8f0',
-                  borderRadius: '12px',
-                  padding: '1rem 1.25rem',
                   display: 'grid',
                   gridTemplateColumns: '1fr 1fr',
-                  gap: '1rem',
+                  gap: '0.85rem',
                   zIndex: 1
                 }}>
-                  <div>
-                    <span style={{ fontSize: '0.7rem', color: '#64748b', display: 'block', fontWeight: 700 }}>
-                      {isAr ? 'معامل الرسملة (RSV Factor):' : 'RSV Factor:'}
+                  {/* Building Cost Ratio (Brand Gold) */}
+                  <div style={{
+                    background: 'linear-gradient(135deg, #ffffff 0%, #fefcf9 100%)',
+                    border: '1.5px solid rgba(184, 144, 62, 0.3)',
+                    borderRadius: '12px',
+                    padding: '0.85rem 1rem',
+                    boxShadow: '0 2px 8px rgba(184, 144, 62, 0.04)'
+                  }}>
+                    <span style={{ fontSize: '0.7rem', color: '#946f23', display: 'block', fontWeight: 800 }}>
+                      {isAr ? 'نسبة تكلفة المباني من السعر:' : 'Building Cost Ratio:'}
                     </span>
-                    <div style={{ fontSize: '1.6rem', fontWeight: 900, color: '#946f23', fontVariantNumeric: 'tabular-nums', marginTop: '0.2rem' }}>
-                      {alloc.rsv_factor}
+                    <div style={{ fontSize: '1.65rem', fontWeight: 900, color: '#946f23', fontVariantNumeric: 'tabular-nums', marginTop: '0.15rem' }}>
+                      {rsvPct}%
                     </div>
-                    <span style={{ fontSize: '0.74rem', color: '#b45309', fontWeight: 700 }}>
-                      ({rsvPct}% {isAr ? 'نسبة تكلفة الإنشاء' : 'cost ratio'})
+                    <span style={{ fontSize: '0.72rem', color: '#946f23', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+                      <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#946f23', display: 'inline-block' }} />
+                      {isAr ? 'من ثمن الشقة مباني وخامات' : 'construction cost'}
                     </span>
                   </div>
 
-                  <div style={{ textAlign: isAr ? 'left' : 'right', borderRight: isAr ? 'none' : '1px solid #e2e8f0', borderLeft: isAr ? '1px solid #e2e8f0' : 'none', paddingLeft: isAr ? '1rem' : 0, paddingRight: isAr ? 0 : '1rem' }}>
-                    <span style={{ fontSize: '0.7rem', color: '#64748b', display: 'block', fontWeight: 700 }}>
-                      {isAr ? 'هامش الربح الإجمالي المقدر:' : 'Projected Gross Margin:'}
+                  {/* Profit Margin (Forest Jade) */}
+                  <div style={{
+                    background: 'linear-gradient(135deg, #ffffff 0%, #f7fdf9 100%)',
+                    border: '1.5px solid rgba(21, 128, 61, 0.3)',
+                    borderRadius: '12px',
+                    padding: '0.85rem 1rem',
+                    boxShadow: '0 2px 8px rgba(21, 128, 61, 0.04)',
+                    textAlign: isAr ? 'left' : 'right'
+                  }}>
+                    <span style={{ fontSize: '0.7rem', color: '#15803d', display: 'block', fontWeight: 800 }}>
+                      {isAr ? 'مكسبنا الصافي المقدر:' : 'Net Profit Margin:'}
                     </span>
-                    <div style={{ fontSize: '1.6rem', fontWeight: 900, color: '#15803d', fontVariantNumeric: 'tabular-nums', marginTop: '0.2rem' }}>
+                    <div style={{ fontSize: '1.65rem', fontWeight: 900, color: '#15803d', fontVariantNumeric: 'tabular-nums', marginTop: '0.15rem' }}>
                       {grossMarginPct}%
                     </div>
-                    <span style={{ fontSize: '0.74rem', color: '#15803d', fontWeight: 700 }}>
-                      ({isAr ? 'صافي عائد التعاقد' : 'profit margin'})
+                    <span style={{ fontSize: '0.72rem', color: '#15803d', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+                      <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#15803d', display: 'inline-block' }} />
+                      {isAr ? 'صافي مكسب المكتب' : 'net profit margin'}
                     </span>
                   </div>
                 </div>
 
-                {/* Visual Proportional Split Bar */}
-                <div style={{ zIndex: 1, display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                {/* Visual Proportional Split Bar (Brand Gold vs Forest Jade) */}
+                <div style={{ zIndex: 1, display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.72rem' }}>
-                    <span style={{ color: '#2563eb', fontWeight: 700 }}>
-                      {isAr ? `تكلفة الإنشاء WIP: ${rsvPct}%` : `WIP Cost: ${rsvPct}%`}
+                    <span style={{ color: '#946f23', fontWeight: 800 }}>
+                      {isAr ? `تكلفة المباني والخامات: ${rsvPct}%` : `WIP Cost: ${rsvPct}%`}
                     </span>
-                    <span style={{ color: '#15803d', fontWeight: 700 }}>
-                      {isAr ? `هامش الربح: ${grossMarginPct}%` : `Gross Margin: ${grossMarginPct}%`}
+                    <span style={{ color: '#15803d', fontWeight: 800 }}>
+                      {isAr ? `مكسبنا الصافي: ${grossMarginPct}%` : `Gross Margin: ${grossMarginPct}%`}
                     </span>
                   </div>
                   <div style={{
                     width: '100%',
-                    height: '10px',
+                    height: '8px',
                     borderRadius: '999px',
-                    background: '#e2e8f0',
+                    background: '#f1f5f9',
                     overflow: 'hidden',
                     display: 'flex'
                   }}>
                     <div style={{
                       width: `${Math.min(parseFloat(rsvPct) || 0, 100)}%`,
-                      background: 'linear-gradient(90deg, #2563eb, #3b82f6)',
+                      background: 'linear-gradient(90deg, #c5a059, #946f23)',
                       height: '100%',
                       transition: 'width 0.3s ease'
                     }} />
                     <div style={{
                       flex: 1,
-                      background: 'linear-gradient(90deg, #15803d, #10b981)',
+                      background: 'linear-gradient(90deg, #15803d, #16a34a)',
                       height: '100%'
                     }} />
                   </div>
@@ -1753,27 +1830,27 @@ export const ZFInspectorDrawer: React.FC<ZFInspectorDrawerProps> = ({
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.85rem', fontSize: '0.78rem' }}>
-                  <div style={{ background: '#f8fafc', padding: '0.75rem', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                  <div style={{ background: '#ffffff', padding: '0.75rem', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
                     <span style={{ color: '#64748b', fontSize: '0.7rem', display: 'block', fontWeight: 600 }}>
-                      {isAr ? 'تكاليف الإنشاء المتكبدة (WIP 105000):' : 'Incurred Construction WIP (105000):'}
+                      {isAr ? 'المصروف الفعلي على المباني:' : 'Incurred Construction WIP:'}
                     </span>
                     <strong style={{ color: '#946f23', fontSize: '1rem', marginTop: '0.2rem', display: 'block', fontVariantNumeric: 'tabular-nums' }}>
                       {D(alloc.total_incurred_wip).formatEGP(isAr)}
                     </strong>
                     <span style={{ color: '#64748b', fontSize: '0.68rem' }}>
-                      {isAr ? 'خامات ومقاولات واستشارات' : 'Direct civil & MEP costs'}
+                      {isAr ? 'خامات ومقاولات ومصاريف إنشائية متكبدة' : 'Direct civil & MEP costs'}
                     </span>
                   </div>
 
-                  <div style={{ background: '#f8fafc', padding: '0.75rem', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                  <div style={{ background: '#ffffff', padding: '0.75rem', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
                     <span style={{ color: '#64748b', fontSize: '0.7rem', display: 'block', fontWeight: 600 }}>
-                      {isAr ? 'سقف المبيعات المقدر للمشروع:' : 'Projected Sales Ceiling:'}
+                      {isAr ? 'إجمالي سعر بيع كل الشقق المتوقع:' : 'Projected Sales Ceiling:'}
                     </span>
                     <strong style={{ color: '#0f172a', fontSize: '1rem', marginTop: '0.2rem', display: 'block', fontVariantNumeric: 'tabular-nums' }}>
                       {D(alloc.total_sales_value).formatEGP(isAr)}
                     </strong>
                     <span style={{ color: '#64748b', fontSize: '0.68rem' }}>
-                      {isAr ? 'الوعاء التعاقدي البيعي المستهدف' : 'Total target sales denominator'}
+                      {isAr ? 'إجمالي القيمة البيعية لكل وحدات المشروع' : 'Total target sales denominator'}
                     </span>
                   </div>
                 </div>
@@ -1792,15 +1869,15 @@ export const ZFInspectorDrawer: React.FC<ZFInspectorDrawerProps> = ({
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', color: '#15803d', fontWeight: 800, fontSize: '0.78rem' }}>
                     <Calculator size={15} />
-                    <span>{isAr ? 'محاكي استنزال التكلفة عند تسليم الوحدات (Handover Simulator):' : 'Unit Handover Relief Simulator:'}</span>
+                    <span>{isAr ? 'محاكي تسليم الشقق وحساب الأرباح الفورية:' : 'Unit Handover Relief Simulator:'}</span>
                   </div>
-                  <span style={{ fontSize: '0.7rem', color: '#94a3b8' }}>
-                    {isAr ? 'تجربة حية' : 'Live Simulation'}
+                  <span style={{ fontSize: '0.7rem', color: '#64748b' }}>
+                    {isAr ? 'احسب تكلفتك وصافي مكسبك' : 'Live Simulation'}
                   </span>
                 </div>
 
                 <div>
-                  <label style={{ fontSize: '0.72rem', color: '#475569', display: 'block', marginBottom: '0.35rem' }}>
+                  <label style={{ fontSize: '0.72rem', color: '#475569', display: 'block', marginBottom: '0.35rem', fontWeight: 600 }}>
                     {isAr ? 'افترض قيمة بيعية لوحدة يتم تسليمها للعميل (بالجنيه):' : 'Simulate unit contract value delivered to client (EGP):'}
                   </label>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -1813,7 +1890,7 @@ export const ZFInspectorDrawer: React.FC<ZFInspectorDrawerProps> = ({
                         background: '#ffffff',
                         border: '1px solid #cbd5e1',
                         borderRadius: '8px',
-                        padding: '0.45rem 0.75rem',
+                        padding: '0.5rem 0.75rem',
                         color: '#0f172a',
                         fontSize: '0.85rem',
                         fontWeight: 700,
@@ -1822,24 +1899,30 @@ export const ZFInspectorDrawer: React.FC<ZFInspectorDrawerProps> = ({
                         outline: 'none'
                       }}
                     />
-                    <div style={{ display: 'flex', gap: '0.25rem' }}>
-                      {['3000000', '5000000', '10000000'].map(val => (
+                    <div style={{ display: 'flex', gap: '0.3rem' }}>
+                      {[
+                        { val: '3000000', labelAr: '٣ مليون', labelEn: '3M' },
+                        { val: '5000000', labelAr: '٥ مليون', labelEn: '5M' },
+                        { val: '10000000', labelAr: '١٠ مليون', labelEn: '10M' }
+                      ].map(item => (
                         <button
-                          key={val}
+                          key={item.val}
                           type="button"
-                          onClick={() => setSimulatedUnitValue(val)}
+                          onClick={() => setSimulatedUnitValue(item.val)}
                           style={{
-                            background: simulatedUnitValue === val ? '#946f23' : '#ffffff',
-                            border: `1px solid ${simulatedUnitValue === val ? '#946f23' : '#cbd5e1'}`,
-                            color: simulatedUnitValue === val ? '#ffffff' : '#475569',
-                            borderRadius: '6px',
-                            padding: '0.3rem 0.55rem',
-                            fontSize: '0.68rem',
+                            background: simulatedUnitValue === item.val ? '#946f23' : '#ffffff',
+                            border: `1.5px solid ${simulatedUnitValue === item.val ? '#946f23' : '#cbd5e1'}`,
+                            color: simulatedUnitValue === item.val ? '#ffffff' : '#475569',
+                            borderRadius: '8px',
+                            padding: '0.35rem 0.65rem',
+                            fontSize: '0.7rem',
                             fontWeight: 700,
-                            cursor: 'pointer'
+                            cursor: 'pointer',
+                            boxShadow: simulatedUnitValue === item.val ? '0 2px 6px rgba(184, 144, 62, 0.25)' : 'none',
+                            transition: 'all 0.15s ease'
                           }}
                         >
-                          {parseInt(val) / 1000000}M
+                          {isAr ? item.labelAr : item.labelEn}
                         </button>
                       ))}
                     </div>
@@ -1857,26 +1940,26 @@ export const ZFInspectorDrawer: React.FC<ZFInspectorDrawerProps> = ({
                   gap: '1rem'
                 }}>
                   <div>
-                    <span style={{ fontSize: '0.68rem', color: '#64748b', display: 'block', fontWeight: 700 }}>
-                      {isAr ? 'تكلفة الإنشاء المستنزلة (COGS):' : 'Relieved Construction COGS:'}
+                    <span style={{ fontSize: '0.68rem', color: '#946f23', display: 'block', fontWeight: 800 }}>
+                      {isAr ? 'تكلفة مباني الشقة المستنزلة:' : 'Relieved Construction Cost:'}
                     </span>
-                    <div style={{ fontSize: '1.2rem', fontWeight: 900, color: '#946f23', marginTop: '0.15rem', fontVariantNumeric: 'tabular-nums' }}>
+                    <div style={{ fontSize: '1.25rem', fontWeight: 900, color: '#946f23', marginTop: '0.15rem', fontVariantNumeric: 'tabular-nums' }}>
                       {simCOGS.formatEGP(isAr)}
                     </div>
                     <span style={{ fontSize: '0.68rem', color: '#64748b' }}>
-                      {isAr ? `تُخصم من WIP بنسبة ${rsvPct}%` : `Relieved from WIP (105000)`}
+                      {isAr ? `تتخصم تلقائياً من مصاريف المباني بنسبة ${rsvPct}%` : `Relieved from WIP ratio: ${rsvPct}%`}
                     </span>
                   </div>
 
                   <div style={{ textAlign: isAr ? 'left' : 'right' }}>
-                    <span style={{ fontSize: '0.68rem', color: '#64748b', display: 'block', fontWeight: 700 }}>
-                      {isAr ? 'مجمل الربح المحقق بالدفاتر:' : 'Recognized Gross Profit:'}
+                    <span style={{ fontSize: '0.68rem', color: '#15803d', display: 'block', fontWeight: 800 }}>
+                      {isAr ? 'صافي مكسب المكتب المحقق:' : 'Recognized Gross Profit:'}
                     </span>
-                    <div style={{ fontSize: '1.2rem', fontWeight: 900, color: '#15803d', marginTop: '0.15rem', fontVariantNumeric: 'tabular-nums' }}>
+                    <div style={{ fontSize: '1.25rem', fontWeight: 900, color: '#15803d', marginTop: '0.15rem', fontVariantNumeric: 'tabular-nums' }}>
                       {simProfit.formatEGP(isAr)}
                     </div>
-                    <span style={{ fontSize: '0.68rem', color: '#15803d', fontWeight: 600 }}>
-                      {isAr ? `صافي الإيراد المحقق بنسبة ${grossMarginPct}%` : `Net Margin (401000)`}
+                    <span style={{ fontSize: '0.68rem', color: '#15803d', fontWeight: 700 }}>
+                      {isAr ? `ينزل فوراً كربح محقق بالدفاتر بنسبة ${grossMarginPct}%` : `Net Margin ratio: ${grossMarginPct}%`}
                     </span>
                   </div>
                 </div>
@@ -1884,8 +1967,8 @@ export const ZFInspectorDrawer: React.FC<ZFInspectorDrawerProps> = ({
 
               {/* 4. BALANCED GL JOURNAL ENTRY TEMPLATE */}
               <div style={{
-                background: 'rgba(212, 175, 55, 0.04)',
-                border: '1px solid rgba(212, 175, 55, 0.25)',
+                background: 'rgba(184, 144, 62, 0.04)',
+                border: '1px solid rgba(184, 144, 62, 0.22)',
                 borderRadius: '12px',
                 padding: '1rem',
                 display: 'flex',
@@ -1894,7 +1977,7 @@ export const ZFInspectorDrawer: React.FC<ZFInspectorDrawerProps> = ({
               }}>
                 <div style={{ fontSize: '0.76rem', fontWeight: 800, color: '#946f23', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                   <BookOpen size={14} />
-                  <span>{isAr ? 'القيد المحاسبي النموذجي عند التسليم الفعلي (Handover Journal Voucher):' : 'Standard Handover Journal Entry (IFRS 15):'}</span>
+                  <span>{isAr ? 'القيد المحاسبي المولد آلياً عند تسليم الشقة:' : 'Standard Handover Journal Entry:'}</span>
                 </div>
 
                 <div style={{
@@ -1904,25 +1987,25 @@ export const ZFInspectorDrawer: React.FC<ZFInspectorDrawerProps> = ({
                   padding: '0.75rem',
                   display: 'flex',
                   flexDirection: 'column',
-                  gap: '0.4rem',
+                  gap: '0.45rem',
                   fontSize: '0.74rem',
                   fontVariantNumeric: 'tabular-nums'
                 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', color: '#0f172a' }}>
-                    <span>{isAr ? 'من حـ/ ٥٠١٠٠٠ (تكلفة المبيعات العقارية COGS)' : 'Dr 501000 (Cost of Goods Sold)'}</span>
+                    <span>{isAr ? 'من حـ/ تكلفة مباني الشقق المسلمة (501000)' : 'Dr 501000 (Cost of Sales)'}</span>
+                    <strong style={{ color: '#946f23' }}>{simCOGS.formatEGP(isAr)}</strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', color: '#64748b' }}>
+                    <span>{isAr ? 'إلى حـ/ مصاريف ومباني المشروعات تحت التنفيذ (105000)' : 'Cr 105000 (Construction WIP)'}</span>
                     <strong>{simCOGS.formatEGP(isAr)}</strong>
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', color: '#dc2626' }}>
-                    <span>{isAr ? 'إلى حـ/ ١٠٥٠٠٠ (مشروعات تحت التنفيذ WIP)' : 'Cr 105000 (Work in Progress Asset)'}</span>
-                    <strong>{simCOGS.formatEGP(isAr)}</strong>
-                  </div>
-                  <div style={{ borderTop: '1px dashed #e2e8f0', marginTop: '0.2rem', paddingTop: '0.35rem', display: 'flex', justifyContent: 'space-between', color: '#946f23' }}>
-                    <span>{isAr ? 'من حـ/ ٢٠١٠٠٠ (إيرادات مؤجلة / دفعات مقدمة)' : 'Dr 201000 (Deferred Revenue)'}</span>
+                  <div style={{ borderTop: '1px dashed #e2e8f0', marginTop: '0.2rem', paddingTop: '0.35rem', display: 'flex', justifyContent: 'space-between', color: '#0f172a' }}>
+                    <span>{isAr ? 'من حـ/ مقدمات وأقساط حجز الشقق (203000)' : 'Dr 203000 (Deferred Revenue)'}</span>
                     <strong>{simVal.formatEGP(isAr)}</strong>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', color: '#15803d' }}>
-                    <span>{isAr ? 'إلى حـ/ ٤٠١٠٠٠ (إيرادات المبيعات المحققة)' : 'Cr 401000 (Realized Revenue)'}</span>
-                    <strong>{simVal.formatEGP(isAr)}</strong>
+                    <span>{isAr ? 'إلى حـ/ مبيعات الشقق المحققة (401000)' : 'Cr 401000 (Realized Revenue)'}</span>
+                    <strong style={{ color: '#15803d' }}>{simVal.formatEGP(isAr)}</strong>
                   </div>
                 </div>
               </div>
@@ -1967,11 +2050,11 @@ export const ZFInspectorDrawer: React.FC<ZFInspectorDrawerProps> = ({
                 <StatusBadge domain="unit" status={payload.rescission.unit_state} isAr={isAr} />
               </div>
               <div>
-                <span style={{ color: '#64748b' }}>{isAr ? 'إجمالي قيمة العقد الأصلي (V):' : 'Original Gross Value (V):'} </span>
+                <span style={{ color: '#64748b' }}>{isAr ? 'إجمالي ثمن الشقة الأصلي بالعقد:' : 'Original Gross Value:'} </span>
                 <MoneyCell amount={payload.rescission.gross_contract_value} isAr={isAr} />
               </div>
               <div>
-                <span style={{ color: '#64748b' }}>{isAr ? 'إجمالي النقدية المحصلة (C):' : 'Total Cash Collected (C):'} </span>
+                <span style={{ color: '#64748b' }}>{isAr ? 'إجمالي ما سدده العميل نقدياً:' : 'Total Cash Collected:'} </span>
                 <MoneyCell amount={payload.rescission.total_cash_collected} isAr={isAr} />
               </div>
             </div>
@@ -2008,7 +2091,7 @@ export const ZFInspectorDrawer: React.FC<ZFInspectorDrawerProps> = ({
                 }}
               >
                 <TrendingUp size={14} color="#946f23" />
-                <span>{isAr ? 'طلب تصعيد السعر (Delta V)' : 'Request Escalation'}</span>
+                <span>{isAr ? 'طلب تعديل أو زيادة سعر العقد' : 'Request Escalation'}</span>
               </button>
 
               {payload.contract.status === 'Rescinded' ? (
@@ -2056,7 +2139,33 @@ export const ZFInspectorDrawer: React.FC<ZFInspectorDrawerProps> = ({
                   disabled={isMutating || payload.contract.status !== 'Active'}
                 >
                   <RotateCcw size={14} />
-                  <span>{isAr ? 'إجراء فسخ العقد' : 'Rescind Contract'}</span>
+                  <span>{isAr ? 'فسخ العقد وتسوية المسترد' : 'Rescind Contract'}</span>
+                </button>
+              )}
+
+              {onOpenSupplement && (
+                <button 
+                  type="button"
+                  style={{ 
+                    background: '#fdf8ef', 
+                    border: '1px solid rgba(184, 144, 62, 0.4)', 
+                    color: '#946f23',
+                    borderRadius: '8px',
+                    padding: '0.55rem 0.95rem',
+                    fontSize: '0.78rem',
+                    fontWeight: 800,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.4rem',
+                    cursor: isMutating || payload.contract.status !== 'Active' ? 'not-allowed' : 'pointer',
+                    opacity: isMutating || payload.contract.status !== 'Active' ? 0.6 : 1,
+                    transition: 'all 0.15s ease'
+                  }}
+                  onClick={() => onOpenSupplement(payload.contract)}
+                  disabled={isMutating || payload.contract.status !== 'Active'}
+                >
+                  <Plus size={14} />
+                  <span>{isAr ? '+ إضافة ملحق أو دفعة جديدة' : '+ Add Supplement'}</span>
                 </button>
               )}
             </div>
@@ -2104,7 +2213,7 @@ export const ZFInspectorDrawer: React.FC<ZFInspectorDrawerProps> = ({
                   }}
                 >
                   <CheckCircle2 size={14} />
-                  <span>{isAr ? 'إثبات تحصيل البند نقداً باليد' : 'Mark Collected by Hand'}</span>
+                  <span>{isAr ? 'تسجيل تحصيل القسط (كاش / إنستاباي)' : 'Mark Collected'}</span>
                 </button>
               ) : (
                 <div style={{
@@ -2120,7 +2229,7 @@ export const ZFInspectorDrawer: React.FC<ZFInspectorDrawerProps> = ({
                   border: '1px solid #bbf7d0'
                 }}>
                   <CheckCircle2 size={14} />
-                  <span>{isAr ? 'تم التحصيل باليد ومورد بالخزينة (١٠١٠٠٠)' : 'Collected by hand in safe (101000)'}</span>
+                  <span>{isAr ? 'تم التحصيل ومقيد بالخزينة (١٠١٠٠٠)' : 'Collected in safe (101000)'}</span>
                 </div>
               )}
 
@@ -2181,8 +2290,8 @@ export const ZFInspectorDrawer: React.FC<ZFInspectorDrawerProps> = ({
 
         {payload.type === 'rsv' && (
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', gap: '0.75rem' }}>
-            <div style={{ fontSize: '0.74rem', color: '#94a3b8' }}>
-              {isAr ? 'معتمد وموثق بالدفاتر المحاسبية (IFRS 15)' : 'Audited and locked in financial ledger (IFRS 15)'}
+            <div style={{ fontSize: '0.74rem', color: '#64748b', fontWeight: 600 }}>
+              {isAr ? 'حسابات معتمدة وموثقة بدفتر اليومية للشركة' : 'Audited and locked in company ledger'}
             </div>
             <button className={styles.actionBtnSecondary} onClick={onClose} style={{ fontSize: '0.78rem', padding: '0.55rem 0.95rem' }}>
               <span>{isAr ? 'إغلاق الفاحص' : 'Close'}</span>

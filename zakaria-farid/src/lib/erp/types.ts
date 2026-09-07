@@ -228,6 +228,39 @@ export interface ERPPartnerCall {
   created_at: string;
 }
 
+export type PartnerRole = 'primary_developer' | 'equity_partner' | 'land_partner' | 'silent_financier';
+
+export interface ERPPartnerProfile {
+  id: string;
+  name: string;
+  role: PartnerRole;
+  phone?: string;
+  national_id?: string;
+  notes?: string;
+  joined_date: string;
+}
+
+export type PartnerTransactionType = 
+  | 'CAPITAL_INJECTION'     // ضخ مساهمة رأس مال (Dr 101000/102000, Cr 301000)
+  | 'PROFIT_DISTRIBUTION'   // صرف وتوزيع أرباح (Dr 303000, Cr 101000/102000)
+  | 'CAPITAL_RETURN';       // استرداد رأس مال (Dr 301000, Cr 101000/102000)
+
+export interface ERPPartnerTransaction {
+  id: string;
+  transaction_number: string;
+  partner_name: string;
+  type: PartnerTransactionType;
+  amount: string;
+  property_id?: string;
+  property_title?: string;
+  payment_method: 'CASH_101000' | 'INSTAPAY_102000' | 'BANK_102000';
+  journal_entry_number?: string;
+  date: string;
+  status: 'COMPLETED' | 'PENDING';
+  memo: string;
+  receipt_ref?: string;
+}
+
 export type MakerCheckerStatus = 'Pending' | 'Approved' | 'Rejected';
 
 export interface ERPMakerCheckerRequest {

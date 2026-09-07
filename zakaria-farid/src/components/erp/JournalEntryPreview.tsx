@@ -34,7 +34,15 @@ export const localizeBuyerName = (str: string): string => {
     'Sherif Amer': 'شريف عامر',
     'Youssef Farouk': 'يوسف فاروق',
     'Omar Khaled': 'عمر خالد',
-    'Mona Zaki': 'منى زكي'
+    'Mona Zaki': 'منى زكي',
+    'Tarek Abdel-Rahman': 'طارق عبد الرحمن',
+    'Tarek Abdel Rahman': 'طارق عبد الرحمن',
+    'Hossam Othman': 'حسام عثمان',
+    'Hossam El-Din Othman': 'حسام الدين عثمان',
+    'Wael Azmy': 'وائل عزمي',
+    'Mahmoud Taha': 'محمود طه',
+    'Mona Al-Sawy': 'منى الصاوي',
+    'Youssef Badr & Partners': 'يوسف بدر وشركاه'
   };
 
   Object.entries(names).forEach(([en, ar]) => {
@@ -136,18 +144,19 @@ export const localizeJournalDescription = (desc: string, isAr: boolean): string 
 export const localizeJournalMemo = (memo: string | undefined, isAr: boolean): string | undefined => {
   if (!isAr || !memo) return memo;
   const map: Record<string, string> = {
-    'Customer advance cash received': 'إيداع نقدي للدفعة المقدمة من العميل بحساب البنك',
-    'Credit Deferred Contract Revenue': 'إثبات إيراد تعاقدي مؤجل (التزام حتى التسليم)',
+    'Customer advance cash received': 'إيداع بنكي للدفعة المقدمة بحساب البنك',
+    'Credit Deferred Contract Revenue': 'إثبات دفعة الحجز كالتزام تعاقدي حتى التسليم',
+    'Cash collection into Operating Bank': 'إيداع بنكي مباشر بحساب البنك التشغيلي للشركة',
     'Clear Deferred Revenue': 'إقفال الإيرادات المؤجلة وتسويتها بالكامل',
-    'Book Net Receivable': 'إثبات مديونية الأقساط المتبقية على العميل (A/R)',
+    'Book Net Receivable': 'إثبات مديونية الأقساط المتبقية على العميل',
     'Recognize Gross Revenue': 'الاعتراف بإجمالي إيراد المبيعات المحقق بالكامل',
-    'Cost relief from WIP': 'إثبات تكلفة المبيعات المحققة للوحدة (COGS)',
-    'Relieve WIP cost to COGS': 'تخفيض حساب الأعمال تحت التنفيذ بعد التسليم',
+    'Cost relief from WIP': 'إثبات تكلفة المباني والإنشاءات للوحدة المباعة',
+    'Relieve WIP cost to COGS': 'تسوية تكلفة المباني بعد تسليم الشقة',
     'Clear collected advances from Deferred Revenue': 'تسوية الدفعات المحصلة من الإيراد المؤجل',
     'Recognize retained forfeiture penalty': 'إثبات غرامة الفسخ المستقطعة كإيراد للشركة',
     'Customer net refund liability payable': 'إثبات التزام صافي المسترد المستحق للعميل',
     'Settlement of Customer Accounts Receivable': 'تسوية مديونية باقي ثمن الشقة على العميل',
-    'Credit to Deferred Contract Revenue': 'إثبات إيراد مؤجل لدفعة حجز الوحدة',
+    'Credit to Deferred Contract Revenue': 'إثبات دفعة الحجز كالتزام تعاقدي حتى التسليم',
     'Contractor Trade Payables': 'مستحقات وفواتير مقاولي الباطن والموردين',
     'WIP Direct Construction Cost': 'تكاليف مباني وخرسانات قيد التنفيذ بالموقع',
     'Clear uncollected Accounts Receivable off balance sheet': 'إسقاط باقي أقساط العقد غير المحصلة من الدفاتر'
@@ -156,10 +165,15 @@ export const localizeJournalMemo = (memo: string | undefined, isAr: boolean): st
   if (map[memo]) return map[memo];
 
   let text = memo;
+  text = text.replace(/Cash collection into Operating Bank for Contract\s*([A-Za-z0-9_-]+)/gi, 'إيداع بنكي مباشر بحساب البنك التشغيلي للشركة للعقد رقم $1');
+  text = text.replace(/Cash collection into Operating Bank/gi, 'إيداع بنكي مباشر بحساب البنك التشغيلي للشركة');
+  text = text.replace(/Customer advance cash received/gi, 'إيداع بنكي للدفعة المقدمة بحساب البنك');
+  text = text.replace(/Credit Deferred Contract Revenue/gi, 'إثبات دفعة الحجز كالتزام تعاقدي حتى التسليم');
+  text = text.replace(/Credit to Deferred Contract Revenue/gi, 'إثبات دفعة الحجز كالتزام تعاقدي حتى التسليم');
   text = text.replace(/Cash collection by hand into Treasury Safe for Contract\s*([A-Za-z0-9_-]+)/gi, 'توريد كاش باليد لخزينة الشركة للعقد رقم $1');
   text = text.replace(/Installment\s*#([A-Za-z0-9_-]+)\s*collected\s*by\s*hand\s*into\s*Treasury\s*Safe/gi, 'توريد القسط رقم $1 كاش باليد في خزينة الشركة');
   text = text.replace(/Installment\s*#([A-Za-z0-9_-]+)\s*cleared\s*from\s*Safe\s*custody/gi, 'صرف القسط رقم $1 من عهدة الخزينة');
-  text = text.replace(/Customer advance cash received/gi, 'استلام كاش الدفعة المقدمة من العميل');
+  text = localizeBuyerName(text);
   
   return text;
 };
@@ -212,8 +226,8 @@ export const JournalEntryPreview: React.FC<JournalEntryPreviewProps> = ({
         <thead>
           <tr>
             <th style={{ textAlign: isAr ? 'right' : 'left' }}>{isAr ? 'كود الحساب والاسم' : 'Account & Title'}</th>
-            <th style={{ textAlign: isAr ? 'left' : 'right' }}>{isAr ? 'مدين (Debit)' : 'Debit'}</th>
-            <th style={{ textAlign: isAr ? 'left' : 'right' }}>{isAr ? 'دائن (Credit)' : 'Credit'}</th>
+            <th style={{ textAlign: isAr ? 'left' : 'right' }}>{isAr ? 'مدين (له فلوس)' : 'Debit'}</th>
+            <th style={{ textAlign: isAr ? 'left' : 'right' }}>{isAr ? 'دائن (التزام عليه)' : 'Credit'}</th>
           </tr>
         </thead>
         <tbody>
@@ -251,7 +265,7 @@ export const JournalEntryPreview: React.FC<JournalEntryPreviewProps> = ({
       {/* Footer Totals */}
       <div className={styles.footerTotals}>
         <span style={{ color: isBalanced ? '#15803d' : '#dc2626', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-          {isBalanced ? (isAr ? '✓ القيد متوازن تماماً (0.00)' : '✓ Balanced (0.00 Delta)') : (isAr ? '⚠ غير متوازن' : '⚠ Unbalanced')}
+          {isBalanced ? (isAr ? '✓ القيد متوازن تماماً بالمليم' : '✓ Balanced (0.00 Delta)') : (isAr ? '⚠ غير متوازن' : '⚠ Unbalanced')}
         </span>
         <div style={{ display: 'flex', gap: '1.5rem', fontVariantNumeric: 'tabular-nums' }}>
           <span>{isAr ? 'إجمالي المدين:' : 'Dr:'} {totalDebit.formatEGP(isAr)}</span>

@@ -37,6 +37,7 @@ interface CashFlowForecastChartProps {
   isAr?: boolean;
   embeddedInStudio?: boolean;
   onInspectContract?: (contract: ERPContract) => void;
+  onNavigateToMonth?: (monthKey: string) => void;
 }
 
 interface MonthForecastData {
@@ -73,7 +74,8 @@ export const CashFlowForecastChart: React.FC<CashFlowForecastChartProps> = ({
   currentCashBalance = 0,
   isAr = true,
   embeddedInStudio = false,
-  onInspectContract
+  onInspectContract,
+  onNavigateToMonth
 }) => {
   // Configurable burn-rate percentage for construction disbursements (Default 45%)
   const [disbursementRate, setDisbursementRate] = useState<number>(45);
@@ -533,52 +535,86 @@ export const CashFlowForecastChart: React.FC<CashFlowForecastChartProps> = ({
         })}
       </div>
 
-      {/* 5. Selected Month Deal Breakdown Drawer Preview */}
-      {activeMonthData && activeMonthData.contractsDue.length > 0 && (
+      {/* 5. Selected Month Forwarding CTA */}
+      {activeMonthData && (
         <div style={{
           background: '#ffffff',
-          border: '1px solid #e2e8f0',
+          border: '1.5px solid #e2e8f0',
           borderRadius: '12px',
-          padding: '0.85rem 1.15rem',
+          padding: '0.85rem 1.25rem',
           display: 'flex',
-          flexDirection: 'column',
-          gap: '0.5rem'
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: '0.85rem',
+          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.03)'
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span style={{ fontSize: '0.76rem', fontWeight: 800, color: '#0f172a' }}>
-              {isAr ? `تفاصيل الأقساط المستحقة خلال (${activeMonthData.label}):` : `Contracts & Installments Due in (${activeMonthData.label}):`}
-            </span>
-            <span style={{ fontSize: '0.72rem', color: '#946f23', fontWeight: 700 }}>
-              {isAr ? 'إجمالي الشهر: ' : 'Total: '} {D(activeMonthData.inflows).formatEGP(isAr)}
-            </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+            <div style={{
+              width: '32px',
+              height: '32px',
+              borderRadius: '8px',
+              background: 'rgba(184, 144, 62, 0.1)',
+              color: '#946f23',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontWeight: 800
+            }}>
+              <Calendar size={16} />
+            </div>
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                <span style={{ fontSize: '0.85rem', fontWeight: 800, color: '#0f172a' }}>
+                  {activeMonthData.label}
+                </span>
+                <span style={{
+                  fontSize: '0.68rem',
+                  fontWeight: 700,
+                  background: 'rgba(184, 144, 62, 0.12)',
+                  color: '#946f23',
+                  padding: '0.1rem 0.45rem',
+                  borderRadius: '4px',
+                  fontVariantNumeric: 'tabular-nums'
+                }}>
+                  {activeMonthData.dealCount} {isAr ? 'أقساط مستحقة' : 'deals due'}
+                </span>
+              </div>
+              <span style={{ fontSize: '0.72rem', color: '#64748b' }}>
+                {isAr ? 'إجمالي المتحصل المتوقع: ' : 'Expected Inflows: '}
+                <strong style={{ color: '#15803d', fontVariantNumeric: 'tabular-nums' }}>
+                  {D(activeMonthData.inflows).formatEGP(isAr)}
+                </strong>
+              </span>
+            </div>
           </div>
 
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-            {activeMonthData.contractsDue.map((item, idx) => (
-              <div 
-                key={idx}
-                style={{
-                  background: '#f8fafc',
-                  border: '1px solid #e2e8f0',
-                  borderRadius: '8px',
-                  padding: '0.45rem 0.75rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.65rem',
-                  fontSize: '0.74rem'
-                }}
-              >
-                <span style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 800, color: '#946f23' }}>
-                  #{item.contractNumber}
-                </span>
-                <span style={{ color: '#0f172a', fontWeight: 600 }}>{item.buyerName}</span>
-                <span style={{ color: '#64748b' }}>({item.unitId})</span>
-                <strong style={{ color: '#15803d', fontVariantNumeric: 'tabular-nums' }}>
-                  {D(item.amount).formatEGP(isAr)}
-                </strong>
-              </div>
-            ))}
-          </div>
+          {onNavigateToMonth && (
+            <button
+              type="button"
+              onClick={() => onNavigateToMonth(activeMonthData.monthKey)}
+              style={{
+                background: '#0f172a',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: '8px',
+                padding: '0.5rem 1rem',
+                fontSize: '0.78rem',
+                fontWeight: 700,
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.45rem',
+                transition: 'all 0.15s ease',
+                boxShadow: '0 2px 6px rgba(15, 23, 42, 0.15)'
+              }}
+              onMouseEnter={e => e.currentTarget.style.background = '#1e293b'}
+              onMouseLeave={e => e.currentTarget.style.background = '#0f172a'}
+            >
+              <span>{isAr ? `عرض ومتابعة أقساط شهر (${activeMonthData.shortLabel}) في العمليات` : `View ${activeMonthData.shortLabel} Installments in Operations`}</span>
+              <ArrowUpRight size={14} />
+            </button>
+          )}
         </div>
       )}
 

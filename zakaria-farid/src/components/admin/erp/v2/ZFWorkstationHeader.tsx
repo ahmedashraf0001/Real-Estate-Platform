@@ -31,6 +31,8 @@ interface ZFWorkstationHeaderProps {
   onRefreshData: () => void;
   onExportExcel?: () => void;
   isMutating?: boolean;
+  realtimeStatus?: 'connected' | 'syncing' | 'reconnecting' | 'disconnected';
+  lastSyncTime?: Date | null;
   currentUser?: { email?: string } | null;
   onSignOut?: () => void;
   unreadNotificationsCount?: number;
@@ -50,6 +52,8 @@ export const ZFWorkstationHeader: React.FC<ZFWorkstationHeaderProps> = ({
   onRefreshData,
   onExportExcel,
   isMutating = false,
+  realtimeStatus = 'connected',
+  lastSyncTime,
   currentUser,
   onSignOut,
   unreadNotificationsCount = 0,
@@ -165,10 +169,45 @@ export const ZFWorkstationHeader: React.FC<ZFWorkstationHeaderProps> = ({
       <div className={styles.headerRight}>
         {/* Status Telemetry */}
         <div className={styles.telemetryBadge}>
-          <span 
-            className={styles.liveDot} 
-            title={isAr ? 'قاعدة البيانات متصلة بنشاط' : 'PostgreSQL Connected'}
-          />
+          {/* Real-Time Live Sync Indicator */}
+          <div 
+            style={{ 
+              display: 'inline-flex', 
+              alignItems: 'center', 
+              gap: '0.35rem',
+              cursor: 'pointer' 
+            }}
+            onClick={onRefreshData}
+            title={
+              realtimeStatus === 'connected' 
+                ? (isAr ? 'متصل بالسحابة لحظياً — التحديثات تصل فور وقوعها' : 'Connected to Cloud Realtime — Instant updates active')
+                : realtimeStatus === 'syncing'
+                  ? (isAr ? 'جاري مزامنة أحدث البيانات من السحابة...' : 'Syncing live data from cloud...')
+                  : (isAr ? 'جاري إعادة الاتصال بالقناة اللحظية...' : 'Reconnecting to realtime channel...')
+            }
+          >
+            <span 
+              className={styles.liveDot} 
+              style={{
+                background: realtimeStatus === 'connected' ? '#10b981' : realtimeStatus === 'syncing' ? '#f59e0b' : '#ef4444',
+                boxShadow: realtimeStatus === 'connected' ? '0 0 0 2px rgba(16, 185, 129, 0.25)' : 'none'
+              }}
+            />
+            <span style={{
+              fontSize: '0.68rem',
+              fontWeight: 800,
+              color: realtimeStatus === 'connected' ? '#047857' : realtimeStatus === 'syncing' ? '#b45309' : '#64748b',
+              letterSpacing: '-0.01em'
+            }}>
+              {realtimeStatus === 'connected' 
+                ? (isAr ? 'محدث لحظياً' : 'Live Sync')
+                : realtimeStatus === 'syncing'
+                  ? (isAr ? 'جاري المزامنة...' : 'Syncing...')
+                  : (isAr ? 'إعادة اتصال...' : 'Reconnecting...')}
+            </span>
+          </div>
+
+          <span className={styles.telemetrySep} />
 
           {activePeriod && (
             <span 
