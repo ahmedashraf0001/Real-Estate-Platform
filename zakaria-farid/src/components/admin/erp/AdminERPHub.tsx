@@ -74,7 +74,7 @@ import {
 // UI_BUILD.md §4 Shared Component Library
 import { StatusBadge } from '@/components/erp/StatusBadge';
 import { MoneyCell } from '@/components/erp/MoneyCell';
-import { JournalEntryPreview, localizeJournalDescription } from '@/components/erp/JournalEntryPreview';
+import { JournalEntryPreview, localizeJournalDescription, localizeBuyerName } from '@/components/erp/JournalEntryPreview';
 import { LockedPeriodBanner } from '@/components/erp/LockedPeriodBanner';
 import { OpenQuestionFlag } from '@/components/erp/OpenQuestionFlag';
 import { LegalVerificationTag } from '@/components/erp/LegalVerificationTag';
@@ -1183,12 +1183,47 @@ export default function AdminERPHub({ adminLocale, initialTab }: AdminERPHubProp
       setSelectedBuildingUnitNumber(undefined);
       await loadLiveData();
 
+      const localizedBuyer = isAr ? localizeBuyerName(buyerName) : buyerName;
+
       toast.success(
-        isAr ? `تم تحرير وحفظ العقد #${contractNumber} بنجاح` : `Contract #${contractNumber} created successfully`,
+        isAr ? `تم تحرير وحفظ العقد بنجاح` : `Contract created successfully`,
         {
-          description: isAr
-            ? `العميل: ${buyerName} • القيمة الإجمالية: ${D(contractValue).formatEGP(true)} • تم توليد جدول الأقساط وقيد اليومية`
-            : `Client: ${buyerName} • Gross Value: ${D(contractValue).formatEGP(false)} • Schedules & GL generated`,
+          description: (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem', marginTop: '0.35rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap' }}>
+                <span style={{
+                  background: 'rgba(184, 144, 62, 0.1)',
+                  color: '#946f23',
+                  border: '1px solid rgba(184, 144, 62, 0.22)',
+                  padding: '0.12rem 0.55rem',
+                  borderRadius: '6px',
+                  fontWeight: 900,
+                  fontSize: '0.84rem',
+                  fontVariantNumeric: 'tabular-nums'
+                }}>
+                  {D(contractValue).formatEGP(isAr)}
+                </span>
+                <span style={{
+                  background: '#f8fafc',
+                  color: '#475569',
+                  border: '1px solid #e2e8f0',
+                  padding: '0.12rem 0.5rem',
+                  borderRadius: '6px',
+                  fontSize: '0.72rem',
+                  fontWeight: 700,
+                  fontFamily: 'monospace'
+                }}>
+                  #{contractNumber}
+                </span>
+              </div>
+              <div style={{ fontSize: '0.76rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: '0.35rem', flexWrap: 'wrap' }}>
+                <span>{isAr ? 'العميل:' : 'Client:'}</span>
+                <strong style={{ color: '#0f172a', fontWeight: 800 }}>{localizedBuyer}</strong>
+                <span style={{ color: '#cbd5e1' }}>•</span>
+                <span>{isAr ? 'تم توليد جدول الأقساط وقيد اليومية' : 'Schedules & GL generated'}</span>
+              </div>
+            </div>
+          ),
           duration: 5000
         }
       );
@@ -1472,14 +1507,49 @@ export default function AdminERPHub({ adminLocale, initialTab }: AdminERPHubProp
         });
       }
 
+      const localizedBuyer = isAr ? localizeBuyerName(contract.buyer_name || 'عميل مباشر') : (contract.buyer_name || 'Direct Client');
+
       toast.success(
         isInstaPay
-          ? (isAr ? `تم تحصيل القسط #${schedule.tranche_number} عبر إنستاباي بنجاح` : `Installment #${schedule.tranche_number} collected via InstaPay`)
-          : (isAr ? `تم تحصيل القسط #${schedule.tranche_number} وتوريده للخزينة بنجاح` : `Installment #${schedule.tranche_number} collected into Safe`),
+          ? (isAr ? `تم تحصيل القسط #${schedule.tranche_number} عبر إنستاباي` : `Installment #${schedule.tranche_number} via InstaPay`)
+          : (isAr ? `تم توريد القسط #${schedule.tranche_number} للخزينة` : `Installment #${schedule.tranche_number} into Safe`),
         {
-          description: isAr
-            ? `العقد: #${contract.contract_number} • المبلغ: ${D(amount).formatEGP(true)} • تم إثبات القيد بدفتر اليومية`
-            : `Contract: #${contract.contract_number} • Amount: ${D(amount).formatEGP(false)} • GL entry posted`,
+          description: (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem', marginTop: '0.35rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap' }}>
+                <span style={{
+                  background: 'rgba(5, 150, 105, 0.1)',
+                  color: '#047857',
+                  border: '1px solid rgba(5, 150, 105, 0.22)',
+                  padding: '0.12rem 0.55rem',
+                  borderRadius: '6px',
+                  fontWeight: 900,
+                  fontSize: '0.84rem',
+                  fontVariantNumeric: 'tabular-nums'
+                }}>
+                  +{D(amount).formatEGP(isAr)}
+                </span>
+                <span style={{
+                  background: '#f8fafc',
+                  color: '#475569',
+                  border: '1px solid #e2e8f0',
+                  padding: '0.12rem 0.5rem',
+                  borderRadius: '6px',
+                  fontSize: '0.72rem',
+                  fontWeight: 700,
+                  fontFamily: 'monospace'
+                }}>
+                  #{contract.contract_number}
+                </span>
+              </div>
+              <div style={{ fontSize: '0.76rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: '0.35rem', flexWrap: 'wrap' }}>
+                <span>{isAr ? 'العميل:' : 'Client:'}</span>
+                <strong style={{ color: '#0f172a', fontWeight: 800 }}>{localizedBuyer}</strong>
+                <span style={{ color: '#cbd5e1' }}>•</span>
+                <span>{isAr ? 'تم ترحيل القيد لليومية بنجاح' : 'Posted to GL'}</span>
+              </div>
+            </div>
+          ),
           duration: 5000
         }
       );
@@ -1922,14 +1992,49 @@ export default function AdminERPHub({ adminLocale, initialTab }: AdminERPHubProp
 
       await loadLiveData(true);
 
+      const localizedBuyer = isAr ? localizeBuyerName(item.drawer_name || 'عميل مباشر') : (item.drawer_name || 'Direct Client');
+
       toast.success(
         isInstaPay
-          ? (isAr ? 'تم تحصيل القسط عبر إنستاباي وإثباته بحساب البنك بنجاح' : 'Installment collected via InstaPay successfully')
-          : (isAr ? 'تم تحصيل القسط وتوريد النقدية للخزينة بنجاح' : 'Installment collected and deposited into safe successfully'),
+          ? (isAr ? 'تم تحصيل القسط عبر إنستاباي' : 'Installment Collected via InstaPay')
+          : (isAr ? 'تم توريد القسط إلى الخزينة' : 'Installment Deposited into Safe'),
         {
-          description: isAr
-            ? `${isInstaPay ? 'مرجع' : 'إيصال'} #${receiptNo} • المبلغ: ${D(amount).formatEGP(true)} • العميل: ${item.drawer_name}`
-            : `Ref #${receiptNo} • Amount: ${D(amount).formatEGP(false)} • Client: ${item.drawer_name}`,
+          description: (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem', marginTop: '0.35rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap' }}>
+                <span style={{
+                  background: 'rgba(5, 150, 105, 0.1)',
+                  color: '#047857',
+                  border: '1px solid rgba(5, 150, 105, 0.22)',
+                  padding: '0.12rem 0.55rem',
+                  borderRadius: '6px',
+                  fontWeight: 900,
+                  fontSize: '0.84rem',
+                  fontVariantNumeric: 'tabular-nums'
+                }}>
+                  +{D(amount).formatEGP(isAr)}
+                </span>
+                <span style={{
+                  background: '#f8fafc',
+                  color: '#475569',
+                  border: '1px solid #e2e8f0',
+                  padding: '0.12rem 0.5rem',
+                  borderRadius: '6px',
+                  fontSize: '0.72rem',
+                  fontWeight: 700,
+                  fontFamily: 'monospace'
+                }}>
+                  #{receiptNo}
+                </span>
+              </div>
+              <div style={{ fontSize: '0.76rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: '0.35rem', flexWrap: 'wrap' }}>
+                <span>{isAr ? 'العميل:' : 'Client:'}</span>
+                <strong style={{ color: '#0f172a', fontWeight: 800 }}>{localizedBuyer}</strong>
+                <span style={{ color: '#cbd5e1' }}>•</span>
+                <span>{isInstaPay ? (isAr ? 'حساب البنك (102000)' : 'Bank Account (102000)') : (isAr ? 'الخزينة الرئيسية (101000)' : 'Cash Safe (101000)')}</span>
+              </div>
+            </div>
+          ),
           duration: 5000
         }
       );

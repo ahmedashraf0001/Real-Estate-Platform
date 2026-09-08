@@ -30,8 +30,9 @@ export default async function FinOSLayout({ children }: { children: React.ReactN
       <body style={{ margin: 0, padding: 0, height: '100vh', width: '100vw', overflow: 'hidden', background: '#f8f9fa', color: '#0f172a', fontFamily: "'ThmanyahSans', 'Cairo', 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif", WebkitFontSmoothing: 'antialiased' }}>
         {children}
         <Toaster
-          position="top-center"
-          offset={32}
+          position="bottom-left"
+          offset={28}
+          gap={10}
           expand={true}
           dir="auto"
           richColors
@@ -39,7 +40,6 @@ export default async function FinOSLayout({ children }: { children: React.ReactN
           toastOptions={{
             style: {
               fontFamily: "'ThmanyahSans', 'Cairo', 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
-              boxShadow: '0 20px 45px -8px rgba(15, 23, 42, 0.28), 0 0 0 1px rgba(15, 23, 42, 0.08)',
             },
           }}
         />

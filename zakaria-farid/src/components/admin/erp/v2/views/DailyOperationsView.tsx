@@ -878,12 +878,44 @@ export const DailyOperationsView: React.FC<DailyOperationsViewProps> = ({
 
       toast.success(
         isAr 
-          ? `تم تسجيل المصروف على مشروع (${propTitle}) بنجاح` 
-          : `Project cost recorded for (${propTitle})`,
+          ? `تم تسجيل مصروف المشروع بنجاح` 
+          : `Project cost recorded successfully`,
         {
-          description: isAr 
-            ? `المبلغ: ${D(expenseAmount).formatEGP(true)} • البند: ${itemName} • طريقة الدفع: ${paymentLabel}`
-            : `Amount: ${D(expenseAmount).formatEGP(false)} • Item: ${itemName} • Method: ${paymentLabel}`,
+          description: (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem', marginTop: '0.35rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap' }}>
+                <span style={{
+                  background: 'rgba(180, 83, 9, 0.1)',
+                  color: '#b45309',
+                  border: '1px solid rgba(180, 83, 9, 0.22)',
+                  padding: '0.12rem 0.55rem',
+                  borderRadius: '6px',
+                  fontWeight: 900,
+                  fontSize: '0.84rem',
+                  fontVariantNumeric: 'tabular-nums'
+                }}>
+                  -{D(expenseAmount).formatEGP(isAr)}
+                </span>
+                <span style={{
+                  background: '#f8fafc',
+                  color: '#475569',
+                  border: '1px solid #e2e8f0',
+                  padding: '0.12rem 0.5rem',
+                  borderRadius: '6px',
+                  fontSize: '0.72rem',
+                  fontWeight: 700
+                }}>
+                  {propTitle}
+                </span>
+              </div>
+              <div style={{ fontSize: '0.76rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: '0.35rem', flexWrap: 'wrap' }}>
+                <span>{isAr ? 'البند:' : 'Item:'}</span>
+                <strong style={{ color: '#0f172a', fontWeight: 800 }}>{itemName}</strong>
+                <span style={{ color: '#cbd5e1' }}>•</span>
+                <span>{paymentLabel}</span>
+              </div>
+            </div>
+          ),
           duration: 5000
         }
       );

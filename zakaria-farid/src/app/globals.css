@@ -714,13 +714,18 @@ html[lang="ar"] {
 [data-sonner-toast] {
   font-family: var(--font-body, 'ThmanyahSans', 'Cairo', 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif) !important;
   border-radius: 14px !important;
-  box-shadow: 0 20px 45px -8px rgba(15, 23, 42, 0.28), 0 0 0 1px rgba(15, 23, 42, 0.08) !important;
-  padding: 14px 18px !important;
-  font-size: 0.875rem !important;
+  box-shadow: 0 20px 45px -12px rgba(15, 23, 42, 0.18), 0 4px 14px -2px rgba(15, 23, 42, 0.08), 0 0 0 1px rgba(15, 23, 42, 0.05) !important;
+  padding: 13px 18px !important;
+  font-size: 0.86rem !important;
   font-weight: 500 !important;
   letter-spacing: -0.01em !important;
-  backdrop-filter: blur(12px) !important;
-  -webkit-backdrop-filter: blur(12px) !important;
+  background: #ffffff !important;
+  border: 1px solid rgba(15, 23, 42, 0.08) !important;
+  color: #0f172a !important;
+  position: relative !important;
+  overflow: hidden !important;
+  min-width: 340px !important;
+  max-width: 440px !important;
 }
 
 /* Base / Default Neutral Toast */
@@ -728,152 +733,160 @@ html[lang="ar"] {
 [data-sonner-toast][data-type="default"],
 [data-sonner-toast][data-type="normal"] {
   background: #ffffff !important;
-  border: 1.5px solid rgba(184, 144, 62, 0.35) !important;
+  border: 1px solid rgba(15, 23, 42, 0.08) !important;
+  border-inline-start: 4px solid #946f23 !important;
   color: #0f172a !important;
 }
 
-/* Success Toast - Cash / Success Emerald (#059669) */
+/* Success Toast - Luxury White Surface with Crisp Emerald Leading Edge */
 [data-sonner-toast][data-type="success"] {
-  background: #f0fdf4 !important;
-  border: 1.5px solid #059669 !important;
-  color: #064e3b !important;
+  background: #ffffff !important;
+  border: 1px solid rgba(15, 23, 42, 0.08) !important;
+  border-inline-start: 4px solid #059669 !important;
+  color: #0f172a !important;
 }
 [data-sonner-toast][data-type="success"] [data-title] {
-  color: #064e3b !important;
-  font-weight: 700 !important;
+  color: #0f172a !important;
+  font-weight: 800 !important;
+  font-size: 0.88rem !important;
 }
 [data-sonner-toast][data-type="success"] [data-description] {
-  color: #047857 !important;
-  font-weight: 600 !important;
+  color: #475569 !important;
+  font-weight: 500 !important;
+  font-size: 0.78rem !important;
 }
 [data-sonner-toast][data-type="success"] [data-icon] {
   color: #059669 !important;
+  background: rgba(5, 150, 105, 0.1) !important;
+  border-radius: 50% !important;
+  width: 28px !important;
+  height: 28px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex-shrink: 0 !important;
 }
 
-/* Error Toast - Executive Crimson (#dc2626) */
+/* Error Toast - Luxury White Surface with Crimson Leading Edge */
 [data-sonner-toast][data-type="error"] {
-  background: #fef2f2 !important;
-  border: 1.5px solid #dc2626 !important;
-  color: #7f1d1d !important;
+  background: #ffffff !important;
+  border: 1px solid rgba(15, 23, 42, 0.08) !important;
+  border-inline-start: 4px solid #dc2626 !important;
+  color: #0f172a !important;
 }
 [data-sonner-toast][data-type="error"] [data-title] {
-  color: #7f1d1d !important;
-  font-weight: 700 !important;
+  color: #0f172a !important;
+  font-weight: 800 !important;
+  font-size: 0.88rem !important;
 }
 [data-sonner-toast][data-type="error"] [data-description] {
-  color: #991b1b !important;
-  font-weight: 600 !important;
+  color: #64748b !important;
+  font-weight: 500 !important;
+  font-size: 0.78rem !important;
 }
 [data-sonner-toast][data-type="error"] [data-icon] {
   color: #dc2626 !important;
+  background: rgba(220, 38, 38, 0.1) !important;
+  border-radius: 50% !important;
+  width: 28px !important;
+  height: 28px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex-shrink: 0 !important;
 }
 
-/* Info Toast - Primary Brand Gold (#b8903e) */
+/* Info Toast - Brand Gold Leading Edge */
 [data-sonner-toast][data-type="info"] {
-  background: #fffdf7 !important;
-  border: 1.5px solid #b8903e !important;
-  color: #5c4308 !important;
+  background: #ffffff !important;
+  border: 1px solid rgba(15, 23, 42, 0.08) !important;
+  border-inline-start: 4px solid #946f23 !important;
+  color: #0f172a !important;
 }
 [data-sonner-toast][data-type="info"] [data-title] {
-  color: #453205 !important;
-  font-weight: 700 !important;
+  color: #0f172a !important;
+  font-weight: 800 !important;
+  font-size: 0.88rem !important;
 }
 [data-sonner-toast][data-type="info"] [data-description] {
-  color: #785210 !important;
-  font-weight: 600 !important;
+  color: #475569 !important;
+  font-weight: 500 !important;
+  font-size: 0.78rem !important;
 }
 [data-sonner-toast][data-type="info"] [data-icon] {
-  color: #b8903e !important;
+  color: #946f23 !important;
+  background: rgba(184, 144, 62, 0.1) !important;
+  border-radius: 50% !important;
+  width: 28px !important;
+  height: 28px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex-shrink: 0 !important;
 }
 
-/* Warning Toast - Executive Amber (#d97706) */
+/* Warning Toast - Executive Amber Leading Edge */
 [data-sonner-toast][data-type="warning"] {
-  background: #fffbeb !important;
-  border: 1.5px solid #d97706 !important;
-  color: #78350f !important;
+  background: #ffffff !important;
+  border: 1px solid rgba(15, 23, 42, 0.08) !important;
+  border-inline-start: 4px solid #d97706 !important;
+  color: #0f172a !important;
 }
 [data-sonner-toast][data-type="warning"] [data-title] {
-  color: #78350f !important;
-  font-weight: 700 !important;
+  color: #0f172a !important;
+  font-weight: 800 !important;
+  font-size: 0.88rem !important;
 }
 [data-sonner-toast][data-type="warning"] [data-description] {
-  color: #b45309 !important;
-  font-weight: 600 !important;
+  color: #475569 !important;
+  font-weight: 500 !important;
+  font-size: 0.78rem !important;
 }
 [data-sonner-toast][data-type="warning"] [data-icon] {
   color: #d97706 !important;
+  background: rgba(217, 119, 6, 0.1) !important;
+  border-radius: 50% !important;
+  width: 28px !important;
+  height: 28px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex-shrink: 0 !important;
 }
 
 /* Dark Theme Overrides for Executive Suite */
-[data-theme="dark"] [data-sonner-toast]:not([data-type]),
-[data-theme="dark"] [data-sonner-toast][data-type="default"],
-[data-theme="dark"] [data-sonner-toast][data-type="normal"],
-[data-sonner-toaster][data-sonner-theme="dark"] [data-sonner-toast]:not([data-type]),
-[data-sonner-toaster][data-sonner-theme="dark"] [data-sonner-toast][data-type="default"],
-[data-sonner-toaster][data-sonner-theme="dark"] [data-sonner-toast][data-type="normal"] {
+[data-theme="dark"] [data-sonner-toast],
+[data-sonner-toaster][data-sonner-theme="dark"] [data-sonner-toast] {
   background: #0f172a !important;
-  border: 1.5px solid rgba(212, 175, 55, 0.45) !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+  box-shadow: 0 20px 45px -12px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.08) !important;
   color: #f8fafc !important;
 }
 
-[data-theme="dark"] [data-sonner-toast][data-type="success"],
-[data-sonner-toaster][data-sonner-theme="dark"] [data-sonner-toast][data-type="success"] {
-  background: #022c22 !important;
-  border: 1.5px solid #059669 !important;
-  color: #ecfdf5 !important;
-}
-[data-theme="dark"] [data-sonner-toast][data-type="success"] [data-title],
-[data-sonner-toaster][data-sonner-theme="dark"] [data-sonner-toast][data-type="success"] [data-title] {
-  color: #ecfdf5 !important;
-}
-[data-theme="dark"] [data-sonner-toast][data-type="success"] [data-description],
-[data-sonner-toaster][data-sonner-theme="dark"] [data-sonner-toast][data-type="success"] [data-description] {
-  color: #6ee7b7 !important;
+[data-theme="dark"] [data-sonner-toast] [data-title],
+[data-sonner-toaster][data-sonner-theme="dark"] [data-sonner-toast] [data-title] {
+  color: #f8fafc !important;
 }
 
-[data-theme="dark"] [data-sonner-toast][data-type="error"],
-[data-sonner-toaster][data-sonner-theme="dark"] [data-sonner-toast][data-type="error"] {
-  background: #450a0a !important;
-  border: 1.5px solid #dc2626 !important;
-  color: #fef2f2 !important;
-}
-[data-theme="dark"] [data-sonner-toast][data-type="error"] [data-title],
-[data-sonner-toaster][data-sonner-theme="dark"] [data-sonner-toast][data-type="error"] [data-title] {
-  color: #fef2f2 !important;
-}
-[data-theme="dark"] [data-sonner-toast][data-type="error"] [data-description],
-[data-sonner-toaster][data-sonner-theme="dark"] [data-sonner-toast][data-type="error"] [data-description] {
-  color: #fca5a5 !important;
+[data-theme="dark"] [data-sonner-toast] [data-description],
+[data-sonner-toaster][data-sonner-theme="dark"] [data-sonner-toast] [data-description] {
+  color: #94a3b8 !important;
 }
 
-[data-theme="dark"] [data-sonner-toast][data-type="info"],
-[data-sonner-toaster][data-sonner-theme="dark"] [data-sonner-toast][data-type="info"] {
-  background: #1c1507 !important;
-  border: 1.5px solid #d4af37 !important;
-  color: #fef9c3 !important;
-}
-[data-theme="dark"] [data-sonner-toast][data-type="info"] [data-title],
-[data-sonner-toaster][data-sonner-theme="dark"] [data-sonner-toast][data-type="info"] [data-title] {
-  color: #fef9c3 !important;
-}
-[data-theme="dark"] [data-sonner-toast][data-type="info"] [data-description],
-[data-sonner-toaster][data-sonner-theme="dark"] [data-sonner-toast][data-type="info"] [data-description] {
-  color: #fde047 !important;
+[data-theme="dark"] [data-sonner-toast][data-type="success"] {
+  border-inline-start-color: #10b981 !important;
 }
 
-[data-theme="dark"] [data-sonner-toast][data-type="warning"],
-[data-sonner-toaster][data-sonner-theme="dark"] [data-sonner-toast][data-type="warning"] {
-  background: #271403 !important;
-  border: 1.5px solid #d97706 !important;
-  color: #fef3c7 !important;
+[data-theme="dark"] [data-sonner-toast][data-type="error"] {
+  border-inline-start-color: #ef4444 !important;
 }
-[data-theme="dark"] [data-sonner-toast][data-type="warning"] [data-title],
-[data-sonner-toaster][data-sonner-theme="dark"] [data-sonner-toast][data-type="warning"] [data-title] {
-  color: #fef3c7 !important;
+
+[data-theme="dark"] [data-sonner-toast][data-type="info"] {
+  border-inline-start-color: #d4af37 !important;
 }
-[data-theme="dark"] [data-sonner-toast][data-type="warning"] [data-description],
-[data-sonner-toaster][data-sonner-theme="dark"] [data-sonner-toast][data-type="warning"] [data-description] {
-  color: #fcd34d !important;
+
+[data-theme="dark"] [data-sonner-toast][data-type="warning"] {
+  border-inline-start-color: #f59e0b !important;
 }
 
 /* Toast Typography & Content */
