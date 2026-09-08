@@ -19,7 +19,8 @@ import {
   Wallet,
   AlertCircle,
   Smartphone,
-  Banknote
+  Banknote,
+  Info
 } from 'lucide-react';
 import { Property } from '@/lib/supabase/types';
 import { D } from '@/lib/erp/math';
@@ -92,6 +93,9 @@ export const NewPartnerProfileModal: React.FC<NewPartnerProfileModalProps> = ({
   // Notes
   const [notes, setNotes] = useState<string>('');
 
+  // Role Comparison Popover State
+  const [showRoleComparisonModal, setShowRoleComparisonModal] = useState<boolean>(false);
+
   const roleSelectItems = useMemo<ZFCustomSelectItem<string>[]>(() => [
     {
       value: 'equity_partner',
@@ -104,7 +108,11 @@ export const NewPartnerProfileModal: React.FC<NewPartnerProfileModalProps> = ({
       badgeTextColor: '#946f23',
       icon: Users,
       iconBg: 'rgba(148, 111, 35, 0.1)',
-      iconColor: '#946f23'
+      iconColor: '#946f23',
+      tooltipTitleAr: 'شريك ممول بالمشروع (حصة رأسمال وأرباح)',
+      tooltipTitleEn: 'Project Equity Partner',
+      tooltipAr: 'يدخل برأس مال نقدي كشريك في كامل المشروع بحصة مئوية. يتحمل نسبته من تكاليف وخامات المباني (حساب 150000)، وتُحسب حصته تلقائياً من كل قسط محصل من العملاء فوراً بالخزنة.',
+      tooltipEn: 'Capital investor with an equity share. Absorbs proportional building WIP costs and automatically receives proportional share of customer installment collections.'
     },
     {
       value: 'silent_financier',
@@ -117,7 +125,11 @@ export const NewPartnerProfileModal: React.FC<NewPartnerProfileModalProps> = ({
       badgeTextColor: '#1d4ed8',
       icon: Coins,
       iconBg: 'rgba(29, 78, 216, 0.1)',
-      iconColor: '#1d4ed8'
+      iconColor: '#1d4ed8',
+      tooltipTitleAr: 'ممول صامت (عوائد استثمارية دورية)',
+      tooltipTitleEn: 'Silent Financier',
+      tooltipAr: 'يضخ تمويلاً نقدياً لمراحل إنشائية معينة (مثل سقف خرسانة أو تشطيبات) دون تدخل في إدارة المشروع أو البيع، وله عوائد استثمارية دورية متفق عليها ورأس مال مسترد.',
+      tooltipEn: 'Provides capital funding for specific project milestones without management involvement, earning periodic investment returns and capital payback.'
     },
     {
       value: 'land_partner',
@@ -130,9 +142,72 @@ export const NewPartnerProfileModal: React.FC<NewPartnerProfileModalProps> = ({
       badgeTextColor: '#047857',
       icon: Building2,
       iconBg: 'rgba(4, 120, 87, 0.1)',
-      iconColor: '#047857'
+      iconColor: '#047857',
+      tooltipTitleAr: 'شريك مساهم بالأرض (حصة من المبيعات)',
+      tooltipTitleEn: 'Land / Ground Partner',
+      tooltipAr: 'صاحب الأرض الأصلية التي يُقام عليها المشروع بنظام المشاركة مع المطور. يحصل على نسبة متفق عليها من حصيلة مبيعات الشقق والتحصيلات، ولا يتحمل مصاريف خامات البناء والمقاولين.',
+      tooltipEn: 'Original landowner under joint venture. Receives an agreed percentage of apartment sales and collections, without bearing construction WIP expenses.'
     }
   ], [isAr]);
+
+  const activeRoleItem = useMemo(() => {
+    return roleSelectItems.find(item => item.value === role) || roleSelectItems[0];
+  }, [roleSelectItems, role]);
+
+  const roleGuideDetails = useMemo(() => {
+    switch (role) {
+      case 'equity_partner':
+        return {
+          titleAr: 'شريك ممول بالمشروع (حصة رأسمال وأرباح)',
+          titleEn: 'Project Equity Partner',
+          pointsAr: [
+            'يتحمل نسبته من تكاليف وخامات المباني (حساب 150000 - مشروعات تحت التنفيذ).',
+            'توزيعات أرباح دورية ومخرجات تصفية المشروع بحسب حصته التعاقدية.'
+          ],
+          pointsEn: [
+            'Bears proportional share of building WIP and materials costs (Account 150000).',
+            'Entitled to periodic dividend distributions and net proceeds per contract.'
+          ],
+          accentBg: 'linear-gradient(135deg, #fffdf8 0%, #fbf6ec 100%)',
+          borderColor: 'rgba(184, 144, 62, 0.25)',
+          textColor: '#785210'
+        };
+      case 'silent_financier':
+        return {
+          titleAr: 'ممول صامت (عوائد استثمارية دورية)',
+          titleEn: 'Silent Financier',
+          pointsAr: [
+            'تمويل مرحلي محدد دون تدخل في إدارة البناء أو مخاطر تسويق الشقق.',
+            'عوائد استثمارية دورية متفق عليها ورأس مال مسترد بأولوية سداد.'
+          ],
+          pointsEn: [
+            'Targeted milestone funding without construction management or sales marketing risks.',
+            'Pre-agreed periodic investment returns and prioritized capital payback.'
+          ],
+          accentBg: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
+          borderColor: 'rgba(29, 78, 216, 0.2)',
+          textColor: '#1e3a8a'
+        };
+      case 'land_partner':
+        return {
+          titleAr: 'شريك مساهم بالأرض (حصة من المبيعات)',
+          titleEn: 'Land / Ground Partner',
+          pointsAr: [
+            'شراكة عينية بالأرض الأصلية؛ إعفاء كامل من مصاريف ومقاولات وخامات البناء.',
+            'استحقاق نسبة مئوية مباشرة من حصيلة مبيعات وتعاقدات شقق المشروع.'
+          ],
+          pointsEn: [
+            'In-kind land contribution; zero liability for construction or contractor costs.',
+            'Direct entitlement to an agreed percentage of total apartment sales revenue.'
+          ],
+          accentBg: 'linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%)',
+          borderColor: 'rgba(4, 120, 87, 0.2)',
+          textColor: '#065f46'
+        };
+      default:
+        return null;
+    }
+  }, [role]);
 
   const propertySelectItems = useMemo<ZFCustomSelectItem<string>[]>(() => [
     {
@@ -357,7 +432,7 @@ export const NewPartnerProfileModal: React.FC<NewPartnerProfileModalProps> = ({
               <span>{isAr ? '1. البيانات الشخصية والتعريفية للشريك' : '1. Personal & Identity Details'}</span>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.75rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.75rem', alignItems: 'start' }}>
               {/* Full Name */}
               <div>
                 <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 700, color: '#334155', marginBottom: '0.35rem' }}>
@@ -388,10 +463,116 @@ export const NewPartnerProfileModal: React.FC<NewPartnerProfileModalProps> = ({
               </div>
 
               {/* Partner Role */}
-              <div>
-                <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 700, color: '#334155', marginBottom: '0.35rem' }}>
-                  {isAr ? 'صفة وطبيعة الشراكة *' : 'Partner Role *'}
-                </label>
+              <div style={{ position: 'relative' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.35rem', position: 'relative' }}>
+                  <label style={{ fontSize: '0.74rem', fontWeight: 700, color: '#334155' }}>
+                    {isAr ? 'صفة وطبيعة الشراكة *' : 'Partner Role *'}
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setShowRoleComparisonModal(prev => !prev)}
+                    title={
+                      isAr
+                        ? 'مقارنة سريعة بين أنواع الشراكة:\n• شريك ممول: يشارك برأس المال والأرباح ويتحمل تكاليف المباني.\n• ممول صامت: تمويل نقدي بعوائد متفق عليها دون إدارة أو مخاطر تشغيل.\n• شريك بالأرض: تقديم الأرض مقابل نسبة من المبيعات دون مصاريف بناء.'
+                        : 'Quick Role Comparison:\n• Equity Partner: Capital & profits, bears building WIP costs.\n• Silent Financier: Capital funding with agreed returns, zero management.\n• Land Partner: Land plot for sales share, zero construction expenses.'
+                    }
+                    style={{
+                      background: showRoleComparisonModal ? 'rgba(184, 144, 62, 0.12)' : 'transparent',
+                      border: 'none',
+                      padding: '0.1rem 0.35rem',
+                      borderRadius: '4px',
+                      color: '#946f23',
+                      fontSize: '0.68rem',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      textDecoration: 'underline decoration-dotted',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.2rem',
+                      transition: 'all 0.15s ease'
+                    }}
+                  >
+                    {isAr ? '(؟ ما الفرق بين أنواع الشراكة؟)' : '(? Compare Roles)'}
+                  </button>
+
+                  {/* Role Comparison Popover */}
+                  {showRoleComparisonModal && (
+                    <div
+                      style={{
+                        position: 'absolute',
+                        top: 'calc(100% + 4px)',
+                        left: isAr ? 0 : 'auto',
+                        right: isAr ? 'auto' : 0,
+                        width: '320px',
+                        maxWidth: '90vw',
+                        background: '#ffffff',
+                        border: '1.5px solid #d4af37',
+                        borderRadius: '10px',
+                        boxShadow: '0 10px 25px -5px rgba(15, 23, 42, 0.2)',
+                        padding: '0.75rem',
+                        zIndex: 100,
+                        direction: isAr ? 'rtl' : 'ltr',
+                        textAlign: isAr ? 'right' : 'left'
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem', borderBottom: '1px solid #f1f5f9', paddingBottom: '0.35rem' }}>
+                        <span style={{ fontSize: '0.74rem', fontWeight: 800, color: '#0f172a' }}>
+                          {isAr ? 'مقارنة سريعة بين أنواع الشراكة الثلاثة' : 'Quick Role Comparison'}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setShowRoleComparisonModal(false)}
+                          style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '0 2px' }}
+                        >
+                          <X size={14} />
+                        </button>
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
+                        {roleSelectItems.map((item) => (
+                          <div
+                            key={item.value}
+                            onClick={() => {
+                              setRole(item.value as any);
+                              setShowRoleComparisonModal(false);
+                            }}
+                            style={{
+                              padding: '0.45rem 0.55rem',
+                              borderRadius: '6px',
+                              background: role === item.value ? 'rgba(184, 144, 62, 0.08)' : '#f8fafc',
+                              border: role === item.value ? '1px solid rgba(184, 144, 62, 0.4)' : '1px solid #e2e8f0',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              flexDirection: 'column',
+                              gap: '0.2rem'
+                            }}
+                          >
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                              <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#0f172a' }}>
+                                {isAr ? (item.tooltipTitleAr || item.labelAr) : (item.tooltipTitleEn || item.labelEn)}
+                              </span>
+                              {item.badge && (
+                                <span style={{
+                                  fontSize: '0.62rem',
+                                  fontWeight: 800,
+                                  padding: '0.1rem 0.35rem',
+                                  borderRadius: '3px',
+                                  background: item.badgeBg,
+                                  color: item.badgeTextColor
+                                }}>
+                                  {item.badge}
+                                </span>
+                              )}
+                            </div>
+                            <p style={{ margin: 0, fontSize: '0.68rem', color: '#64748b', lineHeight: 1.35 }}>
+                              {isAr ? item.tooltipAr : (item.tooltipEn || item.tooltipAr)}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
                 <ZFCustomSelect<string>
                   value={role}
                   onChange={(val) => setRole(val as any)}
@@ -401,6 +582,91 @@ export const NewPartnerProfileModal: React.FC<NewPartnerProfileModalProps> = ({
                   isAr={isAr}
                   searchable={false}
                 />
+
+                {/* Live Partnership Nature Guide Card */}
+                {roleGuideDetails && activeRoleItem && (
+                  <div
+                    style={{
+                      marginTop: '0.55rem',
+                      borderRadius: '10px',
+                      border: `1.5px solid ${roleGuideDetails.borderColor}`,
+                      background: roleGuideDetails.accentBg,
+                      padding: '0.65rem 0.8rem',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '0.45rem',
+                      boxShadow: '0 2px 6px rgba(0, 0, 0, 0.03)'
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                        {activeRoleItem.icon && (
+                          <div
+                            style={{
+                              width: '24px',
+                              height: '24px',
+                              borderRadius: '6px',
+                              background: activeRoleItem.iconBg || 'rgba(148, 111, 35, 0.1)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              flexShrink: 0
+                            }}
+                          >
+                            <activeRoleItem.icon size={13} color={activeRoleItem.iconColor || '#946f23'} />
+                          </div>
+                        )}
+                        <span style={{ fontSize: '0.74rem', fontWeight: 800, color: '#0f172a' }}>
+                          {isAr ? roleGuideDetails.titleAr : roleGuideDetails.titleEn}
+                        </span>
+                      </div>
+                      {activeRoleItem.badge && (
+                        <span
+                          style={{
+                            fontSize: '0.65rem',
+                            fontWeight: 800,
+                            padding: '0.15rem 0.45rem',
+                            borderRadius: '4px',
+                            background: activeRoleItem.badgeBg || 'rgba(148, 111, 35, 0.08)',
+                            color: activeRoleItem.badgeTextColor || '#946f23',
+                            border: `1px solid ${activeRoleItem.badgeTextColor || '#946f23'}33`,
+                            whiteSpace: 'nowrap'
+                          }}
+                        >
+                          {activeRoleItem.badge}
+                        </span>
+                      )}
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', padding: '0 0.1rem' }}>
+                      {(isAr ? roleGuideDetails.pointsAr : roleGuideDetails.pointsEn).map((point, idx) => (
+                        <div key={idx} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.35rem', fontSize: '0.7rem', color: '#334155', lineHeight: 1.35 }}>
+                          <span style={{ color: roleGuideDetails.textColor, fontWeight: 700, flexShrink: 0 }}>•</span>
+                          <span>{point}</span>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Automated Collection Math Highlight */}
+                    <div
+                      style={{
+                        marginTop: '0.15rem',
+                        padding: '0.45rem 0.6rem',
+                        borderRadius: '6px',
+                        background: '#ffffff',
+                        border: `1px dashed ${roleGuideDetails.borderColor}`,
+                        fontSize: '0.69rem',
+                        color: roleGuideDetails.textColor,
+                        lineHeight: 1.4,
+                        fontWeight: 600
+                      }}
+                    >
+                      {isAr 
+                        ? '💡 يتم احتساب وإضافة حصته من الأقساط تلقائياً ولحظياً بمجرد تحصيل كل قسط بالخزنة دون الحاجة لأي حسابات يدوية.' 
+                        : '💡 Installment collections are automatically credited in real time to the partner balance without manual entry.'}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 

@@ -9,7 +9,8 @@ import {
   Building2, 
   Layers, 
   Sparkles,
-  Plus
+  Plus,
+  Info
 } from 'lucide-react';
 import { D } from '@/lib/erp/math';
 
@@ -27,6 +28,10 @@ export interface ZFCustomSelectItem<T = string> {
   icon?: React.ElementType;
   iconColor?: string;
   iconBg?: string;
+  tooltipTitleAr?: string;
+  tooltipTitleEn?: string;
+  tooltipAr?: string;
+  tooltipEn?: string;
 }
 
 export const getBadgeStyle = (item: { badgeColor?: string; badgeBg?: string; badgeTextColor?: string; iconColor?: string }) => {
@@ -97,6 +102,11 @@ export function ZFCustomSelect<T = string>({
 }: ZFCustomSelectProps<T>) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [hoveredTooltip, setHoveredTooltip] = useState<{
+    item: ZFCustomSelectItem<T>;
+    top: number;
+    left: number;
+  } | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
@@ -105,6 +115,7 @@ export function ZFCustomSelect<T = string>({
     const handleClickOutside = (e: MouseEvent) => {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
         setIsOpen(false);
+        setHoveredTooltip(null);
       }
     };
     if (isOpen) {
@@ -121,8 +132,50 @@ export function ZFCustomSelect<T = string>({
       setTimeout(() => searchInputRef.current?.focus(), 50);
     } else if (!isOpen) {
       setSearchQuery('');
+      setHoveredTooltip(null);
     }
   }, [isOpen, searchable]);
+
+  const handleItemMouseEnter = (item: ZFCustomSelectItem<T>, e: React.MouseEvent<HTMLDivElement>) => {
+    if (item.tooltipAr || item.tooltipEn) {
+      const rect = e.currentTarget.getBoundingClientRect();
+      const cardWidth = 280;
+      const padding = 10;
+      const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 1200;
+      const viewportHeight = typeof window !== 'undefined' ? window.innerHeight : 800;
+
+      let left = 0;
+      if (isAr) {
+        if (rect.right + cardWidth + padding <= viewportWidth) {
+          left = rect.right + padding;
+        } else if (rect.left - cardWidth - padding >= 0) {
+          left = rect.left - cardWidth - padding;
+        } else {
+          left = Math.max(padding, Math.min(rect.left, viewportWidth - cardWidth - padding));
+        }
+      } else {
+        if (rect.right + cardWidth + padding <= viewportWidth) {
+          left = rect.right + padding;
+        } else if (rect.left - cardWidth - padding >= 0) {
+          left = rect.left - cardWidth - padding;
+        } else {
+          left = Math.max(padding, Math.min(rect.left, viewportWidth - cardWidth - padding));
+        }
+      }
+
+      const cardEstHeight = 120;
+      let top = rect.top - 4;
+      if (top + cardEstHeight > viewportHeight - padding) {
+        top = Math.max(padding, viewportHeight - cardEstHeight - padding);
+      }
+
+      setHoveredTooltip({
+        item,
+        top,
+        left
+      });
+    }
+  };
 
   // Normalize sections
   const allSections: ZFCustomSelectSection<T>[] = useMemo(() => {
@@ -379,7 +432,10 @@ export function ZFCustomSelect<T = string>({
           )}
 
           {/* Scrollable Sectioned Items List */}
-          <div style={{ overflowY: 'auto', flex: 1, padding: '0.25rem 0' }}>
+          <div 
+            onScroll={() => setHoveredTooltip(null)}
+            style={{ overflowY: 'auto', flex: 1, padding: '0.25rem 0' }}
+          >
             {totalFilteredCount === 0 ? (
               <div style={{ padding: '1.25rem', textAlign: 'center', color: '#64748b', fontSize: '0.73rem' }}>
                 {isAr ? 'لا توجد نتائج مطابقة للبحث' : 'No matching options found'}
@@ -431,6 +487,7 @@ export function ZFCustomSelect<T = string>({
                             onClick={() => {
                               onChange(item.value);
                               setIsOpen(false);
+                              setHoveredTooltip(null);
                             }}
                             style={{
                               display: 'flex',
@@ -446,9 +503,11 @@ export function ZFCustomSelect<T = string>({
                             }}
                             onMouseEnter={e => {
                               if (!isItemSelected) e.currentTarget.style.background = '#f8fafc';
+                              handleItemMouseEnter(item, e);
                             }}
                             onMouseLeave={e => {
                               if (!isItemSelected) e.currentTarget.style.background = 'transparent';
+                              setHoveredTooltip(null);
                             }}
                           >
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', minWidth: 0, flex: 1 }}>
@@ -505,6 +564,26 @@ export function ZFCustomSelect<T = string>({
                                        </span>
                                      );
                                    })()}
+                                   {(item.tooltipAr || item.tooltipEn) && (
+                                     <span 
+                                       title={isAr ? (item.tooltipTitleAr || item.labelAr) : (item.tooltipTitleEn || item.labelEn)}
+                                       style={{
+                                         display: 'inline-flex',
+                                         alignItems: 'center',
+                                         justifyContent: 'center',
+                                         color: '#946f23',
+                                         background: 'rgba(184, 144, 62, 0.09)',
+                                         borderRadius: '50%',
+                                         width: '15px',
+                                         height: '15px',
+                                         flexShrink: 0,
+                                         marginLeft: isAr ? undefined : '0.15rem',
+                                         marginRight: isAr ? '0.15rem' : undefined
+                                       }}
+                                     >
+                                       <Info size={10} />
+                                     </span>
+                                   )}
                                 </div>
 
                                 {(item.sublabelAr || item.sublabelEn) && (
@@ -534,6 +613,51 @@ export function ZFCustomSelect<T = string>({
               })
             )}
           </div>
+        </div>
+      )}
+
+      {/* 3. FLOATING EXPLANATORY TOOLTIP POPUP */}
+      {isOpen && hoveredTooltip && (hoveredTooltip.item.tooltipAr || hoveredTooltip.item.tooltipEn) && (
+        <div
+          role="tooltip"
+          style={{
+            position: 'fixed',
+            top: `${hoveredTooltip.top}px`,
+            left: `${hoveredTooltip.left}px`,
+            width: '280px',
+            maxWidth: '280px',
+            background: '#ffffff',
+            border: '1.5px solid #e2e8f0',
+            boxShadow: '0 10px 25px -5px rgba(15, 23, 42, 0.15)',
+            borderRadius: '10px',
+            padding: '0.65rem 0.85rem',
+            zIndex: 10005,
+            pointerEvents: 'none',
+            direction: isAr ? 'rtl' : 'ltr',
+            textAlign: isAr ? 'right' : 'left',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '0.35rem',
+            boxSizing: 'border-box'
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+            <Info size={13} color="#946f23" style={{ flexShrink: 0 }} />
+            <span style={{ fontSize: '0.74rem', fontWeight: 800, color: '#0f172a', lineHeight: 1.3 }}>
+              {isAr 
+                ? (hoveredTooltip.item.tooltipTitleAr || hoveredTooltip.item.labelAr) 
+                : (hoveredTooltip.item.tooltipTitleEn || hoveredTooltip.item.labelEn)}
+            </span>
+          </div>
+          <p style={{
+            margin: 0,
+            fontSize: '0.7rem',
+            lineHeight: 1.45,
+            color: '#475569',
+            fontWeight: 500
+          }}>
+            {isAr ? hoveredTooltip.item.tooltipAr : (hoveredTooltip.item.tooltipEn || hoveredTooltip.item.tooltipAr)}
+          </p>
         </div>
       )}
     </div>
