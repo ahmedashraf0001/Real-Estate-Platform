@@ -87,22 +87,32 @@ export const HandCollectionModal: React.FC<HandCollectionModalProps> = ({
   // Combined full list of items (incorporating item and auto-reconciling any pending schedules)
   const masterList = useMemo(() => {
     const existingPdcIds = new Set((allItems || []).map(p => p.cheque_id));
-    const existingTrancheKeys = new Set((allItems || []).map(p => `${p.contract_id}-${p.due_date}`));
+    (allItems || []).forEach(p => {
+      if (p.schedule_id) existingPdcIds.add(p.schedule_id);
+    });
+    const existingTrancheKeys = new Set(
+      (allItems || [])
+        .filter(p => p.status !== 'Cleared' && p.status !== 'Void')
+        .map(p => `${p.contract_id}-${p.due_date}`)
+    );
 
     const combined: ERPPDCRecord[] = [...(allItems || [])];
 
     if (item && !existingPdcIds.has(item.cheque_id)) {
       combined.unshift(item);
       existingPdcIds.add(item.cheque_id);
+      if (item.schedule_id) existingPdcIds.add(item.schedule_id);
     }
 
     // Auto-synthesize any pending schedules not yet in pdcRecords
     (schedules || []).forEach(s => {
-      if (s.status === 'Paid') return;
+      if (s.status === 'Paid' || s.status === 'Void' || s.status === 'SUPERSEDED') return;
+      const linkedC = contracts.find(c => c.contract_id === s.contract_id);
+      if (linkedC && linkedC.status !== 'Active') return;
+
       const key = `${s.contract_id}-${s.due_date}`;
-      const syntheticId = `SND-${s.contract_id.replace(/[^0-9]/g, '')}-T${s.tranche_number}`;
-      if (!existingPdcIds.has(syntheticId) && !existingTrancheKeys.has(key)) {
-        const linkedC = contracts.find(c => c.contract_id === s.contract_id);
+      const syntheticId = s.schedule_id || `SND-${s.contract_id.replace(/[^0-9]/g, '')}-T${s.tranche_number}`;
+      if (!existingPdcIds.has(syntheticId) && !existingPdcIds.has(s.schedule_id) && !existingTrancheKeys.has(key)) {
         combined.push({
           cheque_id: syntheticId,
           contract_id: s.contract_id,
@@ -115,6 +125,7 @@ export const HandCollectionModal: React.FC<HandCollectionModalProps> = ({
           status: 'In Safe'
         });
         existingPdcIds.add(syntheticId);
+        existingPdcIds.add(s.schedule_id);
         existingTrancheKeys.add(key);
       }
     });

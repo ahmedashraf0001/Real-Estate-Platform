@@ -214,7 +214,7 @@ export const DailyOperationsView: React.FC<DailyOperationsViewProps> = ({
     }
   }, [underConstructionProperties, wipPropertyId]);
 
-  // 0. Unified Dues: Combine PDC records with any pending installment schedules that lack a PDC
+  // 0. Unified Dues: Combine PDC records with any pending/defaulted installment schedules that lack a PDC
   const allDuesRecords = useMemo(() => {
     const map = new Map<string, ERPPDCRecord>();
     (pdcRecords || []).forEach(p => {
@@ -222,31 +222,32 @@ export const DailyOperationsView: React.FC<DailyOperationsViewProps> = ({
     });
 
     (schedules || []).forEach(s => {
-      if (s.status === 'Pending') {
-        const alreadyHas = Array.from(map.values()).some(p => 
-          p.schedule_id === s.schedule_id || 
-          (p.contract_id === s.contract_id && p.due_date === s.due_date)
-        );
-        if (!alreadyHas) {
-          const ct = contracts.find(c => c.contract_id === s.contract_id);
-          const numDigits = ct?.contract_number ? ct.contract_number.replace(/\D/g, '') : '789';
-          const newPdc: ERPPDCRecord = {
-            cheque_id: s.schedule_id,
-            contract_id: s.contract_id,
-            schedule_id: s.schedule_id,
-            cheque_number: `SND-${numDigits}-T${s.tranche_number}`,
-            bank_name: 'الخزينة الرئيسية (أمانات نقداً باليد - 101000)',
-            drawer_name: ct?.buyer_name || 'العميل المتعاقد',
-            nominal_value: s.nominal_value,
-            due_date: s.due_date,
-            status: 'In Safe'
-          };
-          map.set(s.schedule_id, newPdc);
-        }
+      if (s.status !== 'Pending' && s.status !== 'Defaulted') return;
+      const ct = contracts.find(c => c.contract_id === s.contract_id);
+      if (ct && ct.status !== 'Active') return;
+
+      const alreadyHas = Array.from(map.values()).some(p => 
+        p.schedule_id === s.schedule_id || 
+        (p.contract_id === s.contract_id && p.due_date === s.due_date && p.status !== 'Cleared' && p.status !== 'Void')
+      );
+      if (!alreadyHas) {
+        const numDigits = ct?.contract_number ? ct.contract_number.replace(/\D/g, '') : '789';
+        const newPdc: ERPPDCRecord = {
+          cheque_id: s.schedule_id,
+          contract_id: s.contract_id,
+          schedule_id: s.schedule_id,
+          cheque_number: `SND-${numDigits}-T${s.tranche_number}`,
+          bank_name: isAr ? 'الخزينة الرئيسية (أمانات نقداً باليد - 101000)' : 'Main Safe (Hand Cash Escrow - 101000)',
+          drawer_name: ct?.buyer_name || (isAr ? 'العميل المتعاقد' : 'Contracted Client'),
+          nominal_value: s.nominal_value,
+          due_date: s.due_date,
+          status: 'In Safe'
+        };
+        map.set(s.schedule_id, newPdc);
       }
     });
     return Array.from(map.values());
-  }, [pdcRecords, schedules, contracts]);
+  }, [pdcRecords, schedules, contracts, isAr]);
 
   const { urgentDues, dueTodayCount, dueTodaySum, dueWeekSum, overdueCount, overdueSum } = useMemo(() => {
     let todaySum = D(0);
@@ -394,6 +395,8 @@ export const DailyOperationsView: React.FC<DailyOperationsViewProps> = ({
     const alerts: Array<{
       id: string;
       severity: 'critical' | 'warning' | 'info';
+      headerLabelAr?: string;
+      headerLabelEn?: string;
       badgeLabelAr?: string;
       badgeLabelEn?: string;
       titleAr: string;
@@ -408,25 +411,36 @@ export const DailyOperationsView: React.FC<DailyOperationsViewProps> = ({
       onClick: () => void;
     }> = [];
 
-    // Overdue items
-    const overdueList = allDuesRecords.filter(p => p.status !== 'Cleared' && p.status !== 'Void' && p.due_date < todayStr);
+    // Overdue items (sorted by due date ascending: oldest overdue first)
+    const overdueList = allDuesRecords
+      .filter(p => p.status !== 'Cleared' && p.status !== 'Void' && p.due_date < todayStr)
+      .sort((a, b) => a.due_date.localeCompare(b.due_date));
+
     if (overdueList.length > 0) {
       const topOverdue = overdueList[0];
       const linkedContract = contracts.find(c => c.contract_id === topOverdue.contract_id);
       const totalOverdueSum = overdueList.reduce((acc, p) => acc.plus(p.nominal_value || '0'), D(0));
-      const daysOverdue = Math.max(1, Math.floor((Date.now() - new Date(topOverdue.due_date).getTime()) / 86400000));
-      const debtor = topOverdue.drawer_name || linkedContract?.buyer_name || (isAr ? 'عميل مسجل' : 'Client');
+      const daysOverdue = Math.max(1, Math.round((new Date(todayStr).getTime() - new Date(topOverdue.due_date).getTime()) / 86400000));
+      const debtor = topOverdue.drawer_name || linkedContract?.buyer_name || (isAr ? 'عميل مسجل' : 'Registered Client');
       const unit = linkedContract?.unit_id || (isAr ? 'وحدة تعاقدية' : 'Unit');
+      const unitDetail = linkedContract
+        ? `${isAr ? 'وحدة' : 'Unit'} ${linkedContract.unit_id} • ${isAr ? 'عقد' : 'Contract'} #${linkedContract.contract_number}`
+        : (isAr ? 'وحدة تعاقدية' : 'Unit');
+
+      const overdueCountLabelAr = `${overdueList.length} ${overdueList.length === 1 ? 'قسط' : 'أقساط'}`;
+      const overdueCountLabelEn = `${overdueList.length} ${overdueList.length === 1 ? 'due' : 'dues'}`;
 
       alerts.push({
-        id: 'overdue-dues',
+        id: `overdue-dues-${topOverdue.cheque_id || 0}`,
         severity: 'critical',
+        headerLabelAr: `متأخرات تحصيل حرجة (${overdueCountLabelAr})`,
+        headerLabelEn: `Critical Overdue (${overdueCountLabelEn})`,
         badgeLabelAr: `متأخر منذ ${daysOverdue} يوم`,
         badgeLabelEn: `${daysOverdue}d overdue`,
-        titleAr: `متأخرات تحصيل حرجة: ${debtor}`,
-        titleEn: `Critical Overdue: ${debtor}`,
+        titleAr: debtor,
+        titleEn: debtor,
         debtorName: debtor,
-        unitDetail: `${unit}${linkedContract ? ` • عقد #${linkedContract.contract_number}` : ''}`,
+        unitDetail,
         amountFormatted: D(topOverdue.nominal_value).formatEGP(isAr),
         secondaryNoteAr: overdueList.length > 1 
           ? `+ ${overdueList.length - 1} أقساط أخرى متأخرة (إجمالي ${totalOverdueSum.formatEGP(true)})` 
@@ -438,6 +452,41 @@ export const DailyOperationsView: React.FC<DailyOperationsViewProps> = ({
         actionLabelEn: 'Collect Installment',
         onClick: () => onCollectItem(topOverdue)
       });
+
+      // If multiple overdue items, render second top overdue debtor card for immediate 1-click collection
+      if (overdueList.length > 1) {
+        const secondOverdue = overdueList[1];
+        const linkedContract2 = contracts.find(c => c.contract_id === secondOverdue.contract_id);
+        const daysOverdue2 = Math.max(1, Math.round((new Date(todayStr).getTime() - new Date(secondOverdue.due_date).getTime()) / 86400000));
+        const debtor2 = secondOverdue.drawer_name || linkedContract2?.buyer_name || (isAr ? 'عميل مسجل' : 'Registered Client');
+        const unit2 = linkedContract2?.unit_id || (isAr ? 'وحدة تعاقدية' : 'Unit');
+        const unitDetail2 = linkedContract2
+          ? `${isAr ? 'وحدة' : 'Unit'} ${linkedContract2.unit_id} • ${isAr ? 'عقد' : 'Contract'} #${linkedContract2.contract_number}`
+          : (isAr ? 'وحدة تعاقدية' : 'Unit');
+
+        alerts.push({
+          id: `overdue-dues-${secondOverdue.cheque_id || 1}`,
+          severity: 'critical',
+          headerLabelAr: isAr ? 'متأخرات إضافية حرجة' : 'Additional Critical Overdue',
+          headerLabelEn: 'Additional Critical Overdue',
+          badgeLabelAr: `متأخر منذ ${daysOverdue2} يوم`,
+          badgeLabelEn: `${daysOverdue2}d overdue`,
+          titleAr: debtor2,
+          titleEn: debtor2,
+          debtorName: debtor2,
+          unitDetail: unitDetail2,
+          amountFormatted: D(secondOverdue.nominal_value).formatEGP(isAr),
+          secondaryNoteAr: overdueList.length > 2
+            ? `+ ${overdueList.length - 2} قسط آخر متأخر • استحقاق ${secondOverdue.due_date}`
+            : `استحقاق ${secondOverdue.due_date} — يتطلب سرعة التواصل والتحصيل المباشر`,
+          secondaryNoteEn: overdueList.length > 2
+            ? `+ ${overdueList.length - 2} more overdue • Due ${secondOverdue.due_date}`
+            : `Due ${secondOverdue.due_date}`,
+          actionLabelAr: 'تحصيل القسط فوراً',
+          actionLabelEn: 'Collect Installment',
+          onClick: () => onCollectItem(secondOverdue)
+        });
+      }
     }
 
     // In-safe cheques maturing within 72 hours
@@ -456,10 +505,12 @@ export const DailyOperationsView: React.FC<DailyOperationsViewProps> = ({
       alerts.push({
         id: 'safe-cheques-near',
         severity: 'warning',
+        headerLabelAr: isAr ? 'أقساط تقترب من الاستحقاق' : 'Approaching Maturity',
+        headerLabelEn: 'Approaching Maturity',
         badgeLabelAr: topNear.due_date === todayStr ? 'يستحق اليوم' : 'خلال 48-72 ساعة',
         badgeLabelEn: topNear.due_date === todayStr ? 'Due Today' : 'Within 48-72h',
-        titleAr: `أقساط تقترب من الاستحقاق: ${debtor}`,
-        titleEn: `Approaching Maturity: ${debtor}`,
+        titleAr: debtor,
+        titleEn: debtor,
         debtorName: debtor,
         unitDetail: `${unit} • استحقاق ${topNear.due_date}`,
         amountFormatted: D(topNear.nominal_value).formatEGP(isAr),
@@ -492,10 +543,12 @@ export const DailyOperationsView: React.FC<DailyOperationsViewProps> = ({
       alerts.push({
         id: 'handover-audit',
         severity: 'info',
+        headerLabelAr: isAr ? 'جاهزية تسليم وحدة' : 'Handover Ready',
+        headerLabelEn: 'Handover Ready',
         badgeLabelAr: `${pct}% مسدد`,
         badgeLabelEn: `${pct}% Paid`,
-        titleAr: `جاهزية تسليم: ${topReady.buyer_name}`,
-        titleEn: `Handover Ready: ${topReady.buyer_name}`,
+        titleAr: topReady.buyer_name,
+        titleEn: topReady.buyer_name,
         debtorName: topReady.buyer_name,
         unitDetail: `${topReady.unit_id} • عقد #${topReady.contract_number}`,
         amountFormatted: D(topReady.total_cash_collected).formatEGP(isAr),
@@ -512,7 +565,7 @@ export const DailyOperationsView: React.FC<DailyOperationsViewProps> = ({
     }
 
     return alerts;
-  }, [pdcRecords, contracts, todayStr, threeDaysStr, onCollectItem, onInspectContract, isAr]);
+  }, [allDuesRecords, contracts, todayStr, threeDaysStr, onCollectItem, onInspectContract, isAr]);
 
   // 3. Filtered & Sorted Dues for the Collection Queue
   const filteredAndSortedDues = useMemo(() => {
@@ -2049,7 +2102,11 @@ export const DailyOperationsView: React.FC<DailyOperationsViewProps> = ({
                           {isCrit ? <AlertCircle size={14} /> : isWarn ? <AlertTriangle size={14} /> : <Key size={14} />}
                         </div>
                         <span style={{ fontSize: '0.74rem', fontWeight: 800, color: '#1e293b' }}>
-                          {isCrit ? (isAr ? 'تنبيه تحصيل متأخر' : 'Overdue Alert') : isWarn ? (isAr ? 'استحقاق قريب' : 'Maturing Alert') : (isAr ? 'جاهزية تسليم' : 'Handover Ready')}
+                          {alert.headerLabelAr 
+                            ? (isAr ? alert.headerLabelAr : (alert.headerLabelEn || alert.headerLabelAr)) 
+                            : isCrit ? (isAr ? 'تنبيه تحصيل متأخر' : 'Overdue Alert') 
+                            : isWarn ? (isAr ? 'استحقاق قريب' : 'Maturing Alert') 
+                            : (isAr ? 'جاهزية تسليم' : 'Handover Ready')}
                         </span>
                       </div>
 
