@@ -85,8 +85,6 @@ export const INITIAL_PARTNER_PROFILES: ERPPartnerProfile[] = [
     role: 'equity_partner',
     phone: '01123456789',
     national_id: '28911041200345',
-    bank_name: 'البنك الأهلي المصري',
-    iban: 'EG440003011200000001234567890',
     instapay_handle: 'ahmed.elsharif@instapay',
     preferred_payout_method: 'INSTAPAY',
     notes: 'شريك ممول ومساهم رئيسي في مشروعات عمارة الشيخ زايد والحي الخامس بحصة 35%',
@@ -98,11 +96,9 @@ export const INITIAL_PARTNER_PROFILES: ERPPartnerProfile[] = [
     role: 'land_partner',
     phone: '01234567890',
     national_id: '27508151200876',
-    bank_name: 'بنك مصر',
-    iban: 'EG380002011500000009876543210',
     instapay_handle: 'ragab.elsawy@instapay',
-    preferred_payout_method: 'BANK',
-    notes: 'شريك بالأرض بموقع العين السخنة - مشاركة بنسبة 30% من عوائد المبيعات',
+    preferred_payout_method: 'CASH',
+    notes: 'شريك بالأرض بموقع العين السخنة - مشاركة بنسبة 30% من عوائد المبيعات نقداً بالخزينة',
     joined_date: '2025-09-01'
   },
   {
@@ -111,8 +107,6 @@ export const INITIAL_PARTNER_PROFILES: ERPPartnerProfile[] = [
     role: 'silent_financier',
     phone: '01555667788',
     national_id: '28204221200432',
-    bank_name: 'البنك التجاري الدولي CIB',
-    iban: 'EG520010022000000004567891234',
     instapay_handle: 'hany.elmeniawy@instapay',
     preferred_payout_method: 'INSTAPAY',
     notes: 'ممول صامت بحصة نقدية بمشروع الساحل الشمالي بنسبة 25%',
@@ -129,11 +123,11 @@ export const INITIAL_PARTNER_TRANSACTIONS: ERPPartnerTransaction[] = [
     amount: '15000000.00',
     property_id: 'the-obsidian-pavilion',
     property_title: 'عمارة الفردوس - الحي الخامس',
-    payment_method: 'BANK_102000',
+    payment_method: 'INSTAPAY_102000',
     journal_entry_number: 'JE-2026-CAP-001',
     date: '2026-01-10',
     status: 'COMPLETED',
-    memo: 'ضخ دفعة أولى من مساهمة رأس مال مشروع عمارة الفردوس عبر تحويل بنكي',
+    memo: 'ضخ دفعة أولى من مساهمة رأس مال مشروع عمارة الفردوس عبر إنستاباي',
     receipt_ref: 'REC-CAP-2026-01'
   },
   {
@@ -159,11 +153,11 @@ export const INITIAL_PARTNER_TRANSACTIONS: ERPPartnerTransaction[] = [
     amount: '2500000.00',
     property_id: 'the-obsidian-pavilion',
     property_title: 'عمارة الفردوس - الحي الخامس',
-    payment_method: 'BANK_102000',
+    payment_method: 'INSTAPAY_102000',
     journal_entry_number: 'JE-2026-DIST-001',
     date: '2026-02-15',
     status: 'COMPLETED',
-    memo: 'صرف دفعة أرباح مرحلية من حصيلة بيع شقق الدور الثاني والثالث',
+    memo: 'صرف دفعة أرباح مرحلية عبر تطبيق إنستاباي من حصيلة بيع شقق الدور الثاني والثالث',
     receipt_ref: 'PAY-DIST-2026-01'
   },
   {
@@ -442,7 +436,7 @@ export class PartnersEngine {
   }): ERPJournalEntry {
     const amt = D(params.amount).toFixed(2);
     const creditAccount = params.paymentMethod === 'CASH_101000' ? '101000' : '102000';
-    const paymentLabel = params.paymentMethod === 'CASH_101000' ? 'خزينة النقدية الرئيسية (كاش)' : 'الحساب البنكي التشغيلي (إنستاباي)';
+    const paymentLabel = params.paymentMethod === 'CASH_101000' ? 'خزينة النقدية الرئيسية (كاش)' : 'حساب تحويلات إنستاباي الفورية (102000)';
     const ref = params.receiptRef || `PAY-${Date.now().toString().slice(-6)}`;
     const year = new Date().getFullYear();
 
@@ -497,7 +491,7 @@ export class PartnersEngine {
   }): ERPJournalEntry {
     const amt = D(params.amount).toFixed(2);
     const debitAccount = params.paymentMethod === 'CASH_101000' ? '101000' : '102000';
-    const paymentLabel = params.paymentMethod === 'CASH_101000' ? 'خزينة النقدية الرئيسية (كاش)' : 'الحساب البنكي التشغيلي (إنستاباي)';
+    const paymentLabel = params.paymentMethod === 'CASH_101000' ? 'خزينة النقدية الرئيسية (كاش)' : 'حساب تحويلات إنستاباي الفورية (102000)';
     const ref = params.receiptRef || `REC-${Date.now().toString().slice(-6)}`;
     const year = new Date().getFullYear();
 

@@ -98,7 +98,7 @@ export const PartnerOperationsModal: React.FC<PartnerOperationsModalProps> = ({
 
   // PAYOUT FORM STATE
   const [payoutAmount, setPayoutAmount] = useState<string>('');
-  const [payoutMethod, setPayoutMethod] = useState<'CASH_101000' | 'INSTAPAY_102000' | 'BANK_102000'>('BANK_102000');
+  const [payoutMethod, setPayoutMethod] = useState<'CASH_101000' | 'INSTAPAY_102000'>('CASH_101000');
   const [payoutPropertyId, setPayoutPropertyId] = useState<string>('');
   const [payoutDate, setPayoutDate] = useState<string>(new Date().toISOString().split('T')[0]);
   const [payoutReceiptRef, setPayoutReceiptRef] = useState<string>(`PAY-${Date.now().toString().slice(-6)}`);
@@ -107,7 +107,7 @@ export const PartnerOperationsModal: React.FC<PartnerOperationsModalProps> = ({
 
   // INJECTION FORM STATE
   const [injectionAmount, setInjectionAmount] = useState<string>('');
-  const [injectionMethod, setInjectionMethod] = useState<'CASH_101000' | 'INSTAPAY_102000' | 'BANK_102000'>('BANK_102000');
+  const [injectionMethod, setInjectionMethod] = useState<'CASH_101000' | 'INSTAPAY_102000'>('CASH_101000');
   const [injectionPropertyId, setInjectionPropertyId] = useState<string>('');
   const [injectionDate, setInjectionDate] = useState<string>(new Date().toISOString().split('T')[0]);
   const [injectionReceiptRef, setInjectionReceiptRef] = useState<string>(`REC-CAP-${Date.now().toString().slice(-6)}`);
@@ -737,7 +737,7 @@ export const PartnerOperationsModal: React.FC<PartnerOperationsModalProps> = ({
                         {isAr ? 'قناة التحويل المفضلة' : 'Payout Channel'}
                       </div>
                       <div style={{ fontSize: '0.7rem', color: '#64748b' }}>
-                        {activePartner.phone ? `إنستاباي / هاتف: ${activePartner.phone}` : (isAr ? 'خزينة كاش / تحويل بنكي' : 'Cash / Bank Transfer')}
+                        {activePartner.instapay_handle ? `إنستاباي: ${activePartner.instapay_handle}` : (activePartner.phone ? `إنستاباي / هاتف: ${activePartner.phone}` : (isAr ? 'خزينة نقدية (كاش)' : 'Cash Safe'))}
                       </div>
                     </div>
                   </div>
@@ -1030,11 +1030,10 @@ export const PartnerOperationsModal: React.FC<PartnerOperationsModalProps> = ({
                       <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 800, color: '#0f172a', marginBottom: '0.45rem' }}>
                         {isAr ? 'طريقة وخزينة صرف الدفعة *' : 'Payout Payment Method *'}
                       </label>
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.65rem' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.65rem' }}>
                         {[
                           { id: 'CASH_101000', title: isAr ? 'خزينة نقدية (101000)' : 'Cash Vault', sub: isAr ? 'صرف كاش باليد من الخزنة' : 'Safe cash', icon: Wallet },
-                          { id: 'INSTAPAY_102000', title: isAr ? 'إنستاباي فوري (102000)' : 'InstaPay Transfer', sub: isAr ? 'تحويل لحساب/محفظة الشريك' : 'Instant mobile transfer', icon: Smartphone },
-                          { id: 'BANK_102000', title: isAr ? 'تحويل بنكي رسمي (102000)' : 'Bank Wire', sub: isAr ? 'تحويل مباشر لحساب الشريك' : 'Official bank payout', icon: Landmark }
+                          { id: 'INSTAPAY_102000', title: isAr ? 'إنستاباي فوري (102000)' : 'InstaPay Transfer', sub: isAr ? 'تحويل لحساب/محفظة الشريك' : 'Instant mobile transfer', icon: Smartphone }
                         ].map(m => {
                           const Icon = m.icon;
                           const isSelected = payoutMethod === m.id;
@@ -1178,7 +1177,7 @@ export const PartnerOperationsModal: React.FC<PartnerOperationsModalProps> = ({
                             <strong style={{ color: '#d4af37' }}>{formatEGP(payoutNum)}</strong>
                           </div>
                           <div style={{ display: 'flex', justifyContent: 'space-between', color: '#94a3b8', paddingRight: isAr ? '1.5rem' : '0', paddingLeft: isAr ? '0' : '1.5rem' }}>
-                            <span>إلى حـ/ {payoutMethod === 'CASH_101000' ? '101000 خزينة النقدية الرئيسية' : '102000 الحسابات البنكية والتحويلات إنستاباي'} (دائن)</span>
+                            <span>إلى حـ/ {payoutMethod === 'CASH_101000' ? '101000 خزينة النقدية الرئيسية' : '102000 تحويلات إنستاباي الفورية'} (دائن)</span>
                             <strong style={{ color: '#94a3b8' }}>{formatEGP(payoutNum)}</strong>
                           </div>
                         </div>
@@ -1305,11 +1304,10 @@ export const PartnerOperationsModal: React.FC<PartnerOperationsModalProps> = ({
                       <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 800, color: '#0f172a', marginBottom: '0.45rem' }}>
                         {isAr ? 'طريقة وخزينة توريد المساهمة *' : 'Capital Injection Method *'}
                       </label>
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.65rem' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.65rem' }}>
                         {[
                           { id: 'CASH_101000', title: isAr ? 'توريد نقد بالخزينة (101000)' : 'Cash Safe Deposit', sub: isAr ? 'استلام كاش باليد في الخزنة' : 'Vault cash received', icon: Wallet },
-                          { id: 'INSTAPAY_102000', title: isAr ? 'تحويل إنستاباي فوري (102000)' : 'InstaPay Transfer', sub: isAr ? 'إيداع عبر تطبيق إنستاباي' : 'Instant mobile deposit', icon: Smartphone },
-                          { id: 'BANK_102000', title: isAr ? 'إيداع بحساب الشركة (102000)' : 'Direct Bank Wire', sub: isAr ? 'إيداع بنكي مباشر للشركة' : 'Official bank deposit', icon: Landmark }
+                          { id: 'INSTAPAY_102000', title: isAr ? 'تحويل إنستاباي فوري (102000)' : 'InstaPay Transfer', sub: isAr ? 'تحويل فوري عبر تطبيق إنستاباي' : 'Instant mobile deposit', icon: Smartphone }
                         ].map(m => {
                           const Icon = m.icon;
                           const isSelected = injectionMethod === m.id;
@@ -1449,7 +1447,7 @@ export const PartnerOperationsModal: React.FC<PartnerOperationsModalProps> = ({
 
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem', fontSize: '0.78rem' }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', color: '#f8fafc' }}>
-                            <span>من حـ/ {injectionMethod === 'CASH_101000' ? '101000 خزينة النقدية الرئيسية' : '102000 الحسابات البنكية والتحويلات إنستاباي'} (مدين)</span>
+                            <span>من حـ/ {injectionMethod === 'CASH_101000' ? '101000 خزينة النقدية الرئيسية' : '102000 تحويلات إنستاباي الفورية'} (مدين)</span>
                             <strong style={{ color: '#d4af37' }}>{formatEGP(injectionNum)}</strong>
                           </div>
                           <div style={{ display: 'flex', justifyContent: 'space-between', color: '#94a3b8', paddingRight: isAr ? '1.5rem' : '0', paddingLeft: isAr ? '0' : '1.5rem' }}>
@@ -1636,10 +1634,8 @@ export const PartnerOperationsModal: React.FC<PartnerOperationsModalProps> = ({
                                   </td>
                                   <td style={{ padding: '0.65rem 0.85rem', color: '#475569' }}>
                                     {tx.payment_method === 'CASH_101000' 
-                                      ? (isAr ? 'خزينة كاش' : 'Cash Vault') 
-                                      : tx.payment_method === 'INSTAPAY_102000'
-                                      ? (isAr ? 'إنستاباي فوري' : 'InstaPay')
-                                      : (isAr ? 'تحويل بنكي' : 'Bank Wire')}
+                                      ? (isAr ? 'خزينة كاش (101000)' : 'Cash Safe') 
+                                      : (isAr ? 'إنستاباي فوري (102000)' : 'InstaPay')}
                                   </td>
                                   <td style={{ padding: '0.65rem 0.85rem', color: '#334155' }}>
                                     <div>{tx.property_title || (isAr ? 'عام ع المحفظة' : 'General')}</div>

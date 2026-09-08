@@ -81,7 +81,7 @@ export const NewPartnerProfileModal: React.FC<NewPartnerProfileModalProps> = ({
   // Step 4: Initial Capital Deposit (Optional)
   const [includeInitialDeposit, setIncludeInitialDeposit] = useState<boolean>(false);
   const [depositAmount, setDepositAmount] = useState<string>('');
-  const [depositPaymentMethod, setDepositPaymentMethod] = useState<'CASH_101000' | 'INSTAPAY_102000' | 'BANK_102000'>('BANK_102000');
+  const [depositPaymentMethod, setDepositPaymentMethod] = useState<'CASH_101000' | 'INSTAPAY_102000' | 'BANK_102000'>('CASH_101000');
   const [depositDate, setDepositDate] = useState<string>(new Date().toISOString().split('T')[0]);
   const [depositReceiptRef, setDepositReceiptRef] = useState<string>(`REC-CAP-${Date.now().toString().slice(-6)}`);
 
@@ -386,12 +386,12 @@ export const NewPartnerProfileModal: React.FC<NewPartnerProfileModalProps> = ({
               <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 700, color: '#334155', marginBottom: '0.35rem' }}>
                 {isAr ? 'وسيلة التحويل المعتمدة لصرف الأرباح' : 'Preferred Payout Channel'}
               </label>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.5rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.5rem' }}>
                 <button
                   type="button"
                   onClick={() => setPayoutMethod('INSTAPAY')}
                   style={{
-                    padding: '0.5rem',
+                    padding: '0.55rem',
                     borderRadius: '8px',
                     border: payoutMethod === 'INSTAPAY' ? '1.5px solid #047857' : '1px solid #e2e8f0',
                     background: payoutMethod === 'INSTAPAY' ? 'rgba(4, 120, 87, 0.08)' : '#f8fafc',
@@ -405,25 +405,9 @@ export const NewPartnerProfileModal: React.FC<NewPartnerProfileModalProps> = ({
                 </button>
                 <button
                   type="button"
-                  onClick={() => setPayoutMethod('BANK')}
-                  style={{
-                    padding: '0.5rem',
-                    borderRadius: '8px',
-                    border: payoutMethod === 'BANK' ? '1.5px solid #1d4ed8' : '1px solid #e2e8f0',
-                    background: payoutMethod === 'BANK' ? 'rgba(29, 78, 216, 0.08)' : '#f8fafc',
-                    color: payoutMethod === 'BANK' ? '#1d4ed8' : '#475569',
-                    fontSize: '0.78rem',
-                    fontWeight: 800,
-                    cursor: 'pointer'
-                  }}
-                >
-                  🏦 {isAr ? 'تحويل بنكي رسمي' : 'Bank Wire'}
-                </button>
-                <button
-                  type="button"
                   onClick={() => setPayoutMethod('CASH')}
                   style={{
-                    padding: '0.5rem',
+                    padding: '0.55rem',
                     borderRadius: '8px',
                     border: payoutMethod === 'CASH' ? '1.5px solid #b8903e' : '1px solid #e2e8f0',
                     background: payoutMethod === 'CASH' ? 'rgba(184, 144, 62, 0.08)' : '#f8fafc',
@@ -438,10 +422,10 @@ export const NewPartnerProfileModal: React.FC<NewPartnerProfileModalProps> = ({
               </div>
             </div>
 
-            {payoutMethod === 'INSTAPAY' && (
+            {payoutMethod === 'INSTAPAY' ? (
               <div>
                 <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 700, color: '#334155', marginBottom: '0.35rem' }}>
-                  {isAr ? 'عنوان إنستاباي (IPA) أو رقم الموبايل المسجل' : 'InstaPay Address (IPA) or Mobile'}
+                  {isAr ? 'عنوان إنستاباي (IPA) أو رقم الموبايل المسجل *' : 'InstaPay Address (IPA) or Mobile *'}
                 </label>
                 <input 
                   type="text"
@@ -460,51 +444,19 @@ export const NewPartnerProfileModal: React.FC<NewPartnerProfileModalProps> = ({
                   }}
                 />
               </div>
-            )}
-
-            {payoutMethod === 'BANK' && (
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.5fr', gap: '0.75rem' }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 700, color: '#334155', marginBottom: '0.35rem' }}>
-                    {isAr ? 'اسم البنك' : 'Bank Name'}
-                  </label>
-                  <input 
-                    type="text"
-                    placeholder={isAr ? 'مثال: بنك CIB أو الأهلي' : 'e.g. CIB Bank'}
-                    value={bankName}
-                    onChange={(e) => setBankName(e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '0.55rem 0.75rem',
-                      borderRadius: '8px',
-                      border: '1px solid #cbd5e1',
-                      fontSize: '0.82rem',
-                      color: '#0f172a',
-                      outline: 'none'
-                    }}
-                  />
-                </div>
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 700, color: '#334155', marginBottom: '0.35rem' }}>
-                    {isAr ? 'رقم الآيبان (IBAN) أو رقم الحساب' : 'IBAN / Account Number'}
-                  </label>
-                  <input 
-                    type="text"
-                    placeholder="EGXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
-                    value={iban}
-                    onChange={(e) => setIban(e.target.value)}
-                    dir="ltr"
-                    style={{
-                      width: '100%',
-                      padding: '0.55rem 0.75rem',
-                      borderRadius: '8px',
-                      border: '1px solid #cbd5e1',
-                      fontSize: '0.82rem',
-                      color: '#0f172a',
-                      outline: 'none'
-                    }}
-                  />
-                </div>
+            ) : (
+              <div style={{
+                fontSize: '0.73rem',
+                color: '#64748b',
+                background: '#f8fafc',
+                padding: '0.55rem 0.75rem',
+                borderRadius: '8px',
+                border: '1px dashed #cbd5e1',
+                lineHeight: 1.4
+              }}>
+                {isAr 
+                  ? '✓ يتم صرف وتوزيعات الأرباح نقداً باليد من خزينة الشركة الرئيسية بموجب سند صرف رسمي.' 
+                  : '✓ Dividends will be disbursed in cash from the company safe.'}
               </div>
             )}
           </div>
@@ -678,9 +630,8 @@ export const NewPartnerProfileModal: React.FC<NewPartnerProfileModalProps> = ({
                         fontWeight: 700
                       }}
                     >
-                      <option value="BANK_102000">{isAr ? 'حساب البنك (102000) - تحويل رسمي' : 'Operating Bank (102000)'}</option>
-                      <option value="INSTAPAY_102000">{isAr ? 'إنستاباي فوري (102000) - حساب البنك' : 'InstaPay (102000)'}</option>
                       <option value="CASH_101000">{isAr ? 'الخزينة الرئيسية (101000) - كاش باليد' : 'Main Cash Safe (101000)'}</option>
+                      <option value="INSTAPAY_102000">{isAr ? 'إنستاباي فوري (102000) - تحويل فوري' : 'InstaPay (102000)'}</option>
                     </select>
                   </div>
                 </div>
@@ -710,12 +661,13 @@ export const NewPartnerProfileModal: React.FC<NewPartnerProfileModalProps> = ({
                   {/* Receipt Ref */}
                   <div>
                     <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 700, color: '#334155', marginBottom: '0.35rem' }}>
-                      {isAr ? 'رقم إيصال الإيداع / المرجع' : 'Receipt Ref'}
+                      {isAr ? 'رقم الإيصال / مرجع المعاملة' : 'Receipt / Ref #'}
                     </label>
                     <input 
                       type="text"
                       value={depositReceiptRef}
                       onChange={(e) => setDepositReceiptRef(e.target.value)}
+                      placeholder={isAr ? 'مثال: REC-2026-088' : 'e.g. REC-2026-088'}
                       style={{
                         width: '100%',
                         padding: '0.55rem 0.75rem',
@@ -737,7 +689,7 @@ export const NewPartnerProfileModal: React.FC<NewPartnerProfileModalProps> = ({
                   borderRadius: '6px',
                   fontWeight: 600
                 }}>
-                  ✓ سيتم ترحيل قيد يومية متوازن تلقائياً: (مدين: الخزنة/البنك 101000/102000 | دائن: رأس مال الشركاء 301000).
+                  ✓ سيتم ترحيل قيد يومية متوازن تلقائياً: (مدين: الخزينة/إنستاباي 101000/102000 | دائن: رأس مال الشركاء 301000).
                 </div>
               </div>
             )}

@@ -399,7 +399,7 @@ export const PartnersManagementView: React.FC<PartnersManagementViewProps> = ({
           accentColor="gold"
           progress={100}
           subtitleLabel={isAr ? 'حساب 301000 - حقوق الملكية' : 'GL 301000 Equity'}
-          subtitleValue={isAr ? 'مساهمات نقدية بالخزنة والبنك' : 'Liquid deposits'}
+          subtitleValue={isAr ? 'مساهمات بالخزينة والإنستاباي' : 'Cash & InstaPay deposits'}
         />
 
         {/* Card 2: Cumulative Profit Distributions (Account 303000) */}
@@ -411,7 +411,7 @@ export const PartnersManagementView: React.FC<PartnersManagementViewProps> = ({
           icon={<Receipt size={20} />}
           accentColor="emerald"
           subtitleLabel={isAr ? 'حساب 303000 - مسحوبات أرباح' : 'GL 303000 Contra-Equity'}
-          subtitleValue={isAr ? 'مسددة بالكامل كاش وبنك' : 'Settled payouts'}
+          subtitleValue={isAr ? 'مسددة بالكامل كاش وإنستاباي' : 'Settled cash & InstaPay'}
         />
 
         {/* Card 3: Net Current Partner Dues / Balances */}
@@ -853,16 +853,16 @@ export const PartnersManagementView: React.FC<PartnersManagementViewProps> = ({
                             {isAr ? 'إنستاباي: ' : 'InstaPay: '}<strong dir="ltr">{p.instapay_handle}</strong>
                           </span>
                         )}
-                        {p.iban && (
+                        {p.preferred_payout_method === 'CASH' && (
                           <span style={{
                             fontSize: '0.68rem',
-                            color: '#1d4ed8',
-                            background: 'rgba(29, 78, 216, 0.05)',
-                            border: '1px solid rgba(29, 78, 216, 0.2)',
+                            color: '#15803d',
+                            background: 'rgba(21, 128, 61, 0.05)',
+                            border: '1px solid rgba(21, 128, 61, 0.2)',
                             borderRadius: '4px',
                             padding: '0.12rem 0.4rem'
                           }}>
-                            {p.bank_name || (isAr ? 'حساب بنكي' : 'Bank')}: <strong dir="ltr">...{p.iban.slice(-6)}</strong>
+                            {isAr ? 'صرف نقدي (خزينة)' : 'Cash Payout'}
                           </span>
                         )}
                       </div>
@@ -1600,8 +1600,7 @@ export const PartnersManagementView: React.FC<PartnersManagementViewProps> = ({
                 options: [
                   { value: 'all', label: isAr ? 'كل وسائل السداد' : 'All Methods' },
                   { value: 'CASH_101000', label: isAr ? 'خزينة كاش (101000)' : 'Cash Vault (101000)' },
-                  { value: 'BANK_102000', label: isAr ? 'تحويل بنكي (102000)' : 'Bank Transfer (102000)' },
-                  { value: 'INSTAPAY_102000', label: isAr ? 'إنستاباي (102000)' : 'InstaPay (102000)' }
+                  { value: 'INSTAPAY_102000', label: isAr ? 'إنستاباي فوري (102000)' : 'InstaPay (102000)' }
                 ]
               },
               {
@@ -1744,8 +1743,7 @@ export const PartnersManagementView: React.FC<PartnersManagementViewProps> = ({
                             border: '1px solid #e2e8f0'
                           }}>
                             {tx.payment_method === 'CASH_101000' && (isAr ? 'خزينة كاش (101000)' : 'Cash Vault')}
-                            {tx.payment_method === 'BANK_102000' && (isAr ? 'تحويل بنكي (102000)' : 'Bank Transfer')}
-                            {tx.payment_method === 'INSTAPAY_102000' && (isAr ? 'إنستاباي (102000)' : 'InstaPay')}
+                            {tx.payment_method === 'INSTAPAY_102000' && (isAr ? 'إنستاباي فوري (102000)' : 'InstaPay (102000)')}
                           </span>
                         </td>
 

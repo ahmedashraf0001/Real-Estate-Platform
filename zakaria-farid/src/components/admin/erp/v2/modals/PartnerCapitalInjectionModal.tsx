@@ -57,7 +57,7 @@ export const PartnerCapitalInjectionModal: React.FC<PartnerCapitalInjectionModal
   const isLockedToPartner = Boolean(initialPartnerName && initialPartnerName.trim());
   const [selectedPartnerName, setSelectedPartnerName] = useState<string>(initialPartnerName?.trim() || (partners[0]?.partnerName || ''));
   const [amount, setAmount] = useState<string>('');
-  const [paymentMethod, setPaymentMethod] = useState<'CASH_101000' | 'INSTAPAY_102000' | 'BANK_102000'>('BANK_102000');
+  const [paymentMethod, setPaymentMethod] = useState<'CASH_101000' | 'INSTAPAY_102000' | 'BANK_102000'>('CASH_101000');
   const [selectedPropertyId, setSelectedPropertyId] = useState<string>('');
   const [injectionDate, setInjectionDate] = useState<string>(new Date().toISOString().split('T')[0]);
   const [receiptRef, setReceiptRef] = useState<string>(`REC-CAP-${Date.now().toString().slice(-6)}`);
@@ -403,71 +403,49 @@ export const PartnerCapitalInjectionModal: React.FC<PartnerCapitalInjectionModal
             <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#334155', marginBottom: '0.35rem' }}>
               {isAr ? 'جهة استلام وتوريد الفلوس:' : 'Receiving Treasury / Account:'}
             </label>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.5rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.65rem' }}>
               <button
                 type="button"
-                onClick={() => setPaymentMethod('BANK_102000')}
+                onClick={() => setPaymentMethod('CASH_101000')}
                 style={{
-                  padding: '0.6rem 0.5rem',
+                  padding: '0.7rem 0.5rem',
                   borderRadius: '8px',
-                  border: paymentMethod === 'BANK_102000' ? '2px solid #1d4ed8' : '1px solid #e2e8f0',
-                  background: paymentMethod === 'BANK_102000' ? 'rgba(29, 78, 216, 0.05)' : '#ffffff',
-                  color: paymentMethod === 'BANK_102000' ? '#1d4ed8' : '#64748b',
-                  fontSize: '0.75rem',
+                  border: paymentMethod === 'CASH_101000' ? '2px solid #059669' : '1px solid #e2e8f0',
+                  background: paymentMethod === 'CASH_101000' ? 'rgba(5, 150, 105, 0.05)' : '#ffffff',
+                  color: paymentMethod === 'CASH_101000' ? '#059669' : '#64748b',
+                  fontSize: '0.78rem',
                   fontWeight: 800,
                   cursor: 'pointer',
                   display: 'flex',
                   flexDirection: 'column',
                   alignItems: 'center',
-                  gap: '0.25rem'
+                  gap: '0.35rem'
                 }}
               >
-                <Landmark size={18} />
-                <span>{isAr ? 'البنك (102000)' : 'Bank'}</span>
+                <Wallet size={20} />
+                <span>{isAr ? 'خزينة النقدية (101000)' : 'Cash Safe (101000)'}</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => setPaymentMethod('INSTAPAY_102000')}
                 style={{
-                  padding: '0.6rem 0.5rem',
+                  padding: '0.7rem 0.5rem',
                   borderRadius: '8px',
-                  border: paymentMethod === 'INSTAPAY_102000' ? '2px solid #7c3aed' : '1px solid #e2e8f0',
-                  background: paymentMethod === 'INSTAPAY_102000' ? 'rgba(124, 58, 237, 0.05)' : '#ffffff',
-                  color: paymentMethod === 'INSTAPAY_102000' ? '#7c3aed' : '#64748b',
-                  fontSize: '0.75rem',
+                  border: paymentMethod === 'INSTAPAY_102000' ? '2px solid #047857' : '1px solid #e2e8f0',
+                  background: paymentMethod === 'INSTAPAY_102000' ? 'rgba(4, 120, 87, 0.05)' : '#ffffff',
+                  color: paymentMethod === 'INSTAPAY_102000' ? '#047857' : '#64748b',
+                  fontSize: '0.78rem',
                   fontWeight: 800,
                   cursor: 'pointer',
                   display: 'flex',
                   flexDirection: 'column',
                   alignItems: 'center',
-                  gap: '0.25rem'
+                  gap: '0.35rem'
                 }}
               >
-                <Coins size={18} />
-                <span>{isAr ? 'إنستاباي (102000)' : 'InstaPay'}</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setPaymentMethod('CASH_101000')}
-                style={{
-                  padding: '0.6rem 0.5rem',
-                  borderRadius: '8px',
-                  border: paymentMethod === 'CASH_101000' ? '2px solid #059669' : '1px solid #e2e8f0',
-                  background: paymentMethod === 'CASH_101000' ? 'rgba(5, 150, 105, 0.05)' : '#ffffff',
-                  color: paymentMethod === 'CASH_101000' ? '#059669' : '#64748b',
-                  fontSize: '0.75rem',
-                  fontWeight: 800,
-                  cursor: 'pointer',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  gap: '0.25rem'
-                }}
-              >
-                <Wallet size={18} />
-                <span>{isAr ? 'الخزينة كاش (101000)' : 'Cash Safe'}</span>
+                <Coins size={20} />
+                <span>{isAr ? 'إنستاباي فوري (102000)' : 'InstaPay (102000)'}</span>
               </button>
             </div>
           </div>

@@ -13,7 +13,8 @@ import {
   Building2,
   ArrowRight,
   Receipt,
-  Scale
+  Scale,
+  Smartphone
 } from 'lucide-react';
 import { D } from '@/lib/erp/math';
 import { MoneyCell } from '@/components/erp/MoneyCell';
@@ -53,7 +54,7 @@ export const PartnerPayoutModal: React.FC<PartnerPayoutModalProps> = ({
 }) => {
   const [selectedPartnerName, setSelectedPartnerName] = useState<string>('');
   const [amount, setAmount] = useState<string>('');
-  const [paymentMethod, setPaymentMethod] = useState<'CASH_101000' | 'INSTAPAY_102000' | 'BANK_102000'>('BANK_102000');
+  const [paymentMethod, setPaymentMethod] = useState<'CASH_101000' | 'INSTAPAY_102000' | 'BANK_102000'>('CASH_101000');
   const [selectedPropertyId, setSelectedPropertyId] = useState<string>('');
   const [payoutDate, setPayoutDate] = useState<string>(new Date().toISOString().split('T')[0]);
   const [receiptRef, setReceiptRef] = useState<string>(`PAY-${Date.now().toString().slice(-6)}`);
@@ -314,10 +315,10 @@ export const PartnerPayoutModal: React.FC<PartnerPayoutModalProps> = ({
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
               <button
                 type="button"
-                onClick={() => setPaymentMethod('BANK_102000')}
+                onClick={() => setPaymentMethod('INSTAPAY_102000')}
                 style={{
-                  background: paymentMethod === 'BANK_102000' || paymentMethod === 'INSTAPAY_102000' ? 'rgba(29, 78, 216, 0.08)' : '#ffffff',
-                  border: paymentMethod === 'BANK_102000' || paymentMethod === 'INSTAPAY_102000' ? '1.5px solid #1d4ed8' : '1px solid #cbd5e1',
+                  background: paymentMethod === 'INSTAPAY_102000' ? 'rgba(4, 120, 87, 0.08)' : '#ffffff',
+                  border: paymentMethod === 'INSTAPAY_102000' ? '1.5px solid #047857' : '1px solid #cbd5e1',
                   borderRadius: '9px',
                   padding: '0.7rem',
                   cursor: 'pointer',
@@ -328,13 +329,13 @@ export const PartnerPayoutModal: React.FC<PartnerPayoutModalProps> = ({
                   transition: 'all 0.15s ease'
                 }}
               >
-                <Landmark size={18} color={paymentMethod === 'BANK_102000' ? '#1d4ed8' : '#64748b'} />
+                <Smartphone size={18} color={paymentMethod === 'INSTAPAY_102000' ? '#047857' : '#64748b'} />
                 <div>
-                  <span style={{ display: 'block', fontSize: '0.78rem', fontWeight: 800, color: paymentMethod === 'BANK_102000' ? '#1d4ed8' : '#0f172a' }}>
-                    {isAr ? 'البنك / إنستاباي (102000)' : 'Bank / InstaPay (102000)'}
+                  <span style={{ display: 'block', fontSize: '0.78rem', fontWeight: 800, color: paymentMethod === 'INSTAPAY_102000' ? '#047857' : '#0f172a' }}>
+                    {isAr ? 'إنستاباي فوري (102000)' : 'InstaPay (102000)'}
                   </span>
                   <span style={{ fontSize: '0.67rem', color: '#64748b' }}>
-                    {isAr ? 'تحويل بنكي أو فوري لحساب الشريك' : 'Electronic transfer'}
+                    {isAr ? 'تحويل فوري لحساب ومحفظة الشريك' : 'Instant mobile transfer'}
                   </span>
                 </div>
               </button>
