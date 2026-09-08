@@ -140,7 +140,7 @@ export function ZFCustomSelect<T = string>({
 
   // Find currently selected item
   const selectedItem = useMemo(() => {
-    if (value === null || value === undefined || value === '') return null;
+    if (value === null || value === undefined) return null;
     for (const sec of allSections) {
       const match = sec.items.find(i => String(i.value) === String(value));
       if (match) return match;

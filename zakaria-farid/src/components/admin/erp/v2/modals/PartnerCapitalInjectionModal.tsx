@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   X, 
   CheckCircle2, 
@@ -10,6 +10,7 @@ import {
   Calendar, 
   FileText,
   User,
+  Users,
   Building2,
   Scale,
   PlusCircle,
@@ -21,6 +22,7 @@ import {
 import { D } from '@/lib/erp/math';
 import { PartnerFinancialSummary } from '@/lib/erp/partnersEngine';
 import { Property } from '@/lib/supabase/types';
+import { ZFCustomSelect, ZFCustomSelectItem } from '../common/ZFCustomSelect';
 
 interface PartnerCapitalInjectionModalProps {
   isOpen: boolean;
@@ -70,6 +72,57 @@ export const PartnerCapitalInjectionModal: React.FC<PartnerCapitalInjectionModal
       setSelectedPartnerName(partners[0].partnerName);
     }
   }, [partners, selectedPartnerName, initialPartnerName]);
+
+  const partnerSelectItems = useMemo<ZFCustomSelectItem<string>[]>(() => {
+    return partners.map(p => {
+      const balanceNum = D(p.netCurrentBalance).toNumber();
+      return {
+        value: p.partnerName,
+        labelAr: p.partnerName,
+        labelEn: p.partnerName,
+        sublabelAr: `${p.roleTitleAr} • مساهمات سابقة: ${D(p.totalContributedCapital).toNumber().toLocaleString()} ج.م`,
+        sublabelEn: `${p.roleTitleAr} • Capital: ${D(p.totalContributedCapital).toNumber().toLocaleString()} EGP`,
+        price: balanceNum,
+        badge: p.roleTitleAr,
+        badgeBg: 'rgba(148, 111, 35, 0.08)',
+        badgeTextColor: '#946f23',
+        icon: Users,
+        iconBg: 'rgba(148, 111, 35, 0.1)',
+        iconColor: '#946f23'
+      };
+    });
+  }, [partners, isAr]);
+
+  const propertySelectItems = useMemo<ZFCustomSelectItem<string>[]>(() => {
+    return [
+      {
+        value: '',
+        labelAr: isAr ? 'رأس مال عام لمحفظة الشركة' : 'General Portfolio Capital',
+        labelEn: 'General Portfolio Capital',
+        sublabelAr: isAr ? 'غير مخصص لعمارة محددة (تمويل عام)' : 'Unallocated to a specific property',
+        sublabelEn: 'Unallocated to a specific property',
+        badge: isAr ? 'محفظة عامة' : 'General',
+        badgeBg: 'rgba(100, 116, 139, 0.08)',
+        badgeTextColor: '#64748b',
+        icon: Building2,
+        iconBg: 'rgba(100, 116, 139, 0.08)',
+        iconColor: '#64748b'
+      },
+      ...properties.map(p => ({
+        value: p.id,
+        labelAr: p.title_ar || p.title_en || '',
+        labelEn: p.title_en || p.title_ar || '',
+        sublabelAr: `${p.location || 'الشرقية'} • ${p.area_sqm || 0} م²`,
+        sublabelEn: `${p.location || 'Sharkia'} • ${p.area_sqm || 0} sqm`,
+        badge: p.completion_status === 'ready' ? (isAr ? 'جاهز' : 'Ready') : (isAr ? 'قيد التطوير' : 'In Progress'),
+        badgeBg: p.completion_status === 'ready' ? 'rgba(21, 128, 61, 0.08)' : 'rgba(148, 111, 35, 0.08)',
+        badgeTextColor: p.completion_status === 'ready' ? '#15803d' : '#946f23',
+        icon: Building2,
+        iconBg: 'rgba(148, 111, 35, 0.1)',
+        iconColor: '#946f23'
+      }))
+    ];
+  }, [properties, isAr]);
 
   if (!isOpen) return null;
 
@@ -299,27 +352,21 @@ export const PartnerCapitalInjectionModal: React.FC<PartnerCapitalInjectionModal
                 )}
               </div>
 
-              <select
+              <ZFCustomSelect<string>
                 value={selectedPartnerName}
-                onChange={(e) => setSelectedPartnerName(e.target.value)}
-                style={{
-                  width: '100%',
-                  background: '#ffffff',
-                  border: '1.5px solid #cbd5e1',
-                  borderRadius: '10px',
-                  padding: '0.65rem 0.85rem',
-                  fontSize: '0.88rem',
-                  fontWeight: 700,
-                  color: '#0f172a',
-                  outline: 'none'
-                }}
-              >
-                {partners.map(p => (
-                  <option key={p.partnerName} value={p.partnerName}>
-                    {p.partnerName} ({p.roleTitleAr})
-                  </option>
-                ))}
-              </select>
+                onChange={(val) => setSelectedPartnerName(val)}
+                items={partnerSelectItems}
+                placeholderAr="-- اضغط لاختيار الشريك المسجل --"
+                placeholderEn="-- Select Registered Partner --"
+                isAr={isAr}
+                searchable={true}
+                customAction={onOpenNewPartnerModal ? {
+                  labelAr: '+ تسجيل وتوثيق شريك جديد',
+                  labelEn: '+ Onboard New Partner',
+                  icon: PlusCircle,
+                  onClick: onOpenNewPartnerModal
+                } : undefined}
+              />
 
               {matchedExistingPartner && (
                 <div style={{
@@ -375,26 +422,15 @@ export const PartnerCapitalInjectionModal: React.FC<PartnerCapitalInjectionModal
               <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#334155', marginBottom: '0.35rem' }}>
                 {isAr ? 'المشروع المستهدف بالتمويل والشراكة:' : 'Target Project:'}
               </label>
-              <select
+              <ZFCustomSelect<string>
                 value={selectedPropertyId}
-                onChange={(e) => setSelectedPropertyId(e.target.value)}
-                style={{
-                  width: '100%',
-                  background: '#ffffff',
-                  border: '1px solid #cbd5e1',
-                  borderRadius: '8px',
-                  padding: '0.55rem 0.75rem',
-                  fontSize: '0.82rem',
-                  color: '#0f172a'
-                }}
-              >
-                <option value="">{isAr ? '-- رأس مال عام لمحفظة الشركة --' : '-- General Portfolio Capital --'}</option>
-                {properties.map(p => (
-                  <option key={p.id} value={p.id}>
-                    {p.title_ar || p.title_en} ({p.location || 'الشرقية'})
-                  </option>
-                ))}
-              </select>
+                onChange={(val) => setSelectedPropertyId(val)}
+                items={propertySelectItems}
+                placeholderAr="-- رأس مال عام لمحفظة الشركة --"
+                placeholderEn="-- General Portfolio Capital --"
+                isAr={isAr}
+                searchable={true}
+              />
             </div>
           </div>
 

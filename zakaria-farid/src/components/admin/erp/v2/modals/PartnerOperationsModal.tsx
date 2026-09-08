@@ -35,6 +35,7 @@ import { MoneyCell } from '@/components/erp/MoneyCell';
 import { exportPartnerDossierExcel } from '@/lib/erp/excelExporter';
 import { tafqeetEGP } from '@/lib/erp/tafqeet';
 import { toast } from 'sonner';
+import { ZFCustomSelect, ZFCustomSelectItem } from '../common/ZFCustomSelect';
 
 export interface PartnerOperationsModalProps {
   isOpen: boolean;
@@ -174,6 +175,68 @@ export const PartnerOperationsModal: React.FC<PartnerOperationsModalProps> = ({
     if (!activePartner) return [];
     return partnerTransactions.filter(t => t.partner_name === activePartner.partnerName);
   }, [partnerTransactions, activePartner]);
+
+  const payoutPropertyItems = useMemo<ZFCustomSelectItem<string>[]>(() => {
+    return [
+      {
+        value: '',
+        labelAr: isAr ? 'توزيع عام على كامل أرباح الشريك' : 'General Portfolio Payout',
+        labelEn: 'General Portfolio Payout',
+        sublabelAr: isAr ? 'غير مخصص لعمارة معينة (توزيع عام)' : 'Unallocated to a specific building',
+        sublabelEn: 'Unallocated to a specific building',
+        badge: isAr ? 'عام' : 'General',
+        badgeBg: 'rgba(100, 116, 139, 0.08)',
+        badgeTextColor: '#64748b',
+        icon: Building2,
+        iconBg: 'rgba(100, 116, 139, 0.08)',
+        iconColor: '#64748b'
+      },
+      ...properties.map(prop => ({
+        value: prop.id,
+        labelAr: prop.title_ar || prop.title_en || '',
+        labelEn: prop.title_en || prop.title_ar || '',
+        sublabelAr: `${prop.location || 'الشرقية'} • ${prop.area_sqm || 0} م²`,
+        sublabelEn: `${prop.location || 'Sharkia'} • ${prop.area_sqm || 0} sqm`,
+        badge: prop.completion_status === 'ready' ? (isAr ? 'جاهز' : 'Ready') : (isAr ? 'قيد التطوير' : 'In Progress'),
+        badgeBg: prop.completion_status === 'ready' ? 'rgba(21, 128, 61, 0.08)' : 'rgba(148, 111, 35, 0.08)',
+        badgeTextColor: prop.completion_status === 'ready' ? '#15803d' : '#946f23',
+        icon: Building2,
+        iconBg: 'rgba(148, 111, 35, 0.1)',
+        iconColor: '#946f23'
+      }))
+    ];
+  }, [properties, isAr]);
+
+  const injectionPropertyItems = useMemo<ZFCustomSelectItem<string>[]>(() => {
+    return [
+      {
+        value: '',
+        labelAr: isAr ? 'محفظة الشركة العامة (غير مخصص لعمارة)' : 'Company General Capital',
+        labelEn: 'Company General Capital',
+        sublabelAr: isAr ? 'تمويل عام لكامل محفظة الشركة ومشاريعها' : 'General portfolio financing',
+        sublabelEn: 'General portfolio financing',
+        badge: isAr ? 'محفظة عامة' : 'General',
+        badgeBg: 'rgba(100, 116, 139, 0.08)',
+        badgeTextColor: '#64748b',
+        icon: Building2,
+        iconBg: 'rgba(100, 116, 139, 0.08)',
+        iconColor: '#64748b'
+      },
+      ...properties.map(prop => ({
+        value: prop.id,
+        labelAr: prop.title_ar || prop.title_en || '',
+        labelEn: prop.title_en || prop.title_ar || '',
+        sublabelAr: `${prop.location || 'الشرقية'} • ${prop.area_sqm || 0} م²`,
+        sublabelEn: `${prop.location || 'Sharkia'} • ${prop.area_sqm || 0} sqm`,
+        badge: prop.completion_status === 'ready' ? (isAr ? 'جاهز' : 'Ready') : (isAr ? 'قيد التطوير' : 'In Progress'),
+        badgeBg: prop.completion_status === 'ready' ? 'rgba(21, 128, 61, 0.08)' : 'rgba(148, 111, 35, 0.08)',
+        badgeTextColor: prop.completion_status === 'ready' ? '#15803d' : '#946f23',
+        icon: Building2,
+        iconBg: 'rgba(148, 111, 35, 0.1)',
+        iconColor: '#946f23'
+      }))
+    ];
+  }, [properties, isAr]);
 
   if (!isOpen) return null;
 
@@ -1067,26 +1130,15 @@ export const PartnerOperationsModal: React.FC<PartnerOperationsModalProps> = ({
                         <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#334155', marginBottom: '0.25rem' }}>
                           {isAr ? 'ربط الدفعة بمشروع معين (اختياري):' : 'Allocate to Property (Optional):'}
                         </label>
-                        <select
+                        <ZFCustomSelect<string>
                           value={payoutPropertyId}
-                          onChange={(e) => setPayoutPropertyId(e.target.value)}
-                          style={{
-                            width: '100%',
-                            padding: '0.55rem 0.75rem',
-                            border: '1px solid #cbd5e1',
-                            borderRadius: '8px',
-                            fontSize: '0.82rem',
-                            color: '#0f172a',
-                            background: '#ffffff'
-                          }}
-                        >
-                          <option value="">{isAr ? 'توزيع عام على كامل أرباح الشريك' : 'General Portfolio Payout'}</option>
-                          {properties.map(prop => (
-                            <option key={prop.id} value={prop.id}>
-                              {prop.title_ar || prop.title_en}
-                            </option>
-                          ))}
-                        </select>
+                          onChange={(val) => setPayoutPropertyId(val)}
+                          items={payoutPropertyItems}
+                          placeholderAr="-- توزيع عام على أرباح الشريك --"
+                          placeholderEn="-- General Portfolio Payout --"
+                          isAr={isAr}
+                          searchable={true}
+                        />
                       </div>
 
                       <div>
@@ -1341,26 +1393,15 @@ export const PartnerOperationsModal: React.FC<PartnerOperationsModalProps> = ({
                         <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#334155', marginBottom: '0.25rem' }}>
                           {isAr ? 'تخصيص المساهمة لمشروع معين:' : 'Target Property:'}
                         </label>
-                        <select
+                        <ZFCustomSelect<string>
                           value={injectionPropertyId}
-                          onChange={(e) => setInjectionPropertyId(e.target.value)}
-                          style={{
-                            width: '100%',
-                            padding: '0.55rem 0.75rem',
-                            border: '1px solid #cbd5e1',
-                            borderRadius: '8px',
-                            fontSize: '0.82rem',
-                            color: '#0f172a',
-                            background: '#ffffff'
-                          }}
-                        >
-                          <option value="">{isAr ? 'محفظة الشركة العامة (غير مخصص لعمارة)' : 'Company General Capital'}</option>
-                          {properties.map(prop => (
-                            <option key={prop.id} value={prop.id}>
-                              {prop.title_ar || prop.title_en}
-                            </option>
-                          ))}
-                        </select>
+                          onChange={(val) => setInjectionPropertyId(val)}
+                          items={injectionPropertyItems}
+                          placeholderAr="-- محفظة الشركة العامة --"
+                          placeholderEn="-- Company General Capital --"
+                          isAr={isAr}
+                          searchable={true}
+                        />
                       </div>
 
                       <div>

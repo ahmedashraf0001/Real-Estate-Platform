@@ -1,10 +1,11 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { 
   X, 
   UserPlus, 
   User, 
+  Users,
   Phone, 
   CreditCard, 
   Landmark, 
@@ -16,11 +17,14 @@ import {
   FileText,
   CheckCircle2,
   Wallet,
-  AlertCircle
+  AlertCircle,
+  Smartphone,
+  Banknote
 } from 'lucide-react';
 import { Property } from '@/lib/supabase/types';
 import { D } from '@/lib/erp/math';
 import { PRIMARY_DEVELOPER_NAME } from '@/lib/erp/partnersDirectory';
+import { ZFCustomSelect, ZFCustomSelectItem } from '../common/ZFCustomSelect';
 
 export interface NewPartnerSubmitPayload {
   name: string;
@@ -87,6 +91,106 @@ export const NewPartnerProfileModal: React.FC<NewPartnerProfileModalProps> = ({
 
   // Notes
   const [notes, setNotes] = useState<string>('');
+
+  const roleSelectItems = useMemo<ZFCustomSelectItem<string>[]>(() => [
+    {
+      value: 'equity_partner',
+      labelAr: 'شريك ممول بالمشروع (حصة رأسمال وأرباح)',
+      labelEn: 'Project Equity Partner',
+      sublabelAr: 'مساهمة مالية مقابل حصة في أرباح المشروع',
+      sublabelEn: 'Capital injection for equity profit share',
+      badge: isAr ? 'رأس مال وأرباح' : 'Equity',
+      badgeBg: 'rgba(148, 111, 35, 0.08)',
+      badgeTextColor: '#946f23',
+      icon: Users,
+      iconBg: 'rgba(148, 111, 35, 0.1)',
+      iconColor: '#946f23'
+    },
+    {
+      value: 'silent_financier',
+      labelAr: 'ممول صامت (عوائد استثمارية دورية)',
+      labelEn: 'Silent Financier',
+      sublabelAr: 'تمويل مالي دون تدخل في الإدارة',
+      sublabelEn: 'Financial backing without management',
+      badge: isAr ? 'عوائد دورية' : 'Financier',
+      badgeBg: 'rgba(29, 78, 216, 0.08)',
+      badgeTextColor: '#1d4ed8',
+      icon: Coins,
+      iconBg: 'rgba(29, 78, 216, 0.1)',
+      iconColor: '#1d4ed8'
+    },
+    {
+      value: 'land_partner',
+      labelAr: 'شريك مساهم بالأرض (حصة من المبيعات)',
+      labelEn: 'Land / Ground Partner',
+      sublabelAr: 'تقديم قطعة أرض مقابل نسبة من الوحدات أو الإيرادات',
+      sublabelEn: 'Land plot for sales or units share',
+      badge: isAr ? 'شريك بالأرض' : 'Land',
+      badgeBg: 'rgba(4, 120, 87, 0.08)',
+      badgeTextColor: '#047857',
+      icon: Building2,
+      iconBg: 'rgba(4, 120, 87, 0.1)',
+      iconColor: '#047857'
+    }
+  ], [isAr]);
+
+  const propertySelectItems = useMemo<ZFCustomSelectItem<string>[]>(() => [
+    {
+      value: '',
+      labelAr: isAr ? '-- بدون ربط بمشروع محدد حالياً (ممول عام) --' : '-- No specific project (General Financier) --',
+      labelEn: '-- No specific project (General Financier) --',
+      sublabelAr: isAr ? 'ممول للمحفظة العامة دون تخصيص لعمارة' : 'General portfolio investor',
+      sublabelEn: 'General portfolio investor',
+      badge: isAr ? 'عام' : 'General',
+      badgeBg: 'rgba(100, 116, 139, 0.08)',
+      badgeTextColor: '#64748b',
+      icon: Building2,
+      iconBg: 'rgba(100, 116, 139, 0.08)',
+      iconColor: '#64748b'
+    },
+    ...properties.map(p => ({
+      value: p.id,
+      labelAr: p.title_ar || p.title_en || '',
+      labelEn: p.title_en || p.title_ar || '',
+      sublabelAr: `${p.location || 'الشرقية'} • ${p.area_sqm || 0} م²`,
+      sublabelEn: `${p.location || 'Sharkia'} • ${p.area_sqm || 0} sqm`,
+      badge: p.completion_status === 'ready' ? (isAr ? 'جاهز' : 'Ready') : (isAr ? 'قيد التطوير' : 'In Progress'),
+      badgeBg: p.completion_status === 'ready' ? 'rgba(21, 128, 61, 0.08)' : 'rgba(148, 111, 35, 0.08)',
+      badgeTextColor: p.completion_status === 'ready' ? '#15803d' : '#946f23',
+      icon: Building2,
+      iconBg: 'rgba(148, 111, 35, 0.1)',
+      iconColor: '#946f23'
+    }))
+  ], [properties, isAr]);
+
+  const depositMethodItems = useMemo<ZFCustomSelectItem<'CASH_101000' | 'INSTAPAY_102000' | 'BANK_102000'>[]>(() => [
+    {
+      value: 'CASH_101000',
+      labelAr: 'الخزينة الرئيسية (101000) - كاش باليد',
+      labelEn: 'Main Cash Safe (101000) - Cash in Hand',
+      sublabelAr: 'استلام نقدية فعلية بالخزينة',
+      sublabelEn: 'Physical cash received into main vault',
+      badge: isAr ? 'خزينة كاش' : 'Cash',
+      badgeBg: 'rgba(21, 128, 61, 0.08)',
+      badgeTextColor: '#15803d',
+      icon: Banknote,
+      iconBg: 'rgba(21, 128, 61, 0.1)',
+      iconColor: '#15803d'
+    },
+    {
+      value: 'INSTAPAY_102000',
+      labelAr: 'إنستاباي فوري (102000) - تحويل فوري',
+      labelEn: 'InstaPay (102000) - Instant Transfer',
+      sublabelAr: 'تحويل إلكتروني فوري بحساب إنستاباي',
+      sublabelEn: 'Instant transfer via InstaPay',
+      badge: isAr ? 'إنستاباي' : 'InstaPay',
+      badgeBg: 'rgba(112, 26, 117, 0.08)',
+      badgeTextColor: '#701a75',
+      icon: Smartphone,
+      iconBg: 'rgba(112, 26, 117, 0.1)',
+      iconColor: '#701a75'
+    }
+  ], [isAr]);
 
   if (!isOpen) return null;
 
@@ -288,25 +392,15 @@ export const NewPartnerProfileModal: React.FC<NewPartnerProfileModalProps> = ({
                 <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 700, color: '#334155', marginBottom: '0.35rem' }}>
                   {isAr ? 'صفة وطبيعة الشراكة *' : 'Partner Role *'}
                 </label>
-                <select
+                <ZFCustomSelect<string>
                   value={role}
-                  onChange={(e) => setRole(e.target.value as any)}
-                  style={{
-                    width: '100%',
-                    padding: '0.55rem 0.75rem',
-                    borderRadius: '8px',
-                    border: '1px solid #cbd5e1',
-                    fontSize: '0.82rem',
-                    color: '#0f172a',
-                    outline: 'none',
-                    background: '#ffffff',
-                    fontWeight: 700
-                  }}
-                >
-                  <option value="equity_partner">{isAr ? 'شريك ممول بالمشروع (حصة رأسمال وأرباح)' : 'Project Equity Partner'}</option>
-                  <option value="silent_financier">{isAr ? 'ممول صامت (عوائد استثمارية دورية)' : 'Silent Financier'}</option>
-                  <option value="land_partner">{isAr ? 'شريك مساهم بالأرض (حصة من المبيعات)' : 'Land / Ground Partner'}</option>
-                </select>
+                  onChange={(val) => setRole(val as any)}
+                  items={roleSelectItems}
+                  placeholderAr="-- اختار صفة الشراكة --"
+                  placeholderEn="-- Select Partner Role --"
+                  isAr={isAr}
+                  searchable={false}
+                />
               </div>
             </div>
 
@@ -482,28 +576,15 @@ export const NewPartnerProfileModal: React.FC<NewPartnerProfileModalProps> = ({
                 <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 700, color: '#334155', marginBottom: '0.35rem' }}>
                   {isAr ? 'المشروع أو العمارة المراد تخصيص حصة بها' : 'Target Portfolio Property'}
                 </label>
-                <select
+                <ZFCustomSelect<string>
                   value={selectedPropertyId}
-                  onChange={(e) => setSelectedPropertyId(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '0.55rem 0.75rem',
-                    borderRadius: '8px',
-                    border: '1px solid #cbd5e1',
-                    fontSize: '0.82rem',
-                    color: '#0f172a',
-                    outline: 'none',
-                    background: '#ffffff',
-                    fontWeight: 600
-                  }}
-                >
-                  <option value="">{isAr ? '-- بدون ربط بمشروع محدد حالياً (ممول عام) --' : '-- No specific project (General Financier) --'}</option>
-                  {properties.map(p => (
-                    <option key={p.id} value={p.id}>
-                      {isAr ? p.title_ar : p.title_en}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(val) => setSelectedPropertyId(val)}
+                  items={propertySelectItems}
+                  placeholderAr="-- بدون ربط بمشروع محدد حالياً --"
+                  placeholderEn="-- No specific project --"
+                  isAr={isAr}
+                  searchable={true}
+                />
               </div>
 
               {/* Share Percentage */}
@@ -615,24 +696,15 @@ export const NewPartnerProfileModal: React.FC<NewPartnerProfileModalProps> = ({
                     <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 700, color: '#334155', marginBottom: '0.35rem' }}>
                       {isAr ? 'طريقة الاستلام والقيد المحاسبي *' : 'Payment Account *'}
                     </label>
-                    <select
+                    <ZFCustomSelect<'CASH_101000' | 'INSTAPAY_102000' | 'BANK_102000'>
                       value={depositPaymentMethod}
-                      onChange={(e) => setDepositPaymentMethod(e.target.value as any)}
-                      style={{
-                        width: '100%',
-                        padding: '0.55rem 0.75rem',
-                        borderRadius: '8px',
-                        border: '1px solid #cbd5e1',
-                        fontSize: '0.82rem',
-                        color: '#0f172a',
-                        outline: 'none',
-                        background: '#ffffff',
-                        fontWeight: 700
-                      }}
-                    >
-                      <option value="CASH_101000">{isAr ? 'الخزينة الرئيسية (101000) - كاش باليد' : 'Main Cash Safe (101000)'}</option>
-                      <option value="INSTAPAY_102000">{isAr ? 'إنستاباي فوري (102000) - تحويل فوري' : 'InstaPay (102000)'}</option>
-                    </select>
+                      onChange={(val) => setDepositPaymentMethod(val)}
+                      items={depositMethodItems}
+                      placeholderAr="-- اختار طريقة الاستلام --"
+                      placeholderEn="-- Select Payment Method --"
+                      isAr={isAr}
+                      searchable={false}
+                    />
                   </div>
                 </div>
 

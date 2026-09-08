@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   X, 
   CheckCircle2, 
@@ -10,6 +10,7 @@ import {
   Calendar, 
   FileText,
   User,
+  Users,
   Building2,
   ArrowRight,
   Receipt,
@@ -20,6 +21,7 @@ import { D } from '@/lib/erp/math';
 import { MoneyCell } from '@/components/erp/MoneyCell';
 import { PartnerFinancialSummary } from '@/lib/erp/partnersEngine';
 import { Property } from '@/lib/supabase/types';
+import { ZFCustomSelect, ZFCustomSelectItem } from '../common/ZFCustomSelect';
 import styles from '../ZFWorkstationShell.module.css';
 
 interface PartnerPayoutModalProps {
@@ -67,6 +69,57 @@ export const PartnerPayoutModal: React.FC<PartnerPayoutModalProps> = ({
       setSelectedPartnerName(partners[0].partnerName);
     }
   }, [initialPartnerName, partners, selectedPartnerName]);
+
+  const partnerSelectItems = useMemo<ZFCustomSelectItem<string>[]>(() => {
+    return partners.map(p => {
+      const balanceNum = D(p.netCurrentBalance).toNumber();
+      return {
+        value: p.partnerName,
+        labelAr: p.partnerName,
+        labelEn: p.partnerName,
+        sublabelAr: `${p.roleTitleAr} • هاتف: ${p.phone || '—'}`,
+        sublabelEn: `${p.roleTitleAr} • Phone: ${p.phone || '—'}`,
+        price: balanceNum,
+        badge: balanceNum > 0 ? (isAr ? 'مستحق له أرباح' : 'Due Payout') : (isAr ? 'رصيد مسوى' : 'Settled'),
+        badgeBg: balanceNum > 0 ? 'rgba(21, 128, 61, 0.08)' : 'rgba(100, 116, 139, 0.08)',
+        badgeTextColor: balanceNum > 0 ? '#15803d' : '#64748b',
+        icon: Users,
+        iconBg: 'rgba(148, 111, 35, 0.1)',
+        iconColor: '#946f23'
+      };
+    });
+  }, [partners, isAr]);
+
+  const propertySelectItems = useMemo<ZFCustomSelectItem<string>[]>(() => {
+    return [
+      {
+        value: '',
+        labelAr: isAr ? 'توزيع عام من أرباح الشركة' : 'General Company Profit Distribution',
+        labelEn: 'General Company Profit Distribution',
+        sublabelAr: isAr ? 'أرباح عامة غير مخصصة لمشروع بعينه' : 'General profit unallocated to a specific project',
+        sublabelEn: 'General profit unallocated to a specific project',
+        badge: isAr ? 'توزيع عام' : 'General',
+        badgeBg: 'rgba(100, 116, 139, 0.08)',
+        badgeTextColor: '#64748b',
+        icon: Building2,
+        iconBg: 'rgba(100, 116, 139, 0.08)',
+        iconColor: '#64748b'
+      },
+      ...properties.map(p => ({
+        value: p.id,
+        labelAr: p.title_ar || p.title_en || '',
+        labelEn: p.title_en || p.title_ar || '',
+        sublabelAr: `${p.location || 'الشرقية'} • ${p.area_sqm || 0} م²`,
+        sublabelEn: `${p.location || 'Sharkia'} • ${p.area_sqm || 0} sqm`,
+        badge: p.completion_status === 'ready' ? (isAr ? 'جاهز' : 'Ready') : (isAr ? 'قيد التطوير' : 'In Progress'),
+        badgeBg: p.completion_status === 'ready' ? 'rgba(21, 128, 61, 0.08)' : 'rgba(148, 111, 35, 0.08)',
+        badgeTextColor: p.completion_status === 'ready' ? '#15803d' : '#946f23',
+        icon: Building2,
+        iconBg: 'rgba(148, 111, 35, 0.1)',
+        iconColor: '#946f23'
+      }))
+    ];
+  }, [properties, isAr]);
 
   if (!isOpen) return null;
 
@@ -185,26 +238,15 @@ export const PartnerPayoutModal: React.FC<PartnerPayoutModalProps> = ({
             <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#334155', marginBottom: '0.35rem' }}>
               {isAr ? 'اختار الشريك أو الممول المستحق للدفعة:' : 'Select Partner / Investor:'}
             </label>
-            <select
+            <ZFCustomSelect<string>
               value={selectedPartnerName}
-              onChange={(e) => setSelectedPartnerName(e.target.value)}
-              style={{
-                width: '100%',
-                background: '#ffffff',
-                border: '1px solid #cbd5e1',
-                borderRadius: '8px',
-                padding: '0.55rem 0.75rem',
-                fontSize: '0.85rem',
-                fontWeight: 700,
-                color: '#0f172a'
-              }}
-            >
-              {partners.map(p => (
-                <option key={p.partnerName} value={p.partnerName}>
-                  {p.partnerName} ({p.roleTitleAr}) — رصيد مستحق: {D(p.netCurrentBalance).toNumber().toLocaleString()} ج.م
-                </option>
-              ))}
-            </select>
+              onChange={(val) => setSelectedPartnerName(val)}
+              items={partnerSelectItems}
+              placeholderAr="-- اضغط لاختيار الشريك المستحق --"
+              placeholderEn="-- Select Partner / Investor --"
+              isAr={isAr}
+              searchable={true}
+            />
           </div>
 
           {/* CURRENT PARTNER FINANCIAL BRIEF CARD */}
@@ -284,26 +326,15 @@ export const PartnerPayoutModal: React.FC<PartnerPayoutModalProps> = ({
               <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#334155', marginBottom: '0.35rem' }}>
                 {isAr ? 'المشروع المرتبط بالدفعة (اختياري):' : 'Linked Project (Optional):'}
               </label>
-              <select
+              <ZFCustomSelect<string>
                 value={selectedPropertyId}
-                onChange={(e) => setSelectedPropertyId(e.target.value)}
-                style={{
-                  width: '100%',
-                  background: '#ffffff',
-                  border: '1px solid #cbd5e1',
-                  borderRadius: '8px',
-                  padding: '0.55rem 0.75rem',
-                  fontSize: '0.82rem',
-                  color: '#0f172a'
-                }}
-              >
-                <option value="">{isAr ? '-- توزيع عام من أرباح الشركة --' : '-- General Company Profit Distribution --'}</option>
-                {properties.map(p => (
-                  <option key={p.id} value={p.id}>
-                    {isAr ? p.title_ar : p.title_en}
-                  </option>
-                ))}
-              </select>
+                onChange={(val) => setSelectedPropertyId(val)}
+                items={propertySelectItems}
+                placeholderAr="-- توزيع عام من أرباح الشركة --"
+                placeholderEn="-- General Company Profit Distribution --"
+                isAr={isAr}
+                searchable={true}
+              />
             </div>
           </div>
 
