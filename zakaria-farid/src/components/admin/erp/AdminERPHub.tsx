@@ -108,6 +108,7 @@ import { RSVAllocationModal } from './v2/modals/RSVAllocationModal';
 import { PartnerPayoutModal } from './v2/modals/PartnerPayoutModal';
 import { PartnerCapitalInjectionModal } from './v2/modals/PartnerCapitalInjectionModal';
 import { PartnerDossierModal } from './v2/modals/PartnerDossierModal';
+import { PartnerOperationsModal } from './v2/modals/PartnerOperationsModal';
 import { NewPartnerProfileModal, NewPartnerSubmitPayload } from './v2/modals/NewPartnerProfileModal';
 import { ERPPartnerProfile, ERPPartnerTransaction } from '@/lib/erp/types';
 import { 
@@ -521,6 +522,7 @@ export default function AdminERPHub({ adminLocale, initialTab }: AdminERPHubProp
   const [showPartnerInjectionModal, setShowPartnerInjectionModal] = useState<boolean>(false);
   const [injectionInitialPartner, setInjectionInitialPartner] = useState<string | undefined>(undefined);
   const [showNewPartnerModal, setShowNewPartnerModal] = useState<boolean>(false);
+  const [showPartnerOperationsModal, setShowPartnerOperationsModal] = useState<boolean>(false);
   const [dossierTargetPartner, setDossierTargetPartner] = useState<PartnerFinancialSummary | null>(null);
 
   const unifiedPartners = useMemo(() => {
@@ -3023,6 +3025,7 @@ export default function AdminERPHub({ adminLocale, initialTab }: AdminERPHubProp
                 onOpenQuickSearch={() => setShowQuickSearch(true)}
                 onAddPropertyCostItem={handleAddPropertyCostItem}
                 onDirectExpenseSubmit={handleDirectExpenseSubmit}
+                onOpenPartnerOperations={() => setShowPartnerOperationsModal(true)}
                 onNavigateToTab={(tab) => navigateToTab(tab)}
               />
             )}
@@ -3481,6 +3484,29 @@ export default function AdminERPHub({ adminLocale, initialTab }: AdminERPHubProp
           setDossierTargetPartner(null);
           setInjectionInitialPartner(name);
           setShowPartnerInjectionModal(true);
+        }}
+      />
+
+      {/* PARTNER OPERATIONS 2-SIDED WORKBENCH MODAL */}
+      <PartnerOperationsModal
+        isOpen={showPartnerOperationsModal}
+        onClose={() => setShowPartnerOperationsModal(false)}
+        partners={PartnersEngine.calculatePartnerSummaries(partnerProfiles, data.properties, data.contracts, partnerTransactions, data.partnerCalls)}
+        partnerProfiles={partnerProfiles}
+        partnerTransactions={partnerTransactions}
+        properties={data.properties}
+        contracts={data.contracts}
+        isAr={isAr}
+        isMutating={isMutating}
+        onOpenNewPartnerModal={() => {
+          setShowPartnerOperationsModal(false);
+          setShowNewPartnerModal(true);
+        }}
+        onConfirmPayout={async (details) => {
+          await handleConfirmPartnerPayout(details);
+        }}
+        onConfirmInjection={async (details) => {
+          await handleConfirmPartnerInjection(details);
         }}
       />
     </div>

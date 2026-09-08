@@ -44,7 +44,8 @@ import {
   Hammer,
   Smartphone,
   Info,
-  Landmark
+  Landmark,
+  Users
 } from 'lucide-react';
 import { Property, BuildingUnitItem } from '@/lib/supabase/types';
 import { 
@@ -104,6 +105,7 @@ interface DailyOperationsViewProps {
   onOpenQuickSearch?: () => void;
   onAddPropertyCostItem?: (item: ERPPropertyCostItem) => Promise<void>;
   onDirectExpenseSubmit?: (amount: string, categoryAccount: string, memo: string, creditAccount?: string) => Promise<void>;
+  onOpenPartnerOperations?: () => void;
   onNavigateToTab: (tab: any) => void;
 }
 
@@ -137,6 +139,7 @@ export const DailyOperationsView: React.FC<DailyOperationsViewProps> = ({
   onOpenQuickSearch,
   onAddPropertyCostItem,
   onDirectExpenseSubmit,
+  onOpenPartnerOperations,
   onNavigateToTab
 }) => {
   // 1. Dues & Collections Analytics
@@ -1620,6 +1623,59 @@ export const DailyOperationsView: React.FC<DailyOperationsViewProps> = ({
               </div>
               <div style={{ fontSize: '0.73rem', color: '#64748b', lineHeight: 1.35 }}>
                 {isAr ? 'تطبيق غرامة الـ 10% القانونية ورد باقي الفلوس نقدياً' : 'Settle penalty & vault refund'}
+              </div>
+            </div>
+          </button>
+
+          {/* Action 10: Partner Management & Distributions */}
+          <button
+            type="button"
+            className={styles.opsActionBtn}
+            title={isAr 
+              ? 'إدارة وتوزيعات الشركاء والممولين: متابعة الأرصدة، ضخ مساهمات رأس مال، وصرف أرباح بنظام الشقين المزدوج' 
+              : 'Manage partners, capital injections, and profit distributions'}
+            style={{
+              padding: '0.95rem 1.15rem',
+              minHeight: '78px',
+              borderRadius: '12px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.85rem',
+              cursor: 'pointer',
+              textAlign: isAr ? 'right' : 'left'
+            }}
+            onClick={() => {
+              if (onOpenPartnerOperations) {
+                onOpenPartnerOperations();
+              } else {
+                onNavigateToTab('partners');
+              }
+            }}
+          >
+            <div 
+              data-action-icon="true"
+              style={{
+                width: '40px',
+                height: '40px',
+                borderRadius: '10px',
+                background: 'rgba(184, 144, 62, 0.08)',
+                color: '#946f23',
+                border: '1px solid rgba(184, 144, 62, 0.22)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+                transition: 'transform 0.2s ease'
+              }}
+            >
+              <Users size={18} />
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem', minWidth: 0, flex: 1 }}>
+              <div data-action-title="true" style={{ fontSize: '0.9rem', fontWeight: 800, color: '#0f172a', transition: 'color 0.2s ease' }}>
+                {isAr ? 'إدارة وتوزيعات الشركاء والممولين' : 'Partner Operations'}
+              </div>
+              <div style={{ fontSize: '0.73rem', color: '#64748b', lineHeight: 1.35 }}>
+                {isAr ? 'متابعة الأرصدة، ضخ مساهمات، وصرف أرباح بنظام الشقين' : 'Balances, dividends & capital'}
               </div>
             </div>
           </button>
