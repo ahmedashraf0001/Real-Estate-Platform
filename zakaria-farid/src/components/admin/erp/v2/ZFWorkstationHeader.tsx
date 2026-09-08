@@ -8,7 +8,6 @@ import {
   Search, 
   RefreshCw,
   ArrowLeft, 
-  FileSpreadsheet, 
   LogOut, 
   Bell, 
   BookOpen, 
@@ -228,23 +227,7 @@ export const ZFWorkstationHeader: React.FC<ZFWorkstationHeaderProps> = ({
           </span>
         </div>
 
-        {/* Executive Excel Export Button */}
-        {onExportExcel && (
-          <button 
-            type="button"
-            className={styles.excelExportBtn}
-            onClick={onExportExcel}
-            title={isAr ? 'تنزيل تقرير إكسيل بكل الحسابات (.xlsx)' : 'Export Accounting Ledger & Reports to Excel (.xlsx)'}
-          >
-            <div className={styles.excelIconBox}>
-              <FileSpreadsheet size={15} strokeWidth={2.2} />
-            </div>
-            <span className={styles.excelExportText}>
-              {isAr ? 'تصدير التقارير' : 'Export Reports'}
-            </span>
-            <span className={styles.excelFormatPill}>XLSX</span>
-          </button>
-        )}
+
 
         {/* Data Refresh */}
         <button 

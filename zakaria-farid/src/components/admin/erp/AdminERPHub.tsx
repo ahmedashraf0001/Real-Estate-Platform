@@ -2985,7 +2985,6 @@ export default function AdminERPHub({ adminLocale, initialTab }: AdminERPHubProp
         onToggleCurrency={() => setCurrency(prev => prev === 'EGP' ? 'USD' : 'EGP')}
         onOpenQuickSearch={() => setShowQuickSearch(true)}
         onRefreshData={loadLiveData}
-        onExportExcel={handleExportExcel}
         isMutating={isMutating}
         currentUser={currentUser}
         onSignOut={handleSignOut}
@@ -3131,6 +3130,7 @@ export default function AdminERPHub({ adminLocale, initialTab }: AdminERPHubProp
                 onAddPropertyCostItem={handleAddPropertyCostItem}
                 onDirectExpenseSubmit={handleDirectExpenseSubmit}
                 onOpenPartnerOperations={() => setShowPartnerOperationsModal(true)}
+                onExportExcel={handleExportExcel}
                 onNavigateToTab={(tab) => navigateToTab(tab)}
               />
             )}

@@ -41,6 +41,7 @@ import {
   SlidersHorizontal,
   Compass,
   FileCheck,
+  FileSpreadsheet,
   Paintbrush,
   Hammer,
   Smartphone,
@@ -107,6 +108,7 @@ interface DailyOperationsViewProps {
   onAddPropertyCostItem?: (item: ERPPropertyCostItem) => Promise<void>;
   onDirectExpenseSubmit?: (amount: string, categoryAccount: string, memo: string, creditAccount?: string) => Promise<void>;
   onOpenPartnerOperations?: () => void;
+  onExportExcel?: () => void;
   onNavigateToTab: (tab: any) => void;
 }
 
@@ -141,6 +143,7 @@ export const DailyOperationsView: React.FC<DailyOperationsViewProps> = ({
   onAddPropertyCostItem,
   onDirectExpenseSubmit,
   onOpenPartnerOperations,
+  onExportExcel,
   onNavigateToTab
 }) => {
   // 1. Dues & Collections Analytics
@@ -1250,6 +1253,24 @@ export const DailyOperationsView: React.FC<DailyOperationsViewProps> = ({
               </span>
             </div>
           </div>
+
+          {/* Executive Excel Export Button */}
+          {onExportExcel && (
+            <button 
+              type="button"
+              className={styles.excelExportBtn}
+              onClick={onExportExcel}
+              title={isAr ? 'تنزيل تقرير إكسيل شامل بكافة الحسابات والعقود واليومية (.xlsx)' : 'Export Accounting Ledger & Reports to Excel (.xlsx)'}
+            >
+              <div className={styles.excelIconBox}>
+                <FileSpreadsheet size={15} strokeWidth={2.2} />
+              </div>
+              <span className={styles.excelExportText}>
+                {isAr ? 'تصدير التقارير' : 'Export Reports'}
+              </span>
+              <span className={styles.excelFormatPill}>XLSX</span>
+            </button>
+          )}
         </div>
 
         {/* Spacious Launchpad Responsive Grid (Ample Room & Zero Clutter) */}
