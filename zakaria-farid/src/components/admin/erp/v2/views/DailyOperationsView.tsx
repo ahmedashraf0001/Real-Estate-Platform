@@ -1289,7 +1289,316 @@ export const DailyOperationsView: React.FC<DailyOperationsViewProps> = ({
         </div>
       </div>
 
-      {/* 2. SPACIOUS EXECUTIVE FAST-ACTION LAUNCHPAD */}
+      {/* 2. EXECUTIVE LIQUIDITY & ACTION RADAR */}
+      <div style={{
+        background: '#ffffff',
+        border: '1.5px solid #e2e8f0',
+        borderRadius: '16px',
+        padding: '1.25rem 1.4rem',
+        boxShadow: '0 4px 20px -4px rgba(15, 23, 42, 0.05)',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '1.1rem'
+      }}>
+        {/* Radar Header & Live Liquidity Breakdown */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: '1rem',
+          borderBottom: '1px solid #f1f5f9',
+          paddingBottom: '0.95rem'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <div style={{
+              width: '38px',
+              height: '38px',
+              borderRadius: '11px',
+              background: 'linear-gradient(135deg, rgba(4, 120, 87, 0.12) 0%, rgba(4, 120, 87, 0.04) 100%)',
+              border: '1px solid rgba(4, 120, 87, 0.25)',
+              color: '#047857',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              boxShadow: '0 2px 6px rgba(4, 120, 87, 0.1)'
+            }}>
+              <Activity size={18} />
+            </div>
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 900, color: '#0f172a', letterSpacing: '-0.01em' }}>
+                  {isAr ? 'رادار السيولة والتنبيهات التشغيلية الفورية' : 'Executive Liquidity & Action Radar'}
+                </h3>
+                <span style={{
+                  fontSize: '0.68rem',
+                  fontWeight: 800,
+                  padding: '0.15rem 0.55rem',
+                  borderRadius: '20px',
+                  background: 'rgba(4, 120, 87, 0.08)',
+                  border: '1px solid rgba(4, 120, 87, 0.25)',
+                  color: '#047857'
+                }}>
+                  {isAr ? 'محدث لحظياً بالمليم' : 'Live Sync'}
+                </span>
+              </div>
+              <span style={{ fontSize: '0.74rem', color: '#64748b', marginTop: '0.2rem', display: 'block' }}>
+                {isAr 
+                  ? 'مراقبة فورية للسيولة الحاضرة بالخزينة والبنك، مع تنبيهات الأقساط المتأخرة والوحدات الجاهزة للتسليم' 
+                  : 'Instant detection of liquid reserves, critical overdue installments, and delivery readiness'}
+              </span>
+            </div>
+          </div>
+
+          {/* Live Liquid Treasury Badges */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'wrap' }}>
+            {/* Safe 101000 */}
+            <div style={{
+              background: '#f8fafc',
+              border: '1px solid #e2e8f0',
+              borderRadius: '9px',
+              padding: '0.4rem 0.75rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.45rem'
+            }}>
+              <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#059669' }} />
+              <span style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 600 }}>
+                {isAr ? 'خزينة المركز الرئيسي (101000):' : 'Main Safe (101000):'}
+              </span>
+              <span style={{ fontSize: '0.84rem', fontWeight: 900, color: '#0f172a', fontVariantNumeric: 'tabular-nums' }}>
+                {liquidBalances.safeCash.formatEGP(isAr)}
+              </span>
+            </div>
+
+            {/* Bank 102000 */}
+            <div style={{
+              background: '#f8fafc',
+              border: '1px solid #e2e8f0',
+              borderRadius: '9px',
+              padding: '0.4rem 0.75rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.45rem'
+            }}>
+              <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#2563eb' }} />
+              <span style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 600 }}>
+                {isAr ? 'البنك وإنستاباي (102000):' : 'Bank & InstaPay (102000):'}
+              </span>
+              <span style={{ fontSize: '0.84rem', fontWeight: 900, color: '#0f172a', fontVariantNumeric: 'tabular-nums' }}>
+                {liquidBalances.bankCash.formatEGP(isAr)}
+              </span>
+            </div>
+
+            {/* Total Liquid Capital */}
+            <div style={{
+              background: 'linear-gradient(135deg, rgba(184, 144, 62, 0.09) 0%, rgba(184, 144, 62, 0.03) 100%)',
+              border: '1.5px solid rgba(184, 144, 62, 0.3)',
+              borderRadius: '9px',
+              padding: '0.4rem 0.85rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.45rem'
+            }}>
+              <Wallet size={14} color="#946f23" />
+              <span style={{ fontSize: '0.72rem', color: '#946f23', fontWeight: 800 }}>
+                {isAr ? 'إجمالي السيولة المتاحة:' : 'Total Liquid:'}
+              </span>
+              <span style={{ fontSize: '0.92rem', fontWeight: 900, color: '#946f23', fontVariantNumeric: 'tabular-nums' }}>
+                {liquidBalances.totalLiquid.formatEGP(isAr)}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* High-Contrast Actionable Alerts Grid */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(290px, 1fr))',
+          gap: '0.8rem'
+        }}>
+          {operationalAlerts.length === 0 ? (
+            <div style={{
+              gridColumn: '1 / -1',
+              background: '#f8fafc',
+              border: '1.5px solid #e2e8f0',
+              borderRadius: '12px',
+              padding: '1.25rem',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '1rem'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <div style={{
+                  width: '36px',
+                  height: '36px',
+                  borderRadius: '10px',
+                  background: 'rgba(5, 150, 105, 0.1)',
+                  color: '#059669',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}>
+                  <ShieldCheck size={20} />
+                </div>
+                <div>
+                  <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#0f172a' }}>
+                    {isAr ? 'كافة العمليات التشغيلية منتظمة ولا توجد متأخرات حرجة' : 'All operational queues are regular'}
+                  </div>
+                  <div style={{ fontSize: '0.73rem', color: '#64748b', marginTop: '0.2rem' }}>
+                    {isAr ? 'الخزينة والحسابات البنكية مطابقة بالمليم، وكافة الأقساط محصلة في مواعيدها المحددة.' : 'Safe and banks reconciled; all schedules collected on time.'}
+                  </div>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => onNavigateToTab('ledger')}
+                style={{
+                  background: '#ffffff',
+                  border: '1px solid #cbd5e1',
+                  color: '#0f172a',
+                  padding: '0.4rem 0.85rem',
+                  borderRadius: '8px',
+                  fontSize: '0.74rem',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.35rem'
+                }}
+              >
+                <span>{isAr ? 'فتح دفتر الأستاذ' : 'View Ledger'}</span>
+                <ArrowLeft size={12} style={{ transform: isAr ? 'none' : 'rotate(180deg)' }} />
+              </button>
+            </div>
+          ) : (
+            operationalAlerts.map(alert => {
+              const isCrit = alert.severity === 'critical';
+              const isWarn = alert.severity === 'warning';
+              const accentColor = isCrit ? '#dc2626' : isWarn ? '#d97706' : '#059669';
+
+              return (
+                <div
+                  key={alert.id}
+                  className={styles.radarAlertCard}
+                >
+                  {/* Subtle architectural leading edge indicator */}
+                  <div 
+                    className={styles.radarAlertLeadingEdge} 
+                    style={{ background: accentColor }} 
+                  />
+
+                  <div>
+                    {/* Top Badge & Header */}
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.65rem', gap: '0.5rem' }}>
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.45rem',
+                      }}>
+                        <div style={{
+                          width: '24px',
+                          height: '24px',
+                          borderRadius: '7px',
+                          background: isCrit ? 'rgba(220, 38, 38, 0.08)' : isWarn ? 'rgba(217, 119, 6, 0.08)' : 'rgba(5, 150, 105, 0.08)',
+                          color: accentColor,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          flexShrink: 0
+                        }}>
+                          {isCrit ? <AlertCircle size={14} /> : isWarn ? <AlertTriangle size={14} /> : <Key size={14} />}
+                        </div>
+                        <span style={{ fontSize: '0.74rem', fontWeight: 800, color: '#1e293b' }}>
+                          {alert.headerLabelAr 
+                            ? (isAr ? alert.headerLabelAr : (alert.headerLabelEn || alert.headerLabelAr)) 
+                            : isCrit ? (isAr ? 'تنبيه تحصيل متأخر' : 'Overdue Alert') 
+                            : isWarn ? (isAr ? 'استحقاق قريب' : 'Maturing Alert') 
+                            : (isAr ? 'جاهزية تسليم' : 'Handover Ready')}
+                        </span>
+                      </div>
+
+                      {alert.badgeLabelAr && (
+                        <span style={{
+                          fontSize: '0.66rem',
+                          fontWeight: 800,
+                          padding: '0.15rem 0.55rem',
+                          borderRadius: '6px',
+                          background: isCrit ? 'rgba(220, 38, 38, 0.06)' : isWarn ? 'rgba(217, 119, 6, 0.06)' : 'rgba(5, 150, 105, 0.06)',
+                          color: isCrit ? '#dc2626' : isWarn ? '#b45309' : '#047857',
+                          border: `1px solid ${isCrit ? 'rgba(220, 38, 38, 0.18)' : isWarn ? 'rgba(217, 119, 6, 0.18)' : 'rgba(5, 150, 105, 0.18)'}`,
+                          flexShrink: 0
+                        }}>
+                          {isAr ? alert.badgeLabelAr : alert.badgeLabelEn}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Debtor Name & Title */}
+                    <div style={{ fontSize: '0.92rem', fontWeight: 900, color: '#0f172a', lineHeight: 1.35, letterSpacing: '-0.01em' }}>
+                      {isAr ? alert.titleAr : alert.titleEn}
+                    </div>
+
+                    {/* Unit & Contract Details */}
+                    {alert.unitDetail && (
+                      <div style={{ fontSize: '0.74rem', color: '#475569', marginTop: '0.3rem', fontWeight: 600 }}>
+                        {alert.unitDetail}
+                      </div>
+                    )}
+
+                    {/* Secondary Note */}
+                    <div style={{ fontSize: '0.71rem', color: '#64748b', marginTop: '0.35rem', lineHeight: 1.45 }}>
+                      {isAr ? alert.secondaryNoteAr : alert.secondaryNoteEn}
+                    </div>
+                  </div>
+
+                  {/* Footer: Amount & Action Trigger */}
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    paddingTop: '0.65rem',
+                    borderTop: '1px solid rgba(15, 23, 42, 0.06)',
+                    marginTop: '0.25rem'
+                  }}>
+                    {alert.amountFormatted ? (
+                      <div>
+                        <span style={{ fontSize: '0.63rem', color: '#64748b', display: 'block', fontWeight: 700 }}>
+                          {isCrit ? (isAr ? 'المبلغ المتأخر:' : 'Due Amount:') : isWarn ? (isAr ? 'قيمة القسط:' : 'Amount:') : (isAr ? 'المسدد حتى الآن:' : 'Collected:')}
+                        </span>
+                        <span style={{
+                          fontSize: '1rem',
+                          fontWeight: 900,
+                          color: accentColor,
+                          fontVariantNumeric: 'tabular-nums',
+                          letterSpacing: '-0.02em'
+                        }}>
+                          {alert.amountFormatted}
+                        </span>
+                      </div>
+                    ) : <div />}
+
+                    <button
+                      type="button"
+                      onClick={alert.onClick}
+                      className={styles.radarAlertButton}
+                    >
+                      <span>{isAr ? alert.actionLabelAr : alert.actionLabelEn}</span>
+                      <span className={styles.radarAlertButtonIcon}>
+                        <ArrowLeft size={11} style={{ transform: isAr ? 'none' : 'rotate(180deg)' }} />
+                      </span>
+                    </button>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+      </div>
+
+      {/* 3. SPACIOUS EXECUTIVE FAST-ACTION LAUNCHPAD */}
       <div style={{
         background: '#ffffff',
         border: '1.5px solid #e2e8f0',
@@ -1876,315 +2185,6 @@ export const DailyOperationsView: React.FC<DailyOperationsViewProps> = ({
               </div>
             </div>
           </button>
-        </div>
-      </div>
-
-      {/* 3. EXECUTIVE LIQUIDITY & ACTION RADAR */}
-      <div style={{
-        background: '#ffffff',
-        border: '1.5px solid #e2e8f0',
-        borderRadius: '16px',
-        padding: '1.25rem 1.4rem',
-        boxShadow: '0 4px 20px -4px rgba(15, 23, 42, 0.05)',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '1.1rem'
-      }}>
-        {/* Radar Header & Live Liquidity Breakdown */}
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          flexWrap: 'wrap',
-          gap: '1rem',
-          borderBottom: '1px solid #f1f5f9',
-          paddingBottom: '0.95rem'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            <div style={{
-              width: '38px',
-              height: '38px',
-              borderRadius: '11px',
-              background: 'linear-gradient(135deg, rgba(4, 120, 87, 0.12) 0%, rgba(4, 120, 87, 0.04) 100%)',
-              border: '1px solid rgba(4, 120, 87, 0.25)',
-              color: '#047857',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              boxShadow: '0 2px 6px rgba(4, 120, 87, 0.1)'
-            }}>
-              <Activity size={18} />
-            </div>
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-                <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 900, color: '#0f172a', letterSpacing: '-0.01em' }}>
-                  {isAr ? 'رادار السيولة والتنبيهات التشغيلية الفورية' : 'Executive Liquidity & Action Radar'}
-                </h3>
-                <span style={{
-                  fontSize: '0.68rem',
-                  fontWeight: 800,
-                  padding: '0.15rem 0.55rem',
-                  borderRadius: '20px',
-                  background: 'rgba(4, 120, 87, 0.08)',
-                  border: '1px solid rgba(4, 120, 87, 0.25)',
-                  color: '#047857'
-                }}>
-                  {isAr ? 'محدث لحظياً بالمليم' : 'Live Sync'}
-                </span>
-              </div>
-              <span style={{ fontSize: '0.74rem', color: '#64748b', marginTop: '0.2rem', display: 'block' }}>
-                {isAr 
-                  ? 'مراقبة فورية للسيولة الحاضرة بالخزينة والبنك، مع تنبيهات الأقساط المتأخرة والوحدات الجاهزة للتسليم' 
-                  : 'Instant detection of liquid reserves, critical overdue installments, and delivery readiness'}
-              </span>
-            </div>
-          </div>
-
-          {/* Live Liquid Treasury Badges */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'wrap' }}>
-            {/* Safe 101000 */}
-            <div style={{
-              background: '#f8fafc',
-              border: '1px solid #e2e8f0',
-              borderRadius: '9px',
-              padding: '0.4rem 0.75rem',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.45rem'
-            }}>
-              <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#059669' }} />
-              <span style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 600 }}>
-                {isAr ? 'خزينة المركز الرئيسي (101000):' : 'Main Safe (101000):'}
-              </span>
-              <span style={{ fontSize: '0.84rem', fontWeight: 900, color: '#0f172a', fontVariantNumeric: 'tabular-nums' }}>
-                {liquidBalances.safeCash.formatEGP(isAr)}
-              </span>
-            </div>
-
-            {/* Bank 102000 */}
-            <div style={{
-              background: '#f8fafc',
-              border: '1px solid #e2e8f0',
-              borderRadius: '9px',
-              padding: '0.4rem 0.75rem',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.45rem'
-            }}>
-              <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#2563eb' }} />
-              <span style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 600 }}>
-                {isAr ? 'البنك وإنستاباي (102000):' : 'Bank & InstaPay (102000):'}
-              </span>
-              <span style={{ fontSize: '0.84rem', fontWeight: 900, color: '#0f172a', fontVariantNumeric: 'tabular-nums' }}>
-                {liquidBalances.bankCash.formatEGP(isAr)}
-              </span>
-            </div>
-
-            {/* Total Liquid Capital */}
-            <div style={{
-              background: 'linear-gradient(135deg, rgba(184, 144, 62, 0.09) 0%, rgba(184, 144, 62, 0.03) 100%)',
-              border: '1.5px solid rgba(184, 144, 62, 0.3)',
-              borderRadius: '9px',
-              padding: '0.4rem 0.85rem',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.45rem'
-            }}>
-              <Wallet size={14} color="#946f23" />
-              <span style={{ fontSize: '0.72rem', color: '#946f23', fontWeight: 800 }}>
-                {isAr ? 'إجمالي السيولة المتاحة:' : 'Total Liquid:'}
-              </span>
-              <span style={{ fontSize: '0.92rem', fontWeight: 900, color: '#946f23', fontVariantNumeric: 'tabular-nums' }}>
-                {liquidBalances.totalLiquid.formatEGP(isAr)}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* High-Contrast Actionable Alerts Grid */}
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(290px, 1fr))',
-          gap: '0.8rem'
-        }}>
-          {operationalAlerts.length === 0 ? (
-            <div style={{
-              gridColumn: '1 / -1',
-              background: '#f8fafc',
-              border: '1.5px solid #e2e8f0',
-              borderRadius: '12px',
-              padding: '1.25rem',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              gap: '1rem'
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                <div style={{
-                  width: '36px',
-                  height: '36px',
-                  borderRadius: '10px',
-                  background: 'rgba(5, 150, 105, 0.1)',
-                  color: '#059669',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
-                }}>
-                  <ShieldCheck size={20} />
-                </div>
-                <div>
-                  <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#0f172a' }}>
-                    {isAr ? 'كافة العمليات التشغيلية منتظمة ولا توجد متأخرات حرجة' : 'All operational queues are regular'}
-                  </div>
-                  <div style={{ fontSize: '0.73rem', color: '#64748b', marginTop: '0.2rem' }}>
-                    {isAr ? 'الخزينة والحسابات البنكية مطابقة بالمليم، وكافة الأقساط محصلة في مواعيدها المحددة.' : 'Safe and banks reconciled; all schedules collected on time.'}
-                  </div>
-                </div>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => onNavigateToTab('ledger')}
-                style={{
-                  background: '#ffffff',
-                  border: '1px solid #cbd5e1',
-                  color: '#0f172a',
-                  padding: '0.4rem 0.85rem',
-                  borderRadius: '8px',
-                  fontSize: '0.74rem',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.35rem'
-                }}
-              >
-                <span>{isAr ? 'فتح دفتر الأستاذ' : 'View Ledger'}</span>
-                <ArrowLeft size={12} style={{ transform: isAr ? 'none' : 'rotate(180deg)' }} />
-              </button>
-            </div>
-          ) : (
-            operationalAlerts.map(alert => {
-              const isCrit = alert.severity === 'critical';
-              const isWarn = alert.severity === 'warning';
-              const accentColor = isCrit ? '#dc2626' : isWarn ? '#d97706' : '#059669';
-
-              return (
-                <div
-                  key={alert.id}
-                  className={styles.radarAlertCard}
-                >
-                  {/* Subtle architectural leading edge indicator */}
-                  <div 
-                    className={styles.radarAlertLeadingEdge} 
-                    style={{ background: accentColor }} 
-                  />
-
-                  <div>
-                    {/* Top Badge & Header */}
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.65rem', gap: '0.5rem' }}>
-                      <div style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.45rem',
-                      }}>
-                        <div style={{
-                          width: '24px',
-                          height: '24px',
-                          borderRadius: '7px',
-                          background: isCrit ? 'rgba(220, 38, 38, 0.08)' : isWarn ? 'rgba(217, 119, 6, 0.08)' : 'rgba(5, 150, 105, 0.08)',
-                          color: accentColor,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          flexShrink: 0
-                        }}>
-                          {isCrit ? <AlertCircle size={14} /> : isWarn ? <AlertTriangle size={14} /> : <Key size={14} />}
-                        </div>
-                        <span style={{ fontSize: '0.74rem', fontWeight: 800, color: '#1e293b' }}>
-                          {alert.headerLabelAr 
-                            ? (isAr ? alert.headerLabelAr : (alert.headerLabelEn || alert.headerLabelAr)) 
-                            : isCrit ? (isAr ? 'تنبيه تحصيل متأخر' : 'Overdue Alert') 
-                            : isWarn ? (isAr ? 'استحقاق قريب' : 'Maturing Alert') 
-                            : (isAr ? 'جاهزية تسليم' : 'Handover Ready')}
-                        </span>
-                      </div>
-
-                      {alert.badgeLabelAr && (
-                        <span style={{
-                          fontSize: '0.66rem',
-                          fontWeight: 800,
-                          padding: '0.15rem 0.55rem',
-                          borderRadius: '6px',
-                          background: isCrit ? 'rgba(220, 38, 38, 0.06)' : isWarn ? 'rgba(217, 119, 6, 0.06)' : 'rgba(5, 150, 105, 0.06)',
-                          color: isCrit ? '#dc2626' : isWarn ? '#b45309' : '#047857',
-                          border: `1px solid ${isCrit ? 'rgba(220, 38, 38, 0.18)' : isWarn ? 'rgba(217, 119, 6, 0.18)' : 'rgba(5, 150, 105, 0.18)'}`,
-                          flexShrink: 0
-                        }}>
-                          {isAr ? alert.badgeLabelAr : alert.badgeLabelEn}
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Debtor Name & Title */}
-                    <div style={{ fontSize: '0.92rem', fontWeight: 900, color: '#0f172a', lineHeight: 1.35, letterSpacing: '-0.01em' }}>
-                      {isAr ? alert.titleAr : alert.titleEn}
-                    </div>
-
-                    {/* Unit & Contract Details */}
-                    {alert.unitDetail && (
-                      <div style={{ fontSize: '0.74rem', color: '#475569', marginTop: '0.3rem', fontWeight: 600 }}>
-                        {alert.unitDetail}
-                      </div>
-                    )}
-
-                    {/* Secondary Note */}
-                    <div style={{ fontSize: '0.71rem', color: '#64748b', marginTop: '0.35rem', lineHeight: 1.45 }}>
-                      {isAr ? alert.secondaryNoteAr : alert.secondaryNoteEn}
-                    </div>
-                  </div>
-
-                  {/* Footer: Amount & Action Trigger */}
-                  <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    paddingTop: '0.65rem',
-                    borderTop: '1px solid rgba(15, 23, 42, 0.06)',
-                    marginTop: '0.25rem'
-                  }}>
-                    {alert.amountFormatted ? (
-                      <div>
-                        <span style={{ fontSize: '0.63rem', color: '#64748b', display: 'block', fontWeight: 700 }}>
-                          {isCrit ? (isAr ? 'المبلغ المتأخر:' : 'Due Amount:') : isWarn ? (isAr ? 'قيمة القسط:' : 'Amount:') : (isAr ? 'المسدد حتى الآن:' : 'Collected:')}
-                        </span>
-                        <span style={{
-                          fontSize: '1rem',
-                          fontWeight: 900,
-                          color: accentColor,
-                          fontVariantNumeric: 'tabular-nums',
-                          letterSpacing: '-0.02em'
-                        }}>
-                          {alert.amountFormatted}
-                        </span>
-                      </div>
-                    ) : <div />}
-
-                    <button
-                      type="button"
-                      onClick={alert.onClick}
-                      className={styles.radarAlertButton}
-                    >
-                      <span>{isAr ? alert.actionLabelAr : alert.actionLabelEn}</span>
-                      <span className={styles.radarAlertButtonIcon}>
-                        <ArrowLeft size={11} style={{ transform: isAr ? 'none' : 'rotate(180deg)' }} />
-                      </span>
-                    </button>
-                  </div>
-                </div>
-              );
-            })
-          )}
         </div>
       </div>
 
