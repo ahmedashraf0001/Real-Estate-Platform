@@ -200,6 +200,14 @@ export class ContractsEngine {
     const unpaidBalance = V.minus(C);
     const cogs = D(rsvCostAmount);
 
+    if (contract.handover_status === 'Delivered') {
+      throw new Error(`ERP Handover Error: Contract ${contract.contract_number} has already been marked as Delivered.`);
+    }
+
+    if (cogs.isNegative()) {
+      throw new Error(`ERP Handover Error: Incurred RSV WIP cost amount cannot be negative.`);
+    }
+
     if (C.greaterThan(V)) {
       throw new Error(`ERP Handover Error: Total cash collected (${C.toFixed(2)}) exceeds contract value (${V.toFixed(2)}).`);
     }
@@ -275,6 +283,22 @@ export class ContractsEngine {
   ): ERPJournalEntry {
     const payment = D(amount);
     const cashAccount = isVaultCash ? '101000' : '102000';
+
+    if (contract.handover_status !== 'Delivered') {
+      throw new Error(`ERP Post-Handover Error: Contract ${contract.contract_number} has not been delivered. Pre-handover collections must credit 203000.`);
+    }
+
+    if (payment.isNegative() || payment.isZero()) {
+      throw new Error(`ERP Post-Handover Error: Collection payment amount must be strictly greater than 0.00.`);
+    }
+
+    const V = D(contract.gross_contract_value);
+    const C = D(contract.total_cash_collected);
+    const remainingReceivable = V.minus(C);
+
+    if (payment.greaterThan(remainingReceivable)) {
+      throw new Error(`ERP Post-Handover Error: Payment amount (${payment.toFixed(2)}) exceeds remaining accounts receivable (${remainingReceivable.toFixed(2)}).`);
+    }
 
     return GeneralLedgerEngine.validateAndCreateEntry({
       entry_number: `JE-COLL-${contract.contract_number}-${Date.now().toString().slice(-4)}`,

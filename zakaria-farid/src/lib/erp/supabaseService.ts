@@ -1428,7 +1428,7 @@ export class ERPSupabaseService {
     newStatus: 'Pending' | 'Delivered',
     handoverDate?: string
   ): Promise<void> {
-    const cleanId = ensureUUID(contractId);
+    const cleanId = contractId ? contractId.trim() : '';
     const { error } = await supabase
       .from('erp_contracts')
       .update({

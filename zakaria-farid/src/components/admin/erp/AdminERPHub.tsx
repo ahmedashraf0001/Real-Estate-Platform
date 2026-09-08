@@ -105,6 +105,7 @@ import { CashCollectionReceiptModal } from './v2/modals/CashCollectionReceiptMod
 import { ContractEscalationModal } from './v2/modals/ContractEscalationModal';
 import { RescissionSettlementModal } from './v2/modals/RescissionSettlementModal';
 import { RSVAllocationModal } from './v2/modals/RSVAllocationModal';
+import { HandoverExecutionModal } from './v2/modals/HandoverExecutionModal';
 import { PartnerPayoutModal } from './v2/modals/PartnerPayoutModal';
 import { PartnerCapitalInjectionModal } from './v2/modals/PartnerCapitalInjectionModal';
 import { PartnerDossierModal } from './v2/modals/PartnerDossierModal';
@@ -731,6 +732,9 @@ export default function AdminERPHub({ adminLocale, initialTab }: AdminERPHubProp
   const [selectedBranch, setSelectedBranch] = useState<'Branch1_PreDelivery' | 'Branch2_PostDelivery'>('Branch1_PreDelivery');
   const [rescissionStep, setRescissionStep] = useState<0 | 1>(0);
   const [rescissionDate, setRescissionDate] = useState(new Date().toISOString().split('T')[0]);
+
+  // Physical Handover Execution & Model B Revenue Recognition Modal
+  const [showHandoverModal, setShowHandoverModal] = useState<ERPContract | null>(null);
 
   // Record Installment Payment Modal
   const [showPayModal, setShowPayModal] = useState<{ contract: ERPContract; schedule: ERPInstallmentSchedule } | null>(null);
@@ -1628,6 +1632,69 @@ export default function AdminERPHub({ adminLocale, initialTab }: AdminERPHubProp
     }
   }
 
+  // Handler: Confirm Physical Handover & Recognize Model B Revenue (§14.D.12 & INV-4.17)
+  async function handleConfirmHandover(contract: ERPContract, handoverDate: string, rsvWipCost: Decimal | string) {
+    setIsMutating(true);
+    try {
+      const entry = ContractsEngine.createHandoverModelBEntry(
+        contract,
+        activePeriod,
+        handoverDate,
+        rsvWipCost,
+        '501000',
+        '151000',
+        'CFO_FARID'
+      );
+
+      await ERPSupabaseService.persistJournalEntry(supabase, entry);
+      await ERPSupabaseService.updateContractHandoverStatus(supabase, contract.contract_id, 'Delivered', handoverDate);
+
+      const updatedDataset = await loadLiveData(true);
+      if (updatedDataset && inspectorPayload?.type === 'contract' && inspectorPayload.contract.contract_id === contract.contract_id) {
+        const updatedContract = updatedDataset.contracts.find(c => c.contract_id === contract.contract_id) || { ...contract, handover_status: 'Delivered' as const, handover_date: handoverDate };
+        const updatedSchedules = updatedDataset.schedules.filter(s => s.contract_id === contract.contract_id);
+        const updatedAmendments = updatedDataset.amendments?.filter(a => a.contract_id === contract.contract_id) || [];
+        const updatedEntries = updatedDataset.journalEntries.filter(j => j.lines.some(l => l.contract_id === contract.contract_id));
+        setInspectorPayload({
+          type: 'contract',
+          contract: updatedContract,
+          schedules: updatedSchedules,
+          amendments: updatedAmendments,
+          allJournalEntries: updatedEntries,
+          latestJournalEntry: entry
+        });
+      } else if (inspectorPayload?.type === 'contract' && inspectorPayload.contract.contract_id === contract.contract_id) {
+        setInspectorPayload(prev => prev && prev.type === 'contract' ? {
+          ...prev,
+          contract: { ...prev.contract, handover_status: 'Delivered' as const, handover_date: handoverDate },
+          latestJournalEntry: entry
+        } : prev);
+      }
+
+      setData(prev => ({
+        ...prev,
+        contracts: prev.contracts.map(c => c.contract_id === contract.contract_id ? { ...c, handover_status: 'Delivered' as const, handover_date: handoverDate } : c),
+        journalEntries: [entry, ...prev.journalEntries]
+      }));
+
+      setShowHandoverModal(null);
+      toast.success(
+        isAr ? 'تم اعتماد محضر الاستلام وترحيل قيود الإيراد (Model B) بنجاح' : 'Unit handover certified & Model B revenue recognized',
+        {
+          description: isAr
+            ? `العقد: #${contract.contract_number} • الوحدة: ${contract.unit_id}`
+            : `Contract: #${contract.contract_number} • Unit: ${contract.unit_id}`,
+          duration: 5000
+        }
+      );
+    } catch (err: unknown) {
+      const msg = (err as Error).message;
+      toast.error(isAr ? 'فشل إتمام إجراءات التسليم' : 'Failed to execute handover', { description: msg });
+    } finally {
+      setIsMutating(false);
+    }
+  }
+
   // Handler: Toggle Contract Handover Status (Pending <-> Delivered)
   async function handleToggleContractHandover(contract: ERPContract) {
     const nextStatus = contract.handover_status === 'Delivered' ? 'Pending' : 'Delivered';
@@ -1669,37 +1736,168 @@ export default function AdminERPHub({ adminLocale, initialTab }: AdminERPHubProp
       const cheque = data.pdcRecords.find(p => p.cheque_id === chequeId);
       if (!cheque) return;
 
-      if (newStatus === 'Cleared') {
+      const todayStr = new Date().toISOString().split('T')[0];
+
+      if (newStatus === 'Deposited') {
         const entry = GeneralLedgerEngine.validateAndCreateEntry({
-          entry_number: `JE-PDC-CLR-${cheque.cheque_number}`,
-          entry_date: new Date().toISOString().split('T')[0],
+          entry_number: `JE-PDC-DEP-${cheque.cheque_number}`,
+          entry_date: todayStr,
           period: activePeriod,
           description: isAr 
-            ? `تحصيل وتوريد القسط رقم ${cheque.cheque_number} كاش باليد لخزينة الشركة` 
-            : `Installment #${cheque.cheque_number} collected by hand into Treasury Safe`,
+            ? `إيداع القسط / الشيك رقم ${cheque.cheque_number} برسم التحصيل البنكي` 
+            : `Cheque / Installment #${cheque.cheque_number} deposited for bank collection`,
           source_module: 'PDC',
           source_entity_id: cheque.cheque_id,
           created_by: 'CFO_FARID',
           lines: [
             {
-              account_code: '101000', // Main Safe / Cash on Hand (Collection by hand)
+              account_code: '104000', // Cheques Under Collection برسم التحصيل
               debit_amount: cheque.nominal_value,
               credit_amount: '0.00',
-              memo: isAr ? `توريد كاش باليد لخزينة الشركة للقسط ${cheque.cheque_number}` : `Installment #${cheque.cheque_number} collected by hand into Treasury Safe`
+              contract_id: cheque.contract_id,
+              memo: isAr ? `إيداع برسم التحصيل للقسط رقم ${cheque.cheque_number}` : `Deposited under collection #${cheque.cheque_number}`
             },
             {
-              account_code: '103200', // Hand Installments & Safe Dues (أقساط وسندات قبض الخزينة)
+              account_code: '103200', // Cheques in Safe أوراق قبض بالخزينة
               debit_amount: '0.00',
               credit_amount: cheque.nominal_value,
-              memo: isAr ? `صرف وتسوية القسط رقم ${cheque.cheque_number} من عهدة الخزينة` : `Installment #${cheque.cheque_number} cleared from Safe custody`
+              contract_id: cheque.contract_id,
+              memo: isAr ? `صرف من عهدة الخزينة للقسط رقم ${cheque.cheque_number}` : `Cleared from Safe custody #${cheque.cheque_number}`
             }
           ]
         });
 
         await ERPSupabaseService.persistPDCStatus(supabase, chequeId, newStatus);
         await ERPSupabaseService.persistJournalEntry(supabase, entry);
+
+        setData(prev => ({
+          ...prev,
+          pdcRecords: prev.pdcRecords.map(p => p.cheque_id === chequeId ? { ...p, status: 'Deposited' as const } : p),
+          journalEntries: [entry, ...prev.journalEntries]
+        }));
+      } else if (newStatus === 'Cleared') {
+        const linkedSchedule = data.schedules.find(s => s.schedule_id === cheque.schedule_id);
+        const linkedContract = data.contracts.find(c => c.contract_id === cheque.contract_id);
+        const isDelivered = linkedContract?.handover_status === 'Delivered';
+        const isPreHandoverInstallment = !isDelivered && Boolean(linkedSchedule || cheque.schedule_id || linkedContract);
+        const creditAccount = isDelivered ? '103000' : (isPreHandoverInstallment ? '203000' : '103200');
+        const debitAccount = cheque.status === 'Deposited' ? '102000' : '101000';
+
+        const entry = GeneralLedgerEngine.validateAndCreateEntry({
+          entry_number: `JE-PDC-CLR-${cheque.cheque_number}`,
+          entry_date: todayStr,
+          period: activePeriod,
+          description: isAr 
+            ? (isDelivered 
+                ? `تحصيل قسط بعد التسليم - ورقة قبض #${cheque.cheque_number} - عقد ${linkedContract?.contract_number || ''}` 
+                : (isPreHandoverInstallment
+                    ? `تحصيل قسط تعاقدي - إيراد مؤجل - ورقة قبض #${cheque.cheque_number} - عقد ${linkedContract?.contract_number || ''}`
+                    : `تحصيل وتوريد القسط رقم ${cheque.cheque_number} كاش باليد لخزينة الشركة`))
+            : (isDelivered
+                ? `Post-handover installment collection - Note #${cheque.cheque_number} - Contract ${linkedContract?.contract_number || ''}`
+                : `Installment #${cheque.cheque_number} cleared`),
+          source_module: 'PDC',
+          source_entity_id: cheque.cheque_id,
+          created_by: 'CFO_FARID',
+          lines: [
+            {
+              account_code: debitAccount, // 101000 Main Safe or 102000 Bank
+              debit_amount: cheque.nominal_value,
+              credit_amount: '0.00',
+              contract_id: cheque.contract_id,
+              memo: isAr 
+                ? (debitAccount === '102000' ? `تحصيل بنكي بحساب البنك للشيك ${cheque.cheque_number}` : `توريد كاش باليد لخزينة الشركة للقسط ${cheque.cheque_number}`)
+                : `Installment #${cheque.cheque_number} funds collected`
+            },
+            {
+              account_code: creditAccount, // 103000 if Delivered, 203000 if Pre-Handover Contract, 103200 if Safe
+              debit_amount: '0.00',
+              credit_amount: cheque.nominal_value,
+              contract_id: cheque.contract_id,
+              memo: isDelivered
+                ? (isAr ? `تسوية باقي أقساط الشقة بعد التسليم (103000)` : `Credit Accounts Receivable post-handover`)
+                : (isPreHandoverInstallment
+                    ? (isAr ? `إثبات إيراد تعاقدي مؤجل للوحدة قيد الإنشاء (203000)` : `Credit Deferred Contract Revenue pre-handover`)
+                    : (isAr ? `صرف وتسوية القسط رقم ${cheque.cheque_number} من عهدة الخزينة` : `Installment #${cheque.cheque_number} cleared from Safe custody`))
+            }
+          ]
+        });
+
+        if (linkedSchedule && linkedContract) {
+          await ERPSupabaseService.persistTranchePayment(
+            supabase,
+            linkedContract.contract_id,
+            linkedSchedule.schedule_id,
+            cheque.nominal_value,
+            entry
+          );
+        } else {
+          await ERPSupabaseService.persistPDCStatus(supabase, chequeId, newStatus);
+          await ERPSupabaseService.persistJournalEntry(supabase, entry);
+        }
+
+        setData(prev => ({
+          ...prev,
+          pdcRecords: prev.pdcRecords.map(p => p.cheque_id === chequeId ? { ...p, status: 'Cleared' as const, cleared_date: todayStr } : p),
+          schedules: linkedSchedule
+            ? prev.schedules.map(s => s.schedule_id === linkedSchedule.schedule_id ? { ...s, status: 'Paid' as const, amount_paid: cheque.nominal_value, paid_date: todayStr } : s)
+            : prev.schedules,
+          contracts: linkedContract
+            ? prev.contracts.map(c => c.contract_id === linkedContract.contract_id ? { ...c, total_cash_collected: D(c.total_cash_collected || 0).plus(cheque.nominal_value).toFixed(2) } : c)
+            : prev.contracts,
+          journalEntries: [entry, ...prev.journalEntries]
+        }));
+      } else if (newStatus === 'Bounced') {
+        if (cheque.status === 'Deposited') {
+          const entry = GeneralLedgerEngine.validateAndCreateEntry({
+            entry_number: `JE-PDC-BNC-${cheque.cheque_number}`,
+            entry_date: todayStr,
+            period: activePeriod,
+            description: isAr 
+              ? `إثبات ارتداد الشيك رقم ${cheque.cheque_number} وإعادته للخزينة بعد إيداعه برسم التحصيل` 
+              : `Cheque #${cheque.cheque_number} bounced after bank deposit - returned to safe`,
+            source_module: 'PDC',
+            source_entity_id: cheque.cheque_id,
+            created_by: 'CFO_FARID',
+            lines: [
+              {
+                account_code: '103200', // Cheques in Safe أوراق قبض بالخزينة
+                debit_amount: cheque.nominal_value,
+                credit_amount: '0.00',
+                contract_id: cheque.contract_id,
+                memo: isAr ? `إعادة قيد الشيك المرتد بالخزينة #${cheque.cheque_number}` : `Returned bounced cheque to safe #${cheque.cheque_number}`
+              },
+              {
+                account_code: '104000', // Reverse Cheques Under Collection برسم التحصيل
+                debit_amount: '0.00',
+                credit_amount: cheque.nominal_value,
+                contract_id: cheque.contract_id,
+                memo: isAr ? `عكس حساب برسم التحصيل للشيك المرتد #${cheque.cheque_number}` : `Reversed cheques under collection #${cheque.cheque_number}`
+              }
+            ]
+          });
+
+          await ERPSupabaseService.persistPDCStatus(supabase, chequeId, 'Bounced');
+          await ERPSupabaseService.persistJournalEntry(supabase, entry);
+
+          setData(prev => ({
+            ...prev,
+            pdcRecords: prev.pdcRecords.map(p => p.cheque_id === chequeId ? { ...p, status: 'Bounced' as const } : p),
+            journalEntries: [entry, ...prev.journalEntries]
+          }));
+        } else {
+          await ERPSupabaseService.persistPDCStatus(supabase, chequeId, newStatus);
+          setData(prev => ({
+            ...prev,
+            pdcRecords: prev.pdcRecords.map(p => p.cheque_id === chequeId ? { ...p, status: newStatus } : p)
+          }));
+        }
       } else {
         await ERPSupabaseService.persistPDCStatus(supabase, chequeId, newStatus);
+        setData(prev => ({
+          ...prev,
+          pdcRecords: prev.pdcRecords.map(p => p.cheque_id === chequeId ? { ...p, status: newStatus } : p)
+        }));
       }
 
       const updatedDataset = await loadLiveData(true);
@@ -1905,34 +2103,89 @@ export default function AdminERPHub({ adminLocale, initialTab }: AdminERPHubProp
 
     setIsMutating(true);
     try {
+      const newEntries: ERPJournalEntry[] = [];
       for (const item of dueToday) {
+        const linkedSchedule = data.schedules.find(s => s.schedule_id === item.schedule_id);
+        const linkedContract = data.contracts.find(c => c.contract_id === item.contract_id);
+        const isDelivered = linkedContract?.handover_status === 'Delivered';
+        const isPreHandoverInstallment = !isDelivered && Boolean(linkedSchedule || item.schedule_id || linkedContract);
+        const creditAccount = isDelivered ? '103000' : (isPreHandoverInstallment ? '203000' : '103200');
+        const debitAccount = item.status === 'Deposited' ? '102000' : '101000';
+
         const entry = GeneralLedgerEngine.validateAndCreateEntry({
           entry_number: `JE-CASH-REC-${item.cheque_number}`,
           entry_date: todayStr,
           period: activePeriod,
-          description: `تحصيل قسط باليد نقداً بالخزينة - بند #${item.cheque_number} - العميل: ${item.drawer_name}`,
+          description: isAr
+            ? (isDelivered 
+                ? `تحصيل قسط بعد التسليم - بند #${item.cheque_number} - العميل: ${item.drawer_name}` 
+                : (isPreHandoverInstallment
+                    ? `تحصيل قسط تعاقدي - إيراد مؤجل - بند #${item.cheque_number} - العميل: ${item.drawer_name}`
+                    : `تحصيل قسط باليد نقداً بالخزينة - بند #${item.cheque_number} - العميل: ${item.drawer_name}`))
+            : `Collection - Item #${item.cheque_number} - Client: ${item.drawer_name}`,
           source_module: 'PDC',
           source_entity_id: item.cheque_id,
           created_by: 'CFO_FARID',
           lines: [
             {
-              account_code: '101000', // Main Safe
+              account_code: debitAccount, // 101000 Main Safe or 102000 Bank
               debit_amount: item.nominal_value,
               credit_amount: '0.00',
-              memo: isAr ? `تحصيل قسط نقداً باليد - العميل: ${item.drawer_name}` : `Hand collection - Client: ${item.drawer_name}`
+              contract_id: item.contract_id,
+              memo: isAr 
+                ? (debitAccount === '102000' ? `تحصيل بنكي بحساب البنك - العميل: ${item.drawer_name}` : `تحصيل قسط نقداً باليد - العميل: ${item.drawer_name}`) 
+                : `Collection - Client: ${item.drawer_name}`
             },
             {
-              account_code: '103200', // Hand Installments & Safe Dues (أقساط وسندات قبض الخزينة)
+              account_code: creditAccount, // 103000 if Delivered, 203000 if Pre-Handover Contract, 103200 if Safe
               debit_amount: '0.00',
               credit_amount: item.nominal_value,
-              memo: isAr ? `إثبات سداد قسط باليد - بند #${item.cheque_number}` : `Hand installment settlement - Item #${item.cheque_number}`
+              contract_id: item.contract_id,
+              memo: isDelivered 
+                ? (isAr ? `تسوية باقي أقساط الشقة بعد التسليم (103000)` : `Credit Accounts Receivable post-handover`)
+                : (isPreHandoverInstallment
+                    ? (isAr ? `إثبات إيراد تعاقدي مؤجل للوحدة قيد الإنشاء (203000)` : `Credit Deferred Contract Revenue pre-handover`)
+                    : (isAr ? `إثبات سداد قسط باليد - بند #${item.cheque_number}` : `Hand installment settlement - Item #${item.cheque_number}`))
             }
           ]
         });
-        await ERPSupabaseService.persistPDCStatus(supabase, item.cheque_id, 'Cleared');
-        await ERPSupabaseService.persistJournalEntry(supabase, entry);
+
+        if (linkedSchedule && linkedContract) {
+          await ERPSupabaseService.persistTranchePayment(
+            supabase,
+            linkedContract.contract_id,
+            linkedSchedule.schedule_id,
+            item.nominal_value,
+            entry
+          );
+        } else {
+          await ERPSupabaseService.persistPDCStatus(supabase, item.cheque_id, 'Cleared');
+          await ERPSupabaseService.persistJournalEntry(supabase, entry);
+        }
+        newEntries.push(entry);
       }
-      await loadLiveData();
+
+      setData(prev => {
+        const clearedIds = new Set(dueToday.map(d => d.cheque_id));
+        const schedMap = new Map(dueToday.filter(d => d.schedule_id).map(d => [d.schedule_id, d.nominal_value]));
+        const contractCashMap = new Map<string, Decimal>();
+        dueToday.forEach(d => {
+          if (d.contract_id) {
+            const cur = contractCashMap.get(d.contract_id) || D(0);
+            contractCashMap.set(d.contract_id, cur.plus(d.nominal_value));
+          }
+        });
+
+        return {
+          ...prev,
+          pdcRecords: prev.pdcRecords.map(p => clearedIds.has(p.cheque_id) ? { ...p, status: 'Cleared' as const, cleared_date: todayStr } : p),
+          schedules: prev.schedules.map(s => schedMap.has(s.schedule_id) ? { ...s, status: 'Paid' as const, amount_paid: schedMap.get(s.schedule_id)!, paid_date: todayStr } : s),
+          contracts: prev.contracts.map(c => contractCashMap.has(c.contract_id) ? { ...c, total_cash_collected: D(c.total_cash_collected || 0).plus(contractCashMap.get(c.contract_id)!).toFixed(2) } : c),
+          journalEntries: [...newEntries, ...prev.journalEntries]
+        };
+      });
+
+      await loadLiveData(true);
 
       toast.success(
         isAr ? `تم تحصيل كافة الأقساط المستحقة اليوم (${dueToday.length}) بنجاح` : `All ${dueToday.length} dues collected successfully`,
@@ -3353,7 +3606,7 @@ export default function AdminERPHub({ adminLocale, initialTab }: AdminERPHubProp
         payload={inspectorPayload}
         onClose={() => setInspectorPayload(null)}
         isAr={isAr}
-        isOverModal={!!(showNewPDCModal || showRSVModal || showQuickTransactionModal || collectingPDCItem || showEscalationModal || showRescissionModal || auditModalProperty)}
+        isOverModal={!!(showNewPDCModal || showRSVModal || showQuickTransactionModal || collectingPDCItem || showEscalationModal || showRescissionModal || auditModalProperty || showHandoverModal)}
         onPayInstallment={(c, sch) => setShowPayModal({ contract: c, schedule: sch })}
         onOpenEscalation={(c) => {
           setShowEscalationModal(c);
@@ -3364,6 +3617,7 @@ export default function AdminERPHub({ adminLocale, initialTab }: AdminERPHubProp
           setSelectedBranch(c.handover_status === 'Delivered' ? 'Branch2_PostDelivery' : 'Branch1_PreDelivery');
           setRescissionStep(0);
         }}
+        onOpenHandoverModal={(c) => setShowHandoverModal(c)}
         onOpenSupplement={(c) => {
           setSupplementInitialContractId(c.contract_id);
           setShowNewPDCModal(true);
@@ -3525,6 +3779,19 @@ export default function AdminERPHub({ adminLocale, initialTab }: AdminERPHubProp
           const fakeEvt = { preventDefault: () => {} } as React.FormEvent;
           await handleCreateRSVAllocation(fakeEvt, { projectName, salesValue, wipAmount });
         }}
+      />
+
+      {/* HANDOVER EXECUTION & MODEL B REVENUE RECOGNITION MODAL */}
+      <HandoverExecutionModal
+        isOpen={!!showHandoverModal}
+        onClose={() => setShowHandoverModal(null)}
+        contract={showHandoverModal}
+        properties={data.properties}
+        activePeriod={activePeriod}
+        costAllocations={data.costAllocations}
+        onConfirmHandover={handleConfirmHandover}
+        isMutating={isMutating}
+        isAr={isAr}
       />
 
       {/* RECORD NEW INSTALLMENT DUE / CONTRACT SUPPLEMENT MODAL */}

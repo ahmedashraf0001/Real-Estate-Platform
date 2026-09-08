@@ -86,6 +86,7 @@ interface ZFInspectorDrawerProps {
   onOpenSupplement?: (contract: ERPContract) => void;
   onNavigateToTab?: (tab: string) => void;
   onToggleHandover?: (contract: ERPContract) => void;
+  onOpenHandoverModal?: (contract: ERPContract) => void;
   onUpdateChequeStatus?: (chequeId: string, newStatus: 'In Safe' | 'Deposited' | 'Cleared' | 'Bounced') => void;
   onInspectContract?: (contract: ERPContract) => void;
   onRemitTax?: (taxId: string) => void;
@@ -103,6 +104,7 @@ export const ZFInspectorDrawer: React.FC<ZFInspectorDrawerProps> = ({
   onOpenSupplement,
   onNavigateToTab,
   onToggleHandover,
+  onOpenHandoverModal,
   onUpdateChequeStatus,
   onInspectContract,
   onRemitTax,
@@ -449,10 +451,16 @@ export const ZFInspectorDrawer: React.FC<ZFInspectorDrawerProps> = ({
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap' }}>
                   <StatusBadge domain="unit" status={contract.handover_status} isAr={isAr} />
-                  {onToggleHandover && contract.status === 'Active' && (
+                  {(onOpenHandoverModal || onToggleHandover) && contract.status === 'Active' && (
                     <button
                       type="button"
-                      onClick={() => onToggleHandover(contract)}
+                      onClick={() => {
+                        if (contract.handover_status === 'Pending' && onOpenHandoverModal) {
+                          onOpenHandoverModal(contract);
+                        } else if (onToggleHandover) {
+                          onToggleHandover(contract);
+                        }
+                      }}
                       disabled={isMutating}
                       title={isAr 
                         ? (contract.handover_status === 'Delivered' ? 'إعادة الوحدة إلى قيد التنفيذ والتشطيب' : 'تسجيل محضر استلام الشقة للعميل') 
@@ -2199,22 +2207,74 @@ export const ZFInspectorDrawer: React.FC<ZFInspectorDrawerProps> = ({
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
               {payload.cheque.status !== 'Cleared' ? (
-                <button 
-                  className={styles.actionBtnPrimary}
-                  onClick={() => onUpdateChequeStatus && onUpdateChequeStatus(payload.cheque.cheque_id, 'Cleared')}
-                  disabled={isMutating}
-                  style={{
-                    padding: '0.55rem 1.15rem',
-                    fontSize: '0.8rem',
-                    fontWeight: 800,
-                    background: 'linear-gradient(135deg, #15803d 0%, #166534 100%)',
-                    border: '1px solid #15803d',
-                    color: '#ffffff'
-                  }}
-                >
-                  <CheckCircle2 size={14} />
-                  <span>{isAr ? 'تسجيل تحصيل القسط (كاش / إنستاباي)' : 'Mark Collected'}</span>
-                </button>
+                <>
+                  {payload.cheque.status === 'In Safe' && onUpdateChequeStatus && (
+                    <button 
+                      type="button"
+                      className={styles.actionBtnSecondary}
+                      onClick={() => onUpdateChequeStatus(payload.cheque.cheque_id, 'Deposited')}
+                      disabled={isMutating}
+                      style={{
+                        padding: '0.55rem 0.95rem',
+                        fontSize: '0.78rem',
+                        fontWeight: 700,
+                        color: '#0369a1',
+                        borderColor: '#bae6fd',
+                        background: '#f0f9ff',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '0.35rem'
+                      }}
+                    >
+                      <Landmark size={14} />
+                      <span>{isAr ? 'إيداع برسم التحصيل البنكي' : 'Deposit at Bank'}</span>
+                    </button>
+                  )}
+
+                  {payload.cheque.status === 'Deposited' && onUpdateChequeStatus && (
+                    <button 
+                      type="button"
+                      className={styles.actionBtnSecondary}
+                      onClick={() => onUpdateChequeStatus(payload.cheque.cheque_id, 'Bounced')}
+                      disabled={isMutating}
+                      style={{
+                        padding: '0.55rem 0.95rem',
+                        fontSize: '0.78rem',
+                        fontWeight: 700,
+                        color: '#b91c1c',
+                        borderColor: '#fecaca',
+                        background: '#fef2f2',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '0.35rem'
+                      }}
+                    >
+                      <RotateCcw size={14} />
+                      <span>{isAr ? 'إثبات ارتداد الشيك' : 'Record Cheque Bounce'}</span>
+                    </button>
+                  )}
+
+                  <button 
+                    className={styles.actionBtnPrimary}
+                    onClick={() => onUpdateChequeStatus && onUpdateChequeStatus(payload.cheque.cheque_id, 'Cleared')}
+                    disabled={isMutating}
+                    style={{
+                      padding: '0.55rem 1.15rem',
+                      fontSize: '0.8rem',
+                      fontWeight: 800,
+                      background: 'linear-gradient(135deg, #15803d 0%, #166534 100%)',
+                      border: '1px solid #15803d',
+                      color: '#ffffff'
+                    }}
+                  >
+                    <CheckCircle2 size={14} />
+                    <span>
+                      {payload.cheque.status === 'Deposited'
+                        ? (isAr ? 'تأكيد الصرف والتحصيل البنكي' : 'Confirm Bank Clearance')
+                        : (isAr ? 'تسجيل تحصيل القسط (كاش / إنستاباي)' : 'Mark Collected')}
+                    </span>
+                  </button>
+                </>
               ) : (
                 <div style={{
                   display: 'flex',
