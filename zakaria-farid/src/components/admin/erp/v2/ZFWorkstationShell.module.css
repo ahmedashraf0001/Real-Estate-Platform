@@ -646,7 +646,7 @@
 }
 
 .dockGroup {
-  margin-bottom: 1.25rem;
+  margin-bottom: 0.95rem;
 }
 
 .dockGroup:first-child {
@@ -654,10 +654,10 @@
 }
 
 .dockGroupTitle {
-  font-size: 0.67rem;
+  font-size: 0.65rem;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.05em;
   color: #64748b;
   padding: 0 0.65rem 0.45rem 0.65rem;
   display: flex;
@@ -1139,7 +1139,7 @@
 }
 
 :global([data-theme="dark"]) .dockGroupTitle {
-  color: #8a99ad;
+  color: #94a3b8;
 }
 
 :global([data-theme="dark"]) .dockItem {

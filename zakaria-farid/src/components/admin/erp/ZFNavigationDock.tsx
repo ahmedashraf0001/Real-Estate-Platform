@@ -8,7 +8,6 @@ import {
   Landmark, 
   RotateCcw, 
   PieChart, 
-  ShieldCheck, 
   Layers, 
   Building2, 
   Calculator,
@@ -78,8 +77,8 @@ export const ZFNavigationDock: React.FC<ZFNavigationDockProps> = ({
 }) => {
   const GROUPS: DockGroupDef[] = [
     {
-      groupTitleEn: 'COMMAND & OPERATIONS',
-      groupTitleAr: 'الإدارة وحركة الشغل',
+      groupTitleEn: 'COMMAND & TREASURY',
+      groupTitleAr: 'الإدارة وحركة الخزينة',
       items: [
         { 
           id: 'cockpit', 
@@ -94,47 +93,65 @@ export const ZFNavigationDock: React.FC<ZFNavigationDockProps> = ({
           icon: Zap,
           badge: urgentDuesCount && urgentDuesCount > 0 ? urgentDuesCount : undefined,
           badgeVariant: 'gold'
-        },
-        { 
-          id: 'properties', 
-          labelEn: 'Projects & WIP Assets', 
-          labelAr: 'المشاريع والشقق المعروضة', 
-          icon: Building2,
-          badge: propertiesCount && propertiesCount > 0 ? propertiesCount : undefined
         }
       ]
     },
     {
-      groupTitleEn: 'SALES & CONTRACTING',
-      groupTitleAr: 'المبيعات والعملاء',
+      groupTitleEn: 'PROJECTS & CONSTRUCTION',
+      groupTitleAr: 'المشاريع وتكاليف البناء',
+      items: [
+        { 
+          id: 'properties', 
+          labelEn: 'Projects & Properties', 
+          labelAr: 'محفظة المشاريع والعمارات', 
+          icon: Building2,
+          badge: propertiesCount && propertiesCount > 0 ? propertiesCount : undefined
+        },
+        { 
+          id: 'calculator', 
+          labelEn: 'Feasibility & Pricing', 
+          labelAr: 'حاسبة تكلفة المباني والأقساط', 
+          icon: Calculator 
+        },
+        { 
+          id: 'cost-allocation', 
+          labelEn: 'WIP Cost Allocation', 
+          labelAr: 'توزيع مصاريف المباني (RSV)', 
+          icon: PieChart 
+        }
+      ]
+    },
+    {
+      groupTitleEn: 'SALES & CONTRACTS',
+      groupTitleAr: 'المبيعات وعقود العملاء',
       items: [
         { 
           id: 'contracts', 
-          labelEn: 'Sales Contracts Registry', 
+          labelEn: 'Sales Contracts', 
           labelAr: 'عقود البيع والعملاء', 
           icon: FileText,
           badge: contractsCount && contractsCount > 0 ? contractsCount : undefined,
           badgeVariant: 'gold'
         },
         { 
-          id: 'calculator', 
-          labelEn: 'Calculator & Feasibility', 
-          labelAr: 'حاسبة تكلفة المباني والأقساط', 
-          icon: Calculator 
-        },
-        { 
           id: 'pdc', 
-          labelEn: 'Hand Installments & Dues', 
+          labelEn: 'Installments & Dues', 
           labelAr: 'أجندة ومواعيد الأقساط', 
           icon: Wallet,
           badge: pdcSafeCount && pdcSafeCount > 0 ? pdcSafeCount : undefined,
           badgeVariant: 'emerald'
+        },
+        { 
+          id: 'rescissions', 
+          labelEn: 'Contract Rescissions', 
+          labelAr: 'إلغاء العقود والتسويات', 
+          icon: RotateCcw 
         }
       ]
     },
     {
-      groupTitleEn: 'ACCOUNTING & GOVERNANCE',
-      groupTitleAr: 'الحسابات ودفاتر الشركة',
+      groupTitleEn: 'FINANCE & GOVERNANCE',
+      groupTitleAr: 'الحسابات والشركاء',
       items: [
         { 
           id: 'ledger', 
@@ -144,26 +161,14 @@ export const ZFNavigationDock: React.FC<ZFNavigationDockProps> = ({
         },
         { 
           id: 'partners', 
-          labelEn: 'Partners & Financiers', 
+          labelEn: 'Partners & Equity', 
           labelAr: 'الشركاء وممولو المشاريع', 
           icon: Users 
         },
         { 
-          id: 'cost-allocation', 
-          labelEn: 'WIP Cost Allocation (RSV)', 
-          labelAr: 'توزيع مصاريف المباني على الشقق', 
-          icon: PieChart 
-        },
-        { 
-          id: 'rescissions', 
-          labelEn: 'Rescissions & Settlement', 
-          labelAr: 'إلغاء العقود وترجيع الفلوس', 
-          icon: RotateCcw 
-        },
-        { 
           id: 'tax', 
-          labelEn: 'Project Statutory Taxes & Permits', 
-          labelAr: 'ضرائب وتراخيص المشاريع', 
+          labelEn: 'Project Taxes & Permits', 
+          labelAr: 'ضرائب وتراخيص وتأمينات المباني', 
           icon: Landmark 
         }
       ]
