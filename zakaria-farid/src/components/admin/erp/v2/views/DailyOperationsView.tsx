@@ -8,6 +8,7 @@ import {
   Plus, 
   Search, 
   CheckCircle2, 
+  Check,
   Clock, 
   AlertTriangle, 
   Building2, 
@@ -185,6 +186,16 @@ export const DailyOperationsView: React.FC<DailyOperationsViewProps> = ({
   const [isSubmittingExpense, setIsSubmittingExpense] = useState(false);
   const [expenseSuccessMsg, setExpenseSuccessMsg] = useState('');
   const [expensePropertyError, setExpensePropertyError] = useState('');
+  const [expenseSuccessData, setExpenseSuccessData] = useState<{
+    amount: string;
+    categoryLabel: string;
+    supplier?: string;
+    propertyTitle: string;
+    invoiceRef?: string;
+    memo: string;
+    paymentSource: string;
+  } | null>(null);
+  const [keepExpenseModalOpen, setKeepExpenseModalOpen] = useState(true);
 
   // Under-Construction Real Estate Projects (off_plan or development buildings)
   const underConstructionProperties = useMemo(() => {
@@ -872,12 +883,32 @@ export const DailyOperationsView: React.FC<DailyOperationsViewProps> = ({
         );
       }
 
+      const matchedCat = categorySelectItems.find(c => c.value === wipCategory);
+      const catLabel = matchedCat ? (isAr ? matchedCat.labelAr : matchedCat.labelEn) : wipCategory;
+
+      setExpenseSuccessData({
+        amount: expenseAmount,
+        categoryLabel: catLabel,
+        supplier: wipSupplier.trim() || undefined,
+        propertyTitle: propTitle,
+        invoiceRef: wipInvoiceRef.trim() || undefined,
+        memo: fullMemo,
+        paymentSource: paymentLabel
+      });
+
+      // Clear input fields for rapid subsequent entry while keeping selected project
       setExpenseAmount('');
       setWipItemName('');
       setWipSupplier('');
       setWipInvoiceRef('');
       setWipQuantity('1');
-      setIsExpenseModalOpen(false);
+
+      if (!keepExpenseModalOpen) {
+        setTimeout(() => {
+          setIsExpenseModalOpen(false);
+          setExpenseSuccessData(null);
+        }, 1500);
+      }
 
       toast.success(
         isAr 
@@ -1017,6 +1048,7 @@ export const DailyOperationsView: React.FC<DailyOperationsViewProps> = ({
     setExpensePaymentSource('101000');
     setWipCategory('civil_structure');
     setExpensePropertyError('');
+    setExpenseSuccessData(null);
     setIsExpenseModalOpen(true);
     setTimeout(() => amountInputRef.current?.focus(), 150);
   };
@@ -3507,7 +3539,10 @@ export const DailyOperationsView: React.FC<DailyOperationsViewProps> = ({
             direction: isAr ? 'rtl' : 'ltr'
           }}
           onClick={(e) => {
-            if (e.target === e.currentTarget) setIsExpenseModalOpen(false);
+            if (e.target === e.currentTarget) {
+              setIsExpenseModalOpen(false);
+              setExpenseSuccessData(null);
+            }
           }}
         >
           <div 
@@ -3580,7 +3615,10 @@ export const DailyOperationsView: React.FC<DailyOperationsViewProps> = ({
 
               <button
                 type="button"
-                onClick={() => setIsExpenseModalOpen(false)}
+                onClick={() => {
+                  setIsExpenseModalOpen(false);
+                  setExpenseSuccessData(null);
+                }}
                 style={{
                   background: '#ffffff',
                   border: '1px solid #e2e8f0',
@@ -3598,6 +3636,106 @@ export const DailyOperationsView: React.FC<DailyOperationsViewProps> = ({
                 <X size={16} />
               </button>
             </div>
+
+            {/* Executive Success Ribbon */}
+            {expenseSuccessData && (
+              <div style={{
+                background: 'linear-gradient(135deg, rgba(5, 150, 105, 0.08) 0%, rgba(4, 120, 87, 0.03) 100%)',
+                border: '1.5px solid #059669',
+                borderRadius: '12px',
+                padding: '0.85rem 1rem',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.65rem',
+                boxShadow: '0 2px 8px rgba(5, 150, 105, 0.1)'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.65rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                    <div style={{
+                      width: '32px',
+                      height: '32px',
+                      borderRadius: '50%',
+                      background: '#059669',
+                      color: '#ffffff',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0
+                    }}>
+                      <Check size={18} strokeWidth={3} />
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '0.86rem', fontWeight: 800, color: '#065f46' }}>
+                        {isAr ? '✓ تم حفظ قيد المصروف بنجاح وتحميله على تكلفة المشروع' : 'Project cost recorded & capitalized successfully'}
+                      </div>
+                      <div style={{ fontSize: '0.74rem', color: '#047857', fontWeight: 700, marginTop: '0.15rem', display: 'flex', alignItems: 'center', gap: '0.35rem', flexWrap: 'wrap' }}>
+                        <span style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 900 }}>
+                          {D(expenseSuccessData.amount).formatEGP(isAr)}
+                        </span>
+                        <span>•</span>
+                        <span>{expenseSuccessData.categoryLabel}</span>
+                        <span>•</span>
+                        <span>{expenseSuccessData.propertyTitle}</span>
+                        {expenseSuccessData.supplier && (
+                          <>
+                            <span>•</span>
+                            <span>{expenseSuccessData.supplier}</span>
+                          </>
+                        )}
+                        <span>•</span>
+                        <span>{expenseSuccessData.paymentSource}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setExpenseSuccessData(null);
+                        setTimeout(() => amountInputRef.current?.focus(), 100);
+                      }}
+                      style={{
+                        background: '#059669',
+                        color: '#ffffff',
+                        border: 'none',
+                        borderRadius: '7px',
+                        padding: '0.38rem 0.8rem',
+                        fontSize: '0.75rem',
+                        fontWeight: 800,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.3rem',
+                        boxShadow: '0 1px 3px rgba(5, 150, 105, 0.25)'
+                      }}
+                    >
+                      <Plus size={13} strokeWidth={2.5} />
+                      <span>{isAr ? '+ تسجيل فاتورة أو مصروف آخر' : '+ Record Another Expense'}</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsExpenseModalOpen(false);
+                        setExpenseSuccessData(null);
+                      }}
+                      style={{
+                        background: '#ffffff',
+                        color: '#334155',
+                        border: '1px solid #cbd5e1',
+                        borderRadius: '7px',
+                        padding: '0.38rem 0.8rem',
+                        fontSize: '0.75rem',
+                        fontWeight: 700,
+                        cursor: 'pointer'
+                      }}
+                    >
+                      {isAr ? 'تم / إغلاق النافذة' : 'Done / Close'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Disbursal / Settlement Method Selector (3-way with Interactive Hover Explanations) */}
             <div>
@@ -4104,63 +4242,78 @@ export const DailyOperationsView: React.FC<DailyOperationsViewProps> = ({
               </div>
 
               {/* Actions */}
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '0.65rem', marginTop: '0.35rem' }}>
-                <button
-                  type="button"
-                  onClick={() => setIsExpenseModalOpen(false)}
-                  title={isAr ? 'إلغاء وإغلاق نافذة تسجيل المصروفات دون حفظ' : 'Cancel without saving'}
-                  style={{
-                    padding: '0.55rem 1rem',
-                    borderRadius: '8px',
-                    border: '1px solid #cbd5e1',
-                    background: '#ffffff',
-                    color: '#475569',
-                    fontSize: '0.8rem',
-                    fontWeight: 700,
-                    cursor: 'pointer'
-                  }}
-                >
-                  {isAr ? 'إلغاء' : 'Cancel'}
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSubmittingExpense || !expenseAmount || !wipPropertyId}
-                  title={isAr ? 'حفظ وترحيل هذا البند إلى حساب تكاليف المشروع وإجراء القيد المحاسبي المزدوج' : 'Post immutable journal entry and save project expense'}
-                  style={{
-                    background: expensePaymentSource === '101000'
-                      ? 'linear-gradient(135deg, #059669 0%, #047857 100%)'
-                      : expensePaymentSource === '102000'
-                        ? 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)'
-                        : 'linear-gradient(135deg, #d97706 0%, #b45309 100%)',
-                    color: '#ffffff',
-                    border: 'none',
-                    borderRadius: '8px',
-                    padding: '0.55rem 1.45rem',
-                    fontSize: '0.82rem',
-                    fontWeight: 800,
-                    cursor: isSubmittingExpense || !expenseAmount || !wipPropertyId ? 'not-allowed' : 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.45rem',
-                    opacity: !expenseAmount || !wipPropertyId ? 0.6 : 1,
-                    boxShadow: '0 2px 6px rgba(0, 0, 0, 0.15)'
-                  }}
-                >
-                  {isSubmittingExpense ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
-                  <span>
-                    {isAr 
-                      ? (expensePaymentSource === '101000' 
-                          ? 'صرف كاش من الخزنة وحفظ' 
-                          : expensePaymentSource === '102000'
-                            ? 'تسجيل تحويل إنستاباي وحفظ'
-                            : 'تسجيل على الحساب للمقاول وحفظ')
-                      : (expensePaymentSource === '101000'
-                          ? 'Disburse Cash & Post Cost'
-                          : expensePaymentSource === '102000'
-                            ? 'Post InstaPay Transfer'
-                            : 'Post Contractor Invoice')}
-                  </span>
-                </button>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.65rem', marginTop: '0.35rem' }}>
+                <label style={{ display: 'inline-flex', alignItems: 'center', gap: '0.45rem', fontSize: '0.74rem', color: '#475569', fontWeight: 700, cursor: 'pointer', userSelect: 'none' }}>
+                  <input 
+                    type="checkbox"
+                    checked={keepExpenseModalOpen}
+                    onChange={(e) => setKeepExpenseModalOpen(e.target.checked)}
+                    style={{ accentColor: '#059669', cursor: 'pointer', width: '15px', height: '15px' }}
+                  />
+                  <span>{isAr ? 'البقاء في النافذة لتسجيل فواتير ومصاريف متتالية' : 'Keep modal open for consecutive entries'}</span>
+                </label>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsExpenseModalOpen(false);
+                      setExpenseSuccessData(null);
+                    }}
+                    title={isAr ? 'إلغاء وإغلاق نافذة تسجيل المصروفات دون حفظ' : 'Cancel without saving'}
+                    style={{
+                      padding: '0.55rem 1rem',
+                      borderRadius: '8px',
+                      border: '1px solid #cbd5e1',
+                      background: '#ffffff',
+                      color: '#475569',
+                      fontSize: '0.8rem',
+                      fontWeight: 700,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    {isAr ? 'إلغاء' : 'Cancel'}
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isSubmittingExpense || !expenseAmount || !wipPropertyId}
+                    title={isAr ? 'حفظ وترحيل هذا البند إلى حساب تكاليف المشروع وإجراء القيد المحاسبي المزدوج' : 'Post immutable journal entry and save project expense'}
+                    style={{
+                      background: expensePaymentSource === '101000'
+                        ? 'linear-gradient(135deg, #059669 0%, #047857 100%)'
+                        : expensePaymentSource === '102000'
+                          ? 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)'
+                          : 'linear-gradient(135deg, #d97706 0%, #b45309 100%)',
+                      color: '#ffffff',
+                      border: 'none',
+                      borderRadius: '8px',
+                      padding: '0.55rem 1.45rem',
+                      fontSize: '0.82rem',
+                      fontWeight: 800,
+                      cursor: isSubmittingExpense || !expenseAmount || !wipPropertyId ? 'not-allowed' : 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.45rem',
+                      opacity: !expenseAmount || !wipPropertyId ? 0.6 : 1,
+                      boxShadow: '0 2px 6px rgba(0, 0, 0, 0.15)'
+                    }}
+                  >
+                    {isSubmittingExpense ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
+                    <span>
+                      {isAr 
+                        ? (expensePaymentSource === '101000' 
+                            ? 'صرف كاش من الخزنة وحفظ' 
+                            : expensePaymentSource === '102000'
+                              ? 'تسجيل تحويل إنستاباي وحفظ'
+                              : 'تسجيل على الحساب للمقاول وحفظ')
+                        : (expensePaymentSource === '101000'
+                            ? 'Disburse Cash & Post Cost'
+                            : expensePaymentSource === '102000'
+                              ? 'Post InstaPay Transfer'
+                              : 'Post Contractor Invoice')}
+                    </span>
+                  </button>
+                </div>
               </div>
             </form>
 

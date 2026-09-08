@@ -57,6 +57,17 @@ export const RescissionSettlementModal: React.FC<RescissionSettlementModalProps>
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [selectedBranch, setSelectedBranch] = useState<'Branch1_PreDelivery' | 'Branch2_PostDelivery'>('Branch1_PreDelivery');
   const [rescissionDate, setRescissionDate] = useState<string>(() => new Date().toISOString().split('T')[0]);
+  const [rescissionSuccess, setRescissionSuccess] = useState<{
+    contractNumber: string;
+    buyer: string;
+    unitId: string;
+    penaltyRetained: string;
+    netRefundLiability: string;
+    totalCashCollected: string;
+    grossContractValue: string;
+    branch: 'Branch1_PreDelivery' | 'Branch2_PostDelivery';
+    rescissionDate: string;
+  } | null>(null);
 
   useEffect(() => {
     if (isOpen) {
@@ -68,6 +79,7 @@ export const RescissionSettlementModal: React.FC<RescissionSettlementModalProps>
       setSelectedBranch('Branch1_PreDelivery');
       setRescissionDate(new Date().toISOString().split('T')[0]);
       setSearchQuery('');
+      setRescissionSuccess(null);
     }
   }, [isOpen, contract, contracts]);
 
@@ -137,7 +149,17 @@ export const RescissionSettlementModal: React.FC<RescissionSettlementModalProps>
       rescissionDate,
       targetContract: activeContract
     });
-    onClose();
+    setRescissionSuccess({
+      contractNumber: activeContract.contract_number,
+      buyer: activeContract.buyer_name,
+      unitId: activeContract.unit_id,
+      penaltyRetained: computed.rescissionRecord.penalty_retained,
+      netRefundLiability: computed.rescissionRecord.net_refund_liability,
+      totalCashCollected: computed.rescissionRecord.total_cash_collected,
+      grossContractValue: computed.rescissionRecord.gross_contract_value,
+      branch: selectedBranch,
+      rescissionDate
+    });
   };
 
   return (
@@ -430,176 +452,374 @@ export const RescissionSettlementModal: React.FC<RescissionSettlementModalProps>
             padding: '1.75rem',
             gap: '1.25rem'
           }}>
-            {/* Active Contract Header Dossier Strip */}
-            <div style={{
-              background: '#f8fafc',
-              border: '1px solid #e2e8f0',
-              borderRadius: '14px',
-              padding: '1rem 1.25rem',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              flexWrap: 'wrap',
-              gap: '1rem'
-            }}>
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <Building2 size={16} color="#946f23" />
-                  <strong style={{ fontSize: '0.95rem', color: '#0f172a' }}>
-                    {activeContract.buyer_name}
-                  </strong>
-                  <span style={{ fontSize: '0.75rem', color: '#64748b' }}>
-                    ({activeContract.contract_number} • {activeContract.unit_id})
-                  </span>
-                </div>
-              </div>
-
-              {/* Effective Rescission Date Input */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <label style={{ fontSize: '0.74rem', fontWeight: 700, color: '#475569', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                  <Calendar size={13} />
-                  <span>{isAr ? 'تاريخ الفسخ المعتمد:' : 'Effective Date:'}</span>
-                </label>
-                <input 
-                  type="date"
-                  value={rescissionDate}
-                  onChange={e => setRescissionDate(e.target.value)}
-                  style={{
-                    padding: '0.4rem 0.65rem',
-                    borderRadius: '8px',
-                    border: '1px solid #cbd5e1',
-                    background: '#ffffff',
-                    color: '#0f172a',
-                    fontSize: '0.78rem',
-                    outline: 'none'
-                  }}
-                  required
-                />
-              </div>
-            </div>
-
-            {/* Rescission Decision Cards (Branch 1 Pre-delivery vs Branch 2 Post-delivery) */}
-            <BranchDecisionCard 
-              contract={activeContract}
-              selectedBranch={selectedBranch}
-              onSelectBranch={setSelectedBranch}
-              isAr={isAr}
-            />
-
-            {/* 4-Box Financial Split HUD */}
-            <div style={{
-              background: '#f8fafc',
-              border: '1px solid #e2e8f0',
-              borderRadius: '14px',
-              padding: '1.15rem',
-              display: 'grid',
-              gridTemplateColumns: 'repeat(2, 1fr)',
-              gap: '1rem'
-            }}>
-              <div>
-                <span style={{ color: '#64748b', fontSize: '0.7rem', display: 'block' }}>
-                  {isAr ? 'قيمة العقد الإجمالية (V):' : 'Gross Contract Value (V):'}
-                </span>
-                <strong style={{ color: '#0f172a', fontSize: '1rem' }}>
-                  <MoneyCell amount={preview.grossContractValue} isAr={isAr} />
-                </strong>
-              </div>
-
-              <div>
-                <span style={{ color: '#64748b', fontSize: '0.7rem', display: 'block' }}>
-                  {isAr ? 'المحصل نقداً حتى الآن (C):' : 'Total Cash Collected (C):'}
-                </span>
-                <strong style={{ color: '#0f172a', fontSize: '1rem' }}>
-                  <MoneyCell amount={preview.totalCashCollected} isAr={isAr} />
-                </strong>
-              </div>
-
-              <div style={{
-                background: 'rgba(184, 144, 62, 0.08)',
-                border: '1px solid rgba(184, 144, 62, 0.25)',
-                borderRadius: '10px',
-                padding: '0.75rem'
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.2rem' }}>
-                  <span style={{ color: '#946f23', fontSize: '0.7rem', fontWeight: 800 }}>
-                    {isAr ? 'غرامة الفسخ المحتجزة للشركة:' : 'Retained Penalty:'}
-                  </span>
-                  <LegalVerificationTag label={isAr ? 'غرامة ١٠٪' : '10% Penalty'} isAr={isAr} />
-                </div>
-                <strong style={{ color: '#946f23', fontSize: '1.1rem', fontWeight: 900 }}>
-                  <MoneyCell amount={preview.penaltyRetained} isAr={isAr} highlight />
-                </strong>
-              </div>
-
-              <div style={{
-                background: 'rgba(16, 185, 129, 0.08)',
-                border: '1px solid rgba(16, 185, 129, 0.25)',
-                borderRadius: '10px',
-                padding: '0.75rem'
-              }}>
-                <span style={{ color: '#047857', fontSize: '0.7rem', fontWeight: 800, display: 'block', marginBottom: '0.2rem' }}>
-                  {isAr ? 'صافي رد العميل المستحق (حساب 206200):' : 'Net Refund Liability (206200):'}
-                </span>
-                <strong style={{ color: '#059669', fontSize: '1.1rem', fontWeight: 900 }}>
-                  <MoneyCell amount={preview.netRefundLiability} isAr={isAr} />
-                </strong>
-              </div>
-            </div>
-
-            {/* Journal Entry Preview */}
-            <JournalEntryPreview entry={preview.journalEntry} isDraft={true} isAr={isAr} />
-
-            {/* Anchored Footer Buttons */}
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'flex-end',
-              gap: '0.65rem',
-              borderTop: '1px solid #e2e8f0',
-              paddingTop: '1.25rem',
-              marginTop: 'auto'
-            }}>
-              <button
-                type="button"
-                onClick={onClose}
-                style={{
-                  background: '#ffffff',
-                  border: '1px solid #cbd5e1',
-                  color: '#64748b',
-                  padding: '0.6rem 1.25rem',
-                  borderRadius: '10px',
-                  fontSize: '0.82rem',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  transition: 'all 0.15s ease'
-                }}
-              >
-                {isAr ? 'إلغاء' : 'Cancel'}
-              </button>
-
-              <button
-                type="button"
-                onClick={handleSubmit}
-                disabled={isMutating}
-                style={{
-                  background: 'linear-gradient(135deg, #ef4444 0%, #b91c1c 100%)',
-                  color: '#ffffff',
-                  border: 'none',
-                  padding: '0.6rem 1.6rem',
-                  borderRadius: '10px',
-                  fontSize: '0.84rem',
-                  fontWeight: 800,
-                  cursor: isMutating ? 'not-allowed' : 'pointer',
-                  display: 'inline-flex',
+            {rescissionSuccess ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', height: '100%' }}>
+                {/* Success Banner */}
+                <div style={{
+                  padding: '1.25rem 1.5rem',
+                  borderRadius: '16px',
+                  background: 'linear-gradient(135deg, #ecfdf5 0%, #f0fdf4 100%)',
+                  border: '1.5px solid rgba(5, 150, 105, 0.3)',
+                  display: 'flex',
                   alignItems: 'center',
-                  gap: '0.5rem',
-                  boxShadow: '0 4px 14px rgba(239, 68, 68, 0.3)'
-                }}
-              >
-                {isMutating ? <Loader2 size={15} className="animate-spin" /> : <RotateCcw size={15} />}
-                <span>{isAr ? 'تأكيد الفسخ وترحيل القيد بالدفاتر' : 'Confirm & Post Rescission Entry'}</span>
-              </button>
-            </div>
+                  gap: '1rem',
+                  boxShadow: '0 4px 16px rgba(5, 150, 105, 0.08)'
+                }}>
+                  <div style={{
+                    width: '46px',
+                    height: '46px',
+                    borderRadius: '12px',
+                    background: '#059669',
+                    color: '#ffffff',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0,
+                    boxShadow: '0 4px 10px rgba(5, 150, 105, 0.3)'
+                  }}>
+                    <CheckCircle2 size={26} />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <h4 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: '#065f46' }}>
+                      {isAr ? 'تم اعتماد فسخ العقد وترحيل قيود الرد المالي بنجاح' : 'Contract Rescission Successfully Posted'}
+                    </h4>
+                    <p style={{ margin: '0.25rem 0 0', fontSize: '0.78rem', color: '#047857' }}>
+                      {isAr 
+                        ? 'تم إلغاء كافة الأقساط المتبقية وتحديث قيد الاسترداد بالدفاتر المحاسبية وأصبحت الوحدة متاحة لإعادة البيع.'
+                        : 'Future installment schedules voided, statutory penalty retained, and net refund liability credited to ledger.'}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Settlement Confirmation Card */}
+                <div style={{
+                  background: '#ffffff',
+                  border: '1.5px solid #e2e8f0',
+                  borderRadius: '16px',
+                  padding: '1.25rem',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '1rem',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.03)'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #f1f5f9', paddingBottom: '0.75rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <Building2 size={16} color="#946f23" />
+                      <strong style={{ fontSize: '0.95rem', color: '#0f172a' }}>{rescissionSuccess.buyer}</strong>
+                      <span style={{ fontSize: '0.76rem', color: '#64748b' }}>({rescissionSuccess.contractNumber})</span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <span style={{
+                        background: 'rgba(5, 150, 105, 0.1)',
+                        color: '#047857',
+                        border: '1px solid rgba(5, 150, 105, 0.25)',
+                        padding: '0.15rem 0.6rem',
+                        borderRadius: '20px',
+                        fontSize: '0.72rem',
+                        fontWeight: 800
+                      }}>
+                        {isAr ? `الوحدة ${rescissionSuccess.unitId} (متاحة للبيع)` : `Unit ${rescissionSuccess.unitId} (Available)`}
+                      </span>
+                      <span style={{ fontSize: '0.75rem', color: '#94a3b8', fontVariantNumeric: 'tabular-nums' }}>
+                        {rescissionSuccess.rescissionDate}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Financial Grid */}
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: '1fr 1fr',
+                    gap: '0.75rem'
+                  }}>
+                    <div style={{ background: '#f8fafc', padding: '0.75rem 1rem', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+                      <span style={{ color: '#64748b', fontSize: '0.7rem', display: 'block' }}>
+                        {isAr ? 'قيمة العقد الأصلية:' : 'Gross Contract Value:'}
+                      </span>
+                      <strong style={{ color: '#0f172a', fontSize: '0.95rem', fontVariantNumeric: 'tabular-nums' }}>
+                        {formatEGP(rescissionSuccess.grossContractValue)} ج.م
+                      </strong>
+                    </div>
+
+                    <div style={{ background: '#f8fafc', padding: '0.75rem 1rem', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+                      <span style={{ color: '#64748b', fontSize: '0.7rem', display: 'block' }}>
+                        {isAr ? 'إجمالي المحصل بالخزينة:' : 'Total Cash Collected:'}
+                      </span>
+                      <strong style={{ color: '#0f172a', fontSize: '0.95rem', fontVariantNumeric: 'tabular-nums' }}>
+                        {formatEGP(rescissionSuccess.totalCashCollected)} ج.م
+                      </strong>
+                    </div>
+
+                    <div style={{ background: 'rgba(184, 144, 62, 0.08)', padding: '0.75rem 1rem', borderRadius: '10px', border: '1px solid rgba(184, 144, 62, 0.25)' }}>
+                      <span style={{ color: '#946f23', fontSize: '0.7rem', fontWeight: 800, display: 'block' }}>
+                        {isAr ? 'غرامة الفسخ المحتجزة (١٠٪ كحد أدنى):' : 'Retained Penalty (10% Floor):'}
+                      </span>
+                      <strong style={{ color: '#946f23', fontSize: '1.05rem', fontWeight: 900, fontVariantNumeric: 'tabular-nums' }}>
+                        {formatEGP(rescissionSuccess.penaltyRetained)} ج.م
+                      </strong>
+                    </div>
+
+                    <div style={{ background: 'rgba(16, 185, 129, 0.08)', padding: '0.75rem 1rem', borderRadius: '10px', border: '1px solid rgba(16, 185, 129, 0.25)' }}>
+                      <span style={{ color: '#047857', fontSize: '0.7rem', fontWeight: 800, display: 'block' }}>
+                        {isAr ? 'صافي رد العميل المستحق (حساب 206200):' : 'Net Refund Liability (206200):'}
+                      </span>
+                      <strong style={{ color: '#059669', fontSize: '1.05rem', fontWeight: 900, fontVariantNumeric: 'tabular-nums' }}>
+                        {formatEGP(rescissionSuccess.netRefundLiability)} ج.م
+                      </strong>
+                    </div>
+                  </div>
+
+                  {/* Statutory & Procedural Banner */}
+                  <div style={{
+                    padding: '0.75rem 1rem',
+                    borderRadius: '10px',
+                    background: '#f8fafc',
+                    border: '1px solid #e2e8f0',
+                    fontSize: '0.76rem',
+                    color: '#475569',
+                    lineHeight: 1.55
+                  }}>
+                    {isAr ? (
+                      <>
+                        📌 <strong>الإجراء المحاسبي المكتمل:</strong> تم ترحيل صافي المبلغ المسترد إلى ذمة العميل بحساب الالتزامات (206200)، وإثبات غرامة الفسخ كإيراد استثنائي محتجز، مع تحرير الوحدة السكنية للبيع مجدداً.
+                      </>
+                    ) : (
+                      <>
+                        📌 <strong>Accounting Audit:</strong> Net refund credited to buyer liability account (206200), penalty retained as miscellaneous gain, and unit unlocked for new sales contracts.
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                {/* Anchored Footer Buttons */}
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'flex-end',
+                  gap: '0.65rem',
+                  borderTop: '1px solid #e2e8f0',
+                  paddingTop: '1.25rem',
+                  marginTop: 'auto'
+                }}>
+                  <button
+                    type="button"
+                    onClick={() => setRescissionSuccess(null)}
+                    style={{
+                      background: '#ffffff',
+                      border: '1px solid #cbd5e1',
+                      color: '#0f172a',
+                      padding: '0.6rem 1.25rem',
+                      borderRadius: '10px',
+                      fontSize: '0.82rem',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.45rem',
+                      transition: 'all 0.15s ease'
+                    }}
+                  >
+                    <RotateCcw size={14} />
+                    <span>{isAr ? 'معالجة عقد آخر' : 'Process Another Contract'}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={onClose}
+                    style={{
+                      background: 'linear-gradient(135deg, #059669 0%, #047857 100%)',
+                      color: '#ffffff',
+                      border: 'none',
+                      padding: '0.6rem 1.6rem',
+                      borderRadius: '10px',
+                      fontSize: '0.84rem',
+                      fontWeight: 800,
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      boxShadow: '0 4px 14px rgba(5, 150, 105, 0.3)'
+                    }}
+                  >
+                    <CheckCircle2 size={16} />
+                    <span>{isAr ? 'تم / إغلاق النافذة' : 'Done / Close Window'}</span>
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <>
+                {/* Active Contract Header Dossier Strip */}
+                <div style={{
+                  background: '#f8fafc',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '14px',
+                  padding: '1rem 1.25rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  flexWrap: 'wrap',
+                  gap: '1rem'
+                }}>
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <Building2 size={16} color="#946f23" />
+                      <strong style={{ fontSize: '0.95rem', color: '#0f172a' }}>
+                        {activeContract.buyer_name}
+                      </strong>
+                      <span style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                        ({activeContract.contract_number} • {activeContract.unit_id})
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Effective Rescission Date Input */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <label style={{ fontSize: '0.74rem', fontWeight: 700, color: '#475569', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                      <Calendar size={13} />
+                      <span>{isAr ? 'تاريخ الفسخ المعتمد:' : 'Effective Date:'}</span>
+                    </label>
+                    <input 
+                      type="date"
+                      value={rescissionDate}
+                      onChange={e => setRescissionDate(e.target.value)}
+                      style={{
+                        padding: '0.4rem 0.65rem',
+                        borderRadius: '8px',
+                        border: '1px solid #cbd5e1',
+                        background: '#ffffff',
+                        color: '#0f172a',
+                        fontSize: '0.78rem',
+                        outline: 'none'
+                      }}
+                      required
+                    />
+                  </div>
+                </div>
+
+                {/* Rescission Decision Cards (Branch 1 Pre-delivery vs Branch 2 Post-delivery) */}
+                <BranchDecisionCard 
+                  contract={activeContract}
+                  selectedBranch={selectedBranch}
+                  onSelectBranch={setSelectedBranch}
+                  isAr={isAr}
+                />
+
+                {/* 4-Box Financial Split HUD */}
+                <div style={{
+                  background: '#f8fafc',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '14px',
+                  padding: '1.15rem',
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(2, 1fr)',
+                  gap: '1rem'
+                }}>
+                  <div>
+                    <span style={{ color: '#64748b', fontSize: '0.7rem', display: 'block' }}>
+                      {isAr ? 'قيمة العقد الإجمالية (V):' : 'Gross Contract Value (V):'}
+                    </span>
+                    <strong style={{ color: '#0f172a', fontSize: '1rem' }}>
+                      <MoneyCell amount={preview.grossContractValue} isAr={isAr} />
+                    </strong>
+                  </div>
+
+                  <div>
+                    <span style={{ color: '#64748b', fontSize: '0.7rem', display: 'block' }}>
+                      {isAr ? 'المحصل نقداً حتى الآن (C):' : 'Total Cash Collected (C):'}
+                    </span>
+                    <strong style={{ color: '#0f172a', fontSize: '1rem' }}>
+                      <MoneyCell amount={preview.totalCashCollected} isAr={isAr} />
+                    </strong>
+                  </div>
+
+                  <div style={{
+                    background: 'rgba(184, 144, 62, 0.08)',
+                    border: '1px solid rgba(184, 144, 62, 0.25)',
+                    borderRadius: '10px',
+                    padding: '0.75rem'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.2rem' }}>
+                      <span style={{ color: '#946f23', fontSize: '0.7rem', fontWeight: 800 }}>
+                        {isAr ? 'غرامة الفسخ المحتجزة للشركة:' : 'Retained Penalty:'}
+                      </span>
+                      <LegalVerificationTag label={isAr ? 'غرامة ١٠٪' : '10% Penalty'} isAr={isAr} />
+                    </div>
+                    <strong style={{ color: '#946f23', fontSize: '1.1rem', fontWeight: 900 }}>
+                      <MoneyCell amount={preview.penaltyRetained} isAr={isAr} highlight />
+                    </strong>
+                  </div>
+
+                  <div style={{
+                    background: 'rgba(16, 185, 129, 0.08)',
+                    border: '1px solid rgba(16, 185, 129, 0.25)',
+                    borderRadius: '10px',
+                    padding: '0.75rem'
+                  }}>
+                    <span style={{ color: '#047857', fontSize: '0.7rem', fontWeight: 800, display: 'block', marginBottom: '0.2rem' }}>
+                      {isAr ? 'صافي رد العميل المستحق (حساب 206200):' : 'Net Refund Liability (206200):'}
+                    </span>
+                    <strong style={{ color: '#059669', fontSize: '1.1rem', fontWeight: 900 }}>
+                      <MoneyCell amount={preview.netRefundLiability} isAr={isAr} />
+                    </strong>
+                  </div>
+                </div>
+
+                {/* Journal Entry Preview */}
+                <JournalEntryPreview entry={preview.journalEntry} isDraft={true} isAr={isAr} />
+
+                {/* Anchored Footer Buttons */}
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'flex-end',
+                  gap: '0.65rem',
+                  borderTop: '1px solid #e2e8f0',
+                  paddingTop: '1.25rem',
+                  marginTop: 'auto'
+                }}>
+                  <button
+                    type="button"
+                    onClick={onClose}
+                    style={{
+                      background: '#ffffff',
+                      border: '1px solid #cbd5e1',
+                      color: '#64748b',
+                      padding: '0.6rem 1.25rem',
+                      borderRadius: '10px',
+                      fontSize: '0.82rem',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease'
+                    }}
+                  >
+                    {isAr ? 'إلغاء' : 'Cancel'}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleSubmit}
+                    disabled={isMutating}
+                    style={{
+                      background: 'linear-gradient(135deg, #ef4444 0%, #b91c1c 100%)',
+                      color: '#ffffff',
+                      border: 'none',
+                      padding: '0.6rem 1.6rem',
+                      borderRadius: '10px',
+                      fontSize: '0.84rem',
+                      fontWeight: 800,
+                      cursor: isMutating ? 'not-allowed' : 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      boxShadow: '0 4px 14px rgba(239, 68, 68, 0.3)'
+                    }}
+                  >
+                    {isMutating ? <Loader2 size={15} className="animate-spin" /> : <RotateCcw size={15} />}
+                    <span>{isAr ? 'تأكيد الفسخ وترحيل القيد بالدفاتر' : 'Confirm & Post Rescission Entry'}</span>
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       </div>

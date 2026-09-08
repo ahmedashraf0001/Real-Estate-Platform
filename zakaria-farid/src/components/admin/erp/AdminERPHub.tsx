@@ -1267,7 +1267,7 @@ export default function AdminERPHub({ adminLocale, initialTab }: AdminERPHubProp
         newSchedules
       );
 
-      setShowEscalationModal(null);
+      // Keep escalation modal open to show completion confirmation card and allow reviewing or adjusting another contract
       const updatedDataset = await loadLiveData(true);
       if (updatedDataset && inspectorPayload?.type === 'contract' && inspectorPayload.contract.contract_id === contract.contract_id) {
         const updatedContract = updatedDataset.contracts.find(c => c.contract_id === contract.contract_id) || contract;
@@ -1328,7 +1328,7 @@ export default function AdminERPHub({ adminLocale, initialTab }: AdminERPHubProp
         voidIds
       );
 
-      setShowRescissionModal(null);
+      // Keep rescission modal open to show completion confirmation card and allow reviewing or processing another contract
       setRescissionStep(0);
       if (inspectorPayload?.type === 'contract' && inspectorPayload.contract.contract_id === contract.contract_id) {
         setInspectorPayload(null);
@@ -1486,7 +1486,7 @@ export default function AdminERPHub({ adminLocale, initialTab }: AdminERPHubProp
 
       await ERPSupabaseService.persistTranchePayment(supabase, contract.contract_id, schedule.schedule_id, amount, entry);
 
-      setShowPayModal(null);
+      // Keep cash collection receipt modal open so user can review and print official receipt voucher
       const updatedDataset = await loadLiveData(true);
 
       // Keep the sidebar open and update its data with the newly paid status!
@@ -1742,8 +1742,6 @@ export default function AdminERPHub({ adminLocale, initialTab }: AdminERPHubProp
 
       // 6. Reload live data
       await loadLiveData();
-      setShowNewPDCModal(false);
-      setSupplementInitialContractId(null);
 
       // 7. Executive Toast Notification
       toast.success(
@@ -1804,7 +1802,6 @@ export default function AdminERPHub({ adminLocale, initialTab }: AdminERPHubProp
 
       await supabase.from('erp_pdc_records').insert([payload]);
       await loadLiveData();
-      setShowNewPDCModal(false);
 
       toast.success(
         isAr ? 'تم إثبات ورقة القبض وحفظها في الخزينة بنجاح' : 'Due / Cheque recorded in safe successfully',
@@ -2097,7 +2094,7 @@ export default function AdminERPHub({ adminLocale, initialTab }: AdminERPHubProp
         ...prev,
         costAllocations: [newAlloc, ...prev.costAllocations]
       }));
-      setShowRSVModal(false);
+      // Keep RSV modal open to show completion confirmation card and factor metrics
       handleInspectRSV(newAlloc);
 
       toast.success(
@@ -3403,7 +3400,6 @@ export default function AdminERPHub({ adminLocale, initialTab }: AdminERPHubProp
         isMutating={isMutating}
         onConfirmCollection={async (details) => {
           await handleCollectPayment(details);
-          setShowPayModal(null);
         }}
       />
 
@@ -3419,7 +3415,6 @@ export default function AdminERPHub({ adminLocale, initialTab }: AdminERPHubProp
           setEscalationDelta(delta);
           setEscalationReason(reason);
           await handleExecuteEscalation(targetContract, delta, reason);
-          setShowEscalationModal(null);
         }}
       />
 
@@ -3437,7 +3432,6 @@ export default function AdminERPHub({ adminLocale, initialTab }: AdminERPHubProp
           setSelectedBranch(selectedBranch);
           setRescissionDate(rDate);
           await handleExecuteRescission(targetContract);
-          setShowRescissionModal(null);
         }}
       />
 
@@ -3454,7 +3448,6 @@ export default function AdminERPHub({ adminLocale, initialTab }: AdminERPHubProp
           setRsvWipAmount(wipAmount);
           const fakeEvt = { preventDefault: () => {} } as React.FormEvent;
           await handleCreateRSVAllocation(fakeEvt);
-          setShowRSVModal(false);
         }}
       />
 

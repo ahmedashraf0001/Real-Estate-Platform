@@ -5,6 +5,7 @@ import {
   Wallet, 
   X, 
   Check, 
+  CheckCircle2,
   FileText, 
   ShieldCheck, 
   Loader2,
@@ -170,16 +171,27 @@ export const NewChequeModal: React.FC<NewChequeModalProps> = ({
   const [dueDate, setDueDate] = useState<string>(() => new Date().toISOString().split('T')[0]);
   const [receiptNumber, setReceiptNumber] = useState<string>('');
   const [customNotes, setCustomNotes] = useState<string>('');
+  const [supplementSuccess, setSupplementSuccess] = useState<{
+    contractNumber: string;
+    buyer: string;
+    unit: string;
+    amount: string;
+    type: string;
+    dueDate: string;
+  } | null>(null);
 
   // Auto-initialize selected contract when opening modal (prefer active contracts)
   useEffect(() => {
     if (isOpen) {
+      setSupplementSuccess(null);
       if (initialContractId && contracts.some(c => c.contract_id === initialContractId)) {
         setSelectedContractId(initialContractId);
       } else if (contracts.length > 0 && (!selectedContractId || !contracts.some(c => c.contract_id === selectedContractId))) {
         const firstActive = contracts.find(c => !isContractClosed(c)) || contracts[0];
         setSelectedContractId(firstActive.contract_id);
       }
+    } else {
+      setSupplementSuccess(null);
     }
   }, [isOpen, initialContractId, contracts, schedules]);
 
@@ -307,6 +319,15 @@ export const NewChequeModal: React.FC<NewChequeModalProps> = ({
       ? `[${reasonTitle}]: ${customNotes.trim()}`
       : `[${reasonTitle}]: ملحق تعاقدي معتمد للوحدة ${activeContract.unit_id}`;
 
+    const successPayload = {
+      contractNumber: activeContract.contract_number,
+      buyer: isAr ? localizeBuyerName(activeContract.buyer_name) : activeContract.buyer_name,
+      unit: activeContract.unit_id,
+      amount: D(amount).toFixed(2),
+      type: reasonTitle,
+      dueDate
+    };
+
     if (onSaveSupplement) {
       await onSaveSupplement({
         contractId: activeContract.contract_id,
@@ -328,7 +349,7 @@ export const NewChequeModal: React.FC<NewChequeModalProps> = ({
       });
     }
 
-    onClose();
+    setSupplementSuccess(successPayload);
   };
 
   if (!isOpen) return null;
@@ -418,7 +439,10 @@ export const NewChequeModal: React.FC<NewChequeModalProps> = ({
 
           <button
             type="button"
-            onClick={onClose}
+            onClick={() => {
+              setSupplementSuccess(null);
+              onClose();
+            }}
             style={{
               background: '#ffffff',
               border: '1px solid #e2e8f0',
@@ -815,7 +839,193 @@ export const NewChequeModal: React.FC<NewChequeModalProps> = ({
             overflowY: 'auto',
             background: '#ffffff'
           }}>
-            {activeContract ? (
+            {supplementSuccess ? (
+              <div style={{ display: 'flex', flexDirection: 'column', flex: 1, padding: '2rem', gap: '1.5rem', justifyContent: 'center' }}>
+                {/* Success Card */}
+                <div style={{
+                  background: 'linear-gradient(135deg, rgba(5, 150, 105, 0.08) 0%, rgba(184, 144, 62, 0.06) 100%)',
+                  border: '1.5px solid #059669',
+                  borderRadius: '16px',
+                  padding: '1.5rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '1.15rem',
+                  boxShadow: '0 4px 16px rgba(5, 150, 105, 0.08)'
+                }}>
+                  <div style={{
+                    width: '48px',
+                    height: '48px',
+                    borderRadius: '50%',
+                    background: 'linear-gradient(135deg, #059669 0%, #b8903e 100%)',
+                    color: '#ffffff',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0,
+                    boxShadow: '0 4px 12px rgba(5, 150, 105, 0.3)'
+                  }}>
+                    <CheckCircle2 size={28} />
+                  </div>
+                  <div>
+                    <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 900, color: '#065f46' }}>
+                      {isAr ? 'تمت إضافة الملحق المالي بنجاح وإدراجه في جدول الأقساط' : 'Supplement Added Successfully'}
+                    </h3>
+                    <p style={{ margin: '0.25rem 0 0', fontSize: '0.8rem', color: '#047857', fontWeight: 600 }}>
+                      {isAr 
+                        ? 'تم تحديث القيمة الإجمالية للعقد وتوليد استحقاق حافظة الشيكات والأمانات' 
+                        : 'Contract gross value updated and installment tranche added to schedule'}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Details Summary Card */}
+                <div style={{
+                  background: 'linear-gradient(135deg, #ffffff 0%, #fffdf8 100%)',
+                  border: '1.5px solid rgba(184, 144, 62, 0.35)',
+                  borderRadius: '16px',
+                  padding: '1.5rem',
+                  boxShadow: '0 8px 24px rgba(184, 144, 62, 0.08)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '1.25rem'
+                }}>
+                  {/* Amount Headline */}
+                  <div style={{
+                    background: 'rgba(184, 144, 62, 0.08)',
+                    border: '1px solid rgba(184, 144, 62, 0.25)',
+                    borderRadius: '12px',
+                    padding: '1rem 1.25rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between'
+                  }}>
+                    <div>
+                      <span style={{ fontSize: '0.72rem', color: '#785210', fontWeight: 700, display: 'block' }}>
+                        {isAr ? 'قيمة الملحق المالي المضاف:' : 'Added Supplement Amount:'}
+                      </span>
+                      <div style={{ fontSize: '1.85rem', fontWeight: 900, color: '#0f172a', fontVariantNumeric: 'tabular-nums', marginTop: '0.2rem' }}>
+                        {D(supplementSuccess.amount).formatEGP(isAr)}
+                      </div>
+                      <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#b8903e', marginTop: '0.3rem' }}>
+                        {tafqeetEGP(supplementSuccess.amount)}
+                      </div>
+                    </div>
+                    <span style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.35rem',
+                      background: '#0f172a',
+                      color: '#ffffff',
+                      padding: '0.4rem 0.85rem',
+                      borderRadius: '8px',
+                      fontSize: '0.8rem',
+                      fontWeight: 800
+                    }}>
+                      <Check size={14} color="#10b981" />
+                      <span>{supplementSuccess.type}</span>
+                    </span>
+                  </div>
+
+                  {/* Summary Grid */}
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(2, 1fr)',
+                    gap: '0.85rem',
+                    background: '#f8fafc',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '12px',
+                    padding: '1rem'
+                  }}>
+                    <div>
+                      <span style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: 700, display: 'block' }}>
+                        {isAr ? 'العميل المستفيد:' : 'Client / Buyer:'}
+                      </span>
+                      <strong style={{ fontSize: '0.88rem', color: '#0f172a', fontWeight: 800, marginTop: '0.15rem', display: 'block' }}>
+                        {supplementSuccess.buyer}
+                      </strong>
+                    </div>
+
+                    <div>
+                      <span style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: 700, display: 'block' }}>
+                        {isAr ? 'رقم العقد والوحدة:' : 'Contract & Unit:'}
+                      </span>
+                      <strong style={{ fontSize: '0.88rem', color: '#0f172a', fontWeight: 800, marginTop: '0.15rem', display: 'block' }}>
+                        {supplementSuccess.unit} (#{supplementSuccess.contractNumber})
+                      </strong>
+                    </div>
+
+                    <div>
+                      <span style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: 700, display: 'block' }}>
+                        {isAr ? 'نوع وبند الملحق:' : 'Supplement Type:'}
+                      </span>
+                      <strong style={{ fontSize: '0.84rem', color: '#946f23', fontWeight: 800, marginTop: '0.15rem', display: 'block' }}>
+                        {supplementSuccess.type}
+                      </strong>
+                    </div>
+
+                    <div>
+                      <span style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: 700, display: 'block' }}>
+                        {isAr ? 'تاريخ الاستحقاق المعتمد:' : 'Due Date:'}
+                      </span>
+                      <strong style={{ fontSize: '0.84rem', color: '#059669', fontWeight: 800, marginTop: '0.15rem', display: 'block' }}>
+                        {supplementSuccess.dueDate}
+                      </strong>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Actions */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '0.5rem' }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSupplementSuccess(null);
+                      setAmount('150000');
+                      setCustomNotes('');
+                      setReceiptNumber('');
+                    }}
+                    style={{
+                      background: '#ffffff',
+                      border: '1.5px solid #b8903e',
+                      color: '#946f23',
+                      padding: '0.65rem 1.25rem',
+                      borderRadius: '8px',
+                      fontSize: '0.82rem',
+                      fontWeight: 800,
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.45rem',
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
+                    }}
+                  >
+                    <Plus size={15} />
+                    <span>{isAr ? '+ إضافة دفعة أو ملحق آخر لنفس العقد / عقد آخر' : '+ Add Another Supplement'}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSupplementSuccess(null);
+                      onClose();
+                    }}
+                    style={{
+                      background: '#0f172a',
+                      color: '#ffffff',
+                      border: 'none',
+                      padding: '0.65rem 1.45rem',
+                      borderRadius: '8px',
+                      fontSize: '0.82rem',
+                      fontWeight: 800,
+                      cursor: 'pointer',
+                      boxShadow: '0 2px 6px rgba(15, 23, 42, 0.2)'
+                    }}
+                  >
+                    {isAr ? 'تم / إغلاق النافذة' : 'Done / Close'}
+                  </button>
+                </div>
+              </div>
+            ) : activeContract ? (
               <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', flex: 1, padding: '1.5rem', gap: '1.25rem' }}>
                 
                 {/* 1. Active Contract Hero Strip */}

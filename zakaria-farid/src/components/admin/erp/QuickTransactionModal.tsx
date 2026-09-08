@@ -13,7 +13,8 @@ import {
   HardHat, 
   FileCheck2,
   CreditCard,
-  UserCheck
+  UserCheck,
+  RotateCcw
 } from 'lucide-react';
 import { 
   ERPAccountingPeriod, 
@@ -23,7 +24,7 @@ import {
 } from '@/lib/erp/types';
 import { Property } from '@/lib/supabase/types';
 import { GeneralLedgerEngine, CANONICAL_COA } from '@/lib/erp/ledger';
-import { D } from '@/lib/erp/math';
+import { D, formatEGP } from '@/lib/erp/math';
 import { ZFCustomSelect, ZFCustomSelectSection } from './v2/common/ZFCustomSelect';
 
 interface QuickTransactionModalProps {
@@ -119,6 +120,14 @@ export const QuickTransactionModal: React.FC<QuickTransactionModalProps> = ({
   const [lenderName, setLenderName] = useState<string>('');
   const [memo, setMemo] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [successEntry, setSuccessEntry] = useState<ERPJournalEntry | null>(null);
+
+  React.useEffect(() => {
+    if (isOpen) {
+      setStep(1);
+      setSuccessEntry(null);
+    }
+  }, [isOpen]);
 
   const currentPreset = REAL_ESTATE_EXPENSE_PRESETS[selectedPresetIndex] || REAL_ESTATE_EXPENSE_PRESETS[0];
 
@@ -262,7 +271,7 @@ export const QuickTransactionModal: React.FC<QuickTransactionModalProps> = ({
       });
 
       await onSaveEntry(entry);
-      onClose();
+      setSuccessEntry(entry);
     } catch (err: unknown) {
       alert((err as Error).message);
     } finally {
@@ -406,13 +415,178 @@ export const QuickTransactionModal: React.FC<QuickTransactionModalProps> = ({
           </button>
         </div>
 
-        {/* Multi-Step Progress Tracker */}
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: '1fr 1fr 1fr',
-          background: '#f1f5f9',
-          borderBottom: '1px solid rgba(255, 255, 255, 0.06)'
-        }}>
+        {successEntry ? (
+          <div style={{ padding: '1.75rem', overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+            {/* Success Banner */}
+            <div style={{
+              padding: '1.25rem 1.5rem',
+              borderRadius: '16px',
+              background: 'linear-gradient(135deg, #ecfdf5 0%, #f0fdf4 100%)',
+              border: '1.5px solid rgba(5, 150, 105, 0.3)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '1rem',
+              boxShadow: '0 4px 16px rgba(5, 150, 105, 0.08)'
+            }}>
+              <div style={{
+                width: '46px',
+                height: '46px',
+                borderRadius: '12px',
+                background: '#059669',
+                color: '#ffffff',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+                boxShadow: '0 4px 10px rgba(5, 150, 105, 0.3)'
+              }}>
+                <CheckCircle2 size={26} />
+              </div>
+              <div style={{ flex: 1 }}>
+                <h4 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: '#065f46' }}>
+                  {isAr ? 'تم ترحيل وحفظ قيد اليومية بنجاح في دفتر الأستاذ العام' : 'Journal Entry Posted Successfully to General Ledger'}
+                </h4>
+                <p style={{ margin: '0.25rem 0 0', fontSize: '0.78rem', color: '#047857' }}>
+                  {isAr 
+                    ? `قيد رقم #${successEntry.entry_number} • معتمد ومرحل بنظام القيد المزدوج المحصن ضد التلاعب.` 
+                    : `Entry #${successEntry.entry_number} • Balanced & posted to double-entry ledger.`}
+                </p>
+              </div>
+            </div>
+
+            {/* Entry Summary Card */}
+            <div style={{
+              background: '#ffffff',
+              border: '1.5px solid #e2e8f0',
+              borderRadius: '16px',
+              padding: '1.25rem',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '1rem',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.03)'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #f1f5f9', paddingBottom: '0.75rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+                <div>
+                  <span style={{ fontSize: '0.72rem', color: '#64748b', display: 'block' }}>{isAr ? 'البيان المحاسبي:' : 'Description:'}</span>
+                  <strong style={{ fontSize: '0.95rem', color: '#0f172a' }}>{successEntry.description}</strong>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <span style={{
+                    fontFamily: 'monospace',
+                    fontSize: '0.75rem',
+                    background: '#f8fafc',
+                    border: '1px solid #e2e8f0',
+                    padding: '0.2rem 0.55rem',
+                    borderRadius: '6px',
+                    fontWeight: 700,
+                    color: '#334155'
+                  }}>
+                    {successEntry.entry_number}
+                  </span>
+                  <span style={{ fontSize: '0.75rem', color: '#94a3b8', fontVariantNumeric: 'tabular-nums' }}>
+                    {successEntry.entry_date}
+                  </span>
+                </div>
+              </div>
+
+              {/* Journal Lines Table */}
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.78rem' }}>
+                  <thead>
+                    <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0', color: '#475569' }}>
+                      <th style={{ padding: '0.6rem 0.75rem', textAlign: isAr ? 'right' : 'left', fontWeight: 800 }}>{isAr ? 'كود الحساب' : 'Account'}</th>
+                      <th style={{ padding: '0.6rem 0.75rem', textAlign: isAr ? 'right' : 'left', fontWeight: 800 }}>{isAr ? 'اسم الحساب / البيان' : 'Account Name'}</th>
+                      <th style={{ padding: '0.6rem 0.75rem', textAlign: 'center', fontWeight: 800 }}>{isAr ? 'مدين (منه)' : 'Debit'}</th>
+                      <th style={{ padding: '0.6rem 0.75rem', textAlign: 'center', fontWeight: 800 }}>{isAr ? 'دائن (له)' : 'Credit'}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {successEntry.lines.map((l, idx) => (
+                      <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                        <td style={{ padding: '0.6rem 0.75rem', fontFamily: 'monospace', fontWeight: 700, color: '#946f23' }}>{l.account_code}</td>
+                        <td style={{ padding: '0.6rem 0.75rem', color: '#0f172a', fontWeight: 600 }}>{l.memo || l.account_code}</td>
+                        <td style={{ padding: '0.6rem 0.75rem', textAlign: 'center', fontWeight: 800, color: parseFloat(l.debit_amount || '0') > 0 ? '#059669' : '#94a3b8', fontVariantNumeric: 'tabular-nums' }}>
+                          {parseFloat(l.debit_amount || '0') > 0 ? `${formatEGP(l.debit_amount)} ج.م` : '—'}
+                        </td>
+                        <td style={{ padding: '0.6rem 0.75rem', textAlign: 'center', fontWeight: 800, color: parseFloat(l.credit_amount || '0') > 0 ? '#b8903e' : '#94a3b8', fontVariantNumeric: 'tabular-nums' }}>
+                          {parseFloat(l.credit_amount || '0') > 0 ? `${formatEGP(l.credit_amount)} ج.م` : '—'}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Anchored Footer Buttons */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'flex-end',
+              gap: '0.65rem',
+              borderTop: '1px solid #e2e8f0',
+              paddingTop: '1.25rem',
+              marginTop: 'auto'
+            }}>
+              <button
+                type="button"
+                onClick={() => {
+                  setSuccessEntry(null);
+                  setStep(1);
+                  setAmount('');
+                  setMemo('');
+                }}
+                style={{
+                  background: '#ffffff',
+                  border: '1px solid #cbd5e1',
+                  color: '#0f172a',
+                  padding: '0.6rem 1.25rem',
+                  borderRadius: '10px',
+                  fontSize: '0.82rem',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.45rem',
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                <RotateCcw size={14} />
+                <span>{isAr ? '+ تسجيل قيد آخر' : '+ New Entry'}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={onClose}
+                style={{
+                  background: 'linear-gradient(135deg, #059669 0%, #047857 100%)',
+                  color: '#ffffff',
+                  border: 'none',
+                  padding: '0.6rem 1.6rem',
+                  borderRadius: '10px',
+                  fontSize: '0.84rem',
+                  fontWeight: 800,
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  boxShadow: '0 4px 14px rgba(5, 150, 105, 0.3)'
+                }}
+              >
+                <CheckCircle2 size={16} />
+                <span>{isAr ? 'تم / إغلاق النافذة' : 'Done / Close Window'}</span>
+              </button>
+            </div>
+          </div>
+        ) : (
+          <>
+            {/* Multi-Step Progress Tracker */}
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: '1fr 1fr 1fr',
+              background: '#f1f5f9',
+              borderBottom: '1px solid rgba(255, 255, 255, 0.06)'
+            }}>
           {[
             { num: 1, titleAr: '1. نوع العملية والمبلغ', titleEn: '1. Type & Amount' },
             { num: 2, titleAr: '2. التوجيه والمشروع', titleEn: '2. COA & Project' },
@@ -1343,6 +1517,8 @@ export const QuickTransactionModal: React.FC<QuickTransactionModalProps> = ({
             </button>
           )}
         </div>
+          </>
+        )}
       </div>
     </div>
   );

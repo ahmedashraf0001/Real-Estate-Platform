@@ -44,6 +44,13 @@ export const ContractEscalationModal: React.FC<ContractEscalationModalProps> = (
   const [delta, setDelta] = useState<string>('');
   const [reason, setReason] = useState<string>('');
   const [error, setError] = useState<string>('');
+  const [escalationSuccess, setEscalationSuccess] = useState<{
+    oldGross: string;
+    newGross: string;
+    delta: string;
+    reason: string;
+    contractNumber: string;
+  } | null>(null);
 
   // Auto-initialize selected contract
   useEffect(() => {
@@ -57,6 +64,9 @@ export const ContractEscalationModal: React.FC<ContractEscalationModalProps> = (
       setReason('');
       setError('');
       setSearchQuery('');
+      setEscalationSuccess(null);
+    } else {
+      setEscalationSuccess(null);
     }
   }, [isOpen, contract, contracts]);
 
@@ -111,7 +121,13 @@ export const ContractEscalationModal: React.FC<ContractEscalationModalProps> = (
 
     try {
       await onConfirmEscalation(delta.trim(), reason.trim(), activeContract);
-      onClose();
+      setEscalationSuccess({
+        oldGross: currentGross.toFixed(2),
+        newGross: newGross.toFixed(2),
+        delta: delta.trim(),
+        reason: reason.trim(),
+        contractNumber: activeContract.contract_number
+      });
     } catch (err: unknown) {
       setError((err as Error).message);
     }
@@ -202,7 +218,10 @@ export const ContractEscalationModal: React.FC<ContractEscalationModalProps> = (
 
           <button
             type="button"
-            onClick={onClose}
+            onClick={() => {
+              setEscalationSuccess(null);
+              onClose();
+            }}
             style={{
               background: '#ffffff',
               border: '1px solid #e2e8f0',
@@ -436,7 +455,164 @@ export const ContractEscalationModal: React.FC<ContractEscalationModalProps> = (
             flexDirection: 'column',
             overflowY: 'auto'
           }}>
-            <form onSubmit={handleSubmit} style={{ padding: '1.75rem', display: 'flex', flexDirection: 'column', gap: '1.25rem', height: '100%', boxSizing: 'border-box' }}>
+            {escalationSuccess ? (
+              <div style={{ padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1.5rem', justifyContent: 'center', height: '100%', boxSizing: 'border-box' }}>
+                {/* Success Banner */}
+                <div style={{
+                  background: 'linear-gradient(135deg, rgba(5, 150, 105, 0.08) 0%, rgba(184, 144, 62, 0.06) 100%)',
+                  border: '1.5px solid #059669',
+                  borderRadius: '16px',
+                  padding: '1.25rem 1.5rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '1rem',
+                  boxShadow: '0 4px 16px rgba(5, 150, 105, 0.08)'
+                }}>
+                  <div style={{
+                    width: '44px',
+                    height: '44px',
+                    borderRadius: '50%',
+                    background: '#059669',
+                    color: '#ffffff',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0,
+                    boxShadow: '0 4px 12px rgba(5, 150, 105, 0.25)'
+                  }}>
+                    <Check size={24} strokeWidth={3} />
+                  </div>
+                  <div>
+                    <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 900, color: '#065f46' }}>
+                      {isAr ? 'تم اعتماد زيادة القيمة وتحديث جدول الأقساط المتبقية بنجاح' : 'Contract Escalation Successfully Applied'}
+                    </h3>
+                    <p style={{ margin: '0.25rem 0 0', fontSize: '0.78rem', color: '#047857', fontWeight: 600 }}>
+                      {isAr 
+                        ? `عقد رقم: ${escalationSuccess.contractNumber} • السبب: ${escalationSuccess.reason}` 
+                        : `Contract #: ${escalationSuccess.contractNumber} • Reason: ${escalationSuccess.reason}`}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Metric Comparison Card */}
+                <div style={{
+                  background: 'linear-gradient(135deg, #ffffff 0%, #fffdf8 100%)',
+                  border: '1.5px solid rgba(184, 144, 62, 0.35)',
+                  borderRadius: '16px',
+                  padding: '1.5rem',
+                  boxShadow: '0 8px 24px rgba(184, 144, 62, 0.08)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '1.25rem'
+                }}>
+                  <div style={{ fontSize: '0.8rem', fontWeight: 800, color: '#946f23', display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                    <TrendingUp size={16} />
+                    <span>{isAr ? 'مقارنة القيمة وتوزيع الزيادة المحاسبية' : 'Escalation Value Breakdown'}</span>
+                  </div>
+
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(3, 1fr)',
+                    gap: '1rem',
+                    background: '#f8fafc',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '12px',
+                    padding: '1.15rem'
+                  }}>
+                    <div>
+                      <span style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 700, display: 'block' }}>
+                        {isAr ? 'قيمة العقد الأصلية:' : 'Original Contract Value:'}
+                      </span>
+                      <strong style={{ fontSize: '1.1rem', color: '#0f172a', fontWeight: 900, fontVariantNumeric: 'tabular-nums', marginTop: '0.25rem', display: 'block' }}>
+                        {D(escalationSuccess.oldGross).formatEGP(isAr)}
+                      </strong>
+                    </div>
+
+                    <div style={{ borderRight: isAr ? '1px dashed #cbd5e1' : 'none', borderLeft: isAr ? 'none' : '1px dashed #cbd5e1', paddingRight: isAr ? '1rem' : 0, paddingLeft: isAr ? 0 : '1rem' }}>
+                      <span style={{ fontSize: '0.72rem', color: '#946f23', fontWeight: 700, display: 'block' }}>
+                        {isAr ? 'الزيادة المعتمدة (+):' : 'Escalation Added (+):'}
+                      </span>
+                      <strong style={{ fontSize: '1.1rem', color: '#b45309', fontWeight: 900, fontVariantNumeric: 'tabular-nums', marginTop: '0.25rem', display: 'block' }}>
+                        +{D(escalationSuccess.delta).formatEGP(isAr)}
+                      </strong>
+                    </div>
+
+                    <div>
+                      <span style={{ fontSize: '0.72rem', color: '#059669', fontWeight: 700, display: 'block' }}>
+                        {isAr ? 'إجمالي العقد الجديد:' : 'New Gross Value:'}
+                      </span>
+                      <strong style={{ fontSize: '1.15rem', color: '#059669', fontWeight: 900, fontVariantNumeric: 'tabular-nums', marginTop: '0.25rem', display: 'block' }}>
+                        {D(escalationSuccess.newGross).formatEGP(isAr)}
+                      </strong>
+                    </div>
+                  </div>
+
+                  {/* Statutory Notice */}
+                  <div style={{
+                    background: 'rgba(184, 144, 62, 0.08)',
+                    border: '1px solid rgba(184, 144, 62, 0.25)',
+                    borderRadius: '10px',
+                    padding: '0.75rem 1rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    fontSize: '0.76rem',
+                    color: '#785210'
+                  }}>
+                    <ShieldCheck size={16} color="#946f23" style={{ flexShrink: 0 }} />
+                    <span>
+                      {isAr 
+                        ? 'تنبيه نظامي: تم توزيع فرق الزيادة على الأقساط غير المسددة مع استيعاب كسور التقريب بالدفعة الأخيرة طبقاً للائحة §4.9.' 
+                        : 'Statutory Notice: Escalation spread evenly across pending tranches with rounding remainder absorbed into final tranche per §4.9.'}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Actions */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '0.5rem' }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEscalationSuccess(null);
+                      setDelta('');
+                      setReason('');
+                      setError('');
+                    }}
+                    style={{
+                      background: '#ffffff',
+                      border: '1.5px solid #cbd5e1',
+                      color: '#334155',
+                      padding: '0.65rem 1.25rem',
+                      borderRadius: '8px',
+                      fontSize: '0.82rem',
+                      fontWeight: 800,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    {isAr ? 'تعديل عقد آخر' : 'Adjust Another Contract'}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={onClose}
+                    style={{
+                      background: '#0f172a',
+                      color: '#ffffff',
+                      border: 'none',
+                      padding: '0.65rem 1.45rem',
+                      borderRadius: '8px',
+                      fontSize: '0.82rem',
+                      fontWeight: 800,
+                      cursor: 'pointer',
+                      boxShadow: '0 2px 6px rgba(15, 23, 42, 0.2)'
+                    }}
+                  >
+                    {isAr ? 'تم / إغلاق النافذة' : 'Done / Close'}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <form onSubmit={handleSubmit} style={{ padding: '1.75rem', display: 'flex', flexDirection: 'column', gap: '1.25rem', height: '100%', boxSizing: 'border-box' }}>
               
               {/* Error Banner */}
               {error && (
@@ -669,6 +845,7 @@ export const ContractEscalationModal: React.FC<ContractEscalationModalProps> = (
                 </button>
               </div>
             </form>
+            )}
           </div>
         </div>
       </div>

@@ -7,10 +7,12 @@ import {
   Loader2, 
   Building2, 
   PieChart, 
-  FolderPlus
+  FolderPlus,
+  CheckCircle2,
+  RotateCcw
 } from 'lucide-react';
 import { Property } from '@/lib/supabase/types';
-import { D } from '@/lib/erp/math';
+import { D, formatEGP } from '@/lib/erp/math';
 import { MoneyCell } from '@/components/erp/MoneyCell';
 import { ZFCustomSelect, ZFCustomSelectItem } from '../common/ZFCustomSelect';
 import styles from '../ZFWorkstationShell.module.css';
@@ -42,6 +44,14 @@ export const RSVAllocationModal: React.FC<RSVAllocationModalProps> = ({
   const [projectName, setProjectName] = useState<string>('');
   const [salesValue, setSalesValue] = useState<string>('100000000');
   const [wipAmount, setWipAmount] = useState<string>('45000000');
+  const [saveSuccessData, setSaveSuccessData] = useState<{
+    projectName: string;
+    salesValue: string;
+    wipAmount: string;
+    factorPct: string;
+    grossMarginPct: string;
+    factor: number;
+  } | null>(null);
 
   useEffect(() => {
     if (isOpen) {
@@ -50,6 +60,7 @@ export const RSVAllocationModal: React.FC<RSVAllocationModalProps> = ({
       setProjectName('');
       setSalesValue('100000000');
       setWipAmount('45000000');
+      setSaveSuccessData(null);
     }
   }, [isOpen]);
 
@@ -130,7 +141,14 @@ export const RSVAllocationModal: React.FC<RSVAllocationModalProps> = ({
       wipAmount,
       propertyId: selectionMode === 'portfolio' ? (selectedPropertyId || undefined) : undefined
     });
-    onClose();
+    setSaveSuccessData({
+      projectName: projectName.trim(),
+      salesValue,
+      wipAmount,
+      factorPct,
+      grossMarginPct,
+      factor
+    });
   };
 
   return (
@@ -197,8 +215,194 @@ export const RSVAllocationModal: React.FC<RSVAllocationModalProps> = ({
           </button>
         </div>
 
-        {/* Modal Form */}
-        <form onSubmit={handleSubmit} style={{ padding: '1.5rem 1.75rem', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
+        {saveSuccessData ? (
+          <div style={{ padding: '1.75rem', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '1.25rem', height: '100%' }}>
+            {/* Success Banner */}
+            <div style={{
+              padding: '1.25rem 1.5rem',
+              borderRadius: '16px',
+              background: 'linear-gradient(135deg, #ecfdf5 0%, #f0fdf4 100%)',
+              border: '1.5px solid rgba(5, 150, 105, 0.3)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '1rem',
+              boxShadow: '0 4px 16px rgba(5, 150, 105, 0.08)'
+            }}>
+              <div style={{
+                width: '46px',
+                height: '46px',
+                borderRadius: '12px',
+                background: '#059669',
+                color: '#ffffff',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+                boxShadow: '0 4px 10px rgba(5, 150, 105, 0.3)'
+              }}>
+                <CheckCircle2 size={26} />
+              </div>
+              <div style={{ flex: 1 }}>
+                <h4 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: '#065f46' }}>
+                  {isAr ? 'تم اعتماد وحفظ معاملات التكلفة ونسب الربحية للمشروع' : 'RSV Allocation & Margin Factor Saved Successfully'}
+                </h4>
+                <p style={{ margin: '0.25rem 0 0', fontSize: '0.78rem', color: '#047857' }}>
+                  {isAr 
+                    ? 'تم تسجيل معامل التكلفة في دفتر الحسابات لتطبيقه تلقائياً عند تسليم الوحدات واعتراف الإيراد.' 
+                    : 'Cost allocation factor recorded in ledger for automated COGS recognition upon delivery.'}
+                </p>
+              </div>
+            </div>
+
+            {/* Breakdown Card */}
+            <div style={{
+              background: '#ffffff',
+              border: '1.5px solid #e2e8f0',
+              borderRadius: '16px',
+              padding: '1.25rem',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '1rem',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.03)'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #f1f5f9', paddingBottom: '0.75rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <Building2 size={18} color="#946f23" />
+                  <strong style={{ fontSize: '1rem', color: '#0f172a' }}>{saveSuccessData.projectName}</strong>
+                </div>
+                <span style={{
+                  background: 'rgba(148, 111, 35, 0.1)',
+                  color: '#946f23',
+                  border: '1px solid rgba(148, 111, 35, 0.25)',
+                  padding: '0.18rem 0.65rem',
+                  borderRadius: '20px',
+                  fontSize: '0.72rem',
+                  fontWeight: 800
+                }}>
+                  {isAr ? 'معتمد بالدفاتر • IFRS 15' : 'Ledger Active • IFRS 15'}
+                </span>
+              </div>
+
+              {/* 4 Financial metric tiles */}
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: '1fr 1fr',
+                gap: '0.75rem'
+              }}>
+                <div style={{ background: '#f8fafc', padding: '0.85rem 1rem', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+                  <span style={{ color: '#64748b', fontSize: '0.7rem', display: 'block', fontWeight: 700 }}>
+                    {isAr ? 'إجمالي المبيعات المستهدفة للمشروع:' : 'Target Sales Value:'}
+                  </span>
+                  <strong style={{ color: '#0f172a', fontSize: '1.05rem', fontVariantNumeric: 'tabular-nums', display: 'block', marginTop: '0.15rem' }}>
+                    {formatEGP(saveSuccessData.salesValue)} ج.م
+                  </strong>
+                </div>
+
+                <div style={{ background: '#f8fafc', padding: '0.85rem 1rem', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+                  <span style={{ color: '#64748b', fontSize: '0.7rem', display: 'block', fontWeight: 700 }}>
+                    {isAr ? 'مصاريف البناء المعتمدة (WIP):' : 'Incurred WIP / Construction:'}
+                  </span>
+                  <strong style={{ color: '#0f172a', fontSize: '1.05rem', fontVariantNumeric: 'tabular-nums', display: 'block', marginTop: '0.15rem' }}>
+                    {formatEGP(saveSuccessData.wipAmount)} ج.م
+                  </strong>
+                </div>
+
+                <div style={{ background: 'rgba(184, 144, 62, 0.08)', padding: '0.85rem 1rem', borderRadius: '10px', border: '1px solid rgba(184, 144, 62, 0.25)' }}>
+                  <span style={{ color: '#946f23', fontSize: '0.7rem', fontWeight: 800, display: 'block' }}>
+                    {isAr ? 'نسبة تكلفة المباني والخامات (COGS):' : 'Cost of Sales Factor:'}
+                  </span>
+                  <strong style={{ color: '#946f23', fontSize: '1.3rem', fontWeight: 900, fontVariantNumeric: 'tabular-nums', display: 'block', marginTop: '0.15rem' }}>
+                    {saveSuccessData.factorPct}%
+                  </strong>
+                </div>
+
+                <div style={{ background: 'rgba(16, 185, 129, 0.08)', padding: '0.85rem 1rem', borderRadius: '10px', border: '1px solid rgba(16, 185, 129, 0.25)' }}>
+                  <span style={{ color: '#047857', fontSize: '0.7rem', fontWeight: 800, display: 'block' }}>
+                    {isAr ? 'صافي هامش ربحية المكتب:' : 'Projected Gross Margin:'}
+                  </span>
+                  <strong style={{ color: '#059669', fontSize: '1.3rem', fontWeight: 900, fontVariantNumeric: 'tabular-nums', display: 'block', marginTop: '0.15rem' }}>
+                    {saveSuccessData.grossMarginPct}%
+                  </strong>
+                </div>
+              </div>
+
+              {/* Progress bar */}
+              <div style={{ width: '100%', height: '8px', borderRadius: '999px', background: '#e2e8f0', overflow: 'hidden', display: 'flex' }}>
+                <div style={{ width: `${Math.min(parseFloat(saveSuccessData.factorPct) || 0, 100)}%`, background: '#946f23', height: '100%' }} />
+                <div style={{ flex: 1, background: '#059669', height: '100%' }} />
+              </div>
+
+              {/* Accounting explanation */}
+              <div style={{ fontSize: '0.75rem', color: '#334155', lineHeight: 1.6, borderTop: '1px dashed #e2e8f0', paddingTop: '0.65rem' }}>
+                {isAr 
+                  ? `💡 تم تفعيل معامل التكلفة بنجاح: عند تسليم أي وحدة سكنية في (${saveSuccessData.projectName})، سيتم ترحيل ما نسبته ${saveSuccessData.factorPct}% من قيمة بيع الشقة مباشرة من حساب مشروعات تحت التنفيذ (105000) إلى تكلفة المبيعات (501000)، واعتبار الباقي ${saveSuccessData.grossMarginPct}% صافي ربح حقيقي للمكتب.`
+                  : `Active Accounting Factor: Upon delivery of any unit in (${saveSuccessData.projectName}), ${saveSuccessData.factorPct}% will be charged to COGS (501000) and the remaining ${saveSuccessData.grossMarginPct}% recognized as gross profit.`}
+              </div>
+            </div>
+
+            {/* Anchored Footer Buttons */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'flex-end',
+              gap: '0.65rem',
+              borderTop: '1px solid #e2e8f0',
+              paddingTop: '1.25rem',
+              marginTop: 'auto'
+            }}>
+              <button
+                type="button"
+                onClick={() => {
+                  setSaveSuccessData(null);
+                  setSelectedPropertyId('');
+                  setProjectName('');
+                  setSalesValue('100000000');
+                  setWipAmount('45000000');
+                }}
+                style={{
+                  background: '#ffffff',
+                  border: '1px solid #cbd5e1',
+                  color: '#0f172a',
+                  padding: '0.6rem 1.25rem',
+                  borderRadius: '10px',
+                  fontSize: '0.82rem',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.45rem',
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                <RotateCcw size={14} />
+                <span>{isAr ? '+ حساب دراسة لمشروع آخر' : '+ Calculate Another Project'}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={onClose}
+                style={{
+                  background: 'linear-gradient(135deg, #059669 0%, #047857 100%)',
+                  color: '#ffffff',
+                  border: 'none',
+                  padding: '0.6rem 1.6rem',
+                  borderRadius: '10px',
+                  fontSize: '0.84rem',
+                  fontWeight: 800,
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  boxShadow: '0 4px 14px rgba(5, 150, 105, 0.3)'
+                }}
+              >
+                <CheckCircle2 size={16} />
+                <span>{isAr ? 'تم / إغلاق النافذة' : 'Done / Close Window'}</span>
+              </button>
+            </div>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} style={{ padding: '1.5rem 1.75rem', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
           
           {/* Mode Switcher: Portfolio vs Custom Project */}
           <div style={{
@@ -531,6 +735,7 @@ export const RSVAllocationModal: React.FC<RSVAllocationModalProps> = ({
             </button>
           </div>
         </form>
+        )}
       </div>
     </div>
   );

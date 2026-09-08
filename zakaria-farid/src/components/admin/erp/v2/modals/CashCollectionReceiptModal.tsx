@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   X, 
   CheckCircle2, 
+  Check,
   Printer, 
   Wallet, 
   Landmark, 
@@ -50,6 +51,21 @@ export const CashCollectionReceiptModal: React.FC<CashCollectionReceiptModalProp
   const [destinationTreasury, setDestinationTreasury] = useState<'SAFE_101000' | 'BANK_102000'>('SAFE_101000');
   const [notes, setNotes] = useState<string>('');
   const [showPrintPreview, setShowPrintPreview] = useState<boolean>(false);
+  const [confirmedVoucher, setConfirmedVoucher] = useState<{
+    voucherCode: string;
+    amount: string;
+    date: string;
+    treasury: string;
+    buyer: string;
+    unit: string;
+    notes?: string;
+  } | null>(null);
+
+  useEffect(() => {
+    if (!isOpen) {
+      setConfirmedVoucher(null);
+    }
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -79,6 +95,15 @@ export const CashCollectionReceiptModal: React.FC<CashCollectionReceiptModalProp
     await onConfirmCollection({
       receiptDate,
       destinationTreasury,
+      notes
+    });
+    setConfirmedVoucher({
+      voucherCode,
+      amount,
+      date: receiptDate,
+      treasury: destinationTreasury,
+      buyer: buyerName,
+      unit: unitId ? `${unitId} (#${contractNumber})` : `#${contractNumber}`,
       notes
     });
   };
@@ -245,16 +270,23 @@ export const CashCollectionReceiptModal: React.FC<CashCollectionReceiptModalProp
             </div>
             <div>
               <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: '#0f172a' }}>
-                {isAr ? 'سند قبض نقدية رسمي وتحصيل دفعة' : 'Official Cash Receipt & Collection Voucher'}
+                {confirmedVoucher 
+                  ? (isAr ? 'سند قبض نقدية رسمي معتمد' : 'Confirmed Cash Receipt Voucher')
+                  : (isAr ? 'سند قبض نقدية رسمي وتحصيل دفعة' : 'Official Cash Receipt & Collection Voucher')}
               </h3>
               <span style={{ fontSize: '0.72rem', color: '#64748b' }}>
-                {isAr ? 'إثبات تحصيل فوري مع الترحيل الآلي لدفتر الأستاذ العام' : 'Instant collection with automated GL ledger posting'}
+                {confirmedVoucher
+                  ? (isAr ? 'تم ترحيل القيد دفترياً بنجاح ويمكن طباعة أو معاينة السند' : 'GL entry posted successfully. Ready for print or preview.')
+                  : (isAr ? 'إثبات تحصيل فوري مع الترحيل الآلي لدفتر الأستاذ العام' : 'Instant collection with automated GL ledger posting')}
               </span>
             </div>
           </div>
 
           <button
-            onClick={onClose}
+            onClick={() => {
+              setConfirmedVoucher(null);
+              onClose();
+            }}
             style={{
               background: '#ffffff',
               border: '1px solid #e2e8f0',
@@ -272,7 +304,262 @@ export const CashCollectionReceiptModal: React.FC<CashCollectionReceiptModalProp
           </button>
         </div>
 
-        {/* Modal Scrollable Body */}
+        {confirmedVoucher ? (
+          <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}>
+            {/* Scrollable Receipt Body */}
+            <div style={{ padding: '1.5rem 1.75rem', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '1.25rem', flex: 1 }}>
+              
+              {/* Emerald Success Banner */}
+              <div style={{
+                background: 'linear-gradient(135deg, rgba(5, 150, 105, 0.09) 0%, rgba(4, 120, 87, 0.04) 100%)',
+                border: '1.5px solid #059669',
+                borderRadius: '16px',
+                padding: '1.25rem 1.5rem',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '1rem',
+                boxShadow: '0 4px 16px rgba(5, 150, 105, 0.08)'
+              }}>
+                <div style={{
+                  width: '48px',
+                  height: '48px',
+                  borderRadius: '50%',
+                  background: '#059669',
+                  color: '#ffffff',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0,
+                  boxShadow: '0 4px 12px rgba(5, 150, 105, 0.3)'
+                }}>
+                  <CheckCircle2 size={28} />
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 900, color: '#065f46' }}>
+                    {isAr ? 'تم تأكيد التحصيل وترحيل القيد الدفتري بنجاح' : 'Collection Successfully Posted to GL'}
+                  </h3>
+                  <p style={{ margin: '0.25rem 0 0', fontSize: '0.8rem', color: '#047857', fontWeight: 600 }}>
+                    {isAr 
+                      ? 'تم تسجيل السند رسمياً في سجلات الخزينة وترحيل القيد المحاسبي المتوازن إلى دفتر الأستاذ العام' 
+                      : 'Receipt recorded in treasury ledger and double-entry transaction posted to GL'}
+                  </p>
+                </div>
+              </div>
+
+              {/* Official Receipt Card */}
+              <div style={{
+                background: 'linear-gradient(135deg, #ffffff 0%, #fffdf8 100%)',
+                border: '1.5px solid rgba(184, 144, 62, 0.35)',
+                borderRadius: '16px',
+                padding: '1.5rem',
+                boxShadow: '0 8px 24px rgba(184, 144, 62, 0.08)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '1.25rem'
+              }}>
+                {/* Header Strip */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #f1f5f9', paddingBottom: '0.85rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <ShieldCheck size={18} color="#946f23" />
+                    <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#946f23', letterSpacing: '0.02em' }}>
+                      {isAr ? 'سند قبض رسمي معتمد • مؤسسة زكريا فريد' : 'OFFICIAL RECEIPT VOUCHER • ZF REAL ESTATE'}
+                    </span>
+                  </div>
+                  <span style={{
+                    fontVariantNumeric: 'tabular-nums',
+                    fontSize: '0.82rem',
+                    fontWeight: 900,
+                    color: '#946f23',
+                    background: 'rgba(184, 144, 62, 0.12)',
+                    border: '1px solid rgba(184, 144, 62, 0.25)',
+                    padding: '0.2rem 0.65rem',
+                    borderRadius: '6px'
+                  }}>
+                    #{confirmedVoucher.voucherCode}
+                  </span>
+                </div>
+
+                {/* Amount Box */}
+                <div style={{
+                  background: 'rgba(16, 185, 129, 0.06)',
+                  border: '1.5px solid rgba(16, 185, 129, 0.25)',
+                  borderRadius: '12px',
+                  padding: '1.15rem 1.35rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between'
+                }}>
+                  <div>
+                    <span style={{ fontSize: '0.74rem', color: '#047857', fontWeight: 700, display: 'block' }}>
+                      {isAr ? 'المبلغ المحصل والمثبت دفترياً:' : 'Collected Amount:'}
+                    </span>
+                    <div style={{ fontSize: '1.85rem', fontWeight: 900, color: '#0f172a', fontVariantNumeric: 'tabular-nums', marginTop: '0.2rem' }}>
+                      {D(confirmedVoucher.amount).formatEGP(isAr)}
+                    </div>
+                    <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#b8903e', marginTop: '0.35rem' }}>
+                      {tafqeetEGP(confirmedVoucher.amount)}
+                    </div>
+                  </div>
+                  <div style={{ textAlign: isAr ? 'left' : 'right' }}>
+                    <span style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.35rem',
+                      background: '#0f172a',
+                      color: '#ffffff',
+                      padding: '0.4rem 0.85rem',
+                      borderRadius: '8px',
+                      fontSize: '0.8rem',
+                      fontWeight: 800
+                    }}>
+                      <Check size={14} color="#10b981" />
+                      <span>{isAr ? 'سند معتمد' : 'Verified'}</span>
+                    </span>
+                    <div style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '0.35rem' }}>
+                      {confirmedVoucher.date}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Voucher Attributes Grid */}
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(2, 1fr)',
+                  gap: '0.85rem',
+                  background: '#f8fafc',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '12px',
+                  padding: '1rem'
+                }}>
+                  <div>
+                    <span style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: 700, display: 'block' }}>
+                      {isAr ? 'اسم العميل / المستلم منه:' : 'Client / Payer:'}
+                    </span>
+                    <strong style={{ fontSize: '0.88rem', color: '#0f172a', fontWeight: 800, marginTop: '0.15rem', display: 'block' }}>
+                      {confirmedVoucher.buyer}
+                    </strong>
+                  </div>
+
+                  <div>
+                    <span style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: 700, display: 'block' }}>
+                      {isAr ? 'رقم الوحدة والعقد:' : 'Unit & Contract:'}
+                    </span>
+                    <strong style={{ fontSize: '0.88rem', color: '#0f172a', fontWeight: 800, marginTop: '0.15rem', display: 'block' }}>
+                      {confirmedVoucher.unit}
+                    </strong>
+                  </div>
+
+                  <div>
+                    <span style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: 700, display: 'block' }}>
+                      {isAr ? 'الخزينة المودع بها:' : 'Destination Treasury:'}
+                    </span>
+                    <strong style={{ fontSize: '0.84rem', color: '#059669', fontWeight: 800, marginTop: '0.15rem', display: 'block' }}>
+                      {confirmedVoucher.treasury === 'SAFE_101000' 
+                        ? (isAr ? 'حـ/ الخزينة الرئيسية 101000 (نقداً باليد)' : 'Main Safe 101000 (Cash by Hand)')
+                        : (isAr ? 'حـ/ البنك وإنستاباي 102000' : 'Bank / InstaPay 102000')}
+                    </strong>
+                  </div>
+
+                  <div>
+                    <span style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: 700, display: 'block' }}>
+                      {isAr ? 'أثر القيد في الأستاذ العام:' : 'GL Impact:'}
+                    </span>
+                    <strong style={{ fontSize: '0.82rem', color: '#334155', fontWeight: 700, marginTop: '0.15rem', display: 'block' }}>
+                      {isAr 
+                        ? (confirmedVoucher.treasury === 'SAFE_101000' ? 'مدين: 101000 • دائن: 206100' : 'مدين: 102000 • دائن: 206100')
+                        : (confirmedVoucher.treasury === 'SAFE_101000' ? 'Dr: 101000 • Cr: 206100' : 'Dr: 102000 • Cr: 206100')}
+                    </strong>
+                  </div>
+                </div>
+
+                {confirmedVoucher.notes && (
+                  <div style={{ fontSize: '0.74rem', color: '#64748b', background: '#ffffff', border: '1px dashed #cbd5e1', borderRadius: '8px', padding: '0.5rem 0.75rem' }}>
+                    <span style={{ fontWeight: 700 }}>{isAr ? 'ملاحظات: ' : 'Notes: '}</span>
+                    <span>{confirmedVoucher.notes}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Confirmed View Footer */}
+            <div style={{
+              padding: '1rem 1.75rem',
+              borderTop: '1px solid #e2e8f0',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              background: '#fafaf9'
+            }}>
+              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                <button
+                  type="button"
+                  onClick={handlePrint}
+                  style={{
+                    background: '#059669',
+                    color: '#ffffff',
+                    border: 'none',
+                    padding: '0.6rem 1.2rem',
+                    borderRadius: '8px',
+                    fontSize: '0.8rem',
+                    fontWeight: 800,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.45rem',
+                    cursor: 'pointer',
+                    boxShadow: '0 2px 6px rgba(5, 150, 105, 0.25)'
+                  }}
+                >
+                  <Printer size={15} />
+                  <span>{isAr ? 'طباعة سند القبض الفوري' : 'Print Official Receipt'}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setShowPrintPreview(true)}
+                  style={{
+                    background: 'rgba(184, 144, 62, 0.08)',
+                    border: '1px solid rgba(184, 144, 62, 0.25)',
+                    color: '#946f23',
+                    padding: '0.6rem 1rem',
+                    borderRadius: '8px',
+                    fontSize: '0.8rem',
+                    fontWeight: 700,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.4rem',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <FileText size={15} />
+                  <span>{isAr ? 'معاينة السند الكامل' : 'Preview Voucher'}</span>
+                </button>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setConfirmedVoucher(null);
+                  onClose();
+                }}
+                style={{
+                  background: '#0f172a',
+                  color: '#ffffff',
+                  border: 'none',
+                  padding: '0.6rem 1.4rem',
+                  borderRadius: '8px',
+                  fontSize: '0.8rem',
+                  fontWeight: 800,
+                  cursor: 'pointer',
+                  boxShadow: '0 2px 6px rgba(15, 23, 42, 0.2)'
+                }}
+              >
+                {isAr ? 'تم / إغلاق النافذة' : 'Done / Close'}
+              </button>
+            </div>
+          </div>
+        ) : (
+          <>
+            {/* Modal Scrollable Body */}
         <div style={{ padding: '1.5rem 1.75rem', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
           
           {/* 1. Official Receipt Voucher Preview Box */}
@@ -568,47 +855,52 @@ export const CashCollectionReceiptModal: React.FC<CashCollectionReceiptModalProp
           </div>
 
           <div style={{ display: 'flex', gap: '0.5rem' }}>
-            <button
-              type="button"
-              onClick={onClose}
-              style={{
-                background: '#ffffff',
-                border: '1px solid #cbd5e1',
-                color: '#64748b',
-                padding: '0.55rem 1.1rem',
-                borderRadius: '8px',
-                fontSize: '0.78rem',
-                fontWeight: 700,
-                cursor: 'pointer'
-              }}
-            >
-              {isAr ? 'إلغاء' : 'Cancel'}
-            </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setConfirmedVoucher(null);
+                  onClose();
+                }}
+                style={{
+                  background: '#ffffff',
+                  border: '1px solid #cbd5e1',
+                  color: '#64748b',
+                  padding: '0.55rem 1.1rem',
+                  borderRadius: '8px',
+                  fontSize: '0.78rem',
+                  fontWeight: 700,
+                  cursor: 'pointer'
+                }}
+              >
+                {isAr ? 'إلغاء' : 'Cancel'}
+              </button>
 
-            <button
-              type="submit"
-              form="cash-collection-form"
-              disabled={isMutating}
-              style={{
-                background: 'linear-gradient(135deg, #059669 0%, #047857 100%)',
-                color: '#ffffff',
-                border: 'none',
-                padding: '0.55rem 1.35rem',
-                borderRadius: '8px',
-                fontSize: '0.8rem',
-                fontWeight: 800,
-                cursor: isMutating ? 'not-allowed' : 'pointer',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.45rem',
-                boxShadow: '0 2px 8px rgba(5, 150, 105, 0.3)'
-              }}
-            >
-              <CheckCircle2 size={14} />
-              <span>{isAr ? 'اعتماد التحصيل والترحيل للأستاذ' : 'Commit & Post to GL'}</span>
-            </button>
+              <button
+                type="submit"
+                form="cash-collection-form"
+                disabled={isMutating}
+                style={{
+                  background: 'linear-gradient(135deg, #059669 0%, #047857 100%)',
+                  color: '#ffffff',
+                  border: 'none',
+                  padding: '0.55rem 1.35rem',
+                  borderRadius: '8px',
+                  fontSize: '0.8rem',
+                  fontWeight: 800,
+                  cursor: isMutating ? 'not-allowed' : 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.45rem',
+                  boxShadow: '0 2px 8px rgba(5, 150, 105, 0.3)'
+                }}
+              >
+                <CheckCircle2 size={14} />
+                <span>{isAr ? 'اعتماد التحصيل والترحيل للأستاذ' : 'Commit & Post to GL'}</span>
+              </button>
+            </div>
           </div>
-        </div>
+        </>
+      )}
       </div>
 
       {/* Screen Preview Modal */}

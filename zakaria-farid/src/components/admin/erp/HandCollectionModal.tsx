@@ -361,7 +361,8 @@ export const HandCollectionModal: React.FC<HandCollectionModalProps> = ({
         collectionNotes.trim(), 
         paymentMethod
       );
-      onClose();
+      // Instead of closing abruptly, open the official receipt voucher print preview so user can review and print immediately
+      setShowPrintPreview(true);
     } catch (err: unknown) {
       const msg = (err as Error).message;
       setError(msg);
