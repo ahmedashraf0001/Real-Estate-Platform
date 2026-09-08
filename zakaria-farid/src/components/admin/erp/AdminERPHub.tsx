@@ -49,7 +49,7 @@ import { ContractsEngine } from '@/lib/erp/contracts';
 import { EscalationEngine } from '@/lib/erp/escalation';
 import { RescissionEngine } from '@/lib/erp/rescission';
 import { RSVEngine } from '@/lib/erp/rsv';
-import { D, generateUUID, isUUID, ensureUUID } from '@/lib/erp/math';
+import { D, Decimal, generateUUID, isUUID, ensureUUID } from '@/lib/erp/math';
 import { 
   ERPContract, 
   ERPInstallmentSchedule, 
@@ -100,7 +100,7 @@ import { ContractRescissionsView } from './v2/views/ContractRescissionsView';
 import { CostAllocationView } from './v2/views/CostAllocationView';
 import { ApartmentTaxesView } from './v2/views/ApartmentTaxesView';
 import { PartnersManagementView } from './v2/views/PartnersManagementView';
-import { NewContractWizardModal } from './v2/modals/NewContractWizardModal';
+import { NewContractWizardModal, NewContractWizardPayload } from './v2/modals/NewContractWizardModal';
 import { CashCollectionReceiptModal } from './v2/modals/CashCollectionReceiptModal';
 import { ContractEscalationModal } from './v2/modals/ContractEscalationModal';
 import { RescissionSettlementModal } from './v2/modals/RescissionSettlementModal';
@@ -464,7 +464,7 @@ export default function AdminERPHub({ adminLocale, initialTab }: AdminERPHubProp
   const [downPaymentAmountInput, setDownPaymentAmountInput] = useState('');
   const [numInstallments, setNumInstallments] = useState('8');
   const [firstPaymentDate, setFirstPaymentDate] = useState(new Date().toISOString().split('T')[0]);
-  const [cashRoutingAccount, setCashRoutingAccount] = useState<'101000'>('101000'); // Safe [101000] - Manual Cash on Hand (No Bank Link)
+  const [cashRoutingAccount, setCashRoutingAccount] = useState<'101000' | '102000'>('101000'); // Safe [101000] or Bank [102000]
 
   const [partnerSplits, setPartnerSplits] = useState<PartnerShareItem[]>(() => {
     return normalizePartnerSplits(null);
@@ -988,23 +988,56 @@ export default function AdminERPHub({ adminLocale, initialTab }: AdminERPHubProp
 
 
   // Handler: Create Real Contract & Persist to Supabase
-  async function handleCreateRealContract(e: React.FormEvent) {
-    e.preventDefault();
-    if (!validateStep1()) {
-      setContractWizardStep(1);
-      return;
+  async function handleCreateRealContract(
+    e?: React.FormEvent,
+    overridePayload?: NewContractWizardPayload
+  ) {
+    if (e && e.preventDefault) {
+      e.preventDefault();
     }
-    if (!validateStep2()) {
-      setContractWizardStep(2);
-      return;
-    }
-    if (!validateStep3()) {
-      setContractWizardStep(3);
-      return;
+    if (!overridePayload) {
+      if (!validateStep1()) {
+        setContractWizardStep(1);
+        return;
+      }
+      if (!validateStep2()) {
+        setContractWizardStep(2);
+        return;
+      }
+      if (!validateStep3()) {
+        setContractWizardStep(3);
+        return;
+      }
     }
 
-    const isCustom = selectedPropertyId === 'custom_unit';
-    const prop = !isCustom ? data.properties.find(p => p.id === selectedPropertyId) : null;
+    const targetPropertyId = overridePayload ? overridePayload.propertyId : selectedPropertyId;
+    const targetBuildingUnitId = overridePayload ? overridePayload.buildingUnitId : selectedBuildingUnitId;
+    const targetBuildingUnitNumber = overridePayload ? overridePayload.buildingUnitNumber : selectedBuildingUnitNumber;
+    const targetIsWholeBuildingContract = overridePayload 
+      ? (overridePayload.isWholeBuildingContract ?? !overridePayload.buildingUnitId) 
+      : isWholeBuildingContract;
+    const targetCustomUnitName = overridePayload ? (overridePayload.customUnitName || '') : customUnitName;
+    const targetBuyerName = overridePayload ? overridePayload.buyerName : buyerName;
+    const targetBuyerNationalId = overridePayload ? overridePayload.buyerNationalId : buyerNationalId;
+    const targetBuyerPhone = overridePayload ? overridePayload.buyerPhone : buyerPhone;
+    const targetBuyerEmail = overridePayload ? overridePayload.buyerEmail : buyerEmail;
+    const targetBasePrice = overridePayload ? overridePayload.basePrice.toString() : basePriceInput;
+    const targetTaxAmount = overridePayload ? (overridePayload.taxAmount || '0.00') : apartmentTaxInput;
+    const targetTaxNotes = overridePayload ? (overridePayload.taxNotes || '') : apartmentTaxDesc;
+    const targetTotalNominalValue = overridePayload ? overridePayload.totalNominalValue.toString() : customPrice;
+    const targetDpAmount = overridePayload ? overridePayload.downPaymentAmount : modalDpAmount;
+    const targetPaymentPlanType = overridePayload ? overridePayload.paymentPlanType : paymentPlanType;
+    const targetNumInstallments = overridePayload ? overridePayload.numInstallments.toString() : numInstallments;
+    const targetFirstPaymentDate = overridePayload ? overridePayload.firstPaymentDate : firstPaymentDate;
+    const targetFirstInstallmentDueDate = overridePayload ? overridePayload.firstInstallmentDueDate : undefined;
+    const targetInstallmentFrequency = overridePayload ? overridePayload.installmentFrequency : 'QUARTERLY';
+    const targetPartnerSplits = overridePayload ? overridePayload.partnerSplits : partnerSplits;
+    const targetDestinationTreasury = overridePayload ? overridePayload.destinationTreasury : cashRoutingAccount;
+    const targetLeadId = overridePayload ? overridePayload.leadId : selectedLeadId;
+    const targetLeadSelectionMode = overridePayload ? (overridePayload.leadSelectionMode || 'NEW_LEAD') : leadSelectionMode;
+
+    const isCustom = targetPropertyId === 'custom_unit';
+    const prop = !isCustom ? data.properties.find(p => p.id === targetPropertyId) : null;
     if (!isCustom && !prop) {
       setContractErrors(prev => ({ ...prev, property: isAr ? 'الوحدة المختارة غير صالحة' : 'Invalid property' }));
       setContractWizardStep(1);
@@ -1028,9 +1061,9 @@ export default function AdminERPHub({ adminLocale, initialTab }: AdminERPHubProp
           return;
         }
 
-        if (!isWholeBuildingContract && selectedBuildingUnitId) {
+        if (!targetIsWholeBuildingContract && targetBuildingUnitId) {
           // Individual unit sale: check if this apartment is already contracted
-          const targetUnit = (prop.building_units || []).find(u => u.unit_id === selectedBuildingUnitId);
+          const targetUnit = (prop.building_units || []).find(u => u.unit_id === targetBuildingUnitId);
           if (targetUnit && targetUnit.status === 'contracted') {
             alert(isAr 
               ? `عفواً! هذه الشقة (${targetUnit.unit_number}) بالعمارة متعاقد عليها بالفعل بموجب عقد سابق.`
@@ -1058,20 +1091,24 @@ export default function AdminERPHub({ adminLocale, initialTab }: AdminERPHubProp
 
     setIsMutating(true);
     try {
-      const contractValue = customPrice ? D(customPrice).toFixed() : (prop ? D(prop.price_egp).toFixed() : '0.00');
+      const contractValue = targetTotalNominalValue ? D(targetTotalNominalValue).toFixed(2) : (prop ? D(prop.price_egp).toFixed(2) : '0.00');
       const contractNumber = `ZF-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
 
-      let effectiveDpPct = downPaymentPct;
-      if (contractValue && parseFloat(contractValue) > 0 && modalDpAmount >= 0) {
-        effectiveDpPct = (modalDpAmount / parseFloat(contractValue)).toString();
+      const dpDec = D(targetDpAmount ?? 0);
+      let effectiveDpPct: Decimal | string = downPaymentPct;
+      if (D(contractValue).gt(0) && dpDec.gte(0)) {
+        effectiveDpPct = dpDec.div(D(contractValue));
       }
-      let effectiveNumInstallments = parseInt(numInstallments, 10);
-      let intervalMonths = 3;
+      let effectiveNumInstallments = parseInt(targetNumInstallments, 10);
+      if (isNaN(effectiveNumInstallments) || effectiveNumInstallments < 0) {
+        effectiveNumInstallments = 0;
+      }
+      let intervalMonths: number | string = targetInstallmentFrequency;
 
-      if (paymentPlanType === 'FULL_CASH') {
+      if (targetPaymentPlanType === 'FULL_CASH') {
         effectiveDpPct = '1.00';
         effectiveNumInstallments = 0;
-      } else if (paymentPlanType === 'UPFRONT_HANDOVER') {
+      } else if (targetPaymentPlanType === 'UPFRONT_HANDOVER') {
         effectiveNumInstallments = 1;
         intervalMonths = 12; // Handover lump sum
       }
@@ -1083,43 +1120,61 @@ export default function AdminERPHub({ adminLocale, initialTab }: AdminERPHubProp
         contractValue,
         effectiveDpPct,
         effectiveNumInstallments,
-        firstPaymentDate,
-        intervalMonths
+        targetFirstPaymentDate,
+        intervalMonths,
+        targetFirstInstallmentDueDate
       );
       const dpSchedule = schedules[0];
       const dpAmount = dpSchedule ? dpSchedule.nominal_value : '0.00';
 
-      if (paymentPlanType === 'FULL_CASH' && dpSchedule) {
+      if (dpSchedule && D(dpAmount).gt(0)) {
         dpSchedule.status = 'Paid';
-        dpSchedule.amount_paid = contractValue;
+        dpSchedule.amount_paid = dpAmount;
+        dpSchedule.paid_date = targetFirstPaymentDate;
       }
 
-      const calculatedSplits = partnerSplits.map(p => {
-        const pct = (parseFloat(p.sharePct.toString()) || 0) / 100;
+      let cumulativeSplitShare = D(0);
+      let cumulativeCashShare = D(0);
+      const calculatedSplits = targetPartnerSplits.map((p, idx) => {
+        const isLast = idx === targetPartnerSplits.length - 1;
+        const pct = D(p.sharePct || 0).div(100);
+        let sAmount: Decimal;
+        let cAmount: Decimal;
+        if (isLast && targetPartnerSplits.length > 1) {
+          sAmount = D(contractValue).minus(cumulativeSplitShare);
+          cAmount = D(dpAmount).minus(cumulativeCashShare);
+        } else {
+          sAmount = D(contractValue).times(pct);
+          cAmount = D(dpAmount).times(pct);
+          cumulativeSplitShare = cumulativeSplitShare.plus(sAmount);
+          cumulativeCashShare = cumulativeCashShare.plus(cAmount);
+        }
         return {
           partner_name: p.partnerName,
           share_percentage: `${p.sharePct}%`,
-          share_amount: D(contractValue).times(pct.toString()).toFixed(2),
-          cash_share: D(dpAmount).times(pct.toString()).toFixed(2)
+          share_amount: sAmount.toFixed(2),
+          cash_share: cAmount.toFixed(2)
         };
       });
 
-      let finalLeadId = selectedLeadId;
-      if (leadSelectionMode === 'NEW_LEAD' && buyerName) {
+      let finalLeadId = targetLeadId;
+      if (targetLeadSelectionMode === 'NEW_LEAD' && targetBuyerName) {
         finalLeadId = await ERPSupabaseService.registerLeadFromContract(supabase, {
-          name: buyerName,
-          phone: buyerPhone,
-          email: buyerEmail,
+          name: targetBuyerName,
+          phone: targetBuyerPhone,
+          email: targetBuyerEmail,
           property_id: (isCustom || !prop?.id || !isUUID(prop.id)) ? undefined : prop.id,
           contractNumber: contractNumber
         });
       }
 
       const isBuilding = prop?.type === 'building' || (prop?.title_ar || '').includes('عمارة') || (prop?.title_en || '').toLowerCase().includes('building');
-      let finalUnitId = isCustom ? customUnitName : (prop?.title_ar || prop?.title_en || 'Unit');
-      if (isBuilding && !isWholeBuildingContract && selectedBuildingUnitNumber) {
-        finalUnitId = `${finalUnitId} - ${selectedBuildingUnitNumber}`;
+      let finalUnitId = isCustom ? targetCustomUnitName : (prop?.title_ar || prop?.title_en || 'Unit');
+      if (isBuilding && !targetIsWholeBuildingContract && targetBuildingUnitNumber) {
+        finalUnitId = `${finalUnitId} - ${targetBuildingUnitNumber}`;
       }
+
+      const isVaultCash = (targetDestinationTreasury === '101000' || targetDestinationTreasury === 'SAFE_101000');
 
       const contract: ERPContract = {
         contract_id: contractId,
@@ -1127,52 +1182,54 @@ export default function AdminERPHub({ adminLocale, initialTab }: AdminERPHubProp
         unit_id: finalUnitId.slice(0, 50),
         property_id: (isCustom || !prop?.id || !isUUID(prop.id)) ? undefined : prop.id,
         lead_id: (finalLeadId && isUUID(finalLeadId)) ? finalLeadId : undefined,
-        buyer_name: buyerName,
-        buyer_phone: buyerPhone || undefined,
-        buyer_email: buyerEmail || undefined,
-        buyer_national_id: buyerNationalId,
-        base_price: basePriceInput ? D(basePriceInput).toFixed(2) : (prop ? D(prop.price_egp).toFixed(2) : contractValue),
-        tax_amount: '0.00',
+        buyer_name: targetBuyerName,
+        buyer_phone: targetBuyerPhone || undefined,
+        buyer_email: targetBuyerEmail || undefined,
+        buyer_national_id: targetBuyerNationalId,
+        base_price: targetBasePrice ? D(targetBasePrice).toFixed(2) : (prop ? D(prop.price_egp).toFixed(2) : contractValue),
+        tax_amount: targetTaxAmount ? D(targetTaxAmount).toFixed(2) : '0.00',
         gross_contract_value: contractValue,
         currency: 'EGP',
         exchange_rate: '1.0000',
-        contract_date: firstPaymentDate,
-        handover_status: (paymentPlanType === 'FULL_CASH' && prop?.completion_status === 'ready') ? 'Delivered' : 'Pending',
-        total_cash_collected: paymentPlanType === 'FULL_CASH' ? contractValue : '0.00',
+        contract_date: targetFirstPaymentDate,
+        handover_status: (targetPaymentPlanType === 'FULL_CASH' && prop?.completion_status === 'ready') ? 'Delivered' : 'Pending',
+        total_cash_collected: D(dpAmount).gt(0) ? dpAmount : '0.00',
         status: 'Active',
-        payment_plan_type: paymentPlanType,
+        payment_plan_type: targetPaymentPlanType,
         partner_splits: calculatedSplits,
-        is_whole_building_sale: isBuilding ? isWholeBuildingContract : undefined,
-        building_unit_id: isBuilding && !isWholeBuildingContract ? selectedBuildingUnitId : undefined,
-        building_unit_number: isBuilding && !isWholeBuildingContract ? selectedBuildingUnitNumber : undefined
+        is_whole_building_sale: isBuilding ? targetIsWholeBuildingContract : undefined,
+        building_unit_id: isBuilding && !targetIsWholeBuildingContract ? targetBuildingUnitId : undefined,
+        building_unit_number: isBuilding && !targetIsWholeBuildingContract ? targetBuildingUnitNumber : undefined
       };
 
-      const dpEntry = ContractsEngine.createAdvancePaymentEntry(
-        contract,
-        dpAmount,
-        activePeriod,
-        firstPaymentDate,
-        cashRoutingAccount === '101000'
-      );
+      const dpEntry = D(dpAmount).gt(0)
+        ? ContractsEngine.createAdvancePaymentEntry(
+            contract,
+            dpAmount,
+            activePeriod,
+            targetFirstPaymentDate,
+            isVaultCash
+          )
+        : undefined;
 
       await ERPSupabaseService.persistNewContract(supabase, contract, schedules, dpEntry);
 
-      if (isBuilding && !isWholeBuildingContract && selectedBuildingUnitId && prop?.id) {
+      if (isBuilding && !targetIsWholeBuildingContract && targetBuildingUnitId && prop?.id) {
         await ERPSupabaseService.updateBuildingUnitStatus(
           supabase,
           prop.id,
-          selectedBuildingUnitId,
+          targetBuildingUnitId,
           'contracted',
           contractId,
           contractNumber,
-          buyerName
+          targetBuyerName
         );
         await ERPSupabaseService.updateBuildingUnitTax(
           supabase,
           prop.id,
-          selectedBuildingUnitId,
-          parseFloat(apartmentTaxInput) || 0,
-          apartmentTaxDesc || (isAr ? 'ضريبة ورسوم محددة يدوياً للشقة' : 'Manual Apartment Tax')
+          targetBuildingUnitId,
+          parseFloat(targetTaxAmount) || 0,
+          targetTaxNotes || (isAr ? 'ضريبة ورسوم محددة يدوياً للشقة' : 'Manual Apartment Tax')
         );
       }
 
@@ -1193,7 +1250,7 @@ export default function AdminERPHub({ adminLocale, initialTab }: AdminERPHubProp
       setSelectedBuildingUnitNumber(undefined);
       await loadLiveData();
 
-      const localizedBuyer = isAr ? localizeBuyerName(buyerName) : buyerName;
+      const localizedBuyer = isAr ? localizeBuyerName(targetBuyerName) : targetBuyerName;
 
       toast.success(
         isAr ? `تم تحرير وحفظ العقد بنجاح` : `Contract created successfully`,
@@ -2088,12 +2145,18 @@ export default function AdminERPHub({ adminLocale, initialTab }: AdminERPHubProp
   }
 
   // Handler: Calculate & Add New RSV Cost Allocation
-  async function handleCreateRSVAllocation(e: React.FormEvent) {
-    e.preventDefault();
-    if (!rsvProjectName.trim() || !rsvWipAmount || !rsvSalesValue) return;
+  async function handleCreateRSVAllocation(
+    e?: React.FormEvent,
+    overrideData?: { projectName: string; salesValue: string; wipAmount: string }
+  ) {
+    if (e && e.preventDefault) e.preventDefault();
+    const projName = (overrideData ? overrideData.projectName : rsvProjectName).trim();
+    const wip = overrideData ? overrideData.wipAmount : rsvWipAmount;
+    const sales = overrideData ? overrideData.salesValue : rsvSalesValue;
+    if (!projName || !wip || !sales) return;
     setIsMutating(true);
     try {
-      const newAlloc = RSVEngine.calculateAllocation(rsvProjectName.trim(), rsvWipAmount, rsvSalesValue);
+      const newAlloc = RSVEngine.calculateAllocation(projName, wip, sales);
       try {
         await supabase.from('erp_cost_allocations').insert([newAlloc]);
       } catch (dbErr) {
@@ -2108,7 +2171,7 @@ export default function AdminERPHub({ adminLocale, initialTab }: AdminERPHubProp
       handleInspectRSV(newAlloc);
 
       toast.success(
-        isAr ? `تم حفظ وتطبيق نسبة أرباح المشروع (${rsvProjectName.trim()})` : `RSV allocation generated for (${rsvProjectName.trim()})`,
+        isAr ? `تم حفظ وتطبيق نسبة أرباح المشروع (${projName})` : `RSV allocation generated for (${projName})`,
         {
           description: isAr
             ? `نسبة تكلفة المباني: ${(parseFloat(newAlloc.rsv_factor) * 100).toFixed(1)}% • إجمالي مصاريف المشروع: ${D(newAlloc.total_incurred_wip).formatEGP(true)}`
@@ -3380,24 +3443,26 @@ export default function AdminERPHub({ adminLocale, initialTab }: AdminERPHubProp
           setSelectedPropertyId(payload.propertyId);
           setSelectedBuildingUnitId(payload.buildingUnitId || undefined);
           setSelectedBuildingUnitNumber(payload.buildingUnitNumber || undefined);
-          setIsWholeBuildingContract(!payload.buildingUnitId);
+          setIsWholeBuildingContract(payload.isWholeBuildingContract ?? !payload.buildingUnitId);
           setCustomUnitName(payload.customUnitName || '');
           setBuyerName(payload.buyerName);
           setBuyerNationalId(payload.buyerNationalId);
           setBuyerPhone(payload.buyerPhone);
           setBuyerEmail(payload.buyerEmail);
           setBasePriceInput(payload.basePrice.toString());
-          setApartmentTaxInput(payload.taxAmount.toString());
+          setApartmentTaxInput((payload.taxAmount || '0.00').toString());
           setApartmentTaxDesc(payload.taxNotes || '');
           setCustomPrice(payload.totalNominalValue.toString());
           setPaymentPlanType(payload.paymentPlanType);
           setNumInstallments(payload.numInstallments.toString());
           setFirstPaymentDate(payload.firstPaymentDate);
           setPartnerSplits(payload.partnerSplits);
-          setCashRoutingAccount('101000');
+          setCashRoutingAccount(payload.destinationTreasury === 'BANK_102000' || payload.destinationTreasury === '102000' ? '102000' : '101000');
+          if (payload.leadId) setSelectedLeadId(payload.leadId);
+          if (payload.leadSelectionMode) setLeadSelectionMode(payload.leadSelectionMode);
           
           const fakeEvent = { preventDefault: () => {} } as React.FormEvent;
-          await handleCreateRealContract(fakeEvent);
+          await handleCreateRealContract(fakeEvent, payload);
         }}
       />
 
@@ -3458,7 +3523,7 @@ export default function AdminERPHub({ adminLocale, initialTab }: AdminERPHubProp
           setRsvSalesValue(salesValue);
           setRsvWipAmount(wipAmount);
           const fakeEvt = { preventDefault: () => {} } as React.FormEvent;
-          await handleCreateRSVAllocation(fakeEvt);
+          await handleCreateRSVAllocation(fakeEvt, { projectName, salesValue, wipAmount });
         }}
       />
 

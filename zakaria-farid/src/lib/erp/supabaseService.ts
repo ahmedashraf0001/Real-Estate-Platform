@@ -779,7 +779,7 @@ export class ERPSupabaseService {
       }
 
       // Auto-generate Post-Dated Cheques (PDC) for all upcoming installment tranches
-      const upcomingTranches = schedules.filter(s => s.status === 'Pending');
+      const upcomingTranches = schedules.filter(s => s.status === 'Pending' && s.tranche_number > 0);
       if (upcomingTranches.length > 0) {
         try {
           const pdcRows = upcomingTranches.map((s, idx) => ({

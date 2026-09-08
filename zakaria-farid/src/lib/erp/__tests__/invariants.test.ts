@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 import { InvariantsValidator } from '../invariants';
 import { EscalationEngine } from '../escalation';
 import { RescissionEngine } from '../rescission';
+import { ContractsEngine } from '../contracts';
+import { ERPSupabaseService } from '../supabaseService';
 import { CANONICAL_COA } from '../ledger';
 import { ERPAccountingPeriod, ERPContract, ERPInstallmentSchedule, ERPJournalEntry } from '../types';
 
@@ -222,6 +224,141 @@ describe('Financial Invariants & Immutability Audits (§4.1 – §4.17)', () => 
     required.forEach(code => {
       assert.ok(CANONICAL_COA[code], `Account ${code} must be registered in CANONICAL_COA`);
     });
+  });
+
+  it('INV-4.3 & Terms: ContractsEngine.generateSchedule supports firstInstallmentDueDate and installmentFrequency', () => {
+    const schedules = ContractsEngine.generateSchedule(
+      'c-sched-test',
+      '1000000.00',
+      '0.20', // 20% down payment = 200,000
+      4,      // 4 installments of 200,000
+      '2026-01-01',
+      'QUARTERLY',
+      '2026-04-01'
+    );
+
+    assert.strictEqual(schedules.length, 5); // Tranche 0 + 4 installments
+    // Tranche 0: Down payment on startDate
+    assert.strictEqual(schedules[0].tranche_number, 0);
+    assert.strictEqual(schedules[0].nominal_value, '200000.00');
+    assert.strictEqual(schedules[0].due_date, '2026-01-01');
+
+    // Tranche 1: first installment on firstInstallmentDueDate
+    assert.strictEqual(schedules[1].tranche_number, 1);
+    assert.strictEqual(schedules[1].nominal_value, '200000.00');
+    assert.strictEqual(schedules[1].due_date, '2026-04-01');
+
+    // Tranche 2: 3 months after firstInstallmentDueDate
+    assert.strictEqual(schedules[2].tranche_number, 2);
+    assert.strictEqual(schedules[2].nominal_value, '200000.00');
+    assert.strictEqual(schedules[2].due_date, '2026-07-01');
+
+    // Tranche 3
+    assert.strictEqual(schedules[3].tranche_number, 3);
+    assert.strictEqual(schedules[3].due_date, '2026-10-01');
+
+    // Tranche 4
+    assert.strictEqual(schedules[4].tranche_number, 4);
+    assert.strictEqual(schedules[4].due_date, '2027-01-01');
+  });
+
+  it('INV-PDC: Tranche 0 (Down Payment) never generates PDC note during persistNewContract', async () => {
+    const insertedRecords: Record<string, any[]> = {};
+    const mockSupabase: any = {
+      from: (tableName: string) => ({
+        insert: async (rows: any[]) => {
+          insertedRecords[tableName] = rows;
+          return { error: null };
+        }
+      })
+    };
+
+    const mockContract: ERPContract = {
+      contract_id: 'c-test-pdc',
+      contract_number: 'CNT-PDC-001',
+      unit_id: 'u-1',
+      buyer_name: 'Buyer PDC',
+      gross_contract_value: '1000000.00',
+      total_cash_collected: '200000.00',
+      currency: 'EGP',
+      exchange_rate: '1.0000',
+      handover_status: 'Pending',
+      status: 'Active',
+      contract_date: '2026-01-01'
+    };
+
+    const schedules: ERPInstallmentSchedule[] = [
+      {
+        schedule_id: 'sch-0',
+        contract_id: 'c-test-pdc',
+        tranche_number: 0,
+        nominal_value: '200000.00',
+        due_date: '2026-01-01',
+        status: 'Paid',
+        schedule_version: 1,
+        amount_paid: '200000.00'
+      },
+      {
+        schedule_id: 'sch-1',
+        contract_id: 'c-test-pdc',
+        tranche_number: 1,
+        nominal_value: '400000.00',
+        due_date: '2026-04-01',
+        status: 'Pending',
+        schedule_version: 1,
+        amount_paid: '0.00'
+      },
+      {
+        schedule_id: 'sch-2',
+        contract_id: 'c-test-pdc',
+        tranche_number: 2,
+        nominal_value: '400000.00',
+        due_date: '2026-07-01',
+        status: 'Pending',
+        schedule_version: 1,
+        amount_paid: '0.00'
+      }
+    ];
+
+    await ERPSupabaseService.persistNewContract(mockSupabase, mockContract, schedules);
+
+    const pdcs = insertedRecords['erp_pdc_records'] || [];
+    // Only Tranche 1 and 2 should generate PDCs (2 PDCs), never Tranche 0
+    assert.strictEqual(pdcs.length, 2, 'Only future pending installments (tranche_number > 0) generate PDCs');
+    assert.ok(!pdcs.some(p => p.schedule_id === 'sch-0'), 'Tranche 0 must never generate a PDC');
+  });
+
+  it('INV-4.3 & Calendar Clamping: Clamps month-end dates without skipping February or overflowing', () => {
+    const schedules = ContractsEngine.generateSchedule(
+      'c-clamp-test',
+      '1200000.00',
+      '0.20',
+      4,
+      '2026-01-31',
+      'MONTHLY'
+    );
+
+    assert.strictEqual(schedules.length, 5);
+    assert.strictEqual(schedules[0].due_date, '2026-01-31', 'Tranche 0 starts on Jan 31');
+    assert.strictEqual(schedules[1].due_date, '2026-02-28', 'Feb installment must clamp to Feb 28, not rollover to March');
+    assert.strictEqual(schedules[2].due_date, '2026-03-31', 'March installment must be March 31');
+    assert.strictEqual(schedules[3].due_date, '2026-04-30', 'April installment must clamp to April 30');
+    assert.strictEqual(schedules[4].due_date, '2026-05-31', 'May installment must be May 31');
+  });
+
+  it('INV-4.3 & Full Cash: 0 installments guarantees single Tranche 0 covering 100% of gross value', () => {
+    const schedules = ContractsEngine.generateSchedule(
+      'c-cash-test',
+      '2500000.00',
+      '1.00',
+      0,
+      '2026-03-01'
+    );
+
+    assert.strictEqual(schedules.length, 1, 'Full cash schedule must have exactly 1 tranche');
+    assert.strictEqual(schedules[0].tranche_number, 0);
+    assert.strictEqual(schedules[0].nominal_value, '2500000.00');
+    assert.strictEqual(schedules[0].due_date, '2026-03-01');
   });
 
 });

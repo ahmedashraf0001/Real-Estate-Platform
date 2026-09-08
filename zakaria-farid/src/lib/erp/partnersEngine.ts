@@ -257,20 +257,30 @@ export class PartnersEngine {
 
           // Contracts on this property
           const propContracts = contracts.filter(c => c.property_id === prop.id || c.unit_id === prop.id);
-          const totalContractSales = propContracts.reduce((sum, c) => sum.plus(c.gross_contract_value || 0), D(0));
-          const totalCollections = propContracts.reduce((sum, c) => sum.plus(c.total_cash_collected || 0), D(0));
 
-          let contractSalesShare = totalContractSales.times(shareRatio);
-          let collectionsShare = totalCollections.times(shareRatio);
+          let contractSalesShare = D(0);
+          let collectionsShare = D(0);
 
-          // Check contract-level splits
+          // Sum explicit contract splits if defined, falling back to shareRatio only for contracts without an explicit split
           propContracts.forEach(c => {
             if (c.partner_splits && c.partner_splits.length > 0) {
-              const cSplit = c.partner_splits.find(s => s.partner_name === partnerName);
+              const cSplit = c.partner_splits.find(
+                s => (s.partner_name || (s as any).partnerName || '').trim() === partnerName.trim()
+              );
               if (cSplit) {
-                contractSalesShare = contractSalesShare.plus(cSplit.share_amount || 0);
-                collectionsShare = collectionsShare.plus(cSplit.cash_share || 0);
+                let sAmt = D(cSplit.share_amount || 0);
+                let cAmt = D(cSplit.cash_share || 0);
+                if (sAmt.isZero() && cSplit.share_percentage && cSplit.share_percentage !== '0%') {
+                  const pct = D(cSplit.share_percentage.replace('%', '')).div(100);
+                  sAmt = D(c.gross_contract_value || 0).times(pct);
+                  cAmt = D(c.total_cash_collected || 0).times(pct);
+                }
+                contractSalesShare = contractSalesShare.plus(sAmt);
+                collectionsShare = collectionsShare.plus(cAmt);
               }
+            } else {
+              contractSalesShare = contractSalesShare.plus(D(c.gross_contract_value || 0).times(shareRatio));
+              collectionsShare = collectionsShare.plus(D(c.total_cash_collected || 0).times(shareRatio));
             }
           });
 
@@ -363,20 +373,50 @@ export class PartnersEngine {
         remainingDues: string;
       }> = [];
 
+      // Helper to calculate partner sales and collection shares honoring contract-level splits
+      const computePartnerShares = (name: string, ratio: Decimal) => {
+        let salesShare = D(0);
+        let colShare = D(0);
+        propContracts.forEach(c => {
+          if (c.partner_splits && c.partner_splits.length > 0) {
+            const cSplit = c.partner_splits.find(
+              s => (s.partner_name || (s as any).partnerName || '').trim() === name.trim()
+            );
+            if (cSplit) {
+              let sAmt = D(cSplit.share_amount || 0);
+              let cAmt = D(cSplit.cash_share || 0);
+              if (sAmt.isZero() && cSplit.share_percentage && cSplit.share_percentage !== '0%') {
+                const pct = D(cSplit.share_percentage.replace('%', '')).div(100);
+                sAmt = D(c.gross_contract_value || 0).times(pct);
+                cAmt = D(c.total_cash_collected || 0).times(pct);
+              }
+              salesShare = salesShare.plus(sAmt);
+              colShare = colShare.plus(cAmt);
+            }
+          } else {
+            salesShare = salesShare.plus(D(c.gross_contract_value || 0).times(ratio));
+            colShare = colShare.plus(D(c.total_cash_collected || 0).times(ratio));
+          }
+        });
+        return { salesShare, colShare };
+      };
+
       // Primary developer
       const primRatio = D(primaryShare).div(100);
       const primPayouts = transactions
         .filter(t => t.partner_name === PRIMARY_DEVELOPER_NAME && (t.property_id === prop.id || !t.property_id) && t.type === 'PROFIT_DISTRIBUTION')
         .reduce((sum, t) => sum.plus(t.amount || 0), D(0));
 
-      const primCollections = totalCashCollected.times(primRatio);
+      const { salesShare: primSales, colShare: primCollections } = computePartnerShares(PRIMARY_DEVELOPER_NAME, primRatio);
+      const primWipCost = totalIncurredWip.times(primRatio);
+      const primProfit = primSales.minus(primWipCost);
       partnersList.push({
         name: PRIMARY_DEVELOPER_NAME,
         sharePct: primaryShare,
-        wipCostShare: totalIncurredWip.times(primRatio).toFixed(2),
-        salesShare: totalContractSales.times(primRatio).toFixed(2),
+        wipCostShare: primWipCost.toFixed(2),
+        salesShare: primSales.toFixed(2),
         collectionsShare: primCollections.toFixed(2),
-        profitShare: projectNetProfit.times(primRatio).toFixed(2),
+        profitShare: primProfit.toFixed(2),
         paidPayouts: primPayouts.toFixed(2),
         remainingDues: primCollections.minus(primPayouts).toFixed(2)
       });
@@ -391,14 +431,16 @@ export class PartnersEngine {
             .filter(t => t.partner_name === name && (t.property_id === prop.id || !t.property_id) && t.type === 'PROFIT_DISTRIBUTION')
             .reduce((sum, t) => sum.plus(t.amount || 0), D(0));
 
-          const colShare = totalCashCollected.times(ratio);
+          const { salesShare: partnerSales, colShare } = computePartnerShares(name, ratio);
+          const wipCost = totalIncurredWip.times(ratio);
+          const profit = partnerSales.minus(wipCost);
           partnersList.push({
             name,
             sharePct: pct,
-            wipCostShare: totalIncurredWip.times(ratio).toFixed(2),
-            salesShare: totalContractSales.times(ratio).toFixed(2),
+            wipCostShare: wipCost.toFixed(2),
+            salesShare: partnerSales.toFixed(2),
             collectionsShare: colShare.toFixed(2),
-            profitShare: projectNetProfit.times(ratio).toFixed(2),
+            profitShare: profit.toFixed(2),
             paidPayouts: payouts.toFixed(2),
             remainingDues: colShare.minus(payouts).toFixed(2)
           });
@@ -419,6 +461,11 @@ export class PartnersEngine {
       };
     });
   }
+
+  /**
+   * Alias for getProjectPartnershipCards matching spec nomenclature.
+   */
+  static aggregateProjectPartnershipCards = PartnersEngine.getProjectPartnershipCards;
 
   /**
    * Creates a balanced double-entry journal entry for a partner profit payout / dividend (INV-4.1).

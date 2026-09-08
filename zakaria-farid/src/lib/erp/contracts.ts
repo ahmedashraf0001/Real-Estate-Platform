@@ -20,7 +20,8 @@ export class ContractsEngine {
    * @param downPaymentPercent Down payment percentage (e.g. 0.15 for 15%)
    * @param numberOfInstallments Number of subsequent tranches (e.g. 12 quarters)
    * @param startDate Contract start date (YYYY-MM-DD)
-   * @param intervalMonths Interval between installments in months (e.g. 3)
+   * @param intervalMonthsOrFrequency Interval between installments in months (e.g. 3) or frequency ('MONTHLY', 'QUARTERLY', 'SEMI_ANNUAL')
+   * @param firstInstallmentDueDate Optional first installment due date (YYYY-MM-DD)
    */
   static generateSchedule(
     contractId: string,
@@ -28,8 +29,25 @@ export class ContractsEngine {
     downPaymentPercent: string | number | Decimal,
     numberOfInstallments: number,
     startDate: string,
-    intervalMonths = 3
+    intervalMonthsOrFrequency: number | 'MONTHLY' | 'QUARTERLY' | 'SEMI_ANNUAL' | string = 3,
+    firstInstallmentDueDate?: string
   ): ERPInstallmentSchedule[] {
+    let intervalMonths = 3;
+    if (typeof intervalMonthsOrFrequency === 'number') {
+      intervalMonths = intervalMonthsOrFrequency;
+    } else if (intervalMonthsOrFrequency === 'MONTHLY') {
+      intervalMonths = 1;
+    } else if (intervalMonthsOrFrequency === 'QUARTERLY') {
+      intervalMonths = 3;
+    } else if (intervalMonthsOrFrequency === 'SEMI_ANNUAL') {
+      intervalMonths = 6;
+    } else if (typeof intervalMonthsOrFrequency === 'string') {
+      const parsed = parseInt(intervalMonthsOrFrequency, 10);
+      if (!isNaN(parsed) && parsed > 0) {
+        intervalMonths = parsed;
+      }
+    }
+
     const totalV = D(grossValue);
     const dpPct = D(downPaymentPercent);
     const downPaymentAmount = totalV.times(dpPct);
@@ -50,6 +68,8 @@ export class ContractsEngine {
     });
 
     if (numberOfInstallments <= 0) {
+      // Full upfront cash contract: Tranche 0 covers 100% of nominal value
+      schedules[0].nominal_value = totalV.toFixed(2);
       return schedules;
     }
 
@@ -57,12 +77,24 @@ export class ContractsEngine {
     const baseTrancheAmount = remainingAmount.div(numberOfInstallments);
     let cumulativeAllocated = D(0);
 
-    const baseDate = new Date(startDate);
+    const parseYMD = (dateStr: string) => {
+      const parts = dateStr.split('-').map(Number);
+      return { year: parts[0] || 2026, month: parts[1] || 1, day: parts[2] || 1 };
+    };
+
+    const baseInstallmentParts = firstInstallmentDueDate 
+      ? parseYMD(firstInstallmentDueDate) 
+      : parseYMD(startDate);
 
     for (let i = 1; i <= numberOfInstallments; i++) {
-      const dueDate = new Date(baseDate);
-      dueDate.setMonth(dueDate.getMonth() + (i * intervalMonths));
-      const dueDateStr = dueDate.toISOString().split('T')[0];
+      const monthOffset = firstInstallmentDueDate ? (i - 1) * intervalMonths : i * intervalMonths;
+      const totalMonths = (baseInstallmentParts.month - 1) + monthOffset;
+      const targetYear = baseInstallmentParts.year + Math.floor(totalMonths / 12);
+      const targetMonthIndex = ((totalMonths % 12) + 12) % 12;
+      const daysInTargetMonth = new Date(Date.UTC(targetYear, targetMonthIndex + 1, 0)).getUTCDate();
+      const clampedDay = Math.min(baseInstallmentParts.day, daysInTargetMonth);
+      const targetDate = new Date(Date.UTC(targetYear, targetMonthIndex, clampedDay));
+      const dueDateStr = targetDate.toISOString().split('T')[0];
 
       let trancheValue: Decimal;
       if (i === numberOfInstallments) {

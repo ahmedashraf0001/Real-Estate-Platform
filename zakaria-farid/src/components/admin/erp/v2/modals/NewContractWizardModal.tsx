@@ -43,6 +43,32 @@ import { ZFCustomSelect, ZFCustomSelectSection, ZFCustomSelectItem } from '../co
 import { MoneyCell } from '@/components/erp/MoneyCell';
 import styles from '../ZFWorkstationShell.module.css';
 
+export interface NewContractWizardPayload {
+  propertyId: string;
+  buildingUnitId?: string;
+  buildingUnitNumber?: string;
+  isWholeBuildingContract?: boolean;
+  customUnitName?: string;
+  leadId?: string;
+  leadSelectionMode?: 'EXISTING_LEAD' | 'NEW_LEAD';
+  buyerName: string;
+  buyerNationalId: string;
+  buyerPhone: string;
+  buyerEmail: string;
+  basePrice: number | string;
+  taxAmount?: string;
+  taxNotes?: string;
+  totalNominalValue: number | string;
+  downPaymentAmount: number | string;
+  paymentPlanType: 'FULL_CASH' | 'UPFRONT_HANDOVER' | 'INSTALLMENTS';
+  numInstallments: number;
+  installmentFrequency: 'MONTHLY' | 'QUARTERLY' | 'SEMI_ANNUAL';
+  firstPaymentDate: string;
+  firstInstallmentDueDate?: string;
+  partnerSplits: PartnerShareItem[];
+  destinationTreasury: 'SAFE_101000' | 'BANK_102000' | '101000' | '102000';
+}
+
 interface NewContractWizardModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -55,7 +81,7 @@ interface NewContractWizardModalProps {
   unifiedPartners: Array<{ name: string; role: string }>;
   isMutating?: boolean;
   isAr?: boolean;
-  onContractCreated: (contractData: any) => Promise<void>;
+  onContractCreated: (contractData: NewContractWizardPayload) => Promise<void>;
 }
 
 export const NewContractWizardModal: React.FC<NewContractWizardModalProps> = ({
@@ -304,11 +330,14 @@ export const NewContractWizardModal: React.FC<NewContractWizardModalProps> = ({
       return;
     }
 
-    const payload = {
+    const payload: NewContractWizardPayload = {
       propertyId: selectedPropertyId,
       buildingUnitId: selectedBuildingUnitId || undefined,
       buildingUnitNumber: selectedBuildingUnit?.unit_number || undefined,
+      isWholeBuildingContract: !selectedBuildingUnitId,
       customUnitName: selectedPropertyId === 'custom_unit' ? customUnitName.trim() : undefined,
+      leadId: selectedLeadId || undefined,
+      leadSelectionMode,
       buyerName: buyerName.trim(),
       buyerNationalId: buyerNationalId.trim(),
       buyerPhone: buyerPhone.trim(),
@@ -1482,8 +1511,8 @@ export const NewContractWizardModal: React.FC<NewContractWizardModalProps> = ({
 
                 <div style={{ fontSize: '0.72rem', color: '#065f46', background: 'rgba(16, 185, 129, 0.08)', padding: '0.5rem 0.75rem', borderRadius: '6px' }}>
                   {isAr 
-                    ? `التوجيه المحاسبي اللحظي: مدين [${destinationTreasury === 'SAFE_101000' ? '101000 خزينة' : '102000 بنك'}] بمبلغ ${D(modalDpAmount).formatEGP(isAr)} • دائن [206100 إيرادات مؤجلة] بمبلغ ${D(modalDpAmount).formatEGP(isAr)}.`
-                    : `Instant GL Posting: Dr [${destinationTreasury === 'SAFE_101000' ? '101000 Safe' : '102000 Bank'}] ${D(modalDpAmount).formatEGP(isAr)} • Cr [206100 Deferred Revenue] ${D(modalDpAmount).formatEGP(isAr)}.`}
+                    ? `التوجيه المحاسبي اللحظي: مدين [${destinationTreasury === 'SAFE_101000' ? '101000 خزينة' : '102000 بنك'}] بمبلغ ${D(modalDpAmount).formatEGP(isAr)} • دائن [203000 إيرادات مؤجلة] بمبلغ ${D(modalDpAmount).formatEGP(isAr)}.`
+                    : `Instant GL Posting: Dr [${destinationTreasury === 'SAFE_101000' ? '101000 Safe' : '102000 Bank'}] ${D(modalDpAmount).formatEGP(isAr)} • Cr [203000 Deferred Revenue] ${D(modalDpAmount).formatEGP(isAr)}.`}
                 </div>
               </div>
 
