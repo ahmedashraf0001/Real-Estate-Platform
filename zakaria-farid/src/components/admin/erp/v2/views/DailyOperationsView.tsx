@@ -71,6 +71,7 @@ import { ZFCustomSelect, ZFCustomSelectItem } from '../common/ZFCustomSelect';
 import { ZFPagination } from '../ZFPagination';
 import { toast } from 'sonner';
 import { tafqeetEGP } from '@/lib/erp/tafqeet';
+import type { PartnerFinancialSummary } from '@/lib/erp/partnersEngine';
 
 interface DailyOperationsViewProps {
   isAr?: boolean;
@@ -93,6 +94,7 @@ interface DailyOperationsViewProps {
   activePeriod: ERPAccountingPeriod;
   propertyCosts?: ERPPropertyCostItem[];
   isMutating?: boolean;
+  partnerSummaries?: PartnerFinancialSummary[];
   onOpenQuickTransaction: () => void;
   onOpenNewContract: () => void;
   onOpenNewCheque: () => void;
@@ -128,6 +130,7 @@ export const DailyOperationsView: React.FC<DailyOperationsViewProps> = ({
   activePeriod,
   propertyCosts = [],
   isMutating = false,
+  partnerSummaries = [],
   onOpenQuickTransaction,
   onOpenNewContract,
   onOpenNewCheque,
@@ -310,6 +313,24 @@ export const DailyOperationsView: React.FC<DailyOperationsViewProps> = ({
       totalLiquid
     };
   }, [journalEntries, kpis.cashBank]);
+
+  // Fast-Action Launchpad dynamic badge metrics
+  const availableUnitsCount = useMemo(() => {
+    return (properties || []).reduce((acc, p) => acc + (p.building_units?.filter(u => u.status !== 'contracted').length || 0), 0);
+  }, [properties]);
+
+  const handoverCount = useMemo(() => {
+    return (contracts || []).filter(c => 
+      c.status === 'Active' && (
+        (c.handover_status as string) === 'Ready' || 
+        (c.handover_status !== 'Delivered' && (properties || []).some(p => p.id === c.property_id && p.completion_status === 'ready'))
+      )
+    ).length;
+  }, [contracts, properties]);
+
+  const partnersWithDuesCount = useMemo(() => {
+    return (partnerSummaries || []).filter(p => D(p.netCurrentBalance || 0).gt(0)).length;
+  }, [partnerSummaries]);
 
   // 1. Dynamic Daily Operational Metrics (Today's Direct Cash Movements & Pending Dues)
   const {
@@ -1718,8 +1739,38 @@ export const DailyOperationsView: React.FC<DailyOperationsViewProps> = ({
               <Receipt size={18} />
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem', minWidth: 0, flex: 1 }}>
-              <div data-action-title="true" style={{ fontSize: '0.9rem', fontWeight: 800, color: '#0f172a', transition: 'color 0.2s ease' }}>
-                {isAr ? 'تحصيل قسط وطباعة إيصال' : 'Collect & Issue Receipt'}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.4rem' }}>
+                <div data-action-title="true" style={{ fontSize: '0.88rem', fontWeight: 800, color: '#0f172a', transition: 'color 0.2s ease' }}>
+                  {isAr ? 'تحصيل قسط وطباعة إيصال' : 'Collect & Issue Receipt'}
+                </div>
+                <span
+                  style={{
+                    fontSize: '0.67rem',
+                    fontWeight: 700,
+                    fontVariantNumeric: 'tabular-nums',
+                    padding: '0.12rem 0.5rem',
+                    borderRadius: '12px',
+                    whiteSpace: 'nowrap',
+                    flexShrink: 0,
+                    background: overdueCount > 0 
+                      ? 'rgba(220, 38, 38, 0.1)' 
+                      : (dueTodayCount > 0 ? 'rgba(217, 119, 6, 0.1)' : 'rgba(21, 128, 61, 0.08)'),
+                    color: overdueCount > 0 
+                      ? '#dc2626' 
+                      : (dueTodayCount > 0 ? '#b45309' : '#15803d'),
+                    border: overdueCount > 0 
+                      ? '1px solid rgba(220, 38, 38, 0.25)' 
+                      : (dueTodayCount > 0 ? '1px solid rgba(217, 119, 6, 0.25)' : '1px solid rgba(21, 128, 61, 0.2)'),
+                  }}
+                >
+                  {overdueCount > 0
+                    ? (isAr ? `${overdueCount} متأخرات` : `${overdueCount} Overdue`)
+                    : (dueTodayCount > 0
+                        ? (isAr ? `${dueTodayCount} اليوم` : `${dueTodayCount} Today`)
+                        : (isAr ? '✓ الخزنة منتظمة' : '✓ Safe Balanced')
+                      )
+                  }
+                </span>
               </div>
               <div style={{ fontSize: '0.73rem', color: '#64748b', lineHeight: 1.35 }}>
                 {isAr ? 'استلام كاش بالخزنة (101000) أو إنستاباي وإصدار سند قبض' : 'Instant 1-click collection'}
@@ -1765,8 +1816,26 @@ export const DailyOperationsView: React.FC<DailyOperationsViewProps> = ({
               <Plus size={18} />
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem', minWidth: 0, flex: 1 }}>
-              <div data-action-title="true" style={{ fontSize: '0.9rem', fontWeight: 800, color: '#0f172a', transition: 'color 0.2s ease' }}>
-                {isAr ? 'إضافة ملحق أو دفعة للعقد' : 'Add Contract Supplement'}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.4rem' }}>
+                <div data-action-title="true" style={{ fontSize: '0.88rem', fontWeight: 800, color: '#0f172a', transition: 'color 0.2s ease' }}>
+                  {isAr ? 'إضافة ملحق أو دفعة للعقد' : 'Add Contract Supplement'}
+                </div>
+                <span
+                  style={{
+                    fontSize: '0.67rem',
+                    fontWeight: 700,
+                    fontVariantNumeric: 'tabular-nums',
+                    padding: '0.12rem 0.5rem',
+                    borderRadius: '12px',
+                    whiteSpace: 'nowrap',
+                    flexShrink: 0,
+                    background: 'rgba(15, 23, 42, 0.05)',
+                    color: '#475569',
+                    border: '1px solid rgba(15, 23, 42, 0.1)',
+                  }}
+                >
+                  {isAr ? `${contracts.length} عقد نشط` : `${contracts.length} Active`}
+                </span>
               </div>
               <div style={{ fontSize: '0.73rem', color: '#64748b', lineHeight: 1.35 }}>
                 {isAr ? 'تشطيبات، تعديلات معمارية، أو مبالغ طارئة بنظام الشقين' : 'Finishing, alterations or annex'}
@@ -1812,8 +1881,26 @@ export const DailyOperationsView: React.FC<DailyOperationsViewProps> = ({
               <HardHat size={18} />
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem', minWidth: 0, flex: 1 }}>
-              <div data-action-title="true" style={{ fontSize: '0.9rem', fontWeight: 800, color: '#0f172a', transition: 'color 0.2s ease' }}>
-                {isAr ? 'تسجيل مصاريف وخامات المشروع' : 'Record Project Expenses'}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.4rem' }}>
+                <div data-action-title="true" style={{ fontSize: '0.88rem', fontWeight: 800, color: '#0f172a', transition: 'color 0.2s ease' }}>
+                  {isAr ? 'تسجيل مصاريف وخامات المشروع' : 'Record Project Expenses'}
+                </div>
+                <span
+                  style={{
+                    fontSize: '0.67rem',
+                    fontWeight: 700,
+                    fontVariantNumeric: 'tabular-nums',
+                    padding: '0.12rem 0.5rem',
+                    borderRadius: '12px',
+                    whiteSpace: 'nowrap',
+                    flexShrink: 0,
+                    background: 'rgba(180, 83, 9, 0.08)',
+                    color: '#b45309',
+                    border: '1px solid rgba(180, 83, 9, 0.2)',
+                  }}
+                >
+                  {isAr ? `${underConstructionProperties.length} مواقع جارية` : `${underConstructionProperties.length} Active Sites`}
+                </span>
               </div>
               <div style={{ fontSize: '0.73rem', color: '#64748b', lineHeight: 1.35 }}>
                 {isAr ? 'كاش، إنستاباي، أو فواتير مقاولين على الحساب ومتابعة المباني' : 'Cash, InstaPay, or credit invoice'}
@@ -1865,8 +1952,26 @@ export const DailyOperationsView: React.FC<DailyOperationsViewProps> = ({
               <ShieldCheck size={18} />
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem', minWidth: 0, flex: 1 }}>
-              <div data-action-title="true" style={{ fontSize: '0.9rem', fontWeight: 800, color: '#0f172a', transition: 'color 0.2s ease' }}>
-                {isAr ? 'تكلفة العمارة وأرباح الشقق' : 'Property Cost Audit'}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.4rem' }}>
+                <div data-action-title="true" style={{ fontSize: '0.88rem', fontWeight: 800, color: '#0f172a', transition: 'color 0.2s ease' }}>
+                  {isAr ? 'تكلفة العمارة وأرباح الشقق' : 'Property Cost Audit'}
+                </div>
+                <span
+                  style={{
+                    fontSize: '0.67rem',
+                    fontWeight: 700,
+                    fontVariantNumeric: 'tabular-nums',
+                    padding: '0.12rem 0.5rem',
+                    borderRadius: '12px',
+                    whiteSpace: 'nowrap',
+                    flexShrink: 0,
+                    background: 'rgba(51, 65, 85, 0.06)',
+                    color: '#334155',
+                    border: '1px solid rgba(51, 65, 85, 0.15)',
+                  }}
+                >
+                  {isAr ? `${properties.length} مشاريع بالمحفظة` : `${properties.length} Projects`}
+                </span>
               </div>
               <div style={{ fontSize: '0.73rem', color: '#64748b', lineHeight: 1.35 }}>
                 {isAr ? 'تدقيق مصاريف المباني، تكلفة المتر الفعلي، وربحية كل شقة' : 'Audit costs & unit profit'}
@@ -1918,8 +2023,26 @@ export const DailyOperationsView: React.FC<DailyOperationsViewProps> = ({
               <Calculator size={18} />
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem', minWidth: 0, flex: 1 }}>
-              <div data-action-title="true" style={{ fontSize: '0.9rem', fontWeight: 800, color: '#0f172a', transition: 'color 0.2s ease' }}>
-                {isAr ? 'حاسبة تسعير وجدوى المشروع' : 'Feasibility & Pricing'}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.4rem' }}>
+                <div data-action-title="true" style={{ fontSize: '0.88rem', fontWeight: 800, color: '#0f172a', transition: 'color 0.2s ease' }}>
+                  {isAr ? 'حاسبة تسعير وجدوى المشروع' : 'Feasibility & Pricing'}
+                </div>
+                <span
+                  style={{
+                    fontSize: '0.67rem',
+                    fontWeight: 700,
+                    fontVariantNumeric: 'tabular-nums',
+                    padding: '0.12rem 0.5rem',
+                    borderRadius: '12px',
+                    whiteSpace: 'nowrap',
+                    flexShrink: 0,
+                    background: 'rgba(30, 58, 138, 0.06)',
+                    color: '#1e40af',
+                    border: '1px solid rgba(30, 58, 138, 0.18)',
+                  }}
+                >
+                  {isAr ? 'دراسات جدوى وتكلفة' : 'Feasibility & Cost'}
+                </span>
               </div>
               <div style={{ fontSize: '0.73rem', color: '#64748b', lineHeight: 1.35 }}>
                 {isAr ? 'دراسة تكلفة المتر المسطح، هامش الربح المستهدف، وجدولة الأقساط' : 'Installments & margin study'}
@@ -1965,8 +2088,26 @@ export const DailyOperationsView: React.FC<DailyOperationsViewProps> = ({
               <FileText size={18} />
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem', minWidth: 0, flex: 1 }}>
-              <div data-action-title="true" style={{ fontSize: '0.9rem', fontWeight: 800, color: '#0f172a', transition: 'color 0.2s ease' }}>
-                {isAr ? 'تحرير عقد بيع وحجز شقة' : 'New Sales Contract'}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.4rem' }}>
+                <div data-action-title="true" style={{ fontSize: '0.88rem', fontWeight: 800, color: '#0f172a', transition: 'color 0.2s ease' }}>
+                  {isAr ? 'تحرير عقد بيع وحجز شقة' : 'New Sales Contract'}
+                </div>
+                <span
+                  style={{
+                    fontSize: '0.67rem',
+                    fontWeight: 700,
+                    fontVariantNumeric: 'tabular-nums',
+                    padding: '0.12rem 0.5rem',
+                    borderRadius: '12px',
+                    whiteSpace: 'nowrap',
+                    flexShrink: 0,
+                    background: 'rgba(184, 144, 62, 0.1)',
+                    color: '#946f23',
+                    border: '1px solid rgba(184, 144, 62, 0.25)',
+                  }}
+                >
+                  {isAr ? `${availableUnitsCount} شقق شاغرة` : `${availableUnitsCount} Vacant`}
+                </span>
               </div>
               <div style={{ fontSize: '0.73rem', color: '#64748b', lineHeight: 1.35 }}>
                 {isAr ? 'تسجيل بيانات العميل، دفعة الحجز بالخزنة، وجدول الأقساط بالمليم' : '3-step deal wizard'}
@@ -2018,8 +2159,29 @@ export const DailyOperationsView: React.FC<DailyOperationsViewProps> = ({
               <Layers size={18} />
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem', minWidth: 0, flex: 1 }}>
-              <div data-action-title="true" style={{ fontSize: '0.9rem', fontWeight: 800, color: '#0f172a', transition: 'color 0.2s ease' }}>
-                {isAr ? 'حساب أرباح ونسبة إنجاز المشروع' : 'Milestone Recognition (RSV)'}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.4rem' }}>
+                <div data-action-title="true" style={{ fontSize: '0.88rem', fontWeight: 800, color: '#0f172a', transition: 'color 0.2s ease' }}>
+                  {isAr ? 'حساب أرباح ونسبة إنجاز المشروع' : 'Milestone Recognition (RSV)'}
+                </div>
+                <span
+                  style={{
+                    fontSize: '0.67rem',
+                    fontWeight: 700,
+                    fontVariantNumeric: 'tabular-nums',
+                    padding: '0.12rem 0.5rem',
+                    borderRadius: '12px',
+                    whiteSpace: 'nowrap',
+                    flexShrink: 0,
+                    background: 'rgba(148, 111, 35, 0.09)',
+                    color: '#946f23',
+                    border: '1px solid rgba(148, 111, 35, 0.2)',
+                  }}
+                >
+                  {handoverCount > 0 
+                    ? (isAr ? `${handoverCount} جاهزة للتسليم` : `${handoverCount} Ready`)
+                    : (isAr ? 'متابعة نسب الإنجاز' : 'RSV Milestone')
+                  }
+                </span>
               </div>
               <div style={{ fontSize: '0.73rem', color: '#64748b', lineHeight: 1.35 }}>
                 {isAr ? 'توزيع مصاريف المباني واعتراف مكسب الشقق بالدفاتر' : 'Milestone revenue recognition'}
@@ -2071,8 +2233,26 @@ export const DailyOperationsView: React.FC<DailyOperationsViewProps> = ({
               <TrendingUp size={18} />
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem', minWidth: 0, flex: 1 }}>
-              <div data-action-title="true" style={{ fontSize: '0.9rem', fontWeight: 800, color: '#0f172a', transition: 'color 0.2s ease' }}>
-                {isAr ? 'تعديل أسعار أو بنود العقد' : 'Price Escalation'}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.4rem' }}>
+                <div data-action-title="true" style={{ fontSize: '0.88rem', fontWeight: 800, color: '#0f172a', transition: 'color 0.2s ease' }}>
+                  {isAr ? 'تعديل أسعار أو بنود العقد' : 'Price Escalation'}
+                </div>
+                <span
+                  style={{
+                    fontSize: '0.67rem',
+                    fontWeight: 700,
+                    fontVariantNumeric: 'tabular-nums',
+                    padding: '0.12rem 0.5rem',
+                    borderRadius: '12px',
+                    whiteSpace: 'nowrap',
+                    flexShrink: 0,
+                    background: 'rgba(71, 85, 105, 0.06)',
+                    color: '#475569',
+                    border: '1px solid rgba(71, 85, 105, 0.15)',
+                  }}
+                >
+                  {isAr ? 'ملاحق Delta V' : 'Delta V'}
+                </span>
               </div>
               <div style={{ fontSize: '0.73rem', color: '#64748b', lineHeight: 1.35 }}>
                 {isAr ? 'إضافة ملحق سعري Delta V وجدولة الفروق' : 'Price adjustment addendum'}
@@ -2124,8 +2304,26 @@ export const DailyOperationsView: React.FC<DailyOperationsViewProps> = ({
               <RotateCcw size={18} />
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem', minWidth: 0, flex: 1 }}>
-              <div data-action-title="true" style={{ fontSize: '0.9rem', fontWeight: 800, color: '#0f172a', transition: 'color 0.2s ease' }}>
-                {isAr ? 'فسخ تعاقد وتسوية المسترد' : 'Contract Rescission'}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.4rem' }}>
+                <div data-action-title="true" style={{ fontSize: '0.88rem', fontWeight: 800, color: '#0f172a', transition: 'color 0.2s ease' }}>
+                  {isAr ? 'فسخ تعاقد وتسوية المسترد' : 'Contract Rescission'}
+                </div>
+                <span
+                  style={{
+                    fontSize: '0.67rem',
+                    fontWeight: 700,
+                    fontVariantNumeric: 'tabular-nums',
+                    padding: '0.12rem 0.5rem',
+                    borderRadius: '12px',
+                    whiteSpace: 'nowrap',
+                    flexShrink: 0,
+                    background: 'rgba(159, 18, 57, 0.06)',
+                    color: '#9f1239',
+                    border: '1px solid rgba(159, 18, 57, 0.18)',
+                  }}
+                >
+                  {isAr ? 'غرامة 10% وتسويات' : '10% Deduction'}
+                </span>
               </div>
               <div style={{ fontSize: '0.73rem', color: '#64748b', lineHeight: 1.35 }}>
                 {isAr ? 'تطبيق غرامة الـ 10% القانونية ورد باقي الفلوس نقدياً' : 'Settle penalty & vault refund'}
@@ -2177,8 +2375,29 @@ export const DailyOperationsView: React.FC<DailyOperationsViewProps> = ({
               <Users size={18} />
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem', minWidth: 0, flex: 1 }}>
-              <div data-action-title="true" style={{ fontSize: '0.9rem', fontWeight: 800, color: '#0f172a', transition: 'color 0.2s ease' }}>
-                {isAr ? 'إدارة وتوزيعات الشركاء والممولين' : 'Partner Operations'}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.4rem' }}>
+                <div data-action-title="true" style={{ fontSize: '0.88rem', fontWeight: 800, color: '#0f172a', transition: 'color 0.2s ease' }}>
+                  {isAr ? 'إدارة وتوزيعات الشركاء والممولين' : 'Partner Operations'}
+                </div>
+                <span
+                  style={{
+                    fontSize: '0.67rem',
+                    fontWeight: 700,
+                    fontVariantNumeric: 'tabular-nums',
+                    padding: '0.12rem 0.5rem',
+                    borderRadius: '12px',
+                    whiteSpace: 'nowrap',
+                    flexShrink: 0,
+                    background: 'rgba(21, 128, 61, 0.08)',
+                    color: '#15803d',
+                    border: '1px solid rgba(21, 128, 61, 0.2)',
+                  }}
+                >
+                  {partnersWithDuesCount > 0 
+                    ? (isAr ? `${partnersWithDuesCount} مستحق أرباح` : `${partnersWithDuesCount} Due`)
+                    : (isAr ? 'إدارة رؤوس الأموال' : 'Capital & Equity')
+                  }
+                </span>
               </div>
               <div style={{ fontSize: '0.73rem', color: '#64748b', lineHeight: 1.35 }}>
                 {isAr ? 'متابعة الأرصدة، ضخ مساهمات، وصرف أرباح بنظام الشقين' : 'Balances, dividends & capital'}

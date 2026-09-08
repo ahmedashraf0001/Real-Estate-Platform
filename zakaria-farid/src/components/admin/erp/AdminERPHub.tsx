@@ -529,6 +529,16 @@ export default function AdminERPHub({ adminLocale, initialTab }: AdminERPHubProp
     return getUnifiedPartnersDirectory(data.partnerCalls, data.properties, data.contracts);
   }, [data.partnerCalls, data.properties, data.contracts]);
 
+  const partnerSummaries = useMemo(() => {
+    return PartnersEngine.calculatePartnerSummaries(
+      partnerProfiles,
+      data.properties,
+      data.contracts,
+      partnerTransactions,
+      data.partnerCalls
+    );
+  }, [partnerProfiles, data.properties, data.contracts, partnerTransactions, data.partnerCalls]);
+
   const handleSelectLead = (leadId: string) => {
     setSelectedLeadId(leadId);
     if (!leadId) return;
@@ -3108,6 +3118,7 @@ export default function AdminERPHub({ adminLocale, initialTab }: AdminERPHubProp
                 activePeriod={activePeriod}
                 propertyCosts={data.propertyCosts}
                 isMutating={isMutating}
+                partnerSummaries={partnerSummaries}
                 onOpenQuickTransaction={() => setShowQuickTransactionModal(true)}
                 onOpenNewContract={handleOpenGenericNewContract}
                 onOpenNewCheque={() => {
@@ -3520,7 +3531,7 @@ export default function AdminERPHub({ adminLocale, initialTab }: AdminERPHubProp
           setShowPartnerPayoutModal(false);
           setPayoutInitialPartner(undefined);
         }}
-        partners={PartnersEngine.calculatePartnerSummaries(partnerProfiles, data.properties, data.contracts, partnerTransactions, data.partnerCalls)}
+        partners={partnerSummaries}
         properties={data.properties}
         initialPartnerName={payoutInitialPartner}
         isAr={isAr}
@@ -3554,7 +3565,7 @@ export default function AdminERPHub({ adminLocale, initialTab }: AdminERPHubProp
           setInjectionInitialPartner(undefined);
         }}
         initialPartnerName={injectionInitialPartner}
-        partners={PartnersEngine.calculatePartnerSummaries(partnerProfiles, data.properties, data.contracts, partnerTransactions, data.partnerCalls)}
+        partners={partnerSummaries}
         properties={data.properties}
         isAr={isAr}
         isMutating={isMutating}
@@ -3589,7 +3600,7 @@ export default function AdminERPHub({ adminLocale, initialTab }: AdminERPHubProp
       <PartnerOperationsModal
         isOpen={showPartnerOperationsModal}
         onClose={() => setShowPartnerOperationsModal(false)}
-        partners={PartnersEngine.calculatePartnerSummaries(partnerProfiles, data.properties, data.contracts, partnerTransactions, data.partnerCalls)}
+        partners={partnerSummaries}
         partnerProfiles={partnerProfiles}
         partnerTransactions={partnerTransactions}
         properties={data.properties}

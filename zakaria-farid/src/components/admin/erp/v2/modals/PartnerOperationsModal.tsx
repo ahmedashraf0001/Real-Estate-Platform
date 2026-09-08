@@ -584,10 +584,22 @@ export const PartnerOperationsModal: React.FC<PartnerOperationsModalProps> = ({
                           ? '0 4px 14px rgba(184, 144, 62, 0.15)' 
                           : (isOwner ? '0 2px 8px rgba(184, 144, 62, 0.08)' : 'none'),
                         position: 'relative',
-                        borderRight: isAr ? (isOwner ? (isSelected ? '4px solid #946f23' : '4px solid rgba(184, 144, 62, 0.8)') : undefined) : undefined,
-                        borderLeft: !isAr ? (isOwner ? (isSelected ? '4px solid #946f23' : '4px solid rgba(184, 144, 62, 0.8)') : undefined) : undefined,
                       }}
                     >
+                      {isOwner && (
+                        <span
+                          style={{
+                            position: 'absolute',
+                            top: 0,
+                            bottom: 0,
+                            right: isAr ? 0 : 'auto',
+                            left: isAr ? 'auto' : 0,
+                            width: '4px',
+                            borderRadius: isAr ? '0 14px 14px 0' : '14px 0 0 14px',
+                            background: isSelected ? '#946f23' : 'rgba(184, 144, 62, 0.8)'
+                          }}
+                        />
+                      )}
                       {/* Top row: Initial Monogram + Name + Role Badge */}
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.45rem' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem' }}>
