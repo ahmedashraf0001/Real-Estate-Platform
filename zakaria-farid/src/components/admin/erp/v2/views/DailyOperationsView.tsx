@@ -14,6 +14,7 @@ import {
   Send, 
   Loader2, 
   ArrowUpRight,
+  ArrowDownLeft,
   ShieldCheck, 
   DollarSign, 
   TrendingUp, 
@@ -801,6 +802,15 @@ export const DailyOperationsView: React.FC<DailyOperationsViewProps> = ({
     ];
   }, []);
 
+  // 4. Dues Sort Items for ZFCustomSelect
+  const duesSortSelectItems: ZFCustomSelectItem[] = useMemo(() => [
+    { value: 'date_asc', labelAr: 'الاستحقاق: الأقرب أولاً', labelEn: 'Due Date: Earliest First' },
+    { value: 'date_desc', labelAr: 'الاستحقاق: الأبعد أولاً', labelEn: 'Due Date: Furthest First' },
+    { value: 'amount_desc', labelAr: 'المبلغ: من الأعلى للأقل', labelEn: 'Amount: High to Low' },
+    { value: 'amount_asc', labelAr: 'المبلغ: من الأقل للأعلى', labelEn: 'Amount: Low to High' },
+    { value: 'name_asc', labelAr: 'اسم العميل: أبجدياً (أ-ي)', labelEn: 'Client Name (A-Z)' },
+  ], []);
+
   // Submit Handler: Unified Real Estate Project Cost & Expense Logger
   const handleProjectCostSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1045,50 +1055,99 @@ export const DailyOperationsView: React.FC<DailyOperationsViewProps> = ({
           <div className={styles.deskMiniTelemetry}>
             {/* 1. Today's Collections */}
             <div className={styles.deskMiniItem}>
-              <span className={styles.deskMiniLabel}>{isAr ? 'تحصيلات اليوم:' : 'Collections:'}</span>
-              <span className={styles.deskMiniVal} style={{ color: '#059669' }}>
-                +{todayCollectionsSum.formatEGP(isAr)}
+              <span className={styles.deskMiniIconBadge} style={{ background: 'rgba(5, 150, 105, 0.1)', color: '#059669' }}>
+                <ArrowDownLeft size={13} />
               </span>
+              <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.15 }}>
+                <span className={styles.deskMiniLabel}>{isAr ? 'تحصيلات اليوم' : 'Collections'}</span>
+                <span className={styles.deskMiniVal} style={{ color: '#059669' }}>
+                  +{todayCollectionsSum.formatEGP(isAr)}
+                </span>
+              </div>
               {todayCollectionsCount > 0 && (
-                <span style={{ fontSize: '0.65rem', color: '#059669', background: 'rgba(5, 150, 105, 0.1)', padding: '0.05rem 0.35rem', borderRadius: '4px' }}>
+                <span style={{ 
+                  fontSize: '0.65rem', 
+                  fontWeight: 800,
+                  color: '#059669', 
+                  background: 'rgba(5, 150, 105, 0.12)', 
+                  border: '1px solid rgba(5, 150, 105, 0.2)',
+                  padding: '0.08rem 0.38rem', 
+                  borderRadius: '5px' 
+                }}>
                   {todayCollectionsCount}
                 </span>
               )}
             </div>
 
-            <span className={styles.deskMiniSep} />
-
             {/* 2. Today's Disbursements */}
             <div className={styles.deskMiniItem}>
-              <span className={styles.deskMiniLabel}>{isAr ? 'مصروفات وخامات اليوم:' : 'Disbursements:'}</span>
-              <span className={styles.deskMiniVal} style={{ color: todayDisbursementsSum.gt(0) ? '#b45309' : '#475569' }}>
-                -{todayDisbursementsSum.formatEGP(isAr)}
+              <span className={styles.deskMiniIconBadge} style={{ background: 'rgba(180, 83, 9, 0.1)', color: '#b45309' }}>
+                <ArrowUpRight size={13} />
               </span>
+              <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.15 }}>
+                <span className={styles.deskMiniLabel}>{isAr ? 'مصروفات وخامات' : 'Disbursements'}</span>
+                <span className={styles.deskMiniVal} style={{ color: todayDisbursementsSum.gt(0) ? '#b45309' : '#475569' }}>
+                  -{todayDisbursementsSum.formatEGP(isAr)}
+                </span>
+              </div>
               {todayDisbursementsCount > 0 && (
-                <span style={{ fontSize: '0.65rem', color: '#b45309', background: 'rgba(180, 83, 9, 0.1)', padding: '0.05rem 0.35rem', borderRadius: '4px' }}>
+                <span style={{ 
+                  fontSize: '0.65rem', 
+                  fontWeight: 800,
+                  color: '#b45309', 
+                  background: 'rgba(180, 83, 9, 0.12)', 
+                  border: '1px solid rgba(180, 83, 9, 0.2)',
+                  padding: '0.08rem 0.38rem', 
+                  borderRadius: '5px' 
+                }}>
                   {todayDisbursementsCount}
                 </span>
               )}
             </div>
 
-            <span className={styles.deskMiniSep} />
-
             {/* 3. Today's Net Cash Flow */}
             <div className={styles.deskMiniItem}>
-              <span className={styles.deskMiniLabel}>{isAr ? 'صافي حركة اليوم:' : 'Net Flow:'}</span>
-              <span className={styles.deskMiniVal} style={{ color: todayNetFlow.gt(0) ? '#059669' : todayNetFlow.lt(0) ? '#dc2626' : '#0f172a' }}>
-                {todayNetFlow.gt(0) ? '+' : ''}{todayNetFlow.formatEGP(isAr)}
+              <span className={styles.deskMiniIconBadge} style={{ 
+                background: todayNetFlow.gt(0) ? 'rgba(5, 150, 105, 0.1)' : todayNetFlow.lt(0) ? 'rgba(220, 38, 38, 0.1)' : 'rgba(71, 85, 105, 0.1)', 
+                color: todayNetFlow.gt(0) ? '#059669' : todayNetFlow.lt(0) ? '#dc2626' : '#475569' 
+              }}>
+                <Wallet size={13} />
               </span>
+              <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.15 }}>
+                <span className={styles.deskMiniLabel}>{isAr ? 'صافي الحركة' : 'Net Flow'}</span>
+                <span className={styles.deskMiniVal} style={{ color: todayNetFlow.gt(0) ? '#059669' : todayNetFlow.lt(0) ? '#dc2626' : '#0f172a' }}>
+                  {todayNetFlow.gt(0) ? '+' : ''}{todayNetFlow.formatEGP(isAr)}
+                </span>
+              </div>
             </div>
-
-            <span className={styles.deskMiniSep} />
 
             {/* 4. Dues Today */}
             <div className={styles.deskMiniItem}>
-              <span className={styles.deskMiniLabel}>{isAr ? 'مستحق التحصيل اليوم:' : 'Due Today:'}</span>
-              <span className={`${styles.deskMiniVal} ${todayPendingDueCount > 0 ? styles.deskMiniValAlert : ''}`}>
-                {todayPendingDueSum.formatEGP(isAr)} ({todayPendingDueCount})
+              <span className={styles.deskMiniIconBadge} style={{ 
+                background: todayPendingDueCount > 0 ? 'rgba(220, 38, 38, 0.1)' : 'rgba(71, 85, 105, 0.1)', 
+                color: todayPendingDueCount > 0 ? '#dc2626' : '#64748b' 
+              }}>
+                <BellRing size={13} />
               </span>
+              <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.15 }}>
+                <span className={styles.deskMiniLabel}>{isAr ? 'مستحق اليوم' : 'Due Today'}</span>
+                <span className={`${styles.deskMiniVal} ${todayPendingDueCount > 0 ? styles.deskMiniValAlert : ''}`}>
+                  {todayPendingDueSum.formatEGP(isAr)}
+                </span>
+              </div>
+              {todayPendingDueCount > 0 && (
+                <span style={{ 
+                  fontSize: '0.65rem', 
+                  fontWeight: 800,
+                  color: '#dc2626', 
+                  background: 'rgba(220, 38, 38, 0.12)', 
+                  border: '1px solid rgba(220, 38, 38, 0.2)',
+                  padding: '0.08rem 0.38rem', 
+                  borderRadius: '5px' 
+                }}>
+                  {todayPendingDueCount}
+                </span>
+              )}
             </div>
           </div>
 
@@ -1097,12 +1156,12 @@ export const DailyOperationsView: React.FC<DailyOperationsViewProps> = ({
             alignItems: 'center',
             gap: '0.5rem',
             background: '#ffffff',
-            border: '1px solid #e2e8f0',
-            borderRadius: '8px',
-            padding: '0.35rem 0.75rem',
-            boxShadow: '0 1px 2px rgba(0,0,0,0.02)'
+            border: '1px solid rgba(15, 23, 42, 0.08)',
+            borderRadius: '11px',
+            padding: '0.55rem 0.85rem',
+            boxShadow: '0 2px 8px -2px rgba(15, 23, 42, 0.05)'
           }}>
-            <Clock size={13} color="#946f23" />
+            <Clock size={14} color="#946f23" />
             <span style={{ fontSize: '0.74rem', fontWeight: 700, color: '#0f172a', fontVariantNumeric: 'tabular-nums' }}>
               {new Date().toLocaleDateString(isAr ? 'ar-EG' : 'en-US', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' })}
             </span>
@@ -1870,50 +1929,54 @@ export const DailyOperationsView: React.FC<DailyOperationsViewProps> = ({
             operationalAlerts.map(alert => {
               const isCrit = alert.severity === 'critical';
               const isWarn = alert.severity === 'warning';
+              const accentColor = isCrit ? '#dc2626' : isWarn ? '#d97706' : '#059669';
 
               return (
                 <div
                   key={alert.id}
-                  style={{
-                    background: '#ffffff',
-                    border: `1.5px solid ${isCrit ? '#fecaca' : isWarn ? '#fde68a' : '#bfdbfe'}`,
-                    borderRadius: '12px',
-                    padding: '0.95rem 1.15rem',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    justifyContent: 'space-between',
-                    gap: '0.75rem',
-                    boxShadow: isCrit 
-                      ? '0 2px 10px rgba(239, 68, 68, 0.08)' 
-                      : isWarn 
-                      ? '0 2px 10px rgba(217, 119, 6, 0.06)' 
-                      : '0 2px 8px rgba(37, 99, 235, 0.06)'
-                  }}
+                  className={styles.radarAlertCard}
                 >
+                  {/* Subtle architectural leading edge indicator */}
+                  <div 
+                    className={styles.radarAlertLeadingEdge} 
+                    style={{ background: accentColor }} 
+                  />
+
                   <div>
                     {/* Top Badge & Header */}
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.45rem', gap: '0.5rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.65rem', gap: '0.5rem' }}>
                       <div style={{
                         display: 'flex',
                         alignItems: 'center',
-                        gap: '0.4rem',
-                        color: isCrit ? '#dc2626' : isWarn ? '#d97706' : '#2563eb',
-                        fontWeight: 800,
-                        fontSize: '0.75rem'
+                        gap: '0.45rem',
                       }}>
-                        {isCrit ? <AlertCircle size={15} /> : isWarn ? <AlertTriangle size={15} /> : <Key size={15} />}
-                        <span>{isCrit ? (isAr ? 'تنبيه تحصيل متأخر' : 'Overdue Alert') : isWarn ? (isAr ? 'استحقاق قريب' : 'Maturing Alert') : (isAr ? 'جاهزية تسليم' : 'Handover Ready')}</span>
+                        <div style={{
+                          width: '24px',
+                          height: '24px',
+                          borderRadius: '7px',
+                          background: isCrit ? 'rgba(220, 38, 38, 0.08)' : isWarn ? 'rgba(217, 119, 6, 0.08)' : 'rgba(5, 150, 105, 0.08)',
+                          color: accentColor,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          flexShrink: 0
+                        }}>
+                          {isCrit ? <AlertCircle size={14} /> : isWarn ? <AlertTriangle size={14} /> : <Key size={14} />}
+                        </div>
+                        <span style={{ fontSize: '0.74rem', fontWeight: 800, color: '#1e293b' }}>
+                          {isCrit ? (isAr ? 'تنبيه تحصيل متأخر' : 'Overdue Alert') : isWarn ? (isAr ? 'استحقاق قريب' : 'Maturing Alert') : (isAr ? 'جاهزية تسليم' : 'Handover Ready')}
+                        </span>
                       </div>
 
                       {alert.badgeLabelAr && (
                         <span style={{
                           fontSize: '0.66rem',
                           fontWeight: 800,
-                          padding: '0.12rem 0.5rem',
+                          padding: '0.15rem 0.55rem',
                           borderRadius: '6px',
-                          background: isCrit ? '#fef2f2' : isWarn ? '#fffbeb' : '#eff6ff',
-                          color: isCrit ? '#dc2626' : isWarn ? '#b45309' : '#1d4ed8',
-                          border: `1px solid ${isCrit ? '#fecaca' : isWarn ? '#fde68a' : '#bfdbfe'}`,
+                          background: isCrit ? 'rgba(220, 38, 38, 0.06)' : isWarn ? 'rgba(217, 119, 6, 0.06)' : 'rgba(5, 150, 105, 0.06)',
+                          color: isCrit ? '#dc2626' : isWarn ? '#b45309' : '#047857',
+                          border: `1px solid ${isCrit ? 'rgba(220, 38, 38, 0.18)' : isWarn ? 'rgba(217, 119, 6, 0.18)' : 'rgba(5, 150, 105, 0.18)'}`,
                           flexShrink: 0
                         }}>
                           {isAr ? alert.badgeLabelAr : alert.badgeLabelEn}
@@ -1922,19 +1985,19 @@ export const DailyOperationsView: React.FC<DailyOperationsViewProps> = ({
                     </div>
 
                     {/* Debtor Name & Title */}
-                    <div style={{ fontSize: '0.88rem', fontWeight: 900, color: '#0f172a', lineHeight: 1.35 }}>
+                    <div style={{ fontSize: '0.92rem', fontWeight: 900, color: '#0f172a', lineHeight: 1.35, letterSpacing: '-0.01em' }}>
                       {isAr ? alert.titleAr : alert.titleEn}
                     </div>
 
                     {/* Unit & Contract Details */}
                     {alert.unitDetail && (
-                      <div style={{ fontSize: '0.73rem', color: '#475569', marginTop: '0.25rem', fontWeight: 600 }}>
+                      <div style={{ fontSize: '0.74rem', color: '#475569', marginTop: '0.3rem', fontWeight: 600 }}>
                         {alert.unitDetail}
                       </div>
                     )}
 
                     {/* Secondary Note */}
-                    <div style={{ fontSize: '0.7rem', color: '#64748b', marginTop: '0.35rem', lineHeight: 1.4 }}>
+                    <div style={{ fontSize: '0.71rem', color: '#64748b', marginTop: '0.35rem', lineHeight: 1.45 }}>
                       {isAr ? alert.secondaryNoteAr : alert.secondaryNoteEn}
                     </div>
                   </div>
@@ -1944,20 +2007,21 @@ export const DailyOperationsView: React.FC<DailyOperationsViewProps> = ({
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
-                    paddingTop: '0.5rem',
-                    borderTop: '1px solid #f1f5f9',
-                    marginTop: '0.2rem'
+                    paddingTop: '0.65rem',
+                    borderTop: '1px solid rgba(15, 23, 42, 0.06)',
+                    marginTop: '0.25rem'
                   }}>
                     {alert.amountFormatted ? (
                       <div>
-                        <span style={{ fontSize: '0.62rem', color: '#64748b', display: 'block', fontWeight: 600 }}>
+                        <span style={{ fontSize: '0.63rem', color: '#64748b', display: 'block', fontWeight: 700 }}>
                           {isCrit ? (isAr ? 'المبلغ المتأخر:' : 'Due Amount:') : isWarn ? (isAr ? 'قيمة القسط:' : 'Amount:') : (isAr ? 'المسدد حتى الآن:' : 'Collected:')}
                         </span>
                         <span style={{
-                          fontSize: '0.95rem',
+                          fontSize: '1rem',
                           fontWeight: 900,
-                          color: isCrit ? '#dc2626' : isWarn ? '#d97706' : '#059669',
-                          fontVariantNumeric: 'tabular-nums'
+                          color: accentColor,
+                          fontVariantNumeric: 'tabular-nums',
+                          letterSpacing: '-0.02em'
                         }}>
                           {alert.amountFormatted}
                         </span>
@@ -1967,27 +2031,12 @@ export const DailyOperationsView: React.FC<DailyOperationsViewProps> = ({
                     <button
                       type="button"
                       onClick={alert.onClick}
-                      style={{
-                        background: isCrit 
-                          ? 'linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)' 
-                          : isWarn 
-                          ? 'linear-gradient(135deg, #d97706 0%, #b45309 100%)' 
-                          : 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-                        color: '#ffffff',
-                        border: 'none',
-                        padding: '0.38rem 0.85rem',
-                        borderRadius: '7px',
-                        fontSize: '0.74rem',
-                        fontWeight: 800,
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.35rem',
-                        boxShadow: '0 2px 5px rgba(0,0,0,0.1)'
-                      }}
+                      className={styles.radarAlertButton}
                     >
                       <span>{isAr ? alert.actionLabelAr : alert.actionLabelEn}</span>
-                      <ArrowLeft size={12} style={{ transform: isAr ? 'none' : 'rotate(180deg)' }} />
+                      <span className={styles.radarAlertButtonIcon}>
+                        <ArrowLeft size={11} style={{ transform: isAr ? 'none' : 'rotate(180deg)' }} />
+                      </span>
                     </button>
                   </div>
                 </div>
@@ -2203,29 +2252,16 @@ export const DailyOperationsView: React.FC<DailyOperationsViewProps> = ({
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'wrap' }}>
               {/* Sort Dropdown */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                <ArrowUpDown size={13} color="#64748b" />
-                <select
+              <div style={{ minWidth: '190px' }}>
+                <ZFCustomSelect
                   value={duesSortBy}
-                  onChange={e => setDuesSortBy(e.target.value as any)}
-                  style={{
-                    background: '#f8fafc',
-                    border: '1px solid #cbd5e1',
-                    borderRadius: '8px',
-                    padding: '0.35rem 0.65rem',
-                    fontSize: '0.72rem',
-                    fontWeight: 700,
-                    color: '#0f172a',
-                    outline: 'none',
-                    cursor: 'pointer'
-                  }}
-                >
-                  <option value="date_asc">{isAr ? 'الاستحقاق: الأقرب' : 'Due Date: Oldest'}</option>
-                  <option value="date_desc">{isAr ? 'الاستحقاق: الأبعد' : 'Due Date: Newest'}</option>
-                  <option value="amount_desc">{isAr ? 'المبلغ: من الأعلى' : 'Amount: High to Low'}</option>
-                  <option value="amount_asc">{isAr ? 'المبلغ: من الأقل' : 'Amount: Low to High'}</option>
-                  <option value="name_asc">{isAr ? 'اسم العميل (أ-ي)' : 'Name (A-Z)'}</option>
-                </select>
+                  onChange={(val) => setDuesSortBy(val as any)}
+                  items={duesSortSelectItems}
+                  isAr={isAr}
+                  searchable={false}
+                  placeholderAr="ترتيب حسب..."
+                  placeholderEn="Sort by..."
+                />
               </div>
 
               {/* Reset */}
