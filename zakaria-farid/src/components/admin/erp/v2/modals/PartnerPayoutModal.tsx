@@ -56,7 +56,8 @@ export const PartnerPayoutModal: React.FC<PartnerPayoutModalProps> = ({
   isMutating = false,
   onConfirmPayout
 }) => {
-  const [selectedPartnerName, setSelectedPartnerName] = useState<string>('');
+  const isLockedToPartner = Boolean(initialPartnerName && initialPartnerName.trim());
+  const [selectedPartnerName, setSelectedPartnerName] = useState<string>(initialPartnerName?.trim() || (partners[0]?.partnerName || ''));
   const [amount, setAmount] = useState<string>('');
   const [paymentMethod, setPaymentMethod] = useState<'CASH_101000' | 'INSTAPAY_102000' | 'BANK_102000'>('CASH_101000');
   const [selectedPropertyId, setSelectedPropertyId] = useState<string>('');
@@ -65,8 +66,8 @@ export const PartnerPayoutModal: React.FC<PartnerPayoutModalProps> = ({
   const [memo, setMemo] = useState<string>('');
 
   useEffect(() => {
-    if (initialPartnerName) {
-      setSelectedPartnerName(initialPartnerName);
+    if (initialPartnerName && initialPartnerName.trim()) {
+      setSelectedPartnerName(initialPartnerName.trim());
     } else if (partners.length > 0 && !selectedPartnerName) {
       setSelectedPartnerName(partners[0].partnerName);
     }
@@ -126,7 +127,13 @@ export const PartnerPayoutModal: React.FC<PartnerPayoutModalProps> = ({
 
   if (!isOpen) return null;
 
-  const currentPartner = partners.find(p => p.partnerName === selectedPartnerName) || partners[0];
+  const effectivePartnerName = (isLockedToPartner ? initialPartnerName!.trim() : selectedPartnerName) || '';
+  const currentPartner = partners.find(p => p.partnerName === effectivePartnerName) || partners.find(p => p.partnerName === selectedPartnerName) || partners[0];
+  const isOwner = Boolean(
+    effectivePartnerName === PRIMARY_DEVELOPER_NAME ||
+    effectivePartnerName.includes('زكريا فريد') ||
+    currentPartner?.isPermanent
+  );
   const selectedProperty = properties.find(p => p.id === selectedPropertyId);
 
   const numAmount = parseFloat(amount) || 0;
@@ -134,17 +141,17 @@ export const PartnerPayoutModal: React.FC<PartnerPayoutModalProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedPartnerName || !isAmountValid || isMutating) return;
+    if (!effectivePartnerName || !isAmountValid || isMutating) return;
 
     await onConfirmPayout({
-      partnerName: selectedPartnerName,
+      partnerName: effectivePartnerName,
       amount: D(numAmount).toFixed(2),
       paymentMethod,
       propertyId: selectedPropertyId || undefined,
       propertyTitle: selectedProperty ? (selectedProperty.title_ar || selectedProperty.title_en) : undefined,
       payoutDate,
       receiptRef,
-      memo: memo || `صرف دفعة أرباح للشريك: ${selectedPartnerName}`
+      memo: memo || `صرف دفعة أرباح للشريك: ${effectivePartnerName}`
     });
 
     onClose();
@@ -236,21 +243,107 @@ export const PartnerPayoutModal: React.FC<PartnerPayoutModalProps> = ({
         {/* FORM BODY */}
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', overflowY: 'auto', padding: '1.25rem 1.5rem', gap: '1.15rem' }}>
           
-          {/* PARTNER SELECTOR */}
-          <div>
-            <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#334155', marginBottom: '0.35rem' }}>
-              {isAr ? 'اختار الشريك أو الممول المستحق للدفعة:' : 'Select Partner / Investor:'}
-            </label>
-            <ZFCustomSelect<string>
-              value={selectedPartnerName}
-              onChange={(val) => setSelectedPartnerName(val)}
-              items={partnerSelectItems}
-              placeholderAr="-- اضغط لاختيار الشريك المستحق --"
-              placeholderEn="-- Select Partner / Investor --"
-              isAr={isAr}
-              searchable={true}
-            />
-          </div>
+          {/* 1. PARTNER IDENTIFICATION: LOCKED TO SPECIFIC PARTNER OR SELECTION */}
+          {isLockedToPartner ? (
+            /* LOCKED EXECUTIVE PARTNER CARD */
+            <div style={{
+              background: isOwner 
+                ? 'linear-gradient(135deg, rgba(212, 175, 55, 0.12) 0%, rgba(184, 144, 62, 0.04) 100%)' 
+                : 'linear-gradient(135deg, rgba(184, 144, 62, 0.08) 0%, rgba(184, 144, 62, 0.02) 100%)',
+              border: isOwner ? '1.5px solid rgba(212, 175, 55, 0.45)' : '1.5px solid rgba(184, 144, 62, 0.35)',
+              borderRadius: '12px',
+              padding: '0.85rem 1.15rem',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              boxShadow: '0 2px 8px rgba(184, 144, 62, 0.08)'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <div style={{
+                  width: '40px',
+                  height: '40px',
+                  borderRadius: '10px',
+                  background: isOwner 
+                    ? 'linear-gradient(135deg, rgba(212, 175, 55, 0.35), rgba(180, 130, 30, 0.15))' 
+                    : 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
+                  color: isOwner ? '#b4821e' : '#d4af37',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontWeight: 900,
+                  fontSize: '1.1rem',
+                  border: isOwner ? '1px solid rgba(212, 175, 55, 0.5)' : '1px solid rgba(212, 175, 55, 0.3)'
+                }}>
+                  {isOwner ? (
+                    <Crown size={20} color="#fbbf24" />
+                  ) : (
+                    (effectivePartnerName || '').charAt(0)
+                  )}
+                </div>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                    <span style={{ fontSize: '0.95rem', fontWeight: 800, color: '#0f172a' }}>
+                      {effectivePartnerName}
+                    </span>
+                    {isOwner ? (
+                      <span style={{
+                        fontSize: '0.68rem',
+                        fontWeight: 800,
+                        padding: '0.15rem 0.5rem',
+                        borderRadius: '4px',
+                        background: 'rgba(184, 144, 62, 0.18)',
+                        color: '#946f23',
+                        border: '1px solid rgba(184, 144, 62, 0.3)',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '0.25rem'
+                      }}>
+                        <Crown size={11} color="#946f23" />
+                        {isAr ? 'المالك' : 'Owner'}
+                      </span>
+                    ) : (
+                      <span style={{
+                        fontSize: '0.68rem',
+                        fontWeight: 700,
+                        padding: '0.1rem 0.45rem',
+                        borderRadius: '4px',
+                        background: '#f1f5f9',
+                        color: '#475569'
+                      }}>
+                        {currentPartner?.roleTitleAr || (isAr ? 'شريك مساهم' : 'Partner')}
+                      </span>
+                    )}
+                  </div>
+                  <div style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '0.15rem' }}>
+                    {isAr 
+                      ? 'صرف الأرباح موجه ومقفل لهذا الشريك مباشرة' 
+                      : 'Profit payout locked to this partner'}
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: '#047857', fontSize: '0.75rem', fontWeight: 800 }}>
+                <ShieldCheck size={16} color="#047857" />
+                <span>{isAr ? 'شريك معتمد' : 'Verified'}</span>
+              </div>
+            </div>
+          ) : (
+            /* GENERAL MODE: SELECT EXISTING PARTNER */
+            <div>
+              <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#334155', marginBottom: '0.35rem' }}>
+                {isAr ? 'اختار الشريك أو الممول المستحق للدفعة:' : 'Select Partner / Investor:'}
+              </label>
+              <ZFCustomSelect<string>
+                value={selectedPartnerName}
+                onChange={(val) => setSelectedPartnerName(val)}
+                items={partnerSelectItems}
+                placeholderAr="-- اضغط لاختيار الشريك المستحق --"
+                placeholderEn="-- Select Partner / Investor --"
+                isAr={isAr}
+                searchable={true}
+              />
+            </div>
+          )}
 
           {/* CURRENT PARTNER FINANCIAL BRIEF CARD */}
           {currentPartner && (
