@@ -25,7 +25,8 @@ import {
   Loader2, 
   CheckCircle2, 
   AlertCircle,
-  HelpCircle
+  HelpCircle,
+  Crown
 } from 'lucide-react';
 import { PartnerFinancialSummary } from '@/lib/erp/partnersEngine';
 import { ERPPartnerTransaction, ERPContract, ERPPartnerProfile } from '@/lib/erp/types';
@@ -36,6 +37,7 @@ import { exportPartnerDossierExcel } from '@/lib/erp/excelExporter';
 import { tafqeetEGP } from '@/lib/erp/tafqeet';
 import { toast } from 'sonner';
 import { ZFCustomSelect, ZFCustomSelectItem } from '../common/ZFCustomSelect';
+import { PRIMARY_DEVELOPER_NAME } from '@/lib/erp/partnersDirectory';
 
 export interface PartnerOperationsModalProps {
   isOpen: boolean;
@@ -90,7 +92,7 @@ export const PartnerOperationsModal: React.FC<PartnerOperationsModalProps> = ({
   // --------------------------------------------------------------------------
   const [selectedPartnerName, setSelectedPartnerName] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState<string>('');
-  const [roleFilter, setRoleFilter] = useState<'all' | 'equity_partner' | 'land_partner' | 'silent_financier'>('all');
+  const [roleFilter, setRoleFilter] = useState<'all' | 'owner' | 'equity_partner' | 'land_partner' | 'silent_financier'>('all');
 
   // --------------------------------------------------------------------------
   // 2. OPERATIONS WORKBENCH TABS (SIDE 2)
@@ -143,14 +145,19 @@ export const PartnerOperationsModal: React.FC<PartnerOperationsModalProps> = ({
   const filteredPartners = useMemo(() => {
     const profileMap = new Map(partnerProfiles.map(p => [p.name, p.role]));
     return partners.filter(p => {
+      const isOwner = p.isPermanent || p.partnerName === PRIMARY_DEVELOPER_NAME || p.partnerName.includes('زكريا فريد');
       if (roleFilter !== 'all') {
-        const partnerRole = profileMap.get(p.partnerName);
-        if (partnerRole) {
-          if (partnerRole !== roleFilter) return false;
+        if (roleFilter === 'owner') {
+          if (!isOwner) return false;
         } else {
-          if (roleFilter === 'equity_partner' && !p.roleTitleAr.includes('مال')) return false;
-          if (roleFilter === 'land_partner' && !p.roleTitleAr.includes('أرض')) return false;
-          if (roleFilter === 'silent_financier' && !p.roleTitleAr.includes('صامت')) return false;
+          const partnerRole = profileMap.get(p.partnerName);
+          if (partnerRole) {
+            if (partnerRole !== roleFilter) return false;
+          } else {
+            if (roleFilter === 'equity_partner' && !p.roleTitleAr.includes('مال')) return false;
+            if (roleFilter === 'land_partner' && !p.roleTitleAr.includes('أرض')) return false;
+            if (roleFilter === 'silent_financier' && !p.roleTitleAr.includes('صامت')) return false;
+          }
         }
       }
       if (searchQuery.trim()) {
@@ -159,9 +166,14 @@ export const PartnerOperationsModal: React.FC<PartnerOperationsModalProps> = ({
         const matchPhone = (p.phone || '').toLowerCase().includes(q);
         const matchNationalId = (p.national_id || '').toLowerCase().includes(q);
         const matchHoldings = p.holdings.some(h => (h.propertyTitle || '').toLowerCase().includes(q));
-        return matchName || matchPhone || matchNationalId || matchHoldings;
+        const matchOwnerKeyword = isOwner && (q.includes('مالك') || q.includes('owner') || q.includes('مطور'));
+        return matchName || matchPhone || matchNationalId || matchHoldings || matchOwnerKeyword;
       }
       return true;
+    }).sort((a, b) => {
+      const aIsOwner = a.isPermanent || a.partnerName === PRIMARY_DEVELOPER_NAME || a.partnerName.includes('زكريا فريد');
+      const bIsOwner = b.isPermanent || b.partnerName === PRIMARY_DEVELOPER_NAME || b.partnerName.includes('زكريا فريد');
+      return (bIsOwner ? 1 : 0) - (aIsOwner ? 1 : 0);
     });
   }, [partners, roleFilter, searchQuery, partnerProfiles]);
 
@@ -490,6 +502,7 @@ export const PartnerOperationsModal: React.FC<PartnerOperationsModalProps> = ({
               <div style={{ display: 'flex', gap: '0.35rem', overflowX: 'auto', paddingBottom: '2px' }}>
                 {[
                   { id: 'all', label: isAr ? 'الكل' : 'All' },
+                  { id: 'owner', label: isAr ? 'المالك' : 'Owner' },
                   { id: 'equity_partner', label: isAr ? 'شريك بالمال' : 'Equity' },
                   { id: 'land_partner', label: isAr ? 'شريك بالأرض' : 'Land' },
                   { id: 'silent_financier', label: isAr ? 'ممول صامت' : 'Silent' }
@@ -544,6 +557,7 @@ export const PartnerOperationsModal: React.FC<PartnerOperationsModalProps> = ({
               ) : (
                 filteredPartners.map(p => {
                   const isSelected = activePartner?.partnerName === p.partnerName;
+                  const isOwner = p.isPermanent || p.partnerName === PRIMARY_DEVELOPER_NAME || p.partnerName.includes('زكريا فريد');
                   const netDue = D(p.netCurrentBalance || 0);
                   const isPositiveDue = netDue.gt(0);
 
@@ -558,38 +572,71 @@ export const PartnerOperationsModal: React.FC<PartnerOperationsModalProps> = ({
                       style={{
                         padding: '0.85rem',
                         borderRadius: '14px',
-                        background: isSelected ? 'rgba(184, 144, 62, 0.06)' : '#ffffff',
-                        border: isSelected ? '1.5px solid #946f23' : '1px solid #e2e8f0',
+                        background: isSelected 
+                          ? (isOwner ? 'linear-gradient(135deg, rgba(184, 144, 62, 0.12) 0%, rgba(184, 144, 62, 0.04) 100%)' : 'rgba(184, 144, 62, 0.06)')
+                          : (isOwner ? 'linear-gradient(135deg, rgba(184, 144, 62, 0.04) 0%, #ffffff 100%)' : '#ffffff'),
+                        border: isSelected 
+                          ? '1.5px solid #946f23' 
+                          : (isOwner ? '1.5px solid rgba(184, 144, 62, 0.45)' : '1px solid #e2e8f0'),
                         cursor: 'pointer',
                         transition: 'all 0.15s ease',
-                        boxShadow: isSelected ? '0 4px 14px rgba(184, 144, 62, 0.12)' : 'none',
-                        position: 'relative'
+                        boxShadow: isSelected 
+                          ? '0 4px 14px rgba(184, 144, 62, 0.15)' 
+                          : (isOwner ? '0 2px 8px rgba(184, 144, 62, 0.08)' : 'none'),
+                        position: 'relative',
+                        borderRight: isAr ? (isOwner ? (isSelected ? '4px solid #946f23' : '4px solid rgba(184, 144, 62, 0.8)') : undefined) : undefined,
+                        borderLeft: !isAr ? (isOwner ? (isSelected ? '4px solid #946f23' : '4px solid rgba(184, 144, 62, 0.8)') : undefined) : undefined,
                       }}
                     >
                       {/* Top row: Initial Monogram + Name + Role Badge */}
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.45rem' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem' }}>
                           <div style={{
-                            width: '32px',
-                            height: '32px',
+                            width: '34px',
+                            height: '34px',
                             borderRadius: '8px',
-                            background: isSelected ? '#0f172a' : '#f1f5f9',
-                            color: isSelected ? '#d4af37' : '#475569',
+                            background: isOwner 
+                              ? 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)' 
+                              : (isSelected ? '#0f172a' : '#f1f5f9'),
+                            color: isOwner ? '#d4af37' : (isSelected ? '#d4af37' : '#475569'),
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
                             fontWeight: 800,
                             fontSize: '0.85rem',
-                            border: `1px solid ${isSelected ? 'rgba(212, 175, 55, 0.3)' : '#e2e8f0'}`
+                            border: isOwner 
+                              ? '1.5px solid rgba(212, 175, 55, 0.5)' 
+                              : `1px solid ${isSelected ? 'rgba(212, 175, 55, 0.3)' : '#e2e8f0'}`,
+                            boxShadow: isOwner ? '0 2px 6px rgba(0,0,0,0.12)' : 'none'
                           }}>
-                            {p.partnerName.charAt(0)}
+                            {isOwner ? <Crown size={17} color="#d4af37" /> : p.partnerName.charAt(0)}
                           </div>
                           <div>
-                            <div style={{ fontSize: '0.85rem', fontWeight: 800, color: '#0f172a' }}>
-                              {p.partnerName}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
+                              <span style={{ fontSize: '0.86rem', fontWeight: 800, color: '#0f172a' }}>
+                                {p.partnerName}
+                              </span>
+                              {isOwner && (
+                                <span style={{
+                                  fontSize: '0.64rem',
+                                  fontWeight: 900,
+                                  background: 'linear-gradient(135deg, rgba(184, 144, 62, 0.22) 0%, rgba(184, 144, 62, 0.08) 100%)',
+                                  color: '#854d0e',
+                                  padding: '0.1rem 0.45rem',
+                                  borderRadius: '5px',
+                                  border: '1px solid rgba(184, 144, 62, 0.45)',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '0.25rem',
+                                  boxShadow: '0 1px 3px rgba(184, 144, 62, 0.12)'
+                                }}>
+                                  <Crown size={11} color="#946f23" />
+                                  <span>{isAr ? 'المالك' : 'Owner'}</span>
+                                </span>
+                              )}
                             </div>
-                            <div style={{ fontSize: '0.68rem', color: '#64748b' }}>
-                              {p.roleTitleAr}
+                            <div style={{ fontSize: '0.68rem', color: isOwner ? '#946f23' : '#64748b', fontWeight: isOwner ? 700 : 500 }}>
+                              {isOwner ? (isAr ? 'المطور الرئيسي • مالك المنظومة' : 'Owner & Primary Developer') : p.roleTitleAr}
                             </div>
                           </div>
                         </div>
@@ -615,7 +662,7 @@ export const PartnerOperationsModal: React.FC<PartnerOperationsModalProps> = ({
                         padding: '0.25rem 0',
                         borderBottom: '1px dashed #e2e8f0'
                       }}>
-                        <span>{isAr ? 'رأس المال المساهم:' : 'Contributed Capital:'}</span>
+                        <span>{isOwner ? (isAr ? 'رأس مال المالك المودع:' : 'Owner Paid Capital:') : (isAr ? 'رأس المال المساهم:' : 'Contributed Capital:')}</span>
                         <strong style={{ color: '#0f172a' }}>{formatEGP(p.totalContributedCapital)}</strong>
                       </div>
 
@@ -628,7 +675,7 @@ export const PartnerOperationsModal: React.FC<PartnerOperationsModalProps> = ({
                         marginTop: '0.35rem'
                       }}>
                         <span style={{ fontWeight: 700, color: '#475569' }}>
-                          {isAr ? 'صافي المستحق له:' : 'Net Balance Due:'}
+                          {isOwner ? (isAr ? 'صافي مستحقات المالك:' : 'Owner Net Balance:') : (isAr ? 'صافي المستحق له:' : 'Net Balance Due:')}
                         </span>
                         <span style={{
                           fontWeight: 800,
@@ -714,19 +761,21 @@ export const PartnerOperationsModal: React.FC<PartnerOperationsModalProps> = ({
             flexDirection: 'column',
             overflowY: 'auto'
           }}>
-            {activePartner ? (
+            {activePartner ? (() => {
+              const isActiveOwner = activePartner.isPermanent || activePartner.partnerName === PRIMARY_DEVELOPER_NAME || activePartner.partnerName.includes('زكريا فريد');
+              return (
               <div style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
                 
                 {/* 1. PARTNER PROFILE RIBBON */}
                 <div style={{
                   background: 'linear-gradient(135deg, #f8fafc 0%, #ffffff 100%)',
-                  border: '1px solid #e2e8f0',
+                  border: isActiveOwner ? '1.5px solid rgba(184, 144, 62, 0.4)' : '1px solid #e2e8f0',
                   borderRadius: '16px',
                   padding: '1.15rem 1.35rem',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.02)'
+                  boxShadow: isActiveOwner ? '0 4px 16px rgba(184, 144, 62, 0.08)' : '0 2px 8px rgba(0,0,0,0.02)'
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
                     <div style={{
@@ -740,29 +789,49 @@ export const PartnerOperationsModal: React.FC<PartnerOperationsModalProps> = ({
                       justifyContent: 'center',
                       fontWeight: 900,
                       fontSize: '1.25rem',
-                      border: '1px solid rgba(212, 175, 55, 0.3)'
+                      border: isActiveOwner ? '1.5px solid rgba(212, 175, 55, 0.55)' : '1px solid rgba(212, 175, 55, 0.3)',
+                      boxShadow: isActiveOwner ? '0 4px 12px rgba(184, 144, 62, 0.25)' : 'none'
                     }}>
-                      {activePartner.partnerName.charAt(0)}
+                      {isActiveOwner ? <Crown size={24} color="#d4af37" /> : activePartner.partnerName.charAt(0)}
                     </div>
                     <div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-                        <h4 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: '#0f172a' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'wrap' }}>
+                        <h4 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 900, color: '#0f172a' }}>
                           {activePartner.partnerName}
                         </h4>
-                        <span style={{
-                          background: 'rgba(184, 144, 62, 0.1)',
-                          color: '#946f23',
-                          border: '1px solid rgba(184, 144, 62, 0.25)',
-                          padding: '0.15rem 0.55rem',
-                          borderRadius: '6px',
-                          fontSize: '0.72rem',
-                          fontWeight: 700
-                        }}>
-                          {activePartner.roleTitleAr}
-                        </span>
+                        {isActiveOwner ? (
+                          <span style={{
+                            background: 'linear-gradient(135deg, rgba(184, 144, 62, 0.22) 0%, rgba(184, 144, 62, 0.08) 100%)',
+                            color: '#854d0e',
+                            border: '1.5px solid rgba(184, 144, 62, 0.45)',
+                            padding: '0.2rem 0.65rem',
+                            borderRadius: '6px',
+                            fontSize: '0.74rem',
+                            fontWeight: 900,
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '0.35rem',
+                            boxShadow: '0 1px 4px rgba(184, 144, 62, 0.15)'
+                          }}>
+                            <Crown size={13} color="#946f23" />
+                            <span>{isAr ? 'المالك ومؤسس المنظومة' : 'Owner & Founder'}</span>
+                          </span>
+                        ) : (
+                          <span style={{
+                            background: 'rgba(184, 144, 62, 0.1)',
+                            color: '#946f23',
+                            border: '1px solid rgba(184, 144, 62, 0.25)',
+                            padding: '0.15rem 0.55rem',
+                            borderRadius: '6px',
+                            fontSize: '0.72rem',
+                            fontWeight: 700
+                          }}>
+                            {activePartner.roleTitleAr}
+                          </span>
+                        )}
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', color: '#047857', fontSize: '0.72rem', fontWeight: 800 }}>
                           <ShieldCheck size={14} />
-                          <span>{isAr ? 'شريك موثق' : 'Verified'}</span>
+                          <span>{isAr ? (isActiveOwner ? 'الحساب السيادي للمنشأة (301000)' : 'شريك موثق') : (isActiveOwner ? 'Sovereign Account (301000)' : 'Verified')}</span>
                         </div>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginTop: '0.35rem', fontSize: '0.75rem', color: '#64748b' }}>
@@ -797,7 +866,7 @@ export const PartnerOperationsModal: React.FC<PartnerOperationsModalProps> = ({
                     <Smartphone size={16} style={{ color: '#059669' }} />
                     <div>
                       <div style={{ fontWeight: 800, color: '#0f172a' }}>
-                        {isAr ? 'قناة التحويل المفضلة' : 'Payout Channel'}
+                        {isActiveOwner ? (isAr ? 'قناة سحب أرباح المالك' : 'Owner Payout Channel') : (isAr ? 'قناة التحويل المفضلة' : 'Payout Channel')}
                       </div>
                       <div style={{ fontSize: '0.7rem', color: '#64748b' }}>
                         {activePartner.instapay_handle ? `إنستاباي: ${activePartner.instapay_handle}` : (activePartner.phone ? `إنستاباي / هاتف: ${activePartner.phone}` : (isAr ? 'خزينة نقدية (كاش)' : 'Cash Safe'))}
@@ -820,7 +889,7 @@ export const PartnerOperationsModal: React.FC<PartnerOperationsModalProps> = ({
                   }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: '#946f23' }}>
                       <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#64748b' }}>
-                        {isAr ? 'رأس المال المساهم' : 'Capital Contributed'}
+                        {isActiveOwner ? (isAr ? 'رأس مال المالك (301000)' : 'Owner Capital (301000)') : (isAr ? 'رأس المال المساهم' : 'Capital Contributed')}
                       </span>
                       <Coins size={16} />
                     </div>
@@ -868,7 +937,7 @@ export const PartnerOperationsModal: React.FC<PartnerOperationsModalProps> = ({
                   }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: '#475569' }}>
                       <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#64748b' }}>
-                        {isAr ? 'أرباح مسددة فعلياً' : 'Distributions Paid'}
+                        {isActiveOwner ? (isAr ? 'مسحوبات سابقة للمالك' : 'Prior Owner Drawings') : (isAr ? 'أرباح مسددة فعلياً' : 'Distributions Paid')}
                       </span>
                       <Receipt size={16} />
                     </div>
@@ -892,7 +961,7 @@ export const PartnerOperationsModal: React.FC<PartnerOperationsModalProps> = ({
                   }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: '#047857' }}>
                       <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#047857' }}>
-                        {isAr ? 'صافي الرصيد المستحق له' : 'Net Current Balance'}
+                        {isActiveOwner ? (isAr ? 'صافي مستحقات وأرباح المالك' : 'Owner Net Dues') : (isAr ? 'صافي الرصيد المستحق له' : 'Net Current Balance')}
                       </span>
                       <Scale size={16} />
                     </div>
@@ -955,9 +1024,25 @@ export const PartnerOperationsModal: React.FC<PartnerOperationsModalProps> = ({
                   marginTop: '0.5rem'
                 }}>
                   {[
-                    { id: 'payout', label: isAr ? 'صرف دفعة أرباح وتسديد مستحقات' : 'Disburse Dividend', icon: Receipt },
-                    { id: 'injection', label: isAr ? 'ضخ مساهمة رأس مال جديدة' : 'Inject Capital', icon: Coins },
-                    { id: 'statement', label: isAr ? 'كشف الحساب وسجل العمليات' : 'Statement & Ledger', icon: FileText }
+                    { 
+                      id: 'payout', 
+                      label: isActiveOwner 
+                        ? (isAr ? 'مسحوبات أرباح المالك' : 'Owner Drawings') 
+                        : (isAr ? 'صرف دفعة أرباح وتسديد مستحقات' : 'Disburse Dividend'), 
+                      icon: Receipt 
+                    },
+                    { 
+                      id: 'injection', 
+                      label: isActiveOwner 
+                        ? (isAr ? 'زيادة رأس مال المالك' : 'Owner Capital Addition') 
+                        : (isAr ? 'ضخ مساهمة رأس مال جديدة' : 'Inject Capital'), 
+                      icon: Coins 
+                    },
+                    { 
+                      id: 'statement', 
+                      label: isAr ? 'كشف الحساب وسجل العمليات' : 'Statement & Ledger', 
+                      icon: FileText 
+                    }
                   ].map(tab => {
                     const Icon = tab.icon;
                     const isActive = activeTab === tab.id;
@@ -1191,7 +1276,7 @@ export const PartnerOperationsModal: React.FC<PartnerOperationsModalProps> = ({
                         type="text"
                         value={payoutMemo}
                         onChange={(e) => setPayoutMemo(e.target.value)}
-                        placeholder={isAr ? `صرف دفعة أرباح للشريك: ${activePartner.partnerName}` : `Dividend distribution for ${activePartner.partnerName}`}
+                        placeholder={isAr ? (isActiveOwner ? 'مسحوبات أرباح شخصية للمالك زكريا فريد' : `صرف دفعة أرباح للشريك: ${activePartner.partnerName}`) : (isActiveOwner ? 'Owner dividend distribution' : `Dividend distribution for ${activePartner.partnerName}`)}
                         style={{
                           width: '100%',
                           padding: '0.55rem 0.75rem',
@@ -1225,7 +1310,7 @@ export const PartnerOperationsModal: React.FC<PartnerOperationsModalProps> = ({
 
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem', fontSize: '0.78rem' }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', color: '#f8fafc' }}>
-                            <span>من حـ/ 303000 أرباح موزعة للشركاء (مدين)</span>
+                            <span>{isActiveOwner ? (isAr ? 'من حـ/ 303000 أرباح ومسحوبات المالك (مدين)' : 'Dr 303000 Owner Drawings & Dividends') : (isAr ? 'من حـ/ 303000 أرباح موزعة للشركاء (مدين)' : 'Dr 303000 Partner Dividends')}</span>
                             <strong style={{ color: '#d4af37' }}>{formatEGP(payoutNum)}</strong>
                           </div>
                           <div style={{ display: 'flex', justifyContent: 'space-between', color: '#94a3b8', paddingRight: isAr ? '1.5rem' : '0', paddingLeft: isAr ? '0' : '1.5rem' }}>
@@ -1280,7 +1365,11 @@ export const PartnerOperationsModal: React.FC<PartnerOperationsModalProps> = ({
                         ) : (
                           <>
                             <CheckCircle2 size={16} />
-                            <span>{isAr ? 'تأكيد صرف الدفعة وترحيل القيد' : 'Confirm Payout & Post GL'}</span>
+                            <span>
+                              {isActiveOwner 
+                                ? (isAr ? 'تأكيد صرف مسحوبات المالك وترحيل القيد' : 'Confirm Owner Payout & Post GL')
+                                : (isAr ? 'تأكيد صرف الدفعة وترحيل القيد' : 'Confirm Payout & Post GL')}
+                            </span>
                           </>
                         )}
                       </button>
@@ -1454,7 +1543,7 @@ export const PartnerOperationsModal: React.FC<PartnerOperationsModalProps> = ({
                         type="text"
                         value={injectionMemo}
                         onChange={(e) => setInjectionMemo(e.target.value)}
-                        placeholder={isAr ? `إيداع مساهمة رأس مال جديدة من الشريك: ${activePartner.partnerName}` : `Capital injection from ${activePartner.partnerName}`}
+                        placeholder={isAr ? (isActiveOwner ? 'زيادة رأس مال المالك زكريا فريد بالخزينة' : `إيداع مساهمة رأس مال جديدة من الشريك: ${activePartner.partnerName}`) : (isActiveOwner ? 'Owner capital contribution' : `Capital injection from ${activePartner.partnerName}`)}
                         style={{
                           width: '100%',
                           padding: '0.55rem 0.75rem',
@@ -1492,7 +1581,7 @@ export const PartnerOperationsModal: React.FC<PartnerOperationsModalProps> = ({
                             <strong style={{ color: '#d4af37' }}>{formatEGP(injectionNum)}</strong>
                           </div>
                           <div style={{ display: 'flex', justifyContent: 'space-between', color: '#94a3b8', paddingRight: isAr ? '1.5rem' : '0', paddingLeft: isAr ? '0' : '1.5rem' }}>
-                            <span>إلى حـ/ 301000 رأس مال الشركاء والممولين (دائن)</span>
+                            <span>{isActiveOwner ? (isAr ? 'إلى حـ/ 301000 رأس مال المالك والمؤسسين (دائن)' : 'Cr 301000 Owner Paid Capital') : (isAr ? 'إلى حـ/ 301000 رأس مال الشركاء والممولين (دائن)' : 'Cr 301000 Partner Capital')}</span>
                             <strong style={{ color: '#94a3b8' }}>{formatEGP(injectionNum)}</strong>
                           </div>
                         </div>
@@ -1543,7 +1632,11 @@ export const PartnerOperationsModal: React.FC<PartnerOperationsModalProps> = ({
                         ) : (
                           <>
                             <CheckCircle2 size={16} />
-                            <span>{isAr ? 'تأكيد ضخ رأس المال وترحيل القيد' : 'Confirm Capital Injection & Post GL'}</span>
+                            <span>
+                              {isActiveOwner 
+                                ? (isAr ? 'تأكيد زيادة رأس مال المالك وترحيل القيد' : 'Confirm Owner Capital & Post GL')
+                                : (isAr ? 'تأكيد ضخ رأس المال وترحيل القيد' : 'Confirm Capital Injection & Post GL')}
+                            </span>
                           </>
                         )}
                       </button>
@@ -1559,7 +1652,9 @@ export const PartnerOperationsModal: React.FC<PartnerOperationsModalProps> = ({
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                       <div>
                         <h5 style={{ margin: 0, fontSize: '0.92rem', fontWeight: 800, color: '#0f172a' }}>
-                          {isAr ? `كشف حساب الشريك: ${activePartner.partnerName}` : `Statement for ${activePartner.partnerName}`}
+                          {isActiveOwner 
+                            ? (isAr ? 'كشف حساب مساهمات ومسحوبات المالك (زكريا فريد)' : 'Owner Capital & Drawings Statement (Zakaria Farid)')
+                            : (isAr ? `كشف حساب الشريك: ${activePartner.partnerName}` : `Statement for ${activePartner.partnerName}`)}
                         </h5>
                         <p style={{ margin: '0.15rem 0 0', fontSize: '0.72rem', color: '#64748b' }}>
                           {isAr ? `إجمالي الحركات المسجلة: ${currentPartnerTransactions.length} حركة` : `${currentPartnerTransactions.length} transactions recorded`}
@@ -1663,25 +1758,30 @@ export const PartnerOperationsModal: React.FC<PartnerOperationsModalProps> = ({
                                       borderRadius: '6px',
                                       fontSize: '0.7rem',
                                       fontWeight: 800,
-                                      background: isInjection ? 'rgba(184, 144, 62, 0.1)' : 'rgba(4, 120, 87, 0.1)',
-                                      color: isInjection ? '#946f23' : '#047857'
+                                      background: isInjection ? 'rgba(184, 144, 62, 0.1)' : 'rgba(4, 120, 87, 0.08)',
+                                      color: isInjection ? '#946f23' : '#047857',
+                                      border: `1px solid ${isInjection ? 'rgba(184, 144, 62, 0.25)' : 'rgba(4, 120, 87, 0.2)'}`
                                     }}>
                                       {isInjection ? <ArrowDownLeft size={12} /> : <ArrowUpRight size={12} />}
-                                      {isInjection ? (isAr ? 'ضخ مساهمة' : 'Injection') : (isAr ? 'صرف أرباح' : 'Payout')}
+                                      <span>
+                                        {isInjection 
+                                          ? (isActiveOwner ? (isAr ? 'زيادة رأس مال' : 'Owner Capital') : (isAr ? 'ضخ رأس مال' : 'Capital Injection'))
+                                          : (isActiveOwner ? (isAr ? 'مسحوبات أرباح' : 'Owner Drawing') : (isAr ? 'توزيع أرباح' : 'Dividend Payout'))}
+                                      </span>
                                     </span>
                                   </td>
-                                  <td style={{ padding: '0.65rem 0.85rem', fontWeight: 800, color: isInjection ? '#946f23' : '#047857' }}>
+                                  <td style={{ padding: '0.65rem 0.85rem', fontWeight: 800, color: isInjection ? '#0f172a' : '#047857', fontVariantNumeric: 'tabular-nums' }}>
                                     {formatEGP(tx.amount)}
                                   </td>
                                   <td style={{ padding: '0.65rem 0.85rem', color: '#475569' }}>
                                     {tx.payment_method === 'CASH_101000' 
-                                      ? (isAr ? 'خزينة كاش (101000)' : 'Cash Safe') 
-                                      : (isAr ? 'إنستاباي فوري (102000)' : 'InstaPay')}
+                                      ? (isAr ? 'خزينة نقدية' : 'Cash Safe') 
+                                      : (isAr ? 'إنستاباي فوري' : 'InstaPay')}
                                   </td>
                                   <td style={{ padding: '0.65rem 0.85rem', color: '#334155' }}>
-                                    <div>{tx.property_title || (isAr ? 'عام ع المحفظة' : 'General')}</div>
+                                    <div style={{ fontWeight: 600 }}>{tx.property_title || (isAr ? 'محفظة الشركة العامة' : 'General Portfolio')}</div>
                                     {tx.memo && (
-                                      <div style={{ fontSize: '0.68rem', color: '#64748b', marginTop: '0.1rem' }}>
+                                      <div style={{ fontSize: '0.7rem', color: '#64748b', marginTop: '0.15rem' }}>
                                         {tx.memo}
                                       </div>
                                     )}
@@ -1705,7 +1805,8 @@ export const PartnerOperationsModal: React.FC<PartnerOperationsModalProps> = ({
                 )}
 
               </div>
-            ) : (
+              );
+            })() : (
               <div style={{
                 flex: 1,
                 display: 'flex',

@@ -15,14 +15,16 @@ import {
   Scale,
   PlusCircle,
   Coins,
-  Phone,
-  CreditCard,
-  Percent
+  Phone, 
+  CreditCard, 
+  Percent,
+  Crown
 } from 'lucide-react';
 import { D } from '@/lib/erp/math';
 import { PartnerFinancialSummary } from '@/lib/erp/partnersEngine';
 import { Property } from '@/lib/supabase/types';
 import { ZFCustomSelect, ZFCustomSelectItem } from '../common/ZFCustomSelect';
+import { PRIMARY_DEVELOPER_NAME } from '@/lib/erp/partnersDirectory';
 
 interface PartnerCapitalInjectionModalProps {
   isOpen: boolean;
@@ -76,18 +78,19 @@ export const PartnerCapitalInjectionModal: React.FC<PartnerCapitalInjectionModal
   const partnerSelectItems = useMemo<ZFCustomSelectItem<string>[]>(() => {
     return partners.map(p => {
       const balanceNum = D(p.netCurrentBalance).toNumber();
+      const isOwner = p.isPermanent || p.partnerName === PRIMARY_DEVELOPER_NAME || p.partnerName.includes('زكريا فريد');
       return {
         value: p.partnerName,
-        labelAr: p.partnerName,
-        labelEn: p.partnerName,
-        sublabelAr: `${p.roleTitleAr} • مساهمات سابقة: ${D(p.totalContributedCapital).toNumber().toLocaleString()} ج.م`,
-        sublabelEn: `${p.roleTitleAr} • Capital: ${D(p.totalContributedCapital).toNumber().toLocaleString()} EGP`,
+        labelAr: isOwner ? `${p.partnerName} (المالك والمطور الرئيسي)` : p.partnerName,
+        labelEn: isOwner ? `${p.partnerName} (Owner & Primary Developer)` : p.partnerName,
+        sublabelAr: isOwner ? `مالك المنظومة • مساهمات سابقة: ${D(p.totalContributedCapital).toNumber().toLocaleString()} ج.م` : `${p.roleTitleAr} • مساهمات سابقة: ${D(p.totalContributedCapital).toNumber().toLocaleString()} ج.م`,
+        sublabelEn: isOwner ? `System Owner • Capital: ${D(p.totalContributedCapital).toNumber().toLocaleString()} EGP` : `${p.roleTitleAr} • Capital: ${D(p.totalContributedCapital).toNumber().toLocaleString()} EGP`,
         price: balanceNum,
-        badge: p.roleTitleAr,
-        badgeBg: 'rgba(148, 111, 35, 0.08)',
+        badge: isOwner ? (isAr ? 'المالك' : 'Owner') : p.roleTitleAr,
+        badgeBg: isOwner ? 'rgba(184, 144, 62, 0.18)' : 'rgba(148, 111, 35, 0.08)',
         badgeTextColor: '#946f23',
-        icon: Users,
-        iconBg: 'rgba(148, 111, 35, 0.1)',
+        icon: isOwner ? Crown : Users,
+        iconBg: isOwner ? 'rgba(184, 144, 62, 0.15)' : 'rgba(148, 111, 35, 0.1)',
         iconColor: '#946f23'
       };
     });

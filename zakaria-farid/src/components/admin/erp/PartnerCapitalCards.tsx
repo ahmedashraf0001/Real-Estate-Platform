@@ -5,9 +5,10 @@
  */
 
 import React from 'react';
-import { Users, PlusCircle } from 'lucide-react';
+import { Users, PlusCircle, Crown } from 'lucide-react';
 import { ERPPartnerCall } from '@/lib/erp/types';
 import { D } from '@/lib/erp/math';
+import { PRIMARY_DEVELOPER_NAME } from '@/lib/erp/partnersDirectory';
 
 interface PartnerCapitalCardsProps {
   partnerCalls: ERPPartnerCall[];
@@ -93,6 +94,12 @@ export const PartnerCapitalCards: React.FC<PartnerCapitalCardsProps> = ({
       progressPercent: Math.round(progress),
       isFulfilled
     };
+  }).sort((a, b) => {
+    const isAOwner = a.name === PRIMARY_DEVELOPER_NAME || a.name.includes('زكريا فريد');
+    const isBOwner = b.name === PRIMARY_DEVELOPER_NAME || b.name.includes('زكريا فريد');
+    if (isAOwner && !isBOwner) return -1;
+    if (!isAOwner && isBOwner) return 1;
+    return 0;
   });
 
   // Calculate totals
@@ -214,6 +221,7 @@ export const PartnerCapitalCards: React.FC<PartnerCapitalCardsProps> = ({
         gap: '1.15rem'
       }}>
         {partnerSummaries.map(partner => {
+          const isOwner = partner.name === PRIMARY_DEVELOPER_NAME || partner.name.includes('زكريا فريد');
           // Monogram initials
           const initials = partner.name
             .split(' ')
@@ -225,24 +233,30 @@ export const PartnerCapitalCards: React.FC<PartnerCapitalCardsProps> = ({
             <div
               key={partner.name}
               style={{
-                background: 'linear-gradient(180deg, rgba(20, 26, 42, 0.75) 0%, rgba(12, 16, 26, 0.9) 100%)',
-                border: '1px solid rgba(255, 255, 255, 0.08)',
+                background: isOwner
+                  ? 'linear-gradient(180deg, rgba(35, 30, 20, 0.9) 0%, rgba(18, 16, 22, 0.95) 100%)'
+                  : 'linear-gradient(180deg, rgba(20, 26, 42, 0.75) 0%, rgba(12, 16, 26, 0.9) 100%)',
+                border: isOwner
+                  ? '1.5px solid rgba(212, 175, 55, 0.45)'
+                  : '1px solid rgba(255, 255, 255, 0.08)',
                 borderRadius: '14px',
                 padding: '1.25rem',
                 position: 'relative',
                 display: 'flex',
                 flexDirection: 'column',
                 gap: '1rem',
-                boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
+                boxShadow: isOwner
+                  ? '0 8px 28px rgba(180, 140, 50, 0.15), 0 8px 24px rgba(0,0,0,0.4)'
+                  : '0 8px 24px rgba(0,0,0,0.4)',
                 transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)'
               }}
               onMouseEnter={e => {
                 e.currentTarget.style.transform = 'translateY(-2px)';
-                e.currentTarget.style.borderColor = 'rgba(212, 175, 55, 0.35)';
+                e.currentTarget.style.borderColor = 'rgba(212, 175, 55, 0.55)';
               }}
               onMouseLeave={e => {
                 e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.08)';
+                e.currentTarget.style.borderColor = isOwner ? 'rgba(212, 175, 55, 0.45)' : 'rgba(255, 255, 255, 0.08)';
               }}
             >
               {/* Partner Card Header */}
@@ -252,8 +266,12 @@ export const PartnerCapitalCards: React.FC<PartnerCapitalCardsProps> = ({
                     width: '38px',
                     height: '38px',
                     borderRadius: '10px',
-                    background: 'linear-gradient(135deg, rgba(212, 175, 55, 0.2), rgba(212, 175, 55, 0.05))',
-                    border: '1px solid rgba(212, 175, 55, 0.3)',
+                    background: isOwner
+                      ? 'linear-gradient(135deg, rgba(212, 175, 55, 0.35), rgba(180, 130, 30, 0.15))'
+                      : 'linear-gradient(135deg, rgba(212, 175, 55, 0.2), rgba(212, 175, 55, 0.05))',
+                    border: isOwner
+                      ? '1.5px solid rgba(212, 175, 55, 0.55)'
+                      : '1px solid rgba(212, 175, 55, 0.3)',
                     color: '#e2c974',
                     display: 'flex',
                     alignItems: 'center',
@@ -261,14 +279,35 @@ export const PartnerCapitalCards: React.FC<PartnerCapitalCardsProps> = ({
                     fontWeight: 800,
                     fontSize: '0.85rem'
                   }}>
-                    {initials || 'ZF'}
+                    {isOwner ? <Crown size={18} style={{ color: '#fbbf24' }} /> : (initials || 'ZF')}
                   </div>
                   <div>
-                    <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 800, color: '#ffffff' }}>
-                      {partner.name}
-                    </h4>
-                    <span style={{ fontSize: '0.68rem', color: '#94a3b8' }}>
-                      {isAr ? 'شريك استراتيجي ومؤسس' : 'Managing Equity Partner'}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                      <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 800, color: '#ffffff' }}>
+                        {partner.name}
+                      </h4>
+                      {isOwner && (
+                        <span style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '0.2rem',
+                          background: 'rgba(212, 175, 55, 0.2)',
+                          border: '1px solid rgba(212, 175, 55, 0.45)',
+                          color: '#fef08a',
+                          fontSize: '0.66rem',
+                          fontWeight: 800,
+                          padding: '0.1rem 0.45rem',
+                          borderRadius: '4px'
+                        }}>
+                          <Crown size={11} />
+                          {isAr ? 'المالك' : 'Owner'}
+                        </span>
+                      )}
+                    </div>
+                    <span style={{ fontSize: '0.68rem', color: isOwner ? '#e2c974' : '#94a3b8', fontWeight: isOwner ? 600 : 400 }}>
+                      {isOwner
+                        ? (isAr ? 'المطور الرئيسي • مالك المنظومة' : 'Primary Developer & System Owner')
+                        : (isAr ? 'شريك استراتيجي ومؤسس' : 'Managing Equity Partner')}
                     </span>
                   </div>
                 </div>

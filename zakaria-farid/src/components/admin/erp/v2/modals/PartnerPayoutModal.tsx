@@ -13,15 +13,17 @@ import {
   Users,
   Building2,
   ArrowRight,
-  Receipt,
-  Scale,
-  Smartphone
+  Receipt, 
+  Scale, 
+  Smartphone,
+  Crown
 } from 'lucide-react';
 import { D } from '@/lib/erp/math';
 import { MoneyCell } from '@/components/erp/MoneyCell';
 import { PartnerFinancialSummary } from '@/lib/erp/partnersEngine';
 import { Property } from '@/lib/supabase/types';
 import { ZFCustomSelect, ZFCustomSelectItem } from '../common/ZFCustomSelect';
+import { PRIMARY_DEVELOPER_NAME } from '@/lib/erp/partnersDirectory';
 import styles from '../ZFWorkstationShell.module.css';
 
 interface PartnerPayoutModalProps {
@@ -73,18 +75,19 @@ export const PartnerPayoutModal: React.FC<PartnerPayoutModalProps> = ({
   const partnerSelectItems = useMemo<ZFCustomSelectItem<string>[]>(() => {
     return partners.map(p => {
       const balanceNum = D(p.netCurrentBalance).toNumber();
+      const isOwner = p.isPermanent || p.partnerName === PRIMARY_DEVELOPER_NAME || p.partnerName.includes('زكريا فريد');
       return {
         value: p.partnerName,
-        labelAr: p.partnerName,
-        labelEn: p.partnerName,
-        sublabelAr: `${p.roleTitleAr} • هاتف: ${p.phone || '—'}`,
-        sublabelEn: `${p.roleTitleAr} • Phone: ${p.phone || '—'}`,
+        labelAr: isOwner ? `${p.partnerName} (المالك والمطور الرئيسي)` : p.partnerName,
+        labelEn: isOwner ? `${p.partnerName} (Owner & Primary Developer)` : p.partnerName,
+        sublabelAr: isOwner ? `مالك المنظومة • رصيد مستحق: ${balanceNum.toLocaleString()} ج.م` : `${p.roleTitleAr} • هاتف: ${p.phone || '—'}`,
+        sublabelEn: isOwner ? `System Owner • Balance: ${balanceNum.toLocaleString()} EGP` : `${p.roleTitleAr} • Phone: ${p.phone || '—'}`,
         price: balanceNum,
-        badge: balanceNum > 0 ? (isAr ? 'مستحق له أرباح' : 'Due Payout') : (isAr ? 'رصيد مسوى' : 'Settled'),
-        badgeBg: balanceNum > 0 ? 'rgba(21, 128, 61, 0.08)' : 'rgba(100, 116, 139, 0.08)',
-        badgeTextColor: balanceNum > 0 ? '#15803d' : '#64748b',
-        icon: Users,
-        iconBg: 'rgba(148, 111, 35, 0.1)',
+        badge: isOwner ? (isAr ? 'المالك' : 'Owner') : (balanceNum > 0 ? (isAr ? 'مستحق له أرباح' : 'Due Payout') : (isAr ? 'رصيد مسوى' : 'Settled')),
+        badgeBg: isOwner ? 'rgba(184, 144, 62, 0.15)' : (balanceNum > 0 ? 'rgba(21, 128, 61, 0.08)' : 'rgba(100, 116, 139, 0.08)'),
+        badgeTextColor: isOwner ? '#946f23' : (balanceNum > 0 ? '#15803d' : '#64748b'),
+        icon: isOwner ? Crown : Users,
+        iconBg: isOwner ? 'rgba(184, 144, 62, 0.15)' : 'rgba(148, 111, 35, 0.1)',
         iconColor: '#946f23'
       };
     });

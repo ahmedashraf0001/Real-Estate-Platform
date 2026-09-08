@@ -17,7 +17,8 @@ import {
   ArrowDownLeft,
   ArrowUpRight,
   Printer,
-  FileText
+  FileText,
+  Crown
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { exportPartnerDossierExcel } from '@/lib/erp/excelExporter';
@@ -26,6 +27,7 @@ import { PartnerFinancialSummary } from '@/lib/erp/partnersEngine';
 import { ERPPartnerTransaction } from '@/lib/erp/types';
 import { MoneyCell } from '@/components/erp/MoneyCell';
 import { D } from '@/lib/erp/math';
+import { PRIMARY_DEVELOPER_NAME } from '@/lib/erp/partnersDirectory';
 
 interface PartnerDossierModalProps {
   isOpen: boolean;
@@ -240,40 +242,67 @@ export const PartnerDossierModal: React.FC<PartnerDossierModalProps> = ({
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            <div 
-              style={{
-                width: '42px',
-                height: '42px',
-                borderRadius: '12px',
-                background: 'rgba(148, 111, 35, 0.1)',
-                color: '#946f23',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}
-            >
-              <User size={22} />
-            </div>
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: '#0f172a' }}>
-                  {partner.partnerName}
-                </h3>
-                <span style={{
-                  fontSize: '0.68rem',
-                  padding: '0.15rem 0.5rem',
-                  borderRadius: '6px',
-                  background: partner.isPermanent ? 'rgba(148, 111, 35, 0.12)' : 'rgba(29, 78, 216, 0.08)',
-                  color: partner.isPermanent ? '#946f23' : '#1d4ed8',
-                  fontWeight: 700
-                }}>
-                  {partner.roleTitleAr}
-                </span>
-              </div>
-              <p style={{ margin: 0, fontSize: '0.72rem', color: '#64748b' }}>
-                {isAr ? 'كشف الحساب الاستثماري وحصص الأرباح والمشاريع' : 'Investment dossier & statement of account'}
-              </p>
-            </div>
+            {(() => {
+              const isOwner = partner.isPermanent || partner.partnerName === PRIMARY_DEVELOPER_NAME || partner.partnerName.includes('زكريا فريد');
+              return (
+                <>
+                  <div 
+                    style={{
+                      width: '42px',
+                      height: '42px',
+                      borderRadius: '12px',
+                      background: isOwner ? 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)' : 'rgba(148, 111, 35, 0.1)',
+                      color: isOwner ? '#d4af37' : '#946f23',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      border: isOwner ? '1.5px solid rgba(212, 175, 55, 0.45)' : 'none',
+                      boxShadow: isOwner ? '0 2px 8px rgba(184, 144, 62, 0.2)' : 'none'
+                    }}
+                  >
+                    {isOwner ? <Crown size={22} color="#d4af37" /> : <User size={22} />}
+                  </div>
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                      <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: '#0f172a' }}>
+                        {partner.partnerName}
+                      </h3>
+                      {isOwner ? (
+                        <span style={{
+                          fontSize: '0.68rem',
+                          padding: '0.15rem 0.55rem',
+                          borderRadius: '6px',
+                          background: 'linear-gradient(135deg, rgba(184, 144, 62, 0.2) 0%, rgba(184, 144, 62, 0.08) 100%)',
+                          color: '#854d0e',
+                          border: '1px solid rgba(184, 144, 62, 0.4)',
+                          fontWeight: 900,
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '0.25rem'
+                        }}>
+                          <Crown size={11} color="#946f23" />
+                          <span>{isAr ? 'المالك والمطور الرئيسي' : 'Owner & Primary Developer'}</span>
+                        </span>
+                      ) : (
+                        <span style={{
+                          fontSize: '0.68rem',
+                          padding: '0.15rem 0.5rem',
+                          borderRadius: '6px',
+                          background: 'rgba(29, 78, 216, 0.08)',
+                          color: '#1d4ed8',
+                          fontWeight: 700
+                        }}>
+                          {partner.roleTitleAr}
+                        </span>
+                      )}
+                    </div>
+                    <p style={{ margin: 0, fontSize: '0.72rem', color: '#64748b' }}>
+                      {isAr ? (isOwner ? 'كشف حساب مساهمات ومسحوبات المالك وحصص المشاريع' : 'كشف الحساب الاستثماري وحصص الأرباح والمشاريع') : 'Investment dossier & statement of account'}
+                    </p>
+                  </div>
+                </>
+              );
+            })()}
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>

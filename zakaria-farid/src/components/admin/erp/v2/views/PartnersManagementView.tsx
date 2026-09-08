@@ -19,7 +19,8 @@ import {
   AlertTriangle,
   FileText,
   Filter,
-  Eye
+  Eye,
+  Crown
 } from 'lucide-react';
 import { 
   ERPPartnerProfile, 
@@ -678,29 +679,33 @@ export const PartnersManagementView: React.FC<PartnersManagementViewProps> = ({
                           fontWeight: 800,
                           fontSize: '1.1rem'
                         }}>
-                          {isPrimary ? <ShieldCheck size={22} color="#946f23" /> : p.partnerName.slice(0, 1)}
+                          {isPrimary ? <Crown size={22} color="#946f23" /> : p.partnerName.slice(0, 1)}
                         </div>
                         <div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap' }}>
                             <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 800, color: '#0f172a' }}>
                               {p.partnerName}
                             </h3>
                             {isPrimary && (
                               <span style={{
                                 fontSize: '0.65rem',
-                                fontWeight: 800,
-                                background: 'rgba(184, 144, 62, 0.15)',
+                                fontWeight: 900,
+                                background: 'linear-gradient(135deg, rgba(184, 144, 62, 0.22) 0%, rgba(184, 144, 62, 0.08) 100%)',
                                 color: '#854d0e',
-                                padding: '0.1rem 0.4rem',
-                                borderRadius: '4px',
-                                border: '1px solid rgba(184, 144, 62, 0.3)'
+                                padding: '0.12rem 0.45rem',
+                                borderRadius: '5px',
+                                border: '1px solid rgba(184, 144, 62, 0.4)',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '0.25rem'
                               }}>
-                                {isAr ? 'المالك' : 'Owner'}
+                                <Crown size={11} color="#946f23" />
+                                <span>{isAr ? 'المالك' : 'Owner'}</span>
                               </span>
                             )}
                           </div>
-                          <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 600 }}>
-                            {p.roleTitleAr}
+                          <span style={{ fontSize: '0.75rem', color: isPrimary ? '#946f23' : '#64748b', fontWeight: isPrimary ? 700 : 600 }}>
+                            {isPrimary ? (isAr ? 'المطور الرئيسي • مالك المنظومة' : 'Owner & Primary Developer') : p.roleTitleAr}
                           </span>
                         </div>
                       </div>
@@ -1064,14 +1069,33 @@ export const PartnersManagementView: React.FC<PartnersManagementViewProps> = ({
                               fontWeight: 800,
                               fontSize: '0.85rem'
                             }}>
-                              {isPrimary ? <ShieldCheck size={18} color="#946f23" /> : p.partnerName.slice(0, 1)}
+                              {isPrimary ? <Crown size={18} color="#946f23" /> : p.partnerName.slice(0, 1)}
                             </div>
                             <div>
-                              <div style={{ fontWeight: 800, color: '#0f172a', fontSize: '0.86rem' }}>
-                                {p.partnerName}
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
+                                <span style={{ fontWeight: 800, color: '#0f172a', fontSize: '0.86rem' }}>
+                                  {p.partnerName}
+                                </span>
+                                {isPrimary && (
+                                  <span style={{
+                                    fontSize: '0.62rem',
+                                    fontWeight: 900,
+                                    background: 'linear-gradient(135deg, rgba(184, 144, 62, 0.22) 0%, rgba(184, 144, 62, 0.08) 100%)',
+                                    color: '#854d0e',
+                                    padding: '0.1rem 0.4rem',
+                                    borderRadius: '4px',
+                                    border: '1px solid rgba(184, 144, 62, 0.4)',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '0.2rem'
+                                  }}>
+                                    <Crown size={10} color="#946f23" />
+                                    <span>{isAr ? 'المالك' : 'Owner'}</span>
+                                  </span>
+                                )}
                               </div>
-                              <div style={{ fontSize: '0.72rem', color: '#64748b' }}>
-                                {p.roleTitleAr}
+                              <div style={{ fontSize: '0.72rem', color: isPrimary ? '#946f23' : '#64748b', fontWeight: isPrimary ? 700 : 500 }}>
+                                {isPrimary ? (isAr ? 'المطور الرئيسي • مالك المنظومة' : 'Owner & Primary Developer') : p.roleTitleAr}
                               </div>
                             </div>
                           </div>
