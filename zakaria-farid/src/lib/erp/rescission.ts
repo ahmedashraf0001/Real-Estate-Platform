@@ -34,7 +34,8 @@ export class RescissionEngine {
     originalRsvCostAmount = '0.00',
     cogsAccountCode = '501000',
     wipAccountCode = '151000',
-    actor = 'CHIEF_FINANCIAL_OFFICER'
+    actor = 'CHIEF_FINANCIAL_OFFICER',
+    originalHandoverEntry?: ERPJournalEntry
   ): {
     rescissionRecord: ERPRescissionRecord;
     journalEntry: ERPJournalEntry;
@@ -65,7 +66,32 @@ export class RescissionEngine {
 
     let journalEntry: ERPJournalEntry;
     const unpaidArCleared = isPostDelivery ? V.minus(C) : D(0);
-    const rsvCost = D(originalRsvCostAmount);
+
+    let effectiveRsvCost = D(originalRsvCostAmount);
+    let effectiveCogsAccount = cogsAccountCode;
+    let effectiveWipAccount = wipAccountCode;
+
+    // In Branch 2 (Post-Delivery), if the original handover journal entry is provided,
+    // reverse the exact historical WIP asset account and COGS expense account/amounts.
+    if (isPostDelivery && originalHandoverEntry && originalHandoverEntry.lines) {
+      const cogsLine = originalHandoverEntry.lines.find(
+        l => D(l.debit_amount).gt(0) && l.account_code.startsWith('50')
+      );
+      const wipLine = originalHandoverEntry.lines.find(
+        l => D(l.credit_amount).gt(0) && l.account_code.startsWith('15')
+      );
+
+      if (cogsLine) {
+        effectiveCogsAccount = cogsLine.account_code;
+        effectiveRsvCost = D(cogsLine.debit_amount);
+      }
+      if (wipLine) {
+        effectiveWipAccount = wipLine.account_code;
+        if (!cogsLine) {
+          effectiveRsvCost = D(wipLine.credit_amount);
+        }
+      }
+    }
 
     if (!isPostDelivery) {
       // ==========================================
@@ -161,17 +187,17 @@ export class RescissionEngine {
             memo: 'Clear uncollected Accounts Receivable off balance sheet'
           },
           {
-            account_code: wipAccountCode,
-            debit_amount: rsvCost.toFixed(2),
+            account_code: effectiveWipAccount,
+            debit_amount: effectiveRsvCost.toFixed(2),
             credit_amount: '0.00',
             contract_id: contract.contract_id,
             unit_id: contract.unit_id,
             memo: 'Restore unit cost basis to Construction WIP'
           },
           {
-            account_code: cogsAccountCode,
+            account_code: effectiveCogsAccount,
             debit_amount: '0.00',
-            credit_amount: rsvCost.toFixed(2),
+            credit_amount: effectiveRsvCost.toFixed(2),
             contract_id: contract.contract_id,
             unit_id: contract.unit_id,
             memo: 'Reverse Cost of Goods Sold'
@@ -180,9 +206,9 @@ export class RescissionEngine {
       });
     }
 
-    // Transition all unbilled/unpaid schedules to 'Void'
+    // Transition all unbilled future schedule lineage rows (Pending and SUPERSEDED) to 'Void'
     const updatedSchedules = schedules.map(s => {
-      if (s.status === 'Pending') {
+      if (s.status === 'Pending' || s.status === 'SUPERSEDED') {
         return {
           ...s,
           status: 'Void' as const
@@ -201,7 +227,7 @@ export class RescissionEngine {
       penalty_retained: penaltyRetained.toFixed(2),
       net_refund_liability: netRefund.toFixed(2),
       unpaid_ar_cleared: unpaidArCleared.toFixed(2),
-      wip_cost_restored: rsvCost.toFixed(2),
+      wip_cost_restored: effectiveRsvCost.toFixed(2),
       unit_state: 'Under Rescission Audit',
       journal_entry_id: journalEntry.entry_id,
       created_at: new Date().toISOString()

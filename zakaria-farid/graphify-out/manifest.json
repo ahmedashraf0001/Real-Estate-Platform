@@ -4836,9 +4836,9 @@
     "semantic_hash": ""
   },
   "src/components/admin/erp/AdminERPHub.tsx": {
-    "mtime": 1788885810.5944552,
-    "seen": 1788885872.9195852,
-    "ast_hash": "b504ee3fc160e1c7fc07399742f2e9e7",
+    "mtime": 1788888269.7385492,
+    "seen": 1788915888.8137524,
+    "ast_hash": "a7a211c66368ed28dcddaf4e95f5633f",
     "semantic_hash": ""
   },
   "src/components/admin/erp/CockpitAnalyticsCharts.tsx": {
@@ -4884,9 +4884,9 @@
     "semantic_hash": ""
   },
   "src/components/admin/erp/ZFInspectorDrawer.tsx": {
-    "mtime": 1788750893.0324793,
-    "seen": 1788757824.27717,
-    "ast_hash": "b9b891793e85d5bfc2bf1e00647e818f",
+    "mtime": 1788887434.8915682,
+    "seen": 1788887579.5722117,
+    "ast_hash": "7e2d449bd0b0fe5eccfa232407bfc57a",
     "semantic_hash": ""
   },
   "src/components/admin/erp/ZFNavigationDock.tsx": {
@@ -4998,9 +4998,9 @@
     "semantic_hash": ""
   },
   "src/lib/erp/contracts.ts": {
-    "mtime": 1788885658.2050245,
-    "seen": 1788885872.921589,
-    "ast_hash": "af4654132998b774d6239f5f2601b67c",
+    "mtime": 1788887372.0817952,
+    "seen": 1788887579.5739763,
+    "ast_hash": "0cba61ae97d270bc58a0f4b2127c368e",
     "semantic_hash": ""
   },
   "src/lib/erp/escalation.ts": {
@@ -5046,9 +5046,9 @@
     "semantic_hash": ""
   },
   "src/lib/erp/rescission.ts": {
-    "mtime": 1788390167.192707,
-    "seen": 1788392751.7904155,
-    "ast_hash": "19c3a7db4b11f93758b9c5a8aed5e899",
+    "mtime": 1788888055.0473254,
+    "seen": 1788915888.8168712,
+    "ast_hash": "794d7beb5d707f07b31e914dcc0e3f72",
     "semantic_hash": ""
   },
   "src/lib/erp/rsv.ts": {
@@ -5064,9 +5064,9 @@
     "semantic_hash": ""
   },
   "src/lib/erp/supabaseService.ts": {
-    "mtime": 1788884958.566638,
-    "seen": 1788885291.2797594,
-    "ast_hash": "4a6dd804f5add215dc706a0a4e58902b",
+    "mtime": 1788888143.4190059,
+    "seen": 1788915888.8169334,
+    "ast_hash": "04f02bc321cfa1a9ee0510bf0031dcf3",
     "semantic_hash": ""
   },
   "src/lib/erp/types.ts": {
@@ -5292,9 +5292,9 @@
     "semantic_hash": ""
   },
   "src/components/admin/erp/v2/modals/ContractEscalationModal.tsx": {
-    "mtime": 1788838284.0275855,
-    "seen": 1788885291.277593,
-    "ast_hash": "3d66b8f0ba9d8379ab61cb7629c2a89b",
+    "mtime": 1788888264.2645688,
+    "seen": 1788915888.8145251,
+    "ast_hash": "b5151be9a6cd5976ac52559184620aca",
     "semantic_hash": ""
   },
   "src/components/admin/erp/v2/modals/NewContractWizardModal.tsx": {
@@ -6138,9 +6138,9 @@
     "semantic_hash": ""
   },
   "src/lib/erp/__tests__/invariants.test.ts": {
-    "mtime": 1788885774.8215888,
-    "seen": 1788885872.9215868,
-    "ast_hash": "2e928665fbbeff775e278dafc217001a",
+    "mtime": 1788915804.734365,
+    "seen": 1788915888.8163195,
+    "ast_hash": "8815be5ab40da29062f2555e4c391cc6",
     "semantic_hash": ""
   },
   "src/lib/erp/useERPRealtimeSync.ts": {
@@ -6207,6 +6207,12 @@
     "mtime": 1788878751.3493905,
     "seen": 1788885291.277603,
     "ast_hash": "bce288f2d977c69634c652ef1586a14d",
+    "semantic_hash": ""
+  },
+  "src/components/admin/erp/v2/modals/HandoverExecutionModal.tsx": {
+    "mtime": 1788887471.0454373,
+    "seen": 1788887579.5725513,
+    "ast_hash": "606adcb49e20669d07eb2c7d95ef753f",
     "semantic_hash": ""
   }
 }

@@ -14,6 +14,8 @@ import {
   ERPJournalEntry, 
   ERPMakerCheckerRequest, 
   ERPPartnerCall, 
+  ERPPartnerProfile,
+  ERPPartnerTransaction,
   ERPPDCRecord, 
   ERPRescissionRecord, 
   ERPTaxRecord,
@@ -1119,6 +1121,17 @@ export class ERPSupabaseService {
         .in('schedule_id', supersededScheduleIds);
 
       if (supError) throw supError;
+
+      // Void uncollected safe PDCs corresponding to superseded tranches
+      try {
+        await supabase
+          .from('erp_pdc_records')
+          .update({ status: 'Void' })
+          .eq('contract_id', cleanContractId)
+          .eq('status', 'In Safe');
+      } catch (pdcVoidErr) {
+        console.warn('Notice while voiding safe PDCs during escalation:', pdcVoidErr);
+      }
     }
 
     // 2. Insert Amendment Record
@@ -1160,6 +1173,36 @@ export class ERPSupabaseService {
       .insert(newRows);
 
     if (insertError) throw insertError;
+
+    // 3b. Generate replacement PDCs for version N+1 tranches
+    try {
+      const { data: contractData } = await supabase
+        .from('erp_contracts')
+        .select('contract_number, buyer_name')
+        .eq('contract_id', cleanContractId)
+        .single();
+
+      const contractDigits = (contractData?.contract_number || '').replace(/\D/g, '') || '789';
+      const drawerName = contractData?.buyer_name || 'العميل المتعاقد';
+
+      const replacementPdcRows = newSchedules.map((s, idx) => ({
+        cheque_id: generateUUID(),
+        contract_id: cleanContractId,
+        schedule_id: ensureUUID(s.schedule_id),
+        cheque_number: `SND-${contractDigits}-v${s.schedule_version || amendment.new_version || '2'}-T${s.tranche_number}`,
+        bank_name: '',
+        drawer_name: drawerName,
+        nominal_value: s.nominal_value,
+        due_date: s.due_date,
+        status: 'In Safe' as const
+      }));
+
+      if (replacementPdcRows.length > 0) {
+        await supabase.from('erp_pdc_records').insert(replacementPdcRows);
+      }
+    } catch (pdcInsertErr) {
+      console.warn('Notice while generating replacement PDCs during escalation:', pdcInsertErr);
+    }
 
     // 4. Update Contract Gross Value
     const { error: contractError } = await supabase
@@ -1279,22 +1322,42 @@ export class ERPSupabaseService {
 
     if (contractError) throw contractError;
 
-    // 3. Mark pending installments as Void
+    // 3. Mark all schedule lineage rows (Pending and SUPERSEDED) as Void
     if (voidScheduleIds.length > 0) {
       await supabase
         .from('erp_installment_schedules')
         .update({ status: 'Void' })
         .in('schedule_id', voidScheduleIds);
     }
+    try {
+      await supabase
+        .from('erp_installment_schedules')
+        .update({ status: 'Void' })
+        .eq('contract_id', cleanContractId)
+        .in('status', ['Pending', 'SUPERSEDED']);
+    } catch (schErr) {
+      console.warn('Notice while voiding schedule lineage for rescinded contract:', schErr);
+    }
+
+    // 3b. Void matching uncollected erp_pdc_records (status = 'Void')
+    try {
+      await supabase
+        .from('erp_pdc_records')
+        .update({ status: 'Void' })
+        .eq('contract_id', cleanContractId)
+        .in('status', ['In Safe', 'Deposited']);
+    } catch (pdcErr) {
+      console.warn('Notice while voiding uncollected PDCs for rescinded contract:', pdcErr);
+    }
 
     // 4. Insert Journal Entry
     await this.persistJournalEntry(supabase, journalEntry);
 
-    // 5. Restore property listing status to active upon contract rescission
+    // 5. Restore property listing status to active and update building_units.status to available
     try {
       const { data: rescindedContract } = await supabase
         .from('erp_contracts')
-        .select('property_id')
+        .select('property_id, building_unit_id')
         .eq('contract_id', cleanContractId)
         .single();
 
@@ -1303,9 +1366,18 @@ export class ERPSupabaseService {
           .from('properties')
           .update({ listing_status: 'active' })
           .eq('id', rescindedContract.property_id);
+
+        if (rescindedContract.building_unit_id) {
+          await this.updateBuildingUnitStatus(
+            supabase,
+            rescindedContract.property_id,
+            rescindedContract.building_unit_id,
+            'available'
+          );
+        }
       }
     } catch (e) {
-      console.warn('Could not restore property listing_status to active:', e);
+      console.warn('Could not restore property listing_status or unit status to active/available:', e);
     }
   }
 
@@ -1570,6 +1642,171 @@ export class ERPSupabaseService {
       }
     } catch (err) {
       console.warn('Silent fallback on updateBuildingUnitTax:', err);
+    }
+  }
+
+  /**
+   * Persist a partner transaction (Capital Injection, Profit Distribution, Capital Return)
+   */
+  static async persistPartnerTransaction(
+    supabase: SupabaseClient,
+    tx: ERPPartnerTransaction | {
+      transaction_id?: string;
+      id?: string;
+      partner_name: string;
+      property_id?: string;
+      property_title?: string;
+      type: string;
+      amount: string | number;
+      date: string;
+      routing_account?: string;
+      payment_method?: string;
+      journal_entry_id?: string;
+      notes?: string;
+      memo?: string;
+    }
+  ): Promise<void> {
+    const rawId = (tx as any).transaction_id || tx.id || generateUUID();
+    const cleanId = ensureUUID(rawId);
+    const routingAccount = (tx as any).routing_account || 
+      (tx.payment_method?.includes('101000') ? '101000' : '102000');
+    const propertyId = tx.property_id && isUUID(tx.property_id) ? tx.property_id : null;
+    const journalEntryId = (tx as any).journal_entry_id && isUUID((tx as any).journal_entry_id) 
+      ? (tx as any).journal_entry_id 
+      : null;
+
+    const row = {
+      transaction_id: cleanId,
+      partner_name: tx.partner_name,
+      property_id: propertyId,
+      property_title: tx.property_title || null,
+      type: tx.type,
+      amount: D(tx.amount).toFixed(2),
+      date: tx.date,
+      routing_account: routingAccount,
+      journal_entry_id: journalEntryId,
+      notes: (tx as any).notes || (tx as any).memo || null
+    };
+
+    const { error } = await supabase.from('erp_partner_transactions').insert(row);
+    if (error) {
+      if (this.isSchemaCacheError(error)) {
+        console.warn('erp_partner_transactions table not yet in schema cache. Kept in memory.');
+        return;
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Load partner transactions from Supabase
+   */
+  static async loadPartnerTransactions(
+    supabase: SupabaseClient
+  ): Promise<ERPPartnerTransaction[]> {
+    try {
+      const { data, error } = await supabase
+        .from('erp_partner_transactions')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        if (this.isSchemaCacheError(error)) return [];
+        throw error;
+      }
+
+      return (data || []).map(row => ({
+        id: row.transaction_id as string,
+        transaction_number: `PT-${(row.transaction_id as string).slice(0, 8).toUpperCase()}`,
+        partner_name: row.partner_name as string,
+        type: row.type as any,
+        amount: D((row.amount as string | number) || 0).toFixed(2),
+        property_id: (row.property_id as string) || undefined,
+        property_title: (row.property_title as string) || undefined,
+        payment_method: row.routing_account === '101000' ? 'CASH_101000' : 'BANK_102000',
+        journal_entry_number: undefined,
+        date: row.date as string,
+        status: 'COMPLETED' as const,
+        memo: (row.notes as string) || ''
+      }));
+    } catch (e) {
+      if (this.isSchemaCacheError(e)) return [];
+      console.warn('Failed to load partner transactions:', e);
+      return [];
+    }
+  }
+
+  /**
+   * Persist or update a partner profile in Supabase
+   */
+  static async persistPartnerProfile(
+    supabase: SupabaseClient,
+    profile: ERPPartnerProfile | {
+      id?: string;
+      partner_id?: string;
+      name: string;
+      role?: string;
+      phone?: string;
+      email?: string;
+      national_id?: string;
+      notes?: string;
+      joined_date?: string;
+    }
+  ): Promise<void> {
+    const rawId = (profile as any).partner_id || profile.id || generateUUID();
+    const cleanId = ensureUUID(rawId);
+    const row = {
+      partner_id: cleanId,
+      name: profile.name,
+      phone: profile.phone || null,
+      email: (profile as any).email || null,
+      national_id: profile.national_id || null,
+      role: profile.role || 'equity_partner',
+      updated_at: new Date().toISOString()
+    };
+
+    const { error } = await supabase
+      .from('erp_partner_profiles')
+      .upsert(row, { onConflict: 'name' });
+
+    if (error) {
+      if (this.isSchemaCacheError(error)) {
+        console.warn('erp_partner_profiles table not yet in schema cache. Kept in memory.');
+        return;
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Load partner profiles from Supabase
+   */
+  static async loadPartnerProfiles(
+    supabase: SupabaseClient
+  ): Promise<ERPPartnerProfile[]> {
+    try {
+      const { data, error } = await supabase
+        .from('erp_partner_profiles')
+        .select('*')
+        .order('name', { ascending: true });
+
+      if (error) {
+        if (this.isSchemaCacheError(error)) return [];
+        throw error;
+      }
+
+      return (data || []).map(row => ({
+        id: row.partner_id as string,
+        name: row.name as string,
+        role: (row.role as any) || 'equity_partner',
+        phone: (row.phone as string) || undefined,
+        national_id: (row.national_id as string) || undefined,
+        joined_date: row.created_at ? new Date(row.created_at as string).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]
+      }));
+    } catch (e) {
+      if (this.isSchemaCacheError(e)) return [];
+      console.warn('Failed to load partner profiles:', e);
+      return [];
     }
   }
 }

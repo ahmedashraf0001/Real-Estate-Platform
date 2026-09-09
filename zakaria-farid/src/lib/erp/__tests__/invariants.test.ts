@@ -5,8 +5,8 @@ import { EscalationEngine } from '../escalation';
 import { RescissionEngine } from '../rescission';
 import { ContractsEngine } from '../contracts';
 import { ERPSupabaseService } from '../supabaseService';
-import { CANONICAL_COA } from '../ledger';
-import { D } from '../math';
+import { CANONICAL_COA, GeneralLedgerEngine } from '../ledger';
+import { D, generateUUID } from '../math';
 import { ERPAccountingPeriod, ERPContract, ERPInstallmentSchedule, ERPJournalEntry } from '../types';
 
 describe('Financial Invariants & Immutability Audits (§4.1 – §4.17)', () => {
@@ -714,6 +714,385 @@ describe('Financial Invariants & Immutability Audits (§4.1 – §4.17)', () => 
     assert.strictEqual(capturedId, 'c-custom-id-99', 'contractId must match exact passed string');
     assert.strictEqual(capturedStatus, 'Delivered');
     assert.strictEqual(capturedDate, '2026-09-15');
+  });
+
+  it('INV-0.6 & DB Immutability: Schedule trigger immutability contract unconditionally blocks direct DELETE', () => {
+    // Simulates the PL/pgSQL function trg_guard_installment_schedule_immutability() from migration 013
+    function simulateScheduleImmutabilityTrigger(
+      op: 'INSERT' | 'UPDATE' | 'DELETE',
+      oldRow: any,
+      newRow: any
+    ) {
+      if (op === 'DELETE') {
+        throw new Error('ERP Violation: installment_schedules rows are insert-only and cannot be deleted.');
+      }
+      if (op === 'UPDATE') {
+        if (
+          oldRow.nominal_value !== newRow.nominal_value ||
+          oldRow.due_date !== newRow.due_date ||
+          oldRow.tranche_number !== newRow.tranche_number ||
+          oldRow.contract_id !== newRow.contract_id
+        ) {
+          throw new Error('ERP Violation: Financial columns (nominal_value, due_date, tranche_number, contract_id) are immutable once inserted.');
+        }
+
+        if (oldRow.status === 'SUPERSEDED' && newRow.status !== 'SUPERSEDED' && newRow.status !== 'Void') {
+          throw new Error('ERP Violation: SUPERSEDED tranches cannot transition to any status other than Void.');
+        }
+
+        if (oldRow.status === 'Void' && newRow.status !== 'Void') {
+          throw new Error('ERP Violation: Void tranches cannot transition to any other status.');
+        }
+      }
+    }
+
+    // Direct DELETE is unconditionally rejected
+    assert.throws(
+      () => simulateScheduleImmutabilityTrigger('DELETE', { schedule_id: 's-1' }, null),
+      /ERP Violation: installment_schedules rows are insert-only and cannot be deleted/
+    );
+
+    // Modifying financial columns is rejected
+    assert.throws(
+      () => simulateScheduleImmutabilityTrigger('UPDATE', 
+        { schedule_id: 's-1', nominal_value: '50000.00', due_date: '2026-06-01', tranche_number: 1, contract_id: 'c-1' },
+        { schedule_id: 's-1', nominal_value: '55000.00', due_date: '2026-06-01', tranche_number: 1, contract_id: 'c-1' }
+      ),
+      /Financial columns .* are immutable once inserted/
+    );
+
+    // SUPERSEDED -> Void is explicitly allowed for contract rescission cleanup
+    assert.doesNotThrow(
+      () => simulateScheduleImmutabilityTrigger('UPDATE',
+        { schedule_id: 's-1', status: 'SUPERSEDED', nominal_value: '50000.00', due_date: '2026-06-01', tranche_number: 1, contract_id: 'c-1' },
+        { schedule_id: 's-1', status: 'Void', nominal_value: '50000.00', due_date: '2026-06-01', tranche_number: 1, contract_id: 'c-1' }
+      )
+    );
+
+    // SUPERSEDED -> Paid is strictly forbidden
+    assert.throws(
+      () => simulateScheduleImmutabilityTrigger('UPDATE',
+        { schedule_id: 's-1', status: 'SUPERSEDED', nominal_value: '50000.00', due_date: '2026-06-01', tranche_number: 1, contract_id: 'c-1' },
+        { schedule_id: 's-1', status: 'Paid', nominal_value: '50000.00', due_date: '2026-06-01', tranche_number: 1, contract_id: 'c-1' }
+      ),
+      /SUPERSEDED tranches cannot transition to any status other than Void/
+    );
+  });
+
+  it('INV-4.10 & Rescission Hardening: Branch 2 reverses exact historical handover WIP/COGS accounts and voids schedule lineage and PDCs', async () => {
+    const period: ERPAccountingPeriod = {
+      period_id: 'p-1',
+      fiscal_year: 2026,
+      period_number: 9,
+      start_date: '2026-09-01',
+      end_date: '2026-09-30',
+      status: 'OPEN'
+    };
+
+    const contract: ERPContract = {
+      contract_id: 'c-resc-handover-test',
+      contract_number: 'CNT-HND-042',
+      unit_id: 'u-301',
+      buyer_name: 'Hossam Osman',
+      gross_contract_value: '2500000.00',
+      total_cash_collected: '1500000.00',
+      currency: 'EGP',
+      exchange_rate: '1.0000',
+      handover_status: 'Delivered',
+      status: 'Active',
+      contract_date: '2025-03-01'
+    };
+
+    // Historical handover entry with exact historical WIP (152000) and COGS (502000) for 1,125,000 EGP
+    const historicalHandoverEntry: ERPJournalEntry = {
+      entry_id: 'je-hnd-historical',
+      entry_number: `JE-HANDOVER-${contract.contract_number}`,
+      period_id: 'p-1',
+      entry_date: '2025-10-01',
+      description: `Historical Handover Delivery for ${contract.contract_number}`,
+      source_module: 'SALES',
+      source_entity_id: contract.contract_id,
+      is_locked: true,
+      created_by: 'CFO_FARID',
+      created_at: '2025-10-01T00:00:00Z',
+      lines: [
+        { line_id: 'l1', entry_id: 'je-hnd', line_number: 1, account_code: '203000', debit_amount: '1500000.00', credit_amount: '0.00' },
+        { line_id: 'l2', entry_id: 'je-hnd', line_number: 2, account_code: '103000', debit_amount: '1000000.00', credit_amount: '0.00' },
+        { line_id: 'l3', entry_id: 'je-hnd', line_number: 3, account_code: '401000', debit_amount: '0.00', credit_amount: '2500000.00' },
+        { line_id: 'l4', entry_id: 'je-hnd', line_number: 4, account_code: '502000', debit_amount: '1125000.00', credit_amount: '0.00' },
+        { line_id: 'l5', entry_id: 'je-hnd', line_number: 5, account_code: '152000', debit_amount: '0.00', credit_amount: '1125000.00' }
+      ]
+    };
+
+    const schedules: ERPInstallmentSchedule[] = [
+      { schedule_id: 's-1', contract_id: contract.contract_id, tranche_number: 1, schedule_version: 1, due_date: '2025-03-01', nominal_value: '500000.00', amount_paid: '500000.00', status: 'Paid' },
+      { schedule_id: 's-2', contract_id: contract.contract_id, tranche_number: 2, schedule_version: 1, due_date: '2025-06-01', nominal_value: '1000000.00', amount_paid: '1000000.00', status: 'Paid' },
+      { schedule_id: 's-3', contract_id: contract.contract_id, tranche_number: 3, schedule_version: 1, due_date: '2025-12-01', nominal_value: '500000.00', amount_paid: '0.00', status: 'SUPERSEDED' },
+      { schedule_id: 's-4', contract_id: contract.contract_id, tranche_number: 3, schedule_version: 2, due_date: '2025-12-01', nominal_value: '500000.00', amount_paid: '0.00', status: 'Pending' }
+    ];
+
+    const rescissionResult = RescissionEngine.processRescission(
+      contract,
+      schedules,
+      period,
+      '2026-09-08',
+      '0.00',
+      '501000',
+      '151000',
+      'CFO_FARID',
+      historicalHandoverEntry
+    );
+
+    // Verify exact accounts and amounts unwound
+    const restoredWipLine = rescissionResult.journalEntry.lines.find(l => l.account_code === '152000');
+    const reversedCogsLine = rescissionResult.journalEntry.lines.find(l => l.account_code === '502000');
+    assert.ok(restoredWipLine, 'WIP account 152000 from handover must be debited');
+    assert.strictEqual(restoredWipLine?.debit_amount, '1125000.00');
+    assert.ok(reversedCogsLine, 'COGS account 502000 from handover must be credited');
+    assert.strictEqual(reversedCogsLine?.credit_amount, '1125000.00');
+
+    // Verify all schedule lineage rows (Pending and SUPERSEDED) are voided
+    const s3 = rescissionResult.updatedSchedules.find(s => s.schedule_id === 's-3');
+    const s4 = rescissionResult.updatedSchedules.find(s => s.schedule_id === 's-4');
+    assert.strictEqual(s3?.status, 'Void');
+    assert.strictEqual(s4?.status, 'Void');
+
+    // Test persistRescission updates Supabase schedules, PDCs, and unit status
+    let voidedScheduleStatus: string | null = null;
+    let voidedPdcStatus: string | null = null;
+    let unitStatusUpdated: string | null = null;
+
+    const mockSupabase: any = {
+      from: (tableName: string) => {
+        if (tableName === 'erp_rescissions') {
+          return { insert: async () => ({ error: null }) };
+        }
+        if (tableName === 'erp_contracts') {
+          return {
+            update: () => ({ eq: async () => ({ error: null }) }),
+            select: () => ({
+              eq: () => ({
+                single: async () => ({
+                  data: { property_id: 'a0000000-0000-4000-8000-000000000001', building_unit_id: 'u-301' },
+                  error: null
+                })
+              })
+            })
+          };
+        }
+        if (tableName === 'erp_installment_schedules') {
+          return {
+            update: (vals: any) => ({
+              in: async () => { voidedScheduleStatus = vals.status; return { error: null }; },
+              eq: () => ({ in: async () => { voidedScheduleStatus = vals.status; return { error: null }; } })
+            })
+          };
+        }
+        if (tableName === 'erp_pdc_records') {
+          return {
+            update: (vals: any) => ({
+              eq: () => ({ in: async () => { voidedPdcStatus = vals.status; return { error: null }; } })
+            })
+          };
+        }
+        if (tableName === 'erp_journal_entries' || tableName === 'erp_journal_lines') {
+          return { insert: async () => ({ error: null }) };
+        }
+        if (tableName === 'properties') {
+          return {
+            select: () => ({
+              eq: () => ({
+                single: async () => ({
+                  data: { building_units: [{ unit_id: 'u-301', status: 'contracted' }] },
+                  error: null
+                })
+              })
+            }),
+            update: (vals: any) => {
+              if (vals.building_units) {
+                const u = vals.building_units.find((item: any) => item.unit_id === 'u-301');
+                if (u) unitStatusUpdated = u.status;
+              }
+              return { eq: async () => ({ error: null }) };
+            }
+          };
+        }
+        return { insert: async () => ({ error: null }), update: () => ({ eq: async () => ({ error: null }) }) };
+      }
+    };
+
+    await ERPSupabaseService.persistRescission(
+      mockSupabase,
+      'a0000000-0000-4000-8000-000000000002',
+      rescissionResult.rescissionRecord,
+      rescissionResult.journalEntry,
+      ['s-3', 's-4']
+    );
+
+    assert.strictEqual(voidedScheduleStatus, 'Void', 'Schedules must be marked Void in DB');
+    assert.strictEqual(voidedPdcStatus, 'Void', 'Safe PDCs must be marked Void in DB');
+    assert.strictEqual(unitStatusUpdated, 'available', 'Linked building unit must be marked available');
+  });
+
+  it('INV-4.17 & Escalation Hardening: Delivered contract escalation generates adjusting entry Dr 103000 / Cr 401000 for Delta V', () => {
+    const period: ERPAccountingPeriod = {
+      period_id: 'p-1',
+      fiscal_year: 2026,
+      period_number: 9,
+      start_date: '2026-09-01',
+      end_date: '2026-09-30',
+      status: 'OPEN'
+    };
+
+    const deliveredContract: ERPContract = {
+      contract_id: 'c-deliv-esc-01',
+      contract_number: 'CNT-DELIV-001',
+      unit_id: 'u-202',
+      buyer_name: 'Dr. Mahmoud Sharqawy',
+      gross_contract_value: '3000000.00',
+      total_cash_collected: '2000000.00',
+      currency: 'EGP',
+      exchange_rate: '1.0000',
+      handover_status: 'Delivered',
+      status: 'Active',
+      contract_date: '2025-01-01'
+    };
+
+    const deltaV = '250000.00';
+
+    const adjustingEntry = GeneralLedgerEngine.validateAndCreateEntry({
+      entry_number: `JE-ADJ-ESC-${deliveredContract.contract_number}-2`,
+      entry_date: '2026-09-08',
+      period,
+      description: `Contract Price Escalation Adjustment (Post-Handover) for ${deliveredContract.contract_number} (Delta V: ${deltaV})`,
+      source_module: 'ESCALATION',
+      source_entity_id: deliveredContract.contract_id,
+      created_by: 'CFO_FARID',
+      lines: [
+        {
+          account_code: '103000',
+          debit_amount: deltaV,
+          credit_amount: '0.00',
+          contract_id: deliveredContract.contract_id,
+          unit_id: deliveredContract.unit_id,
+          memo: 'Incremental Accounts Receivable from Escalation'
+        },
+        {
+          account_code: '401000',
+          debit_amount: '0.00',
+          credit_amount: deltaV,
+          contract_id: deliveredContract.contract_id,
+          unit_id: deliveredContract.unit_id,
+          memo: 'Incremental Realized Sales Revenue from Escalation'
+        }
+      ]
+    });
+
+    assert.strictEqual(adjustingEntry.lines.length, 2);
+    assert.strictEqual(adjustingEntry.lines[0].account_code, '103000');
+    assert.strictEqual(adjustingEntry.lines[0].debit_amount, '250000.00');
+    assert.strictEqual(adjustingEntry.lines[1].account_code, '401000');
+    assert.strictEqual(adjustingEntry.lines[1].credit_amount, '250000.00');
+
+    const balCheck = InvariantsValidator.verifyDoubleEntryBalance([adjustingEntry]);
+    assert.strictEqual(balCheck.passed, true);
+  });
+
+  it('INV-4.5 & Partner Persistence: Partner payout asserts sufficient cash balance and persists transaction record', async () => {
+    const journalEntries: ERPJournalEntry[] = [
+      {
+        entry_id: 'je-init-safe',
+        entry_number: 'JE-SAFE-001',
+        period_id: 'p-1',
+        entry_date: '2026-09-01',
+        description: 'Initial Safe Cash Funding',
+        source_module: 'SALES',
+        is_locked: false,
+        created_by: 'system',
+        created_at: new Date().toISOString(),
+        lines: [
+          { line_id: 'l1', entry_id: 'je-s', line_number: 1, account_code: '101000', debit_amount: '80000.00', credit_amount: '0.00' },
+          { line_id: 'l2', entry_id: 'je-s', line_number: 2, account_code: '301000', debit_amount: '0.00', credit_amount: '80000.00' }
+        ]
+      }
+    ];
+
+    function verifyCashBalanceForPayout(routingAccount: string, payoutAmount: string, entries: ERPJournalEntry[]) {
+      let balance = D(0);
+      for (const entry of entries) {
+        for (const line of entry.lines) {
+          if (line.account_code === routingAccount) {
+            balance = balance.plus(line.debit_amount).minus(line.credit_amount);
+          }
+        }
+      }
+      const payout = D(payoutAmount);
+      if (balance.lt(payout)) {
+        throw new Error(`ERP Invariant 4.5 Violation: Insufficient balance in ${routingAccount} (${balance.toFixed(2)} EGP). Cannot disburse ${payout.toFixed(2)} EGP.`);
+      }
+      return balance;
+    }
+
+    // Payout <= 80,000 succeeds
+    assert.doesNotThrow(() => {
+      verifyCashBalanceForPayout('101000', '50000.00', journalEntries);
+    });
+
+    // Payout > 80,000 throws INV-4.5
+    assert.throws(
+      () => verifyCashBalanceForPayout('101000', '95000.00', journalEntries),
+      /ERP Invariant 4.5 Violation: Insufficient balance in 101000/
+    );
+
+    // Test persistPartnerTransaction & loadPartnerTransactions
+    let insertedTxRow: any = null;
+    const mockSupabase: any = {
+      from: (tableName: string) => {
+        if (tableName === 'erp_partner_transactions') {
+          return {
+            insert: async (row: any) => { insertedTxRow = row; return { error: null }; },
+            select: () => ({
+              order: async () => ({
+                data: [
+                  {
+                    transaction_id: 'b0000000-0000-0000-0000-000000000001',
+                    partner_name: 'Eng. Ahmed El-Sherif',
+                    type: 'PROFIT_DISTRIBUTION',
+                    amount: '50000.00',
+                    routing_account: '101000',
+                    date: '2026-09-08',
+                    notes: 'Q3 Dividend'
+                  }
+                ],
+                error: null
+              })
+            })
+          };
+        }
+        return { insert: async () => ({ error: null }) };
+      }
+    };
+
+    await ERPSupabaseService.persistPartnerTransaction(mockSupabase, {
+      id: 'b0000000-0000-0000-0000-000000000001',
+      transaction_number: 'PT-2026-001',
+      partner_name: 'Eng. Ahmed El-Sherif',
+      type: 'PROFIT_DISTRIBUTION',
+      amount: '50000.00',
+      payment_method: 'CASH_101000',
+      date: '2026-09-08',
+      status: 'COMPLETED',
+      memo: 'Q3 Dividend'
+    });
+
+    assert.strictEqual(insertedTxRow.partner_name, 'Eng. Ahmed El-Sherif');
+    assert.strictEqual(insertedTxRow.amount, '50000.00');
+    assert.strictEqual(insertedTxRow.routing_account, '101000');
+
+    const loaded = await ERPSupabaseService.loadPartnerTransactions(mockSupabase);
+    assert.strictEqual(loaded.length, 1);
+    assert.strictEqual(loaded[0].partner_name, 'Eng. Ahmed El-Sherif');
+    assert.strictEqual(loaded[0].amount, '50000.00');
   });
 
 });

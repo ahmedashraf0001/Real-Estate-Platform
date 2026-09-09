@@ -103,14 +103,14 @@ export const ContractEscalationModal: React.FC<ContractEscalationModalProps> = (
   if (!isOpen || !activeContract) return null;
 
   const currentGross = D(activeContract.gross_contract_value || '0');
-  const deltaNum = parseFloat(delta) || 0;
-  const newGross = currentGross.plus(deltaNum);
+  const deltaD = D(delta || '0');
+  const newGross = currentGross.plus(deltaD);
   const totalPaid = D(activeContract.total_cash_collected || '0');
   const remainingBal = currentGross.minus(totalPaid);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!delta || deltaNum <= 0) {
+    if (!delta || deltaD.lte(0)) {
       setError(isAr ? 'يرجى إدخال قيمة زيادة صالحة أكبر من الصفر' : 'Please enter a valid escalation amount');
       return;
     }
@@ -738,7 +738,7 @@ export const ContractEscalationModal: React.FC<ContractEscalationModalProps> = (
               </div>
 
               {/* Projected Impact Preview Card */}
-              {deltaNum > 0 && (
+              {deltaD.gt(0) && (
                 <div style={{
                   background: 'linear-gradient(135deg, rgba(184, 144, 62, 0.08) 0%, rgba(184, 144, 62, 0.02) 100%)',
                   border: '1px solid rgba(184, 144, 62, 0.3)',
@@ -750,7 +750,7 @@ export const ContractEscalationModal: React.FC<ContractEscalationModalProps> = (
                 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                      <Sparkles size={16} color="#946f23" />
+                       <Sparkles size={16} color="#946f23" />
                       <span style={{ color: '#475569', fontSize: '0.82rem', fontWeight: 700 }}>
                         {isAr ? 'القيمة الإجمالية الجديدة بعد التصعيد:' : 'New Gross Contract Value:'}
                       </span>
@@ -762,7 +762,7 @@ export const ContractEscalationModal: React.FC<ContractEscalationModalProps> = (
                   
                   <div style={{ borderTop: '1px dashed rgba(184, 144, 62, 0.25)', paddingTop: '0.5rem', display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: '#64748b' }}>
                     <span>{isAr ? 'الزيادة الصافية المضافة:' : 'Net Delta Added:'}</span>
-                    <span style={{ fontWeight: 800, color: '#059669' }}>+{formatEGP(deltaNum.toString())} ج.م</span>
+                    <span style={{ fontWeight: 800, color: '#059669' }}>+{formatEGP(deltaD.toFixed(2))} ج.م</span>
                   </div>
 
                   <span style={{ fontSize: '0.72rem', color: '#64748b', lineHeight: 1.4 }}>

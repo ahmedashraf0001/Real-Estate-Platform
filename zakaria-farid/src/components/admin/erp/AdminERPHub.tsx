@@ -767,8 +767,18 @@ export default function AdminERPHub({ adminLocale, initialTab }: AdminERPHubProp
   const loadLiveData = useCallback(async (isSilent = false) => {
     try {
       if (!isSilent) setIsLoading(true);
-      const dataset = await ERPSupabaseService.fetchLiveERPData(supabase);
+      const [dataset, liveProfiles, liveTransactions] = await Promise.all([
+        ERPSupabaseService.fetchLiveERPData(supabase),
+        ERPSupabaseService.loadPartnerProfiles(supabase),
+        ERPSupabaseService.loadPartnerTransactions(supabase)
+      ]);
       setData(dataset);
+      if (liveProfiles && liveProfiles.length > 0) {
+        setPartnerProfiles(liveProfiles);
+      }
+      if (liveTransactions && liveTransactions.length > 0) {
+        setPartnerTransactions(liveTransactions);
+      }
       return dataset;
     } catch (err) {
       console.error('Failed to load ERP dataset from Supabase:', err);
@@ -793,10 +803,16 @@ export default function AdminERPHub({ adminLocale, initialTab }: AdminERPHubProp
 
   useEffect(() => {
     let isMounted = true;
-    ERPSupabaseService.fetchLiveERPData(supabase)
-      .then(dataset => {
+    Promise.all([
+      ERPSupabaseService.fetchLiveERPData(supabase),
+      ERPSupabaseService.loadPartnerProfiles(supabase),
+      ERPSupabaseService.loadPartnerTransactions(supabase)
+    ])
+      .then(([dataset, liveProfiles, liveTransactions]) => {
         if (isMounted) {
           setData(dataset);
+          if (liveProfiles && liveProfiles.length > 0) setPartnerProfiles(liveProfiles);
+          if (liveTransactions && liveTransactions.length > 0) setPartnerTransactions(liveTransactions);
           setIsLoading(false);
         }
       })
@@ -1338,6 +1354,39 @@ export default function AdminERPHub({ adminLocale, initialTab }: AdminERPHubProp
         newSchedules
       );
 
+      // If contract is already delivered (handover_status === 'Delivered'), generate and persist adjusting entry Dr 103000 / Cr 401000
+      if (contract.handover_status === 'Delivered') {
+        const deltaD = D(delta);
+        const adjustingEntry = GeneralLedgerEngine.validateAndCreateEntry({
+          entry_number: `JE-ADJ-ESC-${contract.contract_number}-${result.amendment.new_version}`,
+          entry_date: new Date().toISOString().split('T')[0],
+          period: activePeriod,
+          description: `Contract Price Escalation Adjustment (Post-Handover) for ${contract.contract_number} (Delta V: ${deltaD.toFixed(2)})`,
+          source_module: 'ESCALATION',
+          source_entity_id: contract.contract_id,
+          created_by: 'CFO_FARID',
+          lines: [
+            {
+              account_code: '103000',
+              debit_amount: deltaD.toFixed(2),
+              credit_amount: '0.00',
+              contract_id: contract.contract_id,
+              unit_id: contract.unit_id,
+              memo: `Incremental Accounts Receivable from Escalation Amendment v${result.amendment.new_version}`
+            },
+            {
+              account_code: '401000',
+              debit_amount: '0.00',
+              credit_amount: deltaD.toFixed(2),
+              contract_id: contract.contract_id,
+              unit_id: contract.unit_id,
+              memo: `Incremental Realized Sales Revenue from Escalation Amendment v${result.amendment.new_version}`
+            }
+          ]
+        });
+        await ERPSupabaseService.persistJournalEntry(supabase, adjustingEntry);
+      }
+
       // Keep escalation modal open to show completion confirmation card and allow reviewing or adjusting another contract
       const updatedDataset = await loadLiveData(true);
       if (updatedDataset && inspectorPayload?.type === 'contract' && inspectorPayload.contract.contract_id === contract.contract_id) {
@@ -1354,8 +1403,8 @@ export default function AdminERPHub({ adminLocale, initialTab }: AdminERPHubProp
         isAr ? `تم تعديل أسعار وبنود العقد #${contract.contract_number} بنجاح` : `Contract #${contract.contract_number} amended successfully`,
         {
           description: isAr
-            ? `قيمة الفارق: ${parseFloat(delta) >= 0 ? '+' : ''}${parseFloat(delta).toLocaleString('ar-EG')} ج.م • تم تحديث جدول الأقساط`
-            : `Delta: ${parseFloat(delta).toLocaleString('en-US')} EGP • Schedules updated`,
+            ? `قيمة الفارق: ${D(delta).gte(0) ? '+' : ''}${D(delta).formatEGP(true)} • تم تحديث جدول الأقساط`
+            : `Delta: ${D(delta).formatEGP(false)} • Schedules updated`,
           duration: 5000
         }
       );
@@ -1378,18 +1427,26 @@ export default function AdminERPHub({ adminLocale, initialTab }: AdminERPHubProp
     try {
       const contractSchedules = data.schedules.filter(s => s.contract_id === contract.contract_id);
 
+      const handoverEntry = data.journalEntries.find(j => 
+        j.entry_number === `JE-HANDOVER-${contract.contract_number}` ||
+        (j.source_module === 'SALES' && j.source_entity_id === contract.contract_id && j.entry_number.startsWith('JE-HANDOVER'))
+      );
+
       const result = RescissionEngine.processRescission(
         contract,
         contractSchedules,
         activePeriod,
         rescissionDate,
-        D(contract.gross_contract_value).times('0.45').toFixed(),
+        handoverEntry ? undefined : D(contract.gross_contract_value).times('0.45').toFixed(),
         '501000',
         '151000',
-        'CFO_FARID'
+        'CFO_FARID',
+        handoverEntry
       );
 
-      const voidIds = contractSchedules.filter(s => s.status === 'Pending').map(s => s.schedule_id);
+      const voidIds = contractSchedules
+        .filter(s => s.status === 'Pending' || s.status === 'SUPERSEDED')
+        .map(s => s.schedule_id);
 
       await ERPSupabaseService.persistRescission(
         supabase,
@@ -2523,7 +2580,7 @@ export default function AdminERPHub({ adminLocale, initialTab }: AdminERPHubProp
     }
   }
 
-  // Handler: Confirm Partner Profit Distribution / Dividend Payout (INV-4.1)
+  // Handler: Confirm Partner Profit Distribution / Dividend Payout (INV-4.1 & INV-4.5)
   const handleConfirmPartnerPayout = async (details: {
     partnerName: string;
     amount: string;
@@ -2536,6 +2593,28 @@ export default function AdminERPHub({ adminLocale, initialTab }: AdminERPHubProp
   }) => {
     setIsMutating(true);
     try {
+      // 0. INV-4.5: Assert safe/bank cash balance >= payout amount before posting
+      const routingAccount = details.paymentMethod === 'CASH_101000' ? '101000' : '102000';
+      let cashBalance = D(0);
+      for (const jEntry of data.journalEntries) {
+        for (const line of jEntry.lines) {
+          if (line.account_code === routingAccount) {
+            cashBalance = cashBalance.plus(line.debit_amount).minus(line.credit_amount);
+          }
+        }
+      }
+
+      const payoutAmt = D(details.amount);
+      if (cashBalance.lt(payoutAmt)) {
+        const accNameAr = routingAccount === '101000' ? 'الخزينة الرئيسية (101000)' : 'حساب البنك / إنستاباي (102000)';
+        const accNameEn = routingAccount === '101000' ? 'Main Safe (101000)' : 'Bank / InstaPay Account (102000)';
+        throw new Error(
+          isAr
+            ? `عفواً! رصيد ${accNameAr} غير كافٍ لصرف الأرباح. الرصيد المتاح: ${cashBalance.formatEGP(true)}، والمطلوب صرفه: ${payoutAmt.formatEGP(true)} (معيار INV-4.5).`
+            : `ERP Invariant 4.5 Violation: Insufficient balance in ${accNameEn} (${cashBalance.toFixed(2)} EGP). Cannot disburse ${payoutAmt.toFixed(2)} EGP.`
+        );
+      }
+
       // 1. Post GL Journal Entry: Dr 303000 (Partner Dividends) / Cr 101000 or 102000
       const entry = PartnersEngine.createPayoutJournalEntry({
         partnerName: details.partnerName,
@@ -2568,6 +2647,23 @@ export default function AdminERPHub({ adminLocale, initialTab }: AdminERPHubProp
         memo: details.memo,
         receipt_ref: details.receiptRef
       };
+
+      try {
+        await ERPSupabaseService.persistPartnerTransaction(supabase, {
+          transaction_id: ensureUUID(newTx.id),
+          partner_name: newTx.partner_name,
+          property_id: newTx.property_id && isUUID(newTx.property_id) ? newTx.property_id : undefined,
+          property_title: newTx.property_title,
+          type: newTx.type,
+          amount: newTx.amount,
+          date: newTx.date,
+          routing_account: routingAccount,
+          journal_entry_id: isUUID(entry.entry_id) ? entry.entry_id : undefined,
+          notes: newTx.memo
+        });
+      } catch (ptErr) {
+        console.warn('Silent database sync for partner transaction:', ptErr);
+      }
 
       setPartnerTransactions(prev => [newTx, ...prev]);
       setData(prev => ({
@@ -2630,6 +2726,7 @@ export default function AdminERPHub({ adminLocale, initialTab }: AdminERPHubProp
         console.warn('Silent database sync for partner injection:', dbErr);
       }
 
+      const routingAccount = details.paymentMethod === 'CASH_101000' ? '101000' : '102000';
       const newTx: ERPPartnerTransaction = {
         id: `pt-tx-${Date.now()}`,
         transaction_number: `PT-${new Date().getFullYear()}-${Math.floor(100 + Math.random() * 900)}`,
@@ -2646,6 +2743,23 @@ export default function AdminERPHub({ adminLocale, initialTab }: AdminERPHubProp
         receipt_ref: details.receiptRef
       };
 
+      try {
+        await ERPSupabaseService.persistPartnerTransaction(supabase, {
+          transaction_id: ensureUUID(newTx.id),
+          partner_name: newTx.partner_name,
+          property_id: newTx.property_id && isUUID(newTx.property_id) ? newTx.property_id : undefined,
+          property_title: newTx.property_title,
+          type: newTx.type,
+          amount: newTx.amount,
+          date: newTx.date,
+          routing_account: routingAccount,
+          journal_entry_id: isUUID(entry.entry_id) ? entry.entry_id : undefined,
+          notes: newTx.memo
+        });
+      } catch (ptErr) {
+        console.warn('Silent database sync for partner injection transaction:', ptErr);
+      }
+
       // Register profile if new partner
       const roleArMap: Record<string, string> = {
         equity_partner: 'شريك ممول بالمشروع',
@@ -2653,6 +2767,19 @@ export default function AdminERPHub({ adminLocale, initialTab }: AdminERPHubProp
         silent_financier: 'ممول صامت'
       };
       const assignedRole = details.role || 'equity_partner';
+
+      try {
+        await ERPSupabaseService.persistPartnerProfile(supabase, {
+          id: `pt-${Date.now()}`,
+          name: details.partnerName,
+          role: assignedRole,
+          phone: details.phone,
+          national_id: details.nationalId,
+          joined_date: details.injectionDate
+        });
+      } catch (profErr) {
+        console.warn('Silent database sync for partner profile:', profErr);
+      }
 
       saveRegisteredPartner({
         name: details.partnerName,
