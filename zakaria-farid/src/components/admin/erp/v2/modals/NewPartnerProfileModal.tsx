@@ -31,6 +31,7 @@ export interface NewPartnerSubmitPayload {
   name: string;
   role: 'equity_partner' | 'land_partner' | 'silent_financier';
   phone: string;
+  email?: string;
   nationalId?: string;
   preferredPayoutMethod: 'INSTAPAY' | 'BANK' | 'CASH';
   instapayHandle?: string;

@@ -1355,9 +1355,10 @@ export default function AdminERPHub({ adminLocale, initialTab }: AdminERPHubProp
       );
 
       // If contract is already delivered (handover_status === 'Delivered'), generate and persist adjusting entry Dr 103000 / Cr 401000
+      let adjustingEntry: ERPJournalEntry | undefined;
       if (contract.handover_status === 'Delivered') {
         const deltaD = D(delta);
-        const adjustingEntry = GeneralLedgerEngine.validateAndCreateEntry({
+        adjustingEntry = GeneralLedgerEngine.validateAndCreateEntry({
           entry_number: `JE-ADJ-ESC-${contract.contract_number}-${result.amendment.new_version}`,
           entry_date: new Date().toISOString().split('T')[0],
           period: activePeriod,
@@ -1386,6 +1387,20 @@ export default function AdminERPHub({ adminLocale, initialTab }: AdminERPHubProp
         });
         await ERPSupabaseService.persistJournalEntry(supabase, adjustingEntry);
       }
+
+      // Immediately update React state in memory
+      setData(prev => ({
+        ...prev,
+        contracts: prev.contracts.map(c => 
+          c.contract_id === contract.contract_id ? result.updatedContract : c
+        ),
+        schedules: [
+          ...prev.schedules.filter(s => s.contract_id !== contract.contract_id),
+          ...result.allSchedules
+        ],
+        journalEntries: adjustingEntry ? [adjustingEntry, ...prev.journalEntries] : prev.journalEntries,
+        amendments: [result.amendment, ...prev.amendments]
+      }));
 
       // Keep escalation modal open to show completion confirmation card and allow reviewing or adjusting another contract
       const updatedDataset = await loadLiveData(true);
@@ -1455,6 +1470,28 @@ export default function AdminERPHub({ adminLocale, initialTab }: AdminERPHubProp
         result.journalEntry,
         voidIds
       );
+
+      // Immediately update React state in memory
+      setData(prev => ({
+        ...prev,
+        contracts: prev.contracts.map(c => 
+          c.contract_id === contract.contract_id ? { ...c, status: 'Rescinded' as const } : c
+        ),
+        schedules: prev.schedules.map(s => {
+          if (s.contract_id === contract.contract_id && (s.status === 'Pending' || s.status === 'SUPERSEDED')) {
+            return { ...s, status: 'Void' as const };
+          }
+          return s;
+        }),
+        pdcRecords: prev.pdcRecords.map(p => {
+          if (p.contract_id === contract.contract_id && (p.status === 'In Safe' || p.status === 'Deposited')) {
+            return { ...p, status: 'Void' as const };
+          }
+          return p;
+        }),
+        journalEntries: [result.journalEntry, ...prev.journalEntries],
+        rescissions: [result.rescissionRecord, ...prev.rescissions]
+      }));
 
       // Keep rescission modal open to show completion confirmation card and allow reviewing or processing another contract
       setRescissionStep(0);
@@ -2897,6 +2934,20 @@ export default function AdminERPHub({ adminLocale, initialTab }: AdminERPHubProp
       };
       setPartnerProfiles(prev => [...prev.filter(p => p.name !== profileData.name), newProfile]);
 
+      try {
+        await ERPSupabaseService.persistPartnerProfile(supabase, {
+          id: newProfile.id,
+          name: newProfile.name,
+          role: newProfile.role,
+          phone: newProfile.phone,
+          email: profileData.email,
+          national_id: newProfile.national_id,
+          joined_date: newProfile.joined_date
+        });
+      } catch (profileErr) {
+        console.warn('Silent database sync for partner profile:', profileErr);
+      }
+
       // 3. Update property partner_splits if a project was allocated
       if (profileData.propertyId && profileData.sharePercentage && profileData.sharePercentage > 0) {
         const partnerShare = profileData.sharePercentage;
@@ -2929,7 +2980,7 @@ export default function AdminERPHub({ adminLocale, initialTab }: AdminERPHubProp
       }
 
       // 4. Handle optional initial deposit if provided
-      if (profileData.initialDeposit && parseFloat(profileData.initialDeposit.amount) > 0) {
+      if (profileData.initialDeposit && D(profileData.initialDeposit.amount || 0).gt(0)) {
         const entry = PartnersEngine.createCapitalInjectionJournalEntry({
           partnerName: profileData.name,
           amount: profileData.initialDeposit.amount,
@@ -2958,6 +3009,21 @@ export default function AdminERPHub({ adminLocale, initialTab }: AdminERPHubProp
           memo: `إيداع مساهمة رأس مال تأسيسية للشريك: ${profileData.name}`,
           receipt_ref: profileData.initialDeposit.receiptRef
         };
+
+        try {
+          await ERPSupabaseService.persistPartnerTransaction(supabase, {
+            transaction_id: ensureUUID(newTx.id),
+            partner_name: newTx.partner_name,
+            type: newTx.type,
+            amount: newTx.amount,
+            date: newTx.date,
+            routing_account: profileData.initialDeposit.paymentMethod === 'CASH_101000' ? '101000' : '102000',
+            journal_entry_id: isUUID(entry.entry_id) ? entry.entry_id : undefined,
+            notes: newTx.memo
+          });
+        } catch (txErr) {
+          console.warn('Silent database sync for initial deposit partner transaction:', txErr);
+        }
 
         setPartnerTransactions(prev => [newTx, ...prev]);
         setData(prev => ({ ...prev, journalEntries: [entry, ...prev.journalEntries] }));
