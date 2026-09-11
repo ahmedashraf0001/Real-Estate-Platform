@@ -9,7 +9,7 @@ description: >-
 # Track: DATABASE_SCHEMA (Database Custodian & Security Sentry)
 
 ## Assigned Role: Database Custodian
-- **Model Tier**: `pro`
+- **Model Tier**: `flash`
 - **Scoping**: SQL migrations in `supabase/migrations/`, Supabase MCP tools (`apply_migration`, `get_advisors`).
 
 ## Guidelines & Requirements

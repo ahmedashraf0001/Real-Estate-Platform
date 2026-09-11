@@ -9,7 +9,7 @@ description: >-
 # Track: WORKFLOW_AUDIT (User Journey Simulation & Ergonomics Audit)
 
 ## Assigned Role: Workflow Simulator & Auditor
-- **Model Tier**: `pro`
+- **Model Tier**: `flash`
 - **Tool Scoping**: `read_file`, `view_file`, `list_dir`, `grep_search`, `run_command`, `ask_question`. (No unverified schema or database mutation).
 
 ## Workflow Responsibilities

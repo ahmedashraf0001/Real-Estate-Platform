@@ -9,7 +9,7 @@ description: >-
 # Track: FINANCIAL_CORE (Mathematical Engine & Statutory Accounting)
 
 ## Assigned Role: Financial Calculation Engineer
-- **Model Tier**: `pro`
+- **Model Tier**: `flash`
 - **Scoping**: Edit domain logic in `src/lib/erp/`, execute verification suite `npm test` and `npx tsc --noEmit`.
 
 ## Hard Invariants Enforced

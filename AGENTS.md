@@ -11,7 +11,7 @@ For **EVERY** coding task, simulation, or bug report, the orchestrator MUST:
 3. **IMMEDIATELY invoke a specialized subagent** via `invoke_subagent` specifying:
    - `TypeName`: `self`
    - `Role`: The assigned role name (e.g. `Workflow Simulator & Auditor`, `Financial Calculation Engineer`, `Executive UI/UX Engineer`, `Database Custodian`)
-   - `Model`: The assigned model tier (`pro` for dual-gated domain/audit tracks; `flash` for surface UI)
+   - `Model`: The assigned model tier (`flash` or `inherit` — default to `flash` for all tracks for optimal reasoning speed and instruction following)
    - `Prompt`: Comprehensive task specification, files involved, relevant invariants, and mandatory verification commands.
 4. Audit the subagent's completion report and verification evidence before updating `.agents/checkpoint.json`.
 
@@ -25,10 +25,10 @@ For **EVERY** coding task, simulation, or bug report, the orchestrator MUST:
 
 | Task Characteristics | Target Track | Assigned Subagent Role | Model Tier | Gating |
 | :--- | :--- | :--- | :---: | :---: |
-| End-to-end user journeys, branch testing, UI ergonomics & flow audits | `WORKFLOW_AUDIT` | `Workflow Simulator & Auditor` | `pro` | Dual-Gated |
-| Double-entry journals, math, calculations, revenue recognition, partner splits | `FINANCIAL_CORE` | `Financial Calculation Engineer` | `pro` | Dual-Gated |
+| End-to-end user journeys, branch testing, UI ergonomics & flow audits | `WORKFLOW_AUDIT` | `Workflow Simulator & Auditor` | `flash` | Dual-Gated |
+| Double-entry journals, math, calculations, revenue recognition, partner splits | `FINANCIAL_CORE` | `Financial Calculation Engineer` | `flash` | Dual-Gated |
 | UI bug fixes, Arabic RTL localization, modal vouchers, Alabaster styling | `SURFACE_UI` | `Executive UI/UX Engineer` | `flash` | Single-Gated |
-| Supabase migrations, RLS policies, trigger immutability, performance indexes | `DATABASE_SCHEMA` | `Database Custodian` | `pro` | Dual-Gated |
+| Supabase migrations, RLS policies, trigger immutability, performance indexes | `DATABASE_SCHEMA` | `Database Custodian` | `flash` | Dual-Gated |
 
 ---
 
