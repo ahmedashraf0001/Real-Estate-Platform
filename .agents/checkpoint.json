@@ -1,0 +1,40 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "version": "2.0.0",
+  "lastUpdated": "2026-09-11T09:41:00.000Z",
+  "sessionState": "IDLE",
+  "activeWorkOrder": null,
+  "circuitBreakerCounters": {
+    "WORKFLOW_AUDIT": {
+      "preGate": 0,
+      "postGate": 0,
+      "ceiling": 3
+    },
+    "FINANCIAL_CORE": {
+      "preGate": 0,
+      "postGate": 0,
+      "ceiling": 3
+    },
+    "SURFACE_UI": {
+      "preGate": 0,
+      "postGate": 0,
+      "ceiling": 5
+    },
+    "DATABASE_SCHEMA": {
+      "preGate": 0,
+      "postGate": 0,
+      "ceiling": 3
+    }
+  },
+  "currentTask": {
+    "taskId": null,
+    "taskSummary": null,
+    "track": null,
+    "currentStep": null,
+    "stepIndex": 0,
+    "totalSteps": 0,
+    "touchedFiles": [],
+    "activeSubagents": []
+  },
+  "breachLog": []
+}

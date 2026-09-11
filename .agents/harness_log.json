@@ -1,0 +1,19 @@
+[
+  {
+    "version": "1.0 -> 2.0.0",
+    "date": "2026-09-11",
+    "trigger": "Adoption Mode run by user: user requested harness revamp focusing on workflow testing/simulation, calculation verification, and UI ergonomics",
+    "change_type": "add",
+    "entities_affected": {
+      "WORKFLOW_AUDIT": "added",
+      "FINANCIAL_CORE": "added",
+      "SURFACE_UI": "added",
+      "DATABASE_SCHEMA": "added"
+    },
+    "rationale": "Reconstructed clean, 4-track harness adhering strictly to the Harness Builder Mode 2 specification. Enshrined 7 confirmed Hard Invariants, mechanical gates, circuit breakers, and subagent delegation.",
+    "reference_integrity_scan": {
+      "tracks_checked": ["WORKFLOW_AUDIT", "FINANCIAL_CORE", "SURFACE_UI", "DATABASE_SCHEMA"],
+      "status": "clean"
+    }
+  }
+]

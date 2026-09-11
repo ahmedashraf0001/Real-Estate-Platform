@@ -1,0 +1,12 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "version": "2.0.0",
+  "pre_tool": [
+    {
+      "tool": "run_command",
+      "command_pattern": "git commit.*",
+      "hook_script": ".agents/scripts/verify_gates.sh"
+    }
+  ],
+  "post_tool": []
+}
