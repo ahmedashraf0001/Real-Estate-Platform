@@ -11,9 +11,14 @@ For **EVERY** coding task, simulation, or bug report, the orchestrator MUST:
 3. **IMMEDIATELY invoke a specialized subagent** via `invoke_subagent` specifying:
    - `TypeName`: `self`
    - `Role`: The assigned role name (e.g. `Workflow Simulator & Auditor`, `Financial Calculation Engineer`, `Executive UI/UX Engineer`, `Database Custodian`)
-   - `Model`: The assigned model tier (`flash` or `inherit` — default to `flash` for all tracks for optimal reasoning speed and instruction following)
+   - `Model`: The assigned model tier (`flash` only — Gemini 3.8 Flash is the project standard)
    - `Prompt`: Comprehensive task specification, files involved, relevant invariants, and mandatory verification commands.
 4. Audit the subagent's completion report and verification evidence before updating `.agents/checkpoint.json`.
+
+### Strict Constraint: Absolute Ban on Pro Tier
+- **NEVER use `Model: "pro"`**: Passing `"Model": "pro"` to `invoke_subagent` is strictly forbidden across all tracks without exception.
+- **NEVER prompt subagents to claim Pro**: Instructing a subagent in prompt text to describe itself as "Pro" or "فئة النماذج المتقدمة" is strictly forbidden.
+- **ALWAYS use `Model: "flash"`**: All subagents must be invoked with `"Model": "flash"` for peak speed, tool reliability, and sharp reasoning.
 
 ### Directive Hierarchy & Framework Rules
 - **Repository Root Authority**: This file (`AGENTS.md`) at the repository root is the single authoritative orchestrator directive governing all development across the project.
