@@ -38,10 +38,10 @@ bash ../.agents/scripts/verify_gates.sh
 
 | المسار (Track) | الدور المتخصص | نموذج الذكاء | البوابة | المهام الرئيسية |
 | :--- | :--- | :---: | :---: | :--- |
-| `WORKFLOW_AUDIT` | `Workflow Simulator & Auditor` | `pro` | Dual | محاكاة رحلات المستخدمين، الستريس تيست، وتصنيف السلاسة (سهل/صعب/خاطئ/مستحيل) |
-| `FINANCIAL_CORE` | `Financial Calculation Engineer` | `pro` | Dual | المحرك المالي والقيود المزدوجة ومطابقة الأقساط والشركاء |
+| `WORKFLOW_AUDIT` | `Workflow Simulator & Auditor` | `flash` | Dual | محاكاة رحلات المستخدمين، الستريس تيست، وتصنيف السلاسة (سهل/صعب/خاطئ/مستحيل) |
+| `FINANCIAL_CORE` | `Financial Calculation Engineer` | `flash` | Dual | المحرك المالي والقيود المزدوجة ومطابقة الأقساط والشركاء |
 | `SURFACE_UI` | `Executive UI/UX Engineer` | `flash` | Single | تصميم وتطوير الواجهات، الأنماط، وسلاسة تدفق النوافذ |
-| `DATABASE_SCHEMA` | `Database Custodian` | `pro` | Dual | المايجريشن، سياسات RLS، وتريجرات الحماية ضد الحذف |
+| `DATABASE_SCHEMA` | `Database Custodian` | `flash` | Dual | المايجريشن، سياسات RLS، وتريجرات الحماية ضد الحذف |
 
 ---
 
