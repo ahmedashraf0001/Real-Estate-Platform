@@ -158,7 +158,7 @@ export const RSVAllocationModal: React.FC<RSVAllocationModalProps> = ({
         style={{
           maxWidth: '680px',
           width: '95vw',
-          maxHeight: '94vh',
+          maxHeight: '90vh',
           display: 'flex',
           flexDirection: 'column'
         }}
@@ -166,7 +166,7 @@ export const RSVAllocationModal: React.FC<RSVAllocationModalProps> = ({
       >
         {/* Modal Header */}
         <div style={{
-          padding: '1.25rem 1.75rem',
+          padding: 'clamp(0.85rem, 2.5vw, 1.25rem) clamp(1rem, 3vw, 1.75rem)',
           borderBottom: '1px solid #e2e8f0',
           display: 'flex',
           alignItems: 'center',
@@ -188,22 +188,25 @@ export const RSVAllocationModal: React.FC<RSVAllocationModalProps> = ({
             </div>
             <div>
               <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: '#0f172a' }}>
-                {isAr ? 'حساب أرباح ونسبة إنجاز المشروع' : 'Relative Sales Value (RSV) Allocation Wizard'}
+                {isAr ? 'معامل التكلفة الإنشائية للشقة الفاخرة (RSV Factor)' : 'Relative Sales Value (RSV) Allocation Wizard'}
               </h3>
               <span style={{ fontSize: '0.72rem', color: '#64748b' }}>
-                {isAr ? 'توزيع مصاريف المباني لمعرفة نصيب كل شقة وصافي مكسب المكتب عند التسليم' : 'IFRS 15 relative sales value COGS capitalization factor'}
+                {isAr ? 'توزيع مصاريف المباني لحساب معامل التكلفة الإنشائية للشقة الفاخرة وتحديد صافي أرباح المكتب بدقة عند التسليم' : 'IFRS 15 relative sales value COGS capitalization factor'}
               </span>
             </div>
           </div>
 
           <button
             onClick={onClose}
+            aria-label={isAr ? 'إغلاق' : 'Close'}
             style={{
               background: '#ffffff',
               border: '1px solid #e2e8f0',
               borderRadius: '8px',
-              width: '30px',
-              height: '30px',
+              minWidth: '44px',
+              minHeight: '44px',
+              width: '44px',
+              height: '44px',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -211,7 +214,7 @@ export const RSVAllocationModal: React.FC<RSVAllocationModalProps> = ({
               cursor: 'pointer'
             }}
           >
-            <X size={15} />
+            <X size={18} />
           </button>
         </div>
 
@@ -244,11 +247,11 @@ export const RSVAllocationModal: React.FC<RSVAllocationModalProps> = ({
               </div>
               <div style={{ flex: 1 }}>
                 <h4 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: '#065f46' }}>
-                  {isAr ? 'تم اعتماد وحفظ معاملات التكلفة ونسب الربحية للمشروع' : 'RSV Allocation & Margin Factor Saved Successfully'}
+                  {isAr ? 'تم اعتماد وحفظ معامل التكلفة الإنشائية للشقة الفاخرة (RSV Factor) ونسب الربحية' : 'RSV Allocation & Margin Factor Saved Successfully'}
                 </h4>
                 <p style={{ margin: '0.25rem 0 0', fontSize: '0.78rem', color: '#047857' }}>
                   {isAr 
-                    ? 'تم تسجيل معامل التكلفة في دفتر الحسابات لتطبيقه تلقائياً عند تسليم الوحدات واعتراف الإيراد.' 
+                    ? 'تم تسجيل معامل التكلفة الإنشائية للشقة الفاخرة في دفتر الحسابات لتطبيقه تلقائياً عند تسليم الوحدات واعتراف الإيراد.' 
                     : 'Cost allocation factor recorded in ledger for automated COGS recognition upon delivery.'}
                 </p>
               </div>
@@ -309,7 +312,7 @@ export const RSVAllocationModal: React.FC<RSVAllocationModalProps> = ({
 
                 <div style={{ background: 'rgba(184, 144, 62, 0.08)', padding: '0.85rem 1rem', borderRadius: '10px', border: '1px solid rgba(184, 144, 62, 0.25)' }}>
                   <span style={{ color: '#946f23', fontSize: '0.7rem', fontWeight: 800, display: 'block' }}>
-                    {isAr ? 'نسبة تكلفة المباني والخامات (COGS):' : 'Cost of Sales Factor:'}
+                    {isAr ? 'معامل التكلفة الإنشائية للشقة الفاخرة (RSV Factor):' : 'Luxury Unit Construction Cost Factor (RSV):'}
                   </span>
                   <strong style={{ color: '#946f23', fontSize: '1.3rem', fontWeight: 900, fontVariantNumeric: 'tabular-nums', display: 'block', marginTop: '0.15rem' }}>
                     {saveSuccessData.factorPct}%
@@ -335,7 +338,7 @@ export const RSVAllocationModal: React.FC<RSVAllocationModalProps> = ({
               {/* Accounting explanation */}
               <div style={{ fontSize: '0.75rem', color: '#334155', lineHeight: 1.6, borderTop: '1px dashed #e2e8f0', paddingTop: '0.65rem' }}>
                 {isAr 
-                  ? `💡 تم تفعيل معامل التكلفة بنجاح: عند تسليم أي وحدة سكنية في (${saveSuccessData.projectName})، سيتم ترحيل ما نسبته ${saveSuccessData.factorPct}% من قيمة بيع الشقة مباشرة من حساب مشروعات تحت التنفيذ (105000) إلى تكلفة المبيعات (501000)، واعتبار الباقي ${saveSuccessData.grossMarginPct}% صافي ربح حقيقي للمكتب.`
+                  ? `💡 تم تفعيل معامل التكلفة الإنشائية للشقة الفاخرة (RSV Factor) بنجاح: عند تسليم أي وحدة سكنية في (${saveSuccessData.projectName})، سيتم ترحيل ما نسبته ${saveSuccessData.factorPct}% من قيمة بيع الشقة مباشرة من حساب مشروعات تحت التنفيذ (105000) إلى تكلفة المبيعات (501000)، واعتبار الباقي ${saveSuccessData.grossMarginPct}% صافي ربح حقيقي للمكتب.`
                   : `Active Accounting Factor: Upon delivery of any unit in (${saveSuccessData.projectName}), ${saveSuccessData.factorPct}% will be charged to COGS (501000) and the remaining ${saveSuccessData.grossMarginPct}% recognized as gross profit.`}
               </div>
             </div>
@@ -368,6 +371,7 @@ export const RSVAllocationModal: React.FC<RSVAllocationModalProps> = ({
                   fontSize: '0.82rem',
                   fontWeight: 700,
                   cursor: 'pointer',
+                  minHeight: '44px',
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: '0.45rem',
@@ -390,6 +394,7 @@ export const RSVAllocationModal: React.FC<RSVAllocationModalProps> = ({
                   fontSize: '0.84rem',
                   fontWeight: 800,
                   cursor: 'pointer',
+                  minHeight: '44px',
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: '0.5rem',
@@ -402,7 +407,7 @@ export const RSVAllocationModal: React.FC<RSVAllocationModalProps> = ({
             </div>
           </div>
         ) : (
-          <form onSubmit={handleSubmit} style={{ padding: '1.5rem 1.75rem', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
+          <form onSubmit={handleSubmit} style={{ padding: 'clamp(1rem, 3vw, 1.75rem)', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
           
           {/* Mode Switcher: Portfolio vs Custom Project */}
           <div style={{
@@ -638,7 +643,7 @@ export const RSVAllocationModal: React.FC<RSVAllocationModalProps> = ({
               borderRadius: '8px',
               fontVariantNumeric: 'tabular-nums'
             }}>
-              <span>{isAr ? 'الحسبة ببساطة:' : 'Formula:'}</span>
+              <span>{isAr ? 'حسبة معامل التكلفة الإنشائية للشقة الفاخرة (RSV Factor):' : 'Formula:'}</span>
               <strong style={{ color: '#0f172a' }}>
                 {isAr 
                   ? `مصاريف المباني (${D(wip).formatEGP(isAr)}) ÷ إجمالي سعر البيع (${D(sales).formatEGP(isAr)}) = ${factorPct}%`
@@ -649,13 +654,13 @@ export const RSVAllocationModal: React.FC<RSVAllocationModalProps> = ({
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.85rem' }}>
               <div style={{ background: '#f8fafc', padding: '0.75rem 1rem', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
                 <span style={{ fontSize: '0.7rem', color: '#64748b', display: 'block', fontWeight: 700 }}>
-                  {isAr ? 'نسبة تكلفة المباني من سعر البيع:' : 'Calculated Construction Ratio:'}
+                  {isAr ? 'معامل التكلفة الإنشائية للشقة الفاخرة (RSV Factor):' : 'Calculated Construction Ratio (RSV):'}
                 </span>
                 <strong style={{ fontSize: '1.4rem', color: '#946f23', fontVariantNumeric: 'tabular-nums', display: 'block', marginTop: '0.15rem' }}>
                   {factorPct}%
                 </strong>
                 <span style={{ fontSize: '0.72rem', color: '#946f23', fontWeight: 700 }}>
-                  {isAr ? '(من ثمن الشقة رايح مباني وخامات)' : '(cost of sales ratio)'}
+                  {isAr ? '(نسبة تكلفة خامات ومباني الشقة من ثمن البيع)' : '(cost of sales ratio)'}
                 </span>
               </div>
 
@@ -681,7 +686,7 @@ export const RSVAllocationModal: React.FC<RSVAllocationModalProps> = ({
             {/* Explanatory text in simple Egyptian Arabic */}
             <div style={{ fontSize: '0.74rem', color: '#334155', lineHeight: 1.55, borderTop: '1px dashed #e2e8f0', paddingTop: '0.6rem' }}>
               {isAr 
-                ? `💡 يعني إيه النتيجة دي ببساطة؟ لو بعت شقة بـ 5,000,000 ج.م وسلّمتها للعميل، النظام هيعتبر تلقائياً إن تكلفة مباني الشقة دي حوالي ${(5000000 * factor).toLocaleString()} ج.م، والباقي ${(5000000 * (1 - factor)).toLocaleString()} ج.م ينزل مكسب صافي حقيقي يدخل خزينة وأرباح المكتب فوراً.`
+                ? `💡 ما هو معامل التكلفة الإنشائية للشقة الفاخرة (RSV Factor)؟ يعني ببساطة لو بعت شقة بـ 5,000,000 ج.م وسلّمتها للعميل، النظام هيعتبر تلقائياً إن تكلفة مباني الشقة دي حوالي ${(5000000 * factor).toLocaleString()} ج.م (${factorPct}%)، والباقي ${(5000000 * (1 - factor)).toLocaleString()} ج.م ينزل مكسب صافي حقيقي يدخل خزينة وأرباح المكتب فوراً.`
                 : `Ledger Impact: Delivering a 5,000,000 EGP unit will relieve ${(5000000 * factor).toLocaleString()} EGP from WIP (105000) into COGS (501000).`}
             </div>
           </div>
@@ -706,7 +711,8 @@ export const RSVAllocationModal: React.FC<RSVAllocationModalProps> = ({
                 borderRadius: '8px',
                 fontSize: '0.78rem',
                 fontWeight: 700,
-                cursor: 'pointer'
+                cursor: 'pointer',
+                minHeight: '44px'
               }}
             >
               {isAr ? 'إلغاء' : 'Cancel'}
@@ -724,6 +730,7 @@ export const RSVAllocationModal: React.FC<RSVAllocationModalProps> = ({
                 fontSize: '0.8rem',
                 fontWeight: 800,
                 cursor: isMutating ? 'not-allowed' : 'pointer',
+                minHeight: '44px',
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '0.45rem',

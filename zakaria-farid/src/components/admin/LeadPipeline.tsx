@@ -17,6 +17,14 @@ import {
   getNotifyFaridWhatsAppUrl, 
   formatFaridWhatsAppLeadMessage 
 } from '@/lib/services/whatsappNotifier';
+import { NewContractWizardModal, NewContractWizardPayload } from '@/components/admin/erp/v2/modals/NewContractWizardModal';
+import { ContractsEngine } from '@/lib/erp/contracts';
+import { GeneralLedgerEngine } from '@/lib/erp/ledger';
+import { ERPSupabaseService } from '@/lib/erp/supabaseService';
+import { createClient } from '@/lib/supabase/client';
+import { generateUUID, D } from '@/lib/erp/math';
+import { ERPAccountingPeriod } from '@/lib/erp/types';
+import { PRIMARY_DEVELOPER_NAME } from '@/lib/erp/partnersDirectory';
 
 interface LeadPipelineProps {
   initialLeads: Lead[];
@@ -72,6 +80,20 @@ function getWhatsAppUrl(phone: string, leadName: string, propertyTitle?: string,
 
 export default function LeadPipeline({ initialLeads, properties, adminLocale }: LeadPipelineProps) {
   const isAr = adminLocale === 'ar';
+  const [theme, setTheme] = useState<'dark' | 'light'>('dark');
+  useEffect(() => {
+    const readTheme = () => {
+      const cur = (document.documentElement.getAttribute('data-theme') as 'dark' | 'light') ||
+        (localStorage.getItem('zf_theme') as 'dark' | 'light') || 'dark';
+      setTheme(cur);
+    };
+    readTheme();
+    const obs = new MutationObserver(readTheme);
+    obs.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+    return () => obs.disconnect();
+  }, []);
+  const isLight = theme === 'light';
+
   const [leads, setLeads] = useState(initialLeads);
   const [activeTab, setActiveTab] = useState<'pipeline' | 'archived'>('pipeline');
   const [searchQuery, setSearchQuery] = useState('');
@@ -86,6 +108,14 @@ export default function LeadPipeline({ initialLeads, properties, adminLocale }: 
   const [draggedOverStage, setDraggedOverStage] = useState<string | null>(null);
   const [isComposerOpen, setIsComposerOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, []);
 
   const kanbanRef = useRef<HTMLDivElement>(null);
 
@@ -104,6 +134,113 @@ export default function LeadPipeline({ initialLeads, properties, adminLocale }: 
     lost_reason: '', 
     source: '' 
   });
+
+  const [convertingLead, setConvertingLead] = useState<Lead | null>(null);
+
+  const defaultActivePeriod: ERPAccountingPeriod = useMemo(() => ({
+    period_id: 'PRD-2026-FY',
+    fiscal_year: 2026,
+    period_number: 1,
+    start_date: '2026-01-01',
+    end_date: '2026-12-31',
+    status: 'OPEN'
+  }), []);
+
+  const handleContractCreatedFromLead = async (payload: NewContractWizardPayload) => {
+    setIsSaving(true);
+    try {
+      const supabase = createClient();
+      const contractId = generateUUID();
+      const contractValue = D(payload.totalNominalValue || payload.basePrice).toFixed(2);
+      const contractNumber = `ZF-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
+      
+      const dpDec = D(payload.downPaymentAmount || 0);
+      let effectiveDpPct = D(contractValue).gt(0) ? dpDec.div(D(contractValue)).toFixed(4) : '0.15';
+      let effectiveNumInstallments = payload.numInstallments || 0;
+      let intervalMonths: number | string = payload.installmentFrequency || 'QUARTERLY';
+      if (payload.paymentPlanType === 'FULL_CASH') {
+        effectiveDpPct = '1.00';
+        effectiveNumInstallments = 0;
+      }
+
+      const schedules = ContractsEngine.generateSchedule(
+        contractId,
+        contractValue,
+        effectiveDpPct,
+        effectiveNumInstallments,
+        payload.firstPaymentDate,
+        intervalMonths,
+        payload.firstInstallmentDueDate
+      );
+      const dpSchedule = schedules[0];
+      const dpAmount = dpSchedule ? dpSchedule.nominal_value : '0.00';
+
+      const dpEntry = (dpSchedule && D(dpAmount).gt(0))
+        ? GeneralLedgerEngine.validateAndCreateEntry({
+            entry_number: `JE-NEW-${contractNumber}`,
+            entry_date: payload.firstPaymentDate,
+            period: defaultActivePeriod,
+            description: `تحصيل دفعة الحجز والمقدم النقدي للعقد ${contractNumber} (${payload.buyerName})`,
+            source_module: 'SALES',
+            source_entity_id: contractId,
+            created_by: 'CFO_FARID',
+            lines: [
+              {
+                account_code: payload.destinationTreasury === 'BANK_102000' || payload.destinationTreasury === '102000' ? '102000' : '101000',
+                debit_amount: D(dpAmount).toFixed(2),
+                credit_amount: '0.00',
+                memo: isAr ? 'استلام دفعة الحجز والمقدم النقدي بالخزينة' : 'Down payment receipt in treasury'
+              },
+              {
+                account_code: '203000',
+                debit_amount: '0.00',
+                credit_amount: D(dpAmount).toFixed(2),
+                memo: isAr ? 'إثبات دفعة الحجز كإيراد تعاقدي مؤجل حتى التسليم' : 'Credit to deferred revenue'
+              }
+            ]
+          })
+        : undefined;
+
+      const contractData = {
+        contract_id: contractId,
+        contract_number: contractNumber,
+        contract_date: payload.firstPaymentDate,
+        property_id: payload.propertyId === 'custom_unit' ? undefined : payload.propertyId,
+        building_unit_id: payload.buildingUnitId || undefined,
+        buyer_name: payload.buyerName,
+        buyer_national_id: payload.buyerNationalId || 'N/A',
+        buyer_phone: payload.buyerPhone || '',
+        buyer_email: payload.buyerEmail || '',
+        gross_contract_value: contractValue,
+        total_cash_collected: dpAmount,
+        status: 'Active' as const,
+        handover_status: 'Pending' as const,
+        partner_splits: payload.partnerSplits,
+        notes: `عقد بيع تم تحويله آلياً من عميل مهتم #${convertingLead?.id || ''}`
+      };
+
+      await ERPSupabaseService.persistNewContract(supabase, contractData as any, schedules, dpEntry);
+
+      if (convertingLead) {
+        await updateLeadStage(convertingLead.id, 'closed_won');
+        setLeads(prev => prev.map(l => l.id === convertingLead.id ? { ...l, stage: 'closed_won', stage_updated_at: new Date().toISOString() } : l));
+      }
+
+      toast.success(
+        isAr ? `🎉 تم تحويل العميل إلى عقد بيع بنجاح! رقم العقد: ${contractNumber}` : `🎉 Lead converted to Contract ${contractNumber}!`,
+        {
+          description: isAr ? 'تم اعتماد العقد وترحيل دفعة الحجز وتحديث مرحلة العميل إلى تم التعاقد ✨' : 'Contract executed and lead moved to Closed Won ✨'
+        }
+      );
+      setConvertingLead(null);
+    } catch (err: unknown) {
+      const msg = (err as Error)?.message || 'Unknown error';
+      console.error('Error converting lead to contract:', err);
+      toast.error(isAr ? `حدث خطأ أثناء تحويل العميل إلى عقد: ${msg}` : `Failed to convert lead: ${msg}`);
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   const activeLeads = useMemo(
     () => leads.filter((l) => !l.is_archived && l.stage !== 'archived'),
@@ -574,21 +711,21 @@ export default function LeadPipeline({ initialLeads, properties, adminLocale }: 
         alignItems: 'center',
         justifyContent: 'space-between',
         gap: '16px',
-        background: 'rgba(16, 20, 29, 0.85)',
+        background: 'var(--admin-card-bg, rgba(16, 20, 29, 0.85))',
         backdropFilter: 'blur(20px)',
         WebkitBackdropFilter: 'blur(20px)',
         padding: '18px 24px',
         borderRadius: '16px',
-        border: '1px solid rgba(255, 255, 255, 0.08)',
-        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)',
+        border: '1px solid var(--admin-card-border, rgba(255, 255, 255, 0.08))',
+        boxShadow: 'var(--admin-card-shadow, 0 8px 32px rgba(0, 0, 0, 0.4))',
         flexWrap: 'wrap'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
           <div>
-            <h1 style={{ fontSize: '20px', fontWeight: 800, margin: 0, color: '#FFFFFF', letterSpacing: '-0.02em' }}>
+            <h1 style={{ fontSize: '20px', fontWeight: 800, margin: 0, color: 'var(--admin-text-title, #FFFFFF)', letterSpacing: '-0.02em' }}>
               {isAr ? 'إدارة العملاء والمبيعات (CRM)' : 'CRM Lead Pipeline'}
             </h1>
-            <p style={{ margin: '3px 0 0', color: 'rgba(255, 255, 255, 0.6)', fontSize: '12.5px', fontWeight: 500 }}>
+            <p style={{ margin: '3px 0 0', color: 'var(--admin-text-muted, rgba(255, 255, 255, 0.6))', fontSize: '12.5px', fontWeight: 500 }}>
               {isAr
                 ? 'لوحة إدارة مسار الصفقات ومتابعة العملاء الفوري'
                 : 'Interactive sales pipeline & deal progression studio.'}
@@ -597,7 +734,7 @@ export default function LeadPipeline({ initialLeads, properties, adminLocale }: 
 
           {/* View Tab Switcher & Auto-Archive Toggle */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-            <div style={{ display: 'flex', gap: '4px', background: 'rgba(255, 255, 255, 0.04)', padding: '3px', borderRadius: '10px', border: '1px solid rgba(255, 255, 255, 0.08)' }}>
+            <div style={{ display: 'flex', gap: '4px', background: 'var(--admin-input-bg, rgba(255, 255, 255, 0.04))', padding: '3px', borderRadius: '10px', border: '1px solid var(--admin-card-border, rgba(255, 255, 255, 0.08))' }}>
               <button
                 type="button"
                 onClick={() => setActiveTab('pipeline')}
@@ -608,7 +745,7 @@ export default function LeadPipeline({ initialLeads, properties, adminLocale }: 
                   fontWeight: 800,
                   border: 'none',
                   background: activeTab === 'pipeline' ? 'linear-gradient(135deg, #E5B869 0%, #C5A059 100%)' : 'transparent',
-                  color: activeTab === 'pipeline' ? '#0A0C10' : 'rgba(255, 255, 255, 0.65)',
+                  color: activeTab === 'pipeline' ? '#0A0C10' : 'var(--admin-text-muted, rgba(255, 255, 255, 0.65))',
                   cursor: 'pointer',
                   transition: 'all 150ms ease'
                 }}
@@ -625,7 +762,7 @@ export default function LeadPipeline({ initialLeads, properties, adminLocale }: 
                   fontWeight: 800,
                   border: 'none',
                   background: activeTab === 'archived' ? 'linear-gradient(135deg, #E5B869 0%, #C5A059 100%)' : 'transparent',
-                  color: activeTab === 'archived' ? '#0A0C10' : 'rgba(255, 255, 255, 0.65)',
+                  color: activeTab === 'archived' ? '#0A0C10' : 'var(--admin-text-muted, rgba(255, 255, 255, 0.65))',
                   cursor: 'pointer',
                   transition: 'all 150ms ease'
                 }}
@@ -649,9 +786,9 @@ export default function LeadPipeline({ initialLeads, properties, adminLocale }: 
                 fontWeight: 700,
                 cursor: 'pointer',
                 transition: 'all 150ms ease',
-                background: autoArchiveOnClose ? 'rgba(16, 185, 129, 0.1)' : 'rgba(255, 255, 255, 0.04)',
-                border: autoArchiveOnClose ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid rgba(255, 255, 255, 0.08)',
-                color: autoArchiveOnClose ? '#34D399' : 'rgba(255, 255, 255, 0.55)',
+                background: autoArchiveOnClose ? 'rgba(16, 185, 129, 0.1)' : 'var(--admin-card-bg-subtle, rgba(255, 255, 255, 0.04))',
+                border: autoArchiveOnClose ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid var(--admin-card-border, rgba(255, 255, 255, 0.08))',
+                color: autoArchiveOnClose ? '#34D399' : 'var(--admin-text-muted, rgba(255, 255, 255, 0.55))',
               }}
             >
               <Archive size={12} />
@@ -703,9 +840,9 @@ export default function LeadPipeline({ initialLeads, properties, adminLocale }: 
           type="button"
           onClick={() => setStageFilter(stageFilter === 'new' ? 'all' : 'new')}
           style={{
-            background: stageFilter === 'new' ? 'rgba(229, 184, 105, 0.12)' : 'rgba(16, 20, 29, 0.75)',
+            background: stageFilter === 'new' ? 'rgba(229, 184, 105, 0.12)' : 'var(--admin-card-bg, rgba(16, 20, 29, 0.75))',
             backdropFilter: 'blur(16px)',
-            border: stageFilter === 'new' ? '1px solid rgba(229, 184, 105, 0.45)' : '1px solid rgba(255, 255, 255, 0.08)',
+            border: stageFilter === 'new' ? '1px solid rgba(229, 184, 105, 0.45)' : '1px solid var(--admin-card-border, rgba(255, 255, 255, 0.08))',
             borderRadius: '12px',
             padding: '10px 12px',
             textAlign: isAr ? 'right' : 'left',
@@ -717,10 +854,10 @@ export default function LeadPipeline({ initialLeads, properties, adminLocale }: 
           }}
         >
           <div>
-            <span style={{ fontSize: '10px', fontWeight: 800, color: stageFilter === 'new' ? '#E5B869' : 'rgba(255, 255, 255, 0.55)', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block' }}>
+            <span style={{ fontSize: '10px', fontWeight: 800, color: stageFilter === 'new' ? 'var(--admin-gold-primary, #E5B869)' : 'var(--admin-text-muted, rgba(255, 255, 255, 0.55))', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block' }}>
               {isAr ? 'طلبات جديدة' : 'New Inquiries'}
             </span>
-            <strong style={{ fontSize: '18px', fontWeight: 800, color: '#FFFFFF', marginTop: '2px', display: 'block' }}>
+            <strong style={{ fontSize: '18px', fontWeight: 800, color: 'var(--admin-text-title, #FFFFFF)', marginTop: '2px', display: 'block' }}>
               {newCount}
             </strong>
           </div>
@@ -732,9 +869,9 @@ export default function LeadPipeline({ initialLeads, properties, adminLocale }: 
           type="button"
           onClick={() => setStageFilter(stageFilter === 'contacted' ? 'all' : 'contacted')}
           style={{
-            background: stageFilter === 'contacted' ? 'rgba(229, 184, 105, 0.12)' : 'rgba(16, 20, 29, 0.75)',
+            background: stageFilter === 'contacted' ? 'rgba(229, 184, 105, 0.12)' : 'var(--admin-card-bg, rgba(16, 20, 29, 0.75))',
             backdropFilter: 'blur(16px)',
-            border: stageFilter === 'contacted' ? '1px solid rgba(229, 184, 105, 0.45)' : '1px solid rgba(255, 255, 255, 0.08)',
+            border: stageFilter === 'contacted' ? '1px solid rgba(229, 184, 105, 0.45)' : '1px solid var(--admin-card-border, rgba(255, 255, 255, 0.08))',
             borderRadius: '12px',
             padding: '10px 12px',
             textAlign: isAr ? 'right' : 'left',
@@ -746,10 +883,10 @@ export default function LeadPipeline({ initialLeads, properties, adminLocale }: 
           }}
         >
           <div>
-            <span style={{ fontSize: '10px', fontWeight: 800, color: stageFilter === 'contacted' ? '#E5B869' : 'rgba(255, 255, 255, 0.55)', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block' }}>
+            <span style={{ fontSize: '10px', fontWeight: 800, color: stageFilter === 'contacted' ? 'var(--admin-gold-primary, #E5B869)' : 'var(--admin-text-muted, rgba(255, 255, 255, 0.55))', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block' }}>
               {isAr ? 'تم التواصل' : 'Contacted'}
             </span>
-            <strong style={{ fontSize: '18px', fontWeight: 800, color: '#FFFFFF', marginTop: '2px', display: 'block' }}>
+            <strong style={{ fontSize: '18px', fontWeight: 800, color: 'var(--admin-text-title, #FFFFFF)', marginTop: '2px', display: 'block' }}>
               {contactedCount}
             </strong>
           </div>
@@ -761,9 +898,9 @@ export default function LeadPipeline({ initialLeads, properties, adminLocale }: 
           type="button"
           onClick={() => setStageFilter(stageFilter === 'viewing_scheduled' ? 'all' : 'viewing_scheduled')}
           style={{
-            background: stageFilter === 'viewing_scheduled' ? 'rgba(229, 184, 105, 0.12)' : 'rgba(16, 20, 29, 0.75)',
+            background: stageFilter === 'viewing_scheduled' ? 'rgba(229, 184, 105, 0.12)' : 'var(--admin-card-bg, rgba(16, 20, 29, 0.75))',
             backdropFilter: 'blur(16px)',
-            border: stageFilter === 'viewing_scheduled' ? '1px solid rgba(229, 184, 105, 0.45)' : '1px solid rgba(255, 255, 255, 0.08)',
+            border: stageFilter === 'viewing_scheduled' ? '1px solid rgba(229, 184, 105, 0.45)' : '1px solid var(--admin-card-border, rgba(255, 255, 255, 0.08))',
             borderRadius: '12px',
             padding: '10px 12px',
             textAlign: isAr ? 'right' : 'left',
@@ -775,10 +912,10 @@ export default function LeadPipeline({ initialLeads, properties, adminLocale }: 
           }}
         >
           <div>
-            <span style={{ fontSize: '10px', fontWeight: 800, color: stageFilter === 'viewing_scheduled' ? '#E5B869' : 'rgba(255, 255, 255, 0.55)', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block' }}>
+            <span style={{ fontSize: '10px', fontWeight: 800, color: stageFilter === 'viewing_scheduled' ? 'var(--admin-gold-primary, #E5B869)' : 'var(--admin-text-muted, rgba(255, 255, 255, 0.55))', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block' }}>
               {isAr ? 'معاينات مجدولة' : 'Viewings'}
             </span>
-            <strong style={{ fontSize: '18px', fontWeight: 800, color: '#FFFFFF', marginTop: '2px', display: 'block' }}>
+            <strong style={{ fontSize: '18px', fontWeight: 800, color: 'var(--admin-text-title, #FFFFFF)', marginTop: '2px', display: 'block' }}>
               {viewingCount}
             </strong>
           </div>
@@ -790,9 +927,9 @@ export default function LeadPipeline({ initialLeads, properties, adminLocale }: 
           type="button"
           onClick={() => setStageFilter(stageFilter === 'negotiating' ? 'all' : 'negotiating')}
           style={{
-            background: stageFilter === 'negotiating' ? 'rgba(229, 184, 105, 0.12)' : 'rgba(16, 20, 29, 0.75)',
+            background: stageFilter === 'negotiating' ? 'rgba(229, 184, 105, 0.12)' : 'var(--admin-card-bg, rgba(16, 20, 29, 0.75))',
             backdropFilter: 'blur(16px)',
-            border: stageFilter === 'negotiating' ? '1px solid rgba(229, 184, 105, 0.45)' : '1px solid rgba(255, 255, 255, 0.08)',
+            border: stageFilter === 'negotiating' ? '1px solid rgba(229, 184, 105, 0.45)' : '1px solid var(--admin-card-border, rgba(255, 255, 255, 0.08))',
             borderRadius: '12px',
             padding: '10px 12px',
             textAlign: isAr ? 'right' : 'left',
@@ -804,10 +941,10 @@ export default function LeadPipeline({ initialLeads, properties, adminLocale }: 
           }}
         >
           <div>
-            <span style={{ fontSize: '10px', fontWeight: 800, color: stageFilter === 'negotiating' ? '#E5B869' : 'rgba(255, 255, 255, 0.55)', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block' }}>
+            <span style={{ fontSize: '10px', fontWeight: 800, color: stageFilter === 'negotiating' ? 'var(--admin-gold-primary, #E5B869)' : 'var(--admin-text-muted, rgba(255, 255, 255, 0.55))', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block' }}>
               {isAr ? 'جاري التفاوض' : 'Negotiating'}
             </span>
-            <strong style={{ fontSize: '18px', fontWeight: 800, color: '#FFFFFF', marginTop: '2px', display: 'block' }}>
+            <strong style={{ fontSize: '18px', fontWeight: 800, color: 'var(--admin-text-title, #FFFFFF)', marginTop: '2px', display: 'block' }}>
               {negotiatingCount}
             </strong>
           </div>
@@ -819,9 +956,9 @@ export default function LeadPipeline({ initialLeads, properties, adminLocale }: 
           type="button"
           onClick={() => setStageFilter(stageFilter === 'closed_won' ? 'all' : 'closed_won')}
           style={{
-            background: stageFilter === 'closed_won' ? 'rgba(16, 185, 129, 0.12)' : 'rgba(16, 20, 29, 0.75)',
+            background: stageFilter === 'closed_won' ? 'rgba(16, 185, 129, 0.12)' : 'var(--admin-card-bg, rgba(16, 20, 29, 0.75))',
             backdropFilter: 'blur(16px)',
-            border: stageFilter === 'closed_won' ? '1px solid rgba(16, 185, 129, 0.35)' : '1px solid rgba(255, 255, 255, 0.08)',
+            border: stageFilter === 'closed_won' ? '1px solid rgba(16, 185, 129, 0.35)' : '1px solid var(--admin-card-border, rgba(255, 255, 255, 0.08))',
             borderRadius: '12px',
             padding: '10px 12px',
             textAlign: isAr ? 'right' : 'left',
@@ -836,7 +973,7 @@ export default function LeadPipeline({ initialLeads, properties, adminLocale }: 
             <span style={{ fontSize: '10px', fontWeight: 800, color: '#10B981', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block' }}>
               {isAr ? 'تم التعاقد ✨' : 'Closed Won ✨'}
             </span>
-            <strong style={{ fontSize: '18px', fontWeight: 800, color: '#FFFFFF', marginTop: '2px', display: 'block' }}>
+            <strong style={{ fontSize: '18px', fontWeight: 800, color: 'var(--admin-text-title, #FFFFFF)', marginTop: '2px', display: 'block' }}>
               {wonCount}
             </strong>
           </div>
@@ -848,9 +985,9 @@ export default function LeadPipeline({ initialLeads, properties, adminLocale }: 
           type="button"
           onClick={() => setStageFilter(stageFilter === 'stale' ? 'all' : 'stale')}
           style={{
-            background: stageFilter === 'stale' ? 'rgba(244, 63, 94, 0.12)' : 'rgba(16, 20, 29, 0.75)',
+            background: stageFilter === 'stale' ? 'rgba(244, 63, 94, 0.12)' : 'var(--admin-card-bg, rgba(16, 20, 29, 0.75))',
             backdropFilter: 'blur(16px)',
-            border: stageFilter === 'stale' ? '1px solid rgba(244, 63, 94, 0.35)' : (staleCount > 0 ? '1px solid rgba(244, 63, 94, 0.25)' : '1px solid rgba(255, 255, 255, 0.08)'),
+            border: stageFilter === 'stale' ? '1px solid rgba(244, 63, 94, 0.35)' : (staleCount > 0 ? '1px solid rgba(244, 63, 94, 0.25)' : '1px solid var(--admin-card-border, rgba(255, 255, 255, 0.08))'),
             borderRadius: '12px',
             padding: '10px 12px',
             textAlign: isAr ? 'right' : 'left',
@@ -862,14 +999,14 @@ export default function LeadPipeline({ initialLeads, properties, adminLocale }: 
           }}
         >
           <div>
-            <span style={{ fontSize: '10px', fontWeight: 800, color: staleCount > 0 ? '#FB7185' : 'rgba(255, 255, 255, 0.55)', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block' }}>
+            <span style={{ fontSize: '10px', fontWeight: 800, color: staleCount > 0 ? '#FB7185' : 'var(--admin-text-muted, rgba(255, 255, 255, 0.55))', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block' }}>
               {isAr ? 'يحتاج متابعة' : 'Follow-Up'}
             </span>
-            <strong style={{ fontSize: '18px', fontWeight: 800, color: staleCount > 0 ? '#FB7185' : '#FFFFFF', marginTop: '2px', display: 'block' }}>
+            <strong style={{ fontSize: '18px', fontWeight: 800, color: staleCount > 0 ? '#FB7185' : 'var(--admin-text-title, #FFFFFF)', marginTop: '2px', display: 'block' }}>
               {staleCount}
             </strong>
           </div>
-          <Flame size={16} style={{ color: staleCount > 0 ? '#FB7185' : 'rgba(255, 255, 255, 0.5)', opacity: 0.85 }} />
+          <Flame size={16} style={{ color: staleCount > 0 ? '#FB7185' : 'var(--admin-text-muted, rgba(255, 255, 255, 0.5))', opacity: 0.85 }} />
         </button>
       </div>
 
@@ -932,11 +1069,12 @@ export default function LeadPipeline({ initialLeads, properties, adminLocale }: 
         alignItems: 'center',
         gap: '12px',
         flexWrap: 'wrap',
-        background: 'rgba(16, 20, 29, 0.75)',
+        background: 'var(--admin-card-bg, rgba(16, 20, 29, 0.75))',
         backdropFilter: 'blur(16px)',
         padding: '10px 18px',
         borderRadius: '14px',
-        border: '1px solid rgba(255, 255, 255, 0.08)',
+        border: '1px solid var(--admin-card-border, rgba(255, 255, 255, 0.08))',
+        boxShadow: 'var(--admin-card-shadow, none)'
       }}>
         {/* Text Search */}
         <div style={{ flex: '1 1 260px', position: 'relative', display: 'flex', alignItems: 'center' }}>
@@ -950,11 +1088,11 @@ export default function LeadPipeline({ initialLeads, properties, adminLocale }: 
               width: '100%',
               padding: isAr ? '9px 38px 9px 14px' : '9px 14px 9px 38px',
               fontSize: '13px',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
+              border: '1px solid var(--admin-input-border, rgba(255, 255, 255, 0.1))',
               borderRadius: '10px',
               outline: 'none',
-              background: 'rgba(10, 13, 20, 0.8)',
-              color: '#FFFFFF',
+              background: 'var(--admin-input-bg, rgba(10, 13, 20, 0.8))',
+              color: 'var(--admin-text-title, #FFFFFF)',
               boxSizing: 'border-box'
             }}
           />
@@ -962,7 +1100,7 @@ export default function LeadPipeline({ initialLeads, properties, adminLocale }: 
             <button
               type="button"
               onClick={() => setSearchQuery('')}
-              style={{ position: 'absolute', [isAr ? 'left' : 'right']: '10px', background: 'transparent', border: 'none', cursor: 'pointer', color: 'rgba(255, 255, 255, 0.5)' }}
+              style={{ position: 'absolute', [isAr ? 'left' : 'right']: '10px', background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--admin-text-muted, rgba(255, 255, 255, 0.5))' }}
             >
               <X size={14} />
             </button>
@@ -981,14 +1119,14 @@ export default function LeadPipeline({ initialLeads, properties, adminLocale }: 
             borderRadius: '8px',
             fontSize: '11.5px',
             fontWeight: 700,
-            color: '#E5B869'
+            color: 'var(--admin-gold-primary, #E5B869)'
           }}>
             <Filter size={12} />
             <span>Filter: {stageFilter === 'stale' ? 'Needs Attention' : stageFilter}</span>
             <button
               type="button"
               onClick={() => setStageFilter('all')}
-              style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#E5B869', padding: 0, display: 'flex', alignItems: 'center' }}
+              style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--admin-gold-primary, #E5B869)', padding: 0, display: 'flex', alignItems: 'center' }}
             >
               <X size={12} />
             </button>
@@ -997,14 +1135,14 @@ export default function LeadPipeline({ initialLeads, properties, adminLocale }: 
 
         {/* Sort Select */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <ArrowUpDown size={14} style={{ color: 'rgba(255, 255, 255, 0.5)' }} />
+          <ArrowUpDown size={14} style={{ color: 'var(--admin-text-muted, rgba(255, 255, 255, 0.5))' }} />
           <select
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value as any)}
             style={{
-              background: 'rgba(10, 13, 20, 0.8)',
-              color: '#FFFFFF',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
+              background: 'var(--admin-input-bg, rgba(10, 13, 20, 0.8))',
+              color: 'var(--admin-text-title, #FFFFFF)',
+              border: '1px solid var(--admin-input-border, rgba(255, 255, 255, 0.1))',
               borderRadius: '8px',
               padding: '6px 12px',
               fontSize: '12px',
@@ -1045,8 +1183,8 @@ export default function LeadPipeline({ initialLeads, properties, adminLocale }: 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '12px' }}>
               {filteredArchivedLeads.map((lead) => (
                 <div key={lead.id} style={{
-                  background: 'rgba(22, 28, 40, 0.85)',
-                  border: '1px solid rgba(255, 255, 255, 0.07)',
+                  background: 'var(--admin-card-bg, rgba(22, 28, 40, 0.85))',
+                  border: '1px solid var(--admin-card-border, #CBD5E1)',
                   borderRadius: '12px',
                   padding: '14px',
                   display: 'flex',
@@ -1055,23 +1193,23 @@ export default function LeadPipeline({ initialLeads, properties, adminLocale }: 
                 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                     <div>
-                      <h4 style={{ margin: 0, fontSize: '13.5px', fontWeight: 700, color: '#FFFFFF' }}>{lead.name}</h4>
-                      <p style={{ margin: '2px 0 0', fontSize: '11.5px', color: 'rgba(255, 255, 255, 0.55)' }}>{lead.phone}</p>
+                      <h4 style={{ margin: 0, fontSize: '13.5px', fontWeight: 700, color: 'var(--admin-text-title, #FFFFFF)' }}>{lead.name}</h4>
+                      <p style={{ margin: '2px 0 0', fontSize: '11.5px', color: 'var(--admin-text-muted, #475569)', fontWeight: 600 }}>{lead.phone}</p>
                     </div>
-                    <span style={{ fontSize: '10px', fontWeight: 800, padding: '2px 7px', borderRadius: '6px', background: 'rgba(255, 255, 255, 0.06)', color: 'rgba(255, 255, 255, 0.6)' }}>
+                    <span style={{ fontSize: '10px', fontWeight: 800, padding: '2px 7px', borderRadius: '6px', background: 'var(--admin-card-bg-subtle, rgba(255, 255, 255, 0.06))', color: 'var(--admin-text-muted, #475569)' }}>
                       {lead.stage || 'Archived'}
                     </span>
                   </div>
 
                   {lead.property && (
-                    <div style={{ fontSize: '11px', color: '#E5B869', fontWeight: 600, background: 'rgba(229, 184, 105, 0.08)', padding: '4px 8px', borderRadius: '6px', border: '1px solid rgba(229, 184, 105, 0.2)' }}>
-                      <Building2 size={11} style={{ display: 'inline', marginInlineEnd: '4px', color: '#E5B869' }} />
+                    <div style={{ fontSize: '11px', color: 'var(--admin-gold-primary, #946F23)', fontWeight: 600, background: 'rgba(197, 160, 89, 0.08)', padding: '4px 8px', borderRadius: '6px', border: '1px solid rgba(197, 160, 89, 0.25)' }}>
+                      <Building2 size={11} style={{ display: 'inline', marginInlineEnd: '4px', color: 'var(--admin-gold-primary, #946F23)' }} />
                       {isAr && lead.property.title_ar ? lead.property.title_ar : lead.property.title_en}
                     </div>
                   )}
 
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '8px', borderTop: '1px dashed rgba(255, 255, 255, 0.08)', marginTop: 'auto' }}>
-                    <span style={{ fontSize: '10.5px', color: 'rgba(255, 255, 255, 0.4)' }}>{formatTimeAgo(lead.created_at)}</span>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '8px', borderTop: '1px dashed var(--admin-card-border, #CBD5E1)', marginTop: 'auto' }}>
+                    <span style={{ fontSize: '10.5px', color: 'var(--admin-text-muted, #475569)', fontWeight: 600 }}>{formatTimeAgo(lead.created_at)}</span>
                     <div style={{ display: 'flex', gap: '6px' }}>
                       <button
                         type="button"
@@ -1085,9 +1223,9 @@ export default function LeadPipeline({ initialLeads, properties, adminLocale }: 
                           borderRadius: '6px',
                           fontSize: '11px',
                           fontWeight: 700,
-                          background: 'rgba(16, 185, 129, 0.12)',
-                          color: '#34D399',
-                          border: '1px solid rgba(16, 185, 129, 0.25)',
+                          background: 'var(--admin-success-bg, rgba(4, 120, 87, 0.08))',
+                          color: 'var(--admin-success-text, #047857)',
+                          border: '1px solid var(--admin-success-border, rgba(4, 120, 87, 0.25))',
                           cursor: 'pointer'
                         }}
                       >
@@ -1126,10 +1264,13 @@ export default function LeadPipeline({ initialLeads, properties, adminLocale }: 
       /* ─── Kanban Track: Full-Width 6 Columns when Drawer is Closed ─── */
       <div style={{
         display: 'grid',
-        gridTemplateColumns: selectedLead ? '1fr 440px' : '1fr',
+        gridTemplateColumns: selectedLead ? (isMobile ? '1fr' : '1fr 440px') : '1fr',
         gap: '16px',
         alignItems: 'stretch',
         width: '100%',
+        maxWidth: '100%',
+        boxSizing: 'border-box',
+        overflowX: 'hidden',
         flex: 1,
         transition: 'grid-template-columns 0.3s cubic-bezier(0.16, 1, 0.3, 1)'
       }}>
@@ -1140,9 +1281,11 @@ export default function LeadPipeline({ initialLeads, properties, adminLocale }: 
           onDragOver={handleKanbanDragOver}
           style={{
             display: 'grid',
-            gridTemplateColumns: selectedLead ? 'repeat(6, minmax(260px, 1fr))' : 'repeat(6, minmax(210px, 1fr))',
+            gridTemplateColumns: selectedLead ? (isMobile ? 'repeat(6, minmax(240px, 1fr))' : 'repeat(6, minmax(260px, 1fr))') : 'repeat(6, minmax(210px, 1fr))',
             gap: '12px',
             overflowX: 'auto',
+            WebkitOverflowScrolling: 'touch',
+            maxWidth: '100%',
             paddingBottom: '10px',
             scrollbarWidth: 'thin',
             scrollBehavior: 'smooth'
@@ -1177,12 +1320,12 @@ export default function LeadPipeline({ initialLeads, properties, adminLocale }: 
                   setDraggedLeadId(null);
                 }}
                 style={{
-                  background: isHovered ? 'rgba(229, 184, 105, 0.05)' : 'rgba(16, 20, 29, 0.75)',
+                  background: isHovered ? 'var(--admin-gold-glow, rgba(229, 184, 105, 0.05))' : 'var(--admin-card-bg-subtle, rgba(16, 20, 29, 0.75))',
                   backdropFilter: 'blur(20px)',
                   borderTop: isHovered ? '2px dashed rgba(229, 184, 105, 0.6)' : `2px solid ${stage.color}`,
-                  borderRight: isHovered ? '2px dashed rgba(229, 184, 105, 0.6)' : '1px solid rgba(255, 255, 255, 0.07)',
-                  borderBottom: isHovered ? '2px dashed rgba(229, 184, 105, 0.6)' : '1px solid rgba(255, 255, 255, 0.07)',
-                  borderLeft: isHovered ? '2px dashed rgba(229, 184, 105, 0.6)' : '1px solid rgba(255, 255, 255, 0.07)',
+                  borderRight: isHovered ? '2px dashed rgba(229, 184, 105, 0.6)' : '1px solid var(--admin-card-border, #CBD5E1)',
+                  borderBottom: isHovered ? '2px dashed rgba(229, 184, 105, 0.6)' : '1px solid var(--admin-card-border, #CBD5E1)',
+                  borderLeft: isHovered ? '2px dashed rgba(229, 184, 105, 0.6)' : '1px solid var(--admin-card-border, #CBD5E1)',
                   borderRadius: '14px',
                   padding: '12px',
                   minHeight: '520px',
@@ -1190,7 +1333,7 @@ export default function LeadPipeline({ initialLeads, properties, adminLocale }: 
                   flex: 1,
                   display: 'flex',
                   flexDirection: 'column',
-                  boxShadow: isHovered ? `0 8px 24px ${stage.glow}` : '0 4px 16px rgba(0,0,0,0.2)',
+                  boxShadow: isHovered ? `0 8px 24px ${stage.glow}` : 'var(--admin-card-shadow, 0 4px 16px rgba(0,0,0,0.2))',
                   transition: 'all 150ms ease',
                   boxSizing: 'border-box'
                 }}
@@ -1202,12 +1345,12 @@ export default function LeadPipeline({ initialLeads, properties, adminLocale }: 
                   alignItems: 'center',
                   paddingBottom: '10px',
                   marginBottom: '10px',
-                  borderBottom: '1px solid rgba(255, 255, 255, 0.07)',
+                  borderBottom: '1px solid var(--admin-card-border, #CBD5E1)',
                   flexShrink: 0
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
                     <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: stage.color }} />
-                    <h3 style={{ fontSize: '12.5px', fontWeight: 800, margin: 0, color: '#FFFFFF', letterSpacing: '0.01em' }}>
+                    <h3 style={{ fontSize: '12.5px', fontWeight: 800, margin: 0, color: 'var(--admin-text-title, #FFFFFF)', letterSpacing: '0.01em' }}>
                       {isAr ? stage.ar : stage.en}
                     </h3>
                   </div>
@@ -1242,6 +1385,8 @@ export default function LeadPipeline({ initialLeads, properties, adminLocale }: 
                     const isDraggingThis = lead.id === draggedLeadId;
                     const initials = lead.name ? lead.name.slice(0, 2).toUpperCase() : 'LD';
                     const propTitle = lead.property ? (isAr && lead.property.title_ar ? lead.property.title_ar : lead.property.title_en) : undefined;
+                    const cardProp = lead.property_id ? properties.find(p => p.id === lead.property_id) : (lead.property ? properties.find(p => p.id === lead.property!.id) : undefined);
+                    const cardPrice = (lead.property as any)?.price_egp ?? cardProp?.price_egp;
                     const waLink = getWhatsAppUrl(lead.phone, lead.name, propTitle, isAr);
 
                     return (
@@ -1263,21 +1408,21 @@ export default function LeadPipeline({ initialLeads, properties, adminLocale }: 
                           borderStyle: 'solid',
                           borderWidth: '1px',
                           borderColor: isSelected
-                            ? '#E5B869'
-                            : (stale ? 'rgba(244, 63, 94, 0.35)' : 'rgba(255, 255, 255, 0.07)'),
+                            ? 'var(--admin-gold-primary, #E5B869)'
+                            : (stale ? 'rgba(244, 63, 94, 0.35)' : 'var(--admin-card-border, #CBD5E1)'),
                           ...(isAr
                             ? { borderRightWidth: '3px', borderRightColor: stage.color }
                             : { borderLeftWidth: '3px', borderLeftColor: stage.color }),
                           borderRadius: '10px',
                           padding: '11px',
                           background: isSelected
-                            ? 'rgba(229, 184, 105, 0.08)'
-                            : (stale ? 'rgba(244, 63, 94, 0.03)' : 'rgba(22, 28, 40, 0.85)'),
+                            ? 'rgba(229, 184, 105, 0.12)'
+                            : (stale ? 'rgba(244, 63, 94, 0.05)' : 'var(--admin-card-bg, rgba(22, 28, 40, 0.85))'),
                           cursor: 'pointer',
                           opacity: isDraggingThis ? 0.35 : 1,
                           boxShadow: isSelected
                             ? '0 4px 16px rgba(229, 184, 105, 0.2)'
-                            : '0 2px 8px rgba(0,0,0,0.15)',
+                            : 'var(--admin-card-shadow, 0 2px 8px rgba(0,0,0,0.15))',
                           transition: 'all 150ms ease',
                           display: 'flex',
                           flexDirection: 'column',
@@ -1292,7 +1437,7 @@ export default function LeadPipeline({ initialLeads, properties, adminLocale }: 
                               height: '26px',
                               borderRadius: '50%',
                               background: isSelected ? 'linear-gradient(135deg, #E5B869 0%, #C5A059 100%)' : 'rgba(229, 184, 105, 0.12)',
-                              color: isSelected ? '#0A0C10' : '#E5B869',
+                              color: isSelected ? '#0A0C10' : 'var(--admin-gold-primary, #E5B869)',
                               display: 'flex',
                               alignItems: 'center',
                               justifyContent: 'center',
@@ -1308,7 +1453,7 @@ export default function LeadPipeline({ initialLeads, properties, adminLocale }: 
                               style={{
                                 fontSize: '12.5px',
                                 fontWeight: 700,
-                                color: '#FFFFFF',
+                                color: 'var(--admin-text-title, #FFFFFF)',
                                 overflow: 'hidden',
                                 textOverflow: 'ellipsis',
                                 whiteSpace: 'nowrap',
@@ -1340,27 +1485,36 @@ export default function LeadPipeline({ initialLeads, properties, adminLocale }: 
                         {/* Inquired Property Chip */}
                         <div style={{
                           fontSize: '10.5px',
-                          color: '#E5B869',
+                          color: 'var(--admin-gold-primary, #946F23)',
                           fontWeight: 600,
                           overflow: 'hidden',
                           textOverflow: 'ellipsis',
                           whiteSpace: 'nowrap',
                           display: 'flex',
                           alignItems: 'center',
+                          justifyContent: 'space-between',
                           gap: '5px',
-                          background: 'rgba(229, 184, 105, 0.06)',
-                          border: '1px solid rgba(229, 184, 105, 0.16)',
+                          background: 'rgba(197, 160, 89, 0.08)',
+                          border: '1px solid rgba(197, 160, 89, 0.25)',
                           padding: '4px 7px',
                           borderRadius: '6px'
                         }}>
-                          <Building2 size={10} style={{ flexShrink: 0, color: '#E5B869' }} />
-                          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            {propTitle || (isAr ? 'استفسار عام' : 'General Inquiry')}
-                          </span>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '5px', minWidth: 0, overflow: 'hidden' }}>
+                            <Building2 size={10} style={{ flexShrink: 0, color: 'var(--admin-gold-primary, #946F23)' }} />
+                            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              {propTitle || (isAr ? 'استفسار عام' : 'General Inquiry')}
+                            </span>
+                          </div>
+                          {cardPrice ? (
+                            <span style={{ flexShrink: 0, fontVariantNumeric: 'tabular-nums', fontWeight: 800, fontSize: '10.5px', color: 'var(--admin-text-title, #0F172A)' }}>
+                              {Number(cardPrice).toLocaleString('en-US')}{' '}
+                              <span style={{ color: '#946F23', fontSize: '9px', fontWeight: 700 }}>{isAr ? 'ج.م' : 'EGP'}</span>
+                            </span>
+                          ) : null}
                         </div>
 
                         {/* Card Footer: Time ago & Subtle Quick Icon Actions */}
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '10px', color: 'rgba(255, 255, 255, 0.45)', paddingTop: '6px', borderTop: '1px dashed rgba(255, 255, 255, 0.08)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '10px', color: 'var(--admin-text-muted, #475569)', fontWeight: 600, paddingTop: '6px', borderTop: '1px dashed var(--admin-card-border, #CBD5E1)' }}>
                           <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
                             <Clock size={10} />
                             {formatTimeAgo(lead.stage_updated_at || lead.created_at)}
@@ -1376,9 +1530,9 @@ export default function LeadPipeline({ initialLeads, properties, adminLocale }: 
                                 width: '24px',
                                 height: '24px',
                                 borderRadius: '6px',
-                                background: 'rgba(255, 255, 255, 0.06)',
-                                border: '1px solid rgba(255, 255, 255, 0.1)',
-                                color: 'rgba(255, 255, 255, 0.75)',
+                                background: 'var(--admin-card-bg-subtle, rgba(255, 255, 255, 0.06))',
+                                border: '1px solid var(--admin-card-border, #CBD5E1)',
+                                color: 'var(--admin-text-body, #334155)',
                                 display: 'inline-flex',
                                 alignItems: 'center',
                                 justifyContent: 'center'
@@ -1398,9 +1552,9 @@ export default function LeadPipeline({ initialLeads, properties, adminLocale }: 
                                 width: '24px',
                                 height: '24px',
                                 borderRadius: '6px',
-                                background: 'rgba(16, 185, 129, 0.15)',
-                                border: '1px solid rgba(16, 185, 129, 0.35)',
-                                color: '#34D399',
+                                background: 'var(--admin-success-bg, rgba(4, 120, 87, 0.08))',
+                                border: '1px solid var(--admin-success-border, rgba(4, 120, 87, 0.25))',
+                                color: 'var(--admin-success-text, #047857)',
                                 display: 'inline-flex',
                                 alignItems: 'center',
                                 justifyContent: 'center'
@@ -1422,8 +1576,8 @@ export default function LeadPipeline({ initialLeads, properties, adminLocale }: 
                                   height: '24px',
                                   borderRadius: '6px',
                                   background: 'rgba(221, 167, 82, 0.12)',
-                                  border: '1px solid rgba(221, 167, 82, 0.25)',
-                                  color: '#DDA752',
+                                  border: '1px solid var(--admin-card-border, #CBD5E1)',
+                                  color: 'var(--admin-gold-primary, #DDA752)',
                                   display: 'inline-flex',
                                   alignItems: 'center',
                                   justifyContent: 'center'
@@ -1432,6 +1586,30 @@ export default function LeadPipeline({ initialLeads, properties, adminLocale }: 
                                 <ArrowUpRight size={12} />
                               </Link>
                             )}
+
+                            {/* Convert to Contract Button */}
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setConvertingLead(lead);
+                              }}
+                              title={isAr ? 'تحويل إلى عقد بيع' : 'Convert to Sales Contract'}
+                              style={{
+                                width: '24px',
+                                height: '24px',
+                                borderRadius: '6px',
+                                background: 'rgba(229, 184, 105, 0.18)',
+                                border: '1px solid rgba(229, 184, 105, 0.45)',
+                                color: 'var(--admin-gold-primary, #E5B869)',
+                                cursor: 'pointer',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                justifyContent: 'center'
+                              }}
+                            >
+                              <FileText size={11} />
+                            </button>
 
                             {/* Quick Archive Button */}
                             <button
@@ -1445,9 +1623,9 @@ export default function LeadPipeline({ initialLeads, properties, adminLocale }: 
                                 width: '24px',
                                 height: '24px',
                                 borderRadius: '6px',
-                                background: 'rgba(255, 255, 255, 0.04)',
-                                border: '1px solid rgba(255, 255, 255, 0.08)',
-                                color: 'rgba(255, 255, 255, 0.5)',
+                                background: 'var(--admin-card-bg-subtle, rgba(255, 255, 255, 0.04))',
+                                border: '1px solid var(--admin-card-border, #CBD5E1)',
+                                color: 'var(--admin-text-muted, #475569)',
                                 cursor: 'pointer',
                                 display: 'inline-flex',
                                 alignItems: 'center',
@@ -1461,22 +1639,22 @@ export default function LeadPipeline({ initialLeads, properties, adminLocale }: 
                       </div>
                     );
                   })}
+                </div>
 
                   {stage.items.length === 0 && (
                     <div style={{
                       padding: '32px 8px',
                       textAlign: 'center',
-                      color: 'rgba(255, 255, 255, 0.3)',
+                      color: 'var(--admin-text-muted, #475569)',
                       fontSize: '11.5px',
                       fontWeight: 600,
-                      border: '1.5px dashed rgba(255, 255, 255, 0.08)',
+                      border: '1.5px dashed var(--admin-card-border, #CBD5E1)',
                       borderRadius: '12px',
-                      background: 'rgba(0, 0, 0, 0.15)'
+                      background: 'var(--admin-dropzone-bg, rgba(0, 0, 0, 0.04))'
                     }}>
                       {isAr ? 'اسحب عميلاً إلى هنا' : 'Drop lead here'}
                     </div>
                   )}
-                </div>
               </div>
             );
           })}
@@ -1485,31 +1663,45 @@ export default function LeadPipeline({ initialLeads, properties, adminLocale }: 
         {/* ─── Dismissible Slide-Out Lead Dossier Drawer ─── */}
         {selectedLead && (
           <div style={{
-            background: 'rgba(13, 19, 34, 0.96)',
+            background: isLight ? 'var(--admin-drawer-bg, #FFFFFF)' : 'var(--admin-drawer-bg, rgba(13, 19, 34, 0.96))',
             backdropFilter: 'blur(28px)',
             WebkitBackdropFilter: 'blur(28px)',
-            border: '1px solid rgba(221, 167, 82, 0.3)',
+            border: isLight ? '1.5px solid var(--admin-card-border, #D8D2C4)' : '1px solid var(--admin-card-border, rgba(221, 167, 82, 0.3))',
             borderRadius: '20px',
             padding: '20px',
-            boxShadow: '0 16px 48px rgba(0,0,0,0.6), inset 0 1px 0 rgba(221, 167, 82, 0.2)',
+            boxShadow: isLight ? '0 12px 36px rgba(15, 23, 42, 0.08), 0 2px 8px rgba(15, 23, 42, 0.04)' : 'var(--admin-card-shadow, 0 16px 48px rgba(0,0,0,0.6))',
             display: 'flex',
             flexDirection: 'column',
             gap: '14px',
             height: '100%',
+            width: '100%',
+            maxWidth: isMobile ? '100%' : '440px',
             boxSizing: 'border-box',
             animation: 'fadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
             overflowY: 'auto',
-            maxHeight: 'calc(100vh - 200px)',
+            maxHeight: isMobile ? 'calc(100vh - 120px)' : 'calc(100vh - 200px)',
             scrollbarWidth: 'thin'
           }}>
-            {/* Header: Lead Identity, Contact Details & Direct Actions */}
-            <div style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.08)', paddingBottom: '12px' }}>
-              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '10px' }}>
+            {/* Scoped style for notes textarea placeholder in light/dark mode */}
+            <style dangerouslySetInnerHTML={{ __html: `
+              .zf-lead-notes-area::placeholder {
+                color: ${isLight ? '#64748B' : 'rgba(255, 255, 255, 0.4)'} !important;
+                opacity: 1;
+              }
+            `}} />
+
+            {/* Header: Lead Identity, Contact Details & Direct Actions (Decongested 3 Rows) */}
+            <div style={{
+              borderBottom: isLight ? '1px solid var(--admin-card-border, #D8D2C4)' : '1px solid var(--admin-card-border-subtle, rgba(255, 255, 255, 0.08))',
+              paddingBottom: '14px'
+            }}>
+              {/* Row 1: Identity & Close Button */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0, flex: 1 }}>
-                  {/* Client Avatar */}
+                  {/* Client Avatar (40px) */}
                   <div style={{
-                    width: '42px',
-                    height: '42px',
+                    width: '40px',
+                    height: '40px',
                     borderRadius: '12px',
                     background: 'linear-gradient(135deg, #E5B869 0%, #B8860B 100%)',
                     color: '#0A0E18',
@@ -1524,213 +1716,259 @@ export default function LeadPipeline({ initialLeads, properties, adminLocale }: 
                     {selectedLead.name ? selectedLead.name.slice(0, 2).toUpperCase() : 'LD'}
                   </div>
 
-                  {/* Name & Contact Info */}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', minWidth: 0, flex: 1 }}>
+                  {/* Full Client Name & Language/Source Badge */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, flexWrap: 'wrap' }}>
                     <h3 style={{
                       fontSize: '16px',
                       fontWeight: 800,
                       margin: 0,
-                      color: '#FFFFFF',
+                      color: isLight ? 'var(--admin-text-title, #0F172A)' : 'var(--admin-text-title, #FFFFFF)',
                       letterSpacing: '-0.01em',
-                      whiteSpace: 'nowrap',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis'
+                      lineHeight: 1.3
                     }}>
                       {selectedLead.name}
                     </h3>
-
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
-                      <a
-                        href={`tel:${selectedLead.phone}`}
-                        style={{
-                          color: '#E5B869',
-                          fontSize: '11.5px',
-                          fontWeight: 700,
-                          textDecoration: 'none',
-                          direction: 'ltr',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '4px',
-                          whiteSpace: 'nowrap'
-                        }}
-                      >
-                        <Phone size={10} style={{ opacity: 0.8 }} />
-                        <span>{selectedLead.phone}</span>
-                      </a>
-
-                      {selectedLead.email && (
-                        <div
-                          style={{
-                            color: 'rgba(255, 255, 255, 0.55)',
-                            fontSize: '11px',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '4px',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap'
-                          }}
-                          title={selectedLead.email}
-                        >
-                          <span style={{ fontSize: '10px', opacity: 0.6 }}>✉️</span>
-                          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{selectedLead.email}</span>
-                        </div>
-                      )}
-                    </div>
+                    <span style={{
+                      padding: '2px 7px',
+                      borderRadius: '6px',
+                      fontSize: '10px',
+                      fontWeight: 700,
+                      background: isLight ? 'rgba(148, 111, 35, 0.08)' : 'rgba(229, 184, 105, 0.15)',
+                      border: isLight ? '1px solid rgba(148, 111, 35, 0.25)' : '1px solid rgba(229, 184, 105, 0.35)',
+                      color: isLight ? '#946F23' : '#E5B869',
+                      whiteSpace: 'nowrap'
+                    }}>
+                      {selectedLead.source ? (selectedLead.source === 'Direct Phone Call' ? (isAr ? 'اتصال مباشر' : 'Direct Call') : selectedLead.source) : (isAr ? 'عربي' : 'EN')}
+                    </span>
                   </div>
                 </div>
 
-                {/* Micro Action Toolbar */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
-                  {/* Direct Phone Call Button */}
-                  <a
-                    href={`tel:${selectedLead.phone}`}
-                    title={isAr ? 'اتصال هاتفي مباشر' : 'Direct Call'}
+                {/* [X] Close Drawer Button (32x32px) */}
+                <button
+                  type="button"
+                  onClick={() => setSelectedLeadId(null)}
+                  title={isAr ? 'إغلاق لوحة العميل' : 'Close Dossier'}
+                  style={{
+                    width: '32px',
+                    height: '32px',
+                    borderRadius: '8px',
+                    background: isLight ? '#F1F5F9' : 'rgba(255, 255, 255, 0.06)',
+                    border: isLight ? '1px solid var(--admin-card-border, #D8D2C4)' : '1px solid rgba(255, 255, 255, 0.12)',
+                    color: isLight ? '#475569' : 'rgba(255, 255, 255, 0.75)',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    transition: 'all 0.15s ease',
+                    flexShrink: 0
+                  }}
+                >
+                  <X size={15} />
+                </button>
+              </div>
+
+              {/* Row 2: Contact Details */}
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                flexWrap: 'wrap',
+                gap: '12px',
+                marginTop: '8px',
+                paddingInlineStart: '2px'
+              }}>
+                <a
+                  href={`tel:${selectedLead.phone}`}
+                  style={{
+                    color: isLight ? 'var(--admin-gold-primary, #946F23)' : '#E5B869',
+                    fontSize: '12px',
+                    fontWeight: 700,
+                    textDecoration: 'none',
+                    direction: 'ltr',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '5px',
+                    whiteSpace: 'nowrap'
+                  }}
+                >
+                  <Phone size={12} style={{ opacity: 0.9 }} />
+                  <span>{selectedLead.phone}</span>
+                </a>
+
+                {selectedLead.email && (
+                  <div
                     style={{
-                      width: '30px',
-                      height: '30px',
-                      borderRadius: '8px',
-                      background: 'rgba(255, 255, 255, 0.06)',
-                      border: '1px solid rgba(255, 255, 255, 0.12)',
-                      color: 'rgba(255, 255, 255, 0.85)',
+                      color: isLight ? 'var(--admin-text-muted, #64748B)' : 'rgba(255, 255, 255, 0.55)',
+                      fontSize: '11.5px',
                       display: 'inline-flex',
                       alignItems: 'center',
-                      justifyContent: 'center',
-                      textDecoration: 'none',
-                      transition: 'all 0.15s ease'
+                      gap: '5px',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap'
                     }}
+                    title={selectedLead.email}
                   >
-                    <Phone size={12} />
-                  </a>
+                    <span style={{ fontSize: '11px', opacity: 0.8 }}>✉️</span>
+                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{selectedLead.email}</span>
+                  </div>
+                )}
+              </div>
 
-                  {/* Direct WhatsApp with Client Button */}
-                  <a
-                    href={`https://wa.me/${formatInternationalWhatsAppNumber(selectedLead.phone)}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    title={isAr ? 'محادثة واتساب مباشرة مع العميل' : 'Direct WhatsApp with Client'}
-                    style={{
-                      width: '30px',
-                      height: '30px',
-                      borderRadius: '8px',
-                      background: 'rgba(16, 185, 129, 0.15)',
-                      border: '1px solid rgba(16, 185, 129, 0.35)',
-                      color: '#34D399',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      textDecoration: 'none',
-                      transition: 'all 0.15s ease'
-                    }}
-                  >
-                    <MessageCircle size={12} />
-                  </a>
+              {/* Row 3: Spacious Action Toolbar */}
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                marginTop: '12px',
+                width: '100%'
+              }}>
+                {/* 1. Call Button */}
+                <a
+                  href={`tel:${selectedLead.phone}`}
+                  title={isAr ? 'اتصال هاتفي مباشر' : 'Direct Call'}
+                  style={{
+                    flex: '1 1 0',
+                    minWidth: 0,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '4px',
+                    padding: '8px 4px',
+                    borderRadius: '8px',
+                    fontSize: '11px',
+                    fontWeight: 700,
+                    textDecoration: 'none',
+                    background: isLight ? '#F8FAFC' : 'rgba(255, 255, 255, 0.06)',
+                    border: isLight ? '1px solid var(--admin-card-border, #D8D2C4)' : '1px solid rgba(255, 255, 255, 0.12)',
+                    color: isLight ? '#0F172A' : 'rgba(255, 255, 255, 0.9)',
+                    transition: 'all 0.15s ease',
+                    whiteSpace: 'nowrap'
+                  }}
+                >
+                  <Phone size={12} />
+                  <span>{isAr ? 'اتصال' : 'Call'}</span>
+                </a>
 
-                  {/* Copy Contact Details Button */}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const text = `👤 ${selectedLead.name}\n📞 ${selectedLead.phone}${selectedLead.email ? `\n✉️ ${selectedLead.email}` : ''}${selectedLead.property ? `\n🏡 ${selectedLead.property.title_en}` : ''}`;
-                      navigator.clipboard.writeText(text);
-                      toast.success(isAr ? 'تم نسخ بيانات العميل بنجاح' : 'Contact card copied to clipboard');
-                    }}
-                    title={isAr ? 'نسخ بيانات العميل' : 'Copy Contact Card'}
-                    style={{
-                      width: '30px',
-                      height: '30px',
-                      borderRadius: '8px',
-                      background: 'rgba(255, 255, 255, 0.06)',
-                      border: '1px solid rgba(255, 255, 255, 0.12)',
-                      color: 'rgba(255, 255, 255, 0.85)',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      cursor: 'pointer',
-                      transition: 'all 0.15s ease'
-                    }}
-                  >
-                    <Copy size={12} />
-                  </button>
+                {/* 2. WhatsApp Button (Royal Emerald) */}
+                <a
+                  href={`https://wa.me/${formatInternationalWhatsAppNumber(selectedLead.phone)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  title={isAr ? 'محادثة واتساب مباشرة مع العميل' : 'Direct WhatsApp with Client'}
+                  style={{
+                    flex: '1 1 0',
+                    minWidth: 0,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '4px',
+                    padding: '8px 4px',
+                    borderRadius: '8px',
+                    fontSize: '11px',
+                    fontWeight: 700,
+                    textDecoration: 'none',
+                    background: isLight ? 'rgba(4, 120, 87, 0.08)' : 'rgba(16, 185, 129, 0.15)',
+                    border: isLight ? '1px solid rgba(4, 120, 87, 0.25)' : '1px solid rgba(16, 185, 129, 0.35)',
+                    color: isLight ? '#047857' : '#34D399',
+                    transition: 'all 0.15s ease',
+                    whiteSpace: 'nowrap'
+                  }}
+                >
+                  <MessageCircle size={12} />
+                  <span>{isAr ? 'واتساب' : 'WhatsApp'}</span>
+                </a>
 
-                  {/* Notify Farid WhatsApp Button */}
-                  <a
-                    href={getNotifyFaridWhatsAppUrl({
-                      name: selectedLead.name,
-                      phone: selectedLead.phone,
-                      email: selectedLead.email,
-                      propertyTitle: cleanLeadData?.displayTitle || 'استفسار عام عن المشاريع الفاخرة',
-                      notes: selectedLead.notes,
-                      source: selectedLead.source,
-                    })}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    title={isAr ? 'إرسال ملخص الطلب إلى واتساب زكريا فريد' : 'Forward lead summary to Farid Zakaria WhatsApp'}
-                    style={{
-                      height: '30px',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '4px',
-                      borderRadius: '8px',
-                      padding: '0 8px',
-                      fontSize: '10.5px',
-                      fontWeight: 800,
-                      background: 'rgba(229, 184, 105, 0.15)',
-                      border: '1px solid rgba(229, 184, 105, 0.35)',
-                      color: '#E5B869',
-                      textDecoration: 'none',
-                      transition: 'all 0.15s ease'
-                    }}
-                  >
-                    <Send size={11} />
-                    <span>{isAr ? 'إشعار' : 'Notify'}</span>
-                  </a>
+                {/* 3. Copy Details Button */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    const text = `👤 ${selectedLead.name}\n📞 ${selectedLead.phone}${selectedLead.email ? `\n✉️ ${selectedLead.email}` : ''}${selectedLead.property ? `\n🏡 ${selectedLead.property.title_en}` : ''}`;
+                    navigator.clipboard.writeText(text);
+                    toast.success(isAr ? 'تم نسخ بيانات العميل بنجاح' : 'Contact card copied to clipboard');
+                  }}
+                  title={isAr ? 'نسخ بيانات العميل' : 'Copy Contact Card'}
+                  style={{
+                    flex: '1 1 0',
+                    minWidth: 0,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '4px',
+                    padding: '8px 4px',
+                    borderRadius: '8px',
+                    fontSize: '11px',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    background: isLight ? '#F8FAFC' : 'rgba(255, 255, 255, 0.06)',
+                    border: isLight ? '1px solid var(--admin-card-border, #D8D2C4)' : '1px solid rgba(255, 255, 255, 0.12)',
+                    color: isLight ? '#0F172A' : 'rgba(255, 255, 255, 0.9)',
+                    transition: 'all 0.15s ease',
+                    whiteSpace: 'nowrap'
+                  }}
+                >
+                  <Copy size={12} />
+                  <span>{isAr ? 'نسخ' : 'Copy'}</span>
+                </button>
 
-                  {/* [X] Close Drawer Button */}
-                  <button
-                    type="button"
-                    onClick={() => setSelectedLeadId(null)}
-                    title={isAr ? 'إغلاق لوحة العميل' : 'Close Dossier'}
-                    style={{
-                      width: '30px',
-                      height: '30px',
-                      borderRadius: '8px',
-                      background: 'rgba(255, 255, 255, 0.06)',
-                      border: '1px solid rgba(255, 255, 255, 0.12)',
-                      color: 'rgba(255, 255, 255, 0.75)',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      transition: 'all 0.15s ease'
-                    }}
-                  >
-                    <X size={14} />
-                  </button>
-                </div>
+                {/* 4. Notify Farid WhatsApp Button (Andalusian Gold) */}
+                <a
+                  href={getNotifyFaridWhatsAppUrl({
+                    name: selectedLead.name,
+                    phone: selectedLead.phone,
+                    email: selectedLead.email,
+                    propertyTitle: cleanLeadData?.displayTitle || 'استفسار عام عن المشاريع الفاخرة',
+                    notes: selectedLead.notes,
+                    source: selectedLead.source,
+                  })}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  title={isAr ? 'إرسال ملخص الطلب إلى واتساب زكريا فريد' : 'Forward lead summary to Farid Zakaria WhatsApp'}
+                  style={{
+                    flex: '1.3 1 0',
+                    minWidth: 0,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '4px',
+                    padding: '8px 4px',
+                    borderRadius: '8px',
+                    fontSize: '10.5px',
+                    fontWeight: 800,
+                    textDecoration: 'none',
+                    background: isLight ? 'rgba(148, 111, 35, 0.08)' : 'rgba(229, 184, 105, 0.15)',
+                    border: isLight ? '1px solid rgba(148, 111, 35, 0.25)' : '1px solid rgba(229, 184, 105, 0.35)',
+                    color: isLight ? '#946F23' : '#E5B869',
+                    transition: 'all 0.15s ease',
+                    whiteSpace: 'nowrap'
+                  }}
+                >
+                  <Send size={11} />
+                  <span>{isAr ? 'إشعار زكريا فريد' : 'Notify'}</span>
+                </a>
               </div>
 
               {/* Top Property Badge (if attached) */}
               {cleanLeadData?.primaryProp && (
                 <div style={{
-                  marginTop: '10px',
-                  background: 'rgba(221, 167, 82, 0.08)',
+                  marginTop: '12px',
+                  background: isLight ? 'rgba(148, 111, 35, 0.06)' : 'rgba(221, 167, 82, 0.08)',
                   padding: '7px 12px',
                   borderRadius: '10px',
-                  border: '1px solid rgba(221, 167, 82, 0.25)',
+                  border: isLight ? '1px solid rgba(148, 111, 35, 0.2)' : '1px solid rgba(221, 167, 82, 0.25)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between'
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
-                    <Building2 size={14} style={{ color: '#E5B869', flexShrink: 0 }} />
-                    <span style={{ fontSize: '12px', fontWeight: 800, color: '#FFFFFF', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <Building2 size={14} style={{ color: isLight ? '#946F23' : '#E5B869', flexShrink: 0 }} />
+                    <span style={{ fontSize: '12px', fontWeight: 800, color: isLight ? '#0F172A' : '#FFFFFF', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {cleanLeadData.displayTitle}
                     </span>
                   </div>
                   <Link
                     href={`/admin/${adminLocale}/properties/${cleanLeadData.primaryProp.id}/edit`}
                     target="_blank"
-                    style={{ color: '#E5B869', display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: '11px', fontWeight: 700, textDecoration: 'none' }}
+                    style={{ color: isLight ? '#946F23' : '#E5B869', display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: '11px', fontWeight: 700, textDecoration: 'none' }}
                   >
                     <span>{isAr ? 'عرض' : 'View'}</span>
                     <ArrowUpRight size={13} />
@@ -1742,11 +1980,19 @@ export default function LeadPipeline({ initialLeads, properties, adminLocale }: 
             {/* ─── Deal Stage Progression Stepper ─── */}
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                <span style={{ fontSize: '10.5px', fontWeight: 800, color: '#E5B869', letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+                <span style={{ fontSize: '10.5px', fontWeight: 800, color: isLight ? 'var(--admin-gold-primary, #946F23)' : '#E5B869', letterSpacing: '0.04em', textTransform: 'uppercase' }}>
                   {isAr ? 'مسار تقدم الصفقة:' : 'Deal Stage Progression:'}
                 </span>
                 {selectedLead.stage === 'closed_lost' && (
-                  <span style={{ fontSize: '9.5px', fontWeight: 800, color: '#F43F5E', background: 'rgba(244, 63, 94, 0.15)', padding: '2px 7px', borderRadius: '4px' }}>
+                  <span style={{
+                    fontSize: '9.5px',
+                    fontWeight: 800,
+                    color: isLight ? '#E11D48' : '#F43F5E',
+                    background: isLight ? '#FFF1F2' : 'rgba(244, 63, 94, 0.15)',
+                    border: isLight ? '1px solid #FECDD3' : 'none',
+                    padding: '2px 7px',
+                    borderRadius: '4px'
+                  }}>
                     {isAr ? 'صفقة ملغية 🔴' : 'Closed Lost 🔴'}
                   </span>
                 )}
@@ -1756,16 +2002,39 @@ export default function LeadPipeline({ initialLeads, properties, adminLocale }: 
                 display: 'grid',
                 gridTemplateColumns: 'repeat(5, 1fr)',
                 gap: '3px',
-                background: 'rgba(0, 0, 0, 0.25)',
-                padding: '3px',
+                background: isLight ? 'var(--admin-card-bg-subtle, #F8FAFC)' : 'rgba(0, 0, 0, 0.25)',
+                padding: '4px',
                 borderRadius: '10px',
-                border: '1px solid rgba(255, 255, 255, 0.08)'
+                border: isLight ? '1px solid var(--admin-card-border, #D8D2C4)' : '1px solid rgba(255, 255, 255, 0.08)'
               }}>
                 {PROGRESSION_STAGES.map((st) => {
                   const currentStageKey = selectedLead.stage || 'new';
                   const currentIdx = PROGRESSION_STAGES.findIndex(s => s.key === currentStageKey);
                   const isCurrent = currentStageKey === st.key;
                   const isPassed = currentIdx > PROGRESSION_STAGES.findIndex(s => s.key === st.key);
+
+                  let btnBg = 'transparent';
+                  let btnBorder = '1px solid transparent';
+                  let btnColor = isLight ? '#64748B' : 'rgba(255, 255, 255, 0.45)';
+                  let circleBg = isLight ? '#FFFFFF' : 'rgba(255, 255, 255, 0.1)';
+                  let circleBorder = isLight ? '1px solid #D8D2C4' : 'none';
+                  let circleColor = isLight ? '#64748B' : 'rgba(255, 255, 255, 0.5)';
+
+                  if (isCurrent) {
+                    btnBg = isLight ? 'rgba(148, 111, 35, 0.12)' : `${st.color}35`;
+                    btnBorder = isLight ? '1.5px solid #946F23' : `1.5px solid ${st.color}`;
+                    btnColor = isLight ? '#0F172A' : '#FFFFFF';
+                    circleBg = isLight ? '#946F23' : st.color;
+                    circleBorder = 'none';
+                    circleColor = '#FFFFFF';
+                  } else if (isPassed) {
+                    btnBg = isLight ? 'rgba(4, 120, 87, 0.08)' : `${st.color}15`;
+                    btnBorder = isLight ? '1px solid rgba(4, 120, 87, 0.25)' : '1px solid transparent';
+                    btnColor = isLight ? '#047857' : st.color;
+                    circleBg = isLight ? '#047857' : `${st.color}40`;
+                    circleBorder = 'none';
+                    circleColor = '#FFFFFF';
+                  }
 
                   return (
                     <button
@@ -1778,9 +2047,9 @@ export default function LeadPipeline({ initialLeads, properties, adminLocale }: 
                         borderRadius: '6px',
                         fontSize: '9px',
                         fontWeight: 800,
-                        border: isCurrent ? `1.5px solid ${st.color}` : '1px solid transparent',
-                        background: isCurrent ? `${st.color}35` : (isPassed ? `${st.color}15` : 'transparent'),
-                        color: isCurrent ? '#FFFFFF' : (isPassed ? st.color : 'rgba(255, 255, 255, 0.45)'),
+                        border: btnBorder,
+                        background: btnBg,
+                        color: btnColor,
                         cursor: 'pointer',
                         textAlign: 'center',
                         display: 'flex',
@@ -1794,8 +2063,9 @@ export default function LeadPipeline({ initialLeads, properties, adminLocale }: 
                         width: '16px',
                         height: '16px',
                         borderRadius: '50%',
-                        background: isCurrent ? st.color : (isPassed ? `${st.color}40` : 'rgba(255, 255, 255, 0.1)'),
-                        color: isCurrent ? '#0A0E18' : (isPassed ? '#FFFFFF' : 'rgba(255, 255, 255, 0.5)'),
+                        background: circleBg,
+                        border: circleBorder,
+                        color: circleColor,
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
@@ -1829,11 +2099,13 @@ export default function LeadPipeline({ initialLeads, properties, adminLocale }: 
                       borderRadius: '8px',
                       fontSize: '11.5px',
                       fontWeight: 800,
-                      background: `linear-gradient(135deg, ${nextStageInfo.color} 0%, #0A0E18 180%)`,
+                      background: isLight
+                        ? `linear-gradient(135deg, ${nextStageInfo.color} 0%, #85581A 100%)`
+                        : `linear-gradient(135deg, ${nextStageInfo.color} 0%, #0A0E18 180%)`,
                       border: `1px solid ${nextStageInfo.color}`,
                       color: '#FFFFFF',
                       cursor: 'pointer',
-                      boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3)'
+                      boxShadow: isLight ? '0 2px 8px rgba(148, 111, 35, 0.25)' : '0 2px 8px rgba(0, 0, 0, 0.3)'
                     }}
                   >
                     <span>{isAr ? `نقل المرحلة إلى: ${nextStageInfo.ar}` : `Advance to: ${nextStageInfo.en}`}</span>
@@ -1850,9 +2122,15 @@ export default function LeadPipeline({ initialLeads, properties, adminLocale }: 
                     borderRadius: '8px',
                     fontSize: '11px',
                     fontWeight: 700,
-                    background: selectedLead.stage === 'closed_lost' ? 'rgba(56, 189, 248, 0.15)' : 'rgba(244, 63, 94, 0.12)',
-                    border: selectedLead.stage === 'closed_lost' ? '1px solid #38BDF8' : '1px solid rgba(244, 63, 94, 0.3)',
-                    color: selectedLead.stage === 'closed_lost' ? '#38BDF8' : '#FB7185',
+                    background: selectedLead.stage === 'closed_lost'
+                      ? (isLight ? '#F0F9FF' : 'rgba(56, 189, 248, 0.15)')
+                      : (isLight ? '#FFF1F2' : 'rgba(244, 63, 94, 0.12)'),
+                    border: selectedLead.stage === 'closed_lost'
+                      ? (isLight ? '1px solid #BAE6FD' : '1px solid #38BDF8')
+                      : (isLight ? '1px solid #FECDD3' : '1px solid rgba(244, 63, 94, 0.3)'),
+                    color: selectedLead.stage === 'closed_lost'
+                      ? (isLight ? '#0284C7' : '#38BDF8')
+                      : (isLight ? '#E11D48' : '#FB7185'),
                     cursor: 'pointer',
                     whiteSpace: 'nowrap'
                   }}
@@ -1860,15 +2138,42 @@ export default function LeadPipeline({ initialLeads, properties, adminLocale }: 
                   {selectedLead.stage === 'closed_lost' ? (isAr ? 'إعادة تنشيط 🔄' : 'Reactivate 🔄') : (isAr ? 'تعذر التعاقد 🔴' : 'Closed Lost 🔴')}
                 </button>
               </div>
+
+              {/* Direct Convert to Contract Button */}
+              <button
+                type="button"
+                disabled={isSaving}
+                onClick={() => setConvertingLead(selectedLead)}
+                style={{
+                  width: '100%',
+                  marginTop: '8px',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  padding: '10px 16px',
+                  borderRadius: '10px',
+                  fontSize: '12.5px',
+                  fontWeight: 800,
+                  background: 'linear-gradient(135deg, #E5B869 0%, #B8860B 100%)',
+                  color: '#0A0E18',
+                  border: 'none',
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 14px rgba(229, 184, 105, 0.35)'
+                }}
+              >
+                <FileText size={15} style={{ color: '#0A0E18' }} />
+                <span>{isAr ? 'تحويل إلى عقد بيع رسمي (إنشاء عقد جديد) ✍️' : 'Convert to Official Sales Contract ✍️'}</span>
+              </button>
             </div>
 
             {/* ─── Hero Inquired Property Card ─── */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <span style={{ fontSize: '10.5px', fontWeight: 800, color: '#E5B869', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                <span style={{ fontSize: '10.5px', fontWeight: 800, color: isLight ? 'var(--admin-gold-primary, #946F23)' : '#E5B869', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                   {isAr ? 'تفاصيل العقار المطلوب:' : 'Inquired Property:'}
                 </span>
-                <span style={{ fontSize: '10px', color: 'rgba(255, 255, 255, 0.5)' }}>
+                <span style={{ fontSize: '10px', color: isLight ? 'var(--admin-text-muted, #64748B)' : 'rgba(255, 255, 255, 0.5)' }}>
                   {formatTimeAgo(selectedLead.created_at)}
                 </span>
               </div>
@@ -1880,9 +2185,9 @@ export default function LeadPipeline({ initialLeads, properties, adminLocale }: 
                   gap: '10px',
                   padding: '12px',
                   borderRadius: '12px',
-                  background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(10, 14, 24, 0.8) 100%)',
-                  border: '1px solid rgba(221, 167, 82, 0.3)',
-                  boxShadow: '0 4px 16px rgba(0, 0, 0, 0.25)'
+                  background: isLight ? 'var(--admin-card-bg-subtle, #F8FAFC)' : 'var(--admin-card-bg, rgba(10, 14, 24, 0.8))',
+                  border: isLight ? '1px solid var(--admin-card-border, #D8D2C4)' : '1px solid var(--admin-card-border, rgba(221, 167, 82, 0.3))',
+                  boxShadow: isLight ? '0 2px 10px rgba(15, 23, 42, 0.04)' : 'var(--admin-card-shadow, 0 4px 16px rgba(0, 0, 0, 0.25))'
                 }}>
                   <div style={{ display: 'flex', gap: '12px' }}>
                     {/* Property Thumbnail */}
@@ -1895,7 +2200,7 @@ export default function LeadPipeline({ initialLeads, properties, adminLocale }: 
                         borderRadius: '10px',
                         objectFit: 'cover',
                         flexShrink: 0,
-                        border: '1px solid rgba(255, 255, 255, 0.15)'
+                        border: isLight ? '1px solid #D8D2C4' : '1px solid rgba(255, 255, 255, 0.15)'
                       }}
                     />
 
@@ -1907,39 +2212,51 @@ export default function LeadPipeline({ initialLeads, properties, adminLocale }: 
                           borderRadius: '5px',
                           fontSize: '9.5px',
                           fontWeight: 800,
-                          background: 'rgba(229, 184, 105, 0.18)',
-                          border: '1px solid rgba(229, 184, 105, 0.4)',
-                          color: '#E5B869',
+                          background: isLight ? 'rgba(148, 111, 35, 0.08)' : 'rgba(229, 184, 105, 0.18)',
+                          border: isLight ? '1px solid rgba(148, 111, 35, 0.25)' : '1px solid rgba(229, 184, 105, 0.4)',
+                          color: isLight ? '#946F23' : '#E5B869',
                           textTransform: 'uppercase'
                         }}>
                           🏷️ {isAr ? 'طلب استحواذ خاص' : 'Private Acquisition'}
                         </span>
 
+                        {/* WhatsApp Protocol Badge (Royal Emerald) */}
                         <span style={{
                           padding: '2px 7px',
                           borderRadius: '5px',
                           fontSize: '9.5px',
                           fontWeight: 800,
-                          background: 'rgba(16, 185, 129, 0.15)',
-                          border: '1px solid rgba(16, 185, 129, 0.35)',
-                          color: '#34D399'
+                          background: isLight ? 'rgba(4, 120, 87, 0.08)' : 'rgba(16, 185, 129, 0.15)',
+                          border: isLight ? '1px solid rgba(4, 120, 87, 0.25)' : '1px solid rgba(16, 185, 129, 0.35)',
+                          color: isLight ? '#047857' : '#34D399'
                         }}>
                           📱 {cleanLeadData.protocol}
                         </span>
                       </div>
 
                       {/* Property Title */}
-                      <strong style={{ fontSize: '13.5px', color: '#FFFFFF', lineHeight: 1.3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      <strong style={{ fontSize: '13.5px', color: isLight ? 'var(--admin-text-title, #0F172A)' : 'var(--admin-text-title, #FFFFFF)', lineHeight: 1.3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         {cleanLeadData.displayTitle}
                       </strong>
 
                       {/* Location & Price */}
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px' }}>
-                        <span style={{ color: '#E5B869', fontWeight: 800 }}>
-                          {cleanLeadData.propPrice ? `${Number(cleanLeadData.propPrice).toLocaleString()} EGP` : 'Price on Request'}
-                        </span>
-                        <span style={{ color: 'rgba(255, 255, 255, 0.4)' }}>·</span>
-                        <span style={{ color: 'rgba(255, 255, 255, 0.7)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {cleanLeadData.propPrice ? (
+                          <span style={{ display: 'inline-flex', alignItems: 'baseline', gap: '3px' }}>
+                            <span style={{ color: isLight ? '#0F172A' : 'var(--admin-text-title, #FFFFFF)', fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}>
+                              {Number(cleanLeadData.propPrice).toLocaleString('en-US')}
+                            </span>
+                            <span style={{ color: isLight ? '#946F23' : '#E5B869', fontWeight: 700 }}>
+                              {isAr ? 'ج.م' : 'EGP'}
+                            </span>
+                          </span>
+                        ) : (
+                          <span style={{ color: isLight ? 'var(--admin-gold-primary, #946F23)' : '#E5B869', fontWeight: 700 }}>
+                            {isAr ? 'السعر عند الطلب' : 'Price on Request'}
+                          </span>
+                        )}
+                        <span style={{ color: isLight ? '#94A3B8' : 'rgba(255, 255, 255, 0.4)' }}>·</span>
+                        <span style={{ color: isLight ? 'var(--admin-text-muted, #64748B)' : 'var(--admin-text-muted, rgba(255, 255, 255, 0.7))', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           {cleanLeadData.propLocation}
                         </span>
                       </div>
@@ -1951,16 +2268,16 @@ export default function LeadPipeline({ initialLeads, properties, adminLocale }: 
                     <div style={{
                       padding: '8px 10px',
                       borderRadius: '8px',
-                      background: 'rgba(0, 0, 0, 0.35)',
-                      border: '1px solid rgba(255, 255, 255, 0.08)',
+                      background: isLight ? '#F1F5F9' : 'var(--admin-card-bg-subtle, rgba(0, 0, 0, 0.35))',
+                      border: isLight ? '1px solid #E2E8F0' : '1px solid var(--admin-card-border-subtle, rgba(255, 255, 255, 0.08))',
                       display: 'flex',
                       flexDirection: 'column',
                       gap: '2px'
                     }}>
-                      <span style={{ fontSize: '9.5px', fontWeight: 800, color: 'rgba(255, 255, 255, 0.5)', textTransform: 'uppercase' }}>
+                      <span style={{ fontSize: '9.5px', fontWeight: 800, color: isLight ? 'var(--admin-text-muted, #64748B)' : 'var(--admin-text-muted, rgba(255, 255, 255, 0.5))', textTransform: 'uppercase' }}>
                         {isAr ? 'رسالة واستفسار العميل:' : 'Client Inquiry Note:'}
                       </span>
-                      <p style={{ margin: 0, fontSize: '11.5px', color: '#F1F5F9', lineHeight: 1.4, fontStyle: 'italic' }}>
+                      <p style={{ margin: 0, fontSize: '11.5px', color: isLight ? '#0F172A' : 'var(--admin-text-body, #F1F5F9)', lineHeight: 1.4, fontStyle: 'italic' }}>
                         &ldquo;{cleanLeadData.clientMessage}&rdquo;
                       </p>
                     </div>
@@ -2010,9 +2327,9 @@ export default function LeadPipeline({ initialLeads, properties, adminLocale }: 
                                 borderRadius: '8px',
                                 fontSize: '11px',
                                 fontWeight: 700,
-                                background: 'rgba(255, 255, 255, 0.06)',
-                                border: '1px solid rgba(255, 255, 255, 0.12)',
-                                color: 'rgba(255, 255, 255, 0.85)',
+                                background: isLight ? '#FFFFFF' : 'var(--admin-card-bg-subtle, rgba(255, 255, 255, 0.06))',
+                                border: isLight ? '1px solid var(--admin-card-border, #D8D2C4)' : '1px solid var(--admin-card-border, rgba(255, 255, 255, 0.12))',
+                                color: isLight ? '#0F172A' : 'var(--admin-text-body, rgba(255, 255, 255, 0.85))',
                                 textDecoration: 'none',
                                 display: 'inline-flex',
                                 alignItems: 'center',
@@ -2033,24 +2350,25 @@ export default function LeadPipeline({ initialLeads, properties, adminLocale }: 
                 <div style={{
                   padding: '12px',
                   borderRadius: '12px',
-                  background: 'rgba(255, 255, 255, 0.03)',
-                  border: '1px dashed rgba(255, 255, 255, 0.15)',
+                  background: isLight ? 'var(--admin-card-bg-subtle, #F8FAFC)' : 'var(--admin-card-bg-subtle, rgba(255, 255, 255, 0.03))',
+                  border: isLight ? '1px dashed var(--admin-card-border, #D8D2C4)' : '1px dashed var(--admin-card-border, rgba(255, 255, 255, 0.15))',
                   display: 'flex',
                   flexDirection: 'column',
                   gap: '8px'
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <span style={{ fontSize: '11.5px', color: 'rgba(255, 255, 255, 0.7)', fontWeight: 700 }}>
+                    <span style={{ fontSize: '11.5px', color: isLight ? 'var(--admin-text-title, #0F172A)' : 'var(--admin-text-title, rgba(255, 255, 255, 0.7))', fontWeight: 700 }}>
                       {isAr ? 'استشارة عقارية عامة (لم يتم ربط عقار محدد)' : 'General Advisory (No property linked yet)'}
                     </span>
+                    {/* WhatsApp Protocol Badge (Royal Emerald) */}
                     <span style={{
                       padding: '2px 7px',
                       borderRadius: '5px',
                       fontSize: '9.5px',
                       fontWeight: 800,
-                      background: 'rgba(16, 185, 129, 0.15)',
-                      border: '1px solid rgba(16, 185, 129, 0.35)',
-                      color: '#34D399'
+                      background: isLight ? 'rgba(4, 120, 87, 0.08)' : 'rgba(16, 185, 129, 0.15)',
+                      border: isLight ? '1px solid rgba(4, 120, 87, 0.25)' : '1px solid rgba(16, 185, 129, 0.35)',
+                      color: isLight ? '#047857' : '#34D399'
                     }}>
                       📱 {cleanLeadData?.protocol || 'WhatsApp'}
                     </span>
@@ -2060,10 +2378,10 @@ export default function LeadPipeline({ initialLeads, properties, adminLocale }: 
                     <div style={{
                       padding: '7px 9px',
                       borderRadius: '7px',
-                      background: 'rgba(0, 0, 0, 0.3)',
-                      border: '1px solid rgba(255, 255, 255, 0.06)',
+                      background: isLight ? '#F1F5F9' : 'var(--admin-card-bg-subtle, rgba(0, 0, 0, 0.3))',
+                      border: isLight ? '1px solid #E2E8F0' : '1px solid var(--admin-card-border-subtle, rgba(255, 255, 255, 0.06))',
                       fontSize: '11px',
-                      color: '#FFFFFF',
+                      color: isLight ? '#0F172A' : 'var(--admin-text-body, #FFFFFF)',
                       fontStyle: 'italic'
                     }}>
                       &ldquo;{cleanLeadData.clientMessage}&rdquo;
@@ -2079,9 +2397,9 @@ export default function LeadPipeline({ initialLeads, properties, adminLocale }: 
                         flex: 1,
                         padding: '6px 8px',
                         borderRadius: '7px',
-                        background: 'rgba(10, 14, 24, 0.9)',
-                        border: '1px solid rgba(255, 255, 255, 0.12)',
-                        color: '#FFFFFF',
+                        background: isLight ? '#FFFFFF' : 'var(--admin-input-bg, rgba(10, 14, 24, 0.9))',
+                        border: isLight ? '1px solid #D8D2C4' : '1px solid var(--admin-input-border, rgba(255, 255, 255, 0.12))',
+                        color: isLight ? '#0F172A' : 'var(--admin-text-title, #FFFFFF)',
                         fontSize: '10.5px',
                         outline: 'none'
                       }}
@@ -2089,7 +2407,7 @@ export default function LeadPipeline({ initialLeads, properties, adminLocale }: 
                       <option value="">{isAr ? '-- ربط عقار من المحفظة بهذا العميل --' : '-- Link a Portfolio Property --'}</option>
                       {properties.map((p) => (
                         <option key={p.id} value={p.id}>
-                          {isAr && p.title_ar ? p.title_ar : p.title_en} ({p.price_egp ? `${Number(p.price_egp).toLocaleString()} EGP` : 'Price on request'})
+                          {isAr && p.title_ar ? p.title_ar : p.title_en} ({p.price_egp ? `${Number(p.price_egp).toLocaleString('en-US')} ${isAr ? 'ج.م' : 'EGP'}` : (isAr ? 'السعر عند الطلب' : 'Price on request')})
                         </option>
                       ))}
                     </select>
@@ -2120,11 +2438,12 @@ export default function LeadPipeline({ initialLeads, properties, adminLocale }: 
                         borderRadius: '7px',
                         fontSize: '10.5px',
                         fontWeight: 800,
-                        background: selectedPropToAssociate ? '#E5B869' : 'rgba(255, 255, 255, 0.08)',
-                        color: selectedPropToAssociate ? '#0A0E18' : 'rgba(255, 255, 255, 0.4)',
-                        border: 'none',
+                        background: selectedPropToAssociate ? (isLight ? 'linear-gradient(135deg, #946F23 0%, #B8860B 100%)' : '#E5B869') : (isLight ? '#F1F5F9' : 'rgba(255, 255, 255, 0.08)'),
+                        color: selectedPropToAssociate ? '#FFFFFF' : (isLight ? '#94A3B8' : 'rgba(255, 255, 255, 0.4)'),
+                        border: selectedPropToAssociate ? 'none' : (isLight ? '1px solid #E2E8F0' : 'none'),
                         cursor: selectedPropToAssociate ? 'pointer' : 'not-allowed',
-                        whiteSpace: 'nowrap'
+                        whiteSpace: 'nowrap',
+                        boxShadow: (selectedPropToAssociate && isLight) ? '0 2px 6px rgba(148, 111, 35, 0.25)' : 'none'
                       }}
                     >
                       {isAr ? 'ربط' : 'Link'}
@@ -2137,7 +2456,7 @@ export default function LeadPipeline({ initialLeads, properties, adminLocale }: 
             {/* ─── Other Distinct Inquiries by the same client (if any) ─── */}
             {otherInquiries.length > 0 && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <span style={{ fontSize: '10.5px', fontWeight: 800, color: '#E5B869', textTransform: 'uppercase' }}>
+                <span style={{ fontSize: '10.5px', fontWeight: 800, color: isLight ? 'var(--admin-gold-primary, #946F23)' : '#E5B869', textTransform: 'uppercase' }}>
                   {isAr ? `عقارات سابقة استفسر عنها العميل (${otherInquiries.length}):` : `Previous Inquiries by Client (${otherInquiries.length}):`}
                 </span>
 
@@ -2159,26 +2478,33 @@ export default function LeadPipeline({ initialLeads, properties, adminLocale }: 
                           gap: '8px',
                           padding: '7px 10px',
                           borderRadius: '8px',
-                          background: 'rgba(255, 255, 255, 0.03)',
-                          border: '1px solid rgba(255, 255, 255, 0.08)'
+                          background: isLight ? '#F8FAFC' : 'rgba(255, 255, 255, 0.03)',
+                          border: isLight ? '1px solid var(--admin-card-border, #D8D2C4)' : '1px solid rgba(255, 255, 255, 0.08)'
                         }}
                       >
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
                           <img
                             src={oth.image}
                             alt={oth.title}
-                            style={{ width: '36px', height: '36px', borderRadius: '6px', objectFit: 'cover' }}
+                            style={{
+                              width: '36px',
+                              height: '36px',
+                              borderRadius: '6px',
+                              objectFit: 'cover',
+                              border: isLight ? '1px solid #D8D2C4' : 'none'
+                            }}
                           />
                           <div style={{ minWidth: 0 }}>
-                            <strong style={{ fontSize: '11.5px', color: '#FFFFFF', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            <strong style={{ fontSize: '11.5px', color: isLight ? 'var(--admin-text-title, #0F172A)' : '#FFFFFF', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                               {oth.title}
                             </strong>
-                            <span style={{ fontSize: '10px', color: 'rgba(255, 255, 255, 0.55)' }}>
+                            <span style={{ fontSize: '10px', color: isLight ? 'var(--admin-text-muted, #64748B)' : 'rgba(255, 255, 255, 0.55)' }}>
                               {oth.location} · {formatTimeAgo(oth.date)}
                             </span>
                           </div>
                         </div>
 
+                        {/* WhatsApp Action Button (Royal Emerald) */}
                         <a
                           href={waHref}
                           target="_blank"
@@ -2188,9 +2514,9 @@ export default function LeadPipeline({ initialLeads, properties, adminLocale }: 
                             borderRadius: '6px',
                             fontSize: '9.5px',
                             fontWeight: 800,
-                            background: 'rgba(16, 185, 129, 0.15)',
-                            border: '1px solid rgba(16, 185, 129, 0.35)',
-                            color: '#34D399',
+                            background: isLight ? 'rgba(4, 120, 87, 0.08)' : 'rgba(16, 185, 129, 0.15)',
+                            border: isLight ? '1px solid rgba(4, 120, 87, 0.25)' : '1px solid rgba(16, 185, 129, 0.35)',
+                            color: isLight ? '#047857' : '#34D399',
                             textDecoration: 'none',
                             display: 'inline-flex',
                             alignItems: 'center',
@@ -2211,11 +2537,11 @@ export default function LeadPipeline({ initialLeads, properties, adminLocale }: 
             {/* ─── Internal Advisor Notes & Quick Tags ─── */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <span style={{ fontSize: '10.5px', fontWeight: 800, color: '#E5B869', textTransform: 'uppercase' }}>
+                <span style={{ fontSize: '10.5px', fontWeight: 800, color: isLight ? 'var(--admin-gold-primary, #946F23)' : '#E5B869', textTransform: 'uppercase' }}>
                   {isAr ? 'ملاحظات المستشار العقاري:' : 'Internal Advisor Notes:'}
                 </span>
                 {selectedLead.source && (
-                  <span style={{ fontSize: '9.5px', color: 'rgba(255, 255, 255, 0.45)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '180px' }}>
+                  <span style={{ fontSize: '9.5px', color: isLight ? 'var(--admin-text-muted, #64748B)' : 'rgba(255, 255, 255, 0.45)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '180px' }}>
                     {selectedLead.source}
                   </span>
                 )}
@@ -2247,9 +2573,9 @@ export default function LeadPipeline({ initialLeads, properties, adminLocale }: 
                       borderRadius: '6px',
                       fontSize: '10px',
                       fontWeight: 700,
-                      background: 'rgba(221, 167, 82, 0.12)',
-                      border: '1px solid rgba(221, 167, 82, 0.25)',
-                      color: '#E5B869',
+                      background: isLight ? 'rgba(148, 111, 35, 0.08)' : 'rgba(221, 167, 82, 0.12)',
+                      border: isLight ? '1px solid rgba(148, 111, 35, 0.25)' : '1px solid rgba(221, 167, 82, 0.25)',
+                      color: isLight ? '#946F23' : '#E5B869',
                       cursor: 'pointer'
                     }}
                   >
@@ -2260,18 +2586,19 @@ export default function LeadPipeline({ initialLeads, properties, adminLocale }: 
 
               {/* Notes Textarea */}
               <textarea
+                className="zf-lead-notes-area"
                 value={detailDraft.notes}
                 onChange={(e) => setDetailDraft(d => ({ ...d, notes: e.target.value }))}
                 rows={3}
                 style={{
                   width: '100%',
-                  border: '1px solid rgba(255, 255, 255, 0.12)',
+                  border: isLight ? '1px solid #D8D2C4' : '1px solid var(--admin-input-border, rgba(255, 255, 255, 0.12))',
                   borderRadius: '9px',
                   padding: '8px 10px',
                   fontSize: '11.5px',
                   fontFamily: 'inherit',
-                  background: 'rgba(10, 14, 24, 0.85)',
-                  color: '#FFFFFF',
+                  background: isLight ? '#FFFFFF' : 'var(--admin-input-bg, rgba(10, 14, 24, 0.85))',
+                  color: isLight ? '#0F172A' : 'var(--admin-text-title, #FFFFFF)',
                   boxSizing: 'border-box',
                   outline: 'none',
                   lineHeight: '1.4'
@@ -2282,7 +2609,7 @@ export default function LeadPipeline({ initialLeads, properties, adminLocale }: 
               {/* Closed Lost Reason (if closed lost) */}
               {(selectedLead.stage === 'closed_lost' || detailDraft.lost_reason) && (
                 <div>
-                  <label style={{ fontSize: '10px', fontWeight: 800, color: '#F43F5E', display: 'block', marginBottom: '3px' }}>
+                  <label style={{ fontSize: '10px', fontWeight: 800, color: isLight ? '#E11D48' : '#F43F5E', display: 'block', marginBottom: '3px' }}>
                     {isAr ? 'سبب عدم إتمام الصفقة:' : 'Closed Lost Reason:'}
                   </label>
                   <input
@@ -2290,12 +2617,12 @@ export default function LeadPipeline({ initialLeads, properties, adminLocale }: 
                     onChange={(e) => setDetailDraft(d => ({ ...d, lost_reason: e.target.value }))}
                     style={{
                       width: '100%',
-                      border: '1px solid rgba(244, 63, 94, 0.35)',
+                      border: isLight ? '1px solid #FECDD3' : '1px solid rgba(244, 63, 94, 0.35)',
                       borderRadius: '7px',
                       padding: '6px 10px',
                       fontSize: '11px',
-                      background: 'rgba(244, 63, 94, 0.1)',
-                      color: '#FFFFFF',
+                      background: isLight ? '#FFF1F2' : 'rgba(244, 63, 94, 0.1)',
+                      color: isLight ? '#0F172A' : 'var(--admin-text-title, #FFFFFF)',
                       boxSizing: 'border-box',
                       outline: 'none'
                     }}
@@ -2306,7 +2633,7 @@ export default function LeadPipeline({ initialLeads, properties, adminLocale }: 
             </div>
 
             {/* ─── Footer Action Bar ─── */}
-            <div style={{ display: 'flex', gap: '6px', marginTop: 'auto', paddingTop: '8px', borderTop: '1px solid rgba(255, 255, 255, 0.08)' }}>
+            <div style={{ display: 'flex', gap: '6px', marginTop: 'auto', paddingTop: '8px', borderTop: isLight ? '1px solid var(--admin-card-border, #D8D2C4)' : '1px solid rgba(255, 255, 255, 0.08)' }}>
               <button
                 type="button"
                 onClick={() => void handleSaveDetails()}
@@ -2345,9 +2672,9 @@ export default function LeadPipeline({ initialLeads, properties, adminLocale }: 
                   borderRadius: '9px',
                   fontSize: '11.5px',
                   fontWeight: 700,
-                  background: 'rgba(255, 255, 255, 0.06)',
-                  color: 'rgba(255, 255, 255, 0.8)',
-                  border: '1px solid rgba(255, 255, 255, 0.12)',
+                  background: isLight ? '#F8FAFC' : 'rgba(255, 255, 255, 0.06)',
+                  color: isLight ? '#0F172A' : 'rgba(255, 255, 255, 0.8)',
+                  border: isLight ? '1px solid var(--admin-card-border, #D8D2C4)' : '1px solid rgba(255, 255, 255, 0.12)',
                   cursor: 'pointer'
                 }}
               >
@@ -2367,9 +2694,9 @@ export default function LeadPipeline({ initialLeads, properties, adminLocale }: 
                   borderRadius: '9px',
                   fontSize: '11.5px',
                   fontWeight: 700,
-                  background: 'rgba(244, 63, 94, 0.12)',
-                  color: '#FB7185',
-                  border: '1px solid rgba(244, 63, 94, 0.3)',
+                  background: isLight ? '#FFF1F2' : 'rgba(244, 63, 94, 0.12)',
+                  color: isLight ? '#E11D48' : '#FB7185',
+                  border: isLight ? '1px solid #FECDD3' : '1px solid rgba(244, 63, 94, 0.3)',
                   cursor: 'pointer'
                 }}
               >
@@ -2399,26 +2726,26 @@ export default function LeadPipeline({ initialLeads, properties, adminLocale }: 
           <div style={{
             width: '100%',
             maxWidth: '520px',
-            background: 'rgba(13, 19, 34, 0.95)',
+            background: 'var(--admin-modal-bg, var(--admin-card-bg, #0D1322))',
             backdropFilter: 'blur(24px)',
             borderRadius: '20px',
             padding: '28px',
-            boxShadow: '0 25px 60px rgba(0, 0, 0, 0.6)',
-            border: '1px solid rgba(221, 167, 82, 0.3)'
+            boxShadow: 'var(--admin-card-shadow, 0 25px 60px rgba(0, 0, 0, 0.6))',
+            border: '1px solid var(--admin-card-border, rgba(221, 167, 82, 0.3))'
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
               <div>
-                <h3 style={{ margin: 0, fontSize: '18px', fontFamily: "var(--font-sans, 'ThmanyahSans', 'Cairo', -apple-system, BlinkMacSystemFont, sans-serif)", fontWeight: 800, color: '#FFFFFF' }}>
+                <h3 style={{ margin: 0, fontSize: '18px', fontFamily: "var(--font-sans, 'ThmanyahSans', 'Cairo', -apple-system, BlinkMacSystemFont, sans-serif)", fontWeight: 800, color: 'var(--admin-text-title, #FFFFFF)' }}>
                   {isAr ? 'إضافة عميل جديد يدوي' : 'Register Manual Inquiry'}
                 </h3>
-                <p style={{ margin: '4px 0 0', color: 'rgba(255, 255, 255, 0.6)', fontSize: '12.5px' }}>
+                <p style={{ margin: '4px 0 0', color: 'var(--admin-text-muted, rgba(255, 255, 255, 0.6))', fontSize: '12.5px' }}>
                   {isAr ? 'سجل اتصالات هاتفية، رسائل واتساب، أو زيارات مباشرة للمكتب' : 'Record a direct phone call, WhatsApp lead, or office walk-in.'}
                 </p>
               </div>
               <button
                 type="button"
                 onClick={() => setIsComposerOpen(false)}
-                style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'rgba(255, 255, 255, 0.6)', padding: '4px' }}
+                style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--admin-text-muted, rgba(255, 255, 255, 0.6))', padding: '4px' }}
               >
                 <X size={20} />
               </button>
@@ -2427,7 +2754,7 @@ export default function LeadPipeline({ initialLeads, properties, adminLocale }: 
             <form onSubmit={handleCreateLead} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                 <div>
-                  <label style={{ fontSize: '12px', fontWeight: 700, display: 'block', marginBottom: '6px', color: 'rgba(255, 255, 255, 0.85)' }}>
+                  <label style={{ fontSize: '12px', fontWeight: 700, display: 'block', marginBottom: '6px', color: 'var(--admin-text-body, rgba(255, 255, 255, 0.85))' }}>
                     {isAr ? 'اسم العميل *' : 'Client Name *'}
                   </label>
                   <input
@@ -2436,12 +2763,12 @@ export default function LeadPipeline({ initialLeads, properties, adminLocale }: 
                     onChange={(e) => setForm(f => ({ ...f, name: e.target.value }))}
                     style={{
                       width: '100%',
-                      border: '1px solid rgba(255, 255, 255, 0.12)',
+                      border: '1px solid var(--admin-input-border, rgba(255, 255, 255, 0.12))',
                       borderRadius: '10px',
                       padding: '10px 14px',
                       fontSize: '13px',
-                      background: 'rgba(10, 14, 24, 0.85)',
-                      color: '#FFFFFF',
+                      background: 'var(--admin-input-bg, rgba(10, 14, 24, 0.85))',
+                      color: 'var(--admin-text-title, #FFFFFF)',
                       boxSizing: 'border-box',
                       outline: 'none'
                     }}
@@ -2449,7 +2776,7 @@ export default function LeadPipeline({ initialLeads, properties, adminLocale }: 
                   />
                 </div>
                 <div>
-                  <label style={{ fontSize: '12px', fontWeight: 700, display: 'block', marginBottom: '6px', color: 'rgba(255, 255, 255, 0.85)' }}>
+                  <label style={{ fontSize: '12px', fontWeight: 700, display: 'block', marginBottom: '6px', color: 'var(--admin-text-body, rgba(255, 255, 255, 0.85))' }}>
                     {isAr ? 'رقم الهاتف *' : 'Phone Number *'}
                   </label>
                   <input
@@ -2458,12 +2785,12 @@ export default function LeadPipeline({ initialLeads, properties, adminLocale }: 
                     onChange={(e) => setForm(f => ({ ...f, phone: e.target.value }))}
                     style={{
                       width: '100%',
-                      border: '1px solid rgba(255, 255, 255, 0.12)',
+                      border: '1px solid var(--admin-input-border, rgba(255, 255, 255, 0.12))',
                       borderRadius: '10px',
                       padding: '10px 14px',
                       fontSize: '13px',
-                      background: 'rgba(10, 14, 24, 0.85)',
-                      color: '#FFFFFF',
+                      background: 'var(--admin-input-bg, rgba(10, 14, 24, 0.85))',
+                      color: 'var(--admin-text-title, #FFFFFF)',
                       boxSizing: 'border-box',
                       outline: 'none'
                     }}
@@ -2475,7 +2802,7 @@ export default function LeadPipeline({ initialLeads, properties, adminLocale }: 
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                 <div>
-                  <label style={{ fontSize: '12px', fontWeight: 700, display: 'block', marginBottom: '6px', color: 'rgba(255, 255, 255, 0.85)' }}>
+                  <label style={{ fontSize: '12px', fontWeight: 700, display: 'block', marginBottom: '6px', color: 'var(--admin-text-body, rgba(255, 255, 255, 0.85))' }}>
                     {isAr ? 'البريد الإلكتروني' : 'Email Address'}
                   </label>
                   <input
@@ -2484,12 +2811,12 @@ export default function LeadPipeline({ initialLeads, properties, adminLocale }: 
                     onChange={(e) => setForm(f => ({ ...f, email: e.target.value }))}
                     style={{
                       width: '100%',
-                      border: '1px solid rgba(255, 255, 255, 0.12)',
+                      border: '1px solid var(--admin-input-border, rgba(255, 255, 255, 0.12))',
                       borderRadius: '10px',
                       padding: '10px 14px',
                       fontSize: '13px',
-                      background: 'rgba(10, 14, 24, 0.85)',
-                      color: '#FFFFFF',
+                      background: 'var(--admin-input-bg, rgba(10, 14, 24, 0.85))',
+                      color: 'var(--admin-text-title, #FFFFFF)',
                       boxSizing: 'border-box',
                       outline: 'none'
                     }}
@@ -2498,7 +2825,7 @@ export default function LeadPipeline({ initialLeads, properties, adminLocale }: 
                   />
                 </div>
                 <div>
-                  <label style={{ fontSize: '12px', fontWeight: 700, display: 'block', marginBottom: '6px', color: 'rgba(255, 255, 255, 0.85)' }}>
+                  <label style={{ fontSize: '12px', fontWeight: 700, display: 'block', marginBottom: '6px', color: 'var(--admin-text-body, rgba(255, 255, 255, 0.85))' }}>
                     {isAr ? 'العقار المرتبط' : 'Related Property'}
                   </label>
                   <select
@@ -2506,12 +2833,12 @@ export default function LeadPipeline({ initialLeads, properties, adminLocale }: 
                     onChange={(e) => setForm(f => ({ ...f, property_id: e.target.value }))}
                     style={{
                       width: '100%',
-                      border: '1px solid rgba(255, 255, 255, 0.12)',
+                      border: '1px solid var(--admin-input-border, rgba(255, 255, 255, 0.12))',
                       borderRadius: '10px',
                       padding: '10px 14px',
                       fontSize: '13px',
-                      background: '#0D1322',
-                      color: '#FFFFFF',
+                      background: 'var(--admin-input-bg, #0D1322)',
+                      color: 'var(--admin-text-title, #FFFFFF)',
                       boxSizing: 'border-box',
                       outline: 'none',
                       cursor: 'pointer'
@@ -2528,7 +2855,7 @@ export default function LeadPipeline({ initialLeads, properties, adminLocale }: 
               </div>
 
               <div>
-                <label style={{ fontSize: '12px', fontWeight: 700, display: 'block', marginBottom: '6px', color: 'rgba(255, 255, 255, 0.85)' }}>
+                <label style={{ fontSize: '12px', fontWeight: 700, display: 'block', marginBottom: '6px', color: 'var(--admin-text-body, rgba(255, 255, 255, 0.85))' }}>
                   {isAr ? 'مصدر الطلب' : 'Lead Source'}
                 </label>
                 <input
@@ -2536,12 +2863,12 @@ export default function LeadPipeline({ initialLeads, properties, adminLocale }: 
                   onChange={(e) => setForm(f => ({ ...f, source: e.target.value }))}
                   style={{
                     width: '100%',
-                    border: '1px solid rgba(255, 255, 255, 0.12)',
+                    border: '1px solid var(--admin-input-border, rgba(255, 255, 255, 0.12))',
                     borderRadius: '10px',
                     padding: '10px 14px',
                     fontSize: '13px',
-                    background: 'rgba(10, 14, 24, 0.85)',
-                    color: '#FFFFFF',
+                    background: 'var(--admin-input-bg, rgba(10, 14, 24, 0.85))',
+                    color: 'var(--admin-text-title, #FFFFFF)',
                     boxSizing: 'border-box',
                     outline: 'none'
                   }}
@@ -2550,7 +2877,7 @@ export default function LeadPipeline({ initialLeads, properties, adminLocale }: 
               </div>
 
               <div>
-                <label style={{ fontSize: '12px', fontWeight: 700, display: 'block', marginBottom: '6px', color: 'rgba(255, 255, 255, 0.85)' }}>
+                <label style={{ fontSize: '12px', fontWeight: 700, display: 'block', marginBottom: '6px', color: 'var(--admin-text-body, rgba(255, 255, 255, 0.85))' }}>
                   {isAr ? 'ملاحظات أولية ومواصفات الطلب' : 'Initial Notes & Requirements'}
                 </label>
                 <textarea
@@ -2559,13 +2886,13 @@ export default function LeadPipeline({ initialLeads, properties, adminLocale }: 
                   rows={3}
                   style={{
                     width: '100%',
-                    border: '1px solid rgba(255, 255, 255, 0.12)',
+                    border: '1px solid var(--admin-input-border, rgba(255, 255, 255, 0.12))',
                     borderRadius: '10px',
                     padding: '10px 14px',
                     fontSize: '13px',
                     fontFamily: 'inherit',
-                    background: 'rgba(10, 14, 24, 0.85)',
-                    color: '#FFFFFF',
+                    background: 'var(--admin-input-bg, rgba(10, 14, 24, 0.85))',
+                    color: 'var(--admin-text-title, #FFFFFF)',
                     boxSizing: 'border-box',
                     outline: 'none',
                     lineHeight: '1.5'
@@ -2579,9 +2906,9 @@ export default function LeadPipeline({ initialLeads, properties, adminLocale }: 
                   type="button"
                   onClick={() => setIsComposerOpen(false)}
                   style={{
-                    border: '1px solid rgba(255, 255, 255, 0.12)',
-                    background: 'rgba(255, 255, 255, 0.05)',
-                    color: 'rgba(255, 255, 255, 0.75)',
+                    border: '1px solid var(--admin-card-border, rgba(255, 255, 255, 0.12))',
+                    background: 'var(--admin-card-bg-subtle, rgba(255, 255, 255, 0.05))',
+                    color: 'var(--admin-text-body, rgba(255, 255, 255, 0.75))',
                     padding: '10px 18px',
                     fontSize: '13px',
                     fontWeight: 700,
@@ -2616,6 +2943,27 @@ export default function LeadPipeline({ initialLeads, properties, adminLocale }: 
             </form>
           </div>
         </div>
+      )}
+
+      {/* Convert Lead to Contract Wizard Modal */}
+      {convertingLead && (
+        <NewContractWizardModal
+          isOpen={!!convertingLead}
+          onClose={() => setConvertingLead(null)}
+          initialPropertyId={convertingLead.property_id || undefined}
+          initialBuyerName={convertingLead.name || ''}
+          initialBuyerPhone={convertingLead.phone || ''}
+          initialBuyerEmail={convertingLead.email || ''}
+          initialLeadId={convertingLead.id}
+          properties={properties}
+          contracts={[]}
+          leads={leads}
+          activePeriod={defaultActivePeriod}
+          unifiedPartners={[{ name: PRIMARY_DEVELOPER_NAME, role: 'PRIMARY_DEVELOPER' }]}
+          isMutating={isSaving}
+          isAr={isAr}
+          onContractCreated={handleContractCreatedFromLead}
+        />
       )}
     </div>
   );

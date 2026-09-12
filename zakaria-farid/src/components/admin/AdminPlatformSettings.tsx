@@ -51,6 +51,42 @@ type TabKey = 'radar' | 'home' | 'about' | 'contact';
 
 export default function AdminPlatformSettings({ adminLocale }: AdminPlatformSettingsProps) {
   const isAr = adminLocale === 'ar';
+  const [theme, setTheme] = useState<'dark' | 'light'>('dark');
+
+  useEffect(() => {
+    const readTheme = () => {
+      if (typeof document === 'undefined') return;
+      const attr = document.documentElement.getAttribute('data-theme') as 'dark' | 'light' | null;
+      if (attr === 'light' || attr === 'dark') {
+        setTheme(attr);
+        return;
+      }
+      try {
+        const stored = localStorage.getItem('zf_theme') as 'dark' | 'light' | null;
+        if (stored === 'light' || stored === 'dark') {
+          setTheme(stored);
+          return;
+        }
+      } catch {}
+      try {
+        const match = document.cookie.match(/(?:^|;\s*)zf_theme=(light|dark)/);
+        if (match && (match[1] === 'light' || match[1] === 'dark')) {
+          setTheme(match[1] as 'dark' | 'light');
+          return;
+        }
+      } catch {}
+      setTheme('dark');
+    };
+
+    readTheme();
+    const obs = new MutationObserver(() => {
+      readTheme();
+    });
+    obs.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+    return () => obs.disconnect();
+  }, []);
+
+  const isLight = theme === 'light';
   const [activeTab, setActiveTab] = useState<TabKey>('radar');
   const [settings, setSettings] = useState<PlatformDisplaySettings>(DEFAULT_PLATFORM_SETTINGS);
   const [savedSuccess, setSavedSuccess] = useState<boolean>(false);
@@ -193,7 +229,7 @@ export default function AdminPlatformSettings({ adminLocale }: AdminPlatformSett
   const contact = settings.contact || DEFAULT_CONTACT_SETTINGS;
 
   return (
-    <div className="admin-settings-root" dir={isAr ? 'rtl' : 'ltr'}>
+    <div className={`admin-settings-root ${isLight ? 'is-light' : ''}`} dir={isAr ? 'rtl' : 'ltr'}>
       {/* Top Header Card */}
       <div className="settings-header-card">
         <div className="settings-header-left">
@@ -314,6 +350,46 @@ export default function AdminPlatformSettings({ adminLocale }: AdminPlatformSett
                   <span className="toggle-title">{isAr ? 'عرض صندوق تنبيهات الـ VIP' : 'Show VIP Property Alerts Card'}</span>
                   <span className="toggle-desc">{isAr ? 'تفعيل بطاقة الاشتراك في الفرص النادرة بالشريط الجانبي' : 'Enable email alerts subscription box in the properties sidebar'}</span>
                 </div>
+              </label>
+            </div>
+          </div>
+
+          {/* Public Price Privacy (POA) Card */}
+          <div className={`settings-card ${settings.hidePropertyPrices ? 'poa-active-card' : ''}`} style={{
+            border: settings.hidePropertyPrices ? (isLight ? '1.5px solid #946F23' : '1.5px solid rgba(221, 167, 82, 0.5)') : undefined,
+            background: settings.hidePropertyPrices ? (isLight ? 'rgba(148, 111, 35, 0.06)' : 'var(--admin-gold-glow, rgba(221, 167, 82, 0.04))') : undefined
+          }}>
+            <div className="card-section-head-between">
+              <div className="card-section-head-left">
+                <div className="card-icon-wrap" style={{ color: settings.hidePropertyPrices ? (isLight ? '#946F23' : '#DDA752') : undefined }}>
+                  {settings.hidePropertyPrices ? <EyeOff size={18} /> : <Eye size={18} />}
+                </div>
+                <div>
+                  <h2 className="card-title">
+                    {isAr ? '🔒 إخفاء أسعار العقارات عن الزوار (السعر عند الطلب - POA)' : '🔒 Hide Property Prices from Public (Price on Application - POA)'}
+                  </h2>
+                  <p className="card-sub">
+                    {isAr 
+                      ? 'عند التفعيل، يتم حجب الأسعار الرقمية لجميع العقارات واستبدالها بعبارة "السعر عند الطلب" لحفظ الخصوصية وتشجيع طلب المعاينات والتواصل المباشر.'
+                      : 'When enabled, public listings display "Price on Application" instead of numeric prices to protect client privacy and drive high-intent inquiries.'}
+                  </p>
+                </div>
+              </div>
+
+              <label style={{ display: 'inline-flex', alignItems: 'center', cursor: 'pointer', gap: '8px' }}>
+                <input 
+                  type="checkbox" 
+                  checked={!!settings.hidePropertyPrices}
+                  onChange={(e) => {
+                    const next = { ...settings, hidePropertyPrices: e.target.checked };
+                    setSettings(next);
+                    saveStoredPlatformSettings(next);
+                  }}
+                  style={{ width: 18, height: 18, accentColor: '#946F23', cursor: 'pointer' }}
+                />
+                <span style={{ fontSize: '13px', fontWeight: 800, color: settings.hidePropertyPrices ? 'var(--admin-gold-primary, #946F23)' : (isLight ? '#475569' : 'var(--admin-text-muted, #64748B)') }}>
+                  {settings.hidePropertyPrices ? (isAr ? 'مفعل (مخفي)' : 'Enabled (Hidden)') : (isAr ? 'معطل (معروض)' : 'Disabled (Visible)')}
+                </span>
               </label>
             </div>
           </div>
@@ -1937,6 +2013,326 @@ export default function AdminPlatformSettings({ adminLocale }: AdminPlatformSett
           padding: 6px 8px;
           color: #FFFFFF;
           font-size: 0.78rem;
+        }
+
+        /* ══════════════════════════════════════════════════════════════════════
+           ALABASTER LUXURY LIGHT MODE OVERRIDES
+        ══════════════════════════════════════════════════════════════════════ */
+        .admin-settings-root.is-light,
+        :global([data-theme="light"]) .admin-settings-root {
+          color: #0F172A;
+        }
+
+        /* Header Card */
+        .admin-settings-root.is-light .settings-header-card,
+        :global([data-theme="light"]) .admin-settings-root .settings-header-card {
+          background: #FFFFFF !important;
+          border: 1.5px solid #D8D2C4 !important;
+          box-shadow: 0 12px 32px rgba(15, 23, 42, 0.06);
+        }
+
+        .admin-settings-root.is-light .settings-main-title,
+        :global([data-theme="light"]) .admin-settings-root .settings-main-title {
+          color: #0F172A !important;
+          font-weight: 800;
+        }
+
+        .admin-settings-root.is-light .settings-main-desc,
+        :global([data-theme="light"]) .admin-settings-root .settings-main-desc {
+          color: #475569 !important;
+        }
+
+        .admin-settings-root.is-light .gold-pill,
+        :global([data-theme="light"]) .admin-settings-root .gold-pill {
+          background: rgba(148, 111, 35, 0.08) !important;
+          border: 1px solid rgba(148, 111, 35, 0.25) !important;
+          color: #946F23 !important;
+        }
+
+        .admin-settings-root.is-light .live-pill,
+        :global([data-theme="light"]) .admin-settings-root .live-pill {
+          background: rgba(4, 120, 87, 0.08) !important;
+          border: 1px solid rgba(4, 120, 87, 0.25) !important;
+          color: #047857 !important;
+        }
+
+        /* Action Buttons */
+        .admin-settings-root.is-light .btn-outline-gold,
+        :global([data-theme="light"]) .admin-settings-root .btn-outline-gold {
+          background: #F8FAFC !important;
+          border: 1px solid #D8D2C4 !important;
+          color: #0F172A !important;
+          font-weight: 700;
+        }
+
+        .admin-settings-root.is-light .btn-outline-gold:hover,
+        :global([data-theme="light"]) .admin-settings-root .btn-outline-gold:hover {
+          background: #F1F5F9 !important;
+          border-color: #946F23 !important;
+          color: #946F23 !important;
+        }
+
+        .admin-settings-root.is-light .btn-solid-gold,
+        :global([data-theme="light"]) .admin-settings-root .btn-solid-gold {
+          background: linear-gradient(135deg, #DDA752 0%, #B8860B 100%) !important;
+          border: 1px solid #DDA752 !important;
+          color: #0A0E18 !important;
+          font-weight: 800;
+          box-shadow: 0 4px 14px rgba(221, 167, 82, 0.35);
+        }
+
+        .admin-settings-root.is-light .btn-solid-gold:hover,
+        :global([data-theme="light"]) .admin-settings-root .btn-solid-gold:hover {
+          filter: brightness(1.06);
+        }
+
+        /* Navigation Tabs */
+        .admin-settings-root.is-light .settings-tab-btn,
+        :global([data-theme="light"]) .admin-settings-root .settings-tab-btn {
+          background: #FFFFFF !important;
+          border: 1px solid #D8D2C4 !important;
+          color: #475569 !important;
+          font-weight: 700;
+        }
+
+        .admin-settings-root.is-light .settings-tab-btn:hover,
+        :global([data-theme="light"]) .admin-settings-root .settings-tab-btn:hover {
+          background: #F8FAFC !important;
+          color: #0F172A !important;
+          border-color: #946F23 !important;
+        }
+
+        .admin-settings-root.is-light .settings-tab-btn.active,
+        :global([data-theme="light"]) .admin-settings-root .settings-tab-btn.active {
+          background: rgba(148, 111, 35, 0.1) !important;
+          border: 1.5px solid #946F23 !important;
+          color: #946F23 !important;
+          font-weight: 800;
+        }
+
+        /* Settings Cards */
+        .admin-settings-root.is-light .settings-card,
+        :global([data-theme="light"]) .admin-settings-root .settings-card {
+          background: #FFFFFF !important;
+          border: 1.5px solid #D8D2C4 !important;
+          box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05);
+        }
+
+        .admin-settings-root.is-light .settings-card.poa-active-card,
+        :global([data-theme="light"]) .admin-settings-root .settings-card.poa-active-card {
+          background: rgba(148, 111, 35, 0.06) !important;
+          border: 1.5px solid #946F23 !important;
+        }
+
+        .admin-settings-root.is-light .card-title,
+        :global([data-theme="light"]) .admin-settings-root .card-title {
+          color: #0F172A !important;
+          font-weight: 800;
+        }
+
+        .admin-settings-root.is-light .card-sub,
+        :global([data-theme="light"]) .admin-settings-root .card-sub {
+          color: #475569 !important;
+          font-weight: 500;
+        }
+
+        .admin-settings-root.is-light .card-icon-wrap,
+        :global([data-theme="light"]) .admin-settings-root .card-icon-wrap {
+          background: rgba(148, 111, 35, 0.08) !important;
+          border: 1px solid rgba(148, 111, 35, 0.25) !important;
+          color: #946F23 !important;
+        }
+
+        /* Toggle Checkbox Cards */
+        .admin-settings-root.is-light .toggle-checkbox-card,
+        :global([data-theme="light"]) .admin-settings-root .toggle-checkbox-card {
+          background: #F8FAFC !important;
+          border: 1px solid #D8D2C4 !important;
+          border-radius: 10px;
+        }
+
+        .admin-settings-root.is-light .toggle-checkbox-card:hover,
+        :global([data-theme="light"]) .admin-settings-root .toggle-checkbox-card:hover {
+          background: #F1F5F9 !important;
+          border-color: #946F23 !important;
+        }
+
+        .admin-settings-root.is-light .toggle-title,
+        :global([data-theme="light"]) .admin-settings-root .toggle-title {
+          color: #0F172A !important;
+          font-weight: 800;
+        }
+
+        .admin-settings-root.is-light .toggle-desc,
+        :global([data-theme="light"]) .admin-settings-root .toggle-desc {
+          color: #475569 !important;
+          font-weight: 500;
+        }
+
+        .admin-settings-root.is-light .toggle-checkbox-card input[type="checkbox"],
+        :global([data-theme="light"]) .admin-settings-root .toggle-checkbox-card input[type="checkbox"] {
+          accent-color: #946F23;
+        }
+
+        /* District Rows */
+        .admin-settings-root.is-light .district-row-card,
+        :global([data-theme="light"]) .admin-settings-root .district-row-card {
+          background: #F8FAFC !important;
+          border: 1px solid #D8D2C4 !important;
+          border-radius: 10px;
+        }
+
+        .admin-settings-root.is-light .district-row-card:hover,
+        :global([data-theme="light"]) .admin-settings-root .district-row-card:hover {
+          background: #F1F5F9 !important;
+          border-color: #946F23 !important;
+        }
+
+        .admin-settings-root.is-light .district-rank,
+        :global([data-theme="light"]) .admin-settings-root .district-rank {
+          background: rgba(148, 111, 35, 0.1) !important;
+          color: #946F23 !important;
+          font-weight: 800;
+        }
+
+        .admin-settings-root.is-light .district-name-main,
+        :global([data-theme="light"]) .admin-settings-root .district-name-main {
+          color: #0F172A !important;
+          font-weight: 800;
+        }
+
+        .admin-settings-root.is-light .district-name-alt,
+        :global([data-theme="light"]) .admin-settings-root .district-name-alt {
+          color: #475569 !important;
+          font-weight: 600;
+        }
+
+        .admin-settings-root.is-light .field-group-sm label,
+        :global([data-theme="light"]) .admin-settings-root .field-group-sm label {
+          color: #475569 !important;
+          font-weight: 700;
+          font-size: 0.72rem;
+        }
+
+        .admin-settings-root.is-light .field-group-sm input,
+        :global([data-theme="light"]) .admin-settings-root .field-group-sm input {
+          background: #FFFFFF !important;
+          border: 1px solid #D8D2C4 !important;
+          color: #0F172A !important;
+          font-weight: 700;
+        }
+
+        .admin-settings-root.is-light .field-group-sm input:focus,
+        :global([data-theme="light"]) .admin-settings-root .field-group-sm input:focus {
+          border-color: #946F23 !important;
+          outline: none;
+        }
+
+        .admin-settings-root.is-light .btn-icon-toggle,
+        :global([data-theme="light"]) .admin-settings-root .btn-icon-toggle {
+          background: #FFFFFF !important;
+          border: 1px solid #D8D2C4 !important;
+          color: #64748B !important;
+        }
+
+        .admin-settings-root.is-light .btn-icon-toggle.active,
+        :global([data-theme="light"]) .admin-settings-root .btn-icon-toggle.active {
+          color: #047857 !important;
+          background: rgba(4, 120, 87, 0.08) !important;
+          border-color: rgba(4, 120, 87, 0.3) !important;
+        }
+
+        .admin-settings-root.is-light .btn-icon-delete,
+        :global([data-theme="light"]) .admin-settings-root .btn-icon-delete {
+          background: #FFF1F2 !important;
+          border: 1px solid #FECDD3 !important;
+          color: #E11D48 !important;
+        }
+
+        /* General Form Fields */
+        .admin-settings-root.is-light .field-group label,
+        :global([data-theme="light"]) .admin-settings-root .field-group label {
+          color: #0F172A !important;
+          font-weight: 700;
+        }
+
+        .admin-settings-root.is-light .field-group input,
+        .admin-settings-root.is-light .field-group textarea,
+        .admin-settings-root.is-light .field-group select,
+        :global([data-theme="light"]) .admin-settings-root .field-group input,
+        :global([data-theme="light"]) .admin-settings-root .field-group textarea,
+        :global([data-theme="light"]) .admin-settings-root .field-group select {
+          background: #FFFFFF !important;
+          border: 1px solid #D8D2C4 !important;
+          color: #0F172A !important;
+          font-weight: 600;
+        }
+
+        .admin-settings-root.is-light .field-group input:focus,
+        .admin-settings-root.is-light .field-group textarea:focus,
+        .admin-settings-root.is-light .field-group select:focus,
+        :global([data-theme="light"]) .admin-settings-root .field-group input:focus,
+        :global([data-theme="light"]) .admin-settings-root .field-group textarea:focus,
+        :global([data-theme="light"]) .admin-settings-root .field-group select:focus {
+          border-color: #946F23 !important;
+          outline: none;
+        }
+
+        .admin-settings-root.is-light .field-group input::placeholder,
+        .admin-settings-root.is-light .field-group textarea::placeholder,
+        :global([data-theme="light"]) .admin-settings-root .field-group input::placeholder,
+        :global([data-theme="light"]) .admin-settings-root .field-group textarea::placeholder {
+          color: #94A3B8;
+        }
+
+        /* New District Form */
+        .admin-settings-root.is-light .btn-add-district,
+        :global([data-theme="light"]) .admin-settings-root .btn-add-district {
+          background: rgba(148, 111, 35, 0.1) !important;
+          border: 1px solid rgba(148, 111, 35, 0.3) !important;
+          color: #946F23 !important;
+          font-weight: 700;
+        }
+
+        .admin-settings-root.is-light .btn-add-district:hover,
+        :global([data-theme="light"]) .admin-settings-root .btn-add-district:hover {
+          background: rgba(148, 111, 35, 0.18) !important;
+          border-color: #946F23 !important;
+        }
+
+        .admin-settings-root.is-light .new-district-form,
+        :global([data-theme="light"]) .admin-settings-root .new-district-form {
+          background: #FDFBF7 !important;
+          border: 1.5px dashed rgba(148, 111, 35, 0.35) !important;
+        }
+
+        .admin-settings-root.is-light .new-form-title,
+        :global([data-theme="light"]) .admin-settings-root .new-form-title {
+          color: #946F23 !important;
+          font-weight: 800;
+        }
+
+        .admin-settings-root.is-light .btn-cancel,
+        :global([data-theme="light"]) .admin-settings-root .btn-cancel {
+          background: #FFFFFF !important;
+          border: 1px solid #D8D2C4 !important;
+          color: #475569 !important;
+        }
+
+        .admin-settings-root.is-light .btn-confirm,
+        :global([data-theme="light"]) .admin-settings-root .btn-confirm {
+          background: linear-gradient(135deg, #DDA752 0%, #B8860B 100%) !important;
+          border: none !important;
+          color: #0A0E18 !important;
+          font-weight: 800;
+        }
+
+        /* Editorial Dividers */
+        .admin-settings-root.is-light .sub-chapter-divider,
+        :global([data-theme="light"]) .admin-settings-root .sub-chapter-divider {
+          color: #946F23 !important;
+          border-bottom: 1px solid rgba(148, 111, 35, 0.25) !important;
+          font-weight: 800;
         }
       `}</style>
     </div>

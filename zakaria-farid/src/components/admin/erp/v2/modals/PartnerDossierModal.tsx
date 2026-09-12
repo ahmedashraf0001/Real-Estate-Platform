@@ -121,32 +121,34 @@ export const PartnerDossierModal: React.FC<PartnerDossierModalProps> = ({
         <h4 style={{ margin: '0 0 0.5rem', fontSize: '0.88rem', fontWeight: 800, color: '#0f172a' }}>
           {isAr ? 'حصص الشراكة في مشاريع الشركة' : 'Project Equity Shares & Holdings'}
         </h4>
-        <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #cbd5e1', fontSize: '0.78rem' }}>
-          <thead>
-            <tr style={{ background: '#0f172a', color: '#ffffff' }}>
-              <th style={{ padding: '0.5rem', textAlign: 'center', width: '6%' }}>#</th>
-              <th style={{ padding: '0.5rem 0.75rem', textAlign: isAr ? 'right' : 'left' }}>{isAr ? 'المشروع العقاري' : 'Project'}</th>
-              <th style={{ padding: '0.5rem', textAlign: 'center', width: '15%' }}>{isAr ? 'نسبة الحصة (%)' : 'Share %'}</th>
-              <th style={{ padding: '0.5rem 0.75rem', textAlign: 'right', width: '25%' }}>{isAr ? 'نصيب المبيعات (ج.م)' : 'Sales Share'}</th>
-              <th style={{ padding: '0.5rem 0.75rem', textAlign: 'right', width: '25%' }}>{isAr ? 'نصيب التكاليف (ج.م)' : 'WIP Cost Share'}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {partner.holdings.map((h, i) => (
-              <tr key={i} style={{ borderBottom: '1px solid #e2e8f0', background: i % 2 === 1 ? '#f8fafc' : '#ffffff' }}>
-                <td style={{ padding: '0.5rem', textAlign: 'center', color: '#64748b' }}>{i + 1}</td>
-                <td style={{ padding: '0.5rem 0.75rem', fontWeight: 700, color: '#0f172a' }}>{h.propertyTitle}</td>
-                <td style={{ padding: '0.5rem', textAlign: 'center', fontWeight: 800, color: '#946f23' }}>{h.sharePct}%</td>
-                <td style={{ padding: '0.5rem 0.75rem', textAlign: 'right', fontWeight: 700, color: '#059669' }}>
-                  {D(h.contractSalesShare).formatEGP(isAr)}
-                </td>
-                <td style={{ padding: '0.5rem 0.75rem', textAlign: 'right', fontWeight: 700, color: '#b45309' }}>
-                  {D(h.wipCostShare).formatEGP(isAr)}
-                </td>
+        <div style={{ overflowX: 'auto', width: '100%', WebkitOverflowScrolling: 'touch' }}>
+          <table style={{ width: '100%', minWidth: '500px', borderCollapse: 'collapse', border: '1px solid #cbd5e1', fontSize: '0.78rem' }}>
+            <thead>
+              <tr style={{ background: '#0f172a', color: '#ffffff' }}>
+                <th style={{ padding: '0.5rem', textAlign: 'center', width: '6%' }}>#</th>
+                <th style={{ padding: '0.5rem 0.75rem', textAlign: isAr ? 'right' : 'left' }}>{isAr ? 'المشروع العقاري' : 'Project'}</th>
+                <th style={{ padding: '0.5rem', textAlign: 'center', width: '15%' }}>{isAr ? 'نسبة الحصة (%)' : 'Share %'}</th>
+                <th style={{ padding: '0.5rem 0.75rem', textAlign: 'right', width: '25%' }}>{isAr ? 'نصيب المبيعات (ج.م)' : 'Sales Share'}</th>
+                <th style={{ padding: '0.5rem 0.75rem', textAlign: 'right', width: '25%' }}>{isAr ? 'نصيب التكاليف (ج.م)' : 'WIP Cost Share'}</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {partner.holdings.map((h, i) => (
+                <tr key={i} style={{ borderBottom: '1px solid #e2e8f0', background: i % 2 === 1 ? '#f8fafc' : '#ffffff' }}>
+                  <td style={{ padding: '0.5rem', textAlign: 'center', color: '#64748b' }}>{i + 1}</td>
+                  <td style={{ padding: '0.5rem 0.75rem', fontWeight: 700, color: '#0f172a' }}>{h.propertyTitle}</td>
+                  <td style={{ padding: '0.5rem', textAlign: 'center', fontWeight: 800, color: '#946f23' }}>{h.sharePct}%</td>
+                  <td style={{ padding: '0.5rem 0.75rem', textAlign: 'right', fontWeight: 700, color: '#059669' }}>
+                    {D(h.contractSalesShare).formatEGP(isAr)}
+                  </td>
+                  <td style={{ padding: '0.5rem 0.75rem', textAlign: 'right', fontWeight: 700, color: '#b45309' }}>
+                    {D(h.wipCostShare).formatEGP(isAr)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {/* 3. Transaction History Table */}
@@ -154,7 +156,8 @@ export const PartnerDossierModal: React.FC<PartnerDossierModalProps> = ({
         <h4 style={{ margin: '0 0 0.5rem', fontSize: '0.88rem', fontWeight: 800, color: '#0f172a' }}>
           {isAr ? 'سجل العمليات والتحويلات المالية المسجلة' : 'Recorded Financial Transactions'}
         </h4>
-        <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #cbd5e1', fontSize: '0.76rem' }}>
+        <div style={{ overflowX: 'auto', width: '100%', WebkitOverflowScrolling: 'touch' }}>
+          <table style={{ width: '100%', minWidth: '520px', borderCollapse: 'collapse', border: '1px solid #cbd5e1', fontSize: '0.76rem' }}>
           <thead>
             <tr style={{ background: '#0f172a', color: '#ffffff' }}>
               <th style={{ padding: '0.5rem', textAlign: 'center', width: '5%' }}>#</th>
@@ -194,6 +197,7 @@ export const PartnerDossierModal: React.FC<PartnerDossierModalProps> = ({
             )}
           </tbody>
         </table>
+        </div>
       </div>
     </div>
   );
@@ -222,7 +226,7 @@ export const PartnerDossierModal: React.FC<PartnerDossierModalProps> = ({
           borderRadius: '16px',
           width: '100%',
           maxWidth: '780px',
-          maxHeight: '92vh',
+          maxHeight: '90vh',
           display: 'flex',
           flexDirection: 'column',
           boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
@@ -233,7 +237,7 @@ export const PartnerDossierModal: React.FC<PartnerDossierModalProps> = ({
         {/* HEADER */}
         <div 
           style={{
-            padding: '1.2rem 1.5rem',
+            padding: 'clamp(0.85rem, 2.5vw, 1.2rem) clamp(1rem, 3vw, 1.5rem)',
             borderBottom: '1px solid #e2e8f0',
             display: 'flex',
             alignItems: 'center',
@@ -376,12 +380,16 @@ export const PartnerDossierModal: React.FC<PartnerDossierModalProps> = ({
             <button 
               type="button"
               onClick={onClose}
+              aria-label={isAr ? 'إغلاق' : 'Close'}
               style={{
                 background: 'transparent',
                 border: 'none',
                 color: '#64748b',
                 cursor: 'pointer',
-                padding: '0.4rem',
+                minWidth: '44px',
+                minHeight: '44px',
+                width: '44px',
+                height: '44px',
                 borderRadius: '8px',
                 display: 'flex',
                 alignItems: 'center',
@@ -447,8 +455,8 @@ export const PartnerDossierModal: React.FC<PartnerDossierModalProps> = ({
             </div>
 
             {partner.holdings.length > 0 ? (
-              <div style={{ border: '1px solid #e2e8f0', borderRadius: '10px', overflow: 'hidden' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.74rem' }}>
+              <div style={{ border: '1px solid #e2e8f0', borderRadius: '10px', overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+                <table style={{ width: '100%', minWidth: '550px', borderCollapse: 'collapse', fontSize: '0.74rem' }}>
                   <thead>
                     <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0', color: '#64748b', fontSize: '0.68rem' }}>
                       <th style={{ padding: '0.5rem 0.75rem', textAlign: isAr ? 'right' : 'left' }}>{isAr ? 'المشروع' : 'Project'}</th>
@@ -498,8 +506,8 @@ export const PartnerDossierModal: React.FC<PartnerDossierModalProps> = ({
             </div>
 
             {partnerTransactions.length > 0 ? (
-              <div style={{ border: '1px solid #e2e8f0', borderRadius: '10px', overflow: 'hidden' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.73rem' }}>
+              <div style={{ border: '1px solid #e2e8f0', borderRadius: '10px', overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+                <table style={{ width: '100%', minWidth: '560px', borderCollapse: 'collapse', fontSize: '0.73rem' }}>
                   <thead>
                     <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0', color: '#64748b', fontSize: '0.68rem' }}>
                       <th style={{ padding: '0.5rem 0.75rem', textAlign: isAr ? 'right' : 'left' }}>{isAr ? 'رقم الإشعار' : 'Ref'}</th>
@@ -668,7 +676,7 @@ export const PartnerDossierModal: React.FC<PartnerDossierModalProps> = ({
             style={{ 
               maxWidth: '900px', 
               width: '100%', 
-              maxHeight: '94vh', 
+              maxHeight: '90vh', 
               overflowY: 'auto',
               borderRadius: '12px',
               boxShadow: '0 25px 50px rgba(0,0,0,0.3)'

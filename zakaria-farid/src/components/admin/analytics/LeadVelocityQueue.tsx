@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { 
   MessageSquare, 
@@ -23,6 +23,20 @@ interface LeadVelocityQueueProps {
 export default function LeadVelocityQueue({ staleLeads, channels, adminLocale }: LeadVelocityQueueProps) {
   const isAr = adminLocale === 'ar';
 
+  const [theme, setTheme] = useState<'dark' | 'light'>('dark');
+  useEffect(() => {
+    const readTheme = () => {
+      const cur = (document.documentElement.getAttribute('data-theme') as 'dark' | 'light') ||
+        (localStorage.getItem('zf_theme') as 'dark' | 'light') || 'dark';
+      setTheme(cur);
+    };
+    readTheme();
+    const obs = new MutationObserver(readTheme);
+    obs.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+    return () => obs.disconnect();
+  }, []);
+  const isLight = theme === 'light';
+
   const formatHoursAgo = (dateStr: string) => {
     const then = new Date(dateStr).getTime();
     const diffHours = Math.round((Date.now() - then) / (1000 * 60 * 60));
@@ -34,7 +48,7 @@ export default function LeadVelocityQueue({ staleLeads, channels, adminLocale }:
   };
 
   return (
-    <div className="velocity-grid">
+    <div className={`velocity-grid ${isLight ? 'is-light' : ''}`}>
       {/* 1. Lead Origin Channel Share */}
       <div className="channel-card">
         <div className="section-header">
@@ -188,14 +202,30 @@ export default function LeadVelocityQueue({ staleLeads, channels, adminLocale }:
           display: flex;
           flex-direction: column;
           gap: 16px;
+          transition: background-color 200ms ease, border-color 200ms ease, box-shadow 200ms ease;
+        }
+
+        .velocity-grid.is-light .channel-card,
+        .velocity-grid.is-light .urgent-queue-card {
+          background: #FFFFFF;
+          border: 1.5px solid #D8D2C4;
+          box-shadow: 0 12px 32px rgba(15, 23, 42, 0.06);
         }
 
         .urgent-queue-card {
           border-top: 2px solid #FB7185;
         }
 
+        .velocity-grid.is-light .urgent-queue-card {
+          border-top: 2px solid #E11D48;
+        }
+
         .channel-card {
           border-top: 2px solid #E5B869;
+        }
+
+        .velocity-grid.is-light .channel-card {
+          border-top: 2px solid #946F23;
         }
 
         .section-header {
@@ -217,10 +247,22 @@ export default function LeadVelocityQueue({ staleLeads, channels, adminLocale }:
           border: 1px solid rgba(229, 184, 105, 0.25);
         }
 
+        .velocity-grid.is-light .section-icon-box {
+          background: rgba(148, 111, 35, 0.08);
+          border-color: rgba(148, 111, 35, 0.25);
+          color: #946F23;
+        }
+
         .section-icon-box.alert-box {
           background: rgba(244, 63, 94, 0.12);
           color: #FB7185;
           border: 1px solid rgba(244, 63, 94, 0.25);
+        }
+
+        .velocity-grid.is-light .section-icon-box.alert-box {
+          background: #FFF1F2;
+          border-color: #FECDD3;
+          color: #E11D48;
         }
 
         .title-with-pill {
@@ -237,6 +279,10 @@ export default function LeadVelocityQueue({ staleLeads, channels, adminLocale }:
           margin: 0;
         }
 
+        .velocity-grid.is-light .section-title {
+          color: #0F172A;
+        }
+
         .urgent-count-badge {
           font-size: 9.5px;
           font-weight: 800;
@@ -247,10 +293,20 @@ export default function LeadVelocityQueue({ staleLeads, channels, adminLocale }:
           border-radius: 4px;
         }
 
+        .velocity-grid.is-light .urgent-count-badge {
+          color: #E11D48;
+          background: #FFF1F2;
+          border-color: #FECDD3;
+        }
+
         .section-sub {
           font-size: 11.5px;
           color: rgba(255, 255, 255, 0.55);
           margin: 2px 0 0 0;
+        }
+
+        .velocity-grid.is-light .section-sub {
+          color: #475569;
         }
 
         .channel-bars-list {
@@ -277,6 +333,10 @@ export default function LeadVelocityQueue({ staleLeads, channels, adminLocale }:
           color: #FFFFFF;
         }
 
+        .velocity-grid.is-light .channel-name {
+          color: #0F172A;
+        }
+
         .channel-stats {
           display: flex;
           align-items: center;
@@ -297,12 +357,22 @@ export default function LeadVelocityQueue({ staleLeads, channels, adminLocale }:
           border-radius: 4px;
         }
 
+        .velocity-grid.is-light .channel-conv-pill {
+          background: #F1F5F9;
+          border: 1px solid #D8D2C4;
+          color: #334155;
+        }
+
         .channel-track {
           width: 100%;
           height: 6px;
           background: rgba(255, 255, 255, 0.06);
           border-radius: 9999px;
           overflow: hidden;
+        }
+
+        .velocity-grid.is-light .channel-track {
+          background: #E2E8F0;
         }
 
         .channel-fill {
@@ -329,9 +399,19 @@ export default function LeadVelocityQueue({ staleLeads, channels, adminLocale }:
           transition: all 150ms ease;
         }
 
+        .velocity-grid.is-light .urgent-lead-row {
+          background: #F8FAFC;
+          border: 1px solid #D8D2C4;
+        }
+
         .urgent-lead-row:hover {
           background: rgba(255, 255, 255, 0.04);
           border-color: rgba(244, 63, 94, 0.25);
+        }
+
+        .velocity-grid.is-light .urgent-lead-row:hover {
+          background: #F1F5F9;
+          border-color: #E11D48;
         }
 
         .lead-main-meta {
@@ -357,6 +437,10 @@ export default function LeadVelocityQueue({ staleLeads, channels, adminLocale }:
           text-overflow: ellipsis;
         }
 
+        .velocity-grid.is-light .lead-name {
+          color: #0F172A;
+        }
+
         .lead-time-tag {
           display: inline-flex;
           align-items: center;
@@ -369,12 +453,22 @@ export default function LeadVelocityQueue({ staleLeads, channels, adminLocale }:
           border-radius: 4px;
         }
 
+        .velocity-grid.is-light .lead-time-tag {
+          background: #F1F5F9;
+          border: 1px solid #D8D2C4;
+          color: #64748B;
+        }
+
         .lead-prop-name {
           font-size: 11px;
           color: rgba(255, 255, 255, 0.55);
           white-space: nowrap;
           overflow: hidden;
           text-overflow: ellipsis;
+        }
+
+        .velocity-grid.is-light .lead-prop-name {
+          color: #475569;
         }
 
         .lead-action-buttons {
@@ -402,9 +496,21 @@ export default function LeadVelocityQueue({ staleLeads, channels, adminLocale }:
           border: 1px solid rgba(16, 185, 129, 0.25);
         }
 
+        .velocity-grid.is-light .wa-btn {
+          background: rgba(4, 120, 87, 0.08);
+          border: 1px solid rgba(4, 120, 87, 0.25);
+          color: #047857;
+        }
+
         .wa-btn:hover {
           background: #34D399;
           color: #0A0C10;
+        }
+
+        .velocity-grid.is-light .wa-btn:hover {
+          background: #047857;
+          color: #FFFFFF;
+          border-color: #047857;
         }
 
         .phone-btn {
@@ -413,10 +519,22 @@ export default function LeadVelocityQueue({ staleLeads, channels, adminLocale }:
           border: 1px solid rgba(255, 255, 255, 0.1);
         }
 
+        .velocity-grid.is-light .phone-btn {
+          background: rgba(148, 111, 35, 0.08);
+          border: 1px solid rgba(148, 111, 35, 0.25);
+          color: #946F23;
+        }
+
         .phone-btn:hover {
           background: #E5B869;
           color: #0A0C10;
           border-color: #E5B869;
+        }
+
+        .velocity-grid.is-light .phone-btn:hover {
+          background: #946F23;
+          color: #FFFFFF;
+          border-color: #946F23;
         }
 
         .crm-btn {
@@ -426,10 +544,22 @@ export default function LeadVelocityQueue({ staleLeads, channels, adminLocale }:
           padding: 4px 6px;
         }
 
+        .velocity-grid.is-light .crm-btn {
+          background: #F1F5F9;
+          border: 1px solid #D8D2C4;
+          color: #334155;
+        }
+
         .crm-btn:hover {
           background: #E5B869;
           color: #0A0C10;
           border-color: #E5B869;
+        }
+
+        .velocity-grid.is-light .crm-btn:hover {
+          background: #0F172A;
+          color: #FFFFFF;
+          border-color: #0F172A;
         }
 
         .queue-all-clear {
@@ -443,10 +573,19 @@ export default function LeadVelocityQueue({ staleLeads, channels, adminLocale }:
           gap: 6px;
         }
 
+        .velocity-grid.is-light .queue-all-clear {
+          color: #475569;
+        }
+
         .clear-icon {
           color: #34D399;
+        }
+
+        .velocity-grid.is-light .clear-icon {
+          color: #047857;
         }
       `}</style>
     </div>
   );
 }
+

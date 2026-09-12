@@ -1,13 +1,18 @@
 /**
- * Format a price in EGP using Western Arabic numerals (standard for Egyptian real estate).
+ * Break price into numeric formatted value and currency symbol per ERP standard.
+ */
+export function formatPriceParts(price: number, locale: string): { num: string; cur: string } {
+  const num = Number(price || 0).toLocaleString('en-US');
+  const cur = locale === 'ar' ? 'ج.م' : 'EGP';
+  return { num, cur };
+}
+
+/**
+ * Format a price in EGP using Western Arabic numerals with thousands separator and non-breaking currency symbol.
  */
 export function formatPrice(price: number, locale: string): string {
-  return new Intl.NumberFormat(locale === 'ar' ? 'ar-EG' : 'en-EG', {
-    style: 'currency',
-    currency: 'EGP',
-    maximumFractionDigits: 0,
-    numberingSystem: 'latn', // Western numerals per addendum §1 note
-  }).format(price);
+  const { num, cur } = formatPriceParts(price, locale);
+  return `${num}\u00A0${cur}`;
 }
 
 /**

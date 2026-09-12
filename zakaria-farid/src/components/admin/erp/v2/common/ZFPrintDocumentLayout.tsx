@@ -74,10 +74,11 @@ export const ZFPrintDocumentLayout: React.FC<ZFPrintDocumentLayoutProps> = ({
               background: 'linear-gradient(135deg, #b8903e 0%, #946f23 100%)',
               color: '#ffffff',
               border: 'none',
-              padding: '0.45rem 1rem',
-              borderRadius: '6px',
-              fontSize: '0.78rem',
+              padding: '0.55rem 1.1rem',
+              borderRadius: '8px',
+              fontSize: '0.8rem',
               fontWeight: 800,
+              minHeight: '44px',
               display: 'inline-flex',
               alignItems: 'center',
               gap: '0.4rem',
@@ -85,7 +86,7 @@ export const ZFPrintDocumentLayout: React.FC<ZFPrintDocumentLayoutProps> = ({
               boxShadow: '0 2px 6px rgba(184, 144, 62, 0.3)'
             }}
           >
-            <Printer size={14} />
+            <Printer size={15} />
             <span>{isAr ? 'بدء الطباعة الآن (Ctrl+P)' : 'Print Document'}</span>
           </button>
 
@@ -93,19 +94,24 @@ export const ZFPrintDocumentLayout: React.FC<ZFPrintDocumentLayoutProps> = ({
             <button
               type="button"
               onClick={onClose}
+              aria-label={isAr ? 'إغلاق المعاينة' : 'Close Preview'}
               style={{
                 background: 'rgba(255, 255, 255, 0.08)',
                 color: '#94a3b8',
                 border: 'none',
                 padding: '0.45rem',
-                borderRadius: '6px',
+                borderRadius: '8px',
                 cursor: 'pointer',
+                minWidth: '44px',
+                minHeight: '44px',
+                width: '44px',
+                height: '44px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center'
               }}
             >
-              <X size={16} />
+              <X size={18} />
             </button>
           )}
         </div>
@@ -118,9 +124,8 @@ export const ZFPrintDocumentLayout: React.FC<ZFPrintDocumentLayoutProps> = ({
         style={{
           background: '#ffffff',
           color: '#0f172a',
-          padding: '24mm 20mm',
-          fontFamily: isAr ? '"Segoe UI", Tahoma, Arial, sans-serif' : 'Arial, sans-serif',
-          minHeight: '280mm',
+          padding: '16mm 16mm',
+          fontFamily: isAr ? 'var(--font-thmanyah, "ThmanyahSans"), var(--font-cairo, "Cairo"), "Segoe UI", Tahoma, sans-serif' : 'var(--font-thmanyah, "ThmanyahSans"), Arial, sans-serif',
           display: 'flex',
           flexDirection: 'column',
           justifyContent: 'space-between',

@@ -17,7 +17,10 @@ import {
   ArrowUpDown,
   Filter,
   Calendar,
-  TrendingUp
+  TrendingUp,
+  X,
+  Loader2,
+  Coins
 } from 'lucide-react';
 import { ERPPDCRecord, ERPContract } from '@/lib/erp/types';
 import { D } from '@/lib/erp/math';
@@ -25,6 +28,7 @@ import { MoneyCell } from '@/components/erp/MoneyCell';
 import { ZFPagination } from '../ZFPagination';
 import { ZFKpiCard } from '../ZFKpiCard';
 import { ZFFilterToolbar } from '../ZFFilterToolbar';
+import { ZFErpBreadcrumb } from '../common/ZFErpBreadcrumb';
 import styles from '../ZFWorkstationShell.module.css';
 
 interface HandInstallmentsVaultViewProps {
@@ -36,6 +40,7 @@ interface HandInstallmentsVaultViewProps {
   onCollectDueToday?: () => void;
   onOpenNewCheque: () => void;
   onInspectCheque: (item: ERPPDCRecord) => void;
+  onBounceItem?: (item: ERPPDCRecord) => void | Promise<void>;
 }
 
 export const HandInstallmentsVaultView: React.FC<HandInstallmentsVaultViewProps> = ({
@@ -46,8 +51,11 @@ export const HandInstallmentsVaultView: React.FC<HandInstallmentsVaultViewProps>
   onCollectItem,
   onCollectDueToday,
   onOpenNewCheque,
-  onInspectCheque
+  onInspectCheque,
+  onBounceItem
 }) => {
+  const [bouncingPDCItem, setBouncingPDCItem] = useState<ERPPDCRecord | null>(null);
+  const [isBouncingProcessing, setIsBouncingProcessing] = useState(false);
   const [chequeMaturityFilter, setChequeMaturityFilter] = useState<'all' | 'due_now' | 'due_30'>('all');
   const [chequeStatusFilter, setChequeStatusFilter] = useState<'all' | 'pending' | 'cleared' | 'overdue' | 'bounced'>('all');
   const [chequeSortBy, setChequeSortBy] = useState<'priority' | 'due_date_asc' | 'due_date_desc' | 'nominal_desc' | 'nominal_asc' | 'drawer_asc'>('priority');
@@ -475,6 +483,37 @@ export const HandInstallmentsVaultView: React.FC<HandInstallmentsVaultViewProps>
             </div>
           )}
 
+          {/* 1-Click Bounce Action Button */}
+          {pdc.status !== 'Bounced' && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setBouncingPDCItem(pdc);
+              }}
+              disabled={isMutating || isBouncingProcessing}
+              title={isAr ? 'إثبات ارتداد بنكي للشيك' : 'Record Bounced Cheque'}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '0.3rem',
+                background: 'rgba(239, 68, 68, 0.08)',
+                color: '#dc2626',
+                border: '1px solid rgba(239, 68, 68, 0.25)',
+                borderRadius: '8px',
+                padding: '0.45rem 0.65rem',
+                fontSize: '0.74rem',
+                fontWeight: 700,
+                cursor: 'pointer',
+                transition: 'all 0.15s ease'
+              }}
+            >
+              <RotateCcw size={12} />
+              <span>{isAr ? 'إثبات ارتداد' : 'Bounce'}</span>
+            </button>
+          )}
+
           <button
             type="button"
             onClick={(e) => {
@@ -622,6 +661,31 @@ export const HandInstallmentsVaultView: React.FC<HandInstallmentsVaultViewProps>
               </span>
             )}
 
+            {pdc.status !== 'Bounced' && (
+              <button
+                type="button"
+                onClick={() => setBouncingPDCItem(pdc)}
+                disabled={isMutating || isBouncingProcessing}
+                title={isAr ? 'إثبات ارتداد بنكي للشيك' : 'Record Bounced Cheque'}
+                style={{
+                  background: 'rgba(239, 68, 68, 0.08)',
+                  border: '1px solid rgba(239, 68, 68, 0.25)',
+                  color: '#dc2626',
+                  padding: '0.3rem 0.55rem',
+                  borderRadius: '6px',
+                  fontSize: '0.72rem',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.25rem'
+                }}
+              >
+                <RotateCcw size={11} />
+                <span>{isAr ? 'إثبات ارتداد' : 'Bounce'}</span>
+              </button>
+            )}
+
             <button
               type="button"
               onClick={() => onInspectCheque(pdc)}
@@ -649,6 +713,7 @@ export const HandInstallmentsVaultView: React.FC<HandInstallmentsVaultViewProps>
       {/* 1. STAGE HEADER & ACTIONS */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
+          <ZFErpBreadcrumb sectionTitle={isAr ? 'خزانة الأقساط وسندات القبض' : 'Installments Vault & Receipts'} icon={<Coins size={13} color="#946f23" />} />
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
             <h1 style={{ fontSize: '1.4rem', fontWeight: 800, margin: 0, color: '#0f172a', letterSpacing: '-0.02em' }}>
               {isAr ? 'أجندة ومواعيد الأقساط وسندات القبض' : 'Installment Dues & Cash Receipts'}
@@ -965,18 +1030,210 @@ export const HandInstallmentsVaultView: React.FC<HandInstallmentsVaultViewProps>
         </div>
       )}
 
-      {/* 7. PAGINATION BAR (SHARED) */}
-      {sortedCheques.length > 0 && (
-        <ZFPagination
-          currentPage={currentPage}
-          totalPages={totalPages}
-          totalItems={sortedCheques.length}
-          pageSize={pageSize}
-          onPageChange={setCurrentPage}
-          onPageSizeChange={setPageSize}
-          isAr={isAr}
-          itemLabel={{ ar: 'قسط', en: 'installments' }}
-        />
+      {/* 8. RECORD BOUNCED CHEQUE CONFIRMATION MODAL */}
+      {bouncingPDCItem && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(15, 23, 42, 0.65)',
+          backdropFilter: 'blur(8px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 9999,
+          padding: '1.25rem',
+          direction: isAr ? 'rtl' : 'ltr'
+        }}>
+          <div style={{
+            background: '#ffffff',
+            borderRadius: '16px',
+            border: '1.5px solid #e2e8f0',
+            maxWidth: '520px',
+            width: '100%',
+            overflow: 'hidden',
+            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
+            display: 'flex',
+            flexDirection: 'column'
+          }}>
+            {/* Modal Header */}
+            <div style={{
+              padding: '1.25rem 1.5rem',
+              borderBottom: '1px solid #e2e8f0',
+              background: 'linear-gradient(135deg, #fef2f2 0%, #ffffff 100%)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <div style={{
+                  width: '40px',
+                  height: '40px',
+                  borderRadius: '10px',
+                  background: 'rgba(239, 68, 68, 0.12)',
+                  border: '1px solid rgba(239, 68, 68, 0.25)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#dc2626'
+                }}>
+                  <RotateCcw size={20} />
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: '#0f172a' }}>
+                    {isAr ? 'إثبات ارتداد بنكي للشيك' : 'Record Bounced Cheque'}
+                  </h3>
+                  <span style={{ fontSize: '0.74rem', color: '#64748b' }}>
+                    {isAr ? 'إجراء بنكي فوري وقيد محاسبي عكسي آلي' : '1-Click Bank Bounce & Reversal Flow'}
+                  </span>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setBouncingPDCItem(null)}
+                style={{
+                  background: '#ffffff',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '8px',
+                  color: '#64748b',
+                  width: '32px',
+                  height: '32px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer'
+                }}
+              >
+                <X size={15} />
+              </button>
+            </div>
+
+            {/* Cheque & Contract Dossier */}
+            <div style={{ padding: '1.25rem 1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div style={{
+                background: '#f8fafc',
+                border: '1px solid #e2e8f0',
+                borderRadius: '12px',
+                padding: '1rem',
+                display: 'grid',
+                gridTemplateColumns: 'repeat(2, 1fr)',
+                gap: '0.75rem',
+                fontSize: '0.78rem'
+              }}>
+                <div>
+                  <span style={{ color: '#64748b', display: 'block', fontSize: '0.7rem' }}>{isAr ? 'رقم الشيك / السند:' : 'Cheque #:'}</span>
+                  <strong style={{ color: '#946f23', fontWeight: 800 }}>#{bouncingPDCItem.cheque_number}</strong>
+                </div>
+                <div>
+                  <span style={{ color: '#64748b', display: 'block', fontSize: '0.7rem' }}>{isAr ? 'قيمة الشيك:' : 'Nominal Value:'}</span>
+                  <strong style={{ color: '#dc2626', fontWeight: 900 }}>
+                    <MoneyCell amount={bouncingPDCItem.nominal_value} isAr={isAr} highlight />
+                  </strong>
+                </div>
+                <div>
+                  <span style={{ color: '#64748b', display: 'block', fontSize: '0.7rem' }}>{isAr ? 'اسم الساحب (العميل):' : 'Drawer Name:'}</span>
+                  <strong style={{ color: '#0f172a' }}>{bouncingPDCItem.drawer_name}</strong>
+                </div>
+                <div>
+                  <span style={{ color: '#64748b', display: 'block', fontSize: '0.7rem' }}>{isAr ? 'تاريخ الاستحقاق:' : 'Due Date:'}</span>
+                  <strong style={{ color: '#0f172a', fontVariantNumeric: 'tabular-nums' }}>{bouncingPDCItem.due_date}</strong>
+                </div>
+              </div>
+
+              {/* Explanatory Reassurance Banner */}
+              <div style={{
+                background: 'rgba(239, 68, 68, 0.05)',
+                border: '1px solid rgba(239, 68, 68, 0.2)',
+                borderRadius: '10px',
+                padding: '0.85rem 1rem',
+                fontSize: '0.75rem',
+                color: '#7f1d1d',
+                lineHeight: 1.6
+              }}>
+                <strong style={{ display: 'block', marginBottom: '0.25rem', color: '#b91c1c' }}>
+                  {isAr ? '📌 الأثر الدفتري والتنفيذي للارتداد:' : '📌 Reversal Impact & Audit Trail:'}
+                </strong>
+                {isAr ? (
+                  <>
+                    <div>١. نقل حالة الشيك فوراً إلى <strong>مرتد (Bounced)</strong> في سجلات الخزانة.</div>
+                    <div>٢. توليد قيد ارتداد عكسي بالدفاتر: <strong>مدين [١٠٣٢٠٠ أقساط الخزينة المستحقة]</strong> بمبلغ {D(bouncingPDCItem.nominal_value).formatEGP(isAr)} مقابل <strong>دائن [١٠٤٠٠٠ أوراق قبض بالخزينة]</strong>.</div>
+                    <div>٣. تحديث جدول الأقساط بالعقد وإثبات التعثر لمتابعة التحصيل دون أي إرباك تشغيلي.</div>
+                  </>
+                ) : (
+                  <>
+                    <div>1. Move cheque status to Bounced in vault records.</div>
+                    <div>2. Post reversal entry: Dr 103200 (Safe Dues) / Cr 104000 (PDC in Safe).</div>
+                    <div>3. Update contract installment agenda for legal follow-up.</div>
+                  </>
+                )}
+              </div>
+            </div>
+
+            {/* Footer Buttons */}
+            <div style={{
+              padding: '1rem 1.5rem',
+              background: '#f8fafc',
+              borderTop: '1px solid #e2e8f0',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'flex-end',
+              gap: '0.65rem'
+            }}>
+              <button
+                type="button"
+                onClick={() => setBouncingPDCItem(null)}
+                disabled={isBouncingProcessing}
+                style={{
+                  background: '#ffffff',
+                  border: '1px solid #cbd5e1',
+                  color: '#475569',
+                  padding: '0.55rem 1.15rem',
+                  borderRadius: '8px',
+                  fontSize: '0.8rem',
+                  fontWeight: 700,
+                  cursor: 'pointer'
+                }}
+              >
+                {isAr ? 'إلغاء' : 'Cancel'}
+              </button>
+
+              <button
+                type="button"
+                onClick={async () => {
+                  if (!bouncingPDCItem || !onBounceItem) return;
+                  setIsBouncingProcessing(true);
+                  try {
+                    await onBounceItem(bouncingPDCItem);
+                    setBouncingPDCItem(null);
+                  } finally {
+                    setIsBouncingProcessing(false);
+                  }
+                }}
+                disabled={isBouncingProcessing}
+                style={{
+                  background: 'linear-gradient(135deg, #ef4444 0%, #b91c1c 100%)',
+                  color: '#ffffff',
+                  border: 'none',
+                  padding: '0.55rem 1.35rem',
+                  borderRadius: '8px',
+                  fontSize: '0.82rem',
+                  fontWeight: 800,
+                  cursor: isBouncingProcessing ? 'not-allowed' : 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.45rem',
+                  boxShadow: '0 2px 8px rgba(239, 68, 68, 0.3)'
+                }}
+              >
+                {isBouncingProcessing ? <Loader2 size={14} className="animate-spin" /> : <RotateCcw size={14} />}
+                <span>{isAr ? 'تأكيد إثبات الارتداد البنكي' : 'Confirm Bounced Cheque'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

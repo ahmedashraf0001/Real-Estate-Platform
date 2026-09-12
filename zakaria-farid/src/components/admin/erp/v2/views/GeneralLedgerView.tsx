@@ -47,6 +47,7 @@ import { ZFPrintDocumentLayout } from '../common/ZFPrintDocumentLayout';
 import { exportComprehensiveArabicExcel } from '@/lib/erp/excelExporter';
 import { LiveERPDataset } from '@/lib/erp/supabaseService';
 import { toast } from 'sonner';
+import { ZFErpBreadcrumb } from '../common/ZFErpBreadcrumb';
 import styles from '../ZFWorkstationShell.module.css';
 
 interface GeneralLedgerViewProps {
@@ -657,11 +658,7 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
       {/* 1. Header & Stage Breadcrumb */}
       <div className={styles.stageHeader}>
         <div className={styles.stageTitleArea}>
-          <div className={styles.stageBreadcrumb}>
-            <span>FIN-OS</span>
-            <span>/</span>
-            <span>{isAr ? 'حسابات الشركة ودفتر اليومية' : 'General Ledger'}</span>
-          </div>
+          <ZFErpBreadcrumb sectionTitle={isAr ? 'حسابات الشركة ودفتر اليومية' : 'General Ledger & COA'} icon={<BookOpen size={13} color="#946f23" />} />
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
             <h1 className={styles.stageTitle}>
               {isAr ? 'حسابات الشركة ودفتر اليومية' : 'Chart of Accounts & Immutable Ledger'}

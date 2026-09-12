@@ -14,7 +14,8 @@ import {
   Wallet,
   Zap,
   Users,
-  X
+  X,
+  Compass
 } from 'lucide-react';
 import styles from './v2/ZFWorkstationShell.module.css';
 
@@ -192,17 +193,20 @@ export const ZFNavigationDock: React.FC<ZFNavigationDockProps> = ({
             style={{
               background: '#f1f5f9',
               border: '1px solid #e2e8f0',
-              borderRadius: '7px',
-              padding: '0.35rem',
+              borderRadius: '8px',
+              minWidth: '44px',
+              minHeight: '44px',
+              padding: '10px',
               cursor: 'pointer',
-              color: '#64748b',
+              color: '#475569',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center'
             }}
             title={isAr ? 'إغلاق القائمة' : 'Close Menu'}
+            aria-label={isAr ? 'إغلاق القائمة' : 'Close Menu'}
           >
-            <X size={15} />
+            <X size={18} />
           </button>
         </div>
       )}
@@ -258,16 +262,17 @@ export const ZFNavigationDock: React.FC<ZFNavigationDockProps> = ({
         ))}
       </div>
 
-      {/* Dock Footer: Audited Financial Engine Status + Academy Button */}
+      {/* Dock Footer: Audited Financial Engine Status + Walkthrough Button */}
       <div className={styles.dockFooter}>
         {onOpenAcademy && (
           <button
             type="button"
             onClick={onOpenAcademy}
             className={styles.academyBtn}
+            title={isAr ? 'دليل وجولة المنظومة التفاعلية' : 'FIN-OS Walkthrough Tour'}
           >
-            <BookOpen size={14} />
-            <span>{isAr ? 'دليل واستخدام النظام' : 'ERP Academy & Guide'}</span>
+            <Compass size={14} />
+            <span>{isAr ? 'دليل وجولة المنظومة' : 'FIN-OS Tour & Guide'}</span>
           </button>
         )}
 

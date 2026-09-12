@@ -886,8 +886,8 @@ export const CapitalFlowMindmap: React.FC<CapitalFlowMindmapProps> = ({
           border-color: #94a3b8 !important;
         }
         .flow-card-interactive.is-selected {
-          box-shadow: 0 0 0 2.5px var(--accent-color, #d4af37), 0 12px 28px -4px rgba(0, 0, 0, 0.1) !important;
-          border-color: var(--accent-color, #d4af37) !important;
+          box-shadow: 0 0 0 1.5px var(--accent-color, #c5a059), 0 8px 24px -4px rgba(0, 0, 0, 0.06) !important;
+          border-color: var(--accent-color, #c5a059) !important;
           transform: translateY(-2px);
         }
         .custom-thin-scrollbar::-webkit-scrollbar {
@@ -1340,7 +1340,7 @@ export const CapitalFlowMindmap: React.FC<CapitalFlowMindmapProps> = ({
               flexDirection: 'column',
               gap: embeddedInStudio ? '0.55rem' : '0.85rem',
               background: isInflowHidden ? 'transparent' : 'rgba(255, 255, 255, 0.75)',
-              border: isInflowHidden ? 'none' : '1.5px solid rgba(16, 185, 129, 0.25)',
+              border: isInflowHidden ? 'none' : '1px solid #e2e8f0',
               borderRadius: '16px',
               padding: isInflowHidden ? 0 : (embeddedInStudio ? '0.65rem 0.75rem' : '0.9rem 0.95rem'),
               boxShadow: isInflowHidden ? 'none' : (isOutflowHidden ? '0 8px 30px -4px rgba(16, 185, 129, 0.12), 0 2px 8px rgba(0, 0, 0, 0.04)' : '0 2px 8px rgba(16, 185, 129, 0.04)'),
@@ -1482,18 +1482,18 @@ export const CapitalFlowMindmap: React.FC<CapitalFlowMindmapProps> = ({
                 }
               }}
               style={{
-                '--accent-color': (activeDossier && selectedNodeId !== 'core-treasury') ? activeDossier.accentColor : '#d4af37',
+                '--accent-color': (activeDossier && selectedNodeId !== 'core-treasury') ? activeDossier.accentColor : '#c5a059',
                 background: '#ffffff',
-                border: `2px solid ${(activeDossier && selectedNodeId !== 'core-treasury') ? activeDossier.accentColor : '#d4af37'}`,
+                border: `1.5px solid ${(activeDossier && selectedNodeId !== 'core-treasury') ? activeDossier.accentColor : 'rgba(197, 160, 89, 0.45)'}`,
                 borderRadius: '16px',
                 padding: embeddedInStudio 
                   ? '1rem 1.15rem' 
                   : (activeDossier && selectedNodeId !== 'core-treasury' ? '1.1rem 1.25rem' : '1.35rem 1.5rem'),
                 cursor: 'pointer',
                 position: 'relative',
-                boxShadow: (isOutflowHidden || isInflowHidden)
-                  ? '0 16px 42px -6px rgba(212, 175, 55, 0.25), 0 4px 14px rgba(0, 0, 0, 0.06)'
-                  : '0 8px 30px -4px rgba(212, 175, 55, 0.18), 0 2px 6px rgba(0, 0, 0, 0.05)',
+                boxShadow: (isOutflowHidden || isInflowHidden) 
+                  ? '0 12px 32px -4px rgba(197, 160, 89, 0.12), 0 2px 8px rgba(0, 0, 0, 0.04)' 
+                  : '0 4px 20px -2px rgba(197, 160, 89, 0.08), 0 1px 4px rgba(0, 0, 0, 0.03)',
                 zIndex: 6,
                 transform: 'scale(1)',
                 transition: 'all 0.35s cubic-bezier(0.16, 1, 0.3, 1)',
@@ -2079,13 +2079,13 @@ export const CapitalFlowMindmap: React.FC<CapitalFlowMindmapProps> = ({
                     height: embeddedInStudio ? '40px' : '50px',
                     margin: '0 auto',
                     borderRadius: '12px',
-                    background: '#fefce8',
-                    border: '1.5px solid #fef08a',
+                    background: 'rgba(197, 160, 89, 0.08)',
+                    border: '1px solid rgba(197, 160, 89, 0.22)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     color: '#946f23',
-                    boxShadow: '0 2px 8px rgba(212, 175, 55, 0.2)'
+                    boxShadow: 'none'
                   }}>
                     <ShieldCheck size={embeddedInStudio ? 22 : 26} />
                   </div>
@@ -2095,8 +2095,8 @@ export const CapitalFlowMindmap: React.FC<CapitalFlowMindmapProps> = ({
                       display: 'inline-flex',
                       alignItems: 'center',
                       gap: '0.35rem',
-                      background: '#fefce8',
-                      border: '1px solid #fef08a',
+                      background: 'rgba(197, 160, 89, 0.08)',
+                      border: '1px solid rgba(197, 160, 89, 0.22)',
                       borderRadius: '999px',
                       padding: '0.15rem 0.65rem',
                       fontSize: '0.66rem',
@@ -2135,8 +2135,8 @@ export const CapitalFlowMindmap: React.FC<CapitalFlowMindmapProps> = ({
                   {/* Financial Telemetry Sub-row */}
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: embeddedInStudio ? '0.5rem' : '0.75rem', textAlign: 'center' }}>
                     <div style={{
-                      background: '#f0fdf4',
-                      border: '1.5px solid #bbf7d0',
+                      background: '#f8fafc',
+                      border: '1px solid #e2e8f0',
                       borderRadius: '10px',
                       padding: embeddedInStudio ? '0.45rem 0.4rem' : '0.65rem 0.5rem'
                     }}>
@@ -2149,8 +2149,8 @@ export const CapitalFlowMindmap: React.FC<CapitalFlowMindmapProps> = ({
                     </div>
 
                     <div style={{
-                      background: '#fffbeb',
-                      border: '1.5px solid #fde68a',
+                      background: '#f8fafc',
+                      border: '1px solid #e2e8f0',
                       borderRadius: '10px',
                       padding: embeddedInStudio ? '0.45rem 0.4rem' : '0.65rem 0.5rem'
                     }}>
@@ -2205,7 +2205,7 @@ export const CapitalFlowMindmap: React.FC<CapitalFlowMindmapProps> = ({
               flexDirection: 'column',
               gap: embeddedInStudio ? '0.65rem' : '0.85rem',
               background: isOutflowHidden ? 'transparent' : 'rgba(255, 255, 255, 0.75)',
-              border: isOutflowHidden ? 'none' : '1.5px solid rgba(245, 158, 11, 0.25)',
+              border: isOutflowHidden ? 'none' : '1px solid #e2e8f0',
               borderRadius: '16px',
               padding: isOutflowHidden ? 0 : (embeddedInStudio ? '0.65rem 0.75rem' : '0.9rem 0.95rem'),
               boxShadow: isOutflowHidden ? 'none' : (isInflowHidden ? '0 8px 30px -4px rgba(245, 158, 11, 0.12), 0 2px 8px rgba(0, 0, 0, 0.04)' : '0 2px 8px rgba(245, 158, 11, 0.04)'),
@@ -2242,8 +2242,8 @@ export const CapitalFlowMindmap: React.FC<CapitalFlowMindmapProps> = ({
                   color: '#0f172a', 
                   fontVariantNumeric: 'tabular-nums', 
                   fontWeight: 800,
-                  background: '#fffbeb',
-                  border: '1px solid #fde68a',
+                  background: '#f8fafc',
+                  border: '1px solid #e2e8f0',
                   padding: '0.15rem 0.5rem',
                   borderRadius: '6px'
                 }}>

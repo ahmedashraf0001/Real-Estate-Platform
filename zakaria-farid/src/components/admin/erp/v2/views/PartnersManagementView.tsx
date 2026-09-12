@@ -41,6 +41,7 @@ import { MoneyCell } from '@/components/erp/MoneyCell';
 import { ZFKpiCard } from '../ZFKpiCard';
 import { ZFFilterToolbar, ZFFilterTab, ZFFilterDropdown, ZFSortOption } from '../ZFFilterToolbar';
 import { ZFPagination } from '../ZFPagination';
+import { ZFErpBreadcrumb } from '../common/ZFErpBreadcrumb';
 import styles from '../ZFWorkstationShell.module.css';
 
 export interface PartnersManagementViewProps {
@@ -257,11 +258,7 @@ export const PartnersManagementView: React.FC<PartnersManagementViewProps> = ({
       {/* 1. STAGE HEADER & QUICK ACTIONS */}
       <div className={styles.stageHeader}>
         <div className={styles.stageTitleArea}>
-          <div className={styles.stageBreadcrumb}>
-            <span>FIN-OS</span>
-            <span>/</span>
-            <span>{isAr ? 'الشركاء وممولو المشاريع' : 'Partners & Project Financiers'}</span>
-          </div>
+          <ZFErpBreadcrumb sectionTitle={isAr ? 'الشركاء وممولو المشاريع' : 'Partners & Project Financiers'} icon={<Users size={13} color="#946f23" />} />
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
             <h1 className={styles.stageTitle}>

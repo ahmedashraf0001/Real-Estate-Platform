@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { 
   Sparkles, 
@@ -26,6 +26,20 @@ interface ExecutiveAdvisoryFeedProps {
 export default function ExecutiveAdvisoryFeed({ advisories, adminLocale }: ExecutiveAdvisoryFeedProps) {
   const isAr = adminLocale === 'ar';
 
+  const [theme, setTheme] = useState<'dark' | 'light'>('dark');
+  useEffect(() => {
+    const readTheme = () => {
+      const cur = (document.documentElement.getAttribute('data-theme') as 'dark' | 'light') ||
+        (localStorage.getItem('zf_theme') as 'dark' | 'light') || 'dark';
+      setTheme(cur);
+    };
+    readTheme();
+    const obs = new MutationObserver(readTheme);
+    obs.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+    return () => obs.disconnect();
+  }, []);
+  const isLight = theme === 'light';
+
   const getTypeIcon = (type: ExecutiveAdvisory['type']) => {
     switch (type) {
       case 'deal_alert':
@@ -40,7 +54,67 @@ export default function ExecutiveAdvisoryFeed({ advisories, adminLocale }: Execu
     }
   };
 
-  const getSeverityStyle = (severity: ExecutiveAdvisory['severity']) => {
+  const getSeverityStyle = (severity: ExecutiveAdvisory['severity'], isLightMode: boolean) => {
+    if (isLightMode) {
+      switch (severity) {
+        case 'high':
+          return {
+            themeColor: '#E11D48',
+            bgGradient: 'linear-gradient(145deg, #FFFFFF 0%, #FFF5F5 100%)',
+            border: '#FECDD3',
+            topBorder: '#E11D48',
+            badgeBg: '#FFF1F2',
+            badgeColor: '#E11D48',
+            badgeBorder: '#FECDD3',
+            badgeLabel: isAr ? 'إجراء عاجل' : 'HIGH PRIORITY',
+            btnBg: '#FFF1F2',
+            btnBorder: '#FECDD3',
+            btnColor: '#E11D48',
+            btnHoverBg: '#E11D48',
+            btnHoverColor: '#FFFFFF',
+            metricBg: '#FFF1F2',
+            metricColor: '#E11D48',
+          };
+        case 'medium':
+          return {
+            themeColor: '#946F23',
+            bgGradient: 'linear-gradient(145deg, #FFFFFF 0%, #FDFBF7 100%)',
+            border: '#D8D2C4',
+            topBorder: '#946F23',
+            badgeBg: 'rgba(148, 111, 35, 0.08)',
+            badgeColor: '#946F23',
+            badgeBorder: 'rgba(148, 111, 35, 0.25)',
+            badgeLabel: isAr ? 'فرصة نمو استثمارية' : 'GROWTH OPPORTUNITY',
+            btnBg: 'rgba(148, 111, 35, 0.08)',
+            btnBorder: 'rgba(148, 111, 35, 0.25)',
+            btnColor: '#946F23',
+            btnHoverBg: '#946F23',
+            btnHoverColor: '#FFFFFF',
+            metricBg: 'rgba(148, 111, 35, 0.08)',
+            metricColor: '#946F23',
+          };
+        case 'info':
+        default:
+          return {
+            themeColor: '#0369A1',
+            bgGradient: 'linear-gradient(145deg, #FFFFFF 0%, #F0F9FF 100%)',
+            border: '#BAE6FD',
+            topBorder: '#0284C7',
+            badgeBg: '#F0F9FF',
+            badgeColor: '#0369A1',
+            badgeBorder: '#BAE6FD',
+            badgeLabel: isAr ? 'رؤية استراتيجية' : 'STRATEGIC INSIGHT',
+            btnBg: 'rgba(2, 132, 199, 0.08)',
+            btnBorder: '#BAE6FD',
+            btnColor: '#0284C7',
+            btnHoverBg: '#0284C7',
+            btnHoverColor: '#FFFFFF',
+            metricBg: '#F0F9FF',
+            metricColor: '#0369A1',
+          };
+      }
+    }
+
     switch (severity) {
       case 'high':
         return {
@@ -101,7 +175,7 @@ export default function ExecutiveAdvisoryFeed({ advisories, adminLocale }: Execu
   };
 
   return (
-    <div className="advisory-master-container">
+    <div className={`advisory-master-container ${isLight ? 'is-light' : ''}`}>
       {/* Header Bar */}
       <div className="advisory-header">
         <div className="advisory-title-group">
@@ -131,7 +205,7 @@ export default function ExecutiveAdvisoryFeed({ advisories, adminLocale }: Execu
       <div className="advisory-grid">
         {advisories.map((item) => {
           const Icon = getTypeIcon(item.type);
-          const style = getSeverityStyle(item.severity);
+          const style = getSeverityStyle(item.severity, isLight);
           const title = isAr ? item.titleAr : item.titleEn;
           const msg = isAr ? item.messageAr : item.messageEn;
           const actionText = isAr ? item.actionTextAr : item.actionTextEn;
@@ -144,6 +218,7 @@ export default function ExecutiveAdvisoryFeed({ advisories, adminLocale }: Execu
                 background: style.bgGradient,
                 borderColor: style.border,
                 borderTop: `2px solid ${style.topBorder}`,
+                boxShadow: isLight ? '0 8px 24px rgba(15, 23, 42, 0.05)' : '0 10px 28px rgba(0, 0, 0, 0.3)',
               }}
             >
               {/* Top Row: Severity Badge + Metric Chip */}
@@ -201,6 +276,8 @@ export default function ExecutiveAdvisoryFeed({ advisories, adminLocale }: Execu
                       background: style.btnBg,
                       borderColor: style.btnBorder,
                       color: style.btnColor,
+                      ['--btn-hover-bg' as any]: style.btnHoverBg,
+                      ['--btn-hover-color' as any]: style.btnHoverColor,
                     }}
                   >
                     <span>{actionText}</span>
@@ -225,6 +302,13 @@ export default function ExecutiveAdvisoryFeed({ advisories, adminLocale }: Execu
           display: flex;
           flex-direction: column;
           gap: 18px;
+          transition: background-color 200ms ease, border-color 200ms ease, box-shadow 200ms ease;
+        }
+
+        .advisory-master-container.is-light {
+          background: #FFFFFF;
+          border: 1.5px solid #D8D2C4;
+          box-shadow: 0 12px 36px rgba(15, 23, 42, 0.08);
         }
 
         .advisory-header {
@@ -253,6 +337,13 @@ export default function ExecutiveAdvisoryFeed({ advisories, adminLocale }: Execu
           box-shadow: 0 4px 12px rgba(229, 184, 105, 0.15);
         }
 
+        .advisory-master-container.is-light .advisory-icon-box {
+          background: rgba(148, 111, 35, 0.08);
+          border-color: rgba(148, 111, 35, 0.25);
+          color: #946F23;
+          box-shadow: none;
+        }
+
         .title-with-pill {
           display: flex;
           align-items: center;
@@ -266,6 +357,10 @@ export default function ExecutiveAdvisoryFeed({ advisories, adminLocale }: Execu
           color: #FFFFFF;
           margin: 0;
           letter-spacing: -0.01em;
+        }
+
+        .advisory-master-container.is-light .advisory-title {
+          color: #0F172A;
         }
 
         .live-ai-badge {
@@ -283,6 +378,12 @@ export default function ExecutiveAdvisoryFeed({ advisories, adminLocale }: Execu
           text-transform: uppercase;
         }
 
+        .advisory-master-container.is-light .live-ai-badge {
+          background: rgba(148, 111, 35, 0.08);
+          border: 1px solid rgba(148, 111, 35, 0.25);
+          color: #946F23;
+        }
+
         .pulsing-dot {
           width: 6px;
           height: 6px;
@@ -290,6 +391,11 @@ export default function ExecutiveAdvisoryFeed({ advisories, adminLocale }: Execu
           background: #E5B869;
           box-shadow: 0 0 8px #E5B869;
           animation: pulseGlow 1.8s infinite;
+        }
+
+        .advisory-master-container.is-light .pulsing-dot {
+          background: #946F23;
+          box-shadow: 0 0 8px #946F23;
         }
 
         @keyframes pulseGlow {
@@ -302,6 +408,10 @@ export default function ExecutiveAdvisoryFeed({ advisories, adminLocale }: Execu
           color: rgba(255, 255, 255, 0.55);
           margin: 2px 0 0 0;
           font-weight: 500;
+        }
+
+        .advisory-master-container.is-light .advisory-sub {
+          color: #475569;
         }
 
         .advisory-grid {
@@ -317,14 +427,22 @@ export default function ExecutiveAdvisoryFeed({ advisories, adminLocale }: Execu
           padding: 18px 20px;
           display: flex;
           flex-direction: column;
-          justifyContent: space-between;
+          justify-content: space-between;
           gap: 14px;
           transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+        }
+
+        .advisory-master-container.is-light .advisory-item {
+          box-shadow: 0 4px 16px rgba(15, 23, 42, 0.05);
         }
 
         .advisory-item:hover {
           transform: translateY(-2px);
           box-shadow: 0 14px 36px rgba(0, 0, 0, 0.45);
+        }
+
+        .advisory-master-container.is-light .advisory-item:hover {
+          box-shadow: 0 10px 28px rgba(15, 23, 42, 0.08);
         }
 
         .advisory-card-top {
@@ -385,12 +503,20 @@ export default function ExecutiveAdvisoryFeed({ advisories, adminLocale }: Execu
           letter-spacing: -0.01em;
         }
 
+        .advisory-master-container.is-light .advisory-card-title {
+          color: #0F172A;
+        }
+
         .advisory-card-desc {
           font-size: 12px;
           color: rgba(255, 255, 255, 0.65);
           margin: 0;
           line-height: 1.55;
           font-weight: 450;
+        }
+
+        .advisory-master-container.is-light .advisory-card-desc {
+          color: #475569;
         }
 
         .advisory-footer {
@@ -414,10 +540,10 @@ export default function ExecutiveAdvisoryFeed({ advisories, adminLocale }: Execu
         }
 
         .advisory-action-btn:hover {
-          background: #E5B869 !important;
-          color: #0A0C10 !important;
-          border-color: #E5B869 !important;
-          box-shadow: 0 4px 14px rgba(229, 184, 105, 0.35);
+          background: var(--btn-hover-bg, #E5B869) !important;
+          color: var(--btn-hover-color, #0A0C10) !important;
+          border-color: var(--btn-hover-bg, #E5B869) !important;
+          box-shadow: 0 4px 14px rgba(148, 111, 35, 0.25);
           transform: translateX(2px);
         }
 

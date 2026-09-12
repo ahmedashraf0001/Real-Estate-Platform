@@ -17,6 +17,7 @@ import { InquiryModal } from '@/components/InquiryModal';
 import { useFavorites } from '@/lib/context/FavoritesContext';
 import { toast } from 'sonner';
 import { createCachedTileLayer } from '@/lib/mapCache';
+import { getStoredPlatformSettings } from '@/lib/services/marketIntelligence';
 import { 
   Bed, 
   Bath, 
@@ -439,6 +440,27 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
   const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [geoStatus, setGeoStatus] = useState<'idle' | 'locating' | 'located' | 'fallback'>('idle');
 
+  const [isHidePrices, setIsHidePrices] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    const cookieMatch = document.cookie.match(/zf_hide_prices=([^;]+)/);
+    if (cookieMatch) return cookieMatch[1] === 'true';
+    return getStoredPlatformSettings().hidePropertyPrices ?? false;
+  });
+
+  useEffect(() => {
+    const syncSettings = () => {
+      const cookieMatch = document.cookie.match(/zf_hide_prices=([^;]+)/);
+      if (cookieMatch) {
+        setIsHidePrices(cookieMatch[1] === 'true');
+      } else {
+        setIsHidePrices(getStoredPlatformSettings().hidePropertyPrices ?? false);
+      }
+    };
+    syncSettings();
+    window.addEventListener('zf_platform_settings_updated', syncSettings);
+    return () => window.removeEventListener('zf_platform_settings_updated', syncSettings);
+  }, []);
+
   const formattedPrice = new Intl.NumberFormat('en-US').format(property.price);
   const similarProperties = propSimilar || fallbackAdapted.filter((p: Property) => p.id !== property.id).slice(0, 3);
 
@@ -663,13 +685,28 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
             <div className="top-header-right">
               <div className="property-price-card">
                 <span className="price-label">{isAr ? 'قيمة الاستحواذ المعتمدة' : 'ACQUISITION VALUE'}</span>
-                <div className="price-value">
-                  {formattedPrice} <span className="price-currency">{property.currency}</span>
-                </div>
-                <span className="price-tax-note">
-                  {pricePerSqm ? `~ ${pricePerSqm} ${property.currency} / m² • ` : ''}
-                  {isAr ? 'تسجيل عقاري موثق • ٠٪ عمولات خفية' : 'Freehold Escrow Verified • 0% Hidden Fees'}
-                </span>
+                {isHidePrices ? (
+                  <>
+                    <div className="price-value" style={{ fontSize: '1.25rem', color: '#946F23', fontWeight: 800 }}>
+                      {isAr ? 'السعر عند الطلب' : 'Price on Application'}
+                    </div>
+                    <span className="price-tax-note">
+                      {isAr
+                        ? 'يتم تحديد القيمة بناءً على طلب المعاينة والملف التعريفي الخاص'
+                        : 'Value disclosed upon private viewing & advisory prospectus request'}
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <div className="price-value tabular-nums">
+                      {formattedPrice} <span className="price-currency" style={{ color: '#946F23' }}>{isAr ? 'ج.م' : property.currency}</span>
+                    </div>
+                    <span className="price-tax-note">
+                      {pricePerSqm ? `~ ${pricePerSqm} ${isAr ? 'ج.م' : property.currency} / m² • ` : ''}
+                      {isAr ? 'تسجيل عقاري موثق • ٠٪ عمولات خفية' : 'Freehold Escrow Verified • 0% Hidden Fees'}
+                    </span>
+                  </>
+                )}
               </div>
 
               <div className="top-action-group">
@@ -1418,13 +1455,26 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
       <div className={`mobile-bottom-lead-bar ${isLeadBarHidden ? 'lead-bar-hidden' : ''}`}>
         <div className="property-price-card">
           <span className="price-label">{isAr ? 'قيمة الاستحواذ المعتمدة' : 'ACQUISITION VALUE'}</span>
-          <div className="price-value">
-            {formattedPrice} <span className="price-currency">{property.currency}</span>
-          </div>
-          <span className="price-tax-note">
-            {pricePerSqm ? `~ ${pricePerSqm} ${property.currency} / m² • ` : ''}
-            {isAr ? 'تسجيل عقاري موثق • ٠٪ عمولات خفية' : 'Freehold Escrow Verified • 0% Hidden Fees'}
-          </span>
+          {isHidePrices ? (
+            <>
+              <div className="price-value" style={{ fontSize: '1.1rem', color: '#946F23', fontWeight: 800 }}>
+                {isAr ? 'السعر عند الطلب' : 'Price on Application'}
+              </div>
+              <span className="price-tax-note">
+                {isAr ? 'حسب طلب المعاينة والملف الخاص' : 'Disclosed upon private viewing request'}
+              </span>
+            </>
+          ) : (
+            <>
+              <div className="price-value tabular-nums">
+                {formattedPrice} <span className="price-currency" style={{ color: '#946F23' }}>{isAr ? 'ج.م' : property.currency}</span>
+              </div>
+              <span className="price-tax-note">
+                {pricePerSqm ? `~ ${pricePerSqm} ${isAr ? 'ج.م' : property.currency} / m² • ` : ''}
+                {isAr ? 'تسجيل عقاري موثق • ٠٪ عمولات خفية' : 'Freehold Escrow Verified • 0% Hidden Fees'}
+              </span>
+            </>
+          )}
         </div>
         <div className="top-action-group">
           <button

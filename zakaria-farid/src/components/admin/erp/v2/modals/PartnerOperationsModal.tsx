@@ -365,7 +365,8 @@ export const PartnerOperationsModal: React.FC<PartnerOperationsModalProps> = ({
           borderRadius: '24px',
           width: '100%',
           maxWidth: '1200px',
-          height: 'min(870px, 94vh)',
+          maxHeight: '90vh',
+          height: 'min(870px, 90vh)',
           boxShadow: '0 25px 65px -15px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(0,0,0,0.04)',
           overflow: 'hidden',
           display: 'flex',
@@ -377,7 +378,7 @@ export const PartnerOperationsModal: React.FC<PartnerOperationsModalProps> = ({
             1. TOP HEADER BAR
             ══════════════════════════════════════════════════════════════════════════ */}
         <div style={{
-          padding: '1.1rem 1.75rem',
+          padding: 'clamp(0.85rem, 2vw, 1.1rem) clamp(1rem, 2.5vw, 1.75rem)',
           borderBottom: '1px solid #e2e8f0',
           display: 'flex',
           alignItems: 'center',
@@ -428,13 +429,16 @@ export const PartnerOperationsModal: React.FC<PartnerOperationsModalProps> = ({
           <button
             type="button"
             onClick={onClose}
+            aria-label={isAr ? 'إغلاق' : 'Close'}
             style={{
               background: '#ffffff',
               border: '1px solid #e2e8f0',
               borderRadius: '10px',
               color: '#64748b',
-              width: '34px',
-              height: '34px',
+              width: '44px',
+              height: '44px',
+              minWidth: '44px',
+              minHeight: '44px',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -442,7 +446,7 @@ export const PartnerOperationsModal: React.FC<PartnerOperationsModalProps> = ({
               transition: 'all 0.15s ease'
             }}
           >
-            <X size={17} />
+            <X size={18} />
           </button>
         </div>
 
@@ -451,10 +455,10 @@ export const PartnerOperationsModal: React.FC<PartnerOperationsModalProps> = ({
             ══════════════════════════════════════════════════════════════════════════ */}
         <div style={{
           display: 'grid',
-          gridTemplateColumns: '380px 1fr',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 360px), 1fr))',
           flex: 1,
           minHeight: 0,
-          overflow: 'hidden'
+          overflowY: 'auto'
         }}>
 
           {/* ──────────────────────────────────────────────────────────────────
@@ -1735,10 +1739,11 @@ export const PartnerOperationsModal: React.FC<PartnerOperationsModalProps> = ({
                       <div style={{
                         border: '1px solid #e2e8f0',
                         borderRadius: '12px',
-                        overflow: 'hidden',
+                        overflowX: 'auto',
+                        WebkitOverflowScrolling: 'touch',
                         background: '#ffffff'
                       }}>
-                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.78rem' }}>
+                        <table style={{ width: '100%', minWidth: '650px', borderCollapse: 'collapse', fontSize: '0.78rem' }}>
                           <thead>
                             <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0', textAlign: isAr ? 'right' : 'left', color: '#64748b' }}>
                               <th style={{ padding: '0.65rem 0.85rem', fontWeight: 700 }}>{isAr ? 'رقم الحركة' : 'Tx #'}</th>

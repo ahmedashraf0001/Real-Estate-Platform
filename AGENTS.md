@@ -1,4 +1,4 @@
-# Zakaria Farid Real Estate ERP — Multi-Agent Engineering Harness (v2.0.0)
+# Zakaria Farid Real Estate ERP — Multi-Agent Engineering Harness (v2.1.0)
 
 ## 0. MANDATORY: Zero Direct Application Writes (Subagent Delegation)
 The primary orchestrator agent is **STRICTLY FORBIDDEN** from writing or editing application code directly (`write_to_file`, `replace_file_content`, etc.) in `zakaria-farid/`.
@@ -13,7 +13,7 @@ For **EVERY** coding task, simulation, or bug report, the orchestrator MUST:
    - `Role`: The assigned role name (e.g. `Workflow Simulator & Auditor`, `Financial Calculation Engineer`, `Executive UI/UX Engineer`, `Database Custodian`)
    - `Model`: The assigned model tier (`flash` only — Gemini 3.8 Flash is the project standard)
    - `Prompt`: Comprehensive task specification, files involved, relevant invariants, and mandatory verification commands.
-4. Audit the subagent's completion report and verification evidence before updating `.agents/checkpoint.json`.
+4. Audit the subagent's completion report and verification evidence, synchronize the graph (`bash .agents/scripts/sync_graph.sh`), and update `.agents/checkpoint.json`.
 
 ### Strict Constraint: Absolute Ban on Pro Tier
 - **NEVER use `Model: "pro"`**: Passing `"Model": "pro"` to `invoke_subagent` is strictly forbidden across all tracks without exception.
@@ -34,6 +34,23 @@ For **EVERY** coding task, simulation, or bug report, the orchestrator MUST:
 | Double-entry journals, math, calculations, revenue recognition, partner splits | `FINANCIAL_CORE` | `Financial Calculation Engineer` | `flash` | Dual-Gated |
 | UI bug fixes, Arabic RTL localization, modal vouchers, Alabaster styling | `SURFACE_UI` | `Executive UI/UX Engineer` | `flash` | Single-Gated |
 | Supabase migrations, RLS policies, trigger immutability, performance indexes | `DATABASE_SCHEMA` | `Database Custodian` | `flash` | Dual-Gated |
+
+---
+
+## 1.5. Codebase Querying & Topology Search Protocol (`graphify`)
+To ensure rapid, accurate structural exploration and prevent blind file browsing or excessive token expenditure:
+1. **Primary Exploration Tool**: Orchestrator and specialized subagents MUST query the knowledge graph first for codebase architecture, module dependencies, caller/callee paths, and symbol topology:
+   ```bash
+   graphify query "<question>"
+   ```
+2. **Deep-Dive Traversal**: Use `--dfs` for tracing execution call stacks (`graphify query "<question>" --dfs`) or `graphify path "<source>" "<target>"` for shortest paths between concepts.
+3. **Targeted Fallback**: Ripgrep (`grep_search`) is preserved as a targeted secondary fallback for exact regexes or literal string/content lookups when graph nodes do not provide the exact line text.
+4. **Continuous Graph Synchronization**: The knowledge graph MUST be updated with each code change. Upon completing any work order or commit, execute:
+   ```bash
+   bash .agents/scripts/sync_graph.sh
+   # or directly: graphify extract zakaria-farid --code-only --out .
+   ```
+   This performs an incremental AST extraction (~9s, 0 token cost) keeping `graphify-out/graph.json` continuously in sync with code edits.
 
 ---
 

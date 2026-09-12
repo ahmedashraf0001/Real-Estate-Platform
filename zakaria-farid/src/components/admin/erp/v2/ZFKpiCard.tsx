@@ -28,42 +28,48 @@ export interface ZFKpiCardProps {
   tooltip?: string;
 }
 
-const ACCENT_THEMES: Record<ZFKpiAccentColor, { bg: string; border: string; icon: string; text: string }> = {
+const ACCENT_THEMES: Record<ZFKpiAccentColor, { bg: string; border: string; icon: string; text: string; valueColor?: string }> = {
   gold: {
-    bg: 'rgba(184, 144, 62, 0.08)',
-    border: 'rgba(184, 144, 62, 0.22)',
+    bg: 'rgba(197, 160, 89, 0.09)',
+    border: 'rgba(197, 160, 89, 0.28)',
     icon: '#946f23',
-    text: '#854d0e'
+    text: '#854d0e',
+    valueColor: '#946f23'
   },
   emerald: {
-    bg: 'rgba(21, 128, 61, 0.06)',
-    border: 'rgba(21, 128, 61, 0.18)',
-    icon: '#15803d',
-    text: '#166534'
+    bg: 'rgba(4, 120, 87, 0.08)',
+    border: 'rgba(4, 120, 87, 0.22)',
+    icon: '#047857',
+    text: '#065f46',
+    valueColor: '#047857'
   },
   amber: {
     bg: 'rgba(180, 83, 9, 0.06)',
     border: 'rgba(180, 83, 9, 0.18)',
     icon: '#b45309',
-    text: '#92400e'
+    text: '#92400e',
+    valueColor: '#b45309'
   },
   slate: {
     bg: 'rgba(51, 65, 85, 0.05)',
     border: 'rgba(51, 65, 85, 0.15)',
     icon: '#475569',
-    text: '#334155'
+    text: '#334155',
+    valueColor: '#0f172a'
   },
   rose: {
     bg: 'rgba(159, 18, 57, 0.05)',
     border: 'rgba(159, 18, 57, 0.18)',
     icon: '#9f1239',
-    text: '#881337'
+    text: '#881337',
+    valueColor: '#9f1239'
   },
   blue: {
     bg: 'rgba(30, 58, 138, 0.05)',
     border: 'rgba(30, 58, 138, 0.18)',
     icon: '#1e40af',
-    text: '#1e3a8a'
+    text: '#1e3a8a',
+    valueColor: '#1e40af'
   }
 };
 
@@ -141,8 +147,34 @@ export const ZFKpiCard: React.FC<ZFKpiCardProps> = ({
             </div>
           )}
           <div>
-            <div style={{ fontSize: '0.74rem', fontWeight: 600, color: '#64748b' }}>
-              {title}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap' }}>
+              <span style={{ fontSize: '0.74rem', fontWeight: 600, color: '#64748b' }}>
+                {title}
+              </span>
+              {badge && (
+                <span
+                  className={styles.kpiBadge}
+                  style={{
+                    fontSize: '0.62rem',
+                    padding: '0.1rem 0.38rem',
+                    borderRadius: '5px',
+                    background: badge.variant === 'positive' ? 'rgba(4, 120, 87, 0.08)' :
+                      badge.variant === 'warning' ? 'rgba(180, 83, 9, 0.07)' :
+                      badge.variant === 'danger' ? 'rgba(159, 18, 57, 0.06)' :
+                      badge.variant === 'gold' ? 'rgba(197, 160, 89, 0.1)' : undefined,
+                    color: badge.variant === 'positive' ? '#047857' :
+                      badge.variant === 'warning' ? '#92400e' :
+                      badge.variant === 'danger' ? '#9f1239' :
+                      badge.variant === 'gold' ? '#946f23' : undefined,
+                    borderColor: badge.variant === 'positive' ? 'rgba(4, 120, 87, 0.22)' :
+                      badge.variant === 'warning' ? 'rgba(180, 83, 9, 0.2)' :
+                      badge.variant === 'danger' ? 'rgba(159, 18, 57, 0.2)' :
+                      badge.variant === 'gold' ? 'rgba(197, 160, 89, 0.3)' : undefined
+                  }}
+                >
+                  {badge.text}
+                </span>
+              )}
             </div>
             {subtitleLabel && (
               <div style={{ fontSize: '0.68rem', color: '#94a3b8' }}>
@@ -153,7 +185,7 @@ export const ZFKpiCard: React.FC<ZFKpiCardProps> = ({
         </div>
 
         <div style={{ textAlign: 'right', display: 'flex', alignItems: 'baseline', gap: '0.35rem' }}>
-          <span style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0f172a', fontVariantNumeric: 'tabular-nums' }}>
+          <span style={{ fontSize: '1.25rem', fontWeight: 800, color: accent.valueColor || '#0f172a', fontVariantNumeric: 'tabular-nums' }}>
             {num}
           </span>
           {cur && (
@@ -271,18 +303,18 @@ export const ZFKpiCard: React.FC<ZFKpiCardProps> = ({
               <span
                 className={styles.kpiBadge}
                 style={{
-                  background: badge.variant === 'positive' ? 'rgba(21, 128, 61, 0.07)' :
+                  background: badge.variant === 'positive' ? 'rgba(4, 120, 87, 0.08)' :
                     badge.variant === 'warning' ? 'rgba(180, 83, 9, 0.07)' :
                     badge.variant === 'danger' ? 'rgba(159, 18, 57, 0.06)' :
-                    badge.variant === 'gold' ? 'rgba(184, 144, 62, 0.08)' : undefined,
-                  color: badge.variant === 'positive' ? '#15803d' :
+                    badge.variant === 'gold' ? 'rgba(197, 160, 89, 0.1)' : undefined,
+                  color: badge.variant === 'positive' ? '#047857' :
                     badge.variant === 'warning' ? '#92400e' :
                     badge.variant === 'danger' ? '#9f1239' :
                     badge.variant === 'gold' ? '#946f23' : undefined,
-                  borderColor: badge.variant === 'positive' ? 'rgba(21, 128, 61, 0.2)' :
+                  borderColor: badge.variant === 'positive' ? 'rgba(4, 120, 87, 0.22)' :
                     badge.variant === 'warning' ? 'rgba(180, 83, 9, 0.2)' :
                     badge.variant === 'danger' ? 'rgba(159, 18, 57, 0.2)' :
-                    badge.variant === 'gold' ? 'rgba(184, 144, 62, 0.22)' : undefined
+                    badge.variant === 'gold' ? 'rgba(197, 160, 89, 0.3)' : undefined
                 }}
               >
                 {badge.text}
@@ -299,7 +331,7 @@ export const ZFKpiCard: React.FC<ZFKpiCardProps> = ({
       <div
         onClick={onClick}
         title={tooltip}
-        className={`${styles.doubleBezelCard} ${className || ''}`}
+        className={`${styles.doubleBezelCard} ${effectiveFlagship ? styles.flagshipCard : ''} ${className || ''}`}
         style={{ cursor: onClick ? 'pointer' : 'default', ...style }}
       >
         <div className={styles.doubleBezelInner}>

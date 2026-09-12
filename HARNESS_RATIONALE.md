@@ -1,4 +1,4 @@
-# Harness Rationale: Zakaria Farid Real Estate ERP (v2.0.0)
+# Harness Rationale: Zakaria Farid Real Estate ERP (v2.1.0)
 
 ## 1. Track Derivation & Risk Architecture
 
@@ -73,3 +73,13 @@ Every Hard Invariant and dual-gated track is mechanically backed by:
 - **`Database Custodian`**:
   - `read_file`, `view_file`, `replace_file_content`, `write_to_file`: Create and edit SQL migrations in `supabase/migrations/` (Justification: 4a schema and trigger maintenance).
   - `call_mcp_tool` (Supabase MCP): Apply migrations, verify RLS advisors, and test triggers (Justification: 4a database inspection and migration verification).
+
+---
+
+## 6. Knowledge Graph Architecture & Continuous AST Sync (`graphify`)
+- **Querying & Topology Search**:
+  - `graphify query "<question>"` is provisioned as the primary architectural discovery tool for the orchestrator and all specialized subagents (Justification: 4a dependency and topology inspection prior to modification, with zero LLM token cost).
+  - Traces AST relationships (imports, calls, community clusters) across 12,000+ nodes in milliseconds.
+- **Continuous Synchronization**:
+  - Backed mechanically by `.agents/scripts/sync_graph.sh` and `verify_gates.sh --sync-graph`.
+  - Incremental AST extraction updates `graphify-out/graph.json` upon task completion in ~9 seconds, keeping the repository graph perpetually fresh.

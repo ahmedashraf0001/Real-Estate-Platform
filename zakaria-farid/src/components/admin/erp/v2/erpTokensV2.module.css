@@ -5,18 +5,18 @@
  */
 
 :root {
-  /* Surfaces & Canvas — Architectural Alabaster & Crisp White */
-  --zf2-bg-canvas: #f8f9fa;
+  /* Surfaces & Canvas — Warm Architectural Alabaster & Crisp White */
+  --zf2-bg-canvas: #eae6dc;
   --zf2-bg-header: #ffffff;
   --zf2-bg-dock: #ffffff;
   --zf2-bg-surface: #ffffff;
-  --zf2-bg-surface-raised: #f1f5f9;
-  --zf2-bg-surface-hover: #e2e8f0;
-  --zf2-bg-surface-active: #cbd5e1;
+  --zf2-bg-surface-raised: #f4f1ea;
+  --zf2-bg-surface-hover: #eae6dc;
+  --zf2-bg-surface-active: #d8d2c4;
   
   /* Hairline Borders */
-  --zf2-border-subtle: #e2e8f0;
-  --zf2-border-medium: #cbd5e1;
+  --zf2-border-subtle: #d8d2c4;
+  --zf2-border-medium: #d8d2c4;
   --zf2-border-focus: rgba(148, 111, 35, 0.45);
 
   /* Primary Accent: Architectural Egyptian Bronze-Gold */

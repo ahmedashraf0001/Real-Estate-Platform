@@ -30,6 +30,7 @@ import { MoneyCell } from '@/components/erp/MoneyCell';
 import { ZFPagination } from '../ZFPagination';
 import { ZFKpiCard } from '../ZFKpiCard';
 import { ZFFilterToolbar } from '../ZFFilterToolbar';
+import { ZFErpBreadcrumb } from '../common/ZFErpBreadcrumb';
 import styles from '../ZFWorkstationShell.module.css';
 
 interface ContractsRegistryViewProps {
@@ -191,6 +192,7 @@ export const ContractsRegistryView: React.FC<ContractsRegistryViewProps> = ({
       {/* 1. STAGE HEADER & ACTIONS */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
+          <ZFErpBreadcrumb sectionTitle={isAr ? 'عقود البيع ومتابعة الأقساط' : 'Sales Contracts & Installments'} icon={<FileText size={13} color="#946f23" />} />
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
             <h1 style={{ fontSize: '1.4rem', fontWeight: 800, margin: 0, color: '#0f172a', letterSpacing: '-0.02em' }}>
               {isAr ? 'عقود البيع ومتابعة أقساط العملاء' : 'Sales Contracts & Installment Pipeline'}

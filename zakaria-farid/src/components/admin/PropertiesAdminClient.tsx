@@ -1,11 +1,12 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
 import { 
   Plus, 
   Pencil, 
   Eye, 
+  EyeOff,
   Building2, 
   Archive, 
   RotateCcw, 
@@ -20,7 +21,8 @@ import {
   Crown
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { formatPrice } from '@/lib/utils/formatting';
+import { formatPrice, formatPriceParts } from '@/lib/utils/formatting';
+import { getStoredPlatformSettings, saveStoredPlatformSettings } from '@/lib/services/marketIntelligence';
 import { toggleArchiveProperty, deletePropertyPermanently } from '@/app/actions/properties';
 import type { Property } from '@/lib/supabase/types';
 
@@ -37,6 +39,28 @@ export default function PropertiesAdminClient({ initialProperties, adminLocale }
   const [selectedType, setSelectedType] = useState('all');
   const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'price_asc' | 'price_desc' | 'area_desc'>('newest');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [hidePrices, setHidePrices] = useState<boolean>(false);
+
+  useEffect(() => {
+    setHidePrices(getStoredPlatformSettings().hidePropertyPrices ?? false);
+    const handleUpdate = () => {
+      setHidePrices(getStoredPlatformSettings().hidePropertyPrices ?? false);
+    };
+    window.addEventListener('zf_platform_settings_updated', handleUpdate);
+    return () => window.removeEventListener('zf_platform_settings_updated', handleUpdate);
+  }, []);
+
+  const handleToggleHidePrices = () => {
+    const current = getStoredPlatformSettings();
+    const next = !current.hidePropertyPrices;
+    saveStoredPlatformSettings({ ...current, hidePropertyPrices: next });
+    setHidePrices(next);
+    toast.success(
+      next
+        ? (isAr ? '🔒 تم إخفاء أسعار العقارات عن الزوار (السعر عند الطلب - POA)' : '🔒 Property prices hidden from public (POA enabled)')
+        : (isAr ? '👁️ تم إظهار أسعار العقارات للزوار' : '👁️ Public property prices are now visible to visitors')
+    );
+  };
 
   const STATUS_BADGE: Record<string, { bg: string; color: string; border: string }> = {
     active: { bg: 'rgba(16, 185, 129, 0.12)', color: '#10B981', border: 'rgba(16, 185, 129, 0.3)' },
@@ -162,21 +186,21 @@ export default function PropertiesAdminClient({ initialProperties, adminLocale }
         justifyContent: 'space-between',
         flexWrap: 'wrap',
         gap: '16px',
-        background: 'rgba(16, 20, 29, 0.85)',
+        background: 'var(--admin-card-bg, rgba(16, 20, 29, 0.85))',
         backdropFilter: 'blur(20px)',
         padding: '18px 24px',
         borderRadius: '16px',
-        border: '1px solid rgba(255, 255, 255, 0.08)',
-        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)'
+        border: '1px solid var(--admin-card-border, rgba(255, 255, 255, 0.08))',
+        boxShadow: 'var(--admin-card-shadow, 0 8px 32px rgba(0, 0, 0, 0.4))'
       }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-            <h1 style={{ fontSize: '20px', fontWeight: 800, margin: 0, color: '#FFFFFF' }}>
+            <h1 style={{ fontSize: '20px', fontWeight: 800, margin: 0, color: 'var(--admin-text-title, #FFFFFF)' }}>
               {isAr ? 'محفظة العقارات الفاخرة' : 'Properties Portfolio'}
             </h1>
 
             {/* Filter Tabs */}
-            <div style={{ display: 'flex', gap: '4px', background: 'rgba(255, 255, 255, 0.04)', padding: '3px', borderRadius: '10px', border: '1px solid rgba(255, 255, 255, 0.08)' }}>
+            <div style={{ display: 'flex', gap: '4px', background: 'var(--admin-input-bg, rgba(255, 255, 255, 0.04))', padding: '3px', borderRadius: '10px', border: '1px solid var(--admin-card-border, rgba(255, 255, 255, 0.08))' }}>
               <button
                 type="button"
                 onClick={() => setActiveTab('active')}
@@ -187,7 +211,7 @@ export default function PropertiesAdminClient({ initialProperties, adminLocale }
                   fontWeight: 800,
                   border: 'none',
                   background: activeTab === 'active' ? 'linear-gradient(135deg, #E5B869 0%, #C5A059 100%)' : 'transparent',
-                  color: activeTab === 'active' ? '#0A0C10' : 'rgba(255, 255, 255, 0.65)',
+                  color: activeTab === 'active' ? '#0A0C10' : 'var(--admin-text-muted, rgba(255, 255, 255, 0.65))',
                   cursor: 'pointer',
                   transition: 'all 150ms ease',
                 }}
@@ -204,7 +228,7 @@ export default function PropertiesAdminClient({ initialProperties, adminLocale }
                   fontWeight: 800,
                   border: 'none',
                   background: activeTab === 'archived' ? 'linear-gradient(135deg, #E5B869 0%, #C5A059 100%)' : 'transparent',
-                  color: activeTab === 'archived' ? '#0A0C10' : 'rgba(255, 255, 255, 0.65)',
+                  color: activeTab === 'archived' ? '#0A0C10' : 'var(--admin-text-muted, rgba(255, 255, 255, 0.65))',
                   cursor: 'pointer',
                   transition: 'all 150ms ease',
                 }}
@@ -213,33 +237,62 @@ export default function PropertiesAdminClient({ initialProperties, adminLocale }
               </button>
             </div>
           </div>
-          <p style={{ fontSize: '12px', color: 'rgba(255, 255, 255, 0.55)', marginTop: '3px', margin: 0 }}>
+          <p style={{ fontSize: '12px', color: 'var(--admin-text-muted, rgba(255, 255, 255, 0.55))', marginTop: '3px', margin: 0 }}>
             {activeTab === 'active'
               ? (isAr ? `يتم عرض ${activeProps.length} عقار فاخر معتمد على المنصة الحية` : `Displaying ${activeProps.length} active sovereign estate listings`)
               : (isAr ? `يتم عرض ${archivedProps.length} عقار مؤرشف` : `Displaying ${archivedProps.length} archived property listings`)}
           </p>
         </div>
 
-        <Link 
-          href={`/admin/${adminLocale}/properties/new`} 
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '6px',
-            padding: '9px 16px',
-            borderRadius: '10px',
-            fontSize: '12.5px',
-            fontWeight: 800,
-            background: 'linear-gradient(135deg, #E5B869 0%, #C5A059 100%)',
-            color: '#0A0C10',
-            textDecoration: 'none',
-            boxShadow: '0 3px 14px rgba(229, 184, 105, 0.25)',
-            transition: 'all 150ms ease'
-          }}
-        >
-          <Plus size={15} strokeWidth={2.5} />
-          <span>{isAr ? 'إدراج عقار جديد' : 'New Property'}</span>
-        </Link>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+          <button
+            type="button"
+            onClick={handleToggleHidePrices}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '9px 14px',
+              borderRadius: '10px',
+              fontSize: '12px',
+              fontWeight: 700,
+              cursor: 'pointer',
+              background: hidePrices ? 'rgba(221, 167, 82, 0.18)' : 'var(--admin-card-bg-subtle, #F8FAFC)',
+              border: `1px solid ${hidePrices ? '#DDA752' : 'var(--admin-card-border, #CBD5E1)'}`,
+              color: hidePrices ? 'var(--admin-gold-primary, #946F23)' : 'var(--admin-text-title, #0F172A)',
+              transition: 'all 150ms ease'
+            }}
+            title={isAr ? 'التحكم في سرية الأسعار العامة' : 'Control public price visibility'}
+          >
+            {hidePrices ? <EyeOff size={14} /> : <Eye size={14} />}
+            <span>
+              {hidePrices 
+                ? (isAr ? '🔒 الأسعار مخفية (السعر عند الطلب)' : '🔒 Prices Hidden (POA)') 
+                : (isAr ? '👁️ الأسعار معروضة للزوار' : '👁️ Public Prices Visible')}
+            </span>
+          </button>
+
+          <Link 
+            href={`/admin/${adminLocale}/properties/new`} 
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '9px 16px',
+              borderRadius: '10px',
+              fontSize: '12.5px',
+              fontWeight: 800,
+              background: 'linear-gradient(135deg, #E5B869 0%, #C5A059 100%)',
+              color: '#0A0C10',
+              textDecoration: 'none',
+              boxShadow: '0 3px 14px rgba(229, 184, 105, 0.25)',
+              transition: 'all 150ms ease'
+            }}
+          >
+            <Plus size={15} strokeWidth={2.5} />
+            <span>{isAr ? 'إدراج عقار جديد' : 'New Property'}</span>
+          </Link>
+        </div>
       </div>
 
       {/* Search & Filter Toolbar */}
@@ -248,11 +301,12 @@ export default function PropertiesAdminClient({ initialProperties, adminLocale }
         alignItems: 'center',
         gap: '12px',
         flexWrap: 'wrap',
-        background: 'rgba(16, 20, 29, 0.75)',
+        background: 'var(--admin-card-bg, rgba(16, 20, 29, 0.75))',
         backdropFilter: 'blur(16px)',
         padding: '10px 16px',
         borderRadius: '14px',
-        border: '1px solid rgba(255, 255, 255, 0.08)',
+        border: '1px solid var(--admin-card-border, #CBD5E1)',
+        boxShadow: 'var(--admin-card-shadow, 0 1px 3px rgba(0, 0, 0, 0.05))'
       }}>
         {/* Text Search */}
         <div style={{ flex: '1 1 260px', position: 'relative', display: 'flex', alignItems: 'center' }}>
@@ -266,11 +320,11 @@ export default function PropertiesAdminClient({ initialProperties, adminLocale }
               width: '100%',
               padding: isAr ? '9px 38px 9px 14px' : '9px 14px 9px 38px',
               fontSize: '13px',
-              border: '1px solid rgba(255, 255, 255, 0.12)',
+              border: '1px solid var(--admin-input-border, #CBD5E1)',
               borderRadius: '10px',
               outline: 'none',
-              background: 'rgba(10, 14, 24, 0.7)',
-              color: '#FFFFFF',
+              background: 'var(--admin-input-bg, rgba(10, 14, 24, 0.7))',
+              color: 'var(--admin-text-title, #FFFFFF)',
               boxSizing: 'border-box'
             }}
           />
@@ -278,7 +332,7 @@ export default function PropertiesAdminClient({ initialProperties, adminLocale }
             <button
               type="button"
               onClick={() => setSearchQuery('')}
-              style={{ position: 'absolute', [isAr ? 'left' : 'right']: '12px', background: 'transparent', border: 'none', cursor: 'pointer', color: 'rgba(255, 255, 255, 0.5)' }}
+              style={{ position: 'absolute', [isAr ? 'left' : 'right']: '12px', background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--admin-text-muted, #475569)' }}
             >
               <X size={14} />
             </button>
@@ -295,10 +349,10 @@ export default function PropertiesAdminClient({ initialProperties, adminLocale }
               padding: '9px 14px',
               fontSize: '12.5px',
               fontWeight: 700,
-              border: '1px solid rgba(255, 255, 255, 0.12)',
+              border: '1px solid var(--admin-input-border, #CBD5E1)',
               borderRadius: '10px',
-              background: 'rgba(10, 14, 24, 0.7)',
-              color: '#FFFFFF',
+              background: 'var(--admin-input-bg, rgba(10, 14, 24, 0.7))',
+              color: 'var(--admin-text-title, #FFFFFF)',
               cursor: 'pointer',
               outline: 'none'
             }}
@@ -322,10 +376,10 @@ export default function PropertiesAdminClient({ initialProperties, adminLocale }
               padding: '9px 14px',
               fontSize: '12.5px',
               fontWeight: 700,
-              border: '1px solid rgba(255, 255, 255, 0.12)',
+              border: '1px solid var(--admin-input-border, #CBD5E1)',
               borderRadius: '10px',
-              background: 'rgba(10, 14, 24, 0.7)',
-              color: '#FFFFFF',
+              background: 'var(--admin-input-bg, rgba(10, 14, 24, 0.7))',
+              color: 'var(--admin-text-title, #FFFFFF)',
               cursor: 'pointer',
               outline: 'none'
             }}
@@ -350,11 +404,11 @@ export default function PropertiesAdminClient({ initialProperties, adminLocale }
             <div
               key={p.id}
               style={{
-                background: 'rgba(16, 20, 29, 0.75)',
+                background: 'var(--admin-card-bg, rgba(16, 20, 29, 0.75))',
                 backdropFilter: 'blur(20px)',
                 borderRadius: '16px',
-                boxShadow: '0 8px 24px rgba(0,0,0,0.3)',
-                border: '1px solid rgba(255, 255, 255, 0.08)',
+                boxShadow: 'var(--admin-card-shadow, 0 1px 3px rgba(0,0,0,0.05))',
+                border: '1px solid var(--admin-card-border, #CBD5E1)',
                 overflow: 'hidden',
                 display: 'flex',
                 flexDirection: 'column',
@@ -429,7 +483,7 @@ export default function PropertiesAdminClient({ initialProperties, adminLocale }
                   <h3 style={{
                     fontSize: '14.5px',
                     fontWeight: 800,
-                    color: '#FFFFFF',
+                    color: 'var(--admin-text-title, #FFFFFF)',
                     margin: '0 0 4px',
                     overflow: 'hidden',
                     textOverflow: 'ellipsis',
@@ -438,15 +492,20 @@ export default function PropertiesAdminClient({ initialProperties, adminLocale }
                     {isAr ? p.title_ar : p.title_en}
                   </h3>
 
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11.5px', color: 'rgba(255, 255, 255, 0.6)' }}>
-                    <MapPin size={12} style={{ color: '#E5B869' }} />
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11.5px', color: 'var(--admin-text-muted, #475569)', fontWeight: 600 }}>
+                    <MapPin size={12} style={{ color: 'var(--admin-gold-primary, #E5B869)' }} />
                     <span>{p.location}</span>
                     <span>•</span>
                     <span>{typeLabel[p.type] ?? p.type}</span>
                   </div>
 
-                  <p style={{ fontSize: '17px', fontWeight: 800, color: '#E5B869', margin: '8px 0 0' }}>
-                    {formatPrice(p.price_egp, adminLocale)}
+                  <p style={{ margin: '8px 0 0', display: 'flex', alignItems: 'baseline', gap: '5px' }}>
+                    <span style={{ fontSize: '18px', fontWeight: 800, fontVariantNumeric: 'tabular-nums', color: 'var(--admin-text-title, #0F172A)' }}>
+                      {formatPriceParts(p.price_egp, adminLocale).num}
+                    </span>
+                    <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--admin-gold-primary, #946F23)' }}>
+                      {formatPriceParts(p.price_egp, adminLocale).cur}
+                    </span>
                   </p>
                 </div>
 
@@ -457,26 +516,26 @@ export default function PropertiesAdminClient({ initialProperties, adminLocale }
                   gap: '8px',
                   padding: '7px 10px',
                   borderRadius: '8px',
-                  background: 'rgba(255, 255, 255, 0.03)',
-                  border: '1px solid rgba(255, 255, 255, 0.06)',
+                  background: 'var(--admin-card-bg-subtle, #F8FAFC)',
+                  border: '1px solid var(--admin-card-border, #CBD5E1)',
                   textAlign: 'center'
                 }}>
                   <div>
-                    <span style={{ fontSize: '9.5px', color: 'rgba(255, 255, 255, 0.45)', display: 'block' }}>{isAr ? 'غرف' : 'Beds'}</span>
-                    <strong style={{ fontSize: '12.5px', color: '#FFFFFF' }}>{p.bedrooms}</strong>
+                    <span style={{ fontSize: '9.5px', color: 'var(--admin-text-muted, #475569)', fontWeight: 600, display: 'block' }}>{isAr ? 'غرف' : 'Beds'}</span>
+                    <strong style={{ fontSize: '12.5px', color: 'var(--admin-text-title, #0F172A)', fontWeight: 700 }}>{p.bedrooms}</strong>
                   </div>
                   <div>
-                    <span style={{ fontSize: '9.5px', color: 'rgba(255, 255, 255, 0.45)', display: 'block' }}>{isAr ? 'حمامات' : 'Baths'}</span>
-                    <strong style={{ fontSize: '12.5px', color: '#FFFFFF' }}>{p.bathrooms}</strong>
+                    <span style={{ fontSize: '9.5px', color: 'var(--admin-text-muted, #475569)', fontWeight: 600, display: 'block' }}>{isAr ? 'حمامات' : 'Baths'}</span>
+                    <strong style={{ fontSize: '12.5px', color: 'var(--admin-text-title, #0F172A)', fontWeight: 700 }}>{p.bathrooms}</strong>
                   </div>
                   <div>
-                    <span style={{ fontSize: '9.5px', color: 'rgba(255, 255, 255, 0.45)', display: 'block' }}>{isAr ? 'م²' : 'SQM'}</span>
-                    <strong style={{ fontSize: '12.5px', color: '#FFFFFF' }}>{p.area_sqm}</strong>
+                    <span style={{ fontSize: '9.5px', color: 'var(--admin-text-muted, #475569)', fontWeight: 600, display: 'block' }}>{isAr ? 'م²' : 'SQM'}</span>
+                    <strong style={{ fontSize: '12.5px', color: 'var(--admin-text-title, #0F172A)', fontWeight: 700 }}>{p.area_sqm}</strong>
                   </div>
                 </div>
 
                 {/* Actions Footer */}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', borderTop: '1px solid rgba(255, 255, 255, 0.07)', paddingTop: '10px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', borderTop: '1px solid var(--admin-card-border, #CBD5E1)', paddingTop: '10px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                     <Link
                       href={`/admin/${adminLocale}/properties/${p.id}/edit`}
@@ -490,7 +549,7 @@ export default function PropertiesAdminClient({ initialProperties, adminLocale }
                         fontWeight: 700,
                         background: 'rgba(229, 184, 105, 0.12)',
                         border: '1px solid rgba(229, 184, 105, 0.25)',
-                        color: '#E5B869',
+                        color: 'var(--admin-gold-primary, #E5B869)',
                         textDecoration: 'none'
                       }}
                     >
@@ -511,9 +570,9 @@ export default function PropertiesAdminClient({ initialProperties, adminLocale }
                           borderRadius: '7px',
                           fontSize: '11px',
                           fontWeight: 600,
-                          background: 'rgba(255, 255, 255, 0.04)',
-                          border: '1px solid rgba(255, 255, 255, 0.08)',
-                          color: 'rgba(255, 255, 255, 0.75)',
+                          background: 'var(--admin-card-bg-subtle, rgba(255, 255, 255, 0.04))',
+                          border: '1px solid var(--admin-card-border, #CBD5E1)',
+                          color: 'var(--admin-text-body, #334155)',
                           textDecoration: 'none'
                         }}
                       >
@@ -532,8 +591,8 @@ export default function PropertiesAdminClient({ initialProperties, adminLocale }
                         padding: '6px 8px',
                         borderRadius: '8px',
                         background: 'transparent',
-                        border: '1px solid rgba(255, 255, 255, 0.1)',
-                        color: 'rgba(255, 255, 255, 0.6)',
+                        border: '1px solid var(--admin-card-border, #CBD5E1)',
+                        color: 'var(--admin-text-muted, #475569)',
                         cursor: 'pointer'
                       }}
                       title={p.is_archived ? (isAr ? 'استعادة من الأرشيف' : 'Restore') : (isAr ? 'أرشفة' : 'Archive')}

@@ -72,17 +72,17 @@ export default async function AnalyticsPage({ params }: Props) {
         justifyContent: 'space-between',
         flexWrap: 'wrap',
         gap: '16px',
-        background: 'rgba(16, 20, 29, 0.85)',
+        background: 'var(--admin-card-bg, rgba(16, 20, 29, 0.85))',
         backdropFilter: 'blur(20px)',
         WebkitBackdropFilter: 'blur(20px)',
         padding: '20px 24px',
         borderRadius: '16px',
-        border: '1px solid rgba(255, 255, 255, 0.08)',
-        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)'
+        border: '1px solid var(--admin-card-border, rgba(255, 255, 255, 0.08))',
+        boxShadow: 'var(--admin-card-shadow, 0 8px 32px rgba(0, 0, 0, 0.4))'
       }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-            <h1 style={{ fontSize: '20px', fontWeight: 800, margin: 0, color: '#FFFFFF', letterSpacing: '-0.02em' }}>
+            <h1 style={{ fontSize: '20px', fontWeight: 800, margin: 0, color: 'var(--admin-text-title, #FFFFFF)', letterSpacing: '-0.02em' }}>
               {isAr ? 'الذكاء العقاري وتحليلات السوق' : 'Property & Market Intelligence'}
             </h1>
             <span style={{
@@ -91,13 +91,13 @@ export default async function AnalyticsPage({ params }: Props) {
               padding: '3px 10px',
               borderRadius: '9999px',
               background: 'rgba(229, 184, 105, 0.12)',
-              color: '#E5B869',
+              color: 'var(--admin-gold-primary, #E5B869)',
               border: '1px solid rgba(229, 184, 105, 0.3)'
             }}>
               {isAr ? 'مؤشرات حية متزامنة' : 'Live Real-Time Index'}
             </span>
           </div>
-          <p style={{ fontSize: '12.5px', color: 'rgba(255, 255, 255, 0.6)', marginTop: '4px', margin: '4px 0 0', fontWeight: 500 }}>
+          <p style={{ fontSize: '12.5px', color: 'var(--admin-text-muted, rgba(255, 255, 255, 0.6))', marginTop: '4px', margin: '4px 0 0', fontWeight: 500 }}>
             {isAr
               ? 'تحليل سرعة تفاعل المشترين مع العقارات المعروضة، ومصفوفة العرض والطلب حسب المناطق، وتوزيع قنوات الاستحواذ'
               : 'Live buyer liquidity velocity, district supply vs. demand matrix, and acquisition channel attribution.'}
@@ -116,14 +116,15 @@ export default async function AnalyticsPage({ params }: Props) {
               borderRadius: '10px',
               fontSize: '12px',
               fontWeight: 700,
-              background: 'rgba(255, 255, 255, 0.04)',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
-              color: 'rgba(255, 255, 255, 0.85)',
+              background: 'var(--admin-card-bg-subtle, rgba(255, 255, 255, 0.04))',
+              border: '1px solid var(--admin-card-border, rgba(255, 255, 255, 0.1))',
+              color: 'var(--admin-text-body, rgba(255, 255, 255, 0.85))',
               textDecoration: 'none',
+              minHeight: '44px',
               transition: 'all 150ms ease'
             }}
           >
-            <span>{isAr ? '← لوحة القيادة التنفيذية' : '← Executive Overview'}</span>
+            <span>{isAr ? 'لوحة القيادة التنفيذية →' : '← Executive Overview'}</span>
           </Link>
 
           <Link
@@ -139,6 +140,7 @@ export default async function AnalyticsPage({ params }: Props) {
               background: 'linear-gradient(135deg, #E5B869 0%, #C5A059 100%)',
               color: '#0A0C10',
               textDecoration: 'none',
+              minHeight: '44px',
               boxShadow: '0 3px 14px rgba(229, 184, 105, 0.3)',
               transition: 'all 150ms ease'
             }}
@@ -154,29 +156,30 @@ export default async function AnalyticsPage({ params }: Props) {
         
         {/* Metric 1: Top Engaged Asset */}
         <div style={{
-          background: 'rgba(16, 20, 29, 0.75)',
+          background: 'var(--admin-card-bg, rgba(16, 20, 29, 0.75))',
           backdropFilter: 'blur(16px)',
           borderRadius: '14px',
           padding: '16px 18px',
-          border: '1px solid rgba(229, 184, 105, 0.25)',
+          border: '1px solid var(--admin-card-border, rgba(229, 184, 105, 0.25))',
+          boxShadow: 'var(--admin-card-shadow, none)',
           display: 'flex',
           flexDirection: 'column',
           justifyContent: 'space-between',
           gap: '8px'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span style={{ fontSize: '11px', fontWeight: 800, color: 'rgba(255, 255, 255, 0.55)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+            <span style={{ fontSize: '11px', fontWeight: 800, color: 'var(--admin-text-muted, rgba(255, 255, 255, 0.55))', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
               {isAr ? 'أعلى عقار طلباً بالمحفظة' : 'Highest Velocity Asset'}
             </span>
-            <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: 'rgba(229, 184, 105, 0.12)', color: '#E5B869', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: 'rgba(229, 184, 105, 0.12)', color: 'var(--admin-gold-primary, #E5B869)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <TrendingUp size={14} />
             </div>
           </div>
           <div>
-            <span style={{ fontSize: '18px', fontWeight: 800, color: '#FFFFFF', letterSpacing: '-0.01em', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            <span style={{ fontSize: '18px', fontWeight: 800, color: 'var(--admin-text-title, #FFFFFF)', letterSpacing: '-0.01em', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {topProperty ? (isAr ? topProperty.titleAr : topProperty.titleEn) : (isAr ? 'لا توجد بيانات' : 'No Data')}
             </span>
-            <p style={{ fontSize: '11px', color: '#E5B869', margin: '3px 0 0', fontWeight: 600 }}>
+            <p style={{ fontSize: '11px', color: 'var(--admin-gold-primary, #E5B869)', margin: '3px 0 0', fontWeight: 600 }}>
               {topProperty ? `${topProperty.demandScore}/100 Demand Score (${topProperty.inquiryCount} Inquiries)` : '—'}
             </p>
           </div>
@@ -184,29 +187,30 @@ export default async function AnalyticsPage({ params }: Props) {
 
         {/* Metric 2: Primary Demand Geographic District */}
         <div style={{
-          background: 'rgba(16, 20, 29, 0.75)',
+          background: 'var(--admin-card-bg, rgba(16, 20, 29, 0.75))',
           backdropFilter: 'blur(16px)',
           borderRadius: '14px',
           padding: '16px 18px',
-          border: '1px solid rgba(255, 255, 255, 0.08)',
+          border: '1px solid var(--admin-card-border, rgba(255, 255, 255, 0.08))',
+          boxShadow: 'var(--admin-card-shadow, none)',
           display: 'flex',
           flexDirection: 'column',
           justifyContent: 'space-between',
           gap: '8px'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span style={{ fontSize: '11px', fontWeight: 800, color: 'rgba(255, 255, 255, 0.55)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+            <span style={{ fontSize: '11px', fontWeight: 800, color: 'var(--admin-text-muted, rgba(255, 255, 255, 0.55))', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
               {isAr ? 'المنطقة الأكثر طلباً' : 'Top Geographic Demand'}
             </span>
-            <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: 'rgba(255, 255, 255, 0.05)', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: 'var(--admin-card-bg-subtle, rgba(255, 255, 255, 0.05))', color: 'var(--admin-text-title, #FFFFFF)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <MapPin size={14} />
             </div>
           </div>
           <div>
-            <span style={{ fontSize: '18px', fontWeight: 800, color: '#FFFFFF', letterSpacing: '-0.01em', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            <span style={{ fontSize: '18px', fontWeight: 800, color: 'var(--admin-text-title, #FFFFFF)', letterSpacing: '-0.01em', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {topDistrict ? (isAr ? topDistrict.nameAr : topDistrict.nameEn) : 'Sheikh Zayed & West'}
             </span>
-            <p style={{ fontSize: '11px', color: 'rgba(255, 255, 255, 0.5)', margin: '3px 0 0', fontWeight: 500 }}>
+            <p style={{ fontSize: '11px', color: 'var(--admin-text-muted, rgba(255, 255, 255, 0.5))', margin: '3px 0 0', fontWeight: 500 }}>
               {topDistrict ? `${topDistrict.inquirySharePct}% of total inbound buyer demand` : 'Active tracking'}
             </p>
           </div>
@@ -214,18 +218,19 @@ export default async function AnalyticsPage({ params }: Props) {
 
         {/* Metric 3: Primary Inbound Channel */}
         <div style={{
-          background: 'rgba(16, 20, 29, 0.75)',
+          background: 'var(--admin-card-bg, rgba(16, 20, 29, 0.75))',
           backdropFilter: 'blur(16px)',
           borderRadius: '14px',
           padding: '16px 18px',
-          border: '1px solid rgba(255, 255, 255, 0.08)',
+          border: '1px solid var(--admin-card-border, rgba(255, 255, 255, 0.08))',
+          boxShadow: 'var(--admin-card-shadow, none)',
           display: 'flex',
           flexDirection: 'column',
           justifyContent: 'space-between',
           gap: '8px'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span style={{ fontSize: '11px', fontWeight: 800, color: 'rgba(255, 255, 255, 0.55)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+            <span style={{ fontSize: '11px', fontWeight: 800, color: 'var(--admin-text-muted, rgba(255, 255, 255, 0.55))', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
               {isAr ? 'أعلى قنوات الاستحواذ' : 'Top Acquisition Channel'}
             </span>
             <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: 'rgba(16, 185, 129, 0.12)', color: '#34D399', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -233,7 +238,7 @@ export default async function AnalyticsPage({ params }: Props) {
             </div>
           </div>
           <div>
-            <span style={{ fontSize: '18px', fontWeight: 800, color: '#FFFFFF', letterSpacing: '-0.01em', display: 'block' }}>
+            <span style={{ fontSize: '18px', fontWeight: 800, color: 'var(--admin-text-title, #FFFFFF)', letterSpacing: '-0.01em', display: 'block' }}>
               {isAr ? 'مكتب الواتساب الفوري' : 'WhatsApp VIP Desk'}
             </span>
             <p style={{ fontSize: '11px', color: '#34D399', margin: '3px 0 0', fontWeight: 600 }}>
@@ -244,29 +249,30 @@ export default async function AnalyticsPage({ params }: Props) {
 
         {/* Metric 4: Deal Conversion Rate */}
         <div style={{
-          background: 'rgba(16, 20, 29, 0.75)',
+          background: 'var(--admin-card-bg, rgba(16, 20, 29, 0.75))',
           backdropFilter: 'blur(16px)',
           borderRadius: '14px',
           padding: '16px 18px',
-          border: '1px solid rgba(255, 255, 255, 0.08)',
+          border: '1px solid var(--admin-card-border, rgba(255, 255, 255, 0.08))',
+          boxShadow: 'var(--admin-card-shadow, none)',
           display: 'flex',
           flexDirection: 'column',
           justifyContent: 'space-between',
           gap: '8px'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span style={{ fontSize: '11px', fontWeight: 800, color: 'rgba(255, 255, 255, 0.55)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+            <span style={{ fontSize: '11px', fontWeight: 800, color: 'var(--admin-text-muted, rgba(255, 255, 255, 0.55))', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
               {isAr ? 'نسبة نجاح التعاقد' : 'Deal Conversion Rate'}
             </span>
-            <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: 'rgba(229, 184, 105, 0.12)', color: '#E5B869', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: 'rgba(229, 184, 105, 0.12)', color: 'var(--admin-gold-primary, #E5B869)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <BarChart3 size={14} />
             </div>
           </div>
           <div>
-            <span style={{ fontSize: '24px', fontWeight: 800, color: '#FFFFFF', letterSpacing: '-0.02em' }}>
+            <span style={{ fontSize: '24px', fontWeight: 800, color: 'var(--admin-text-title, #FFFFFF)', letterSpacing: '-0.02em' }}>
               {closingRate}%
             </span>
-            <p style={{ fontSize: '11px', color: 'rgba(255, 255, 255, 0.5)', margin: '3px 0 0', fontWeight: 500 }}>
+            <p style={{ fontSize: '11px', color: 'var(--admin-text-muted, rgba(255, 255, 255, 0.5))', margin: '3px 0 0', fontWeight: 500 }}>
               {closedDeals} {isAr ? 'عقود استحواذ ناجحة' : 'Closed Deals'} ({totalInquiries} {isAr ? 'إجمالي الطلبات' : 'Total Leads'})
             </p>
           </div>

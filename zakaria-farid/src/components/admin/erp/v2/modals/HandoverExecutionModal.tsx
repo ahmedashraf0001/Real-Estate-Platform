@@ -147,7 +147,7 @@ export const HandoverExecutionModal: React.FC<HandoverExecutionModalProps> = ({
         style={{
           maxWidth: '1080px',
           width: '95vw',
-          maxHeight: '94vh',
+          maxHeight: '90vh',
           display: 'flex',
           flexDirection: 'column',
           boxShadow: '0 25px 60px -15px rgba(15, 23, 42, 0.3)'
@@ -157,14 +157,15 @@ export const HandoverExecutionModal: React.FC<HandoverExecutionModalProps> = ({
       >
         {/* Executive Modal Header */}
         <div style={{
-          padding: '1.25rem 1.75rem',
+          padding: 'clamp(0.85rem, 2.5vw, 1.25rem) clamp(1rem, 3vw, 1.75rem)',
           borderBottom: '1px solid #e2e8f0',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          background: 'linear-gradient(135deg, #fafaf9 0%, #f5f5f4 100%)'
+          background: 'linear-gradient(135deg, #fafaf9 0%, #f5f5f4 100%)',
+          gap: '0.75rem'
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', minWidth: 0 }}>
             <div style={{
               width: '42px',
               height: '42px',
@@ -174,13 +175,14 @@ export const HandoverExecutionModal: React.FC<HandoverExecutionModalProps> = ({
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              boxShadow: '0 4px 12px rgba(184, 144, 62, 0.28)'
+              boxShadow: '0 4px 12px rgba(184, 144, 62, 0.28)',
+              flexShrink: 0
             }}>
               <KeyRound size={22} />
             </div>
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: '#0f172a' }}>
+            <div style={{ minWidth: 0 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                <h3 style={{ margin: 0, fontSize: 'clamp(0.95rem, 2vw, 1.15rem)', fontWeight: 800, color: '#0f172a' }}>
                   {isAr ? 'محضر استلام الشقة والاعتراف بالإيراد (Model B)' : 'Handover Protocol & Net Revenue Recognition'}
                 </h3>
                 <span style={{
@@ -195,7 +197,7 @@ export const HandoverExecutionModal: React.FC<HandoverExecutionModalProps> = ({
                   IFRS 15 / §14.D.12
                 </span>
               </div>
-              <span style={{ fontSize: '0.74rem', color: '#64748b' }}>
+              <span style={{ fontSize: '0.74rem', color: '#64748b', display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 {isAr 
                   ? 'إثبات التسليم الفعلي ونقل الإيراد المؤجل (٢٠٣٠٠٠) إلى إيراد مبيعات محقق (٤٠١٠٠٠) وإثبات باقي الأقساط كمدينين (١٠٣٠٠٠)' 
                   : 'Physical delivery protocol, clearing deferred contract liabilities & recognizing realized sales revenue'}
@@ -204,23 +206,28 @@ export const HandoverExecutionModal: React.FC<HandoverExecutionModalProps> = ({
           </div>
 
           <button
+            type="button"
             onClick={onClose}
             disabled={isMutating}
+            aria-label={isAr ? 'إغلاق النافذة' : 'Close Modal'}
             style={{
               background: '#ffffff',
               border: '1px solid #e2e8f0',
               borderRadius: '9px',
-              width: '32px',
-              height: '32px',
+              minWidth: '44px',
+              minHeight: '44px',
+              width: '44px',
+              height: '44px',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               color: '#64748b',
               cursor: 'pointer',
-              transition: 'all 0.15s ease'
+              transition: 'all 0.15s ease',
+              flexShrink: 0
             }}
           >
-            <X size={16} />
+            <X size={18} />
           </button>
         </div>
 
@@ -228,7 +235,7 @@ export const HandoverExecutionModal: React.FC<HandoverExecutionModalProps> = ({
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
           <div style={{
             display: 'grid',
-            gridTemplateColumns: 'minmax(340px, 1.15fr) minmax(400px, 1.4fr)',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
             flex: 1,
             overflowY: 'auto'
           }}>
@@ -236,7 +243,7 @@ export const HandoverExecutionModal: React.FC<HandoverExecutionModalProps> = ({
                 PANEL 1: CONTRACT & ASSET HEALTH + POC COMPLETION GATE
                 ───────────────────────────────────────────────────────────── */}
             <div style={{
-              padding: '1.5rem',
+              padding: 'clamp(1rem, 2.5vw, 1.5rem)',
               borderRight: isAr ? 'none' : '1px solid #e2e8f0',
               borderLeft: isAr ? '1px solid #e2e8f0' : 'none',
               background: '#fafaf9',
@@ -600,7 +607,7 @@ export const HandoverExecutionModal: React.FC<HandoverExecutionModalProps> = ({
                 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <span style={{ fontSize: '0.7rem', fontWeight: 800, color: '#334155' }}>
-                      {isAr ? 'مدين: الإيراد المؤجل (٢٠٣٠٠٠)' : 'Dr 203000 Deferred Rev'}
+                      {isAr ? 'مدين: المقدم والأقساط المحصلة (حساب ٢٠٣٠٠٠)' : 'Dr 203000 Deferred Rev'}
                     </span>
                     <span style={{ fontSize: '0.65rem', color: '#64748b' }}>Dr = C</span>
                   </div>
@@ -608,7 +615,7 @@ export const HandoverExecutionModal: React.FC<HandoverExecutionModalProps> = ({
                     <MoneyCell amount={cashCollected} isAr={isAr} />
                   </strong>
                   <span style={{ fontSize: '0.65rem', color: '#059669' }}>
-                    {isAr ? 'تصفير حساب الدفعات المقدمة إلى 0.00' : 'Clears deferred revenue to 0.00'}
+                    {isAr ? 'المبالغ المحصلة قبل الاستلام تتحول لمبيعات رسمية' : 'Clears deferred revenue to 0.00'}
                   </span>
                 </div>
 
@@ -620,7 +627,7 @@ export const HandoverExecutionModal: React.FC<HandoverExecutionModalProps> = ({
                 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <span style={{ fontSize: '0.7rem', fontWeight: 800, color: '#334155' }}>
-                      {isAr ? 'مدين: باقي أقساط العملاء (١٠٣٠٠٠)' : 'Dr 103000 A/R Receivables'}
+                      {isAr ? 'مدين: باقي ثمن الشقة على العميل (حساب ١٠٣٠٠٠)' : 'Dr 103000 A/R Receivables'}
                     </span>
                     <span style={{ fontSize: '0.65rem', color: '#64748b' }}>Dr = V - C</span>
                   </div>
@@ -628,7 +635,7 @@ export const HandoverExecutionModal: React.FC<HandoverExecutionModalProps> = ({
                     <MoneyCell amount={unpaidBalance} isAr={isAr} />
                   </strong>
                   <span style={{ fontSize: '0.65rem', color: '#64748b' }}>
-                    {isAr ? 'ترحيل باقي الأقساط غير المحصلة' : 'Remaining installments booked to A/R'}
+                    {isAr ? 'باقي الأقساط غير المسددة تثبت كمديونية على المشتري' : 'Remaining installments booked to A/R'}
                   </span>
                 </div>
 
@@ -640,7 +647,7 @@ export const HandoverExecutionModal: React.FC<HandoverExecutionModalProps> = ({
                 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <span style={{ fontSize: '0.7rem', fontWeight: 800, color: '#334155' }}>
-                      {isAr ? 'دائن: إيراد مبيعات محقق (٤٠١٠٠٠)' : 'Cr 401000 Realized Revenue'}
+                      {isAr ? 'دائن: إجمالي إيراد بيع الشقة (حساب ٤٠١٠٠٠)' : 'Cr 401000 Realized Revenue'}
                     </span>
                     <span style={{ fontSize: '0.65rem', color: '#64748b' }}>Cr = V</span>
                   </div>
@@ -648,7 +655,7 @@ export const HandoverExecutionModal: React.FC<HandoverExecutionModalProps> = ({
                     <MoneyCell amount={grossValue} isAr={isAr} />
                   </strong>
                   <span style={{ fontSize: '0.65rem', color: '#059669' }}>
-                    {isAr ? 'اعتراف رسمي بكامل قيمة العقد بقائمة الدخل' : '100% recognized into P&L'}
+                    {isAr ? 'اعتراف رسمي بكامل سعر بيع الشقة في قائمة الأرباح' : '100% recognized into P&L'}
                   </span>
                 </div>
 
@@ -660,7 +667,7 @@ export const HandoverExecutionModal: React.FC<HandoverExecutionModalProps> = ({
                 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <span style={{ fontSize: '0.7rem', fontWeight: 800, color: '#334155' }}>
-                      {isAr ? 'استنزاف التكلفة: مدين ٥٠١٠٠٠ / دائن ١٥١٠٠٠' : 'WIP Relief: Dr 501000 / Cr 151000'}
+                      {isAr ? 'تكلفة المباني والإنشاءات (مدين ٥٠١٠٠٠ / دائن ١٥١٠٠٠)' : 'WIP Relief: Dr 501000 / Cr 151000'}
                     </span>
                     <span style={{ fontSize: '0.65rem', color: '#64748b' }}>RSV COGS</span>
                   </div>
@@ -668,8 +675,42 @@ export const HandoverExecutionModal: React.FC<HandoverExecutionModalProps> = ({
                     <MoneyCell amount={D(rsvCostAmount || 0)} isAr={isAr} />
                   </strong>
                   <span style={{ fontSize: '0.65rem', color: '#6366f1' }}>
-                    {isAr ? 'إقفال تكلفة البناء من الإنشاءات إلى تكلفة المبيعات' : 'Relieves WIP into COGS per RSV factor'}
+                    {isAr ? 'استنزاف وتخفيض تكلفة مباني الشقة من مصاريف المشروع لإظهار صافي الربح' : 'Relieves WIP into COGS per RSV factor'}
                   </span>
+                </div>
+              </div>
+
+              {/* Plain Real-Estate Explanation of Compound Entry */}
+              <div style={{
+                background: 'linear-gradient(135deg, #fefdfa 0%, #f8fafc 100%)',
+                border: '1px solid rgba(184, 144, 62, 0.3)',
+                borderRadius: '10px',
+                padding: '0.85rem 1rem',
+                fontSize: '0.74rem',
+                color: '#334155',
+                lineHeight: 1.6,
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.4rem'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 800, color: '#946f23' }}>
+                  <Building2 size={15} />
+                  <span>{isAr ? 'توضيح أسطر القيد المركب لمبيعات الشقق وتكلفة المباني (لغير المحاسبين):' : 'Plain-Language Real Estate Breakdown of Compound Entry:'}</span>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem', color: '#475569' }}>
+                  {isAr ? (
+                    <>
+                      <div>• <strong>سطر مبيعات الشقة (٤٠١٠٠٠):</strong> تسجيل كامل ثمن الشقة كإيراد بيع محقق في حسابات الشركة لحظة تسليم المفتاح.</div>
+                      <div>• <strong>سطر تسوية المقدمات والأقساط (٢٠٣٠٠٠ و ١٠٣٠٠٠):</strong> إقفال الدفعات المحصلة سابقاً، وإثبات باقي ثمن الشقة كمديونية على المشتري.</div>
+                      <div>• <strong>سطر تكلفة المباني والإنشاءات (٥٠١٠٠٠ مقابل ١٥١٠٠٠):</strong> خصم تكلفة خامات وصب وتشطيب الشقة من حساب المشروع وتحميلها على تكلفة البيع، لحساب صافي الربح الحقيقي للمكتب فوراً.</div>
+                    </>
+                  ) : (
+                    <>
+                      <div>• <strong>Revenue Recognition (401000):</strong> Recognizes 100% of apartment sales price into company P&L upon key delivery.</div>
+                      <div>• <strong>Cash & Receivables Settlement (203000 & 103000):</strong> Relieves collected advance cash, and records remaining balance as A/R.</div>
+                      <div>• <strong>Building Cost & WIP Relief (501000 vs 151000):</strong> Relieves structural construction expenses from WIP into COGS to derive true gross margin.</div>
+                    </>
+                  )}
                 </div>
               </div>
 
@@ -716,7 +757,7 @@ export const HandoverExecutionModal: React.FC<HandoverExecutionModalProps> = ({
               </span>
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
               <button
                 type="button"
                 onClick={onClose}
@@ -726,10 +767,14 @@ export const HandoverExecutionModal: React.FC<HandoverExecutionModalProps> = ({
                   border: '1px solid #cbd5e1',
                   color: '#475569',
                   padding: '0.6rem 1.25rem',
+                  minHeight: '44px',
                   borderRadius: '10px',
                   fontSize: '0.82rem',
                   fontWeight: 700,
-                  cursor: 'pointer'
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
                 }}
               >
                 {isAr ? 'إلغاء' : 'Cancel'}
@@ -745,12 +790,14 @@ export const HandoverExecutionModal: React.FC<HandoverExecutionModalProps> = ({
                   color: '#ffffff',
                   border: 'none',
                   padding: '0.65rem 1.6rem',
+                  minHeight: '44px',
                   borderRadius: '10px',
                   fontSize: '0.84rem',
                   fontWeight: 800,
                   cursor: canConfirm ? 'pointer' : 'not-allowed',
                   display: 'inline-flex',
                   alignItems: 'center',
+                  justifyContent: 'center',
                   gap: '0.5rem',
                   boxShadow: canConfirm ? '0 4px 14px rgba(22, 101, 52, 0.3)' : 'none',
                   transition: 'all 0.15s ease'

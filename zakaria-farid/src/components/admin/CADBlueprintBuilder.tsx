@@ -7157,6 +7157,8 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
         }
 
         [data-theme="light"] .fp-canvas-panel {
+          background: #F8FAFC;
+          border: 1.5px solid #D8D2C4;
           box-shadow: 0 12px 32px rgba(28,26,22,0.06);
         }
 
@@ -7170,7 +7172,8 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
         }
 
         [data-theme="light"] .fp-canvas-bar {
-          background: #F8FAFC;
+          background: #FFFFFF;
+          border-block-end: 1.5px solid #D8D2C4;
         }
 
         .fp-canvas-badge {
@@ -7182,6 +7185,10 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
           font-weight: 700;
           letter-spacing: 0.05em;
           color: var(--fp-gold);
+        }
+
+        [data-theme="light"] .fp-canvas-badge {
+          color: #946F23;
         }
 
         .fp-canvas-body {
@@ -7550,6 +7557,16 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
           background: rgba(10, 14, 24, 0.5);
         }
 
+        [data-theme="light"] .fp-wizard-head {
+          background: #FFFFFF !important;
+          border-bottom: 1px solid #D8D2C4 !important;
+        }
+
+        [data-theme="light"] .fp-wizard-close-btn {
+          border: 1px solid #D8D2C4 !important;
+          color: #64748B !important;
+        }
+
         .fp-wizard-head-title {
           display: inline-flex;
           align-items: center;
@@ -7763,6 +7780,10 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
           font-family: monospace;
         }
 
+        [data-theme="light"] .fp-wizard-footer-summary {
+          color: #64748B !important;
+        }
+
         .fp-wizard-actions {
           display: inline-flex;
           align-items: center;
@@ -7784,6 +7805,18 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
         .fp-wizard-cancel-btn:hover {
           color: #EDE8DD;
           border-color: rgba(255, 255, 255, 0.3);
+        }
+
+        [data-theme="light"] .fp-wizard-cancel-btn {
+          background: #FFFFFF !important;
+          border: 1px solid #D8D2C4 !important;
+          color: #0F172A !important;
+        }
+
+        [data-theme="light"] .fp-wizard-cancel-btn:hover {
+          background: #F8FAFC !important;
+          color: #0F172A !important;
+          border-color: #946F23 !important;
         }
 
         .fp-wizard-generate-btn {
@@ -7921,19 +7954,35 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
         .fp-list-panel.in-rail {
           --fp-surface: #0D1220;
           --fp-canvas-bg: #0A0E18;
-          --fp-line: rgba(221,167,82,0.16);
+          --fp-line: rgba(197,160,89,0.22);
           --fp-text: #EDE8DD;
           --fp-text-dim: rgba(237,232,221,0.55);
-          --fp-gold: #DDA752;
-          --fp-gold-grad: linear-gradient(135deg,#DDA752,#B8860B);
+          --fp-gold: #C5A059;
+          --fp-gold-grad: linear-gradient(135deg,#C5A059,#B8860B);
           --fp-warn: #E0A63A;
           --fp-warn-bg: rgba(224,166,58,0.10);
           --fp-danger: #D96B6B;
-          --fp-focus-ring: 0 0 0 2px rgba(221,167,82,0.55);
+          --fp-focus-ring: 0 0 0 2px rgba(197,160,89,0.55);
           height: 100%;
           border: none;
           border-radius: 0;
           font-family: 'Plus Jakarta Sans', sans-serif;
+          color: var(--fp-text);
+        }
+
+        [data-theme="light"] .fp-list-panel.in-rail {
+          --fp-surface: #FFFFFF;
+          --fp-canvas-bg: #F8FAFC;
+          --fp-line: #D8D2C4;
+          --fp-text: #0F172A;
+          --fp-text-dim: #475569;
+          --fp-gold: #946F23;
+          --fp-gold-grad: linear-gradient(135deg, #946F23, #B8860B);
+          --fp-warn: #D97706;
+          --fp-warn-bg: rgba(217, 119, 6, 0.10);
+          --fp-danger: #DC2626;
+          --fp-focus-ring: 0 0 0 2px rgba(148, 111, 35, 0.45);
+          background: var(--fp-surface);
           color: var(--fp-text);
         }
 
@@ -8203,7 +8252,8 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
         }
 
         [data-theme="light"] .fp-custom-zone {
-          background: #F1F5F9;
+          background: #F8FAFC;
+          border-top: 1.5px solid #D8D2C4;
         }
 
         .fp-custom-zone-label {
@@ -8215,6 +8265,11 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
           letter-spacing: 0.08em;
           text-transform: uppercase;
           color: var(--fp-gold);
+        }
+
+        [data-theme="light"] .fp-custom-zone-label {
+          color: #0F172A;
+          font-weight: 800;
         }
 
         .fp-custom-zone-row {
@@ -8235,6 +8290,21 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
           font-size: 0.8125rem;
           outline: none;
           transition: border-color 0.15s ease;
+        }
+
+        [data-theme="light"] .fp-custom-zone-input {
+          background: #FFFFFF;
+          border: 1.5px solid #D8D2C4;
+          color: #0F172A;
+        }
+
+        .fp-custom-zone-input::placeholder {
+          color: var(--fp-text-dim);
+        }
+
+        [data-theme="light"] .fp-custom-zone-input::placeholder {
+          color: #64748B;
+          opacity: 1;
         }
 
         .fp-custom-zone-input:focus {
@@ -8282,10 +8352,23 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
           transition: all 0.15s ease;
         }
 
+        [data-theme="light"] .fp-custom-zone-chip {
+          background: #FFFFFF;
+          border: 1.5px solid #D8D2C4;
+          color: #334155;
+          font-weight: 700;
+        }
+
         .fp-custom-zone-chip:hover {
           color: var(--fp-gold);
           border-color: var(--fp-gold);
           background: rgba(221, 167, 82, 0.08);
+        }
+
+        [data-theme="light"] .fp-custom-zone-chip:hover {
+          background: #F1F5F9;
+          border-color: #946F23;
+          color: #946F23;
         }
 
         .fp-group {
@@ -8467,6 +8550,11 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
           flex-shrink: 0;
         }
 
+        [data-theme="light"] .fp-custom-zone {
+          background: #F8FAFC;
+          border-block-start: 1.5px solid #D8D2C4;
+        }
+
         .fp-custom-zone-label {
           display: inline-flex;
           align-items: center;
@@ -8475,6 +8563,10 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
           font-weight: 800;
           letter-spacing: 0.1em;
           color: var(--fp-gold);
+        }
+
+        [data-theme="light"] .fp-custom-zone-label {
+          color: #0F172A;
         }
 
         .fp-custom-zone-row {
@@ -8496,9 +8588,14 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
           outline: none;
         }
 
-        [data-theme="light"] .fp-custom-zone-input { background: #F8FAFC; }
+        [data-theme="light"] .fp-custom-zone-input {
+          background: #FFFFFF;
+          border: 1.5px solid #D8D2C4;
+          color: #0F172A;
+        }
         .fp-custom-zone-input:focus { border-color: var(--fp-gold); }
         .fp-custom-zone-input::placeholder { color: var(--fp-text-dim); }
+        [data-theme="light"] .fp-custom-zone-input::placeholder { color: #64748B; opacity: 1; }
 
         .fp-custom-zone-btn {
           display: inline-flex;
@@ -8540,7 +8637,19 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
           transition: color 0.15s cubic-bezier(0.2,0,0,1), border-color 0.15s cubic-bezier(0.2,0,0,1);
         }
 
+        [data-theme="light"] .fp-custom-zone-chip {
+          background: #FFFFFF;
+          border: 1.5px solid #D8D2C4;
+          color: #334155;
+          font-weight: 700;
+        }
+
         .fp-custom-zone-chip:hover { color: var(--fp-gold); border-color: var(--fp-gold); }
+        [data-theme="light"] .fp-custom-zone-chip:hover {
+          background: #F1F5F9;
+          border-color: #946F23;
+          color: #946F23;
+        }
         .fp-custom-zone-chip:focus-visible { outline: none; box-shadow: var(--fp-focus-ring); }
 
         .fp-list-empty { padding: 2.5rem 1.5rem; text-align: center; }
@@ -9237,15 +9346,15 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
           background: rgba(13, 19, 34, 0.88);
           backdrop-filter: blur(12px);
           -webkit-backdrop-filter: blur(12px);
-          border: 1px solid rgba(221, 167, 82, 0.3);
+          border: 1px solid rgba(197, 160, 89, 0.3);
           border-radius: 10px;
           box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
           overflow: hidden;
         }
 
         [data-theme="light"] .fp-floating-zoom-widget {
-          background: rgba(255, 255, 255, 0.92);
-          border-color: rgba(221, 167, 82, 0.4);
+          background: #FFFFFF;
+          border: 1.5px solid #D8D2C4;
           box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
         }
 
@@ -9263,8 +9372,17 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
         }
 
         .fp-float-zoom-btn:hover:not(:disabled) {
-          background: rgba(221, 167, 82, 0.18);
+          background: rgba(197, 160, 89, 0.18);
           color: var(--fp-gold);
+        }
+
+        [data-theme="light"] .fp-float-zoom-btn {
+          color: #0F172A;
+        }
+
+        [data-theme="light"] .fp-float-zoom-btn:hover:not(:disabled) {
+          background: #F8FAFC;
+          color: #946F23;
         }
 
         .fp-float-zoom-btn:disabled {
@@ -9282,6 +9400,11 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
           color: var(--fp-gold);
           border-inline: 1px solid var(--fp-line);
           letter-spacing: -0.02em;
+        }
+
+        [data-theme="light"] .fp-float-zoom-val {
+          color: #946F23;
+          border-inline: 1.5px solid #D8D2C4;
         }
 
         .fp-tool-action-btn {

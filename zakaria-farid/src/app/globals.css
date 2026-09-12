@@ -332,10 +332,19 @@ body {
   letter-spacing: 0;
 }
 
-#__next, .app-root, main {
+#__next, .app-root, main:not([class*="stage"]):not([data-erp-stage="true"]) {
   background-color: var(--bg-primary) !important;
   min-height: 100vh;
   transition: background-color var(--transition-smooth);
+}
+
+/* ERP Financial Workstation Canvas: Warm Architectural Alabaster */
+[data-erp-workstation="true"],
+[data-erp-workstation="true"] main,
+main[class*="stage"],
+[data-erp-stage="true"] {
+  background-color: var(--zf2-bg-canvas, #EAE6DC) !important;
+  background: var(--zf2-bg-canvas, #EAE6DC) !important;
 }
 
 /* ─────────────────────────────────────────────────────────────────
@@ -985,10 +994,50 @@ div[style*="background:#ffffff"] select {
 }
 
 @media print {
-  .zf-print-only,
-  .zf-print-only * {
+  .zf-print-only {
     display: block !important;
     visibility: visible !important;
+  }
+
+  .zf-print-only * {
+    visibility: visible !important;
+  }
+
+  /* Explicit table element display restoration for print */
+  .zf-print-only table,
+  #zf-printable-area table,
+  .zf-printable-document table {
+    display: table !important;
+    width: 100% !important;
+    border-collapse: collapse !important;
+  }
+
+  .zf-print-only thead,
+  #zf-printable-area thead,
+  .zf-printable-document thead {
+    display: table-header-group !important;
+  }
+
+  .zf-print-only tbody,
+  #zf-printable-area tbody,
+  .zf-printable-document tbody {
+    display: table-row-group !important;
+  }
+
+  .zf-print-only tr,
+  #zf-printable-area tr,
+  .zf-printable-document tr {
+    display: table-row !important;
+    page-break-inside: avoid !important;
+  }
+
+  .zf-print-only th,
+  .zf-print-only td,
+  #zf-printable-area th,
+  #zf-printable-area td,
+  .zf-printable-document th,
+  .zf-printable-document td {
+    display: table-cell !important;
   }
 
   @page {
@@ -1093,6 +1142,10 @@ div[style*="background:#ffffff"] select {
 
   tfoot {
     display: table-footer-group !important;
+  }
+
+  th, td {
+    border-color: #cbd5e1 !important;
   }
 }
 

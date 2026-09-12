@@ -1,11 +1,40 @@
 .adminWrapper {
+  --admin-canvas-bg: #080A0F;
+  --admin-card-bg: rgba(16, 20, 29, 0.85);
+  --admin-card-bg-subtle: rgba(255, 255, 255, 0.03);
+  --admin-card-border: rgba(255, 255, 255, 0.08);
+  --admin-card-border-subtle: rgba(255, 255, 255, 0.05);
+  --admin-divider: rgba(255, 255, 255, 0.08);
+  --admin-text-title: #FFFFFF;
+  --admin-text-body: rgba(255, 255, 255, 0.75);
+  --admin-text-muted: rgba(255, 255, 255, 0.5);
+  --admin-text-dim: rgba(255, 255, 255, 0.35);
+  --admin-input-bg: rgba(10, 14, 24, 0.7);
+  --admin-input-border: rgba(255, 255, 255, 0.12);
+  --admin-card-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  --admin-kpi-border: rgba(229, 184, 105, 0.25);
+  --admin-advisory-bg: rgba(16, 20, 29, 0.85);
+  --admin-advisory-border: rgba(229, 184, 105, 0.3);
+  --admin-advisory-title: #FFFFFF;
+  --admin-advisory-text: rgba(255, 255, 255, 0.7);
+  --admin-success-text: #34D399;
+  --admin-success-bg: rgba(16, 185, 129, 0.12);
+  --admin-success-border: rgba(16, 185, 129, 0.25);
+  --admin-dropzone-bg: rgba(0, 0, 0, 0.15);
+  --admin-dropzone-border: rgba(255, 255, 255, 0.08);
+  --admin-track-bg: rgba(255, 255, 255, 0.06);
+  --admin-drawer-bg: rgba(13, 19, 34, 0.96);
+  --admin-modal-bg: rgba(13, 19, 34, 0.95);
+  --admin-gold-primary: #E5B869;
+  --admin-gold-glow: rgba(229, 184, 105, 0.05);
+
   display: flex;
   width: 100%;
   max-width: 100%;
   height: 100vh;
   overflow: hidden;
-  background: #080A0F;
-  color: #FFFFFF;
+  background: var(--admin-canvas-bg);
+  color: var(--admin-text-title);
   font-family: 'ThmanyahSans', 'Cairo', 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -17,8 +46,37 @@
 }
 
 [data-theme="light"] .adminWrapper {
-  background: #F8FAFC;
-  color: #0F172A;
+  --admin-canvas-bg: #EAE6DC;
+  --admin-card-bg: #FFFFFF;
+  --admin-card-bg-subtle: #F4F1EA;
+  --admin-card-border: #D8D2C4;
+  --admin-card-border-subtle: #D8D2C4;
+  --admin-divider: #D8D2C4;
+  --admin-text-title: #0F172A;
+  --admin-text-body: #334155;
+  --admin-text-muted: #475569;
+  --admin-text-dim: #64748B;
+  --admin-input-bg: #FFFFFF;
+  --admin-input-border: #D8D2C4;
+  --admin-card-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px -1px rgba(0, 0, 0, 0.03);
+  --admin-kpi-border: rgba(197, 160, 89, 0.35);
+  --admin-advisory-bg: #FFFFFF;
+  --admin-advisory-border: #C5A059;
+  --admin-advisory-title: #0F172A;
+  --admin-advisory-text: #334155;
+  --admin-success-text: #047857;
+  --admin-success-bg: rgba(4, 120, 87, 0.08);
+  --admin-success-border: rgba(4, 120, 87, 0.25);
+  --admin-dropzone-bg: #F4F1EA;
+  --admin-dropzone-border: #D8D2C4;
+  --admin-track-bg: #E3DDD1;
+  --admin-drawer-bg: #FFFFFF;
+  --admin-modal-bg: #FFFFFF;
+  --admin-gold-primary: #946F23;
+  --admin-gold-glow: rgba(197, 160, 89, 0.08);
+
+  background: var(--admin-canvas-bg);
+  color: var(--admin-text-title);
 }
 
 .adminMain {
@@ -36,15 +94,14 @@
   background: 
     radial-gradient(ellipse at 85% 5%, rgba(229, 184, 105, 0.04) 0%, transparent 60%),
     radial-gradient(ellipse at 15% 95%, rgba(229, 184, 105, 0.025) 0%, transparent 60%),
-    #080A0F;
+    var(--admin-canvas-bg, #080A0F);
   scrollbar-width: thin;
   scrollbar-color: rgba(229, 184, 105, 0.25) transparent;
 }
 
 [data-theme="light"] .adminMain {
-  background: radial-gradient(circle at 90% 10%, rgba(229, 184, 105, 0.08) 0%, transparent 60%),
-              #F8FAFC;
-  scrollbar-color: rgba(229, 184, 105, 0.4) transparent;
+  background: var(--admin-canvas-bg, #EAE6DC) !important;
+  scrollbar-color: rgba(197, 160, 89, 0.4) transparent;
 }
 
 .adminMain::-webkit-scrollbar {
@@ -128,4 +185,184 @@
 
 @keyframes adminSpin {
   to { transform: rotate(360deg); }
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   Comprehensive Light Mode Theme Overrides for Shared Admin Panels
+───────────────────────────────────────────────────────────────── */
+[data-theme="light"] .adminWrapper :global(input),
+[data-theme="light"] .adminWrapper :global(select),
+[data-theme="light"] .adminWrapper :global(textarea) {
+  color-scheme: light;
+}
+
+[data-theme="light"] .adminWrapper :global(.admin-card),
+[data-theme="light"] .adminWrapper :global(.leaderboard-card),
+[data-theme="light"] .adminWrapper :global(.demand-matrix-card),
+[data-theme="light"] .adminWrapper :global(.advisory-feed-card),
+[data-theme="light"] .adminWrapper :global(.velocity-queue-card),
+[data-theme="light"] .adminWrapper :global(.advisory-master-container),
+[data-theme="light"] .adminWrapper :global(.matrix-card),
+[data-theme="light"] .adminWrapper :global(.channel-card),
+[data-theme="light"] .adminWrapper :global(.urgent-queue-card) {
+  background: #FFFFFF !important;
+  border-color: #D8D2C4 !important;
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.06), 0 1px 3px 0 rgba(0, 0, 0, 0.05) !important;
+  color: #0F172A !important;
+}
+
+[data-theme="light"] .adminWrapper :global(.settings-card),
+[data-theme="light"] .adminWrapper :global(.settings-header-card) {
+  background: #FFFFFF !important;
+  border: 1.5px solid #D8D2C4 !important;
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.06), 0 1px 3px 0 rgba(0, 0, 0, 0.05) !important;
+  color: #0F172A !important;
+}
+
+[data-theme="light"] .adminWrapper :global(.leaderboard-title),
+[data-theme="light"] .adminWrapper :global(.matrix-title),
+[data-theme="light"] .adminWrapper :global(.advisory-title),
+[data-theme="light"] .adminWrapper :global(.velocity-title),
+[data-theme="light"] .adminWrapper :global(.section-title),
+[data-theme="light"] .adminWrapper :global(.settings-main-title),
+[data-theme="light"] .adminWrapper :global(.card-title) {
+  color: #0F172A !important;
+}
+
+[data-theme="light"] .adminWrapper :global(.leaderboard-sub),
+[data-theme="light"] .adminWrapper :global(.matrix-sub),
+[data-theme="light"] .adminWrapper :global(.advisory-sub),
+[data-theme="light"] .adminWrapper :global(.velocity-sub),
+[data-theme="light"] .adminWrapper :global(.section-sub),
+[data-theme="light"] .adminWrapper :global(.settings-main-desc),
+[data-theme="light"] .adminWrapper :global(.card-sub) {
+  color: #475569 !important;
+}
+
+[data-theme="light"] .adminWrapper :global(.leaderboard-row),
+[data-theme="light"] .adminWrapper :global(.matrix-row),
+[data-theme="light"] .adminWrapper :global(.velocity-row),
+[data-theme="light"] .adminWrapper :global(.district-card),
+[data-theme="light"] .adminWrapper :global(.advisory-item),
+[data-theme="light"] .adminWrapper :global(.urgent-lead-row) {
+  background: #F8FAFC !important;
+  border-color: #D8D2C4 !important;
+  color: #334155 !important;
+}
+
+[data-theme="light"] .adminWrapper :global(.district-row-card),
+[data-theme="light"] .adminWrapper :global(.toggle-checkbox-card) {
+  background: #F8FAFC !important;
+  border: 1px solid #D8D2C4 !important;
+  border-radius: 10px !important;
+  color: #334155 !important;
+}
+
+[data-theme="light"] .adminWrapper :global(.district-row-card:hover),
+[data-theme="light"] .adminWrapper :global(.toggle-checkbox-card:hover) {
+  background: #F1F5F9 !important;
+  border-color: #946F23 !important;
+}
+
+[data-theme="light"] .adminWrapper :global(.toggle-title) {
+  color: #0F172A !important;
+  font-weight: 800 !important;
+}
+
+[data-theme="light"] .adminWrapper :global(.toggle-desc) {
+  color: #475569 !important;
+  font-weight: 500 !important;
+}
+
+[data-theme="light"] .adminWrapper :global(.prop-title-text),
+[data-theme="light"] .adminWrapper :global(.district-name-main) {
+  color: #0F172A !important;
+}
+
+[data-theme="light"] .adminWrapper :global(.prop-location-sub),
+[data-theme="light"] .adminWrapper :global(.district-name-alt) {
+  color: #475569 !important;
+}
+
+[data-theme="light"] .adminWrapper :global(.rank-num) {
+  color: #64748B !important;
+}
+
+[data-theme="light"] .adminWrapper :global(.district-rank) {
+  background: rgba(148, 111, 35, 0.1) !important;
+  color: #946F23 !important;
+  font-weight: 800 !important;
+}
+
+[data-theme="light"] .adminWrapper :global(.card-icon-wrap),
+[data-theme="light"] .adminWrapper :global(.gold-pill) {
+  background: rgba(148, 111, 35, 0.08) !important;
+  border: 1px solid rgba(148, 111, 35, 0.25) !important;
+  color: #946F23 !important;
+}
+
+[data-theme="light"] .adminWrapper :global(.tier-pill-btn),
+[data-theme="light"] .adminWrapper :global(.settings-tab-btn) {
+  background: #FFFFFF !important;
+  border: 1px solid #D8D2C4 !important;
+  color: #475569 !important;
+}
+
+[data-theme="light"] .adminWrapper :global(.tier-pill-btn:hover),
+[data-theme="light"] .adminWrapper :global(.settings-tab-btn:hover) {
+  background: #F1F5F9 !important;
+  border-color: #946F23 !important;
+  color: #0F172A !important;
+}
+
+[data-theme="light"] .adminWrapper :global(.tier-pill-btn.active),
+[data-theme="light"] .adminWrapper :global(.settings-tab-btn.active) {
+  background: rgba(148, 111, 35, 0.1) !important;
+  border: 1.5px solid #946F23 !important;
+  color: #946F23 !important;
+}
+
+[data-theme="light"] .adminWrapper :global(.btn-outline-gold) {
+  background: #F8FAFC !important;
+  border: 1px solid #D8D2C4 !important;
+  color: #0F172A !important;
+  font-weight: 700 !important;
+}
+
+[data-theme="light"] .adminWrapper :global(.btn-outline-gold:hover) {
+  background: #F1F5F9 !important;
+  border-color: #946F23 !important;
+  color: #946F23 !important;
+}
+
+[data-theme="light"] .adminWrapper :global(.field-group label) {
+  color: #0F172A !important;
+  font-weight: 700 !important;
+}
+
+[data-theme="light"] .adminWrapper :global(.field-group-sm label) {
+  color: #475569 !important;
+  font-weight: 700 !important;
+}
+
+[data-theme="light"] .adminWrapper :global(.field-group input),
+[data-theme="light"] .adminWrapper :global(.field-group textarea),
+[data-theme="light"] .adminWrapper :global(.field-group select),
+[data-theme="light"] .adminWrapper :global(.field-group-sm input) {
+  background: #FFFFFF !important;
+  border: 1px solid #D8D2C4 !important;
+  color: #0F172A !important;
+}
+
+[data-theme="light"] .adminWrapper :global(.field-group input:focus),
+[data-theme="light"] .adminWrapper :global(.field-group textarea:focus),
+[data-theme="light"] .adminWrapper :global(.field-group select:focus),
+[data-theme="light"] .adminWrapper :global(.field-group-sm input:focus) {
+  border-color: #946F23 !important;
+  outline: none;
+}
+
+[data-theme="light"] .adminWrapper :global(.sub-chapter-divider) {
+  color: #946F23 !important;
+  border-bottom: 1px solid rgba(148, 111, 35, 0.25) !important;
 }

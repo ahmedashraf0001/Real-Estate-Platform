@@ -45,18 +45,18 @@
   border-color: rgba(220, 38, 38, 0.25);
 }
 
-/* Desaturated Grays for Versioning & Terminal States - UI_BUILD.md §3.1 */
+/* Desaturated Slate & Charcoal for Versioning & Terminal States - UI_BUILD.md §3.1 */
 .stateSuperseded {
-  color: var(--zf-state-superseded, #8b8fa3);
-  background: rgba(139, 143, 163, 0.12);
-  border-color: rgba(139, 143, 163, 0.25);
+  color: var(--zf-state-superseded, #64748b);
+  background: rgba(100, 116, 139, 0.10);
+  border-color: rgba(100, 116, 139, 0.25);
   text-decoration: line-through;
 }
 
 .stateVoid {
-  color: var(--zf-state-void, #5a5f73);
-  background: rgba(90, 95, 115, 0.12);
-  border-color: rgba(90, 95, 115, 0.25);
+  color: var(--zf-state-void, #475569);
+  background: rgba(71, 85, 105, 0.12);
+  border-color: rgba(71, 85, 105, 0.25);
 }
 
 .stateLocked {

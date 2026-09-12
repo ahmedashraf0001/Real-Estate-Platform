@@ -181,7 +181,7 @@ export const PartnerPayoutModal: React.FC<PartnerPayoutModalProps> = ({
           borderRadius: '16px',
           width: '100%',
           maxWidth: '680px',
-          maxHeight: '92vh',
+          maxHeight: '90vh',
           display: 'flex',
           flexDirection: 'column',
           boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
@@ -192,7 +192,7 @@ export const PartnerPayoutModal: React.FC<PartnerPayoutModalProps> = ({
         {/* HEADER */}
         <div 
           style={{
-            padding: '1.2rem 1.5rem',
+            padding: 'clamp(0.85rem, 2.5vw, 1.2rem) clamp(1rem, 3vw, 1.5rem)',
             borderBottom: '1px solid #e2e8f0',
             display: 'flex',
             alignItems: 'center',
@@ -227,12 +227,19 @@ export const PartnerPayoutModal: React.FC<PartnerPayoutModalProps> = ({
           <button 
             type="button"
             onClick={onClose}
+            aria-label={isAr ? 'إغلاق' : 'Close'}
             style={{
               background: 'transparent',
               border: 'none',
               color: '#64748b',
               cursor: 'pointer',
-              padding: '0.4rem',
+              minWidth: '44px',
+              minHeight: '44px',
+              width: '44px',
+              height: '44px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
               borderRadius: '8px'
             }}
           >
@@ -577,39 +584,41 @@ export const PartnerPayoutModal: React.FC<PartnerPayoutModalProps> = ({
               </span>
             </div>
 
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.72rem' }}>
-              <thead>
-                <tr style={{ borderBottom: '1px solid #e2e8f0', color: '#64748b' }}>
-                  <th style={{ textAlign: isAr ? 'right' : 'left', padding: '0.3rem 0.4rem' }}>{isAr ? 'الحساب' : 'Account'}</th>
-                  <th style={{ textAlign: isAr ? 'left' : 'right', padding: '0.3rem 0.4rem' }}>{isAr ? 'مدين (له فلوس)' : 'Debit'}</th>
-                  <th style={{ textAlign: isAr ? 'left' : 'right', padding: '0.3rem 0.4rem' }}>{isAr ? 'دائن (عليه فلوس)' : 'Credit'}</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
-                  <td style={{ padding: '0.35rem 0.4rem', fontWeight: 700, color: '#0f172a' }}>
-                    303000 — {isAr ? 'توزيعات أرباح ومسحوبات الشركاء' : 'Partner Distributions'}
-                  </td>
-                  <td style={{ padding: '0.35rem 0.4rem', textAlign: isAr ? 'left' : 'right', fontWeight: 800, color: '#15803d' }}>
-                    {numAmount > 0 ? numAmount.toLocaleString() : '0.00'} ج.م
-                  </td>
-                  <td style={{ padding: '0.35rem 0.4rem', textAlign: isAr ? 'left' : 'right', color: '#94a3b8' }}>
-                    0.00
-                  </td>
-                </tr>
-                <tr>
-                  <td style={{ padding: '0.35rem 0.4rem', fontWeight: 700, color: '#0f172a' }}>
-                    {paymentMethod === 'CASH_101000' ? '101000 — خزينة النقدية الرئيسية' : '102000 — البنك التشغيلي (إنستاباي)'}
-                  </td>
-                  <td style={{ padding: '0.35rem 0.4rem', textAlign: isAr ? 'left' : 'right', color: '#94a3b8' }}>
-                    0.00
-                  </td>
-                  <td style={{ padding: '0.35rem 0.4rem', textAlign: isAr ? 'left' : 'right', fontWeight: 800, color: '#0f172a' }}>
-                    {numAmount > 0 ? numAmount.toLocaleString() : '0.00'} ج.م
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+            <div style={{ overflowX: 'auto', width: '100%', WebkitOverflowScrolling: 'touch' }}>
+              <table style={{ width: '100%', minWidth: '380px', borderCollapse: 'collapse', fontSize: '0.72rem' }}>
+                <thead>
+                  <tr style={{ borderBottom: '1px solid #e2e8f0', color: '#64748b' }}>
+                    <th style={{ textAlign: isAr ? 'right' : 'left', padding: '0.3rem 0.4rem' }}>{isAr ? 'الحساب' : 'Account'}</th>
+                    <th style={{ textAlign: isAr ? 'left' : 'right', padding: '0.3rem 0.4rem' }}>{isAr ? 'مدين (له فلوس)' : 'Debit'}</th>
+                    <th style={{ textAlign: isAr ? 'left' : 'right', padding: '0.3rem 0.4rem' }}>{isAr ? 'دائن (عليه فلوس)' : 'Credit'}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
+                    <td style={{ padding: '0.35rem 0.4rem', fontWeight: 700, color: '#0f172a' }}>
+                      303000 — {isAr ? 'توزيعات أرباح ومسحوبات الشركاء' : 'Partner Distributions'}
+                    </td>
+                    <td style={{ padding: '0.35rem 0.4rem', textAlign: isAr ? 'left' : 'right', fontWeight: 800, color: '#15803d' }}>
+                      {numAmount > 0 ? numAmount.toLocaleString() : '0.00'} ج.م
+                    </td>
+                    <td style={{ padding: '0.35rem 0.4rem', textAlign: isAr ? 'left' : 'right', color: '#94a3b8' }}>
+                      0.00
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style={{ padding: '0.35rem 0.4rem', fontWeight: 700, color: '#0f172a' }}>
+                      {paymentMethod === 'CASH_101000' ? '101000 — خزينة النقدية الرئيسية' : '102000 — البنك التشغيلي (إنستاباي)'}
+                    </td>
+                    <td style={{ padding: '0.35rem 0.4rem', textAlign: isAr ? 'left' : 'right', color: '#94a3b8' }}>
+                      0.00
+                    </td>
+                    <td style={{ padding: '0.35rem 0.4rem', textAlign: isAr ? 'left' : 'right', fontWeight: 800, color: '#0f172a' }}>
+                      {numAmount > 0 ? numAmount.toLocaleString() : '0.00'} ج.م
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
 
           {/* FOOTER ACTIONS */}
@@ -632,7 +641,8 @@ export const PartnerPayoutModal: React.FC<PartnerPayoutModalProps> = ({
                 fontSize: '0.78rem',
                 fontWeight: 700,
                 color: '#475569',
-                cursor: 'pointer'
+                cursor: 'pointer',
+                minHeight: '44px'
               }}
             >
               {isAr ? 'إلغاء' : 'Cancel'}
@@ -649,6 +659,7 @@ export const PartnerPayoutModal: React.FC<PartnerPayoutModalProps> = ({
                 fontWeight: 800,
                 color: '#ffffff',
                 cursor: isAmountValid && !isMutating ? 'pointer' : 'not-allowed',
+                minHeight: '44px',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '0.4rem',

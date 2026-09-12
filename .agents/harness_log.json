@@ -15,5 +15,27 @@
       "tracks_checked": ["WORKFLOW_AUDIT", "FINANCIAL_CORE", "SURFACE_UI", "DATABASE_SCHEMA"],
       "status": "clean"
     }
+  },
+  {
+    "version": "2.0.0 -> 2.1.0",
+    "date": "2026-09-11",
+    "trigger": "User request under Mode 3c: '/harness-audit 3c mode i want you to start using graphify for querying, searching and you will need to update the graph with each change, read the graphify skill for more info'",
+    "change_type": "behavior-change",
+    "entities_affected": {
+      "Codebase-Querying": "graphify query mandated as primary structural lookup",
+      "Continuous-Sync": "graphify extract wired to .agents/scripts/sync_graph.sh and verify_gates.sh"
+    },
+    "rationale": "Empowers orchestrator and subagents with instant, zero-token AST knowledge graph traversal (12,000+ nodes) for architecture, dependency, and call-chain analysis, backed by automated incremental AST extraction on every change.",
+    "reference_integrity_scan": {
+      "files_checked": [
+        "AGENTS.md",
+        "HARNESS_RATIONALE.md",
+        ".agents/scripts/sync_graph.sh",
+        ".agents/scripts/verify_gates.sh",
+        ".agents/checkpoint.json"
+      ],
+      "status": "clean, 0 dangling references, 0 broken invariants"
+    }
   }
 ]
+

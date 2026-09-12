@@ -50,6 +50,11 @@ export default function CatalogLoading() {
           min-height: 100vh;
         }
 
+        [data-theme="light"] .catalog-skeleton-view,
+        html[data-theme="light"] .catalog-skeleton-view {
+          background: #EAE6DC !important;
+        }
+
         @media (max-width: 768px) {
           .catalog-skeleton-view {
             padding-top: 96px;
@@ -117,9 +122,11 @@ export default function CatalogLoading() {
           flex-wrap: wrap;
         }
 
-        [data-theme="light"] .catalog-skeleton-filter-bar {
-          background: #FFFFFF;
-          border-color: rgba(0, 0, 0, 0.06);
+        [data-theme="light"] .catalog-skeleton-filter-bar,
+        html[data-theme="light"] .catalog-skeleton-filter-bar {
+          background: #FFFFFF !important;
+          border: 1.5px solid #D8D2C4 !important;
+          box-shadow: 0 4px 16px rgba(15, 23, 42, 0.05) !important;
         }
 
         .skeleton-filter-search { width: 280px; height: 42px; border-radius: 12px; }
@@ -141,9 +148,11 @@ export default function CatalogLoading() {
           flex-direction: column;
         }
 
-        [data-theme="light"] .skeleton-card {
-          background: #FFFFFF;
-          border-color: rgba(0, 0, 0, 0.06);
+        [data-theme="light"] .skeleton-card,
+        html[data-theme="light"] .skeleton-card {
+          background: #FFFFFF !important;
+          border: 1.5px solid #D8D2C4 !important;
+          box-shadow: 0 4px 16px rgba(15, 23, 42, 0.05) !important;
         }
 
         .skeleton-card-media {

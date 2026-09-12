@@ -17,6 +17,7 @@ import { ERPContract, ERPPropertyCostItem } from '@/lib/erp/types';
 import { D } from '@/lib/erp/math';
 import { PropertyFinancialMatrix } from '../../PropertyFinancialMatrix';
 import { ZFKpiCard } from '../ZFKpiCard';
+import { ZFErpBreadcrumb } from '../common/ZFErpBreadcrumb';
 import styles from '../ZFWorkstationShell.module.css';
 
 interface PropertiesPortfolioViewProps {
@@ -104,6 +105,7 @@ export const PropertiesPortfolioView: React.FC<PropertiesPortfolioViewProps> = (
       {/* 1. STAGE HEADER & QUICK ACTION */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
+          <ZFErpBreadcrumb sectionTitle={isAr ? 'المحفظة الاستثمارية للعقارات' : 'Investment Portfolio'} icon={<Building2 size={13} color="#946f23" />} />
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
             <h1 style={{ fontSize: '1.4rem', fontWeight: 800, margin: 0, color: '#0f172a', letterSpacing: '-0.02em' }}>
               {isAr ? 'المشاريع والشقق المعروضة' : 'Property Portfolio Financial Status'}

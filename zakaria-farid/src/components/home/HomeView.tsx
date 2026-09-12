@@ -747,9 +747,10 @@ export const HomeView: React.FC<HomeViewProps> = ({
           }
 
           [data-theme="light"] .hero-pill-line-gold .gold-text-span {
-            color: #0F172A !important;
-            -webkit-text-fill-color: #0F172A !important;
-            text-shadow: none !important;
+            color: #FFFFFF !important;
+            -webkit-text-fill-color: #FFFFFF !important;
+            text-shadow: 0 2px 14px rgba(0, 0, 0, 0.75), 0 1px 3px rgba(0, 0, 0, 0.9) !important;
+            font-weight: 800 !important;
           }
 
           .hero-pill-line-white {
@@ -787,11 +788,16 @@ export const HomeView: React.FC<HomeViewProps> = ({
           }
 
           [data-theme="light"] .hero-pill-line-white .white-text-span {
-            background: linear-gradient(135deg, #B8860B 0%, #996515 50%, #7B4F0F 100%) !important;
+            background: linear-gradient(135deg, #FFFDF7 0%, #FFE599 22%, #F6D484 55%, #E5B869 85%, #C99632 100%) !important;
             -webkit-background-clip: text !important;
             background-clip: text !important;
             -webkit-text-fill-color: transparent !important;
             color: transparent !important;
+            filter: drop-shadow(0 2px 12px rgba(0, 0, 0, 0.75)) drop-shadow(0 1px 3px rgba(0, 0, 0, 0.9)) !important;
+            display: inline-block;
+            padding: 0.05em 0.2em;
+            margin: -0.05em -0.2em;
+            overflow: visible;
           }
 
           :global([dir="rtl"]) .hero-title,
@@ -1083,11 +1089,12 @@ export const HomeView: React.FC<HomeViewProps> = ({
           }
 
           [data-theme="light"] .hero-pill-line-gold .gold-text-span {
-            background: linear-gradient(135deg, #B8860B 0%, #996515 50%, #7B4F0F 100%) !important;
+            background: linear-gradient(135deg, #FFFDF7 0%, #FFE599 22%, #F6D484 55%, #E5B869 85%, #C99632 100%) !important;
             -webkit-background-clip: text !important;
             background-clip: text !important;
             -webkit-text-fill-color: transparent !important;
             color: transparent !important;
+            filter: drop-shadow(0 2px 10px rgba(0, 0, 0, 0.75)) !important;
           }
 
           /* Mobile Line 2: Crisp Pure White */
@@ -1136,9 +1143,9 @@ export const HomeView: React.FC<HomeViewProps> = ({
           }
 
           [data-theme="light"] .hero-pill-line-white .white-text-span {
-            color: #0F172A !important;
-            -webkit-text-fill-color: #0F172A !important;
-            text-shadow: none !important;
+            color: #FFFFFF !important;
+            -webkit-text-fill-color: #FFFFFF !important;
+            text-shadow: 0 2px 12px rgba(0, 0, 0, 0.8) !important;
           }
 
           /* Mobile Sparkling Star Divider with Symmetrical Glowing Lines */
@@ -1191,8 +1198,9 @@ export const HomeView: React.FC<HomeViewProps> = ({
           }
 
           [data-theme="light"] .hero-subtitle {
-            color: #334155 !important;
-            text-shadow: 0 1px 4px rgba(255, 255, 255, 0.85) !important;
+            color: rgba(255, 255, 255, 0.94) !important;
+            text-shadow: 0 2px 12px rgba(0, 0, 0, 0.85) !important;
+            font-weight: 500 !important;
           }
 
           /* Search & Modules Container */
@@ -1279,7 +1287,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
           }
 
           [data-theme="light"] .dest-chip-arrow {
-            color: #B8860B;
+            color: #C5A059;
           }
 
           /* Trust Guarantee Badges Bar */
@@ -1322,7 +1330,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
           }
 
           [data-theme="light"] .hero-trust-icon {
-            color: #B8860B;
+            color: #C5A059;
           }
 
           .hero-trust-divider {
@@ -1383,6 +1391,12 @@ export const HomeView: React.FC<HomeViewProps> = ({
           margin: 0;
           font-weight: 400;
           text-shadow: 0 2px 12px rgba(0, 0, 0, 0.8);
+        }
+
+        [data-theme="light"] .hero-subtitle {
+          color: rgba(255, 255, 255, 0.94) !important;
+          text-shadow: 0 2px 12px rgba(0, 0, 0, 0.85) !important;
+          font-weight: 500 !important;
         }
 
         .hero-search-wrapper {
@@ -1449,9 +1463,9 @@ export const HomeView: React.FC<HomeViewProps> = ({
         }
 
         [data-theme="light"] .section-eyebrow-pill {
-          color: #8C6826;
-          background: rgba(184, 147, 74, 0.08);
-          border-color: rgba(140, 104, 38, 0.22);
+          color: #C5A059;
+          background: rgba(197, 160, 89, 0.08);
+          border-color: rgba(197, 160, 89, 0.22);
         }
 
         .eyebrow-dot {
@@ -1463,7 +1477,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
         }
 
         [data-theme="light"] .eyebrow-dot {
-          background: #8C6826;
+          background: #C5A059;
         }
 
         .section-title {
@@ -1488,7 +1502,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
         }
 
         [data-theme="light"] .title-serif-accent {
-          color: #8C6826;
+          color: #C5A059;
         }
 
         .explore-catalog-btn {
@@ -1506,7 +1520,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
         }
 
         [data-theme="light"] .explore-catalog-btn {
-          color: #8C6826;
+          color: #C5A059;
         }
 
         .explore-catalog-btn:hover {
@@ -1737,7 +1751,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
         }
 
         [data-theme="light"] .seller-eyebrow {
-          color: #8C6826;
+          color: #C5A059;
         }
 
         .seller-confidential-tag {
@@ -1755,9 +1769,9 @@ export const HomeView: React.FC<HomeViewProps> = ({
         }
 
         [data-theme="light"] .seller-confidential-tag {
-          color: #8C6826;
-          background: rgba(184, 147, 74, 0.1);
-          border-color: rgba(140, 104, 38, 0.25);
+          color: #C5A059;
+          background: rgba(197, 160, 89, 0.1);
+          border-color: rgba(197, 160, 89, 0.25);
         }
 
         .seller-title {
@@ -1804,7 +1818,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
         }
 
         [data-theme="light"] .stat-val {
-          color: #8C6826;
+          color: #C5A059;
         }
 
         .stat-lbl {
@@ -1891,8 +1905,8 @@ export const HomeView: React.FC<HomeViewProps> = ({
 
         [data-theme="light"] .seller-outline-btn:hover {
           background: #FFFFFF;
-          color: #8C6826;
-          border-color: rgba(140, 104, 38, 0.4);
+          color: #C5A059;
+          border-color: rgba(197, 160, 89, 0.4);
         }
 
         @media (max-width: 960px) {

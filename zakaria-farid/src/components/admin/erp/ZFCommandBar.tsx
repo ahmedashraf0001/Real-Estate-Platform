@@ -15,7 +15,7 @@ import {
   ShieldCheck,
   LogOut,
   Bell,
-  BookOpen
+  Compass
 } from 'lucide-react';
 import { ERPAccountingPeriod } from '@/lib/erp/types';
 import styles from './ZFSubprogram.module.css';
@@ -233,16 +233,16 @@ export const ZFCommandBar: React.FC<ZFCommandBarProps> = ({
             </button>
           )}
 
-          {/* ERP Academy & Tutorial Trigger */}
+          {/* ERP Guided Walkthrough Trigger */}
           {onOpenAcademy && (
             <button
               type="button"
               className={styles.clusterBtnIcon}
               onClick={onOpenAcademy}
-              title={isAr ? 'دليل المنظومة وجولة التدريب (ERP Academy & Tour)' : 'ERP Academy & Tutorial Guide'}
+              title={isAr ? 'دليل وجولة المنظومة الشاملة' : 'FIN-OS Walkthrough Tour'}
               style={{ color: '#e2c974' }}
             >
-              <BookOpen size={13} />
+              <Compass size={13} />
             </button>
           )}
 

@@ -36,14 +36,15 @@ import {
   CreditCard,
   BarChart2,
   Wallet,
-  PieChart
+  PieChart,
+  Compass
 } from 'lucide-react';
 import shellStyles from './v2/ZFWorkstationShell.module.css';
 import '@/components/erp/erpTokens.css';
 import { toast } from 'sonner';
 
 import { createClient } from '@/lib/supabase/client';
-import { ERPSupabaseService, LiveERPDataset } from '@/lib/erp/supabaseService';
+import { ERPSupabaseService, LiveERPDataset, isAuthError } from '@/lib/erp/supabaseService';
 import { CANONICAL_COA, GeneralLedgerEngine } from '@/lib/erp/ledger';
 import { ContractsEngine } from '@/lib/erp/contracts';
 import { EscalationEngine } from '@/lib/erp/escalation';
@@ -122,6 +123,7 @@ import { Property, BuildingUnitItem } from '@/lib/supabase/types';
 
 import { ZFNavigationDock, ERPNavModule } from './ZFNavigationDock';
 import { ZFWorkstationHeader } from './v2/ZFWorkstationHeader';
+import { ZFERPLoadingWorkstation } from './v2/ZFERPLoadingWorkstation';
 import { useERPRealtimeSync } from '@/lib/erp/useERPRealtimeSync';
 import { DailyOperationsView } from './v2/views/DailyOperationsView';
 import { CockpitView } from './v2/views/CockpitView';
@@ -229,19 +231,51 @@ export default function AdminERPHub({ adminLocale, initialTab }: AdminERPHubProp
   // Enforce active administrator authentication in client shell
   useEffect(() => {
     let isMounted = true;
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (!isMounted) return;
-      if (!user && process.env.NODE_ENV !== 'development') {
-        window.location.href = '/admin/login?next=/fin-os';
-      } else {
-        setCurrentUser(user || ({ id: 'dev-admin', email: 'admin@zakariafarid.com', role: 'authenticated' } as any));
+
+    const checkAuth = async () => {
+      try {
+        const { data: { user }, error: userError } = await supabase.auth.getUser();
+        if (!user || userError) {
+          const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+          let validUser = (!sessionError && session?.user) ? session.user : null;
+
+          if (!validUser) {
+            const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
+            if (!refreshError && refreshData?.session?.user) {
+              validUser = refreshData.session.user;
+            }
+          }
+
+          if (!validUser) {
+            if (typeof window !== 'undefined') {
+              window.location.href = '/admin/login?next=' + encodeURIComponent(window.location.pathname + window.location.search);
+            }
+            return;
+          }
+
+          if (isMounted) {
+            setCurrentUser(validUser);
+          }
+        } else {
+          if (isMounted) {
+            setCurrentUser(user);
+          }
+        }
+      } catch {
+        if (typeof window !== 'undefined') {
+          window.location.href = '/admin/login?next=' + encodeURIComponent(window.location.pathname + window.location.search);
+        }
       }
-    });
+    };
+
+    checkAuth();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (!isMounted) return;
-      if ((event === 'SIGNED_OUT' || !session) && process.env.NODE_ENV !== 'development') {
-        window.location.href = '/admin/login';
+      if (event === 'SIGNED_OUT' || !session) {
+        if (typeof window !== 'undefined') {
+          window.location.href = '/admin/login';
+        }
       } else if (session?.user) {
         setCurrentUser(session.user);
       }
@@ -780,8 +814,36 @@ export default function AdminERPHub({ adminLocale, initialTab }: AdminERPHubProp
         setPartnerTransactions(liveTransactions);
       }
       return dataset;
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to load ERP dataset from Supabase:', err);
+      if (isAuthError(err)) {
+        try {
+          const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
+          if (!refreshError && refreshData?.session) {
+            const [retryDataset, retryProfiles, retryTransactions] = await Promise.all([
+              ERPSupabaseService.fetchLiveERPData(supabase),
+              ERPSupabaseService.loadPartnerProfiles(supabase),
+              ERPSupabaseService.loadPartnerTransactions(supabase)
+            ]);
+            setData(retryDataset);
+            if (retryProfiles && retryProfiles.length > 0) {
+              setPartnerProfiles(retryProfiles);
+            }
+            if (retryTransactions && retryTransactions.length > 0) {
+              setPartnerTransactions(retryTransactions);
+            }
+            return retryDataset;
+          }
+        } catch (refreshErr) {
+          console.error('Failed to refresh session on auth error:', refreshErr);
+        }
+
+        toast.error('انتهت صلاحية الجلسة، جاري إعادة توجيهك لتسجيل الدخول...');
+        if (typeof window !== 'undefined') {
+          window.location.href = '/admin/login';
+        }
+        return null;
+      }
       return null;
     } finally {
       if (!isSilent) setIsLoading(false);
@@ -802,29 +864,8 @@ export default function AdminERPHub({ adminLocale, initialTab }: AdminERPHubProp
   });
 
   useEffect(() => {
-    let isMounted = true;
-    Promise.all([
-      ERPSupabaseService.fetchLiveERPData(supabase),
-      ERPSupabaseService.loadPartnerProfiles(supabase),
-      ERPSupabaseService.loadPartnerTransactions(supabase)
-    ])
-      .then(([dataset, liveProfiles, liveTransactions]) => {
-        if (isMounted) {
-          setData(dataset);
-          if (liveProfiles && liveProfiles.length > 0) setPartnerProfiles(liveProfiles);
-          if (liveTransactions && liveTransactions.length > 0) setPartnerTransactions(liveTransactions);
-          setIsLoading(false);
-        }
-      })
-      .catch(err => {
-        console.error('Failed to load ERP dataset from Supabase:', err);
-        if (isMounted) setIsLoading(false);
-      });
-
-    return () => {
-      isMounted = false;
-    };
-  }, [supabase]);
+    loadLiveData(false);
+  }, [loadLiveData]);
 
   // Close inspector drawer whenever the active page/tab changes
   useEffect(() => {
@@ -2458,6 +2499,107 @@ export default function AdminERPHub({ adminLocale, initialTab }: AdminERPHubProp
     }
   }
 
+  // Handler: Record Bounced Cheque (1-Click Bounce Flow)
+  async function handleConfirmBounceCheque(item: ERPPDCRecord) {
+    if (item.status === 'Bounced') {
+      toast.info(isAr ? 'هذا الشيك مسجل كمرتد بالفعل' : 'Cheque is already recorded as Bounced');
+      return;
+    }
+    setIsMutating(true);
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      const contract = data.contracts.find(c => c.contract_id === item.contract_id);
+      const schedule = data.schedules.find(s => 
+        (item.schedule_id && s.schedule_id === item.schedule_id) ||
+        (s.contract_id === item.contract_id && s.due_date === item.due_date)
+      );
+
+      const isPreviouslyCleared = item.status === 'Cleared';
+      const creditAccount = isPreviouslyCleared 
+        ? (contract?.handover_status === 'Delivered' ? '103000' : '101000') 
+        : '104000';
+
+      const bounceEntry = GeneralLedgerEngine.validateAndCreateEntry({
+        entry_number: `JE-PDC-BNC-${item.cheque_number || item.cheque_id.slice(0, 6)}`,
+        entry_date: today,
+        period: activePeriod,
+        description: `إثبات ارتداد بنكي للشيك #${item.cheque_number} - العميل: ${item.drawer_name}`,
+        source_module: 'PDC',
+        source_entity_id: item.cheque_id,
+        created_by: 'CFO_FARID',
+        lines: [
+          {
+            account_code: '103200', // أقساط الخزينة المجدولة / شيكات مرتدة
+            debit_amount: D(item.nominal_value).toFixed(2),
+            credit_amount: '0.00',
+            memo: isAr ? `إثبات مديونية شيك مرتد على العميل: ${item.drawer_name}` : `Bounced cheque receivable: ${item.drawer_name}`
+          },
+          {
+            account_code: creditAccount, // 104000 أوراق قبض أو الحساب الدائن العكسي
+            debit_amount: '0.00',
+            credit_amount: D(item.nominal_value).toFixed(2),
+            memo: isAr ? `عكس قيد الشيك المرتد رقم #${item.cheque_number}` : `Reversal of bounced cheque #${item.cheque_number}`
+          }
+        ]
+      });
+
+      // 1. Persist PDC status as Bounced
+      await ERPSupabaseService.persistPDCStatus(supabase, item.cheque_id, 'Bounced');
+
+      // 2. Persist reverse entry in General Ledger
+      await ERPSupabaseService.persistJournalEntry(supabase, bounceEntry);
+
+      // 3. Update schedule & contract
+      if (schedule) {
+        await supabase
+          .from('erp_installment_schedules')
+          .update({
+            status: 'Defaulted'
+          })
+          .eq('schedule_id', schedule.schedule_id);
+      }
+
+      if (contract && isPreviouslyCleared) {
+        const newTotalCash = Math.max(0, D(contract.total_cash_collected || '0').minus(item.nominal_value).toNumber()).toFixed(2);
+        await supabase
+          .from('erp_contracts')
+          .update({ total_cash_collected: newTotalCash })
+          .eq('contract_id', contract.contract_id);
+      }
+
+      // 4. Update local state optimistically
+      setData(prev => ({
+        ...prev,
+        contracts: isPreviouslyCleared && contract
+          ? prev.contracts.map(c => c.contract_id === item.contract_id ? { ...c, total_cash_collected: Math.max(0, D(c.total_cash_collected || '0').minus(item.nominal_value).toNumber()).toFixed(2) } : c)
+          : prev.contracts,
+        schedules: prev.schedules.map(s => 
+          (schedule && s.schedule_id === schedule.schedule_id)
+            ? { ...s, status: 'Defaulted' as const }
+            : s
+        ),
+        pdcRecords: prev.pdcRecords.map(p => p.cheque_id === item.cheque_id ? { ...p, status: 'Bounced' as const } : p),
+        journalEntries: [bounceEntry, ...prev.journalEntries]
+      }));
+
+      await loadLiveData(true);
+
+      toast.success(
+        isAr ? 'تم إثبات ارتداد الشيك وترحيل القيد العكسي' : 'Cheque Marked as Bounced',
+        {
+          description: isAr
+            ? `تم تحويل حالة الشيك #${item.cheque_number} للعميل (${item.drawer_name}) إلى مرتد، وقيد مديونية العجز دفترياً بنجاح.`
+            : `Cheque #${item.cheque_number} marked as Bounced and reverse GL entry posted.`
+        }
+      );
+    } catch (err: unknown) {
+      const msg = (err as Error).message;
+      toast.error(isAr ? 'تعذر إثبات ارتداد الشيك' : 'Failed to record bounce', { description: msg });
+    } finally {
+      setIsMutating(false);
+    }
+  }
+
   // Handler: Toggle Accounting Period Lock (Invariant 0.9)
   async function handleTogglePeriodStatus(periodId: string, newStatus: 'OPEN' | 'LOCKED' | 'CLOSED') {
     setIsMutating(true);
@@ -3481,14 +3623,7 @@ export default function AdminERPHub({ adminLocale, initialTab }: AdminERPHubProp
 
   // Loading Screen
   if (isLoading) {
-    return (
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100vh', background: 'var(--zf2-bg-canvas, #f8f9fa)', color: 'var(--zf2-text-primary, #0f172a)', gap: '1rem' }}>
-        <Loader2 size={36} className="animate-spin" />
-        <div style={{ fontSize: '0.95rem', fontWeight: 700, letterSpacing: '0.05em' }}>
-          {isAr ? 'جاري تهيئة بيئة العمل المالية المباشرة (ZF FIN-OS)...' : 'Initializing ZF Financial Workstation...'}
-        </div>
-      </div>
-    );
+    return <ZFERPLoadingWorkstation isAr={isAr} />;
   }
 
   return (
@@ -3507,7 +3642,7 @@ export default function AdminERPHub({ adminLocale, initialTab }: AdminERPHubProp
         unreadNotificationsCount={unreadNotificationsCount}
         hasCriticalAlerts={hasCriticalAlerts}
         onOpenNotifications={() => setShowNotificationCenter(true)}
-        onOpenAcademy={() => setIsAcademyOpen(true)}
+        onOpenAcademy={() => setIsGuidedTourActive(true)}
         isDockCollapsed={isDockCollapsed}
         onToggleDock={handleToggleDock}
       />
@@ -3552,7 +3687,7 @@ export default function AdminERPHub({ adminLocale, initialTab }: AdminERPHubProp
           pdcSafeCount={data.pdcRecords.filter(p => p.status === 'In Safe').length}
           propertiesCount={data.properties.length}
           isAr={isAr}
-          onOpenAcademy={() => setIsAcademyOpen(true)}
+          onOpenAcademy={() => setIsGuidedTourActive(true)}
           isCollapsed={isDockCollapsed}
           isMobileOpen={isMobileDockOpen}
           onCloseMobile={() => setIsMobileDockOpen(false)}
@@ -3567,7 +3702,7 @@ export default function AdminERPHub({ adminLocale, initialTab }: AdminERPHubProp
         )}
 
         {/* Main Workstation Stage */}
-        <main className={shellStyles.stage} ref={stageRef}>
+        <main className={shellStyles.stage} ref={stageRef} data-erp-stage="true">
           <div className={shellStyles.stageContainer}>
             {/* Proactive Period Lock Banner (Invariant 0.9) */}
             <LockedPeriodBanner period={activePeriod} isAr={isAr} />
@@ -3709,6 +3844,7 @@ export default function AdminERPHub({ adminLocale, initialTab }: AdminERPHubProp
                   setShowNewPDCModal(true);
                 }}
                 onInspectCheque={handleInspectCheque}
+                onBounceItem={handleConfirmBounceCheque}
               />
             )}
 
@@ -3829,30 +3965,149 @@ export default function AdminERPHub({ adminLocale, initialTab }: AdminERPHubProp
         onClose={() => setShowQuickSearch(false)}
         contracts={data.contracts}
         cheques={data.pdcRecords}
+        properties={data.properties}
+        leads={data.leads}
+        partners={partnerProfiles}
+        rescissions={data.rescissions}
+        taxRecords={data.taxRecords}
         onSelectModule={(mod) => navigateToTab(mod)}
         onSelectContract={(c) => handleInspectContract(c)}
-        onOpenAcademy={() => setIsAcademyOpen(true)}
+        onOpenAcademy={() => setIsGuidedTourActive(true)}
         onStartGuidedTour={() => setIsGuidedTourActive(true)}
         isAr={isAr}
+        adminLocale={adminLocale}
       />
 
-      {/* 4.25 FIN-OS MASTER ACADEMY & TUTORIAL MODAL */}
+      {/* 4.25 FIN-OS MASTER ACADEMY (FALLBACK WRAPPER TO LIVE WALKTHROUGH) */}
       <ZFErpAcademyModal 
-        isOpen={isAcademyOpen}
+        isOpen={isAcademyOpen && !isGuidedTourActive}
         onClose={() => setIsAcademyOpen(false)}
         onStartGuidedTour={() => setIsGuidedTourActive(true)}
-        onNavigateToModule={(mod) => navigateToTab(mod)}
+        onNavigateToModule={(mod) => navigateToTab(mod, false)}
         isAr={isAr}
       />
 
-      {/* 4.35 INTERACTIVE ON-SCREEN GUIDED SPOTLIGHT TOUR */}
+      {/* 4.35 INTERACTIVE ON-SCREEN GUIDED SPOTLIGHT TOUR & WALKTHROUGH */}
       <ZFErpGuidedTour 
         isActive={isGuidedTourActive}
-        onComplete={() => setIsGuidedTourActive(false)}
-        onSkip={() => setIsGuidedTourActive(false)}
-        onNavigateToModule={(mod) => navigateToTab(mod)}
+        onComplete={() => { setIsGuidedTourActive(false); setIsAcademyOpen(false); }}
+        onSkip={() => { setIsGuidedTourActive(false); setIsAcademyOpen(false); }}
+        onNavigateToModule={(mod) => navigateToTab(mod, false)}
         isAr={isAr}
       />
+
+      {/* 4.4 FIRST-TIME WELCOME & WALKTHROUGH INVITATION BANNER */}
+      {showFirstTimeTourPrompt && !isGuidedTourActive && (
+        <div
+          style={{
+            position: 'fixed',
+            bottom: '24px',
+            left: isAr ? '24px' : 'auto',
+            right: isAr ? 'auto' : '24px',
+            maxWidth: '460px',
+            background: 'rgba(255, 255, 255, 0.98)',
+            backdropFilter: 'blur(16px)',
+            border: '1.5px solid #946F23',
+            borderRadius: '16px',
+            padding: '0.95rem 1.15rem',
+            boxShadow: '0 20px 45px rgba(15, 23, 42, 0.18), 0 0 0 1px rgba(148, 111, 35, 0.2)',
+            zIndex: 99998,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '0.65rem',
+            direction: isAr ? 'rtl' : 'ltr',
+            animation: 'fadeIn 0.3s ease-out'
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '0.5rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+              <div style={{
+                width: '32px',
+                height: '32px',
+                borderRadius: '8px',
+                background: 'linear-gradient(135deg, #946F23 0%, #C5A059 100%)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#FFFFFF',
+                flexShrink: 0
+              }}>
+                <Compass size={18} />
+              </div>
+              <div>
+                <div style={{ fontSize: '0.86rem', fontWeight: 800, color: '#0F172A' }}>
+                  {isAr ? 'مرحباً بك في FIN-OS' : 'Welcome to FIN-OS'}
+                </div>
+                <div style={{ fontSize: '0.74rem', color: '#64748B' }}>
+                  {isAr ? 'هل تود استكشاف الشاشات والمؤشرات الأساسية عبر جولة حية؟' : 'Would you like an interactive walkthrough of all 9 core modules?'}
+                </div>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setShowFirstTimeTourPrompt(false);
+                if (typeof window !== 'undefined') {
+                  localStorage.setItem('zf_fin_os_tour_completed_v1', 'dismissed');
+                }
+              }}
+              style={{ background: 'transparent', border: 'none', color: '#94A3B8', cursor: 'pointer', padding: '0.2rem' }}
+              title={isAr ? 'إغلاق' : 'Dismiss'}
+            >
+              <X size={15} />
+            </button>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', alignSelf: isAr ? 'flex-start' : 'flex-end' }}>
+            <button
+              type="button"
+              onClick={() => {
+                setShowFirstTimeTourPrompt(false);
+                setIsGuidedTourActive(true);
+              }}
+              style={{
+                background: 'linear-gradient(135deg, #946F23 0%, #78581C 100%)',
+                border: 'none',
+                color: '#FFFFFF',
+                borderRadius: '8px',
+                padding: '0.45rem 0.95rem',
+                fontSize: '0.78rem',
+                fontWeight: 800,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+                boxShadow: '0 3px 10px rgba(148, 111, 35, 0.3)'
+              }}
+            >
+              <Compass size={14} />
+              <span>{isAr ? 'ابدأ الجولة التفاعلية' : 'Start Tour'}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setShowFirstTimeTourPrompt(false);
+                if (typeof window !== 'undefined') {
+                  localStorage.setItem('zf_fin_os_tour_completed_v1', 'dismissed');
+                }
+              }}
+              style={{
+                background: '#F1EFEA',
+                border: '1px solid #D8D2C4',
+                color: '#475569',
+                borderRadius: '8px',
+                padding: '0.45rem 0.85rem',
+                fontSize: '0.76rem',
+                fontWeight: 700,
+                cursor: 'pointer'
+              }}
+            >
+              {isAr ? 'لاحقاً' : 'Later'}
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* 4.5 EXECUTIVE NOTIFICATION & ALERT CENTER */}
       <ZFNotificationCenter 

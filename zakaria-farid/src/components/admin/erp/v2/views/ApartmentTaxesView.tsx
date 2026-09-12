@@ -27,6 +27,7 @@ import { localizeBuyerName } from '@/components/erp/JournalEntryPreview';
 import { ZFPagination } from '../ZFPagination';
 import { ZFKpiCard } from '../ZFKpiCard';
 import { ZFFilterToolbar } from '../ZFFilterToolbar';
+import { ZFErpBreadcrumb } from '../common/ZFErpBreadcrumb';
 import styles from '../ZFWorkstationShell.module.css';
 
 export interface ApartmentTaxesViewProps {
@@ -412,11 +413,7 @@ export const ApartmentTaxesView: React.FC<ApartmentTaxesViewProps> = ({
       {/* 1. Header & Stage Breadcrumb */}
       <div className={styles.stageHeader}>
         <div className={styles.stageTitleArea}>
-          <div className={styles.stageBreadcrumb}>
-            <span>FIN-OS</span>
-            <span>/</span>
-            <span>{isAr ? 'ضرائب وتراخيص المشاريع' : 'Project Statutory Taxes & Permits'}</span>
-          </div>
+          <ZFErpBreadcrumb sectionTitle={isAr ? 'ضرائب وتراخيص المشاريع' : 'Project Statutory Taxes & Permits'} icon={<Receipt size={13} color="#946f23" />} />
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
             <h1 className={styles.stageTitle}>

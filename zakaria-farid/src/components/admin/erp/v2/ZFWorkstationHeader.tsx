@@ -10,7 +10,7 @@ import {
   ArrowLeft, 
   LogOut, 
   Bell, 
-  BookOpen, 
+  Compass, 
   UserCheck, 
   Sun, 
   Moon, 
@@ -116,14 +116,55 @@ export const ZFWorkstationHeader: React.FC<ZFWorkstationHeaderProps> = ({
           </button>
         )}
 
-        <Link 
-          href={`/admin/${isAr ? 'ar' : 'en'}`} 
-          className={styles.adminReturnLink}
-          title={isAr ? 'العودة إلى لوحة القيادة التنفيذية' : 'Return to Executive Dashboard'}
-        >
-          <ArrowLeft size={13} style={{ transform: isAr ? 'rotate(180deg)' : 'none' }} />
-          <span>{isAr ? 'لوحة الإدارة' : 'Admin'}</span>
-        </Link>
+        {/* Executive Breadcrumb Switcher */}
+        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', fontWeight: 700 }}>
+          <Link 
+            href={`/admin/${isAr ? 'ar' : 'en'}`} 
+            className={styles.adminReturnLink}
+            title={isAr ? 'العودة إلى لوحة القيادة التنفيذية' : 'Return to Executive Dashboard'}
+          >
+            <ArrowLeft size={13} style={{ transform: isAr ? 'rotate(180deg)' : 'none' }} />
+            <span>{isAr ? 'لوحة الإدارة' : 'Admin'}</span>
+          </Link>
+          <span style={{ color: 'var(--admin-card-border, #CBD5E1)', opacity: 0.6 }}>/</span>
+          <Link 
+            href={`/admin/${isAr ? 'ar' : 'en'}/properties`} 
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '4px',
+              padding: '4px 8px',
+              borderRadius: '6px',
+              color: 'var(--admin-text-muted, #64748B)',
+              textDecoration: 'none',
+              fontSize: '11px',
+              fontWeight: 600,
+              transition: 'all 0.15s ease'
+            }}
+            title={isAr ? 'محفظة العقارات' : 'Properties Portfolio'}
+          >
+            <span>{isAr ? 'العقارات' : 'Properties'}</span>
+          </Link>
+          <span style={{ color: 'var(--admin-card-border, #CBD5E1)', opacity: 0.6 }}>/</span>
+          <Link 
+            href={`/admin/${isAr ? 'ar' : 'en'}/leads`} 
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '4px',
+              padding: '4px 8px',
+              borderRadius: '6px',
+              color: 'var(--admin-text-muted, #64748B)',
+              textDecoration: 'none',
+              fontSize: '11px',
+              fontWeight: 600,
+              transition: 'all 0.15s ease'
+            }}
+            title={isAr ? 'إدارة العملاء والمعاينات' : 'Client Inquiries & CRM'}
+          >
+            <span>{isAr ? 'العملاء' : 'Leads'}</span>
+          </Link>
+        </div>
 
         {/* Official Al Zakaria Brand Logo from Main Website */}
         <div className={styles.brandLockup}>
@@ -153,12 +194,12 @@ export const ZFWorkstationHeader: React.FC<ZFWorkstationHeaderProps> = ({
         type="button"
         className={styles.searchAnchor}
         onClick={onOpenQuickSearch}
-        title={isAr ? 'بحث سريع في العقود، الأقساط، وحركة الخزنة (⌘K)' : 'Quick search contracts, dues, ledger... (⌘K)'}
+        title={isAr ? 'البحث الشامل في المنظومة (عقارات، عملاء، عقود، خزينة، شركاء)... (⌘K)' : 'Universal Omni-Search (Properties, Leads, Contracts, Treasury, Partners)... (⌘K)'}
       >
         <div className={styles.searchIconText}>
           <Search size={14} style={{ color: '#64748b' }} />
           <span>
-            {isAr ? 'دوّر في العقود، الأقساط، أو حركة الخزنة...' : 'Search contracts, dues, journal entries...'}
+            {isAr ? 'البحث الشامل في المنظومة (عقارات، عملاء، عقود، خزينة، شركاء)...' : 'Universal Omni-Search (Properties, Leads, Contracts, Treasury, Partners)...'}
           </span>
         </div>
         <kbd className={styles.kbd}>⌘K</kbd>
@@ -273,15 +314,15 @@ export const ZFWorkstationHeader: React.FC<ZFWorkstationHeaderProps> = ({
           </button>
         )}
 
-        {/* ERP Academy Trigger */}
+        {/* ERP Walkthrough & Guide Trigger */}
         {onOpenAcademy && (
           <button
             type="button"
             className={styles.utilityBtn}
             onClick={onOpenAcademy}
-            title={isAr ? 'دليل واستخدام النظام' : 'Academy & Guide'}
+            title={isAr ? 'دليل وجولة المنظومة التفاعلية' : 'FIN-OS Walkthrough Tour'}
           >
-            <BookOpen size={14} color="#946f23" />
+            <Compass size={14} color="#946f23" />
           </button>
         )}
 

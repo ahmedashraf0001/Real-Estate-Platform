@@ -13,7 +13,7 @@ export default async function DashboardGroupLayout({ children, params }: LayoutP
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
-  if (!user && process.env.NODE_ENV !== 'development') {
+  if (!user) {
     redirect('/admin/login');
   }
 

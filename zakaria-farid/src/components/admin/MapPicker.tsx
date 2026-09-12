@@ -914,13 +914,140 @@ export default function MapPicker({ latitude, longitude, onChange, isAr = false 
           text-overflow: ellipsis;
         }
 
+        /* Light Mode Rules for MapPicker */
+        .sanctum-map-search-input::placeholder {
+          color: #64748B !important;
+          opacity: 1 !important;
+        }
+        [data-theme="light"] .sanctum-map-search-input::placeholder {
+          color: #64748B !important;
+          opacity: 1 !important;
+        }
+        [data-theme="light"] .search-input-box input.sanctum-map-search-input {
+          background: #FFFFFF !important;
+          color: #0F172A !important;
+          border: 1.5px solid #D8D2C4 !important;
+          box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06) !important;
+        }
+        [data-theme="light"] .sanctum-map-locate-btn {
+          background: #FFFFFF !important;
+          color: #0F172A !important;
+          border: 1.5px solid #D8D2C4 !important;
+        }
+        [data-theme="light"] .sanctum-map-locate-btn:hover:not(:disabled) {
+          background: #F8FAFC !important;
+          border-color: #946F23 !important;
+          color: #946F23 !important;
+        }
+        [data-theme="light"] .sanctum-map-gmaps-btn {
+          background: #FFFFFF !important;
+          color: #0284C7 !important;
+          border: 1.5px solid #BAE6FD !important;
+        }
+        [data-theme="light"] .search-dropdown-menu {
+          background: #FFFFFF !important;
+          border: 1.5px solid #D8D2C4 !important;
+          box-shadow: 0 12px 32px rgba(15, 23, 42, 0.12) !important;
+        }
+        [data-theme="light"] .dropdown-header {
+          border-bottom: 1.5px solid #D8D2C4 !important;
+          color: #946F23 !important;
+        }
+        [data-theme="light"] .dropdown-item {
+          color: #0F172A !important;
+        }
+        [data-theme="light"] .dropdown-item:hover {
+          background: #F8FAFC !important;
+        }
+        [data-theme="light"] .item-desc,
+        [data-theme="light"] .item-subtitle {
+          color: #64748B !important;
+        }
+        [data-theme="light"] .item-title {
+          color: #0F172A !important;
+        }
+        [data-theme="light"] .sanctum-location-alert {
+          background: #F8FAFC !important;
+          border: 1.5px solid #D8D2C4 !important;
+        }
+        [data-theme="light"] .alert-heading {
+          color: #946F23 !important;
+        }
+        [data-theme="light"] .alert-text {
+          color: #475569 !important;
+        }
+        [data-theme="light"] .alert-chip-btn {
+          background: #FFFFFF !important;
+          border: 1.5px solid #D8D2C4 !important;
+          color: #334155 !important;
+          font-weight: 700 !important;
+        }
+        [data-theme="light"] .alert-chip-btn:hover {
+          background: #F8FAFC !important;
+          border-color: #946F23 !important;
+          color: #946F23 !important;
+        }
+        [data-theme="light"] .quick-label {
+          color: #475569 !important;
+          font-weight: 700 !important;
+        }
+        [data-theme="light"] .alert-close-btn {
+          color: #64748B !important;
+        }
+        [data-theme="light"] .quick-chips-label {
+          color: #475569 !important;
+          font-weight: 700 !important;
+        }
+        [data-theme="light"] .quick-chip-btn {
+          background: #FFFFFF !important;
+          border: 1.5px solid #D8D2C4 !important;
+          color: #334155 !important;
+          font-weight: 700 !important;
+        }
+        [data-theme="light"] .quick-chip-btn:hover {
+          background: #F8FAFC !important;
+          border-color: #946F23 !important;
+          color: #946F23 !important;
+        }
+        [data-theme="light"] .sanctum-map-frame {
+          border: 1.5px solid #D8D2C4 !important;
+          background: #F8FAFC !important;
+          box-shadow: 0 4px 20px rgba(15, 23, 42, 0.08) !important;
+        }
+        [data-theme="light"] .map-mode-switcher {
+          background: #FFFFFF !important;
+          border: 1.5px solid #D8D2C4 !important;
+          box-shadow: 0 4px 16px rgba(15, 23, 42, 0.1) !important;
+        }
+        [data-theme="light"] .mode-btn {
+          color: #475569 !important;
+        }
+        [data-theme="light"] .mode-btn:hover {
+          background: #F8FAFC !important;
+          color: #0F172A !important;
+        }
+        [data-theme="light"] .mode-btn.active {
+          background: linear-gradient(135deg, #946F23 0%, #B8860B 100%) !important;
+          color: #FFFFFF !important;
+          box-shadow: 0 2px 8px rgba(148, 111, 35, 0.3) !important;
+        }
+        [data-theme="light"] .sanctum-coords-pill {
+          background: #FFFFFF !important;
+          border: 1.5px solid #D8D2C4 !important;
+          color: #0F172A !important;
+          box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08) !important;
+        }
+        [data-theme="light"] .sanctum-coords-pill .coords-icon {
+          color: #946F23 !important;
+        }
+
         /* Alert Banner */
         .sanctum-location-alert {
           display: flex;
           align-items: flex-start;
           gap: 12px;
-          background: rgba(221, 167, 82, 0.08);
-          border: 1px solid rgba(221, 167, 82, 0.3);
+          background: rgba(197, 160, 89, 0.08);
+          border: 1px solid rgba(197, 160, 89, 0.3);
           border-radius: 14px;
           padding: 12px 16px;
           position: relative;
@@ -941,7 +1068,7 @@ export default function MapPicker({ latitude, longitude, onChange, isAr = false 
         .alert-heading {
           font-size: 0.84rem;
           font-weight: 700;
-          color: #DDA752;
+          color: #C5A059;
         }
 
         .alert-text {
@@ -976,9 +1103,9 @@ export default function MapPicker({ latitude, longitude, onChange, isAr = false 
         }
 
         .alert-chip-btn:hover {
-          background: rgba(221, 167, 82, 0.25);
-          border-color: #DDA752;
-          color: #DDA752;
+          background: rgba(197, 160, 89, 0.25);
+          border-color: #C5A059;
+          color: #C5A059;
         }
 
         .alert-close-btn {
@@ -1050,9 +1177,9 @@ export default function MapPicker({ latitude, longitude, onChange, isAr = false 
         }
 
         .quick-chip-btn:hover {
-          background: rgba(221, 167, 82, 0.2);
-          border-color: rgba(221, 167, 82, 0.4);
-          color: #DDA752;
+          background: rgba(197, 160, 89, 0.2);
+          border-color: rgba(197, 160, 89, 0.4);
+          color: #C5A059;
         }
 
         /* Map Frame */
@@ -1062,7 +1189,7 @@ export default function MapPicker({ latitude, longitude, onChange, isAr = false 
           width: 100%;
           border-radius: 20px;
           overflow: hidden;
-          border: 1px solid rgba(221, 167, 82, 0.25);
+          border: 1px solid rgba(197, 160, 89, 0.25);
           box-shadow: 0 12px 36px rgba(0, 0, 0, 0.5);
           background: #0A0C10;
         }
@@ -1084,14 +1211,14 @@ export default function MapPicker({ latitude, longitude, onChange, isAr = false 
           align-items: center;
           gap: 12px;
           background: rgba(18, 24, 38, 0.95);
-          border: 1px solid rgba(221, 167, 82, 0.4);
+          border: 1px solid rgba(197, 160, 89, 0.4);
           border-radius: 16px;
           padding: 20px 30px;
           box-shadow: 0 16px 36px rgba(0, 0, 0, 0.6);
         }
 
         .gold-spinner {
-          color: #DDA752;
+          color: #C5A059;
           animation: spin 1s linear infinite;
         }
 
@@ -1100,6 +1227,25 @@ export default function MapPicker({ latitude, longitude, onChange, isAr = false 
           font-weight: 600;
           color: #E2E8F0;
           text-align: center;
+        }
+
+        [data-theme="light"] .sanctum-map-loading-overlay,
+        html[data-theme="light"] .sanctum-map-loading-overlay {
+          background: rgba(248, 250, 252, 0.85) !important;
+        }
+        [data-theme="light"] .loading-card,
+        html[data-theme="light"] .loading-card {
+          background: #FFFFFF !important;
+          border: 1.5px solid #D8D2C4 !important;
+          box-shadow: 0 12px 32px rgba(15, 23, 42, 0.08) !important;
+        }
+        [data-theme="light"] .loading-text,
+        html[data-theme="light"] .loading-text {
+          color: #0F172A !important;
+        }
+        [data-theme="light"] .gold-spinner,
+        html[data-theme="light"] .gold-spinner {
+          color: #946F23 !important;
         }
 
         @keyframes spin {
@@ -1116,7 +1262,7 @@ export default function MapPicker({ latitude, longitude, onChange, isAr = false 
           align-items: center;
           gap: 4px;
           background: rgba(10, 14, 22, 0.88);
-          border: 1px solid rgba(221, 167, 82, 0.35);
+          border: 1px solid rgba(197, 160, 89, 0.35);
           border-radius: 12px;
           padding: 4px;
           backdrop-filter: blur(16px);
@@ -1149,10 +1295,10 @@ export default function MapPicker({ latitude, longitude, onChange, isAr = false 
         }
 
         .mode-btn.active {
-          background: linear-gradient(135deg, #DDA752 0%, #C8923D 100%);
+          background: linear-gradient(135deg, #C5A059 0%, #B8860B 100%);
           color: #0A0C10;
           font-weight: 700;
-          box-shadow: 0 2px 8px rgba(221, 167, 82, 0.3);
+          box-shadow: 0 2px 8px rgba(197, 160, 89, 0.3);
         }
 
         /* Coordinates Pill */
@@ -1169,7 +1315,7 @@ export default function MapPicker({ latitude, longitude, onChange, isAr = false 
           padding: 6px 14px;
           pointer-events: none;
           background: rgba(10, 14, 22, 0.88);
-          border: 1px solid rgba(221, 167, 82, 0.4);
+          border: 1px solid rgba(197, 160, 89, 0.4);
           box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
           font-size: 0.75rem;
           font-weight: 700;
@@ -1182,7 +1328,7 @@ export default function MapPicker({ latitude, longitude, onChange, isAr = false 
         }
 
         .sanctum-coords-pill .coords-icon {
-          color: #DDA752;
+          color: #C5A059;
           flex-shrink: 0;
         }
 
@@ -1204,9 +1350,9 @@ export default function MapPicker({ latitude, longitude, onChange, isAr = false 
           width: 16px;
           height: 16px;
           border-radius: 50%;
-          background: #DDA752;
+          background: #C5A059;
           border: 3px solid #0A0C10;
-          box-shadow: 0 0 18px rgba(221, 167, 82, 0.95);
+          box-shadow: 0 0 18px rgba(197, 160, 89, 0.95);
           z-index: 2;
         }
 
@@ -1216,7 +1362,7 @@ export default function MapPicker({ latitude, longitude, onChange, isAr = false 
           width: 32px;
           height: 32px;
           border-radius: 50%;
-          background: rgba(221, 167, 82, 0.4);
+          background: rgba(197, 160, 89, 0.4);
           animation: sanctumPickerPulse 2s infinite ease-out;
           transform: translateY(-8px);
           z-index: 1;
@@ -1229,7 +1375,7 @@ export default function MapPicker({ latitude, longitude, onChange, isAr = false 
 
         .sanctum-picker-frame .sanctum-pin-tag {
           background: rgba(10, 14, 22, 0.95);
-          border: 1px solid #DDA752;
+          border: 1px solid #C5A059;
           border-radius: 8px;
           padding: 4px 10px;
           font-size: 0.72rem;

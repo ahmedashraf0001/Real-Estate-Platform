@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { 
   TrendingUp, 
   DollarSign, 
@@ -35,6 +35,7 @@ interface CashFlowForecastChartProps {
   pdcRecords?: ERPPDCRecord[];
   currentCashBalance?: number;
   isAr?: boolean;
+  theme?: 'dark' | 'light';
   embeddedInStudio?: boolean;
   onInspectContract?: (contract: ERPContract) => void;
   onNavigateToMonth?: (monthKey: string) => void;
@@ -73,6 +74,7 @@ export const CashFlowForecastChart: React.FC<CashFlowForecastChartProps> = ({
   pdcRecords = [],
   currentCashBalance = 0,
   isAr = true,
+  theme: propTheme,
   embeddedInStudio = false,
   onInspectContract,
   onNavigateToMonth
@@ -80,6 +82,22 @@ export const CashFlowForecastChart: React.FC<CashFlowForecastChartProps> = ({
   // Configurable burn-rate percentage for construction disbursements (Default 45%)
   const [disbursementRate, setDisbursementRate] = useState<number>(45);
   const [selectedMonthKey, setSelectedMonthKey] = useState<string | null>(null);
+  const [isBtnHovered, setIsBtnHovered] = useState<boolean>(false);
+  const [detectedTheme, setDetectedTheme] = useState<'dark' | 'light'>('light');
+
+  useEffect(() => {
+    const readTheme = () => {
+      const cur = (document.documentElement.getAttribute('data-theme') as 'dark' | 'light') ||
+        (localStorage.getItem('zf_theme') as 'dark' | 'light') || 'light';
+      setDetectedTheme(cur);
+    };
+    readTheme();
+    const obs = new MutationObserver(readTheme);
+    obs.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+    return () => obs.disconnect();
+  }, []);
+
+  const isLight = (propTheme || detectedTheme) === 'light';
 
   // Compute 6-Month Rolling Forecast Window
   const forecastData: MonthForecastData[] = useMemo(() => {
@@ -183,8 +201,8 @@ export const CashFlowForecastChart: React.FC<CashFlowForecastChartProps> = ({
 
   return (
     <div style={{
-      background: embeddedInStudio ? 'transparent' : '#ffffff',
-      border: embeddedInStudio ? 'none' : '1px solid #e2e8f0',
+      background: embeddedInStudio ? 'transparent' : (isLight ? '#ffffff' : '#111622'),
+      border: embeddedInStudio ? 'none' : `1px solid ${isLight ? '#D8D2C4' : 'rgba(255, 255, 255, 0.1)'}`,
       borderRadius: embeddedInStudio ? 0 : '16px',
       padding: embeddedInStudio ? 0 : '1.5rem',
       boxShadow: embeddedInStudio ? 'none' : '0 1px 3px rgba(0, 0, 0, 0.04)',
@@ -209,7 +227,7 @@ export const CashFlowForecastChart: React.FC<CashFlowForecastChartProps> = ({
             }}>
               <TrendingUp size={15} />
             </div>
-            <span style={{ fontSize: '0.85rem', fontWeight: 800, color: '#0f172a' }}>
+            <span style={{ fontSize: '0.85rem', fontWeight: 800, color: isLight ? '#0f172a' : '#f8fafc' }}>
               {isAr ? 'توقعات الكاش والتحصيلات (الـ 6 شهور الجاية)' : 'Cash Flow Forecast & 6-Month Timeline'}
             </span>
             <span style={{
@@ -239,7 +257,7 @@ export const CashFlowForecastChart: React.FC<CashFlowForecastChartProps> = ({
               }}>
                 <TrendingUp size={18} />
               </div>
-              <h2 style={{ fontSize: '1.15rem', fontWeight: 800, margin: 0, color: '#0f172a' }}>
+              <h2 style={{ fontSize: '1.15rem', fontWeight: 800, margin: 0, color: isLight ? '#0f172a' : '#f8fafc' }}>
                 {isAr ? 'توقعات الكاش والتحصيلات (الـ 6 شهور الجاية)' : 'Cash Flow Forecast & 6-Month Inflow Timeline'}
               </h2>
               <span style={{
@@ -254,7 +272,7 @@ export const CashFlowForecastChart: React.FC<CashFlowForecastChartProps> = ({
                 {isAr ? 'رؤية مستقبلية' : 'Predictive Runway'}
               </span>
             </div>
-            <p style={{ fontSize: '0.78rem', color: '#64748b', margin: '0.25rem 0 0 0' }}>
+            <p style={{ fontSize: '0.78rem', color: isLight ? '#64748b' : '#94a3b8', margin: '0.25rem 0 0 0' }}>
               {isAr 
                 ? 'مقارنة بين مواعيد تحصيل أقساط الزباين ومصاريف المباني عشان نتأكد إن في كاش كافي دايماً'
                 : 'Forward-looking installment dues vs construction WIP disbursements ensuring contractor milestone coverage'}
@@ -267,12 +285,12 @@ export const CashFlowForecastChart: React.FC<CashFlowForecastChartProps> = ({
           display: 'flex',
           alignItems: 'center',
           gap: '0.5rem',
-          background: '#f8fafc',
-          border: '1px solid #e2e8f0',
+          background: isLight ? '#fdfcf9' : '#1e293b',
+          border: `1px solid ${isLight ? '#D8D2C4' : 'rgba(255, 255, 255, 0.1)'}`,
           borderRadius: '8px',
           padding: embeddedInStudio ? '0.25rem 0.55rem' : '0.35rem 0.65rem'
         }}>
-          <span style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 600 }}>
+          <span style={{ fontSize: '0.72rem', color: isLight ? '#64748b' : '#94a3b8', fontWeight: 600 }}>
             {isAr ? 'نسبة الصرف على المباني:' : 'Est. WIP Burn Rate:'}
           </span>
           {[35, 45, 55].map(rate => (
@@ -281,14 +299,19 @@ export const CashFlowForecastChart: React.FC<CashFlowForecastChartProps> = ({
               type="button"
               onClick={() => setDisbursementRate(rate)}
               style={{
-                background: disbursementRate === rate ? '#0f172a' : 'transparent',
-                color: disbursementRate === rate ? '#ffffff' : '#475569',
+                background: disbursementRate === rate 
+                  ? (isLight ? '#946f23' : '#0f172a') 
+                  : 'transparent',
+                color: disbursementRate === rate 
+                  ? '#ffffff' 
+                  : (isLight ? '#475569' : '#94a3b8'),
                 border: 'none',
                 borderRadius: '5px',
                 padding: '0.15rem 0.45rem',
                 fontSize: '0.7rem',
                 fontWeight: 700,
-                cursor: 'pointer'
+                cursor: 'pointer',
+                transition: 'all 0.15s ease'
               }}
             >
               {rate}%
@@ -302,7 +325,7 @@ export const CashFlowForecastChart: React.FC<CashFlowForecastChartProps> = ({
         
         {/* Chip 1: Total 6-Month Inflows */}
         <div style={{
-          background: 'linear-gradient(135deg, #ffffff 0%, #fefdfa 100%)',
+          background: isLight ? 'linear-gradient(135deg, #ffffff 0%, #fefdfa 100%)' : 'linear-gradient(135deg, #1e293b 0%, #161c2b 100%)',
           border: '1px solid rgba(184, 144, 62, 0.3)',
           borderRadius: '12px',
           padding: embeddedInStudio ? '0.65rem 0.95rem' : '0.85rem 1.15rem',
@@ -311,18 +334,18 @@ export const CashFlowForecastChart: React.FC<CashFlowForecastChartProps> = ({
           <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#946f23', display: 'block' }}>
             {isAr ? 'إجمالي الفلوس المتوقع تحصيلها (6 شهور):' : 'Total 6-Month Inflows:'}
           </span>
-          <div style={{ fontSize: embeddedInStudio ? '1.25rem' : '1.45rem', fontWeight: 900, color: '#0f172a', marginTop: '0.15rem', fontVariantNumeric: 'tabular-nums' }}>
+          <div style={{ fontSize: embeddedInStudio ? '1.25rem' : '1.45rem', fontWeight: 900, color: isLight ? '#0f172a' : '#f8fafc', marginTop: '0.15rem', fontVariantNumeric: 'tabular-nums' }}>
             {D(summary.totalInflows).formatEGP(isAr)}
           </div>
-          <span style={{ fontSize: '0.68rem', color: '#64748b', marginTop: '0.2rem', display: 'block' }}>
+          <span style={{ fontSize: '0.68rem', color: isLight ? '#64748b' : '#94a3b8', marginTop: '0.2rem', display: 'block' }}>
             {isAr ? 'حسب مواعيد أقساط عقود البيع' : 'From verified contract schedules'}
           </span>
         </div>
 
         {/* Chip 2: Peak Cash Flow Month */}
         <div style={{
-          background: '#ffffff',
-          border: '1px solid #e2e8f0',
+          background: isLight ? '#ffffff' : '#1e293b',
+          border: `1px solid ${isLight ? '#D8D2C4' : 'rgba(255, 255, 255, 0.1)'}`,
           borderRadius: '12px',
           padding: embeddedInStudio ? '0.65rem 0.95rem' : '0.85rem 1.15rem',
           boxShadow: '0 1px 2px rgba(0,0,0,0.02)'
@@ -330,7 +353,7 @@ export const CashFlowForecastChart: React.FC<CashFlowForecastChartProps> = ({
           <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#946f23', display: 'block' }}>
             {isAr ? 'أكتر شهر هيدخل فيه فلوس:' : 'Peak Inflow Month:'}
           </span>
-          <div style={{ fontSize: embeddedInStudio ? '1.15rem' : '1.25rem', fontWeight: 800, color: '#0f172a', marginTop: '0.15rem' }}>
+          <div style={{ fontSize: embeddedInStudio ? '1.15rem' : '1.25rem', fontWeight: 800, color: isLight ? '#0f172a' : '#f8fafc', marginTop: '0.15rem' }}>
             {summary.peakMonth?.label || '—'}
           </div>
           <span style={{ fontSize: '0.74rem', fontWeight: 700, color: '#946f23', fontVariantNumeric: 'tabular-nums', marginTop: '0.2rem', display: 'block' }}>
@@ -340,8 +363,8 @@ export const CashFlowForecastChart: React.FC<CashFlowForecastChartProps> = ({
 
         {/* Chip 3: Net Cash Surplus */}
         <div style={{
-          background: '#ffffff',
-          border: '1px solid #e2e8f0',
+          background: isLight ? '#ffffff' : '#1e293b',
+          border: `1px solid ${isLight ? '#D8D2C4' : 'rgba(255, 255, 255, 0.1)'}`,
           borderRadius: '12px',
           padding: embeddedInStudio ? '0.65rem 0.95rem' : '0.85rem 1.15rem',
           boxShadow: '0 1px 2px rgba(0,0,0,0.02)'
@@ -352,7 +375,7 @@ export const CashFlowForecastChart: React.FC<CashFlowForecastChartProps> = ({
           <div style={{ fontSize: embeddedInStudio ? '1.25rem' : '1.45rem', fontWeight: 900, color: '#15803d', marginTop: '0.15rem', fontVariantNumeric: 'tabular-nums' }}>
             {D(summary.netSurplus).formatEGP(isAr)}
           </div>
-          <span style={{ fontSize: '0.68rem', color: '#64748b', marginTop: '0.2rem', display: 'block' }}>
+          <span style={{ fontSize: '0.68rem', color: isLight ? '#64748b' : '#94a3b8', marginTop: '0.2rem', display: 'block' }}>
             {isAr ? `بعد خصم ${disbursementRate}% لمصاريف المباني والتشطيب` : `After ${disbursementRate}% WIP disbursements`}
           </span>
         </div>
@@ -375,7 +398,7 @@ export const CashFlowForecastChart: React.FC<CashFlowForecastChartProps> = ({
                 : (isAr ? 'تنبيه: عجز مؤقت متوقع في الرصيد' : 'Deficit Warning in Runway')}
             </span>
           </div>
-          <span style={{ fontSize: '0.7rem', color: '#64748b', marginTop: '0.25rem' }}>
+          <span style={{ fontSize: '0.7rem', color: isLight ? '#64748b' : '#94a3b8', marginTop: '0.25rem' }}>
             {summary.isSafe 
               ? (isAr ? 'الكاش في الخزنة والبنك مكفي وزيادة طول الـ 6 شهور الجاية' : 'Treasury cash remains positive across all 6 months')
               : (isAr ? 'محتاجين نوزع بعض دفعات مقاولين البناء عشان الكاش يفضل مرتاح' : 'Consider staggering contractor disbursements')}
@@ -387,27 +410,40 @@ export const CashFlowForecastChart: React.FC<CashFlowForecastChartProps> = ({
       {/* 3. Interactive Chart (Recharts) */}
       <div style={{ width: '100%', height: embeddedInStudio ? 270 : 320, marginTop: embeddedInStudio ? '0.25rem' : '0.5rem' }}>
         <ResponsiveContainer width="100%" height="100%">
-          <ComposedChart data={forecastData} margin={{ top: 15, right: 10, left: 10, bottom: 5 }}>
+          <ComposedChart 
+            data={forecastData} 
+            margin={{ top: 15, right: isAr ? 20 : 10, left: isAr ? 10 : 20, bottom: 5 }}
+          >
             <defs>
               <linearGradient id="goldAreaGrad" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="5%" stopColor="#c5a059" stopOpacity={0.25} />
                 <stop offset="95%" stopColor="#c5a059" stopOpacity={0.0} />
               </linearGradient>
             </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+            <CartesianGrid strokeDasharray="3 3" stroke={isLight ? 'rgba(216, 210, 196, 0.4)' : 'rgba(255, 255, 255, 0.06)'} vertical={false} />
             <XAxis 
               dataKey="shortLabel" 
-              stroke="#64748b" 
+              stroke={isLight ? '#64748b' : '#94a3b8'} 
               fontSize={12} 
               tickLine={false} 
-              axisLine={{ stroke: '#e2e8f0' }} 
+              axisLine={{ stroke: isLight ? '#D8D2C4' : 'rgba(255, 255, 255, 0.1)' }} 
+              reversed={isAr}
             />
             <YAxis 
-              stroke="#64748b" 
+              orientation={isAr ? 'right' : 'left'}
+              stroke={isLight ? '#64748b' : '#94a3b8'} 
               fontSize={11} 
               tickLine={false} 
               axisLine={false} 
-              tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} 
+              tickFormatter={(v: number) => {
+                if (Math.abs(v) >= 1_000_000) {
+                  return `${(v / 1_000_000).toFixed(0)} ${isAr ? 'م' : 'M'}`;
+                }
+                if (Math.abs(v) >= 1_000) {
+                  return `${(v / 1_000).toFixed(0)} ${isAr ? 'ألف' : 'k'}`;
+                }
+                return `${v}`;
+              }} 
             />
             <Tooltip 
               content={({ active, payload, label }) => {
@@ -415,30 +451,30 @@ export const CashFlowForecastChart: React.FC<CashFlowForecastChartProps> = ({
                   const data = payload[0].payload as MonthForecastData;
                   return (
                     <div style={{
-                      background: '#ffffff',
-                      border: '1px solid #cbd5e1',
+                      background: isLight ? '#ffffff' : '#1e293b',
+                      border: `1px solid ${isLight ? '#D8D2C4' : '#334155'}`,
                       borderRadius: '10px',
                       padding: '0.75rem 1rem',
-                      boxShadow: '0 8px 24px rgba(0,0,0,0.08)',
+                      boxShadow: isLight ? '0 8px 24px rgba(0,0,0,0.08)' : '0 8px 24px rgba(0,0,0,0.4)',
                       fontSize: '0.78rem',
                       minWidth: '200px'
                     }}>
-                      <div style={{ fontWeight: 800, color: '#0f172a', marginBottom: '0.45rem', borderBottom: '1px solid #f1f5f9', paddingBottom: '0.35rem' }}>
+                      <div style={{ fontWeight: 800, color: isLight ? '#0f172a' : '#f8fafc', marginBottom: '0.45rem', borderBottom: `1px solid ${isLight ? '#f1f5f9' : '#334155'}`, paddingBottom: '0.35rem' }}>
                         {data.label} ({data.dealCount} {isAr ? 'أقساط مستحقة' : 'deals'})
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', color: '#946f23', fontWeight: 700, margin: '0.2rem 0' }}>
                         <span>{isAr ? 'الفلوس المتوقع تحصيلها:' : 'Expected Inflow:'}</span>
                         <span style={{ fontVariantNumeric: 'tabular-nums' }}>{D(data.inflows).formatEGP(isAr)}</span>
                       </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', color: '#64748b', margin: '0.2rem 0' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', color: isLight ? '#64748b' : '#94a3b8', margin: '0.2rem 0' }}>
                         <span>{isAr ? 'مصاريف المباني التقديرية:' : 'Disbursements:'}</span>
                         <span style={{ fontVariantNumeric: 'tabular-nums' }}>{D(data.outflows).formatEGP(isAr)}</span>
                       </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', color: data.netFlow >= 0 ? '#15803d' : '#dc2626', fontWeight: 700, margin: '0.2rem 0', borderTop: '1px dashed #e2e8f0', paddingTop: '0.25rem' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', color: data.netFlow >= 0 ? '#15803d' : '#dc2626', fontWeight: 700, margin: '0.2rem 0', borderTop: `1px dashed ${isLight ? '#D8D2C4' : '#334155'}`, paddingTop: '0.25rem' }}>
                         <span>{isAr ? 'صافي الفلوس للشهر ده:' : 'Net Monthly Flow:'}</span>
                         <span style={{ fontVariantNumeric: 'tabular-nums' }}>{D(data.netFlow).formatEGP(isAr)}</span>
                       </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', color: '#0f172a', fontWeight: 800, margin: '0.2rem 0', paddingTop: '0.25rem' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', color: isLight ? '#0f172a' : '#f8fafc', fontWeight: 800, margin: '0.2rem 0', paddingTop: '0.25rem' }}>
                         <span>{isAr ? 'الكاش المتوقع في الخزنة والبنك:' : 'Rolling Treasury:'}</span>
                         <span style={{ fontVariantNumeric: 'tabular-nums' }}>{D(data.cumulative).formatEGP(isAr)}</span>
                       </div>
@@ -450,7 +486,7 @@ export const CashFlowForecastChart: React.FC<CashFlowForecastChartProps> = ({
             />
             <Legend 
               wrapperStyle={{ fontSize: '0.74rem', paddingTop: '0.5rem' }} 
-              formatter={(value) => <span style={{ color: '#334155', fontWeight: 600 }}>{value}</span>}
+              formatter={(value) => <span style={{ color: isLight ? '#334155' : '#cbd5e1', fontWeight: 600 }}>{value}</span>}
             />
             
             {/* Inflows Area with subtle gold fill */}
@@ -466,7 +502,9 @@ export const CashFlowForecastChart: React.FC<CashFlowForecastChartProps> = ({
             {/* Outflows Bar */}
             <Bar 
               dataKey="outflows" 
-              fill="#cbd5e1" 
+              fill={isLight ? '#94a3b8' : '#64748b'} 
+              stroke={isLight ? '#64748b' : '#94a3b8'}
+              strokeWidth={1}
               radius={[6, 6, 0, 0]} 
               barSize={20} 
               name={isAr ? 'مصاريف المباني التقديرية' : 'Projected Disbursements'} 
@@ -476,9 +514,9 @@ export const CashFlowForecastChart: React.FC<CashFlowForecastChartProps> = ({
             <Line 
               type="monotone" 
               dataKey="cumulative" 
-              stroke="#0f172a" 
+              stroke={isLight ? '#0f172a' : '#38bdf8'} 
               strokeWidth={3} 
-              dot={{ r: 4, fill: '#0f172a', strokeWidth: 1, stroke: '#ffffff' }} 
+              dot={{ r: 4, fill: isLight ? '#0f172a' : '#38bdf8', strokeWidth: 1.5, stroke: '#ffffff' }} 
               name={isAr ? 'الكاش المتوقع في الخزنة والبنك' : 'Rolling Cash Balance'} 
             />
           </ComposedChart>
@@ -495,8 +533,10 @@ export const CashFlowForecastChart: React.FC<CashFlowForecastChartProps> = ({
               key={m.monthKey}
               onClick={() => setSelectedMonthKey(m.monthKey)}
               style={{
-                background: isSelected ? 'rgba(184, 144, 62, 0.05)' : '#f8fafc',
-                border: `1.5px solid ${isSelected ? '#946f23' : '#e2e8f0'}`,
+                background: isSelected 
+                  ? (isLight ? 'rgba(184, 144, 62, 0.08)' : 'rgba(184, 144, 62, 0.15)') 
+                  : (isLight ? '#fdfcf9' : '#1e293b'),
+                border: `1.5px solid ${isSelected ? '#946f23' : (isLight ? '#D8D2C4' : 'rgba(255, 255, 255, 0.1)')}`,
                 borderRadius: '10px',
                 padding: '0.75rem',
                 cursor: 'pointer',
@@ -504,14 +544,16 @@ export const CashFlowForecastChart: React.FC<CashFlowForecastChartProps> = ({
               }}
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem' }}>
-                <span style={{ fontSize: '0.76rem', fontWeight: 800, color: isSelected ? '#946f23' : '#0f172a' }}>
+                <span style={{ fontSize: '0.76rem', fontWeight: 800, color: isSelected ? '#946f23' : (isLight ? '#0f172a' : '#f8fafc') }}>
                   {m.shortLabel}
                 </span>
                 <span style={{
                   fontSize: '0.62rem',
                   fontVariantNumeric: 'tabular-nums',
-                  background: isSelected ? 'rgba(184, 144, 62, 0.15)' : '#e2e8f0',
-                  color: isSelected ? '#946f23' : '#64748b',
+                  background: isSelected 
+                    ? 'rgba(184, 144, 62, 0.15)' 
+                    : (isLight ? '#EDE8DE' : 'rgba(255, 255, 255, 0.08)'),
+                  color: isSelected ? '#946f23' : (isLight ? '#64748b' : '#94a3b8'),
                   padding: '0.1rem 0.35rem',
                   borderRadius: '4px',
                   fontWeight: 700
@@ -524,7 +566,7 @@ export const CashFlowForecastChart: React.FC<CashFlowForecastChartProps> = ({
                 {D(m.inflows).formatEGP(isAr)}
               </div>
 
-              <div style={{ fontSize: '0.68rem', color: '#64748b', marginTop: '0.25rem', display: 'flex', justifyContent: 'space-between' }}>
+              <div style={{ fontSize: '0.68rem', color: isLight ? '#64748b' : '#94a3b8', marginTop: '0.25rem', display: 'flex', justifyContent: 'space-between' }}>
                 <span>{isAr ? 'الصافي:' : 'Net:'}</span>
                 <strong style={{ color: m.netFlow >= 0 ? '#15803d' : '#dc2626', fontVariantNumeric: 'tabular-nums' }}>
                   {D(m.netFlow).formatEGP(isAr)}
@@ -538,8 +580,8 @@ export const CashFlowForecastChart: React.FC<CashFlowForecastChartProps> = ({
       {/* 5. Selected Month Forwarding CTA */}
       {activeMonthData && (
         <div style={{
-          background: '#ffffff',
-          border: '1.5px solid #e2e8f0',
+          background: isLight ? '#ffffff' : '#1e293b',
+          border: `1.5px solid ${isLight ? '#D8D2C4' : 'rgba(255, 255, 255, 0.1)'}`,
           borderRadius: '12px',
           padding: '0.85rem 1.25rem',
           display: 'flex',
@@ -547,7 +589,7 @@ export const CashFlowForecastChart: React.FC<CashFlowForecastChartProps> = ({
           justifyContent: 'space-between',
           flexWrap: 'wrap',
           gap: '0.85rem',
-          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.03)'
+          boxShadow: isLight ? '0 1px 3px rgba(0, 0, 0, 0.03)' : '0 2px 8px rgba(0, 0, 0, 0.2)'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
             <div style={{
@@ -565,7 +607,7 @@ export const CashFlowForecastChart: React.FC<CashFlowForecastChartProps> = ({
             </div>
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                <span style={{ fontSize: '0.85rem', fontWeight: 800, color: '#0f172a' }}>
+                <span style={{ fontSize: '0.85rem', fontWeight: 800, color: isLight ? '#0f172a' : '#f8fafc' }}>
                   {activeMonthData.label}
                 </span>
                 <span style={{
@@ -580,7 +622,7 @@ export const CashFlowForecastChart: React.FC<CashFlowForecastChartProps> = ({
                   {activeMonthData.dealCount} {isAr ? 'أقساط مستحقة' : 'deals due'}
                 </span>
               </div>
-              <span style={{ fontSize: '0.72rem', color: '#64748b' }}>
+              <span style={{ fontSize: '0.72rem', color: isLight ? '#64748b' : '#94a3b8' }}>
                 {isAr ? 'إجمالي المتحصل المتوقع: ' : 'Expected Inflows: '}
                 <strong style={{ color: '#15803d', fontVariantNumeric: 'tabular-nums' }}>
                   {D(activeMonthData.inflows).formatEGP(isAr)}
@@ -593,10 +635,14 @@ export const CashFlowForecastChart: React.FC<CashFlowForecastChartProps> = ({
             <button
               type="button"
               onClick={() => onNavigateToMonth(activeMonthData.monthKey)}
+              onMouseEnter={() => setIsBtnHovered(true)}
+              onMouseLeave={() => setIsBtnHovered(false)}
               style={{
-                background: '#0f172a',
+                background: isLight
+                  ? (isBtnHovered ? 'linear-gradient(135deg, #78591c 0%, #946f23 100%)' : 'linear-gradient(135deg, #946f23 0%, #b8860b 100%)')
+                  : (isBtnHovered ? '#1e293b' : 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)'),
                 color: '#ffffff',
-                border: 'none',
+                border: isLight ? '1px solid rgba(148, 111, 35, 0.35)' : '1px solid rgba(255, 255, 255, 0.12)',
                 borderRadius: '8px',
                 padding: '0.5rem 1rem',
                 fontSize: '0.78rem',
@@ -606,10 +652,10 @@ export const CashFlowForecastChart: React.FC<CashFlowForecastChartProps> = ({
                 alignItems: 'center',
                 gap: '0.45rem',
                 transition: 'all 0.15s ease',
-                boxShadow: '0 2px 6px rgba(15, 23, 42, 0.15)'
+                boxShadow: isLight
+                  ? (isBtnHovered ? '0 4px 12px rgba(148, 111, 35, 0.35)' : '0 2px 8px rgba(148, 111, 35, 0.25)')
+                  : '0 2px 6px rgba(0, 0, 0, 0.3)'
               }}
-              onMouseEnter={e => e.currentTarget.style.background = '#1e293b'}
-              onMouseLeave={e => e.currentTarget.style.background = '#0f172a'}
             >
               <span>{isAr ? `عرض ومتابعة أقساط شهر (${activeMonthData.shortLabel}) في العمليات` : `View ${activeMonthData.shortLabel} Installments in Operations`}</span>
               <ArrowUpRight size={14} />

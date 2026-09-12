@@ -44,6 +44,10 @@ else
   echo "✓ Gate 2 BYPASSED: Staged changes are scoped to presentation/UI without financial engine modifications."
 fi
 
+if [ "$1" = "--sync-graph" ] || [ "$2" = "--sync-graph" ]; then
+  bash "${SCRIPT_DIR}/sync_graph.sh"
+fi
+
 echo "=============================================================================="
 echo "✓ ALL GATES PASSED: Ready for commit or stage completion."
 echo "=============================================================================="

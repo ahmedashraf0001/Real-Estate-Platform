@@ -86,6 +86,11 @@ export default function PropertyDetailLoading() {
           min-height: 100vh;
         }
 
+        [data-theme="light"] .property-skeleton-view,
+        html[data-theme="light"] .property-skeleton-view {
+          background: #EAE6DC !important;
+        }
+
         @media (max-width: 768px) {
           .property-skeleton-view {
             padding-top: 96px;
@@ -214,8 +219,11 @@ export default function PropertyDetailLoading() {
           border: 1px solid rgba(255, 255, 255, 0.1);
         }
 
-        [data-theme="light"] .skeleton-gallery-frame {
-          border-color: rgba(0, 0, 0, 0.08);
+        [data-theme="light"] .skeleton-gallery-frame,
+        html[data-theme="light"] .skeleton-gallery-frame {
+          background: #FFFFFF !important;
+          border: 1.5px solid #D8D2C4 !important;
+          box-shadow: 0 4px 16px rgba(15, 23, 42, 0.05) !important;
         }
 
         .skeleton-ambient-glow {
@@ -251,9 +259,11 @@ export default function PropertyDetailLoading() {
           gap: 1rem;
         }
 
-        [data-theme="light"] .skeleton-section-card {
-          background: #FFFFFF;
-          border-color: rgba(0, 0, 0, 0.06);
+        [data-theme="light"] .skeleton-section-card,
+        html[data-theme="light"] .skeleton-section-card {
+          background: #FFFFFF !important;
+          border: 1.5px solid #D8D2C4 !important;
+          box-shadow: 0 4px 16px rgba(15, 23, 42, 0.05) !important;
         }
 
         .skeleton-section-eyebrow { width: 140px; height: 14px; }
@@ -292,9 +302,11 @@ export default function PropertyDetailLoading() {
           gap: 1rem;
         }
 
-        [data-theme="light"] .skeleton-broker-card {
-          background: #FFFFFF;
-          border-color: rgba(0, 0, 0, 0.06);
+        [data-theme="light"] .skeleton-broker-card,
+        html[data-theme="light"] .skeleton-broker-card {
+          background: #FFFFFF !important;
+          border: 1.5px solid #D8D2C4 !important;
+          box-shadow: 0 4px 16px rgba(15, 23, 42, 0.05) !important;
         }
 
         .skeleton-avatar {

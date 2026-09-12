@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { z } from 'zod';
 import { createClient as createServerClient } from '@/lib/supabase/server';
 import { 
   sendServerSideLeadNotification, 
@@ -8,6 +9,50 @@ import {
 function isValidUUID(str?: string | null): boolean {
   if (!str) return false;
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str.trim());
+}
+
+function stripHtml(input?: string | null): string {
+  if (!input) return '';
+  return input.replace(/<[^>]*>?/gm, '').trim();
+}
+
+/**
+ * Server-Side Validation Schema for Customer Leads
+ * Guarantees strict input sanitization, prevents SQL/Script injection,
+ * and validates phone numbers.
+ */
+const RawLeadSchema = z.object({
+  name: z.string({ required_error: 'Name is required' })
+    .min(2, 'Name must be at least 2 characters')
+    .max(100, 'Name cannot exceed 100 characters'),
+  phone: z.string({ required_error: 'Phone number is required' })
+    .min(3, 'Phone number is required')
+    .max(35, 'Phone number is too long'),
+  email: z.string().email('Invalid email address').max(150).nullable().optional().or(z.literal('')),
+  message: z.string().max(2000).nullable().optional(),
+  property_id: z.string().max(100).nullable().optional(),
+  property_title: z.string().max(200).nullable().optional(),
+  budget: z.string().max(100).nullable().optional(),
+  preferred_channel: z.string().max(50).nullable().optional(),
+  notes: z.string().max(1000).nullable().optional(),
+  source: z.string().max(150).nullable().optional(),
+});
+
+/**
+ * Validates phone numbers: accepts Egyptian mobile (010, 011, 012, 015),
+ * international E.164 formats, or explicit email-only fallback ("N/A - Email Only").
+ */
+function isValidPhone(phone: string, email?: string | null): boolean {
+  const clean = phone.trim();
+  if (clean.toUpperCase().startsWith('N/A')) {
+    return Boolean(email && email.includes('@'));
+  }
+  // Strip out valid formatting characters: digits, spaces, hyphens, plus, parens
+  const digitsOnly = clean.replace(/\D/g, '');
+  if (digitsOnly.length < 7 || digitsOnly.length > 15) {
+    return false;
+  }
+  return /^[+]?[0-9\s\-().]{7,30}$/.test(clean);
 }
 
 async function getAdminClient() {
@@ -60,42 +105,63 @@ async function getAdminClient() {
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
-    const { 
-      name, 
-      email, 
-      phone, 
-      message, 
-      property_id, 
-      property_title, 
-      budget, 
-      preferred_channel, 
-      notes, 
-      source 
-    } = body;
-
-    if (!name || !phone) {
-      return NextResponse.json({ error: 'Name and phone are required' }, { status: 400 });
+    let rawJson: unknown;
+    try {
+      rawJson = await request.json();
+    } catch {
+      return NextResponse.json({ error: 'Invalid JSON payload' }, { status: 400 });
     }
+
+    const parseResult = RawLeadSchema.safeParse(rawJson);
+    if (!parseResult.success) {
+      const firstIssue = parseResult.error.issues[0];
+      return NextResponse.json({ 
+        error: firstIssue?.message || 'Invalid input data' 
+      }, { status: 400 });
+    }
+
+    const data = parseResult.data;
+    const sanitizedName = stripHtml(data.name);
+    const rawPhone = stripHtml(data.phone);
+    const sanitizedEmail = data.email ? stripHtml(data.email).toLowerCase() : null;
+
+    if (!sanitizedName || sanitizedName.length < 2) {
+      return NextResponse.json({ error: 'Please provide a valid name (at least 2 characters)' }, { status: 400 });
+    }
+
+    if (!isValidPhone(rawPhone, sanitizedEmail)) {
+      return NextResponse.json({ 
+        error: 'Please provide a valid phone number (e.g. 01012345678 or +201009970776)' 
+      }, { status: 400 });
+    }
+
+    const sanitizedPhone = rawPhone.toUpperCase().startsWith('N/A') 
+      ? 'N/A - Email Only' 
+      : rawPhone.replace(/[^\d+]/g, '');
+
+    const sanitizedMessage = stripHtml(data.message);
+    const sanitizedBudget = stripHtml(data.budget);
+    const sanitizedChannel = stripHtml(data.preferred_channel);
+    const sanitizedNotes = stripHtml(data.notes);
+    const sanitizedSource = stripHtml(data.source);
+    const propertyIdInput = stripHtml(data.property_id);
+    const propertyTitleInput = stripHtml(data.property_title);
 
     const adminSupabase = await getAdminClient();
     const supabase = adminSupabase ?? (await createServerClient());
 
     let finalPropertyId: string | null = null;
-    let resolvedPropertyTitle: string | null = property_title || null;
+    let resolvedPropertyTitle: string | null = propertyTitleInput || null;
     let resolvedPropertySlug: string | null = null;
 
-    // Resolve property by UUID or slug
-    if (property_id) {
-      const rawPropId = String(property_id).trim();
-
-      if (isValidUUID(rawPropId)) {
-        // Query by UUID
+    // Resolve property by UUID or slug safely
+    if (propertyIdInput) {
+      if (isValidUUID(propertyIdInput)) {
         try {
           const { data: prop } = await supabase
             .from('properties')
             .select('id, title_ar, title_en, slug')
-            .eq('id', rawPropId)
+            .eq('id', propertyIdInput)
             .maybeSingle();
 
           if (prop) {
@@ -103,20 +169,19 @@ export async function POST(request: Request) {
             resolvedPropertyTitle = resolvedPropertyTitle || prop.title_ar || prop.title_en;
             resolvedPropertySlug = prop.slug;
           } else {
-            // Still a valid UUID, store it
-            finalPropertyId = rawPropId;
+            finalPropertyId = propertyIdInput;
           }
         } catch {
-          finalPropertyId = rawPropId;
+          finalPropertyId = propertyIdInput;
         }
-      } else {
-        // rawPropId is a slug (e.g. "ultra-luxury-modern-smart-mansion")
-        resolvedPropertySlug = rawPropId;
+      } else if (/^[a-zA-Z0-9_-]{1,100}$/.test(propertyIdInput)) {
+        // Safe slug lookup
+        resolvedPropertySlug = propertyIdInput;
         try {
           const { data: prop } = await supabase
             .from('properties')
             .select('id, title_ar, title_en, slug')
-            .eq('slug', rawPropId)
+            .eq('slug', propertyIdInput)
             .maybeSingle();
 
           if (prop) {
@@ -124,7 +189,6 @@ export async function POST(request: Request) {
             resolvedPropertyTitle = resolvedPropertyTitle || prop.title_ar || prop.title_en;
             resolvedPropertySlug = prop.slug;
           } else {
-            // Property not found in database (e.g. mock/catalog asset), do not pass invalid string as UUID
             finalPropertyId = null;
           }
         } catch {
@@ -134,49 +198,73 @@ export async function POST(request: Request) {
     }
 
     // Clean notes without duplication
-    let cleanNotes = notes ? String(notes).trim() : '';
-    if (preferred_channel && !cleanNotes.includes(preferred_channel)) {
-      cleanNotes = cleanNotes ? `Protocol: ${preferred_channel} | ${cleanNotes}` : `Protocol: ${preferred_channel}`;
+    let cleanNotes = sanitizedNotes;
+    if (sanitizedChannel && !cleanNotes.includes(sanitizedChannel)) {
+      cleanNotes = cleanNotes ? `Protocol: ${sanitizedChannel} | ${cleanNotes}` : `Protocol: ${sanitizedChannel}`;
     }
 
     const leadPayload = {
-      name: String(name).trim(),
-      email: email ? String(email).trim() : null,
-      phone: String(phone).trim(),
-      message: message ? String(message).trim() : null,
+      name: sanitizedName,
+      email: sanitizedEmail || null,
+      phone: sanitizedPhone,
+      message: sanitizedMessage || null,
       property_id: finalPropertyId,
       notes: cleanNotes || null,
-      source: source || (resolvedPropertyTitle ? `Property Acquisition: ${resolvedPropertyTitle}` : 'Website Inquiry Modal'),
+      source: sanitizedSource || (resolvedPropertyTitle ? `Property Acquisition: ${resolvedPropertyTitle}` : 'Website Inquiry Modal'),
       entry_method: 'form',
       stage: 'new',
       stage_updated_at: new Date().toISOString(),
     };
 
-    let insertedLead: any = null;
+    let insertedLeadId: string | null = null;
 
-    // Primary insert attempt
-    const insertRes = await supabase.from('leads').insert(leadPayload).select().maybeSingle();
-
-    if (insertRes.error) {
-      console.warn('[api/leads] Primary lead insert error, falling back to minimal payload:', insertRes.error.message);
-      
-      const fallbackPayload = {
-        name: leadPayload.name,
-        phone: leadPayload.phone,
-        email: leadPayload.email,
-        message: leadPayload.message,
-        notes: leadPayload.notes,
-        source: leadPayload.source,
-      };
-
-      const fallbackRes = await supabase.from('leads').insert(fallbackPayload).select().maybeSingle();
-      if (fallbackRes.error) {
-        console.error('[api/leads] Fallback lead insert error:', fallbackRes.error.message);
-        throw fallbackRes.error;
+    // ─── RLS Least-Privilege Insert Handling ──────────────────────────────────
+    // P1 Security Hardening:
+    // When inserting as anon, public.leads has INSERT-only privilege (no SELECT).
+    // Using .insert() WITHOUT .select() avoids triggering PostgreSQL RETURNING clause
+    // which requires SELECT permissions and causes permission denied (42501) errors.
+    if (adminSupabase) {
+      const insertRes = await adminSupabase.from('leads').insert(leadPayload).select('id').maybeSingle();
+      if (!insertRes.error && insertRes.data) {
+        insertedLeadId = insertRes.data.id;
+      } else {
+        // Fallback with minimal payload
+        const fallbackPayload = {
+          name: leadPayload.name,
+          phone: leadPayload.phone,
+          email: leadPayload.email,
+          message: leadPayload.message,
+          notes: leadPayload.notes,
+          source: leadPayload.source,
+        };
+        const fallbackRes = await adminSupabase.from('leads').insert(fallbackPayload).select('id').maybeSingle();
+        if (fallbackRes.error) {
+          console.error('[api/leads] Admin fallback lead insert error:', fallbackRes.error.message);
+          throw fallbackRes.error;
+        }
+        if (fallbackRes.data) {
+          insertedLeadId = fallbackRes.data.id;
+        }
       }
-      insertedLead = fallbackRes.data;
     } else {
-      insertedLead = insertRes.data;
+      // Anon client: execute INSERT only without .select()
+      const insertRes = await supabase.from('leads').insert(leadPayload);
+      if (insertRes.error) {
+        console.warn('[api/leads] Anon lead insert error, attempting minimal fallback:', insertRes.error.message);
+        const fallbackPayload = {
+          name: leadPayload.name,
+          phone: leadPayload.phone,
+          email: leadPayload.email,
+          message: leadPayload.message,
+          notes: leadPayload.notes,
+          source: leadPayload.source,
+        };
+        const fallbackRes = await supabase.from('leads').insert(fallbackPayload);
+        if (fallbackRes.error) {
+          console.error('[api/leads] Anon fallback lead insert error:', fallbackRes.error.message);
+          throw fallbackRes.error;
+        }
+      }
     }
 
     const notificationPayload = {
@@ -186,11 +274,11 @@ export async function POST(request: Request) {
       message: leadPayload.message,
       propertyTitle: resolvedPropertyTitle,
       propertySlug: resolvedPropertySlug,
-      budget,
+      budget: sanitizedBudget || null,
       notes: cleanNotes,
       source: leadPayload.source,
       entryMethod: 'form',
-      preferredChannel: preferred_channel || 'WhatsApp',
+      preferredChannel: sanitizedChannel || 'WhatsApp',
     };
 
     // 1. Dispatch background notification if webhook/bot is active
@@ -203,9 +291,11 @@ export async function POST(request: Request) {
     // 2. Build direct WhatsApp URL to notify Farid Zakaria
     const faridWhatsAppUrl = getNotifyFaridWhatsAppUrl(notificationPayload);
 
+    // 3. Secure Response:
+    // Do NOT return unmasked client phone or private details in response body
     return NextResponse.json({ 
       success: true, 
-      lead: insertedLead,
+      id: insertedLeadId || undefined,
       farid_whatsapp_url: faridWhatsAppUrl 
     }, { status: 201 });
   } catch (err: any) {

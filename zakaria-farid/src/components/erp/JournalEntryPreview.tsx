@@ -61,7 +61,7 @@ export const localizeJournalDescription = (desc: string, isAr: boolean): string 
   // 1. Installment / tranche collections
   // Case A: Down payment / Tranche 0: "Installment #0 collected - Contract ZF-2026-2986"
   text = text.replace(/Installment\s*#0\s*(?:collected\s*(?:by\s*hand\s*)?[-–—]\s*)Contract\s*([A-Za-z0-9_-]+)/gi, 
-    'تحصيل دفعة مقدم الحجز (قسط رقم 0) - عقد رقم $1');
+    'تحصيل دفعة الحجز والمقدم النقدي (Tranche 0) - عقد رقم $1');
 
   // Case B: Tranche N collected by hand: "Installment #3 collected by hand - Contract ZF-2026-4651"
   text = text.replace(/Installment\s*#(\d+)\s*collected\s*by\s*hand\s*[-–—]\s*Contract\s*([A-Za-z0-9_-]+)/gi, 

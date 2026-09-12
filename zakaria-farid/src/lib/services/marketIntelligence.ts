@@ -218,6 +218,7 @@ export interface PlatformDisplaySettings {
   showVIPAlerts: boolean;
   showFloorPlans: boolean;
   showCommuteTimes: boolean;
+  hidePropertyPrices?: boolean;
   contact: PlatformContactSettings;
   whatsappAutomation?: PlatformWhatsAppAutomationSettings;
   home?: PlatformHomeSettings;
@@ -513,6 +514,7 @@ export const DEFAULT_PLATFORM_SETTINGS: PlatformDisplaySettings = {
   showVIPAlerts: true,
   showFloorPlans: true,
   showCommuteTimes: true,
+  hidePropertyPrices: false,
   contact: DEFAULT_CONTACT_SETTINGS,
   whatsappAutomation: DEFAULT_WHATSAPP_AUTOMATION_SETTINGS,
   home: DEFAULT_HOME_SETTINGS,
@@ -531,6 +533,7 @@ export function getStoredPlatformSettings(): PlatformDisplaySettings {
       return {
         ...DEFAULT_PLATFORM_SETTINGS,
         ...parsed,
+        hidePropertyPrices: parsed.hidePropertyPrices ?? false,
         contact: {
           ...DEFAULT_CONTACT_SETTINGS,
           ...(parsed.contact || {})
@@ -560,6 +563,7 @@ export function saveStoredPlatformSettings(settings: PlatformDisplaySettings): v
   if (typeof window === 'undefined') return;
   try {
     localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings));
+    document.cookie = `zf_hide_prices=${settings.hidePropertyPrices ? 'true' : 'false'}; path=/; max-age=31536000; SameSite=Lax`;
     window.dispatchEvent(new Event('zf_platform_settings_updated'));
   } catch (e) {
     console.warn('Error saving platform settings', e);

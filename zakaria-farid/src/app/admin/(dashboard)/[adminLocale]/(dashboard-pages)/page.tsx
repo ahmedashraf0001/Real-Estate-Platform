@@ -3,7 +3,7 @@ import Link from 'next/link';
 import {
   Building2, Users, TrendingUp, Plus, Crown, AlertTriangle,
   Sparkles, CheckCircle2, ArrowRight, DollarSign, PieChart, Clock, MessageCircle, Home, Castle, SunMedium, ShieldCheck, Compass, Eye, Zap,
-  ExternalLink, Phone, Pencil, ArrowUpRight, MapPin, BarChart3
+  ExternalLink, Phone, Pencil, ArrowUpRight, MapPin, BarChart3, Landmark
 } from 'lucide-react';
 import { formatPrice } from '@/lib/utils/formatting';
 import { formatInternationalWhatsAppNumber } from '@/lib/services/whatsappNotifier';
@@ -129,17 +129,17 @@ export default async function AdminDashboard({ params }: Props) {
         justifyContent: 'space-between',
         flexWrap: 'wrap',
         gap: '16px',
-        background: 'rgba(16, 20, 29, 0.85)',
+        background: 'var(--admin-card-bg, rgba(16, 20, 29, 0.85))',
         backdropFilter: 'blur(20px)',
         WebkitBackdropFilter: 'blur(20px)',
         padding: '20px 24px',
         borderRadius: '16px',
-        border: '1px solid rgba(255, 255, 255, 0.08)',
-        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)'
+        border: '1px solid var(--admin-card-border, #CBD5E1)',
+        boxShadow: 'var(--admin-card-shadow, 0 8px 32px rgba(0, 0, 0, 0.4))'
       }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-            <h1 style={{ fontSize: '20px', fontWeight: 800, margin: 0, color: '#FFFFFF', letterSpacing: '-0.02em' }}>
+            <h1 style={{ fontSize: '20px', fontWeight: 800, margin: 0, color: 'var(--admin-text-title, #FFFFFF)', letterSpacing: '-0.02em' }}>
               {isAr ? 'مركز الإدارة والعمليات العقارية' : 'Executive Overview & Operations'}
             </h1>
             <span style={{
@@ -148,13 +148,13 @@ export default async function AdminDashboard({ params }: Props) {
               padding: '3px 10px',
               borderRadius: '9999px',
               background: 'rgba(229, 184, 105, 0.12)',
-              color: '#E5B869',
+              color: 'var(--gold-primary, #E5B869)',
               border: '1px solid rgba(229, 184, 105, 0.3)'
             }}>
               {activeCount} {isAr ? 'عقار معروض للبيع' : 'Active Listed Estates'}
             </span>
           </div>
-          <p style={{ fontSize: '12.5px', color: 'rgba(255, 255, 255, 0.6)', marginTop: '4px', margin: '4px 0 0', fontWeight: 500 }}>
+          <p style={{ fontSize: '12.5px', color: 'var(--admin-text-muted, #475569)', marginTop: '4px', margin: '4px 0 0', fontWeight: 500 }}>
             {isAr
               ? 'متابعة حركة المبيعات، ومحفظة الأصول المعروضة، واستفسارات كبار العملاء المباشرة لفريد زكريا'
               : 'Sovereign portfolio valuation, live estate inventory, and high-intent buyer acquisition pipeline.'}
@@ -174,9 +174,9 @@ export default async function AdminDashboard({ params }: Props) {
               borderRadius: '10px',
               fontSize: '12px',
               fontWeight: 700,
-              background: 'rgba(255, 255, 255, 0.04)',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
-              color: 'rgba(255, 255, 255, 0.85)',
+              background: 'var(--admin-card-bg-subtle, rgba(255, 255, 255, 0.04))',
+              border: '1px solid var(--admin-card-border, #CBD5E1)',
+              color: 'var(--admin-text-body, #334155)',
               textDecoration: 'none',
               transition: 'all 150ms ease'
             }}
@@ -213,33 +213,48 @@ export default async function AdminDashboard({ params }: Props) {
         
         {/* KPI 1: Active Portfolio Valuation */}
         <div style={{
-          background: 'rgba(16, 20, 29, 0.75)',
+          background: 'var(--admin-card-bg, rgba(16, 20, 29, 0.75))',
           backdropFilter: 'blur(16px)',
           borderRadius: '14px',
           padding: '16px 18px',
-          border: '1px solid rgba(229, 184, 105, 0.25)',
+          border: '1px solid var(--admin-card-border, #CBD5E1)',
+          boxShadow: 'var(--admin-card-shadow, 0 1px 3px rgba(0, 0, 0, 0.05))',
           display: 'flex',
           flexDirection: 'column',
           justifyContent: 'space-between',
           gap: '8px'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span style={{ fontSize: '11px', fontWeight: 800, color: 'rgba(255, 255, 255, 0.55)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+            <span style={{ fontSize: '11px', fontWeight: 800, color: 'var(--admin-text-muted, #475569)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
               {isAr ? 'القيمة السوقية للمحفظة' : 'Active Portfolio Value'}
             </span>
-            <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: 'rgba(229, 184, 105, 0.12)', color: '#E5B869', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: 'rgba(229, 184, 105, 0.12)', color: '#C5A059', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <DollarSign size={14} strokeWidth={2.5} />
             </div>
           </div>
           <div>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
-              <span style={{ fontSize: '12px', fontWeight: 800, color: '#E5B869' }}>EGP</span>
-              <span style={{ fontSize: '24px', fontWeight: 800, color: '#FFFFFF', letterSpacing: '-0.02em' }}>
-                {new Intl.NumberFormat(isAr ? 'ar-EG' : 'en-EG', { maximumFractionDigits: 0 }).format(portfolioValue)}
+              <span style={{
+                fontSize: '24px',
+                fontWeight: 800,
+                fontVariantNumeric: 'tabular-nums',
+                color: 'var(--admin-text-title, #0F172A)',
+                letterSpacing: '-0.02em'
+              }}>
+                {Number(portfolioValue).toLocaleString('en-US')}
+              </span>
+              <span style={{ fontSize: '12px', fontWeight: 800, color: 'var(--admin-gold-primary, #946F23)' }}>
+                {isAr ? 'ج.م' : 'EGP'}
               </span>
             </div>
-            <p style={{ fontSize: '11px', color: 'rgba(255, 255, 255, 0.5)', margin: '3px 0 0', fontWeight: 500 }}>
-              {isAr ? `متوسط الوحدة: ${new Intl.NumberFormat('en-EG', { notation: 'compact' }).format(avgPropertyPrice)} ج.م` : `Avg Listing: ${new Intl.NumberFormat('en-EG', { notation: 'compact' }).format(avgPropertyPrice)} EGP`}
+            <p style={{ fontSize: '11px', color: 'var(--admin-text-muted, #475569)', margin: '3px 0 0', fontWeight: 500, display: 'flex', alignItems: 'baseline', gap: '4px' }}>
+              <span>{isAr ? 'متوسط الوحدة:' : 'Avg Listing:'}</span>
+              <span style={{ fontWeight: 700, fontVariantNumeric: 'tabular-nums', color: 'var(--admin-text-title, #0F172A)' }}>
+                {Number(avgPropertyPrice).toLocaleString('en-US')}
+              </span>
+              <span style={{ color: 'var(--admin-gold-primary, #946F23)', fontWeight: 700 }}>
+                {isAr ? 'ج.م' : 'EGP'}
+              </span>
             </p>
           </div>
         </div>
@@ -248,11 +263,12 @@ export default async function AdminDashboard({ params }: Props) {
         <Link
           href={`/admin/${adminLocale}/properties`}
           style={{
-            background: 'rgba(16, 20, 29, 0.75)',
+            background: 'var(--admin-card-bg, rgba(16, 20, 29, 0.75))',
             backdropFilter: 'blur(16px)',
             borderRadius: '14px',
             padding: '16px 18px',
-            border: '1px solid rgba(255, 255, 255, 0.08)',
+            border: '1px solid var(--admin-card-border, #CBD5E1)',
+            boxShadow: 'var(--admin-card-shadow, 0 1px 3px rgba(0, 0, 0, 0.05))',
             display: 'flex',
             flexDirection: 'column',
             justifyContent: 'space-between',
@@ -263,19 +279,19 @@ export default async function AdminDashboard({ params }: Props) {
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span style={{ fontSize: '11px', fontWeight: 800, color: 'rgba(255, 255, 255, 0.55)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+            <span style={{ fontSize: '11px', fontWeight: 800, color: 'var(--admin-text-muted, #475569)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
               {isAr ? 'المعروض النشط بالكتالوج' : 'Catalog Inventory'}
             </span>
-            <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: 'rgba(255, 255, 255, 0.05)', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: 'var(--admin-card-bg-subtle, rgba(255, 255, 255, 0.05))', color: 'var(--admin-text-title, #FFFFFF)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <Building2 size={14} />
             </div>
           </div>
           <div>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
-              <span style={{ fontSize: '24px', fontWeight: 800, color: '#FFFFFF' }}>{activeCount}</span>
-              <span style={{ fontSize: '12px', fontWeight: 600, color: 'rgba(255, 255, 255, 0.5)' }}>{isAr ? 'عقار نشط' : 'Units'}</span>
+              <span style={{ fontSize: '24px', fontWeight: 800, color: 'var(--admin-text-title, #FFFFFF)' }}>{activeCount}</span>
+              <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--admin-text-muted, #475569)' }}>{isAr ? 'عقار نشط' : 'Units'}</span>
             </div>
-            <p style={{ fontSize: '11px', color: '#E5B869', margin: '3px 0 0', fontWeight: 600 }}>
+            <p style={{ fontSize: '11px', color: 'var(--admin-gold-primary, #C5A059)', margin: '3px 0 0', fontWeight: 600 }}>
               {featuredCount} {isAr ? 'عقارات مميزة في الواجهة' : 'Featured Trophy Assets'}
             </p>
           </div>
@@ -285,11 +301,12 @@ export default async function AdminDashboard({ params }: Props) {
         <Link
           href={`/admin/${adminLocale}/leads`}
           style={{
-            background: 'rgba(16, 20, 29, 0.75)',
+            background: 'var(--admin-card-bg, rgba(16, 20, 29, 0.75))',
             backdropFilter: 'blur(16px)',
             borderRadius: '14px',
             padding: '16px 18px',
-            border: '1px solid rgba(255, 255, 255, 0.08)',
+            border: '1px solid var(--admin-card-border, #CBD5E1)',
+            boxShadow: 'var(--admin-card-shadow, 0 1px 3px rgba(0, 0, 0, 0.05))',
             display: 'flex',
             flexDirection: 'column',
             justifyContent: 'space-between',
@@ -300,19 +317,19 @@ export default async function AdminDashboard({ params }: Props) {
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span style={{ fontSize: '11px', fontWeight: 800, color: 'rgba(255, 255, 255, 0.55)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+            <span style={{ fontSize: '11px', fontWeight: 800, color: 'var(--admin-text-muted, #475569)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
               {isAr ? 'طلبات العملاء بالمحفظة' : 'Client Inquiries'}
             </span>
-            <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: 'rgba(229, 184, 105, 0.12)', color: '#E5B869', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: 'rgba(229, 184, 105, 0.12)', color: '#C5A059', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <Users size={14} />
             </div>
           </div>
           <div>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
-              <span style={{ fontSize: '24px', fontWeight: 800, color: '#FFFFFF' }}>{totalLeadsCount}</span>
-              <span style={{ fontSize: '12px', fontWeight: 600, color: 'rgba(255, 255, 255, 0.5)' }}>{isAr ? 'طلب' : 'Inquiries'}</span>
+              <span style={{ fontSize: '24px', fontWeight: 800, color: 'var(--admin-text-title, #FFFFFF)' }}>{totalLeadsCount}</span>
+              <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--admin-text-muted, #475569)' }}>{isAr ? 'طلب' : 'Inquiries'}</span>
             </div>
-            <p style={{ fontSize: '11px', color: '#34D399', margin: '3px 0 0', fontWeight: 600 }}>
+            <p style={{ fontSize: '11px', color: 'var(--admin-success-text, #047857)', margin: '3px 0 0', fontWeight: 700 }}>
               {closedWonCount} {isAr ? 'عقود استحواذ ناجحة' : 'Closed Deals'} ({conversionRate}%)
             </p>
           </div>
@@ -320,18 +337,19 @@ export default async function AdminDashboard({ params }: Props) {
 
         {/* KPI 4: Response SLA Health */}
         <div style={{
-          background: 'rgba(16, 20, 29, 0.75)',
+          background: 'var(--admin-card-bg, rgba(16, 20, 29, 0.75))',
           backdropFilter: 'blur(16px)',
           borderRadius: '14px',
           padding: '16px 18px',
-          border: staleLeadsCount > 0 ? '1px solid rgba(244, 63, 94, 0.35)' : '1px solid rgba(16, 185, 129, 0.3)',
+          border: staleLeadsCount > 0 ? '1px solid rgba(244, 63, 94, 0.35)' : '1px solid var(--admin-card-border, #CBD5E1)',
+          boxShadow: 'var(--admin-card-shadow, 0 1px 3px rgba(0, 0, 0, 0.05))',
           display: 'flex',
           flexDirection: 'column',
           justifyContent: 'space-between',
           gap: '8px'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span style={{ fontSize: '11px', fontWeight: 800, color: 'rgba(255, 255, 255, 0.55)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+            <span style={{ fontSize: '11px', fontWeight: 800, color: 'var(--admin-text-muted, #475569)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
               {isAr ? 'كفاءة سرعة الاستجابة' : 'Response SLA'}
             </span>
             <div style={{
@@ -352,11 +370,11 @@ export default async function AdminDashboard({ params }: Props) {
               <span style={{ fontSize: '24px', fontWeight: 800, color: staleLeadsCount > 0 ? '#FB7185' : '#34D399' }}>
                 {staleLeadsCount > 0 ? `${staleLeadsCount}` : '100%'}
               </span>
-              <span style={{ fontSize: '12px', fontWeight: 600, color: 'rgba(255, 255, 255, 0.5)' }}>
+              <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--admin-text-muted, #475569)' }}>
                 {staleLeadsCount > 0 ? (isAr ? 'تتطلب رد >24h' : 'Pending >24h') : (isAr ? 'استجابة ممتازة' : 'Optimal')}
               </span>
             </div>
-            <p style={{ fontSize: '11px', color: 'rgba(255, 255, 255, 0.5)', margin: '3px 0 0', fontWeight: 500 }}>
+            <p style={{ fontSize: '11px', color: 'var(--admin-text-muted, #475569)', margin: '3px 0 0', fontWeight: 500 }}>
               {staleLeadsCount > 0 ? (isAr ? 'يرجى التواصل مع العملاء المعلقين' : 'Follow up with pending leads') : (isAr ? 'زمن الاستجابة أقل من 12 ساعة' : 'All inquiries handled <12h')}
             </p>
           </div>
@@ -367,10 +385,11 @@ export default async function AdminDashboard({ params }: Props) {
       {/* ─── 3. Strategic Executive Advisory Alert (Focused) ─── */}
       {topAdvisory && (
         <div style={{
-          background: 'rgba(16, 20, 29, 0.85)',
+          background: 'var(--admin-advisory-bg, #FFFFFF)',
           backdropFilter: 'blur(20px)',
           borderRadius: '14px',
-          border: topAdvisory.severity === 'high' ? '1px solid rgba(244, 63, 94, 0.3)' : '1px solid rgba(229, 184, 105, 0.3)',
+          border: topAdvisory.severity === 'high' ? '1.5px solid rgba(244, 63, 94, 0.4)' : '1.5px solid var(--admin-advisory-border, #C5A059)',
+          boxShadow: '0 4px 16px -2px rgba(197, 160, 89, 0.12), 0 1px 3px rgba(0, 0, 0, 0.04)',
           padding: '14px 20px',
           display: 'flex',
           alignItems: 'center',
@@ -384,7 +403,7 @@ export default async function AdminDashboard({ params }: Props) {
               height: '32px',
               borderRadius: '8px',
               background: topAdvisory.severity === 'high' ? 'rgba(244, 63, 94, 0.15)' : 'rgba(229, 184, 105, 0.15)',
-              color: topAdvisory.severity === 'high' ? '#FB7185' : '#E5B869',
+              color: topAdvisory.severity === 'high' ? '#FB7185' : '#C5A059',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -394,16 +413,16 @@ export default async function AdminDashboard({ params }: Props) {
             </div>
             <div style={{ minWidth: 0 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <strong style={{ fontSize: '13px', color: '#FFFFFF' }}>
+                <strong style={{ fontSize: '13px', color: 'var(--admin-advisory-title, #0F172A)' }}>
                   {isAr ? topAdvisory.titleAr : topAdvisory.titleEn}
                 </strong>
                 {topAdvisory.metric && (
-                  <span style={{ fontSize: '9.5px', fontWeight: 800, padding: '1px 6px', borderRadius: '4px', background: 'rgba(255,255,255,0.06)', color: '#E5B869' }}>
+                  <span style={{ fontSize: '9.5px', fontWeight: 800, padding: '1px 6px', borderRadius: '4px', background: 'rgba(197, 160, 89, 0.12)', color: 'var(--admin-gold-primary, #946F23)' }}>
                     {topAdvisory.metric}
                   </span>
                 )}
               </div>
-              <p style={{ margin: '2px 0 0', fontSize: '11.5px', color: 'rgba(255, 255, 255, 0.6)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              <p style={{ margin: '2px 0 0', fontSize: '11.5px', color: 'var(--admin-advisory-text, #334155)', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {isAr ? topAdvisory.messageAr : topAdvisory.messageEn}
               </p>
             </div>
@@ -416,15 +435,15 @@ export default async function AdminDashboard({ params }: Props) {
                 style={{
                   fontSize: '11.5px',
                   fontWeight: 700,
-                  color: topAdvisory.severity === 'high' ? '#FB7185' : '#E5B869',
+                  color: topAdvisory.severity === 'high' ? '#FB7185' : 'var(--admin-gold-primary, #946F23)',
                   textDecoration: 'none',
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: '4px',
                   padding: '6px 12px',
                   borderRadius: '8px',
-                  background: 'rgba(255,255,255,0.04)',
-                  border: '1px solid rgba(255,255,255,0.08)'
+                  background: 'var(--admin-card-bg-subtle, #F8FAFC)',
+                  border: '1px solid var(--admin-card-border, #CBD5E1)'
                 }}
               >
                 <span>{isAr ? topAdvisory.actionTextAr || 'متابعة الإجراء' : topAdvisory.actionTextEn || 'Take Action'}</span>
@@ -435,15 +454,208 @@ export default async function AdminDashboard({ params }: Props) {
         </div>
       )}
 
+      {/* ─── FIN-OS Executive Workstation Gateway ─── */}
+      <div style={{
+        background: 'var(--admin-card-bg, #FFFFFF)',
+        backdropFilter: 'blur(20px)',
+        borderRadius: '16px',
+        border: '1px solid var(--admin-card-border, #D8D2C4)',
+        boxShadow: 'var(--admin-card-shadow, 0 4px 20px rgba(0, 0, 0, 0.05))',
+        padding: '18px 22px',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '14px',
+        position: 'relative',
+        overflow: 'hidden'
+      }}>
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: '12px'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div style={{
+              width: '40px',
+              height: '40px',
+              borderRadius: '10px',
+              background: 'linear-gradient(135deg, rgba(221, 167, 82, 0.2) 0%, rgba(148, 111, 35, 0.1) 100%)',
+              border: '1px solid rgba(221, 167, 82, 0.4)',
+              color: 'var(--admin-gold-primary, #946F23)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0
+            }}>
+              <Landmark size={20} strokeWidth={2.2} />
+            </div>
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                <h2 style={{ fontSize: '15px', fontWeight: 800, margin: 0, color: 'var(--admin-text-title, #0F172A)' }}>
+                  {isAr ? 'محطة العمل المالية والمحاسبية FIN-OS' : 'FIN-OS Financial ERP Workstation'}
+                </h2>
+                <span style={{
+                  fontSize: '10px',
+                  fontWeight: 800,
+                  padding: '2px 8px',
+                  borderRadius: '9999px',
+                  background: 'rgba(221, 167, 82, 0.15)',
+                  color: 'var(--admin-gold-primary, #946F23)',
+                  border: '1px solid rgba(221, 167, 82, 0.35)'
+                }}>
+                  v2.4
+                </span>
+                <span style={{
+                  fontSize: '10px',
+                  fontWeight: 700,
+                  padding: '2px 8px',
+                  borderRadius: '9999px',
+                  background: 'rgba(16, 185, 129, 0.1)',
+                  color: '#047857',
+                  border: '1px solid rgba(16, 185, 129, 0.25)'
+                }}>
+                  {isAr ? '● متصل بالدفتر العام' : '● Live Ledger Synced'}
+                </span>
+              </div>
+              <p style={{ fontSize: '12px', color: 'var(--admin-text-muted, #64748B)', margin: '3px 0 0', fontWeight: 500 }}>
+                {isAr
+                  ? 'إدارة متكاملة للخزينة والسيولة النقدية، دورة عقود البيع، أجندة الشيكات الآجلة، وتوزيعات أرباح الشركاء.'
+                  : 'Sovereign financial engine for multi-tranche sales contracts, PDC lifecycle, and cash-gated equity distributions.'}
+              </p>
+            </div>
+          </div>
+
+          <Link
+            href={`/fin-os/${adminLocale}`}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '8px 16px',
+              borderRadius: '9px',
+              fontSize: '12px',
+              fontWeight: 800,
+              background: 'linear-gradient(135deg, #DDA752 0%, #B8860B 100%)',
+              color: '#0A0C10',
+              textDecoration: 'none',
+              boxShadow: '0 3px 12px rgba(221, 167, 82, 0.25)',
+              transition: 'all 150ms ease'
+            }}
+          >
+            <span>{isAr ? 'فتح محطة FIN-OS الكاملة' : 'Launch Full FIN-OS'}</span>
+            <ArrowUpRight size={14} />
+          </Link>
+        </div>
+
+        {/* Quick Module Launch Buttons */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+          gap: '10px',
+          paddingTop: '8px',
+          borderTop: '1px solid var(--admin-card-border, #D8D2C4)'
+        }}>
+          <Link
+            href={`/fin-os/${adminLocale}?tab=operations`}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '10px 12px',
+              borderRadius: '10px',
+              background: 'var(--admin-card-bg-subtle, #F8FAFC)',
+              border: '1px solid var(--admin-card-border, #D8D2C4)',
+              color: 'var(--admin-text-title, #0F172A)',
+              textDecoration: 'none',
+              fontSize: '12px',
+              fontWeight: 700,
+              transition: 'all 0.15s ease'
+            }}
+          >
+            <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#10B981' }} />
+            <span>{isAr ? 'الخزينة والعمليات' : 'Treasury & Ops'}</span>
+            <ArrowRight size={13} style={{ marginInlineStart: 'auto', color: 'var(--admin-gold-primary, #946F23)', transform: isAr ? 'scaleX(-1)' : 'none' }} />
+          </Link>
+
+          <Link
+            href={`/fin-os/${adminLocale}?tab=contracts`}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '10px 12px',
+              borderRadius: '10px',
+              background: 'var(--admin-card-bg-subtle, #F8FAFC)',
+              border: '1px solid var(--admin-card-border, #D8D2C4)',
+              color: 'var(--admin-text-title, #0F172A)',
+              textDecoration: 'none',
+              fontSize: '12px',
+              fontWeight: 700,
+              transition: 'all 0.15s ease'
+            }}
+          >
+            <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#3B82F6' }} />
+            <span>{isAr ? 'عقود البيع والعملاء' : 'Contracts & Sales'}</span>
+            <ArrowRight size={13} style={{ marginInlineStart: 'auto', color: 'var(--admin-gold-primary, #946F23)', transform: isAr ? 'scaleX(-1)' : 'none' }} />
+          </Link>
+
+          <Link
+            href={`/fin-os/${adminLocale}?tab=pdc`}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '10px 12px',
+              borderRadius: '10px',
+              background: 'var(--admin-card-bg-subtle, #F8FAFC)',
+              border: '1px solid var(--admin-card-border, #D8D2C4)',
+              color: 'var(--admin-text-title, #0F172A)',
+              textDecoration: 'none',
+              fontSize: '12px',
+              fontWeight: 700,
+              transition: 'all 0.15s ease'
+            }}
+          >
+            <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#F59E0B' }} />
+            <span>{isAr ? 'أجندة الشيكات والأقساط' : 'PDC & Due Cheques'}</span>
+            <ArrowRight size={13} style={{ marginInlineStart: 'auto', color: 'var(--admin-gold-primary, #946F23)', transform: isAr ? 'scaleX(-1)' : 'none' }} />
+          </Link>
+
+          <Link
+            href={`/fin-os/${adminLocale}?tab=ledger`}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '10px 12px',
+              borderRadius: '10px',
+              background: 'var(--admin-card-bg-subtle, #F8FAFC)',
+              border: '1px solid var(--admin-card-border, #D8D2C4)',
+              color: 'var(--admin-text-title, #0F172A)',
+              textDecoration: 'none',
+              fontSize: '12px',
+              fontWeight: 700,
+              transition: 'all 0.15s ease'
+            }}
+          >
+            <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#8B5CF6' }} />
+            <span>{isAr ? 'الدفتر العام واليومية' : 'General Ledger'}</span>
+            <ArrowRight size={13} style={{ marginInlineStart: 'auto', color: 'var(--admin-gold-primary, #946F23)', transform: isAr ? 'scaleX(-1)' : 'none' }} />
+          </Link>
+        </div>
+      </div>
+
       {/* ─── 4. Live Inquiries & Portfolio Inventory ─── */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '16px' }}>
         
         {/* Left: Recent Inbound Client Inquiries */}
         <div style={{
-          background: 'rgba(16, 20, 29, 0.75)',
+          background: 'var(--admin-card-bg, rgba(16, 20, 29, 0.75))',
           backdropFilter: 'blur(20px)',
           borderRadius: '16px',
-          border: '1px solid rgba(255, 255, 255, 0.08)',
+          border: '1px solid var(--admin-card-border, #CBD5E1)',
+          boxShadow: 'var(--admin-card-shadow, 0 1px 3px rgba(0, 0, 0, 0.05))',
           padding: '20px',
           display: 'flex',
           flexDirection: 'column',
@@ -451,14 +663,14 @@ export default async function AdminDashboard({ params }: Props) {
         }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#E5B869' }} />
-              <h2 style={{ fontSize: '14.5px', fontWeight: 800, margin: 0, color: '#FFFFFF' }}>
+              <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#C5A059' }} />
+              <h2 style={{ fontSize: '14.5px', fontWeight: 800, margin: 0, color: 'var(--admin-text-title, #FFFFFF)' }}>
                 {isAr ? 'أحدث استفسارات العملاء الواردة' : 'Recent Inbound Acquisition Leads'}
               </h2>
             </div>
             <Link
               href={`/admin/${adminLocale}/leads`}
-              style={{ fontSize: '11.5px', fontWeight: 700, color: '#E5B869', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}
+              style={{ fontSize: '11.5px', fontWeight: 700, color: 'var(--admin-gold-primary, #C5A059)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}
             >
               <span>{isAr ? 'فتح CRM بالكامل' : 'View CRM'}</span>
               <ArrowRight size={12} style={{ transform: isAr ? 'scaleX(-1)' : 'none' }} />
@@ -466,7 +678,7 @@ export default async function AdminDashboard({ params }: Props) {
           </div>
 
           {recentLeads.length === 0 ? (
-            <div style={{ padding: '36px', textAlign: 'center', color: 'rgba(255, 255, 255, 0.45)', border: '1px dashed rgba(255, 255, 255, 0.08)', borderRadius: '12px', fontSize: '12.5px' }}>
+            <div style={{ padding: '36px', textAlign: 'center', color: 'var(--admin-text-muted, #475569)', border: '1px dashed var(--admin-card-border, #CBD5E1)', borderRadius: '12px', fontSize: '12.5px' }}>
               {isAr ? 'لا توجد استفسارات عملاء جديدة حالياً' : 'No recent client inquiries found.'}
             </div>
           ) : (
@@ -490,8 +702,8 @@ export default async function AdminDashboard({ params }: Props) {
                       justifyContent: 'space-between',
                       gap: '12px',
                       padding: '10px 14px',
-                      background: 'rgba(255, 255, 255, 0.02)',
-                      border: '1px solid rgba(255, 255, 255, 0.06)',
+                      background: 'var(--admin-card-bg-subtle, rgba(255, 255, 255, 0.02))',
+                      border: '1px solid var(--admin-card-border-subtle, #CBD5E1)',
                       borderRadius: '10px',
                       transition: 'all 150ms ease'
                     }}
@@ -502,7 +714,7 @@ export default async function AdminDashboard({ params }: Props) {
                         height: '28px',
                         borderRadius: '50%',
                         background: 'rgba(229, 184, 105, 0.12)',
-                        color: '#E5B869',
+                        color: 'var(--admin-gold-primary, #C5A059)',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
@@ -515,7 +727,7 @@ export default async function AdminDashboard({ params }: Props) {
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <strong style={{ fontSize: '12.5px', color: '#FFFFFF', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          <strong style={{ fontSize: '12.5px', color: 'var(--admin-text-title, #FFFFFF)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                             {lead.name}
                           </strong>
                           <span style={{
@@ -530,8 +742,10 @@ export default async function AdminDashboard({ params }: Props) {
                             {isAr ? stageInfo.ar : stageInfo.en}
                           </span>
                         </div>
-                        <span style={{ fontSize: '11px', color: 'rgba(255, 255, 255, 0.5)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {lead.property?.title_en || lead.property?.title_ar || (isAr ? 'استفسار عام' : 'General Inquiry')} • {formatTimeAgo(lead.created_at)}
+                        <span style={{ fontSize: '11.5px', color: 'var(--admin-text-muted, #475569)', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {lead.property?.title_en || lead.property?.title_ar || (isAr ? 'استفسار عام' : 'General Inquiry')}
+                          <span style={{ margin: '0 4px', color: 'var(--admin-divider, #CBD5E1)' }}>•</span>
+                          <span style={{ color: 'var(--admin-text-body, #334155)', fontWeight: 600 }}>{formatTimeAgo(lead.created_at)}</span>
                         </span>
                       </div>
                     </div>
@@ -547,9 +761,9 @@ export default async function AdminDashboard({ params }: Props) {
                               width: '26px',
                               height: '26px',
                               borderRadius: '6px',
-                              background: 'rgba(16, 185, 129, 0.12)',
-                              border: '1px solid rgba(16, 185, 129, 0.25)',
-                              color: '#34D399',
+                              background: 'var(--admin-success-bg, rgba(4, 120, 87, 0.08))',
+                              border: '1px solid var(--admin-success-border, rgba(4, 120, 87, 0.25))',
+                              color: 'var(--admin-success-text, #047857)',
                               display: 'inline-flex',
                               alignItems: 'center',
                               justifyContent: 'center'
@@ -564,9 +778,9 @@ export default async function AdminDashboard({ params }: Props) {
                               width: '26px',
                               height: '26px',
                               borderRadius: '6px',
-                              background: 'rgba(255, 255, 255, 0.04)',
-                              border: '1px solid rgba(255, 255, 255, 0.08)',
-                              color: 'rgba(255, 255, 255, 0.75)',
+                              background: 'var(--admin-card-bg-subtle, rgba(255, 255, 255, 0.04))',
+                              border: '1px solid var(--admin-card-border, #CBD5E1)',
+                              color: 'var(--admin-text-body, #334155)',
                               display: 'inline-flex',
                               alignItems: 'center',
                               justifyContent: 'center'
@@ -587,10 +801,11 @@ export default async function AdminDashboard({ params }: Props) {
 
         {/* Right: Portfolio Estates Inventory Quick Access */}
         <div style={{
-          background: 'rgba(16, 20, 29, 0.75)',
+          background: 'var(--admin-card-bg, rgba(16, 20, 29, 0.75))',
           backdropFilter: 'blur(20px)',
           borderRadius: '16px',
-          border: '1px solid rgba(255, 255, 255, 0.08)',
+          border: '1px solid var(--admin-card-border, #CBD5E1)',
+          boxShadow: 'var(--admin-card-shadow, 0 1px 3px rgba(0, 0, 0, 0.05))',
           padding: '20px',
           display: 'flex',
           flexDirection: 'column',
@@ -598,14 +813,14 @@ export default async function AdminDashboard({ params }: Props) {
         }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#E5B869' }} />
-              <h2 style={{ fontSize: '14.5px', fontWeight: 800, margin: 0, color: '#FFFFFF' }}>
+              <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#C5A059' }} />
+              <h2 style={{ fontSize: '14.5px', fontWeight: 800, margin: 0, color: 'var(--admin-text-title, #FFFFFF)' }}>
                 {isAr ? 'محفظة العقارات الفاخرة' : 'Active Sovereign Inventory'}
               </h2>
             </div>
             <Link
               href={`/admin/${adminLocale}/properties`}
-              style={{ fontSize: '11.5px', fontWeight: 700, color: '#E5B869', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}
+              style={{ fontSize: '11.5px', fontWeight: 700, color: 'var(--admin-gold-primary, #C5A059)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}
             >
               <span>{isAr ? 'إدارة الكتالوج' : 'All Properties'}</span>
               <ArrowRight size={12} style={{ transform: isAr ? 'scaleX(-1)' : 'none' }} />
@@ -626,8 +841,8 @@ export default async function AdminDashboard({ params }: Props) {
                     justifyContent: 'space-between',
                     gap: '12px',
                     padding: '8px 12px',
-                    background: 'rgba(255, 255, 255, 0.02)',
-                    border: '1px solid rgba(255, 255, 255, 0.06)',
+                    background: 'var(--admin-card-bg-subtle, rgba(255, 255, 255, 0.02))',
+                    border: '1px solid var(--admin-card-border-subtle, #CBD5E1)',
                     borderRadius: '10px'
                   }}
                 >
@@ -637,10 +852,10 @@ export default async function AdminDashboard({ params }: Props) {
                       <img src={photo} alt={title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-                      <strong style={{ fontSize: '12.5px', color: '#FFFFFF', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      <strong style={{ fontSize: '12.5px', color: 'var(--admin-text-title, #FFFFFF)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {title}
                       </strong>
-                      <span style={{ fontSize: '11px', color: '#E5B869', fontWeight: 700 }}>
+                      <span style={{ fontSize: '11px', color: 'var(--admin-gold-primary, #C5A059)', fontWeight: 700 }}>
                         {formatPrice(prop.price_egp, adminLocale)}
                       </span>
                     </div>
@@ -655,7 +870,7 @@ export default async function AdminDashboard({ params }: Props) {
                         borderRadius: '6px',
                         background: 'rgba(229, 184, 105, 0.12)',
                         border: '1px solid rgba(229, 184, 105, 0.25)',
-                        color: '#E5B869',
+                        color: 'var(--admin-gold-primary, #C5A059)',
                         display: 'inline-flex',
                         alignItems: 'center',
                         justifyContent: 'center'
@@ -672,9 +887,9 @@ export default async function AdminDashboard({ params }: Props) {
                           width: '26px',
                           height: '26px',
                           borderRadius: '6px',
-                          background: 'rgba(255, 255, 255, 0.04)',
-                          border: '1px solid rgba(255, 255, 255, 0.08)',
-                          color: 'rgba(255, 255, 255, 0.75)',
+                          background: 'var(--admin-card-bg-subtle, rgba(255, 255, 255, 0.04))',
+                          border: '1px solid var(--admin-card-border, #CBD5E1)',
+                          color: 'var(--admin-text-body, #334155)',
                           display: 'inline-flex',
                           alignItems: 'center',
                           justifyContent: 'center'
@@ -698,20 +913,21 @@ export default async function AdminDashboard({ params }: Props) {
         
         {/* Deal Progression Funnel */}
         <div style={{
-          background: 'rgba(16, 20, 29, 0.75)',
+          background: 'var(--admin-card-bg, rgba(16, 20, 29, 0.75))',
           backdropFilter: 'blur(20px)',
           borderRadius: '16px',
-          border: '1px solid rgba(255, 255, 255, 0.08)',
+          border: '1px solid var(--admin-card-border, #CBD5E1)',
+          boxShadow: 'var(--admin-card-shadow, 0 1px 3px rgba(0, 0, 0, 0.05))',
           padding: '20px',
           display: 'flex',
           flexDirection: 'column',
           gap: '14px'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <h3 style={{ fontSize: '13.5px', fontWeight: 800, margin: 0, color: '#FFFFFF' }}>
+            <h3 style={{ fontSize: '13.5px', fontWeight: 800, margin: 0, color: 'var(--admin-text-title, #FFFFFF)' }}>
               {isAr ? 'مسار تقدم الصفقات والمفاوضات' : 'Deal Progression Funnel'}
             </h3>
-            <span style={{ fontSize: '11px', fontWeight: 700, color: '#34D399' }}>
+            <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--admin-success-text, #047857)' }}>
               {conversionRate}% {isAr ? 'نسبة الإغلاق' : 'Win Rate'}
             </span>
           </div>
@@ -725,14 +941,14 @@ export default async function AdminDashboard({ params }: Props) {
               return (
                 <div key={stageKey} style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11.5px' }}>
-                    <span style={{ color: 'rgba(255, 255, 255, 0.65)', fontWeight: 600 }}>
+                    <span style={{ color: 'var(--admin-text-body, #334155)', fontWeight: 600 }}>
                       {isAr ? info.ar : info.en}
                     </span>
                     <strong style={{ color: info.color }}>
                       {count} ({pct}%)
                     </strong>
                   </div>
-                  <div style={{ width: '100%', height: '5px', background: 'rgba(255, 255, 255, 0.06)', borderRadius: '9999px', overflow: 'hidden' }}>
+                  <div style={{ width: '100%', height: '6px', background: 'var(--admin-track-bg, #E2E8F0)', borderRadius: '9999px', overflow: 'hidden' }}>
                     <div style={{ width: `${Math.max(count > 0 ? 6 : 0, pct)}%`, height: '100%', background: info.color, borderRadius: '9999px', transition: 'width 0.3s ease' }} />
                   </div>
                 </div>
@@ -743,20 +959,21 @@ export default async function AdminDashboard({ params }: Props) {
 
         {/* Regional Capital Allocation */}
         <div style={{
-          background: 'rgba(16, 20, 29, 0.75)',
+          background: 'var(--admin-card-bg, rgba(16, 20, 29, 0.75))',
           backdropFilter: 'blur(20px)',
           borderRadius: '16px',
-          border: '1px solid rgba(255, 255, 255, 0.08)',
+          border: '1px solid var(--admin-card-border, #CBD5E1)',
+          boxShadow: 'var(--admin-card-shadow, 0 1px 3px rgba(0, 0, 0, 0.05))',
           padding: '20px',
           display: 'flex',
           flexDirection: 'column',
           gap: '14px'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <h3 style={{ fontSize: '13.5px', fontWeight: 800, margin: 0, color: '#FFFFFF' }}>
+            <h3 style={{ fontSize: '13.5px', fontWeight: 800, margin: 0, color: 'var(--admin-text-title, #FFFFFF)' }}>
               {isAr ? 'توزيع القيمة حسب المناطق' : 'Regional Capital Allocation'}
             </h3>
-            <span style={{ fontSize: '11px', color: '#E5B869', fontWeight: 700 }}>
+            <span style={{ fontSize: '11px', color: 'var(--admin-gold-primary, #C5A059)', fontWeight: 700 }}>
               {Object.keys(districtRollup).length} {isAr ? 'مناطق رئيسية' : 'Districts'}
             </span>
           </div>
@@ -768,14 +985,14 @@ export default async function AdminDashboard({ params }: Props) {
               return (
                 <div key={district} style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11.5px' }}>
-                    <span style={{ color: 'rgba(255, 255, 255, 0.65)', fontWeight: 600 }}>
+                    <span style={{ color: 'var(--admin-text-body, #334155)', fontWeight: 600 }}>
                       {district} ({data.units} {isAr ? 'وحدات' : 'Units'})
                     </span>
-                    <strong style={{ color: '#E5B869' }}>
+                    <strong style={{ color: 'var(--admin-gold-primary, #C5A059)' }}>
                       {new Intl.NumberFormat(isAr ? 'ar-EG' : 'en-EG', { notation: 'compact' }).format(data.value)} EGP ({pct}%)
                     </strong>
                   </div>
-                  <div style={{ width: '100%', height: '5px', background: 'rgba(255, 255, 255, 0.06)', borderRadius: '9999px', overflow: 'hidden' }}>
+                  <div style={{ width: '100%', height: '6px', background: 'var(--admin-track-bg, #E2E8F0)', borderRadius: '9999px', overflow: 'hidden' }}>
                     <div style={{ width: `${Math.max(4, pct)}%`, height: '100%', background: 'linear-gradient(90deg, #C5A059, #E5B869)', borderRadius: '9999px' }} />
                   </div>
                 </div>
@@ -786,20 +1003,21 @@ export default async function AdminDashboard({ params }: Props) {
 
         {/* Typology Capital Rollup */}
         <div style={{
-          background: 'rgba(16, 20, 29, 0.75)',
+          background: 'var(--admin-card-bg, rgba(16, 20, 29, 0.75))',
           backdropFilter: 'blur(20px)',
           borderRadius: '16px',
-          border: '1px solid rgba(255, 255, 255, 0.08)',
+          border: '1px solid var(--admin-card-border, #CBD5E1)',
+          boxShadow: 'var(--admin-card-shadow, 0 1px 3px rgba(0, 0, 0, 0.05))',
           padding: '20px',
           display: 'flex',
           flexDirection: 'column',
           gap: '14px'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <h3 style={{ fontSize: '13.5px', fontWeight: 800, margin: 0, color: '#FFFFFF' }}>
+            <h3 style={{ fontSize: '13.5px', fontWeight: 800, margin: 0, color: 'var(--admin-text-title, #FFFFFF)' }}>
               {isAr ? 'الأنماط المعمارية والقيمة' : 'Typology Capital Rollup'}
             </h3>
-            <span style={{ fontSize: '11px', color: '#E5B869', fontWeight: 700 }}>
+            <span style={{ fontSize: '11px', color: 'var(--admin-gold-primary, #C5A059)', fontWeight: 700 }}>
               {Object.keys(typeRollup).length} {isAr ? 'أنماط' : 'Types'}
             </span>
           </div>
@@ -813,15 +1031,15 @@ export default async function AdminDashboard({ params }: Props) {
               return (
                 <div key={type} style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '11.5px' }}>
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: 'rgba(255, 255, 255, 0.65)', fontWeight: 600 }}>
-                      <Icon size={12} style={{ color: '#E5B869' }} />
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: 'var(--admin-text-title, #FFFFFF)', fontWeight: 700 }}>
+                      <Icon size={12} style={{ color: 'var(--admin-gold-primary, #C5A059)' }} />
                       <span>{isAr ? meta.labelAr : meta.labelEn}</span>
                     </span>
-                    <strong style={{ color: '#FFFFFF' }}>
+                    <strong style={{ color: 'var(--admin-text-title, #FFFFFF)' }}>
                       {new Intl.NumberFormat(isAr ? 'ar-EG' : 'en-EG', { notation: 'compact' }).format(val)} EGP ({pct}%)
                     </strong>
                   </div>
-                  <div style={{ width: '100%', height: '5px', background: 'rgba(255, 255, 255, 0.06)', borderRadius: '9999px', overflow: 'hidden' }}>
+                  <div style={{ width: '100%', height: '6px', background: 'var(--admin-track-bg, #E2E8F0)', borderRadius: '9999px', overflow: 'hidden' }}>
                     <div style={{ width: `${Math.max(4, pct)}%`, height: '100%', background: 'linear-gradient(90deg, #E5B869, #C5A059)', borderRadius: '9999px' }} />
                   </div>
                 </div>

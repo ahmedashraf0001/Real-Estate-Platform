@@ -59,6 +59,28 @@ export interface LiveERPDataset {
   isSchemaMigrated: boolean;
 }
 
+/**
+ * Detects if a Supabase/PostgREST error indicates an expired token or unauthorized access.
+ */
+export function isAuthError(err: unknown): boolean {
+  if (!err || typeof err !== 'object') return false;
+  const e = err as Record<string, unknown>;
+  const code = String(e.code || e.statusCode || e.status || '');
+  const message = String(e.message || e.error_description || e.msg || '').toLowerCase();
+
+  if (code === '401' || code === 'PGRST301') return true;
+  if (
+    message.includes('jwt expired') ||
+    message.includes('token is expired') ||
+    message.includes('unauthorized') ||
+    message.includes('invalid jwt') ||
+    message.includes('token expired')
+  ) {
+    return true;
+  }
+  return false;
+}
+
 export class ERPSupabaseService {
   /**
    * Fetch all live ERP data directly from Supabase.
@@ -66,10 +88,14 @@ export class ERPSupabaseService {
    */
   static async fetchLiveERPData(supabase: SupabaseClient): Promise<LiveERPDataset> {
     // 1. Fetch Real Properties from Supabase
-    const { data: propertiesData } = await supabase
+    const { data: propertiesData, error: propertiesError } = await supabase
       .from('properties')
       .select('*, property_images(*)')
       .order('created_at', { ascending: false });
+
+    if (propertiesError && isAuthError(propertiesError)) {
+      throw propertiesError;
+    }
 
     const rawProps = (propertiesData as Property[]) || [];
     const baseProperties = rawProps.length > 0 ? rawProps : (FALLBACK_PROPERTIES as Property[]);
@@ -136,14 +162,18 @@ export class ERPSupabaseService {
     // 1b. Fetch Active CRM Leads from Supabase
     let leads: Lead[] = [];
     try {
-      const { data: leadsData } = await supabase
+      const { data: leadsData, error: leadsError } = await supabase
         .from('leads')
         .select('id, name, phone, email, stage, property_id, created_at, notes')
         .order('created_at', { ascending: false });
+      if (leadsError && isAuthError(leadsError)) {
+        throw leadsError;
+      }
       if (leadsData && leadsData.length > 0) {
         leads = leadsData as unknown as Lead[];
       }
     } catch (e) {
+      if (isAuthError(e)) throw e;
       console.warn('Leads fetch error in ERP:', e);
     }
 
@@ -208,13 +238,17 @@ export class ERPSupabaseService {
         .order('period_number', { ascending: true });
 
       if (periodsRes.error) {
+        if (isAuthError(periodsRes.error)) {
+          throw periodsRes.error;
+        }
         if (periodsRes.error.code === 'PGRST205' || periodsRes.error.message?.includes('schema cache')) {
           isSchemaMigrated = false;
         }
       } else {
         periodsData = periodsRes.data;
       }
-    } catch {
+    } catch (e) {
+      if (isAuthError(e)) throw e;
       isSchemaMigrated = false;
     }
 
@@ -272,6 +306,14 @@ export class ERPSupabaseService {
           supabase.from('erp_partner_calls').select('*').order('created_at', { ascending: false }),
           supabase.from('erp_maker_checker').select('*').order('created_at', { ascending: false })
         ]);
+
+        const responses = [cRes, sRes, eRes, pRes, rRes, aRes, caRes, tRes, pcRes, mcRes];
+        for (const res of responses) {
+          if (res?.error && isAuthError(res.error)) {
+            throw res.error;
+          }
+        }
+
         contractsData = cRes.data;
         schedulesData = sRes.data;
         entriesData = eRes.data;
@@ -285,13 +327,18 @@ export class ERPSupabaseService {
 
         try {
           const costRes = await supabase.from('erp_property_costs').select('*').order('logged_date', { ascending: false });
+          if (costRes.error && isAuthError(costRes.error)) {
+            throw costRes.error;
+          }
           if (costRes.data && costRes.data.length > 0) {
             propertyCostsData = costRes.data;
           }
-        } catch {
+        } catch (costErr) {
+          if (isAuthError(costErr)) throw costErr;
           // erp_property_costs table not yet created
         }
       } catch (err) {
+        if (isAuthError(err)) throw err;
         console.warn('Error querying migrated tables:', err);
       }
     }
@@ -1730,6 +1777,7 @@ export class ERPSupabaseService {
         memo: (row.notes as string) || ''
       }));
     } catch (e) {
+      if (isAuthError(e)) throw e;
       if (this.isSchemaCacheError(e)) return [];
       console.warn('Failed to load partner transactions:', e);
       return [];
@@ -1804,6 +1852,7 @@ export class ERPSupabaseService {
         joined_date: row.created_at ? new Date(row.created_at as string).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]
       }));
     } catch (e) {
+      if (isAuthError(e)) throw e;
       if (this.isSchemaCacheError(e)) return [];
       console.warn('Failed to load partner profiles:', e);
       return [];

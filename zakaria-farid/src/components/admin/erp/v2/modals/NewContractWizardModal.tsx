@@ -74,6 +74,10 @@ interface NewContractWizardModalProps {
   onClose: () => void;
   initialPropertyId?: string;
   initialBuildingUnitId?: string;
+  initialBuyerName?: string;
+  initialBuyerPhone?: string;
+  initialBuyerEmail?: string;
+  initialLeadId?: string;
   properties: Property[];
   contracts: ERPContract[];
   leads?: any[];
@@ -89,6 +93,10 @@ export const NewContractWizardModal: React.FC<NewContractWizardModalProps> = ({
   onClose,
   initialPropertyId,
   initialBuildingUnitId,
+  initialBuyerName,
+  initialBuyerPhone,
+  initialBuyerEmail,
+  initialLeadId,
   properties,
   contracts,
   leads = [],
@@ -190,12 +198,17 @@ export const NewContractWizardModal: React.FC<NewContractWizardModalProps> = ({
     if (isOpen) {
       setStep(1);
       setContractErrors({});
-      setLeadSelectionMode('NEW_LEAD');
-      setSelectedLeadId('');
-      setBuyerName('');
+      if (initialLeadId) {
+        setLeadSelectionMode('EXISTING_LEAD');
+        setSelectedLeadId(initialLeadId);
+      } else {
+        setLeadSelectionMode('NEW_LEAD');
+        setSelectedLeadId('');
+      }
+      setBuyerName(initialBuyerName || '');
       setBuyerNationalId('');
-      setBuyerPhone('');
-      setBuyerEmail('');
+      setBuyerPhone(initialBuyerPhone || '');
+      setBuyerEmail(initialBuyerEmail || '');
       setPaymentPlanType('INSTALLMENTS');
       setDownPaymentInputPct('15');
       setDownPaymentAmountInput('');
@@ -217,7 +230,7 @@ export const NewContractWizardModal: React.FC<NewContractWizardModalProps> = ({
         setPartnerSplits(normalizePartnerSplits(null));
       }
     }
-  }, [isOpen, initialPropertyId, initialBuildingUnitId, applyPropertySelection]);
+  }, [isOpen, initialPropertyId, initialBuildingUnitId, initialBuyerName, initialBuyerPhone, initialBuyerEmail, initialLeadId, applyPropertySelection]);
 
   // Derived Pricing
   const basePrice = parseFloat(basePriceInput) || 0;
@@ -455,7 +468,7 @@ export const NewContractWizardModal: React.FC<NewContractWizardModalProps> = ({
         style={{
           maxWidth: '880px',
           width: '95vw',
-          maxHeight: '94vh',
+          maxHeight: '90vh',
           display: 'flex',
           flexDirection: 'column'
         }}
@@ -463,61 +476,68 @@ export const NewContractWizardModal: React.FC<NewContractWizardModalProps> = ({
       >
         {/* Top Header */}
         <div style={{
-          padding: '1.25rem 1.75rem',
+          padding: 'clamp(0.85rem, 2.5vw, 1.25rem) clamp(1rem, 3vw, 1.75rem)',
           borderBottom: '1px solid #e2e8f0',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          background: '#fafaf9'
+          background: '#fafaf9',
+          gap: '0.75rem'
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', minWidth: 0 }}>
             <div style={{
-              width: '36px',
-              height: '36px',
+              width: '38px',
+              height: '38px',
               borderRadius: '10px',
               background: 'rgba(184, 144, 62, 0.12)',
               color: '#946f23',
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'center'
+              justifyContent: 'center',
+              flexShrink: 0
             }}>
               <Plus size={18} />
             </div>
-            <div>
-              <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: '#0f172a' }}>
+            <div style={{ minWidth: 0 }}>
+              <h3 style={{ margin: 0, fontSize: 'clamp(0.95rem, 2vw, 1.15rem)', fontWeight: 800, color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 {isAr ? 'تحرير وتوثيق عقد بيع عقاري جديد' : 'Execute Real Estate Sales Contract'}
               </h3>
-              <span style={{ fontSize: '0.72rem', color: '#64748b' }}>
+              <span style={{ fontSize: '0.72rem', color: '#64748b', display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 {isAr ? 'معالج مالي متكامل: ربط الوحدة، جدولة السداد، حصص الشركاء، والترحيل للدفاتر' : 'Executive deal workflow: Property specs, tranches, partner splits & ledger posting'}
               </span>
             </div>
           </div>
 
           <button
+            type="button"
             onClick={onClose}
+            aria-label={isAr ? 'إغلاق النافذة' : 'Close Modal'}
             style={{
               background: '#ffffff',
               border: '1px solid #e2e8f0',
               borderRadius: '8px',
-              width: '30px',
-              height: '30px',
+              minWidth: '44px',
+              minHeight: '44px',
+              width: '44px',
+              height: '44px',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               color: '#64748b',
-              cursor: 'pointer'
+              cursor: 'pointer',
+              flexShrink: 0
             }}
           >
-            <X size={15} />
+            <X size={18} />
           </button>
         </div>
 
         {/* 3-Step Wizard Navigation Ribbon */}
         <div style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(3, 1fr)',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
           gap: '0.5rem',
-          padding: '0.85rem 1.75rem',
+          padding: '0.65rem clamp(0.75rem, 3vw, 1.75rem)',
           background: '#f8fafc',
           borderBottom: '1px solid #e2e8f0'
         }}>
@@ -582,7 +602,7 @@ export const NewContractWizardModal: React.FC<NewContractWizardModalProps> = ({
         </div>
 
         {/* Wizard Body Form */}
-        <form onSubmit={handleFinalSubmit} style={{ padding: '1.5rem 1.75rem', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '1.25rem', flex: 1 }}>
+        <form onSubmit={handleFinalSubmit} style={{ padding: 'clamp(1rem, 3vw, 1.75rem)', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '1.25rem', flex: 1 }}>
           
           {/* ═══════════════════════════════════════════════════════════ */}
           {/* STEP 1: PROPERTY & BUYER                                   */}
@@ -928,19 +948,21 @@ export const NewContractWizardModal: React.FC<NewContractWizardModalProps> = ({
                     background: 'linear-gradient(135deg, #c5a059 0%, #946f23 100%)',
                     color: '#ffffff',
                     border: 'none',
-                    padding: '0.6rem 1.45rem',
+                    padding: '0.65rem 1.45rem',
+                    minHeight: '44px',
                     borderRadius: '8px',
                     fontSize: '0.82rem',
                     fontWeight: 800,
                     cursor: 'pointer',
                     display: 'inline-flex',
                     alignItems: 'center',
+                    justifyContent: 'center',
                     gap: '0.45rem',
                     boxShadow: '0 2px 8px rgba(148, 111, 35, 0.25)'
                   }}
                 >
                   <span>{isAr ? 'المتابعة للشروط المالية وجدولة السداد' : 'Proceed to Payment Terms'}</span>
-                  <ArrowRight size={15} />
+                  <ArrowRight size={15} style={{ transform: isAr ? 'rotate(180deg)' : 'none' }} />
                 </button>
               </div>
             </div>
@@ -1069,10 +1091,10 @@ export const NewContractWizardModal: React.FC<NewContractWizardModalProps> = ({
                     </div>
                   </div>
 
-                  {/* Down payment cash amount */}
+                  {/* Down payment cash amount with plain-language Tranche 0 clarification */}
                   <div>
                     <label style={{ fontSize: '0.74rem', fontWeight: 700, color: '#334155', marginBottom: '0.25rem', display: 'block' }}>
-                      {isAr ? 'قيمة الدفعة المقدمة (ج.م):' : 'Down Payment (EGP):'}
+                      {isAr ? 'دفعة الحجز والمقدم النقدي (Tranche 0):' : 'Down Payment & Reservation (Tranche 0):'}
                     </label>
                     <input
                       type="number"
@@ -1096,6 +1118,9 @@ export const NewContractWizardModal: React.FC<NewContractWizardModalProps> = ({
                         outline: 'none'
                       }}
                     />
+                    <span style={{ fontSize: '0.67rem', color: '#64748b', display: 'block', marginTop: '0.2rem' }}>
+                      {isAr ? '💡 Tranche 0 تعني دفعة الحجز والمقدم النقدي المسددة فوراً عند التعاقد' : 'Tranche 0 covers the upfront reservation & down payment'}
+                    </span>
                   </div>
 
                   {/* Installment count */}
@@ -1210,30 +1235,39 @@ export const NewContractWizardModal: React.FC<NewContractWizardModalProps> = ({
                 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <span style={{ fontSize: '0.76rem', fontWeight: 800, color: '#0f172a' }}>
-                      {isAr ? `معاينة جدول استحقاقات الأقساط (${previewSchedule.length} قسطاً):` : `Installments Schedule Preview (${previewSchedule.length} Tranches):`}
+                      {isAr ? `معاينة جدول الدفعات والأقساط (دفعة الحجز والمقدم النقدي + ${previewSchedule.length} أقساط):` : `Payment & Installments Schedule (Tranche 0 + ${previewSchedule.length} Tranches):`}
                     </span>
                     <span style={{ fontSize: '0.72rem', color: '#64748b' }}>
                       {isAr ? `قيمة القسط الدوري: ${D(previewSchedule[0]?.amount || 0).formatEGP(isAr)}` : `Per Tranche: ${D(previewSchedule[0]?.amount || 0).formatEGP(isAr)}`}
                     </span>
                   </div>
 
-                  <div style={{ maxHeight: '140px', overflowY: 'auto', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
-                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.74rem', textAlign: isAr ? 'right' : 'left' }}>
+                  <div style={{ maxHeight: '150px', overflowY: 'auto', overflowX: 'auto', WebkitOverflowScrolling: 'touch', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
+                    <table style={{ width: '100%', minWidth: '460px', borderCollapse: 'collapse', fontSize: '0.74rem', textAlign: isAr ? 'right' : 'left' }}>
                       <thead>
                         <tr style={{ background: '#f1f5f9', color: '#475569' }}>
                           <th style={{ padding: '0.4rem 0.6rem' }}>#</th>
                           <th style={{ padding: '0.4rem 0.6rem' }}>{isAr ? 'تاريخ الاستحقاق' : 'Due Date'}</th>
-                          <th style={{ padding: '0.4rem 0.6rem' }}>{isAr ? 'قيمة القسط' : 'Amount'}</th>
-                          <th style={{ padding: '0.4rem 0.6rem' }}>{isAr ? 'الحالة الدفترية' : 'Status'}</th>
+                          <th style={{ padding: '0.4rem 0.6rem' }}>{isAr ? 'قيمة الدفعة' : 'Amount'}</th>
+                          <th style={{ padding: '0.4rem 0.6rem' }}>{isAr ? 'البيان / الحالة الدفترية' : 'Description / Status'}</th>
                         </tr>
                       </thead>
                       <tbody>
+                        {/* Tranche 0: Down payment / Reservation */}
+                        <tr style={{ borderTop: '1px solid #e2e8f0', background: 'rgba(5, 150, 105, 0.04)' }}>
+                          <td style={{ padding: '0.4rem 0.6rem', fontWeight: 800, color: '#059669' }}>#0</td>
+                          <td style={{ padding: '0.4rem 0.6rem', fontVariantNumeric: 'tabular-nums', color: '#0f172a' }}>{firstPaymentDate}</td>
+                          <td style={{ padding: '0.4rem 0.6rem', fontWeight: 800, color: '#059669' }}>{D(modalDpAmount).formatEGP(isAr)}</td>
+                          <td style={{ padding: '0.4rem 0.6rem', color: '#047857', fontWeight: 700 }}>
+                            {isAr ? 'دفعة الحجز والمقدم النقدي (Tranche 0 مسددة)' : 'Tranche 0: Reservation & Down Payment (Paid)'}
+                          </td>
+                        </tr>
                         {previewSchedule.slice(0, 10).map(t => (
                           <tr key={t.index} style={{ borderTop: '1px solid #e2e8f0', background: '#ffffff' }}>
-                            <td style={{ padding: '0.4rem 0.6rem', fontWeight: 700 }}>{t.index}</td>
+                            <td style={{ padding: '0.4rem 0.6rem', fontWeight: 700 }}>#{t.index}</td>
                             <td style={{ padding: '0.4rem 0.6rem', fontVariantNumeric: 'tabular-nums' }}>{t.dueDate}</td>
                             <td style={{ padding: '0.4rem 0.6rem', fontWeight: 700, color: '#946f23' }}>{D(t.amount).formatEGP(isAr)}</td>
-                            <td style={{ padding: '0.4rem 0.6rem', color: '#64748b' }}>{isAr ? 'مستحق باليد' : 'Pending Hand'}</td>
+                            <td style={{ padding: '0.4rem 0.6rem', color: '#64748b' }}>{isAr ? 'قسط دوري مجدول باليد' : 'Pending Hand'}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -1243,7 +1277,7 @@ export const NewContractWizardModal: React.FC<NewContractWizardModalProps> = ({
               )}
 
               {/* Step 2 Footer Navigation */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '0.5rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '0.5rem', flexWrap: 'wrap', gap: '0.5rem' }}>
                 <button
                   type="button"
                   onClick={() => setStep(1)}
@@ -1252,13 +1286,17 @@ export const NewContractWizardModal: React.FC<NewContractWizardModalProps> = ({
                     border: '1px solid #cbd5e1',
                     color: '#334155',
                     padding: '0.6rem 1.25rem',
+                    minHeight: '44px',
                     borderRadius: '8px',
                     fontSize: '0.8rem',
                     fontWeight: 700,
-                    cursor: 'pointer'
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
                   }}
                 >
-                  {isAr ? '← السابق: الوحدة والمشتري' : '← Back: Property & Buyer'}
+                  {isAr ? 'السابق: الوحدة والمشتري →' : '← Back: Property & Buyer'}
                 </button>
 
                 <button
@@ -1270,19 +1308,21 @@ export const NewContractWizardModal: React.FC<NewContractWizardModalProps> = ({
                     background: 'linear-gradient(135deg, #c5a059 0%, #946f23 100%)',
                     color: '#ffffff',
                     border: 'none',
-                    padding: '0.6rem 1.45rem',
+                    padding: '0.65rem 1.45rem',
+                    minHeight: '44px',
                     borderRadius: '8px',
                     fontSize: '0.82rem',
                     fontWeight: 800,
                     cursor: 'pointer',
                     display: 'inline-flex',
                     alignItems: 'center',
+                    justifyContent: 'center',
                     gap: '0.45rem',
                     boxShadow: '0 2px 8px rgba(148, 111, 35, 0.25)'
                   }}
                 >
                   <span>{isAr ? 'المتابعة لتوزيع الشركاء والاعتماد' : 'Proceed to Partner Splits'}</span>
-                  <ArrowRight size={15} />
+                  <ArrowRight size={15} style={{ transform: isAr ? 'rotate(180deg)' : 'none' }} />
                 </button>
               </div>
             </div>
@@ -1500,7 +1540,7 @@ export const NewContractWizardModal: React.FC<NewContractWizardModalProps> = ({
                     <strong style={{ color: '#946f23' }}>{D(totalNominalValue).formatEGP(isAr)}</strong>
                   </div>
                   <div>
-                    <span style={{ color: '#64748b', display: 'block', fontSize: '0.68rem' }}>{isAr ? 'الدفعة المقدمة:' : 'Down Payment:'}</span>
+                    <span style={{ color: '#64748b', display: 'block', fontSize: '0.68rem' }}>{isAr ? 'دفعة الحجز والمقدم النقدي:' : 'Down Payment & Reservation (Tranche 0):'}</span>
                     <strong style={{ color: '#059669' }}>{D(modalDpAmount).formatEGP(isAr)}</strong>
                   </div>
                   <div>
@@ -1517,7 +1557,7 @@ export const NewContractWizardModal: React.FC<NewContractWizardModalProps> = ({
               </div>
 
               {/* Step 3 Footer Navigation */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '0.5rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '0.5rem', flexWrap: 'wrap', gap: '0.5rem' }}>
                 <button
                   type="button"
                   onClick={() => setStep(2)}
@@ -1526,13 +1566,17 @@ export const NewContractWizardModal: React.FC<NewContractWizardModalProps> = ({
                     border: '1px solid #cbd5e1',
                     color: '#334155',
                     padding: '0.6rem 1.25rem',
+                    minHeight: '44px',
                     borderRadius: '8px',
                     fontSize: '0.8rem',
                     fontWeight: 700,
-                    cursor: 'pointer'
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
                   }}
                 >
-                  {isAr ? '← السابق: الشروط المالية' : '← Back: Payment Terms'}
+                  {isAr ? 'السابق: الشروط المالية →' : '← Back: Payment Terms'}
                 </button>
 
                 <button
@@ -1543,12 +1587,14 @@ export const NewContractWizardModal: React.FC<NewContractWizardModalProps> = ({
                     color: '#ffffff',
                     border: 'none',
                     padding: '0.65rem 1.65rem',
+                    minHeight: '44px',
                     borderRadius: '8px',
                     fontSize: '0.82rem',
                     fontWeight: 800,
                     cursor: isMutating ? 'not-allowed' : 'pointer',
                     display: 'inline-flex',
                     alignItems: 'center',
+                    justifyContent: 'center',
                     gap: '0.45rem',
                     boxShadow: '0 2px 10px rgba(148, 111, 35, 0.3)'
                   }}

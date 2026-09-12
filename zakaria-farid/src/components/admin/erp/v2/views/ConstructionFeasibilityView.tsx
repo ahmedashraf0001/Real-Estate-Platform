@@ -1,9 +1,11 @@
 'use client';
 
 import React from 'react';
+import { Calculator } from 'lucide-react';
 import { Property, BuildingUnitItem } from '@/lib/supabase/types';
 import { ERPPropertyCostItem } from '@/lib/erp/types';
 import { ConstructionCostCalculator } from '../../ConstructionCostCalculator';
+import { ZFErpBreadcrumb } from '../common/ZFErpBreadcrumb';
 import styles from '../ZFWorkstationShell.module.css';
 
 interface ConstructionFeasibilityViewProps {
@@ -27,6 +29,12 @@ export const ConstructionFeasibilityView: React.FC<ConstructionFeasibilityViewPr
 }) => {
   return (
     <div className={styles.stageContainer}>
+      <div>
+        <ZFErpBreadcrumb 
+          sectionTitle={isAr ? 'حاسبة تكلفة المباني والجدوى' : 'Construction Cost & Feasibility'} 
+          icon={<Calculator size={13} color="#946f23" />} 
+        />
+      </div>
       <ConstructionCostCalculator 
         properties={properties}
         propertyCosts={propertyCosts}

@@ -48,7 +48,8 @@ import {
   Smartphone,
   Info,
   Landmark,
-  Users
+  Users,
+  Calendar
 } from 'lucide-react';
 import { Property, BuildingUnitItem } from '@/lib/supabase/types';
 import { 
@@ -66,6 +67,7 @@ import { MoneyCell } from '@/components/erp/MoneyCell';
 import { StatusBadge } from '@/components/erp/StatusBadge';
 import { localizeJournalDescription } from '@/components/erp/JournalEntryPreview';
 import { ZFKpiCard } from '../ZFKpiCard';
+import { ZFErpBreadcrumb } from '../common/ZFErpBreadcrumb';
 import styles from '../ZFWorkstationShell.module.css';
 import { ZFCustomSelect, ZFCustomSelectItem } from '../common/ZFCustomSelect';
 import { ZFPagination } from '../ZFPagination';
@@ -1141,11 +1143,11 @@ export const DailyOperationsView: React.FC<DailyOperationsViewProps> = ({
         paddingBottom: '0.25rem'
       }}>
         <div>
-          <div className={styles.stageBreadcrumb} style={{ marginBottom: '0.45rem' }}>
-            <span>FIN-OS</span>
-            <span>/</span>
-            <span>{isAr ? 'حركة الخزنة والعمليات اليومية' : 'Daily Operations & Cashier Cockpit'}</span>
-          </div>
+          <ZFErpBreadcrumb 
+            sectionTitle={isAr ? 'حركة الخزنة والعمليات اليومية' : 'Daily Operations & Cashier'} 
+            icon={<Calendar size={13} color="#946f23" />} 
+            style={{ marginBottom: '0.45rem' }} 
+          />
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
             <div 
@@ -1297,7 +1299,7 @@ export const DailyOperationsView: React.FC<DailyOperationsViewProps> = ({
             alignItems: 'center',
             gap: '0.5rem',
             background: '#ffffff',
-            border: '1px solid rgba(15, 23, 42, 0.08)',
+            border: '1.5px solid #d8d2c4',
             borderRadius: '11px',
             padding: '0.55rem 0.85rem',
             boxShadow: '0 2px 8px -2px rgba(15, 23, 42, 0.05)'
@@ -1313,7 +1315,7 @@ export const DailyOperationsView: React.FC<DailyOperationsViewProps> = ({
       {/* 2. EXECUTIVE LIQUIDITY & ACTION RADAR */}
       <div style={{
         background: '#ffffff',
-        border: '1.5px solid #e2e8f0',
+        border: '1.5px solid #d8d2c4',
         borderRadius: '16px',
         padding: '1.25rem 1.4rem',
         boxShadow: '0 4px 20px -4px rgba(15, 23, 42, 0.05)',
@@ -1376,12 +1378,13 @@ export const DailyOperationsView: React.FC<DailyOperationsViewProps> = ({
             {/* Safe 101000 */}
             <div style={{
               background: '#f8fafc',
-              border: '1px solid #e2e8f0',
-              borderRadius: '9px',
+              border: '1.5px solid #d8d2c4',
+              borderRadius: '10px',
               padding: '0.4rem 0.75rem',
               display: 'flex',
               alignItems: 'center',
-              gap: '0.45rem'
+              gap: '0.45rem',
+              boxShadow: '0 1px 3px rgba(15, 23, 42, 0.04)'
             }}>
               <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#059669' }} />
               <span style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 600 }}>
@@ -1395,12 +1398,13 @@ export const DailyOperationsView: React.FC<DailyOperationsViewProps> = ({
             {/* Bank 102000 */}
             <div style={{
               background: '#f8fafc',
-              border: '1px solid #e2e8f0',
-              borderRadius: '9px',
+              border: '1.5px solid #d8d2c4',
+              borderRadius: '10px',
               padding: '0.4rem 0.75rem',
               display: 'flex',
               alignItems: 'center',
-              gap: '0.45rem'
+              gap: '0.45rem',
+              boxShadow: '0 1px 3px rgba(15, 23, 42, 0.04)'
             }}>
               <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#2563eb' }} />
               <span style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 600 }}>
@@ -1414,12 +1418,13 @@ export const DailyOperationsView: React.FC<DailyOperationsViewProps> = ({
             {/* Total Liquid Capital */}
             <div style={{
               background: 'linear-gradient(135deg, rgba(184, 144, 62, 0.09) 0%, rgba(184, 144, 62, 0.03) 100%)',
-              border: '1.5px solid rgba(184, 144, 62, 0.3)',
-              borderRadius: '9px',
+              border: '1.5px solid #d8d2c4',
+              borderRadius: '10px',
               padding: '0.4rem 0.85rem',
               display: 'flex',
               alignItems: 'center',
-              gap: '0.45rem'
+              gap: '0.45rem',
+              boxShadow: '0 1px 3px rgba(15, 23, 42, 0.04)'
             }}>
               <Wallet size={14} color="#946f23" />
               <span style={{ fontSize: '0.72rem', color: '#946f23', fontWeight: 800 }}>
@@ -1432,23 +1437,20 @@ export const DailyOperationsView: React.FC<DailyOperationsViewProps> = ({
           </div>
         </div>
 
-        {/* High-Contrast Actionable Alerts Grid */}
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(290px, 1fr))',
-          gap: '0.8rem'
-        }}>
+        {/* High-Contrast Actionable Alerts Grid (Recessed Bay) */}
+        <div className={styles.radarRecessedBay}>
           {operationalAlerts.length === 0 ? (
             <div style={{
               gridColumn: '1 / -1',
-              background: '#f8fafc',
-              border: '1.5px solid #e2e8f0',
+              background: '#ffffff',
+              border: '1.5px solid #d8d2c4',
               borderRadius: '12px',
               padding: '1.25rem',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
-              gap: '1rem'
+              gap: '1rem',
+              boxShadow: '0 2px 8px rgba(15, 23, 42, 0.04)'
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                 <div style={{
@@ -1477,17 +1479,18 @@ export const DailyOperationsView: React.FC<DailyOperationsViewProps> = ({
                 type="button"
                 onClick={() => onNavigateToTab('ledger')}
                 style={{
-                  background: '#ffffff',
-                  border: '1px solid #cbd5e1',
-                  color: '#0f172a',
-                  padding: '0.4rem 0.85rem',
+                  background: 'linear-gradient(135deg, #946f23 0%, #b8860b 100%)',
+                  border: '1px solid rgba(148, 111, 35, 0.35)',
+                  color: '#ffffff',
+                  padding: '0.45rem 0.95rem',
                   borderRadius: '8px',
                   fontSize: '0.74rem',
                   fontWeight: 700,
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '0.35rem'
+                  gap: '0.35rem',
+                  boxShadow: '0 2px 8px rgba(148, 111, 35, 0.25)'
                 }}
               >
                 <span>{isAr ? 'فتح دفتر الأستاذ' : 'View Ledger'}</span>
@@ -1504,6 +1507,10 @@ export const DailyOperationsView: React.FC<DailyOperationsViewProps> = ({
                 <div
                   key={alert.id}
                   className={styles.radarAlertCard}
+                  style={isCrit ? {
+                    border: '1.5px solid rgba(220, 38, 38, 0.35)',
+                    boxShadow: '0 4px 14px rgba(220, 38, 38, 0.1), 0 1px 3px rgba(0, 0, 0, 0.02)'
+                  } : undefined}
                 >
                   {/* Subtle architectural leading edge indicator */}
                   <div 
@@ -1604,7 +1611,7 @@ export const DailyOperationsView: React.FC<DailyOperationsViewProps> = ({
                     <button
                       type="button"
                       onClick={alert.onClick}
-                      className={styles.radarAlertButton}
+                      className={`${styles.radarAlertButton} ${isCrit ? styles.radarAlertButtonCrit : ''}`}
                     >
                       <span>{isAr ? alert.actionLabelAr : alert.actionLabelEn}</span>
                       <span className={styles.radarAlertButtonIcon}>
@@ -1622,10 +1629,10 @@ export const DailyOperationsView: React.FC<DailyOperationsViewProps> = ({
       {/* 3. SPACIOUS EXECUTIVE FAST-ACTION LAUNCHPAD */}
       <div style={{
         background: '#ffffff',
-        border: '1.5px solid #e2e8f0',
+        border: '1.5px solid #d8d2c4',
         borderRadius: '16px',
         padding: '1.25rem 1.4rem',
-        boxShadow: '0 2px 8px rgba(15, 23, 42, 0.04)',
+        boxShadow: '0 4px 20px -4px rgba(15, 23, 42, 0.05)',
         display: 'flex',
         flexDirection: 'column',
         gap: '1.1rem'
@@ -1656,11 +1663,11 @@ export const DailyOperationsView: React.FC<DailyOperationsViewProps> = ({
                   fontWeight: 800,
                   color: '#475569',
                   background: '#f8fafc',
-                  border: '1px solid #e2e8f0',
+                  border: '1px solid #d8d2c4',
                   padding: '0.12rem 0.55rem',
                   borderRadius: '20px'
                 }}>
-                  {isAr ? '٩ إجراءات مباشرة' : '9 Actions'}
+                  {isAr ? '١٠ إجراءات موزعة على ٤ أركان' : '10 Actions in 4 Pillars'}
                 </span>
               </div>
               <span style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '0.2rem', display: 'block' }}>
@@ -1688,729 +1695,757 @@ export const DailyOperationsView: React.FC<DailyOperationsViewProps> = ({
           )}
         </div>
 
-        {/* Spacious Launchpad Responsive Grid (Ample Room & Zero Clutter) */}
+        {/* 4 Core Architectural Pillars of the System */}
         <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(270px, 1fr))',
-          gap: '0.85rem'
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '1rem'
         }}>
-          {/* Action 1: Collect Due */}
-          <button
-            type="button"
-            className={styles.opsActionBtn}
-            title={isAr 
-              ? 'تحصيل قسط مستحق أو دفعة تعاقد كاش بالخزنة (101000) أو إنستاباي (102000)، وتوليد سند قبض رسمي وإيصال فوري للعميل' 
-              : 'Collect installment into cash safe or InstaPay, issue official receipt'}
-            style={{
-              padding: '0.95rem 1.15rem',
-              minHeight: '78px',
-              borderRadius: '12px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.85rem',
-              cursor: 'pointer',
-              textAlign: isAr ? 'right' : 'left'
-            }}
-            onClick={() => {
-              const target = filteredAndSortedDues[0] || urgentDues[0] || pdcRecords.find(p => p.status !== 'Cleared') || pdcRecords[0];
-              if (target) {
-                onCollectItem(target);
-              } else {
-                onNavigateToTab('pdc');
-              }
-            }}
-          >
-            <div 
-              data-action-icon="true"
-              style={{
-                width: '40px',
-                height: '40px',
-                borderRadius: '10px',
-                background: 'rgba(21, 128, 61, 0.07)',
-                color: '#15803d',
-                border: '1px solid rgba(21, 128, 61, 0.2)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexShrink: 0,
-                transition: 'transform 0.2s ease'
-              }}
-            >
-              <Receipt size={18} />
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem', minWidth: 0, flex: 1 }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.4rem' }}>
-                <div data-action-title="true" style={{ fontSize: '0.88rem', fontWeight: 800, color: '#0f172a', transition: 'color 0.2s ease' }}>
-                  {isAr ? 'تحصيل قسط وطباعة إيصال' : 'Collect & Issue Receipt'}
+          {/* Pillar 1: ركن حركة الخزينة والتحصيل النقدي (Treasury & Cashier Operations) */}
+          <div className={styles.pillarBay}>
+            <div className={styles.pillarHeader}>
+              <div className={styles.pillarHeaderMain}>
+                <div className={styles.pillarIconBox} style={{
+                  background: 'rgba(4, 120, 87, 0.1)',
+                  color: '#047857',
+                  border: '1px solid rgba(4, 120, 87, 0.22)'
+                }}>
+                  <Wallet size={16} />
                 </div>
-                <span
+                <div>
+                  <div className={styles.pillarTitle}>
+                    {isAr ? 'ركن حركة الخزينة والتحصيل النقدي' : 'Treasury & Cashier Operations'}
+                  </div>
+                  <span className={styles.pillarSubtitle}>
+                    {isAr ? 'التحصيل الفوري، سندات القبض، ومطابقة الصندوق' : 'Instant cashiering, receipt vouchers & safe balance'}
+                  </span>
+                </div>
+              </div>
+              <span className={styles.pillarBadge} style={{
+                background: 'rgba(4, 120, 87, 0.08)',
+                color: '#047857',
+                border: '1px solid rgba(4, 120, 87, 0.22)'
+              }}>
+                {isAr ? 'حركة الصندوق الفورية' : 'Instant Safe Cashiering'}
+              </span>
+            </div>
+
+            <div className={styles.pillarGrid}>
+              {/* Action 1: Collect Due */}
+              <button
+                type="button"
+                className={styles.opsActionBtn}
+                title={isAr 
+                  ? 'تحصيل قسط مستحق أو دفعة تعاقد كاش بالخزنة (101000) أو إنستاباي (102000)، وتوليد سند قبض رسمي وإيصال فوري للعميل' 
+                  : 'Collect installment into cash safe or InstaPay, issue official receipt'}
+                onClick={() => {
+                  const target = filteredAndSortedDues[0] || urgentDues[0] || pdcRecords.find(p => p.status !== 'Cleared') || pdcRecords[0];
+                  if (target) {
+                    onCollectItem(target);
+                  } else {
+                    onNavigateToTab('pdc');
+                  }
+                }}
+              >
+                <div 
+                  data-action-icon="true"
                   style={{
-                    fontSize: '0.67rem',
-                    fontWeight: 700,
-                    fontVariantNumeric: 'tabular-nums',
-                    padding: '0.12rem 0.5rem',
-                    borderRadius: '12px',
-                    whiteSpace: 'nowrap',
+                    width: '40px',
+                    height: '40px',
+                    borderRadius: '10px',
+                    background: 'rgba(21, 128, 61, 0.07)',
+                    color: '#15803d',
+                    border: '1px solid rgba(21, 128, 61, 0.2)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
                     flexShrink: 0,
-                    background: overdueCount > 0 
-                      ? 'rgba(220, 38, 38, 0.1)' 
-                      : (dueTodayCount > 0 ? 'rgba(217, 119, 6, 0.1)' : 'rgba(21, 128, 61, 0.08)'),
-                    color: overdueCount > 0 
-                      ? '#dc2626' 
-                      : (dueTodayCount > 0 ? '#b45309' : '#15803d'),
-                    border: overdueCount > 0 
-                      ? '1px solid rgba(220, 38, 38, 0.25)' 
-                      : (dueTodayCount > 0 ? '1px solid rgba(217, 119, 6, 0.25)' : '1px solid rgba(21, 128, 61, 0.2)'),
+                    transition: 'transform 0.2s ease'
                   }}
                 >
-                  {overdueCount > 0
-                    ? (isAr ? `${overdueCount} متأخرات` : `${overdueCount} Overdue`)
-                    : (dueTodayCount > 0
-                        ? (isAr ? `${dueTodayCount} اليوم` : `${dueTodayCount} Today`)
-                        : (isAr ? '✓ الخزنة منتظمة' : '✓ Safe Balanced')
-                      )
-                  }
-                </span>
-              </div>
-              <div style={{ fontSize: '0.73rem', color: '#64748b', lineHeight: 1.35 }}>
-                {isAr ? 'استلام كاش بالخزنة (101000) أو إنستاباي وإصدار سند قبض' : 'Instant 1-click collection'}
-              </div>
+                  <Receipt size={18} />
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem', minWidth: 0, flex: 1 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.4rem' }}>
+                    <div data-action-title="true" style={{ fontSize: '0.88rem', fontWeight: 800, color: '#0f172a', transition: 'color 0.2s ease' }}>
+                      {isAr ? 'تحصيل قسط وطباعة إيصال' : 'Collect & Issue Receipt'}
+                    </div>
+                    <span
+                      style={{
+                        fontSize: '0.67rem',
+                        fontWeight: 700,
+                        fontVariantNumeric: 'tabular-nums',
+                        padding: '0.12rem 0.5rem',
+                        borderRadius: '12px',
+                        whiteSpace: 'nowrap',
+                        flexShrink: 0,
+                        background: overdueCount > 0 
+                          ? 'rgba(220, 38, 38, 0.1)' 
+                          : (dueTodayCount > 0 ? 'rgba(217, 119, 6, 0.1)' : 'rgba(21, 128, 61, 0.08)'),
+                        color: overdueCount > 0 
+                          ? '#dc2626' 
+                          : (dueTodayCount > 0 ? '#b45309' : '#15803d'),
+                        border: overdueCount > 0 
+                          ? '1px solid rgba(220, 38, 38, 0.25)' 
+                          : (dueTodayCount > 0 ? '1px solid rgba(217, 119, 6, 0.25)' : '1px solid rgba(21, 128, 61, 0.2)'),
+                      }}
+                    >
+                      {overdueCount > 0
+                        ? (isAr ? `${overdueCount} متأخرات` : `${overdueCount} Overdue`)
+                        : (dueTodayCount > 0
+                            ? (isAr ? `${dueTodayCount} اليوم` : `${dueTodayCount} Today`)
+                            : (isAr ? '✓ الخزنة منتظمة' : '✓ Safe Balanced')
+                          )
+                      }
+                    </span>
+                  </div>
+                  <div style={{ fontSize: '0.73rem', color: '#64748b', lineHeight: 1.35 }}>
+                    {isAr ? 'استلام كاش بالخزنة (101000) أو إنستاباي وإصدار سند قبض' : 'Instant 1-click collection'}
+                  </div>
+                </div>
+              </button>
             </div>
-          </button>
+          </div>
 
-          {/* Action 2: Add Contract Supplement */}
-          <button
-            type="button"
-            className={styles.opsActionBtn}
-            title={isAr 
-              ? 'إضافة ملحق مالي للعقد (دفعة تشطيبات، تعديلات معمارية، أو إشعار مدين جديد) بنظام الشقين وربطه بجدول الأقساط' 
-              : 'Add contract supplement or finishing installment to contract'}
-            style={{
-              padding: '0.95rem 1.15rem',
-              minHeight: '78px',
-              borderRadius: '12px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.85rem',
-              cursor: 'pointer',
-              textAlign: isAr ? 'right' : 'left'
-            }}
-            onClick={onOpenNewCheque}
-          >
-            <div 
-              data-action-icon="true"
-              style={{
-                width: '40px',
-                height: '40px',
-                borderRadius: '10px',
+          {/* Pillar 2: ركن المبيعات وعقود العملاء (Sales Contracts & Customer Accounts) */}
+          <div className={styles.pillarBay}>
+            <div className={styles.pillarHeader}>
+              <div className={styles.pillarHeaderMain}>
+                <div className={styles.pillarIconBox} style={{
+                  background: 'rgba(184, 144, 62, 0.1)',
+                  color: '#946f23',
+                  border: '1px solid rgba(184, 144, 62, 0.25)'
+                }}>
+                  <FileText size={16} />
+                </div>
+                <div>
+                  <div className={styles.pillarTitle}>
+                    {isAr ? 'ركن المبيعات وعقود العملاء' : 'Sales Contracts & Customer Accounts'}
+                  </div>
+                  <span className={styles.pillarSubtitle}>
+                    {isAr ? 'حجز الشقق، توثيق العقود، وإدارة الجداول والتسويات' : 'Unit reservations, contract execution & settlements'}
+                  </span>
+                </div>
+              </div>
+              <span className={styles.pillarBadge} style={{
                 background: 'rgba(184, 144, 62, 0.08)',
                 color: '#946f23',
-                border: '1px solid rgba(184, 144, 62, 0.22)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexShrink: 0,
-                transition: 'transform 0.2s ease'
-              }}
-            >
-              <Plus size={18} />
+                border: '1px solid rgba(184, 144, 62, 0.22)'
+              }}>
+                {isAr ? 'التعاقدات والتسويات' : 'Deals & Settlements'}
+              </span>
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem', minWidth: 0, flex: 1 }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.4rem' }}>
-                <div data-action-title="true" style={{ fontSize: '0.88rem', fontWeight: 800, color: '#0f172a', transition: 'color 0.2s ease' }}>
-                  {isAr ? 'إضافة ملحق أو دفعة للعقد' : 'Add Contract Supplement'}
-                </div>
-                <span
-                  style={{
-                    fontSize: '0.67rem',
-                    fontWeight: 700,
-                    fontVariantNumeric: 'tabular-nums',
-                    padding: '0.12rem 0.5rem',
-                    borderRadius: '12px',
-                    whiteSpace: 'nowrap',
-                    flexShrink: 0,
-                    background: 'rgba(15, 23, 42, 0.05)',
-                    color: '#475569',
-                    border: '1px solid rgba(15, 23, 42, 0.1)',
-                  }}
-                >
-                  {isAr ? `${contracts.length} عقد نشط` : `${contracts.length} Active`}
-                </span>
-              </div>
-              <div style={{ fontSize: '0.73rem', color: '#64748b', lineHeight: 1.35 }}>
-                {isAr ? 'تشطيبات، تعديلات معمارية، أو مبالغ طارئة بنظام الشقين' : 'Finishing, alterations or annex'}
-              </div>
-            </div>
-          </button>
 
-          {/* Action 3: Record Project Expenses & Materials */}
-          <button
-            type="button"
-            className={`${styles.opsActionBtn} ${isExpenseModalOpen ? styles.opsActionBtnActive : ''}`}
-            title={isAr 
-              ? 'تسجيل فواتير ومصروفات وخامات المباني (حديد، أسمنت، خرسانة، سباكة، مصنعيات) كاش أو إنستاباي أو آجل على الحساب' 
-              : 'Record building materials, contractor labor, or site expenses'}
-            style={{
-              padding: '0.95rem 1.15rem',
-              minHeight: '78px',
-              borderRadius: '12px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.85rem',
-              cursor: 'pointer',
-              textAlign: isAr ? 'right' : 'left'
-            }}
-            onClick={handleOpenProjectExpenses}
-          >
-            <div 
-              data-action-icon="true"
-              style={{
-                width: '40px',
-                height: '40px',
-                borderRadius: '10px',
-                background: 'rgba(180, 83, 9, 0.07)',
-                color: '#b45309',
-                border: '1px solid rgba(180, 83, 9, 0.2)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexShrink: 0,
-                transition: 'transform 0.2s ease'
-              }}
-            >
-              <HardHat size={18} />
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem', minWidth: 0, flex: 1 }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.4rem' }}>
-                <div data-action-title="true" style={{ fontSize: '0.88rem', fontWeight: 800, color: '#0f172a', transition: 'color 0.2s ease' }}>
-                  {isAr ? 'تسجيل مصاريف وخامات المشروع' : 'Record Project Expenses'}
-                </div>
-                <span
+            <div className={styles.pillarGrid}>
+              {/* Action 6: New Deal Wizard */}
+              <button
+                type="button"
+                className={styles.opsActionBtn}
+                title={isAr 
+                  ? 'فتح معالج تحرير عقد بيع جديد لشقة: تسجيل بيانات العميل، تحصيل مقدم الحجز بالخزنة، وتوليد جدول الأقساط آلياً' 
+                  : 'Create new sales contract, record down payment, and build installment schedule'}
+                onClick={onOpenNewContract}
+              >
+                <div 
+                  data-action-icon="true"
                   style={{
-                    fontSize: '0.67rem',
-                    fontWeight: 700,
-                    fontVariantNumeric: 'tabular-nums',
-                    padding: '0.12rem 0.5rem',
-                    borderRadius: '12px',
-                    whiteSpace: 'nowrap',
-                    flexShrink: 0,
-                    background: 'rgba(180, 83, 9, 0.08)',
-                    color: '#b45309',
-                    border: '1px solid rgba(180, 83, 9, 0.2)',
-                  }}
-                >
-                  {isAr ? `${underConstructionProperties.length} مواقع جارية` : `${underConstructionProperties.length} Active Sites`}
-                </span>
-              </div>
-              <div style={{ fontSize: '0.73rem', color: '#64748b', lineHeight: 1.35 }}>
-                {isAr ? 'كاش، إنستاباي، أو فواتير مقاولين على الحساب ومتابعة المباني' : 'Cash, InstaPay, or credit invoice'}
-              </div>
-            </div>
-          </button>
-
-          {/* Action 4: Property Lifecycle Cost Audit */}
-          <button
-            type="button"
-            className={styles.opsActionBtn}
-            title={isAr 
-              ? 'تدقيق ومراجعة مصاريف مباني كل عمارة، تكلفة المتر الفعلي، ونسبة الربح الصافي المحقق من بيع الشقق' 
-              : 'Audit building WIP costs, per-sqm rates, and apartment profit margins'}
-            style={{
-              padding: '0.95rem 1.15rem',
-              minHeight: '78px',
-              borderRadius: '12px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.85rem',
-              cursor: 'pointer',
-              textAlign: isAr ? 'right' : 'left'
-            }}
-            onClick={() => {
-              if (primaryProperty && onOpenAuditForProperty) {
-                onOpenAuditForProperty(primaryProperty);
-              } else {
-                onNavigateToTab('properties');
-              }
-            }}
-          >
-            <div 
-              data-action-icon="true"
-              style={{
-                width: '40px',
-                height: '40px',
-                borderRadius: '10px',
-                background: 'rgba(51, 65, 85, 0.06)',
-                color: '#334155',
-                border: '1px solid rgba(51, 65, 85, 0.18)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexShrink: 0,
-                transition: 'transform 0.2s ease'
-              }}
-            >
-              <ShieldCheck size={18} />
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem', minWidth: 0, flex: 1 }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.4rem' }}>
-                <div data-action-title="true" style={{ fontSize: '0.88rem', fontWeight: 800, color: '#0f172a', transition: 'color 0.2s ease' }}>
-                  {isAr ? 'تكلفة العمارة وأرباح الشقق' : 'Property Cost Audit'}
-                </div>
-                <span
-                  style={{
-                    fontSize: '0.67rem',
-                    fontWeight: 700,
-                    fontVariantNumeric: 'tabular-nums',
-                    padding: '0.12rem 0.5rem',
-                    borderRadius: '12px',
-                    whiteSpace: 'nowrap',
-                    flexShrink: 0,
-                    background: 'rgba(51, 65, 85, 0.06)',
-                    color: '#334155',
-                    border: '1px solid rgba(51, 65, 85, 0.15)',
-                  }}
-                >
-                  {isAr ? `${properties.length} مشاريع بالمحفظة` : `${properties.length} Projects`}
-                </span>
-              </div>
-              <div style={{ fontSize: '0.73rem', color: '#64748b', lineHeight: 1.35 }}>
-                {isAr ? 'تدقيق مصاريف المباني، تكلفة المتر الفعلي، وربحية كل شقة' : 'Audit costs & unit profit'}
-              </div>
-            </div>
-          </button>
-
-          {/* Action 5: Feasibility & Pricing Calculator */}
-          <button
-            type="button"
-            className={styles.opsActionBtn}
-            title={isAr 
-              ? 'حاسبة الجدوى وتسعير الشقق والمشاريع، دراسة تكلفة المتر المسطح، واحتساب هامش الربح المستهدف وخطط الأقساط' 
-              : 'Feasibility study and apartment pricing simulator'}
-            style={{
-              padding: '0.95rem 1.15rem',
-              minHeight: '78px',
-              borderRadius: '12px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.85rem',
-              cursor: 'pointer',
-              textAlign: isAr ? 'right' : 'left'
-            }}
-            onClick={() => {
-              if (primaryProperty && onOpenCalculatorForProperty) {
-                onOpenCalculatorForProperty(primaryProperty);
-              } else {
-                onNavigateToTab('calculator');
-              }
-            }}
-          >
-            <div 
-              data-action-icon="true"
-              style={{
-                width: '40px',
-                height: '40px',
-                borderRadius: '10px',
-                background: 'rgba(30, 58, 138, 0.06)',
-                color: '#1e40af',
-                border: '1px solid rgba(30, 58, 138, 0.2)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexShrink: 0,
-                transition: 'transform 0.2s ease'
-              }}
-            >
-              <Calculator size={18} />
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem', minWidth: 0, flex: 1 }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.4rem' }}>
-                <div data-action-title="true" style={{ fontSize: '0.88rem', fontWeight: 800, color: '#0f172a', transition: 'color 0.2s ease' }}>
-                  {isAr ? 'حاسبة تسعير وجدوى المشروع' : 'Feasibility & Pricing'}
-                </div>
-                <span
-                  style={{
-                    fontSize: '0.67rem',
-                    fontWeight: 700,
-                    fontVariantNumeric: 'tabular-nums',
-                    padding: '0.12rem 0.5rem',
-                    borderRadius: '12px',
-                    whiteSpace: 'nowrap',
-                    flexShrink: 0,
-                    background: 'rgba(30, 58, 138, 0.06)',
-                    color: '#1e40af',
-                    border: '1px solid rgba(30, 58, 138, 0.18)',
-                  }}
-                >
-                  {isAr ? 'دراسات جدوى وتكلفة' : 'Feasibility & Cost'}
-                </span>
-              </div>
-              <div style={{ fontSize: '0.73rem', color: '#64748b', lineHeight: 1.35 }}>
-                {isAr ? 'دراسة تكلفة المتر المسطح، هامش الربح المستهدف، وجدولة الأقساط' : 'Installments & margin study'}
-              </div>
-            </div>
-          </button>
-
-          {/* Action 6: New Contract Deal Wizard */}
-          <button
-            type="button"
-            className={styles.opsActionBtn}
-            title={isAr 
-              ? 'فتح معالج تحرير عقد بيع جديد لشقة: تسجيل بيانات العميل، تحصيل مقدم الحجز بالخزنة، وتوليد جدول الأقساط آلياً' 
-              : 'Create new sales contract, record down payment, and build installment schedule'}
-            style={{
-              padding: '0.95rem 1.15rem',
-              minHeight: '78px',
-              borderRadius: '12px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.85rem',
-              cursor: 'pointer',
-              textAlign: isAr ? 'right' : 'left'
-            }}
-            onClick={onOpenNewContract}
-          >
-            <div 
-              data-action-icon="true"
-              style={{
-                width: '40px',
-                height: '40px',
-                borderRadius: '10px',
-                background: 'rgba(184, 144, 62, 0.08)',
-                color: '#946f23',
-                border: '1px solid rgba(184, 144, 62, 0.22)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexShrink: 0,
-                transition: 'transform 0.2s ease'
-              }}
-            >
-              <FileText size={18} />
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem', minWidth: 0, flex: 1 }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.4rem' }}>
-                <div data-action-title="true" style={{ fontSize: '0.88rem', fontWeight: 800, color: '#0f172a', transition: 'color 0.2s ease' }}>
-                  {isAr ? 'تحرير عقد بيع وحجز شقة' : 'New Sales Contract'}
-                </div>
-                <span
-                  style={{
-                    fontSize: '0.67rem',
-                    fontWeight: 700,
-                    fontVariantNumeric: 'tabular-nums',
-                    padding: '0.12rem 0.5rem',
-                    borderRadius: '12px',
-                    whiteSpace: 'nowrap',
-                    flexShrink: 0,
-                    background: 'rgba(184, 144, 62, 0.1)',
+                    width: '40px',
+                    height: '40px',
+                    borderRadius: '10px',
+                    background: 'rgba(184, 144, 62, 0.08)',
                     color: '#946f23',
-                    border: '1px solid rgba(184, 144, 62, 0.25)',
-                  }}
-                >
-                  {isAr ? `${availableUnitsCount} شقق شاغرة` : `${availableUnitsCount} Vacant`}
-                </span>
-              </div>
-              <div style={{ fontSize: '0.73rem', color: '#64748b', lineHeight: 1.35 }}>
-                {isAr ? 'تسجيل بيانات العميل، دفعة الحجز بالخزنة، وجدول الأقساط بالمليم' : '3-step deal wizard'}
-              </div>
-            </div>
-          </button>
-
-          {/* Action 7: RSV Milestone Recognition */}
-          <button
-            type="button"
-            className={styles.opsActionBtn}
-            title={isAr 
-              ? 'معادلة الرسملة والاعتراف بالإيراد (RSV): حساب نسبة الإنجاز الفعلي وتوزيع مصاريف المباني وإثبات أرباح الشقق بالدفاتر' 
-              : 'Recognize project progress and revenue via the RSV Factor'}
-            style={{
-              padding: '0.95rem 1.15rem',
-              minHeight: '78px',
-              borderRadius: '12px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.85rem',
-              cursor: 'pointer',
-              textAlign: isAr ? 'right' : 'left'
-            }}
-            onClick={() => {
-              if (onOpenRSVModal) {
-                onOpenRSVModal();
-              } else {
-                onNavigateToTab('contracts');
-              }
-            }}
-          >
-            <div 
-              data-action-icon="true"
-              style={{
-                width: '40px',
-                height: '40px',
-                borderRadius: '10px',
-                background: 'rgba(30, 58, 138, 0.06)',
-                color: '#1e3a8a',
-                border: '1px solid rgba(30, 58, 138, 0.2)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexShrink: 0,
-                transition: 'transform 0.2s ease'
-              }}
-            >
-              <Layers size={18} />
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem', minWidth: 0, flex: 1 }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.4rem' }}>
-                <div data-action-title="true" style={{ fontSize: '0.88rem', fontWeight: 800, color: '#0f172a', transition: 'color 0.2s ease' }}>
-                  {isAr ? 'حساب أرباح ونسبة إنجاز المشروع' : 'Milestone Recognition (RSV)'}
-                </div>
-                <span
-                  style={{
-                    fontSize: '0.67rem',
-                    fontWeight: 700,
-                    fontVariantNumeric: 'tabular-nums',
-                    padding: '0.12rem 0.5rem',
-                    borderRadius: '12px',
-                    whiteSpace: 'nowrap',
+                    border: '1px solid rgba(184, 144, 62, 0.22)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
                     flexShrink: 0,
-                    background: 'rgba(148, 111, 35, 0.09)',
-                    color: '#946f23',
-                    border: '1px solid rgba(148, 111, 35, 0.2)',
+                    transition: 'transform 0.2s ease'
                   }}
                 >
-                  {handoverCount > 0 
-                    ? (isAr ? `${handoverCount} جاهزة للتسليم` : `${handoverCount} Ready`)
-                    : (isAr ? 'متابعة نسب الإنجاز' : 'RSV Milestone')
+                  <FileText size={18} />
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem', minWidth: 0, flex: 1 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.4rem' }}>
+                    <div data-action-title="true" style={{ fontSize: '0.88rem', fontWeight: 800, color: '#0f172a', transition: 'color 0.2s ease' }}>
+                      {isAr ? 'تحرير عقد بيع وحجز شقة' : 'New Sales Contract'}
+                    </div>
+                    <span
+                      style={{
+                        fontSize: '0.67rem',
+                        fontWeight: 700,
+                        fontVariantNumeric: 'tabular-nums',
+                        padding: '0.12rem 0.5rem',
+                        borderRadius: '12px',
+                        whiteSpace: 'nowrap',
+                        flexShrink: 0,
+                        background: 'rgba(184, 144, 62, 0.1)',
+                        color: '#946f23',
+                        border: '1px solid rgba(184, 144, 62, 0.25)',
+                      }}
+                    >
+                      {isAr ? `${availableUnitsCount} شقق شاغرة` : `${availableUnitsCount} Vacant`}
+                    </span>
+                  </div>
+                  <div style={{ fontSize: '0.73rem', color: '#64748b', lineHeight: 1.35 }}>
+                    {isAr ? 'تسجيل بيانات العميل، دفعة الحجز بالخزنة، وجدول الأقساط بالمليم' : '3-step deal wizard'}
+                  </div>
+                </div>
+              </button>
+
+              {/* Action 2: Add Contract Supplement */}
+              <button
+                type="button"
+                className={styles.opsActionBtn}
+                title={isAr 
+                  ? 'إضافة ملحق مالي للعقد (دفعة تشطيبات، تعديلات معمارية، أو إشعار مدين جديد) بنظام الشقين وربطه بجدول الأقساط' 
+                  : 'Add contract supplement or finishing installment to contract'}
+                onClick={onOpenNewCheque}
+              >
+                <div 
+                  data-action-icon="true"
+                  style={{
+                    width: '40px',
+                    height: '40px',
+                    borderRadius: '10px',
+                    background: 'rgba(184, 144, 62, 0.08)',
+                    color: '#946f23',
+                    border: '1px solid rgba(184, 144, 62, 0.22)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0,
+                    transition: 'transform 0.2s ease'
+                  }}
+                >
+                  <Plus size={18} />
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem', minWidth: 0, flex: 1 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.4rem' }}>
+                    <div data-action-title="true" style={{ fontSize: '0.88rem', fontWeight: 800, color: '#0f172a', transition: 'color 0.2s ease' }}>
+                      {isAr ? 'إضافة ملحق أو دفعة للعقد' : 'Add Contract Supplement'}
+                    </div>
+                    <span
+                      style={{
+                        fontSize: '0.67rem',
+                        fontWeight: 700,
+                        fontVariantNumeric: 'tabular-nums',
+                        padding: '0.12rem 0.5rem',
+                        borderRadius: '12px',
+                        whiteSpace: 'nowrap',
+                        flexShrink: 0,
+                        background: 'rgba(15, 23, 42, 0.05)',
+                        color: '#475569',
+                        border: '1px solid rgba(15, 23, 42, 0.1)',
+                      }}
+                    >
+                      {isAr ? `${contracts.length} عقد نشط` : `${contracts.length} Active`}
+                    </span>
+                  </div>
+                  <div style={{ fontSize: '0.73rem', color: '#64748b', lineHeight: 1.35 }}>
+                    {isAr ? 'تشطيبات، تعديلات معمارية، أو مبالغ طارئة بنظام الشقين' : 'Finishing, alterations or annex'}
+                  </div>
+                </div>
+              </button>
+
+              {/* Action 8: Contract Escalation */}
+              <button
+                type="button"
+                className={styles.opsActionBtn}
+                title={isAr 
+                  ? 'إجراء تعديل سعري أو تطبيق فروق زيادة التكاليف على العقد (Delta V)، وإعادة جدولة الفروق على الأقساط المتبقية بنظام الشقين' 
+                  : 'Adjust contract price and re-amortize installment deltas with two-sided layout'}
+                onClick={() => {
+                  if (primaryContract && onOpenEscalationModal) {
+                    onOpenEscalationModal(primaryContract);
+                  } else {
+                    onNavigateToTab('contracts');
                   }
-                </span>
-              </div>
-              <div style={{ fontSize: '0.73rem', color: '#64748b', lineHeight: 1.35 }}>
-                {isAr ? 'توزيع مصاريف المباني واعتراف مكسب الشقق بالدفاتر' : 'Milestone revenue recognition'}
-              </div>
-            </div>
-          </button>
-
-          {/* Action 8: Contract Escalation */}
-          <button
-            type="button"
-            className={styles.opsActionBtn}
-            title={isAr 
-              ? 'إجراء تعديل سعري أو تطبيق فروق زيادة التكاليف على العقد (Delta V)، وإعادة جدولة الفروق على الأقساط المتبقية بنظام الشقين' 
-              : 'Adjust contract price and re-amortize installment deltas with two-sided layout'}
-            style={{
-              padding: '0.95rem 1.15rem',
-              minHeight: '78px',
-              borderRadius: '12px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.85rem',
-              cursor: 'pointer',
-              textAlign: isAr ? 'right' : 'left'
-            }}
-            onClick={() => {
-              if (primaryContract && onOpenEscalationModal) {
-                onOpenEscalationModal(primaryContract);
-              } else {
-                onNavigateToTab('contracts');
-              }
-            }}
-          >
-            <div 
-              data-action-icon="true"
-              style={{
-                width: '40px',
-                height: '40px',
-                borderRadius: '10px',
-                background: 'rgba(71, 85, 105, 0.06)',
-                color: '#475569',
-                border: '1px solid rgba(71, 85, 105, 0.18)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexShrink: 0,
-                transition: 'transform 0.2s ease'
-              }}
-            >
-              <TrendingUp size={18} />
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem', minWidth: 0, flex: 1 }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.4rem' }}>
-                <div data-action-title="true" style={{ fontSize: '0.88rem', fontWeight: 800, color: '#0f172a', transition: 'color 0.2s ease' }}>
-                  {isAr ? 'تعديل أسعار أو بنود العقد' : 'Price Escalation'}
-                </div>
-                <span
+                }}
+              >
+                <div 
+                  data-action-icon="true"
                   style={{
-                    fontSize: '0.67rem',
-                    fontWeight: 700,
-                    fontVariantNumeric: 'tabular-nums',
-                    padding: '0.12rem 0.5rem',
-                    borderRadius: '12px',
-                    whiteSpace: 'nowrap',
-                    flexShrink: 0,
+                    width: '40px',
+                    height: '40px',
+                    borderRadius: '10px',
                     background: 'rgba(71, 85, 105, 0.06)',
                     color: '#475569',
-                    border: '1px solid rgba(71, 85, 105, 0.15)',
+                    border: '1px solid rgba(71, 85, 105, 0.18)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0,
+                    transition: 'transform 0.2s ease'
                   }}
                 >
-                  {isAr ? 'ملاحق Delta V' : 'Delta V'}
-                </span>
-              </div>
-              <div style={{ fontSize: '0.73rem', color: '#64748b', lineHeight: 1.35 }}>
-                {isAr ? 'إضافة ملحق سعري Delta V وجدولة الفروق' : 'Price adjustment addendum'}
-              </div>
-            </div>
-          </button>
-
-          {/* Action 9: Contract Rescission */}
-          <button
-            type="button"
-            className={styles.opsActionBtn}
-            title={isAr 
-              ? 'تسوية فسخ أو استرداد شقة: حساب الخصم القانوني (10% قبل التسليم) أو استرداد الوحدة، وصرف مستحقات العميل من الخزنة' 
-              : 'Settle contract cancellation, calculate statutory deduction, and refund'}
-            style={{
-              padding: '0.95rem 1.15rem',
-              minHeight: '78px',
-              borderRadius: '12px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.85rem',
-              cursor: 'pointer',
-              textAlign: isAr ? 'right' : 'left'
-            }}
-            onClick={() => {
-              if (primaryContract && onOpenRescissionModal) {
-                onOpenRescissionModal(primaryContract);
-              } else {
-                onNavigateToTab('contracts');
-              }
-            }}
-          >
-            <div 
-              data-action-icon="true"
-              style={{
-                width: '40px',
-                height: '40px',
-                borderRadius: '10px',
-                background: 'rgba(159, 18, 57, 0.06)',
-                color: '#9f1239',
-                border: '1px solid rgba(159, 18, 57, 0.18)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexShrink: 0,
-                transition: 'transform 0.2s ease'
-              }}
-            >
-              <RotateCcw size={18} />
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem', minWidth: 0, flex: 1 }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.4rem' }}>
-                <div data-action-title="true" style={{ fontSize: '0.88rem', fontWeight: 800, color: '#0f172a', transition: 'color 0.2s ease' }}>
-                  {isAr ? 'فسخ تعاقد وتسوية المسترد' : 'Contract Rescission'}
+                  <TrendingUp size={18} />
                 </div>
-                <span
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem', minWidth: 0, flex: 1 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.4rem' }}>
+                    <div data-action-title="true" style={{ fontSize: '0.88rem', fontWeight: 800, color: '#0f172a', transition: 'color 0.2s ease' }}>
+                      {isAr ? 'تعديل أسعار أو بنود العقد' : 'Price Escalation'}
+                    </div>
+                    <span
+                      style={{
+                        fontSize: '0.67rem',
+                        fontWeight: 700,
+                        fontVariantNumeric: 'tabular-nums',
+                        padding: '0.12rem 0.5rem',
+                        borderRadius: '12px',
+                        whiteSpace: 'nowrap',
+                        flexShrink: 0,
+                        background: 'rgba(71, 85, 105, 0.06)',
+                        color: '#475569',
+                        border: '1px solid rgba(71, 85, 105, 0.15)',
+                      }}
+                    >
+                      {isAr ? 'ملاحق Delta V' : 'Delta V'}
+                    </span>
+                  </div>
+                  <div style={{ fontSize: '0.73rem', color: '#64748b', lineHeight: 1.35 }}>
+                    {isAr ? 'إضافة ملحق سعري Delta V وجدولة الفروق' : 'Price adjustment addendum'}
+                  </div>
+                </div>
+              </button>
+
+              {/* Action 9: Contract Rescission */}
+              <button
+                type="button"
+                className={styles.opsActionBtn}
+                title={isAr 
+                  ? 'تسوية فسخ أو استرداد شقة: حساب الخصم القانوني (10% قبل التسليم) أو استرداد الوحدة، وصرف مستحقات العميل من الخزنة' 
+                  : 'Settle contract cancellation, calculate statutory deduction, and refund'}
+                onClick={() => {
+                  if (primaryContract && onOpenRescissionModal) {
+                    onOpenRescissionModal(primaryContract);
+                  } else {
+                    onNavigateToTab('contracts');
+                  }
+                }}
+              >
+                <div 
+                  data-action-icon="true"
                   style={{
-                    fontSize: '0.67rem',
-                    fontWeight: 700,
-                    fontVariantNumeric: 'tabular-nums',
-                    padding: '0.12rem 0.5rem',
-                    borderRadius: '12px',
-                    whiteSpace: 'nowrap',
-                    flexShrink: 0,
+                    width: '40px',
+                    height: '40px',
+                    borderRadius: '10px',
                     background: 'rgba(159, 18, 57, 0.06)',
                     color: '#9f1239',
                     border: '1px solid rgba(159, 18, 57, 0.18)',
-                  }}
-                >
-                  {isAr ? 'غرامة 10% وتسويات' : '10% Deduction'}
-                </span>
-              </div>
-              <div style={{ fontSize: '0.73rem', color: '#64748b', lineHeight: 1.35 }}>
-                {isAr ? 'تطبيق غرامة الـ 10% القانونية ورد باقي الفلوس نقدياً' : 'Settle penalty & vault refund'}
-              </div>
-            </div>
-          </button>
-
-          {/* Action 10: Partner Management & Distributions */}
-          <button
-            type="button"
-            className={styles.opsActionBtn}
-            title={isAr 
-              ? 'إدارة وتوزيعات الشركاء والممولين: متابعة الأرصدة، ضخ مساهمات رأس مال، وصرف أرباح بنظام الشقين المزدوج' 
-              : 'Manage partners, capital injections, and profit distributions'}
-            style={{
-              padding: '0.95rem 1.15rem',
-              minHeight: '78px',
-              borderRadius: '12px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.85rem',
-              cursor: 'pointer',
-              textAlign: isAr ? 'right' : 'left'
-            }}
-            onClick={() => {
-              if (onOpenPartnerOperations) {
-                onOpenPartnerOperations();
-              } else {
-                onNavigateToTab('partners');
-              }
-            }}
-          >
-            <div 
-              data-action-icon="true"
-              style={{
-                width: '40px',
-                height: '40px',
-                borderRadius: '10px',
-                background: 'rgba(184, 144, 62, 0.08)',
-                color: '#946f23',
-                border: '1px solid rgba(184, 144, 62, 0.22)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexShrink: 0,
-                transition: 'transform 0.2s ease'
-              }}
-            >
-              <Users size={18} />
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem', minWidth: 0, flex: 1 }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.4rem' }}>
-                <div data-action-title="true" style={{ fontSize: '0.88rem', fontWeight: 800, color: '#0f172a', transition: 'color 0.2s ease' }}>
-                  {isAr ? 'إدارة وتوزيعات الشركاء والممولين' : 'Partner Operations'}
-                </div>
-                <span
-                  style={{
-                    fontSize: '0.67rem',
-                    fontWeight: 700,
-                    fontVariantNumeric: 'tabular-nums',
-                    padding: '0.12rem 0.5rem',
-                    borderRadius: '12px',
-                    whiteSpace: 'nowrap',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
                     flexShrink: 0,
-                    background: 'rgba(21, 128, 61, 0.08)',
-                    color: '#15803d',
-                    border: '1px solid rgba(21, 128, 61, 0.2)',
+                    transition: 'transform 0.2s ease'
                   }}
                 >
-                  {partnersWithDuesCount > 0 
-                    ? (isAr ? `${partnersWithDuesCount} مستحق أرباح` : `${partnersWithDuesCount} Due`)
-                    : (isAr ? 'إدارة رؤوس الأموال' : 'Capital & Equity')
-                  }
-                </span>
-              </div>
-              <div style={{ fontSize: '0.73rem', color: '#64748b', lineHeight: 1.35 }}>
-                {isAr ? 'متابعة الأرصدة، ضخ مساهمات، وصرف أرباح بنظام الشقين' : 'Balances, dividends & capital'}
-              </div>
+                  <RotateCcw size={18} />
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem', minWidth: 0, flex: 1 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.4rem' }}>
+                    <div data-action-title="true" style={{ fontSize: '0.88rem', fontWeight: 800, color: '#0f172a', transition: 'color 0.2s ease' }}>
+                      {isAr ? 'فسخ تعاقد وتسوية المسترد' : 'Contract Rescission'}
+                    </div>
+                    <span
+                      style={{
+                        fontSize: '0.67rem',
+                        fontWeight: 700,
+                        fontVariantNumeric: 'tabular-nums',
+                        padding: '0.12rem 0.5rem',
+                        borderRadius: '12px',
+                        whiteSpace: 'nowrap',
+                        flexShrink: 0,
+                        background: 'rgba(159, 18, 57, 0.06)',
+                        color: '#9f1239',
+                        border: '1px solid rgba(159, 18, 57, 0.18)',
+                      }}
+                    >
+                      {isAr ? 'غرامة 10% وتسويات' : '10% Deduction'}
+                    </span>
+                  </div>
+                  <div style={{ fontSize: '0.73rem', color: '#64748b', lineHeight: 1.35 }}>
+                    {isAr ? 'تطبيق غرامة الـ 10% القانونية ورد باقي الفلوس نقدياً' : 'Settle penalty & vault refund'}
+                  </div>
+                </div>
+              </button>
             </div>
-          </button>
+          </div>
+
+          {/* Pillar 3: ركن المشاريع وتكاليف البناء (Projects & Construction WIP) */}
+          <div className={styles.pillarBay}>
+            <div className={styles.pillarHeader}>
+              <div className={styles.pillarHeaderMain}>
+                <div className={styles.pillarIconBox} style={{
+                  background: 'rgba(180, 83, 9, 0.1)',
+                  color: '#b45309',
+                  border: '1px solid rgba(180, 83, 9, 0.25)'
+                }}>
+                  <Building2 size={16} />
+                </div>
+                <div>
+                  <div className={styles.pillarTitle}>
+                    {isAr ? 'ركن المشاريع وتكاليف البناء' : 'Projects & Construction WIP'}
+                  </div>
+                  <span className={styles.pillarSubtitle}>
+                    {isAr ? 'فواتير وخامات المواقع، تدقيق تكلفة المباني، ودراسات الجدوى' : 'Site materials, building WIP audit & feasibility'}
+                  </span>
+                </div>
+              </div>
+              <span className={styles.pillarBadge} style={{
+                background: 'rgba(180, 83, 9, 0.08)',
+                color: '#b45309',
+                border: '1px solid rgba(180, 83, 9, 0.22)'
+              }}>
+                {isAr ? 'المواقع والمقاولين' : 'Sites & Contractors'}
+              </span>
+            </div>
+
+            <div className={styles.pillarGrid}>
+              {/* Action 3: Record Project Expenses & Materials */}
+              <button
+                type="button"
+                className={`${styles.opsActionBtn} ${isExpenseModalOpen ? styles.opsActionBtnActive : ''}`}
+                title={isAr 
+                  ? 'تسجيل فواتير ومصروفات وخامات المباني (حديد، أسمنت، خرسانة، سباكة، مصنعيات) كاش أو إنستاباي أو آجل على الحساب' 
+                  : 'Record building materials, contractor labor, or site expenses'}
+                onClick={handleOpenProjectExpenses}
+              >
+                <div 
+                  data-action-icon="true"
+                  style={{
+                    width: '40px',
+                    height: '40px',
+                    borderRadius: '10px',
+                    background: 'rgba(180, 83, 9, 0.07)',
+                    color: '#b45309',
+                    border: '1px solid rgba(180, 83, 9, 0.2)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0,
+                    transition: 'transform 0.2s ease'
+                  }}
+                >
+                  <HardHat size={18} />
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem', minWidth: 0, flex: 1 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.4rem' }}>
+                    <div data-action-title="true" style={{ fontSize: '0.88rem', fontWeight: 800, color: '#0f172a', transition: 'color 0.2s ease' }}>
+                      {isAr ? 'تسجيل مصاريف وخامات المشروع' : 'Record Project Expenses'}
+                    </div>
+                    <span
+                      style={{
+                        fontSize: '0.67rem',
+                        fontWeight: 700,
+                        fontVariantNumeric: 'tabular-nums',
+                        padding: '0.12rem 0.5rem',
+                        borderRadius: '12px',
+                        whiteSpace: 'nowrap',
+                        flexShrink: 0,
+                        background: 'rgba(180, 83, 9, 0.08)',
+                        color: '#b45309',
+                        border: '1px solid rgba(180, 83, 9, 0.2)',
+                      }}
+                    >
+                      {isAr ? `${underConstructionProperties.length} مواقع جارية` : `${underConstructionProperties.length} Active Sites`}
+                    </span>
+                  </div>
+                  <div style={{ fontSize: '0.73rem', color: '#64748b', lineHeight: 1.35 }}>
+                    {isAr ? 'كاش، إنستاباي، أو فواتير مقاولين على الحساب ومتابعة المباني' : 'Cash, InstaPay, or credit invoice'}
+                  </div>
+                </div>
+              </button>
+
+              {/* Action 5: Feasibility & Pricing Calculator */}
+              <button
+                type="button"
+                className={styles.opsActionBtn}
+                title={isAr 
+                  ? 'حاسبة الجدوى وتسعير الشقق والمشاريع، دراسة تكلفة المتر المسطح، واحتساب هامش الربح المستهدف وخطط الأقساط' 
+                  : 'Feasibility study and apartment pricing simulator'}
+                onClick={() => {
+                  if (primaryProperty && onOpenCalculatorForProperty) {
+                    onOpenCalculatorForProperty(primaryProperty);
+                  } else {
+                    onNavigateToTab('calculator');
+                  }
+                }}
+              >
+                <div 
+                  data-action-icon="true"
+                  style={{
+                    width: '40px',
+                    height: '40px',
+                    borderRadius: '10px',
+                    background: 'rgba(30, 58, 138, 0.06)',
+                    color: '#1e40af',
+                    border: '1px solid rgba(30, 58, 138, 0.2)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0,
+                    transition: 'transform 0.2s ease'
+                  }}
+                >
+                  <Calculator size={18} />
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem', minWidth: 0, flex: 1 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.4rem' }}>
+                    <div data-action-title="true" style={{ fontSize: '0.88rem', fontWeight: 800, color: '#0f172a', transition: 'color 0.2s ease' }}>
+                      {isAr ? 'حاسبة تسعير وجدوى المشروع' : 'Feasibility & Pricing'}
+                    </div>
+                    <span
+                      style={{
+                        fontSize: '0.67rem',
+                        fontWeight: 700,
+                        fontVariantNumeric: 'tabular-nums',
+                        padding: '0.12rem 0.5rem',
+                        borderRadius: '12px',
+                        whiteSpace: 'nowrap',
+                        flexShrink: 0,
+                        background: 'rgba(30, 58, 138, 0.06)',
+                        color: '#1e40af',
+                        border: '1px solid rgba(30, 58, 138, 0.18)',
+                      }}
+                    >
+                      {isAr ? 'دراسات جدوى وتكلفة' : 'Feasibility & Cost'}
+                    </span>
+                  </div>
+                  <div style={{ fontSize: '0.73rem', color: '#64748b', lineHeight: 1.35 }}>
+                    {isAr ? 'دراسة تكلفة المتر المسطح، هامش الربح المستهدف، وجدولة الأقساط' : 'Installments & margin study'}
+                  </div>
+                </div>
+              </button>
+
+              {/* Action 4: Property Lifecycle Cost Audit */}
+              <button
+                type="button"
+                className={styles.opsActionBtn}
+                title={isAr 
+                  ? 'تدقيق ومراجعة مصاريف مباني كل عمارة، تكلفة المتر الفعلي، ونسبة الربح الصافي المحقق من بيع الشقق' 
+                  : 'Audit building WIP costs, per-sqm rates, and apartment profit margins'}
+                onClick={() => {
+                  if (primaryProperty && onOpenAuditForProperty) {
+                    onOpenAuditForProperty(primaryProperty);
+                  } else {
+                    onNavigateToTab('properties');
+                  }
+                }}
+              >
+                <div 
+                  data-action-icon="true"
+                  style={{
+                    width: '40px',
+                    height: '40px',
+                    borderRadius: '10px',
+                    background: 'rgba(51, 65, 85, 0.06)',
+                    color: '#334155',
+                    border: '1px solid rgba(51, 65, 85, 0.18)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0,
+                    transition: 'transform 0.2s ease'
+                  }}
+                >
+                  <ShieldCheck size={18} />
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem', minWidth: 0, flex: 1 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.4rem' }}>
+                    <div data-action-title="true" style={{ fontSize: '0.88rem', fontWeight: 800, color: '#0f172a', transition: 'color 0.2s ease' }}>
+                      {isAr ? 'تكلفة العمارة وأرباح الشقق' : 'Property Cost Audit'}
+                    </div>
+                    <span
+                      style={{
+                        fontSize: '0.67rem',
+                        fontWeight: 700,
+                        fontVariantNumeric: 'tabular-nums',
+                        padding: '0.12rem 0.5rem',
+                        borderRadius: '12px',
+                        whiteSpace: 'nowrap',
+                        flexShrink: 0,
+                        background: 'rgba(51, 65, 85, 0.06)',
+                        color: '#334155',
+                        border: '1px solid rgba(51, 65, 85, 0.15)',
+                      }}
+                    >
+                      {isAr ? `${properties.length} مشاريع بالمحفظة` : `${properties.length} Projects`}
+                    </span>
+                  </div>
+                  <div style={{ fontSize: '0.73rem', color: '#64748b', lineHeight: 1.35 }}>
+                    {isAr ? 'تدقيق مصاريف المباني، تكلفة المتر الفعلي، وربحية كل شقة' : 'Audit costs & unit profit'}
+                  </div>
+                </div>
+              </button>
+            </div>
+          </div>
+
+          {/* Pillar 4: ركن الحسابات والشركاء (Finance, RSV & Equity Partners) */}
+          <div className={styles.pillarBay}>
+            <div className={styles.pillarHeader}>
+              <div className={styles.pillarHeaderMain}>
+                <div className={styles.pillarIconBox} style={{
+                  background: 'rgba(148, 111, 35, 0.1)',
+                  color: '#946f23',
+                  border: '1px solid rgba(148, 111, 35, 0.25)'
+                }}>
+                  <Landmark size={16} />
+                </div>
+                <div>
+                  <div className={styles.pillarTitle}>
+                    {isAr ? 'ركن الحسابات والشركاء' : 'Finance, RSV & Equity Partners'}
+                  </div>
+                  <span className={styles.pillarSubtitle}>
+                    {isAr ? 'الاعتراف بالإيراد، نسب الإنجاز، ومستحقات الشركاء والممولين' : 'Milestone recognition, RSV factor & partner equity'}
+                  </span>
+                </div>
+              </div>
+              <span className={styles.pillarBadge} style={{
+                background: 'rgba(148, 111, 35, 0.08)',
+                color: '#946f23',
+                border: '1px solid rgba(148, 111, 35, 0.22)'
+              }}>
+                {isAr ? 'الدفاتر وحصص الأرباح' : 'Ledger & Profit Shares'}
+              </span>
+            </div>
+
+            <div className={styles.pillarGrid}>
+              {/* Action 7: RSV Milestone Recognition */}
+              <button
+                type="button"
+                className={styles.opsActionBtn}
+                title={isAr 
+                  ? 'معادلة الرسملة والاعتراف بالإيراد (RSV): حساب نسبة الإنجاز الفعلي وتوزيع مصاريف المباني وإثبات أرباح الشقق بالدفاتر' 
+                  : 'Recognize project progress and revenue via the RSV Factor'}
+                onClick={() => {
+                  if (onOpenRSVModal) {
+                    onOpenRSVModal();
+                  } else {
+                    onNavigateToTab('contracts');
+                  }
+                }}
+              >
+                <div 
+                  data-action-icon="true"
+                  style={{
+                    width: '40px',
+                    height: '40px',
+                    borderRadius: '10px',
+                    background: 'rgba(30, 58, 138, 0.06)',
+                    color: '#1e3a8a',
+                    border: '1px solid rgba(30, 58, 138, 0.2)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0,
+                    transition: 'transform 0.2s ease'
+                  }}
+                >
+                  <Layers size={18} />
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem', minWidth: 0, flex: 1 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.4rem' }}>
+                    <div data-action-title="true" style={{ fontSize: '0.88rem', fontWeight: 800, color: '#0f172a', transition: 'color 0.2s ease' }}>
+                      {isAr ? 'حساب أرباح ونسبة إنجاز المشروع' : 'Milestone Recognition (RSV)'}
+                    </div>
+                    <span
+                      style={{
+                        fontSize: '0.67rem',
+                        fontWeight: 700,
+                        fontVariantNumeric: 'tabular-nums',
+                        padding: '0.12rem 0.5rem',
+                        borderRadius: '12px',
+                        whiteSpace: 'nowrap',
+                        flexShrink: 0,
+                        background: 'rgba(148, 111, 35, 0.09)',
+                        color: '#946f23',
+                        border: '1px solid rgba(148, 111, 35, 0.2)',
+                      }}
+                    >
+                      {handoverCount > 0 
+                        ? (isAr ? `${handoverCount} جاهزة للتسليم` : `${handoverCount} Ready`)
+                        : (isAr ? 'متابعة نسب الإنجاز' : 'RSV Milestone')
+                      }
+                    </span>
+                  </div>
+                  <div style={{ fontSize: '0.73rem', color: '#64748b', lineHeight: 1.35 }}>
+                    {isAr ? 'توزيع مصاريف المباني واعتراف مكسب الشقق بالدفاتر' : 'Milestone revenue recognition'}
+                  </div>
+                </div>
+              </button>
+
+              {/* Action 10: Partner Management & Distributions */}
+              <button
+                type="button"
+                className={styles.opsActionBtn}
+                title={isAr 
+                  ? 'إدارة وتوزيعات الشركاء والممولين: متابعة الأرصدة، ضخ مساهمات رأس مال، وصرف أرباح بنظام الشقين المزدوج' 
+                  : 'Manage partners, capital injections, and profit distributions'}
+                onClick={() => {
+                  if (onOpenPartnerOperations) {
+                    onOpenPartnerOperations();
+                  } else {
+                    onNavigateToTab('partners');
+                  }
+                }}
+              >
+                <div 
+                  data-action-icon="true"
+                  style={{
+                    width: '40px',
+                    height: '40px',
+                    borderRadius: '10px',
+                    background: 'rgba(184, 144, 62, 0.08)',
+                    color: '#946f23',
+                    border: '1px solid rgba(184, 144, 62, 0.22)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0,
+                    transition: 'transform 0.2s ease'
+                  }}
+                >
+                  <Users size={18} />
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem', minWidth: 0, flex: 1 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.4rem' }}>
+                    <div data-action-title="true" style={{ fontSize: '0.88rem', fontWeight: 800, color: '#0f172a', transition: 'color 0.2s ease' }}>
+                      {isAr ? 'إدارة وتوزيعات الشركاء والممولين' : 'Partner Operations'}
+                    </div>
+                    <span
+                      style={{
+                        fontSize: '0.67rem',
+                        fontWeight: 700,
+                        fontVariantNumeric: 'tabular-nums',
+                        padding: '0.12rem 0.5rem',
+                        borderRadius: '12px',
+                        whiteSpace: 'nowrap',
+                        flexShrink: 0,
+                        background: 'rgba(21, 128, 61, 0.08)',
+                        color: '#15803d',
+                        border: '1px solid rgba(21, 128, 61, 0.2)',
+                      }}
+                    >
+                      {partnersWithDuesCount > 0 
+                        ? (isAr ? `${partnersWithDuesCount} مستحق أرباح` : `${partnersWithDuesCount} Due`)
+                        : (isAr ? 'إدارة رؤوس الأموال' : 'Capital & Equity')
+                      }
+                    </span>
+                  </div>
+                  <div style={{ fontSize: '0.73rem', color: '#64748b', lineHeight: 1.35 }}>
+                    {isAr ? 'متابعة الأرصدة، ضخ مساهمات، وصرف أرباح بنظام الشقين' : 'Balances, dividends & capital'}
+                  </div>
+                </div>
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
       {/* 4. UNIFIED EXECUTIVE DAILY DESK WORKBENCH */}
       <div style={{
         background: '#ffffff',
-        border: '1.5px solid #e2e8f0',
+        border: '1.5px solid #d8d2c4',
         borderRadius: '16px',
         boxShadow: '0 4px 20px -4px rgba(15, 23, 42, 0.05)',
         display: 'flex',

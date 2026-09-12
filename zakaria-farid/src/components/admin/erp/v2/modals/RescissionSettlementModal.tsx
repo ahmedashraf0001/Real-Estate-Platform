@@ -185,7 +185,8 @@ export const RescissionSettlementModal: React.FC<RescissionSettlementModalProps>
           borderRadius: '24px',
           width: '100%',
           maxWidth: '1180px',
-          height: 'min(880px, 94vh)',
+          maxHeight: '90vh',
+          height: 'min(880px, 90vh)',
           boxShadow: '0 25px 65px -15px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(0,0,0,0.04)',
           overflow: 'hidden',
           display: 'flex',
@@ -197,7 +198,7 @@ export const RescissionSettlementModal: React.FC<RescissionSettlementModalProps>
             1. TOP HEADER BAR
             ══════════════════════════════════════════════════════════════════════════ */}
         <div style={{
-          padding: '1.1rem 1.75rem',
+          padding: 'clamp(0.85rem, 2vw, 1.1rem) clamp(1rem, 2.5vw, 1.75rem)',
           borderBottom: '1px solid #e2e8f0',
           display: 'flex',
           alignItems: 'center',
@@ -223,7 +224,7 @@ export const RescissionSettlementModal: React.FC<RescissionSettlementModalProps>
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
                 <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: '#0f172a' }}>
-                  {isAr ? 'معالج فسخ العقد وتطبيق الحد الأدنى للاسترداد (Forfeiture Floor)' : 'Contract Rescission & Forfeiture Floor Settlement'}
+                  {isAr ? 'معالج فسخ العقد وتطبيق حد حظر مطالبة العميل بعجز إضافي (Forfeiture Floor)' : 'Contract Rescission & Forfeiture Floor Settlement'}
                 </h3>
                 <span style={{
                   background: 'rgba(239, 68, 68, 0.1)',
@@ -234,13 +235,13 @@ export const RescissionSettlementModal: React.FC<RescissionSettlementModalProps>
                   fontSize: '0.72rem',
                   fontWeight: 800
                 }}>
-                  {isAr ? 'مادة ١٤٧ مدني • قانون ١١٩' : 'Statutory Floor Engine'}
+                  {isAr ? 'حد حظر مطالبة العميل بعجز إضافي' : 'Statutory Floor Engine'}
                 </span>
               </div>
               <p style={{ margin: '0.2rem 0 0', fontSize: '0.75rem', color: '#64748b' }}>
                 {isAr 
-                  ? 'احتساب غرامة الفسخ القانونية (١٠٪ كحد أدنى)، قيد رد المستحق للعميل، وإلغاء الأقساط المستقبلية تلقائياً.' 
-                  : 'Calculate statutory penalty retention, client net refund liability, and post reversing journal entries.'}
+                  ? 'احتساب غرامة الفسخ القانونية (١٠٪) مع تطبيق حد حظر مطالبة العميل بعجز إضافي (العميل لن يُطالب بأي مبالغ إضافية إذا كانت مدفوعاته أقل من الغرامة)، ورد المستحق وإلغاء الأقساط المستقبلية تلقائياً.' 
+                  : 'Calculate statutory penalty retention with Forfeiture Floor protection (client is never billed for deficits if payments were less than penalty).'}
               </p>
             </div>
           </div>
@@ -248,13 +249,16 @@ export const RescissionSettlementModal: React.FC<RescissionSettlementModalProps>
           <button
             type="button"
             onClick={onClose}
+            aria-label={isAr ? 'إغلاق' : 'Close'}
             style={{
               background: '#ffffff',
               border: '1px solid #e2e8f0',
               borderRadius: '10px',
               color: '#64748b',
-              width: '34px',
-              height: '34px',
+              width: '44px',
+              height: '44px',
+              minWidth: '44px',
+              minHeight: '44px',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -262,7 +266,7 @@ export const RescissionSettlementModal: React.FC<RescissionSettlementModalProps>
               transition: 'all 0.15s ease'
             }}
           >
-            <X size={17} />
+            <X size={18} />
           </button>
         </div>
 
@@ -271,10 +275,10 @@ export const RescissionSettlementModal: React.FC<RescissionSettlementModalProps>
             ══════════════════════════════════════════════════════════════════════════ */}
         <div style={{
           display: 'grid',
-          gridTemplateColumns: '390px 1fr',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 360px), 1fr))',
           flex: 1,
           minHeight: 0,
-          overflow: 'hidden'
+          overflowY: 'auto'
         }}>
 
           {/* ──────────────────────────────────────────────────────────────────
@@ -449,7 +453,7 @@ export const RescissionSettlementModal: React.FC<RescissionSettlementModalProps>
             display: 'flex',
             flexDirection: 'column',
             overflowY: 'auto',
-            padding: '1.75rem',
+            padding: 'clamp(1rem, 2.5vw, 1.75rem)',
             gap: '1.25rem'
           }}>
             {rescissionSuccess ? (
@@ -552,11 +556,14 @@ export const RescissionSettlementModal: React.FC<RescissionSettlementModalProps>
 
                     <div style={{ background: 'rgba(184, 144, 62, 0.08)', padding: '0.75rem 1rem', borderRadius: '10px', border: '1px solid rgba(184, 144, 62, 0.25)' }}>
                       <span style={{ color: '#946f23', fontSize: '0.7rem', fontWeight: 800, display: 'block' }}>
-                        {isAr ? 'غرامة الفسخ المحتجزة (١٠٪ كحد أدنى):' : 'Retained Penalty (10% Floor):'}
+                        {isAr ? 'غرامة الفسخ المحتجزة (حد حظر مطالبة العميل بعجز إضافي):' : 'Retained Penalty (Forfeiture Floor):'}
                       </span>
                       <strong style={{ color: '#946f23', fontSize: '1.05rem', fontWeight: 900, fontVariantNumeric: 'tabular-nums' }}>
                         {formatEGP(rescissionSuccess.penaltyRetained)} ج.م
                       </strong>
+                      <span style={{ fontSize: '0.65rem', color: '#946f23', display: 'block', marginTop: '0.2rem' }}>
+                        {isAr ? 'تم تطبيق حد حظر مطالبة العميل بعجز إضافي (Forfeiture Floor)' : 'Forfeiture Floor rule applied'}
+                      </span>
                     </div>
 
                     <div style={{ background: 'rgba(16, 185, 129, 0.08)', padding: '0.75rem 1rem', borderRadius: '10px', border: '1px solid rgba(16, 185, 129, 0.25)' }}>
@@ -581,11 +588,11 @@ export const RescissionSettlementModal: React.FC<RescissionSettlementModalProps>
                   }}>
                     {isAr ? (
                       <>
-                        📌 <strong>الإجراء المحاسبي المكتمل:</strong> تم ترحيل صافي المبلغ المسترد إلى ذمة العميل بحساب الالتزامات (206200)، وإثبات غرامة الفسخ كإيراد استثنائي محتجز، مع تحرير الوحدة السكنية للبيع مجدداً.
+                        📌 <strong>الإجراء المحاسبي المكتمل:</strong> تم تطبيق حد حظر مطالبة العميل بعجز إضافي (Forfeiture Floor) بحيث لا يُطالب العميل بأي عجز إضافي إذا كانت مدفوعاته أقل من الغرامة. تم ترحيل صافي المبلغ المسترد إلى ذمة العميل بحساب الالتزامات (206200)، وإثبات غرامة الفسخ كإيراد استثنائي محتجز، مع تحرير الوحدة السكنية للبيع مجدداً.
                       </>
                     ) : (
                       <>
-                        📌 <strong>Accounting Audit:</strong> Net refund credited to buyer liability account (206200), penalty retained as miscellaneous gain, and unit unlocked for new sales contracts.
+                        📌 <strong>Accounting Audit:</strong> Forfeiture Floor applied (client is never billed for deficits). Net refund credited to buyer liability account (206200), penalty retained as miscellaneous gain, and unit unlocked for new sales contracts.
                       </>
                     )}
                   </div>
@@ -613,6 +620,7 @@ export const RescissionSettlementModal: React.FC<RescissionSettlementModalProps>
                       fontSize: '0.82rem',
                       fontWeight: 700,
                       cursor: 'pointer',
+                      minHeight: '44px',
                       display: 'inline-flex',
                       alignItems: 'center',
                       gap: '0.45rem',
@@ -635,6 +643,7 @@ export const RescissionSettlementModal: React.FC<RescissionSettlementModalProps>
                       fontSize: '0.84rem',
                       fontWeight: 800,
                       cursor: 'pointer',
+                      minHeight: '44px',
                       display: 'inline-flex',
                       alignItems: 'center',
                       gap: '0.5rem',
@@ -740,13 +749,18 @@ export const RescissionSettlementModal: React.FC<RescissionSettlementModalProps>
                   }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.2rem' }}>
                       <span style={{ color: '#946f23', fontSize: '0.7rem', fontWeight: 800 }}>
-                        {isAr ? 'غرامة الفسخ المحتجزة للشركة:' : 'Retained Penalty:'}
+                        {isAr ? 'غرامة الفسخ المحتجزة (حد حظر مطالبة العميل بعجز إضافي):' : 'Retained Penalty (Forfeiture Floor):'}
                       </span>
-                      <LegalVerificationTag label={isAr ? 'غرامة ١٠٪' : '10% Penalty'} isAr={isAr} />
+                      <LegalVerificationTag label={isAr ? 'حد أقصى ١٠٪' : '10% Floor'} isAr={isAr} />
                     </div>
                     <strong style={{ color: '#946f23', fontSize: '1.1rem', fontWeight: 900 }}>
                       <MoneyCell amount={preview.penaltyRetained} isAr={isAr} highlight />
                     </strong>
+                    <span style={{ fontSize: '0.66rem', color: '#946f23', display: 'block', marginTop: '0.3rem', lineHeight: 1.4 }}>
+                      {isAr 
+                        ? '🛡️ حد حظر مطالبة العميل بعجز إضافي (Forfeiture Floor): العميل لن يُطالب بأي مبالغ إضافية إذا كانت مدفوعاته أقل من الغرامة.'
+                        : 'Forfeiture Floor: Client will never be asked to pay additional deficits if payments were less than the penalty.'}
+                    </span>
                   </div>
 
                   <div style={{
@@ -789,6 +803,7 @@ export const RescissionSettlementModal: React.FC<RescissionSettlementModalProps>
                       fontSize: '0.82rem',
                       fontWeight: 700,
                       cursor: 'pointer',
+                      minHeight: '44px',
                       transition: 'all 0.15s ease'
                     }}
                   >
@@ -808,6 +823,7 @@ export const RescissionSettlementModal: React.FC<RescissionSettlementModalProps>
                       fontSize: '0.84rem',
                       fontWeight: 800,
                       cursor: isMutating ? 'not-allowed' : 'pointer',
+                      minHeight: '44px',
                       display: 'inline-flex',
                       alignItems: 'center',
                       gap: '0.5rem',

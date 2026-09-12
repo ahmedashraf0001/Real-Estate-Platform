@@ -152,62 +152,64 @@ export const CashCollectionReceiptModal: React.FC<CashCollectionReceiptModalProp
       </div>
 
       {/* 2. Client & Contract Metadata Table */}
-      <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #cbd5e1', fontSize: '0.82rem' }}>
-        <tbody>
-          <tr style={{ borderBottom: '1px solid #e2e8f0', background: '#f8fafc' }}>
-            <td style={{ padding: '0.75rem 1rem', fontWeight: 800, width: '25%', color: '#334155' }}>
-              {isAr ? 'اسم العميل / المستلم منه:' : 'Client / Payer:'}
-            </td>
-            <td style={{ padding: '0.75rem 1rem', fontWeight: 900, width: '35%', color: '#0f172a' }}>
-              {buyerName}
-            </td>
-            <td style={{ padding: '0.75rem 1rem', fontWeight: 800, width: '20%', color: '#334155' }}>
-              {isAr ? 'رقم العقد والوحدة:' : 'Contract & Unit:'}
-            </td>
-            <td style={{ padding: '0.75rem 1rem', fontWeight: 800, width: '20%', color: '#0f172a' }}>
-              {unitId} (#{contractNumber})
-            </td>
-          </tr>
-          <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
-            <td style={{ padding: '0.75rem 1rem', fontWeight: 800, color: '#334155' }}>
-              {isAr ? 'جهة الإيداع والتوريد:' : 'Deposit Treasury:'}
-            </td>
-            <td style={{ padding: '0.75rem 1rem', color: '#0f172a' }}>
-              {destinationTreasury === 'SAFE_101000' 
-                ? (isAr ? 'خـزينة الشركة النقدية الرئيسية (كود 101000)' : 'Corporate Cash Safe (101000)')
-                : (isAr ? 'حـساب البنك التجاري والإنستاباي (كود 102000)' : 'Commercial Bank & InstaPay (102000)')}
-            </td>
-            <td style={{ padding: '0.75rem 1rem', fontWeight: 800, color: '#334155' }}>
-              {isAr ? 'تاريخ الاستحقاق:' : 'Due Date:'}
-            </td>
-            <td style={{ padding: '0.75rem 1rem', color: '#0f172a' }}>
-              {schedule?.due_date || cheque?.due_date || receiptDate}
-            </td>
-          </tr>
-          <tr style={{ borderBottom: '1px solid #e2e8f0', background: '#f8fafc' }}>
-            <td style={{ padding: '0.75rem 1rem', fontWeight: 800, color: '#334155' }}>
-              {isAr ? 'إجمالي قيمة التعاقد:' : 'Contract Gross:'}
-            </td>
-            <td style={{ padding: '0.75rem 1rem', fontWeight: 700, color: '#0f172a' }}>
-              {grossContract.formatEGP(isAr)}
-            </td>
-            <td style={{ padding: '0.75rem 1rem', fontWeight: 800, color: '#334155' }}>
-              {isAr ? 'المتبقي بعد هذا السداد:' : 'Remaining Balance:'}
-            </td>
-            <td style={{ padding: '0.75rem 1rem', fontWeight: 800, color: '#b45309' }}>
-              {remainingDue.formatEGP(isAr)}
-            </td>
-          </tr>
-          <tr>
-            <td style={{ padding: '0.75rem 1rem', fontWeight: 800, color: '#334155' }}>
-              {isAr ? 'البيان وملاحظات السداد:' : 'Memo & Description:'}
-            </td>
-            <td colSpan={3} style={{ padding: '0.75rem 1rem', color: '#475569' }}>
-              {notes || (isAr ? `سداد القسط رقم ${trancheNumber} المستحق عن الوحدة ${unitId} بموجب العقد رقم ${contractNumber}` : `Payment of tranche #${trancheNumber} for unit ${unitId}`)}
-            </td>
-          </tr>
-        </tbody>
-      </table>
+      <div style={{ overflowX: 'auto', width: '100%', WebkitOverflowScrolling: 'touch' }}>
+        <table style={{ width: '100%', minWidth: '480px', borderCollapse: 'collapse', border: '1px solid #cbd5e1', fontSize: '0.82rem' }}>
+          <tbody>
+            <tr style={{ borderBottom: '1px solid #e2e8f0', background: '#f8fafc' }}>
+              <td style={{ padding: '0.75rem 1rem', fontWeight: 800, width: '25%', color: '#334155' }}>
+                {isAr ? 'اسم العميل / المستلم منه:' : 'Client / Payer:'}
+              </td>
+              <td style={{ padding: '0.75rem 1rem', fontWeight: 900, width: '35%', color: '#0f172a' }}>
+                {buyerName}
+              </td>
+              <td style={{ padding: '0.75rem 1rem', fontWeight: 800, width: '20%', color: '#334155' }}>
+                {isAr ? 'رقم العقد والوحدة:' : 'Contract & Unit:'}
+              </td>
+              <td style={{ padding: '0.75rem 1rem', fontWeight: 800, width: '20%', color: '#0f172a' }}>
+                {unitId} (#{contractNumber})
+              </td>
+            </tr>
+            <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
+              <td style={{ padding: '0.75rem 1rem', fontWeight: 800, color: '#334155' }}>
+                {isAr ? 'جهة الإيداع والتوريد:' : 'Deposit Treasury:'}
+              </td>
+              <td style={{ padding: '0.75rem 1rem', color: '#0f172a' }}>
+                {destinationTreasury === 'SAFE_101000' 
+                  ? (isAr ? 'خـزينة الشركة النقدية الرئيسية (كود 101000)' : 'Corporate Cash Safe (101000)')
+                  : (isAr ? 'حـساب البنك التجاري والإنستاباي (كود 102000)' : 'Commercial Bank & InstaPay (102000)')}
+              </td>
+              <td style={{ padding: '0.75rem 1rem', fontWeight: 800, color: '#334155' }}>
+                {isAr ? 'تاريخ الاستحقاق:' : 'Due Date:'}
+              </td>
+              <td style={{ padding: '0.75rem 1rem', color: '#0f172a' }}>
+                {schedule?.due_date || cheque?.due_date || receiptDate}
+              </td>
+            </tr>
+            <tr style={{ borderBottom: '1px solid #e2e8f0', background: '#f8fafc' }}>
+              <td style={{ padding: '0.75rem 1rem', fontWeight: 800, color: '#334155' }}>
+                {isAr ? 'إجمالي قيمة التعاقد:' : 'Contract Gross:'}
+              </td>
+              <td style={{ padding: '0.75rem 1rem', fontWeight: 700, color: '#0f172a' }}>
+                {grossContract.formatEGP(isAr)}
+              </td>
+              <td style={{ padding: '0.75rem 1rem', fontWeight: 800, color: '#334155' }}>
+                {isAr ? 'المتبقي بعد هذا السداد:' : 'Remaining Balance:'}
+              </td>
+              <td style={{ padding: '0.75rem 1rem', fontWeight: 800, color: '#b45309' }}>
+                {remainingDue.formatEGP(isAr)}
+              </td>
+            </tr>
+            <tr>
+              <td style={{ padding: '0.75rem 1rem', fontWeight: 800, color: '#334155' }}>
+                {isAr ? 'البيان وملاحظات السداد:' : 'Memo & Description:'}
+              </td>
+              <td colSpan={3} style={{ padding: '0.75rem 1rem', color: '#475569' }}>
+                {notes || (isAr ? `سداد القسط رقم ${trancheNumber} المستحق عن الوحدة ${unitId} بموجب العقد رقم ${contractNumber}` : `Payment of tranche #${trancheNumber} for unit ${unitId}`)}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
 
       {/* 3. Accounting Debit/Credit Summary */}
       <div style={{
@@ -240,7 +242,7 @@ export const CashCollectionReceiptModal: React.FC<CashCollectionReceiptModalProp
         style={{ 
           maxWidth: '680px', 
           width: '95vw', 
-          maxHeight: '94vh',
+          maxHeight: '90vh',
           display: 'flex',
           flexDirection: 'column'
         }}
@@ -248,7 +250,7 @@ export const CashCollectionReceiptModal: React.FC<CashCollectionReceiptModalProp
       >
         {/* Modal Header */}
         <div style={{
-          padding: '1.25rem 1.75rem',
+          padding: 'clamp(0.85rem, 2.5vw, 1.25rem) clamp(1rem, 3vw, 1.75rem)',
           borderBottom: '1px solid #e2e8f0',
           display: 'flex',
           alignItems: 'center',
@@ -287,12 +289,15 @@ export const CashCollectionReceiptModal: React.FC<CashCollectionReceiptModalProp
               setConfirmedVoucher(null);
               onClose();
             }}
+            aria-label={isAr ? 'إغلاق' : 'Close'}
             style={{
               background: '#ffffff',
               border: '1px solid #e2e8f0',
               borderRadius: '8px',
-              width: '30px',
-              height: '30px',
+              minWidth: '44px',
+              minHeight: '44px',
+              width: '44px',
+              height: '44px',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -300,7 +305,7 @@ export const CashCollectionReceiptModal: React.FC<CashCollectionReceiptModalProp
               cursor: 'pointer'
             }}
           >
-            <X size={15} />
+            <X size={18} />
           </button>
         </div>
 
@@ -502,6 +507,7 @@ export const CashCollectionReceiptModal: React.FC<CashCollectionReceiptModalProp
                     borderRadius: '8px',
                     fontSize: '0.8rem',
                     fontWeight: 800,
+                    minHeight: '44px',
                     display: 'inline-flex',
                     alignItems: 'center',
                     gap: '0.45rem',
@@ -524,6 +530,7 @@ export const CashCollectionReceiptModal: React.FC<CashCollectionReceiptModalProp
                     borderRadius: '8px',
                     fontSize: '0.8rem',
                     fontWeight: 700,
+                    minHeight: '44px',
                     display: 'inline-flex',
                     alignItems: 'center',
                     gap: '0.4rem',
@@ -549,6 +556,7 @@ export const CashCollectionReceiptModal: React.FC<CashCollectionReceiptModalProp
                   borderRadius: '8px',
                   fontSize: '0.8rem',
                   fontWeight: 800,
+                  minHeight: '44px',
                   cursor: 'pointer',
                   boxShadow: '0 2px 6px rgba(15, 23, 42, 0.2)'
                 }}
@@ -843,6 +851,7 @@ export const CashCollectionReceiptModal: React.FC<CashCollectionReceiptModalProp
                 borderRadius: '8px',
                 fontSize: '0.78rem',
                 fontWeight: 700,
+                minHeight: '44px',
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '0.35rem',
@@ -869,6 +878,7 @@ export const CashCollectionReceiptModal: React.FC<CashCollectionReceiptModalProp
                   borderRadius: '8px',
                   fontSize: '0.78rem',
                   fontWeight: 700,
+                  minHeight: '44px',
                   cursor: 'pointer'
                 }}
               >
@@ -888,6 +898,7 @@ export const CashCollectionReceiptModal: React.FC<CashCollectionReceiptModalProp
                   fontSize: '0.8rem',
                   fontWeight: 800,
                   cursor: isMutating ? 'not-allowed' : 'pointer',
+                  minHeight: '44px',
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: '0.45rem',
@@ -924,7 +935,7 @@ export const CashCollectionReceiptModal: React.FC<CashCollectionReceiptModalProp
             style={{ 
               maxWidth: '850px', 
               width: '100%', 
-              maxHeight: '94vh', 
+              maxHeight: '90vh', 
               overflowY: 'auto',
               borderRadius: '12px',
               boxShadow: '0 25px 50px rgba(0,0,0,0.3)'

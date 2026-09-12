@@ -40,6 +40,7 @@ import { D } from '@/lib/erp/math';
 import { CashFlowForecastChart } from '../charts/CashFlowForecastChart';
 import { RealEstateValueWaterfall } from '../charts/RealEstateValueWaterfall';
 import { ZFKpiCard } from '../ZFKpiCard';
+import { ZFErpBreadcrumb } from '../common/ZFErpBreadcrumb';
 import styles from '../ZFWorkstationShell.module.css';
 
 interface CockpitViewProps {
@@ -154,6 +155,7 @@ export const CockpitView: React.FC<CockpitViewProps> = ({
       {/* SECTION 1: STAGE HEADER */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem', paddingTop: '0.35rem' }}>
         <div>
+          <ZFErpBreadcrumb sectionTitle={isAr ? 'قمرة القيادة والتحكم المالي' : 'Executive Financial Cockpit'} icon={<Wallet size={13} color="#946f23" />} />
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
             <h1 style={{ fontSize: '1.4rem', fontWeight: 800, margin: 0, color: '#0f172a', letterSpacing: '-0.02em' }}>
               {isAr ? 'نظرة عامة على الشغل والفلوس' : 'Executive Financial Cockpit'}
@@ -163,8 +165,8 @@ export const CockpitView: React.FC<CockpitViewProps> = ({
               fontWeight: 700,
               padding: '0.18rem 0.55rem',
               borderRadius: '6px',
-              background: 'rgba(184, 144, 62, 0.09)',
-              border: '1px solid rgba(184, 144, 62, 0.28)',
+              background: 'rgba(197, 160, 89, 0.08)',
+              border: '1px solid rgba(197, 160, 89, 0.22)',
               color: '#946f23'
             }}>
               {isAr ? 'موقف الكاش' : 'Executive Position'}
