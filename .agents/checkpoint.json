@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "version": "2.1.0",
-  "lastUpdated": "2026-09-12T16:48:20.660221+00:00",
+  "version": "3.0.0",
+  "lastUpdated": "2026-09-23T20:00:00.000Z",
   "sessionState": "IDLE",
   "activeWorkOrder": null,
   "circuitBreakerCounters": {
@@ -27,28 +27,28 @@
     }
   },
   "currentTask": {
-    "taskId": "FIN-OS-LOADING-PLACEHOLDERS-LIGHT-MODE",
-    "taskSummary": "Implemented Sovereign Alabaster Light Mode across all loading skeletons and placeholders in ERP, Admin, MapPicker, and Public Catalog. Fixed CSS selector bug (:not([data-theme='light']) overriding html attribute), added useSkeletonTheme observer hook, and unified #EAE6DC canvas and #FFFFFF cards with #D8D2C4 borders.",
-    "track": "SURFACE_UI",
+    "taskId": "HARNESS-BUILDER-MODE-2-ADOPTION-V3.0.0",
+    "taskSummary": "Re-adopted expanded codebase into v3.0.0 engineering harness: enshrined INV-FINOS-DESIGN-SYSTEM and INV-AP-PRIORITY-SORT, codified erp_notifications & notificationEngine, updated test suite baseline to 244 tests across 66 suites, and updated gatekeeper regex.",
+    "track": "WORKFLOW_AUDIT",
     "currentStep": "COMPLETED",
-    "stepIndex": 1,
-    "totalSteps": 1,
+    "stepIndex": 6,
+    "totalSteps": 6,
     "touchedFiles": [
-      "src/components/admin/ui/ZFSkeletonLoader.tsx",
-      "src/components/admin/erp/v2/ZFERPLoadingWorkstation.tsx",
-      "src/components/admin/MapPicker.tsx",
-      "src/components/admin/DynamicMapPicker.tsx",
-      "src/app/[locale]/properties/loading.tsx",
-      "src/app/[locale]/properties/[slug]/loading.tsx"
+      "PROJECT_SPEC.md",
+      "HARNESS_RATIONALE.md",
+      "AGENTS.md",
+      "ONBOARDING.md",
+      ".agents/scripts/verify_gates.sh",
+      ".agents/checkpoint.json",
+      ".agents/harness_log.json"
     ],
     "activeSubagents": []
   },
   "lastCompletedWorkOrder": {
-    "track": "SURFACE_UI",
-    "role": "Executive UI/UX Engineer",
-    "modelTier": "flash",
-    "verificationEvidence": "Full Sovereign Alabaster Light Mode for loading placeholders: Eliminated flawed :not([data-theme='light']) CSS selectors across ZFSkeletonLoader and ZFERPLoadingWorkstation, implemented live useSkeletonTheme hook with MutationObserver, added light mode styling to MapPicker overlay, DynamicMapPicker, and catalog loading screens with #EAE6DC canvas, #FFFFFF cards, and #D8D2C4 borders. Verified: npx tsc --noEmit (0 errors), npm test (62/62 passed), verify_gates.sh (ALL GATES PASSED).",
-    "completedAt": "2026-09-12T06:30:30.000Z"
+    "track": "WORKFLOW_AUDIT",
+    "role": "Harness Builder",
+    "verificationEvidence": "Passed npx tsc --noEmit (0 errors), npm test (244/244 passing across 66 suites), verify_gates.sh returned exit code 0.",
+    "completedAt": "2026-09-23T20:00:00.000Z"
   },
   "breachLog": [],
   "lastRepositoryPublish": {
@@ -56,13 +56,23 @@
     "branch": "main",
     "verification": {
       "typecheck": "passed",
-      "tests": "62/62 passed",
-      "graphSync": "completed; SQL extraction unavailable (tree_sitter_sql missing)"
+      "tests": "244/244 passed",
+      "graphSync": "completed"
     },
     "excluded": [
       "zakaria-farid/.open-next/",
       "zakaria-farid/graphify-out/",
       ".agents/plugins"
     ]
+  },
+  "lastGraphSync": {
+    "completedAt": "2026-09-23T19:50:00.000Z",
+    "command": "bash .agents/scripts/sync_graph.sh",
+    "status": "completed",
+    "nodes": 59869,
+    "edges": 93664,
+    "communities": 4230,
+    "warnings": [],
+    "llmTokens": 0
   }
 }

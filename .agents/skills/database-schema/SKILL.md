@@ -9,7 +9,7 @@ description: >-
 # Track: DATABASE_SCHEMA (Database Custodian & Security Sentry)
 
 ## Assigned Role: Database Custodian
-- **Model Tier**: `flash`
+- **Delegation**: Must be invoked via Antigravity `invoke_subagent` with `TypeName: "self"`, `Role: "Database Custodian"`, and strictly `Model: "flash"`. The `pro` model is strictly forbidden.
 - **Scoping**: SQL migrations in `supabase/migrations/`, Supabase MCP tools (`apply_migration`, `get_advisors`).
 
 ## Guidelines & Requirements

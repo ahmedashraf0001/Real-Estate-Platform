@@ -1,7 +1,7 @@
 import { getTranslations } from 'next-intl/server';
 import { getAllProperties } from '@/lib/supabase/queries';
 import { adaptProperties } from '@/lib/utils/propertyAdapter';
-import { CatalogView } from '@/components/property/CatalogView';
+import { CatalogView } from '@/components/catalog/CatalogView';
 import type { Metadata } from 'next';
 
 type Props = {

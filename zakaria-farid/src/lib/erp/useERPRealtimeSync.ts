@@ -90,7 +90,8 @@ export function useERPRealtimeSync({
       'erp_contract_amendments',
       'erp_cost_allocations',
       'erp_tax_records',
-      'erp_partner_calls',
+      'erp_partner_commitments',
+      'erp_partner_transactions',
       'erp_maker_checker',
       'properties',
       'leads'

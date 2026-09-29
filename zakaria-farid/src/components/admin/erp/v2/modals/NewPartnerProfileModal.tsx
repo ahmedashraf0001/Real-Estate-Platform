@@ -242,11 +242,11 @@ export const NewPartnerProfileModal: React.FC<NewPartnerProfileModalProps> = ({
   const depositMethodItems = useMemo<ZFCustomSelectItem<'CASH_101000' | 'INSTAPAY_102000' | 'BANK_102000'>[]>(() => [
     {
       value: 'CASH_101000',
-      labelAr: 'الخزينة الرئيسية (101000) - كاش باليد',
-      labelEn: 'Main Cash Safe (101000) - Cash in Hand',
-      sublabelAr: 'استلام نقدية فعلية بالخزينة',
-      sublabelEn: 'Physical cash received into main vault',
-      badge: isAr ? 'خزينة كاش' : 'Cash',
+      labelAr: 'كاش نقدي باليد',
+      labelEn: 'Cash in Hand',
+      sublabelAr: 'استلام نقدي فعلي وتوريد بالخزينة التشغيلية الرئيسية (101000)',
+      sublabelEn: 'Physical cash received into main operating treasury (101000)',
+      badge: isAr ? 'كاش باليد' : 'Cash',
       badgeBg: 'rgba(21, 128, 61, 0.08)',
       badgeTextColor: '#15803d',
       icon: Banknote,
@@ -255,10 +255,10 @@ export const NewPartnerProfileModal: React.FC<NewPartnerProfileModalProps> = ({
     },
     {
       value: 'INSTAPAY_102000',
-      labelAr: 'إنستاباي فوري (102000) - تحويل فوري',
-      labelEn: 'InstaPay (102000) - Instant Transfer',
-      sublabelAr: 'تحويل إلكتروني فوري بحساب إنستاباي',
-      sublabelEn: 'Instant transfer via InstaPay',
+      labelAr: 'تحويل إنستاباي فوري',
+      labelEn: 'Instant InstaPay Transfer',
+      sublabelAr: 'تحويل إلكتروني فوري لحساب الخزينة الرئيسية (101000)',
+      sublabelEn: 'Instant electronic transfer into main operating treasury (101000)',
       badge: isAr ? 'إنستاباي' : 'InstaPay',
       badgeBg: 'rgba(112, 26, 117, 0.08)',
       badgeTextColor: '#701a75',
@@ -958,20 +958,85 @@ export const NewPartnerProfileModal: React.FC<NewPartnerProfileModalProps> = ({
                     />
                   </div>
 
-                  {/* Payment Method */}
+                  {/* Payment Method & Unified Destination */}
                   <div>
-                    <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 700, color: '#334155', marginBottom: '0.35rem' }}>
-                      {isAr ? 'طريقة الاستلام والقيد المحاسبي *' : 'Payment Account *'}
-                    </label>
-                    <ZFCustomSelect<'CASH_101000' | 'INSTAPAY_102000' | 'BANK_102000'>
-                      value={depositPaymentMethod}
-                      onChange={(val) => setDepositPaymentMethod(val)}
-                      items={depositMethodItems}
-                      placeholderAr="-- اختار طريقة الاستلام --"
-                      placeholderEn="-- Select Payment Method --"
-                      isAr={isAr}
-                      searchable={false}
-                    />
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.35rem' }}>
+                      <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 700, color: '#334155' }}>
+                        {isAr ? 'طريقة التحصيل والتوريد *' : 'Collection Method *'}
+                      </label>
+                      <span style={{
+                        fontSize: '0.66rem',
+                        fontWeight: 700,
+                        color: '#047857',
+                        background: 'rgba(4, 120, 87, 0.08)',
+                        padding: '0.12rem 0.45rem',
+                        borderRadius: '5px',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '0.25rem'
+                      }}>
+                        <Landmark size={10} />
+                        {isAr ? 'الوجهة الموحدة: الخزينة الرئيسية (101000)' : 'Unified Destination: Main Safe (101000)'}
+                      </span>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+                      <button
+                        type="button"
+                        onClick={() => setDepositPaymentMethod('CASH_101000')}
+                        style={{
+                          padding: '0.55rem 0.65rem',
+                          borderRadius: '8px',
+                          border: depositPaymentMethod === 'CASH_101000' ? '1.5px solid #059669' : '1px solid #cbd5e1',
+                          background: depositPaymentMethod === 'CASH_101000' ? 'rgba(5, 150, 105, 0.06)' : '#ffffff',
+                          color: depositPaymentMethod === 'CASH_101000' ? '#059669' : '#475569',
+                          textAlign: isAr ? 'right' : 'left',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.5rem',
+                          transition: 'all 0.15s ease'
+                        }}
+                      >
+                        <Wallet size={16} color={depositPaymentMethod === 'CASH_101000' ? '#059669' : '#64748b'} />
+                        <div>
+                          <strong style={{ display: 'block', fontSize: '0.78rem', color: depositPaymentMethod === 'CASH_101000' ? '#059669' : '#0f172a' }}>
+                            {isAr ? 'كاش نقدي باليد' : 'Cash in Hand'}
+                          </strong>
+                          <span style={{ fontSize: '0.64rem', color: '#64748b' }}>
+                            {isAr ? 'توريد بالخزينة (101000)' : 'Vault Safe (101000)'}
+                          </span>
+                        </div>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setDepositPaymentMethod('INSTAPAY_102000')}
+                        style={{
+                          padding: '0.55rem 0.65rem',
+                          borderRadius: '8px',
+                          border: depositPaymentMethod === 'INSTAPAY_102000' ? '1.5px solid #701a75' : '1px solid #cbd5e1',
+                          background: depositPaymentMethod === 'INSTAPAY_102000' ? 'rgba(112, 26, 117, 0.06)' : '#ffffff',
+                          color: depositPaymentMethod === 'INSTAPAY_102000' ? '#701a75' : '#475569',
+                          textAlign: isAr ? 'right' : 'left',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.5rem',
+                          transition: 'all 0.15s ease'
+                        }}
+                      >
+                        <Smartphone size={16} color={depositPaymentMethod === 'INSTAPAY_102000' ? '#701a75' : '#64748b'} />
+                        <div>
+                          <strong style={{ display: 'block', fontSize: '0.78rem', color: depositPaymentMethod === 'INSTAPAY_102000' ? '#701a75' : '#0f172a' }}>
+                            {isAr ? 'تحويل إنستاباي فوري' : 'Instant InstaPay'}
+                          </strong>
+                          <span style={{ fontSize: '0.64rem', color: '#64748b' }}>
+                            {isAr ? 'تحويل للخزينة (101000)' : 'Transfer to Safe (101000)'}
+                          </span>
+                        </div>
+                      </button>
+                    </div>
                   </div>
                 </div>
 
@@ -1028,7 +1093,9 @@ export const NewPartnerProfileModal: React.FC<NewPartnerProfileModalProps> = ({
                   borderRadius: '6px',
                   fontWeight: 600
                 }}>
-                  ✓ سيتم ترحيل قيد يومية متوازن تلقائياً: (مدين: الخزينة/إنستاباي 101000/102000 | دائن: رأس مال الشركاء 301000).
+                  {isAr
+                    ? `✓ سيتم ترحيل قيد يومية متوازن تلقائياً: مدين: الخزينة التشغيلية الرئيسية (101000) [عبر ${depositPaymentMethod === 'INSTAPAY_102000' ? 'إنستاباي' : 'كاش باليد'}] · دائن: رأس مال الشركاء (301000).`
+                    : `✓ Automatic balanced journal entry: Dr: Operating Treasury Safe (101000) [via ${depositPaymentMethod === 'INSTAPAY_102000' ? 'InstaPay' : 'Cash'}] · Cr: Partner Capital (301000).`}
                 </div>
               </div>
             )}

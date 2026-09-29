@@ -36,7 +36,7 @@ describe('Partners & Project Financiers Financial Engine (§14.B & INV-4.1)', ()
     assert.strictEqual(creditLine.credit_amount, '500000.00');
   });
 
-  it('INV-4.1: Partner Capital Injection creates a balanced journal entry (Dr 102000 / Cr 301000)', () => {
+  it('INV-4.1: Partner Capital Injection creates a balanced journal entry (Dr 101000 / Cr 301000)', () => {
     const injectionJe = PartnersEngine.createCapitalInjectionJournalEntry({
       partnerName: 'د. هاني المنياوي',
       amount: '2000000.00',
@@ -51,11 +51,11 @@ describe('Partners & Project Financiers Financial Engine (§14.B & INV-4.1)', ()
     const balanceCheck = InvariantsValidator.verifyDoubleEntryBalance([injectionJe]);
     assert.strictEqual(balanceCheck.passed, true, 'Capital injection JE must be strictly balanced');
 
-    // Check accounts: Debit 102000, Credit 301000
-    const debitLine = injectionJe.lines.find(l => l.account_code === '102000');
+    // Check accounts: Debit 101000 (Unified Treasury Safe for InstaPay), Credit 301000
+    const debitLine = injectionJe.lines.find(l => l.account_code === '101000');
     const creditLine = injectionJe.lines.find(l => l.account_code === '301000');
 
-    assert.ok(debitLine, 'Must debit account 102000 (Operating Bank / InstaPay)');
+    assert.ok(debitLine, 'Must debit account 101000 (Operating Treasury Safe / InstaPay channel)');
     assert.strictEqual(debitLine.debit_amount, '2000000.00');
     assert.strictEqual(debitLine.credit_amount, '0.00');
 
@@ -64,9 +64,35 @@ describe('Partners & Project Financiers Financial Engine (§14.B & INV-4.1)', ()
     assert.strictEqual(creditLine.credit_amount, '2000000.00');
   });
 
+  it('INV-4.1: Commercial Bank Partner Capital Injection creates a balanced journal entry (Dr 102000 / Cr 301000)', () => {
+    const injectionJe = PartnersEngine.createCapitalInjectionJournalEntry({
+      partnerName: 'د. هاني المنياوي',
+      amount: '2000000.00',
+      paymentMethod: 'BANK_102000',
+      propertyTitle: 'برج الصفوة',
+      receiptRef: 'REC-TEST-BANK-001',
+      currentPeriod: 'prd-2026-03',
+      loggedBy: 'CHIEF_ACCOUNTANT'
+    });
+
+    const balanceCheck = InvariantsValidator.verifyDoubleEntryBalance([injectionJe]);
+    assert.strictEqual(balanceCheck.passed, true, 'Capital injection JE must be strictly balanced');
+
+    const debitLine = injectionJe.lines.find(l => l.account_code === '102000');
+    const creditLine = injectionJe.lines.find(l => l.account_code === '301000');
+
+    assert.ok(debitLine, 'Must debit account 102000 (Commercial Bank)');
+    assert.strictEqual(debitLine.debit_amount, '2000000.00');
+    assert.strictEqual(debitLine.credit_amount, '0.00');
+
+    assert.ok(creditLine, 'Must credit account 301000 (Partner Capital)');
+    assert.strictEqual(creditLine.credit_amount, '2000000.00');
+  });
+
   it('INV-Partnership-100%: Aggregates project partnership cards and enforces 100% equity check', () => {
     const mockProperty: Property = {
       id: 'prop-test-1',
+      type: 'building',
       title_ar: 'عمارة النخيل',
       title_en: 'Palm Mansion',
       location: 'منيا القمح',
@@ -150,6 +176,7 @@ describe('Partners & Project Financiers Financial Engine (§14.B & INV-4.1)', ()
 
     const mockProperty: Property = {
       id: 'prop-test-2',
+      type: 'building',
       title_ar: 'عمارة الياسمين',
       title_en: 'Jasmine Mansion',
       location: 'منيا القمح',
@@ -253,6 +280,7 @@ describe('Partners & Project Financiers Financial Engine (§14.B & INV-4.1)', ()
 
     const mockProperty: Property = {
       id: 'prop-zero-split',
+      type: 'building',
       title_ar: 'مشروع الحصة الصفرية',
       title_en: 'Zero Split Project',
       location: 'منيا القمح',

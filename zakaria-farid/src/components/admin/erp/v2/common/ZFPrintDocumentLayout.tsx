@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Printer, ShieldCheck, Landmark, Building2, X } from 'lucide-react';
+import { Printer, Building2, X } from 'lucide-react';
 
 export interface ZFPrintDocumentLayoutProps {
   documentTitle: string;
@@ -11,6 +11,7 @@ export interface ZFPrintDocumentLayoutProps {
   children: React.ReactNode;
   onClose?: () => void;
   isAr?: boolean;
+  isReport?: boolean;
 }
 
 export const ZFPrintDocumentLayout: React.FC<ZFPrintDocumentLayoutProps> = ({
@@ -20,7 +21,8 @@ export const ZFPrintDocumentLayout: React.FC<ZFPrintDocumentLayoutProps> = ({
   date,
   children,
   onClose,
-  isAr = true
+  isAr = true,
+  isReport = false
 }) => {
   const handlePrint = () => {
     window.print();
@@ -44,7 +46,7 @@ export const ZFPrintDocumentLayout: React.FC<ZFPrintDocumentLayoutProps> = ({
             width: '28px',
             height: '28px',
             borderRadius: '6px',
-            background: '#b8903e',
+            background: 'var(--erp-accent, #2563eb)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -53,7 +55,7 @@ export const ZFPrintDocumentLayout: React.FC<ZFPrintDocumentLayoutProps> = ({
             <Printer size={16} />
           </div>
           <span style={{ fontSize: '0.85rem', fontWeight: 800 }}>
-            {isAr ? 'معاينة المستند الرسمي المعتمد للطباعة' : 'Official Document Print Preview'}
+            {isAr ? 'معاينة المستند قبل الطباعة' : 'Document Print Preview'}
           </span>
           <span style={{
             fontSize: '0.72rem',
@@ -71,7 +73,7 @@ export const ZFPrintDocumentLayout: React.FC<ZFPrintDocumentLayoutProps> = ({
             type="button"
             onClick={handlePrint}
             style={{
-              background: 'linear-gradient(135deg, #b8903e 0%, #946f23 100%)',
+              background: 'var(--erp-accent, #2563eb)',
               color: '#ffffff',
               border: 'none',
               padding: '0.55rem 1.1rem',
@@ -83,7 +85,7 @@ export const ZFPrintDocumentLayout: React.FC<ZFPrintDocumentLayoutProps> = ({
               alignItems: 'center',
               gap: '0.4rem',
               cursor: 'pointer',
-              boxShadow: '0 2px 6px rgba(184, 144, 62, 0.3)'
+              boxShadow: 'none'
             }}
           >
             <Printer size={15} />
@@ -97,7 +99,7 @@ export const ZFPrintDocumentLayout: React.FC<ZFPrintDocumentLayoutProps> = ({
               aria-label={isAr ? 'إغلاق المعاينة' : 'Close Preview'}
               style={{
                 background: 'rgba(255, 255, 255, 0.08)',
-                color: '#94a3b8',
+                color: '#ffffff',
                 border: 'none',
                 padding: '0.45rem',
                 borderRadius: '8px',
@@ -117,7 +119,7 @@ export const ZFPrintDocumentLayout: React.FC<ZFPrintDocumentLayoutProps> = ({
         </div>
       </div>
 
-      {/* THE OFFICIAL PRINTABLE PAPER DOCUMENT */}
+      {/* Printable report */}
       <div 
         id="zf-printable-area" 
         className="zf-printable-document"
@@ -133,7 +135,7 @@ export const ZFPrintDocumentLayout: React.FC<ZFPrintDocumentLayoutProps> = ({
           boxSizing: 'border-box'
         }}
       >
-        {/* 1. OFFICIAL CORPORATE LETTERHEAD */}
+        {/* Corporate letterhead */}
         <div>
           <div style={{
             display: 'flex',
@@ -149,13 +151,13 @@ export const ZFPrintDocumentLayout: React.FC<ZFPrintDocumentLayoutProps> = ({
                 width: '52px',
                 height: '52px',
                 borderRadius: '12px',
-                background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
-                border: '2px solid #b8903e',
+                background: '#0f172a',
+                border: '1px solid var(--erp-accent, #2563eb)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                color: '#d4af37',
-                boxShadow: '0 4px 10px rgba(0,0,0,0.15)'
+                color: '#ffffff',
+                boxShadow: 'none'
               }}>
                 <Building2 size={26} />
               </div>
@@ -173,20 +175,11 @@ export const ZFPrintDocumentLayout: React.FC<ZFPrintDocumentLayoutProps> = ({
                   margin: '0.2rem 0 0 0',
                   fontSize: '0.74rem',
                   fontWeight: 700,
-                  color: '#b8903e',
+                  color: 'var(--erp-accent, #2563eb)',
                   letterSpacing: '0.05em'
                 }}>
                   {isAr ? 'آل زكريا للعقارات الفاخرة • ZAKARIA FARID LUXURY ESTATES' : 'LUXURY ASSETS & ARCHITECTURAL ESTATES'}
                 </p>
-                <div style={{
-                  fontSize: '0.68rem',
-                  color: '#64748b',
-                  marginTop: '0.25rem'
-                }}>
-                  {isAr 
-                    ? 'س.ت: 184520 • ب.ض: 541-230-890 • المركز الرئيسي: منيا القمح - محافظة الشرقية'
-                    : 'CR: 184520 • Tax ID: 541-230-890 • Headquarters: Minya al-Qamh, Sharkia'}
-                </div>
               </div>
             </div>
 
@@ -211,8 +204,8 @@ export const ZFPrintDocumentLayout: React.FC<ZFPrintDocumentLayoutProps> = ({
                 </div>
               )}
               <div style={{ marginTop: '0.45rem', fontSize: '0.74rem', color: '#334155' }}>
-                <span style={{ fontWeight: 700 }}>{isAr ? 'رقم المستند: ' : 'Doc Ref: '}</span>
-                <span style={{ fontFamily: 'monospace', fontWeight: 800, color: '#b8903e' }}>{voucherCode}</span>
+                <span style={{ fontWeight: 700 }}>{isAr ? 'مرجع المستند: ' : 'Reference: '}</span>
+                <span style={{ fontFamily: 'monospace', fontWeight: 800, color: 'var(--erp-accent, #2563eb)' }}>{voucherCode}</span>
               </div>
               <div style={{ fontSize: '0.74rem', color: '#334155', marginTop: '0.15rem' }}>
                 <span style={{ fontWeight: 700 }}>{isAr ? 'تاريخ الإصدار: ' : 'Date: '}</span>
@@ -227,7 +220,7 @@ export const ZFPrintDocumentLayout: React.FC<ZFPrintDocumentLayoutProps> = ({
           </div>
         </div>
 
-        {/* 3. OFFICIAL STATUTORY FOOTER & SIGNATURES */}
+        {/* Signature spaces; approval is not assumed */}
         <div style={{ marginTop: 'auto', paddingTop: '1.5rem', borderTop: '1.5px solid #e2e8f0' }}>
           {/* Signatures Row */}
           <div style={{
@@ -242,10 +235,10 @@ export const ZFPrintDocumentLayout: React.FC<ZFPrintDocumentLayoutProps> = ({
               borderRadius: '8px',
               padding: '0.75rem',
               textAlign: 'center',
-              background: '#f8fafc'
+              background: '#ffffff'
             }}>
               <div style={{ fontSize: '0.74rem', fontWeight: 800, color: '#334155', marginBottom: '2.5rem' }}>
-                {isAr ? 'توقيع العميل / المودع / الشريك' : 'Client / Payer Signature'}
+                {isReport ? (isAr ? 'إعداد التقرير' : 'Prepared by') : (isAr ? 'توقيع العميل / المودع / الشريك' : 'Client / Payer Signature')}
               </div>
               <div style={{ borderTop: '1px dashed #94a3b8', paddingTop: '0.35rem', fontSize: '0.68rem', color: '#64748b' }}>
                 {isAr ? 'الاسم والتوقيع' : 'Name & Signature'}
@@ -258,30 +251,29 @@ export const ZFPrintDocumentLayout: React.FC<ZFPrintDocumentLayoutProps> = ({
               borderRadius: '8px',
               padding: '0.75rem',
               textAlign: 'center',
-              background: '#f8fafc'
+              background: '#ffffff'
             }}>
               <div style={{ fontSize: '0.74rem', fontWeight: 800, color: '#334155', marginBottom: '2.5rem' }}>
-                {isAr ? 'توقيع أمين الخزينة / المستلم' : 'Treasurer / Receiver'}
+                {isReport ? (isAr ? 'مراجعة الحسابات' : 'Reviewed by') : (isAr ? 'توقيع أمين الخزينة / المستلم' : 'Treasurer / Receiver')}
               </div>
               <div style={{ borderTop: '1px dashed #94a3b8', paddingTop: '0.35rem', fontSize: '0.68rem', color: '#64748b' }}>
-                {isAr ? 'الاستلام والعهد' : 'Custody & Receipt'}
+                {isReport ? (isAr ? 'الاسم والتوقيع' : 'Name & Signature') : (isAr ? 'الاستلام والعهد' : 'Custody & Receipt')}
               </div>
             </div>
 
             {/* Box 3: Company Seal & Management */}
             <div style={{
-              border: '1px solid #b8903e',
+              border: '1px solid #cbd5e1',
               borderRadius: '8px',
               padding: '0.75rem',
               textAlign: 'center',
-              background: 'rgba(184, 144, 62, 0.03)',
-              position: 'relative'
+              background: '#ffffff'
             }}>
-              <div style={{ fontSize: '0.74rem', fontWeight: 800, color: '#946f23', marginBottom: '2.5rem' }}>
-                {isAr ? 'اعتماد الإدارة المالية وختم الشركة' : 'Chief Financial Officer & Official Seal'}
+              <div style={{ fontSize: '0.74rem', fontWeight: 800, color: '#334155', marginBottom: '2.5rem' }}>
+                {isAr ? 'اعتماد الإدارة المالية (إن وجد)' : 'Finance approval (if applicable)'}
               </div>
-              <div style={{ borderTop: '1px dashed #b8903e', paddingTop: '0.35rem', fontSize: '0.68rem', color: '#946f23', fontWeight: 700 }}>
-                {isAr ? 'مُعتمد رسمياً ومرحل بالدفاتر ✓' : 'Audited & Posted ✓'}
+              <div style={{ borderTop: '1px dashed #94a3b8', paddingTop: '0.35rem', fontSize: '0.68rem', color: '#64748b', fontWeight: 700 }}>
+                {isAr ? 'التوقيع والتاريخ' : 'Signature & date'}
               </div>
             </div>
           </div>
@@ -297,12 +289,10 @@ export const ZFPrintDocumentLayout: React.FC<ZFPrintDocumentLayoutProps> = ({
             paddingTop: '0.5rem'
           }}>
             <span>
-              {isAr 
-                ? 'مستند مالي معتمد صادر إلكترونياً من نظام ZF FIN-OS • لا يعتد بأي كشط أو تعديل يدوي' 
-                : 'Official financial instrument generated by ZF FIN-OS • Alterations void validity'}
+              {isAr ? 'تقرير مولّد من نظام FIN-OS؛ يتطلب توقيع الجهة المختصة عند الاعتماد.' : 'Generated by FIN-OS; approval requires an authorized signature.'}
             </span>
             <span>
-              {isAr ? 'صفحة 1 من 1 • نسخة أصلية' : 'Page 1 of 1 • Original Copy'}
+              {isAr ? 'نسخة للطباعة' : 'Print copy'}
             </span>
           </div>
         </div>

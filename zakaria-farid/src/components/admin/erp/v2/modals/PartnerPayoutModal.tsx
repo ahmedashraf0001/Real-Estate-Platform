@@ -16,13 +16,17 @@ import {
   Receipt, 
   Scale, 
   Smartphone,
-  Crown
+  Crown,
+  AlertTriangle
 } from 'lucide-react';
 import { D } from '@/lib/erp/math';
 import { MoneyCell } from '@/components/erp/MoneyCell';
 import { PartnerFinancialSummary } from '@/lib/erp/partnersEngine';
 import { Property } from '@/lib/supabase/types';
+import type { ERPAccountingPeriod } from '@/lib/erp/types';
+import { resolvePeriodForDate } from '@/lib/erp/ledger';
 import { ZFCustomSelect, ZFCustomSelectItem } from '../common/ZFCustomSelect';
+import { ZFModalShell } from '../common/ZFModalShell';
 import { PRIMARY_DEVELOPER_NAME } from '@/lib/erp/partnersDirectory';
 import styles from '../ZFWorkstationShell.module.css';
 
@@ -32,6 +36,8 @@ interface PartnerPayoutModalProps {
   partners: PartnerFinancialSummary[];
   properties?: Property[];
   initialPartnerName?: string;
+  activePeriod?: ERPAccountingPeriod;
+  periods?: ERPAccountingPeriod[];
   isAr?: boolean;
   isMutating?: boolean;
   onConfirmPayout: (details: {
@@ -52,6 +58,8 @@ export const PartnerPayoutModal: React.FC<PartnerPayoutModalProps> = ({
   partners,
   properties = [],
   initialPartnerName,
+  activePeriod,
+  periods,
   isAr = true,
   isMutating = false,
   onConfirmPayout
@@ -85,11 +93,11 @@ export const PartnerPayoutModal: React.FC<PartnerPayoutModalProps> = ({
         sublabelEn: isOwner ? `System Owner • Balance: ${balanceNum.toLocaleString()} EGP` : `${p.roleTitleAr} • Phone: ${p.phone || '—'}`,
         price: balanceNum,
         badge: isOwner ? (isAr ? 'المالك' : 'Owner') : (balanceNum > 0 ? (isAr ? 'مستحق له أرباح' : 'Due Payout') : (isAr ? 'رصيد مسوى' : 'Settled')),
-        badgeBg: isOwner ? 'rgba(184, 144, 62, 0.15)' : (balanceNum > 0 ? 'rgba(21, 128, 61, 0.08)' : 'rgba(100, 116, 139, 0.08)'),
-        badgeTextColor: isOwner ? '#946f23' : (balanceNum > 0 ? '#15803d' : '#64748b'),
+        badgeBg: isOwner ? '#eff6ff' : (balanceNum > 0 ? 'rgba(21, 128, 61, 0.08)' : 'rgba(100, 116, 139, 0.08)'),
+        badgeTextColor: isOwner ? '#2563eb' : (balanceNum > 0 ? '#15803d' : '#64748b'),
         icon: isOwner ? Crown : Users,
-        iconBg: isOwner ? 'rgba(184, 144, 62, 0.15)' : 'rgba(148, 111, 35, 0.1)',
-        iconColor: '#946f23'
+        iconBg: isOwner ? '#eff6ff' : 'rgba(37, 99, 235, 0.1)',
+        iconColor: '#2563eb'
       };
     });
   }, [partners, isAr]);
@@ -116,16 +124,18 @@ export const PartnerPayoutModal: React.FC<PartnerPayoutModalProps> = ({
         sublabelAr: `${p.location || 'الشرقية'} • ${p.area_sqm || 0} م²`,
         sublabelEn: `${p.location || 'Sharkia'} • ${p.area_sqm || 0} sqm`,
         badge: p.completion_status === 'ready' ? (isAr ? 'جاهز' : 'Ready') : (isAr ? 'قيد التطوير' : 'In Progress'),
-        badgeBg: p.completion_status === 'ready' ? 'rgba(21, 128, 61, 0.08)' : 'rgba(148, 111, 35, 0.08)',
-        badgeTextColor: p.completion_status === 'ready' ? '#15803d' : '#946f23',
+        badgeBg: p.completion_status === 'ready' ? 'rgba(21, 128, 61, 0.08)' : '#eff6ff',
+        badgeTextColor: p.completion_status === 'ready' ? '#15803d' : '#2563eb',
         icon: Building2,
-        iconBg: 'rgba(148, 111, 35, 0.1)',
-        iconColor: '#946f23'
+        iconBg: '#eff6ff',
+        iconColor: '#2563eb'
       }))
     ];
   }, [properties, isAr]);
 
-  if (!isOpen) return null;
+  const targetPeriod = useMemo(() => {
+    return resolvePeriodForDate(payoutDate, periods || (activePeriod ? [activePeriod] : []), activePeriod);
+  }, [payoutDate, periods, activePeriod]);
 
   const effectivePartnerName = (isLockedToPartner ? initialPartnerName!.trim() : selectedPartnerName) || '';
   const currentPartner = partners.find(p => p.partnerName === effectivePartnerName) || partners.find(p => p.partnerName === selectedPartnerName) || partners[0];
@@ -138,10 +148,11 @@ export const PartnerPayoutModal: React.FC<PartnerPayoutModalProps> = ({
 
   const numAmount = parseFloat(amount) || 0;
   const isAmountValid = numAmount > 0;
+  const isTargetPeriodLocked = targetPeriod ? targetPeriod.status !== 'OPEN' : false;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!effectivePartnerName || !isAmountValid || isMutating) return;
+    if (!effectivePartnerName || !isAmountValid || isMutating || isTargetPeriodLocked) return;
 
     await onConfirmPayout({
       partnerName: effectivePartnerName,
@@ -158,94 +169,17 @@ export const PartnerPayoutModal: React.FC<PartnerPayoutModalProps> = ({
   };
 
   return (
-    <div 
-      style={{
-        position: 'fixed',
-        inset: 0,
-        backgroundColor: 'rgba(15, 23, 42, 0.65)',
-        backdropFilter: 'blur(5px)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 9999,
-        padding: '1rem',
-        direction: isAr ? 'rtl' : 'ltr'
-      }}
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
+    <ZFModalShell
+      isOpen={isOpen}
+      onClose={onClose}
+      title={isAr ? 'صرف دفعة أرباح وتسديد مستحقات شريك' : 'Partner Profit Payout & Settlement'}
+      subtitle={isAr ? 'إنشاء قيد يومية متوازن آلياً (مدين حـ/303000 أرباح الشركاء - دائن حـ/101000 الخزينة الرئيسية)' : 'Audited double-entry journal posting for partner distribution (Main Treasury 101000)'}
+      icon={<Receipt size={18} />}
+      isAr={isAr}
+      maxWidth="680px"
+      maxHeight="90vh"
+      bodyStyle={{ padding: 0 }}
     >
-      <div 
-        style={{
-          background: '#ffffff',
-          borderRadius: '16px',
-          width: '100%',
-          maxWidth: '680px',
-          maxHeight: '90vh',
-          display: 'flex',
-          flexDirection: 'column',
-          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
-          overflow: 'hidden',
-          border: '1px solid #e2e8f0'
-        }}
-      >
-        {/* HEADER */}
-        <div 
-          style={{
-            padding: 'clamp(0.85rem, 2.5vw, 1.2rem) clamp(1rem, 3vw, 1.5rem)',
-            borderBottom: '1px solid #e2e8f0',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            background: 'linear-gradient(135deg, #f8fafc 0%, #ffffff 100%)'
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-            <div 
-              style={{
-                width: '38px',
-                height: '38px',
-                borderRadius: '10px',
-                background: 'rgba(21, 128, 61, 0.1)',
-                color: '#15803d',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}
-            >
-              <Receipt size={20} />
-            </div>
-            <div>
-              <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 800, color: '#0f172a' }}>
-                {isAr ? 'صرف دفعة أرباح وتسديد مستحقات شريك' : 'Partner Profit Payout & Settlement'}
-              </h3>
-              <p style={{ margin: 0, fontSize: '0.72rem', color: '#64748b' }}>
-                {isAr ? 'إنشاء قيد يومية متوازن آلياً (مدين حـ/303000 - دائن حـ/101000 أو 102000)' : 'Audited double-entry journal posting for partner distribution'}
-              </p>
-            </div>
-          </div>
-          <button 
-            type="button"
-            onClick={onClose}
-            aria-label={isAr ? 'إغلاق' : 'Close'}
-            style={{
-              background: 'transparent',
-              border: 'none',
-              color: '#64748b',
-              cursor: 'pointer',
-              minWidth: '44px',
-              minHeight: '44px',
-              width: '44px',
-              height: '44px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              borderRadius: '8px'
-            }}
-          >
-            <X size={18} />
-          </button>
-        </div>
 
         {/* FORM BODY */}
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', overflowY: 'auto', padding: '1.25rem 1.5rem', gap: '1.15rem' }}>
@@ -443,9 +377,14 @@ export const PartnerPayoutModal: React.FC<PartnerPayoutModalProps> = ({
 
           {/* PAYMENT METHOD SELECTION */}
           <div>
-            <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#334155', marginBottom: '0.35rem' }}>
-              {isAr ? 'طريقة وخزينة الصرف (حساب الخروج):' : 'Disbursement Source Account:'}
-            </label>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.35rem' }}>
+              <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#334155' }}>
+                {isAr ? 'طريقة الصرف والسداد:' : 'Disbursement Method:'}
+              </label>
+              <span style={{ fontSize: '0.66rem', fontWeight: 700, color: '#946f23', background: 'rgba(184, 144, 62, 0.08)', padding: '0.12rem 0.45rem', borderRadius: '5px' }}>
+                {isAr ? 'جهة الصرف الموحدة: الخزينة التشغيلية الرئيسية (101000)' : 'Source: Operating Treasury Safe (101000)'}
+              </span>
+            </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
               <button
                 type="button"
@@ -466,10 +405,10 @@ export const PartnerPayoutModal: React.FC<PartnerPayoutModalProps> = ({
                 <Smartphone size={18} color={paymentMethod === 'INSTAPAY_102000' ? '#047857' : '#64748b'} />
                 <div>
                   <span style={{ display: 'block', fontSize: '0.78rem', fontWeight: 800, color: paymentMethod === 'INSTAPAY_102000' ? '#047857' : '#0f172a' }}>
-                    {isAr ? 'إنستاباي فوري (102000)' : 'InstaPay (102000)'}
+                    {isAr ? 'تحويل إنستاباي فوري' : 'Instant InstaPay Transfer'}
                   </span>
                   <span style={{ fontSize: '0.67rem', color: '#64748b' }}>
-                    {isAr ? 'تحويل فوري لحساب ومحفظة الشريك' : 'Instant mobile transfer'}
+                    {isAr ? 'صرف إلكتروني من الخزينة لحساب الشريك' : 'Digital transfer from treasury'}
                   </span>
                 </div>
               </button>
@@ -493,10 +432,10 @@ export const PartnerPayoutModal: React.FC<PartnerPayoutModalProps> = ({
                 <Wallet size={18} color={paymentMethod === 'CASH_101000' ? '#946f23' : '#64748b'} />
                 <div>
                   <span style={{ display: 'block', fontSize: '0.78rem', fontWeight: 800, color: paymentMethod === 'CASH_101000' ? '#946f23' : '#0f172a' }}>
-                    {isAr ? 'خزينة النقدية الرئيسية (101000)' : 'Main Cash Vault (101000)'}
+                    {isAr ? 'كاش نقدي باليد' : 'Cash in Hand'}
                   </span>
                   <span style={{ fontSize: '0.67rem', color: '#64748b' }}>
-                    {isAr ? 'صرف كاش يدوي بإيصال استلام' : 'Cash vault disbursement'}
+                    {isAr ? 'صرف نقدية فعلية من الخزينة الرئيسية' : 'Cash disbursement from main safe'}
                   </span>
                 </div>
               </button>
@@ -544,6 +483,32 @@ export const PartnerPayoutModal: React.FC<PartnerPayoutModalProps> = ({
               />
             </div>
           </div>
+
+          {isTargetPeriodLocked && targetPeriod && (
+            <div style={{
+              background: '#fef2f2',
+              border: '1.5px solid #fecaca',
+              borderRadius: '8px',
+              padding: '0.65rem 0.85rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.6rem',
+              color: '#991b1b',
+              fontSize: '0.78rem'
+            }}>
+              <AlertTriangle size={17} color="#dc2626" style={{ flexShrink: 0 }} />
+              <div>
+                <strong style={{ display: 'block', fontSize: '0.8rem' }}>
+                  {isAr ? 'الفترة المحاسبية لتاريخ الصرف مقفلة' : 'Fiscal period is locked'}
+                </strong>
+                <span style={{ fontSize: '0.73rem', color: '#b91c1c' }}>
+                  {isAr
+                    ? `تاريخ الصرف يقع في الفترة (${targetPeriod.fiscal_year}-M${targetPeriod.period_number}) وهي مقفلة بموجب المعيار Invariant 0.9. يُرجى فتح الفترة أولاً.`
+                    : `Disbursement date falls in period (${targetPeriod.fiscal_year}-M${targetPeriod.period_number}) which is locked per Invariant 0.9.`}
+                </span>
+              </div>
+            </div>
+          )}
 
           {/* NOTES / MEMO */}
           <div>
@@ -607,7 +572,11 @@ export const PartnerPayoutModal: React.FC<PartnerPayoutModalProps> = ({
                   </tr>
                   <tr>
                     <td style={{ padding: '0.35rem 0.4rem', fontWeight: 700, color: '#0f172a' }}>
-                      {paymentMethod === 'CASH_101000' ? '101000 — خزينة النقدية الرئيسية' : '102000 — البنك التشغيلي (إنستاباي)'}
+                      {paymentMethod === 'BANK_102000'
+                        ? (isAr ? '102000 — حساب البنك التجاري' : '102000 — Commercial Bank Account')
+                        : paymentMethod === 'INSTAPAY_102000'
+                        ? (isAr ? '101000 — الخزينة الرئيسية (تحويل إنستاباي)' : '101000 — Main Treasury (InstaPay Transfer)')
+                        : (isAr ? '101000 — خزينة النقدية الرئيسية (كاش)' : '101000 — Main Cash Safe (Cash)')}
                     </td>
                     <td style={{ padding: '0.35rem 0.4rem', textAlign: isAr ? 'left' : 'right', color: '#94a3b8' }}>
                       0.00
@@ -649,29 +618,42 @@ export const PartnerPayoutModal: React.FC<PartnerPayoutModalProps> = ({
             </button>
             <button
               type="submit"
-              disabled={!isAmountValid || isMutating}
+              disabled={!isAmountValid || isMutating || isTargetPeriodLocked}
               style={{
-                background: isAmountValid && !isMutating ? 'linear-gradient(135deg, #15803d 0%, #166534 100%)' : '#94a3b8',
+                background: isAmountValid && !isMutating && !isTargetPeriodLocked ? 'linear-gradient(135deg, #15803d 0%, #166534 100%)' : '#94a3b8',
                 border: 'none',
                 borderRadius: '8px',
                 padding: '0.55rem 1.25rem',
                 fontSize: '0.78rem',
                 fontWeight: 800,
                 color: '#ffffff',
-                cursor: isAmountValid && !isMutating ? 'pointer' : 'not-allowed',
+                cursor: isAmountValid && !isMutating && !isTargetPeriodLocked ? 'pointer' : 'not-allowed',
                 minHeight: '44px',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '0.4rem',
-                boxShadow: isAmountValid ? '0 4px 12px rgba(21, 128, 61, 0.25)' : 'none'
+                boxShadow: isAmountValid && !isTargetPeriodLocked ? '0 4px 12px rgba(21, 128, 61, 0.25)' : 'none'
               }}
             >
-              <CheckCircle2 size={16} />
-              <span>{isMutating ? (isAr ? 'جارٍ الاعتماد والترحيل...' : 'Posting...') : (isAr ? 'اعتماد وصرف الدفعة وترحيل القيد' : 'Confirm Payout & Post JE')}</span>
+              {isMutating ? (
+                <>
+                  <CheckCircle2 size={16} />
+                  <span>{isAr ? 'جارٍ الاعتماد والترحيل...' : 'Posting...'}</span>
+                </>
+              ) : isTargetPeriodLocked ? (
+                <>
+                  <AlertTriangle size={16} />
+                  <span>{isAr ? `الفترة المحاسبية مقفلة (M${targetPeriod?.period_number ?? ''})` : `Period Locked (M${targetPeriod?.period_number ?? ''})`}</span>
+                </>
+              ) : (
+                <>
+                  <CheckCircle2 size={16} />
+                  <span>{isAr ? 'اعتماد وصرف الدفعة وترحيل القيد' : 'Confirm Payout & Post JE'}</span>
+                </>
+              )}
             </button>
           </div>
         </form>
-      </div>
-    </div>
+    </ZFModalShell>
   );
 };

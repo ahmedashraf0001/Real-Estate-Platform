@@ -1,0 +1,631 @@
+/* ==========================================================================
+   FIN-OS ERP — BALANCE SHEET & INCOME STATEMENT ANALYTICS STYLES
+   Surfaces: #ffffff !important, 1px #cbd5e1 border, 12px radius, #f8fafc canvas
+   Zero AI Color Slop, Pure CAD Blueprint Aesthetics, Tabular Nums
+   ========================================================================== */
+
+.pageContainer {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  box-sizing: border-box;
+  font-family: 'ThmanyahSans', 'Cairo', 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+/* ─── 1. TOP HEADER & FILTER BAR ─── */
+.headerCard {
+  background: #ffffff !important;
+  border: 1px solid var(--erp-border, #cbd5e1);
+  border-radius: 12px;
+  padding: 1rem 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+}
+
+.headerLeading {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.headerIconSquircle {
+  width: 36px;
+  height: 36px;
+  border-radius: 9px;
+  background: var(--erp-accent-soft, #eff6ff);
+  color: var(--erp-accent, #2563eb);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.titleArea {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.pageTitle {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--erp-text-title, #0f172a);
+  margin: 0;
+  line-height: 1.3;
+}
+
+.pageSubtitle {
+  font-size: 0.78rem;
+  color: var(--erp-text-muted, #64748b);
+  margin: 0;
+  line-height: 1.4;
+}
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+}
+
+.filterBadge {
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: #475569;
+  background: #f1f5f9;
+  padding: 0.35rem 0.75rem;
+  border-radius: 6px;
+  border: 1px solid #e2e8f0;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.excelExportBtn {
+  background: #ffffff !important;
+  border: 1px solid #cbd5e1;
+  color: #0f172a;
+  border-radius: 8px;
+  padding: 0.45rem 0.9rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  transition: all 0.15s ease;
+}
+
+.excelExportBtn:hover {
+  background: #f8fafc !important;
+  border-color: #94a3b8;
+}
+
+/* ─── 2. 4 DISCRETE STAT CARDS GRID ─── */
+.kpiGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.85rem;
+  width: 100%;
+}
+
+@media (max-width: 1100px) {
+  .kpiGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .kpiGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.kpiCard {
+  background: #ffffff !important;
+  border: 1px solid var(--erp-border, #cbd5e1);
+  border-radius: 12px;
+  padding: 1rem 1.15rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 0.65rem;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
+  position: relative;
+  overflow: hidden;
+}
+
+.kpiTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.kpiLabelGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.kpiTitle {
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: var(--erp-text-muted, #64748b);
+}
+
+.kpiSubtext {
+  font-size: 0.68rem;
+  color: #94a3b8;
+}
+
+.kpiSquircle {
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.kpiValueRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.kpiValue {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--erp-text-title, #0f172a);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+}
+
+.kpiTrendBadge {
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 0.2rem 0.5rem;
+  border-radius: 5px;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ─── 3. ANALYTICAL CHARTS 2-COLUMN GRIDS ─── */
+.chartsGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.85rem;
+  width: 100%;
+}
+
+@media (max-width: 1024px) {
+  .chartsGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.chartCard {
+  background: #ffffff !important;
+  border: 1px solid var(--erp-border, #cbd5e1);
+  border-radius: 12px;
+  padding: 1rem 1.15rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
+  min-width: 0;
+}
+
+.chartHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  padding-bottom: 0.65rem;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.chartHeaderLeading {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.chartIconSquircle {
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  background: #f8fafc;
+  color: #475569;
+  border: 1px solid #e2e8f0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.chartTitleWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.chartTitle {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--erp-text-title, #0f172a);
+  margin: 0;
+}
+
+.chartSubtitle {
+  font-size: 0.7rem;
+  color: var(--erp-text-muted, #64748b);
+  margin: 0;
+}
+
+.chartHeaderTrailing {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Donut Layout: Responsive Side-by-Side or Stacked Donut + Breakdown List */
+.donutSplitLayout {
+  display: grid;
+  grid-template-columns: minmax(180px, 220px) 1fr;
+  gap: 1.15rem;
+  align-items: center;
+  min-height: 220px;
+  width: 100%;
+  min-width: 0;
+}
+
+@media (max-width: 1240px) {
+  .donutSplitLayout {
+    grid-template-columns: minmax(0, 1fr);
+    justify-items: center;
+    gap: 1rem;
+  }
+}
+
+.donutLegendList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  width: 100%;
+  min-width: 0;
+}
+
+.donutLegendItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.4rem 0.65rem;
+  border-radius: 7px;
+  background: #f8fafc;
+  border: 1px solid #f1f5f9;
+  min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
+  transition: background-color 0.15s ease;
+}
+
+.donutLegendItem:hover {
+  background: #f1f5f9;
+}
+
+.donutLegendLeading {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+}
+
+.donutLegendDot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.donutLegendLabel {
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: #334155;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.donutLegendTrailing {
+  display: flex;
+  align-items: baseline;
+  gap: 0.45rem;
+  flex-shrink: 0;
+}
+
+.donutLegendPercent {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #64748b;
+  font-variant-numeric: tabular-nums;
+}
+
+.donutLegendValue {
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: #0f172a;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ─── 4. CANONICAL DATA TABLE SECTION ─── */
+.tableCard {
+  background: #ffffff !important;
+  border: 1px solid var(--erp-border, #cbd5e1);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
+}
+
+.tableToolbar {
+  padding: 0.85rem 1.15rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.85rem;
+  flex-wrap: wrap;
+  background: #ffffff;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.toolbarLeading {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+}
+
+.filterPillsGroup {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: #f8fafc;
+  padding: 0.2rem 0.25rem;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+}
+
+.filterPill {
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  padding: 0.3rem 0.65rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.filterPill:hover {
+  color: #0f172a;
+}
+
+.filterPillActive {
+  background: #ffffff !important;
+  color: var(--erp-text-title, #0f172a) !important;
+  font-weight: 700;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+}
+
+.searchBox {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 7px;
+  padding: 0.35rem 0.65rem;
+  color: #94a3b8;
+  min-width: 220px;
+}
+
+.searchInput {
+  border: none;
+  background: transparent;
+  outline: none;
+  font-size: 0.75rem;
+  color: #0f172a;
+  width: 100%;
+  font-family: inherit;
+}
+
+.searchInput::placeholder {
+  color: #94a3b8;
+}
+
+.tableContainer {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.dataTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.78rem;
+  text-align: right;
+  direction: rtl;
+}
+
+[dir="ltr"] .dataTable {
+  text-align: left;
+  direction: ltr;
+}
+
+.dataTable thead tr {
+  background: #fafbfc;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.dataTable th {
+  padding: 0.65rem 0.95rem;
+  font-weight: 700;
+  color: #475569;
+  font-size: 0.72rem;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+}
+
+.dataTable tbody tr {
+  border-bottom: 1px solid #f1f5f9;
+  transition: background-color 0.12s ease;
+  height: 52px;
+}
+
+.dataTable tbody tr:hover {
+  background-color: #f8fafc;
+}
+
+.dataTable td {
+  padding: 0.6rem 0.95rem;
+  color: #0f172a;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.accountCodeCol {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-weight: 700;
+  color: #334155;
+  font-size: 0.75rem;
+}
+
+.accountNameCol {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.accountIconSquircle {
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border: 1px solid rgba(0, 0, 0, 0.04);
+}
+
+.accountNameText {
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.typeBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.55rem;
+  border-radius: 5px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0;
+}
+
+.typeBadgeAsset { background: #ecfdf5; color: #059669; }
+.typeBadgeLiability { background: #eff6ff; color: #2563eb; }
+.typeBadgeEquity { background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; }
+.typeBadgeRevenue { background: #ecfdf5; color: #059669; }
+.typeBadgeExpense { background: #fff1f2; color: #e11d48; }
+
+.inspectActionBtn {
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  color: #0f172a;
+  border-radius: 6px;
+  padding: 0.3rem 0.65rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  transition: all 0.15s ease;
+}
+
+.inspectActionBtn:hover {
+  background: #ffffff;
+  border-color: #94a3b8;
+  color: var(--erp-accent, #2563eb);
+}
+
+.tableFooterSummary {
+  padding: 0.75rem 1.15rem;
+  background: #fafbfc;
+  border-top: 1px solid #e2e8f0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: #334155;
+}
+
+/* ─── 5. STATUS PILLS ─── */
+.statusPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.22rem 0.65rem;
+  border-radius: 9999px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.statusPillGreen {
+  background: #ecfdf5;
+  color: #059669;
+  border: 1px solid #a7f3d0;
+}
+
+.statusPillBlue {
+  background: #eff6ff;
+  color: #2563eb;
+  border: 1px solid #bfdbfe;
+}
+
+.statusPillAmber {
+  background: #fffbeb;
+  color: #d97706;
+  border: 1px solid #fde68a;
+}
+
+.statusPillRed {
+  background: #fff1f2;
+  color: #e11d48;
+  border: 1px solid #fecdd3;
+}
+
+.statusPillNeutral {
+  background: #f8fafc;
+  color: #475569;
+  border: 1px solid #e2e8f0;
+}

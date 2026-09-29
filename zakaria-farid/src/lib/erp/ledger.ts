@@ -220,6 +220,15 @@ export const CANONICAL_COA: Record<string, ERPAccount> = {
     is_active: true,
     notes: 'Partner dividend distributions and capital returns (§14.B)'
   },
+  '304000': {
+    account_code: '304000',
+    account_name_en: 'General Statutory Reserves',
+    account_name_ar: 'الاحتياطيات النظامية والعامة',
+    account_type: 'EQUITY',
+    normal_balance: 'CREDIT',
+    is_active: true,
+    notes: 'Statutory legal and contingency reserves (§14.B)'
+  },
   '401000': {
     account_code: '401000',
     account_name_en: 'Realized Sales Revenue',
@@ -312,7 +321,69 @@ export const CANONICAL_COA: Record<string, ERPAccount> = {
   }
 };
 
+/**
+ * Resolves the target ERP accounting period corresponding to a specific entry date.
+ * If an exact date match is found in periods, returns it.
+ * Otherwise falls back to fallbackPeriod, the first OPEN period, or the last period.
+ */
+export function resolvePeriodForDate(
+  dateStr: string | undefined,
+  periods: ERPAccountingPeriod[],
+  fallbackPeriod?: ERPAccountingPeriod
+): ERPAccountingPeriod {
+  if (!dateStr || !periods || periods.length === 0) {
+    return fallbackPeriod || {
+      period_id: 'prd-2026-09',
+      fiscal_year: 2026,
+      period_number: 9,
+      start_date: '2026-09-01',
+      end_date: '2026-09-30',
+      status: 'OPEN'
+    };
+  }
+  const cleanDate = dateStr.slice(0, 10);
+  const matched = periods.find(p => p.start_date <= cleanDate && cleanDate <= p.end_date);
+  if (matched) return matched;
+  return fallbackPeriod || periods.find(p => p.status === 'OPEN') || periods[periods.length - 1];
+}
+
+/**
+ * Resolves the effective ERP accounting period for workstation widgets.
+ * Prioritizes controlled selectedPeriod, followed by userSelectedPeriodId in periods,
+ * activePeriod match in periods, first period in periods, and lastly activePeriod fallback.
+ */
+export function resolveEffectivePeriod(params: {
+  selectedPeriod?: ERPAccountingPeriod;
+  periods?: ERPAccountingPeriod[];
+  userSelectedPeriodId?: string | null;
+  activePeriod?: ERPAccountingPeriod;
+}): ERPAccountingPeriod | undefined {
+  const { selectedPeriod, periods, userSelectedPeriodId, activePeriod } = params;
+  if (selectedPeriod) {
+    if (periods && periods.length > 0) {
+      const liveMatch = periods.find(p => p.period_id === selectedPeriod.period_id);
+      if (liveMatch) return liveMatch;
+    }
+    return selectedPeriod;
+  }
+  if (periods && periods.length > 0) {
+    if (userSelectedPeriodId) {
+      const match = periods.find(p => p.period_id === userSelectedPeriodId);
+      if (match) return match;
+    }
+    if (activePeriod?.period_id) {
+      const activeMatch = periods.find(p => p.period_id === activePeriod.period_id);
+      if (activeMatch) return activeMatch;
+    }
+    return periods[0];
+  }
+  return activePeriod;
+}
+
 export class GeneralLedgerEngine {
+  static resolvePeriodForDate = resolvePeriodForDate;
+  static resolveEffectivePeriod = resolveEffectivePeriod;
+
   /**
    * Validate and Post a Journal Entry.
    * Enforces:

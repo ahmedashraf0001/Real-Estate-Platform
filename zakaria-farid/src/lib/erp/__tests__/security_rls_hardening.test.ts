@@ -49,7 +49,6 @@ describe('Phase 3: Security & RLS Hardening Verification Suite', () => {
         'erp_contract_amendments',
         'erp_cost_allocations',
         'erp_tax_records',
-        'erp_partner_calls',
         'erp_maker_checker',
         'erp_audit_logs',
         'erp_partner_profiles',

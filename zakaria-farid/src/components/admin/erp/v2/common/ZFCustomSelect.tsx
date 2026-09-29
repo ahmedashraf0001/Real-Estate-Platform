@@ -44,7 +44,7 @@ export const getBadgeStyle = (item: { badgeColor?: string; badgeBg?: string; bad
   }
   const color = item.badgeColor || item.iconColor || '#64748b';
   if (color.startsWith('#f') || color.startsWith('#d') || color.startsWith('rgba')) {
-    const textColor = item.badgeTextColor || (color.includes('fee') ? '#dc2626' : color.includes('dcf') ? '#15803d' : '#946f23');
+    const textColor = item.badgeTextColor || (color.includes('fee') ? '#dc2626' : color.includes('dcf') ? '#15803d' : 'var(--erp-accent, #2563eb)');
     return {
       bg: color,
       color: textColor,
@@ -118,67 +118,23 @@ export function ZFCustomSelect<T = string>({
         setHoveredTooltip(null);
       }
     };
-    if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [isOpen]);
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
-  // Focus search input on open
+  // Autofocus search on open
   useEffect(() => {
-    if (isOpen && searchable && searchInputRef.current) {
+    if (isOpen && searchable) {
       setTimeout(() => searchInputRef.current?.focus(), 50);
-    } else if (!isOpen) {
+    }
+    if (!isOpen) {
       setSearchQuery('');
       setHoveredTooltip(null);
     }
   }, [isOpen, searchable]);
 
-  const handleItemMouseEnter = (item: ZFCustomSelectItem<T>, e: React.MouseEvent<HTMLDivElement>) => {
-    if (item.tooltipAr || item.tooltipEn) {
-      const rect = e.currentTarget.getBoundingClientRect();
-      const cardWidth = 280;
-      const padding = 10;
-      const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 1200;
-      const viewportHeight = typeof window !== 'undefined' ? window.innerHeight : 800;
-
-      let left = 0;
-      if (isAr) {
-        if (rect.right + cardWidth + padding <= viewportWidth) {
-          left = rect.right + padding;
-        } else if (rect.left - cardWidth - padding >= 0) {
-          left = rect.left - cardWidth - padding;
-        } else {
-          left = Math.max(padding, Math.min(rect.left, viewportWidth - cardWidth - padding));
-        }
-      } else {
-        if (rect.right + cardWidth + padding <= viewportWidth) {
-          left = rect.right + padding;
-        } else if (rect.left - cardWidth - padding >= 0) {
-          left = rect.left - cardWidth - padding;
-        } else {
-          left = Math.max(padding, Math.min(rect.left, viewportWidth - cardWidth - padding));
-        }
-      }
-
-      const cardEstHeight = 120;
-      let top = rect.top - 4;
-      if (top + cardEstHeight > viewportHeight - padding) {
-        top = Math.max(padding, viewportHeight - cardEstHeight - padding);
-      }
-
-      setHoveredTooltip({
-        item,
-        top,
-        left
-      });
-    }
-  };
-
-  // Normalize sections
-  const allSections: ZFCustomSelectSection<T>[] = useMemo(() => {
+  // Normalize sections: if items provided without sections, create a synthetic single section
+  const effectiveSections = useMemo<ZFCustomSelectSection<T>[]>(() => {
     if (sections && sections.length > 0) return sections;
     if (items && items.length > 0) {
       return [{
@@ -191,41 +147,57 @@ export function ZFCustomSelect<T = string>({
     return [];
   }, [sections, items]);
 
+  // Filter sections by search query
+  const filteredSections = useMemo(() => {
+    if (!searchQuery.trim()) return effectiveSections;
+    const q = searchQuery.toLowerCase().trim();
+    return effectiveSections
+      .map(section => {
+        const matchingItems = section.items.filter(item => {
+          const matchLabel = item.labelAr.toLowerCase().includes(q) || item.labelEn.toLowerCase().includes(q);
+          const matchSublabel = item.sublabelAr?.toLowerCase().includes(q) || item.sublabelEn?.toLowerCase().includes(q);
+          const matchBadge = item.badge?.toLowerCase().includes(q);
+          const matchPrice = item.price ? String(item.price).includes(q) : false;
+          return matchLabel || matchSublabel || matchBadge || matchPrice;
+        });
+        return { ...section, items: matchingItems };
+      })
+      .filter(section => section.items.length > 0);
+  }, [effectiveSections, searchQuery]);
+
   // Find currently selected item
   const selectedItem = useMemo(() => {
     if (value === null || value === undefined) return null;
-    for (const sec of allSections) {
-      const match = sec.items.find(i => String(i.value) === String(value));
-      if (match) return match;
+    for (const s of effectiveSections) {
+      const found = s.items.find(i => String(i.value) === String(value));
+      if (found) return found;
     }
     return null;
-  }, [allSections, value]);
+  }, [effectiveSections, value]);
 
-  // Filter sections and items based on search query
-  const filteredSections = useMemo(() => {
-    if (!searchQuery.trim()) return allSections;
-    const q = searchQuery.toLowerCase().trim();
+  const totalFilteredCount = useMemo(() => {
+    return filteredSections.reduce((sum, s) => sum + s.items.length, 0);
+  }, [filteredSections]);
 
-    return allSections
-      .map(sec => {
-        const matchedItems = sec.items.filter(item => {
-          const lAr = item.labelAr?.toLowerCase() || '';
-          const lEn = item.labelEn?.toLowerCase() || '';
-          const sAr = item.sublabelAr?.toLowerCase() || '';
-          const sEn = item.sublabelEn?.toLowerCase() || '';
-          const badge = item.badge?.toLowerCase() || '';
-          return lAr.includes(q) || lEn.includes(q) || sAr.includes(q) || sEn.includes(q) || badge.includes(q);
-        });
+  const handleItemMouseEnter = (item: ZFCustomSelectItem<T>, e: React.MouseEvent<HTMLDivElement>) => {
+    if (!item.tooltipAr && !item.tooltipEn) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const tooltipWidth = 280;
+    const padding = 12;
 
-        return {
-          ...sec,
-          items: matchedItems
-        };
-      })
-      .filter(sec => sec.items.length > 0);
-  }, [allSections, searchQuery]);
+    let left = isAr ? rect.left - tooltipWidth - padding : rect.right + padding;
+    if (left < padding) left = padding;
+    if (left + tooltipWidth > window.innerWidth - padding) {
+      left = window.innerWidth - tooltipWidth - padding;
+    }
 
-  const totalFilteredCount = filteredSections.reduce((acc, s) => acc + s.items.length, 0);
+    let top = rect.top;
+    if (top + 160 > window.innerHeight) {
+      top = window.innerHeight - 170;
+    }
+
+    setHoveredTooltip({ item, top, left });
+  };
 
   return (
     <div ref={containerRef} style={{ position: 'relative', width: '100%' }}>
@@ -244,11 +216,11 @@ export function ZFCustomSelect<T = string>({
           border: hasError 
             ? '1.5px solid #dc2626' 
             : isOpen 
-              ? '1.5px solid #946f23' 
+              ? '1.5px solid var(--erp-accent, #2563eb)' 
               : '1px solid #cbd5e1',
           borderRadius: '9px',
           boxShadow: isOpen 
-            ? '0 0 0 3px rgba(184, 144, 62, 0.15)' 
+            ? '0 0 0 3px var(--erp-accent-tint, rgba(37, 99, 235, 0.12))' 
             : '0 1px 2px rgba(0, 0, 0, 0.02)',
           cursor: disabled ? 'not-allowed' : 'pointer',
           textAlign: isAr ? 'right' : 'left',
@@ -263,9 +235,9 @@ export function ZFCustomSelect<T = string>({
               width: '26px',
               height: '26px',
               borderRadius: '7px',
-              background: selectedItem.iconBg || 'rgba(184, 144, 62, 0.12)',
-              color: selectedItem.iconColor || '#946f23',
-              border: `1px solid ${selectedItem.iconColor ? `${selectedItem.iconColor}33` : 'rgba(184, 144, 62, 0.25)'}`,
+              background: selectedItem.iconBg || 'var(--erp-accent-subtle, #eff6ff)',
+              color: selectedItem.iconColor || 'var(--erp-accent, #2563eb)',
+              border: '1px solid #e2e8f0',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -315,7 +287,7 @@ export function ZFCustomSelect<T = string>({
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', flexShrink: 0 }}>
           {selectedItem?.price !== undefined && (
-            <span style={{ fontSize: '0.74rem', fontWeight: 800, color: '#946f23', fontVariantNumeric: 'tabular-nums' }}>
+            <span style={{ fontSize: '0.74rem', fontWeight: 700, color: '#0f172a', fontVariantNumeric: 'tabular-nums' }}>
               {D(selectedItem.price).formatEGP(isAr)}
             </span>
           )}
@@ -344,7 +316,7 @@ export function ZFCustomSelect<T = string>({
           left: 0,
           right: 0,
           background: '#ffffff',
-          border: '1.5px solid #e2e8f0',
+          border: '1px solid var(--erp-border, #cbd5e1)',
           borderRadius: '14px',
           boxShadow: '0 12px 32px -4px rgba(0, 0, 0, 0.12), 0 4px 12px rgba(0, 0, 0, 0.04)',
           zIndex: 9999,
@@ -415,17 +387,17 @@ export function ZFCustomSelect<T = string>({
                   alignItems: 'center',
                   gap: '0.45rem',
                   padding: '0.45rem 0.65rem',
-                  background: 'rgba(184, 144, 62, 0.06)',
-                  border: '1px dashed rgba(184, 144, 62, 0.4)',
+                  background: 'var(--erp-accent-subtle, #eff6ff)',
+                  border: '1px dashed var(--erp-border, #93c5fd)',
                   borderRadius: '7px',
-                  color: '#946f23',
+                  color: 'var(--erp-accent, #2563eb)',
                   fontSize: '0.73rem',
-                  fontWeight: 800,
+                  fontWeight: 700,
                   cursor: 'pointer',
                   textAlign: isAr ? 'right' : 'left'
                 }}
               >
-                <Plus size={13} color="#946f23" />
+                <Plus size={13} color="var(--erp-accent, #2563eb)" />
                 <span>{isAr ? customAction.labelAr : customAction.labelEn}</span>
               </button>
             </div>
@@ -456,7 +428,7 @@ export function ZFCustomSelect<T = string>({
                       borderTop: '1px solid #f1f5f9',
                       borderBottom: '1px solid #f1f5f9'
                     }}>
-                      <SectionIcon size={11} color="#946f23" />
+                      <SectionIcon size={11} color="var(--erp-accent, #2563eb)" />
                       <span style={{ fontSize: '0.64rem', fontWeight: 700, color: '#475569', letterSpacing: '0.02em', textTransform: 'uppercase' }}>
                         {isAr ? section.titleAr : section.titleEn}
                       </span>
@@ -495,9 +467,9 @@ export function ZFCustomSelect<T = string>({
                               justifyContent: 'space-between',
                               padding: '0.42rem 0.75rem',
                               cursor: 'pointer',
-                              background: isItemSelected ? 'rgba(184, 144, 62, 0.08)' : 'transparent',
-                              borderRight: isAr && isItemSelected ? '3px solid #946f23' : 'none',
-                              borderLeft: !isAr && isItemSelected ? '3px solid #946f23' : 'none',
+                              background: isItemSelected ? 'var(--erp-accent-subtle, #eff6ff)' : 'transparent',
+                              borderRight: isAr && isItemSelected ? '3px solid var(--erp-accent, #2563eb)' : 'none',
+                              borderLeft: !isAr && isItemSelected ? '3px solid var(--erp-accent, #2563eb)' : 'none',
                               transition: 'all 0.12s ease',
                               gap: '0.55rem'
                             }}
@@ -516,7 +488,7 @@ export function ZFCustomSelect<T = string>({
                                 height: '26px',
                                 borderRadius: '7px',
                                 background: isItemSelected 
-                                  ? (item.iconColor || '#946f23')
+                                  ? 'var(--erp-accent, #2563eb)'
                                   : (item.iconBg || '#f1f5f9'),
                                 color: isItemSelected 
                                   ? '#ffffff'
@@ -528,7 +500,7 @@ export function ZFCustomSelect<T = string>({
                                 alignItems: 'center',
                                 justifyContent: 'center',
                                 flexShrink: 0,
-                                boxShadow: isItemSelected ? '0 2px 6px rgba(0,0,0,0.15)' : 'none',
+                                boxShadow: isItemSelected ? '0 2px 6px var(--erp-accent-tint, rgba(37,99,235,0.25))' : 'none',
                                 transition: 'all 0.15s ease'
                               }}>
                                 {React.createElement(ItemIcon, { size: 14 })}
@@ -539,7 +511,7 @@ export function ZFCustomSelect<T = string>({
                                   <span style={{
                                     fontSize: '0.75rem',
                                     fontWeight: isItemSelected ? 700 : 600,
-                                    color: isItemSelected ? (item.iconColor || '#946f23') : '#0f172a',
+                                    color: isItemSelected ? 'var(--erp-accent, #2563eb)' : '#0f172a',
                                     whiteSpace: 'nowrap',
                                     overflow: 'hidden',
                                     textOverflow: 'ellipsis'
@@ -571,8 +543,8 @@ export function ZFCustomSelect<T = string>({
                                          display: 'inline-flex',
                                          alignItems: 'center',
                                          justifyContent: 'center',
-                                         color: '#946f23',
-                                         background: 'rgba(184, 144, 62, 0.09)',
+                                         color: 'var(--erp-accent, #2563eb)',
+                                         background: 'var(--erp-accent-subtle, #eff6ff)',
                                          borderRadius: '50%',
                                          width: '15px',
                                          height: '15px',
@@ -596,12 +568,12 @@ export function ZFCustomSelect<T = string>({
 
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', flexShrink: 0 }}>
                               {item.price !== undefined && (
-                                <span style={{ fontSize: '0.73rem', fontWeight: 800, color: '#0f172a', fontVariantNumeric: 'tabular-nums' }}>
+                                <span style={{ fontSize: '0.73rem', fontWeight: 700, color: '#0f172a', fontVariantNumeric: 'tabular-nums' }}>
                                   {D(item.price).formatEGP(isAr)}
                                 </span>
                               )}
                               {isItemSelected && (
-                                <Check size={13} color="#946f23" />
+                                <Check size={13} color="var(--erp-accent, #2563eb)" />
                               )}
                             </div>
                           </div>
@@ -642,7 +614,7 @@ export function ZFCustomSelect<T = string>({
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-            <Info size={13} color="#946f23" style={{ flexShrink: 0 }} />
+            <Info size={13} color="var(--erp-accent, #2563eb)" style={{ flexShrink: 0 }} />
             <span style={{ fontSize: '0.74rem', fontWeight: 800, color: '#0f172a', lineHeight: 1.3 }}>
               {isAr 
                 ? (hoveredTooltip.item.tooltipTitleAr || hoveredTooltip.item.labelAr) 

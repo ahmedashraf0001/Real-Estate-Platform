@@ -35,7 +35,7 @@ export class Decimal {
     }
 
     const isNegative = trimmed.startsWith('-');
-    const clean = isNegative ? trimmed.slice(1) : trimmed;
+    const clean = (isNegative ? trimmed.slice(1) : trimmed).replace(/,/g, '');
     const parts = clean.split('.');
 
     const wholeStr = parts[0] || '0';
@@ -48,11 +48,15 @@ export class Decimal {
       fracStr = fracStr.slice(0, 2);
     }
 
-    const wholeBig = BigInt(wholeStr);
-    const fracBig = BigInt(fracStr);
-    const totalCents = wholeBig * B_HUNDRED + fracBig;
+    try {
+      const wholeBig = BigInt(wholeStr);
+      const fracBig = BigInt(fracStr);
+      const totalCents = wholeBig * B_HUNDRED + fracBig;
 
-    return isNegative ? -totalCents : totalCents;
+      return isNegative ? -totalCents : totalCents;
+    } catch {
+      return B_ZERO;
+    }
   }
 
   static fromCents(cents: bigint): Decimal {
@@ -63,6 +67,18 @@ export class Decimal {
 
   static zero(): Decimal {
     return new Decimal('0.00');
+  }
+
+  static max(a: Decimal | string | number, b: Decimal | string | number): Decimal {
+    const da = a instanceof Decimal ? a : new Decimal(a);
+    const db = b instanceof Decimal ? b : new Decimal(b);
+    return da.gte(db) ? da : db;
+  }
+
+  static min(a: Decimal | string | number, b: Decimal | string | number): Decimal {
+    const da = a instanceof Decimal ? a : new Decimal(a);
+    const db = b instanceof Decimal ? b : new Decimal(b);
+    return da.lte(db) ? da : db;
   }
 
   plus(other: Decimal | string | number): Decimal {
@@ -110,6 +126,10 @@ export class Decimal {
   equals(other: Decimal | string | number): boolean {
     const o = other instanceof Decimal ? other : new Decimal(other);
     return this.cents === o.cents;
+  }
+
+  eq(other: Decimal | string | number): boolean {
+    return this.equals(other);
   }
 
   greaterThan(other: Decimal | string | number): boolean {
@@ -162,6 +182,14 @@ export class Decimal {
 
   abs(): Decimal {
     return this.cents < B_ZERO ? Decimal.fromCents(-this.cents) : this;
+  }
+
+  min(other: Decimal | string | number): Decimal {
+    return Decimal.min(this, other);
+  }
+
+  max(other: Decimal | string | number): Decimal {
+    return Decimal.max(this, other);
   }
 
   toFixed(fractionDigits = 2): string {

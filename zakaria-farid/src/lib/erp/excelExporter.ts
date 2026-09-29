@@ -6,8 +6,9 @@
 
 import ExcelJS from 'exceljs';
 import { LiveERPDataset } from './supabaseService';
-import { ERPAccount, ERPJournalEntry, ERPContract } from './types';
+import { ERPAccount, ERPJournalEntry, ERPContract, ERPPropertyCostItem, ERPInstallmentSchedule } from './types';
 import { Property } from '@/lib/supabase/types';
+import { SinglePropertyAnalysis } from './propertyAnalysisEngine';
 import { CANONICAL_COA } from './ledger';
 import { 
   renderDonutChart, 
@@ -1274,7 +1275,13 @@ export async function exportPartnerDossierExcel(
     r.getCell(3).value = t.date;
     r.getCell(4).value = isInjection ? (isAr ? 'ضخ مساهمة رأس مال' : 'Capital Injection') : (isAr ? 'صرف وتسديد أرباح' : 'Profit Distribution');
     r.getCell(5).value = parseFloat(String(t.amount)) || 0;
-    r.getCell(6).value = t.payment_method === 'CASH_101000' ? (isAr ? 'خزينة كاش (101000)' : 'Cash Safe') : (isAr ? 'بنك / إنستاباي (102000)' : 'Bank');
+    const isCash = t.payment_method === 'CASH_101000' || t.payment_method === 'CASH';
+    const isInsta = String(t.payment_method || '').includes('INSTAPAY');
+    r.getCell(6).value = isCash
+      ? (isAr ? 'خزينة كاش (101000)' : 'Cash Safe (101000)')
+      : isInsta
+        ? (isAr ? 'إنستاباي - خزينة (101000)' : 'InstaPay Treasury (101000)')
+        : (isAr ? 'حساب بنكي تجاري (102000)' : 'Commercial Bank (102000)');
     r.getCell(7).value = t.memo || '—';
 
     r.getCell(1).alignment = { horizontal: 'center' };
@@ -1310,6 +1317,140 @@ export async function exportPartnerDossierExcel(
   ];
 
   await downloadWorkbook(wb, `كشف_حساب_شريك_${partner.partnerName.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0, 10)}.xlsx`);
+}
+
+/**
+ * Dedicated Partner Directory & Financial Balances Excel Exporter
+ */
+export async function exportPartnerDirectoryExcel(
+  partners: Array<{
+    partnerName: string;
+    roleTitleAr: string;
+    totalContributedCapital: string | number;
+    totalCollectionsShare: string | number;
+    totalDistributionsPaid: string | number;
+    netCurrentBalance: string | number;
+    roiPercent: string | number;
+    phone?: string;
+    preferred_payout_method?: string;
+    holdings: Array<{ propertyTitle: string }>;
+  }>,
+  transactions: Array<{
+    amount: string | number;
+    type: string;
+  }> = [],
+  isAr: boolean = true
+): Promise<void> {
+  const wb = new ExcelJS.Workbook();
+  wb.creator = 'شركة زكريا فريد للتطوير العقاري';
+  wb.created = new Date();
+
+  const ws = wb.addWorksheet(isAr ? 'دليل الشركاء والممولين' : 'Partner Directory', {
+    views: [{ rightToLeft: isAr, showGridLines: true }]
+  });
+
+  // Title
+  ws.mergeCells('A1:J1');
+  const title = ws.getCell('A1');
+  title.value = isAr 
+    ? 'شركة زكريا فريد للتطوير العقاري — كشف ودليل الشركاء والممولين وأرصدة الحسابات'
+    : 'Zakaria Farid Real Estate — Partner Directory & Balances';
+  title.font = { name: isAr ? 'Segoe UI' : 'Calibri', size: 14, bold: true, color: { argb: PALETTE.headerBg } };
+  title.alignment = { vertical: 'middle', horizontal: 'center' };
+  ws.getRow(1).height = 32;
+
+  // Subtitle
+  ws.mergeCells('A2:J2');
+  const sub = ws.getCell('A2');
+  sub.value = isAr
+    ? `تاريخ الاستخراج: ${new Date().toLocaleDateString('ar-EG')} • نظام ZF FIN-OS • حسابات حقوق الملكية (301000 - 303000)`
+    : `Generated: ${new Date().toLocaleDateString('en-US')} • ZF FIN-OS • Equity Accounts (301000 - 303000)`;
+  sub.font = { name: isAr ? 'Segoe UI' : 'Calibri', size: 10, color: { argb: 'FF64748B' } };
+  sub.alignment = { vertical: 'middle', horizontal: 'center' };
+  ws.getRow(2).height = 20;
+
+  // Headers
+  const headers = [
+    isAr ? 'م' : '#',
+    isAr ? 'اسم الشريك / الممول' : 'Partner Name',
+    isAr ? 'صفة الشراكة' : 'Role',
+    isAr ? 'المشاريع' : 'Projects',
+    isAr ? 'رأس المال المودع (301000)' : 'Contributed (301000)',
+    isAr ? 'الأرباح المنصرفة (303000)' : 'Distributions (303000)',
+    isAr ? 'صافي الرصيد الجاري' : 'Net Current Balance',
+    isAr ? 'ROI %' : 'ROI %',
+    isAr ? 'طريقة الصرف' : 'Payment Method',
+    isAr ? 'رقم الهاتف' : 'Phone'
+  ];
+
+  const hRow = ws.getRow(4);
+  hRow.height = 26;
+  headers.forEach((h, idx) => {
+    const cell = hRow.getCell(idx + 1);
+    cell.value = h;
+    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: PALETTE.headerBg } };
+    cell.font = { bold: true, size: 9, color: { argb: PALETTE.headerText } };
+    cell.alignment = { vertical: 'middle', horizontal: 'center' };
+  });
+
+  let rowIdx = 5;
+  partners.forEach((p, idx) => {
+    const r = ws.getRow(rowIdx);
+    r.height = 22;
+
+    r.getCell(1).value = idx + 1;
+    r.getCell(2).value = p.partnerName;
+    r.getCell(3).value = p.roleTitleAr;
+    r.getCell(4).value = p.holdings.length;
+    r.getCell(5).value = parseFloat(String(p.totalContributedCapital)) || 0;
+    r.getCell(6).value = parseFloat(String(p.totalDistributionsPaid)) || 0;
+    r.getCell(7).value = parseFloat(String(p.netCurrentBalance)) || 0;
+    r.getCell(8).value = `${p.roiPercent}%`;
+    r.getCell(9).value = p.preferred_payout_method || (isAr ? 'تحويل فوري' : 'Direct');
+    r.getCell(10).value = p.phone || '—';
+
+    r.getCell(1).alignment = { horizontal: 'center' };
+    r.getCell(2).alignment = { horizontal: 'right' };
+    r.getCell(2).font = { bold: true };
+    r.getCell(3).alignment = { horizontal: 'center' };
+    r.getCell(4).alignment = { horizontal: 'center' };
+    r.getCell(5).numFmt = '#,##0.00 "ج.م"';
+    r.getCell(5).font = { bold: true };
+    r.getCell(6).numFmt = '#,##0.00 "ج.م"';
+    r.getCell(6).font = { color: { argb: PALETTE.emerald }, bold: true };
+    r.getCell(7).numFmt = '#,##0.00 "ج.م"';
+    r.getCell(7).font = { bold: true };
+    r.getCell(8).alignment = { horizontal: 'center' };
+    r.getCell(8).font = { color: { argb: PALETTE.gold }, bold: true };
+    r.getCell(9).alignment = { horizontal: 'center' };
+    r.getCell(10).alignment = { horizontal: 'center' };
+
+    for (let c = 1; c <= 10; c++) {
+      const cell = r.getCell(c);
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: rowIdx % 2 === 0 ? PALETTE.zebraBg : PALETTE.white } };
+      cell.border = {
+        bottom: { style: 'thin', color: { argb: PALETTE.border } },
+        left: { style: 'thin', color: { argb: PALETTE.border } },
+        right: { style: 'thin', color: { argb: PALETTE.border } }
+      };
+    }
+    rowIdx++;
+  });
+
+  ws.columns = [
+    { width: 6 },
+    { width: 26 },
+    { width: 22 },
+    { width: 12 },
+    { width: 24 },
+    { width: 24 },
+    { width: 24 },
+    { width: 12 },
+    { width: 16 },
+    { width: 18 }
+  ];
+
+  await downloadWorkbook(wb, `دليل_الشركاء_والممولين_${new Date().toISOString().slice(0, 10)}.xlsx`);
 }
 
 /**
@@ -1455,4 +1596,728 @@ export async function exportFeasibilityExcel(
   ];
 
   await downloadWorkbook(wb, `دراسة_جدوى_${data.title.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0, 10)}.xlsx`);
+}
+
+/**
+ * Helper to get property type label in Arabic or English
+ */
+function getPropertyTypeLabelText(type?: string | null, isAr: boolean = true): string {
+  const map: Record<string, { ar: string; en: string }> = {
+    apartment: { ar: 'شقق سكنية', en: 'Apartments' },
+    building: { ar: 'عمارات ومباني', en: 'Buildings' },
+    villa: { ar: 'فيلات وقصور', en: 'Villas' },
+    duplex: { ar: 'دوبلكس', en: 'Duplex' },
+    penthouse: { ar: 'بنتهاوس', en: 'Penthouse' },
+    commercial: { ar: 'تجاري وإداري', en: 'Commercial' },
+    land: { ar: 'أراضي ومواقع', en: 'Land' },
+    chalet: { ar: 'شاليهات ساحلية', en: 'Chalets' },
+  };
+  if (!type) return isAr ? 'مشروع عقاري' : 'Property';
+  const item = map[type.toLowerCase().trim()];
+  return item ? (isAr ? item.ar : item.en) : type;
+}
+
+export interface ComprehensivePropertyAnalysisExportData {
+  property: Property;
+  analysis: SinglePropertyAnalysis;
+  propertyCosts: ERPPropertyCostItem[];
+  contracts: ERPContract[];
+  schedules?: ERPInstallmentSchedule[];
+  isAr?: boolean;
+}
+
+/**
+ * Multi-Sheet Comprehensive Property Feasibility & Investment Analysis Exporter
+ * Generates 4 rich, executive-grade sheets:
+ * Sheet 1: Executive Feasibility & Investment Summary (ملخص دراسة الجدوى والاستثمار)
+ * Sheet 2: Lifecycle Milestone Pipeline (محطات دورة حياة المشروع)
+ * Sheet 3: Itemized Construction Costs (سجل بنود وتكاليف الإنشاءات المعتمدة)
+ * Sheet 4: Sales Contracts & Receivables (عقود المبيعات ومستحقات الأقساط)
+ */
+export async function exportComprehensivePropertyAnalysisExcel(
+  data: ComprehensivePropertyAnalysisExportData
+): Promise<void> {
+  const { property, analysis, propertyCosts, contracts, isAr = true } = data;
+  const wb = new ExcelJS.Workbook();
+  wb.creator = 'شركة زكريا فريد للتطوير العقاري';
+  wb.created = new Date();
+
+  const propName = isAr 
+    ? (property.title_ar || property.title_en || analysis.titleAr || 'عقار غير مسمى')
+    : (property.title_en || property.title_ar || analysis.titleEn || 'Unnamed Property');
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // SHEET 1: ملخص دراسة الجدوى والاستثمار (Executive Feasibility & Investment Summary)
+  // ──────────────────────────────────────────────────────────────────────────
+  const ws1 = wb.addWorksheet(isAr ? 'ملخص دراسة الجدوى والاستثمار' : 'Feasibility Summary', {
+    views: [{ rightToLeft: isAr, showGridLines: true }]
+  });
+
+  // Main Header
+  ws1.mergeCells('A1:F1');
+  const h1 = ws1.getCell('A1');
+  h1.value = isAr 
+    ? 'شركة زكريا فريد للتطوير العقاري — تقرير دراسة الجدوى والتحليل الاستثماري الشامل'
+    : 'Zakaria Farid Real Estate — Comprehensive Feasibility & Investment Dossier';
+  h1.font = { name: isAr ? 'Segoe UI' : 'Calibri', size: 13, bold: true, color: { argb: PALETTE.headerText } };
+  h1.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: PALETTE.headerBg } };
+  h1.alignment = { vertical: 'middle', horizontal: 'center' };
+  ws1.getRow(1).height = 34;
+
+  // Subheader
+  ws1.mergeCells('A2:F2');
+  const h2 = ws1.getCell('A2');
+  h2.value = isAr
+    ? `العقار: ${propName} | كود المشروع: ${property.id.slice(0, 8)} | الموقع: ${property.location || 'غير محدد'} | تاريخ الإصدار: ${new Date().toISOString().slice(0, 10)}`
+    : `Project: ${propName} | ID: ${property.id.slice(0, 8)} | Location: ${property.location || 'N/A'} | Date: ${new Date().toISOString().slice(0, 10)}`;
+  h2.font = { name: isAr ? 'Segoe UI' : 'Calibri', size: 9, bold: true, color: { argb: 'FF475569' } };
+  h2.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: PALETTE.subHeaderBg } };
+  h2.alignment = { vertical: 'middle', horizontal: 'center' };
+  ws1.getRow(2).height = 22;
+
+  // Section 1: بطاقة هوية ومواصفات المشروع الهندسية
+  ws1.mergeCells('A4:F4');
+  const s1Header = ws1.getCell('A4');
+  s1Header.value = isAr ? '١. هوية ومواصفات المشروع الهندسية والمعمارية:' : '1. Property Architectural & Engineering Identity:';
+  s1Header.font = { bold: true, size: 11, color: { argb: PALETTE.headerBg } };
+  ws1.getRow(4).height = 24;
+
+  const identitySpecs: [string, any, string?][] = [
+    [isAr ? 'اسم العقار / المشروع' : 'Project Title', propName],
+    [isAr ? 'كود العقار المرجعي' : 'Property Code', property.id],
+    [isAr ? 'الموقع الجغرافي والمدينة' : 'Location / City', property.location || (isAr ? 'غير محدد' : 'N/A')],
+    [isAr ? 'نوع العقار والتصنيف المعماري' : 'Property Type', getPropertyTypeLabelText(property.type, isAr)],
+    [isAr ? 'إجمالي المساحة البنائية الإجمالية (م²)' : 'Total Built-up Area (sqm)', analysis.areaSqm, '#,##0 "م²"'],
+    [isAr ? 'إجمالي عدد الوحدات' : 'Total Units Count', analysis.totalUnits, '#,##0 "وحدة"'],
+    [isAr ? 'حالة التنفيذ والجاهزية الإنشائية' : 'Completion Status', analysis.statusLabel]
+  ];
+
+  let rIdx = 5;
+  identitySpecs.forEach(([label, val, numFmt]) => {
+    const row = ws1.getRow(rIdx);
+    row.height = 20;
+    ws1.mergeCells(`A${rIdx}:C${rIdx}`);
+    ws1.mergeCells(`D${rIdx}:F${rIdx}`);
+
+    const labelCell = row.getCell(1);
+    labelCell.value = label;
+    labelCell.font = { bold: true, size: 9, color: { argb: 'FF475569' } };
+    labelCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: rIdx % 2 === 0 ? PALETTE.zebraBg : PALETTE.white } };
+    labelCell.alignment = { vertical: 'middle', horizontal: isAr ? 'right' : 'left' };
+
+    const valCell = row.getCell(4);
+    valCell.value = val;
+    valCell.font = { bold: true, size: 9, color: { argb: 'FF0F172A' } };
+    valCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: rIdx % 2 === 0 ? PALETTE.zebraBg : PALETTE.white } };
+    valCell.alignment = { vertical: 'middle', horizontal: isAr ? 'right' : 'left' };
+    if (numFmt && typeof val === 'number') {
+      valCell.numFmt = numFmt;
+    }
+
+    for (let c = 1; c <= 6; c++) {
+      row.getCell(c).border = {
+        bottom: { style: 'thin', color: { argb: PALETTE.border } },
+        top: { style: 'thin', color: { argb: PALETTE.border } },
+        left: { style: 'thin', color: { argb: PALETTE.border } },
+        right: { style: 'thin', color: { argb: PALETTE.border } }
+      };
+    }
+    rIdx++;
+  });
+
+  // Section 2: المؤشرات المالية ودراسة الجدوى الكبرى
+  rIdx += 1;
+  ws1.mergeCells(`A${rIdx}:F${rIdx}`);
+  const s2Header = ws1.getCell(`A${rIdx}`);
+  s2Header.value = isAr ? '٢. المؤشرات المالية ودراسة الجدوى الاستثمارية الكبرى:' : '2. Key Financial Feasibility & Investment Metrics:';
+  s2Header.font = { bold: true, size: 11, color: { argb: PALETTE.headerBg } };
+  ws1.getRow(rIdx).height = 24;
+  rIdx++;
+
+  const unitCost = analysis.areaSqm > 0 ? analysis.breakdown.totalInvestedCapital.toNumber() / analysis.areaSqm : 0;
+  const unitSelling = analysis.areaSqm > 0 ? analysis.expectedTotalSales.toNumber() / analysis.areaSqm : 0;
+
+  const financialMetrics: [string, number, string, string?][] = [
+    [isAr ? 'إجمالي رأس المال المستثمر (الأرض + التشييد WIP)' : 'Total Capital Invested (Land + WIP)', analysis.breakdown.totalInvestedCapital.toNumber(), '#,##0.00 "ج.م"', 'FF0F172A'],
+    [isAr ? 'القيمة التقديرية لإجمالي المبيعات (RSV المستهدف)' : 'Expected Sales Volume (Total RSV)', analysis.expectedTotalSales.toNumber(), '#,##0.00 "ج.م"', 'FF2563EB'],
+    [isAr ? 'صافي الأرباح الاستثمارية المتوقعة (NPV)' : 'Projected Net Profit (NPV)', analysis.netExpectedProfit.toNumber(), '#,##0.00 "ج.م"', 'FF16A34A'],
+    [isAr ? 'معدل العائد المتوقع على الاستثمار (ROI %)' : 'Expected Return on Investment (ROI %)', analysis.roiPct.toNumber() / 100, '0.0%', 'FF16A34A'],
+    [isAr ? 'هامش الربح الإجمالي للمشروع (%)' : 'Gross Profit Margin (%)', analysis.grossMarginPct.toNumber() / 100, '0.0%', 'FF2563EB'],
+    [isAr ? 'معدل تكلفة المتر المربع الإجمالي' : 'Overall Cost per sqm', unitCost, '#,##0.00 "ج.م/م²"', 'FF475569'],
+    [isAr ? 'متوسط سعر بيع المتر المربع المستهدف' : 'Target Selling Price per sqm', unitSelling, '#,##0.00 "ج.م/م²"', 'FF475569'],
+    [isAr ? 'نسبة الاستيعاب والمبيعات المحققة فعلياً' : 'Sales Absorption Rate', analysis.absorptionRatePct.toNumber() / 100, '0.0%', 'FF0D9488']
+  ];
+
+  financialMetrics.forEach(([label, val, numFmt, colorHex]) => {
+    const row = ws1.getRow(rIdx);
+    row.height = 21;
+    ws1.mergeCells(`A${rIdx}:D${rIdx}`);
+    ws1.mergeCells(`E${rIdx}:F${rIdx}`);
+
+    const labelCell = row.getCell(1);
+    labelCell.value = label;
+    labelCell.font = { bold: true, size: 9, color: { argb: 'FF334155' } };
+    labelCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: rIdx % 2 === 0 ? PALETTE.zebraBg : PALETTE.white } };
+    labelCell.alignment = { vertical: 'middle', horizontal: isAr ? 'right' : 'left' };
+
+    const valCell = row.getCell(5);
+    valCell.value = val;
+    valCell.numFmt = numFmt;
+    valCell.font = { bold: true, size: 10, color: { argb: colorHex || 'FF0F172A' } };
+    valCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: rIdx % 2 === 0 ? PALETTE.zebraBg : PALETTE.white } };
+    valCell.alignment = { vertical: 'middle', horizontal: 'center' };
+
+    for (let c = 1; c <= 6; c++) {
+      row.getCell(c).border = {
+        bottom: { style: 'thin', color: { argb: PALETTE.border } },
+        top: { style: 'thin', color: { argb: PALETTE.border } },
+        left: { style: 'thin', color: { argb: PALETTE.border } },
+        right: { style: 'thin', color: { argb: PALETTE.border } }
+      };
+    }
+    rIdx++;
+  });
+
+  // Section 3: تفصيل بنود التكاليف الاستثمارية المباشرة الـ ٥
+  rIdx += 1;
+  ws1.mergeCells(`A${rIdx}:F${rIdx}`);
+  const s3Header = ws1.getCell(`A${rIdx}`);
+  s3Header.value = isAr ? '٣. تفصيل بنود التكاليف الاستثمارية المباشرة الـ ٥ المعتمدة:' : '3. Breakdown of Direct Cost Categories:';
+  s3Header.font = { bold: true, size: 11, color: { argb: PALETTE.headerBg } };
+  ws1.getRow(rIdx).height = 24;
+  rIdx++;
+
+  const catHeaders = [
+    isAr ? 'م' : '#',
+    isAr ? 'بند التكلفة الاستثمارية' : 'Cost Category',
+    isAr ? 'المعدل للمتر (ج.م/م²)' : 'Rate / sqm (EGP)',
+    isAr ? 'إجمالي التكلفة المعتمدة (ج.م)' : 'Total Cost (EGP)',
+    isAr ? 'النسبة من إجمالي الاستثمار %' : 'Share of Total %',
+    isAr ? 'ملاحظات وتدقيق الحساب' : 'Auditing Notes'
+  ];
+
+  const catHRow = ws1.getRow(rIdx);
+  catHRow.height = 26;
+  catHeaders.forEach((h, idx) => {
+    const cell = catHRow.getCell(idx + 1);
+    cell.value = h;
+    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: PALETTE.headerBg } };
+    cell.font = { bold: true, size: 9, color: { argb: PALETTE.headerText } };
+    cell.alignment = { horizontal: 'center', vertical: 'middle' };
+  });
+  rIdx++;
+
+  const catStartRow = rIdx;
+  const categoriesList = [
+    {
+      name: isAr ? 'حصة الأرض والتخصيص' : 'Land Allocation',
+      totalCost: analysis.breakdown.landCost.toNumber(),
+      notes: isAr ? 'تكلفة شراء الموقع والتخصيص القانوني والرسوم المساحية' : 'Site purchase & registration'
+    },
+    {
+      name: isAr ? 'الهيكل الخرساني والحديد والأساسات' : 'Structural Concrete & Rebar',
+      totalCost: analysis.breakdown.structureWip.toNumber(),
+      notes: isAr ? 'الخرسانة الجاهزة وحديد التسليح ومصنعيات المقاولين' : 'Ready-mix concrete & rebar'
+    },
+    {
+      name: isAr ? 'الكهروميكانيك والتجهيزات الفنية' : 'MEP Infrastructure & Services',
+      totalCost: analysis.breakdown.mepWip.toNumber(),
+      notes: isAr ? 'شبكات التغذية والصرف وتمديدات الكهرباء والمصاعد' : 'Plumbing, electrical & HVAC'
+    },
+    {
+      name: isAr ? 'التشطيبات المعمارية والواجهات' : 'Finishing & Exterior Facades',
+      totalCost: analysis.breakdown.finishingWip.toNumber(),
+      notes: isAr ? 'الدهانات والمحارة وتكسيات الحجر والواجهات الخارجية' : 'Plastering, paint & stone facade'
+    },
+    {
+      name: isAr ? 'التراخيص والرسوم والضرائب' : 'Permits, Statutory Fees & Taxes',
+      totalCost: analysis.breakdown.permitsFees.toNumber(),
+      notes: isAr ? 'رسوم التراخيص الإنشائية وجهاز المدينة والدمغات' : 'Statutory permits & municipal fees'
+    }
+  ];
+
+  const totalInv = analysis.breakdown.totalInvestedCapital.toNumber();
+
+  categoriesList.forEach((cat, idx) => {
+    const row = ws1.getRow(rIdx);
+    row.height = 22;
+    row.getCell(1).value = idx + 1;
+    row.getCell(2).value = cat.name;
+    row.getCell(3).value = analysis.areaSqm > 0 ? cat.totalCost / analysis.areaSqm : 0;
+    row.getCell(4).value = cat.totalCost;
+    row.getCell(5).value = totalInv > 0 ? cat.totalCost / totalInv : 0;
+    row.getCell(6).value = cat.notes;
+
+    row.getCell(1).alignment = { horizontal: 'center' };
+    row.getCell(2).alignment = { horizontal: isAr ? 'right' : 'left' };
+    row.getCell(3).numFmt = '#,##0.00 "ج.م"';
+    row.getCell(4).numFmt = '#,##0.00 "ج.م"';
+    row.getCell(5).numFmt = '0.0%';
+    row.getCell(5).alignment = { horizontal: 'center' };
+    row.getCell(6).alignment = { horizontal: isAr ? 'right' : 'left' };
+
+    for (let c = 1; c <= 6; c++) {
+      const cell = row.getCell(c);
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: rIdx % 2 === 0 ? PALETTE.zebraBg : PALETTE.white } };
+      cell.border = {
+        bottom: { style: 'thin', color: { argb: PALETTE.border } },
+        top: { style: 'thin', color: { argb: PALETTE.border } },
+        left: { style: 'thin', color: { argb: PALETTE.border } },
+        right: { style: 'thin', color: { argb: PALETTE.border } }
+      };
+    }
+    rIdx++;
+  });
+
+  // Total Categories Row
+  const catEndRow = rIdx - 1;
+  const totRow = ws1.getRow(rIdx);
+  totRow.height = 26;
+  totRow.getCell(2).value = isAr ? 'إجمالي تكاليف الاستثمار المعتمدة:' : 'Total Invested Capital:';
+  totRow.getCell(2).font = { bold: true };
+  totRow.getCell(3).value = analysis.areaSqm > 0 ? totalInv / analysis.areaSqm : 0;
+  totRow.getCell(3).numFmt = '#,##0.00 "ج.م"';
+  totRow.getCell(3).font = { bold: true };
+  totRow.getCell(4).value = { formula: `SUM(D${catStartRow}:D${catEndRow})` };
+  totRow.getCell(4).numFmt = '#,##0.00 "ج.م"';
+  totRow.getCell(4).font = { bold: true, size: 10, color: { argb: PALETTE.emerald } };
+  totRow.getCell(5).value = 1;
+  totRow.getCell(5).numFmt = '100.0%';
+  totRow.getCell(5).alignment = { horizontal: 'center' };
+  totRow.getCell(5).font = { bold: true };
+  totRow.getCell(6).value = isAr ? 'مطابق لسجلات التكاليف وحسابات الأستاذ' : 'Reconciled with General Ledger';
+  totRow.getCell(6).font = { italic: true, size: 8, color: { argb: 'FF64748B' } };
+
+  for (let c = 1; c <= 6; c++) {
+    const cell = totRow.getCell(c);
+    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: PALETTE.subHeaderBg } };
+    cell.border = {
+      top: { style: 'medium', color: { argb: PALETTE.headerBg } },
+      bottom: { style: 'double', color: { argb: PALETTE.headerBg } },
+      left: { style: 'thin', color: { argb: PALETTE.border } },
+      right: { style: 'thin', color: { argb: PALETTE.border } }
+    };
+  }
+
+  ws1.columns = [
+    { width: 6 },
+    { width: 38 },
+    { width: 22 },
+    { width: 24 },
+    { width: 20 },
+    { width: 44 }
+  ];
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // SHEET 2: محطات دورة حياة المشروع (Lifecycle Milestone Pipeline)
+  // ──────────────────────────────────────────────────────────────────────────
+  const ws2 = wb.addWorksheet(isAr ? 'محطات دورة حياة المشروع' : 'Milestone Pipeline', {
+    views: [{ rightToLeft: isAr, showGridLines: true }]
+  });
+
+  ws2.mergeCells('A1:G1');
+  const h2_1 = ws2.getCell('A1');
+  h2_1.value = isAr
+    ? `محطات ومراحل دورة حياة المشروع والجدول الزمني للإنجاز — ${propName}`
+    : `Property Execution Lifecycle Milestones & Timeline — ${propName}`;
+  h2_1.font = { name: isAr ? 'Segoe UI' : 'Calibri', size: 12, bold: true, color: { argb: PALETTE.headerText } };
+  h2_1.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: PALETTE.headerBg } };
+  h2_1.alignment = { vertical: 'middle', horizontal: 'center' };
+  ws2.getRow(1).height = 32;
+
+  const msHeaders = [
+    isAr ? 'م' : '#',
+    isAr ? 'المحطة التنفيذية' : 'Milestone Name',
+    isAr ? 'تاريخ التسجيل والاعتماد' : 'Logged Date',
+    isAr ? 'الحالة التشغيلية' : 'Execution Status',
+    isAr ? 'نسبة الإنجاز %' : 'Progress %',
+    isAr ? 'التكاليف المسجلة (ج.م)' : 'Logged Cost (EGP)',
+    isAr ? 'البيان والملاحظات التنفيذية' : 'Executive Notes'
+  ];
+
+  const msHRow = ws2.getRow(3);
+  msHRow.height = 26;
+  msHeaders.forEach((h, idx) => {
+    const cell = msHRow.getCell(idx + 1);
+    cell.value = h;
+    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: PALETTE.headerBg } };
+    cell.font = { bold: true, size: 9, color: { argb: PALETTE.headerText } };
+    cell.alignment = { horizontal: 'center', vertical: 'middle' };
+  });
+
+  let msRIdx = 4;
+  analysis.milestones.forEach((m) => {
+    const row = ws2.getRow(msRIdx);
+    row.height = 24;
+    row.getCell(1).value = m.order;
+    row.getCell(2).value = isAr ? m.titleAr : m.titleEn;
+    row.getCell(3).value = m.date;
+    row.getCell(4).value = m.status === 'completed'
+      ? (isAr ? 'مكتمل' : 'Completed')
+      : m.status === 'in_progress'
+        ? (isAr ? 'قيد التنفيذ' : 'In Progress')
+        : (isAr ? 'مخطط' : 'Pending');
+    row.getCell(5).value = (m.progressPct || 0) / 100;
+    row.getCell(6).value = parseFloat(m.costLoggedEgp || '0');
+    row.getCell(7).value = isAr ? m.summaryAr : m.summaryEn;
+
+    row.getCell(1).alignment = { horizontal: 'center' };
+    row.getCell(2).alignment = { horizontal: isAr ? 'right' : 'left' };
+    row.getCell(3).alignment = { horizontal: 'center' };
+    row.getCell(4).alignment = { horizontal: 'center' };
+    row.getCell(5).alignment = { horizontal: 'center' };
+    row.getCell(5).numFmt = '0%';
+    row.getCell(6).numFmt = '#,##0.00 "ج.م"';
+    row.getCell(7).alignment = { horizontal: isAr ? 'right' : 'left' };
+
+    // Status styling
+    if (m.status === 'completed') {
+      row.getCell(4).font = { bold: true, color: { argb: PALETTE.emerald } };
+    } else if (m.status === 'in_progress') {
+      row.getCell(4).font = { bold: true, color: { argb: 'FF2563EB' } };
+    } else {
+      row.getCell(4).font = { color: { argb: 'FF64748B' } };
+    }
+
+    for (let c = 1; c <= 7; c++) {
+      const cell = row.getCell(c);
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: msRIdx % 2 === 0 ? PALETTE.zebraBg : PALETTE.white } };
+      cell.border = {
+        bottom: { style: 'thin', color: { argb: PALETTE.border } },
+        top: { style: 'thin', color: { argb: PALETTE.border } },
+        left: { style: 'thin', color: { argb: PALETTE.border } },
+        right: { style: 'thin', color: { argb: PALETTE.border } }
+      };
+    }
+    msRIdx++;
+  });
+
+  ws2.columns = [
+    { width: 6 },
+    { width: 34 },
+    { width: 16 },
+    { width: 18 },
+    { width: 15 },
+    { width: 22 },
+    { width: 55 }
+  ];
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // SHEET 3: سجل بنود وتكاليف الإنشاءات المعتمدة (Itemized Construction Costs)
+  // ──────────────────────────────────────────────────────────────────────────
+  const ws3 = wb.addWorksheet(isAr ? 'سجل تكاليف الإنشاءات' : 'Construction Costs', {
+    views: [{ rightToLeft: isAr, showGridLines: true }]
+  });
+
+  const propCosts = propertyCosts.filter(c => c.property_id === property.id);
+
+  ws3.mergeCells('A1:O1');
+  const h3_1 = ws3.getCell('A1');
+  h3_1.value = isAr
+    ? `سجل بنود وتكاليف الإنشاءات وعقود مقاولي الباطن المعتمدة — ${propName}`
+    : `Itemized Construction Costs & Subcontractor Contracts — ${propName}`;
+  h3_1.font = { name: isAr ? 'Segoe UI' : 'Calibri', size: 12, bold: true, color: { argb: PALETTE.headerText } };
+  h3_1.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: PALETTE.headerBg } };
+  h3_1.alignment = { vertical: 'middle', horizontal: 'center' };
+  ws3.getRow(1).height = 32;
+
+  const costHeaders = [
+    isAr ? 'م' : '#',
+    isAr ? 'كود البند' : 'Item ID',
+    isAr ? 'المرحلة' : 'Phase',
+    isAr ? 'التصنيف' : 'Category',
+    isAr ? 'بيان وتفاصيل البند' : 'Description / Item Name',
+    isAr ? 'المقاول / المورد' : 'Supplier / Contractor',
+    isAr ? 'رقم الفاتورة' : 'Invoice Ref',
+    isAr ? 'تاريخ التسجيل' : 'Logged Date',
+    isAr ? 'الكمية' : 'Qty',
+    isAr ? 'الوحدة' : 'Unit',
+    isAr ? 'سعر الوحدة (ج.م)' : 'Unit Cost',
+    isAr ? 'إجمالي التكلفة (ج.م)' : 'Total Cost (EGP)',
+    isAr ? 'المسدد (ج.م)' : 'Paid Amount (EGP)',
+    isAr ? 'المتبقي (ج.م)' : 'Remaining (EGP)',
+    isAr ? 'حالة الاعتماد' : 'Audit Status'
+  ];
+
+  const costHRow = ws3.getRow(3);
+  costHRow.height = 26;
+  costHeaders.forEach((h, idx) => {
+    const cell = costHRow.getCell(idx + 1);
+    cell.value = h;
+    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: PALETTE.headerBg } };
+    cell.font = { bold: true, size: 9, color: { argb: PALETTE.headerText } };
+    cell.alignment = { horizontal: 'center', vertical: 'middle' };
+  });
+
+  let cRIdx = 4;
+  if (propCosts.length === 0) {
+    ws3.mergeCells(`A${cRIdx}:O${cRIdx}`);
+    const emptyCell = ws3.getCell(`A${cRIdx}`);
+    emptyCell.value = isAr ? 'لا توجد بنود تكاليف مسجلة لهذا العقار حالياً' : 'No construction cost items registered for this property.';
+    emptyCell.alignment = { horizontal: 'center', vertical: 'middle' };
+    emptyCell.font = { italic: true, size: 10, color: { argb: 'FF64748B' } };
+    ws3.getRow(cRIdx).height = 26;
+    cRIdx++;
+  } else {
+    const costStartRow = cRIdx;
+    propCosts.forEach((item, idx) => {
+      const row = ws3.getRow(cRIdx);
+      row.height = 22;
+      const unitCostVal = parseFloat(item.unit_cost_egp || '0');
+      const totalCostVal = parseFloat(item.total_cost_egp || String(item.total_amount || 0));
+      const paidVal = parseFloat(item.paid_amount_egp || '0');
+      const remainingVal = parseFloat(item.remaining_amount_egp || String(totalCostVal - paidVal));
+
+      row.getCell(1).value = idx + 1;
+      row.getCell(2).value = item.item_id || item.id || `C-${idx + 1}`;
+      row.getCell(3).value = item.phase || 'N/A';
+      row.getCell(4).value = item.category || 'N/A';
+      row.getCell(5).value = isAr ? (item.item_name_ar || item.item_name_en) : (item.item_name_en || item.item_name_ar);
+      row.getCell(6).value = item.supplier_contractor || (isAr ? 'مقاولو الباطن' : 'Subcontractors');
+      row.getCell(7).value = item.invoice_ref || '-';
+      row.getCell(8).value = item.logged_date || '-';
+      row.getCell(9).value = item.quantity || 1;
+      row.getCell(10).value = item.unit || 'مقطوعية';
+      row.getCell(11).value = unitCostVal;
+      row.getCell(12).value = totalCostVal;
+      row.getCell(13).value = paidVal;
+      row.getCell(14).value = remainingVal;
+      row.getCell(15).value = item.status === 'verified' 
+        ? (isAr ? 'معتمد ومحقق' : 'Verified')
+        : item.status === 'capitalized' 
+          ? (isAr ? 'مرسمل بالأصل' : 'Capitalized')
+          : (isAr ? 'تحت التدقيق' : 'Pending');
+
+      row.getCell(1).alignment = { horizontal: 'center' };
+      row.getCell(2).alignment = { horizontal: 'center' };
+      row.getCell(3).alignment = { horizontal: 'center' };
+      row.getCell(4).alignment = { horizontal: 'center' };
+      row.getCell(5).alignment = { horizontal: isAr ? 'right' : 'left' };
+      row.getCell(6).alignment = { horizontal: isAr ? 'right' : 'left' };
+      row.getCell(7).alignment = { horizontal: 'center' };
+      row.getCell(8).alignment = { horizontal: 'center' };
+      row.getCell(9).alignment = { horizontal: 'center' };
+      row.getCell(10).alignment = { horizontal: 'center' };
+      row.getCell(11).numFmt = '#,##0.00 "ج.م"';
+      row.getCell(12).numFmt = '#,##0.00 "ج.م"';
+      row.getCell(13).numFmt = '#,##0.00 "ج.م"';
+      row.getCell(14).numFmt = '#,##0.00 "ج.م"';
+      row.getCell(15).alignment = { horizontal: 'center' };
+
+      for (let c = 1; c <= 15; c++) {
+        const cell = row.getCell(c);
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: cRIdx % 2 === 0 ? PALETTE.zebraBg : PALETTE.white } };
+        cell.border = {
+          bottom: { style: 'thin', color: { argb: PALETTE.border } },
+          top: { style: 'thin', color: { argb: PALETTE.border } },
+          left: { style: 'thin', color: { argb: PALETTE.border } },
+          right: { style: 'thin', color: { argb: PALETTE.border } }
+        };
+      }
+      cRIdx++;
+    });
+
+    // Total Cost Row
+    const costEndRow = cRIdx - 1;
+    const totCostRow = ws3.getRow(cRIdx);
+    totCostRow.height = 26;
+    totCostRow.getCell(5).value = isAr ? 'إجمالي تكاليف البنود المسجلة:' : 'Total Cost Items:';
+    totCostRow.getCell(5).font = { bold: true };
+    totCostRow.getCell(12).value = { formula: `SUM(L${costStartRow}:L${costEndRow})` };
+    totCostRow.getCell(12).numFmt = '#,##0.00 "ج.م"';
+    totCostRow.getCell(12).font = { bold: true, color: { argb: PALETTE.headerBg } };
+    totCostRow.getCell(13).value = { formula: `SUM(M${costStartRow}:M${costEndRow})` };
+    totCostRow.getCell(13).numFmt = '#,##0.00 "ج.م"';
+    totCostRow.getCell(13).font = { bold: true, color: { argb: PALETTE.emerald } };
+    totCostRow.getCell(14).value = { formula: `SUM(N${costStartRow}:N${costEndRow})` };
+    totCostRow.getCell(14).numFmt = '#,##0.00 "ج.م"';
+    totCostRow.getCell(14).font = { bold: true, color: { argb: PALETTE.amber } };
+
+    for (let c = 1; c <= 15; c++) {
+      const cell = totCostRow.getCell(c);
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: PALETTE.subHeaderBg } };
+      cell.border = {
+        top: { style: 'medium', color: { argb: PALETTE.headerBg } },
+        bottom: { style: 'double', color: { argb: PALETTE.headerBg } },
+        left: { style: 'thin', color: { argb: PALETTE.border } },
+        right: { style: 'thin', color: { argb: PALETTE.border } }
+      };
+    }
+  }
+
+  ws3.columns = [
+    { width: 6 },
+    { width: 14 },
+    { width: 14 },
+    { width: 16 },
+    { width: 34 },
+    { width: 22 },
+    { width: 15 },
+    { width: 14 },
+    { width: 10 },
+    { width: 12 },
+    { width: 18 },
+    { width: 20 },
+    { width: 20 },
+    { width: 20 },
+    { width: 16 }
+  ];
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // SHEET 4: عقود المبيعات ومستحقات الأقساط (Sales Contracts & Receivables)
+  // ──────────────────────────────────────────────────────────────────────────
+  const ws4 = wb.addWorksheet(isAr ? 'عقود المبيعات ومستحقات الأقساط' : 'Sales & Receivables', {
+    views: [{ rightToLeft: isAr, showGridLines: true }]
+  });
+
+  const propContracts = (analysis.associatedContracts && analysis.associatedContracts.length > 0)
+    ? analysis.associatedContracts
+    : contracts.filter(c => 
+        c.property_id === property.id || 
+        (property.building_units && property.building_units.some((u: any) => u.unit_id === c.unit_id))
+      );
+
+  ws4.mergeCells('A1:K1');
+  const h4_1 = ws4.getCell('A1');
+  h4_1.value = isAr
+    ? `سجل عقود مبيعات الوحدات والمتحصلات النقدية ومستحقات الأقساط (A/R) — ${propName}`
+    : `Sales Contracts, Collected Revenue & Pending Receivables (A/R) — ${propName}`;
+  h4_1.font = { name: isAr ? 'Segoe UI' : 'Calibri', size: 12, bold: true, color: { argb: PALETTE.headerText } };
+  h4_1.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: PALETTE.headerBg } };
+  h4_1.alignment = { vertical: 'middle', horizontal: 'center' };
+  ws4.getRow(1).height = 32;
+
+  const contractHeaders = [
+    isAr ? 'م' : '#',
+    isAr ? 'رقم العقد' : 'Contract #',
+    isAr ? 'رقم الوحدة' : 'Unit #',
+    isAr ? 'اسم العميل / المشتري' : 'Buyer Name',
+    isAr ? 'تاريخ التعاقد' : 'Contract Date',
+    isAr ? 'إجمالي قيمة العقد (ج.م)' : 'Gross Contract Value',
+    isAr ? 'الدفعة المقدمة (ج.م)' : 'Down Payment',
+    isAr ? 'المتحصلات النقدية (ج.م)' : 'Cash Collected',
+    isAr ? 'المستحقات المتبقية A/R (ج.م)' : 'Pending Receivables (A/R)',
+    isAr ? 'حالة التعاقد' : 'Contract Status',
+    isAr ? 'حالة التسليم' : 'Handover Status'
+  ];
+
+  const contractHRow = ws4.getRow(3);
+  contractHRow.height = 26;
+  contractHeaders.forEach((h, idx) => {
+    const cell = contractHRow.getCell(idx + 1);
+    cell.value = h;
+    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: PALETTE.headerBg } };
+    cell.font = { bold: true, size: 9, color: { argb: PALETTE.headerText } };
+    cell.alignment = { horizontal: 'center', vertical: 'middle' };
+  });
+
+  let ctRIdx = 4;
+  if (propContracts.length === 0) {
+    ws4.mergeCells(`A${ctRIdx}:K${ctRIdx}`);
+    const emptyCell = ws4.getCell(`A${ctRIdx}`);
+    emptyCell.value = isAr ? 'لا توجد عقود مبيعات مبرمة لهذا العقار حتى الآن' : 'No sales contracts executed for this property yet.';
+    emptyCell.alignment = { horizontal: 'center', vertical: 'middle' };
+    emptyCell.font = { italic: true, size: 10, color: { argb: 'FF64748B' } };
+    ws4.getRow(ctRIdx).height = 26;
+    ctRIdx++;
+  } else {
+    const ctStartRow = ctRIdx;
+    propContracts.forEach((c, idx) => {
+      const row = ws4.getRow(ctRIdx);
+      row.height = 22;
+      const grossVal = parseFloat(c.gross_contract_value || '0');
+      const downPaymentVal = (c as any).down_payment 
+        ? parseFloat((c as any).down_payment)
+        : (data.schedules?.find((s: any) => s.contract_id === (c.contract_id || (c as any).id) && s.tranche_number === 0)
+            ? parseFloat(data.schedules.find((s: any) => s.contract_id === (c.contract_id || (c as any).id) && s.tranche_number === 0)!.nominal_value)
+            : 0);
+      const collectedVal = parseFloat(c.total_cash_collected || '0');
+      const pendingAr = Math.max(0, grossVal - collectedVal);
+
+      row.getCell(1).value = idx + 1;
+      row.getCell(2).value = c.contract_number || c.contract_id;
+      row.getCell(3).value = c.building_unit_number || c.unit_id || '-';
+      row.getCell(4).value = c.buyer_name || (isAr ? 'عميل بدون اسم' : 'Unnamed Buyer');
+      row.getCell(5).value = c.contract_date || '-';
+      row.getCell(6).value = grossVal;
+      row.getCell(7).value = downPaymentVal;
+      row.getCell(8).value = collectedVal;
+      row.getCell(9).value = pendingAr;
+      row.getCell(10).value = c.status || 'Active';
+      row.getCell(11).value = c.handover_status || 'Pending';
+
+      row.getCell(1).alignment = { horizontal: 'center' };
+      row.getCell(2).alignment = { horizontal: 'center' };
+      row.getCell(3).alignment = { horizontal: 'center' };
+      row.getCell(4).alignment = { horizontal: isAr ? 'right' : 'left' };
+      row.getCell(5).alignment = { horizontal: 'center' };
+      row.getCell(6).numFmt = '#,##0.00 "ج.م"';
+      row.getCell(7).numFmt = '#,##0.00 "ج.م"';
+      row.getCell(8).numFmt = '#,##0.00 "ج.م"';
+      row.getCell(9).numFmt = '#,##0.00 "ج.م"';
+      row.getCell(10).alignment = { horizontal: 'center' };
+      row.getCell(11).alignment = { horizontal: 'center' };
+
+      for (let col = 1; col <= 11; col++) {
+        const cell = row.getCell(col);
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: ctRIdx % 2 === 0 ? PALETTE.zebraBg : PALETTE.white } };
+        cell.border = {
+          bottom: { style: 'thin', color: { argb: PALETTE.border } },
+          top: { style: 'thin', color: { argb: PALETTE.border } },
+          left: { style: 'thin', color: { argb: PALETTE.border } },
+          right: { style: 'thin', color: { argb: PALETTE.border } }
+        };
+      }
+      ctRIdx++;
+    });
+
+    // Total Contracts Row
+    const ctEndRow = ctRIdx - 1;
+    const totCtRow = ws4.getRow(ctRIdx);
+    totCtRow.height = 26;
+    totCtRow.getCell(4).value = isAr ? 'إجمالي المحفظة التعاقدية:' : 'Total Portfolio Contracts:';
+    totCtRow.getCell(4).font = { bold: true };
+    totCtRow.getCell(6).value = { formula: `SUM(F${ctStartRow}:F${ctEndRow})` };
+    totCtRow.getCell(6).numFmt = '#,##0.00 "ج.م"';
+    totCtRow.getCell(6).font = { bold: true, color: { argb: PALETTE.headerBg } };
+    totCtRow.getCell(7).value = { formula: `SUM(G${ctStartRow}:G${ctEndRow})` };
+    totCtRow.getCell(7).numFmt = '#,##0.00 "ج.م"';
+    totCtRow.getCell(7).font = { bold: true, color: { argb: PALETTE.headerBg } };
+    totCtRow.getCell(8).value = { formula: `SUM(H${ctStartRow}:H${ctEndRow})` };
+    totCtRow.getCell(8).numFmt = '#,##0.00 "ج.م"';
+    totCtRow.getCell(8).font = { bold: true, color: { argb: PALETTE.emerald } };
+    totCtRow.getCell(9).value = { formula: `SUM(I${ctStartRow}:I${ctEndRow})` };
+    totCtRow.getCell(9).numFmt = '#,##0.00 "ج.م"';
+    totCtRow.getCell(9).font = { bold: true, color: { argb: PALETTE.amber } };
+
+    for (let col = 1; col <= 11; col++) {
+      const cell = totCtRow.getCell(col);
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: PALETTE.subHeaderBg } };
+      cell.border = {
+        top: { style: 'medium', color: { argb: PALETTE.headerBg } },
+        bottom: { style: 'double', color: { argb: PALETTE.headerBg } },
+        left: { style: 'thin', color: { argb: PALETTE.border } },
+        right: { style: 'thin', color: { argb: PALETTE.border } }
+      };
+    }
+  }
+
+  ws4.columns = [
+    { width: 6 },
+    { width: 16 },
+    { width: 14 },
+    { width: 28 },
+    { width: 15 },
+    { width: 22 },
+    { width: 20 },
+    { width: 22 },
+    { width: 24 },
+    { width: 16 },
+    { width: 16 }
+  ];
+
+  await downloadWorkbook(
+    wb, 
+    `تقرير_تحليلي_شامل_${propName.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0, 10)}.xlsx`
+  );
 }

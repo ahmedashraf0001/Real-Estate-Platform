@@ -287,20 +287,18 @@ export const PropertyFinancialMatrix: React.FC<PropertyFinancialMatrixProps> = (
         style={{
           background: '#ffffff',
           border: isContracted 
-            ? '1px solid rgba(5, 150, 105, 0.35)' 
+            ? '1px solid rgba(22, 163, 74, 0.35)' 
             : isPartialUnitsSold
-              ? '1px solid rgba(184, 144, 62, 0.45)'
-              : '1px solid #e2e8f0',
-          borderRadius: '16px',
+              ? '1px solid rgba(217, 119, 6, 0.35)'
+              : '1px solid var(--erp-card-border, #e2e8f0)',
+          borderRadius: '12px',
           overflow: 'hidden',
           display: 'flex',
           flexDirection: 'column',
           height: '100%',
           minHeight: '430px',
-          boxShadow: isContracted 
-            ? '0 1px 3px rgba(0,0,0,0.04), 0 6px 16px -4px rgba(5, 150, 105, 0.08)'
-            : '0 1px 3px rgba(0,0,0,0.04), 0 6px 16px -4px rgba(0,0,0,0.03)',
-          transition: 'all 0.25s ease'
+          boxShadow: 'none',
+          transition: 'border-color 0.2s ease'
         }}
       >
         {/* Card Image Banner */}
@@ -317,52 +315,52 @@ export const PropertyFinancialMatrix: React.FC<PropertyFinancialMatrixProps> = (
             background: 'linear-gradient(to top, rgba(15, 23, 42, 0.75) 0%, transparent 60%)'
           }} />
 
-          {/* Status Badge Over Image */}
+          {/* Status Badge Over Image - Soft Pastel Micro-Pill */}
           <div style={{ position: 'absolute', top: '10px', right: '10px' }}>
             {isContracted ? (
               <span style={{
-                background: '#15803d',
-                color: '#ffffff',
+                background: '#ecfdf5',
+                color: '#16a34a',
+                border: '1px solid rgba(22, 163, 74, 0.25)',
                 padding: '0.2rem 0.6rem',
                 borderRadius: '6px',
                 fontSize: '0.72rem',
-                fontWeight: 800,
+                fontWeight: 700,
                 display: 'flex',
                 alignItems: 'center',
-                gap: '0.3rem',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
+                gap: '0.3rem'
               }}>
                 <CheckCircle2 size={12} />
                 <span>{isWholeBuildingSold ? (isAr ? 'مباع بتعاقد (عمارة كاملة)' : 'Sold (Whole Building)') : (isAr ? 'مباع بتعاقد' : 'Contracted')}</span>
               </span>
             ) : isPartialUnitsSold ? (
               <span style={{
-                background: 'linear-gradient(135deg, #c5a059 0%, #a48135 100%)',
-                color: '#ffffff',
+                background: '#fffbeb',
+                color: '#d97706',
+                border: '1px solid rgba(217, 119, 6, 0.25)',
                 padding: '0.2rem 0.6rem',
                 borderRadius: '6px',
                 fontSize: '0.72rem',
-                fontWeight: 800,
+                fontWeight: 700,
                 display: 'flex',
                 alignItems: 'center',
-                gap: '0.3rem',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
+                gap: '0.3rem'
               }}>
                 <Building2 size={12} />
                 <span>{isAr ? `بيع ${contractedUnitsCount}/${bUnits.length} شقق` : `${contractedUnitsCount}/${bUnits.length} Sold`}</span>
               </span>
             ) : (
               <span style={{
-                background: '#946f23',
-                color: '#ffffff',
+                background: '#eff6ff',
+                color: 'var(--erp-accent, #2563eb)',
+                border: '1px solid rgba(37, 99, 235, 0.25)',
                 padding: '0.2rem 0.6rem',
                 borderRadius: '6px',
                 fontSize: '0.72rem',
-                fontWeight: 800,
+                fontWeight: 700,
                 display: 'flex',
                 alignItems: 'center',
-                gap: '0.3rem',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
+                gap: '0.3rem'
               }}>
                 <Clock size={12} />
                 <span>{isAr ? 'متاح للتعاقد' : 'Available'}</span>
@@ -405,7 +403,7 @@ export const PropertyFinancialMatrix: React.FC<PropertyFinancialMatrixProps> = (
               borderRadius: '6px',
               backdropFilter: 'blur(6px)'
             }}>
-              <MapPin size={12} color="#c5a059" />
+              <MapPin size={12} color="var(--erp-text-muted, #64748b)" />
               <span>{property.location || (isAr ? 'الشرقية' : 'Sharkia')}</span>
             </span>
           </div>
@@ -451,13 +449,13 @@ export const PropertyFinancialMatrix: React.FC<PropertyFinancialMatrixProps> = (
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
-              background: isWholeBuildingSold ? '#ecfdf5' : 'rgba(184, 144, 62, 0.08)',
-              border: isWholeBuildingSold ? '1px solid #a7f3d0' : '1px solid rgba(184, 144, 62, 0.25)',
+              background: isWholeBuildingSold ? '#f0fdf4' : 'var(--erp-accent-tint, rgba(37, 99, 235, 0.08))',
+              border: isWholeBuildingSold ? '1px solid #bbf7d0' : '1px solid rgba(37, 99, 235, 0.25)',
               borderRadius: '8px',
               padding: '0.45rem 0.65rem',
               fontSize: '0.72rem'
             }}>
-              <span style={{ color: isWholeBuildingSold ? '#059669' : '#946f23', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+              <span style={{ color: isWholeBuildingSold ? '#16a34a' : 'var(--erp-accent, #2563eb)', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
                 <Building2 size={13} />
                 <span>
                   {isWholeBuildingSold
@@ -538,7 +536,7 @@ export const PropertyFinancialMatrix: React.FC<PropertyFinancialMatrixProps> = (
             ) : (
               <div style={{ display: 'flex', justifyContent: 'space-between', color: '#64748b' }}>
                 <span>{isAr ? 'مقدم الحجز المطلوب (١٥٪):' : 'Down Payment (15%):'}</span>
-                <span style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 700, color: '#946f23' }}>
+                <span style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 700, color: 'var(--erp-accent, #2563eb)' }}>
                   {D(suggestedDownpayment).formatEGP(isAr)}
                 </span>
               </div>
@@ -571,19 +569,17 @@ export const PropertyFinancialMatrix: React.FC<PropertyFinancialMatrixProps> = (
                 style={{
                   flex: 1,
                   minHeight: '40px',
-                  background: 'linear-gradient(135deg, #c5a059 0%, #a48135 100%)',
+                  background: 'var(--erp-accent, #2563eb)',
                   color: '#ffffff',
-                  border: '1px solid #947228',
+                  border: '1px solid var(--erp-accent, #2563eb)',
                   borderRadius: '8px',
                   padding: '0.45rem 0.65rem',
                   fontSize: '0.75rem',
                   fontWeight: 700,
                   cursor: 'pointer',
                   display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
                   gap: '0.35rem',
-                  boxShadow: '0 1px 3px rgba(184, 144, 62, 0.25)',
+                  boxShadow: 'none',
                   transition: 'all 0.2s ease',
                   boxSizing: 'border-box'
                 }}
@@ -668,7 +664,7 @@ export const PropertyFinancialMatrix: React.FC<PropertyFinancialMatrixProps> = (
                 boxSizing: 'border-box'
               }}
             >
-              <Calculator size={13} color="#946f23" />
+              <Calculator size={13} color="var(--erp-accent, #2563eb)" />
               <span>{isAr ? 'حاسبة التسعير' : 'Pricing'}</span>
             </button>
           </div>
@@ -831,8 +827,8 @@ export const PropertyFinancialMatrix: React.FC<PropertyFinancialMatrixProps> = (
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #f1f5f9', paddingBottom: '1rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                 <div style={{
-                  background: 'rgba(184, 144, 62, 0.10)',
-                  color: '#946f23',
+                  background: 'var(--erp-accent-subtle, #eff6ff)',
+                  color: 'var(--erp-accent, #2563eb)',
                   padding: '0.6rem',
                   borderRadius: '12px'
                 }}>
@@ -884,7 +880,7 @@ export const PropertyFinancialMatrix: React.FC<PropertyFinancialMatrixProps> = (
                 }}>
                   <div style={{ background: '#f8fafc', padding: '0.85rem', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
                     <span style={{ fontSize: '0.7rem', color: '#64748b', display: 'block' }}>{isAr ? 'استراتيجية البيع المعتمدة:' : 'Sales Strategy:'}</span>
-                    <span style={{ fontSize: '0.88rem', fontWeight: 800, color: isWholeBuildingSold ? '#059669' : '#946f23' }}>
+                    <span style={{ fontSize: '0.88rem', fontWeight: 800, color: isWholeBuildingSold ? '#16a34a' : 'var(--erp-accent, #2563eb)' }}>
                       {isWholeBuildingSold
                         ? (isAr ? '🏢 تم بيع العمارة بالكامل بموجب عقد رسمي' : '🏢 Sold Entirely Under Master Contract')
                         : selectedBuildingModal.sale_mode === 'whole_building' ? (isAr ? 'عمارة بالكامل فقط' : 'Whole Building Only')
@@ -902,7 +898,7 @@ export const PropertyFinancialMatrix: React.FC<PropertyFinancialMatrixProps> = (
 
                   <div style={{ background: '#f8fafc', padding: '0.85rem', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
                     <span style={{ fontSize: '0.7rem', color: '#64748b', display: 'block' }}>{isAr ? 'الشقق المتاحة للتعاقد:' : 'Available Units:'}</span>
-                    <span style={{ fontSize: '1.1rem', fontWeight: 900, color: availCount > 0 ? '#059669' : '#dc2626' }}>
+                    <span style={{ fontSize: '1.1rem', fontWeight: 900, color: availCount > 0 ? '#16a34a' : '#dc2626' }}>
                       {availCount} {isAr ? (isWholeBuildingSold ? 'شقة (العمارة مباعة بالكامل)' : 'شقة شاغرة') : 'Available'}
                     </span>
                   </div>
@@ -911,12 +907,12 @@ export const PropertyFinancialMatrix: React.FC<PropertyFinancialMatrixProps> = (
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <span style={{ fontSize: '0.7rem', color: '#64748b' }}>{isAr ? 'إجمالي المحفظة شاملاً الضرائب:' : 'Retail Value (Incl. Taxes):'}</span>
                       {totalTaxesVal > 0 && (
-                        <span style={{ fontSize: '0.64rem', color: '#946f23', fontWeight: 700 }}>
+                        <span style={{ fontSize: '0.64rem', color: 'var(--erp-accent, #2563eb)', fontWeight: 700 }}>
                           +{D(totalTaxesVal).formatEGP(isAr)} {isAr ? 'ضرائب يدوية' : 'taxes'}
                         </span>
                       )}
                     </div>
-                    <span style={{ fontSize: '1.05rem', fontWeight: 900, color: '#946f23' }}>
+                    <span style={{ fontSize: '1.05rem', fontWeight: 900, color: '#0f172a', fontVariantNumeric: 'tabular-nums' }}>
                       {D(totalRetailVal).formatEGP(isAr)}
                     </span>
                   </div>
@@ -964,9 +960,9 @@ export const PropertyFinancialMatrix: React.FC<PropertyFinancialMatrixProps> = (
                         borderRadius: '6px',
                         fontSize: '0.7rem',
                         fontWeight: 800,
-                        background: isUnitSold ? '#f0fdf4' : '#fffbeb',
-                        color: isUnitSold ? '#15803d' : '#946f23',
-                        border: isUnitSold ? '1px solid #bbf7d0' : '1px solid rgba(184, 144, 62, 0.25)'
+                        background: isUnitSold ? '#f0fdf4' : 'var(--erp-accent-subtle, #eff6ff)',
+                        color: isUnitSold ? '#16a34a' : 'var(--erp-accent, #2563eb)',
+                        border: isUnitSold ? '1px solid #bbf7d0' : '1px solid rgba(37, 99, 235, 0.25)'
                       }}>
                         {isWholeBuildingSold 
                           ? (isAr ? 'مباعة (ضمن العمارة بالكامل)' : 'Sold with Building') 
@@ -987,7 +983,7 @@ export const PropertyFinancialMatrix: React.FC<PropertyFinancialMatrixProps> = (
                       gap: '0.25rem'
                     }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                        <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#946f23' }}>
+                        <span style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--erp-text-title, #0f172a)' }}>
                           {isAr ? 'سعر بيع الوحدة:' : 'Unit Sales Price:'}
                         </span>
                         <span style={{ fontSize: '1rem', fontWeight: 900, color: '#0f172a', fontVariantNumeric: 'tabular-nums' }}>
@@ -1009,7 +1005,7 @@ export const PropertyFinancialMatrix: React.FC<PropertyFinancialMatrixProps> = (
                         background: '#f0fdf4', 
                         border: '1px solid #bbf7d0',
                         padding: '0.45rem 0.65rem', 
-                        borderRadius: '6px',
+                        borderRadius: '6px', 
                         lineHeight: 1.4
                       }}>
                         {isWholeBuildingSold ? (
@@ -1043,9 +1039,9 @@ export const PropertyFinancialMatrix: React.FC<PropertyFinancialMatrixProps> = (
                           onOpenContractForProperty(bldg, unit);
                         }}
                         style={{
-                          background: 'linear-gradient(135deg, #c5a059 0%, #a48135 100%)',
+                          background: 'var(--erp-accent, #2563eb)',
                           color: '#ffffff',
-                          border: '1px solid #947228',
+                          border: '1px solid var(--erp-accent, #2563eb)',
                           borderRadius: '8px',
                           padding: '0.5rem',
                           fontSize: '0.76rem',
@@ -1055,7 +1051,7 @@ export const PropertyFinancialMatrix: React.FC<PropertyFinancialMatrixProps> = (
                           alignItems: 'center',
                           justifyContent: 'center',
                           gap: '0.4rem',
-                          boxShadow: '0 1px 3px rgba(184, 144, 62, 0.25)'
+                          boxShadow: 'none'
                         }}
                       >
                         <Plus size={14} />
@@ -1132,7 +1128,7 @@ export const PropertyFinancialMatrix: React.FC<PropertyFinancialMatrixProps> = (
                     border: '1px solid #cbd5e1',
                     borderRadius: '8px',
                     padding: '0.65rem 0.85rem',
-                    color: '#946f23',
+                    color: 'var(--erp-accent, #2563eb)',
                     fontSize: '1.05rem',
                     fontWeight: 800,
                     outline: 'none'
@@ -1154,21 +1150,21 @@ export const PropertyFinancialMatrix: React.FC<PropertyFinancialMatrixProps> = (
                       const tax25 = Math.round(editingTaxUnit.basePrice * 0.025);
                       setEditingTaxUnit({ ...editingTaxUnit, taxAmount: tax25.toString() });
                     }}
-                    style={{ fontSize: '0.65rem', background: '#e0f2fe', border: '1px solid #bae6fd', color: '#946f23', padding: '0.2rem 0.5rem', borderRadius: '5px', cursor: 'pointer' }}
+                    style={{ fontSize: '0.65rem', background: 'var(--erp-accent-subtle, #eff6ff)', border: '1px solid rgba(37, 99, 235, 0.25)', color: 'var(--erp-accent, #2563eb)', padding: '0.2rem 0.5rem', borderRadius: '5px', cursor: 'pointer' }}
                   >
                     {isAr ? `٢.٥٪ استرشادية (${Math.round(editingTaxUnit.basePrice * 0.025).toLocaleString()} ج.م)` : '2.5% Guideline'}
                   </button>
                   <button
                     type="button"
                     onClick={() => setEditingTaxUnit({ ...editingTaxUnit, taxAmount: '50000' })}
-                    style={{ fontSize: '0.65rem', background: '#e0f2fe', border: '1px solid #bae6fd', color: '#946f23', padding: '0.2rem 0.5rem', borderRadius: '5px', cursor: 'pointer' }}
+                    style={{ fontSize: '0.65rem', background: 'var(--erp-accent-subtle, #eff6ff)', border: '1px solid rgba(37, 99, 235, 0.25)', color: 'var(--erp-accent, #2563eb)', padding: '0.2rem 0.5rem', borderRadius: '5px', cursor: 'pointer' }}
                   >
                     +50,000 ج.م
                   </button>
                   <button
                     type="button"
                     onClick={() => setEditingTaxUnit({ ...editingTaxUnit, taxAmount: '100000' })}
-                    style={{ fontSize: '0.65rem', background: '#e0f2fe', border: '1px solid #bae6fd', color: '#946f23', padding: '0.2rem 0.5rem', borderRadius: '5px', cursor: 'pointer' }}
+                    style={{ fontSize: '0.65rem', background: 'var(--erp-accent-subtle, #eff6ff)', border: '1px solid rgba(37, 99, 235, 0.25)', color: 'var(--erp-accent, #2563eb)', padding: '0.2rem 0.5rem', borderRadius: '5px', cursor: 'pointer' }}
                   >
                     +100,000 ج.م
                   </button>
@@ -1211,11 +1207,11 @@ export const PropertyFinancialMatrix: React.FC<PropertyFinancialMatrixProps> = (
                   <span>{isAr ? 'سعر الشقة الأساسي:' : 'Base Apartment Price:'}</span>
                   <span style={{ color: '#0f172a', fontWeight: 700 }}>{D(editingTaxUnit.basePrice).formatEGP(isAr)}</span>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.74rem', color: '#946f23' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.74rem', color: 'var(--erp-accent, #2563eb)' }}>
                   <span>{isAr ? 'الضريبة المضافة باليد:' : 'Manual Tax Added:'}</span>
                   <span style={{ fontWeight: 700 }}>+ {D(parseFloat(editingTaxUnit.taxAmount) || 0).formatEGP(isAr)}</span>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.86rem', color: '#946f23', fontWeight: 800, borderTop: '1px solid #e2e8f0', paddingTop: '0.45rem', marginTop: '0.2rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.86rem', color: 'var(--erp-text-title, #0f172a)', fontWeight: 800, borderTop: '1px solid #e2e8f0', paddingTop: '0.45rem', marginTop: '0.2rem' }}>
                   <span>{isAr ? 'إجمالي السعر شامل الضريبة:' : 'Total Price with Tax:'}</span>
                   <span style={{ fontSize: '1.1rem', fontWeight: 900, fontVariantNumeric: 'tabular-nums' }}>
                     {D(editingTaxUnit.basePrice + (parseFloat(editingTaxUnit.taxAmount) || 0)).formatEGP(isAr)}
@@ -1246,14 +1242,14 @@ export const PropertyFinancialMatrix: React.FC<PropertyFinancialMatrixProps> = (
                   disabled={isSavingTax}
                   style={{
                     flex: 2,
-                    background: 'linear-gradient(135deg, #c5a059 0%, #a48135 100%)',
-                    border: '1px solid #947228',
+                    background: 'var(--erp-accent, #2563eb)',
+                    border: '1px solid var(--erp-accent, #2563eb)',
                     color: '#ffffff',
                     padding: '0.65rem',
                     borderRadius: '8px',
                     fontWeight: 800,
                     cursor: isSavingTax ? 'wait' : 'pointer',
-                    boxShadow: '0 2px 8px rgba(184, 144, 62, 0.25)'
+                    boxShadow: 'none'
                   }}
                 >
                   {isSavingTax ? (isAr ? 'جاري الحفظ...' : 'Saving...') : (isAr ? 'حفظ الضريبة وتحديث تسعير الشقة' : 'Save Tax & Update Price')}

@@ -8,6 +8,7 @@ interface BrandLogoProps {
   locale?: string;
   className?: string;
   onClick?: () => void;
+  emblemOnly?: boolean;
 }
 
 export const BrandLogo: React.FC<BrandLogoProps> = ({
@@ -15,7 +16,8 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
   showSubtitle = false,
   locale = 'en',
   className = '',
-  onClick
+  onClick,
+  emblemOnly = false
 }) => {
   const isAr = locale === 'ar';
 
@@ -59,33 +61,35 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
       </div>
 
       {/* Brand Wordmark Lockup */}
-      <div className="brand-wordmark-wrap">
-        {/* Main Title: AL ZAKARIA in Classic Roman Serif Egyptian Gold */}
-        <div className="brand-primary-name">
-          {isAr ? (
-            <span className="name-serif-gold name-ar">آل زكريا</span>
-          ) : (
-            <span className="name-serif-gold">AL ZAKARIA</span>
+      {!emblemOnly && (
+        <div className="brand-wordmark-wrap">
+          {/* Main Title: AL ZAKARIA in Classic Roman Serif Egyptian Gold */}
+          <div className="brand-primary-name">
+            {isAr ? (
+              <span className="name-serif-gold name-ar">آل زكريا</span>
+            ) : (
+              <span className="name-serif-gold">AL ZAKARIA</span>
+            )}
+          </div>
+
+          {/* Sub-bar: LUXURY ESTATES with Hairline & Diamond Node */}
+          <div className="brand-sub-row">
+            <span className="brand-sub-text">
+              {isAr ? 'للعقارات الفاخرة' : 'LUXURY ESTATES'}
+            </span>
+            <div className="brand-hairline">
+              <span className="hairline-node" />
+            </div>
+          </div>
+
+          {/* Arabic Calligraphic Signature on larger variants */}
+          {(showSubtitle || size === 'lg' || size === 'hero') && !isAr && (
+            <div className="brand-arabic-line">
+              <span>الزكريا للعقارات الفاخرة</span>
+            </div>
           )}
         </div>
-
-        {/* Sub-bar: LUXURY ESTATES with Hairline & Diamond Node */}
-        <div className="brand-sub-row">
-          <span className="brand-sub-text">
-            {isAr ? 'للعقارات الفاخرة' : 'LUXURY ESTATES'}
-          </span>
-          <div className="brand-hairline">
-            <span className="hairline-node" />
-          </div>
-        </div>
-
-        {/* Arabic Calligraphic Signature on larger variants */}
-        {(showSubtitle || size === 'lg' || size === 'hero') && !isAr && (
-          <div className="brand-arabic-line">
-            <span>الزكريا للعقارات الفاخرة</span>
-          </div>
-        )}
-      </div>
+      )}
 
       <style>{`
         .luxury-brand-logo {

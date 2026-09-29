@@ -9,8 +9,8 @@ description: >-
 # Track: WORKFLOW_AUDIT (User Journey Simulation & Ergonomics Audit)
 
 ## Assigned Role: Workflow Simulator & Auditor
-- **Model Tier**: `flash`
-- **Tool Scoping**: `read_file`, `view_file`, `list_dir`, `grep_search`, `run_command`, `ask_question`. (No unverified schema or database mutation).
+- **Delegation**: Must be invoked via Antigravity `invoke_subagent` with `TypeName: "self"`, `Role: "Workflow Simulator & Auditor"`, and strictly `Model: "flash"`. The `pro` model is strictly forbidden.
+- **Tool Scoping**: Read files, query graphify, run verification commands, inspect the browser, and ask necessary clarifying questions through Antigravity's `ask_question`. No unverified schema or database mutation.
 
 ## Workflow Responsibilities
 1. **End-to-End Simulation**: Walk through complete real estate operational cycles:

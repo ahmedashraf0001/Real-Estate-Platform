@@ -3,6 +3,8 @@
  * Source of Truth: AGENT_BUILD_SPEC.md (Revision 2)
  */
 
+import type { Decimal } from './math';
+
 export type AccountType = 
   | 'ASSET' 
   | 'LIABILITY' 
@@ -44,7 +46,8 @@ export type JournalSourceModule =
   | 'WIP_ALLOCATION' 
   | 'TAX' 
   | 'CAPITAL_CALL'
-  | 'MANUAL';
+  | 'MANUAL'
+  | 'MANUAL_ADJUSTMENT';
 
 export interface ERPJournalLine {
   line_id: string;
@@ -106,11 +109,14 @@ export interface ERPContract {
   total_cash_collected: string; // Fixed-point string
   status: ContractStatus;
   payment_plan_type?: 'FULL_CASH' | 'UPFRONT_HANDOVER' | 'INSTALLMENTS';
+  sale_model?: SaleModel;
   partner_splits?: ERPContractPartnerSplit[];
   is_whole_building_sale?: boolean;
   building_unit_id?: string;
   building_unit_number?: string;
 }
+
+export type SaleModel = 'CASH_ON_DELIVERY' | 'OFF_PLAN_INSTALLMENTS';
 
 export type InstallmentStatus = 
   | 'Pending' 
@@ -228,6 +234,25 @@ export interface ERPPartnerCall {
   created_at: string;
 }
 
+export type PartnerCommitmentStatus = 'PENDING' | 'PARTIALLY_PAID' | 'PAID' | 'OVERDUE' | 'CANCELLED';
+
+export interface ERPPartnerCommitment {
+  commitment_id: string;
+  property_id: string;
+  partner_name: string;
+  partner_id?: string;
+  milestone_name: string;
+  milestone_phase?: string;
+  committed_amount: string;
+  paid_amount: string;
+  due_date: string;
+  status: PartnerCommitmentStatus;
+  notes?: string;
+  created_by?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
 export type PartnerRole = 'primary_developer' | 'equity_partner' | 'land_partner' | 'silent_financier';
 
 export interface ERPPartnerProfile {
@@ -245,9 +270,9 @@ export interface ERPPartnerProfile {
 }
 
 export type PartnerTransactionType = 
-  | 'CAPITAL_INJECTION'     // ضخ مساهمة رأس مال (Dr 101000/102000, Cr 301000)
-  | 'PROFIT_DISTRIBUTION'   // صرف وتوزيع أرباح (Dr 303000, Cr 101000/102000)
-  | 'CAPITAL_RETURN';       // استرداد رأس مال (Dr 301000, Cr 101000/102000)
+  | 'CAPITAL_INJECTION'     // ضخ مساهمة رأس مال (Dr 101000 الخزينة عبر كاش/إنستاباي أو 102000 بنك, Cr 301000)
+  | 'PROFIT_DISTRIBUTION'   // صرف وتوزيع أرباح (Dr 303000, Cr 101000 الخزينة عبر كاش/إنستاباي أو 102000 بنك)
+  | 'CAPITAL_RETURN';       // استرداد رأس مال (Dr 301000, Cr 101000 الخزينة عبر كاش/إنستاباي أو 102000 بنك)
 
 export interface ERPPartnerTransaction {
   id: string;
@@ -257,12 +282,53 @@ export interface ERPPartnerTransaction {
   amount: string;
   property_id?: string;
   property_title?: string;
+  commitment_id?: string;
   payment_method: 'CASH_101000' | 'INSTAPAY_102000' | 'BANK_102000';
   journal_entry_number?: string;
   date: string;
   status: 'COMPLETED' | 'PENDING';
   memo: string;
   receipt_ref?: string;
+  created_at?: string;
+  updated_at?: string;
+  adjustments?: ERPPropertyCostAdjustment[];
+}
+
+export type OwnershipActionType = 'FULL_INTERNAL_BUYOUT' | 'PARTIAL_SALE' | 'FULL_SUBSTITUTION' | 'INITIAL_FORMATION';
+
+export interface BuildingOwnershipLogEntry {
+  log_id: string;
+  property_id: string;
+  action_type: OwnershipActionType;
+  from_partner_name: string;
+  to_partner_name: string;
+  transferred_share_pct: number;
+  effective_date: string;
+  transfer_value_egp?: string; // قيمة التنازل الودية المتفق عليها (اختياري للتوثيق)
+  transferred_arrears_egp?: string; // قيمة المتأخرات المنقولة إن وجدت
+  transferred_arrears_flag: boolean;
+  notes?: string;
+  created_at: string;
+}
+
+export interface DynamicBuildingCapitalInfo {
+  propertyId: string;
+  propertyTitle: string;
+  targetBudgetEgp?: number;
+  founderInjectedEgp: string;
+  founderSharePct: number;
+  impliedTotalCapitalEgp: string;
+  totalActualInjectedEgp: string;
+  fundingRatioPct: number;
+  partnerStatuses: Array<{
+    partnerName: string;
+    sharePct: number;
+    requiredContributionEgp: string;
+    paidContributionEgp: string;
+    arrearsEgp: string;
+    hasArrears: boolean;
+    isFounder: boolean;
+  }>;
 }
 
 export type MakerCheckerStatus = 'Pending' | 'Approved' | 'Rejected';
@@ -302,7 +368,16 @@ export interface ERPAuditLog {
 
 export type ERPNotificationSeverity = 'critical' | 'warning' | 'info' | 'success';
 
-export type ERPNotificationCategory = 'cheque' | 'approval' | 'tax' | 'contract' | 'period' | 'system';
+export type ERPNotificationCategory = 
+  | 'cheque' 
+  | 'approval' 
+  | 'tax' 
+  | 'contract' 
+  | 'period' 
+  | 'system'
+  | 'contractor'
+  | 'expense'
+  | 'transaction';
 
 export interface ERPNotification {
   id: string;
@@ -343,6 +418,46 @@ export type PropertyLifecyclePhase =
   | 'finishing_interiors'       // التشطيبات والكسوات والدهانات
   | 'final_inspection_handover'; // المعاينة النهائية والجاهزية للبيع
 
+export type CostAdjustmentType = 
+  | 'REFUND_OVERPAYMENT'      // استرداد مبالغ مدفوعة بالزيادة عن طريق الخطأ (تسوية دائنة بالخصم)
+  | 'SUPPLEMENT_UNDERPAYMENT'  // سداد مكمل لمبلغ مدفوع أقل من المستحق (تسوية مدينة بالإضافة)
+  | 'ADMIN_NOTE';             // تعديل إداري للتوثيق
+
+export interface ERPPropertyCostAdjustment {
+  adjustment_id: string;
+  parent_item_id: string;
+  adjustment_type: CostAdjustmentType;
+  amount_egp: string; // Positive string format "1000.00"
+  reason: string;
+  reference_invoice?: string;
+  payment_method?: 'CASH_101000' | 'INSTAPAY_102000' | 'BANK_102000' | 'ON_CREDIT';
+  created_at: string;
+  logged_by: string;
+  journal_entry_id?: string;
+}
+
+export type CostPaymentTerm = 
+  | 'FULL_CASH'                   // سداد نقدي فوري كامل
+  | 'DOWN_PAYMENT_INSTALLMENTS'   // دفعة مقدمة + أقساط مجدولة
+  | 'FULL_DEFERRED';              // آجل بالكامل على أقساط / دفعات
+
+export interface ERPPayableInstallment {
+  installment_id: string;
+  cost_item_id: string;
+  installment_number: number;
+  title_ar: string;
+  title_en?: string;
+  due_date: string; // YYYY-MM-DD
+  amount_egp: string;
+  paid_amount_egp: string;
+  status: 'PENDING' | 'PARTIALLY_PAID' | 'PAID' | 'OVERDUE';
+  payment_date?: string;
+  payment_method?: 'CASH_101000' | 'INSTAPAY_101000' | 'INSTAPAY_102000' | 'BANK_102000';
+  treasury_account_code?: '101000';
+  payment_id?: string;
+  notes?: string;
+}
+
 export interface ERPPropertyCostItem {
   item_id: string;
   id?: string;
@@ -367,5 +482,115 @@ export interface ERPPropertyCostItem {
   status: 'verified' | 'pending_audit' | 'capitalized';
   notes?: string;
   created_at?: string;
+  updated_at?: string;
+  
+  // Payment terms & Payables (جدولة الالتزامات والأقساط)
+  payment_term?: CostPaymentTerm;
+  paid_amount_egp?: string;
+  remaining_amount_egp?: string;
+  due_date?: string;
+  payable_installments?: ERPPayableInstallment[];
+
+  // Adjustments & Sub-items (البنود الفرعية والتسويات)
+  adjustments?: ERPPropertyCostAdjustment[];
+  net_effective_cost_egp?: string;
+  is_locked?: boolean;
 }
 
+// ============================================================================
+// DATED & VERSIONED UNIT ESTIMATE-TO-COMPLETE (تقديرات تكلفة إتمام الوحدات)
+// ============================================================================
+
+export interface ERPUnitEstimate {
+  estimate_id: string;
+  property_id: string;
+  building_unit_id?: string;
+  unit_number?: string;
+  as_of_date: string; // ISO Date YYYY-MM-DD
+  forecast_cost_to_complete: string; // Fixed-point string "1250000.00"
+  confidence_score?: number; // 0..100
+  notes?: string;
+  created_by?: string;
+  created_at?: string;
+}
+
+// ============================================================================
+// MARGIN EXPOSURE SIGNALS & METRICS (إشارات مخاطر هوامش أرباح البيع تحت الإنشاء)
+// ============================================================================
+
+export type MarginExposureSignal = 
+  | 'UNKNOWN'            // Missing or stale estimate (>90 days), or unclassified sale model
+  | 'HEALTHY'            // Projected margin >= review band threshold
+  | 'REVIEW_REQUIRED'    // Projected margin < review band threshold but >= 0
+  | 'LOSS_EXPOSURE';     // Projected margin < 0 (contract in net projected loss)
+
+export interface MarginExposureResult {
+  contract_id: string;
+  contract_number: string;
+  sale_model: SaleModel | 'UNCLASSIFIED';
+  gross_contract_value: string;
+  attributable_incurred_cost: string;
+  direct_unit_cost: string;
+  common_allocated_cost: string;
+  forecast_cost_to_complete: string;
+  total_projected_cost: string;
+  projected_margin_amount: string;
+  projected_margin_percentage: string;
+  signal: MarginExposureSignal;
+  is_estimate_stale: boolean;
+  estimate_as_of_date?: string;
+  estimate_age_days?: number;
+  notes?: string;
+}
+
+export interface MarginExposureConfig {
+  /** Margin percentage threshold below which review is required. Default: 20 (%) */
+  reviewThresholdPercent?: number;
+  /** Maximum allowable days before an estimate is marked stale. Default: 90 days */
+  staleEstimateDaysThreshold?: number;
+}
+
+export interface PortfolioMarginExposureSummary {
+  /** Total contracts submitted to the evaluator */
+  totalContractsSubmitted: number;
+  /** Active contracts evaluated and subject to ongoing margin risk */
+  activeContractsEvaluated: number;
+  /** Rescinded/cancelled contracts explicitly excluded from active exposure */
+  rescindedContractsExcluded: number;
+  /** Total active off-plan contracts */
+  totalOffPlanContracts: number;
+  /** Total active cash on delivery contracts */
+  totalCashOnDeliveryContracts: number;
+  /** Total active unclassified contracts */
+  totalUnclassifiedContracts: number;
+  /** Count of contracts in healthy margin corridor */
+  healthyCount: number;
+  /** Count of contracts requiring cost engineering review */
+  reviewRequiredCount: number;
+  /** Count of contracts with projected loss */
+  lossExposureCount: number;
+  /** Count of contracts with unknown risk (missing/stale data or unclassified) */
+  unknownCount: number;
+  /** Net monetary value of projected loss exposure in EGP */
+  totalExposureLossAmount: Decimal;
+  /** Exact configuration applied during evaluation */
+  appliedConfig: Required<MarginExposureConfig>;
+  /** Detailed evaluation per active contract */
+  contracts: MarginExposureResult[];
+}
+
+
+
+
+/** Unreceived purchase commitment. Never included in WIP or AP until invoiced. */
+export interface ERPConstructionPurchaseOrder {
+  order_id: string;
+  property_id: string;
+  supplier_name: string;
+  description: string;
+  amount_egp: string;
+  order_date: string;
+  status: 'DRAFT';
+  created_by?: string;
+  created_at?: string;
+}

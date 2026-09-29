@@ -1,4 +1,5 @@
 import type { ZoneInstance } from '@/lib/layering';
+import type { BuildingOwnershipLogEntry } from '@/lib/erp/types';
 
 export type PropertyType = 'apartment' | 'building' | 'garage' | 'villa' | 'duplex' | 'penthouse' | 'townhouse' | 'commercial';
 
@@ -83,6 +84,7 @@ export interface Property {
   latitude: number | null;
   longitude: number | null;
   completion_status: CompletionStatus;
+  completion_percentage?: number | null;
   listing_status: ListingStatus;
   is_featured: boolean;
   is_archived?: boolean | null;
@@ -97,7 +99,15 @@ export interface Property {
   spec_layers?: ZoneInstance[] | SpecLayer[] | any;
   property_images?: PropertyImage[];
   property_amenities?: PropertyAmenity[];
-  partner_splits?: Array<{ partner_name: string; share_percentage: number }>;
+  target_budget_egp?: number;
+  ownership_history?: BuildingOwnershipLogEntry[];
+  partner_splits?: Array<{
+    partner_name: string;
+    share_percentage: number;
+    partnerName?: string;
+    sharePct?: number;
+    is_archived?: boolean;
+  }>;
   sale_mode?: BuildingSaleMode;
   total_units_count?: number;
   building_units?: BuildingUnitItem[];

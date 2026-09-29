@@ -109,8 +109,9 @@ export const ZFERPLoadingWorkstation: React.FC<ZFERPLoadingWorkstationProps> = (
       style={{
         position: 'fixed',
         inset: 0,
-        width: '100vw',
-        height: '100vh',
+        width: '100%',
+        maxWidth: '100vw',
+        height: '100%',
         zIndex: 9999,
         display: 'flex',
         alignItems: 'center',
@@ -120,26 +121,22 @@ export const ZFERPLoadingWorkstation: React.FC<ZFERPLoadingWorkstationProps> = (
         fontFamily: "'ThmanyahSans', 'Cairo', 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif",
         background: theme === 'dark'
           ? `
-            radial-gradient(ellipse at 50% 36%, rgba(197, 160, 89, 0.12) 0%, rgba(4, 120, 87, 0.06) 42%, transparent 74%),
-            radial-gradient(circle at 10% 12%, rgba(197, 160, 89, 0.06) 0%, transparent 45%),
-            radial-gradient(circle at 90% 88%, rgba(4, 120, 87, 0.05) 0%, transparent 45%),
+            radial-gradient(ellipse at 50% 36%, rgba(37, 99, 235, 0.08) 0%, rgba(15, 23, 42, 0.4) 42%, transparent 74%),
             #0B0F19
           `
           : `
-            radial-gradient(ellipse at 50% 36%, rgba(197, 160, 89, 0.15) 0%, rgba(4, 120, 87, 0.05) 42%, transparent 74%),
-            radial-gradient(circle at 10% 12%, rgba(197, 160, 89, 0.08) 0%, transparent 45%),
-            radial-gradient(circle at 90% 88%, rgba(4, 120, 87, 0.06) 0%, transparent 45%),
-            #EAE6DC
+            radial-gradient(ellipse at 50% 36%, rgba(37, 99, 235, 0.06) 0%, transparent 74%),
+            #f8fafc
           `,
       }}
     >
       <style>{`
         @keyframes zfCrownPulse {
           0%, 100% {
-            box-shadow: 0 0 28px rgba(197, 160, 89, 0.32), 0 0 60px rgba(197, 160, 89, 0.14);
+            box-shadow: 0 0 28px rgba(37, 99, 235, 0.25), 0 0 60px rgba(37, 99, 235, 0.1);
           }
           50% {
-            box-shadow: 0 0 46px rgba(197, 160, 89, 0.52), 0 0 85px rgba(197, 160, 89, 0.24);
+            box-shadow: 0 0 46px rgba(37, 99, 235, 0.4), 0 0 85px rgba(37, 99, 235, 0.18);
           }
         }
 
@@ -178,7 +175,7 @@ export const ZFERPLoadingWorkstation: React.FC<ZFERPLoadingWorkstationProps> = (
           width: 68px;
           height: 68px;
           clip-path: polygon(30% 0%, 70% 0%, 100% 30%, 100% 70%, 70% 100%, 30% 100%, 0% 70%, 0% 30%);
-          background: linear-gradient(135deg, #E5B869 0%, #C5A059 40%, #946F23 100%);
+          background: #2563eb;
           display: flex;
           align-items: center;
           justify-content: center;
@@ -191,35 +188,34 @@ export const ZFERPLoadingWorkstation: React.FC<ZFERPLoadingWorkstationProps> = (
           width: 58px;
           height: 58px;
           clip-path: polygon(30% 0%, 70% 0%, 100% 30%, 100% 70%, 70% 100%, 30% 100%, 0% 70%, 0% 30%);
-          background: linear-gradient(145deg, #FFFFFF 0%, #F8FAFC 100%);
+          background: #ffffff;
           display: flex;
           align-items: center;
           justify-content: center;
-          border: 1.5px solid #946F23;
-          box-shadow: 0 4px 14px rgba(148, 111, 35, 0.15);
+          border: 1.5px solid #2563eb;
+          box-shadow: 0 4px 14px rgba(37, 99, 235, 0.15);
         }
 
         .zf-monogram-zf {
           font-family: 'Cinzel', 'Playfair Display', 'ThmanyahSans', serif;
           font-size: 22px;
           font-weight: 900;
-          color: #946F23;
+          color: #2563eb;
           letter-spacing: 0.04em;
-          text-shadow: 0 1px 2px rgba(148, 111, 35, 0.2);
         }
 
         [data-theme="dark"] .zf-octagonal-inner,
         html[data-theme="dark"] .zf-octagonal-inner,
         .zf-erp-loading-screen.dark .zf-octagonal-inner {
-          background: linear-gradient(145deg, #1E2538 0%, #0F172A 100%);
-          border: 1px solid rgba(229, 184, 105, 0.4);
+          background: #1e293b;
+          border: 1px solid rgba(59, 130, 246, 0.4);
           box-shadow: none;
         }
 
         [data-theme="dark"] .zf-monogram-zf,
         html[data-theme="dark"] .zf-monogram-zf,
         .zf-erp-loading-screen.dark .zf-monogram-zf {
-          color: #E5B869;
+          color: #60a5fa;
           text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
         }
 
@@ -227,16 +223,16 @@ export const ZFERPLoadingWorkstation: React.FC<ZFERPLoadingWorkstationProps> = (
           background: #FFFFFF;
           backdrop-filter: blur(28px);
           -webkit-backdrop-filter: blur(28px);
-          border: 1.5px solid #D8D2C4;
-          box-shadow: 0 20px 50px -10px rgba(15, 23, 42, 0.1), 0 0 1px 1px rgba(197, 160, 89, 0.2);
+          border: 1.5px solid #e2e8f0;
+          box-shadow: 0 20px 50px -10px rgba(15, 23, 42, 0.08);
         }
 
         [data-theme="dark"] .zf-capsule-glass,
         html[data-theme="dark"] .zf-capsule-glass,
         .zf-erp-loading-screen.dark .zf-capsule-glass {
           background: rgba(15, 20, 31, 0.94);
-          border-color: rgba(229, 184, 105, 0.25);
-          box-shadow: 0 28px 70px -12px rgba(0, 0, 0, 0.65), 0 0 1px 1px rgba(197, 160, 89, 0.18);
+          border-color: rgba(59, 130, 246, 0.25);
+          box-shadow: 0 28px 70px -12px rgba(0, 0, 0, 0.65);
         }
       `}</style>
 
@@ -259,8 +255,8 @@ export const ZFERPLoadingWorkstation: React.FC<ZFERPLoadingWorkstationProps> = (
           style={{
             height: '52px',
             width: '100%',
-            borderBottom: '1px solid rgba(197, 160, 89, 0.2)',
-            background: 'rgba(255, 255, 255, 0.4)',
+            borderBottom: '1px solid #e2e8f0',
+            background: 'rgba(255, 255, 255, 0.6)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
@@ -269,13 +265,13 @@ export const ZFERPLoadingWorkstation: React.FC<ZFERPLoadingWorkstationProps> = (
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <div style={{ width: '26px', height: '26px', borderRadius: '6px', background: 'rgba(197, 160, 89, 0.25)' }} />
-            <div style={{ width: '90px', height: '11px', borderRadius: '4px', background: 'rgba(197, 160, 89, 0.2)' }} />
+            <div style={{ width: '26px', height: '26px', borderRadius: '6px', background: '#e2e8f0' }} />
+            <div style={{ width: '90px', height: '11px', borderRadius: '4px', background: '#e2e8f0' }} />
           </div>
-          <div style={{ width: '260px', height: '28px', borderRadius: '8px', background: 'rgba(197, 160, 89, 0.12)' }} />
+          <div style={{ width: '260px', height: '28px', borderRadius: '8px', background: '#f1f5f9' }} />
           <div style={{ display: 'flex', gap: '8px' }}>
-            <div style={{ width: '26px', height: '26px', borderRadius: '6px', background: 'rgba(197, 160, 89, 0.2)' }} />
-            <div style={{ width: '26px', height: '26px', borderRadius: '6px', background: 'rgba(197, 160, 89, 0.2)' }} />
+            <div style={{ width: '26px', height: '26px', borderRadius: '6px', background: '#e2e8f0' }} />
+            <div style={{ width: '26px', height: '26px', borderRadius: '6px', background: '#e2e8f0' }} />
           </div>
         </div>
 
@@ -289,8 +285,8 @@ export const ZFERPLoadingWorkstation: React.FC<ZFERPLoadingWorkstationProps> = (
                 style={{
                   height: '84px',
                   borderRadius: '12px',
-                  border: '1px solid rgba(197, 160, 89, 0.14)',
-                  background: 'rgba(255, 255, 255, 0.3)',
+                  border: '1px solid #e2e8f0',
+                  background: 'rgba(255, 255, 255, 0.6)',
                 }}
               />
             ))}
@@ -300,8 +296,8 @@ export const ZFERPLoadingWorkstation: React.FC<ZFERPLoadingWorkstationProps> = (
             style={{
               flex: 1,
               borderRadius: '14px',
-              border: '1px solid rgba(197, 160, 89, 0.14)',
-              background: 'rgba(255, 255, 255, 0.2)',
+              border: '1px solid #e2e8f0',
+              background: 'rgba(255, 255, 255, 0.4)',
             }}
           />
         </div>
@@ -311,8 +307,8 @@ export const ZFERPLoadingWorkstation: React.FC<ZFERPLoadingWorkstationProps> = (
           style={{
             height: '46px',
             width: '100%',
-            borderTop: '1px solid rgba(197, 160, 89, 0.16)',
-            background: 'rgba(255, 255, 255, 0.35)',
+            borderTop: '1px solid #e2e8f0',
+            background: 'rgba(255, 255, 255, 0.6)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -326,7 +322,7 @@ export const ZFERPLoadingWorkstation: React.FC<ZFERPLoadingWorkstationProps> = (
                 width: '64px',
                 height: '24px',
                 borderRadius: '6px',
-                background: 'rgba(197, 160, 89, 0.15)',
+                background: '#e2e8f0',
               }}
             />
           ))}
@@ -382,11 +378,11 @@ export const ZFERPLoadingWorkstation: React.FC<ZFERPLoadingWorkstationProps> = (
               gap: '6px',
               fontSize: '12.5px',
               fontWeight: 700,
-              color: 'var(--zf2-gold, #946F23)',
+              color: '#2563eb',
               letterSpacing: isAr ? 'normal' : '0.04em',
             }}
           >
-            <Sparkles size={13} style={{ color: '#C5A059' }} />
+            <Sparkles size={13} style={{ color: '#2563eb' }} />
             <span>
               {isAr
                 ? 'منظومة FIN-OS v2.4 • بيئة الإدارة المالية والسيادية'
@@ -443,7 +439,7 @@ export const ZFERPLoadingWorkstation: React.FC<ZFERPLoadingWorkstationProps> = (
               width: '100%',
               height: '4px',
               borderRadius: '9999px',
-              background: 'rgba(197, 160, 89, 0.18)',
+              background: '#e2e8f0',
               overflow: 'hidden',
             }}
           >
@@ -452,7 +448,7 @@ export const ZFERPLoadingWorkstation: React.FC<ZFERPLoadingWorkstationProps> = (
                 width: `${progress}%`,
                 height: '100%',
                 borderRadius: '9999px',
-                background: 'linear-gradient(90deg, #C5A059 0%, #047857 50%, #C5A059 100%)',
+                background: 'linear-gradient(90deg, #2563eb 0%, #16a34a 50%, #2563eb 100%)',
                 backgroundSize: '200% 100%',
                 animation: 'zfShimmerGlow 2s linear infinite',
                 transition: 'width 0.65s cubic-bezier(0.16, 1, 0.3, 1)',
@@ -485,7 +481,7 @@ export const ZFERPLoadingWorkstation: React.FC<ZFERPLoadingWorkstationProps> = (
               style={{
                 fontWeight: 800,
                 fontVariantNumeric: 'tabular-nums',
-                color: 'var(--zf2-gold, #946F23)',
+                color: '#2563eb',
                 flexShrink: 0,
               }}
             >
@@ -550,7 +546,7 @@ export const ZFERPLoadingWorkstation: React.FC<ZFERPLoadingWorkstationProps> = (
         <div
           style={{
             width: '100%',
-            borderTop: '1px solid var(--zf2-border-subtle, #D8D2C4)',
+            borderTop: '1px solid #e2e8f0',
             paddingTop: '14px',
             display: 'flex',
             alignItems: 'center',
@@ -561,7 +557,7 @@ export const ZFERPLoadingWorkstation: React.FC<ZFERPLoadingWorkstationProps> = (
             color: 'var(--zf2-text-muted, #64748B)',
           }}
         >
-          <ShieldCheck size={13} style={{ color: '#C5A059' }} />
+          <ShieldCheck size={13} style={{ color: '#2563eb' }} />
           <span>
             {isAr
               ? 'دقة حسابية معتمدة بالقرش (0.00 Delta) • تشفير سيادي محمي'

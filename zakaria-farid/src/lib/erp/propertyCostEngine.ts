@@ -1,6 +1,14 @@
-import { ERPPropertyCostItem, PropertyCostCategory, PropertyLifecyclePhase } from './types';
+import { 
+  ERPPropertyCostItem, 
+  PropertyCostCategory, 
+  PropertyLifecyclePhase,
+  ERPPropertyCostAdjustment,
+  ERPPayableInstallment,
+  CostPaymentTerm
+} from './types';
 import { Property } from '@/lib/supabase/types';
-import { D } from './math';
+import { FALLBACK_PROPERTIES } from '@/lib/data/fallbackProperties';
+import { D, Decimal, generateUUID } from './math';
 
 export interface CategoryMeta {
   key: PropertyCostCategory;
@@ -87,6 +95,85 @@ export const PROPERTY_COST_CATEGORIES: CategoryMeta[] = [
   }
 ];
 
+export type ConstructionExpensePaymentSource = '101000' | '102000' | '201000';
+
+export interface ConstructionExpenseJournalLine {
+  account_code: string;
+  debit_amount: string;
+  credit_amount: string;
+  memo: string;
+}
+
+export function getPropertyCostAccountCode(category: PropertyCostCategory): string {
+  return PROPERTY_COST_CATEGORIES.find(meta => meta.key === category)?.accountCode || '151000';
+}
+
+/**
+ * Builds the balanced posting for a construction cost.
+ *
+ * Immediate cash/bank purchases credit the selected treasury account. Supplier
+ * bills credit AP for the unpaid balance and, when present, credit the selected
+ * treasury account for the down payment.
+ */
+export function buildConstructionExpenseJournalLines(params: {
+  category: PropertyCostCategory;
+  totalAmount: string | number;
+  paymentSource: ConstructionExpensePaymentSource;
+  downPayment?: string | number;
+  downPaymentSource?: Exclude<ConstructionExpensePaymentSource, '201000'>;
+  memo: string;
+}): ConstructionExpenseJournalLine[] {
+  const total = D(params.totalAmount);
+  if (!total.gt(0)) {
+    throw new Error('Construction expense total must be greater than zero.');
+  }
+
+  const debitAccount = getPropertyCostAccountCode(params.category);
+  const totalAmount = total.toFixed(2);
+  const lines: ConstructionExpenseJournalLine[] = [{
+    account_code: debitAccount,
+    debit_amount: totalAmount,
+    credit_amount: '0.00',
+    memo: params.memo
+  }];
+
+  if (params.paymentSource !== '201000') {
+    lines.push({
+      account_code: params.paymentSource,
+      debit_amount: '0.00',
+      credit_amount: totalAmount,
+      memo: params.memo
+    });
+    return lines;
+  }
+
+  const downPayment = D(params.downPayment || 0);
+  if (downPayment.lt(0) || downPayment.gt(total)) {
+    throw new Error('Construction expense down payment must be between zero and the invoice total.');
+  }
+
+  if (downPayment.gt(0)) {
+    lines.push({
+      account_code: params.downPaymentSource || '101000',
+      debit_amount: '0.00',
+      credit_amount: downPayment.toFixed(2),
+      memo: params.memo
+    });
+  }
+
+  const payableBalance = total.minus(downPayment);
+  if (payableBalance.gt(0)) {
+    lines.push({
+      account_code: '201000',
+      debit_amount: '0.00',
+      credit_amount: payableBalance.toFixed(2),
+      memo: params.memo
+    });
+  }
+
+  return lines;
+}
+
 export interface PhaseMeta {
   key: PropertyLifecyclePhase;
   order: number;
@@ -172,16 +259,45 @@ export const PROPERTY_LIFECYCLE_PHASES: PhaseMeta[] = [
  * Generates an authentic Egyptian real estate construction lifecycle audit trail
  * for a list of properties, proportional to their actual built-up area and catalog specs.
  */
-export function generateMockPropertyCosts(properties: Property[]): ERPPropertyCostItem[] {
+export function generateMockPropertyCosts(properties?: Property[]): ERPPropertyCostItem[] {
+  const activeProps = (properties && properties.length > 0) ? properties : (FALLBACK_PROPERTIES as Property[]);
   const allCosts: ERPPropertyCostItem[] = [];
 
-  properties.forEach((prop, propIndex) => {
+  activeProps.forEach((prop, propIndex) => {
     const area = prop.area_sqm || 200;
     const propId = prop.id;
 
     // Dates staggered across 2024 - 2025 to create a chronological progression
     const yearOffset = propIndex % 2 === 0 ? 0 : 1;
     const baseYear = 2024 + yearOffset;
+
+    // 0. Land Acquisition & Allocation (حصة وتكلفة الأرض المحملة)
+    const landRatePerSqm = propIndex === 0 ? 5500 : (4500 + ((propIndex * 400) % 2500));
+    const landTotal = D(area).times(landRatePerSqm).toFixed(2);
+    allCosts.push({
+      item_id: `cost-${propId}-00`,
+      id: `cost-${propId}-00`,
+      property_id: propId,
+      category: 'land_allocation',
+      phase: 'planning_permits',
+      item_name_ar: 'تخصيص وشراء أرض المشروع ورسوم جهاز المدينة والمساحة',
+      item_name_en: 'Land Plot Acquisition & Allocation',
+      supplier_contractor: 'هيئة المجتمعات العمرانية وجهاز المدينة',
+      invoice_ref: `LND-${baseYear - 1}-${100 + propIndex}`,
+      quantity: area,
+      unit: 'م²',
+      unit_cost_egp: landRatePerSqm.toFixed(2),
+      total_cost_egp: landTotal,
+      logged_date: `${baseYear - 1}-10-15`,
+      logged_by: 'م. زكريا فريد - المطور العقاري',
+      linked_account_code: '150000',
+      status: 'verified',
+      payment_term: 'FULL_CASH',
+      paid_amount_egp: landTotal,
+      remaining_amount_egp: '0.00',
+      net_effective_cost_egp: landTotal,
+      notes: 'تم سداد ثمن قطعة الأرض ورسوم التخصيص واستلام محضر الاستلام الرسمي المعتمد'
+    });
 
     // 1. Planning & Permits
     allCosts.push({
@@ -267,6 +383,9 @@ export function generateMockPropertyCosts(properties: Property[]): ERPPropertyCo
 
     // 2. Excavation & Foundations
     const excavationVol = Math.round(area * 3.5);
+    const excTotal = propIndex === 0 ? '7890000.00' : D(excavationVol).times(165).toFixed(2);
+    const excPaid = propIndex === 0 ? '0.00' : excTotal;
+    const excRem = propIndex === 0 ? '7890000.00' : '0.00';
     allCosts.push({
       item_id: `cost-${propId}-03`,
       property_id: propId,
@@ -274,15 +393,32 @@ export function generateMockPropertyCosts(properties: Property[]): ERPPropertyCo
       phase: 'excavation_foundation',
       item_name_ar: 'أعمال الحفر الميكانيكي وسند جوانب الحفر والتطهير ونقل المخلفات',
       item_name_en: 'Mechanical Excavation, Shoring & Site Earthworks',
-      supplier_contractor: 'شركة النيل المتخصصة في الأساسات وأعمال الحفر',
-      invoice_ref: `EXC-${baseYear}-${300 + propIndex}`,
+      supplier_contractor: 'شركة النيل للمقاولات',
+      invoice_ref: propIndex === 0 ? 'INV-2025-031' : `EXC-${baseYear}-${300 + propIndex}`,
       quantity: excavationVol,
       unit: 'م³',
       unit_cost_egp: '165.00',
-      total_cost_egp: D(excavationVol).times(165).toFixed(2),
+      total_cost_egp: excTotal,
+      paid_amount_egp: excPaid,
+      remaining_amount_egp: excRem,
+      payment_term: propIndex === 0 ? 'FULL_DEFERRED' : 'FULL_CASH',
+      due_date: propIndex === 0 ? '2025-03-20' : `${baseYear}-04-10`,
+      payable_installments: propIndex === 0 ? [
+        {
+          installment_id: `inst-${propId}-03-1`,
+          cost_item_id: `cost-${propId}-03`,
+          installment_number: 1,
+          title_ar: 'مستخلص أعمال الحفر وسند الجوانب الختامي',
+          due_date: '2025-03-20',
+          amount_egp: '7890000.00',
+          paid_amount_egp: '0.00',
+          status: 'OVERDUE',
+          notes: 'مستخلص معتمد قيد تدبير السيولة'
+        }
+      ] : undefined,
       logged_date: `${baseYear}-04-10`,
       logged_by: 'م. فاروق النجار - مهندس الموقع',
-      linked_account_code: '151000',
+      linked_account_code: propIndex === 0 ? '201000' : '151000',
       status: 'verified',
       notes: 'تم الوصول إلى منسوب التأسيس المعتمد ومطابق لتقرير الجسات'
     });
@@ -352,6 +488,9 @@ export function generateMockPropertyCosts(properties: Property[]): ERPPropertyCo
     });
 
     const skeletonConcreteVol = Math.round(area * 0.85);
+    const con7Total = propIndex === 0 ? '6750000.00' : D(skeletonConcreteVol).times(1750).toFixed(2);
+    const con7Paid = propIndex === 0 ? '2750000.00' : con7Total;
+    const con7Rem = propIndex === 0 ? '4000000.00' : '0.00';
     allCosts.push({
       item_id: `cost-${propId}-07`,
       property_id: propId,
@@ -359,19 +498,50 @@ export function generateMockPropertyCosts(properties: Property[]): ERPPropertyCo
       phase: 'structural_skeleton',
       item_name_ar: 'توريد وصب خرسانة جاهزة رتبة C35 للأعمدة والحوائط والأسقف والكمرات',
       item_name_en: 'Ready-Mix Concrete C35 Pouring for Columns & Slabs',
-      supplier_contractor: 'لافارج مصر للأسمنت والخرسانة الجاهزة',
-      invoice_ref: `LAF-${baseYear}-${700 + propIndex}`,
+      supplier_contractor: 'شركة النيل للمقاولات',
+      invoice_ref: propIndex === 0 ? 'INV-2025-014' : `LAF-${baseYear}-${700 + propIndex}`,
       quantity: skeletonConcreteVol,
       unit: 'م³',
       unit_cost_egp: '1750.00',
-      total_cost_egp: D(skeletonConcreteVol).times(1750).toFixed(2),
+      total_cost_egp: con7Total,
+      paid_amount_egp: con7Paid,
+      remaining_amount_egp: con7Rem,
+      payment_term: propIndex === 0 ? 'DOWN_PAYMENT_INSTALLMENTS' : 'FULL_CASH',
+      due_date: propIndex === 0 ? '2025-03-08' : `${baseYear}-08-30`,
+      payable_installments: propIndex === 0 ? [
+        {
+          installment_id: `inst-${propId}-07-1`,
+          cost_item_id: `cost-${propId}-07`,
+          installment_number: 1,
+          title_ar: 'دفعة مقدمة توريد الخرسانة',
+          due_date: '2025-02-01',
+          amount_egp: '2750000.00',
+          paid_amount_egp: '2750000.00',
+          status: 'PAID',
+          payment_date: '2025-02-01'
+        },
+        {
+          installment_id: `inst-${propId}-07-2`,
+          cost_item_id: `cost-${propId}-07`,
+          installment_number: 2,
+          title_ar: 'مستخلص صب خرسانة السقف الرابع',
+          due_date: '2025-03-08',
+          amount_egp: '4000000.00',
+          paid_amount_egp: '0.00',
+          status: 'OVERDUE',
+          notes: 'مستحق السداد لشركة النيل'
+        }
+      ] : undefined,
       logged_date: `${baseYear}-08-30`,
       logged_by: 'م. فاروق النجار - مهندس الموقع',
-      linked_account_code: '151000',
+      linked_account_code: propIndex === 0 ? '201000' : '151000',
       status: 'capitalized',
       notes: 'صب الأسقف بنظام البمب الهيدروليكي والمعالجة بالمياه لمدة 10 أيام'
     });
 
+    const labTotal = propIndex === 2 ? '4670000.00' : D(area).times(820).toFixed(2);
+    const labPaid = propIndex === 2 ? '1670000.00' : labTotal;
+    const labRem = propIndex === 2 ? '3000000.00' : '0.00';
     allCosts.push({
       item_id: `cost-${propId}-08`,
       property_id: propId,
@@ -379,16 +549,44 @@ export function generateMockPropertyCosts(properties: Property[]): ERPPropertyCo
       phase: 'structural_skeleton',
       item_name_ar: 'مصنعيات مقاولة النجارة المسلحة والحدادة وتجهيز الفورم الإنشائية',
       item_name_en: 'Formwork Carpentry & Blacksmithing Structural Labor',
-      supplier_contractor: 'مقاولات الأمل للبناء والإنشاءات الخرسانية',
-      invoice_ref: `LAB-STR-${baseYear}-${800 + propIndex}`,
+      supplier_contractor: 'البركة للمقاولات',
+      invoice_ref: propIndex === 2 ? 'INV-2025-033' : `LAB-STR-${baseYear}-${800 + propIndex}`,
       quantity: area,
       unit: 'م² مسطح',
       unit_cost_egp: '820.00',
-      total_cost_egp: D(area).times(820).toFixed(2),
+      total_cost_egp: labTotal,
+      paid_amount_egp: labPaid,
+      remaining_amount_egp: labRem,
+      payment_term: propIndex === 2 ? 'DOWN_PAYMENT_INSTALLMENTS' : 'FULL_CASH',
+      due_date: propIndex === 2 ? '2025-03-22' : `${baseYear}-09-25`,
+      payable_installments: propIndex === 2 ? [
+        {
+          installment_id: `inst-${propId}-08-1`,
+          cost_item_id: `cost-${propId}-08`,
+          installment_number: 1,
+          title_ar: 'دفعة تحضيرية لمقاول النجارة',
+          due_date: '2025-02-15',
+          amount_egp: '1670000.00',
+          paid_amount_egp: '1670000.00',
+          status: 'PAID',
+          payment_date: '2025-02-15'
+        },
+        {
+          installment_id: `inst-${propId}-08-2`,
+          cost_item_id: `cost-${propId}-08`,
+          installment_number: 2,
+          title_ar: 'مستخلص الأعمال المنفذة للهيكل',
+          due_date: '2025-03-22',
+          amount_egp: '3000000.00',
+          paid_amount_egp: '0.00',
+          status: 'PENDING',
+          notes: 'قيد المراجعة الفنية'
+        }
+      ] : undefined,
       logged_date: `${baseYear}-09-25`,
       logged_by: 'م. أحمد عبد العزيز - مدير المشروعات',
-      linked_account_code: '151000',
-      status: 'verified',
+      linked_account_code: propIndex === 2 ? '201000' : '151000',
+      status: propIndex === 2 ? 'pending_audit' : 'verified',
       notes: 'صرف المستخلص الختامي لمقاول الهيكل الإنشائي بعد الاستلام'
     });
 
@@ -414,6 +612,9 @@ export function generateMockPropertyCosts(properties: Property[]): ERPPropertyCo
       notes: 'تنفيذ الربط بأعتاب خرسانية مسلحة وشبك تمدد معدني'
     });
 
+    const elcTotal = propIndex === 1 ? '4320000.00' : D(area).times(1.6).times(380).toFixed(2);
+    const elcPaid = elcTotal;
+    const elcRem = '0.00';
     allCosts.push({
       item_id: `cost-${propId}-10`,
       property_id: propId,
@@ -421,12 +622,29 @@ export function generateMockPropertyCosts(properties: Property[]): ERPPropertyCo
       phase: 'masonry_roughing',
       item_name_ar: 'تأسيس شبكة الكهرباء والمواسير والعلب وكابلات السويدي النحاسية الأصلية',
       item_name_en: 'El Sewedy Certified Electrical Conduits & Copper Cabling',
-      supplier_contractor: 'السويدي إليكتريك مصر - التوزيع المعتمد',
-      invoice_ref: `ELC-${baseYear}-${1000 + propIndex}`,
+      supplier_contractor: 'البركة للمقاولات',
+      invoice_ref: propIndex === 1 ? 'INV-2025-017' : `ELC-${baseYear}-${1000 + propIndex}`,
       quantity: Math.round(area * 1.6),
       unit: 'متر طولي',
       unit_cost_egp: '380.00',
-      total_cost_egp: D(area).times(1.6).times(380).toFixed(2),
+      total_cost_egp: elcTotal,
+      paid_amount_egp: elcPaid,
+      remaining_amount_egp: elcRem,
+      payment_term: 'FULL_CASH',
+      due_date: propIndex === 1 ? '2025-03-10' : `${baseYear}-12-12`,
+      payable_installments: propIndex === 1 ? [
+        {
+          installment_id: `inst-${propId}-10-1`,
+          cost_item_id: `cost-${propId}-10`,
+          installment_number: 1,
+          title_ar: 'سداد كامل مستخلص شبكة الكهرباء',
+          due_date: '2025-03-10',
+          amount_egp: '4320000.00',
+          paid_amount_egp: '4320000.00',
+          status: 'PAID',
+          payment_date: '2025-03-10'
+        }
+      ] : undefined,
       logged_date: `${baseYear}-12-12`,
       logged_by: 'م. شريف مدحت - مهندس كهروميكانيك',
       linked_account_code: '152000',
@@ -434,6 +652,9 @@ export function generateMockPropertyCosts(properties: Property[]): ERPPropertyCo
       notes: 'تأريض معتمد ولوحات شنايدر إلكتريك وقواطع حماية تفاضلية'
     });
 
+    const plmTotal = propIndex === 0 ? '8910000.00' : propIndex === 1 ? '5120000.00' : D(area).times(420).toFixed(2);
+    const plmPaid = propIndex === 0 ? '5000000.00' : '0.00';
+    const plmRem = propIndex === 0 ? '3910000.00' : (propIndex === 1 ? '5120000.00' : '0.00');
     allCosts.push({
       item_id: `cost-${propId}-11`,
       property_id: propId,
@@ -441,20 +662,63 @@ export function generateMockPropertyCosts(properties: Property[]): ERPPropertyCo
       phase: 'masonry_roughing',
       item_name_ar: 'تأسيس شبكة التغذية المائية والصرف الصحي ومواسير البولي بروبلين المقاومة',
       item_name_en: 'PPR Water Supply & Sound-Insulated Drainage Networks',
-      supplier_contractor: 'مجموعة الشريف لأنظمة السباكة المتقدمة',
-      invoice_ref: `PLM-${baseYear}-${1100 + propIndex}`,
+      supplier_contractor: 'المنار للمقاولات',
+      invoice_ref: propIndex === 0 ? 'INV-2025-021' : propIndex === 1 ? 'INV-2025-036' : `PLM-${baseYear}-${1100 + propIndex}`,
       quantity: 1,
       unit: 'شبكة كاملة',
-      unit_cost_egp: D(area).times(420).toFixed(2),
-      total_cost_egp: D(area).times(420).toFixed(2),
+      unit_cost_egp: plmTotal,
+      total_cost_egp: plmTotal,
+      paid_amount_egp: plmPaid,
+      remaining_amount_egp: plmRem,
+      payment_term: propIndex === 0 ? 'DOWN_PAYMENT_INSTALLMENTS' : propIndex === 1 ? 'FULL_DEFERRED' : 'FULL_CASH',
+      due_date: propIndex === 0 ? '2025-03-12' : propIndex === 1 ? '2025-03-25' : `${baseYear + 1}-01-18`,
+      payable_installments: propIndex === 0 ? [
+        {
+          installment_id: `inst-${propId}-11-1`,
+          cost_item_id: `cost-${propId}-11`,
+          installment_number: 1,
+          title_ar: 'دفعة توريد شبكة المواسير والمحابس',
+          due_date: '2025-02-10',
+          amount_egp: '5000000.00',
+          paid_amount_egp: '5000000.00',
+          status: 'PAID',
+          payment_date: '2025-02-10'
+        },
+        {
+          installment_id: `inst-${propId}-11-2`,
+          cost_item_id: `cost-${propId}-11`,
+          installment_number: 2,
+          title_ar: 'مستخلص تجارب الضغط والتسليم النهائي',
+          due_date: '2025-03-12',
+          amount_egp: '3910000.00',
+          paid_amount_egp: '0.00',
+          status: 'PENDING',
+          notes: 'قيد المراجعة الفنية'
+        }
+      ] : propIndex === 1 ? [
+        {
+          installment_id: `inst-${propId}-11-3`,
+          cost_item_id: `cost-${propId}-11`,
+          installment_number: 1,
+          title_ar: 'مستخلص أعمال الكهروميكانيك المؤجل',
+          due_date: '2025-03-25',
+          amount_egp: '5120000.00',
+          paid_amount_egp: '0.00',
+          status: 'PENDING',
+          notes: 'مستخلص معلق'
+        }
+      ] : undefined,
       logged_date: `${baseYear + 1}-01-18`,
       logged_by: 'م. شريف مدحت - مهندس كهروميكانيك',
-      linked_account_code: '152000',
-      status: 'verified',
+      linked_account_code: (propIndex === 0 || propIndex === 1) ? '201000' : '152000',
+      status: (propIndex === 0 || propIndex === 1) ? 'pending_audit' : 'verified',
       notes: 'تم إجراء اختبار الضغط المائي 15 بار لمدة 24 ساعة وتسليم شهادة الضمان'
     });
 
     // 5. Architectural Finishing & Interiors
+    const plsTotal = propIndex === 2 ? '5670000.00' : D(area).times(3.2).times(145).toFixed(2);
+    const plsPaid = propIndex === 2 ? '0.00' : plsTotal;
+    const plsRem = propIndex === 2 ? '5670000.00' : '0.00';
     allCosts.push({
       item_id: `cost-${propId}-12`,
       property_id: propId,
@@ -462,16 +726,33 @@ export function generateMockPropertyCosts(properties: Property[]): ERPPropertyCo
       phase: 'finishing_interiors',
       item_name_ar: 'أعمال البياض والمحارة الأسمنتية الداخلية وتأكيس الحوائط على البؤج والأوتار',
       item_name_en: 'Laser-Leveled Interior Cement Plastering & Rendering',
-      supplier_contractor: 'شركة الفردوس المتخصصة للمحارة والتشطيبات',
-      invoice_ref: `PLS-${baseYear + 1}-${1200 + propIndex}`,
+      supplier_contractor: 'الأفق للمقاولات',
+      invoice_ref: propIndex === 2 ? 'INV-2025-024' : `PLS-${baseYear + 1}-${1200 + propIndex}`,
       quantity: Math.round(area * 3.2),
       unit: 'م² مسطح',
       unit_cost_egp: '145.00',
-      total_cost_egp: D(area).times(3.2).times(145).toFixed(2),
+      total_cost_egp: plsTotal,
+      paid_amount_egp: plsPaid,
+      remaining_amount_egp: plsRem,
+      payment_term: propIndex === 2 ? 'FULL_DEFERRED' : 'FULL_CASH',
+      due_date: propIndex === 2 ? '2025-03-15' : `${baseYear + 1}-02-28`,
+      payable_installments: propIndex === 2 ? [
+        {
+          installment_id: `inst-${propId}-12-1`,
+          cost_item_id: `cost-${propId}-12`,
+          installment_number: 1,
+          title_ar: 'مستخلص المحارة الداخلية المؤجل',
+          due_date: '2025-03-15',
+          amount_egp: '5670000.00',
+          paid_amount_egp: '0.00',
+          status: 'PENDING',
+          notes: 'مستخلص معلق'
+        }
+      ] : undefined,
       logged_date: `${baseYear + 1}-02-28`,
       logged_by: 'م. فاروق النجار - مهندس الموقع',
-      linked_account_code: '153000',
-      status: 'verified',
+      linked_account_code: propIndex === 2 ? '201000' : '153000',
+      status: propIndex === 2 ? 'pending_audit' : 'verified',
       notes: 'استلام بالقدة وميزان المياه الليزري، عدم وجود أي تموجات'
     });
 
@@ -515,22 +796,53 @@ export function generateMockPropertyCosts(properties: Property[]): ERPPropertyCo
       notes: 'تأسيس 3 سكاكين معجون جوتن و 2 وش دهان حريري ناعم قابل للغسيل'
     });
 
+    const aluTotal = propIndex === 1 ? '3240000.00' : D(area).times(0.35).times(5200).toFixed(2);
+    const aluPaid = propIndex === 1 ? '1000000.00' : aluTotal;
+    const aluRem = propIndex === 1 ? '2240000.00' : '0.00';
     allCosts.push({
       item_id: `cost-${propId}-15`,
       property_id: propId,
       category: 'site_facade',
       phase: 'finishing_interiors',
-      item_name_ar: 'توريد وتركيب قطاعات ألوميتال جامبو عازل للصوت وزجاج دبل سيكوريت عاكس',
-      item_name_en: 'Jumbo Acoustic Thermal Double-Glazed Aluminum Systems',
-      supplier_contractor: 'المصرية الألمانية لصناعة الألومنيوم (EG-ALU)',
-      invoice_ref: `ALU-${baseYear + 1}-${1500 + propIndex}`,
+      item_name_ar: 'توريد وتركيب قطاعات ألوميتال جامبو عازل للصوت وزجاج دبل سيكوريت عاكس ولاندسكيب',
+      item_name_en: 'Jumbo Acoustic Thermal Double-Glazed Aluminum Systems & Site Works',
+      supplier_contractor: 'الصفا للمقاولات',
+      invoice_ref: propIndex === 1 ? 'INV-2025-028' : `ALU-${baseYear + 1}-${1500 + propIndex}`,
       quantity: Math.round(area * 0.35),
       unit: 'م²',
       unit_cost_egp: '5200.00',
-      total_cost_egp: D(area).times(0.35).times(5200).toFixed(2),
+      total_cost_egp: aluTotal,
+      paid_amount_egp: aluPaid,
+      remaining_amount_egp: aluRem,
+      payment_term: propIndex === 1 ? 'DOWN_PAYMENT_INSTALLMENTS' : 'FULL_CASH',
+      due_date: propIndex === 1 ? '2025-03-18' : `${baseYear + 1}-07-14`,
+      payable_installments: propIndex === 1 ? [
+        {
+          installment_id: `inst-${propId}-15-1`,
+          cost_item_id: `cost-${propId}-15`,
+          installment_number: 1,
+          title_ar: 'دفعة مقدمة تشغيل قطاعات الألوميتال واللاندسكيب',
+          due_date: '2025-02-15',
+          amount_egp: '1000000.00',
+          paid_amount_egp: '1000000.00',
+          status: 'PAID',
+          payment_date: '2025-02-15'
+        },
+        {
+          installment_id: `inst-${propId}-15-2`,
+          cost_item_id: `cost-${propId}-15`,
+          installment_number: 2,
+          title_ar: 'مستخلص تركيب الواجهات والأعمال الخارجية',
+          due_date: '2025-03-18',
+          amount_egp: '2240000.00',
+          paid_amount_egp: '0.00',
+          status: 'PENDING',
+          notes: 'جاري السداد والتدقيق'
+        }
+      ] : undefined,
       logged_date: `${baseYear + 1}-07-14`,
       logged_by: 'م. إبراهيم كمال - مهندس التشطيبات',
-      linked_account_code: '153000',
+      linked_account_code: propIndex === 1 ? '201000' : '153000',
       status: 'capitalized',
       notes: 'إكسسوارات إيطالية وسلك بليسيه مدمج مانع للأتربة والحشرات'
     });
@@ -557,7 +869,18 @@ export function generateMockPropertyCosts(properties: Property[]): ERPPropertyCo
     });
   });
 
-  return allCosts;
+  return allCosts.map(c => {
+    const total = c.total_cost_egp;
+    return {
+      ...c,
+      created_at: c.created_at || `${c.logged_date}T10:00:00.000Z`,
+      payment_term: c.payment_term || 'FULL_CASH',
+      paid_amount_egp: c.paid_amount_egp !== undefined ? c.paid_amount_egp : total,
+      remaining_amount_egp: c.remaining_amount_egp !== undefined ? c.remaining_amount_egp : '0.00',
+      net_effective_cost_egp: c.net_effective_cost_egp || total,
+      adjustments: c.adjustments || []
+    };
+  });
 }
 
 /**
@@ -679,3 +1002,549 @@ export function calculateBuiltPropertySellingPrice({
     grossMarginPct: grossMargin.toFixed(1)
   };
 }
+
+// ============================================================================
+// 24-Hour Edit Grace Period & Accounting Immutability Guard
+// ============================================================================
+
+/**
+ * Checks whether a cost item or partner transaction is within the 24-hour edit window.
+ */
+export function isItemWithinGracePeriod(createdAt?: string, graceHours: number = 24): boolean {
+  if (!createdAt) return true; // If missing timestamp, allow initial modification
+  try {
+    const createdTime = new Date(createdAt).getTime();
+    if (isNaN(createdTime)) return true;
+    const elapsedMs = Date.now() - createdTime;
+    return elapsedMs >= 0 && elapsedMs <= graceHours * 3600 * 1000;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Returns remaining grace period hours (e.g. 14.2 hours). Returns 0 if expired.
+ */
+export function getRemainingGraceHours(createdAt?: string, graceHours: number = 24): number {
+  if (!createdAt) return graceHours;
+  try {
+    const createdTime = new Date(createdAt).getTime();
+    if (isNaN(createdTime)) return 0;
+    const elapsedMs = Date.now() - createdTime;
+    const remainingMs = (graceHours * 3600 * 1000) - elapsedMs;
+    if (remainingMs <= 0) return 0;
+    return Math.round((remainingMs / (3600 * 1000)) * 10) / 10;
+  } catch {
+    return 0;
+  }
+}
+
+// ============================================================================
+// Sub-Items & Cost Adjustments Calculator (استردادات وملاحق السداد)
+// ============================================================================
+
+export interface CostItemEffectiveTotals {
+  baseCost: string;
+  totalRefunds: string;
+  totalSupplements: string;
+  netAdjustments: string;
+  netEffectiveCost: string;
+  paidAmount: string;
+  remainingAmount: string;
+  isFullyPaid: boolean;
+  isPartiallyPaid: boolean;
+  isUnpaid: boolean;
+}
+
+/**
+ * Calculates net effective cost and payment status including all sub-item adjustments.
+ */
+export function calculateCostItemEffectiveTotals(item: ERPPropertyCostItem): CostItemEffectiveTotals {
+  const baseCost = D(item.total_cost_egp || item.total_amount || 0);
+  
+  let totalRefunds = D(0);
+  let totalSupplements = D(0);
+
+  if (item.adjustments && item.adjustments.length > 0) {
+    for (const adj of item.adjustments) {
+      const amt = D(adj.amount_egp || 0).abs();
+      if (adj.adjustment_type === 'REFUND_OVERPAYMENT') {
+        totalRefunds = totalRefunds.plus(amt);
+      } else if (adj.adjustment_type === 'SUPPLEMENT_UNDERPAYMENT') {
+        totalSupplements = totalSupplements.plus(amt);
+      }
+    }
+  }
+
+  const netAdjustments = totalSupplements.minus(totalRefunds);
+  const netEffectiveCost = Decimal.max(0, baseCost.plus(netAdjustments));
+
+  // Determine paid amount
+  let paidAmount = D(0);
+  if (item.payable_installments && item.payable_installments.length > 0) {
+    paidAmount = item.payable_installments.reduce((acc, inst) => acc.plus(inst.paid_amount_egp || 0), D(0));
+  } else if (item.paid_amount_egp !== undefined) {
+    paidAmount = D(item.paid_amount_egp || 0);
+  } else if (item.payment_term === 'FULL_CASH' || !item.payment_term) {
+    paidAmount = netEffectiveCost; // Spot cash is fully paid by default
+  }
+
+  const remainingAmount = Decimal.max(0, netEffectiveCost.minus(paidAmount));
+
+  return {
+    baseCost: baseCost.toFixed(2),
+    totalRefunds: totalRefunds.toFixed(2),
+    totalSupplements: totalSupplements.toFixed(2),
+    netAdjustments: netAdjustments.toFixed(2),
+    netEffectiveCost: netEffectiveCost.toFixed(2),
+    paidAmount: paidAmount.toFixed(2),
+    remainingAmount: remainingAmount.toFixed(2),
+    isFullyPaid: remainingAmount.isZero(),
+    isPartiallyPaid: paidAmount.gt(0) && remainingAmount.gt(0),
+    isUnpaid: paidAmount.isZero() && remainingAmount.gt(0)
+  };
+}
+
+/**
+ * Appends an adjustment sub-item to a cost item and returns the updated item.
+ */
+export function addCostAdjustment(
+  item: ERPPropertyCostItem,
+  adjustment: Omit<ERPPropertyCostAdjustment, 'adjustment_id' | 'created_at'>
+): ERPPropertyCostItem {
+  const newAdjustment: ERPPropertyCostAdjustment = {
+    ...adjustment,
+    adjustment_id: generateUUID(),
+    created_at: new Date().toISOString()
+  };
+
+  const existingAdjustments = item.adjustments || [];
+  const updatedAdjustments = [...existingAdjustments, newAdjustment];
+
+  const updatedItem: ERPPropertyCostItem = {
+    ...item,
+    adjustments: updatedAdjustments
+  };
+
+  const totals = calculateCostItemEffectiveTotals(updatedItem);
+  updatedItem.net_effective_cost_egp = totals.netEffectiveCost;
+  updatedItem.remaining_amount_egp = totals.remainingAmount;
+  updatedItem.paid_amount_egp = totals.paidAmount;
+
+  return updatedItem;
+}
+
+// ============================================================================
+// Cost Payables & Installment Structuring (جدولة التزامات وأقساط البناء)
+// ============================================================================
+
+/**
+ * Generates an installment payment schedule for a project cost item.
+ */
+export function generatePayableInstallmentSchedule(params: {
+  costItemId: string;
+  totalAmount: string | number;
+  downPayment: string | number;
+  numberOfInstallments: number;
+  firstDueDate: string;
+  frequencyMonths?: number;
+}): ERPPayableInstallment[] {
+  const {
+    costItemId,
+    totalAmount,
+    downPayment,
+    numberOfInstallments,
+    firstDueDate,
+    frequencyMonths = 1
+  } = params;
+
+  const total = D(totalAmount);
+  const dp = Decimal.min(total, D(downPayment));
+  const remaining = total.minus(dp);
+
+  const installments: ERPPayableInstallment[] = [];
+  let seq = 1;
+
+  // Down Payment tranche if > 0
+  if (dp.gt(0)) {
+    installments.push({
+      installment_id: generateUUID(),
+      cost_item_id: costItemId,
+      installment_number: 0,
+      title_ar: 'الدفعة المقدمة الإنشائية',
+      title_en: 'Construction Advance Payment',
+      due_date: new Date().toISOString().split('T')[0],
+      amount_egp: dp.toFixed(2),
+      paid_amount_egp: dp.toFixed(2), // Down payment is considered paid at contract
+      status: 'PAID',
+      payment_date: new Date().toISOString().split('T')[0]
+    });
+  }
+
+  if (numberOfInstallments > 0 && remaining.gt(0)) {
+    const baseInstallment = remaining.dividedBy(numberOfInstallments);
+    let accumulated = D(0);
+
+    const [startYear, startMonth, startDay] = firstDueDate.split('-').map(Number);
+
+    for (let i = 0; i < numberOfInstallments; i++) {
+      const isLast = i === numberOfInstallments - 1;
+      const instAmount = isLast ? remaining.minus(accumulated) : baseInstallment;
+      accumulated = accumulated.plus(instAmount);
+
+      const targetMonth = (startMonth - 1) + (i * frequencyMonths);
+      const dueDateObj = new Date(startYear, targetMonth, startDay || 1);
+      const dueDateStr = dueDateObj.toISOString().split('T')[0];
+
+      installments.push({
+        installment_id: generateUUID(),
+        cost_item_id: costItemId,
+        installment_number: seq++,
+        title_ar: `القسط الإنشائي رقم ${i + 1}`,
+        title_en: `Construction Tranche #${i + 1}`,
+        due_date: dueDateStr,
+        amount_egp: instAmount.toFixed(2),
+        paid_amount_egp: '0.00',
+        status: 'PENDING'
+      });
+    }
+  }
+
+  return installments;
+}
+
+/**
+ * Records full or partial payment against a specific payable installment.
+ * Fix 2: Settlement Modal Protection Against Silent Data Loss:
+ * - If an invoice has no existing payable_installments or the target installment ID is not found,
+ *   instantiates the payment tranche with the paid amount, status 'PAID', and payment details.
+ * - Preserves any historical paid amounts (such as down payments) not represented in installments.
+ * - Recalculates paid_amount_egp and remaining_amount_egp accurately.
+ */
+export function recordPayableInstallmentPayment(
+  item: ERPPropertyCostItem,
+  installmentId: string,
+  amountPaid: string | number,
+  paymentMethod?: 'CASH_101000' | 'INSTAPAY_101000' | 'INSTAPAY_102000' | 'BANK_102000',
+  paymentDate?: string,
+  notes?: string,
+  meta?: Partial<ERPPayableInstallment>
+): ERPPropertyCostItem {
+  const pDate = paymentDate || new Date().toISOString().split('T')[0];
+  const paidDelta = D(amountPaid);
+
+  if (paidDelta.lte(0)) return item;
+
+  let existingInstallments = [...(item.payable_installments || [])];
+
+  // Safeguard: Preserve any existing paid_amount_egp on the invoice that isn't represented in installments
+  const priorPaid = D(item.paid_amount_egp || 0);
+  const existingPaidSum = existingInstallments.reduce((acc, inst) => acc.plus(inst.paid_amount_egp || 0), D(0));
+  if (priorPaid.gt(existingPaidSum)) {
+    const unrepresentedPaid = priorPaid.minus(existingPaidSum);
+    const priorTranche: ERPPayableInstallment = {
+      installment_id: `inst-prior-${item.item_id || Date.now()}`,
+      cost_item_id: item.item_id || 'unknown',
+      installment_number: 0,
+      title_ar: 'الدفعة المسددة مسبقاً',
+      title_en: 'Prior Settled Payment',
+      due_date: item.logged_date || pDate,
+      amount_egp: unrepresentedPaid.toFixed(2),
+      paid_amount_egp: unrepresentedPaid.toFixed(2),
+      status: 'PAID',
+      payment_date: item.logged_date || pDate,
+      payment_method: (item.linked_account_code === '102000' ? 'BANK_102000' : 'CASH_101000') as any
+    };
+    existingInstallments = [priorTranche, ...existingInstallments];
+  }
+
+  const installmentIndex = existingInstallments.findIndex(inst => inst.installment_id === installmentId);
+
+  let updatedInstallments: ERPPayableInstallment[];
+
+  if (installmentIndex >= 0) {
+    updatedInstallments = existingInstallments.map((inst, idx) => {
+      if (idx !== installmentIndex) return inst;
+
+      const currentPaid = D(inst.paid_amount_egp || 0);
+      const newPaid = currentPaid.plus(paidDelta);
+      const instTotal = D(inst.amount_egp);
+      const newStatus: ERPPayableInstallment['status'] = newPaid.gte(instTotal)
+        ? 'PAID'
+        : 'PARTIALLY_PAID';
+
+      return {
+        ...inst,
+        paid_amount_egp: newPaid.toFixed(2),
+        status: newStatus,
+        payment_date: pDate,
+        payment_method: paymentMethod || inst.payment_method || 'CASH_101000',
+        notes: notes?.trim() || inst.notes,
+        payment_id: meta?.payment_id,
+        treasury_account_code: meta?.treasury_account_code
+      };
+    });
+  } else {
+    // Fallback: If target installment is not found or array was empty,
+    // instantiate the payment tranche with paid amount, status 'PAID', and payment details
+    const paidAmountStr = paidDelta.toFixed(2);
+    const trancheTotal = meta?.amount_egp && D(meta.amount_egp).gte(paidDelta)
+      ? D(meta.amount_egp).toFixed(2)
+      : paidAmountStr;
+    const trancheStatus: ERPPayableInstallment['status'] = D(paidAmountStr).gte(trancheTotal) ? 'PAID' : 'PARTIALLY_PAID';
+
+    const newTranche: ERPPayableInstallment = {
+      installment_id: installmentId || generateUUID(),
+      cost_item_id: item.item_id || meta?.cost_item_id || 'unknown',
+      installment_number: existingInstallments.length + 1,
+      title_ar: meta?.title_ar || 'دفعة سداد مستحقات',
+      title_en: meta?.title_en || 'Payment Tranche',
+      due_date: meta?.due_date || pDate,
+      amount_egp: trancheTotal,
+      paid_amount_egp: paidAmountStr,
+      status: trancheStatus,
+      payment_date: pDate,
+      payment_method: paymentMethod || 'CASH_101000',
+      notes: notes?.trim() || meta?.notes,
+      payment_id: meta?.payment_id,
+      treasury_account_code: meta?.treasury_account_code
+    };
+    updatedInstallments = [...existingInstallments, newTranche];
+  }
+
+  const updatedItem: ERPPropertyCostItem = {
+    ...item,
+    payable_installments: updatedInstallments
+  };
+
+  const totals = calculateCostItemEffectiveTotals(updatedItem);
+  updatedItem.paid_amount_egp = totals.paidAmount;
+  updatedItem.remaining_amount_egp = totals.remainingAmount;
+  updatedItem.updated_at = new Date().toISOString();
+
+  return updatedItem;
+}
+
+/**
+ * Fix 1: Creates a direct construction expense with smart cash/bank logic.
+ * When payment source is Cash (101000) or Bank (102000):
+ * - paymentTerm = 'FULL_CASH'
+ * - dpAmount = totalNum.toFixed(2)
+ * - payableInstallments = []
+ * - paid_amount_egp = dpAmount (100% paid upon creation)
+ * - remaining_amount_egp = '0.00'
+ */
+export function createDirectConstructionExpense(params: {
+  propertyId: string;
+  category: PropertyCostCategory;
+  phase: PropertyLifecyclePhase;
+  itemName: string;
+  supplier?: string;
+  invoiceRef?: string;
+  totalAmount: number | string;
+  paymentSource: '101000' | '102000' | '201000';
+  scheduleNow?: boolean;
+  downPayment?: number | string;
+  numberOfInstallments?: number;
+  firstDueDate?: string;
+  frequencyMonths?: number;
+  quantity?: number;
+  unit?: string;
+  notes?: string;
+  loggedDate?: string;
+  loggedBy?: string;
+}): ERPPropertyCostItem {
+  const {
+    propertyId,
+    category,
+    phase,
+    itemName,
+    supplier,
+    invoiceRef,
+    totalAmount,
+    paymentSource,
+    scheduleNow = false,
+    downPayment = 0,
+    numberOfInstallments = 3,
+    firstDueDate,
+    frequencyMonths = 1,
+    quantity = 1,
+    unit = 'مقطوعية',
+    notes,
+    loggedDate = new Date().toISOString().split('T')[0],
+    loggedBy = 'CFO_FARID'
+  } = params;
+
+  const totalNum = D(totalAmount);
+  const costId = generateUUID();
+  let paymentTerm: CostPaymentTerm = 'FULL_CASH';
+  let payableInstallments: ERPPayableInstallment[] = [];
+  let dpAmount = '0.00';
+  let remainingAmount = '0.00';
+
+  if (paymentSource === '101000' || paymentSource === '102000') {
+    paymentTerm = 'FULL_CASH';
+    dpAmount = totalNum.toFixed(2);
+    remainingAmount = '0.00';
+    payableInstallments = [];
+  } else if (paymentSource === '201000') {
+    if (scheduleNow) {
+      const dpNum = Decimal.min(totalNum, D(downPayment || 0));
+      dpAmount = dpNum.toFixed(2);
+      remainingAmount = Decimal.max(0, totalNum.minus(dpNum)).toFixed(2);
+      const tranchesCount = numberOfInstallments > 0 ? numberOfInstallments : 1;
+
+      paymentTerm = dpNum.gt(0) ? 'DOWN_PAYMENT_INSTALLMENTS' : 'FULL_DEFERRED';
+
+      payableInstallments = generatePayableInstallmentSchedule({
+        costItemId: costId,
+        totalAmount: totalNum.toNumber(),
+        downPayment: dpNum.toNumber(),
+        numberOfInstallments: tranchesCount,
+        firstDueDate: firstDueDate || new Date().toISOString().split('T')[0],
+        frequencyMonths: frequencyMonths
+      });
+    } else {
+      paymentTerm = 'FULL_DEFERRED';
+      dpAmount = '0.00';
+      remainingAmount = totalNum.toFixed(2);
+      payableInstallments = [];
+    }
+  }
+
+  return {
+    item_id: costId,
+    id: costId,
+    property_id: propertyId,
+    category,
+    phase,
+    item_name_ar: itemName.trim(),
+    item_name_en: itemName.trim(),
+    supplier_contractor: supplier?.trim() || undefined,
+    invoice_ref: invoiceRef?.trim() || undefined,
+    quantity: Number(quantity) || 1,
+    unit: unit || 'مقطوعية',
+    unit_cost_egp: totalNum.dividedBy(Number(quantity) || 1).toFixed(2),
+    total_cost_egp: totalNum.toFixed(2),
+    logged_date: loggedDate,
+    logged_by: loggedBy,
+    created_at: new Date().toISOString(),
+    status: 'verified',
+    linked_account_code: paymentSource,
+    payment_term: paymentTerm,
+    paid_amount_egp: dpAmount,
+    remaining_amount_egp: remainingAmount,
+    due_date: paymentSource === '201000' ? firstDueDate : undefined,
+    payable_installments: payableInstallments,
+    adjustments: [],
+    net_effective_cost_egp: totalNum.toFixed(2),
+    notes: notes?.trim() || undefined
+  };
+}
+
+/**
+ * Fix 3: Sorts payables table items across priority, project, contractor, dueDate, totalCost, and remaining.
+ */
+export type PayableSortField = 'priority' | 'project' | 'contractor' | 'dueDate' | 'totalCost' | 'remaining';
+export type SortDirection = 'asc' | 'desc';
+
+export function sortPayableItems<T extends {
+  projectName?: string;
+  contractor?: string;
+  dueDate?: string;
+  totalNum?: Decimal | number | string;
+  remainingNum?: Decimal | number | string;
+  statusKey?: string;
+  hasInstallments?: boolean;
+}>(items: T[], field: PayableSortField, direction: SortDirection = 'asc', isAr: boolean = true): T[] {
+  return [...items].sort((a, b) => {
+    let comparison = 0;
+    switch (field) {
+      case 'priority': {
+        const getPriorityScore = (item: T) => {
+          const rem = D(item.remainingNum || 0);
+          if (rem.isZero() || item.statusKey === 'paid') return 4;
+          if (item.statusKey === 'overdue') return 1;
+          if (item.hasInstallments) return 2;
+          return 3;
+        };
+        const scoreA = getPriorityScore(a);
+        const scoreB = getPriorityScore(b);
+        if (scoreA !== scoreB) {
+          comparison = scoreA - scoreB;
+        } else {
+          // Secondary tie-breaker within same priority tier
+          if (scoreA === 1 || scoreA === 2) {
+            // Overdue and upcoming: earliest due date first
+            const dateA = a.dueDate || '';
+            const dateB = b.dueDate || '';
+            comparison = dateA.localeCompare(dateB);
+          } else if (scoreA === 3) {
+            // Unscheduled: largest remaining balance first
+            const remA = D(a.remainingNum || 0);
+            const remB = D(b.remainingNum || 0);
+            comparison = remB.minus(remA).toNumber();
+          } else {
+            // Settled: latest due date first
+            const dateA = a.dueDate || '';
+            const dateB = b.dueDate || '';
+            comparison = dateB.localeCompare(dateA);
+          }
+        }
+        break;
+      }
+      case 'project':
+        comparison = (a.projectName || '').localeCompare(b.projectName || '', isAr ? 'ar' : 'en');
+        break;
+      case 'contractor':
+        comparison = (a.contractor || '').localeCompare(b.contractor || '', isAr ? 'ar' : 'en');
+        break;
+      case 'dueDate': {
+        const dateA = a.dueDate || '';
+        const dateB = b.dueDate || '';
+        comparison = dateA.localeCompare(dateB);
+        break;
+      }
+      case 'totalCost': {
+        const costA = D(a.totalNum || 0);
+        const costB = D(b.totalNum || 0);
+        comparison = costA.minus(costB).toNumber();
+        break;
+      }
+      case 'remaining': {
+        const remA = D(a.remainingNum || 0);
+        const remB = D(b.remainingNum || 0);
+        comparison = remA.minus(remB).toNumber();
+        break;
+      }
+    }
+    return direction === 'asc' ? comparison : -comparison;
+  });
+}
+
+/**
+ * Updates a cost item directly, strictly guarded by the 24-hour grace period rule.
+ */
+export function updateCostItemDirectly(
+  item: ERPPropertyCostItem,
+  updates: Partial<ERPPropertyCostItem>,
+  forceOverride: boolean = false
+): ERPPropertyCostItem {
+  if (!forceOverride && !isItemWithinGracePeriod(item.created_at, 24)) {
+    throw new Error('Accounting Lock: Item cannot be modified directly after the 24-hour grace period. Please use an adjustment sub-item.');
+  }
+
+  const updated: ERPPropertyCostItem = {
+    ...item,
+    ...updates,
+    updated_at: new Date().toISOString()
+  };
+
+  const totals = calculateCostItemEffectiveTotals(updated);
+  updated.net_effective_cost_egp = totals.netEffectiveCost;
+  updated.paid_amount_egp = totals.paidAmount;
+  updated.remaining_amount_egp = totals.remainingAmount;
+
+  return updated;
+}
+

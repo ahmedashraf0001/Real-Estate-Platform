@@ -8,6 +8,7 @@ import {
 import { formatPrice } from '@/lib/utils/formatting';
 import { formatInternationalWhatsAppNumber } from '@/lib/services/whatsappNotifier';
 import { generateStrategicAdvisories } from '@/lib/services/dashboardAnalytics';
+import { getPortfolioValuation, getActiveProperties } from '@/lib/erp/canonicalMetrics';
 
 interface Props {
   params: Promise<{ adminLocale: string }>;
@@ -65,13 +66,14 @@ export default async function AdminDashboard({ params }: Props) {
     getAllLeads().catch(() => []),
   ]);
 
-  const activeProperties = properties.filter((p) => p.listing_status === 'active');
+  const activeProperties = getActiveProperties(properties);
   const activeCount   = activeProperties.length;
   const featuredCount = properties.filter((p) => p.is_featured).length;
   
   const staleLeads = leads.filter(isStale);
   const staleLeadsCount = staleLeads.length;
-  const portfolioValue   = activeProperties.reduce((sum, p) => sum + Number(p.price_egp || 0), 0);
+  // Canonical Portfolio Valuation: active listings only
+  const portfolioValue   = getPortfolioValuation(properties).toNumber();
   const avgPropertyPrice = activeCount > 0 ? Math.round(portfolioValue / activeCount) : 0;
 
   // High Priority Strategic Advisory
@@ -557,7 +559,7 @@ export default async function AdminDashboard({ params }: Props) {
           borderTop: '1px solid var(--admin-card-border, #D8D2C4)'
         }}>
           <Link
-            href={`/fin-os/${adminLocale}?tab=operations`}
+            href={`/fin-os/${adminLocale}/operations`}
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -579,7 +581,7 @@ export default async function AdminDashboard({ params }: Props) {
           </Link>
 
           <Link
-            href={`/fin-os/${adminLocale}?tab=contracts`}
+            href={`/fin-os/${adminLocale}/contracts`}
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -601,7 +603,7 @@ export default async function AdminDashboard({ params }: Props) {
           </Link>
 
           <Link
-            href={`/fin-os/${adminLocale}?tab=pdc`}
+            href={`/fin-os/${adminLocale}/pdc`}
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -623,7 +625,7 @@ export default async function AdminDashboard({ params }: Props) {
           </Link>
 
           <Link
-            href={`/fin-os/${adminLocale}?tab=ledger`}
+            href={`/fin-os/${adminLocale}/ledger`}
             style={{
               display: 'flex',
               alignItems: 'center',

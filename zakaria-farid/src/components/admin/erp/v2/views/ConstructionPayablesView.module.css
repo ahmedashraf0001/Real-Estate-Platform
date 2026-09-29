@@ -1,0 +1,1840 @@
+/* ============================================================================
+   FIN-OS Construction WIP & Contractor AP Design System
+   View Component Styles: ConstructionPayablesView.module.css
+   ============================================================================ */
+
+.containerQueryContext {
+  container-type: inline-size;
+  container-name: middleSection;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  font-variant-numeric: tabular-nums;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+/* --------------------------------------------------------------------------
+   HEADER & TOP CONTROLS
+   -------------------------------------------------------------------------- */
+.headerRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.titleArea {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.pageTitle {
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: var(--erp-text-title, #0f172a);
+  margin: 0;
+  letter-spacing: -0.02em;
+}
+
+.subtitle {
+  font-size: 0.80rem;
+  color: var(--erp-text-muted, #64748b);
+  margin: 0;
+}
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.primaryBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  background: var(--erp-accent, #2563eb);
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  padding: 0.55rem 1rem;
+  font-size: 0.80rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.1s ease;
+  white-space: nowrap;
+}
+
+.primaryBtn:hover {
+  background: var(--erp-accent-hover, #1d4ed8);
+}
+
+.secondaryBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  background: #ffffff;
+  color: var(--erp-text-body, #334155);
+  border: 1px solid var(--erp-border, #cbd5e1);
+  border-radius: 8px;
+  padding: 0.55rem 0.9rem;
+  font-size: 0.80rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.secondaryBtn:hover {
+  background: #f8fafc;
+  color: var(--erp-text-title, #0f172a);
+}
+
+/* --------------------------------------------------------------------------
+   CHARTS ROW (2-Card Responsive Blueprint Grid: Timeline + Donut)
+   -------------------------------------------------------------------------- */
+.chartsRow {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.85rem;
+  width: 100%;
+  align-items: stretch;
+}
+
+@container middleSection (max-width: 820px) {
+  .chartsRow {
+    grid-template-columns: 1fr;
+  }
+}
+
+.whiteCard {
+  background: #ffffff !important;
+  border: 1px solid var(--erp-border, #cbd5e1);
+  border-radius: 12px;
+  padding: 1.1rem 1.25rem;
+  box-shadow: none !important;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  box-sizing: border-box;
+}
+
+.cardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.85rem;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.cardHeaderLeading {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.cardIconSquircle {
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  background: var(--erp-accent-subtle, #eff6ff);
+  color: var(--erp-accent, #2563eb);
+  border: 1px solid var(--erp-accent-tint, rgba(37, 99, 235, 0.15));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.cardTitle {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--erp-text-title, #0f172a);
+  margin: 0;
+}
+
+.cardHeaderTrailing {
+  font-size: 0.72rem;
+  color: var(--erp-text-muted, #64748b);
+  font-weight: 500;
+}
+
+/* Donut Chart Inner Layout */
+.donutBody {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex: 1;
+}
+
+@media (max-width: 480px) {
+  .donutBody {
+    flex-direction: column;
+  }
+}
+
+.donutChartWrap {
+  flex: 1;
+  min-width: 140px;
+  max-width: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.donutLegendList {
+  flex: 1.2;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 150px;
+}
+
+.donutLegendItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.74rem;
+  padding: 0.2rem 0;
+  border-bottom: 1px dashed #f1f5f9;
+}
+
+.donutLegendItem:last-child {
+  border-bottom: none;
+}
+
+.donutLegendLeading {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.donutDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.donutLabel {
+  color: var(--erp-text-body, #334155);
+  font-weight: 600;
+}
+
+.donutLegendValues {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.donutPct {
+  font-size: 0.70rem;
+  font-weight: 700;
+  color: var(--erp-text-muted, #64748b);
+}
+
+.donutAmount {
+  font-weight: 700;
+  color: var(--erp-text-title, #0f172a);
+}
+
+
+
+/* --------------------------------------------------------------------------
+   FILTER CONTROLS
+   -------------------------------------------------------------------------- */
+
+.searchBox {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: #ffffff;
+  border: 1px solid var(--erp-border, #cbd5e1);
+  border-radius: 8px;
+  padding: 0 0.75rem;
+  height: 36px;
+  width: 240px;
+  flex-shrink: 0;
+  transition: border-color 0.15s ease;
+}
+
+.searchBox:focus-within {
+  border-color: var(--erp-accent, #2563eb);
+}
+
+.searchInput {
+  border: none;
+  background: transparent;
+  width: 100%;
+  font-size: 0.78rem;
+  color: var(--erp-text-title, #0f172a);
+  font-family: inherit;
+  outline: none;
+}
+
+.searchInput::placeholder {
+  color: var(--erp-text-subtle, #94a3b8);
+}
+
+.filterSelect {
+  height: 36px;
+  border: 1px solid var(--erp-border, #cbd5e1);
+  border-radius: 8px;
+  padding: 0 0.85rem;
+  font-size: 0.78rem;
+  color: var(--erp-text-body, #334155);
+  font-family: inherit;
+  background: #ffffff;
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+.filterSelect:focus {
+  border-color: var(--erp-accent, #2563eb);
+}
+
+
+
+
+/* --------------------------------------------------------------------------
+   CANONICAL PAYABLES DATA TABLE
+   -------------------------------------------------------------------------- */
+.tableCard {
+  background: #ffffff !important;
+  border: 1px solid var(--erp-border, #cbd5e1);
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  overflow: visible;
+  width: 100%;
+  box-shadow: none !important;
+}
+
+.tableTabsBar {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0 1.25rem;
+  min-height: 52px;
+  background: #ffffff;
+  border-bottom: 1px solid var(--erp-border, #cbd5e1);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.tableTabsBar::-webkit-scrollbar {
+  display: none;
+}
+
+.tableTabsActions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding-bottom: 0.5rem;
+  flex-shrink: 0;
+}
+
+.priorityResetBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  height: 32px;
+  padding: 0 0.75rem;
+  border: 1px dashed var(--erp-accent, #2563eb);
+  border-radius: 7px;
+  background: var(--erp-accent-subtle, #eff6ff);
+  color: var(--erp-accent, #2563eb);
+  font-size: 0.74rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.priorityResetBtn:hover {
+  background: #dbeafe;
+}
+
+.tabDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.tabDotRed {
+  background: #ef4444;
+}
+
+.tabDotAmber {
+  background: #f59e0b;
+}
+
+.tabDotSlate {
+  background: #64748b;
+}
+
+.tabDotGreen {
+  background: #10b981;
+}
+
+.tableFilterBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.55rem;
+  padding: 0.55rem 1.25rem;
+  background: #fafbfc;
+  border-bottom: 1px solid var(--erp-border, #cbd5e1);
+}
+
+.tableToolbarControls {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.tableToolbarControls .filterSelect:first-child {
+  max-width: 150px;
+}
+
+.tableToolbarControls .filterSelect {
+  max-width: 135px;
+  min-width: 0;
+  flex: 1 1 110px;
+}
+
+.tableToolbarControls .searchBox {
+  width: 180px;
+  flex: 0 1 180px;
+  min-width: 100px;
+}
+
+.tableCount {
+  font-size: 0.7rem;
+  padding: 0.1rem 0.45rem;
+  border-radius: 6px;
+  background: var(--erp-accent-subtle, #eff6ff);
+  color: var(--erp-accent, #2563eb);
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+
+.tableCountRed {
+  background: #fef2f2 !important;
+  color: #dc2626 !important;
+}
+
+.sectionDividerRow {
+  background: #f8fafc;
+}
+
+.sectionDividerCell {
+  padding: 0.55rem 1.25rem;
+  border-top: 1px solid var(--erp-border, #cbd5e1);
+  border-bottom: 1px solid var(--erp-border, #cbd5e1);
+  background: #f8fafc;
+}
+
+.sectionDividerContent {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.sectionDividerLeading {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.sectionDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.sectionDotRed {
+  background: #ef4444;
+  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.2);
+}
+
+.sectionDotAmber {
+  background: #f59e0b;
+  box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.2);
+}
+
+.sectionDotSlate {
+  background: #64748b;
+  box-shadow: 0 0 0 2px rgba(100, 116, 139, 0.2);
+}
+
+.sectionDotGreen {
+  background: #10b981;
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
+}
+
+.sectionDividerTitle {
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: var(--erp-text-title, #0f172a);
+}
+
+.sectionDividerBadge {
+  font-size: 0.70rem;
+  font-weight: 600;
+  color: #475569;
+  background: #ffffff;
+  border: 1px solid var(--erp-border, #cbd5e1);
+  padding: 0.12rem 0.5rem;
+  border-radius: 6px;
+  font-variant-numeric: tabular-nums;
+}
+
+.unscheduledBadgeBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: #64748b;
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  padding: 0.15rem 0.45rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-family: inherit;
+}
+
+.unscheduledBadgeBtn:hover {
+  background: #e2e8f0;
+  color: #0f172a;
+  border-color: #94a3b8;
+}
+
+.toolbarIconBtn {
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 32px;
+  border: 1px solid var(--erp-border, #cbd5e1);
+  border-radius: 7px;
+  background: #ffffff;
+  color: var(--erp-text-body, #334155);
+  cursor: pointer;
+}
+
+.toolbarIconBtn:hover, .toolbarIconBtn:focus-visible {
+  border-color: var(--erp-accent, #2563eb);
+  color: var(--erp-accent, #2563eb);
+}
+
+.dateDisclosure {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.dateDisclosure > summary {
+  list-style: none;
+  height: 36px;
+}
+
+.dateDisclosure > summary::-webkit-details-marker {
+  display: none;
+}
+
+.filterDot {
+  width: 5px;
+  height: 5px;
+  background: var(--erp-accent, #2563eb);
+  border-radius: 50%;
+}
+
+.dateDisclosurePanel {
+  position: absolute;
+  z-index: 15;
+  top: calc(100% + 6px);
+  inset-inline-end: 0;
+  display: grid;
+  gap: 0.65rem;
+  width: 260px;
+  padding: 0.85rem;
+  background: #ffffff;
+  border: 1px solid var(--erp-border, #cbd5e1);
+  border-radius: 8px;
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.08);
+}
+
+.dateDisclosurePanel label {
+  display: grid;
+  gap: 0.25rem;
+  font-size: 0.74rem;
+  color: var(--erp-text-muted, #64748b);
+}
+
+.dateDisclosurePanel input {
+  width: 100%;
+}
+
+@container middleSection (max-width: 980px) {
+  .tableTabsBar { flex-wrap: wrap; padding-block: 0.4rem; gap: 0.75rem; }
+  .tableTabsActions { margin-inline-start: auto; padding-bottom: 0; }
+  .tableFilterBar { flex-wrap: wrap; gap: 0.5rem; }
+  .tableToolbarControls { flex-wrap: wrap; flex-basis: 100%; }
+}
+
+.tableTabsUnderline {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 1.5rem;
+  margin-bottom: -1px;
+}
+
+.underlineTab {
+  padding: 0.85rem 0.25rem;
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: var(--erp-text-muted, #64748b);
+  background: transparent;
+  border: none;
+  border-bottom: 2.5px solid transparent;
+  cursor: pointer;
+  font-family: inherit;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.underlineTab:hover:not(.underlineTabActive) {
+  color: var(--erp-text-title, #0f172a);
+}
+
+.underlineTabActive {
+  color: var(--erp-accent, #2563eb) !important;
+  border-bottom-color: var(--erp-accent, #2563eb) !important;
+}
+
+.tableHeaderActions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.rowActions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+}
+
+.rowActionBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 1px solid var(--erp-card-border, #e2e8f0);
+  border-radius: 7px;
+  background: #ffffff;
+  color: var(--erp-text-body, #334155);
+  cursor: pointer;
+}
+
+.rowActionBtn:hover, .rowActionBtn:focus-visible {
+  border-color: var(--erp-accent, #2563eb);
+  color: var(--erp-accent, #2563eb);
+  outline-offset: 2px;
+}
+.toolbarActionBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: #ffffff;
+  color: var(--erp-text-body, #334155);
+  border: 1px solid var(--erp-border, #cbd5e1);
+  border-radius: 7px;
+  padding: 0.42rem 0.75rem;
+  font-size: 0.76rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.toolbarActionBtn:hover {
+  background: var(--erp-accent-subtle, #eff6ff);
+  color: var(--erp-accent, #2563eb);
+  border-color: var(--erp-accent, #2563eb);
+}
+
+
+.tableContainer {
+  width: 100%;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.canonicalTable {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: right;
+  font-size: 0.80rem;
+}
+
+.canonicalThead {
+  background: #fafbfc;
+  border-bottom: 1px solid var(--erp-border, #cbd5e1);
+}
+
+.canonicalTh {
+  padding: 0.65rem 0.65rem;
+  font-size: 0.73rem;
+  font-weight: 700;
+  color: var(--erp-text-muted, #64748b);
+  white-space: nowrap;
+  user-select: none;
+}
+
+.sortableTh {
+  cursor: pointer !important;
+  user-select: none;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+
+.sortableTh:hover {
+  background: rgba(37, 99, 235, 0.04);
+  color: var(--erp-text-title, #0f172a);
+}
+
+.thSortContent {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.sortIcon {
+  color: var(--erp-text-subtle, #94a3b8);
+  flex-shrink: 0;
+}
+
+.sortIconActive {
+  color: var(--erp-accent, #2563eb);
+  flex-shrink: 0;
+}
+
+.canonicalRow {
+  border-bottom: 1px solid var(--erp-border-subtle, #f1f5f9);
+  transition: background 0.12s ease;
+  cursor: pointer;
+  height: 54px;
+}
+
+.canonicalRow:hover {
+  background: rgba(37, 99, 235, 0.02) !important;
+}
+
+.canonicalTd {
+  padding: 0.65rem 0.65rem;
+  vertical-align: middle;
+  white-space: nowrap;
+  font-size: 0.78rem;
+}
+
+/* Micro Action Buttons */
+.actionPayBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: var(--erp-accent, #2563eb);
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  padding: 0.35rem 0.65rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.actionPayBtn:hover {
+  background: var(--erp-accent-hover, #1d4ed8);
+}
+
+/* Table Footer & Pagination */
+.tableFooterBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1.25rem;
+  background: #ffffff;
+  border-top: 1px solid var(--erp-border-subtle, #f1f5f9);
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.footerCount {
+  font-size: 0.76rem;
+  color: var(--erp-text-muted, #64748b);
+  font-variant-numeric: tabular-nums;
+}
+
+.paginationGroup {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.pageBtn {
+  min-width: 30px;
+  height: 30px;
+  padding: 0 0.4rem;
+  border-radius: 6px;
+  border: 1px solid var(--erp-border, #cbd5e1);
+  background: #ffffff;
+  color: var(--erp-text-body, #334155);
+  font-size: 0.76rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+  font-variant-numeric: tabular-nums;
+}
+
+.pageBtn:hover:not(:disabled):not(.pageBtnActive) {
+  background: #f8fafc;
+  border-color: #94a3b8;
+}
+
+.pageBtn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.pageBtnActive {
+  background: var(--erp-accent, #2563eb) !important;
+  color: #ffffff !important;
+  border-color: var(--erp-accent, #2563eb) !important;
+}
+
+/* --------------------------------------------------------------------------
+   SIDEBAR COMPANION WIDGETS (Rendered via Portal)
+   -------------------------------------------------------------------------- */
+.sideWidgetsWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  width: 100%;
+}
+
+.sideWidgetCard {
+  background: #ffffff !important;
+  border: 1px solid var(--erp-border, #cbd5e1);
+  border-radius: 12px;
+  padding: 0.75rem 0.85rem;
+  box-shadow: none !important;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+
+
+
+.sideWidgetHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 0.65rem;
+  border-bottom: 1px solid var(--erp-border-subtle, #f1f5f9);
+}
+
+.sideWidgetTitleWrap {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.sideWidgetTitle {
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: var(--erp-text-title, #0f172a);
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.25;
+}
+
+.sideWidgetBadge {
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--erp-text-muted, #64748b);
+  background: #f1f5f9;
+  border: 1px solid var(--erp-border-subtle, #e2e8f0);
+  padding: 0.15rem 0.45rem;
+  border-radius: 6px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  line-height: 1.2;
+}
+
+.emptyContractorsWrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 0.45rem;
+  padding: 1.25rem 0.75rem;
+  color: var(--erp-text-body, #334155);
+  font-size: 0.76rem;
+  font-weight: 600;
+}
+
+.emptyContractorsSubtext {
+  font-size: 0.70rem;
+  color: var(--erp-text-muted, #64748b);
+  font-weight: 500;
+}
+
+/* --------------------------------------------------------------------------
+   IMAGE SAMPLE SIDE WIDGETS:
+   1. QUICK SUMMARY (ملخص سريع)
+   2. EXPENSES EXECUTION PERCENTAGE (نسبة الإنجاز في المصروفات)
+   3. TOP CONTRACTORS WITH DUES (المقاولين الأعلى مستحقات)
+   -------------------------------------------------------------------------- */
+
+/* 1. Quick Summary Table / Rows */
+.quickSummaryList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.quickSummaryRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  min-height: 40px;
+  padding: 0.3rem 0.4rem;
+  border-bottom: 1px solid var(--erp-border-subtle, #f1f5f9);
+}
+
+.quickSummaryRow:last-child {
+  border-bottom: 0;
+}
+
+.quickSummaryLeading {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-width: 0;
+}
+
+.quickSummaryIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  flex: 0 0 28px;
+  border: 1px solid var(--erp-card-border, #e2e8f0);
+  border-radius: 7px;
+  background: #f8fafc;
+  color: var(--erp-accent, #2563eb);
+}
+
+.quickSummaryLabel {
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: var(--erp-text-body, #334155);
+}
+
+.quickSummaryValue {
+  font-size: 0.82rem;
+  font-weight: 800;
+  color: var(--erp-text-title, #0f172a);
+  font-variant-numeric: tabular-nums;
+}
+
+/* 2. Progress Gauge Widget */
+.progressGaugeBody {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.15rem 0;
+}
+
+.progressRingContainer {
+  width: 76px;
+  height: 76px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.progressRingSvg {
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+
+.progressRingBg {
+  stroke: #e2e8f0;
+}
+
+.progressRingFill {
+  stroke: var(--erp-accent, #2563eb);
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.6s ease;
+}
+
+.progressRingCenterText {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  pointer-events: none;
+}
+
+.progressRingPercent {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--erp-text-title, #0f172a);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.progressLegendList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  flex: 1;
+}
+
+.progressLegendItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--erp-text-body, #334155);
+}
+
+.progressLegendDotLabel {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.progressLegendDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.progressLegendValue {
+  font-weight: 800;
+  color: var(--erp-text-title, #0f172a);
+  font-variant-numeric: tabular-nums;
+}
+
+/* 3. Top Contractors List */
+.topContractorsHeaderRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.70rem;
+  font-weight: 700;
+  color: var(--erp-text-muted, #64748b);
+  padding: 0.15rem 0.4rem 0.3rem;
+  border-bottom: 1px solid var(--erp-border, #cbd5e1);
+}
+
+.topContractorsList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.32rem;
+  margin-top: 0.25rem;
+}
+
+.topContractorRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.35rem 0.55rem;
+  border-radius: 8px;
+  background: #ffffff;
+  border: 1px solid var(--erp-card-border, #e2e8f0);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.topContractorRow:hover {
+  background: #f8fafc;
+  border-color: var(--erp-accent, #2563eb);
+}
+
+.topContractorLeading {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-width: 0;
+}
+
+.topContractorAvatar {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--erp-accent-subtle, #eff6ff);
+  color: var(--erp-accent, #2563eb);
+  border: 1px solid var(--erp-accent-tint, rgba(37, 99, 235, 0.18));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.72rem;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+
+.topContractorName {
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: var(--erp-text-title, #0f172a);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.topContractorDue {
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: #dc2626;
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+
+.viewAllContractorsBtn {
+  margin-top: 0.5rem;
+  width: 100%;
+  padding: 0.55rem;
+  border-radius: 8px;
+  border: 1px solid var(--erp-border, #cbd5e1);
+  background: #ffffff;
+  color: var(--erp-text-body, #334155);
+  font-size: 0.76rem;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+}
+
+.viewAllContractorsBtn:hover {
+  background: var(--erp-accent-subtle, #eff6ff);
+  color: var(--erp-accent, #2563eb);
+  border-color: var(--erp-accent, #2563eb);
+}
+
+/* --------------------------------------------------------------------------
+   DATE FILTER GROUP (من تاريخ / إلى تاريخ)
+   -------------------------------------------------------------------------- */
+
+
+.dateFilterInput {
+  border: none;
+  background: transparent;
+  font-size: 0.76rem;
+  font-family: inherit;
+  color: var(--erp-text-title, #0f172a);
+  outline: none;
+  cursor: pointer;
+  width: 105px;
+}
+
+.scheduleActionBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.45rem 0.85rem;
+  border-radius: 8px;
+  background: var(--erp-accent-subtle, #eff6ff);
+  border: 1px solid var(--erp-accent-tint, rgba(37, 99, 235, 0.25));
+  color: var(--erp-accent, #2563eb);
+  font-size: 0.76rem;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.scheduleActionBtn:hover {
+  background: var(--erp-accent, #2563eb);
+  color: #ffffff;
+  border-color: var(--erp-accent, #2563eb);
+}
+
+.drawerContent {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1rem 1.2rem 1.5rem;
+}
+
+.drawerIdentity {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  padding-bottom: 0.85rem;
+  border-bottom: 1px solid var(--erp-card-border, #e2e8f0);
+}
+
+.drawerIdentityTop, .drawerSectionHeading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.drawerReference {
+  color: var(--erp-text-muted, #64748b);
+  font-size: 0.7rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.drawerIdentity strong {
+  color: var(--erp-text-title, #0f172a);
+  font-size: 0.9rem;
+}
+
+.drawerIdentity > span:last-child {
+  color: var(--erp-text-muted, #64748b);
+  font-size: 0.76rem;
+}
+
+.drawerMetrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.drawerMetric {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  min-width: 0;
+  padding: 0.7rem;
+  background: #ffffff;
+  border: 1px solid var(--erp-card-border, #e2e8f0);
+  border-radius: 8px;
+}
+
+.drawerMetric span {
+  color: var(--erp-text-muted, #64748b);
+  font-size: 0.69rem;
+}
+
+.drawerMetric strong {
+  color: var(--erp-text-title, #0f172a);
+  font-size: 0.84rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.drawerSection {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  padding-top: 0.3rem;
+}
+
+.drawerSection h4 {
+  margin: 0;
+  color: var(--erp-text-title, #0f172a);
+  font-size: 0.85rem;
+}
+
+.drawerFacts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.7rem;
+  margin: 0;
+  padding: 0.8rem;
+  border: 1px solid var(--erp-card-border, #e2e8f0);
+  border-radius: 8px;
+}
+
+.drawerFacts div {
+  min-width: 0;
+}
+
+.drawerFacts dt {
+  margin-bottom: 0.25rem;
+  color: var(--erp-text-muted, #64748b);
+  font-size: 0.69rem;
+}
+
+.drawerFacts dd {
+  margin: 0;
+  color: var(--erp-text-title, #0f172a);
+  font-size: 0.77rem;
+  font-weight: 650;
+  overflow-wrap: anywhere;
+  font-variant-numeric: tabular-nums;
+}
+
+.drawerNote {
+  margin: 0;
+  color: var(--erp-text-body, #334155);
+  font-size: 0.75rem;
+  line-height: 1.5;
+}
+
+.drawerEmptyPlan, .drawerPaidState {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.45rem;
+  padding: 0.9rem;
+  border: 1px solid var(--erp-card-border, #e2e8f0);
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--erp-text-body, #334155);
+}
+
+.drawerEmptyPlan > svg, .drawerPaidState > svg { color: var(--erp-accent, #2563eb); }
+.drawerEmptyPlan strong { font-size: 0.8rem; }
+.drawerEmptyPlan > span, .drawerPaidState span { font-size: 0.73rem; color: var(--erp-text-muted, #64748b); }
+.drawerPaidState { flex-direction: row; align-items: center; }
+
+.drawerPlanActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.45rem;
+}
+
+.drawerPrimaryAction {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.45rem 0.85rem;
+  border: 1px solid var(--erp-accent, #2563eb);
+  border-radius: 7px;
+  background: var(--erp-accent, #2563eb);
+  color: #ffffff;
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.drawerPrimaryAction:hover { background: var(--erp-accent-hover, #1d4ed8); }
+
+.drawerTextAction {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.3rem 0.45rem;
+  border: 1px solid var(--erp-card-border, #e2e8f0);
+  border-radius: 6px;
+  background: #ffffff;
+  color: var(--erp-accent, #2563eb);
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.drawerTextAction:hover { border-color: var(--erp-accent, #2563eb); }
+
+.drawerInstallments {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.drawerInstallment {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  padding: 0.7rem;
+  border: 1px solid var(--erp-card-border, #e2e8f0);
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.drawerInstallmentInfo, .drawerInstallmentEnd {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.25rem;
+}
+
+.drawerInstallmentInfo { min-width: 0; }
+.drawerInstallmentInfo strong { font-size: 0.77rem; color: var(--erp-text-title, #0f172a); }
+.drawerInstallmentInfo span { display: inline-flex; gap: 0.25rem; align-items: center; font-size: 0.69rem; color: var(--erp-text-muted, #64748b); }
+.drawerInstallmentEnd { align-items: flex-end; flex-shrink: 0; }
+.drawerInstallmentEnd strong { font-size: 0.82rem; font-variant-numeric: tabular-nums; color: var(--erp-text-title, #0f172a); }
+
+/* ─── ACTION BUTTON TOOLTIPS ─── */
+.rowActionWrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.rowActionTooltip {
+  position: absolute;
+  bottom: calc(100% + 7px);
+  left: 50%;
+  transform: translateX(-50%) translateY(4px);
+  background: #0f172a;
+  color: #f8fafc;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.35;
+  white-space: nowrap;
+  padding: 6px 10px;
+  border-radius: 6px;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.25), 0 4px 6px -4px rgba(0, 0, 0, 0.2);
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.15s cubic-bezier(0.16, 1, 0.3, 1), transform 0.15s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.15s;
+  z-index: 50;
+}
+
+.rowActionTooltip::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border-width: 5px;
+  border-style: solid;
+  border-color: #0f172a transparent transparent transparent;
+}
+
+.rowActionWrap:hover .rowActionTooltip,
+.rowActionWrap:focus-within .rowActionTooltip {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* ─── ACTIVE CONTRACTOR FILTER BADGE ─── */
+.activeFilterBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.35rem 0.65rem;
+  background: var(--erp-accent-subtle, #eff6ff);
+  border: 1px solid var(--erp-accent-tint, #bfdbfe);
+  border-radius: 7px;
+  color: var(--erp-accent, #2563eb);
+  font-size: 0.74rem;
+  font-weight: 700;
+}
+
+.activeFilterBadge button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  border: none;
+  background: rgba(37, 99, 235, 0.1);
+  color: var(--erp-accent, #2563eb);
+  cursor: pointer;
+  padding: 0;
+  transition: all 0.15s ease;
+}
+
+.activeFilterBadge button:hover {
+  background: var(--erp-accent, #2563eb);
+  color: #ffffff;
+}
+
+/* ─── CONTRACTORS DIRECTORY MODAL ─── */
+.contractorsDirWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 1.15rem;
+  padding: 0.25rem 0 0.5rem;
+}
+
+.contractorsSearchBox {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.5rem 0.85rem;
+  background: #ffffff;
+  border: 1px solid var(--erp-border, #cbd5e1);
+  border-radius: 8px;
+  color: #64748b;
+}
+
+.contractorsSearchInput {
+  flex: 1;
+  border: none;
+  background: transparent;
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #0f172a;
+  outline: none;
+}
+
+.contractorsSummaryBanner {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.75rem;
+  padding: 0.85rem 1.1rem;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+}
+
+.contractorsSummaryCard {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.contractorsSummaryLabel {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #64748b;
+}
+
+.contractorsSummaryValue {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: #0f172a;
+  font-variant-numeric: tabular-nums;
+}
+
+.contractorIdentity {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.contractorSquircle {
+  width: 30px;
+  height: 30px;
+  min-width: 30px;
+  border-radius: 8px;
+  background: var(--erp-accent-subtle, #eff6ff);
+  color: var(--erp-accent, #2563eb);
+  border: 1px solid var(--erp-accent-tint, rgba(37, 99, 235, 0.15));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 0.82rem;
+}
+
+.contractorFilterBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: 6px;
+  background: var(--erp-accent-subtle, #eff6ff);
+  color: var(--erp-accent, #2563eb);
+  border: 1px solid var(--erp-accent-tint, #bfdbfe);
+  font: inherit;
+  font-size: 0.73rem;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+
+.contractorFilterBtn:hover {
+  background: var(--erp-accent, #2563eb);
+  color: #ffffff;
+  border-color: var(--erp-accent, #2563eb);
+}
+
+.contractorPillBadge {
+  padding: 0.15rem 0.5rem;
+  border-radius: 6px;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: #475569;
+}
+
+/* ─── CENTERED INSPECTION MODAL ─── */
+.inspectModalBody {
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+  padding: 0.25rem 0 0.5rem;
+}
+
+.inspectIdentityRibbon {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.85rem 1.15rem;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  flex-wrap: wrap;
+}
+
+.inspectIdentityLeading {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.inspectAvatar {
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+  border-radius: 10px;
+  background: var(--erp-accent-subtle, #eff6ff);
+  color: var(--erp-accent, #2563eb);
+  border: 1px solid var(--erp-accent-tint, rgba(37, 99, 235, 0.18));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.inspectIdentityText {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.inspectIdentityContractor {
+  font-size: 0.96rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.inspectIdentitySub {
+  font-size: 0.74rem;
+  color: #64748b;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.inspectIdentityTrailing {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.inspectMetricsGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.75rem;
+}
+
+.inspectMetricCard {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 0.8rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.inspectMetricLabel {
+  font-size: 0.69rem;
+  color: #64748b;
+  font-weight: 600;
+}
+
+.inspectMetricValue {
+  font-size: 1.12rem;
+  font-weight: 800;
+  color: #0f172a;
+  font-variant-numeric: tabular-nums;
+}
+
+.inspectBodyColumns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.inspectColumn {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 1rem 1.1rem;
+}
+
+.inspectColHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid #f1f5f9;
+  padding-bottom: 0.6rem;
+}
+
+.inspectColTitle {
+  font-size: 0.82rem;
+  font-weight: 800;
+  color: #0f172a;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.inspectFactsList {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+.inspectFactItem {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.inspectFactItemWide {
+  grid-column: span 2;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.inspectFactLabel {
+  font-size: 0.68rem;
+  color: #64748b;
+  font-weight: 600;
+}
+
+.inspectFactVal {
+  font-size: 0.78rem;
+  color: #0f172a;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.inspectInstallmentsList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-height: 290px;
+  overflow-y: auto;
+}
+
+.inspectInstallmentCard {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.65rem 0.85rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #ffffff;
+  gap: 0.6rem;
+}
+
+.inspectSettleInstBtn {
+  padding: 0.25rem 0.6rem;
+  border-radius: 5px;
+  background: var(--erp-accent, #2563eb);
+  color: #ffffff;
+  border: none;
+  font-size: 0.69rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.inspectSettleInstBtn:hover {
+  background: var(--erp-accent-hover, #1d4ed8);
+}
+
+.inspectModalFooter {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.65rem;
+  width: 100%;
+}
+
+@media (max-width: 768px) {
+  .contractorsSummaryBanner,
+  .inspectMetricsGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .inspectBodyColumns {
+    grid-template-columns: 1fr;
+  }
+}
+
+.payablesMode { display: flex; gap: 8px; flex-wrap: wrap; min-width: 0; }
+.payablesMode button[aria-pressed="true"] { color: var(--erp-accent); border-color: var(--erp-accent); }
+.contractorFilterBtn { display: flex; justify-content: space-between; align-items: center; gap: 8px; width: 100%; min-width: 0; padding: 10px 0; background: #ffffff !important; border: 0; border-bottom: 1px solid #f1f5f9; color: #334155; font: inherit; font-size: 12px; text-align: start; cursor: pointer; }
+.contractorFilterBtn span { min-width: 0; overflow-wrap: anywhere; }
+.contractorFilterBtn bdi { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.containerQueryContext button:focus-visible, .containerQueryContext select:focus-visible, .contractorFilterBtn:focus-visible { outline: 2px solid var(--erp-accent); outline-offset: 2px; }
+
+.quickActionsStack { display: flex; flex-direction: column; gap: 8px; }
+.quickActionsStack button { width: 100%; justify-content: center; white-space: normal; }
+.purchaseOrdersList { margin-top: 14px; font-size: 12px; }
+.purchaseOrdersList h4 { margin: 0 0 8px; color: #0f172a; }
+.purchaseOrdersList > div { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; padding: 10px 0; border-top: 1px solid #f1f5f9; overflow-wrap: anywhere; }
+
+.canonicalRow:focus-visible, .sortableTh:focus-visible { outline: 2px solid var(--erp-accent); outline-offset: -2px; }

@@ -1,3 +1,5 @@
+import { getPortfolioValuation, getActiveProperties } from '@/lib/erp/canonicalMetrics';
+
 export interface PropertyEngagementMetric {
   propertyId: string;
   slug?: string;
@@ -148,7 +150,8 @@ export function computeDistrictDemandMetrics(properties: any[], leads: any[]): D
   ];
 
   const totalLeads = (leads || []).length;
-  const totalSupplyValue = (properties || []).reduce((sum, p) => sum + Number(p.price_egp || p.price || 0), 0);
+  // Canonical Portfolio Valuation: active listings only, excluding sold and archived
+  const totalSupplyValue = getPortfolioValuation(properties).toNumber();
 
   return districtDefs.map((dist) => {
     // Count leads in district
@@ -158,17 +161,19 @@ export function computeDistrictDemandMetrics(properties: any[], leads: any[]): D
       return dist.keywords.some((k) => propLocation.includes(k) || message.includes(k));
     });
 
-    // Count properties and value in district
-    const districtProperties = (properties || []).filter((p) => {
-      const loc = (p.location || '').toLowerCase();
-      return dist.keywords.some((k) => loc.includes(k));
+    // Canonical active manageable listings in district
+    const districtActiveProperties = getActiveProperties(properties, {
+      filter: (p) => {
+        const loc = (p.location || '').toLowerCase();
+        return dist.keywords.some((k) => loc.includes(k));
+      },
     });
 
     const inquiryCount = districtLeads.length;
     const inquirySharePct = totalLeads > 0 ? Math.round((inquiryCount / totalLeads) * 100) : 0;
 
-    const listedSupplyCount = districtProperties.length;
-    const listedSupplyValueEgp = districtProperties.reduce((sum, p) => sum + Number(p.price_egp || p.price || 0), 0);
+    const listedSupplyCount = districtActiveProperties.length;
+    const listedSupplyValueEgp = getPortfolioValuation(districtActiveProperties).toNumber();
     const supplySharePct = totalSupplyValue > 0 ? Math.round((listedSupplyValueEgp / totalSupplyValue) * 100) : 0;
 
     let marketStatus: 'undersupplied' | 'balanced' | 'oversupplied' = 'balanced';

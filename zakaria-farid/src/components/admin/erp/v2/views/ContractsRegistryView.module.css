@@ -1,0 +1,672 @@
+/* ==========================================================================
+   FIN-OS ERP — SALES CONTRACTS & INSTALLMENT PIPELINE (v2 Overhaul)
+   Authoritative FIN-OS Design System: Pure White Panels, Thin 1px Hairlines,
+   Slate #f1f5f9 Canvas, Dynamic Accent Reactivity, Tabular Nums, Strict RTL
+   ========================================================================== */
+
+.container {
+  width: 100%;
+  max-width: 100vw;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+  box-sizing: border-box;
+  container-type: inline-size;
+  container-name: contractsView;
+}
+
+/* ─── 1. TOP HEADER ─── */
+.headerRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.headerLeading {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.titleGroup {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+}
+
+.pageTitle {
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: var(--erp-text-title, #0f172a);
+  margin: 0;
+  letter-spacing: -0.02em;
+}
+
+.pageSubtitle {
+  font-size: 0.78rem;
+  color: var(--erp-text-muted, #64748b);
+  margin: 0.1rem 0 0 0;
+}
+
+/* ─── 2. 4 DISCRETE FLOATING KPI CARDS GRID (100% FULL WIDTH) ─── */
+.kpiGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.75rem;
+  width: 100%;
+}
+
+@container contractsView (max-width: 900px) {
+  .kpiGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 900px) {
+  .kpiGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 540px) {
+  .kpiGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ─── 3. COLLAPSIBLE SALES BREAKDOWN DONUT BANNER ─── */
+.donutBannerCard {
+  background: #ffffff !important;
+  border: 1px solid var(--erp-border, #cbd5e1);
+  border-radius: 12px;
+  padding: 1rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  box-sizing: border-box;
+  animation: zfFadeSlideDown 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes zfFadeSlideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.donutBannerHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--erp-border-subtle, #f1f5f9);
+  padding-bottom: 0.65rem;
+}
+
+.donutBannerTitleGroup {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.donutBannerIcon {
+  color: var(--erp-accent, #2563eb);
+}
+
+.donutBannerTitle {
+  font-size: 0.88rem;
+  font-weight: 800;
+  color: var(--erp-text-title, #0f172a);
+  margin: 0;
+}
+
+.donutBannerCloseBtn {
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--erp-text-muted, #64748b);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.donutBannerCloseBtn:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.donutBannerBody {
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+  flex-wrap: wrap;
+}
+
+.donutBannerChart {
+  width: 160px;
+  height: 160px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.donutBannerLegendGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 0.65rem;
+  flex: 1;
+  min-width: 280px;
+}
+
+.donutLegendCard {
+  background: #f8fafc;
+  border: 1px solid var(--erp-card-border, #e2e8f0);
+  border-radius: 8px;
+  padding: 0.6rem 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.donutLegendCardHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.donutLegendDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.donutLegendCardLabel {
+  font-size: 0.73rem;
+  font-weight: 600;
+  color: var(--erp-text-title, #0f172a);
+}
+
+.donutLegendCardValues {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.donutLegendCardCount {
+  font-size: 0.88rem;
+  font-weight: 800;
+  color: var(--erp-text-title, #0f172a);
+  font-variant-numeric: tabular-nums;
+}
+
+.donutLegendCardPct {
+  font-size: 0.74rem;
+  font-weight: 750;
+  color: var(--erp-accent, #2563eb);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ─── 4. TOOLBAR CARD ─── */
+.toolbarCard {
+  background: #ffffff !important;
+  border: 1px solid var(--erp-border, #cbd5e1);
+  border-radius: 12px;
+  padding: 0.6rem 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.toolbarLeading {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 1 1 auto;
+  min-width: 0;
+  flex-wrap: wrap;
+}
+
+.btnNewContract {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  height: 33px;
+  padding: 0 0.85rem;
+  border-radius: 8px;
+  border: none;
+  background: var(--erp-accent, #2563eb);
+  color: #ffffff;
+  font-size: 0.76rem;
+  font-weight: 750;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s ease;
+  box-shadow: 0 1px 2px rgba(37, 99, 235, 0.2);
+}
+
+.btnNewContract:hover {
+  background: var(--erp-accent-hover, #1d4ed8);
+}
+
+.donutToggleBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  height: 33px;
+  padding: 0 0.75rem;
+  border-radius: 8px;
+  border: 1px solid var(--erp-border, #cbd5e1);
+  background: #ffffff;
+  color: var(--erp-text-body, #334155);
+  font-size: 0.74rem;
+  font-weight: 650;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+
+.donutToggleBtn:hover {
+  background: #f8fafc;
+  color: var(--erp-text-title, #0f172a);
+  border-color: #94a3b8;
+}
+
+.donutToggleBtnActive {
+  background: var(--erp-accent-subtle, #eff6ff) !important;
+  color: var(--erp-accent, #2563eb) !important;
+  border-color: rgba(37, 99, 235, 0.4) !important;
+  font-weight: 750 !important;
+}
+
+.projectSelect {
+  height: 33px;
+  padding: 0 0.65rem;
+  border-radius: 8px;
+  border: 1px solid var(--erp-border, #cbd5e1);
+  background: #ffffff;
+  color: var(--erp-text-body, #334155);
+  font-size: 0.76rem;
+  font-weight: 600;
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.15s ease;
+  min-width: 8.5rem;
+  flex: 0 0 auto;
+}
+
+.projectSelect:focus {
+  border-color: var(--erp-accent, #2563eb);
+}
+
+.searchBox {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex: 1 1 12rem;
+  max-width: 22rem;
+  min-width: 10rem;
+}
+
+.searchIcon {
+  position: absolute;
+  right: 0.7rem;
+  color: var(--erp-text-subtle, #94a3b8);
+  pointer-events: none;
+}
+
+:global([dir="ltr"]) .searchIcon {
+  right: auto;
+  left: 0.7rem;
+}
+
+.searchInput {
+  width: 100%;
+  height: 33px;
+  padding: 0 2rem 0 0.7rem;
+  border-radius: 8px;
+  border: 1px solid var(--erp-border, #cbd5e1);
+  background: #ffffff;
+  color: var(--erp-text-title, #0f172a);
+  font-size: 0.76rem;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+:global([dir="ltr"]) .searchInput {
+  padding: 0 0.7rem 0 2rem;
+}
+
+.searchInput:focus {
+  border-color: var(--erp-accent, #2563eb);
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1);
+}
+
+.searchClearBtn {
+  position: absolute;
+  left: 0.6rem;
+  background: none;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+:global([dir="ltr"]) .searchClearBtn {
+  left: auto;
+  right: 0.6rem;
+}
+
+.toolbarTrailing {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex: 0 0 auto;
+}
+
+.statusTabsSegmented {
+  display: inline-flex;
+  align-items: center;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 2px;
+  gap: 2px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.statusTab {
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 0.73rem;
+  font-weight: 600;
+  color: var(--erp-text-muted, #64748b);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.statusTab:hover:not(.statusTabActive) {
+  color: var(--erp-text-title, #0f172a);
+}
+
+.statusTabActive {
+  background: #ffffff !important;
+  color: var(--erp-accent, #2563eb) !important;
+  font-weight: 750 !important;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08) !important;
+}
+
+.statusTabCount {
+  font-size: 0.67rem;
+  padding: 1px 5px;
+  border-radius: 9999px;
+  background: #e2e8f0;
+  color: #475569;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+}
+
+.statusTabActive .statusTabCount {
+  background: var(--erp-accent-subtle, #eff6ff);
+  color: var(--erp-accent, #2563eb);
+}
+
+.statusTabCountRed {
+  background: #fee2e2 !important;
+  color: #dc2626 !important;
+}
+
+.filterIconBtn {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid var(--erp-border, #cbd5e1);
+  background: #ffffff;
+  color: var(--erp-text-muted, #64748b);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.filterIconBtn:hover {
+  background: #f8fafc;
+  color: var(--erp-text-title, #0f172a);
+  border-color: #94a3b8;
+}
+
+/* ─── 5. CANONICAL 10-COLUMN DATA TABLE CARD (100% WIDTH) ─── */
+.tableCard {
+  background: #ffffff !important;
+  border: 1px solid var(--erp-border, #cbd5e1);
+  border-radius: 12px;
+  box-shadow: none !important;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  width: 100%;
+}
+
+.tableHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.65rem 0.95rem;
+  border-bottom: 1px solid var(--erp-border, #cbd5e1);
+  background: #ffffff;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.tableHeaderTitleGroup {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.tableTitle {
+  font-size: 0.9rem;
+  font-weight: 800;
+  color: var(--erp-text-title, #0f172a);
+  margin: 0;
+}
+
+.tableCountBadge {
+  font-size: 0.69rem;
+  font-weight: 600;
+  color: var(--erp-text-muted, #64748b);
+  background: #f1f5f9;
+  padding: 2px 7px;
+  border-radius: 9999px;
+  font-variant-numeric: tabular-nums;
+}
+
+.tableControls {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.contractsTable {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 0.76rem;
+  table-layout: auto;
+}
+
+.contractsTh {
+  padding: 0.75rem 0.65rem !important;
+  font-size: 0.73rem !important;
+  font-weight: 700 !important;
+  color: #64748b !important;
+  background: #fafbfc !important;
+  border-bottom: 1px solid var(--erp-border, #cbd5e1) !important;
+  text-align: start;
+  white-space: nowrap;
+  user-select: none;
+}
+
+.contractsTd {
+  padding: 0.75rem 0.65rem !important;
+  color: var(--erp-text-body, #334155);
+  border-bottom: 1px solid #f1f5f9 !important;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.contractsTable tbody tr {
+  cursor: pointer;
+  transition: background-color 140ms ease;
+  height: 56px;
+}
+
+.contractsTable tbody tr:hover td {
+  background: #fafbfc;
+}
+
+.contractNumberBadge {
+  display: inline-block;
+  font-weight: 750;
+  color: var(--erp-text-title, #0f172a);
+  font-family: monospace;
+  font-variant-numeric: tabular-nums;
+  background: #f8fafc;
+  border: 1px solid var(--erp-card-border, #e2e8f0);
+  padding: 2px 7px;
+  border-radius: 6px;
+  unicode-bidi: isolate;
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+
+.contractsTable tbody tr:hover .contractNumberBadge {
+  color: var(--erp-accent, #2563eb);
+  border-color: rgba(37, 99, 235, 0.3);
+}
+
+/* ─── 6. EMPTY STATE ─── */
+.emptyStateCard {
+  background: #ffffff !important;
+  border: 1px dashed var(--erp-border, #cbd5e1);
+  border-radius: 12px;
+  padding: 3rem 1.5rem;
+  text-align: center;
+}
+
+.emptyTitle {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--erp-text-title, #0f172a);
+  margin-top: 0.65rem;
+}
+
+.emptySubtitle {
+  font-size: 0.78rem;
+  color: var(--erp-text-muted, #64748b);
+  margin-top: 0.3rem;
+}
+
+.emptyResetBtn {
+  margin-top: 0.85rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.85rem;
+  border-radius: 8px;
+  border: 1px solid var(--erp-border, #cbd5e1);
+  background: #ffffff;
+  color: var(--erp-text-title, #0f172a);
+  font-size: 0.76rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.emptyResetBtn:hover {
+  background: #f8fafc;
+}
+
+/* ─── 7. TABLE FOOTER & NUMERIC PAGINATION ─── */
+.tableFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.65rem 1rem;
+  border-top: 1px solid var(--erp-border-subtle, #f1f5f9);
+  background: #ffffff;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.footerLeading {
+  font-size: 0.75rem;
+  color: var(--erp-text-muted, #64748b);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.footerTrailing {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.pageSizeSelect {
+  height: 29px;
+  padding: 0 0.55rem;
+  border-radius: 6px;
+  border: 1px solid var(--erp-border, #cbd5e1);
+  background: #ffffff;
+  color: var(--erp-text-body, #334155);
+  font-size: 0.74rem;
+  font-weight: 600;
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+.pageSizeSelect:focus {
+  border-color: var(--erp-accent, #2563eb);
+}
+
+@container contractsView (max-width: 780px) {
+  .toolbarCard {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .toolbarLeading,
+  .toolbarTrailing {
+    width: 100%;
+  }
+  .statusTabsSegmented {
+    width: 100%;
+    justify-content: flex-start;
+  }
+}

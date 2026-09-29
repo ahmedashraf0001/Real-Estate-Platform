@@ -33,6 +33,7 @@ import { tafqeetEGP } from '@/lib/erp/tafqeet';
 import { D } from '@/lib/erp/math';
 import { toast } from 'sonner';
 import { localizeBuyerName } from '@/components/erp/JournalEntryPreview';
+import { ZFModalShell } from './v2/common/ZFModalShell';
 
 export type SupplementType = 
   | 'extra_finishing' 
@@ -104,9 +105,9 @@ const SUPPLEMENT_TYPES = [
     descAr: 'رسوم نقل ملكية، توثيق ملحق، أو مصاريف إدارية معتمدة',
     descEn: 'Unit assignment fee or legal documentation charges',
     icon: ScrollText,
-    color: '#946f23',
-    bgColor: 'rgba(184, 144, 62, 0.06)',
-    borderColor: 'rgba(184, 144, 62, 0.25)'
+    color: 'var(--erp-accent, #2563eb)',
+    bgColor: 'var(--erp-accent-subtle, rgba(37, 99, 235, 0.08))',
+    borderColor: 'var(--erp-accent-tint, rgba(37, 99, 235, 0.25))'
   },
   {
     id: 'contract_annex' as SupplementType,
@@ -352,114 +353,39 @@ export const NewChequeModal: React.FC<NewChequeModalProps> = ({
     setSupplementSuccess(successPayload);
   };
 
-  if (!isOpen) return null;
+  const handleModalClose = () => {
+    setSupplementSuccess(null);
+    onClose();
+  };
 
   return (
-    <div style={{
-      position: 'fixed',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      background: 'rgba(15, 23, 42, 0.6)',
-      backdropFilter: 'blur(10px)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      zIndex: 9999,
-      padding: '1.25rem',
-      direction: isAr ? 'rtl' : 'ltr'
-    }}>
-      <div 
-        style={{
-          background: '#ffffff',
-          border: '1px solid #cbd5e1',
-          borderRadius: '24px',
-          width: '100%',
-          maxWidth: '1200px',
-          height: 'min(880px, 94vh)',
-          boxShadow: '0 25px 65px -15px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(0,0,0,0.04)',
-          overflow: 'hidden',
-          display: 'flex',
-          flexDirection: 'column'
-        }}
-      >
-        {/* ══════════════════════════════════════════════════════════════════════════
-            1. MODAL TOP HEADER BAR
-            ══════════════════════════════════════════════════════════════════════════ */}
-        <div style={{
-          padding: '1.25rem 2rem',
-          borderBottom: '1px solid #e2e8f0',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          background: 'linear-gradient(135deg, #f8fafc 0%, #ffffff 100%)',
-          flexShrink: 0
+    <ZFModalShell
+      isOpen={isOpen}
+      onClose={handleModalClose}
+      title={isAr ? 'إضافة ملحق أو دفعة إضافية للعقد' : 'Add Contract Supplement / Extra Tranche'}
+      subtitle={isAr 
+        ? 'إثبات قسط أو التزام مالي جديد يضاف لأصل العقد وجدول السداد مع حوكمة الخزينة (١٠١٠٠٠) وبدون المساس بالأقساط المسددة.' 
+        : 'Append an extra tranche to contract gross value and installment schedule without altering cleared dues.'}
+      icon={<Plus size={18} />}
+      headerExtra={
+        <span style={{
+          background: 'var(--erp-accent-subtle, rgba(37, 99, 235, 0.08))',
+          color: 'var(--erp-accent, #2563eb)',
+          border: '1px solid var(--erp-accent-tint, rgba(37, 99, 235, 0.25))',
+          padding: '0.2rem 0.65rem',
+          borderRadius: '20px',
+          fontSize: '0.74rem',
+          fontWeight: 800,
+          whiteSpace: 'nowrap'
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flex: 1, minWidth: 0 }}>
-            <div style={{
-              width: '44px',
-              height: '44px',
-              borderRadius: '12px',
-              background: 'linear-gradient(135deg, rgba(184, 144, 62, 0.18) 0%, rgba(184, 144, 62, 0.06) 100%)',
-              border: '1px solid rgba(184, 144, 62, 0.35)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: '#946f23',
-              flexShrink: 0
-            }}>
-              <Plus size={22} />
-            </div>
-            <div style={{ minWidth: 0 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-                <h3 style={{ margin: 0, fontSize: '1.18rem', fontWeight: 800, color: '#0f172a', lineHeight: 1.3 }}>
-                  {isAr ? 'إضافة ملحق أو دفعة إضافية للعقد' : 'Add Contract Supplement / Extra Tranche'}
-                </h3>
-                <span style={{
-                  background: 'rgba(184, 144, 62, 0.1)',
-                  color: '#946f23',
-                  border: '1px solid rgba(184, 144, 62, 0.25)',
-                  padding: '0.2rem 0.65rem',
-                  borderRadius: '20px',
-                  fontSize: '0.74rem',
-                  fontWeight: 800,
-                  whiteSpace: 'nowrap'
-                }}>
-                  {isAr ? 'تشطيبات • تعديلات • مبالغ طارئة' : 'Finishing • Alterations • Annex'}
-                </span>
-              </div>
-              <p style={{ margin: '0.35rem 0 0', fontSize: '0.8rem', color: '#64748b', lineHeight: 1.5 }}>
-                {isAr 
-                  ? 'إثبات قسط أو التزام مالي جديد يضاف لأصل العقد وجدول السداد مع حوكمة الخزينة (١٠١٠٠٠) وبدون المساس بالأقساط المسددة.' 
-                  : 'Append an extra tranche to contract gross value and installment schedule without altering cleared dues.'}
-              </p>
-            </div>
-          </div>
-
-          <button
-            type="button"
-            onClick={() => {
-              setSupplementSuccess(null);
-              onClose();
-            }}
-            style={{
-              background: '#ffffff',
-              border: '1px solid #e2e8f0',
-              borderRadius: '10px',
-              color: '#64748b',
-              width: '36px',
-              height: '36px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              cursor: 'pointer',
-              transition: 'all 0.15s ease'
-            }}
-          >
-            <X size={18} />
-          </button>
-        </div>
+          {isAr ? 'تشطيبات • تعديلات • مبالغ طارئة' : 'Finishing • Alterations • Annex'}
+        </span>
+      }
+      isAr={isAr}
+      maxWidth="1200px"
+      maxHeight="min(880px, 94vh)"
+      bodyStyle={{ padding: 0, display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}
+    >
 
         {/* ══════════════════════════════════════════════════════════════════════════
             2. TWO-SIDED MASTER-DETAIL GRID
@@ -631,15 +557,13 @@ export const NewChequeModal: React.FC<NewChequeModalProps> = ({
                         padding: '0.9rem 1rem',
                         borderRadius: '14px',
                         border: isSelected 
-                          ? '1.5px solid #946f23' 
+                          ? '1.5px solid var(--erp-accent, #2563eb)' 
                           : '1px solid #e2e8f0',
-                        background: isSelected 
-                          ? 'linear-gradient(135deg, #fdfbf7 0%, #ffffff 100%)' 
-                          : '#ffffff',
+                        background: '#ffffff',
                         cursor: 'pointer',
                         transition: 'all 0.18s cubic-bezier(0.16, 1, 0.3, 1)',
                         boxShadow: isSelected 
-                          ? '0 6px 16px -2px rgba(184, 144, 62, 0.14), 0 0 0 1px rgba(184, 144, 62, 0.15)' 
+                          ? '0 4px 14px -2px var(--erp-accent-tint, rgba(37, 99, 235, 0.15)), 0 0 0 1px var(--erp-accent, #2563eb)' 
                           : '0 1px 3px rgba(15, 23, 42, 0.03)',
                         display: 'flex',
                         flexDirection: 'column',
@@ -655,9 +579,9 @@ export const NewChequeModal: React.FC<NewChequeModalProps> = ({
                             fontFamily: 'monospace, tabular-nums',
                             fontSize: '0.72rem',
                             fontWeight: 800,
-                            color: isSelected ? '#946f23' : '#475569',
-                            background: isSelected ? 'rgba(184, 144, 62, 0.1)' : '#f8fafc',
-                            border: `1px solid ${isSelected ? 'rgba(184, 144, 62, 0.3)' : '#e2e8f0'}`,
+                            color: isSelected ? 'var(--erp-accent, #2563eb)' : '#475569',
+                            background: isSelected ? 'var(--erp-accent-subtle, rgba(37, 99, 235, 0.08))' : '#f8fafc',
+                            border: `1px solid ${isSelected ? 'var(--erp-accent-tint, rgba(37, 99, 235, 0.25))' : '#e2e8f0'}`,
                             padding: '0.15rem 0.5rem',
                             borderRadius: '6px',
                             whiteSpace: 'nowrap',
@@ -669,8 +593,8 @@ export const NewChequeModal: React.FC<NewChequeModalProps> = ({
                             <span style={{
                               fontSize: '0.64rem',
                               fontWeight: 800,
-                              color: '#946f23',
-                              background: 'rgba(184, 144, 62, 0.14)',
+                              color: 'var(--erp-accent, #2563eb)',
+                              background: 'var(--erp-accent-subtle, rgba(37, 99, 235, 0.12))',
                               padding: '0.12rem 0.45rem',
                               borderRadius: '999px',
                               display: 'inline-flex',
@@ -739,7 +663,7 @@ export const NewChequeModal: React.FC<NewChequeModalProps> = ({
                                 whiteSpace: 'nowrap'
                               }}
                             >
-                              <ExternalLink size={10} color="#946f23" />
+                              <ExternalLink size={10} color="var(--erp-accent, #2563eb)" />
                               <span>{isAr ? 'تفاصيل' : 'Details'}</span>
                             </button>
                           )}
@@ -768,7 +692,7 @@ export const NewChequeModal: React.FC<NewChequeModalProps> = ({
                           color: '#64748b',
                           overflow: 'hidden'
                         }}>
-                          <Building2 size={12} color="#946f23" style={{ flexShrink: 0 }} />
+                          <Building2 size={12} color="var(--erp-accent, #2563eb)" style={{ flexShrink: 0 }} />
                           <span style={{
                             overflow: 'hidden',
                             textOverflow: 'ellipsis',
@@ -843,34 +767,34 @@ export const NewChequeModal: React.FC<NewChequeModalProps> = ({
               <div style={{ display: 'flex', flexDirection: 'column', flex: 1, padding: '2rem', gap: '1.5rem', justifyContent: 'center' }}>
                 {/* Success Card */}
                 <div style={{
-                  background: 'linear-gradient(135deg, rgba(5, 150, 105, 0.08) 0%, rgba(184, 144, 62, 0.06) 100%)',
-                  border: '1.5px solid #059669',
+                  background: '#ffffff',
+                  border: '1px solid #cbd5e1',
                   borderRadius: '16px',
                   padding: '1.5rem',
                   display: 'flex',
                   alignItems: 'center',
                   gap: '1.15rem',
-                  boxShadow: '0 4px 16px rgba(5, 150, 105, 0.08)'
+                  boxShadow: '0 1px 3px rgba(15, 23, 42, 0.04)'
                 }}>
                   <div style={{
-                    width: '48px',
-                    height: '48px',
-                    borderRadius: '50%',
-                    background: 'linear-gradient(135deg, #059669 0%, #b8903e 100%)',
-                    color: '#ffffff',
+                    width: '40px',
+                    height: '40px',
+                    borderRadius: '10px',
+                    background: '#f0fdf4',
+                    border: '1px solid #bbf7d0',
+                    color: '#16a34a',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    flexShrink: 0,
-                    boxShadow: '0 4px 12px rgba(5, 150, 105, 0.3)'
+                    flexShrink: 0
                   }}>
-                    <CheckCircle2 size={28} />
+                    <CheckCircle2 size={24} />
                   </div>
                   <div>
-                    <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 900, color: '#065f46' }}>
+                    <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 900, color: '#0f172a' }}>
                       {isAr ? 'تمت إضافة الملحق المالي بنجاح وإدراجه في جدول الأقساط' : 'Supplement Added Successfully'}
                     </h3>
-                    <p style={{ margin: '0.25rem 0 0', fontSize: '0.8rem', color: '#047857', fontWeight: 600 }}>
+                    <p style={{ margin: '0.25rem 0 0', fontSize: '0.8rem', color: '#64748b', fontWeight: 500 }}>
                       {isAr 
                         ? 'تم تحديث القيمة الإجمالية للعقد وتوليد استحقاق حافظة الشيكات والأمانات' 
                         : 'Contract gross value updated and installment tranche added to schedule'}
@@ -880,19 +804,19 @@ export const NewChequeModal: React.FC<NewChequeModalProps> = ({
 
                 {/* Details Summary Card */}
                 <div style={{
-                  background: 'linear-gradient(135deg, #ffffff 0%, #fffdf8 100%)',
-                  border: '1.5px solid rgba(184, 144, 62, 0.35)',
+                  background: '#ffffff',
+                  border: '1px solid #cbd5e1',
                   borderRadius: '16px',
                   padding: '1.5rem',
-                  boxShadow: '0 8px 24px rgba(184, 144, 62, 0.08)',
+                  boxShadow: '0 1px 3px rgba(15, 23, 42, 0.04)',
                   display: 'flex',
                   flexDirection: 'column',
                   gap: '1.25rem'
                 }}>
                   {/* Amount Headline */}
                   <div style={{
-                    background: 'rgba(184, 144, 62, 0.08)',
-                    border: '1px solid rgba(184, 144, 62, 0.25)',
+                    background: '#f8fafc',
+                    border: '1px solid #e2e8f0',
                     borderRadius: '12px',
                     padding: '1rem 1.25rem',
                     display: 'flex',
@@ -900,13 +824,13 @@ export const NewChequeModal: React.FC<NewChequeModalProps> = ({
                     justifyContent: 'space-between'
                   }}>
                     <div>
-                      <span style={{ fontSize: '0.72rem', color: '#785210', fontWeight: 700, display: 'block' }}>
+                      <span style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 700, display: 'block' }}>
                         {isAr ? 'قيمة الملحق المالي المضاف:' : 'Added Supplement Amount:'}
                       </span>
                       <div style={{ fontSize: '1.85rem', fontWeight: 900, color: '#0f172a', fontVariantNumeric: 'tabular-nums', marginTop: '0.2rem' }}>
                         {D(supplementSuccess.amount).formatEGP(isAr)}
                       </div>
-                      <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#b8903e', marginTop: '0.3rem' }}>
+                      <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--erp-accent, #2563eb)', marginTop: '0.3rem' }}>
                         {tafqeetEGP(supplementSuccess.amount)}
                       </div>
                     </div>
@@ -958,7 +882,7 @@ export const NewChequeModal: React.FC<NewChequeModalProps> = ({
                       <span style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: 700, display: 'block' }}>
                         {isAr ? 'نوع وبند الملحق:' : 'Supplement Type:'}
                       </span>
-                      <strong style={{ fontSize: '0.84rem', color: '#946f23', fontWeight: 800, marginTop: '0.15rem', display: 'block' }}>
+                      <strong style={{ fontSize: '0.84rem', color: 'var(--erp-accent, #2563eb)', fontWeight: 800, marginTop: '0.15rem', display: 'block' }}>
                         {supplementSuccess.type}
                       </strong>
                     </div>
@@ -986,17 +910,17 @@ export const NewChequeModal: React.FC<NewChequeModalProps> = ({
                     }}
                     style={{
                       background: '#ffffff',
-                      border: '1.5px solid #b8903e',
-                      color: '#946f23',
+                      border: '1px solid #cbd5e1',
+                      color: '#475569',
                       padding: '0.65rem 1.25rem',
                       borderRadius: '8px',
                       fontSize: '0.82rem',
-                      fontWeight: 800,
+                      fontWeight: 700,
                       cursor: 'pointer',
                       display: 'inline-flex',
                       alignItems: 'center',
                       gap: '0.45rem',
-                      boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
+                      boxShadow: '0 1px 2px rgba(0,0,0,0.03)'
                     }}
                   >
                     <Plus size={15} />
@@ -1032,8 +956,8 @@ export const NewChequeModal: React.FC<NewChequeModalProps> = ({
                 <div style={{
                   padding: '1.25rem 1.5rem',
                   borderRadius: '16px',
-                  background: 'linear-gradient(135deg, #f8fafc 0%, #ffffff 100%)',
-                  border: '1px solid #e2e8f0',
+                  background: '#ffffff',
+                  border: '1px solid #cbd5e1',
                   display: 'flex',
                   flexDirection: 'column',
                   gap: '1rem',
@@ -1126,7 +1050,7 @@ export const NewChequeModal: React.FC<NewChequeModalProps> = ({
                           transition: 'all 0.15s ease'
                         }}
                       >
-                        <ExternalLink size={13} color="#946f23" />
+                        <ExternalLink size={13} color="var(--erp-accent, #2563eb)" />
                         <span>{isAr ? 'عرض ملف وتفاصيل العقد' : 'View Contract Details'}</span>
                       </button>
                     )}
@@ -1158,7 +1082,7 @@ export const NewChequeModal: React.FC<NewChequeModalProps> = ({
 
                     <div>
                       <div style={{ fontSize: '0.7rem', color: '#64748b' }}>{isAr ? 'المتبقي بالأقساط' : 'Remaining Balance'}</div>
-                      <div style={{ fontSize: '1rem', fontWeight: 800, color: activeContractRemaining.gt(0) ? '#946f23' : '#64748b', marginTop: '0.1rem' }}>
+                      <div style={{ fontSize: '1rem', fontWeight: 800, color: activeContractRemaining.gt(0) ? 'var(--erp-accent, #2563eb)' : '#64748b', marginTop: '0.1rem' }}>
                         {activeContractRemaining.formatEGP(isAr)}
                       </div>
                     </div>
@@ -1302,9 +1226,9 @@ export const NewChequeModal: React.FC<NewChequeModalProps> = ({
                         marginTop: '0.45rem',
                         padding: '0.45rem 0.75rem',
                         borderRadius: '8px',
-                        background: '#fffbeb',
-                        border: '1px solid #fde68a',
-                        color: '#92400e',
+                        background: 'var(--erp-accent-subtle, rgba(37, 99, 235, 0.08))',
+                        border: '1px solid var(--erp-accent-tint, rgba(37, 99, 235, 0.25))',
+                        color: 'var(--erp-accent, #2563eb)',
                         fontSize: '0.76rem',
                         fontWeight: 700,
                         display: 'flex',
@@ -1468,18 +1392,18 @@ export const NewChequeModal: React.FC<NewChequeModalProps> = ({
                   <div style={{
                     padding: '1rem 1.25rem',
                     borderRadius: '14px',
-                    background: '#fdf8ef',
-                    border: '1px solid rgba(184, 144, 62, 0.35)',
+                    background: '#ffffff',
+                    border: '1px solid var(--erp-border, #cbd5e1)',
                     display: 'flex',
                     flexDirection: 'column',
                     gap: '0.65rem'
                   }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#946f23', fontWeight: 800, fontSize: '0.84rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--erp-accent, #2563eb)', fontWeight: 800, fontSize: '0.84rem' }}>
                         <ShieldCheck size={16} />
                         <span>{isAr ? 'معاينة الأثر المالي على العقد والخزينة' : 'Financial Impact & Safe Portfolio Preview'}</span>
                       </div>
-                      <span style={{ fontSize: '0.72rem', color: '#946f23', fontWeight: 700 }}>
+                      <span style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 700 }}>
                         Zero-Float Verified
                       </span>
                     </div>
@@ -1488,10 +1412,10 @@ export const NewChequeModal: React.FC<NewChequeModalProps> = ({
                       display: 'grid',
                       gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
                       gap: '0.75rem',
-                      background: '#ffffff',
+                      background: '#f8fafc',
                       padding: '0.85rem',
                       borderRadius: '10px',
-                      border: '1px solid rgba(184, 144, 62, 0.2)'
+                      border: '1px solid #e2e8f0'
                     }}>
                       <div>
                         <div style={{ fontSize: '0.68rem', color: '#64748b' }}>{isAr ? 'إجمالي العقد بعد الإضافة' : 'New Gross Contract'}</div>
@@ -1515,7 +1439,7 @@ export const NewChequeModal: React.FC<NewChequeModalProps> = ({
 
                       <div>
                         <div style={{ fontSize: '0.68rem', color: '#64748b' }}>{isAr ? 'محفظة الأمانات بالخزينة' : 'Safe Portfolio Entry'}</div>
-                        <div style={{ fontSize: '0.92rem', fontWeight: 800, color: '#946f23', marginTop: '0.1rem' }}>
+                        <div style={{ fontSize: '0.92rem', fontWeight: 800, color: 'var(--erp-accent, #2563eb)', marginTop: '0.1rem' }}>
                           {isAr ? 'أمانات نقدية [١٠١٠٠٠]' : 'In Safe [101000]'}
                         </div>
                         <div style={{ fontSize: '0.68rem', color: '#64748b' }}>
@@ -1563,7 +1487,7 @@ export const NewChequeModal: React.FC<NewChequeModalProps> = ({
                       border: 'none',
                       background: activeContractIsClosed
                         ? '#cbd5e1'
-                        : 'linear-gradient(135deg, #b8903e 0%, #946f23 100%)',
+                        : 'var(--erp-accent, #2563eb)',
                       color: activeContractIsClosed ? '#64748b' : '#ffffff',
                       fontSize: '0.86rem',
                       fontWeight: 800,
@@ -1572,7 +1496,18 @@ export const NewChequeModal: React.FC<NewChequeModalProps> = ({
                       gap: '0.5rem',
                       cursor: isMutating || addAmount.lte(0) || activeContractIsClosed ? 'not-allowed' : 'pointer',
                       opacity: isMutating || addAmount.lte(0) || activeContractIsClosed ? 0.65 : 1,
-                      boxShadow: activeContractIsClosed ? 'none' : '0 4px 14px rgba(184, 144, 62, 0.3)'
+                      boxShadow: activeContractIsClosed ? 'none' : '0 2px 8px var(--erp-accent-tint, rgba(37, 99, 235, 0.25))',
+                      transition: 'all 0.15s ease'
+                    }}
+                    onMouseEnter={e => {
+                      if (!isMutating && !activeContractIsClosed && addAmount.gt(0)) {
+                        e.currentTarget.style.background = 'var(--erp-accent-hover, #1d4ed8)';
+                      }
+                    }}
+                    onMouseLeave={e => {
+                      if (!isMutating && !activeContractIsClosed) {
+                        e.currentTarget.style.background = 'var(--erp-accent, #2563eb)';
+                      }
                     }}
                   >
                     {activeContractIsClosed ? (
@@ -1605,8 +1540,7 @@ export const NewChequeModal: React.FC<NewChequeModalProps> = ({
           </div>
 
         </div>
-      </div>
-    </div>
+    </ZFModalShell>
   );
 };
 

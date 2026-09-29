@@ -1,1 +1,0 @@
-export { CatalogView } from '@/components/catalog/CatalogView';

@@ -18,6 +18,7 @@ import {
 import { ERPContract } from '@/lib/erp/types';
 import { D, formatEGP } from '@/lib/erp/math';
 import { MoneyCell } from '@/components/erp/MoneyCell';
+import { ZFModalShell } from '../common/ZFModalShell';
 
 export interface ContractEscalationModalProps {
   isOpen: boolean;
@@ -133,112 +134,38 @@ export const ContractEscalationModal: React.FC<ContractEscalationModalProps> = (
     }
   };
 
-  return (
-    <div style={{
-      position: 'fixed',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      background: 'rgba(15, 23, 42, 0.65)',
-      backdropFilter: 'blur(10px)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      zIndex: 9999,
-      padding: '1.25rem',
-      direction: isAr ? 'rtl' : 'ltr'
-    }}>
-      <div 
-        style={{
-          background: '#ffffff',
-          border: '1px solid #cbd5e1',
-          borderRadius: '24px',
-          width: '100%',
-          maxWidth: '1100px',
-          height: 'min(820px, 94vh)',
-          boxShadow: '0 25px 65px -15px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(0,0,0,0.04)',
-          overflow: 'hidden',
-          display: 'flex',
-          flexDirection: 'column'
-        }}
-        onClick={e => e.stopPropagation()}
-      >
-        {/* ══════════════════════════════════════════════════════════════════════════
-            1. TOP HEADER BAR
-            ══════════════════════════════════════════════════════════════════════════ */}
-        <div style={{
-          padding: '1.1rem 1.75rem',
-          borderBottom: '1px solid #e2e8f0',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          background: 'linear-gradient(135deg, #f8fafc 0%, #ffffff 100%)',
-          flexShrink: 0
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
-            <div style={{
-              width: '42px',
-              height: '42px',
-              borderRadius: '12px',
-              background: 'linear-gradient(135deg, rgba(184, 144, 62, 0.18) 0%, rgba(184, 144, 62, 0.06) 100%)',
-              border: '1px solid rgba(184, 144, 62, 0.35)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: '#946f23',
-              flexShrink: 0
-            }}>
-              <TrendingUp size={22} />
-            </div>
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-                <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: '#0f172a' }}>
-                  {isAr ? 'تصعيد وتعديل قيمة العقد (Delta V - ملحق تعاقدي)' : 'Contract Value Escalation (Delta V - Addendum)'}
-                </h3>
-                <span style={{
-                  background: 'rgba(184, 144, 62, 0.12)',
-                  color: '#946f23',
-                  border: '1px solid rgba(184, 144, 62, 0.25)',
-                  padding: '0.18rem 0.65rem',
-                  borderRadius: '20px',
-                  fontSize: '0.72rem',
-                  fontWeight: 800
-                }}>
-                  {isAr ? 'إصدار ثانٍ موثق' : 'Append-Only v2'}
-                </span>
-              </div>
-              <p style={{ margin: '0.2rem 0 0', fontSize: '0.75rem', color: '#64748b' }}>
-                {isAr 
-                  ? 'إثبات الزيادة السعرية أو فروق التشطيب وتعديل القيمة الإجمالية مع ترحيل قيد تسوية للإيراد المؤجل (٢٠٢٠٠٠).' 
-                  : 'Record contract price adjustments and generate revised installment schedules without affecting paid dues.'}
-              </p>
-            </div>
-          </div>
+  const handleModalClose = () => {
+    setEscalationSuccess(null);
+    onClose();
+  };
 
-          <button
-            type="button"
-            onClick={() => {
-              setEscalationSuccess(null);
-              onClose();
-            }}
-            style={{
-              background: '#ffffff',
-              border: '1px solid #e2e8f0',
-              borderRadius: '10px',
-              color: '#64748b',
-              width: '34px',
-              height: '34px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              cursor: 'pointer',
-              transition: 'all 0.15s ease'
-            }}
-          >
-            <X size={17} />
-          </button>
-        </div>
+  return (
+    <ZFModalShell
+      isOpen={isOpen}
+      onClose={handleModalClose}
+      title={isAr ? 'تصعيد وتعديل قيمة العقد (Delta V - ملحق تعاقدي)' : 'Contract Value Escalation (Delta V - Addendum)'}
+      subtitle={isAr 
+        ? 'إثبات الزيادة السعرية أو فروق التشطيب وتعديل القيمة الإجمالية مع ترحيل قيد تسوية للإيراد المؤجل (٢٠٢٠٠٠).' 
+        : 'Record contract price adjustments and generate revised installment schedules without affecting paid dues.'}
+      icon={<TrendingUp size={18} />}
+      headerExtra={
+        <span style={{
+          background: 'rgba(184, 144, 62, 0.12)',
+          color: '#946f23',
+          border: '1px solid rgba(184, 144, 62, 0.25)',
+          padding: '0.18rem 0.65rem',
+          borderRadius: '20px',
+          fontSize: '0.72rem',
+          fontWeight: 800
+        }}>
+          {isAr ? 'إصدار ثانٍ موثق' : 'Append-Only v2'}
+        </span>
+      }
+      isAr={isAr}
+      maxWidth="1100px"
+      maxHeight="min(820px, 94vh)"
+      bodyStyle={{ padding: 0, display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}
+    >
 
         {/* ══════════════════════════════════════════════════════════════════════════
             2. TWO-SIDED MASTER-DETAIL GRID
@@ -848,7 +775,6 @@ export const ContractEscalationModal: React.FC<ContractEscalationModalProps> = (
             )}
           </div>
         </div>
-      </div>
-    </div>
+    </ZFModalShell>
   );
 };

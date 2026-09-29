@@ -1,0 +1,1390 @@
+/* ==========================================================================
+   FIN-OS ERP — PROPERTIES & UNITS PORTFOLIO VIEW v2
+   Authoritative FIN-OS Design System: Pure White Panels, Thin 1px Hairlines,
+   Slate #f1f5f9 Canvas, Dynamic Accent Reactivity, Tabular Nums, Strict RTL
+   ========================================================================== */
+
+.container {
+  width: 100%;
+  max-width: 100vw;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1.15rem;
+  box-sizing: border-box;
+  container-type: inline-size;
+  container-name: propertiesView;
+}
+
+/* ─── 1. TOP HEADER & TELEMETRY ─── */
+.headerRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.headerLeading {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.titleGroup {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.pageTitle {
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: var(--erp-text-title, #0f172a);
+  margin: 0;
+  letter-spacing: -0.02em;
+}
+
+.portfolioTag {
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.2rem 0.55rem;
+  border-radius: 6px;
+  background: var(--erp-accent-tint, rgba(37, 99, 235, 0.08));
+  border: 1px solid rgba(37, 99, 235, 0.25);
+  color: var(--erp-accent, #2563eb);
+}
+
+.operatingAssetsPill {
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.2rem 0.65rem;
+  border-radius: 6px;
+  background: #ffffff;
+  border: 1px solid var(--erp-border, #cbd5e1);
+  color: var(--erp-text-title, #0f172a);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.pageSubtitle {
+  font-size: 0.8rem;
+  color: var(--erp-text-muted, #64748b);
+  margin: 0;
+}
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+/* Master Segmented Tab Bar */
+.masterTabBar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+}
+
+/* ─── 2. MAIN 100% FULL-WIDTH WORKSPACE ─── */
+.workspaceGrid {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  gap: 1.15rem;
+}
+
+.workstationTabs {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  border-bottom: 1px solid #cbd5e1;
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.1rem;
+  overflow-x: auto;
+}
+
+.workstationTabBtn {
+  padding: 0.65rem 0.25rem;
+  background: none;
+  border: none;
+  border-bottom: 2.5px solid transparent;
+  color: #64748b;
+  font-weight: 600;
+  font-size: 0.86rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.workstationTabBtnActive {
+  border-bottom-color: var(--erp-accent, #2563eb);
+  color: var(--erp-accent, #2563eb);
+  font-weight: 800;
+}
+
+/* ─── MAIN COLUMN (SHOWCASE & TABLE) ─── */
+.mainColumn {
+  display: flex;
+  flex-direction: column;
+  gap: 1.15rem;
+  min-width: 0;
+  container-type: inline-size;
+  container-name: mainColumn;
+}
+
+/* Top filter bar over project cards */
+.cardsFilterBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  background: #ffffff;
+  border: 1px solid var(--erp-card-border, #e2e8f0);
+  border-radius: 10px;
+  padding: 0.45rem 0.65rem;
+}
+
+.cardsFilterTabs {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  flex-wrap: wrap;
+}
+
+.cardsFilterPill {
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  padding: 0.3rem 0.65rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--erp-text-body, #334155);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  white-space: nowrap;
+}
+
+.cardsFilterPill:hover {
+  background: #f1f5f9;
+  color: var(--erp-text-title, #0f172a);
+}
+
+.cardsFilterPillActive {
+  background: var(--erp-accent, #2563eb) !important;
+  color: #ffffff !important;
+  font-weight: 700;
+}
+
+.viewModeGroup {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  background: #f1f5f9;
+  border-radius: 6px;
+  padding: 0.15rem;
+}
+
+.viewModeBtn {
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--erp-text-muted, #64748b);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.viewModeBtn:hover {
+  color: var(--erp-text-title, #0f172a);
+}
+
+.viewModeBtnActive {
+  background: #ffffff;
+  color: var(--erp-accent, #2563eb);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.cardsBarControls {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.projectNavGroup {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: #f8fafc;
+  border: 1px solid var(--erp-card-border, #e2e8f0);
+  border-radius: 6px;
+  padding: 0.15rem 0.4rem;
+}
+
+.projectNavCounter {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--erp-text-muted, #64748b);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.projectNavBtns {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15rem;
+}
+
+.projectNavBtn {
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--erp-text-body, #334155);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.projectNavBtn:hover:not(:disabled) {
+  background: #ffffff;
+  color: var(--erp-accent, #2563eb);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.projectNavBtn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.toggleAllProjectsBtn {
+  background: #ffffff;
+  border: 1px solid var(--erp-card-border, #e2e8f0);
+  border-radius: 6px;
+  padding: 0.32rem 0.65rem;
+  font-size: 0.73rem;
+  font-weight: 700;
+  color: var(--erp-text-body, #334155);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.toggleAllProjectsBtn:hover {
+  background: #f8fafc;
+  border-color: var(--erp-accent, #2563eb);
+  color: var(--erp-accent, #2563eb);
+}
+
+.toggleAllProjectsBtnActive {
+  background: var(--erp-accent-subtle, #eff6ff) !important;
+  border-color: var(--erp-accent, #2563eb) !important;
+  color: var(--erp-accent, #2563eb) !important;
+}
+
+/* ─── FIN-OS HIGH-DENSITY 3-4 COLUMN SHOWCASE GRID ─── */
+.showcaseGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1.15rem;
+}
+
+@container propertiesView (max-width: 1400px) {
+  .showcaseGrid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@container propertiesView (max-width: 900px) {
+  .showcaseGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@container propertiesView (max-width: 580px) {
+  .showcaseGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Backward compatibility */
+.projectCardsGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+@container propertiesView (max-width: 900px) {
+  .projectCardsGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@container propertiesView (max-width: 580px) {
+  .projectCardsGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Floor Sectioning Styles */
+.floorSectionRow {
+  background: #fafbfc;
+  border-bottom: 1px solid #edf2f7;
+}
+
+.floorSectionBadge {
+  font-size: 0.67rem;
+  font-weight: 600;
+  background: #edf2f7;
+  color: #475569;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-variant-numeric: tabular-nums;
+}
+
+.projectCard {
+  background: #ffffff;
+  border: 1px solid var(--erp-card-border, #e2e8f0);
+  border-radius: 12px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  position: relative;
+}
+
+.projectCard:hover {
+  border-color: var(--erp-border, #cbd5e1);
+  box-shadow: 0 4px 12px -2px rgba(15, 23, 42, 0.06);
+}
+
+.projectCardSelected {
+  border-color: var(--erp-accent, #2563eb) !important;
+  box-shadow: 0 0 0 1px var(--erp-accent, #2563eb), 0 4px 12px -2px rgba(37, 99, 235, 0.12) !important;
+}
+
+/* Project Card Top Image */
+.projectImgWrap {
+  position: relative;
+  height: 125px;
+  width: 100%;
+  overflow: hidden;
+  background: #0f172a;
+}
+
+.projectImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s ease;
+}
+
+.projectCard:hover .projectImg {
+  transform: scale(1.02);
+}
+
+.projectImgGradient {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, rgba(15, 23, 42, 0.45) 0%, rgba(15, 23, 42, 0.05) 50%, transparent 100%);
+}
+
+.projectImgStatusBadge {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 2;
+}
+
+:global([dir="ltr"]) .projectImgStatusBadge {
+  right: auto;
+  left: 10px;
+}
+
+.projectImgCategoryBadge {
+  position: absolute;
+  bottom: 10px;
+  right: 10px;
+  z-index: 2;
+  background: rgba(15, 23, 42, 0.85);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  padding: 0.2rem 0.55rem;
+  border-radius: 6px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  backdrop-filter: blur(6px);
+}
+
+:global([dir="ltr"]) .projectImgCategoryBadge {
+  right: auto;
+  left: 10px;
+}
+
+/* Project Card Content */
+.projectCardBody {
+  padding: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  flex: 1;
+}
+
+.projectTitleLocation {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.projectTitle {
+  font-size: 0.86rem;
+  font-weight: 800;
+  color: var(--erp-text-title, #0f172a);
+  margin: 0;
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.projectLocation {
+  font-size: 0.72rem;
+  color: var(--erp-text-muted, #64748b);
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Progress bar section */
+.projectProgressWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.projectProgressHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.72rem;
+}
+
+.projectProgressLabel {
+  color: var(--erp-text-muted, #64748b);
+  font-weight: 600;
+}
+
+.projectProgressVal {
+  font-weight: 800;
+  color: var(--erp-text-title, #0f172a);
+  font-variant-numeric: tabular-nums;
+}
+
+.progressBarTrack {
+  width: 100%;
+  height: 6px;
+  background: #f1f5f9;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.progressBarFill {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--erp-accent, #2563eb);
+  transition: width 0.4s ease;
+}
+
+.progressBarFillSuccess {
+  background: #16a34a !important;
+}
+
+/* Units Telemetry Strip */
+.projectUnitsStrip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #f8fafc;
+  border: 1px solid var(--erp-card-border, #e2e8f0);
+  border-radius: 6px;
+  padding: 0.32rem 0.5rem;
+  font-size: 0.72rem;
+}
+
+.projectUnitTag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.projectUnitTagDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.projectUnitTagLabel {
+  color: var(--erp-text-muted, #64748b);
+  font-size: 0.68rem;
+}
+
+.projectUnitTagVal {
+  color: var(--erp-text-title, #0f172a);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  font-size: 0.74rem;
+}
+
+.projectUnitsDivider {
+  color: #cbd5e1;
+  font-size: 0.75rem;
+}
+
+/* Price Range & Actions Footer */
+.projectCardFooter {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-top: auto;
+  padding-top: 0.45rem;
+  border-top: 1px solid #f1f5f9;
+}
+
+.projectPriceBox {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.projectPriceLabel {
+  font-size: 0.64rem;
+  color: var(--erp-text-muted, #64748b);
+  white-space: nowrap;
+}
+
+.projectPriceValue {
+  font-size: 0.82rem;
+  font-weight: 800;
+  color: var(--erp-text-title, #0f172a);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.projectCardActions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.25rem;
+  width: 100%;
+}
+
+.projectActionBtn {
+  background: #ffffff;
+  border: 1px solid var(--erp-card-border, #e2e8f0);
+  border-radius: 5px;
+  padding: 0.28rem 0.45rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--erp-text-body, #334155);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+}
+
+.projectActionBtn:hover {
+  background: #f8fafc;
+  color: var(--erp-accent, #2563eb);
+  border-color: var(--erp-accent, #2563eb);
+}
+
+.projectActionBtnPrimary {
+  background: var(--erp-accent, #2563eb) !important;
+  color: #ffffff !important;
+  border-color: var(--erp-accent, #2563eb) !important;
+}
+
+.projectActionBtnPrimary:hover {
+  background: var(--erp-accent-hover, #1d4ed8) !important;
+}
+
+/* ─── CANONICAL UNITS INVENTORY TABLE ─── */
+.tableCard {
+  background: #ffffff;
+  border: 1px solid var(--erp-card-border, #e2e8f0);
+  border-radius: 12px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.tableHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.9rem 1.15rem;
+  border-bottom: 1px solid var(--erp-card-border, #e2e8f0);
+  background: #ffffff;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.tableHeaderLeading {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.tableTitle {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--erp-text-title, #0f172a);
+  margin: 0;
+}
+
+.unitCountBadge {
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.18rem 0.55rem;
+  border-radius: 999px;
+  background: var(--erp-accent-subtle, #eff6ff);
+  color: var(--erp-accent, #2563eb);
+  border: 1px solid rgba(37, 99, 235, 0.2);
+  font-variant-numeric: tabular-nums;
+}
+
+.clearProjectFilterBtn {
+  background: var(--erp-accent-tint, rgba(37, 99, 235, 0.08));
+  border: 1px solid rgba(37, 99, 235, 0.25);
+  border-radius: 6px;
+  padding: 0.18rem 0.55rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--erp-accent, #2563eb);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  transition: all 0.15s ease;
+}
+
+.clearProjectFilterBtn:hover {
+  background: var(--erp-accent, #2563eb);
+  color: #ffffff;
+}
+
+.tableHeaderControls {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.tableScrollArea {
+  width: 100%;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.inventoryTable {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: right;
+  font-size: 0.73rem;
+}
+
+:global([dir="ltr"]) .inventoryTable {
+  text-align: left;
+}
+
+.tableHead {
+  background: #fafbfc;
+  border-bottom: 1px solid var(--erp-card-border, #e2e8f0);
+}
+
+.tableTh {
+  padding: 0.5rem 0.25rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--erp-text-muted, #64748b);
+  white-space: nowrap;
+}
+
+.tableRow {
+  border-bottom: 1px solid #f1f5f9;
+  transition: background 0.15s ease;
+  cursor: pointer;
+  height: 46px;
+  min-height: 46px;
+}
+
+.tableRow:hover {
+  background: #f8fafc;
+}
+
+.tableTd {
+  padding: 0.5rem 0.25rem;
+  color: var(--erp-text-body, #334155);
+  vertical-align: middle;
+  white-space: nowrap;
+  font-size: 0.72rem;
+}
+
+.tableTdProject {
+  max-width: 140px;
+  min-width: 100px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+}
+
+.tableTdBold {
+  font-weight: 700;
+  color: var(--erp-text-title, #0f172a);
+}
+
+.tableTdNum {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  color: var(--erp-text-title, #0f172a);
+}
+
+.tableActionIconBtn {
+  width: 25px;
+  height: 25px;
+  border-radius: 6px;
+  background: #ffffff;
+  border: 1px solid var(--erp-card-border, #e2e8f0);
+  color: var(--erp-text-body, #334155);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.tableActionIconBtn:hover {
+  background: #f8fafc;
+  color: var(--erp-accent, #2563eb);
+  border-color: var(--erp-accent, #2563eb);
+}
+
+.tableActionIconBtnPrimary {
+  background: #f8fafc;
+  color: var(--erp-accent, #2563eb);
+  border-color: #cbd5e1;
+}
+
+.tableActionIconBtnPrimary:hover {
+  background: var(--erp-accent-subtle, #eff6ff) !important;
+  color: var(--erp-accent, #2563eb) !important;
+  border-color: var(--erp-accent, #2563eb) !important;
+}
+
+@container mainColumn (max-width: 820px) {
+  .colDownPayment {
+    display: none !important;
+  }
+}
+
+.tableFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1.15rem;
+  border-top: 1px solid var(--erp-card-border, #e2e8f0);
+  background: #fafbfc;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.tableFooterLeading {
+  font-size: 0.75rem;
+  color: var(--erp-text-muted, #64748b);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ─── COMPANION SIDE COLUMN (FILTERS, PIE, MAP) ─── */
+.sideColumn {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  width: 100%;
+  position: sticky;
+  top: 0.75rem;
+  max-height: calc(100vh - 80px);
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+
+.sideColumn::-webkit-scrollbar {
+  display: none;
+}
+
+/* Primary "+ New Project / Contract" Trigger */
+.newProjectBtn {
+  width: 100%;
+  height: 38px;
+  background: var(--erp-accent, #2563eb);
+  color: #ffffff;
+  border: 1px solid var(--erp-accent, #2563eb);
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 800;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  transition: background 0.15s ease;
+  box-shadow: 0 1px 3px rgba(37, 99, 235, 0.2);
+}
+
+.newProjectBtn:hover {
+  background: var(--erp-accent-hover, #1d4ed8);
+  border-color: var(--erp-accent-hover, #1d4ed8);
+}
+
+/* Side Card Blueprint */
+.sideCard {
+  background: #ffffff;
+  border: 1px solid var(--erp-card-border, #e2e8f0);
+  border-radius: 12px;
+  padding: 0.7rem 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.sideCardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid #f1f5f9;
+  padding-bottom: 0.45rem;
+}
+
+.sideCardTitleGroup {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.sideCardIconSquircle {
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  background: var(--erp-accent-subtle, #eff6ff);
+  color: var(--erp-accent, #2563eb);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.sideCardTitle {
+  font-size: 0.86rem;
+  font-weight: 800;
+  color: var(--erp-text-title, #0f172a);
+  margin: 0;
+}
+
+/* Form inputs inside Advanced Search */
+.filterField {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.filterDropdownsGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.45rem;
+}
+
+.filterLabel {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--erp-text-body, #334155);
+}
+
+.filterInputWrap {
+  position: relative;
+  width: 100%;
+}
+
+.filterInputIcon {
+  position: absolute;
+  top: 50%;
+  right: 10px;
+  transform: translateY(-50%);
+  color: var(--erp-text-subtle, #94a3b8);
+  pointer-events: none;
+}
+
+:global([dir="ltr"]) .filterInputIcon {
+  right: auto;
+  left: 10px;
+}
+
+.filterTextInput {
+  width: 100%;
+  background: #ffffff;
+  border: 1px solid var(--erp-border, #cbd5e1);
+  border-radius: 8px;
+  padding: 0.5rem 2rem 0.5rem 0.75rem;
+  font-size: 0.78rem;
+  color: var(--erp-text-title, #0f172a);
+  outline: none;
+  transition: border-color 0.15s ease;
+  box-sizing: border-box;
+}
+
+:global([dir="ltr"]) .filterTextInput {
+  padding: 0.5rem 0.75rem 0.5rem 2rem;
+}
+
+.filterTextInput:focus {
+  border-color: var(--erp-accent, #2563eb);
+}
+
+.filterSelect {
+  width: 100%;
+  background: #ffffff;
+  border: 1px solid var(--erp-border, #cbd5e1);
+  border-radius: 8px;
+  padding: 0.38rem 0.5rem;
+  font-size: 0.74rem;
+  color: var(--erp-text-title, #0f172a);
+  outline: none;
+  cursor: pointer;
+  transition: border-color 0.15s ease;
+  box-sizing: border-box;
+}
+
+.filterSelect:focus {
+  border-color: var(--erp-accent, #2563eb);
+}
+
+.filterActionsGroup {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.35rem;
+}
+
+.filterApplyBtn {
+  flex: 1;
+  background: var(--erp-accent, #2563eb);
+  color: #ffffff;
+  border: 1px solid var(--erp-accent, #2563eb);
+  border-radius: 8px;
+  padding: 0.5rem 0.85rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  transition: background 0.15s ease;
+}
+
+.filterApplyBtn:hover {
+  background: var(--erp-accent-hover, #1d4ed8);
+}
+
+.filterResetBtn {
+  background: #f1f5f9;
+  color: var(--erp-text-body, #334155);
+  border: 1px solid var(--erp-card-border, #e2e8f0);
+  border-radius: 8px;
+  padding: 0.5rem 0.85rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.filterResetBtn:hover {
+  background: #e2e8f0;
+  color: var(--erp-text-title, #0f172a);
+}
+
+/* ─── DONUT / PIE BREAKDOWN LEGEND ─── */
+.distributionLegend {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.25rem 0.45rem;
+  margin-top: 0.2rem;
+}
+
+.distributionItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.68rem;
+  padding: 0.2rem 0.35rem;
+  border-radius: 5px;
+  background: #f8fafc;
+  transition: background 0.15s ease;
+}
+
+.distributionItem:hover {
+  background: #f1f5f9;
+}
+
+.distributionLeading {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.distributionDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.distributionName {
+  font-weight: 600;
+  color: var(--erp-text-title, #0f172a);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 0.68rem;
+}
+
+.distributionTrailing {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+
+.distributionCount {
+  font-size: 0.65rem;
+  color: var(--erp-text-muted, #64748b);
+}
+
+.distributionPct {
+  font-weight: 800;
+  color: var(--erp-text-title, #0f172a);
+  font-size: 0.68rem;
+}
+
+:global([dir="ltr"]) .distributionPct {
+  text-align: right;
+}
+
+/* ─── MINI MAP COMPONENT ─── */
+.miniMapCanvas {
+  position: relative;
+  width: 100%;
+  height: 105px;
+  background: #0f172a;
+  border: 1px solid var(--erp-card-border, #e2e8f0);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.miniMapSvg {
+  width: 100%;
+  height: 100%;
+}
+
+.mapMarkerPin {
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.mapMarkerPin:hover {
+  transform: scale(1.25);
+}
+
+.viewFullMapBtn {
+  width: 100%;
+  background: #f8fafc;
+  border: 1px solid var(--erp-card-border, #e2e8f0);
+  border-radius: 8px;
+  padding: 0.5rem;
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: var(--erp-text-body, #334155);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  transition: all 0.15s ease;
+}
+
+.viewFullMapBtn:hover {
+  background: #ffffff;
+  border-color: var(--erp-accent, #2563eb);
+  color: var(--erp-accent, #2563eb);
+}
+
+/* ─── MODAL OVERLAYS & DIALOGS ─── */
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(8px);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  box-sizing: border-box;
+}
+
+.modalDialog {
+  background: #ffffff;
+  border: 1px solid var(--erp-card-border, #e2e8f0);
+  border-radius: 16px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
+  width: 100%;
+  max-width: 920px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.modalHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.15rem 1.5rem;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.modalBody {
+  padding: 1.5rem;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  scrollbar-width: thin;
+}
+
+.modalCloseBtn {
+  background: #f1f5f9;
+  border: 1px solid var(--erp-card-border, #e2e8f0);
+  border-radius: 8px;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--erp-text-body, #334155);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.modalCloseBtn:hover {
+  background: #e2e8f0;
+  color: var(--erp-text-title, #0f172a);
+}
+
+/* ─── Building Section Grouping in Units Table ─── */
+.buildingSectionRow {
+  background: #f8fafc !important;
+  border-top: 1px solid var(--erp-border, #cbd5e1);
+  border-bottom: 1px solid var(--erp-card-border, #e2e8f0);
+}
+
+.buildingSectionTd {
+  padding: 0.55rem 0.75rem !important;
+  vertical-align: middle;
+}
+
+.buildingSectionContent {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+}
+
+.buildingSectionLeading {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  flex-wrap: wrap;
+}
+
+.buildingSectionToggleBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  border: 1px solid var(--erp-border, #cbd5e1);
+  background: #ffffff;
+  color: var(--erp-text-muted, #64748b);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  padding: 0;
+}
+
+.buildingSectionToggleBtn:hover {
+  background: var(--erp-accent-subtle, #eff6ff);
+  color: var(--erp-accent, #2563eb);
+  border-color: var(--erp-accent, #2563eb);
+}
+
+.buildingSectionSquircle {
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  background: #ffffff;
+  border: 1px solid var(--erp-border, #cbd5e1);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--erp-accent, #2563eb);
+  flex-shrink: 0;
+}
+
+.buildingSectionTitleInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.buildingSectionTitleRow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.buildingSectionTitle {
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: var(--erp-text-title, #0f172a);
+}
+
+.buildingSectionLocation {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 0.7rem;
+  color: var(--erp-text-muted, #64748b);
+}
+
+.buildingSectionTrailing {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+}
+
+.buildingSectionStats {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #475569;
+  font-variant-numeric: tabular-nums;
+}
+
+.statsDot {
+  color: #cbd5e1;
+  font-weight: 400;
+}
+
+.buildingSectionActions {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.buildingSectionActionBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: #ffffff;
+  border: 1px solid var(--erp-border, #cbd5e1);
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--erp-text-body, #334155);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.buildingSectionActionBtn:hover {
+  background: var(--erp-accent-subtle, #eff6ff);
+  color: var(--erp-accent, #2563eb);
+  border-color: var(--erp-accent, #2563eb);
+}
+
+.buildingUnitRow {
+  background: #ffffff;
+}
+
+.buildingUnitRow:hover {
+  background: #f8fafc;
+}
+
+:global([data-theme="dark"]) .buildingSectionRow {
+  background: #1e293b !important;
+  border-color: #334155;
+}
+
+:global([data-theme="dark"]) .buildingSectionToggleBtn,
+:global([data-theme="dark"]) .buildingSectionSquircle,
+:global([data-theme="dark"]) .buildingSectionActionBtn {
+  background: #0f172a;
+  border-color: #334155;
+  color: #cbd5e1;
+}
+
+:global([data-theme="dark"]) .buildingSectionTitle {
+  color: #f8fafc;
+}
+
+:global([data-theme="dark"]) .buildingUnitRow {
+  background: #0f172a;
+}
+
+:global([data-theme="dark"]) .buildingUnitRow:hover {
+  background: #1e293b;
+}
+

@@ -14,6 +14,7 @@ import {
   generateStrategicAdvisories,
   computeLeadChannelBreakdown
 } from '@/lib/services/dashboardAnalytics';
+import { getActiveProperties } from '@/lib/erp/canonicalMetrics';
 
 interface Props {
   params: Promise<{ adminLocale: string }>;
@@ -46,7 +47,7 @@ export default async function AnalyticsPage({ params }: Props) {
     getAllLeads().catch(() => []),
   ]);
 
-  const activeProperties = properties.filter((p) => p.listing_status === 'active');
+  const activeProperties = getActiveProperties(properties);
   const staleLeads = leads.filter(isStale);
 
   // Compute analytics

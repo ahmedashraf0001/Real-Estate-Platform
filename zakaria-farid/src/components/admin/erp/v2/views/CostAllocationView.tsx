@@ -3,80 +3,122 @@
 import React, { useState, useMemo } from 'react';
 import { 
   Calculator, 
-  FileText, 
-  DollarSign, 
-  Search, 
-  LayoutGrid, 
-  List, 
   Eye, 
-  Percent,
-  Plus,
-  RotateCcw,
-  ArrowUpDown,
-  TrendingUp,
-  BarChart3
+  Percent, 
+  Plus, 
+  TrendingUp, 
+  BarChart3,
+  HardHat,
+  ShieldCheck
 } from 'lucide-react';
-import { ERPCostAllocation } from '@/lib/erp/types';
+import { ERPCostAllocation, ERPContract } from '@/lib/erp/types';
+import { Property } from '@/lib/supabase/types';
 import { D } from '@/lib/erp/math';
+import { RSVEngine } from '@/lib/erp/rsv';
 import { MoneyCell } from '@/components/erp/MoneyCell';
 import { ZFPagination } from '../ZFPagination';
-import { ZFKpiCard } from '../ZFKpiCard';
 import { ZFFilterToolbar } from '../ZFFilterToolbar';
 import { ZFErpBreadcrumb } from '../common/ZFErpBreadcrumb';
+import { ZFKpiCard, ZFKpiGrid } from '../ZFKpiCard';
+import { CostAllocationAnalyticsCharts } from './cost-allocation/CostAllocationAnalyticsCharts';
+import { CostAllocationDetailDrawer } from './cost-allocation/CostAllocationDetailDrawer';
 import styles from '../ZFWorkstationShell.module.css';
 
-interface CostAllocationViewProps {
+export type CostAllocationSortOption = 'date_desc' | 'date_asc' | 'rsv_desc' | 'rsv_asc' | 'wip_desc' | 'name_asc';
+
+export interface CostAllocationViewProps {
   costAllocations: ERPCostAllocation[];
+  contracts?: ERPContract[];
+  properties?: Property[];
   isAr?: boolean;
   onOpenNewAllocation: () => void;
-  onInspectRSV: (allocation: ERPCostAllocation) => void;
+  onInspectRSV?: (allocation: ERPCostAllocation) => void;
+  initialInspectingAllocationId?: string;
 }
 
 export const CostAllocationView: React.FC<CostAllocationViewProps> = ({
   costAllocations,
+  contracts = [],
+  properties = [],
   isAr = true,
   onOpenNewAllocation,
-  onInspectRSV
+  onInspectRSV,
+  initialInspectingAllocationId
 }) => {
-  const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards');
-  const [sortBy, setSortBy] = useState<'date_desc' | 'date_asc' | 'rsv_desc' | 'rsv_asc' | 'wip_desc' | 'name_asc'>('date_desc');
+  const [viewMode, setViewMode] = useState<'cards' | 'table'>('table');
+  const [activeTab, setActiveTab] = useState<'all' | 'high_margin' | 'moderate' | 'capital_intensive'>('all');
+  const [sortBy, setSortBy] = useState<CostAllocationSortOption>('date_desc');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [pageSize, setPageSize] = useState<number>(6);
+  const [selectedAllocationId, setSelectedAllocationId] = useState<string | null>(initialInspectingAllocationId || null);
 
-  // Executive KPI Aggregations
+  // Derive active inspecting allocation without cascading renders in useEffect
+  const inspectingAllocation = useMemo(() => {
+    if (!selectedAllocationId) return null;
+    return costAllocations.find(a => a.allocation_id === selectedAllocationId || a.project_name === selectedAllocationId) || null;
+  }, [selectedAllocationId, costAllocations]);
+
+  // Find associated property for the inspecting allocation
+  const inspectingProperty = useMemo(() => {
+    if (!inspectingAllocation) return undefined;
+    const name = (inspectingAllocation.project_name || '').trim().toLowerCase();
+    return properties.find(p => 
+      p.id === inspectingAllocation.project_name ||
+      (p.title_ar && p.title_ar.trim().toLowerCase() === name) ||
+      (p.title_en && p.title_en.trim().toLowerCase() === name) ||
+      (p.slug && p.slug.trim().toLowerCase() === name) ||
+      (p.title_ar && p.title_ar.trim().toLowerCase().includes(name)) ||
+      (p.title_en && p.title_en.trim().toLowerCase().includes(name))
+    );
+  }, [inspectingAllocation, properties]);
+
+  // 1. Executive KPI Aggregations (RSV Engine Portfolio Suite)
   const kpis = useMemo(() => {
-    const totalWip = costAllocations.reduce((acc, ca) => acc.plus(ca.total_incurred_wip || '0'), D(0));
-    const totalSales = costAllocations.reduce((acc, ca) => acc.plus(ca.total_sales_value || '0'), D(0));
-    const avgRsv = totalSales.isZero() ? '0.00%' : `${totalWip.div(totalSales).times(100).toFixed(2)}%`;
-
-    return {
-      totalWip,
-      totalSales,
-      avgRsv,
-      count: costAllocations.length
-    };
+    return RSVEngine.calculatePortfolioAllocationKPIs(costAllocations);
   }, [costAllocations]);
 
-  // Filtered allocations
+  // 2. Filtered allocations based on Search and Margin Tabs
   const filteredCostAllocations = useMemo(() => {
     return costAllocations.filter(ca => {
+      // Search query filter
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
         const project = (ca.project_name || '').toLowerCase();
         const id = (ca.allocation_id || '').toLowerCase();
-        return project.includes(q) || id.includes(q);
+        if (!project.includes(q) && !id.includes(q)) return false;
       }
+
+      // Margin Tab filter
+      const factor = parseFloat(ca.rsv_factor || '0');
+      const margin = 1 - factor;
+
+      if (activeTab === 'high_margin') {
+        return margin >= 0.50; // Margin >= 50%
+      } else if (activeTab === 'moderate') {
+        return margin >= 0.40 && margin < 0.50; // Margin 40% - 49.99%
+      } else if (activeTab === 'capital_intensive') {
+        return factor > 0.60; // Construction cost ratio > 60%
+      }
+
       return true;
     });
-  }, [costAllocations, searchQuery]);
+  }, [costAllocations, searchQuery, activeTab]);
 
-  // Sorted allocations
+  // 3. Sorted allocations
   const sortedCostAllocations = useMemo(() => {
     const list = [...filteredCostAllocations];
     list.sort((a, b) => {
-      if (sortBy === 'date_desc') return new Date(b.calculated_at).getTime() - new Date(a.calculated_at).getTime();
-      if (sortBy === 'date_asc') return new Date(a.calculated_at).getTime() - new Date(b.calculated_at).getTime();
+      if (sortBy === 'date_desc') {
+        const tB = b.calculated_at ? new Date(b.calculated_at).getTime() : 0;
+        const tA = a.calculated_at ? new Date(a.calculated_at).getTime() : 0;
+        return (isNaN(tB) ? 0 : tB) - (isNaN(tA) ? 0 : tA);
+      }
+      if (sortBy === 'date_asc') {
+        const tB = b.calculated_at ? new Date(b.calculated_at).getTime() : 0;
+        const tA = a.calculated_at ? new Date(a.calculated_at).getTime() : 0;
+        return (isNaN(tA) ? 0 : tA) - (isNaN(tB) ? 0 : tB);
+      }
       if (sortBy === 'rsv_desc') return D(b.rsv_factor || '0').minus(D(a.rsv_factor || '0')).toNumber();
       if (sortBy === 'rsv_asc') return D(a.rsv_factor || '0').minus(D(b.rsv_factor || '0')).toNumber();
       if (sortBy === 'wip_desc') return D(b.total_incurred_wip || '0').minus(D(a.total_incurred_wip || '0')).toNumber();
@@ -92,278 +134,349 @@ export const CostAllocationView: React.FC<CostAllocationViewProps> = ({
     return sortedCostAllocations.slice(start, start + pageSize);
   }, [sortedCostAllocations, currentPage, pageSize]);
 
-  const activeFiltersCount = (searchQuery.trim() ? 1 : 0) + (sortBy !== 'date_desc' ? 1 : 0);
+  const activeFiltersCount = (searchQuery.trim() ? 1 : 0) + (sortBy !== 'date_desc' ? 1 : 0) + (activeTab !== 'all' ? 1 : 0);
 
   const handleResetFilters = () => {
+    setActiveTab('all');
     setSortBy('date_desc');
     setSearchQuery('');
     setCurrentPage(1);
   };
 
-  // Format helper for calm executive KPI typography
-  const splitAmount = (dec: any) => {
-    const str = dec.formatEGP(isAr);
-    const lastSpaceIdx = str.lastIndexOf(' ');
-    if (lastSpaceIdx === -1) return { num: str, cur: '' };
-    return { num: str.substring(0, lastSpaceIdx), cur: str.substring(lastSpaceIdx + 1) };
+  const handleSelectAllocation = (ca: ERPCostAllocation) => {
+    setSelectedAllocationId(ca.allocation_id || ca.project_name);
+    onInspectRSV?.(ca);
+  };
+
+  const handleCloseDrawer = () => {
+    setSelectedAllocationId(null);
+    if (typeof window !== 'undefined') {
+      const url = new URL(window.location.href);
+      if (url.searchParams.has('inspect') || url.searchParams.has('allocationId')) {
+        url.searchParams.delete('inspect');
+        url.searchParams.delete('allocationId');
+        window.history.replaceState(null, '', url.pathname + (url.search ? url.search : ''));
+      }
+    }
   };
 
   return (
-    <div className={styles.stageContainer}>
+    <div className={styles.stageContainer} style={{ minWidth: 0, maxWidth: '100vw', boxSizing: 'border-box' }}>
       {/* 1. Header & Stage Breadcrumb */}
       <div className={styles.stageHeader}>
         <div className={styles.stageTitleArea}>
-          <ZFErpBreadcrumb sectionTitle={isAr ? 'توزيع مصاريف المباني على الشقق' : 'WIP Cost Allocation (RSV)'} icon={<BarChart3 size={13} color="#946f23" />} />
+          <ZFErpBreadcrumb 
+            sectionTitle={isAr ? 'توزيع مصاريف المباني على الشقق' : 'WIP Cost Allocation (RSV)'} 
+            icon={<BarChart3 size={13} color="var(--erp-accent, #2563eb)" />} 
+          />
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
             <h1 className={styles.stageTitle}>
-              {isAr ? 'توزيع مصاريف المباني على الشقق وحساب الأرباح' : 'WIP Capitalization & Relative Sales Value (RSV)'}
+              {isAr ? 'رسملة تكاليف البناء وتوزيع مصاريف الشقق (معامل RSV)' : 'WIP Capitalization & Relative Sales Value (RSV)'}
             </h1>
-            <span style={{
-              background: 'rgba(184, 144, 62, 0.08)',
-              border: '1px solid rgba(184, 144, 62, 0.25)',
-              color: '#946f23',
-              padding: '0.2rem 0.55rem',
-              borderRadius: '6px',
-              fontSize: '0.72rem',
-              fontWeight: 800
-            }}>
-              {isAr ? 'حساب تكلفة كل شقة بدقة' : 'IFRS 15 Standard'}
+            <span className={`${styles.statusPill} ${styles.statusPillGreen}`}>
+              <ShieldCheck size={11} />
+              <span>{isAr ? 'معيار IFRS 15 الدولي' : 'IFRS 15 Standard'}</span>
             </span>
           </div>
           <p style={{ margin: '0.35rem 0 0', fontSize: '0.82rem', color: '#64748b' }}>
             {isAr 
-              ? 'توزيع مصاريف المباني على كل شقة لمعرفة تكلفتها وصافي ربحها عند البيع والتسليم.' 
-              : 'Determine COGS relief factors upon unit handover and track capitalized WIP vs total catalog sales ceilings.'}
+              ? 'توزيع تكاليف المباني والخامات على كل شقة لتحديد تكلفة المبيعات (COGS) بدقة عند التسليم وحساب صافي الأرباح المحققة.' 
+              : 'Determine COGS relief factors upon physical unit handover and track capitalized WIP vs gross sales ceilings under IFRS 15.'}
           </p>
         </div>
 
         <div className={styles.stageActions}>
           <button
+            type="button"
+            className={styles.btnPrimary}
             onClick={onOpenNewAllocation}
-            style={{
-              background: 'linear-gradient(135deg, #c5a059 0%, #a48135 100%)',
-              color: '#ffffff',
-              border: 'none',
-              borderRadius: '10px',
-              padding: '0.65rem 1.25rem',
-              fontSize: '0.82rem',
-              fontWeight: 800,
-              cursor: 'pointer',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '0.45rem',
-              boxShadow: '0 4px 14px rgba(197, 160, 89, 0.35)'
-            }}
           >
-            <Plus size={15} />
+            <Plus size={14} />
             <span>{isAr ? '+ توزيع مصاريف جديد لمشروع' : '+ New RSV Allocation'}</span>
           </button>
         </div>
       </div>
 
-      {/* 2. ASYMMETRIC RSV CAPITALIZATION RADAR (Engineering Cost Archetype) */}
-      <div className={styles.asymmetricBentoGrid}>
-        {/* Left / Hero Card: Weighted RSV Factor */}
+      {/* 2. 4 DISCRETE FLOATING STAT CARDS */}
+      <ZFKpiGrid style={{ marginBottom: '1.25rem' }}>
+        {/* Stat 1: Weighted RSV Factor */}
         <ZFKpiCard
-          variant="double-bezel"
-          isFlagship={true}
-          title={isAr ? 'نسبة تكلفة البناء من سعر البيع' : 'Weighted RSV Capitalization Factor'}
-          value={kpis.avgRsv}
-          icon={<Calculator size={20} />}
-          accentColor="gold"
-          progress={parseFloat(kpis.avgRsv) || 0}
-          progressColor="#b8903e"
-          badge={{ text: isAr ? 'نسبة التكلفة من البيع' : 'IFRS 15 Compliant', variant: 'gold' }}
-          subtitleLabel={isAr ? 'طريقة الخصم' : 'Accounting Impact'}
-          subtitleValue={isAr ? 'بتتخصم تكلفة المباني تلقائياً لما نسلم الشقة للعميل' : 'Relieved at unit handover'}
+          title={isAr ? 'نسبة تكلفة المباني (معامل RSV)' : 'Building Cost Ratio (RSV)'}
+          value={kpis.avgRsvPct}
+          icon={<Percent size={16} />}
+          accentColor="accent"
+          subtitleLabel={isAr ? 'معامل RSV' : 'RSV Factor'}
+          subtitleValue={isAr ? 'الموزون للمحفظة' : 'Weighted Portfolio'}
+          tooltip={isAr ? 'نسبة إجمالي تكلفة البناء والخامات من إجمالي القيمة البيعية للمشروعات' : 'Portfolio-wide ratio of construction costs to gross sales'}
         />
 
-        {/* Right Stack: 2 Compact Telemetry Instruments */}
-        <div className={styles.telemetryStack}>
-          <ZFKpiCard
-            variant="compact"
-            title={isAr ? 'إجمالي المصروف على المباني والتشطيب' : 'Total Incurred Construction WIP'}
-            value={kpis.totalWip.formatEGP(isAr)}
-            icon={<FileText size={16} />}
-            accentColor="slate"
-            subtitleLabel={isAr ? 'نوع البند' : 'Type'}
-            subtitleValue={isAr ? 'مصاريف مباني فعلية' : 'capitalized'}
-          />
+        {/* Stat 2: Incurred Construction WIP */}
+        <ZFKpiCard
+          title={isAr ? 'إجمالي المصروف الفعلي على المباني' : 'Incurred Construction WIP'}
+          value={kpis.totalWip.formatEGP(isAr)}
+          unitLabel={isAr ? 'ج.م' : 'EGP'}
+          icon={<HardHat size={16} />}
+          accentColor="blue"
+          subtitleLabel={isAr ? 'أصل استثماري محمل' : 'Capitalized Asset'}
+          subtitleValue={isAr ? 'حساب 150000' : 'Account 150000'}
+          tooltip={isAr ? 'إجمالي تكاليف البناء والخامات المتكبدة والرسملة بحساب 150000' : 'Total capitalized construction WIP in Account 150000'}
+        />
 
-          <ZFKpiCard
-            variant="compact"
-            title={isAr ? 'إجمالي مبيعات الشقق المتوقعة' : 'Project Sales Ceiling (Denominator)'}
-            value={kpis.totalSales.formatEGP(isAr)}
-            icon={<TrendingUp size={16} />}
-            accentColor="emerald"
-            subtitleLabel={isAr ? 'إجمالي المبيعات' : 'Valuation'}
-            subtitleValue={isAr ? 'قيمة كل الشقق بالأسعار الحالية' : 'estimated gross'}
-          />
+        {/* Stat 3: Total Sales Ceiling */}
+        <ZFKpiCard
+          title={isAr ? 'سقف القيمة البيعية الكلية' : 'Gross Sales Ceiling'}
+          value={kpis.totalSales.formatEGP(isAr)}
+          unitLabel={isAr ? 'ج.م' : 'EGP'}
+          icon={<TrendingUp size={16} />}
+          accentColor="emerald"
+          subtitleLabel={isAr ? 'مقام التوزيع' : 'Denominator'}
+          subtitleValue={isAr ? 'سقف المبيعات المقدر' : 'Total Gross Ceiling'}
+          tooltip={isAr ? 'إجمالي القيمة البيعية المتوقعة لكل شقق ووحدات المشروعات' : 'Total projected catalog sales value across all projects'}
+        />
+
+        {/* Stat 4: Portfolio Gross Profit Margin */}
+        <ZFKpiCard
+          title={isAr ? 'صافي هامش الربح الإجمالي' : 'Gross Profit Margin'}
+          value={kpis.avgGrossMarginPct}
+          icon={<Calculator size={16} />}
+          accentColor="emerald"
+          subtitleLabel={isAr ? 'صافي الربح المقدر' : 'Expected Profit'}
+          subtitleValue={kpis.totalGrossMarginValue.formatEGP(isAr) + (isAr ? ' ج.م' : ' EGP')}
+          tooltip={isAr ? 'صافي الأرباح المحققة المتوقعة للمكتب بعد استنزال تكلفة البناء' : 'Net anticipated profits after WIP relief'}
+        />
+      </ZFKpiGrid>
+
+      {/* 3. MARGIN CATEGORY FILTER TABS & TOOLBAR */}
+      <div style={{
+        background: '#ffffff',
+        border: '1px solid #cbd5e1',
+        borderRadius: '12px',
+        padding: '0.85rem 1rem',
+        marginBottom: '1rem',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '0.75rem'
+      }}>
+        {/* Category Tabs */}
+        <div className={styles.tableTabsUnderline} role="tablist">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === 'all'}
+            className={`${styles.underlineTab} ${activeTab === 'all' ? styles.underlineTabActive : ''}`}
+            onClick={() => {
+              setActiveTab('all');
+              setCurrentPage(1);
+            }}
+          >
+            <span>{isAr ? 'كافة المشروعات' : 'All Projects'}</span>
+            <span style={{ fontSize: '0.7rem', padding: '1px 6px', borderRadius: '999px', background: '#f1f5f9', color: '#64748b', fontVariantNumeric: 'tabular-nums' }}>
+              {costAllocations.length}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === 'high_margin'}
+            className={`${styles.underlineTab} ${activeTab === 'high_margin' ? styles.underlineTabActive : ''}`}
+            onClick={() => {
+              setActiveTab('high_margin');
+              setCurrentPage(1);
+            }}
+          >
+            <span>{isAr ? 'هامش ربح مرتفع (≥ 50%)' : 'High Margin (≥ 50%)'}</span>
+          </button>
+
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === 'moderate'}
+            className={`${styles.underlineTab} ${activeTab === 'moderate' ? styles.underlineTabActive : ''}`}
+            onClick={() => {
+              setActiveTab('moderate');
+              setCurrentPage(1);
+            }}
+          >
+            <span>{isAr ? 'هامش ربح معتدل (40% - 50%)' : 'Moderate Margin (40-50%)'}</span>
+          </button>
+
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === 'capital_intensive'}
+            className={`${styles.underlineTab} ${activeTab === 'capital_intensive' ? styles.underlineTabActive : ''}`}
+            onClick={() => {
+              setActiveTab('capital_intensive');
+              setCurrentPage(1);
+            }}
+          >
+            <span>{isAr ? 'تكلفة مباني مرتفعة (> 60%)' : 'Capital Intensive (> 60%)'}</span>
+          </button>
         </div>
+
+        {/* Toolbar: Search, Sort, and View Mode */}
+        <ZFFilterToolbar
+          searchQuery={searchQuery}
+          onSearchChange={(q) => {
+            setSearchQuery(q);
+            setCurrentPage(1);
+          }}
+          searchPlaceholder={isAr ? 'بحث باسم المشروع أو كود التوزيع...' : 'Search allocations...'}
+          sortBy={sortBy}
+          onSortChange={(val) => {
+            setSortBy(val as CostAllocationSortOption);
+            setCurrentPage(1);
+          }}
+          sortOptions={[
+            { value: 'date_desc', label: isAr ? 'التاريخ: الأحدث الأول' : 'Newest Date' },
+            { value: 'date_asc', label: isAr ? 'التاريخ: الأقدم الأول' : 'Oldest Date' },
+            { value: 'rsv_desc', label: isAr ? 'نسبة تكلفة المباني: الأعلى الأول' : 'Highest RSV Factor' },
+            { value: 'rsv_asc', label: isAr ? 'نسبة تكلفة المباني: الأقل الأول' : 'Lowest RSV Factor' },
+            { value: 'wip_desc', label: isAr ? 'المصروف على المباني: الأكبر الأول' : 'Highest Incurred WIP' },
+            { value: 'name_asc', label: isAr ? 'اسم المشروع: أ - ي' : 'Project Name (A-Z)' }
+          ]}
+          sortAriaLabel={isAr ? 'ترتيب المشروعات' : 'Sort Allocations'}
+          activeFiltersCount={activeFiltersCount}
+          onResetFilters={handleResetFilters}
+          viewMode={viewMode}
+          onViewModeChange={(mode) => setViewMode(mode === 'cards' ? 'cards' : 'table')}
+          isAr={isAr}
+        />
       </div>
 
-      {/* 3. Toolbar: Search, Sort, Filters & View Mode Switcher */}
-      <ZFFilterToolbar
-        searchQuery={searchQuery}
-        onSearchChange={(q) => {
-          setSearchQuery(q);
-          setCurrentPage(1);
-        }}
-        searchPlaceholder={isAr ? 'دوّر باسم المشروع أو كود التوزيع...' : 'Search allocations...'}
-        sortBy={sortBy}
-        onSortChange={(val) => {
-          setSortBy(val as any);
-          setCurrentPage(1);
-        }}
-        sortOptions={[
-          { value: 'date_desc', label: isAr ? 'التاريخ: الأحدث الأول' : 'Newest Date' },
-          { value: 'date_asc', label: isAr ? 'التاريخ: الأقدم الأول' : 'Oldest Date' },
-          { value: 'rsv_desc', label: isAr ? 'نسبة تكلفة المباني: الأعلى الأول' : 'Highest RSV Factor' },
-          { value: 'rsv_asc', label: isAr ? 'نسبة تكلفة المباني: الأقل الأول' : 'Lowest RSV Factor' },
-          { value: 'wip_desc', label: isAr ? 'المصروف على المباني: الأكبر الأول' : 'Highest Incurred WIP' },
-          { value: 'name_asc', label: isAr ? 'اسم المشروع: أ - ي' : 'Project Name (A-Z)' }
-        ]}
-        sortAriaLabel={isAr ? 'ترتيب المشروعات' : 'Sort Allocations'}
-        activeFiltersCount={activeFiltersCount}
-        onResetFilters={handleResetFilters}
-        viewMode={viewMode}
-        onViewModeChange={(mode) => setViewMode(mode as any)}
-        isAr={isAr}
-      />
-
-      {/* 4. Main Content: Cards or Dense Table */}
+      {/* 4. MAIN CONTENT: TABLE OR CARDS VIEW */}
       {filteredCostAllocations.length === 0 ? (
         <div style={{
           background: '#ffffff',
-          border: '1px solid #e2e8f0',
-          borderRadius: '16px',
+          border: '1px solid #cbd5e1',
+          borderRadius: '12px',
           padding: '3rem 2rem',
           textAlign: 'center',
           color: '#64748b'
         }}>
-          <Calculator size={36} color="#946f23" style={{ margin: '0 auto 0.75rem' }} />
+          <Calculator size={36} color="var(--erp-accent, #2563eb)" style={{ margin: '0 auto 0.75rem' }} />
           <h3 style={{ margin: 0, color: '#0f172a', fontSize: '1rem', fontWeight: 800 }}>
-            {isAr ? 'مفيش حسابات توزيع مصاريف مسجلة' : 'No cost allocations recorded'}
+            {isAr ? 'لا توجد حسابات توزيع مصاريف مسجلة' : 'No cost allocations found'}
           </h3>
           <p style={{ margin: '0.35rem 0 0', fontSize: '0.82rem' }}>
-            {isAr ? 'اضغط على "+ توزيع مصاريف جديد لمشروع" عشان تبدأ تحسب تكلفة وأرباح العمارة والشقق.' : 'Click "New RSV Allocation" to create your first project allocation.'}
+            {isAr 
+              ? 'اضغط على "+ توزيع مصاريف جديد لمشروع" للبدء في حساب تكلفة وأرباح العمارة والشقق.' 
+              : 'Click "New RSV Allocation" to create your first project allocation.'}
           </p>
         </div>
       ) : viewMode === 'table' ? (
-        <div className={styles.tableCard}>
-          <table className={styles.table}>
-            <thead>
-              <tr>
-                <th>{isAr ? 'المشروع' : 'Project'}</th>
-                <th>{isAr ? 'المصروف على المباني' : 'Incurred WIP'}</th>
-                <th>{isAr ? 'إجمالي سعر بيع الشقق' : 'Sales Value Ceiling'}</th>
-                <th>{isAr ? 'نسبة تكلفة المباني' : 'Building Cost Ratio'}</th>
-                <th>{isAr ? 'صافي مكسب المكتب' : 'Gross Margin'}</th>
-                <th>{isAr ? 'تاريخ الحساب' : 'Calculated Date'}</th>
-                <th style={{ textAlign: 'center' }}>{isAr ? 'تفاصيل' : 'Action'}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {paginatedCostAllocations.map(ca => {
-                const rsvPct = D(ca.rsv_factor || '0').times(100).toFixed(2);
-                const grossMarginPct = D(1).minus(ca.rsv_factor || '0').times(100).toFixed(2);
-                return (
-                  <tr 
-                    key={ca.allocation_id}
-                    onClick={() => onInspectRSV(ca)}
-                    style={{ cursor: 'pointer' }}
-                  >
-                    <td style={{ fontWeight: 800, color: '#0f172a' }}>{ca.project_name}</td>
-                    <td><MoneyCell amount={ca.total_incurred_wip} isAr={isAr} /></td>
-                    <td><MoneyCell amount={ca.total_sales_value} isAr={isAr} /></td>
-                    <td>
-                      <span style={{
-                        fontVariantNumeric: 'tabular-nums',
-                        fontWeight: 800,
-                        color: '#946f23',
-                        background: 'rgba(184, 144, 62, 0.08)',
-                        padding: '0.2rem 0.55rem',
-                        borderRadius: '6px',
-                        border: '1px solid rgba(184, 144, 62, 0.25)'
-                      }}>
-                        {rsvPct}%
-                      </span>
-                    </td>
-                    <td>
-                      <span style={{
-                        fontVariantNumeric: 'tabular-nums',
-                        fontWeight: 800,
-                        color: '#15803d',
-                        background: 'rgba(21, 128, 61, 0.08)',
-                        padding: '0.2rem 0.55rem',
-                        borderRadius: '6px',
-                        border: '1px solid rgba(21, 128, 61, 0.25)'
-                      }}>
-                        {grossMarginPct}%
-                      </span>
-                    </td>
-                    <td style={{ color: '#64748b' }}>{new Date(ca.calculated_at).toLocaleDateString(isAr ? 'ar-EG' : 'en-US')}</td>
-                    <td style={{ textAlign: 'center' }}>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onInspectRSV(ca);
-                        }}
-                        style={{
-                          background: 'rgba(184, 144, 62, 0.08)',
-                          border: '1px solid rgba(184, 144, 62, 0.25)',
-                          borderRadius: '6px',
-                          padding: '0.25rem 0.55rem',
-                          color: '#946f23',
-                          fontSize: '0.72rem',
+        <div className={styles.canonicalTableCard}>
+          <div className={styles.tableContainer}>
+            <table className={styles.canonicalTable}>
+              <thead className={styles.canonicalThead}>
+                <tr>
+                  <th className={styles.canonicalTh}>{isAr ? 'المشروع' : 'Project'}</th>
+                  <th className={styles.canonicalTh}>{isAr ? 'المصروف الفعلي (WIP)' : 'Incurred WIP'}</th>
+                  <th className={styles.canonicalTh}>{isAr ? 'سقف المبيعات الكلي' : 'Sales Value Ceiling'}</th>
+                  <th className={styles.canonicalTh}>{isAr ? 'نسبة تكلفة المباني (RSV)' : 'Building Cost Ratio'}</th>
+                  <th className={styles.canonicalTh}>{isAr ? 'صافي هامش الربح' : 'Gross Margin'}</th>
+                  <th className={styles.canonicalTh}>{isAr ? 'الحالة المحاسبية' : 'Accounting Status'}</th>
+                  <th className={styles.canonicalTh}>{isAr ? 'تاريخ الحساب' : 'Calculated Date'}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {paginatedCostAllocations.map(ca => {
+                  const factor = parseFloat(ca.rsv_factor || '0');
+                  const rsvPct = (factor * 100).toFixed(2);
+                  const grossMarginPct = ((1 - factor) * 100).toFixed(2);
+                  const isOverrun = factor >= 1.0;
+                  const isHighCost = !isOverrun && factor > 0.60;
+
+                  return (
+                    <tr 
+                      key={ca.allocation_id}
+                      className={styles.canonicalRow}
+                      onClick={() => handleSelectAllocation(ca)}
+                      tabIndex={0}
+                      role="button"
+                    >
+                      <td className={styles.canonicalTd} style={{ fontWeight: 800, color: '#0f172a', fontSize: '0.85rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                          <span>{ca.project_name}</span>
+                          <span dir="ltr" style={{ fontSize: '0.7rem', color: '#64748b' }}>
+                            #{ca.allocation_id.slice(0, 6)}
+                          </span>
+                        </div>
+                      </td>
+                      <td className={styles.canonicalTd} style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 700, color: '#0f172a', fontSize: '0.85rem' }}>
+                        <MoneyCell amount={ca.total_incurred_wip} isAr={isAr} />
+                      </td>
+                      <td className={styles.canonicalTd} style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 700, color: '#0f172a', fontSize: '0.85rem' }}>
+                        <MoneyCell amount={ca.total_sales_value} isAr={isAr} />
+                      </td>
+                      <td className={styles.canonicalTd}>
+                        <span style={{
+                          fontVariantNumeric: 'tabular-nums',
                           fontWeight: 700,
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '0.3rem',
-                          cursor: 'pointer'
-                        }}
-                      >
-                        <Eye size={12} />
-                        <span>{isAr ? 'عرض التفاصيل' : 'Inspect'}</span>
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                          color: isOverrun ? '#dc2626' : isHighCost ? '#d97706' : 'var(--erp-accent, #2563eb)',
+                          fontSize: '0.85rem'
+                        }}>
+                          {rsvPct}%
+                        </span>
+                      </td>
+                      <td className={styles.canonicalTd}>
+                        <span style={{
+                          fontVariantNumeric: 'tabular-nums',
+                          fontWeight: 700,
+                          color: isOverrun ? '#dc2626' : '#16a34a',
+                          fontSize: '0.85rem'
+                        }}>
+                          {grossMarginPct}%
+                        </span>
+                      </td>
+                      <td className={styles.canonicalTd}>
+                        <span className={`${styles.statusPill} ${isOverrun ? styles.statusPillRed : isHighCost ? styles.statusPillAmber : styles.statusPillGreen}`}>
+                          <ShieldCheck size={11} />
+                          <span>{isOverrun ? (isAr ? 'تجاوز تكاليف (خسارة)' : 'Cost Overrun / Loss') : isHighCost ? (isAr ? 'تكلفة مرتفعة' : 'High Cost Ratio') : (isAr ? 'هامش آمن معتمد' : 'IFRS 15 Certified')}</span>
+                        </span>
+                      </td>
+                      <td className={styles.canonicalTd} style={{ color: '#64748b', fontSize: '0.8rem', fontVariantNumeric: 'tabular-nums' }}>
+                        {new Date(ca.calculated_at).toLocaleDateString(isAr ? 'ar-EG' : 'en-US')}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
       ) : (
         <div className={styles.cardsGrid}>
           {paginatedCostAllocations.map(ca => {
-            const rsvPct = D(ca.rsv_factor || '0').times(100).toFixed(2);
-            const grossMarginPct = D(1).minus(ca.rsv_factor || '0').times(100).toFixed(2);
+            const factor = parseFloat(ca.rsv_factor || '0');
+            const rsvPct = (factor * 100).toFixed(2);
+            const grossMarginPct = ((1 - factor) * 100).toFixed(2);
 
             return (
               <div
                 key={ca.allocation_id}
-                onClick={() => onInspectRSV(ca)}
+                onClick={() => handleSelectAllocation(ca)}
                 style={{
                   background: '#ffffff',
-                  border: '1px solid #e2e8f0',
-                  borderRadius: '16px',
-                  padding: '1.35rem',
+                  border: '1px solid #cbd5e1',
+                  borderRadius: '12px',
+                  padding: '1.25rem',
                   display: 'flex',
                   flexDirection: 'column',
                   gap: '1rem',
-                  boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04)',
+                  boxShadow: 'none',
                   cursor: 'pointer',
                   transition: 'all 0.15s ease'
                 }}
               >
-                {/* Header with spacious title and micro ID pill */}
+                {/* Header */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.75rem' }}>
                   <div style={{ minWidth: 0, flex: 1 }}>
-                    <h3 style={{ margin: 0, fontSize: '1.02rem', fontWeight: 800, color: '#0f172a', lineHeight: 1.4 }}>
+                    <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 800, color: '#0f172a', lineHeight: 1.4 }}>
                       {ca.project_name}
                     </h3>
-                    <span style={{ fontSize: '0.74rem', color: '#64748b', marginTop: '0.35rem', display: 'block' }}>
+                    <span style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '0.25rem', display: 'block' }}>
                       {isAr ? 'تاريخ الحساب: ' : 'Calculated: '}
                       {new Date(ca.calculated_at).toLocaleDateString(isAr ? 'ar-EG' : 'en-US')}
                     </span>
@@ -385,124 +498,100 @@ export const CostAllocationView: React.FC<CostAllocationViewProps> = ({
                   </span>
                 </div>
 
-                {/* Dual Split Analytics HUD Pods - Unified with RSVAllocationModal */}
+                {/* Dual Split Pods */}
                 <div style={{
                   display: 'grid',
                   gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 130px), 1fr))',
                   gap: '0.75rem'
                 }}>
-                  {/* Pod 1: Building Cost Ratio (Brand Gold) */}
+                  {/* Building Cost Ratio */}
                   <div style={{
-                    background: 'linear-gradient(135deg, #ffffff 0%, #fefdfa 100%)',
-                    border: '1.5px solid rgba(184, 144, 62, 0.3)',
-                    borderRadius: '12px',
-                    padding: '0.85rem 1rem',
-                    boxShadow: '0 2px 8px rgba(184, 144, 62, 0.04)'
+                    background: '#ffffff',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '10px',
+                    padding: '0.85rem 1rem'
                   }}>
-                    <span style={{ fontSize: '0.72rem', color: '#946f23', display: 'block', fontWeight: 800 }}>
-                      {isAr ? 'نسبة تكلفة المباني من السعر:' : 'Building Cost Ratio:'}
+                    <span style={{ fontSize: '0.7rem', color: '#64748b', display: 'block', fontWeight: 700 }}>
+                      {isAr ? 'نسبة تكلفة المباني:' : 'Cost Ratio (RSV):'}
                     </span>
-                    <div style={{ fontSize: '1.55rem', fontWeight: 900, color: '#946f23', fontVariantNumeric: 'tabular-nums', margin: '0.2rem 0' }}>
+                    <div style={{ fontSize: '1.45rem', fontWeight: 800, color: 'var(--erp-accent, #2563eb)', fontVariantNumeric: 'tabular-nums', margin: '0.2rem 0' }}>
                       {rsvPct}%
                     </div>
-                    <span style={{ fontSize: '0.72rem', color: '#946f23', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
-                      <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#946f23', display: 'inline-block' }} />
-                      {isAr ? 'من ثمن الشقة مباني وخامات' : 'construction cost'}
+                    <span style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+                      <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--erp-accent, #2563eb)', display: 'inline-block' }} />
+                      {isAr ? 'من ثمن الشقة مباني' : 'construction cost'}
                     </span>
                   </div>
 
-                  {/* Pod 2: Gross Profit Margin (Forest Jade) */}
+                  {/* Net Profit Margin */}
                   <div style={{
-                    background: 'linear-gradient(135deg, #ffffff 0%, #f7fdf9 100%)',
-                    border: '1.5px solid rgba(21, 128, 61, 0.3)',
-                    borderRadius: '12px',
-                    padding: '0.85rem 1rem',
-                    boxShadow: '0 2px 8px rgba(21, 128, 61, 0.04)'
+                    background: '#ffffff',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '10px',
+                    padding: '0.85rem 1rem'
                   }}>
-                    <span style={{ fontSize: '0.72rem', color: '#15803d', display: 'block', fontWeight: 800 }}>
-                      {isAr ? 'مكسبنا الصافي المتوقع:' : 'Net Profit Margin:'}
+                    <span style={{ fontSize: '0.7rem', color: '#64748b', display: 'block', fontWeight: 700 }}>
+                      {isAr ? 'صافي هامش الربح:' : 'Gross Margin:'}
                     </span>
-                    <div style={{ fontSize: '1.55rem', fontWeight: 900, color: '#15803d', fontVariantNumeric: 'tabular-nums', margin: '0.2rem 0' }}>
+                    <div style={{ fontSize: '1.45rem', fontWeight: 800, color: factor >= 1.0 ? '#dc2626' : '#16a34a', fontVariantNumeric: 'tabular-nums', margin: '0.2rem 0' }}>
                       {grossMarginPct}%
                     </div>
-                    <span style={{ fontSize: '0.72rem', color: '#15803d', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
-                      <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#15803d', display: 'inline-block' }} />
-                      {isAr ? 'مكسب صافي للمكتب' : 'net profit'}
+                    <span style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+                      <span style={{ width: 6, height: 6, borderRadius: '50%', background: factor >= 1.0 ? '#dc2626' : '#16a34a', display: 'inline-block' }} />
+                      {isAr ? (factor >= 1.0 ? 'خسارة إنشائية للمكتب' : 'مكسب صافي للمكتب') : (factor >= 1.0 ? 'project loss' : 'net profit')}
                     </span>
                   </div>
                 </div>
 
-                {/* Dual Spectrum Progress Bar (Brand Gold vs Forest Jade) */}
+                {/* Progress Bar */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.72rem' }}>
-                    <span style={{ color: '#946f23', fontWeight: 800 }}>
+                    <span style={{ color: factor >= 1.0 ? '#dc2626' : 'var(--erp-accent, #2563eb)', fontWeight: 700 }}>
                       {isAr ? `تكلفة المباني: ${rsvPct}%` : `WIP: ${rsvPct}%`}
                     </span>
-                    <span style={{ color: '#15803d', fontWeight: 800 }}>
-                      {isAr ? `مكسبنا الصافي: ${grossMarginPct}%` : `Margin: ${grossMarginPct}%`}
+                    <span style={{ color: factor >= 1.0 ? '#dc2626' : '#16a34a', fontWeight: 700 }}>
+                      {isAr ? `هامش الربح: ${grossMarginPct}%` : `Margin: ${grossMarginPct}%`}
                     </span>
                   </div>
-                  <div style={{ width: '100%', height: '8px', borderRadius: '999px', background: '#f1f5f9', overflow: 'hidden', display: 'flex' }}>
-                    <div style={{ width: `${Math.min(parseFloat(rsvPct) || 0, 100)}%`, background: 'linear-gradient(90deg, #c5a059, #946f23)', height: '100%' }} />
-                    <div style={{ flex: 1, background: 'linear-gradient(90deg, #15803d, #16a34a)', height: '100%' }} />
+                  <div style={{ width: '100%', height: '6px', borderRadius: '999px', background: '#f1f5f9', overflow: 'hidden', display: 'flex' }}>
+                    {factor >= 1.0 ? (
+                      <div style={{ width: '100%', background: '#dc2626', height: '100%' }} />
+                    ) : (
+                      <>
+                        <div style={{ width: `${Math.max(0, Math.min(parseFloat(rsvPct) || 0, 100))}%`, background: 'var(--erp-accent, #2563eb)', height: '100%' }} />
+                        <div style={{ width: `${Math.max(0, Math.min(parseFloat(grossMarginPct) || 0, 100))}%`, background: '#16a34a', height: '100%' }} />
+                      </>
+                    )}
                   </div>
                 </div>
 
-                {/* Financial Pool Ceiling Breakdown */}
-                <div style={{
-                  background: '#f8fafc',
-                  border: '1px solid #e2e8f0',
-                  borderRadius: '10px',
-                  padding: '0.85rem 1rem',
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 130px), 1fr))',
-                  gap: '0.75rem',
-                  fontSize: '0.74rem'
-                }}>
-                  <div>
-                    <span style={{ color: '#64748b', fontSize: '0.7rem', display: 'block', marginBottom: '0.2rem', fontWeight: 600 }}>
-                      {isAr ? 'المصروف على المباني:' : 'Incurred WIP:'}
-                    </span>
-                    <strong style={{ color: '#946f23', fontSize: '0.88rem', fontVariantNumeric: 'tabular-nums' }}>
-                      <MoneyCell amount={ca.total_incurred_wip} isAr={isAr} />
-                    </strong>
-                  </div>
-                  <div>
-                    <span style={{ color: '#64748b', fontSize: '0.7rem', display: 'block', marginBottom: '0.2rem', fontWeight: 600 }}>
-                      {isAr ? 'إجمالي مبيعات الشقق:' : 'Sales Ceiling:'}
-                    </span>
-                    <strong style={{ color: '#0f172a', fontSize: '0.88rem', fontVariantNumeric: 'tabular-nums' }}>
-                      <MoneyCell amount={ca.total_sales_value} isAr={isAr} />
-                    </strong>
-                  </div>
-                </div>
-
+                {/* Action Button */}
                 <button
                   type="button"
                   onClick={(e) => {
                     e.stopPropagation();
-                    onInspectRSV(ca);
+                    handleSelectAllocation(ca);
                   }}
                   style={{
                     background: '#ffffff',
-                    border: '1.5px solid rgba(184, 144, 62, 0.35)',
-                    color: '#946f23',
-                    borderRadius: '10px',
-                    padding: '0.6rem',
-                    fontSize: '0.8rem',
-                    fontWeight: 800,
+                    border: '1px solid #cbd5e1',
+                    color: 'var(--erp-accent, #2563eb)',
+                    borderRadius: '8px',
+                    padding: '0.55rem',
+                    fontSize: '0.78rem',
+                    fontWeight: 700,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     gap: '0.45rem',
                     cursor: 'pointer',
                     marginTop: 'auto',
-                    boxShadow: '0 1px 2px rgba(184, 144, 62, 0.08)',
+                    boxShadow: 'none',
                     transition: 'all 0.15s ease'
                   }}
                 >
-                  <Eye size={14} color="#946f23" />
-                  <span>{isAr ? 'عرض تفاصيل تكلفة العمارة والشقق' : 'Inspect Factor & Release'}</span>
+                  <Eye size={13} />
+                  <span>{isAr ? 'فحص تفاصيل المشروع واستنزال التكلفة' : 'Inspect Allocation & Relief'}</span>
                 </button>
               </div>
             );
@@ -510,7 +599,7 @@ export const CostAllocationView: React.FC<CostAllocationViewProps> = ({
         </div>
       )}
 
-      {/* Unified Pagination Bar */}
+      {/* Pagination Bar */}
       <ZFPagination
         currentPage={currentPage}
         totalPages={totalPages}
@@ -525,6 +614,42 @@ export const CostAllocationView: React.FC<CostAllocationViewProps> = ({
         isAr={isAr}
         itemLabel={{ ar: 'مشروع', en: 'allocations' }}
       />
+
+      {/* 5. CAD CARTESIAN BLUEPRINT CHARTS */}
+      <div style={{ marginTop: '1.75rem', width: '100%', minWidth: 0, boxSizing: 'border-box' }}>
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          marginBottom: '0.85rem'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <BarChart3 size={16} color="var(--erp-accent, #2563eb)" />
+            <h2 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 800, color: '#0f172a' }}>
+              {isAr ? 'التحليلات البيانية والرسملة الهندسية (CAD Analytics)' : 'CAD Cartesian Analytics & Capitalization'}
+            </h2>
+          </div>
+          <span style={{ fontSize: '0.72rem', color: '#64748b' }}>
+            {isAr ? 'مخططات بيانية تفصيلية لتوزيع التكاليف وهوامش الأرباح' : 'Detailed cost distribution & margin blueprints'}
+          </span>
+        </div>
+
+        <CostAllocationAnalyticsCharts
+          allocations={filteredCostAllocations.length > 0 ? filteredCostAllocations : costAllocations}
+          isAr={isAr}
+        />
+      </div>
+
+      {/* 6. DEDICATED SLIDE-OVER DETAIL DRAWER */}
+      <CostAllocationDetailDrawer
+        isOpen={Boolean(inspectingAllocation)}
+        onClose={handleCloseDrawer}
+        allocation={inspectingAllocation}
+        contracts={contracts}
+        property={inspectingProperty}
+        isAr={isAr}
+      />
     </div>
   );
 };
+

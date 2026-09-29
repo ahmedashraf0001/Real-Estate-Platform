@@ -1,30 +1,31 @@
 /**
  * Zakaria Farid Real Estate ERP — Design System Tokens v2
- * "Calm Obsidian & Egyptian Champagne Gold"
- * Replaces high-saturation neon AI-slop with restrained, ultra-premium executive styling.
+ * Canonical Low-Saturation Enterprise Workstation Tokens
+ * Crisp Pure White Panels, Soft Cool Neutral Canvas (#f1f5f9), Dedicated Accent (#2563eb).
  */
 
 :root {
-  /* Surfaces & Canvas — Warm Architectural Alabaster & Crisp White */
-  --zf2-bg-canvas: #eae6dc;
+  /* Surfaces & Canvas — Modern Enterprise SaaS Canvas & Crisp White */
+  --zf2-bg-canvas: #f1f5f9;
   --zf2-bg-header: #ffffff;
   --zf2-bg-dock: #ffffff;
   --zf2-bg-surface: #ffffff;
-  --zf2-bg-surface-raised: #f4f1ea;
-  --zf2-bg-surface-hover: #eae6dc;
-  --zf2-bg-surface-active: #d8d2c4;
+  --zf2-bg-surface-raised: #f1f5f9;
+  --zf2-bg-surface-hover: #f8fafc;
+  --zf2-bg-surface-active: #e2e8f0;
   
   /* Hairline Borders */
-  --zf2-border-subtle: #d8d2c4;
-  --zf2-border-medium: #d8d2c4;
-  --zf2-border-focus: rgba(148, 111, 35, 0.45);
+  --erp-border: #cbd5e1;
+  --erp-border-subtle: #f1f5f9;
+  --zf2-border-subtle: #cbd5e1;
+  --zf2-border-focus: rgba(37, 99, 235, 0.45);
 
-  /* Primary Accent: Architectural Egyptian Bronze-Gold */
-  --zf2-gold: #946f23;
-  --zf2-gold-light: #b48c36;
-  --zf2-gold-dark: #6e5114;
-  --zf2-gold-dim: rgba(148, 111, 35, 0.16);
-  --zf2-gold-wash: rgba(148, 111, 35, 0.08);
+  /* Primary Accent: Enterprise Dynamic Accent (Aliased to FIN-OS Palette) */
+  --zf2-gold: var(--erp-accent, #2563eb);
+  --zf2-gold-light: var(--erp-accent-hover, #1d4ed8);
+  --zf2-gold-dark: var(--erp-accent-hover, #1d4ed8);
+  --zf2-gold-dim: var(--erp-accent-subtle, #eff6ff);
+  --zf2-gold-wash: var(--erp-accent-tint, rgba(37, 99, 235, 0.08));
 
   /* High Contrast Deep Slate Typography */
   --zf2-text-primary: #0f172a;
@@ -41,9 +42,10 @@
   --zf2-state-warning-wash: rgba(217, 119, 6, 0.08);
   --zf2-state-warning-border: rgba(217, 119, 6, 0.25);
 
-  --zf2-state-danger: #dc2626;
-  --zf2-state-danger-wash: rgba(220, 38, 38, 0.08);
-  --zf2-state-danger-border: rgba(220, 38, 38, 0.25);
+  --zf2-state-danger: #991b1b;
+  --zf2-state-danger-subtle: rgba(153, 27, 27, 0.08);
+  --zf2-state-danger-wash: rgba(153, 27, 27, 0.08);
+  --zf2-state-danger-border: rgba(153, 27, 27, 0.25);
 
   --zf2-state-info: #0284c7;
   --zf2-state-info-wash: rgba(2, 132, 199, 0.08);
@@ -69,14 +71,13 @@
   --zf2-bg-surface-active: #2d3b55;
   
   --zf2-border-subtle: rgba(255, 255, 255, 0.09);
-  --zf2-border-medium: rgba(255, 255, 255, 0.16);
-  --zf2-border-focus: rgba(212, 175, 55, 0.55);
+  --zf2-border-focus: rgba(59, 130, 246, 0.55);
 
-  --zf2-gold: #d4af37;
-  --zf2-gold-light: #f3cf7a;
-  --zf2-gold-dark: #b89328;
-  --zf2-gold-dim: rgba(212, 175, 55, 0.22);
-  --zf2-gold-wash: rgba(212, 175, 55, 0.10);
+  --zf2-gold: #3b82f6;
+  --zf2-gold-light: #60a5fa;
+  --zf2-gold-dark: #2563eb;
+  --zf2-gold-dim: rgba(59, 130, 246, 0.22);
+  --zf2-gold-wash: rgba(59, 130, 246, 0.10);
 
   --zf2-text-primary: #ffffff;
   --zf2-text-secondary: #cbd5e1;

@@ -23,6 +23,9 @@ import { D, formatEGP, Decimal } from '@/lib/erp/math';
 import { MoneyCell } from '@/components/erp/MoneyCell';
 import { JournalEntryPreview } from '@/components/erp/JournalEntryPreview';
 import { ContractsEngine } from '@/lib/erp/contracts';
+import { resolvePeriodForDate } from '@/lib/erp/ledger';
+import { getHandoverCOGS } from '@/lib/erp/canonicalMetrics';
+import { ZFModalShell } from '../common/ZFModalShell';
 import styles from '../ZFWorkstationShell.module.css';
 
 export interface HandoverExecutionModalProps {
@@ -31,6 +34,7 @@ export interface HandoverExecutionModalProps {
   contract: ERPContract | null;
   properties?: Property[];
   activePeriod: ERPAccountingPeriod;
+  periods?: ERPAccountingPeriod[];
   costAllocations?: ERPCostAllocation[];
   onConfirmHandover: (contract: ERPContract, handoverDate: string, rsvWipCost: Decimal | string) => Promise<void>;
   isMutating?: boolean;
@@ -43,6 +47,7 @@ export const HandoverExecutionModal: React.FC<HandoverExecutionModalProps> = ({
   contract,
   properties = [],
   activePeriod,
+  periods,
   costAllocations = [],
   onConfirmHandover,
   isMutating = false,
@@ -69,27 +74,23 @@ export const HandoverExecutionModal: React.FC<HandoverExecutionModalProps> = ({
     return linkedProperty.completion_status === 'ready';
   }, [linkedProperty]);
 
+  const [isCostAllocated, setIsCostAllocated] = useState<boolean>(false);
+
   // Initialize values when contract changes or modal opens
   useEffect(() => {
     if (isOpen && contract) {
       setHandoverDate(new Date().toISOString().split('T')[0]);
       setCertifiedCompletionAsserted(false);
 
-      const grossV = D(contract.gross_contract_value || 0);
+      // Canonical Handover COGS (RSV-based unit cost relief without arbitrary fallbacks)
+      const { cogsFormatted, isAllocated } = getHandoverCOGS({
+        contractValue: contract.gross_contract_value || 0,
+        costAllocations,
+        property: linkedProperty,
+      });
 
-      // Try finding matching RSV allocation factor
-      const matchingAlloc = costAllocations.find(ca => 
-        (linkedProperty && ca.project_name && (linkedProperty.title_ar?.includes(ca.project_name) || linkedProperty.title_en?.includes(ca.project_name)))
-      );
-
-      if (matchingAlloc && matchingAlloc.rsv_factor) {
-        const calculatedCost = grossV.times(matchingAlloc.rsv_factor).toFixed(2);
-        setRsvCostAmount(calculatedCost);
-      } else {
-        // Fallback: 45% default construction WIP factor
-        const fallbackCost = grossV.times(0.45).toFixed(2);
-        setRsvCostAmount(fallbackCost);
-      }
+      setRsvCostAmount(cogsFormatted);
+      setIsCostAllocated(isAllocated);
     }
   }, [isOpen, contract, linkedProperty, costAllocations]);
 
@@ -101,16 +102,25 @@ export const HandoverExecutionModal: React.FC<HandoverExecutionModalProps> = ({
     return diff.isNegative() ? D(0) : diff;
   }, [grossValue, cashCollected]);
 
+  const targetPeriod = useMemo(() => {
+    return resolvePeriodForDate(handoverDate, periods || [activePeriod], activePeriod);
+  }, [handoverDate, periods, activePeriod]);
+  const isTargetPeriodLocked = targetPeriod.status !== 'OPEN';
+
   // Generate Model B Journal Entry Preview (§14.D.12 & INV-4.17)
   const previewEntry = useMemo<ERPJournalEntry | null>(() => {
-    if (!contract || !activePeriod) return null;
+    if (!contract || !targetPeriod) return null;
     try {
       const validRsv = D(rsvCostAmount || 0);
+      if (validRsv.isZero() || validRsv.isNegative()) return null;
+      const previewPeriod: ERPAccountingPeriod = targetPeriod.status === 'OPEN'
+        ? targetPeriod
+        : { ...targetPeriod, status: 'OPEN' };
       return ContractsEngine.createHandoverModelBEntry(
         contract,
-        activePeriod,
+        previewPeriod,
         handoverDate,
-        validRsv.isNegative() ? '0.00' : validRsv,
+        validRsv,
         '501000',
         '151000',
         'PREVIEW'
@@ -119,18 +129,34 @@ export const HandoverExecutionModal: React.FC<HandoverExecutionModalProps> = ({
       console.warn('Model B Preview generation error:', e);
       return null;
     }
-  }, [contract, activePeriod, handoverDate, rsvCostAmount]);
+  }, [contract, targetPeriod, handoverDate, rsvCostAmount]);
 
   if (!isOpen || !contract) return null;
 
   const isAlreadyDelivered = contract.handover_status === 'Delivered';
+  const hasValidCost = useMemo(() => {
+    try {
+      return D(rsvCostAmount || '0').gt(0);
+    } catch {
+      return false;
+    }
+  }, [rsvCostAmount]);
 
-  // Gate check: if not ready, require assertion checkbox; must not be already delivered; preview entry must exist
-  const canConfirm = !isMutating && !isAlreadyDelivered && (isPropertyReady || certifiedCompletionAsserted) && grossValue.greaterThan(0) && previewEntry !== null;
+  // Gate check: must have valid cost; if not ready, require assertion checkbox; must not be already delivered; preview entry must exist; target period must not be locked
+  const canConfirm = !isMutating && !isAlreadyDelivered && hasValidCost && (isPropertyReady || certifiedCompletionAsserted) && grossValue.greaterThan(0) && previewEntry !== null && !isTargetPeriodLocked;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!canConfirm) return;
+    if (!canConfirm) {
+      if (!hasValidCost) {
+        alert(
+          isAr 
+            ? 'يرجى إدخال تكلفة البناء المستنزفة (WIP Relief) يدوياً أكبر من الصفر لإتمام التسليم' 
+            : 'Please enter a valid construction WIP relief amount greater than zero to proceed'
+        );
+      }
+      return;
+    }
 
     const finalRsv = D(rsvCostAmount || 0);
     await onConfirmHandover(contract, handoverDate, finalRsv.isNegative() ? '0.00' : finalRsv);
@@ -141,95 +167,31 @@ export const HandoverExecutionModal: React.FC<HandoverExecutionModalProps> = ({
     : contract.unit_id;
 
   return (
-    <div className={styles.modalOverlay} onClick={onClose}>
-      <div 
-        className={styles.modalContent}
-        style={{
-          maxWidth: '1080px',
-          width: '95vw',
-          maxHeight: '90vh',
-          display: 'flex',
-          flexDirection: 'column',
-          boxShadow: '0 25px 60px -15px rgba(15, 23, 42, 0.3)'
-        }}
-        onClick={e => e.stopPropagation()}
-        dir={isAr ? 'rtl' : 'ltr'}
-      >
-        {/* Executive Modal Header */}
-        <div style={{
-          padding: 'clamp(0.85rem, 2.5vw, 1.25rem) clamp(1rem, 3vw, 1.75rem)',
-          borderBottom: '1px solid #e2e8f0',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          background: 'linear-gradient(135deg, #fafaf9 0%, #f5f5f4 100%)',
-          gap: '0.75rem'
+    <ZFModalShell
+      isOpen={isOpen}
+      onClose={onClose}
+      isAr={isAr}
+      maxWidth="1080px"
+      icon={<KeyRound size={18} />}
+      title={isAr ? 'محضر استلام الشقة والاعتراف بالإيراد (Model B)' : 'Handover Protocol & Net Revenue Recognition'}
+      subtitle={isAr 
+        ? 'إثبات التسليم الفعلي ونقل الإيراد المؤجل (٢٠٣٠٠٠) إلى إيراد مبيعات محقق (٤٠١٠٠٠) وإثبات باقي الأقساط كمدينين (١٠٣٠٠٠)' 
+        : 'Physical delivery protocol, clearing deferred contract liabilities & recognizing realized sales revenue'}
+      headerExtra={
+        <span style={{
+          fontSize: '0.68rem',
+          fontWeight: 800,
+          padding: '0.15rem 0.5rem',
+          borderRadius: '6px',
+          background: '#eff6ff',
+          color: '#1d4ed8',
+          border: '1px solid #dbeafe'
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', minWidth: 0 }}>
-            <div style={{
-              width: '42px',
-              height: '42px',
-              borderRadius: '12px',
-              background: 'linear-gradient(135deg, #b8903e 0%, #946f23 100%)',
-              color: '#ffffff',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              boxShadow: '0 4px 12px rgba(184, 144, 62, 0.28)',
-              flexShrink: 0
-            }}>
-              <KeyRound size={22} />
-            </div>
-            <div style={{ minWidth: 0 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-                <h3 style={{ margin: 0, fontSize: 'clamp(0.95rem, 2vw, 1.15rem)', fontWeight: 800, color: '#0f172a' }}>
-                  {isAr ? 'محضر استلام الشقة والاعتراف بالإيراد (Model B)' : 'Handover Protocol & Net Revenue Recognition'}
-                </h3>
-                <span style={{
-                  fontSize: '0.68rem',
-                  fontWeight: 800,
-                  padding: '0.15rem 0.5rem',
-                  borderRadius: '6px',
-                  background: '#fef3c7',
-                  color: '#92400e',
-                  border: '1px solid #fde68a'
-                }}>
-                  IFRS 15 / §14.D.12
-                </span>
-              </div>
-              <span style={{ fontSize: '0.74rem', color: '#64748b', display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                {isAr 
-                  ? 'إثبات التسليم الفعلي ونقل الإيراد المؤجل (٢٠٣٠٠٠) إلى إيراد مبيعات محقق (٤٠١٠٠٠) وإثبات باقي الأقساط كمدينين (١٠٣٠٠٠)' 
-                  : 'Physical delivery protocol, clearing deferred contract liabilities & recognizing realized sales revenue'}
-              </span>
-            </div>
-          </div>
-
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={isMutating}
-            aria-label={isAr ? 'إغلاق النافذة' : 'Close Modal'}
-            style={{
-              background: '#ffffff',
-              border: '1px solid #e2e8f0',
-              borderRadius: '9px',
-              minWidth: '44px',
-              minHeight: '44px',
-              width: '44px',
-              height: '44px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: '#64748b',
-              cursor: 'pointer',
-              transition: 'all 0.15s ease',
-              flexShrink: 0
-            }}
-          >
-            <X size={18} />
-          </button>
-        </div>
+          IFRS 15 / §14.D.12
+        </span>
+      }
+      bodyStyle={{ padding: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
+    >
 
         {/* Executive 2-Panel Content */}
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
@@ -278,6 +240,32 @@ export const HandoverExecutionModal: React.FC<HandoverExecutionModalProps> = ({
                 </div>
               )}
 
+              {/* Fiscal Period Locked Warning Banner */}
+              {isTargetPeriodLocked && (
+                <div style={{
+                  background: '#fef2f2',
+                  border: '1.5px solid #fecaca',
+                  borderRadius: '12px',
+                  padding: '0.9rem 1rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.75rem',
+                  color: '#991b1b'
+                }}>
+                  <AlertTriangle size={20} color="#dc2626" style={{ flexShrink: 0 }} />
+                  <div>
+                    <strong style={{ fontSize: '0.82rem', display: 'block' }}>
+                      {isAr ? 'الفترة المحاسبية لتاريخ التسليم مقفلة' : 'Fiscal period is locked'}
+                    </strong>
+                    <span style={{ fontSize: '0.73rem', color: '#b91c1c' }}>
+                      {isAr
+                        ? `تاريخ التسليم يقع في الفترة (${targetPeriod.fiscal_year}-M${targetPeriod.period_number}) وهي مقفلة بموجب المعيار Invariant 0.9. يُحظر ترحيل قيود Model B داخل فترة مقفلة.`
+                        : `Handover date falls in period (${targetPeriod.fiscal_year}-M${targetPeriod.period_number}) which is locked per Invariant 0.9.`}
+                    </span>
+                  </div>
+                </div>
+              )}
+
               {/* Asset Health Card */}
               <div style={{
                 background: '#ffffff',
@@ -288,7 +276,7 @@ export const HandoverExecutionModal: React.FC<HandoverExecutionModalProps> = ({
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.85rem' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                    <Building2 size={16} color="#946f23" />
+                    <Building2 size={16} color="#2563eb" />
                     <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                       {isAr ? 'بيانات الوحدة والعقد' : 'Contract & Asset Dossier'}
                     </span>
@@ -320,7 +308,7 @@ export const HandoverExecutionModal: React.FC<HandoverExecutionModalProps> = ({
 
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <span style={{ fontSize: '0.76rem', color: '#64748b' }}>{isAr ? 'رقم العقد:' : 'Contract Number:'}</span>
-                    <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#946f23', fontFamily: 'monospace' }}>
+                    <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#2563eb', fontFamily: 'monospace' }}>
                       #{contract.contract_number}
                     </span>
                   </div>
@@ -380,15 +368,15 @@ export const HandoverExecutionModal: React.FC<HandoverExecutionModalProps> = ({
                 </div>
 
                 <div style={{
-                  background: 'rgba(184, 144, 62, 0.05)',
-                  border: '1px solid rgba(184, 144, 62, 0.25)',
+                  background: '#fffbeb',
+                  border: '1px solid #fde68a',
                   borderRadius: '12px',
                   padding: '0.9rem',
                   display: 'flex',
                   flexDirection: 'column',
                   gap: '0.2rem'
                 }}>
-                  <span style={{ fontSize: '0.68rem', fontWeight: 700, color: '#946f23' }}>
+                  <span style={{ fontSize: '0.68rem', fontWeight: 700, color: '#b45309' }}>
                     {isAr ? 'المتبقي (V - C)' : 'Unpaid (V - C)'}
                   </span>
                   <strong style={{ fontSize: '0.96rem', color: '#b45309' }}>
@@ -411,7 +399,7 @@ export const HandoverExecutionModal: React.FC<HandoverExecutionModalProps> = ({
                 {/* Date Picker */}
                 <div>
                   <label style={{ fontSize: '0.76rem', fontWeight: 700, color: '#334155', display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.35rem' }}>
-                    <Calendar size={14} color="#946f23" />
+                    <Calendar size={14} color="#2563eb" />
                     <span>{isAr ? 'تاريخ محضر الاستلام والتسليم الرسمي:' : 'Certified Handover Date:'}</span>
                   </label>
                   <input
@@ -437,13 +425,54 @@ export const HandoverExecutionModal: React.FC<HandoverExecutionModalProps> = ({
                 <div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem' }}>
                     <label style={{ fontSize: '0.76rem', fontWeight: 700, color: '#334155', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                      <Layers size={14} color="#946f23" />
+                      <Layers size={14} color="#2563eb" />
                       <span>{isAr ? 'تكلفة البناء المستنزفة (WIP Relief):' : 'Incurred WIP Relief (RSV):'}</span>
                     </label>
                     <span style={{ fontSize: '0.68rem', color: '#64748b' }}>
                       §14.C.7 Dr 501000 / Cr 151000
                     </span>
                   </div>
+
+                  {!isCostAllocated && (
+                    <div style={{
+                      background: '#fff1f2',
+                      border: '1px solid #fecdd3',
+                      borderRadius: '8px',
+                      padding: '0.6rem 0.75rem',
+                      display: 'flex',
+                      alignItems: 'flex-start',
+                      gap: '0.5rem',
+                      marginBottom: '0.5rem',
+                      color: '#9f1239'
+                    }}>
+                      <AlertTriangle size={15} color="#e11d48" style={{ flexShrink: 0, marginTop: '2px' }} />
+                      <div style={{ fontSize: '0.72rem', lineHeight: 1.4 }}>
+                        <strong>{isAr ? 'تنبيه مالي (لا يوجد تخصيص تكلفة معتمد):' : 'Notice (No Approved Cost Allocation):'}</strong>{' '}
+                        {isAr 
+                          ? 'تم إيقاف النسبة الافتراضية التلقائية (45%). يجب إدخال تكلفة البناء المستنزفة يدوياً وبدقة لإتمام التسليم.' 
+                          : 'The 45% default fallback is removed. You must explicitly input the actual construction WIP relief amount manually.'}
+                      </div>
+                    </div>
+                  )}
+
+                  {isCostAllocated && (
+                    <div style={{
+                      background: '#f0fdf4',
+                      border: '1px solid #bbf7d0',
+                      borderRadius: '8px',
+                      padding: '0.4rem 0.65rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.4rem',
+                      marginBottom: '0.5rem',
+                      color: '#166534',
+                      fontSize: '0.72rem'
+                    }}>
+                      <CheckCircle2 size={13} color="#16a34a" />
+                      <span>{isAr ? 'تم احتساب التكلفة تلقائياً وفق نسبة تخصيص التكلفة المعتمدة (RSV)' : 'Derived from approved relative sales value (RSV) allocation factor'}</span>
+                    </div>
+                  )}
+
                   <div style={{ position: 'relative' }}>
                     <input
                       type="number"
@@ -473,7 +502,7 @@ export const HandoverExecutionModal: React.FC<HandoverExecutionModalProps> = ({
                       transform: 'translateY(-50%)',
                       fontSize: '0.75rem',
                       fontWeight: 700,
-                      color: '#946f23'
+                      color: '#64748b'
                     }}>
                       ج.م
                     </span>
@@ -543,7 +572,7 @@ export const HandoverExecutionModal: React.FC<HandoverExecutionModalProps> = ({
                       type="checkbox"
                       checked={certifiedCompletionAsserted}
                       onChange={e => setCertifiedCompletionAsserted(e.target.checked)}
-                      style={{ marginTop: '0.15rem', accentColor: '#946f23' }}
+                      style={{ marginTop: '0.15rem', accentColor: '#2563eb' }}
                     />
                     <span style={{ fontSize: '0.73rem', fontWeight: 700, color: '#78350f', lineHeight: 1.45 }}>
                       {isAr 
@@ -574,7 +603,7 @@ export const HandoverExecutionModal: React.FC<HandoverExecutionModalProps> = ({
                 borderBottom: '1px solid #f1f5f9'
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <FileText size={17} color="#946f23" />
+                  <FileText size={17} color="#2563eb" />
                   <span style={{ fontWeight: 800, fontSize: '0.88rem', color: '#0f172a' }}>
                     {isAr ? 'معاينة القيد المحاسبي المزدوج (Model B Posting)' : 'Model B Net Recognition Preview'}
                   </span>
@@ -682,8 +711,8 @@ export const HandoverExecutionModal: React.FC<HandoverExecutionModalProps> = ({
 
               {/* Plain Real-Estate Explanation of Compound Entry */}
               <div style={{
-                background: 'linear-gradient(135deg, #fefdfa 0%, #f8fafc 100%)',
-                border: '1px solid rgba(184, 144, 62, 0.3)',
+                background: '#f8fafc',
+                border: '1px solid #e2e8f0',
                 borderRadius: '10px',
                 padding: '0.85rem 1rem',
                 fontSize: '0.74rem',
@@ -693,7 +722,7 @@ export const HandoverExecutionModal: React.FC<HandoverExecutionModalProps> = ({
                 flexDirection: 'column',
                 gap: '0.4rem'
               }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 800, color: '#946f23' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 800, color: '#2563eb' }}>
                   <Building2 size={15} />
                   <span>{isAr ? 'توضيح أسطر القيد المركب لمبيعات الشقق وتكلفة المباني (لغير المحاسبين):' : 'Plain-Language Real Estate Breakdown of Compound Entry:'}</span>
                 </div>
@@ -808,6 +837,11 @@ export const HandoverExecutionModal: React.FC<HandoverExecutionModalProps> = ({
                     <Loader2 size={16} className="animate-spin" />
                     <span>{isAr ? 'جاري ترحيل القيود...' : 'Posting Journal Entries...'}</span>
                   </>
+                ) : isTargetPeriodLocked ? (
+                  <>
+                    <AlertTriangle size={16} />
+                    <span>{isAr ? `الفترة المحاسبية مقفلة (M${targetPeriod.period_number})` : `Period Locked (M${targetPeriod.period_number})`}</span>
+                  </>
                 ) : (
                   <>
                     <CheckCircle2 size={16} />
@@ -818,7 +852,6 @@ export const HandoverExecutionModal: React.FC<HandoverExecutionModalProps> = ({
             </div>
           </div>
         </form>
-      </div>
-    </div>
+    </ZFModalShell>
   );
 };

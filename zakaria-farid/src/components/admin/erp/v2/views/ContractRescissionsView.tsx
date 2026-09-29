@@ -16,7 +16,8 @@ import {
   TrendingUp,
   Building2,
   Scale,
-  Sparkles
+  Sparkles,
+  X
 } from 'lucide-react';
 import { ERPRescissionRecord, ERPContract } from '@/lib/erp/types';
 import { Property } from '@/lib/supabase/types';
@@ -25,7 +26,7 @@ import { MoneyCell } from '@/components/erp/MoneyCell';
 import { StatusBadge } from '@/components/erp/StatusBadge';
 import { localizeBuyerName } from '@/components/erp/JournalEntryPreview';
 import { ZFPagination } from '../ZFPagination';
-import { ZFKpiCard } from '../ZFKpiCard';
+import { ZFKpiCard, ZFKpiGrid } from '../ZFKpiCard';
 import { ZFFilterToolbar } from '../ZFFilterToolbar';
 import { ZFErpBreadcrumb } from '../common/ZFErpBreadcrumb';
 import styles from '../ZFWorkstationShell.module.css';
@@ -35,8 +36,10 @@ interface ContractRescissionsViewProps {
   contracts: ERPContract[];
   properties?: Property[];
   isAr?: boolean;
+  hideHeader?: boolean;
   onInspectRescission: (rescission: ERPRescissionRecord) => void;
   onNavigateToContracts: () => void;
+  onOpenRescissionModal?: (contract: ERPContract) => void;
 }
 
 export const ContractRescissionsView: React.FC<ContractRescissionsViewProps> = ({
@@ -44,8 +47,10 @@ export const ContractRescissionsView: React.FC<ContractRescissionsViewProps> = (
   contracts,
   properties = [],
   isAr = true,
+  hideHeader = false,
   onInspectRescission,
-  onNavigateToContracts
+  onNavigateToContracts,
+  onOpenRescissionModal
 }) => {
   const [viewMode, setViewMode] = useState<'cards' | 'table'>('table');
   const [branchFilter, setBranchFilter] = useState<'all' | 'Pre-Delivery' | 'Post-Delivery'>('all');
@@ -53,6 +58,8 @@ export const ContractRescissionsView: React.FC<ContractRescissionsViewProps> = (
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [pageSize, setPageSize] = useState<number>(10);
+  const [isContractPickerOpen, setIsContractPickerOpen] = useState(false);
+  const [pickerSearchQuery, setPickerSearchQuery] = useState('');
 
   // Properties map for building title lookup
   const propertyMap = useMemo(() => {
@@ -150,117 +157,151 @@ export const ContractRescissionsView: React.FC<ContractRescissionsViewProps> = (
       style={{ width: '100%', maxWidth: '100%', minWidth: 0, boxSizing: 'border-box' }}
     >
       {/* 1. Header & Stage Breadcrumb */}
-      <div className={styles.stageHeader}>
-        <div className={styles.stageTitleArea}>
-          <ZFErpBreadcrumb sectionTitle={isAr ? 'فسخ العقود والتسويات القانونية' : 'Contract Rescissions & Settlements'} icon={<Scale size={13} color="#946f23" />} />
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-            <h1 className={styles.stageTitle} style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
-              <span>{isAr ? 'فسخ وإلغاء العقود' : 'Contract Rescissions'}</span>
-              <span style={{ 
-                background: 'linear-gradient(135deg, #946f23 0%, #c5a059 100%)', 
-                WebkitBackgroundClip: 'text', 
-                WebkitTextFillColor: 'transparent',
-                fontWeight: 900
+      {!hideHeader && (
+        <div className={styles.stageHeader}>
+          <div className={styles.stageTitleArea}>
+            <ZFErpBreadcrumb sectionTitle={isAr ? 'فسخ العقود والتسويات القانونية' : 'Contract Rescissions & Settlements'} icon={<Scale size={13} color="var(--erp-accent, #2563eb)" />} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+              <h1 className={styles.stageTitle} style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
+                <span>{isAr ? 'فسخ وإلغاء العقود' : 'Contract Rescissions'}</span>
+                <span style={{ 
+                  color: 'var(--erp-accent, #2563eb)', 
+                  fontWeight: 900
+                }}>
+                  {isAr ? 'والتسويات المالية القانونية' : '& Forfeiture Floor'}
+                </span>
+              </h1>
+              <span style={{
+                background: 'var(--erp-accent-tint, rgba(37, 99, 235, 0.08))',
+                border: '1px solid rgba(37, 99, 235, 0.25)',
+                color: 'var(--erp-accent, #2563eb)',
+                padding: '0.2rem 0.55rem',
+                borderRadius: '6px',
+                fontSize: '0.72rem',
+                fontWeight: 800,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.35rem'
               }}>
-                {isAr ? 'والتسويات المالية القانونية' : '& Forfeiture Floor'}
+                <Sparkles size={11} color="var(--erp-accent, #2563eb)" />
+                <span>{isAr ? 'تسويات قانونية معتمدة' : 'Audited Legal Settlement'}</span>
               </span>
-            </h1>
-            <span style={{
-              background: 'rgba(197, 160, 89, 0.09)',
-              border: '1px solid rgba(197, 160, 89, 0.28)',
-              color: '#946f23',
-              padding: '0.2rem 0.55rem',
-              borderRadius: '6px',
-              fontSize: '0.72rem',
-              fontWeight: 800,
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '0.35rem'
-            }}>
-              <Sparkles size={11} color="#946f23" />
-              <span>{isAr ? 'تسويات قانونية معتمدة' : 'Audited Legal Settlement'}</span>
-            </span>
+            </div>
+            <p style={{ margin: '0.35rem 0 0', fontSize: '0.82rem', color: '#475569', lineHeight: 1.6 }}>
+              {isAr ? (
+                <>
+                  تسوية العقود القانونية: خصم <strong style={{ color: 'var(--erp-accent, #2563eb)' }}>غرامة الفسخ المستحقة (10%)</strong>، واحتساب <strong style={{ color: '#047857' }}>صافي التزامات الرد للعميل (حساب 206200)</strong>، وتطبيق <strong style={{ color: 'var(--erp-accent, #2563eb)' }}>حد حظر المطالبة بعجز (Forfeiture Floor)</strong> وإعادة إدراج الشقق ضمن محفظة المعروض المتاح.
+                </>
+              ) : (
+                'Official registry for rescinded contracts, 10% forfeiture retention, customer refund liability (206200), and unit repossession.'
+              )}
+            </p>
           </div>
-          <p style={{ margin: '0.35rem 0 0', fontSize: '0.82rem', color: '#475569', lineHeight: 1.6 }}>
-            {isAr ? (
-              <>
-                تسوية العقود القانونية: خصم <strong style={{ color: '#946f23' }}>غرامة الفسخ المستحقة (10%)</strong>، واحتساب <strong style={{ color: '#047857' }}>صافي التزامات الرد للعميل (حساب 206200)</strong>، وتطبيق <strong style={{ color: '#946f23' }}>حد حظر المطالبة بعجز (Forfeiture Floor)</strong> وإعادة إدراج الشقق ضمن محفظة المعروض المتاح.
-              </>
-            ) : (
-              'Official registry for rescinded contracts, 10% forfeiture retention, customer refund liability (206200), and unit repossession.'
+
+          <div className={styles.stageActions} style={{ display: 'flex', gap: '0.65rem', alignItems: 'center' }}>
+            {onOpenRescissionModal && (
+              <button
+                type="button"
+                onClick={() => {
+                  const eligible = contracts.filter(c => c.status !== 'Rescinded');
+                  if (eligible.length === 1) {
+                    onOpenRescissionModal(eligible[0]);
+                  } else {
+                    setIsContractPickerOpen(true);
+                  }
+                }}
+                style={{
+                  background: 'linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '10px',
+                  padding: '0.6rem 1.15rem',
+                  fontSize: '0.8rem',
+                  fontWeight: 800,
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.45rem',
+                  boxShadow: '0 2px 8px rgba(220, 38, 38, 0.25)',
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                <RotateCcw size={14} color="#ffffff" />
+                <span>{isAr ? '+ تسجيل فسخ عقد وتسوية رد' : '+ New Rescission Settlement'}</span>
+              </button>
             )}
-          </p>
-        </div>
 
-        <div className={styles.stageActions}>
-          <button
-            onClick={onNavigateToContracts}
-            style={{
-              background: 'rgba(197, 160, 89, 0.04)',
-              border: '1px solid rgba(197, 160, 89, 0.3)',
-              color: '#946f23',
-              borderRadius: '10px',
-              padding: '0.6rem 1.1rem',
-              fontSize: '0.8rem',
-              fontWeight: 700,
-              cursor: 'pointer',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '0.45rem',
-              boxShadow: '0 1px 2px rgba(197, 160, 89, 0.06)',
-              transition: 'all 0.15s ease'
-            }}
-          >
-            <span>{isAr ? 'الرجوع لعقود البيع' : 'Back to Active Contracts'}</span>
-            <ArrowRight size={14} color="#946f23" />
-          </button>
+            <button
+              onClick={onNavigateToContracts}
+              style={{
+                background: '#ffffff',
+                border: '1px solid var(--erp-border, #cbd5e1)',
+                color: 'var(--erp-accent, #2563eb)',
+                borderRadius: '10px',
+                padding: '0.6rem 1.1rem',
+                fontSize: '0.8rem',
+                fontWeight: 700,
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.45rem',
+                boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)',
+                transition: 'all 0.15s ease'
+              }}
+            >
+              <span>{isAr ? 'الرجوع لعقود البيع' : 'Back to Active Contracts'}</span>
+              <ArrowRight size={14} color="var(--erp-accent, #2563eb)" />
+            </button>
+          </div>
         </div>
-      </div>
+      )}
 
-      {/* 2. ASYMMETRIC LEGAL SETTLEMENT RADAR (Legal Disputes Archetype) */}
-      <div className={styles.asymmetricBentoGrid}>
-        {/* Left / Hero Card: Retained Penalties & Income Yield */}
+      {/* 2. EXECUTIVE LEGAL SETTLEMENT KPIS (4 Discrete Floating Stat Cards) */}
+      <ZFKpiGrid style={{ marginBottom: '1.25rem' }}>
+        {/* Card 1: Retained Penalties & Income Yield */}
         <ZFKpiCard
-          variant="double-bezel"
-          isFlagship={true}
           title={isAr ? 'غرامات الإلغاء المستحقة للشركة' : 'Retained Penalties & Settlement Yield'}
-          value={kpis.totalPenalty.formatEGP(isAr)}
-          icon={<DollarSign size={20} />}
-          accentColor="gold"
-          badge={{ text: isAr ? 'غرامات فسخ مستحقة' : 'Retained Earnings', variant: 'gold' }}
-          subtitleLabel={isAr ? 'عقود مفسوخة معتمدة' : 'Total Rescissions'}
-          subtitleValue={
-            <span style={{ color: '#946f23', fontWeight: 800 }}>
-              {`${kpis.count} ${isAr ? 'عقود ملغاة قانونياً' : 'deals legally voided'}`}
-            </span>
-          }
+          value={splitAmount(kpis.totalPenalty).num}
+          unitLabel={splitAmount(kpis.totalPenalty).cur}
+          icon={<DollarSign size={16} />}
+          accentColor="accent"
+          subtitleLabel={isAr ? 'أرباح تسوية' : 'Settlement'}
+          subtitleValue={isAr ? 'غرامات فسخ مستحقة للشركة' : 'Retained company earnings'}
         />
 
-        {/* Right Stack: 2 Compact Telemetry Instruments */}
-        <div className={styles.telemetryStack}>
-          <ZFKpiCard
-            variant="compact"
-            title={isAr ? 'صافي التزامات الرد للعميل' : 'Customer Refund Liability'}
-            value={kpis.totalRefund.formatEGP(isAr)}
-            icon={<CheckCircle2 size={16} />}
-            accentColor="emerald"
-            badge={{ text: isAr ? 'التزام رد نقدي' : 'Refund Liability', variant: 'positive' }}
-            subtitleLabel={isAr ? 'موقف الفلوس' : 'Status'}
-            subtitleValue={isAr ? 'التزام رد نقدي (حساب 206200)' : 'due for refund'}
-          />
+        {/* Card 2: Customer Refund Liability */}
+        <ZFKpiCard
+          title={isAr ? 'صافي التزامات الرد للعميل' : 'Customer Refund Liability'}
+          value={splitAmount(kpis.totalRefund).num}
+          unitLabel={splitAmount(kpis.totalRefund).cur}
+          icon={<CheckCircle2 size={16} />}
+          accentColor="amber"
+          subtitleLabel={isAr ? 'موقف الفلوس' : 'Status'}
+          subtitleValue={isAr ? 'التزام رد نقدي (حساب 206200)' : 'Due for refund (GL 206200)'}
+        />
 
-          <ZFKpiCard
-            variant="compact"
-            title={isAr ? 'قيمة الأصول والشقق المستردة' : 'Voided Sales & Asset Recovery'}
-            value={kpis.totalGrossVoid.formatEGP(isAr)}
-            icon={<Building2 size={16} color="#946f23" />}
-            accentColor="gold"
-            badge={{ text: isAr ? 'مخزون مسترد' : 'Asset Recovery', variant: 'gold' }}
-            subtitleLabel={isAr ? 'موقف الشقق' : 'Inventory'}
-            subtitleValue={isAr ? 'شقق أعيدت للمعروض المتاح للبيع' : 'restored to inventory'}
-          />
-        </div>
-      </div>
+        {/* Card 3: Voided Sales & Asset Recovery */}
+        <ZFKpiCard
+          title={isAr ? 'قيمة الأصول والشقق المستردة' : 'Voided Sales & Asset Recovery'}
+          value={splitAmount(kpis.totalGrossVoid).num}
+          unitLabel={splitAmount(kpis.totalGrossVoid).cur}
+          icon={<Building2 size={16} />}
+          accentColor="blue"
+          subtitleLabel={isAr ? 'موقف المخزون' : 'Inventory'}
+          subtitleValue={isAr ? 'شقق أعيدت للمعروض المتاح للبيع' : 'Restored to active inventory'}
+        />
+
+        {/* Card 4: Total Rescissions Count */}
+        <ZFKpiCard
+          title={isAr ? 'عدد العقود المفسوخة قانونياً' : 'Total Legally Voided Contracts'}
+          value={kpis.count}
+          unitLabel={isAr ? 'عقد ملغى' : 'deals'}
+          icon={<Scale size={16} />}
+          accentColor="slate"
+          subtitleLabel={isAr ? 'حالة القضايا' : 'Legal Status'}
+          subtitleValue={isAr ? `${kpis.count} عقود ملغاة ومعتمدة` : `${kpis.count} legally voided`}
+        />
+      </ZFKpiGrid>
 
       {/* 3. Toolbar: Filter Tabs, Sort, Search & View Switcher */}
       <ZFFilterToolbar
@@ -311,7 +352,7 @@ export const ContractRescissionsView: React.FC<ContractRescissionsViewProps> = (
           textAlign: 'center',
           color: '#64748b'
         }}>
-          <ShieldAlert size={36} color="#946f23" style={{ margin: '0 auto 0.75rem' }} />
+          <ShieldAlert size={36} color="var(--erp-accent, #2563eb)" style={{ margin: '0 auto 0.75rem' }} />
           <h3 style={{ margin: 0, color: '#0f172a', fontSize: '1rem', fontWeight: 800 }}>
             {isAr ? 'لا توجد عقود مفسوخة مطابقة للبحث أو الفلتر' : 'No matching rescinded contracts recorded'}
           </h3>
@@ -340,7 +381,7 @@ export const ContractRescissionsView: React.FC<ContractRescissionsViewProps> = (
                 <th style={{ minWidth: '140px', textAlign: 'center', whiteSpace: 'nowrap' }}>{isAr ? 'مرحلة الفسخ' : 'Branch'}</th>
                 <th style={{ minWidth: '120px', textAlign: isAr ? 'left' : 'right', whiteSpace: 'nowrap' }}>{isAr ? 'إجمالي قيمة العقد' : 'Gross Value'}</th>
                 <th style={{ minWidth: '115px', textAlign: isAr ? 'left' : 'right', whiteSpace: 'nowrap' }}>{isAr ? 'المسدد من العميل' : 'Cash Collected'}</th>
-                <th style={{ minWidth: '135px', textAlign: isAr ? 'left' : 'right', whiteSpace: 'nowrap', color: '#946f23' }}>
+                <th style={{ minWidth: '135px', textAlign: isAr ? 'left' : 'right', whiteSpace: 'nowrap', color: 'var(--erp-accent, #2563eb)' }}>
                   <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
                     <span>{isAr ? 'غرامة الفسخ (١٠٪)' : 'Penalty Retained'}</span>
                   </span>
@@ -399,16 +440,16 @@ export const ContractRescissionsView: React.FC<ContractRescissionsViewProps> = (
                           fontVariantNumeric: 'tabular-nums',
                           fontSize: '0.74rem',
                           fontWeight: 800,
-                          color: '#946f23',
-                          background: 'rgba(197, 160, 89, 0.06)',
-                          border: '1px solid rgba(197, 160, 89, 0.2)',
+                          color: 'var(--erp-accent, #2563eb)',
+                          background: 'var(--erp-accent-tint, rgba(37, 99, 235, 0.06))',
+                          border: '1px solid rgba(37, 99, 235, 0.2)',
                           borderRadius: '6px',
                           padding: '0.2rem 0.5rem',
                           display: 'inline-flex',
                           alignItems: 'center',
                           gap: '0.3rem'
                         }}>
-                          <RotateCcw size={11} color="#946f23" />
+                          <RotateCcw size={11} color="var(--erp-accent, #2563eb)" />
                           <span>#RS-{r.rescission_id.slice(0, 8).toUpperCase()}</span>
                         </span>
                       </td>
@@ -425,7 +466,7 @@ export const ContractRescissionsView: React.FC<ContractRescissionsViewProps> = (
                             fontSize: '0.84rem', 
                             lineHeight: 1.35 
                           }}>
-                            <Building2 size={13} color="#946f23" style={{ flexShrink: 0 }} />
+                            <Building2 size={13} color="var(--erp-accent, #2563eb)" style={{ flexShrink: 0 }} />
                             <span 
                               style={{ 
                                 whiteSpace: 'nowrap', 
@@ -454,9 +495,9 @@ export const ContractRescissionsView: React.FC<ContractRescissionsViewProps> = (
                             )}
                           </div>
                           <div style={{ fontSize: '0.7rem', color: '#64748b', fontVariantNumeric: 'tabular-nums', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-                            <FileText size={11} color="#946f23" />
+                            <FileText size={11} color="var(--erp-accent, #2563eb)" />
                             <span>{isAr ? 'عقد رقم: ' : 'Contract #'}</span>
-                            <span style={{ fontWeight: 800, color: '#946f23' }}>
+                            <span style={{ fontWeight: 800, color: '#0f172a' }}>
                               #{linked?.contract_number || r.contract_id.slice(0, 8)}
                             </span>
                           </div>
@@ -506,17 +547,17 @@ export const ContractRescissionsView: React.FC<ContractRescissionsViewProps> = (
                       {/* 7. Retained Penalty */}
                       <td style={{ whiteSpace: 'nowrap', minWidth: '135px', textAlign: isAr ? 'left' : 'right' }}>
                         <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
-                          <strong style={{ color: '#946f23', fontWeight: 800 }}>
+                          <strong style={{ color: 'var(--erp-accent, #2563eb)', fontWeight: 800 }}>
                             <MoneyCell amount={r.penalty_retained} isAr={isAr} highlight />
                           </strong>
                           <span style={{
                             fontSize: '0.65rem',
                             fontWeight: 800,
-                            color: '#946f23',
-                            background: 'rgba(197, 160, 89, 0.1)',
+                            color: 'var(--erp-accent, #2563eb)',
+                            background: 'var(--erp-accent-tint, rgba(37, 99, 235, 0.1))',
                             padding: '0.1rem 0.35rem',
                             borderRadius: '4px',
-                            border: '1px solid rgba(197, 160, 89, 0.25)'
+                            border: '1px solid rgba(37, 99, 235, 0.25)'
                           }}>
                             {isAr ? '١٠٪' : '10%'}
                           </span>
@@ -541,9 +582,9 @@ export const ContractRescissionsView: React.FC<ContractRescissionsViewProps> = (
                           type="button"
                           onClick={() => onInspectRescission(r)}
                           style={{
-                            background: 'rgba(197, 160, 89, 0.05)',
-                            border: '1px solid rgba(197, 160, 89, 0.28)',
-                            color: '#946f23',
+                            background: 'var(--erp-accent-tint, rgba(37, 99, 235, 0.05))',
+                            border: '1px solid rgba(37, 99, 235, 0.28)',
+                            color: 'var(--erp-accent, #2563eb)',
                             borderRadius: '7px',
                             padding: '0.32rem 0.75rem',
                             fontSize: '0.72rem',
@@ -552,12 +593,12 @@ export const ContractRescissionsView: React.FC<ContractRescissionsViewProps> = (
                             alignItems: 'center',
                             gap: '0.35rem',
                             cursor: 'pointer',
-                            boxShadow: '0 1px 2px rgba(197, 160, 89, 0.05)',
+                            boxShadow: '0 1px 2px rgba(37, 99, 235, 0.05)',
                             transition: 'all 0.15s ease'
                           }}
                           title={isAr ? 'عرض تفاصيل الفسخ وحساب المسترد' : 'Inspect Rescission Settlement'}
                         >
-                          <Eye size={12} color="#946f23" />
+                          <Eye size={12} color="var(--erp-accent, #2563eb)" />
                           <span>{isAr ? 'عرض التسوية' : 'Inspect'}</span>
                         </button>
                       </td>
@@ -599,9 +640,9 @@ export const ContractRescissionsView: React.FC<ContractRescissionsViewProps> = (
                       fontVariantNumeric: 'tabular-nums',
                       fontSize: '0.72rem',
                       fontWeight: 800,
-                      color: '#946f23',
-                      background: 'rgba(197, 160, 89, 0.06)',
-                      border: '1px solid rgba(197, 160, 89, 0.2)',
+                      color: 'var(--erp-accent, #2563eb)',
+                      background: 'var(--erp-accent-tint, rgba(37, 99, 235, 0.06))',
+                      border: '1px solid rgba(37, 99, 235, 0.2)',
                       borderRadius: '6px',
                       padding: '0.15rem 0.45rem',
                       display: 'inline-flex',
@@ -610,14 +651,14 @@ export const ContractRescissionsView: React.FC<ContractRescissionsViewProps> = (
                       marginBottom: '0.4rem',
                       whiteSpace: 'nowrap'
                     }}>
-                      <RotateCcw size={10} color="#946f23" />
+                      <RotateCcw size={10} color="var(--erp-accent, #2563eb)" />
                       <span>#RS-{r.rescission_id.slice(0, 8).toUpperCase()}</span>
                     </span>
                     <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: '#0f172a', lineHeight: 1.4 }}>
                       {buyerDisplayName}
                     </h3>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.74rem', color: '#64748b', marginTop: '0.25rem', flexWrap: 'wrap' }}>
-                      <Building2 size={12} color="#946f23" />
+                      <Building2 size={12} color="var(--erp-accent, #2563eb)" />
                       <span style={{ fontWeight: 700, color: '#334155' }}>
                         {linked?.unit_id || (isAr ? 'شقة' : 'Property Unit')}
                       </span>
@@ -632,7 +673,7 @@ export const ContractRescissionsView: React.FC<ContractRescissionsViewProps> = (
                           <span>•</span>
                           <span style={{
                             fontVariantNumeric: 'tabular-nums',
-                            color: '#946f23',
+                            color: 'var(--erp-accent, #2563eb)',
                             fontWeight: 800
                           }}>
                             #{linked.contract_number}
@@ -645,8 +686,8 @@ export const ContractRescissionsView: React.FC<ContractRescissionsViewProps> = (
                 </div>
 
                 <div style={{
-                  background: '#fafaf9',
-                  border: '1px solid rgba(197, 160, 89, 0.16)',
+                  background: '#fafbfc',
+                  border: '1px solid #e2e8f0',
                   borderRadius: '12px',
                   padding: '0.85rem',
                   display: 'grid',
@@ -663,8 +704,8 @@ export const ContractRescissionsView: React.FC<ContractRescissionsViewProps> = (
                     <strong style={{ color: '#0f172a' }}><MoneyCell amount={r.total_cash_collected} isAr={isAr} /></strong>
                   </div>
                   <div>
-                    <span style={{ color: '#946f23', display: 'block', fontSize: '0.7rem', fontWeight: 700 }}>{isAr ? 'غرامة الفسخ (١٠٪):' : 'Penalty:'}</span>
-                    <strong style={{ color: '#946f23', fontWeight: 800 }}><MoneyCell amount={r.penalty_retained} isAr={isAr} highlight /></strong>
+                    <span style={{ color: 'var(--erp-accent, #2563eb)', display: 'block', fontSize: '0.7rem', fontWeight: 700 }}>{isAr ? 'غرامة الفسخ (١٠٪):' : 'Penalty:'}</span>
+                    <strong style={{ color: 'var(--erp-accent, #2563eb)', fontWeight: 800 }}><MoneyCell amount={r.penalty_retained} isAr={isAr} highlight /></strong>
                   </div>
                   <div>
                     <span style={{ color: '#047857', display: 'block', fontSize: '0.7rem', fontWeight: 700 }}>{isAr ? 'المسترد للعميل:' : 'Refund:'}</span>
@@ -679,9 +720,9 @@ export const ContractRescissionsView: React.FC<ContractRescissionsViewProps> = (
                     onInspectRescission(r);
                   }}
                   style={{
-                    background: 'rgba(197, 160, 89, 0.05)',
-                    border: '1px solid rgba(197, 160, 89, 0.28)',
-                    color: '#946f23',
+                    background: 'var(--erp-accent-tint, rgba(37, 99, 235, 0.05))',
+                    border: '1px solid rgba(37, 99, 235, 0.28)',
+                    color: 'var(--erp-accent, #2563eb)',
                     borderRadius: '8px',
                     padding: '0.5rem',
                     fontSize: '0.76rem',
@@ -692,11 +733,11 @@ export const ContractRescissionsView: React.FC<ContractRescissionsViewProps> = (
                     gap: '0.35rem',
                     cursor: 'pointer',
                     marginTop: 'auto',
-                    boxShadow: '0 1px 2px rgba(197, 160, 89, 0.04)',
+                    boxShadow: '0 1px 2px rgba(37, 99, 235, 0.04)',
                     transition: 'all 0.15s ease'
                   }}
                 >
-                  <Eye size={13} color="#946f23" />
+                  <Eye size={13} color="var(--erp-accent, #2563eb)" />
                   <span>{isAr ? 'عرض تفاصيل الإلغاء والتسوية' : 'Inspect Rescission'}</span>
                 </button>
               </div>
@@ -720,6 +761,169 @@ export const ContractRescissionsView: React.FC<ContractRescissionsViewProps> = (
         isAr={isAr}
         itemLabel={{ ar: 'تسوية فسخ', en: 'rescissions' }}
       />
+
+      {/* Contract Selection Modal for Rescission */}
+      {isContractPickerOpen && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(15, 23, 42, 0.6)',
+            backdropFilter: 'blur(4px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 9999,
+            padding: '1.25rem'
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setIsContractPickerOpen(false);
+          }}
+        >
+          <div
+            style={{
+              background: '#ffffff',
+              borderRadius: '16px',
+              border: '1.5px solid #e2e8f0',
+              width: '100%',
+              maxWidth: '560px',
+              maxHeight: '80vh',
+              overflow: 'hidden',
+              display: 'flex',
+              flexDirection: 'column',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
+            }}
+          >
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '1.15rem 1.35rem',
+              borderBottom: '1px solid #e2e8f0'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                <div style={{
+                  width: '36px',
+                  height: '36px',
+                  borderRadius: '10px',
+                  background: 'rgba(220, 38, 38, 0.1)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}>
+                  <RotateCcw size={18} color="#dc2626" />
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 800, color: '#0f172a' }}>
+                    {isAr ? 'اختيار عقد للتسوية والفسخ' : 'Select Contract for Rescission'}
+                  </h3>
+                  <p style={{ margin: '0.15rem 0 0', fontSize: '0.74rem', color: '#64748b' }}>
+                    {isAr ? 'اختر العقد المطلوب حساب غرامة الفسخ ورد مستحقاته' : 'Select contract to compute forfeiture & refunds'}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsContractPickerOpen(false)}
+                style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#64748b' }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div style={{ padding: '0.85rem 1.35rem', borderBottom: '1px solid #f1f5f9' }}>
+              <input
+                type="text"
+                placeholder={isAr ? 'ابحث باسم العميل أو رقم العقد أو الوحدة...' : 'Search by buyer, contract #, unit...'}
+                value={pickerSearchQuery}
+                onChange={(e) => setPickerSearchQuery(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '0.6rem 0.85rem',
+                  borderRadius: '8px',
+                  border: '1px solid #cbd5e1',
+                  fontSize: '0.82rem'
+                }}
+              />
+            </div>
+
+            <div style={{ overflowY: 'auto', padding: '0.75rem 1.35rem', flex: 1, display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+              {contracts
+                .filter(c => c.status !== 'Rescinded')
+                .filter(c => {
+                  if (!pickerSearchQuery.trim()) return true;
+                  const q = pickerSearchQuery.toLowerCase();
+                  return (
+                    (c.buyer_name || '').toLowerCase().includes(q) ||
+                    (c.contract_number || '').toLowerCase().includes(q) ||
+                    (c.unit_id || '').toLowerCase().includes(q)
+                  );
+                })
+                .map(c => {
+                  const gross = D(c.gross_contract_value || '0');
+                  const col = D(c.total_cash_collected || '0');
+                  return (
+                    <div
+                      key={c.contract_id}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: '0.75rem 1rem',
+                        borderRadius: '10px',
+                        border: '1px solid #e2e8f0',
+                        background: '#f8fafc',
+                        gap: '0.75rem'
+                      }}
+                    >
+                      <div>
+                        <div style={{ fontWeight: 800, fontSize: '0.85rem', color: '#0f172a' }}>
+                          {c.buyer_name}
+                        </div>
+                        <div style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '0.15rem' }}>
+                          {isAr ? 'عقد' : 'Contract'} #{c.contract_number} • {isAr ? 'وحدة' : 'Unit'} {c.unit_id}
+                        </div>
+                        <div style={{ fontSize: '0.72rem', color: '#047857', fontWeight: 700, marginTop: '0.2rem' }}>
+                          {isAr ? 'المحصل كاش:' : 'Collected:'} {col.formatEGP(isAr)} / {gross.formatEGP(isAr)}
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsContractPickerOpen(false);
+                          onOpenRescissionModal?.(c);
+                        }}
+                        style={{
+                          background: 'linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)',
+                          color: '#ffffff',
+                          border: 'none',
+                          borderRadius: '8px',
+                          padding: '0.45rem 0.85rem',
+                          fontSize: '0.76rem',
+                          fontWeight: 800,
+                          cursor: 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '0.35rem',
+                          whiteSpace: 'nowrap'
+                        }}
+                      >
+                        <RotateCcw size={12} />
+                        <span>{isAr ? 'بدء التسوية والفسخ' : 'Rescind'}</span>
+                      </button>
+                    </div>
+                  );
+                })}
+              {contracts.filter(c => c.status !== 'Rescinded').length === 0 && (
+                <div style={{ textAlign: 'center', padding: '2rem', color: '#64748b', fontSize: '0.82rem' }}>
+                  {isAr ? 'لا توجد عقود سارية قابلة للفسخ' : 'No active contracts available for rescission'}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

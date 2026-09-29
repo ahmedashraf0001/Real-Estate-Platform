@@ -28,7 +28,9 @@ import {
   ArrowLeft,
   DollarSign,
   Layers,
-  Info
+  Info,
+  HardHat,
+  Landmark
 } from 'lucide-react';
 
 export interface TourStepMetric {
@@ -975,6 +977,168 @@ export const SIDEBAR_TOUR_STEPS: TourStep[] = [
     accountingImpactAr: 'إلغاء المديونية وإجراء التسوية العكسية بين المبالغ المستردة، الخصم الإداري، والوحدة المطروحة مجدداً.',
     accountingImpactEn: 'Reverses contract receivables, records administrative penalty revenue, and restores property availability.',
     icon: RotateCcw
+  },
+
+  // 11. مصاريف البناء ومستحقات المقاولين (Construction WIP & Payables - construction)
+  {
+    moduleId: 'construction',
+    targetSelector: '[data-tour="nav-item-construction"]',
+    stepNumber: 11,
+    groupAr: 'المشاريع والإنشاءات',
+    groupEn: 'PROJECTS & CONSTRUCTION',
+    titleAr: 'مصاريف البناء ومستحقات المقاولين (Construction Payables)',
+    titleEn: 'Construction WIP & Contractor Payables',
+    badgeLabelAr: 'حسابات المقاولين',
+    badgeLabelEn: 'AP PAYABLES',
+    purposeAr: 'منظومة حصر وإدارة مستخلصات المقاولين، فواتير الموردين، ومصاريف المواقع؛ ربط النفقات الإنشائية بالأصول الرأسمالية (WIP) وجدولة الدفعات لضبط التدفق النقدي.',
+    purposeEn: 'Master hub for contractor claims, vendor invoices, and site disbursements; links construction expenditures directly to WIP accounts and schedules payable tranches.',
+    keyMetrics: [
+      {
+        nameAr: 'إجمالي التكاليف الإنشائية (WIP)',
+        nameEn: 'Capitalized Construction WIP',
+        descAr: 'المصروفات الرأسمالية التراكمية على الهيكل والخرسانات والتشطيبات.',
+        descEn: 'Cumulative capitalized construction outflows across all project stages.',
+        tagAr: 'تكاليف رأسمالية',
+        tagEn: 'Capitalized WIP'
+      },
+      {
+        nameAr: 'مستحقات المقاولين الآجلة (AP)',
+        nameEn: 'Outstanding Accounts Payable (AP)',
+        descAr: 'إجمالي المبالغ المستحقة للمقاولين والموردين وفق جداول السداد المعتمدة.',
+        descEn: 'Total accounts payable obligations owed to contractors and suppliers.',
+        tagAr: 'التزامات موردين',
+        tagEn: 'Contractor AP'
+      },
+      {
+        nameAr: 'المستحقات المتأخرة السداد',
+        nameEn: 'Overdue Payable Installments',
+        descAr: 'دفعات المقاولين التي حان موعد استحقاقها وتتطلب سداداً فورياً.',
+        descEn: 'Matured payable tranches requiring urgent settlement to maintain site momentum.',
+        tagAr: 'مستحقات عاجلة',
+        tagEn: 'Overdue AP'
+      },
+      {
+        nameAr: 'نسبة الدفعات المسددة للمقاولين',
+        nameEn: 'Payable Settlement Progress',
+        descAr: 'معدل سداد الالتزامات مقارنة بإجمالي الفواتير والمستخلصات المعتمدة.',
+        descEn: 'Overall ratio of settled payables against total approved contractor claims.',
+        tagAr: 'كفاءة السداد',
+        tagEn: 'Settlement Rate'
+      }
+    ],
+    keyButtons: [
+      {
+        nameAr: 'زر [+ إضافة بند تكلفة / مقايسة]',
+        nameEn: 'Button [+ Add Cost Item]',
+        descAr: 'يتيح لك تسجيل فاتورة مقاول أو توريد مواد جديدة وربطها بالمشروع وجدول دفعاتها.',
+        descEn: 'Logs a new contractor invoice or material supply with installment terms.'
+      },
+      {
+        nameAr: 'زر [سداد دفعة مستخلَص]',
+        nameEn: 'Button [Pay Installment]',
+        descAr: 'يتيح لك إثبات سداد دفعة للمقاول نقداً أو عبر البنك وتوليد القيد المحاسبي فوراً.',
+        descEn: 'Records payment against contractor installments with automated double-entry GL routing.'
+      },
+      {
+        nameAr: 'زر [تسوية / تعديل قيمة البند]',
+        nameEn: 'Button [Cost Adjustment]',
+        descAr: 'يتيح لك توثيق أي تغيير أو تسوية في قيمة المستخلص مع حفظ سجل التدقيق.',
+        descEn: 'Applies adjustments or variations to cost items while preserving audit history.'
+      }
+    ],
+    capabilitiesAr: [
+      'حصر مستخلصات المقاولين وفواتير الموردين حسب التخصص (خرسانة، تشطيب، مرافق)',
+      'جدولة أقساط السداد ومتابعة التواريخ الحرجة لتجنب تعطل أعمال الموقع',
+      'إثبات سداد الدفعات وتوليد قيود صرف متوازنة مع الخزينة والبنوك',
+      'إجراء تسويات التكاليف وحفظ سجل التدقيق غير القابل للتعديل'
+    ],
+    capabilitiesEn: [
+      'Track contractor claims and supplier invoices by trade category',
+      'Schedule payable installments and monitor critical payment due dates',
+      'Execute payable payments with automated double-entry GL journals',
+      'Record cost adjustments with immutable audit logs'
+    ],
+    accountingImpactAr: 'إثبات مصروف المقاول في حساب WIP (120000) مع التزام للموردين (201000)، وعند السداد تخفيض الالتزام والنقدية.',
+    accountingImpactEn: 'Recognizes WIP asset (120000) and AP liability (201000); relieves liability upon cash/bank payment.',
+    icon: HardHat
+  },
+
+  // 12. الضرائب العقارية والرسوم (Apartment Taxes & Government Fees - tax)
+  {
+    moduleId: 'tax',
+    targetSelector: '[data-tour="nav-item-tax"]',
+    stepNumber: 12,
+    groupAr: 'الحسابات والشركاء',
+    groupEn: 'FINANCE & GOVERNANCE',
+    titleAr: 'الضرائب العقارية ورسوم الوحدات (Property Taxes)',
+    titleEn: 'Property Taxes & Government Fees',
+    badgeLabelAr: 'الضرائب والتراخيص',
+    badgeLabelEn: 'TAXES & FEES',
+    purposeAr: 'منظومة حصر وإدارة ضريبة التصرفات العقارية (٢.٥٪) ورسوم التراخيص والضرائب البلدية؛ احتساب الالتزام الضريبي على كل عقد وتوثيق السداد لمصلحة الضرائب المصرية.',
+    purposeEn: 'Comprehensive registry for statutory 2.5% real estate disposal taxes, municipal fees, and licensing charges; links tax liabilities to contracts and tracks remittance.',
+    keyMetrics: [
+      {
+        nameAr: 'إجمالي الالتزامات الضريبية المستحقة',
+        nameEn: 'Total Accrued Tax Liabilities',
+        descAr: 'إجمالي المبالغ الواجب سدادها لمصلحة الضرائب والجهات الحكومية.',
+        descEn: 'Total accrued tax and fee obligations across all sold units and registered projects.',
+        tagAr: 'التزامات ضريبية',
+        tagEn: 'Tax Liabilities'
+      },
+      {
+        nameAr: 'ضريبة التصرفات العقارية (2.5%)',
+        nameEn: 'Statutory Disposition Tax (2.5%)',
+        descAr: 'الضريبة الرسمية المقررة قانوناً بنسبة ٢.٥٪ على إجمالي القيمة البيعية للعقود.',
+        descEn: 'Mandatory 2.5% real estate disposition tax calculated on contract nominal values.',
+        tagAr: 'ضريبة تصرفات',
+        tagEn: 'Disposal Tax'
+      },
+      {
+        nameAr: 'الضرائب المسددة والموردة',
+        nameEn: 'Remitted & Cleared Taxes',
+        descAr: 'المبالغ التي تم توريدها بالفعل مع إرفاق إيصالات السداد الرسمية.',
+        descEn: 'Tax amounts formally remitted to government authorities with payment vouchers.',
+        tagAr: 'مسدد رسمياً',
+        tagEn: 'Remitted'
+      },
+      {
+        nameAr: 'الضرائب المعلقة قيد التوريد',
+        nameEn: 'Pending Unremitted Taxes',
+        descAr: 'الالتزامات الضريبية الجاهزة للسداد لتجنب غرامات التأخير الحكومية.',
+        descEn: 'Pending tax items awaiting remittance before statutory deadlines.',
+        tagAr: 'مستحق التوريد',
+        tagEn: 'Pending Remittance'
+      }
+    ],
+    keyButtons: [
+      {
+        nameAr: 'زر [توريد وسداد الضريبة (Remit Tax)]',
+        nameEn: 'Button [Remit Tax Payment]',
+        descAr: 'يتيح لك إثبات سداد الضريبة وإصدار قيد الصرف من الخزينة أو البنك لمصلحة الضرائب.',
+        descEn: 'Records official tax remittance and posts double-entry journal to treasury.'
+      },
+      {
+        nameAr: 'زر [فحص السجل الضريبي]',
+        nameEn: 'Button [Inspect Tax Record]',
+        descAr: 'يتيح لك استعراض العقد المرتبط بالضريبة وتفاصيل الحساب والملاحظات القانونية.',
+        descEn: 'Opens the tax inspector showing contract linkage, calculation basis, and notes.'
+      }
+    ],
+    capabilitiesAr: [
+      'حساب تلقائي لضريبة التصرفات العقارية (٢.٥٪) عند إبرام أي عقد بيع جديد',
+      'حصر شامل لرسوم التراخيص والتأمينات والضرائب البلدية لكل مشروع ووحدة',
+      'إثبات توريد الضرائب للجهات الحكومية مع القيد المزدوج وسند الصرف',
+      'ربط كامل بالسجل المالي للعقود والوحدات لمنع ازدواجية السداد'
+    ],
+    capabilitiesEn: [
+      'Automated 2.5% real estate disposal tax calculation upon contract creation',
+      'Full tracking of municipal permits, building licenses, and property fees',
+      'Execute official tax remittances with automated balanced journal entries',
+      'Complete linkage to contracts and unit records preventing double payment'
+    ],
+    accountingImpactAr: 'إثبات مخصص الضريبة (التزام 204000)، وعند التوريد: مدين ضرائب مستحقة 204000 ودائن البنك 102000.',
+    accountingImpactEn: 'Accrues tax liability (204000); upon remittance: Dr Tax Payable 204000 / Cr Bank 102000.',
+    icon: Landmark
   }
 ];
 

@@ -1,13 +1,24 @@
 import { redirect } from 'next/navigation';
+import { resolveTabRedirect } from '@/lib/erp/routing/tabRedirectMap';
 
 interface Props {
   params: Promise<{ adminLocale: string }>;
-  searchParams?: Promise<{ tab?: string }>;
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }
 
 export default async function AdminERPPage({ params, searchParams }: Props) {
   const { adminLocale } = await params;
   const sp = searchParams ? await searchParams : {};
-  const query = sp.tab ? `?tab=${encodeURIComponent(sp.tab)}` : '';
-  redirect(`/fin-os/${adminLocale}${query}`);
+  const redirectUrl = resolveTabRedirect(adminLocale, sp);
+  if (redirectUrl) {
+    redirect(redirectUrl);
+  }
+
+  const query = new URLSearchParams();
+  for (const [k, v] of Object.entries(sp)) {
+    if (typeof v === 'string') query.set(k, v);
+    else if (Array.isArray(v)) v.forEach(item => query.append(k, item));
+  }
+  const qStr = query.toString();
+  redirect(`/fin-os/${adminLocale}${qStr ? `?${qStr}` : ''}`);
 }

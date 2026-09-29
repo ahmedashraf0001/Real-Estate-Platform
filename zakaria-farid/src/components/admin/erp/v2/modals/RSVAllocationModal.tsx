@@ -15,6 +15,7 @@ import { Property } from '@/lib/supabase/types';
 import { D, formatEGP } from '@/lib/erp/math';
 import { MoneyCell } from '@/components/erp/MoneyCell';
 import { ZFCustomSelect, ZFCustomSelectItem } from '../common/ZFCustomSelect';
+import { ZFModalShell } from '../common/ZFModalShell';
 import styles from '../ZFWorkstationShell.module.css';
 
 interface RSVAllocationModalProps {
@@ -152,71 +153,17 @@ export const RSVAllocationModal: React.FC<RSVAllocationModalProps> = ({
   };
 
   return (
-    <div className={styles.modalOverlay} onClick={onClose}>
-      <div 
-        className={styles.modalContent}
-        style={{
-          maxWidth: '680px',
-          width: '95vw',
-          maxHeight: '90vh',
-          display: 'flex',
-          flexDirection: 'column'
-        }}
-        onClick={e => e.stopPropagation()}
-      >
-        {/* Modal Header */}
-        <div style={{
-          padding: 'clamp(0.85rem, 2.5vw, 1.25rem) clamp(1rem, 3vw, 1.75rem)',
-          borderBottom: '1px solid #e2e8f0',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          background: '#fafaf9'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-            <div style={{
-              width: '36px',
-              height: '36px',
-              borderRadius: '10px',
-              background: 'rgba(184, 144, 62, 0.12)',
-              color: '#946f23',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}>
-              <PieChart size={18} />
-            </div>
-            <div>
-              <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: '#0f172a' }}>
-                {isAr ? 'معامل التكلفة الإنشائية للشقة الفاخرة (RSV Factor)' : 'Relative Sales Value (RSV) Allocation Wizard'}
-              </h3>
-              <span style={{ fontSize: '0.72rem', color: '#64748b' }}>
-                {isAr ? 'توزيع مصاريف المباني لحساب معامل التكلفة الإنشائية للشقة الفاخرة وتحديد صافي أرباح المكتب بدقة عند التسليم' : 'IFRS 15 relative sales value COGS capitalization factor'}
-              </span>
-            </div>
-          </div>
-
-          <button
-            onClick={onClose}
-            aria-label={isAr ? 'إغلاق' : 'Close'}
-            style={{
-              background: '#ffffff',
-              border: '1px solid #e2e8f0',
-              borderRadius: '8px',
-              minWidth: '44px',
-              minHeight: '44px',
-              width: '44px',
-              height: '44px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: '#64748b',
-              cursor: 'pointer'
-            }}
-          >
-            <X size={18} />
-          </button>
-        </div>
+    <ZFModalShell
+      isOpen={isOpen}
+      onClose={onClose}
+      title={isAr ? 'معامل التكلفة الإنشائية للشقة الفاخرة (RSV Factor)' : 'Relative Sales Value (RSV) Allocation Wizard'}
+      subtitle={isAr ? 'توزيع مصاريف المباني لحساب معامل التكلفة الإنشائية للشقة الفاخرة وتحديد صافي أرباح المكتب بدقة عند التسليم' : 'IFRS 15 relative sales value COGS capitalization factor'}
+      icon={<PieChart size={18} />}
+      isAr={isAr}
+      maxWidth="680px"
+      maxHeight="90vh"
+      bodyStyle={{ padding: 0 }}
+    >
 
         {saveSuccessData ? (
           <div style={{ padding: '1.75rem', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '1.25rem', height: '100%' }}>
@@ -270,13 +217,13 @@ export const RSVAllocationModal: React.FC<RSVAllocationModalProps> = ({
             }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #f1f5f9', paddingBottom: '0.75rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <Building2 size={18} color="#946f23" />
+                  <Building2 size={18} color="#2563eb" />
                   <strong style={{ fontSize: '1rem', color: '#0f172a' }}>{saveSuccessData.projectName}</strong>
                 </div>
                 <span style={{
-                  background: 'rgba(148, 111, 35, 0.1)',
-                  color: '#946f23',
-                  border: '1px solid rgba(148, 111, 35, 0.25)',
+                  background: '#eff6ff',
+                  color: '#2563eb',
+                  border: '1px solid #bfdbfe',
                   padding: '0.18rem 0.65rem',
                   borderRadius: '20px',
                   fontSize: '0.72rem',
@@ -310,11 +257,11 @@ export const RSVAllocationModal: React.FC<RSVAllocationModalProps> = ({
                   </strong>
                 </div>
 
-                <div style={{ background: 'rgba(184, 144, 62, 0.08)', padding: '0.85rem 1rem', borderRadius: '10px', border: '1px solid rgba(184, 144, 62, 0.25)' }}>
-                  <span style={{ color: '#946f23', fontSize: '0.7rem', fontWeight: 800, display: 'block' }}>
+                <div style={{ background: '#eff6ff', padding: '0.85rem 1rem', borderRadius: '10px', border: '1px solid #bfdbfe' }}>
+                  <span style={{ color: '#2563eb', fontSize: '0.7rem', fontWeight: 800, display: 'block' }}>
                     {isAr ? 'معامل التكلفة الإنشائية للشقة الفاخرة (RSV Factor):' : 'Luxury Unit Construction Cost Factor (RSV):'}
                   </span>
-                  <strong style={{ color: '#946f23', fontSize: '1.3rem', fontWeight: 900, fontVariantNumeric: 'tabular-nums', display: 'block', marginTop: '0.15rem' }}>
+                  <strong style={{ color: '#2563eb', fontSize: '1.3rem', fontWeight: 900, fontVariantNumeric: 'tabular-nums', display: 'block', marginTop: '0.15rem' }}>
                     {saveSuccessData.factorPct}%
                   </strong>
                 </div>
@@ -331,7 +278,7 @@ export const RSVAllocationModal: React.FC<RSVAllocationModalProps> = ({
 
               {/* Progress bar */}
               <div style={{ width: '100%', height: '8px', borderRadius: '999px', background: '#e2e8f0', overflow: 'hidden', display: 'flex' }}>
-                <div style={{ width: `${Math.min(parseFloat(saveSuccessData.factorPct) || 0, 100)}%`, background: '#946f23', height: '100%' }} />
+                <div style={{ width: `${Math.min(parseFloat(saveSuccessData.factorPct) || 0, 100)}%`, background: '#2563eb', height: '100%' }} />
                 <div style={{ flex: 1, background: '#059669', height: '100%' }} />
               </div>
 
@@ -439,7 +386,7 @@ export const RSVAllocationModal: React.FC<RSVAllocationModalProps> = ({
                 transition: 'all 0.15s ease'
               }}
             >
-              <Building2 size={15} color={selectionMode === 'portfolio' ? '#946f23' : '#64748b'} />
+              <Building2 size={15} color={selectionMode === 'portfolio' ? '#2563eb' : '#64748b'} />
               <span>{isAr ? 'من مشاريع ومحفظة الشركة' : 'From Company Portfolio'}</span>
             </button>
 
@@ -463,7 +410,7 @@ export const RSVAllocationModal: React.FC<RSVAllocationModalProps> = ({
                 transition: 'all 0.15s ease'
               }}
             >
-              <FolderPlus size={15} color={selectionMode === 'custom' ? '#946f23' : '#64748b'} />
+              <FolderPlus size={15} color={selectionMode === 'custom' ? '#2563eb' : '#64748b'} />
               <span>{isAr ? 'مشروع أو دراسة جديدة يدوياً' : 'New / Custom Project'}</span>
             </button>
           </div>
@@ -480,7 +427,7 @@ export const RSVAllocationModal: React.FC<RSVAllocationModalProps> = ({
               gap: '0.5rem'
             }}>
               <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#334155', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                <Building2 size={14} color="#946f23" />
+                <Building2 size={14} color="#2563eb" />
                 <span>{isAr ? 'العمارة أو المشروع المستهدف *' : 'Target Property / Project *'}</span>
               </label>
               <ZFCustomSelect<string>
@@ -536,7 +483,7 @@ export const RSVAllocationModal: React.FC<RSVAllocationModalProps> = ({
             /* Mode B: Custom Project Name Input */
             <div>
               <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#334155', marginBottom: '0.35rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                <FolderPlus size={14} color="#946f23" />
+                <FolderPlus size={14} color="#2563eb" />
                 <span>{isAr ? 'اسم العمارة أو المشروع *' : 'Project Name / Phase *'}</span>
               </label>
               <input 
@@ -567,7 +514,7 @@ export const RSVAllocationModal: React.FC<RSVAllocationModalProps> = ({
                 <label style={{ fontSize: '0.74rem', fontWeight: 700, color: '#334155', margin: 0 }}>
                   {isAr ? 'إجمالي سعر بيع كل شقق العمارة (المبيعات المتوقعة) *' : 'Sales Value Ceiling *'}
                 </label>
-                <span style={{ fontSize: '0.72rem', color: '#946f23', fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}>
+                <span style={{ fontSize: '0.72rem', color: '#2563eb', fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}>
                   {D(salesValue || 0).formatEGP(isAr)}
                 </span>
               </div>
@@ -596,7 +543,7 @@ export const RSVAllocationModal: React.FC<RSVAllocationModalProps> = ({
                 <label style={{ fontSize: '0.74rem', fontWeight: 700, color: '#334155', margin: 0 }}>
                   {isAr ? 'إجمالي مصاريف المباني والخامات المتوقعة للعمارة *' : 'Incurred Construction WIP *'}
                 </label>
-                <span style={{ fontSize: '0.72rem', color: '#946f23', fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}>
+                <span style={{ fontSize: '0.72rem', color: '#2563eb', fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}>
                   {D(wipAmount || 0).formatEGP(isAr)}
                 </span>
               </div>
@@ -622,14 +569,14 @@ export const RSVAllocationModal: React.FC<RSVAllocationModalProps> = ({
 
           {/* Live Calculation Result Card */}
           <div style={{
-            background: 'linear-gradient(135deg, #ffffff 0%, #fefdfa 100%)',
-            border: '1.5px solid rgba(184, 144, 62, 0.35)',
+            background: '#ffffff',
+            border: '1.5px solid #e2e8f0',
             borderRadius: '14px',
             padding: '1.15rem',
             display: 'flex',
             flexDirection: 'column',
             gap: '0.85rem',
-            boxShadow: '0 2px 8px rgba(184, 144, 62, 0.06)'
+            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)'
           }}>
             <div style={{
               display: 'flex',
@@ -656,10 +603,10 @@ export const RSVAllocationModal: React.FC<RSVAllocationModalProps> = ({
                 <span style={{ fontSize: '0.7rem', color: '#64748b', display: 'block', fontWeight: 700 }}>
                   {isAr ? 'معامل التكلفة الإنشائية للشقة الفاخرة (RSV Factor):' : 'Calculated Construction Ratio (RSV):'}
                 </span>
-                <strong style={{ fontSize: '1.4rem', color: '#946f23', fontVariantNumeric: 'tabular-nums', display: 'block', marginTop: '0.15rem' }}>
+                <strong style={{ fontSize: '1.4rem', color: '#2563eb', fontVariantNumeric: 'tabular-nums', display: 'block', marginTop: '0.15rem' }}>
                   {factorPct}%
                 </strong>
-                <span style={{ fontSize: '0.72rem', color: '#946f23', fontWeight: 700 }}>
+                <span style={{ fontSize: '0.72rem', color: '#2563eb', fontWeight: 700 }}>
                   {isAr ? '(نسبة تكلفة خامات ومباني الشقة من ثمن البيع)' : '(cost of sales ratio)'}
                 </span>
               </div>
@@ -679,7 +626,7 @@ export const RSVAllocationModal: React.FC<RSVAllocationModalProps> = ({
 
             {/* Visual Progress Bar */}
             <div style={{ width: '100%', height: '8px', borderRadius: '999px', background: '#e2e8f0', overflow: 'hidden', display: 'flex' }}>
-              <div style={{ width: `${Math.min(parseFloat(factorPct) || 0, 100)}%`, background: '#946f23', height: '100%' }} />
+              <div style={{ width: `${Math.min(parseFloat(factorPct) || 0, 100)}%`, background: '#2563eb', height: '100%' }} />
               <div style={{ flex: 1, background: '#15803d', height: '100%' }} />
             </div>
 
@@ -722,7 +669,7 @@ export const RSVAllocationModal: React.FC<RSVAllocationModalProps> = ({
               type="submit"
               disabled={isMutating}
               style={{
-                background: 'linear-gradient(135deg, #c5a059 0%, #946f23 100%)',
+                background: isMutating ? '#94a3b8' : '#2563eb',
                 color: '#ffffff',
                 border: 'none',
                 padding: '0.55rem 1.35rem',
@@ -734,7 +681,7 @@ export const RSVAllocationModal: React.FC<RSVAllocationModalProps> = ({
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '0.45rem',
-                boxShadow: '0 2px 8px rgba(148, 111, 35, 0.25)'
+                boxShadow: isMutating ? 'none' : '0 2px 8px rgba(37, 99, 235, 0.25)'
               }}
             >
               {isMutating ? <Loader2 size={14} className="animate-spin" /> : <Calculator size={14} />}
@@ -743,7 +690,6 @@ export const RSVAllocationModal: React.FC<RSVAllocationModalProps> = ({
           </div>
         </form>
         )}
-      </div>
-    </div>
+    </ZFModalShell>
   );
 };

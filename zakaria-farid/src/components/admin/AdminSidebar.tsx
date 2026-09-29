@@ -112,11 +112,11 @@ export default function AdminSidebar({ adminLocale }: AdminSidebarProps) {
           icon: Landmark, 
           exact: false,
           subItems: [
-            { href: `/fin-os/${adminLocale}?tab=operations`, label: isAr ? 'الخزينة والعمليات' : 'Treasury & Ops' },
-            { href: `/fin-os/${adminLocale}?tab=contracts`, label: isAr ? 'عقود البيع والعملاء' : 'Contracts & Clients' },
-            { href: `/fin-os/${adminLocale}?tab=pdc`, label: isAr ? 'أجندة الأقساط والشيكات' : 'PDC & Due Cheques' },
-            { href: `/fin-os/${adminLocale}?tab=ledger`, label: isAr ? 'الدفتر العام واليومية' : 'General Ledger' },
-            { href: `/fin-os/${adminLocale}?tab=partners`, label: isAr ? 'الشركاء والأرباح' : 'Partners & Equity' },
+            { href: `/fin-os/${adminLocale}/operations`, label: isAr ? 'الخزينة والعمليات' : 'Treasury & Ops' },
+            { href: `/fin-os/${adminLocale}/contracts`, label: isAr ? 'عقود البيع والعملاء' : 'Contracts & Clients' },
+            { href: `/fin-os/${adminLocale}/pdc`, label: isAr ? 'أجندة الأقساط والشيكات' : 'PDC & Due Cheques' },
+            { href: `/fin-os/${adminLocale}/ledger`, label: isAr ? 'الدفتر العام واليومية' : 'General Ledger' },
+            { href: `/fin-os/${adminLocale}/partners`, label: isAr ? 'الشركاء والأرباح' : 'Partners & Equity' },
           ]
         },
       ]

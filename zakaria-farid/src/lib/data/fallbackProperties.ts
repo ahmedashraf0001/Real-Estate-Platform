@@ -170,7 +170,7 @@ export const FALLBACK_PROPERTIES: Property[] = [
       { unit_id: 'yasmin-apt-201', unit_number: 'شقة 201 - الدور الثاني', floor: 2, area_sqm: 225, bedrooms: 3, bathrooms: 2, price_egp: 6400000, status: 'contracted', contract_number: 'ZF-CON-2025-001', buyer_name: 'المهندس حسام الدين عثمان' },
       { unit_id: 'yasmin-apt-202', unit_number: 'شقة 202 - الدور الثاني', floor: 2, area_sqm: 225, bedrooms: 3, bathrooms: 2, price_egp: 6400000, status: 'available' },
       { unit_id: 'yasmin-apt-301', unit_number: 'شقة 301 - الدور الثالث', floor: 3, area_sqm: 230, bedrooms: 3, bathrooms: 3, price_egp: 6600000, status: 'available' },
-      { unit_id: 'yasmin-apt-302', unit_number: 'شقة 302 - الدور الثالث (بنتهاوس)', floor: 3, area_sqm: 230, bedrooms: 3, bathrooms: 3, price_egp: 6800000, status: 'available' },
+      { unit_id: 'yasmin-roof-302', unit_number: 'شقة 302 - الدور الثالث (روف)', floor: 3, area_sqm: 230, bedrooms: 3, bathrooms: 3, price_egp: 6800000, status: 'available' },
     ],
     listing_status: 'active',
     is_featured: true,
@@ -212,7 +212,7 @@ export const FALLBACK_PROPERTIES: Property[] = [
       { unit_id: 'andalus-apt-301', unit_number: 'شقة 301 - الدور الثالث', floor: 3, area_sqm: 165, bedrooms: 3, bathrooms: 2, price_egp: 2900000, status: 'available' },
       { unit_id: 'andalus-apt-302', unit_number: 'شقة 302 - الدور الثالث', floor: 3, area_sqm: 170, bedrooms: 3, bathrooms: 2, price_egp: 3000000, status: 'available' },
       { unit_id: 'andalus-apt-401', unit_number: 'شقة 401 - الدور الرابع', floor: 4, area_sqm: 165, bedrooms: 3, bathrooms: 2, price_egp: 2950000, status: 'available' },
-      { unit_id: 'andalus-apt-402', unit_number: 'شقة 402 - الدور الرابع (روف)', floor: 4, area_sqm: 170, bedrooms: 3, bathrooms: 2, price_egp: 3100000, status: 'available' },
+      { unit_id: 'andalus-roof-402', unit_number: 'شقة 402 - الدور الرابع (روف)', floor: 4, area_sqm: 170, bedrooms: 3, bathrooms: 2, price_egp: 3100000, status: 'available' },
     ],
     property_images: [
       { id: 'img-801', property_id: 'andalus-residence-minya-elqamh', url: 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=1600&q=85', alt_text_en: 'Building Elevation', alt_text_ar: 'الواجهة المعمارية للعمارة', sort_order: 0 }

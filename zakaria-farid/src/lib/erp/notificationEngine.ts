@@ -5,6 +5,7 @@ import {
   ERPMakerCheckerRequest, 
   ERPTaxRecord, 
   ERPAccountingPeriod,
+  ERPPropertyCostItem,
   ERPNotification 
 } from './types';
 import { D } from './math';
@@ -72,12 +73,13 @@ export function persistClearAll(ids: string[]): void {
   }
 }
 
-interface AlertEvaluationParams {
+export interface AlertEvaluationParams {
   pdcRecords: ERPPDCRecord[];
   contracts: ERPContract[];
   schedules?: ERPInstallmentSchedule[];
   makerCheckerRequests: ERPMakerCheckerRequest[];
   taxRecords: ERPTaxRecord[];
+  propertyCosts?: ERPPropertyCostItem[];
   activePeriod?: ERPAccountingPeriod;
   readIds?: Set<string>;
   dismissedIds?: Set<string>;
@@ -89,6 +91,7 @@ export function evaluateFinancialAlerts({
   schedules = [],
   makerCheckerRequests,
   taxRecords,
+  propertyCosts = [],
   activePeriod,
   readIds = new Set(),
   dismissedIds = new Set()
@@ -245,7 +248,104 @@ export function evaluateFinancialAlerts({
   });
 
   // --------------------------------------------------------------------------
-  // RULE 6: ACCOUNTING PERIOD CONSTRAINTS (Info / Notice)
+  // RULE 6: CONTRACTOR PAYABLE DUES & INSTALLMENTS (Critical / Warning)
+  // --------------------------------------------------------------------------
+  propertyCosts.forEach(cost => {
+    if (!cost.payable_installments || cost.payable_installments.length === 0) return;
+    if (cost.status === 'capitalized' || D(cost.remaining_amount_egp || 0).isZero()) return;
+
+    const costId = cost.item_id || cost.id || 'cost';
+    const contractorName = cost.supplier_contractor || cost.item_name_ar || 'المقاول';
+
+    cost.payable_installments.forEach(inst => {
+      if (inst.status === 'PAID') return;
+      if (!inst.due_date) return;
+
+      const dueDate = new Date(inst.due_date);
+      dueDate.setHours(0, 0, 0, 0);
+      const diffDays = Math.floor((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
+      const instId = inst.installment_id || inst.due_date;
+      const amountVal = inst.amount_egp || '0';
+
+      if (diffDays > 0) {
+        const id = `overdue_contractor_${costId}_${instId}`;
+        if (dismissedIds.has(id)) return;
+
+        notifications.push({
+          id,
+          titleAr: `دفعة مقاول مستحقة متأخرة: ${contractorName}`,
+          titleEn: `Overdue Contractor Payable: ${contractorName}`,
+          messageAr: `الدفعة رقم ${inst.installment_number || 1} بمبلغ ${formatMoney(amountVal)} ج.م للمقاول ${contractorName} تجاوزت موعد استحقاقها (${inst.due_date}) منذ ${diffDays} يوم.`,
+          messageEn: `Payable tranche #${inst.installment_number || 1} for ${formatMoney(amountVal)} EGP to contractor ${contractorName} is overdue since ${inst.due_date} (${diffDays} days past due).`,
+          severity: 'critical',
+          category: 'contractor',
+          createdAt: inst.due_date,
+          read: readIds.has(id),
+          actionLabelAr: 'صرف وسداد المستحق',
+          actionLabelEn: 'Settle Contractor Dues',
+          targetModule: 'construction',
+          metadata: { costId, installmentId: instId }
+        });
+      } else if (diffDays >= -7 && diffDays <= 0) {
+        const id = `maturing_contractor_${costId}_${instId}`;
+        if (dismissedIds.has(id)) return;
+
+        const daysRemaining = Math.abs(diffDays);
+        notifications.push({
+          id,
+          titleAr: `استحقاق دفعة مقاول خلال ${daysRemaining === 0 ? 'اليوم' : `${daysRemaining} أيام`}`,
+          titleEn: `Contractor Payment Maturing in ${daysRemaining === 0 ? 'Today' : `${daysRemaining} days`}`,
+          messageAr: `الدفعة رقم ${inst.installment_number || 1} بمبلغ ${formatMoney(amountVal)} ج.م للمقاول ${contractorName} تستحق في ${inst.due_date}.`,
+          messageEn: `Payable tranche #${inst.installment_number || 1} for ${formatMoney(amountVal)} EGP to contractor ${contractorName} matures on ${inst.due_date}.`,
+          severity: 'warning',
+          category: 'contractor',
+          createdAt: inst.due_date,
+          read: readIds.has(id),
+          actionLabelAr: 'فحص المستحق',
+          actionLabelEn: 'Inspect Payable',
+          targetModule: 'construction',
+          metadata: { costId, installmentId: instId }
+        });
+      }
+    });
+  });
+
+  // --------------------------------------------------------------------------
+  // RULE 7: RECENT CONSTRUCTION EXPENSES & TRANSACTIONS (Info / Transactions)
+  // --------------------------------------------------------------------------
+  propertyCosts.slice(0, 5).forEach(cost => {
+    const costDate = cost.logged_date ? new Date(cost.logged_date) : (cost.created_at ? new Date(cost.created_at) : null);
+    if (!costDate) return;
+    costDate.setHours(0, 0, 0, 0);
+
+    const diffDays = Math.floor((today.getTime() - costDate.getTime()) / (1000 * 60 * 60 * 24));
+    // Include costs logged in the last 14 days
+    if (diffDays >= 0 && diffDays <= 14) {
+      const costId = cost.item_id || cost.id || 'cost';
+      const id = `recent_cost_${costId}`;
+      if (dismissedIds.has(id)) return;
+
+      const itemName = cost.item_name_ar || cost.category;
+      notifications.push({
+        id,
+        titleAr: `إضافة مصروف جديد (${itemName})`,
+        titleEn: `New Expense Logged (${cost.item_name_en || cost.category})`,
+        messageAr: `تم تسجيل مصروف جديد بقيمة ${formatMoney(cost.total_cost_egp)} ج.م - ${cost.notes || itemName}.`,
+        messageEn: `Logged new expense of ${formatMoney(cost.total_cost_egp)} EGP - ${cost.notes || cost.item_name_en || itemName}.`,
+        severity: 'info',
+        category: 'expense',
+        createdAt: cost.logged_date || cost.created_at || new Date().toISOString(),
+        read: readIds.has(id),
+        actionLabelAr: 'عرض بيان المصروفات',
+        actionLabelEn: 'View Expenses',
+        targetModule: 'construction',
+        metadata: { costId }
+      });
+    }
+  });
+
+  // --------------------------------------------------------------------------
+  // RULE 8: ACCOUNTING PERIOD CONSTRAINTS (Info / Notice)
   // --------------------------------------------------------------------------
   if (activePeriod && (activePeriod.status === 'LOCKED' || activePeriod.status === 'CLOSED')) {
     const id = `period_locked_${activePeriod.fiscal_year}_${activePeriod.period_number}`;
@@ -282,3 +382,40 @@ export function evaluateFinancialAlerts({
     return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
   });
 }
+
+export type NotificationTabGroup = 'all' | 'alerts' | 'transactions' | 'schedules' | 'system';
+
+export function filterNotificationsByTab(
+  notifications: ERPNotification[],
+  tab: NotificationTabGroup
+): ERPNotification[] {
+  if (tab === 'all') return notifications;
+  if (tab === 'alerts') {
+    return notifications.filter(n => 
+      n.severity === 'critical' || 
+      n.category === 'approval' || 
+      n.category === 'tax'
+    );
+  }
+  if (tab === 'transactions') {
+    return notifications.filter(n => 
+      n.category === 'expense' || 
+      n.category === 'transaction'
+    );
+  }
+  if (tab === 'schedules') {
+    return notifications.filter(n => 
+      n.category === 'cheque' || 
+      n.category === 'contractor' || 
+      n.category === 'contract'
+    );
+  }
+  if (tab === 'system') {
+    return notifications.filter(n => 
+      n.category === 'system' || 
+      n.category === 'period'
+    );
+  }
+  return notifications;
+}
+

@@ -106,3 +106,5 @@ export function tafqeetEGP(amount: number | string): string {
 
   return `فقط ${fullWords} لا غير`;
 }
+
+export const tafqeetNumber = tafqeetEGP;

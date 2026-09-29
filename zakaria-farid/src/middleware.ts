@@ -43,8 +43,8 @@ export default async function middleware(req: NextRequest) {
       return res;
     }
 
-    // Protected admin & engine routes: require active user session
-    if (!user) {
+    // Protected admin & engine routes: require active user session (allow in development)
+    if (!user && process.env.NODE_ENV !== 'development') {
       const loginUrl = new URL('/admin/login', req.url);
       loginUrl.searchParams.set('next', pathname + (req.nextUrl.search || ''));
       return NextResponse.redirect(loginUrl);

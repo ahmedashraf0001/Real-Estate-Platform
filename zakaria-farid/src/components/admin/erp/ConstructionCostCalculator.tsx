@@ -394,12 +394,12 @@ export const ConstructionCostCalculator: React.FC<ConstructionCostCalculatorProp
         sublabelAr: `${area} م² • ${p.location || (isAr ? 'الشرقية' : 'Sharkia')} • ${statusLabelAr}`,
         sublabelEn: `${area} sqm • ${p.location || 'Sharkia'} • ${statusLabelEn}`,
         badge: isAr ? statusLabelAr : statusLabelEn,
-        badgeColor: isReady ? '#15803d' : '#946f23',
-        badgeBg: isReady ? 'rgba(21, 128, 61, 0.12)' : 'rgba(148, 111, 35, 0.12)',
-        badgeTextColor: isReady ? '#15803d' : '#946f23',
+        badgeColor: isReady ? '#15803d' : 'var(--erp-accent, #2563eb)',
+        badgeBg: isReady ? 'rgba(21, 128, 61, 0.08)' : 'var(--erp-accent-subtle, #eff6ff)',
+        badgeTextColor: isReady ? '#15803d' : 'var(--erp-accent, #2563eb)',
         icon: Building2,
-        iconColor: '#946f23',
-        iconBg: 'rgba(184, 144, 62, 0.1)'
+        iconColor: 'var(--erp-accent, #2563eb)',
+        iconBg: 'var(--erp-accent-subtle, #eff6ff)'
       };
     });
   }, [properties, isAr]);
@@ -640,7 +640,7 @@ export const ConstructionCostCalculator: React.FC<ConstructionCostCalculatorProp
         key: 'permits_engineering',
         nameAr: 'تراخيص ومخططات واستشارات هندسية',
         nameEn: 'Permits & Engineering',
-        color: '#946f23',
+        color: '#d97706',
         total: totalPermitsCost,
         costPerSqm: permitsCostPerSqmEffective,
         percentOfTotal: grandProjectCost > 0 ? (totalPermitsCost / grandProjectCost) * 100 : 0
@@ -785,7 +785,7 @@ export const ConstructionCostCalculator: React.FC<ConstructionCostCalculatorProp
           <span style={{ fontSize: '0.72rem', color: '#64748b', display: 'block', fontWeight: 700 }}>
             {isAr ? 'صافي الربح المتوقع (ROI)' : 'Net Profit (ROI %)'}
           </span>
-          <strong style={{ fontSize: '1.15rem', color: '#946f23', fontVariantNumeric: 'tabular-nums' }}>
+          <strong style={{ fontSize: '1.15rem', color: '#059669', fontVariantNumeric: 'tabular-nums' }}>
             {D(feasibilityCalculations.projectedNetProfit).formatEGP(isAr)} ({feasibilityCalculations.developerMarginPercent}%)
           </strong>
         </div>
@@ -802,7 +802,7 @@ export const ConstructionCostCalculator: React.FC<ConstructionCostCalculatorProp
           </tr>
           <tr>
             <td style={{ padding: '0.6rem 0.85rem', fontWeight: 700 }}>{isAr ? 'مستوى التشطيب:' : 'Finishing Tier:'}</td>
-            <td style={{ padding: '0.6rem 0.85rem', color: '#946f23', fontWeight: 800 }}>
+            <td style={{ padding: '0.6rem 0.85rem', color: '#0f172a', fontWeight: 800 }}>
               {finishingTier === 'custom' ? `مخصص (${customFinishingCostPerSqm} ج.م/م²)` : FINISHING_TIER_COSTS[finishingTier].labelAr}
             </td>
             <td style={{ padding: '0.6rem 0.85rem', fontWeight: 700 }}>{isAr ? 'سعر بيع المتر المستهدف:' : 'Target Price / sqm:'}</td>
@@ -833,7 +833,7 @@ export const ConstructionCostCalculator: React.FC<ConstructionCostCalculatorProp
                 <td style={{ padding: '0.5rem 0.75rem', fontWeight: 700, color: '#0f172a' }}>{isAr ? c.nameAr : c.nameEn}</td>
                 <td style={{ padding: '0.5rem 0.75rem', textAlign: 'right', color: '#334155' }}>{D(c.costPerSqm).formatEGP(isAr)}</td>
                 <td style={{ padding: '0.5rem 0.75rem', textAlign: 'right', fontWeight: 700, color: '#0f172a' }}>{D(c.total).formatEGP(isAr)}</td>
-                <td style={{ padding: '0.5rem', textAlign: 'center', fontWeight: 700, color: '#946f23' }}>{c.percentOfTotal.toFixed(1)}%</td>
+                <td style={{ padding: '0.5rem', textAlign: 'center', fontWeight: 700, color: 'var(--erp-accent, #2563eb)' }}>{c.percentOfTotal.toFixed(1)}%</td>
               </tr>
             ))}
           </tbody>
@@ -890,7 +890,7 @@ export const ConstructionCostCalculator: React.FC<ConstructionCostCalculatorProp
           <span style={{ fontSize: '0.72rem', color: '#64748b', display: 'block', fontWeight: 700 }}>
             {isAr ? 'صافي المكسب المستهدف' : 'Target Profit (ROI %)'}
           </span>
-          <strong style={{ fontSize: '1.15rem', color: '#946f23', fontVariantNumeric: 'tabular-nums' }}>
+          <strong style={{ fontSize: '1.15rem', color: '#059669', fontVariantNumeric: 'tabular-nums' }}>
             {D(builtPricing.targetProfitMoney).formatEGP(isAr)} ({builtPricing.returnOnCostPct}%)
           </strong>
         </div>
@@ -934,7 +934,7 @@ export const ConstructionCostCalculator: React.FC<ConstructionCostCalculatorProp
                 <td style={{ padding: '0.5rem', textAlign: 'center', color: '#64748b' }}>{idx + 1}</td>
                 <td style={{ padding: '0.5rem 0.75rem', fontWeight: 700, color: '#0f172a' }}>{isAr ? c.nameAr : c.nameEn}</td>
                 <td style={{ padding: '0.5rem 0.75rem', textAlign: 'right', fontWeight: 700, color: '#0f172a' }}>{D(c.amount).formatEGP(isAr)}</td>
-                <td style={{ padding: '0.5rem', textAlign: 'center', fontWeight: 700, color: '#946f23' }}>{c.pct}%</td>
+                <td style={{ padding: '0.5rem', textAlign: 'center', fontWeight: 700, color: 'var(--erp-accent, #2563eb)' }}>{c.pct}%</td>
               </tr>
             ))}
           </tbody>
@@ -971,9 +971,9 @@ export const ConstructionCostCalculator: React.FC<ConstructionCostCalculatorProp
             width: '40px',
             height: '40px',
             borderRadius: '10px',
-            background: 'rgba(184, 144, 62, 0.1)',
-            border: '1px solid rgba(184, 144, 62, 0.25)',
-            color: '#946f23',
+            background: 'var(--erp-accent-subtle, #eff6ff)',
+            border: '1px solid #bfdbfe',
+            color: 'var(--erp-accent, #2563eb)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -991,9 +991,9 @@ export const ConstructionCostCalculator: React.FC<ConstructionCostCalculatorProp
                 fontWeight: 700,
                 padding: '0.18rem 0.55rem',
                 borderRadius: '6px',
-                background: 'rgba(184, 144, 62, 0.09)',
-                border: '1px solid rgba(184, 144, 62, 0.28)',
-                color: '#946f23'
+                background: 'var(--erp-accent-subtle, #eff6ff)',
+                border: '1px solid #bfdbfe',
+                color: 'var(--erp-accent, #2563eb)'
               }}>
                 {calculatorMode === 'BUILT_PROPERTY_PRICING' 
                   ? (isAr ? 'تسعير على المصاريف الفعلية' : 'Actual Audit Basis') 
@@ -1026,7 +1026,7 @@ export const ConstructionCostCalculator: React.FC<ConstructionCostCalculatorProp
               onClick={() => setCalculatorMode('BUILT_PROPERTY_PRICING')}
               style={{
                 background: calculatorMode === 'BUILT_PROPERTY_PRICING' ? '#ffffff' : 'transparent',
-                color: calculatorMode === 'BUILT_PROPERTY_PRICING' ? '#946f23' : '#64748b',
+                color: calculatorMode === 'BUILT_PROPERTY_PRICING' ? 'var(--erp-accent, #2563eb)' : '#64748b',
                 border: 'none',
                 borderRadius: '7px',
                 padding: '0.45rem 0.9rem',
@@ -1040,7 +1040,7 @@ export const ConstructionCostCalculator: React.FC<ConstructionCostCalculatorProp
                 transition: 'all 0.15s ease'
               }}
             >
-              <ShieldCheck size={14} color={calculatorMode === 'BUILT_PROPERTY_PRICING' ? '#946f23' : '#64748b'} />
+              <ShieldCheck size={14} color={calculatorMode === 'BUILT_PROPERTY_PRICING' ? 'var(--erp-accent, #2563eb)' : '#64748b'} />
               <span>{isAr ? 'تسعير عقار مبني (مصاريف فعلية)' : 'Built Property Pricing'}</span>
             </button>
 
@@ -1121,9 +1121,9 @@ export const ConstructionCostCalculator: React.FC<ConstructionCostCalculatorProp
             type="button"
             onClick={() => setShowPrintPreview(true)}
             style={{
-              background: 'rgba(184, 144, 62, 0.08)',
-              color: '#946f23',
-              border: '1px solid rgba(184, 144, 62, 0.25)',
+              background: '#ffffff',
+              color: '#0f172a',
+              border: '1px solid #e2e8f0',
               borderRadius: '9px',
               padding: '0.45rem 0.75rem',
               fontSize: '0.76rem',
@@ -1132,11 +1132,12 @@ export const ConstructionCostCalculator: React.FC<ConstructionCostCalculatorProp
               display: 'inline-flex',
               alignItems: 'center',
               gap: '0.35rem',
+              boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
               transition: 'all 0.15s ease'
             }}
             title={isAr ? 'معاينة المستند الرسمي قبل الطباعة' : 'Preview Document'}
           >
-            <FileText size={15} />
+            <FileText size={15} color="var(--erp-accent, #2563eb)" />
             <span>{isAr ? 'معاينة' : 'Preview'}</span>
           </button>
         </div>
@@ -1166,8 +1167,8 @@ export const ConstructionCostCalculator: React.FC<ConstructionCostCalculatorProp
                 width: '32px',
                 height: '32px',
                 borderRadius: '8px',
-                background: 'rgba(184, 144, 62, 0.1)',
-                color: '#946f23',
+                background: 'var(--erp-accent-subtle, #eff6ff)',
+                color: 'var(--erp-accent, #2563eb)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -1205,7 +1206,7 @@ export const ConstructionCostCalculator: React.FC<ConstructionCostCalculatorProp
                   width: '20px',
                   height: '20px',
                   borderRadius: '50%',
-                  background: '#946f23',
+                  background: 'var(--erp-accent, #2563eb)',
                   color: '#ffffff',
                   display: 'flex',
                   alignItems: 'center',
@@ -1234,7 +1235,7 @@ export const ConstructionCostCalculator: React.FC<ConstructionCostCalculatorProp
                   width: '20px',
                   height: '20px',
                   borderRadius: '50%',
-                  background: '#1d4ed8',
+                  background: 'var(--erp-accent-hover, #1d4ed8)',
                   color: '#ffffff',
                   display: 'flex',
                   alignItems: 'center',
@@ -1301,8 +1302,8 @@ export const ConstructionCostCalculator: React.FC<ConstructionCostCalculatorProp
                   width: '30px',
                   height: '30px',
                   borderRadius: '8px',
-                  background: 'rgba(184, 144, 62, 0.1)',
-                  color: '#946f23',
+                  background: 'var(--erp-accent-subtle, #eff6ff)',
+                  color: 'var(--erp-accent, #2563eb)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center'
@@ -1324,9 +1325,9 @@ export const ConstructionCostCalculator: React.FC<ConstructionCostCalculatorProp
                   type="button"
                   onClick={() => onOpenAuditForProperty(selectedProperty)}
                   style={{
-                    background: 'rgba(184, 144, 62, 0.08)',
-                    border: '1px solid rgba(184, 144, 62, 0.28)',
-                    color: '#946f23',
+                    background: '#ffffff',
+                    border: '1px solid #e2e8f0',
+                    color: '#0f172a',
                     fontSize: '0.76rem',
                     fontWeight: 700,
                     padding: '0.45rem 0.85rem',
@@ -1335,10 +1336,11 @@ export const ConstructionCostCalculator: React.FC<ConstructionCostCalculatorProp
                     display: 'flex',
                     alignItems: 'center',
                     gap: '0.4rem',
+                    boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
                     transition: 'all 0.15s ease'
                   }}
                 >
-                  <FileText size={14} />
+                  <FileText size={14} color="var(--erp-accent, #2563eb)" />
                   <span>{isAr ? 'عرض فواتير ومصاريف العقار بالتفصيل' : 'Open Incurred Cost Audit Dossier'}</span>
                 </button>
               )}
@@ -1425,7 +1427,7 @@ export const ConstructionCostCalculator: React.FC<ConstructionCostCalculatorProp
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.6rem' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                    <SlidersHorizontal size={15} color="#946f23" />
+                    <SlidersHorizontal size={15} color="var(--erp-accent, #2563eb)" />
                     <span style={{ fontSize: '0.8rem', fontWeight: 800, color: '#0f172a' }}>
                       {isAr ? 'نطاق الحساب والتسعير المطلوب:' : 'Pricing Scope Target:'}
                     </span>
@@ -1447,8 +1449,8 @@ export const ConstructionCostCalculator: React.FC<ConstructionCostCalculatorProp
                       }}
                       style={{
                         background: pricingScope === 'whole' ? '#ffffff' : 'transparent',
-                        color: pricingScope === 'whole' ? '#946f23' : '#475569',
-                        border: 'none',
+                        color: pricingScope === 'whole' ? '#0f172a' : '#475569',
+                        border: pricingScope === 'whole' ? '1px solid #e2e8f0' : '1px solid transparent',
                         borderRadius: '6px',
                         padding: '0.4rem 0.85rem',
                         fontSize: '0.74rem',
@@ -1461,7 +1463,7 @@ export const ConstructionCostCalculator: React.FC<ConstructionCostCalculatorProp
                         transition: 'all 0.15s ease'
                       }}
                     >
-                      <Building size={14} />
+                      <Building size={14} color={pricingScope === 'whole' ? 'var(--erp-accent, #2563eb)' : '#64748b'} />
                       <span>{isAr ? 'العمارة بالكامل (شروة واحدة)' : 'Entire Building (Wholesale)'}</span>
                     </button>
 
@@ -1476,8 +1478,8 @@ export const ConstructionCostCalculator: React.FC<ConstructionCostCalculatorProp
                       }}
                       style={{
                         background: pricingScope === 'apartment' ? '#ffffff' : 'transparent',
-                        color: pricingScope === 'apartment' ? '#946f23' : '#475569',
-                        border: 'none',
+                        color: pricingScope === 'apartment' ? '#0f172a' : '#475569',
+                        border: pricingScope === 'apartment' ? '1px solid #e2e8f0' : '1px solid transparent',
                         borderRadius: '6px',
                         padding: '0.4rem 0.85rem',
                         fontSize: '0.74rem',
@@ -1490,7 +1492,7 @@ export const ConstructionCostCalculator: React.FC<ConstructionCostCalculatorProp
                         transition: 'all 0.15s ease'
                       }}
                     >
-                      <DoorOpen size={14} />
+                      <DoorOpen size={14} color={pricingScope === 'apartment' ? 'var(--erp-accent, #2563eb)' : '#64748b'} />
                       <span>{isAr ? 'تسعير شقة محددة بالعمارة' : 'Specific Apartment'}</span>
                     </button>
                   </div>
@@ -1518,9 +1520,9 @@ export const ConstructionCostCalculator: React.FC<ConstructionCostCalculatorProp
                           type="button"
                           onClick={() => setSelectedUnitId(u.unit_id)}
                           style={{
-                            background: isSelected ? '#946f23' : '#ffffff',
+                            background: isSelected ? 'var(--erp-accent, #2563eb)' : '#ffffff',
                             color: isSelected ? '#ffffff' : '#0f172a',
-                            border: isSelected ? '1.5px solid #946f23' : '1px solid #cbd5e1',
+                            border: isSelected ? '1.5px solid var(--erp-accent, #2563eb)' : '1px solid var(--erp-border, #cbd5e1)',
                             borderRadius: '8px',
                             padding: '0.35rem 0.75rem',
                             fontSize: '0.73rem',
@@ -1531,10 +1533,10 @@ export const ConstructionCostCalculator: React.FC<ConstructionCostCalculatorProp
                             gap: '0.4rem',
                             flexShrink: 0,
                             transition: 'all 0.15s ease',
-                            boxShadow: isSelected ? '0 2px 8px rgba(148, 111, 35, 0.28)' : 'none'
+                            boxShadow: isSelected ? '0 2px 8px rgba(37, 99, 235, 0.25)' : 'none'
                           }}
                         >
-                          <DoorOpen size={13} color={isSelected ? '#ffffff' : '#946f23'} />
+                          <DoorOpen size={13} color={isSelected ? '#ffffff' : 'var(--erp-accent, #2563eb)'} />
                           <span>{isAr ? `شقة ${u.unit_number}` : `Unit ${u.unit_number}`}</span>
                           <span style={{
                             fontSize: '0.66rem',
@@ -1582,7 +1584,7 @@ export const ConstructionCostCalculator: React.FC<ConstructionCostCalculatorProp
             }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                  <PieChart size={16} color="#946f23" />
+                  <PieChart size={16} color="var(--erp-accent, #2563eb)" />
                   <span style={{ fontSize: '0.84rem', fontWeight: 800, color: '#0f172a' }}>
                     {isAr ? 'مخطط تشريح مصاريف المبنى الإجمالية' : 'Incurred Cost Composition'}
                   </span>
@@ -1675,7 +1677,7 @@ export const ConstructionCostCalculator: React.FC<ConstructionCostCalculatorProp
                   color: '#64748b',
                   fontSize: '0.78rem'
                 }}>
-                  <Info size={18} color="#946f23" style={{ marginBottom: '0.35rem' }} />
+                  <Info size={18} color="#64748b" style={{ marginBottom: '0.35rem' }} />
                   <div>{isAr ? 'لا توجد فواتير أو مصاريف مسجلة حتى الآن لهذا المشروع' : 'No audited cost items logged yet for this property'}</div>
                 </div>
               )}
@@ -1739,7 +1741,7 @@ export const ConstructionCostCalculator: React.FC<ConstructionCostCalculatorProp
                   </strong>
                 </div>
 
-                <span style={{ fontSize: '1.1rem', fontWeight: 900, color: '#946f23' }}>+</span>
+                <span style={{ fontSize: '1.1rem', fontWeight: 900, color: 'var(--erp-accent, #2563eb)' }}>+</span>
 
                 <div style={{ textAlign: 'center' }}>
                   <span style={{ fontSize: '0.66rem', color: '#64748b', fontWeight: 700, display: 'block' }}>
@@ -1756,17 +1758,17 @@ export const ConstructionCostCalculator: React.FC<ConstructionCostCalculatorProp
                   </strong>
                 </div>
 
-                <span style={{ fontSize: '1.1rem', fontWeight: 900, color: '#946f23' }}>=</span>
+                <span style={{ fontSize: '1.1rem', fontWeight: 900, color: 'var(--erp-accent, #2563eb)' }}>=</span>
 
                 <div style={{
                   background: '#ffffff',
-                  border: '1.5px solid rgba(184, 144, 62, 0.4)',
+                  border: '1px solid #e2e8f0',
                   borderRadius: '8px',
                   padding: '0.45rem 0.6rem',
                   textAlign: 'center',
-                  boxShadow: '0 2px 6px rgba(184, 144, 62, 0.1)'
+                  boxShadow: '0 1px 3px rgba(0, 0, 0, 0.03)'
                 }}>
-                  <span style={{ fontSize: '0.66rem', color: '#946f23', fontWeight: 800, display: 'block' }}>
+                  <span style={{ fontSize: '0.66rem', color: 'var(--erp-accent, #2563eb)', fontWeight: 800, display: 'block' }}>
                     {pricingScope === 'apartment' && activeUnit
                       ? (isAr ? `سعر بيع الشقة (${activeUnit.unit_number})` : `Unit ${activeUnit.unit_number} Price`)
                       : (isAr ? 'سعر البيع المقترح' : 'Estimated Selling Price')}
@@ -1798,14 +1800,14 @@ export const ConstructionCostCalculator: React.FC<ConstructionCostCalculatorProp
                     borderRadius: '10px',
                     background: isCompetitive 
                       ? 'rgba(21, 128, 61, 0.06)' 
-                      : 'rgba(184, 144, 62, 0.08)',
+                      : 'var(--erp-accent-subtle, #eff6ff)',
                     border: isCompetitive 
                       ? '1px solid rgba(21, 128, 61, 0.22)' 
-                      : '1px solid rgba(184, 144, 62, 0.25)',
+                      : '1px solid #bfdbfe',
                     fontSize: '0.75rem'
                   }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <Info size={15} color={isCompetitive ? '#15803d' : '#946f23'} />
+                      <Info size={15} color={isCompetitive ? '#15803d' : 'var(--erp-accent, #2563eb)'} />
                       <span style={{ color: '#0f172a', fontWeight: 700 }}>
                         {isAr ? 'مؤشر تنافسية سعر المتر مقابل السوق:' : 'Price vs Market Benchmark:'}
                       </span>
@@ -1813,7 +1815,7 @@ export const ConstructionCostCalculator: React.FC<ConstructionCostCalculatorProp
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                       <span style={{
                         fontWeight: 800,
-                        color: isCompetitive ? '#15803d' : '#946f23',
+                        color: isCompetitive ? '#15803d' : 'var(--erp-accent, #2563eb)',
                         fontVariantNumeric: 'tabular-nums'
                       }}>
                         {variancePct}%
@@ -1823,7 +1825,7 @@ export const ConstructionCostCalculator: React.FC<ConstructionCostCalculatorProp
                         padding: '0.12rem 0.45rem',
                         borderRadius: '4px',
                         fontWeight: 700,
-                        background: isCompetitive ? '#15803d' : '#946f23',
+                        background: isCompetitive ? '#15803d' : 'var(--erp-accent, #2563eb)',
                         color: '#ffffff'
                       }}>
                         {isCompetitive 
@@ -1864,7 +1866,7 @@ export const ConstructionCostCalculator: React.FC<ConstructionCostCalculatorProp
                 borderBottom: '1px solid #f1f5f9'
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                  <ShieldCheck size={16} color="#946f23" />
+                  <ShieldCheck size={16} color="var(--erp-accent, #2563eb)" />
                   <span style={{ fontSize: '0.84rem', fontWeight: 800, color: '#0f172a' }}>
                     {pricingScope === 'apartment' && activeUnit
                       ? (isAr ? `1. نصيب الشقة (${activeUnit.unit_number}) من المصاريف` : `1. Unit ${activeUnit.unit_number} Cost Basis`)
@@ -1877,8 +1879,8 @@ export const ConstructionCostCalculator: React.FC<ConstructionCostCalculatorProp
                     fontWeight: 700,
                     padding: '0.1rem 0.45rem',
                     borderRadius: '4px',
-                    background: 'rgba(148, 111, 35, 0.1)',
-                    color: '#946f23'
+                    background: 'var(--erp-accent-subtle, #eff6ff)',
+                    color: 'var(--erp-accent, #2563eb)'
                   }}>
                     {isAr ? `الدور ${activeUnit.floor}` : `Floor ${activeUnit.floor}`}
                   </span>
@@ -1912,12 +1914,12 @@ export const ConstructionCostCalculator: React.FC<ConstructionCostCalculatorProp
               {/* Metric Grid: Cost / Sqm & Area */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.6rem' }}>
                 <div style={{
-                  background: 'rgba(37, 99, 235, 0.05)',
-                  border: '1px solid rgba(37, 99, 235, 0.18)',
+                  background: '#ffffff',
+                  border: '1px solid #e2e8f0',
                   borderRadius: '10px',
                   padding: '0.65rem 0.85rem'
                 }}>
-                  <span style={{ fontSize: '0.68rem', color: '#2563eb', fontWeight: 700, display: 'block' }}>
+                  <span style={{ fontSize: '0.68rem', color: '#64748b', fontWeight: 700, display: 'block' }}>
                     {pricingScope === 'apartment' && activeUnit ? (isAr ? 'تكلفة متر الشقة:' : 'Unit Cost / Sqm:') : (isAr ? 'تكلفة متر المباني الفعلي:' : 'Actual Cost / Sqm:')}
                   </span>
                   <div style={{ marginTop: '0.2rem' }}>
@@ -1926,7 +1928,7 @@ export const ConstructionCostCalculator: React.FC<ConstructionCostCalculatorProp
                         ? Math.round(activeUnit.totalApartmentCost / (activeUnit.area_sqm || 1))
                         : propertyAudit.costPerSqm,
                       'م²',
-                      { color: '#2563eb', weight: 800, size: '0.92rem' }
+                      { color: '#0f172a', weight: 800, size: '0.92rem' }
                     )}
                   </div>
                 </div>
@@ -1958,7 +1960,7 @@ export const ConstructionCostCalculator: React.FC<ConstructionCostCalculatorProp
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.74rem' }}>
                     <span style={{ color: '#475569' }}>{isAr ? 'رسوم وتراخيص خاصة بالشقة:' : 'Unit Specific Fees:'}</span>
-                    <strong style={{ color: '#946f23' }}>{renderMoney(activeUnit.unitTaxesPaid)}</strong>
+                    <strong style={{ color: '#0f172a' }}>{renderMoney(activeUnit.unitTaxesPaid)}</strong>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.74rem' }}>
                     <span style={{ color: '#475569' }}>{isAr ? 'نسبة المساحة من إجمالي العمارة:' : 'Area Ratio:'}</span>
@@ -2008,7 +2010,7 @@ export const ConstructionCostCalculator: React.FC<ConstructionCostCalculatorProp
                 paddingBottom: '0.65rem',
                 borderBottom: '1px solid #f1f5f9'
               }}>
-                <TrendingUp size={16} color="#946f23" />
+                <TrendingUp size={16} color="var(--erp-accent, #2563eb)" />
                 <span style={{ fontSize: '0.84rem', fontWeight: 800, color: '#0f172a' }}>
                   {isAr ? '2. أسعار السوق والمكسب اللي عاوزه' : '2. Pricing Levers & Margin'}
                 </span>
@@ -2020,7 +2022,7 @@ export const ConstructionCostCalculator: React.FC<ConstructionCostCalculatorProp
                   <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#475569' }}>
                     {isAr ? 'سعر المتر في السوق النهاردة:' : 'Market Benchmark / Sqm:'}
                   </label>
-                  <span style={{ fontSize: '0.78rem', fontWeight: 800, color: '#946f23' }}>
+                  <span style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--erp-accent, #2563eb)' }}>
                     {renderMoney(marketMeterPrice, 'م²')}
                   </span>
                 </div>
@@ -2192,8 +2194,8 @@ export const ConstructionCostCalculator: React.FC<ConstructionCostCalculatorProp
                 <div style={{
                   marginTop: '0.65rem',
                   padding: '0.65rem 0.85rem',
-                  background: 'rgba(22, 163, 74, 0.06)',
-                  border: '1px solid rgba(22, 163, 74, 0.2)',
+                  background: '#ffffff',
+                  border: '1px solid #e2e8f0',
                   borderRadius: '8px',
                   display: 'flex',
                   justifyContent: 'space-between',
@@ -2222,13 +2224,13 @@ export const ConstructionCostCalculator: React.FC<ConstructionCostCalculatorProp
             {/* PILLAR 3: STRATEGIC VALUATION & DECISION */}
             <div style={{
               background: '#ffffff',
-              border: '1.5px solid rgba(184, 144, 62, 0.4)',
+              border: '1px solid #e2e8f0',
               borderRadius: '16px',
               padding: '1.35rem',
               display: 'flex',
               flexDirection: 'column',
               gap: '1rem',
-              boxShadow: '0 4px 18px rgba(184, 144, 62, 0.08)'
+              boxShadow: '0 1px 3px rgba(0, 0, 0, 0.03)'
             }}>
               <div style={{
                 display: 'flex',
@@ -2238,7 +2240,7 @@ export const ConstructionCostCalculator: React.FC<ConstructionCostCalculatorProp
                 borderBottom: '1px solid #f1f5f9'
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                  <Coins size={16} color="#946f23" />
+                  <Coins size={16} color="var(--erp-accent, #2563eb)" />
                   <span style={{ fontSize: '0.84rem', fontWeight: 800, color: '#0f172a' }}>
                     {pricingScope === 'apartment' && activeUnit
                       ? (isAr ? `3. سعر بيع الشقة المقترح (${activeUnit.unit_number})` : `3. Unit ${activeUnit.unit_number} Price`)
@@ -2250,8 +2252,9 @@ export const ConstructionCostCalculator: React.FC<ConstructionCostCalculatorProp
                   fontWeight: 700,
                   padding: '0.15rem 0.5rem',
                   borderRadius: '6px',
-                  background: 'rgba(184, 144, 62, 0.1)',
-                  color: '#946f23'
+                  background: 'var(--erp-accent-subtle, #eff6ff)',
+                  border: '1px solid #bfdbfe',
+                  color: 'var(--erp-accent, #2563eb)'
                 }}>
                   {pricingScope === 'apartment' && activeUnit ? (isAr ? `شقة دور ${activeUnit.floor}` : `Floor ${activeUnit.floor}`) : (isAr ? 'التكلفة + المكسب' : 'Cost + Profit')}
                 </span>
@@ -2259,15 +2262,15 @@ export const ConstructionCostCalculator: React.FC<ConstructionCostCalculatorProp
 
               {/* Hero Big Selling Price */}
               <div style={{
-                background: 'linear-gradient(135deg, rgba(254, 253, 250, 0.9) 0%, rgba(248, 249, 250, 0.95) 100%)',
-                border: '1px solid rgba(184, 144, 62, 0.22)',
+                background: '#f8fafc',
+                border: '1px solid #e2e8f0',
                 borderRadius: '12px',
                 padding: '1rem',
                 display: 'flex',
                 flexDirection: 'column',
                 gap: '0.35rem'
               }}>
-                <span style={{ fontSize: '0.72rem', color: '#946f23', fontWeight: 700, textTransform: 'uppercase' }}>
+                <span style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>
                   {pricingScope === 'apartment' && activeUnit
                     ? (isAr ? `سعر البيع المقترح لشقة ${activeUnit.unit_number}:` : `Unit ${activeUnit.unit_number} Suggested Price:`)
                     : (isAr ? 'سعر البيع المقترح للعقار كله:' : 'Recommended Selling Price:')}
@@ -2281,7 +2284,7 @@ export const ConstructionCostCalculator: React.FC<ConstructionCostCalculatorProp
                 </div>
                 <div style={{ fontSize: '0.78rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '0.2rem' }}>
                   <span>{pricingScope === 'apartment' && activeUnit ? (isAr ? 'سعر متر الشقة:' : 'Unit Price / m²:') : (isAr ? 'سعر بيع المتر المقترح:' : 'Price / Sqm:')}</span>
-                  <strong style={{ color: '#946f23' }}>
+                  <strong style={{ color: '#0f172a' }}>
                     {renderMoney(
                       pricingScope === 'apartment' && activeUnit ? activeUnit.pricePerSqm : builtPricing.estimatedSellingPricePerSqm,
                       'م²'
@@ -2293,29 +2296,29 @@ export const ConstructionCostCalculator: React.FC<ConstructionCostCalculatorProp
               {/* Profitability KPIs Split (2-Column Bento) */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.6rem' }}>
                 <div style={{
-                  background: 'rgba(22, 163, 74, 0.05)',
-                  border: '1px solid rgba(22, 163, 74, 0.2)',
+                  background: '#ffffff',
+                  border: '1px solid #e2e8f0',
                   borderRadius: '10px',
                   padding: '0.65rem 0.85rem'
                 }}>
-                  <span style={{ fontSize: '0.68rem', color: '#15803d', fontWeight: 700, display: 'block' }}>
+                  <span style={{ fontSize: '0.68rem', color: '#64748b', fontWeight: 700, display: 'block' }}>
                     {isAr ? 'نسبة صافي الربح:' : 'Gross Margin:'}
                   </span>
-                  <div style={{ fontSize: '1.15rem', fontWeight: 900, color: '#15803d', marginTop: '0.2rem', fontVariantNumeric: 'tabular-nums' }}>
+                  <div style={{ fontSize: '1.15rem', fontWeight: 900, color: '#0f172a', marginTop: '0.2rem', fontVariantNumeric: 'tabular-nums' }}>
                     {pricingScope === 'apartment' && activeUnit ? activeUnit.grossMargin : builtPricing.grossMarginPct}%
                   </div>
                 </div>
 
                 <div style={{
-                  background: 'rgba(184, 144, 62, 0.06)',
-                  border: '1px solid rgba(184, 144, 62, 0.22)',
+                  background: '#ffffff',
+                  border: '1px solid #e2e8f0',
                   borderRadius: '10px',
                   padding: '0.65rem 0.85rem'
                 }}>
-                  <span style={{ fontSize: '0.68rem', color: '#946f23', fontWeight: 700, display: 'block' }}>
+                  <span style={{ fontSize: '0.68rem', color: '#64748b', fontWeight: 700, display: 'block' }}>
                     {isAr ? 'العائد على المصاريف:' : 'Return on Cost:'}
                   </span>
-                  <div style={{ fontSize: '1.15rem', fontWeight: 900, color: '#946f23', marginTop: '0.2rem', fontVariantNumeric: 'tabular-nums' }}>
+                  <div style={{ fontSize: '1.15rem', fontWeight: 900, color: '#0f172a', marginTop: '0.2rem', fontVariantNumeric: 'tabular-nums' }}>
                     {pricingScope === 'apartment' && activeUnit
                       ? (activeUnit.totalApartmentCost > 0 
                           ? (((activeUnit.suggestedPrice - activeUnit.totalApartmentCost) / activeUnit.totalApartmentCost) * 100).toFixed(1)
@@ -2350,7 +2353,7 @@ export const ConstructionCostCalculator: React.FC<ConstructionCostCalculatorProp
                       type="button"
                       onClick={() => onOpenContractForProperty(selectedProperty, activeUnit)}
                       style={{
-                        background: 'linear-gradient(135deg, #15803d 0%, #166534 100%)',
+                        background: '#16a34a',
                         color: '#ffffff',
                         border: 'none',
                         borderRadius: '10px',
@@ -2362,7 +2365,7 @@ export const ConstructionCostCalculator: React.FC<ConstructionCostCalculatorProp
                         alignItems: 'center',
                         justifyContent: 'center',
                         gap: '0.5rem',
-                        boxShadow: '0 4px 14px rgba(21, 128, 61, 0.28)',
+                        boxShadow: 'none',
                         transition: 'all 0.15s ease'
                       }}
                     >
@@ -2380,8 +2383,8 @@ export const ConstructionCostCalculator: React.FC<ConstructionCostCalculatorProp
                     disabled={isUpdatingPrice}
                     style={{
                       background: priceUpdateSuccess
-                        ? 'linear-gradient(135deg, #15803d 0%, #166534 100%)'
-                        : 'linear-gradient(135deg, #c5a059 0%, #a48135 100%)',
+                        ? '#16a34a'
+                        : 'var(--erp-accent, #2563eb)',
                       color: '#ffffff',
                       border: 'none',
                       borderRadius: '10px',
@@ -2393,7 +2396,7 @@ export const ConstructionCostCalculator: React.FC<ConstructionCostCalculatorProp
                       alignItems: 'center',
                       justifyContent: 'center',
                       gap: '0.45rem',
-                      boxShadow: '0 3px 12px rgba(197, 160, 89, 0.3)',
+                      boxShadow: 'none',
                       marginTop: 'auto',
                       transition: 'all 0.2s ease',
                       opacity: isUpdatingPrice ? 0.7 : 1
@@ -2441,8 +2444,8 @@ export const ConstructionCostCalculator: React.FC<ConstructionCostCalculatorProp
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
                     <div style={{
-                      background: 'rgba(184, 144, 62, 0.1)',
-                      color: '#946f23',
+                      background: 'var(--erp-accent-subtle, #eff6ff)',
+                      color: 'var(--erp-accent, #2563eb)',
                       padding: '0.5rem',
                       borderRadius: '10px'
                     }}>
@@ -2472,8 +2475,8 @@ export const ConstructionCostCalculator: React.FC<ConstructionCostCalculatorProp
                       onClick={() => setBuildingPricingMode('whole')}
                       style={{
                         background: buildingPricingMode === 'whole' ? '#ffffff' : 'transparent',
-                        color: buildingPricingMode === 'whole' ? '#946f23' : '#64748b',
-                        border: buildingPricingMode === 'whole' ? '1px solid rgba(184, 144, 62, 0.3)' : '1px solid transparent',
+                        color: buildingPricingMode === 'whole' ? '#0f172a' : '#64748b',
+                        border: buildingPricingMode === 'whole' ? '1px solid #e2e8f0' : '1px solid transparent',
                         borderRadius: '7px',
                         padding: '0.45rem 0.85rem',
                         fontSize: '0.76rem',
@@ -2486,7 +2489,7 @@ export const ConstructionCostCalculator: React.FC<ConstructionCostCalculatorProp
                         transition: 'all 0.15s ease'
                       }}
                     >
-                      <Building size={15} color={buildingPricingMode === 'whole' ? '#946f23' : '#64748b'} />
+                      <Building size={15} color={buildingPricingMode === 'whole' ? 'var(--erp-accent, #2563eb)' : '#64748b'} />
                       <span>{isAr ? 'بيع العمارة شروة واحدة (جملة)' : 'Whole Building Sale'}</span>
                     </button>
                     <button
@@ -2494,8 +2497,8 @@ export const ConstructionCostCalculator: React.FC<ConstructionCostCalculatorProp
                       onClick={() => setBuildingPricingMode('units')}
                       style={{
                         background: buildingPricingMode === 'units' ? '#ffffff' : 'transparent',
-                        color: buildingPricingMode === 'units' ? '#946f23' : '#64748b',
-                        border: buildingPricingMode === 'units' ? '1px solid rgba(184, 144, 62, 0.3)' : '1px solid transparent',
+                        color: buildingPricingMode === 'units' ? '#0f172a' : '#64748b',
+                        border: buildingPricingMode === 'units' ? '1px solid #e2e8f0' : '1px solid transparent',
                         borderRadius: '7px',
                         padding: '0.45rem 0.85rem',
                         fontSize: '0.76rem',
@@ -2508,7 +2511,7 @@ export const ConstructionCostCalculator: React.FC<ConstructionCostCalculatorProp
                         transition: 'all 0.15s ease'
                       }}
                     >
-                      <Home size={15} color={buildingPricingMode === 'units' ? '#946f23' : '#64748b'} />
+                      <Home size={15} color={buildingPricingMode === 'units' ? 'var(--erp-accent, #2563eb)' : '#64748b'} />
                       <span>{isAr ? 'تسعير الشقق فردانية (قطاعي)' : 'Individual Retail Units'}</span>
                     </button>
                   </div>
@@ -2522,8 +2525,8 @@ export const ConstructionCostCalculator: React.FC<ConstructionCostCalculatorProp
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                     {/* Top Strategy Banner */}
                     <div style={{
-                      background: 'linear-gradient(135deg, rgba(254, 253, 250, 0.9) 0%, rgba(248, 250, 252, 0.95) 100%)',
-                      border: '1.5px solid rgba(184, 144, 62, 0.28)',
+                      background: '#f8fafc',
+                      border: '1px solid #e2e8f0',
                       borderRadius: '12px',
                       padding: '1rem 1.25rem',
                       display: 'flex',
@@ -2539,8 +2542,8 @@ export const ConstructionCostCalculator: React.FC<ConstructionCostCalculatorProp
                             fontWeight: 800,
                             padding: '0.15rem 0.55rem',
                             borderRadius: '6px',
-                            background: 'rgba(184, 144, 62, 0.12)',
-                            color: '#946f23'
+                            background: 'var(--erp-accent-subtle, #eff6ff)',
+                            color: 'var(--erp-accent, #2563eb)'
                           }}>
                             {isAr ? 'صفقة بيع جملة لمستثمر واحد' : 'Wholesale Investor Deal'}
                           </span>
@@ -2560,8 +2563,8 @@ export const ConstructionCostCalculator: React.FC<ConstructionCostCalculatorProp
                         onClick={handleExportBuiltPricingExcel}
                         style={{
                           background: '#ffffff',
-                          color: '#946f23',
-                          border: '1px solid rgba(184, 144, 62, 0.35)',
+                          color: '#0f172a',
+                          border: '1px solid #e2e8f0',
                           borderRadius: '8px',
                           padding: '0.45rem 0.85rem',
                           fontSize: '0.76rem',
@@ -2573,7 +2576,7 @@ export const ConstructionCostCalculator: React.FC<ConstructionCostCalculatorProp
                           boxShadow: '0 1px 2px rgba(0,0,0,0.04)'
                         }}
                       >
-                        <FileSpreadsheet size={14} color="#946f23" />
+                        <FileSpreadsheet size={14} color="var(--erp-accent, #2563eb)" />
                         <span>{isAr ? 'تصدير عرض سعر الشروة' : 'Export Wholesale Deal'}</span>
                       </button>
                     </div>
@@ -2598,17 +2601,17 @@ export const ConstructionCostCalculator: React.FC<ConstructionCostCalculatorProp
                           {isAr ? 'سعر المتر جملة للمستثمر:' : 'Wholesale Price / Sqm:'}
                         </span>
                         <div style={{ marginTop: '0.25rem' }}>
-                          {renderMoney(builtPricing.estimatedSellingPricePerSqm, 'م²', { color: '#946f23', size: '1.2rem', weight: 800 })}
+                          {renderMoney(builtPricing.estimatedSellingPricePerSqm, 'م²', { color: '#0f172a', size: '1.2rem', weight: 800 })}
                         </div>
                       </div>
 
-                      <div style={{ background: 'rgba(21, 128, 61, 0.05)', padding: '0.9rem', borderRadius: '12px', border: '1px solid rgba(21, 128, 61, 0.2)' }}>
-                        <span style={{ fontSize: '0.72rem', color: '#15803d', fontWeight: 700, display: 'block' }}>
+                      <div style={{ background: '#ffffff', padding: '0.9rem', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                        <span style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 700, display: 'block' }}>
                           {isAr ? 'صافي الربح الفوري للمطور:' : 'Net Developer Profit:'}
                         </span>
                         <div style={{ marginTop: '0.25rem' }}>
-                          {renderMoney(builtPricing.targetProfitMoney, undefined, { color: '#15803d', size: '1.2rem', weight: 900 })}
-                          <span style={{ fontSize: '0.74rem', color: '#15803d', fontWeight: 700, marginInlineStart: '0.35rem' }}>
+                          {renderMoney(builtPricing.targetProfitMoney, undefined, { color: '#0f172a', size: '1.2rem', weight: 900 })}
+                          <span style={{ fontSize: '0.74rem', color: '#16a34a', fontWeight: 700, marginInlineStart: '0.35rem' }}>
                             ({builtPricing.grossMarginPct}%)
                           </span>
                         </div>
@@ -2665,7 +2668,7 @@ export const ConstructionCostCalculator: React.FC<ConstructionCostCalculatorProp
                         gap: '0.65rem'
                       }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', borderBottom: '1px solid #f1f5f9', paddingBottom: '0.5rem' }}>
-                          <Scale size={16} color="#946f23" />
+                          <Scale size={16} color="var(--erp-accent, #2563eb)" />
                           <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#0f172a' }}>
                             {isAr ? 'المقارنة مع بيع الشقق فردانية (قطاعي):' : 'Comparison vs Retail Apartment Sales:'}
                           </span>
@@ -2675,12 +2678,12 @@ export const ConstructionCostCalculator: React.FC<ConstructionCostCalculatorProp
                             <span>{isAr ? 'إجمالي مبيعات الشقق قطاعي:' : 'Total Retail Units Revenue:'}</span>
                             <strong style={{ color: '#0f172a' }}>{renderMoney(buildingUnitsPricing.totalRetailRevenue)}</strong>
                           </div>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.35rem 0.5rem', background: 'rgba(21, 128, 61, 0.06)', borderRadius: '6px' }}>
-                            <span style={{ color: '#15803d', fontWeight: 700 }}>{isAr ? 'فرق المكسب الزيادة ببيع الشقق:' : 'Retail Profit Uplift:'}</span>
-                            <strong style={{ color: '#15803d' }}>+{renderMoney(buildingUnitsPricing.retailVsWholeUplift)} (+{buildingUnitsPricing.retailVsWholeUpliftPct}%)</strong>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.35rem 0.5rem', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px' }}>
+                            <span style={{ color: '#0f172a', fontWeight: 700 }}>{isAr ? 'فرق المكسب الزيادة ببيع الشقق:' : 'Retail Profit Uplift:'}</span>
+                            <strong style={{ color: '#16a34a' }}>+{renderMoney(buildingUnitsPricing.retailVsWholeUplift)} (+{buildingUnitsPricing.retailVsWholeUpliftPct}%)</strong>
                           </div>
                           <p style={{ margin: 0, fontSize: '0.72rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                            <Info size={14} color="#946f23" style={{ flexShrink: 0 }} />
+                            <Info size={14} color="#64748b" style={{ flexShrink: 0 }} />
                             <span>
                               {isAr 
                                 ? `القرار الاستثماري: بيع الشروة الواحدة يُضحي بربح إضافي قدره ${buildingUnitsPricing.retailVsWholeUpliftPct}% مقابل راحة البال والسيولة الفورية وتفادي مخاطر السوق.`
@@ -2716,18 +2719,18 @@ export const ConstructionCostCalculator: React.FC<ConstructionCostCalculatorProp
                           {isAr ? 'إجمالي المبيعات لو بعنا الشقق فردانية:' : 'Total Retail Revenue:'}
                         </span>
                         <div style={{ marginTop: '0.2rem' }}>
-                          {renderMoney(buildingUnitsPricing.totalRetailRevenue, undefined, { color: '#946f23', size: '1.15rem', weight: 900 })}
+                          {renderMoney(buildingUnitsPricing.totalRetailRevenue, undefined, { color: '#0f172a', size: '1.15rem', weight: 900 })}
                         </div>
                       </div>
 
-                      <div style={{ background: 'rgba(21, 128, 61, 0.05)', padding: '0.75rem 1rem', borderRadius: '10px', border: '1px solid rgba(21, 128, 61, 0.2)' }}>
-                        <span style={{ fontSize: '0.7rem', color: '#15803d', display: 'block', fontWeight: 700 }}>
+                      <div style={{ background: '#ffffff', padding: '0.75rem 1rem', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+                        <span style={{ fontSize: '0.7rem', color: '#64748b', display: 'block', fontWeight: 700 }}>
                           {isAr ? 'الربح الزيادة من بيع الشقق فردانية:' : 'Retail Profit Uplift:'}
                         </span>
                         <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', marginTop: '0.2rem' }}>
-                          <span style={{ color: '#15803d', fontWeight: 900 }}>+</span>
-                          {renderMoney(buildingUnitsPricing.retailVsWholeUplift, undefined, { color: '#15803d', size: '1.15rem', weight: 900 })}
-                          <span style={{ fontSize: '0.76rem', color: '#15803d', fontWeight: 800 }}>
+                          <span style={{ color: '#0f172a', fontWeight: 900 }}>+</span>
+                          {renderMoney(buildingUnitsPricing.retailVsWholeUplift, undefined, { color: '#0f172a', size: '1.15rem', weight: 900 })}
+                          <span style={{ fontSize: '0.76rem', color: '#16a34a', fontWeight: 800 }}>
                             (+{buildingUnitsPricing.retailVsWholeUpliftPct}%)
                           </span>
                         </div>
@@ -2796,7 +2799,7 @@ export const ConstructionCostCalculator: React.FC<ConstructionCostCalculatorProp
                           type="button"
                           onClick={() => setUnitStatusFilter('available')}
                           style={{
-                            background: unitStatusFilter === 'available' ? '#946f23' : '#ffffff',
+                            background: unitStatusFilter === 'available' ? 'var(--erp-accent, #2563eb)' : '#ffffff',
                             color: unitStatusFilter === 'available' ? '#ffffff' : '#64748b',
                             border: '1px solid #e2e8f0',
                             borderRadius: '6px',
@@ -2858,7 +2861,7 @@ export const ConstructionCostCalculator: React.FC<ConstructionCostCalculatorProp
                                 style={{
                                   borderTop: '1px solid #f1f5f9',
                                   background: (pricingScope === 'apartment' && activeUnit?.unit_id === u.unit_id) 
-                                    ? 'rgba(148, 111, 35, 0.05)' 
+                                    ? 'var(--erp-accent-subtle, #eff6ff)' 
                                     : (idx % 2 === 0 ? '#ffffff' : '#fafafa'),
                                   transition: 'background 0.12s ease'
                                 }}
@@ -2877,7 +2880,7 @@ export const ConstructionCostCalculator: React.FC<ConstructionCostCalculatorProp
                                 </td>
                                 <td style={{ padding: '0.7rem 0.9rem' }}>
                                   {u.unitTaxesPaid > 0 ? (
-                                    renderMoney(u.unitTaxesPaid, undefined, { color: '#946f23', weight: 700 })
+                                    renderMoney(u.unitTaxesPaid, undefined, { color: '#64748b', weight: 700 })
                                   ) : (
                                     <span style={{ color: '#94a3b8' }}>{isAr ? '٠ ج.م' : '0 EGP'}</span>
                                   )}
@@ -2886,7 +2889,7 @@ export const ConstructionCostCalculator: React.FC<ConstructionCostCalculatorProp
                                   {renderMoney(u.totalApartmentCost, undefined, { weight: 800, color: '#0f172a' })}
                                 </td>
                                 <td style={{ padding: '0.7rem 0.9rem' }}>
-                                  {renderMoney(u.suggestedPrice, undefined, { color: '#946f23', weight: 900 })}
+                                  {renderMoney(u.suggestedPrice, undefined, { color: '#0f172a', weight: 900 })}
                                 </td>
                                 <td style={{ padding: '0.7rem 0.9rem' }}>
                                   {renderMoney(u.pricePerSqm, 'م²', { color: '#64748b', weight: 700 })}
@@ -2900,9 +2903,9 @@ export const ConstructionCostCalculator: React.FC<ConstructionCostCalculatorProp
                                     borderRadius: '6px',
                                     fontSize: '0.7rem',
                                     fontWeight: 700,
-                                    background: u.status === 'contracted' ? 'rgba(21, 128, 61, 0.08)' : 'rgba(184, 144, 62, 0.08)',
-                                    color: u.status === 'contracted' ? '#15803d' : '#946f23',
-                                    border: u.status === 'contracted' ? '1px solid rgba(21, 128, 61, 0.25)' : '1px solid rgba(184, 144, 62, 0.25)'
+                                    background: u.status === 'contracted' ? 'rgba(21, 128, 61, 0.08)' : 'var(--erp-accent-subtle, #eff6ff)',
+                                    color: u.status === 'contracted' ? '#15803d' : 'var(--erp-accent, #2563eb)',
+                                    border: u.status === 'contracted' ? '1px solid rgba(21, 128, 61, 0.25)' : '1px solid #bfdbfe'
                                   }}>
                                     {u.status === 'contracted' ? (isAr ? 'متباعة / متعاقد عليها' : 'Contracted') : (isAr ? 'جاهزة للبيع' : 'Available')}
                                   </span>
@@ -2918,9 +2921,9 @@ export const ConstructionCostCalculator: React.FC<ConstructionCostCalculatorProp
                                       }}
                                       title={isAr ? 'تسعير هذه الشقة بالحاسبة أعلاه' : 'Price this unit in calculator above'}
                                       style={{
-                                        background: (pricingScope === 'apartment' && activeUnit?.unit_id === u.unit_id) ? '#946f23' : '#f8fafc',
+                                        background: (pricingScope === 'apartment' && activeUnit?.unit_id === u.unit_id) ? 'var(--erp-accent, #2563eb)' : '#f8fafc',
                                         color: (pricingScope === 'apartment' && activeUnit?.unit_id === u.unit_id) ? '#ffffff' : '#475569',
-                                        border: (pricingScope === 'apartment' && activeUnit?.unit_id === u.unit_id) ? '1.5px solid #946f23' : '1px solid #cbd5e1',
+                                        border: (pricingScope === 'apartment' && activeUnit?.unit_id === u.unit_id) ? '1.5px solid var(--erp-accent, #2563eb)' : '1px solid var(--erp-border, #cbd5e1)',
                                         borderRadius: '7px',
                                         padding: '0.3rem 0.6rem',
                                         fontSize: '0.7rem',
@@ -2929,7 +2932,7 @@ export const ConstructionCostCalculator: React.FC<ConstructionCostCalculatorProp
                                         display: 'flex',
                                         alignItems: 'center',
                                         gap: '0.3rem',
-                                        boxShadow: (pricingScope === 'apartment' && activeUnit?.unit_id === u.unit_id) ? '0 1px 4px rgba(148, 111, 35, 0.3)' : 'none',
+                                        boxShadow: 'none',
                                         transition: 'all 0.15s ease'
                                       }}
                                     >
@@ -2968,7 +2971,7 @@ export const ConstructionCostCalculator: React.FC<ConstructionCostCalculatorProp
                           ) : (
                             <tr>
                               <td colSpan={11} style={{ padding: '2rem', textAlign: 'center', color: '#64748b' }}>
-                                <Info size={18} color="#946f23" style={{ marginBottom: '0.35rem' }} />
+                                <Info size={18} color="#64748b" style={{ marginBottom: '0.35rem' }} />
                                 <div>{isAr ? 'لا توجد شقق مطابقة لنتيجة البحث أو الفلتر المحدد' : 'No units match current filter'}</div>
                               </td>
                             </tr>
@@ -3003,8 +3006,8 @@ export const ConstructionCostCalculator: React.FC<ConstructionCostCalculatorProp
             boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04)'
           }}>
             <div style={{ borderBottom: '1px solid #e2e8f0', paddingBottom: '0.75rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: '0.85rem', fontWeight: 800, color: '#946f23', display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                <Hammer size={16} />
+              <span style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--erp-accent, #2563eb)', display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                <Hammer size={16} color="var(--erp-accent, #2563eb)" />
                 <span>{isAr ? 'مواصفات وتكاليف المشروع الجديد (8 بنود مباشرة)' : 'New Project Specifications & Direct 8-Category Costs'}</span>
               </span>
               <span style={{ fontSize: '0.7rem', color: '#64748b', background: '#f8fafc', padding: '0.2rem 0.55rem', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
@@ -3113,8 +3116,8 @@ export const ConstructionCostCalculator: React.FC<ConstructionCostCalculatorProp
 
               {/* Land Allocation Summary Banner */}
               <div style={{
-                background: 'rgba(146, 64, 14, 0.05)',
-                border: '1px solid rgba(146, 64, 14, 0.2)',
+                background: '#ffffff',
+                border: '1px solid #e2e8f0',
                 borderRadius: '8px',
                 padding: '0.55rem 0.8rem',
                 display: 'flex',
@@ -3122,10 +3125,10 @@ export const ConstructionCostCalculator: React.FC<ConstructionCostCalculatorProp
                 justifyContent: 'space-between',
                 fontSize: '0.73rem'
               }}>
-                <span style={{ color: '#92400e', fontWeight: 700 }}>
+                <span style={{ color: '#0f172a', fontWeight: 700 }}>
                   {isAr ? 'البند 8: إجمالي تكلفة الأرض المحملة ع المبنى:' : 'Item 8: Total Land Allocation:'}
                 </span>
-                <span style={{ fontWeight: 800, color: '#92400e', direction: 'ltr' }}>
+                <span style={{ fontWeight: 800, color: '#0f172a', direction: 'ltr' }}>
                   {formatCompactMoney(feasibilityCalculations.totalLandCost, isAr)} ({feasibilityCalculations.landCostPerBuiltSqm.toLocaleString()} {isAr ? 'ج.م/م² مباني' : 'EGP/sqm'})
                 </span>
               </div>
@@ -3154,8 +3157,8 @@ export const ConstructionCostCalculator: React.FC<ConstructionCostCalculatorProp
                       type="button"
                       onClick={() => setFinishingTier(tier)}
                       style={{
-                        background: isSelected ? 'rgba(184, 144, 62, 0.08)' : '#ffffff',
-                        border: isSelected ? '1.5px solid #946f23' : '1px solid #e2e8f0',
+                        background: isSelected ? 'var(--erp-accent-subtle, #eff6ff)' : '#ffffff',
+                        border: isSelected ? '1.5px solid #2563eb' : '1px solid #e2e8f0',
                         borderRadius: '9px',
                         padding: '0.6rem 0.5rem',
                         textAlign: isAr ? 'right' : 'left',
@@ -3163,21 +3166,21 @@ export const ConstructionCostCalculator: React.FC<ConstructionCostCalculatorProp
                         display: 'flex',
                         flexDirection: 'column',
                         gap: '0.25rem',
-                        boxShadow: isSelected ? '0 2px 8px rgba(148, 111, 35, 0.15)' : 'none',
+                        boxShadow: isSelected ? '0 2px 8px rgba(37, 99, 235, 0.15)' : 'none',
                         transition: 'all 0.15s ease'
                       }}
                     >
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <span style={{ fontSize: '0.72rem', fontWeight: 800, color: isSelected ? '#946f23' : '#0f172a' }}>
+                        <span style={{ fontSize: '0.72rem', fontWeight: 800, color: isSelected ? 'var(--erp-accent, #2563eb)' : '#0f172a' }}>
                           {tier === 'core_and_shell' ? (isAr ? 'طوب وعظم' : 'Core & Shell') :
                            tier === 'semi_finished' ? (isAr ? 'نص تشطيب' : 'Semi-Finished') :
                            tier === 'lux' ? (isAr ? 'تشطيب لوكس' : 'Lux') :
                            tier === 'super_lux' ? (isAr ? 'سوبر لوكس' : 'Super Lux') :
                            (isAr ? 'مخصص يدوي' : 'Custom')}
                         </span>
-                        {isSelected && <Check size={12} color="#946f23" strokeWidth={3} />}
+                        {isSelected && <Check size={12} color="var(--erp-accent, #2563eb)" strokeWidth={3} />}
                       </div>
-                      <span style={{ fontSize: '0.68rem', color: isSelected ? '#946f23' : '#64748b', fontWeight: 700 }}>
+                      <span style={{ fontSize: '0.68rem', color: isSelected ? 'var(--erp-accent, #2563eb)' : '#64748b', fontWeight: 700 }}>
                         {displayCost.toLocaleString()} {isAr ? 'ج.م/م²' : 'EGP'}
                       </span>
                     </button>
@@ -3188,8 +3191,8 @@ export const ConstructionCostCalculator: React.FC<ConstructionCostCalculatorProp
               {/* Custom Finishing Card - Revealed when custom is selected */}
               {finishingTier === 'custom' && (
                 <div style={{
-                  background: 'rgba(184, 144, 62, 0.04)',
-                  border: '1.5px solid rgba(184, 144, 62, 0.35)',
+                  background: 'var(--erp-accent-subtle, #eff6ff)',
+                  border: '1.5px solid #bfdbfe',
                   borderRadius: '12px',
                   padding: '0.9rem 1rem',
                   display: 'flex',
@@ -3199,8 +3202,8 @@ export const ConstructionCostCalculator: React.FC<ConstructionCostCalculatorProp
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                      <Sparkles size={15} color="#946f23" />
-                      <span style={{ fontSize: '0.76rem', fontWeight: 800, color: '#946f23' }}>
+                      <Sparkles size={15} color="var(--erp-accent, #2563eb)" />
+                      <span style={{ fontSize: '0.76rem', fontWeight: 800, color: 'var(--erp-accent, #2563eb)' }}>
                         {isAr ? 'تحديد مواصفات وتكلفة التشطيب المخصص (Custom):' : 'Custom Finishing Specification & Rate:'}
                       </span>
                     </div>
@@ -3222,13 +3225,13 @@ export const ConstructionCostCalculator: React.FC<ConstructionCostCalculatorProp
                       style={{
                         width: '100%',
                         background: '#ffffff',
-                        border: '1.5px solid #946f23',
+                        border: '1.5px solid #2563eb',
                         borderRadius: '8px',
                         color: '#0f172a',
                         fontSize: '0.95rem',
                         fontWeight: 800,
                         padding: '0.55rem 0.8rem',
-                        boxShadow: '0 1px 3px rgba(148, 111, 35, 0.1)'
+                        boxShadow: '0 1px 3px rgba(37, 99, 235, 0.1)'
                       }}
                     />
                   </div>
@@ -3266,9 +3269,9 @@ export const ConstructionCostCalculator: React.FC<ConstructionCostCalculatorProp
                           type="button"
                           onClick={() => setCustomFinishingCostPerSqm(rate)}
                           style={{
-                            background: customFinishingCostPerSqm === rate ? '#946f23' : '#ffffff',
+                            background: customFinishingCostPerSqm === rate ? 'var(--erp-accent, #2563eb)' : '#ffffff',
                             color: customFinishingCostPerSqm === rate ? '#ffffff' : '#334155',
-                            border: customFinishingCostPerSqm === rate ? '1px solid #946f23' : '1px solid #cbd5e1',
+                            border: customFinishingCostPerSqm === rate ? '1px solid var(--erp-accent, #2563eb)' : '1px solid var(--erp-border, #cbd5e1)',
                             borderRadius: '5px',
                             padding: '0.2rem 0.45rem',
                             fontSize: '0.67rem',
@@ -3285,7 +3288,7 @@ export const ConstructionCostCalculator: React.FC<ConstructionCostCalculatorProp
                   {/* Live Total Badge for Custom Finishing */}
                   <div style={{
                     background: '#ffffff',
-                    border: '1px solid rgba(184, 144, 62, 0.25)',
+                    border: '1px solid #bfdbfe',
                     borderRadius: '7px',
                     padding: '0.45rem 0.65rem',
                     fontSize: '0.71rem',
@@ -3316,7 +3319,7 @@ export const ConstructionCostCalculator: React.FC<ConstructionCostCalculatorProp
             }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <span style={{ fontSize: '0.74rem', fontWeight: 800, color: '#334155', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                  <SlidersHorizontal size={14} color="#946f23" />
+                  <SlidersHorizontal size={14} color="var(--erp-accent, #2563eb)" />
                   <span>{isAr ? '3. تفصيل أسعار بنود التكاليف المباشرة المعتمدة:' : '3. Direct Canonical Cost Rates:'}</span>
                 </span>
                 <span style={{ fontSize: '0.68rem', color: '#64748b' }}>
@@ -3504,7 +3507,7 @@ export const ConstructionCostCalculator: React.FC<ConstructionCostCalculatorProp
               {/* Item 6 & 7: Permits & Engineering + Taxes & Insurance */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 180px), 1fr))', gap: '0.6rem' }}>
                 <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '0.7rem' }}>
-                  <div style={{ fontSize: '0.72rem', fontWeight: 800, color: '#946f23', marginBottom: '0.35rem', display: 'flex', justifyContent: 'space-between' }}>
+                  <div style={{ fontSize: '0.72rem', fontWeight: 800, color: '#d97706', marginBottom: '0.35rem', display: 'flex', justifyContent: 'space-between' }}>
                     <span>{isAr ? 'البند 6: تراخيص واستشارات' : 'Item 6: Permits & Eng'}</span>
                     <span>{formatCompactMoney(feasibilityCalculations.totalPermitsCost, isAr)}</span>
                   </div>
@@ -3570,9 +3573,9 @@ export const ConstructionCostCalculator: React.FC<ConstructionCostCalculatorProp
                 style={{
                   width: '100%',
                   background: '#ffffff',
-                  border: '1.5px solid rgba(184, 144, 62, 0.4)',
+                  border: '1.5px solid #2563eb',
                   borderRadius: '8px',
-                  color: '#946f23',
+                  color: '#0f172a',
                   fontSize: '0.95rem',
                   fontWeight: 900,
                   padding: '0.55rem 0.75rem'
@@ -3596,8 +3599,8 @@ export const ConstructionCostCalculator: React.FC<ConstructionCostCalculatorProp
             boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04)'
           }}>
             <div style={{ borderBottom: '1px solid #e2e8f0', paddingBottom: '0.75rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: '0.85rem', fontWeight: 800, color: '#946f23', display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                <TrendingUp size={16} />
+              <span style={{ fontSize: '0.85rem', fontWeight: 800, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                <TrendingUp size={16} color="var(--erp-accent, #2563eb)" />
                 <span>{isAr ? 'نتائج دراسة الجدوى وتوزيع التكاليف الـ 8' : 'Feasibility Results & 8-Category Allocation'}</span>
               </span>
               <span style={{ fontSize: '0.7rem', color: '#15803d', background: 'rgba(21, 128, 61, 0.08)', border: '1px solid rgba(21, 128, 61, 0.25)', padding: '0.2rem 0.55rem', borderRadius: '6px', fontWeight: 700 }}>
@@ -3608,16 +3611,16 @@ export const ConstructionCostCalculator: React.FC<ConstructionCostCalculatorProp
             {/* Top 4 KPI Summary Grid */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 180px), 1fr))', gap: '0.75rem' }}>
               <div style={{
-                background: 'rgba(59, 130, 246, 0.05)',
-                border: '1px solid rgba(59, 130, 246, 0.2)',
+                background: '#ffffff',
+                border: '1px solid #e2e8f0',
                 borderRadius: '10px',
                 padding: '0.85rem'
               }}>
-                <span style={{ fontSize: '0.7rem', color: '#2563eb', display: 'block', fontWeight: 700 }}>
+                <span style={{ fontSize: '0.7rem', color: '#64748b', display: 'block', fontWeight: 700 }}>
                   {isAr ? 'تكلفة المتر الكلية (أرض + مباني):' : 'Grand Cost / sqm:'}
                 </span>
                 <div style={{ marginTop: '0.2rem' }}>
-                  {renderMoney(feasibilityCalculations.grandCostPerSqm, 'م²', { size: '1.2rem', weight: 900 })}
+                  {renderMoney(feasibilityCalculations.grandCostPerSqm, 'م²', { color: '#0f172a', size: '1.2rem', weight: 900 })}
                 </div>
                 <span style={{ fontSize: '0.65rem', color: '#64748b', marginTop: '0.2rem', display: 'block' }}>
                   {isAr ? `المباني: ${feasibilityCalculations.constructionCostPerSqm.toLocaleString()} | الأرض: ${feasibilityCalculations.landCostPerBuiltSqm.toLocaleString()}` : 'Construction + Land'}
@@ -3625,15 +3628,15 @@ export const ConstructionCostCalculator: React.FC<ConstructionCostCalculatorProp
               </div>
 
               <div style={{
-                background: 'rgba(16, 185, 129, 0.05)',
-                border: '1px solid rgba(16, 185, 129, 0.2)',
+                background: '#ffffff',
+                border: '1px solid #e2e8f0',
                 borderRadius: '10px',
                 padding: '0.85rem'
               }}>
-                <span style={{ fontSize: '0.7rem', color: '#15803d', display: 'block', fontWeight: 700 }}>
+                <span style={{ fontSize: '0.7rem', color: '#64748b', display: 'block', fontWeight: 700 }}>
                   {isAr ? 'العائد المتوقع على الاستثمار (ROI):' : 'Developer ROI %:'}
                 </span>
-                <div style={{ fontSize: '1.25rem', fontWeight: 900, color: '#15803d', marginTop: '0.2rem' }}>
+                <div style={{ fontSize: '1.25rem', fontWeight: 900, color: '#0f172a', marginTop: '0.2rem', fontVariantNumeric: 'tabular-nums' }}>
                   {feasibilityCalculations.developerMarginPercent}%
                 </div>
                 <span style={{ fontSize: '0.65rem', color: '#64748b', marginTop: '0.2rem', display: 'block' }}>
@@ -3642,7 +3645,7 @@ export const ConstructionCostCalculator: React.FC<ConstructionCostCalculatorProp
               </div>
 
               <div style={{
-                background: '#f8fafc',
+                background: '#ffffff',
                 border: '1px solid #e2e8f0',
                 borderRadius: '10px',
                 padding: '0.85rem'
@@ -3651,7 +3654,7 @@ export const ConstructionCostCalculator: React.FC<ConstructionCostCalculatorProp
                   {isAr ? 'إجمالي مبيعات المشروع المتوقعة:' : 'Projected Sales:'}
                 </span>
                 <div style={{ marginTop: '0.2rem' }}>
-                  {renderMoney(feasibilityCalculations.projectedGrossRevenue, undefined, { size: '1.05rem', weight: 800 })}
+                  {renderMoney(feasibilityCalculations.projectedGrossRevenue, undefined, { color: '#0f172a', size: '1.05rem', weight: 800 })}
                 </div>
                 <span style={{ fontSize: '0.65rem', color: '#64748b', marginTop: '0.2rem', display: 'block' }}>
                   {builtUpAreaSqm} {isAr ? 'م² مباني للبيع' : 'sqm'}
@@ -3659,17 +3662,17 @@ export const ConstructionCostCalculator: React.FC<ConstructionCostCalculatorProp
               </div>
 
               <div style={{
-                background: 'rgba(21, 128, 61, 0.06)',
-                border: '1px solid rgba(21, 128, 61, 0.25)',
+                background: '#ffffff',
+                border: '1px solid #e2e8f0',
                 borderRadius: '10px',
                 padding: '0.85rem'
               }}>
-                <span style={{ fontSize: '0.7rem', color: '#15803d', display: 'block', fontWeight: 800 }}>
+                <span style={{ fontSize: '0.7rem', color: '#64748b', display: 'block', fontWeight: 800 }}>
                   {isAr ? 'صافي أرباح المطور المتوقعة:' : 'Projected Net Profit:'}
                 </span>
                 <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.2rem', marginTop: '0.2rem' }}>
-                  <span style={{ color: '#15803d', fontWeight: 900 }}>+</span>
-                  {renderMoney(feasibilityCalculations.projectedNetProfit, undefined, { color: '#15803d', size: '1.05rem', weight: 900 })}
+                  <span style={{ color: '#0f172a', fontWeight: 900 }}>+</span>
+                  {renderMoney(feasibilityCalculations.projectedNetProfit, undefined, { color: '#0f172a', size: '1.05rem', weight: 900 })}
                 </div>
                 <span style={{ fontSize: '0.65rem', color: '#15803d', marginTop: '0.2rem', display: 'block', fontWeight: 600 }}>
                   {isAr ? 'بعد تغطية كافة المصاريف والأرض' : 'Net Developer Margin'}
@@ -3681,7 +3684,7 @@ export const ConstructionCostCalculator: React.FC<ConstructionCostCalculatorProp
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.72rem', color: '#475569', fontWeight: 700 }}>
                 <span>{isAr ? 'توزيع بنود التكلفة الإجمالية (مخطط تشريح الاستثمار):' : '8 Categories Cost Distribution:'}</span>
-                <span style={{ color: '#946f23', fontWeight: 800 }}>
+                <span style={{ color: 'var(--erp-accent, #2563eb)', fontWeight: 800 }}>
                   {formatCompactMoney(feasibilityCalculations.grandProjectCost, isAr)}
                 </span>
               </div>
@@ -3785,17 +3788,17 @@ export const ConstructionCostCalculator: React.FC<ConstructionCostCalculatorProp
                     ))}
 
                     {/* Subtotal Construction WIP (Items 1-7) */}
-                    <tr style={{ background: 'rgba(184, 144, 62, 0.06)', borderBottom: '1px solid rgba(184, 144, 62, 0.2)', fontWeight: 800 }}>
-                      <td style={{ padding: '0.65rem 0.75rem', color: '#946f23' }}>
+                    <tr style={{ background: 'var(--erp-accent-subtle, #eff6ff)', borderBottom: '1px solid #bfdbfe', fontWeight: 800 }}>
+                      <td style={{ padding: '0.65rem 0.75rem', color: 'var(--erp-accent, #2563eb)' }}>
                         {isAr ? 'إجمالي تكلفة المباني والإنشاءات (WIP - البنود 1 إلى 7):' : 'Total Construction WIP (Items 1-7):'}
                       </td>
-                      <td style={{ padding: '0.65rem 0.75rem', textAlign: isAr ? 'left' : 'right', color: '#946f23' }}>
+                      <td style={{ padding: '0.65rem 0.75rem', textAlign: isAr ? 'left' : 'right', color: 'var(--erp-accent, #2563eb)' }}>
                         {feasibilityCalculations.constructionCostPerSqm.toLocaleString()} {isAr ? 'ج.م' : 'EGP'}
                       </td>
                       <td style={{ padding: '0.65rem 0.75rem', textAlign: isAr ? 'left' : 'right' }}>
-                        {renderMoney(feasibilityCalculations.totalConstructionWip, undefined, { color: '#946f23', weight: 900 })}
+                        {renderMoney(feasibilityCalculations.totalConstructionWip, undefined, { color: 'var(--erp-accent, #2563eb)', weight: 900 })}
                       </td>
-                      <td style={{ padding: '0.65rem 0.75rem', textAlign: 'center', color: '#946f23' }}>
+                      <td style={{ padding: '0.65rem 0.75rem', textAlign: 'center', color: 'var(--erp-accent, #2563eb)' }}>
                         {((feasibilityCalculations.totalConstructionWip / feasibilityCalculations.grandProjectCost) * 100).toFixed(1)}%
                       </td>
                     </tr>
@@ -3809,7 +3812,7 @@ export const ConstructionCostCalculator: React.FC<ConstructionCostCalculatorProp
                         {feasibilityCalculations.grandCostPerSqm.toLocaleString()} {isAr ? 'ج.م' : 'EGP'}
                       </td>
                       <td style={{ padding: '0.75rem', textAlign: isAr ? 'left' : 'right' }}>
-                        {renderMoney(feasibilityCalculations.grandProjectCost, undefined, { color: '#c5a059', size: '0.85rem', weight: 900 })}
+                        {renderMoney(feasibilityCalculations.grandProjectCost, undefined, { color: '#ffffff', size: '0.85rem', weight: 900 })}
                       </td>
                       <td style={{ padding: '0.75rem', textAlign: 'center', color: '#cbd5e1' }}>
                         100%
@@ -3854,7 +3857,7 @@ export const ConstructionCostCalculator: React.FC<ConstructionCostCalculatorProp
               type="button"
               onClick={handleExportFeasibilityExcel}
               style={{
-                background: 'linear-gradient(135deg, #15803d 0%, #166534 100%)',
+                background: '#16a34a',
                 border: 'none',
                 color: '#ffffff',
                 padding: '0.8rem',
@@ -3866,7 +3869,7 @@ export const ConstructionCostCalculator: React.FC<ConstructionCostCalculatorProp
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: '0.45rem',
-                boxShadow: '0 4px 14px rgba(21, 128, 61, 0.25)',
+                boxShadow: 'none',
                 transition: 'all 0.2s ease',
                 marginTop: 'auto'
               }}

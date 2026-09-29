@@ -28,7 +28,8 @@ import {
   PieChart,
   Layers,
   Zap,
-  CheckCircle2
+  CheckCircle2,
+  HardHat
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { ERPContract, ERPPDCRecord, ERPPartnerProfile, ERPRescissionRecord, ERPTaxRecord } from '@/lib/erp/types';
@@ -37,6 +38,7 @@ import { CANONICAL_COA } from '@/lib/erp/ledger';
 import { getStoredPlatformSettings, saveStoredPlatformSettings } from '@/lib/services/marketIntelligence';
 import { createClient } from '@/lib/supabase/client';
 import { FALLBACK_PROPERTIES } from '@/lib/data/fallbackProperties';
+import { TAB_REDIRECT_MAP } from '@/lib/erp/routing/tabRedirectMap';
 
 export type SearchCategoryKey = 
   | 'all' 
@@ -348,14 +350,16 @@ export const ZFQuickSearchModal: React.FC<ZFQuickSearchModalProps> = ({
   }, [router, onClose]);
 
   const handleNavigateToFinOSTab = useCallback((tab: string, extraQuery?: string) => {
-    if (onSelectModule && (pathname.includes('/fin-os') || pathname.startsWith('/fin-os'))) {
-      onSelectModule(tab);
-    } else {
-      const extra = extraQuery ? `&${extraQuery}` : '';
-      router.push(`/fin-os/${currentLocale}?tab=${tab}${extra}`);
-    }
+    const lower = tab.toLowerCase();
+    const mapping = TAB_REDIRECT_MAP[lower];
+    const subPath = mapping ? (mapping.path ? `/${mapping.path}` : '') : (lower === 'dashboard' || lower === 'cockpit' ? '' : `/${lower}`);
+    const defaultSub = mapping?.defaultSub ? `sub=${mapping.defaultSub}` : '';
+    const combinedQuery = [defaultSub, extraQuery].filter(Boolean).join('&');
+    const queryString = combinedQuery ? `?${combinedQuery}` : '';
+
+    router.push(`/fin-os/${currentLocale}${subPath}${queryString}`);
     onClose();
-  }, [onSelectModule, pathname, currentLocale, router, onClose]);
+  }, [currentLocale, router, onClose]);
 
   // 5. Search Index & Results Compilation
   const results = useMemo(() => {
@@ -502,7 +506,7 @@ export const ZFQuickSearchModal: React.FC<ZFQuickSearchModalProps> = ({
           } else if (onOpenAcademy) {
             onOpenAcademy();
           } else {
-            router.push(`/fin-os/${currentLocale}?tab=dashboard`);
+            router.push(`/fin-os/${currentLocale}`);
             toast.info(
               isArMode 
                 ? 'يمكنك تشغيل جولة المنظومة التفاعلية من شريط أدوات FIN-OS' 
@@ -609,7 +613,18 @@ export const ZFQuickSearchModal: React.FC<ZFQuickSearchModalProps> = ({
         action: () => handleNavigateToFinOSTab('properties'),
         priority: 82
       },
-      // 4. Feasibility & Pricing Calculator
+      // 4. Construction WIP & Contractor Payables
+      {
+        id: 'erp-construction',
+        group: 'finance',
+        title: isArMode ? 'مصاريف البناء ومستحقات المقاولين (AP)' : 'Construction WIP & Payables (AP)',
+        subtitle: isArMode ? 'مستخلصات المقاولين، تكاليف الخرسانة والتشطيب، وأعمار الديون' : 'Contractor claims, WIP tracking, payment terms & AP aging',
+        category: isArMode ? 'المنظومة المالية FIN-OS' : 'Financial ERP (FIN-OS)',
+        icon: HardHat,
+        action: () => handleNavigateToFinOSTab('construction'),
+        priority: 81.5
+      },
+      // 5. Feasibility & Pricing Calculator
       {
         id: 'erp-calculator',
         group: 'finance',
@@ -705,14 +720,7 @@ export const ZFQuickSearchModal: React.FC<ZFQuickSearchModalProps> = ({
         subtitle: isArMode ? 'مخطط مرئي تفاعلي لدورة رأس المال والسيولة النقدية' : 'Interactive visual map of capital cycle & treasury liquidity',
         category: isArMode ? 'المنظومة المالية FIN-OS' : 'Financial ERP (FIN-OS)',
         icon: Layers,
-        action: () => {
-          if (onSelectModule && (pathname.includes('/fin-os') || pathname.startsWith('/fin-os'))) {
-            onSelectModule('dashboard');
-          } else {
-            router.push(`/fin-os/${currentLocale}?tab=dashboard&view=mindmap`);
-          }
-          onClose();
-        },
+        action: () => handleNavigateToFinOSTab('ledger'),
         priority: 73
       }
     ];
@@ -982,6 +990,7 @@ export const ZFQuickSearchModal: React.FC<ZFQuickSearchModalProps> = ({
             } else {
               handleNavigateToFinOSTab('contracts', `contractId=${c.contract_id}`);
             }
+            onClose();
           }
         });
       }
@@ -1012,7 +1021,7 @@ export const ZFQuickSearchModal: React.FC<ZFQuickSearchModalProps> = ({
           subtitle: `${formatNumber(ch.nominal_value)} EGP | ${drawer} | ${status === 'Cleared' ? (isArMode ? 'تم التحصيل' : 'Cleared') : (isArMode ? 'مستحق باليد' : 'Due In Hand')} (${dueDate})`,
           icon: Wallet,
           priority: 72,
-          action: () => handleNavigateToFinOSTab('pdc')
+          action: () => handleNavigateToFinOSTab('pdc', `chequeId=${ch.cheque_id}`)
         });
       }
     });
@@ -1084,7 +1093,7 @@ export const ZFQuickSearchModal: React.FC<ZFQuickSearchModalProps> = ({
           subtitle: `${roleAr} | ${bank || payoutMethod || (isArMode ? 'حساب معتمد' : 'Verified Partner')}`,
           icon: UserCheck,
           priority: 71,
-          action: () => handleNavigateToFinOSTab('partners')
+          action: () => handleNavigateToFinOSTab('partners', `partner=${encodeURIComponent(name)}`)
         });
       }
     });
@@ -1115,7 +1124,7 @@ export const ZFQuickSearchModal: React.FC<ZFQuickSearchModalProps> = ({
           subtitle: `${formatNumber(tx.tax_amount)} EGP | ${txStatus || (isArMode ? 'مستحق' : 'Due')} ${unitNum ? `| وحدة ${unitNum}` : ''}`,
           icon: Landmark,
           priority: 66,
-          action: () => handleNavigateToFinOSTab('tax')
+          action: () => handleNavigateToFinOSTab('tax', `taxId=${txId}`)
         });
       }
     });
@@ -1234,8 +1243,8 @@ export const ZFQuickSearchModal: React.FC<ZFQuickSearchModalProps> = ({
     fontFamily: 'inherit',
     fontWeight: 700,
     background: isLight ? '#FFFFFF' : 'rgba(255, 255, 255, 0.08)',
-    border: isLight ? '1px solid #D8D2C4' : '1px solid rgba(255, 255, 255, 0.15)',
-    color: isLight ? '#0F172A' : '#DDA752',
+    border: isLight ? '1px solid #e2e8f0' : '1px solid rgba(255, 255, 255, 0.15)',
+    color: isLight ? '#0F172A' : '#94A3B8',
     boxShadow: isLight ? '0 1px 2px rgba(15, 23, 42, 0.04)' : 'none',
     lineHeight: 1
   };
@@ -1248,9 +1257,9 @@ export const ZFQuickSearchModal: React.FC<ZFQuickSearchModalProps> = ({
         left: 0,
         right: 0,
         bottom: 0,
-        background: isLight ? 'rgba(15, 23, 42, 0.45)' : 'rgba(0, 0, 0, 0.85)',
-        backdropFilter: isLight ? 'blur(8px)' : 'blur(12px)',
-        WebkitBackdropFilter: isLight ? 'blur(8px)' : 'blur(12px)',
+        background: isLight ? 'rgba(15, 23, 42, 0.35)' : 'rgba(0, 0, 0, 0.85)',
+        backdropFilter: isLight ? 'blur(4px)' : 'blur(12px)',
+        WebkitBackdropFilter: isLight ? 'blur(4px)' : 'blur(12px)',
         display: 'flex',
         alignItems: 'flex-start',
         justifyContent: 'center',
@@ -1272,11 +1281,11 @@ export const ZFQuickSearchModal: React.FC<ZFQuickSearchModalProps> = ({
           background: transparent;
         }
         .zf-search-scrollbar::-webkit-scrollbar-thumb {
-          background: ${isLight ? 'rgba(148, 111, 35, 0.25)' : 'rgba(221, 167, 82, 0.25)'};
+          background: ${isLight ? 'rgba(37, 99, 235, 0.25)' : 'rgba(255, 255, 255, 0.25)'};
           border-radius: 4px;
         }
         .zf-search-scrollbar::-webkit-scrollbar-thumb:hover {
-          background: ${isLight ? 'rgba(148, 111, 35, 0.45)' : 'rgba(221, 167, 82, 0.45)'};
+          background: ${isLight ? 'rgba(37, 99, 235, 0.45)' : 'rgba(255, 255, 255, 0.45)'};
         }
         .zf-chip-scrollbar::-webkit-scrollbar {
           display: none;
@@ -1302,11 +1311,11 @@ export const ZFQuickSearchModal: React.FC<ZFQuickSearchModalProps> = ({
           width: '680px',
           maxWidth: '94vw',
           background: isLight ? '#FFFFFF' : 'rgba(14, 18, 28, 0.98)',
-          border: isLight ? '1.5px solid #D8D2C4' : '1.5px solid rgba(221, 167, 82, 0.35)',
+          border: isLight ? '1px solid #e2e8f0' : '1.5px solid rgba(255, 255, 255, 0.15)',
           borderRadius: '16px',
           boxShadow: isLight
             ? '0 24px 64px rgba(15, 23, 42, 0.12), 0 4px 16px rgba(15, 23, 42, 0.06)'
-            : '0 30px 60px rgba(0, 0, 0, 0.9), 0 0 25px rgba(221, 167, 82, 0.15)',
+            : '0 30px 60px rgba(0, 0, 0, 0.9), 0 0 25px rgba(37, 99, 235, 0.15)',
           overflow: 'hidden',
           display: 'flex',
           flexDirection: 'column',
@@ -1324,10 +1333,10 @@ export const ZFQuickSearchModal: React.FC<ZFQuickSearchModalProps> = ({
             gap: '0.85rem',
             padding: '1.05rem 1.25rem',
             background: isLight ? '#F8FAFC' : 'rgba(20, 25, 38, 0.8)',
-            borderBottom: isLight ? '1px solid #D8D2C4' : '1px solid rgba(255, 255, 255, 0.08)'
+            borderBottom: isLight ? '1px solid #e2e8f0' : '1px solid rgba(255, 255, 255, 0.08)'
           }}
         >
-          <Search size={18} color={isLight ? '#946F23' : '#DDA752'} style={{ flexShrink: 0 }} />
+          <Search size={18} color={isLight ? 'var(--erp-accent, #2563eb)' : '#38bdf8'} style={{ flexShrink: 0 }} />
           <input
             ref={inputRef}
             type="text"
@@ -1377,7 +1386,7 @@ export const ZFQuickSearchModal: React.FC<ZFQuickSearchModalProps> = ({
             aria-label={effectiveIsAr ? 'إغلاق' : 'Close'}
             style={{
               background: isLight ? '#F1F5F9' : 'rgba(255, 255, 255, 0.06)',
-              border: isLight ? '1px solid #D8D2C4' : '1px solid rgba(255, 255, 255, 0.1)',
+              border: isLight ? '1px solid #e2e8f0' : '1px solid rgba(255, 255, 255, 0.1)',
               borderRadius: '6px',
               color: isLight ? '#64748B' : '#94A3B8',
               width: '28px',
@@ -1434,15 +1443,15 @@ export const ZFQuickSearchModal: React.FC<ZFQuickSearchModalProps> = ({
                   cursor: 'pointer',
                   transition: 'all 0.15s ease',
                   border: isActive
-                    ? (isLight ? '1px solid #946F23' : '1px solid #DDA752')
-                    : (isLight ? '1px solid #D8D2C4' : '1px solid rgba(255, 255, 255, 0.1)'),
+                    ? '1px solid var(--erp-accent, #2563eb)'
+                    : (isLight ? '1px solid #e2e8f0' : '1px solid rgba(255, 255, 255, 0.1)'),
                   background: isActive
-                    ? (isLight ? '#946F23' : 'rgba(221, 167, 82, 0.25)')
+                    ? 'var(--erp-accent, #2563eb)'
                     : (isLight ? '#F1F5F9' : 'rgba(255, 255, 255, 0.04)'),
                   color: isActive
-                    ? (isLight ? '#FFFFFF' : '#E5B869')
+                    ? '#FFFFFF'
                     : (isLight ? '#64748B' : '#94A3B8'),
-                  boxShadow: isActive && isLight ? '0 1px 4px rgba(148, 111, 35, 0.2)' : 'none'
+                  boxShadow: 'none'
                 }}
               >
                 <span>{tab.label}</span>
@@ -1497,7 +1506,7 @@ export const ZFQuickSearchModal: React.FC<ZFQuickSearchModalProps> = ({
                     cursor: 'pointer',
                     transition: 'all 0.15s cubic-bezier(0.16, 1, 0.3, 1)',
                     background: isSelected
-                      ? (isLight ? 'rgba(148, 111, 35, 0.08)' : 'rgba(221, 167, 82, 0.12)')
+                      ? (isLight ? '#eff6ff' : 'rgba(37, 99, 235, 0.15)')
                       : 'transparent'
                   }}
                   onMouseEnter={() => setSelectedIndex(index)}
@@ -1517,11 +1526,11 @@ export const ZFQuickSearchModal: React.FC<ZFQuickSearchModalProps> = ({
                         width: '36px',
                         height: '36px',
                         borderRadius: '9px',
-                        background: isLight ? 'rgba(148, 111, 35, 0.1)' : 'rgba(221, 167, 82, 0.12)',
-                        color: isLight ? '#946F23' : '#DDA752',
+                        background: isLight ? 'var(--erp-accent-subtle, #eff6ff)' : 'rgba(37, 99, 235, 0.12)',
+                        color: isLight ? 'var(--erp-accent, #2563eb)' : '#60a5fa',
                         border: isLight
-                          ? '1px solid rgba(148, 111, 35, 0.22)'
-                          : '1px solid rgba(221, 167, 82, 0.25)',
+                          ? '1px solid #bfdbfe'
+                          : '1px solid rgba(37, 99, 235, 0.25)',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
@@ -1568,11 +1577,11 @@ export const ZFQuickSearchModal: React.FC<ZFQuickSearchModalProps> = ({
                       style={{
                         fontSize: '0.68rem',
                         fontWeight: 700,
-                        color: isLight ? '#946F23' : '#DDA752',
-                        background: isLight ? 'rgba(148, 111, 35, 0.08)' : 'rgba(221, 167, 82, 0.12)',
+                        color: isLight ? 'var(--erp-accent, #2563eb)' : '#60a5fa',
+                        background: isLight ? 'var(--erp-accent-subtle, #eff6ff)' : 'rgba(37, 99, 235, 0.1)',
                         border: isLight
-                          ? '1px solid rgba(148, 111, 35, 0.22)'
-                          : '1px solid rgba(221, 167, 82, 0.25)',
+                          ? '1px solid #bfdbfe'
+                          : '1px solid rgba(37, 99, 235, 0.25)',
                         padding: '0.16rem 0.52rem',
                         borderRadius: '6px',
                         whiteSpace: 'nowrap'
@@ -1584,7 +1593,7 @@ export const ZFQuickSearchModal: React.FC<ZFQuickSearchModalProps> = ({
                     {isSelected && (
                       <div
                         style={{
-                          color: isLight ? '#946F23' : '#DDA752',
+                          color: isLight ? 'var(--erp-accent, #2563eb)' : '#60a5fa',
                           display: 'flex',
                           alignItems: 'center',
                           opacity: 0.9
@@ -1605,7 +1614,7 @@ export const ZFQuickSearchModal: React.FC<ZFQuickSearchModalProps> = ({
           style={{
             padding: '0.68rem 1.25rem',
             background: isLight ? '#F8FAFC' : 'rgba(20, 25, 38, 0.95)',
-            borderTop: isLight ? '1px solid #D8D2C4' : '1px solid rgba(255, 255, 255, 0.08)',
+            borderTop: isLight ? '1px solid #e2e8f0' : '1px solid rgba(255, 255, 255, 0.08)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
@@ -1636,7 +1645,7 @@ export const ZFQuickSearchModal: React.FC<ZFQuickSearchModalProps> = ({
               gap: '0.35rem',
               fontWeight: 700,
               fontSize: '0.68rem',
-              color: isLight ? '#946F23' : '#DDA752'
+              color: isLight ? 'var(--erp-accent, #2563eb)' : '#60a5fa'
             }}
           >
             <span>{effectiveIsAr ? 'محرك البحث الشامل' : 'Omni-Search'}</span>

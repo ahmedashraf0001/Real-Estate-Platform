@@ -1,13 +1,20 @@
 'use client';
 
 import React from 'react';
+import { Info } from 'lucide-react';
 import styles from './ZFWorkstationShell.module.css';
 
-export type ZFKpiAccentColor = 'gold' | 'emerald' | 'amber' | 'slate' | 'rose' | 'blue';
+export type ZFKpiAccentColor = 'accent' | 'emerald' | 'amber' | 'slate' | 'rose' | 'blue' | 'teal' | 'gold' | 'purple';
+
+export interface ZFKpiDelta {
+  value: string | number;
+  isPositive?: boolean;
+  label?: string;
+}
 
 export interface ZFKpiCardProps {
   title: string;
-  value: string | number | { toString: () => string; formatEGP?: (isAr?: boolean) => string };
+  value: React.ReactNode | string | number | { toString: () => string; formatEGP?: (isAr?: boolean) => string };
   currency?: string;
   unitLabel?: string;
   icon?: React.ReactNode;
@@ -20,91 +27,189 @@ export interface ZFKpiCardProps {
   progressColor?: string;
   badge?: {
     text: string;
-    variant?: 'positive' | 'warning' | 'neutral' | 'gold' | 'danger';
+    variant?: 'positive' | 'warning' | 'neutral' | 'danger' | 'info' | 'gold';
   };
+  delta?: ZFKpiDelta;
+  sparkline?: React.ReactNode;
+  sparklineData?: number[];
+  sparklineColor?: string;
+  showSparkline?: boolean;
+  footerContent?: React.ReactNode;
   onClick?: () => void;
   className?: string;
   style?: React.CSSProperties;
   tooltip?: string;
 }
 
-const ACCENT_THEMES: Record<ZFKpiAccentColor, { bg: string; border: string; icon: string; text: string; valueColor?: string }> = {
-  gold: {
-    bg: 'rgba(197, 160, 89, 0.09)',
-    border: 'rgba(197, 160, 89, 0.28)',
-    icon: '#946f23',
-    text: '#854d0e',
-    valueColor: '#946f23'
-  },
-  emerald: {
-    bg: 'rgba(4, 120, 87, 0.08)',
-    border: 'rgba(4, 120, 87, 0.22)',
-    icon: '#047857',
-    text: '#065f46',
-    valueColor: '#047857'
-  },
-  amber: {
-    bg: 'rgba(180, 83, 9, 0.06)',
-    border: 'rgba(180, 83, 9, 0.18)',
-    icon: '#b45309',
-    text: '#92400e',
-    valueColor: '#b45309'
-  },
-  slate: {
-    bg: 'rgba(51, 65, 85, 0.05)',
-    border: 'rgba(51, 65, 85, 0.15)',
-    icon: '#475569',
-    text: '#334155',
-    valueColor: '#0f172a'
-  },
-  rose: {
-    bg: 'rgba(159, 18, 57, 0.05)',
-    border: 'rgba(159, 18, 57, 0.18)',
-    icon: '#9f1239',
-    text: '#881337',
-    valueColor: '#9f1239'
-  },
-  blue: {
-    bg: 'rgba(30, 58, 138, 0.05)',
-    border: 'rgba(30, 58, 138, 0.18)',
-    icon: '#1e40af',
-    text: '#1e3a8a',
-    valueColor: '#1e40af'
-  }
-};
-
-const parseMetricValue = (val: string | number | { toString: () => string; formatEGP?: (isAr?: boolean) => string }, explicitCurrency?: string) => {
-  if (typeof val === 'number') {
+const parseMetricValue = (val: React.ReactNode | string | number | { toString: () => string; formatEGP?: (isAr?: boolean) => string }, explicitCurrency?: string) => {
+  if (React.isValidElement(val)) {
     return {
-      num: val.toLocaleString('en-US'),
-      cur: explicitCurrency || ''
+      num: val,
+      cur: explicitCurrency || '',
+      isNegative: false
+    };
+  }
+  if (typeof val === 'number') {
+    const isNeg = val < 0;
+    const absVal = Math.abs(Math.round(val));
+    return {
+      num: isNeg ? `- ${absVal.toLocaleString('en-US')}` : absVal.toLocaleString('en-US'),
+      cur: explicitCurrency || '',
+      isNegative: isNeg
     };
   }
   if (val && typeof (val as any).formatEGP === 'function') {
-    return parseMetricValue((val as any).formatEGP(true), explicitCurrency);
+    const numVal = typeof (val as any).toNumber === 'function' ? (val as any).toNumber() : parseFloat(String(val));
+    if (!isNaN(numVal)) {
+      const isNeg = numVal < 0;
+      const absVal = Math.abs(Math.round(numVal));
+      return {
+        num: isNeg ? `- ${absVal.toLocaleString('en-US')}` : absVal.toLocaleString('en-US'),
+        cur: explicitCurrency || 'ج.م',
+        isNegative: isNeg
+      };
+    }
   }
-  const str = String(val).trim();
-  // Match number with trailing currency (ج.م, EGP, USD, etc.)
-  const match = str.match(/^(.*?)(?:\s+(ج\.م|EGP|USD|EUR|LE))?$/i);
-  if (match && match[2]) {
-    return {
-      num: match[1].trim(),
-      cur: explicitCurrency || match[2]
-    };
+  let str = String(val ?? '').trim();
+  let detectedCur = explicitCurrency || '';
+  const curRegex = /(?:\s+|^)(ج\.م|EGP|USD|EUR|LE)(?:\s+|$)/i;
+  const match = str.match(curRegex);
+  if (match && match[1]) {
+    if (!detectedCur) detectedCur = match[1];
+    str = str.replace(curRegex, ' ').trim();
   }
+  const isNeg = str.startsWith('-') || str.endsWith('-') || (str.startsWith('(') && str.endsWith(')'));
+  let clean = str.replace(/[-()]/g, '').trim().replace(/\.\d{1,2}$/, '');
   return {
-    num: str,
-    cur: explicitCurrency || ''
+    num: isNeg ? `- ${clean}` : clean,
+    cur: detectedCur,
+    isNegative: isNeg
   };
 };
 
+const getBadgePillClass = (variant?: 'positive' | 'warning' | 'neutral' | 'danger' | 'info' | 'gold') => {
+  switch (variant) {
+    case 'positive':
+      return styles.statusPillGreen;
+    case 'warning':
+      return styles.statusPillAmber;
+    case 'danger':
+      return styles.statusPillRed;
+    case 'gold':
+    case 'info':
+      return styles.statusPillBlue;
+    case 'neutral':
+    default:
+      return styles.statusPillNeutral;
+  }
+};
+
+/**
+ * ZFKpiGrid: Responsive 4-column container for discrete floating white stat cards
+ */
+export interface ZFKpiGridProps {
+  children: React.ReactNode;
+  className?: string;
+  style?: React.CSSProperties;
+}
+
+export const ZFKpiGrid: React.FC<ZFKpiGridProps> = ({ children, className, style }) => {
+  return (
+    <div className={`${styles.discreteKpiGrid} ${className || ''}`} style={style}>
+      {children}
+    </div>
+  );
+};
+
+const getIconSquircleStyle = (accent?: ZFKpiAccentColor): React.CSSProperties => {
+  const base: React.CSSProperties = {
+    width: 28,
+    height: 28,
+    borderRadius: 7,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  };
+
+  switch (accent) {
+    case 'emerald':
+      return {
+        ...base,
+        background: '#ecfdf5',
+        color: '#059669',
+        border: '1px solid rgba(5, 150, 105, 0.18)',
+      };
+    case 'amber':
+      return {
+        ...base,
+        background: '#fffbeb',
+        color: '#d97706',
+        border: '1px solid rgba(217, 119, 6, 0.18)',
+      };
+    case 'slate':
+      return {
+        ...base,
+        background: '#f1f5f9',
+        color: '#475569',
+        border: '1px solid rgba(71, 85, 105, 0.15)',
+      };
+    case 'rose':
+      return {
+        ...base,
+        background: '#fef2f2',
+        color: '#e11d48',
+        border: '1px solid rgba(225, 29, 72, 0.18)',
+      };
+    case 'teal':
+      return {
+        ...base,
+        background: '#f0fdfa',
+        color: '#0d9488',
+        border: '1px solid rgba(13, 148, 136, 0.18)',
+      };
+    case 'gold':
+      return {
+        ...base,
+        background: '#fefce8',
+        color: '#ca8a04',
+        border: '1px solid rgba(202, 138, 4, 0.18)',
+      };
+    case 'purple':
+      return {
+        ...base,
+        background: '#f5f3ff',
+        color: '#7c3aed',
+        border: '1px solid rgba(124, 58, 237, 0.18)',
+      };
+    case 'blue':
+    case 'accent':
+    default:
+      return {
+        ...base,
+        background: 'var(--erp-accent-subtle, #eff6ff)',
+        color: 'var(--erp-accent, #2563eb)',
+        border: '1px solid var(--erp-accent-tint, rgba(37, 99, 235, 0.15))',
+      };
+  }
+};
+
+export { ZFKpiWaveSparkline } from './common/ZFKpiWaveSparkline';
+export type { ZFKpiWaveSparklineProps } from './common/ZFKpiWaveSparkline';
+import { ZFKpiWaveSparkline } from './common/ZFKpiWaveSparkline';
+
+/**
+ * ZFKpiCard: Canonical Enterprise Discrete Floating Stat Card
+ * Crisp pure white panel, 1px structural border (#e2e8f0), muted label + (i),
+ * large bold tabular KPI, plain delta line or embedded sparkline.
+ */
 export const ZFKpiCard: React.FC<ZFKpiCardProps> = ({
   title,
   value,
   currency,
   unitLabel,
   icon,
-  accentColor = 'slate',
+  accentColor = 'accent',
   isFlagship = false,
   variant = 'standard',
   subtitleLabel,
@@ -112,14 +217,22 @@ export const ZFKpiCard: React.FC<ZFKpiCardProps> = ({
   progress,
   progressColor,
   badge,
+  delta,
+  sparkline,
+  sparklineData,
+  sparklineColor,
+  showSparkline,
+  footerContent,
   onClick,
   className,
   style,
   tooltip
 }) => {
-  const accent = ACCENT_THEMES[accentColor] || ACCENT_THEMES.slate;
   const { num, cur } = parseMetricValue(value, currency);
-  const effectiveFlagship = isFlagship || variant === 'flagship';
+  const cleanCur = (cur || '').trim();
+  const cleanUnit = (unitLabel || '').trim();
+  const showCur = Boolean(cleanCur && (!cleanUnit || !cleanUnit.includes(cleanCur)));
+  const showUnit = Boolean(cleanUnit);
 
   // Compact horizontal strip rendering
   if (variant === 'compact') {
@@ -127,231 +240,231 @@ export const ZFKpiCard: React.FC<ZFKpiCardProps> = ({
       <div
         onClick={onClick}
         title={tooltip}
-        className={`${styles.compactTelemetryCard} ${className || ''}`}
-        style={{ cursor: onClick ? 'pointer' : 'default', ...style }}
+        className={`${styles.discreteKpiCard || ''} ${className || ''}`.trim()}
+        style={{
+          padding: '0.85rem 1rem',
+          minHeight: 'auto',
+          cursor: onClick ? 'pointer' : 'default',
+          ...style
+        }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-          {icon && (
-            <div
-              className={styles.kpiIconSquircle}
-              style={{
-                width: 28,
-                height: 28,
-                borderRadius: 8,
-                background: accent.bg,
-                color: accent.icon,
-                border: `1px solid ${accent.border}`
-              }}
-            >
-              {icon}
-            </div>
-          )}
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap' }}>
-              <span style={{ fontSize: '0.74rem', fontWeight: 600, color: '#64748b' }}>
-                {title}
-              </span>
-              {badge && (
-                <span
-                  className={styles.kpiBadge}
-                  style={{
-                    fontSize: '0.62rem',
-                    padding: '0.1rem 0.38rem',
-                    borderRadius: '5px',
-                    background: badge.variant === 'positive' ? 'rgba(4, 120, 87, 0.08)' :
-                      badge.variant === 'warning' ? 'rgba(180, 83, 9, 0.07)' :
-                      badge.variant === 'danger' ? 'rgba(159, 18, 57, 0.06)' :
-                      badge.variant === 'gold' ? 'rgba(197, 160, 89, 0.1)' : undefined,
-                    color: badge.variant === 'positive' ? '#047857' :
-                      badge.variant === 'warning' ? '#92400e' :
-                      badge.variant === 'danger' ? '#9f1239' :
-                      badge.variant === 'gold' ? '#946f23' : undefined,
-                    borderColor: badge.variant === 'positive' ? 'rgba(4, 120, 87, 0.22)' :
-                      badge.variant === 'warning' ? 'rgba(180, 83, 9, 0.2)' :
-                      badge.variant === 'danger' ? 'rgba(159, 18, 57, 0.2)' :
-                      badge.variant === 'gold' ? 'rgba(197, 160, 89, 0.3)' : undefined
-                  }}
-                >
-                  {badge.text}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.65rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', minWidth: 0 }}>
+            {icon && (
+              <div style={getIconSquircleStyle(accentColor)}>
+                {icon}
+              </div>
+            )}
+            <div style={{ minWidth: 0 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap' }}>
+                <span style={{ fontSize: '0.74rem', fontWeight: 600, color: '#64748b' }}>
+                  {title}
                 </span>
+                {badge && (
+                  <span className={`${styles.statusPill} ${getBadgePillClass(badge.variant)}`}>
+                    {badge.text}
+                  </span>
+                )}
+              </div>
+              {subtitleLabel && (
+                <div style={{ fontSize: '0.68rem', color: '#94a3b8', marginTop: '2px' }}>
+                  {subtitleLabel}: <strong style={{ color: '#475569', fontVariantNumeric: 'tabular-nums' }}>{subtitleValue}</strong>
+                </div>
               )}
             </div>
-            {subtitleLabel && (
-              <div style={{ fontSize: '0.68rem', color: '#94a3b8' }}>
-                {subtitleLabel}: <strong style={{ color: '#475569' }}>{subtitleValue}</strong>
-              </div>
+          </div>
+
+          <div dir="ltr" style={{ textAlign: 'end', display: 'inline-flex', alignItems: 'baseline', gap: '0.35rem', flexShrink: 0, direction: 'ltr', unicodeBidi: 'isolate' }}>
+            <span
+              dir="ltr"
+              style={{
+                fontSize: '1.25rem',
+                fontWeight: 700,
+                color: '#0f172a',
+                fontVariantNumeric: 'tabular-nums',
+                direction: 'ltr',
+                unicodeBidi: 'isolate'
+              }}
+            >
+              {num}
+            </span>
+            {showCur && (
+              <span style={{ fontSize: '0.74rem', fontWeight: 600, color: '#64748b', direction: 'rtl', unicodeBidi: 'isolate' }}>
+                {cleanCur}
+              </span>
+            )}
+            {showUnit && (
+              <span style={{ fontSize: cleanCur ? '0.70rem' : '0.74rem', fontWeight: 600, color: '#64748b' }}>
+                {cleanUnit}
+              </span>
             )}
           </div>
         </div>
 
-        <div style={{ textAlign: 'right', display: 'flex', alignItems: 'baseline', gap: '0.35rem' }}>
-          <span style={{ fontSize: '1.25rem', fontWeight: 800, color: accent.valueColor || '#0f172a', fontVariantNumeric: 'tabular-nums' }}>
-            {num}
-          </span>
-          {cur && (
-            <span style={{ fontSize: '0.74rem', fontWeight: 700, color: '#946f23' }}>
-              {cur}
-            </span>
-          )}
-          {unitLabel && (
-            <span style={{ fontSize: '0.74rem', fontWeight: 600, color: accent.text }}>
-              {unitLabel}
-            </span>
-          )}
-        </div>
+        {/* Optional Micro Progress Bar */}
+        {(() => {
+          const numProg = typeof progress === 'string' ? parseFloat(progress) : progress;
+          return typeof numProg === 'number' && !isNaN(numProg) ? (
+            <div style={{ width: '100%', height: 4, background: '#f1f5f9', borderRadius: 999, overflow: 'hidden', marginTop: '0.5rem' }}>
+              <div
+                style={{
+                  height: '100%',
+                  width: `${Math.min(100, Math.max(0, numProg))}%`,
+                  background: progressColor || 'var(--erp-accent, #2563eb)',
+                  borderRadius: 999,
+                  transition: 'width 0.4s ease'
+                }}
+              />
+            </div>
+          ) : null;
+        })()}
       </div>
     );
   }
 
-  const cardContent = (
-    <>
-      {/* 1. TOP HEADER: TITLE & ACCENT ICON SQUIRCLE */}
-      <div className={styles.kpiHeader}>
-        <span className={`${styles.kpiLabel} ${effectiveFlagship ? styles.flagshipLabel : ''}`}>
+  // Standard Discrete Floating Stat Card
+  return (
+    <div
+      onClick={onClick}
+      title={tooltip}
+      className={`${styles.discreteKpiCard || ''} ${className || ''}`.trim()}
+      style={{
+        cursor: onClick ? 'pointer' : 'default',
+        ...style
+      }}
+    >
+      {/* 1. TOP HEADER: TITLE & INFO ICON / SQUIRCLE */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
+        <span style={{ fontSize: '0.76rem', fontWeight: 600, color: '#64748b' }}>
           {title}
         </span>
 
-        {icon && (
-          <div
-            className={styles.kpiIconSquircle}
-            style={{
-              background: effectiveFlagship ? 'rgba(184, 144, 62, 0.14)' : accent.bg,
-              color: effectiveFlagship ? '#b8903e' : accent.icon,
-              border: `1px solid ${effectiveFlagship ? 'rgba(184, 144, 62, 0.3)' : accent.border}`,
-              boxShadow: effectiveFlagship ? '0 2px 6px rgba(184, 144, 62, 0.15)' : 'none'
-            }}
-          >
+        {icon ? (
+          <div style={getIconSquircleStyle(accentColor)}>
             {icon}
           </div>
+        ) : (
+          <Info size={14} style={{ color: '#94a3b8', flexShrink: 0 }} />
         )}
       </div>
 
-      {/* 2. PRIMARY VALUE: SINGLE-LINE FLUID NUMBER & ATTACHED CURRENCY */}
-      <div style={{ margin: '0.15rem 0 0.35rem 0' }}>
-        <div
-          className={styles.kpiValue}
+      {/* 2. PRIMARY VALUE: BIG BOLD TABULAR KPI + CURRENCY (FULL WIDTH, ZERO TRUNCATION) */}
+      <div dir="ltr" style={{ margin: '0.4rem 0 0.2rem 0', display: 'flex', alignItems: 'baseline', gap: '0.35rem', direction: 'ltr', unicodeBidi: 'isolate' }}>
+        <span
+          dir="ltr"
           style={{
-            fontSize: effectiveFlagship ? 'clamp(1.5rem, 2vw, 2.1rem)' : 'clamp(1.25rem, 1.55vw, 1.7rem)',
+            fontSize: 'clamp(1.25rem, 1.4vw, 1.45rem)',
+            fontWeight: 700,
+            color: '#0f172a',
+            fontVariantNumeric: 'tabular-nums',
+            letterSpacing: '-0.02em',
+            lineHeight: 1.15,
             whiteSpace: 'nowrap',
-            flexWrap: 'nowrap',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis'
+            direction: 'ltr',
+            unicodeBidi: 'isolate',
+            display: 'inline-block'
           }}
         >
-          <span style={{ whiteSpace: 'nowrap' }}>
-            {num}
+          {num}
+        </span>
+        {showCur && (
+          <span style={{ fontSize: '0.82rem', fontWeight: 600, color: '#64748b', whiteSpace: 'nowrap', direction: 'rtl', unicodeBidi: 'isolate' }}>
+            {cleanCur}
           </span>
-          {cur && (
-            <span className={styles.kpiCurrency} style={{ whiteSpace: 'nowrap' }}>
-              {cur}
-            </span>
-          )}
-          {unitLabel && (
-            <span
-              style={{
-                fontSize: '0.82rem',
-                fontWeight: 700,
-                color: accent.text || '#64748b',
-                whiteSpace: 'nowrap'
-              }}
-            >
-              {unitLabel}
+        )}
+        {showUnit && (
+          <span style={{ fontSize: cleanCur ? '0.78rem' : '0.82rem', fontWeight: 600, color: '#64748b', whiteSpace: 'nowrap' }}>
+            {cleanUnit}
+          </span>
+        )}
+      </div>
+
+      {/* 2.2 DELTA TREND INDICATOR ROW */}
+      {delta && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', margin: '0 0 0.35rem 0', flexWrap: 'nowrap' }}>
+          <span
+            style={{
+              fontSize: '0.72rem',
+              fontWeight: 700,
+              color: delta.isPositive ? '#16a34a' : delta.isPositive === false ? '#dc2626' : '#64748b',
+              background: delta.isPositive ? '#f0fdf4' : delta.isPositive === false ? '#fef2f2' : '#f8fafc',
+              border: `1px solid ${delta.isPositive ? 'rgba(22, 163, 74, 0.2)' : delta.isPositive === false ? 'rgba(220, 38, 38, 0.2)' : '#e2e8f0'}`,
+              borderRadius: '999px',
+              padding: '0.12rem 0.45rem',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.2rem',
+              fontVariantNumeric: 'tabular-nums',
+              whiteSpace: 'nowrap',
+              flexShrink: 0
+            }}
+          >
+            {delta.isPositive ? '▲' : delta.isPositive === false ? '▼' : ''} {delta.value}
+          </span>
+          {delta.label && (
+            <span style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {delta.label}
             </span>
           )}
         </div>
-      </div>
+      )}
+
+      {/* 2.5 EMBEDDED WAVE SPARKLINE (Rendered when time-series data is provided or showSparkline is true) */}
+      {(showSparkline || Boolean(sparklineData && sparklineData.length >= 2)) && !sparkline && (
+        <div style={{ height: 32, margin: '0.15rem 0 0.25rem 0', width: '100%', overflow: 'hidden' }}>
+          <ZFKpiWaveSparkline
+            data={sparklineData && sparklineData.length >= 2 ? sparklineData : [0, 0, 0, 0, 0, 0]}
+            accentColor={accentColor}
+            customColor={sparklineColor}
+            trend={delta?.isPositive ? 'up' : delta?.isPositive === false ? 'down' : 'neutral'}
+            height={32}
+          />
+        </div>
+      )}
 
       {/* 3. OPTIONAL MICRO-PROGRESS BAR */}
       {(() => {
         const numProg = typeof progress === 'string' ? parseFloat(progress) : progress;
         return typeof numProg === 'number' && !isNaN(numProg) ? (
-          <div className={styles.kpiProgressTrack}>
+          <div style={{ width: '100%', height: 4, background: '#f1f5f9', borderRadius: 999, overflow: 'hidden', marginBottom: '0.4rem' }}>
             <div
-              className={styles.kpiProgressBar}
               style={{
+                height: '100%',
                 width: `${Math.min(100, Math.max(0, numProg))}%`,
-                background: progressColor || (effectiveFlagship ? '#b8903e' : accent.icon)
+                background: progressColor || 'var(--erp-accent, #2563eb)',
+                borderRadius: 999,
+                transition: 'width 0.4s ease'
               }}
             />
           </div>
         ) : null;
       })()}
 
-      {/* 4. FOOTER: CONTEXT LABEL & VALUE OR BADGE */}
-      {(subtitleLabel || subtitleValue || badge) && (
-        <div className={`${styles.kpiFooter} ${effectiveFlagship ? styles.kpiFooterSubtle : ''}`}>
-          {subtitleLabel && (
-            <span style={{ fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-              {subtitleLabel}
+      {/* 4. FOOTER: DELTA LINE, SPARKLINE, SUBTITLE, BADGE, OR CUSTOM FOOTER CONTENT */}
+      {footerContent ? (
+        <div style={{ marginTop: 'auto', paddingTop: '0.35rem' }}>
+          {footerContent}
+        </div>
+      ) : (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', marginTop: 'auto', paddingTop: '0.35rem' }}>
+          {subtitleLabel || subtitleValue ? (
+            <span style={{ fontSize: '0.72rem', color: '#64748b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {subtitleLabel && <span>{subtitleLabel}{subtitleValue ? ': ' : ''}</span>}
+              {subtitleValue && <strong style={{ color: '#334155', fontVariantNumeric: 'tabular-nums' }}>{subtitleValue}</strong>}
             </span>
+          ) : (
+            <span />
           )}
-          
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexShrink: 0, marginInlineStart: 'auto' }}>
-            {subtitleValue && (
-              <strong
-                style={{
-                  fontVariantNumeric: 'tabular-nums',
-                  fontWeight: 700,
-                  color: effectiveFlagship ? '#b8903e' : 'inherit'
-                }}
-              >
-                {subtitleValue}
-              </strong>
-            )}
 
-            {badge && (
-              <span
-                className={styles.kpiBadge}
-                style={{
-                  background: badge.variant === 'positive' ? 'rgba(4, 120, 87, 0.08)' :
-                    badge.variant === 'warning' ? 'rgba(180, 83, 9, 0.07)' :
-                    badge.variant === 'danger' ? 'rgba(159, 18, 57, 0.06)' :
-                    badge.variant === 'gold' ? 'rgba(197, 160, 89, 0.1)' : undefined,
-                  color: badge.variant === 'positive' ? '#047857' :
-                    badge.variant === 'warning' ? '#92400e' :
-                    badge.variant === 'danger' ? '#9f1239' :
-                    badge.variant === 'gold' ? '#946f23' : undefined,
-                  borderColor: badge.variant === 'positive' ? 'rgba(4, 120, 87, 0.22)' :
-                    badge.variant === 'warning' ? 'rgba(180, 83, 9, 0.2)' :
-                    badge.variant === 'danger' ? 'rgba(159, 18, 57, 0.2)' :
-                    badge.variant === 'gold' ? 'rgba(197, 160, 89, 0.3)' : undefined
-                }}
-              >
-                {badge.text}
-              </span>
-            )}
-          </div>
+          {sparkline ? (
+            <div style={{ flexShrink: 0 }}>{sparkline}</div>
+          ) : badge ? (
+            <span className={`${styles.statusPill} ${getBadgePillClass(badge.variant)}`}>
+              {badge.text}
+            </span>
+          ) : null}
         </div>
       )}
-    </>
-  );
-
-  if (variant === 'double-bezel') {
-    return (
-      <div
-        onClick={onClick}
-        title={tooltip}
-        className={`${styles.doubleBezelCard} ${effectiveFlagship ? styles.flagshipCard : ''} ${className || ''}`}
-        style={{ cursor: onClick ? 'pointer' : 'default', ...style }}
-      >
-        <div className={styles.doubleBezelInner}>
-          {cardContent}
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div
-      onClick={onClick}
-      title={tooltip}
-      className={`${styles.kpiCard} ${effectiveFlagship ? styles.flagshipCard : ''} ${className || ''}`}
-      style={{
-        cursor: onClick ? 'pointer' : 'default',
-        ...style
-      }}
-    >
-      {cardContent}
     </div>
   );
 };

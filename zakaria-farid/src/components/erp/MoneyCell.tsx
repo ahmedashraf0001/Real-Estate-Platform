@@ -10,6 +10,7 @@ interface MoneyCellProps {
   className?: string;
   highlight?: boolean;
   isAr?: boolean;
+  hideDecimals?: boolean;
 }
 
 export const MoneyCell: React.FC<MoneyCellProps> = ({
@@ -18,10 +19,18 @@ export const MoneyCell: React.FC<MoneyCellProps> = ({
   exchangeRate,
   className = '',
   highlight = false,
-  isAr = false
+  isAr = false,
+  hideDecimals = false
 }) => {
   const dec = amount instanceof Decimal ? amount : D(amount);
-  const formattedEGP = dec.formatEGP(isAr);
+  let formattedEGP: string;
+  if (hideDecimals) {
+    const rounded = Math.round(dec.toNumber());
+    const intStr = rounded.toLocaleString('en-US');
+    formattedEGP = isAr ? `${intStr} ج.م` : `${intStr} EGP`;
+  } else {
+    formattedEGP = dec.formatEGP(isAr);
+  }
 
   const isUSD = currency === 'USD' && exchangeRate && exchangeRate !== '1.0000' && exchangeRate !== '1';
   const usdAmount = isUSD ? dec.div(exchangeRate).toFixed(2) : null;

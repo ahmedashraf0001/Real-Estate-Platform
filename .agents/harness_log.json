@@ -12,7 +12,12 @@
     },
     "rationale": "Reconstructed clean, 4-track harness adhering strictly to the Harness Builder Mode 2 specification. Enshrined 7 confirmed Hard Invariants, mechanical gates, circuit breakers, and subagent delegation.",
     "reference_integrity_scan": {
-      "tracks_checked": ["WORKFLOW_AUDIT", "FINANCIAL_CORE", "SURFACE_UI", "DATABASE_SCHEMA"],
+      "tracks_checked": [
+        "WORKFLOW_AUDIT",
+        "FINANCIAL_CORE",
+        "SURFACE_UI",
+        "DATABASE_SCHEMA"
+      ],
       "status": "clean"
     }
   },
@@ -35,6 +40,758 @@
         ".agents/checkpoint.json"
       ],
       "status": "clean, 0 dangling references, 0 broken invariants"
+    }
+  },
+  {
+    "version": "2.1.0 -> 2.2.0",
+    "date": "2026-09-12T16:58:39.535366+00:00",
+    "trigger": "[user-confirmed] Adapt Antigravity-specific delegation rules for Codex.",
+    "change_type": "behavior-change",
+    "entities_affected": {
+      "Codex": "native subagents with inherited model configuration",
+      "Antigravity": "Flash-only rule retained",
+      "track_skills": "linked to root host-specific policy"
+    },
+    "rationale": "Prevent unavailable Antigravity tools/models from blocking Codex while preserving delegation, roles, financial invariants, gates and circuit breakers.",
+    "reference_integrity_scan": {
+      "tracks_checked": [
+        "WORKFLOW_AUDIT",
+        "FINANCIAL_CORE",
+        "SURFACE_UI",
+        "DATABASE_SCHEMA"
+      ],
+      "status": "all four skill validators passed"
+    }
+  },
+  {
+    "version": "2.2.0 -> 2.3.0",
+    "date": "2026-09-12T22:05:00.000Z",
+    "trigger": "Mode 3a Full Audit: Re-evaluate harness against major changes or architectural drift (FIN-OS ERP expansion, Sovereign Alabaster Light Mode, Property Form overhauls, and RLS security hardening)",
+    "change_type": "add",
+    "entities_affected": {
+      "INV-SEC-RLS": "added to Hard Invariants roster under DATABASE_SCHEMA",
+      "Sovereign-Alabaster-Design-System": "formalized design tokens (#EAE6DC, #FFFFFF, #D8D2C4, #946F23, #047857) under SURFACE_UI",
+      "Test-Suite-Evidence": "updated from 26 to 62 tests across 16 suites",
+      "Version-Parity": "aligned AGENTS.md, PROJECT_SPEC.md, HARNESS_RATIONALE.md, ONBOARDING.md, and checkpoint to 2.3.0"
+    },
+    "rationale": "Formalize post-adoption security hardening (migration 016 RLS lockdown) and UI design evolution (Sovereign Alabaster system), reconcile test suite metrics, and establish version parity across all harness artifacts.",
+    "reference_integrity_scan": {
+      "files_checked": [
+        "AGENTS.md",
+        "PROJECT_SPEC.md",
+        "HARNESS_RATIONALE.md",
+        "ONBOARDING.md",
+        ".agents/checkpoint.json",
+        ".agents/skills/workflow-audit/SKILL.md",
+        ".agents/skills/financial-core/SKILL.md",
+        ".agents/skills/surface-ui/SKILL.md",
+        ".agents/skills/database-schema/SKILL.md"
+      ],
+      "tracks_checked": [
+        "WORKFLOW_AUDIT",
+        "FINANCIAL_CORE",
+        "SURFACE_UI",
+        "DATABASE_SCHEMA"
+      ],
+      "status": "clean, 0 dangling references, 0 broken invariants, all 4 track skills verified"
+    }
+  },
+  {
+    "version": "2.3.0 -> 2.4.0",
+    "date": "2026-09-13T01:08:00.000Z",
+    "trigger": "User request: Purge all OpenAI Codex / third-party AI adaptations and permanently re-anchor the entire engineering harness 100% natively in Google Antigravity",
+    "change_type": "behavior-change",
+    "entities_affected": {
+      "Google-Antigravity": "Exclusively restored across all 4 tracks, AGENTS.md, ONBOARDING.md, and track skills",
+      "Delegation-Engine": "Mandated invoke_subagent with TypeName: 'self', assigned specialist Role, and strict Model: 'flash'",
+      "Pro-Tier-Ban": "Permanently banned pro model across all tracks in favor of flash",
+      "Interactive-Tools": "Re-anchored clarification and circuit-breaker escalations to Antigravity ask_question modal blocks",
+      "Codex-Adaptations": "Permanently purged spawn_agent, generic host fallbacks, and third-party host compromises"
+    },
+    "rationale": "Direct user order ('اعد اصلاح ال harness لتشتغل مع antigravity ثانيا'). Eliminates third-party tool dependencies, standardizes subagent dispatch on Antigravity's high-reliability flash tier, and guarantees seamless multi-agent orchestration without host impedance.",
+    "reference_integrity_scan": {
+      "files_checked": [
+        "AGENTS.md",
+        "PROJECT_SPEC.md",
+        "HARNESS_RATIONALE.md",
+        "ONBOARDING.md",
+        ".agents/checkpoint.json",
+        ".agents/skills/workflow-audit/SKILL.md",
+        ".agents/skills/financial-core/SKILL.md",
+        ".agents/skills/surface-ui/SKILL.md",
+        ".agents/skills/database-schema/SKILL.md"
+      ],
+      "tracks_checked": [
+        "WORKFLOW_AUDIT",
+        "FINANCIAL_CORE",
+        "SURFACE_UI",
+        "DATABASE_SCHEMA"
+      ],
+      "status": "clean, 0 Codex/spawn_agent references in active harness files, 0 broken invariants, all 4 track skills verified"
+    }
+  },
+  {
+    "version": "2.4.0",
+    "date": "2026-09-13T02:05:00.000Z",
+    "trigger": "User request: Activate refined modern design (Option 1) for DailyOperationsView in SURFACE_UI track",
+    "change_type": "surface-ui-refinement",
+    "entities_affected": {
+      "DailyOperationsView": "Applied refined modern sovereign alabaster & gold design with CSS Modules",
+      "Quick-Shortcuts": "Removed duplicate global search action from quick shortcuts bar",
+      "Workbench-Queue-Heading": "Removed duplicate global search action from operations workbench heading",
+      "In-Table-Search": "Preserved fast in-table desk search query filtering across operations tables"
+    },
+    "rationale": "Option 1 confirmed by user: Remove duplicate global search triggers to increase clarity, simplicity, and flow, relying on the top Navbar for global search while retaining in-table filtering for current queue rows.",
+    "reference_integrity_scan": {
+      "files_checked": [
+        "zakaria-farid/src/components/admin/erp/v2/views/DailyOperationsView.tsx",
+        "zakaria-farid/src/components/admin/erp/v2/views/DailyOperationsView.module.css"
+      ],
+      "tracks_checked": [
+        "SURFACE_UI"
+      ],
+      "status": "clean, 0 TypeScript errors, 62/62 vitest tests passing across 16 suites, verify_gates.sh passed all gates"
+    }
+  },
+  {
+    "version": "2.4.1",
+    "date": "2026-09-13T02:22:00.000Z",
+    "trigger": "User request: Executive UI/UX purge and redesign of Daily Operations screen with luxury modern canvas #F8FAFC, AI slop eradication, and Sectionized Action Hub (9/10 actions)",
+    "change_type": "surface-ui-refinement",
+    "entities_affected": {
+      "Canvas-Unification": "Replaced earthy beige (#EAE6DC) with modern luxury slate canvas (#F8FAFC) across 6 files",
+      "AI-Slop-Eradication": "Replaced neon green/red large figures with dark executive tabular numerals (#0F172A), added neutral micro-dot pills, sleek alert strip, and dark banking action buttons",
+      "Sectionized-Action-Hub": "Replaced scattered buttons bar with single unified trigger button opening 3-column functional action hub covering all 9 operational/financial actions plus partner distributions"
+    },
+    "rationale": "High-end executive financial styling (Stripe / Mercury / Linear) eliminating cheap AI-slop color patterns and scattered command buttons in favor of an organized, sectionized financial operations command hub.",
+    "reference_integrity_scan": {
+      "files_checked": [
+        "zakaria-farid/src/components/admin/erp/v2/views/DailyOperationsView.tsx",
+        "zakaria-farid/src/components/admin/erp/v2/views/DailyOperationsView.module.css",
+        "zakaria-farid/src/components/admin/erp/v2/ZFWorkstationShell.module.css",
+        "zakaria-farid/src/components/admin/erp/v2/erpTokensV2.module.css",
+        "zakaria-farid/src/app/globals.css",
+        "zakaria-farid/src/app/fin-os/layout.tsx",
+        "zakaria-farid/src/app/admin/admin.module.css"
+      ],
+      "tracks_checked": [
+        "SURFACE_UI"
+      ],
+      "status": "clean, 0 TypeScript errors, 62/62 vitest tests passing across 16 suites, verify_gates.sh passed all gates, sync_graph.sh knowledge graph updated"
+    }
+  },
+  {
+    "version": "2.4.2",
+    "date": "2026-09-13T02:30:00.000Z",
+    "trigger": "User request: 100% visual parity with NexaERP reference to resolve component distinction and sidebar contrast",
+    "change_type": "surface-ui-refinement",
+    "entities_affected": {
+      "Sidebar-Dock-Contrast": "Applied calm slate background #F8FAFC with crisp solid border #CBD5E1 separating dock cleanly from canvas",
+      "Active-Dock-Capsule": "Transformed active dock item into pure white floating capsule (#FFFFFF / 1px solid #CBD5E1 / shadow-sm / #0F172A font-weight 700) matching Dashboard in NexaERP",
+      "Canvas-Depth": "Unified general canvas background to architectural slate #F1F5F9 providing ~96% luminance depth and sharp contrast with pure white #FFFFFF cards",
+      "Elevated-Components": "Applied refined subtle darker borders (1px solid #CBD5E1) and floating elevation shadows (shadow-sm / shadow-md) to KPI deckCards, alertStrip, workbench, and actionHubSection / actionCards"
+    },
+    "rationale": "Direct executive alignment with NexaERP Enterprise Suite benchmark: eliminates washed-out lack of hierarchy by introducing solid 1px slate-300 borders and floating white capsules against an architectural #F1F5F9 canvas.",
+    "reference_integrity_scan": {
+      "files_checked": [
+        "zakaria-farid/src/components/admin/erp/v2/ZFWorkstationShell.module.css",
+        "zakaria-farid/src/components/admin/erp/v2/views/DailyOperationsView.module.css",
+        "zakaria-farid/src/components/admin/erp/v2/erpTokensV2.module.css",
+        "zakaria-farid/src/app/globals.css",
+        "zakaria-farid/src/app/fin-os/layout.tsx",
+        "zakaria-farid/src/app/admin/admin.module.css"
+      ],
+      "tracks_checked": [
+        "SURFACE_UI"
+      ],
+      "status": "clean, 0 TypeScript errors, 62/62 vitest tests passing across 16 suites, verify_gates.sh passed all gates, sync_graph.sh knowledge graph updated"
+    }
+  },
+  {
+    "version": "2.4.3",
+    "date": "2026-09-13T02:37:00.000Z",
+    "trigger": "User request: make the background less bluish - eliminate Slate-100/300 blue excess in favor of Pure Neutral Zinc / Apple macOS Achromatic Gray",
+    "change_type": "surface-ui-palette-refinement",
+    "entities_affected": {
+      "Canvas-Achromatic-Gray": "Replaced #F1F5F9 (Slate-100 with +8 B excess) with #F4F4F5 (Pure Neutral Zinc-100, R=244 G=244 B=245) across --zf2-bg-canvas, --ops-canvas, --admin-canvas-bg, fin-os body, and globals.css",
+      "Sidebar-Dock-Neutral": "Replaced #F8FAFC with pure neutral Zinc-50 #FAFAFA across --zf2-bg-dock, --ops-subtle, and utility buttons",
+      "Borders-Neutral-Zinc": "Replaced #CBD5E1 with Zinc-300 #D4D4D8 across --zf2-border-subtle, --ops-border, --admin-card-border, dock divider, and table headers",
+      "Subtle-Dividers": "Replaced #E2E8F0 with Zinc-200 #E4E4E7 across --ops-border-subtle, --admin-card-border-subtle, table td rows, and card inner borders",
+      "Dock-Hover-State": "Replaced #EDF2F7 with #EEEEF0 for dock items hover state"
+    },
+    "rationale": "Pure achromatic neutrality eliminates the icy/baby-blue visual tint while maintaining strict contrast, crisp separation, and luxury Apple macOS / Mercury Bank enterprise feel.",
+    "reference_integrity_scan": {
+      "files_checked": [
+        "zakaria-farid/src/components/admin/erp/v2/ZFWorkstationShell.module.css",
+        "zakaria-farid/src/components/admin/erp/v2/views/DailyOperationsView.module.css",
+        "zakaria-farid/src/components/admin/erp/v2/erpTokensV2.module.css",
+        "zakaria-farid/src/app/globals.css",
+        "zakaria-farid/src/app/fin-os/layout.tsx",
+        "zakaria-farid/src/app/admin/admin.module.css"
+      ],
+      "tracks_checked": [
+        "SURFACE_UI"
+      ],
+      "status": "clean, 0 TypeScript errors, 62/62 vitest tests passing across 16 suites, verify_gates.sh passed all gates, sync_graph.sh knowledge graph updated"
+    }
+  },
+  {
+    "version": "2.4.4",
+    "date": "2026-09-13T02:46:00.000Z",
+    "trigger": "User request: Executive UI/UX refinements on Daily Operations (Card 2 financial arrows, Card 1 account code removal, single-line non-wrapping currency alignment, expandable urgent overdue alert strip)",
+    "change_type": "surface-ui-refinement",
+    "entities_affected": {
+      "Card-2-Financial-Arrows": "Replaced primitive +/- symbols with ArrowUpRight / ArrowDownRight financial icons, removed +/- from badge and comparison row, and formatted todayNetFlow with clean absolute tabular numerals",
+      "Card-1-Accounting-Code-Purge": "Removed technical GL account numbers (101000) and (102000) from top badge ('الخزينة والبنك') and breakdown labels ('الخزينة:' and 'البنك وإنستاباي:')",
+      "Single-Line-Currency-Alignment": "Separated formatted numbers from currency symbol via formatNumberWithCommas to eliminate duplicate 'ج.م ج.م', applied white-space nowrap and inline-flex baseline alignment across all deckCardValues and breakdown values",
+      "Expandable-Urgent-Alert-Strip": "Implemented isAlertsExpanded state, toggle button [عرض كل المتأخرات الحرجة (X) ▾], and animated dropdown table displaying overdue badge, debtor, unit/contract, due date, non-wrapping amount, and immediate onCollectItem trigger"
+    },
+    "rationale": "Eliminates low-fidelity UI artifacts (text +/- prefixes, accounting account clutter, duplicate currency labels, and wrapped numbers) while providing immediate visibility and one-click collections across all critical overdue dues directly in the alert strip.",
+    "reference_integrity_scan": {
+      "files_checked": [
+        "zakaria-farid/src/components/admin/erp/v2/views/DailyOperationsView.tsx",
+        "zakaria-farid/src/components/admin/erp/v2/views/DailyOperationsView.module.css",
+        ".agents/checkpoint.json",
+        ".agents/harness_log.json"
+      ],
+      "tracks_checked": [
+        "SURFACE_UI"
+      ],
+      "status": "clean, 0 TypeScript errors, 62/62 vitest tests passing across 16 suites, verify_gates.sh passed all gates, sync_graph.sh knowledge graph updated"
+    }
+  },
+  {
+    "version": "2.4.5",
+    "date": "2026-09-13T02:53:30.000Z",
+    "trigger": "User request: Fix duplicate 'ج.م ج.م' in workbench table and correct RTL alignment for client names and contract details in 'العميل وتفاصيل العقد'",
+    "change_type": "surface-ui-refinement",
+    "entities_affected": {
+      "Workbench-Table-Currency-Deduplication": "Eliminated duplicate 'ج.م ج.م' across summary bars (tabs 1 and 2), table amount cells (tabs 1, 2, 3, 4), and expense confirmation modal by replacing formatEGP calls with formatNumberWithCommas alongside dedicated currency badge",
+      "Client-Column-RTL-Alignment": "Purged dir='auto' from .rowTitle elements that forced LTR left-alignment on Latin names (Eng. Mahmoud El-Sayed, Dr. Karim Hassan), wrapped names in <bdi> isolates, added ltr isolation to contract and cheque numbers, and enforced text-align: start in CSS"
+    },
+    "rationale": "Direct user feedback on image media_1789256289366.png. Eliminates duplicated currency symbol and restores clean, uniform right-to-left visual alignment for the entire client details column.",
+    "reference_integrity_scan": {
+      "files_checked": [
+        "zakaria-farid/src/components/admin/erp/v2/views/DailyOperationsView.tsx",
+        "zakaria-farid/src/components/admin/erp/v2/views/DailyOperationsView.module.css",
+        ".agents/checkpoint.json",
+        ".agents/harness_log.json"
+      ],
+      "tracks_checked": [
+        "SURFACE_UI"
+      ],
+      "status": "clean, 0 TypeScript errors, 62/62 vitest tests passing across 16 suites, verify_gates.sh passed all gates, sync_graph.sh knowledge graph updated"
+    }
+  },
+  {
+    "version": "2.4.6",
+    "date": "2026-09-13T02:58:30.000Z",
+    "trigger": "User request: Change black button to gold accent coloring and apply gold accent coloring to icons in مركز العمليات والإجراءات السريعة",
+    "change_type": "surface-ui-refinement",
+    "entities_affected": {
+      "Action-Hub-Trigger-Button": "Replaced monotone #0f172a button with Andalusian Gold luxury gradient (linear-gradient(135deg, #D4AF37 0%, #B8860B 60%, #946F23 100%)), high-contrast obsidian ink typography (#0A0E18), polished gold border (#DDA752), updated count badge to 10, and active ring halo",
+      "Action-Hub-Card-Icons": "Transformed all 10 action card icon backgrounds to subtle gold (rgba(148, 111, 35, 0.08)) with Andalusian Gold icon glyphs (#946F23) and dynamic hover scaling",
+      "Action-Hub-Column-Icons": "Upgraded all 3 column header icons to Andalusian Gold accent containers",
+      "Alert-Strip-Actions": "Enhanced alert action buttons with refined gold accent borders (border: 1px solid rgba(148, 111, 35, 0.35))"
+    },
+    "rationale": "Direct user feedback on image media_1789257164089.png to resolve monotone black button and grey cards with prestigious Andalusian Gold accents matching the luxury brand identity.",
+    "reference_integrity_scan": {
+      "files_checked": [
+        "zakaria-farid/src/components/admin/erp/v2/views/DailyOperationsView.tsx",
+        "zakaria-farid/src/components/admin/erp/v2/views/DailyOperationsView.module.css",
+        ".agents/checkpoint.json",
+        ".agents/harness_log.json"
+      ],
+      "tracks_checked": [
+        "SURFACE_UI"
+      ],
+      "status": "clean, 0 TypeScript errors, 62/62 vitest tests passing across 16 suites, verify_gates.sh passed all gates, sync_graph.sh knowledge graph updated"
+    }
+  },
+  {
+    "version": "2.4.7",
+    "date": "2026-09-13T03:09:30.000Z",
+    "trigger": "User request: Replace gold gradient with solid dark obsidian buttons with white text, restore ZFErpBreadcrumb in operations view, reorganize header beside export Excel, replace oversized alert button with compact inline dropdown, and fix Card 3 breakdown overflow",
+    "change_type": "surface-ui-refinement",
+    "entities_affected": {
+      "Solid-Dark-Obsidian-Buttons": "Replaced yellow/gold gradient with solid deep obsidian #0f172a styling, crisp white text #ffffff, 1px solid #1e293b border, and unified styling across .actionHubTriggerBtn, .alertActionBtn, and .alertRowActionBtn",
+      "Breadcrumb-Restoration": "Re-anchored ZFErpBreadcrumb into DailyOperationsView title area matching CockpitView and other workstation views",
+      "Header-Reorganization": "Purged date badge container, eliminated second-row floating trigger bar, and placed action hub button directly beside export Excel button on a single horizontal row",
+      "Compact-Alert-Dropdown": "Removed oversized .alertToggleBtn from alert strip end, embedded a compact .alertInlineToggleBtn inside .alertNote beside text content",
+      "Card-3-Breakdown-Overflow-Fix": "Streamlined Card 3 breakdown rhythm to 'حرجة (X): VAL • اليوم (Y): VAL' matching Card 2, eliminating text overflow outside the card"
+    },
+    "rationale": "Direct user feedback on images media_1789257740999.png and media_1789257754231.png for executive ergonomics, clean typography, compact alert interaction, and zero layout overflow.",
+    "reference_integrity_scan": {
+      "files_checked": [
+        "zakaria-farid/src/components/admin/erp/v2/views/DailyOperationsView.tsx",
+        "zakaria-farid/src/components/admin/erp/v2/views/DailyOperationsView.module.css",
+        ".agents/checkpoint.json",
+        ".agents/harness_log.json"
+      ],
+      "tracks_checked": [
+        "SURFACE_UI"
+      ],
+      "status": "clean, 0 TypeScript errors, 62/62 vitest tests passing across 16 suites, verify_gates.sh passed all gates, sync_graph.sh knowledge graph updated"
+    }
+  },
+  {
+    "version": "2.4.8",
+    "date": "2026-09-13T03:20:00.000Z",
+    "trigger": "User request: Purge clutter and AI telemetry patterns from top navbar (ZFWorkstationHeader), move dock collapse and admin link to sidebar (ZFNavigationDock), and ensure zero overflow in Card 3",
+    "change_type": "surface-ui-refinement",
+    "entities_affected": {
+      "Top-Navbar-Declutter": "Removed redundant breadcrumb container (لوحة الإدارة / العقارات / العملاء), brand logo, FIN-OS version badge, dock toggle, and live telemetry bar from ZFWorkstationHeader; centered and widened Omni-Search anchor (max-width: 520px); standardized utility buttons to monochromatic Zinc-100/200/300 styling",
+      "Sidebar-Dock-Enhancements": "Added dock header with BrandLogo (when expanded) and PanelLeftClose/PanelLeftOpen toggle button; added elegant .dockAdminReturnBtn with gold accent hover at the bottom of ZFNavigationDock",
+      "Card-3-Overflow-Fix": "Enforced strict overflow: hidden, text-overflow: ellipsis, and white-space: nowrap in .deckCardBreakdown and .breakdownValueSober to guarantee 0 text overflow"
+    },
+    "rationale": "Direct executive alignment with modern desktop software benchmarks (macOS / Linear / Mercury): eliminates navbar clutter and noisy live telemetry in favor of focused search and clear navigation hierarchy.",
+    "reference_integrity_scan": {
+      "files_checked": [
+        "zakaria-farid/src/components/admin/erp/v2/ZFWorkstationHeader.tsx",
+        "zakaria-farid/src/components/admin/erp/ZFNavigationDock.tsx",
+        "zakaria-farid/src/components/admin/erp/AdminERPHub.tsx",
+        "zakaria-farid/src/components/admin/erp/v2/ZFWorkstationShell.module.css",
+        "zakaria-farid/src/components/admin/erp/v2/views/DailyOperationsView.module.css",
+        ".agents/checkpoint.json",
+        ".agents/harness_log.json"
+      ],
+      "tracks_checked": [
+        "SURFACE_UI"
+      ],
+      "status": "clean, 0 TypeScript errors, 62/62 vitest tests passing across 16 suites, verify_gates.sh passed all gates, sync_graph.sh knowledge graph updated"
+    }
+  },
+  {
+    "version": "2.4.9",
+    "date": "2026-09-13T03:25:30.000Z",
+    "trigger": "User request: Card icon gold parity (remove green from Card 2, match Card 3 amber to signature gold) and refine excessive height in workbench header and deck cards",
+    "change_type": "surface-ui-refinement",
+    "entities_affected": {
+      "Card-Icon-Gold-Parity": "Unified all 3 command deck cards to deckCardIconGold (#946F23 / rgba(148, 111, 35, 0.08)), removing green from Card 2 (TrendingUp) and amber from Card 3 (AlertCircle)",
+      "Workbench-Header-Compaction": "Merged queueHeading title and desks tabs into a single executive horizontal bar (.workbenchHeader) eliminating redundant vertical rows; tightened filters, search input, status chips, and context bar paddings",
+      "Deck-Cards-Compaction": "Reduced .deckCard padding from 20px 22px to 14px 18px, gaps from 14px to 10px, and font size clamp, reducing card height from 196px to ~148px"
+    },
+    "rationale": "Eliminates discordant icon color schemes (green and amber) in favor of 100% brand-aligned Andalusian Gold, and resolves excessive vertical stacking by merging workbench title and operational desks onto a single streamlined row.",
+    "reference_integrity_scan": {
+      "files_checked": [
+        "zakaria-farid/src/components/admin/erp/v2/views/DailyOperationsView.tsx",
+        "zakaria-farid/src/components/admin/erp/v2/views/DailyOperationsView.module.css",
+        ".agents/checkpoint.json",
+        ".agents/harness_log.json"
+      ],
+      "tracks_checked": [
+        "SURFACE_UI"
+      ],
+      "status": "clean, 0 TypeScript errors, 62/62 vitest tests passing across 16 suites, verify_gates.sh passed all gates, sync_graph.sh knowledge graph updated"
+    }
+  },
+  {
+    "version": "2.4.10",
+    "date": "2026-09-13T03:42:00.000Z",
+    "trigger": "User request: Address Card 2 showing 0.00 EGP upon midnight calendar date transition",
+    "change_type": "surface-ui-refinement",
+    "entities_affected": {
+      "Zero-State-Handling": "Replaced misleading 'فائض نقدي' badge and green growth arrow with neutral 'لا توجد حركات اليوم' badge (.statusDotNeutral) and balanced Minus indicator icon (.flowArrowNeutral) when today has zero operations",
+      "Historical-Context-Subtext": "Added dynamic historical backtracking that extracts the most recent active date with cash movement (2026-09-12 / +1,000,001.00 EGP) and displays it in the subtext when today has 0 transactions",
+      "Decimal-Helper": "Added eq method alias to Decimal in math.ts for seamless numeric equality comparisons"
+    },
+    "rationale": "Eliminates confusion caused by calendar date rollover at midnight: when today has no recorded operations, the UI clearly reflects a neutral zero-state while reassuring the operator with the last active session's financial movement.",
+    "reference_integrity_scan": {
+      "files_checked": [
+        "zakaria-farid/src/components/admin/erp/v2/views/DailyOperationsView.tsx",
+        "zakaria-farid/src/components/admin/erp/v2/views/DailyOperationsView.module.css",
+        "zakaria-farid/src/lib/erp/math.ts",
+        ".agents/checkpoint.json",
+        ".agents/harness_log.json"
+      ],
+      "tracks_checked": [
+        "SURFACE_UI"
+      ],
+      "status": "clean, 0 TypeScript errors, 62/62 vitest tests passing across 16 suites, verify_gates.sh passed all gates, sync_graph.sh knowledge graph updated"
+    }
+  },
+  {
+    "version": "2.4.11",
+    "date": "2026-09-13T03:47:45.000Z",
+    "trigger": "User request: Restore BrandLogo to the top navbar and declutter sidebar dock header",
+    "change_type": "surface-ui-refinement",
+    "entities_affected": {
+      "Navbar-BrandLogo": "Restored official BrandLogo size='sm' in headerLeft of ZFWorkstationHeader with clean admin navigation link",
+      "Sidebar-Dock-Deduplication": "Removed duplicate BrandLogo from ZFNavigationDock header while retaining the dock collapse/expand toggle button (.dockToggleBtn)",
+      "Shell-Styling": "Refined .dockHeader padding and spacing in ZFWorkstationShell.module.css"
+    },
+    "rationale": "Direct user request to restore the signature brand identity to the top navbar (headerLeft / top-right in RTL), preventing redundant brand display in the dock header below.",
+    "reference_integrity_scan": {
+      "files_checked": [
+        "zakaria-farid/src/components/admin/erp/v2/ZFWorkstationHeader.tsx",
+        "zakaria-farid/src/components/admin/erp/ZFNavigationDock.tsx",
+        "zakaria-farid/src/components/admin/erp/v2/ZFWorkstationShell.module.css",
+        ".agents/checkpoint.json",
+        ".agents/harness_log.json"
+      ],
+      "tracks_checked": [
+        "SURFACE_UI"
+      ],
+      "status": "clean, 0 TypeScript errors, 62/62 vitest tests passing across 16 suites, verify_gates.sh passed all gates, sync_graph.sh knowledge graph updated"
+    }
+  },
+  {
+    "version": "2.4.12",
+    "date": "2026-09-13T03:51:00.000Z",
+    "trigger": "User request: Use simple, concise Egyptian Arabic for button descriptions in DailyOperationsView Unified Action Hub",
+    "change_type": "surface-ui-refinement",
+    "entities_affected": {
+      "Action-Hub-Subtitles": "Replaced academic/formal MSA descriptions with concise, natural Egyptian business Arabic across all 10 action cards in DailyOperationsView"
+    },
+    "rationale": "Direct user request to enhance ergonomics, immediate comprehension, and cognitive ease for Egyptian sales, cashiers, and site managers.",
+    "reference_integrity_scan": {
+      "files_checked": [
+        "zakaria-farid/src/components/admin/erp/v2/views/DailyOperationsView.tsx",
+        ".agents/checkpoint.json",
+        ".agents/harness_log.json"
+      ],
+      "tracks_checked": [
+        "SURFACE_UI"
+      ],
+      "status": "clean, 0 TypeScript errors, 62/62 vitest tests passing across 16 suites, verify_gates.sh passed all gates"
+    }
+  },
+  {
+    "version": "2.4.13",
+    "date": "2026-09-13T04:08:00.000Z",
+    "trigger": "User request: Overhaul Cash & Treasury popups one by one, eliminating AI slop, reducing visual clutter, and applying Sovereign Alabaster design tokens (Popup 1: HandCollectionModal)",
+    "change_type": "surface-ui-refinement",
+    "entities_affected": {
+      "HandCollectionModal": "Eliminated AI slop fake certificate ribbon banner, replaced pitch-black buttons and tabs (#0f172a) with Andalusian Gold (#946F23) and Emerald (#047857), applied Sovereign Alabaster borders (#D8D2C4) and recessed areas (#F8FAFC), streamlined side agenda from 435px to 375px, streamlined accounting impact text, added Arabic Tafqeet, and harmonized print preview voucher layout"
+    },
+    "rationale": "Execution of approved implementation plan for Popup 1 of the Cash & Treasury pillar in the Operations Hub.",
+    "reference_integrity_scan": {
+      "files_checked": [
+        "zakaria-farid/src/components/admin/erp/HandCollectionModal.tsx",
+        ".agents/checkpoint.json",
+        ".agents/harness_log.json"
+      ],
+      "tracks_checked": [
+        "SURFACE_UI"
+      ],
+      "status": "clean, 0 TypeScript errors, 62/62 vitest tests passing across 16 suites, verify_gates.sh passed all gates"
+    }
+  },
+  {
+    "version": "2.4.14",
+    "date": "2026-09-13T04:31:00.000Z",
+    "trigger": "User request: Place sidebar button beside the 'الإدارة وحركة الخزينة' title and eliminate dead header space",
+    "change_type": "surface-ui-refinement",
+    "entities_affected": {
+      "ZFNavigationDock": "Removed standalone dockHeader container and divider line, merged dockToggleBtn into dockFirstGroupHeader alongside 'الإدارة وحركة الخزينة' on the same horizontal row with space-between alignment (title on right, button on left in RTL; centered when collapsed)",
+      "Shell-CSS": "Added .dockFirstGroupHeader with RTL/LTR parity and collapsed rail centering, and suppressed legacy .dockHeader"
+    },
+    "rationale": "Direct user request to eliminate vertical clutter and empty space at the top of the sidebar navigation dock.",
+    "reference_integrity_scan": {
+      "files_checked": [
+        "zakaria-farid/src/components/admin/erp/ZFNavigationDock.tsx",
+        "zakaria-farid/src/components/admin/erp/v2/ZFWorkstationShell.module.css",
+        ".agents/checkpoint.json",
+        ".agents/harness_log.json"
+      ],
+      "tracks_checked": [
+        "SURFACE_UI"
+      ],
+      "status": "clean, 0 TypeScript errors, 62/62 vitest tests passing across 16 suites, verify_gates.sh passed all gates"
+    }
+  },
+  {
+    "version": "2.4.15",
+    "date": "2026-09-13T04:41:00.000Z",
+    "trigger": "User request: Complete elimination of all green coloring, removal of useless accounting boilerplate, fixing layout proportions (expanding agenda list to 470px and compacting form), separating contract and unit fields, auto-generating receipt number as read-only, making filter tabs smoothly scrollable, and replacing the green submit button with an executive dark slate/navy button",
+    "change_type": "surface-ui-refinement",
+    "entities_affected": {
+      "HandCollectionModal": "Fully eliminated all green styling across entire modal in favor of Andalusian Gold (#946F23) and Dark Slate (#0F172A). Expanded agenda sidebar to 470px to give client cards plenty of room and prevent wrapping. Separated contract number and unit name cleanly. Made filter tabs smoothly scrollable. Removed useless 'الأثر المحاسبي' banner and 101000/102000 account numbers. Protected auto-generated receipt number as read-only with verified badge. Replaced green submit button with executive dark slate/navy button."
+    },
+    "rationale": "Direct user feedback and UI audit to ensure complete alignment with the FIN-OS palette and ergonomics.",
+    "reference_integrity_scan": {
+      "files_checked": [
+        "zakaria-farid/src/components/admin/erp/HandCollectionModal.tsx",
+        ".agents/checkpoint.json",
+        ".agents/harness_log.json"
+      ],
+      "tracks_checked": [
+        "SURFACE_UI"
+      ],
+      "status": "clean, 0 TypeScript errors, 62/62 vitest tests passing across 16 suites, verify_gates.sh passed all gates"
+    }
+  },
+  {
+    "version": "2.4.16",
+    "date": "2026-09-13T04:52:00.000Z",
+    "trigger": "User request: Narrow the popup, add tranche progression indicator ('قسط رقم كذا من كذا'), integrate property architectural image preview, and update the official print document layout with the new data and images.",
+    "change_type": "surface-ui-refinement",
+    "entities_affected": {
+      "AdminERPHub": "Passed properties={data.properties} to HandCollectionModal.",
+      "HandCollectionModal": "Narrowed maxWidth to 1080px (390px 1fr grid) for optimal ergonomic focus. Added installment progression engine (getInstallmentProgression) computing 'قسط رقم X من إجمالي Y قسط' across client cards, selection voucher card, and print view. Integrated primary property photo preview with fallback architectural emblem. Upgraded official print document (ZFPrintDocumentLayout / voucherBody) with property showcase, formatted amount & Arabic tafqeet, clear contract/unit separation, and balanced double-entry accounting entries."
+    },
+    "rationale": "Fulfills user request for narrower modal geometry, installment progression tracking, property visual identity, and print document modernization.",
+    "reference_integrity_scan": {
+      "files_checked": [
+        "zakaria-farid/src/components/admin/erp/AdminERPHub.tsx",
+        "zakaria-farid/src/components/admin/erp/HandCollectionModal.tsx",
+        ".agents/checkpoint.json",
+        ".agents/harness_log.json"
+      ],
+      "tracks_checked": [
+        "SURFACE_UI"
+      ],
+      "status": "clean, 0 TypeScript errors, 62/62 vitest tests passing across 16 suites, verify_gates.sh passed all gates"
+    }
+  },
+  {
+    "version": "2.4.17",
+    "date": "2026-09-13T05:01:00.000Z",
+    "trigger": "User request: 'في الحاجات الي بنحاول ننبه بيها ممكن نستخدم لون احمر داكن شويه عن الي بنستخدمه' - Replace harsh scarlet red (#dc2626 / #ef4444) with an executive deep crimson / garnet red (#991B1B) across all alert, warning, overdue, and critical indicators.",
+    "change_type": "surface-ui-refinement",
+    "entities_affected": {
+      "HandCollectionModal": "Updated overdue priority section badge, due badge, overdue filter tab, and error notice to deep crimson #991B1B with subtle wash rgba(153, 27, 27, 0.08) and border rgba(153, 27, 27, 0.22).",
+      "DailyOperationsView": "Updated .flowArrowNegative, .alertTag, .alertOverdueBadge, .statusDotRose, and overdue status chips to deep crimson #991B1B.",
+      "ZFWorkstationShell": "Updated .deskMiniValAlert to #991B1B, .radarAlertButtonCrit to linear-gradient(135deg, #991b1b 0%, #7f1d1d 100%), .radarAlertLeadingEdgeCrit to #991B1B, and logout / reset buttons.",
+      "erpTokensV2": "Updated --zf2-state-danger to #991b1b, --zf2-state-danger-subtle and wash to rgba(153, 27, 27, 0.08), and border to rgba(153, 27, 27, 0.25).",
+      "HandInstallmentsVaultView": "Updated overdue badges, alert icons, bounce confirmation dialog, and action buttons to #991B1B.",
+      "globals.css": "Updated Sonner error notification toast border, icon, and background to #991B1B."
+    },
+    "rationale": "Direct user design directive: banishing cheap bright scarlet in favor of dignified executive deep crimson (#991B1B) adhering to Sovereign Alabaster luxury design guidelines.",
+    "reference_integrity_scan": {
+      "files_checked": [
+        "zakaria-farid/src/components/admin/erp/HandCollectionModal.tsx",
+        "zakaria-farid/src/components/admin/erp/v2/views/DailyOperationsView.tsx",
+        "zakaria-farid/src/components/admin/erp/v2/views/DailyOperationsView.module.css",
+        "zakaria-farid/src/components/admin/erp/v2/ZFWorkstationShell.module.css",
+        "zakaria-farid/src/components/admin/erp/v2/erpTokensV2.module.css",
+        "zakaria-farid/src/components/admin/erp/v2/views/HandInstallmentsVaultView.tsx",
+        "zakaria-farid/src/app/globals.css",
+        ".agents/checkpoint.json",
+        ".agents/harness_log.json"
+      ],
+      "tracks_checked": [
+        "SURFACE_UI"
+      ],
+      "status": "clean, 0 TypeScript errors, 62/62 vitest tests passing across 16 suites, verify_gates.sh passed all gates"
+    }
+  },
+  {
+    "version": "2.4.18",
+    "date": "2026-09-14T05:56:00.000Z",
+    "trigger": "User request: 1) For each installment show installment sequence ('القسط دا رقم كام') AND remaining count for the client ('كام قسط متبقي للعميل دا'). 2) Remove auto print popup upon fast collection in HandCollectionModal, closing directly with a success toast. 3) Add official receipt voucher printing in the dedicated installments page (HandInstallmentsVaultView). 4) Use graphify exclusively for querying AST components and sync knowledge graph.",
+    "change_type": "surface-ui-refinement",
+    "entities_affected": {
+      "HandCollectionModal": "Enhanced getInstallmentProgression to reliably compute tranche sequence, total installments, paid count, and remaining count with multi-tier fallback matching (Schedule ID -> Due Date -> Nominal Value & Chronological Order -> Regex -> Index). Displayed 'قسط X من Y • متبقي Z قسط' on client agenda cards and detail preview. Removed auto print preview popup on submit; triggers toast.success and closes modal immediately.",
+      "AdminERPHub": "Passed schedules={data.schedules} and properties={data.properties} to HandInstallmentsVaultView.",
+      "HandInstallmentsVaultView": "Integrated schedules and properties props, added getInstallmentProgression display badges, added [طباعة سند القبض] official receipt voucher preview and 1-click printing with ZFPrintDocumentLayout across card and table views.",
+      "Graphify": "Installed graphify global skill and project rules; synchronized 12,487 nodes, 43,412 edges into graphify-out/graph.json for zero-token AST queries."
+    },
+    "rationale": "Greatly improves cashier/operations ergonomic speed by eliminating unwanted modal interruptions while empowering users with exact contractual progression metrics and official receipt vouchers directly from the dedicated installments vault.",
+    "reference_integrity_scan": {
+      "files_checked": [
+        "zakaria-farid/src/components/admin/erp/HandCollectionModal.tsx",
+        "zakaria-farid/src/components/admin/erp/AdminERPHub.tsx",
+        "zakaria-farid/src/components/admin/erp/v2/views/HandInstallmentsVaultView.tsx",
+        ".agents/checkpoint.json",
+        ".agents/harness_log.json"
+      ],
+      "tracks_checked": [
+        "SURFACE_UI"
+      ],
+      "status": "clean, 0 TypeScript errors, 62/62 vitest tests passing across 16 suites, verify_gates.sh passed all gates"
+    }
+  },
+  {
+    "version": "2.4.19",
+    "date": "2026-09-14T06:09:00.000Z",
+    "trigger": "User request: 1) Eliminate all residual AI green colors, specifically in client contractual progression row ('متبقي 0 قسط (تم سداد 2 قسط مسبقاً)'). 2) Keep HandCollectionModal open after collection so user can execute consecutive operations immediately without modal closing.",
+    "change_type": "surface-ui-refinement",
+    "entities_affected": {
+      "HandCollectionModal": "1) Replaced all residual green colors (#059669 / rgba(16, 185, 129)) in the client status row with Dark Slate #0F172A text and Andalusian Gold #946F23 icon, and updated GL posting strip to gold wash and dark slate digits. 2) Removed onClose() from handleSubmit; automatically advances selectedItem to the next pending installment (prioritizing same client/contract, then active filter, then master list) with auto-repopulated form fields and success toast. 3) Safeguarded useEffect prop synchronization using prevIsOpenRef and prevItemIdRef so external state refreshes do not clobber active selection. 4) Changed close button label to 'إغلاق النافذة'.",
+      "HandInstallmentsVaultView": "Replaced all residual green shades (#059669 / #15803d / rgba(21, 128, 61)) in the unit position badge, GL strip, and table row status chips with Andalusian Gold #946F23, Dark Slate #0F172A, and dignified slate #475569. Updated due today KPI accentColor from emerald to slate."
+    },
+    "rationale": "Direct user feedback: eradicating lingering green AI-slop color accents and enabling uninterrupted consecutive batch cashier operations.",
+    "reference_integrity_scan": {
+      "files_checked": [
+        "zakaria-farid/src/components/admin/erp/HandCollectionModal.tsx",
+        "zakaria-farid/src/components/admin/erp/v2/views/HandInstallmentsVaultView.tsx",
+        ".agents/checkpoint.json",
+        ".agents/harness_log.json"
+      ],
+      "tracks_checked": [
+        "SURFACE_UI"
+      ],
+      "status": "clean, 0 TypeScript errors, 62/62 vitest tests passing across 16 suites, verify_gates.sh passed all gates"
+    }
+  },
+  {
+    "version": "2.4.20",
+    "date": "2026-09-14T06:13:00.000Z",
+    "trigger": "User request: Consolidate print action into preview popup, removing redundant standalone print button from HandCollectionModal footer.",
+    "change_type": "surface-ui-refinement",
+    "entities_affected": {
+      "HandCollectionModal": "Removed redundant standalone print button ('طباعة سند القبض') from the modal footer, keeping the preview voucher button ('معاينة سند القبض للطباعة') standalone and styled with the Andalusian Gold theme. Confirmed official print action [بدء الطباعة الآن (Ctrl+P)] is hosted directly within ZFPrintDocumentLayout preview header. Purged unused handlePrint function and Printer icon import."
+    },
+    "rationale": "Direct user feedback: Streamlining cashier ergonomics and eliminating button redundancy in the modal footer by consolidating print initiation inside the official preview layout.",
+    "reference_integrity_scan": {
+      "files_checked": [
+        "zakaria-farid/src/components/admin/erp/HandCollectionModal.tsx",
+        ".agents/checkpoint.json",
+        ".agents/harness_log.json"
+      ],
+      "tracks_checked": [
+        "SURFACE_UI"
+      ],
+      "status": "clean, 0 TypeScript errors, 62/62 vitest tests passing across 16 suites, verify_gates.sh passed all gates"
+    }
+  },
+  {
+    "version": "2.5.0",
+    "date": "2026-09-14T07:18:00.000Z",
+    "trigger": "Executive UI/UX Engineer Implementation: Enterprise Partnership Management Business Model (§14.C & INV-4.2) with building-only scope, dynamic capital matching, official capital supply voucher preview, 3 exit & reallocation workflows (Full Internal Buyout, Partial Sale, Full Substitution), and immutable ownership audit logging.",
+    "change_type": "feature-architecture-addition",
+    "entities_affected": {
+      "types.ts": "Added OwnershipActionType, BuildingOwnershipLogEntry, and DynamicBuildingCapitalInfo models.",
+      "supabase/types.ts": "Extended Property with target_budget_egp, ownership_history, and normalized partner_splits array.",
+      "partnersEngine.ts": "Implemented normalizePropertySplits, computeDynamicBuildingCapital, executeFullInternalBuyout, executePartialSale, and executeFullSubstitution with strict building-only scope, founder permanence, and 100% equity balance lock.",
+      "PartnerReallocationModal.tsx": "Created interactive modal for 3 exit workflows with live before/after equity simulations, 100% balance badge, friendly value/notes documentation, and immutable audit log persistence.",
+      "PartnerCapitalInjectionModal.tsx": "Upgraded capital injection modal with building-only filter, initialPropertyId support, dynamic capital status card (required, paid, arrears, target budget), and post-confirmation official print voucher modal via ZFPrintDocumentLayout (CAP-REC-XXXX, tafqeetEGP, double-entry ribbon Dr 101000/102000 Cr 301000).",
+      "PartnersManagementView.tsx": "Upgraded Tab 2 building cards with dynamic capital matching ribbon, per-partner arrears status badges, inline target budget editing, action buttons [إعادة هيكلة وتخارج الحصص] and [تسجيل توريد رأس مال], collapsible ownership audit history accordion, and integrated PartnerReallocationModal.",
+      "AdminERPHub.tsx": "Wired injectionInitialPropertyId, handleSaveProperty persistence via ERPSupabaseService.updatePropertyPartnership with silent fallback, and connected all modals seamlessly.",
+      "partnersReallocation.test.ts": "Added 16 new comprehensive automated tests covering building scope, founder permanence, dynamic capital, all 3 reallocation workflows, and sequential immutable audit trails."
+    },
+    "rationale": "Empowers real estate leadership and accountants with mathematically sound, fraud-resistant building equity distribution and dynamic founder capital matching while maintaining strict double-entry and ownership audit invariants.",
+    "reference_integrity_scan": {
+      "files_checked": [
+        "zakaria-farid/src/lib/erp/types.ts",
+        "zakaria-farid/src/lib/supabase/types.ts",
+        "zakaria-farid/src/lib/erp/partnersEngine.ts",
+        "zakaria-farid/src/lib/erp/supabaseService.ts",
+        "zakaria-farid/src/components/admin/erp/v2/modals/PartnerReallocationModal.tsx",
+        "zakaria-farid/src/components/admin/erp/v2/modals/PartnerCapitalInjectionModal.tsx",
+        "zakaria-farid/src/components/admin/erp/v2/views/PartnersManagementView.tsx",
+        "zakaria-farid/src/components/admin/erp/AdminERPHub.tsx",
+        "zakaria-farid/src/lib/erp/__tests__/partners.test.ts",
+        "zakaria-farid/src/lib/erp/__tests__/partnersReallocation.test.ts",
+        ".agents/checkpoint.json",
+        ".agents/harness_log.json"
+      ],
+      "tracks_checked": [
+        "SURFACE_UI",
+        "FINANCIAL_CORE"
+      ],
+      "status": "clean, 0 TypeScript errors, 78/78 tests passing across 24 suites, verify_gates.sh passed all gates, graphify synchronized"
+    }
+  },
+  {
+    "version": "2.5.1",
+    "date": "2026-09-14T07:58:30.000Z",
+    "trigger": "Executive UI/UX Engineer Implementation: Restrict Contributor & Partner Equity Allocation strictly to properties of type 'building' in AdminPropertyForm.tsx.",
+    "change_type": "surface-ui-business-rule-enforcement",
+    "entities_affected": {
+      "AdminPropertyForm.tsx": "Dynamic Step 1 ribbon title based on selectedType, isolated Contributor & Partner Equity Allocation section for building properties with informational restriction notice for non-buildings, omitted partner_splits from payload for non-buildings in onSubmit, and conditional display of partner equity breakdown card in Step 4 Review & Publish."
+    },
+    "rationale": "Enforces core domain business rule that equity allocation and partnership shares reside strictly at the building level; individual residential or commercial units (apartments, duplexes, penthouses, chalets, etc.) automatically inherit their parent building's equity structure without maintaining separate unit-level equity splits.",
+    "reference_integrity_scan": {
+      "files_checked": [
+        "zakaria-farid/src/components/admin/AdminPropertyForm.tsx",
+        ".agents/checkpoint.json",
+        ".agents/harness_log.json"
+      ],
+      "tracks_checked": [
+        "SURFACE_UI"
+      ],
+      "status": "clean, 0 TypeScript errors, 78/78 tests passing across 24 suites, verify_gates.sh passed all gates, graphify synchronized"
+    }
+  },
+  {
+    "version": "2.5.2",
+    "date": "2026-09-14T08:11:00.000Z",
+    "trigger": "Executive UI/UX Engineer Implementation: Overhaul Partners & Project Financiers page and Equity Reallocation Studio based on user business feedback (Projects & Building Equity primary default tab, purged global corporate partner onboarding button in favor of Exit & Reallocation Studio button, 1-click partner exit and partial transfer actions on building partner rows and partner cards with exited status badges, and building switcher with preselected seller).",
+    "change_type": "surface-ui-business-model-overhaul",
+    "entities_affected": {
+      "PartnersManagementView.tsx": "Set 'projects' (مشاريع الشراكة وحصص العماير) as default active tab, reordered tabs bar to (1: projects, 2: directory, 3: transactions), replaced global corporate partner onboarding button in stage actions with luxury 'استوديو التخارج وإعادة توزيع الحصص' button, updated header description to reflect project-level equity boundaries, added 'إجراءات التخارج والانسحاب' column with 1-click exit buttons for non-founders and partial transfer for founder on building partner rows, added 1-click exit buttons on partner cards and directory table view with soft gray 'شريك متخارج / لا يملك حصصاً نشطة حالياً' badges for partners without active holdings, and wired building filtering and seller preselection to PartnerReallocationModal.",
+      "PartnerReallocationModal.tsx": "Extended props with allProperties, initialSellerPartner, and initialMode; implemented smooth building switcher dropdown in modal header with building-only filtering; supported automatic preselection of exiting partner; and clarified labels and guidance for the 3 reallocation pathways (Full Internal Buyout, Partial Sale, Full Substitution with arrears transfer toggle)."
+    },
+    "rationale": "Direct executive feedback: Realignment with real estate enterprise business model where partners are not corporate-level static entities, but project-specific financiers defined upon building establishment or joining as substitutes via structured equity reallocation and exit workflows.",
+    "reference_integrity_scan": {
+      "files_checked": [
+        "zakaria-farid/src/components/admin/erp/v2/views/PartnersManagementView.tsx",
+        "zakaria-farid/src/components/admin/erp/v2/modals/PartnerReallocationModal.tsx",
+        ".agents/checkpoint.json",
+        ".agents/harness_log.json"
+      ],
+      "tracks_checked": [
+        "SURFACE_UI"
+      ],
+      "status": "clean, 0 TypeScript errors, 78/78 tests passing across 24 suites, verify_gates.sh passed all gates, graphify synchronized"
+    }
+  },
+  {
+    "version": "2.5.2 -> 2.5.3 (Harness Mode 2 Adoption)",
+    "date": "2026-09-15T08:30:00.000Z",
+    "trigger": "Harness Builder Mode 2 Adoption launched via /harness-adopt by user",
+    "change_type": "behavior-change",
+    "entities_affected": {
+      "PROJECT_SPEC.md": "Reconstructed spec with 9 core entities, 17 hard invariants including near-miss derived invariants, canonical metrics, and deferred scope",
+      "HARNESS_RATIONALE.md": "Updated to reflect 167 tests across 46 suites, 4 tracks, mechanical enforcement mapping, 4f tool justifications, and native Antigravity primitives",
+      "AGENTS.md": "Strengthened Section 0 Zero Direct Application Writes, Circuit Breaker Protocol (ceilings <= 3 for invariant tracks), Resume Protocol, and Triage Matrix",
+      ".agents/scripts/verify_gates.sh": "Updated test suite invocation to 167 tests, path-aware gating, and strict exit code 2 fail-closed standard",
+      ".agents/skills/surface-ui/SKILL.md": "Updated with DESIGN_SYSTEM v2.5 tokens, shared primitives, dual-tier dropdown invariant, and 8 curated presets",
+      ".agents/skills/financial-core/SKILL.md": "Enriched with canonical metrics and near-miss derived invariants"
+    },
+    "rationale": "Execution of Mode 2 Adoption to synchronize the multi-agent engineering harness with actual codebase reality (canonical metrics module, 12 FIN-OS subroutes, 167 automated unit tests, and FIN-OS v2.5 design system).",
+    "reference_integrity_scan": {
+      "files_checked": [
+        "PROJECT_SPEC.md",
+        "HARNESS_RATIONALE.md",
+        "AGENTS.md",
+        ".agents/scripts/verify_gates.sh",
+        ".agents/checkpoint.json",
+        ".agents/skills/surface-ui/SKILL.md",
+        ".agents/skills/financial-core/SKILL.md"
+      ],
+      "tracks_checked": [
+        "WORKFLOW_AUDIT",
+        "FINANCIAL_CORE",
+        "SURFACE_UI",
+        "DATABASE_SCHEMA"
+      ],
+      "status": "clean, 0 dangling references, 0 broken invariants, 167/167 tests passing"
+    }
+  },
+  {
+    "version": "2.5.3 -> 3.0.0 (Harness Mode 2 Adoption)",
+    "date": "2026-09-23T20:00:00.000Z",
+    "trigger": "User launched /harness-adopt to re-evaluate expanded codebase: Notification Engine, Construction Payables Priority Tiering, 244-test statutory test suite, ~60k-node AST Knowledge Graph, and strict FIN-OS ERP Design System Invariants",
+    "change_type": "behavior-change",
+    "entities_affected": {
+      "INV-FINOS-DESIGN-SYSTEM": "Added to Hard Invariants roster under SURFACE_UI",
+      "INV-AP-PRIORITY-SORT": "Added to Hard Invariants roster under FINANCIAL_CORE and SURFACE_UI",
+      "erp_notifications & notificationEngine": "Added as 10th Core Entity (derived-computed / reactive)",
+      "PROJECT_SPEC.md": "Upgraded to v3.0.0 with 11 entities, 19 hard invariants, 244 tests across 66 suites",
+      "HARNESS_RATIONALE.md": "Upgraded to v3.0.0 reflecting 19 invariants, mechanical gate mapping, and 4 tracks",
+      "verify_gates.sh": "Updated to reflect 244 tests across 66 suites, added notificationEngine and propertyCostEngine to path-aware regex, and exit code 2 fail-closed standard",
+      "AGENTS.md & ONBOARDING.md": "Bumped to v3.0.0 and aligned test metrics"
+    },
+    "rationale": "Execution of Mode 2 Adoption to synchronize the multi-agent engineering harness with actual expanded codebase reality (centralized notification engine, 4-tier construction payables priority queue, 244 tests across 66 suites, and FIN-OS v3.0 design system invariants).",
+    "reference_integrity_scan": {
+      "files_checked": [
+        "PROJECT_SPEC.md",
+        "HARNESS_RATIONALE.md",
+        "AGENTS.md",
+        "ONBOARDING.md",
+        ".agents/scripts/verify_gates.sh",
+        ".agents/checkpoint.json"
+      ],
+      "tracks_checked": [
+        "WORKFLOW_AUDIT",
+        "FINANCIAL_CORE",
+        "SURFACE_UI",
+        "DATABASE_SCHEMA"
+      ],
+      "status": "clean, 0 dangling references, 0 broken invariants, 244/244 tests passing across 66 suites"
     }
   }
 ]

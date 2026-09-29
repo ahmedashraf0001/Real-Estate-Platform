@@ -14,6 +14,8 @@ import {
   ERPJournalEntry, 
   ERPMakerCheckerRequest, 
   ERPPartnerCall, 
+  ERPPartnerCommitment,
+  PartnerCommitmentStatus,
   ERPPartnerProfile,
   ERPPartnerTransaction,
   ERPPDCRecord, 
@@ -33,13 +35,16 @@ import {
   MakerCheckerStatus,
   ERPPropertyCostItem,
   PropertyCostCategory,
-  PropertyLifecyclePhase
+  PropertyLifecyclePhase,
+  ERPUnitEstimate,
+  ERPConstructionPurchaseOrder
 } from './types';
 import { Property, Lead, BuildingUnitItem } from '@/lib/supabase/types';
 import { D, generateUUID, isUUID, ensureUUID } from './math';
 import { CANONICAL_COA } from './ledger';
-import { generateMockPropertyCosts } from './propertyCostEngine';
 import { FALLBACK_PROPERTIES } from '@/lib/data/fallbackProperties';
+import { createInitialERPState } from './store';
+import { prepareConstructionSettlement } from './constructionSettlement';
 
 export interface LiveERPDataset {
   periods: ERPAccountingPeriod[];
@@ -52,10 +57,13 @@ export interface LiveERPDataset {
   costAllocations: ERPCostAllocation[];
   taxRecords: ERPTaxRecord[];
   partnerCalls: ERPPartnerCall[];
+  partnerCommitments?: ERPPartnerCommitment[];
   makerCheckerRequests: ERPMakerCheckerRequest[];
   properties: Property[];
   leads: Lead[];
   propertyCosts: ERPPropertyCostItem[];
+  purchaseOrders?: ERPConstructionPurchaseOrder[];
+  unitEstimates?: ERPUnitEstimate[];
   isSchemaMigrated: boolean;
 }
 
@@ -226,6 +234,28 @@ export class ERPSupabaseService {
       ];
     }
 
+    // In development mode, check if we have an authenticated user session.
+    // If unauthenticated, avoid firing failing queries on all 16 RLS-restricted tables to prevent console 401 storms.
+    if (process.env.NODE_ENV === 'development') {
+      let hasSession = false;
+      try {
+        const { data: sessionData } = await supabase.auth.getSession();
+        hasSession = !!sessionData?.session;
+      } catch {
+        hasSession = false;
+      }
+
+      if (!hasSession) {
+        return {
+          ...createInitialERPState(),
+          properties,
+          leads,
+          propertyCosts: [],
+          isSchemaMigrated: true
+        };
+      }
+    }
+
     // 2. Fetch Accounting Periods (Check schema migration status)
     let isSchemaMigrated = true;
     let periodsData: Record<string, unknown>[] | null = null;
@@ -259,6 +289,14 @@ export class ERPSupabaseService {
         { period_id: 'prd-2026-02', fiscal_year: 2026, period_number: 2, start_date: '2026-02-01', end_date: '2026-02-28', status: 'CLOSED' },
         { period_id: 'prd-2026-03', fiscal_year: 2026, period_number: 3, start_date: '2026-03-01', end_date: '2026-03-31', status: 'OPEN' },
         { period_id: 'prd-2026-04', fiscal_year: 2026, period_number: 4, start_date: '2026-04-01', end_date: '2026-04-30', status: 'OPEN' },
+        { period_id: 'prd-2026-05', fiscal_year: 2026, period_number: 5, start_date: '2026-05-01', end_date: '2026-05-31', status: 'OPEN' },
+        { period_id: 'prd-2026-06', fiscal_year: 2026, period_number: 6, start_date: '2026-06-01', end_date: '2026-06-30', status: 'OPEN' },
+        { period_id: 'prd-2026-07', fiscal_year: 2026, period_number: 7, start_date: '2026-07-01', end_date: '2026-07-31', status: 'OPEN' },
+        { period_id: 'prd-2026-08', fiscal_year: 2026, period_number: 8, start_date: '2026-08-01', end_date: '2026-08-31', status: 'OPEN' },
+        { period_id: 'prd-2026-09', fiscal_year: 2026, period_number: 9, start_date: '2026-09-01', end_date: '2026-09-30', status: 'OPEN' },
+        { period_id: 'prd-2026-10', fiscal_year: 2026, period_number: 10, start_date: '2026-10-01', end_date: '2026-10-31', status: 'OPEN' },
+        { period_id: 'prd-2026-11', fiscal_year: 2026, period_number: 11, start_date: '2026-11-01', end_date: '2026-11-30', status: 'OPEN' },
+        { period_id: 'prd-2026-12', fiscal_year: 2026, period_number: 12, start_date: '2026-12-01', end_date: '2026-12-31', status: 'OPEN' }
       ];
       if (isSchemaMigrated && (!periodsData || periodsData.length === 0)) {
         try {
@@ -288,13 +326,15 @@ export class ERPSupabaseService {
     let amendmentsData: Record<string, unknown>[] | null = null;
     let costAllocationsData: Record<string, unknown>[] | null = null;
     let taxData: Record<string, unknown>[] | null = null;
-    let callsData: Record<string, unknown>[] | null = null;
     let makerCheckerData: Record<string, unknown>[] | null = null;
     let propertyCostsData: Record<string, unknown>[] | null = null;
+    let unitEstimatesData: Record<string, unknown>[] | null = null;
+    let purchaseOrdersData: ERPConstructionPurchaseOrder[] = [];
+    let partnerCommitmentsData: Record<string, unknown>[] | null = null;
 
     if (isSchemaMigrated) {
       try {
-        const [cRes, sRes, eRes, pRes, rRes, aRes, caRes, tRes, pcRes, mcRes] = await Promise.all([
+        const [cRes, sRes, eRes, pRes, rRes, aRes, caRes, tRes, mcRes] = await Promise.all([
           supabase.from('erp_contracts').select('*').order('created_at', { ascending: false }),
           supabase.from('erp_installment_schedules').select('*').order('tranche_number', { ascending: true }),
           supabase.from('erp_journal_entries').select('*, erp_journal_lines(*)').order('entry_date', { ascending: false }),
@@ -303,11 +343,10 @@ export class ERPSupabaseService {
           supabase.from('erp_contract_amendments').select('*').order('created_at', { ascending: false }),
           supabase.from('erp_cost_allocations').select('*').order('calculated_at', { ascending: false }),
           supabase.from('erp_tax_records').select('*').order('created_at', { ascending: false }),
-          supabase.from('erp_partner_calls').select('*').order('created_at', { ascending: false }),
           supabase.from('erp_maker_checker').select('*').order('created_at', { ascending: false })
         ]);
 
-        const responses = [cRes, sRes, eRes, pRes, rRes, aRes, caRes, tRes, pcRes, mcRes];
+        const responses = [cRes, sRes, eRes, pRes, rRes, aRes, caRes, tRes, mcRes];
         for (const res of responses) {
           if (res?.error && isAuthError(res.error)) {
             throw res.error;
@@ -322,7 +361,6 @@ export class ERPSupabaseService {
         amendmentsData = aRes.data;
         costAllocationsData = caRes.data;
         taxData = tRes.data;
-        callsData = pcRes.data;
         makerCheckerData = mcRes.data;
 
         try {
@@ -337,6 +375,36 @@ export class ERPSupabaseService {
           if (isAuthError(costErr)) throw costErr;
           // erp_property_costs table not yet created
         }
+
+        const ordersRes = await supabase.from('erp_construction_purchase_orders').select('*').order('order_date', { ascending: false });
+        if (ordersRes.error && isAuthError(ordersRes.error)) throw ordersRes.error;
+        purchaseOrdersData = ordersRes.data || [];
+
+        try {
+          const ueRes = await supabase.from('erp_unit_estimates').select('*').order('as_of_date', { ascending: false });
+          if (ueRes.error && isAuthError(ueRes.error)) {
+            throw ueRes.error;
+          }
+          if (ueRes.data && ueRes.data.length > 0) {
+            unitEstimatesData = ueRes.data;
+          }
+        } catch (ueErr) {
+          if (isAuthError(ueErr)) throw ueErr;
+          // erp_unit_estimates table not yet created
+        }
+
+        try {
+          const pcomRes = await supabase.from('erp_partner_commitments').select('*').order('due_date', { ascending: true });
+          if (pcomRes.error && isAuthError(pcomRes.error)) {
+            throw pcomRes.error;
+          }
+          if (pcomRes.data && pcomRes.data.length > 0) {
+            partnerCommitmentsData = pcomRes.data;
+          }
+        } catch (pcomErr) {
+          if (isAuthError(pcomErr)) throw pcomErr;
+          // erp_partner_commitments table not yet created
+        }
       } catch (err) {
         if (isAuthError(err)) throw err;
         console.warn('Error querying migrated tables:', err);
@@ -344,80 +412,94 @@ export class ERPSupabaseService {
     }
 
     // 3. Contracts
-    const contracts: ERPContract[] = (contractsData || []).map(c => ({
-      contract_id: c.contract_id as string,
-      contract_number: c.contract_number as string,
-      unit_id: c.unit_id as string,
-      property_id: (c.property_id as string) || undefined,
-      buyer_name: c.buyer_name as string,
-      buyer_national_id: c.buyer_national_id as string | undefined,
-      base_price: c.base_price ? D(c.base_price as string | number).toFixed() : undefined,
-      tax_amount: c.tax_amount ? D(c.tax_amount as string | number).toFixed() : undefined,
-      tax_description: (c.tax_description as string) || undefined,
-      gross_contract_value: D((c.gross_contract_value as string | number) || 0).toFixed(),
-      currency: (c.currency as CurrencyCode) || 'EGP',
-      exchange_rate: D((c.exchange_rate as string | number) || 1).toFixed(),
-      contract_date: c.contract_date as string,
-      handover_date: c.handover_date as string | undefined,
-      handover_status: (c.handover_status as HandoverStatus) || 'Pending',
-      total_cash_collected: D((c.total_cash_collected as string | number) || 0).toFixed(),
-      status: (c.status as ContractStatus) || 'Active'
-    }));
+    const fallbackInit = createInitialERPState();
+    const contracts: ERPContract[] = (contractsData && contractsData.length > 0)
+      ? contractsData.map(c => ({
+          contract_id: c.contract_id as string,
+          contract_number: c.contract_number as string,
+          unit_id: c.unit_id as string,
+          property_id: (c.property_id as string) || undefined,
+          building_unit_id: (c.building_unit_id as string) || undefined,
+          building_unit_number: (c.building_unit_number as string) || undefined,
+          is_whole_building_sale: typeof c.is_whole_building_sale === 'boolean' ? c.is_whole_building_sale : undefined,
+          buyer_name: c.buyer_name as string,
+          buyer_national_id: c.buyer_national_id as string | undefined,
+          base_price: c.base_price ? D(c.base_price as string | number).toFixed() : undefined,
+          tax_amount: c.tax_amount ? D(c.tax_amount as string | number).toFixed() : undefined,
+          tax_description: (c.tax_description as string) || undefined,
+          gross_contract_value: D((c.gross_contract_value as string | number) || 0).toFixed(),
+          currency: (c.currency as CurrencyCode) || 'EGP',
+          exchange_rate: D((c.exchange_rate as string | number) || 1).toFixed(),
+          contract_date: c.contract_date as string,
+          handover_date: c.handover_date as string | undefined,
+          handover_status: (c.handover_status as HandoverStatus) || 'Pending',
+          total_cash_collected: D((c.total_cash_collected as string | number) || 0).toFixed(),
+          status: (c.status as ContractStatus) || 'Active',
+          payment_plan_type: (c.payment_plan_type as ERPContract['payment_plan_type']) || undefined,
+          sale_model: (c.sale_model as ERPContract['sale_model']) || undefined,
+        }))
+      : fallbackInit.contracts;
 
     // 4. Installment Schedules
-    const schedules: ERPInstallmentSchedule[] = (schedulesData || []).map(s => ({
-      schedule_id: s.schedule_id as string,
-      contract_id: s.contract_id as string,
-      tranche_number: s.tranche_number as number,
-      nominal_value: D((s.nominal_value as string | number) || 0).toFixed(),
-      due_date: s.due_date as string,
-      status: (s.status as InstallmentStatus) || 'Pending',
-      schedule_version: (s.schedule_version as number) || 1,
-      amendment_id: s.amendment_id as string | undefined,
-      supersedes_schedule_id: s.supersedes_schedule_id as string | undefined,
-      amount_paid: D((s.amount_paid as string | number) || 0).toFixed(),
-      paid_date: s.paid_date as string | undefined
-    }));
+    const schedules: ERPInstallmentSchedule[] = (schedulesData && schedulesData.length > 0)
+      ? schedulesData.map(s => ({
+          schedule_id: s.schedule_id as string,
+          contract_id: s.contract_id as string,
+          tranche_number: s.tranche_number as number,
+          nominal_value: D((s.nominal_value as string | number) || 0).toFixed(),
+          due_date: s.due_date as string,
+          status: (s.status as InstallmentStatus) || 'Pending',
+          schedule_version: (s.schedule_version as number) || 1,
+          amendment_id: s.amendment_id as string | undefined,
+          supersedes_schedule_id: s.supersedes_schedule_id as string | undefined,
+          amount_paid: D((s.amount_paid as string | number) || 0).toFixed(),
+          paid_date: s.paid_date as string | undefined
+        }))
+      : fallbackInit.schedules;
 
     // 5. Journal Entries & Lines
-    const journalEntries: ERPJournalEntry[] = (entriesData || []).map(e => ({
-      entry_id: e.entry_id as string,
-      entry_number: e.entry_number as string,
-      entry_date: e.entry_date as string,
-      period_id: e.period_id as string,
-      description: e.description as string,
-      source_module: (e.source_module as JournalSourceModule) || 'CONTRACT_CREATION',
-      source_entity_id: e.source_entity_id as string | undefined,
-      created_by: (e.created_by as string) || 'SYSTEM',
-      created_at: e.created_at as string,
-      is_locked: (e.is_locked as boolean) || false,
-      lines: ((e.erp_journal_lines as Record<string, unknown>[]) || []).map((l, idx: number) => ({
-        line_id: (l.line_id as string) || `jl-${e.entry_id}-${idx}`,
-        entry_id: e.entry_id as string,
-        line_number: (l.line_number as number) || idx + 1,
-        account_code: (l.account_code as string) || '101000',
-        debit_amount: D(l.debit_amount as string | number || 0).toFixed(),
-        credit_amount: D(l.credit_amount as string | number || 0).toFixed(),
-        unit_id: l.unit_id as string | undefined,
-        contract_id: l.contract_id as string | undefined,
-        memo: l.memo as string | undefined
-      }))
-    }));
+    const journalEntries: ERPJournalEntry[] = (entriesData && entriesData.length > 0)
+      ? entriesData.map(e => ({
+          entry_id: e.entry_id as string,
+          entry_number: e.entry_number as string,
+          entry_date: e.entry_date as string,
+          period_id: e.period_id as string,
+          description: e.description as string,
+          source_module: (e.source_module as JournalSourceModule) || 'CONTRACT_CREATION',
+          source_entity_id: e.source_entity_id as string | undefined,
+          created_by: (e.created_by as string) || 'SYSTEM',
+          created_at: e.created_at as string,
+          is_locked: (e.is_locked as boolean) || false,
+          lines: ((e.erp_journal_lines as Record<string, unknown>[]) || []).map((l, idx: number) => ({
+            line_id: (l.line_id as string) || `jl-${e.entry_id}-${idx}`,
+            entry_id: e.entry_id as string,
+            line_number: (l.line_number as number) || idx + 1,
+            account_code: (l.account_code as string) || '101000',
+            debit_amount: D(l.debit_amount as string | number || 0).toFixed(),
+            credit_amount: D(l.credit_amount as string | number || 0).toFixed(),
+            unit_id: l.unit_id as string | undefined,
+            contract_id: l.contract_id as string | undefined,
+            memo: l.memo as string | undefined
+          }))
+        }))
+      : fallbackInit.journalEntries;
 
     // 6. PDCs — Auto-sync with contracts if empty
-    let pdcRecords: ERPPDCRecord[] = (pdcData || []).map(p => ({
-      cheque_id: p.cheque_id as string,
-      contract_id: p.contract_id as string,
-      schedule_id: p.schedule_id as string | undefined,
-      cheque_number: p.cheque_number as string,
-      bank_name: p.bank_name as string,
-      drawer_name: p.drawer_name as string,
-      nominal_value: D((p.nominal_value as string | number) || 0).toFixed(),
-      due_date: p.due_date as string,
-      status: (p.status as PDCStatus) || 'In Safe',
-      deposited_date: p.deposited_date as string | undefined,
-      cleared_date: p.cleared_date as string | undefined
-    }));
+    let pdcRecords: ERPPDCRecord[] = (pdcData && pdcData.length > 0)
+      ? pdcData.map(p => ({
+          cheque_id: p.cheque_id as string,
+          contract_id: p.contract_id as string,
+          schedule_id: p.schedule_id as string | undefined,
+          cheque_number: p.cheque_number as string,
+          bank_name: p.bank_name as string,
+          drawer_name: p.drawer_name as string,
+          nominal_value: D((p.nominal_value as string | number) || 0).toFixed(),
+          due_date: p.due_date as string,
+          status: (p.status as PDCStatus) || 'In Safe',
+          deposited_date: p.deposited_date as string | undefined,
+          cleared_date: p.cleared_date as string | undefined
+        }))
+      : fallbackInit.pdcRecords;
 
     if (pdcRecords.length === 0 && contracts.length > 0) {
       const generatedPDCs: ERPPDCRecord[] = [];
@@ -631,16 +713,8 @@ export class ERPSupabaseService {
       }
     }
 
-    // 11. Partner Capital Calls
-    const partnerCalls: ERPPartnerCall[] = (callsData || []).map(pc => ({
-      call_id: pc.call_id as string,
-      partner_name: pc.partner_name as string,
-      project_budget_ceiling: D((pc.project_budget_ceiling as string | number) || 0).toFixed(),
-      pro_rata_percentage: (pc.pro_rata_percentage as string) || '50.00%',
-      call_amount: D((pc.call_amount as string | number) || 0).toFixed(),
-      status: (pc.status as CapitalCallStatus) || 'Issued',
-      created_at: (pc.created_at as string) || new Date().toISOString()
-    }));
+    // 11. Partner Capital Calls (Legacy table dropped in Migration 019; superseded by partnerCommitments)
+    const partnerCalls: ERPPartnerCall[] = [];
 
     // 12. Maker-Checker Requests
     const makerCheckerRequests: ERPMakerCheckerRequest[] = (makerCheckerData || []).map(mc => ({
@@ -656,9 +730,7 @@ export class ERPSupabaseService {
     }));
 
     // 13. Property Lifecycle Material & Cost Items
-    let propertyCosts: ERPPropertyCostItem[] = [];
-    if (propertyCostsData && propertyCostsData.length > 0) {
-      propertyCosts = propertyCostsData.map(c => ({
+    const propertyCosts: ERPPropertyCostItem[] = (propertyCostsData || []).map(c => ({
         item_id: c.item_id as string,
         property_id: c.property_id as string,
         building_unit_id: c.building_unit_id as string | undefined,
@@ -679,11 +751,49 @@ export class ERPSupabaseService {
         linked_account_code: (c.linked_account_code as string) || '151000',
         status: (c.status as 'verified' | 'pending_audit' | 'capitalized') || 'verified',
         notes: c.notes as string | undefined,
-        created_at: c.created_at as string | undefined
+        created_at: (c.created_at as string | undefined) || `${c.logged_date}T10:00:00.000Z`,
+        updated_at: c.updated_at as string | undefined,
+        payment_term: c.payment_term as any || 'FULL_CASH',
+        paid_amount_egp: c.paid_amount_egp ? D(c.paid_amount_egp as string | number).toFixed(2) : undefined,
+        remaining_amount_egp: c.remaining_amount_egp ? D(c.remaining_amount_egp as string | number).toFixed(2) : undefined,
+        due_date: c.due_date as string | undefined,
+        payable_installments: (c.payable_installments as any) || undefined,
+        adjustments: (c.adjustments as any) || undefined,
+        net_effective_cost_egp: c.net_effective_cost_egp ? D(c.net_effective_cost_egp as string | number).toFixed(2) : undefined,
+        is_locked: !!c.is_locked
       }));
-    } else {
-      propertyCosts = generateMockPropertyCosts(properties);
-    }
+
+    // 14. Unit Estimates
+    const unitEstimates: ERPUnitEstimate[] = (unitEstimatesData || []).map(u => ({
+      estimate_id: u.estimate_id as string,
+      property_id: u.property_id as string,
+      building_unit_id: (u.building_unit_id as string) || undefined,
+      unit_number: (u.unit_number as string) || undefined,
+      as_of_date: u.as_of_date as string,
+      forecast_cost_to_complete: D((u.forecast_cost_to_complete as string | number) || 0).toFixed(2),
+      confidence_score: u.confidence_score !== undefined && u.confidence_score !== null ? Number(u.confidence_score) : undefined,
+      notes: (u.notes as string) || undefined,
+      created_by: (u.created_by as string) || undefined,
+      created_at: (u.created_at as string) || undefined
+    }));
+
+    // 15. Partner Milestone Commitments
+    const partnerCommitments: ERPPartnerCommitment[] = (partnerCommitmentsData || []).map(row => ({
+      commitment_id: row.commitment_id as string,
+      property_id: row.property_id as string,
+      partner_name: row.partner_name as string,
+      partner_id: (row.partner_id as string) || undefined,
+      milestone_name: row.milestone_name as string,
+      milestone_phase: (row.milestone_phase as string) || undefined,
+      committed_amount: D((row.committed_amount as string | number) || 0).toFixed(2),
+      paid_amount: D((row.paid_amount as string | number) || 0).toFixed(2),
+      due_date: row.due_date as string,
+      status: (row.status as PartnerCommitmentStatus) || 'PENDING',
+      notes: (row.notes as string) || undefined,
+      created_by: (row.created_by as string) || undefined,
+      created_at: (row.created_at as string) || undefined,
+      updated_at: (row.updated_at as string) || undefined
+    }));
 
     return {
       periods,
@@ -696,10 +806,13 @@ export class ERPSupabaseService {
       costAllocations,
       taxRecords,
       partnerCalls,
+      partnerCommitments,
       makerCheckerRequests,
       properties,
       leads,
       propertyCosts,
+      purchaseOrders: purchaseOrdersData.map(order => ({ ...order, amount_egp: D(order.amount_egp).toFixed(2) })),
+      unitEstimates,
       isSchemaMigrated
     };
   }
@@ -750,6 +863,18 @@ export class ERPSupabaseService {
       if (contract.payment_plan_type) {
         contractPayload.payment_plan_type = contract.payment_plan_type;
       }
+      if (contract.sale_model) {
+        contractPayload.sale_model = contract.sale_model;
+      }
+      if (contract.is_whole_building_sale !== undefined) {
+        contractPayload.is_whole_building_sale = contract.is_whole_building_sale;
+      }
+      if (contract.building_unit_id) {
+        contractPayload.building_unit_id = contract.building_unit_id;
+      }
+      if (contract.building_unit_number) {
+        contractPayload.building_unit_number = contract.building_unit_number;
+      }
       if (contract.partner_splits) {
         contractPayload.partner_splits = contract.partner_splits;
       }
@@ -763,59 +888,36 @@ export class ERPSupabaseService {
         contractPayload.tax_description = contract.tax_description;
       }
 
-      let { error: contractError } = await supabase.from('erp_contracts').insert(contractPayload);
-
-      // Resilient fallback if optional columns are not yet in Supabase schema
-      if (contractError && (
-        contractError.message?.includes('property_id') || 
-        contractError.message?.includes('lead_id') || 
-        contractError.message?.includes('payment_plan_type') || 
-        contractError.message?.includes('partner_splits') ||
-        contractError.message?.includes('base_price') ||
-        contractError.message?.includes('tax_amount') ||
-        contractError.message?.includes('tax_description')
-      )) {
-        delete contractPayload.property_id;
-        delete contractPayload.lead_id;
-        delete contractPayload.payment_plan_type;
-        delete contractPayload.partner_splits;
-        delete contractPayload.base_price;
-        delete contractPayload.tax_amount;
-        delete contractPayload.tax_description;
-        const retryRes = await supabase.from('erp_contracts').insert(contractPayload);
-        contractError = retryRes.error;
-      }
+      const { error: contractError } = await supabase.from('erp_contracts').insert(contractPayload);
 
       if (contractError) {
-        if (this.isSchemaCacheError(contractError)) {
-          console.warn('ERP table erp_contracts not yet in Supabase schema cache. Retained in memory.');
-          return;
-        }
         throw contractError;
       }
 
       // Insert Schedules with valid UUIDs
-      const scheduleRows = schedules.map(s => {
-        const schedId = ensureUUID(s.schedule_id);
-        s.schedule_id = schedId;
-        s.contract_id = contractId;
-        return {
-          schedule_id: schedId,
-          contract_id: contractId,
-          tranche_number: s.tranche_number,
-          nominal_value: s.nominal_value,
-          due_date: s.due_date,
-          status: s.status,
-          schedule_version: s.schedule_version || 1,
-          amount_paid: s.amount_paid || '0.00',
-          paid_date: s.paid_date || null
-        };
-      });
+      if (schedules && schedules.length > 0) {
+        const scheduleRows = schedules.map(s => {
+          const schedId = ensureUUID(s.schedule_id);
+          s.schedule_id = schedId;
+          s.contract_id = contractId;
+          return {
+            schedule_id: schedId,
+            contract_id: contractId,
+            tranche_number: s.tranche_number,
+            nominal_value: s.nominal_value,
+            due_date: s.due_date,
+            status: s.status,
+            schedule_version: s.schedule_version || 1,
+            amount_paid: s.amount_paid || '0.00',
+            paid_date: s.paid_date || null
+          };
+        });
 
-      const { error: scheduleError } = await supabase.from('erp_installment_schedules').insert(scheduleRows);
-      if (scheduleError) {
-        if (this.isSchemaCacheError(scheduleError)) return;
-        throw scheduleError;
+        const { error: scheduleError } = await supabase.from('erp_installment_schedules').insert(scheduleRows);
+        if (scheduleError) {
+          if (this.isSchemaCacheError(scheduleError)) return;
+          throw scheduleError;
+        }
       }
 
       // Insert Advance Journal Entry if provided
@@ -887,7 +989,9 @@ export class ERPSupabaseService {
         }
       }
     } catch (err) {
-      if (this.isSchemaCacheError(err)) return;
+      if (this.isSchemaCacheError(err)) {
+        throw new Error('ERP contract schema unavailable; contract was not saved.', { cause: err });
+      }
       throw err;
     }
   }
@@ -943,7 +1047,8 @@ export class ERPSupabaseService {
    */
   static async persistJournalEntry(
     supabase: SupabaseClient,
-    entry: ERPJournalEntry
+    entry: ERPJournalEntry,
+    strict = false
   ): Promise<void> {
     try {
       const entryId = ensureUUID(entry.entry_id);
@@ -1012,7 +1117,7 @@ export class ERPSupabaseService {
       }
 
       if (entryError) {
-        if (this.isSchemaCacheError(entryError)) return;
+        if (!strict && this.isSchemaCacheError(entryError)) return;
         throw entryError;
       }
 
@@ -1059,11 +1164,11 @@ export class ERPSupabaseService {
         }
       }
       if (lineError) {
-        if (this.isSchemaCacheError(lineError)) return;
+        if (!strict && this.isSchemaCacheError(lineError)) return;
         throw lineError;
       }
     } catch (err) {
-      if (this.isSchemaCacheError(err)) return;
+      if (!strict && this.isSchemaCacheError(err)) return;
       throw err;
     }
   }
@@ -1497,6 +1602,37 @@ export class ERPSupabaseService {
   }
 
   /**
+   * Post all unposted journal entries for a given fiscal period.
+   * Sets is_locked = true for all entries belonging to the period, preserving the period's OPEN status.
+   */
+  static async postPeriodJournalEntries(
+    supabase: SupabaseClient,
+    periodId: string
+  ): Promise<number> {
+    try {
+      const { data, error } = await supabase
+        .from('erp_journal_entries')
+        .update({ is_locked: true })
+        .eq('period_id', periodId)
+        .eq('is_locked', false)
+        .select('entry_id');
+
+      if (error) {
+        if (this.isSchemaCacheError(error) || error.code === '42501') {
+          console.warn('Supabase permission or schema pending for erp_journal_entries update.');
+          return 0;
+        }
+        throw error;
+      }
+      return data?.length || 0;
+    } catch (err: unknown) {
+      if (this.isSchemaCacheError(err)) return 0;
+      console.warn('Error posting period journal entries:', err);
+      throw err;
+    }
+  }
+
+  /**
    * Update PDC Cheque Status.
    */
   static async persistPDCStatus(
@@ -1564,11 +1700,12 @@ export class ERPSupabaseService {
    */
   static async addPropertyCostItem(
     supabase: SupabaseClient,
-    item: ERPPropertyCostItem
+    item: ERPPropertyCostItem,
+    strict = false
   ): Promise<void> {
     try {
       const payload: Record<string, unknown> = {
-        item_id: item.item_id,
+        item_id: ensureUUID(item.item_id),
         property_id: item.property_id,
         building_unit_id: item.building_unit_id || null,
         unit_number: item.unit_number || null,
@@ -1586,13 +1723,155 @@ export class ERPSupabaseService {
         logged_by: item.logged_by || 'SYSTEM',
         linked_account_code: item.linked_account_code || '151000',
         status: item.status || 'verified',
-        notes: item.notes || null
+        notes: item.notes || null,
+        created_at: item.created_at || new Date().toISOString(),
+        updated_at: item.updated_at || null,
+        payment_term: item.payment_term || 'FULL_CASH',
+        paid_amount_egp: item.paid_amount_egp || item.total_cost_egp,
+        remaining_amount_egp: item.remaining_amount_egp || '0.00',
+        due_date: item.due_date || null,
+        payable_installments: item.payable_installments || null,
+        adjustments: item.adjustments || null,
+        net_effective_cost_egp: item.net_effective_cost_egp || item.total_cost_egp
       };
 
-      await supabase.from('erp_property_costs').insert([payload]);
+      const { error } = await supabase.from('erp_property_costs').insert([payload]);
+      if (error) {
+        if (!strict && this.isSchemaCacheError(error)) return;
+        throw error;
+      }
     } catch (err) {
-      console.warn('Silent fallback on erp_property_costs insert:', err);
+      if (!strict && this.isSchemaCacheError(err)) return;
+      throw err;
     }
+  }
+
+  /**
+   * Persist the expense and journal with compensating cleanup if either write fails.
+   * Separate Supabase HTTP writes are not a database transaction.
+   */
+  static async persistExpenseWithCostItem(
+    supabase: SupabaseClient,
+    entry: ERPJournalEntry,
+    costItem?: ERPPropertyCostItem
+  ): Promise<void> {
+    if (!costItem) {
+      // Non-expense transactions (e.g. partner funding or loan) write journal only
+      await this.persistJournalEntry(supabase, entry);
+      return;
+    }
+
+    costItem.item_id = ensureUUID(costItem.item_id);
+    if (!costItem.property_id || !isUUID(costItem.property_id)) {
+      throw new Error('A valid property UUID is required to allocate site expense to erp_property_costs.');
+    }
+
+    let costCreated = false;
+
+    try {
+      // 1. Write to erp_property_costs
+      await this.addPropertyCostItem(supabase, costItem, true);
+      costCreated = true;
+
+      // 2. Write to general ledger journal
+      await this.persistJournalEntry(supabase, entry, true);
+    } catch (err) {
+      if (costCreated) {
+        // A journal header may exist even when inserting its lines failed.
+        const { error: linesError } = await supabase.from('erp_journal_lines').delete().eq('entry_id', entry.entry_id);
+        const { error: entryError } = await supabase.from('erp_journal_entries').delete().eq('entry_id', entry.entry_id);
+        const { error: costError } = await supabase.from('erp_property_costs').delete().eq('item_id', costItem.item_id);
+        if (linesError || entryError || costError) {
+          throw new AggregateError(
+            [err, linesError, entryError, costError].filter(Boolean),
+            'Expense posting failed and rollback was incomplete; inspect the cost and journal before retrying.'
+          );
+        }
+      }
+      throw err;
+    }
+  }
+
+  /**
+   * Update an existing Property Cost Item (within the 24-hour grace period).
+   */
+  static async updatePropertyCostItem(
+    supabase: SupabaseClient,
+    item: ERPPropertyCostItem
+  ): Promise<void> {
+    try {
+      const payload: Record<string, unknown> = {
+        category: item.category,
+        phase: item.phase,
+        item_name_ar: item.item_name_ar,
+        item_name_en: item.item_name_en,
+        supplier_contractor: item.supplier_contractor || null,
+        invoice_ref: item.invoice_ref || null,
+        quantity: item.quantity,
+        unit: item.unit,
+        unit_cost_egp: item.unit_cost_egp,
+        total_cost_egp: item.total_cost_egp,
+        notes: item.notes || null,
+        updated_at: new Date().toISOString(),
+        payment_term: item.payment_term,
+        paid_amount_egp: item.paid_amount_egp,
+        remaining_amount_egp: item.remaining_amount_egp,
+        due_date: item.due_date || null,
+        payable_installments: item.payable_installments || null,
+        adjustments: item.adjustments || null,
+        net_effective_cost_egp: item.net_effective_cost_egp || item.total_cost_egp
+      };
+
+      const { error } = await supabase.from('erp_property_costs').update(payload).eq('item_id', item.item_id);
+      if (error) {
+        throw new Error(`Failed to update property cost item ${item.item_id}: ${error.message} (${error.code || 'UNKNOWN'})`);
+      }
+    } catch (err) {
+      console.error('Critical failure on erp_property_costs update:', err);
+      throw err;
+    }
+  }
+
+  /**
+   * Add a sub-item adjustment to a locked or past-grace cost item.
+   */
+  static async addPropertyCostAdjustment(
+    supabase: SupabaseClient,
+    updatedItem: ERPPropertyCostItem
+  ): Promise<void> {
+    try {
+      const { error } = await supabase.from('erp_property_costs').update({
+        adjustments: updatedItem.adjustments || null,
+        net_effective_cost_egp: updatedItem.net_effective_cost_egp || updatedItem.total_cost_egp,
+        paid_amount_egp: updatedItem.paid_amount_egp,
+        remaining_amount_egp: updatedItem.remaining_amount_egp,
+        updated_at: new Date().toISOString()
+      }).eq('item_id', updatedItem.item_id);
+
+      if (error) {
+        throw new Error(`Failed to persist cost adjustment for item ${updatedItem.item_id}: ${error.message} (${error.code || 'UNKNOWN'})`);
+      }
+    } catch (err) {
+      console.error('Critical failure on erp_property_costs adjustment update:', err);
+      throw err;
+    }
+  }
+
+  /**
+   * Record payment on a payable installment for a cost item.
+   */
+  static async createConstructionPurchaseOrder(supabase: SupabaseClient, order: ERPConstructionPurchaseOrder): Promise<void> {
+    if (!order.supplier_name.trim() || !order.description.trim() || !D(order.amount_egp).gt(0)) throw new Error('Supplier, description and positive amount are required.');
+    const { error } = await supabase.from('erp_construction_purchase_orders').insert(order);
+    if (error) throw new Error(`Failed to save purchase order: ${error.message}`);
+  }
+
+  static async recordCostPayablePayment(supabase: SupabaseClient, updatedItem: ERPPropertyCostItem, originalItem: ERPPropertyCostItem, period: ERPAccountingPeriod): Promise<{ item: ERPPropertyCostItem; journal: ERPJournalEntry }> {
+    const settlement = prepareConstructionSettlement(originalItem, updatedItem, period);
+    const { data, error } = await supabase.rpc('settle_construction_payable', settlement.request);
+    if (error) throw new Error(`Failed to post contractor settlement: ${error.message}`);
+    if (!data?.item || !data?.journal) throw new Error('Settlement returned no persisted cost or journal.');
+    return { item: data.item as ERPPropertyCostItem, journal: data.journal as ERPJournalEntry };
   }
 
   /**
@@ -1603,9 +1882,13 @@ export class ERPSupabaseService {
     itemId: string
   ): Promise<void> {
     try {
-      await supabase.from('erp_property_costs').delete().eq('item_id', itemId);
+      const { error } = await supabase.from('erp_property_costs').delete().eq('item_id', itemId);
+      if (error) {
+        throw new Error(`Failed to delete property cost item ${itemId}: ${error.message} (${error.code || 'UNKNOWN'})`);
+      }
     } catch (err) {
-      console.warn('Silent fallback on erp_property_costs delete:', err);
+      console.error('Critical failure on erp_property_costs delete:', err);
+      throw err;
     }
   }
 
@@ -1625,6 +1908,29 @@ export class ERPSupabaseService {
       if (error) throw error;
     } catch (err) {
       console.warn('Silent fallback on property price_egp update:', err);
+    }
+  }
+
+  /**
+   * Update partnership splits, ownership history, or target budget on a building property.
+   */
+  static async updatePropertyPartnership(
+    supabase: SupabaseClient,
+    propertyId: string,
+    updates: {
+      partner_splits?: any[];
+      ownership_history?: any[];
+      target_budget_egp?: number;
+    }
+  ): Promise<void> {
+    try {
+      const { error } = await supabase
+        .from('properties')
+        .update(updates)
+        .eq('id', propertyId);
+      if (error) throw error;
+    } catch (err) {
+      console.warn('Silent fallback on updatePropertyPartnership:', err);
     }
   }
 
@@ -1703,6 +2009,7 @@ export class ERPSupabaseService {
       partner_name: string;
       property_id?: string;
       property_title?: string;
+      commitment_id?: string;
       type: string;
       amount: string | number;
       date: string;
@@ -1716,8 +2023,9 @@ export class ERPSupabaseService {
     const rawId = (tx as any).transaction_id || tx.id || generateUUID();
     const cleanId = ensureUUID(rawId);
     const routingAccount = (tx as any).routing_account || 
-      (tx.payment_method?.includes('101000') ? '101000' : '102000');
+      (tx.payment_method === 'BANK_102000' || tx.payment_method === 'BANK' ? '102000' : '101000');
     const propertyId = tx.property_id && isUUID(tx.property_id) ? tx.property_id : null;
+    const commitmentId = tx.commitment_id && isUUID(tx.commitment_id) ? tx.commitment_id : null;
     const journalEntryId = (tx as any).journal_entry_id && isUUID((tx as any).journal_entry_id) 
       ? (tx as any).journal_entry_id 
       : null;
@@ -1727,6 +2035,7 @@ export class ERPSupabaseService {
       partner_name: tx.partner_name,
       property_id: propertyId,
       property_title: tx.property_title || null,
+      commitment_id: commitmentId,
       type: tx.type,
       amount: D(tx.amount).toFixed(2),
       date: tx.date,
@@ -1743,6 +2052,33 @@ export class ERPSupabaseService {
       }
       throw error;
     }
+
+    // If linked to a milestone commitment, reconcile paid amount
+    if (commitmentId && tx.type === 'CAPITAL_INJECTION') {
+      try {
+        const { data: commitData } = await supabase
+          .from('erp_partner_commitments')
+          .select('committed_amount, paid_amount')
+          .eq('commitment_id', commitmentId)
+          .maybeSingle();
+
+        if (commitData) {
+          const newPaid = D(commitData.paid_amount || 0).plus(D(tx.amount || 0));
+          const committed = D(commitData.committed_amount || 0);
+          const newStatus = newPaid.gte(committed) ? 'PAID' : 'PARTIALLY_PAID';
+          await supabase
+            .from('erp_partner_commitments')
+            .update({
+              paid_amount: newPaid.toFixed(2),
+              status: newStatus,
+              updated_at: new Date().toISOString()
+            })
+            .eq('commitment_id', commitmentId);
+        }
+      } catch (commitErr) {
+        console.warn('Error updating linked partner commitment:', commitErr);
+      }
+    }
   }
 
   /**
@@ -1751,6 +2087,14 @@ export class ERPSupabaseService {
   static async loadPartnerTransactions(
     supabase: SupabaseClient
   ): Promise<ERPPartnerTransaction[]> {
+    if (process.env.NODE_ENV === 'development') {
+      try {
+        const { data: sessionData } = await supabase.auth.getSession();
+        if (!sessionData?.session) return [];
+      } catch {
+        return [];
+      }
+    }
     try {
       const { data, error } = await supabase
         .from('erp_partner_transactions')
@@ -1770,7 +2114,10 @@ export class ERPSupabaseService {
         amount: D((row.amount as string | number) || 0).toFixed(2),
         property_id: (row.property_id as string) || undefined,
         property_title: (row.property_title as string) || undefined,
-        payment_method: row.routing_account === '101000' ? 'CASH_101000' : 'BANK_102000',
+        commitment_id: (row.commitment_id as string) || undefined,
+        payment_method: row.routing_account === '101000' 
+          ? (String(row.notes || '').toLowerCase().includes('instapay') || String(row.notes || '').includes('إنستاباي') ? 'INSTAPAY_102000' : 'CASH_101000') 
+          : 'BANK_102000',
         journal_entry_number: undefined,
         date: row.date as string,
         status: 'COMPLETED' as const,
@@ -1780,6 +2127,100 @@ export class ERPSupabaseService {
       if (isAuthError(e)) throw e;
       if (this.isSchemaCacheError(e)) return [];
       console.warn('Failed to load partner transactions:', e);
+      return [];
+    }
+  }
+
+  /**
+   * Persist a partner milestone commitment in Supabase
+   */
+  static async persistPartnerCommitment(
+    supabase: SupabaseClient,
+    commitment: Partial<ERPPartnerCommitment>
+  ): Promise<ERPPartnerCommitment> {
+    const rawId = commitment.commitment_id;
+    const cleanId = rawId && isUUID(rawId) ? rawId : generateUUID();
+    const row = {
+      commitment_id: cleanId,
+      property_id: commitment.property_id,
+      partner_name: commitment.partner_name,
+      partner_id: commitment.partner_id && isUUID(commitment.partner_id) ? commitment.partner_id : null,
+      milestone_name: commitment.milestone_name,
+      milestone_phase: commitment.milestone_phase || null,
+      committed_amount: D(commitment.committed_amount || 0).toFixed(2),
+      paid_amount: D(commitment.paid_amount || 0).toFixed(2),
+      due_date: commitment.due_date,
+      status: commitment.status || 'PENDING',
+      notes: commitment.notes || null,
+      created_by: commitment.created_by || 'SYSTEM',
+      updated_at: new Date().toISOString()
+    };
+
+    const { data, error } = await supabase
+      .from('erp_partner_commitments')
+      .upsert(row, { onConflict: 'commitment_id' })
+      .select()
+      .single();
+
+    if (error) {
+      throw error;
+    }
+
+    return {
+      commitment_id: data.commitment_id as string,
+      property_id: data.property_id as string,
+      partner_name: data.partner_name as string,
+      partner_id: (data.partner_id as string) || undefined,
+      milestone_name: data.milestone_name as string,
+      milestone_phase: (data.milestone_phase as string) || undefined,
+      committed_amount: D(data.committed_amount as string | number).toFixed(2),
+      paid_amount: D(data.paid_amount as string | number).toFixed(2),
+      due_date: data.due_date as string,
+      status: data.status as PartnerCommitmentStatus,
+      notes: (data.notes as string) || undefined,
+      created_by: (data.created_by as string) || undefined,
+      created_at: (data.created_at as string) || undefined,
+      updated_at: (data.updated_at as string) || undefined
+    };
+  }
+
+  /**
+   * Load partner commitments from Supabase
+   */
+  static async loadPartnerCommitments(
+    supabase: SupabaseClient
+  ): Promise<ERPPartnerCommitment[]> {
+    try {
+      const { data, error } = await supabase
+        .from('erp_partner_commitments')
+        .select('*')
+        .order('due_date', { ascending: true });
+
+      if (error) {
+        if (this.isSchemaCacheError(error)) return [];
+        throw error;
+      }
+
+      return (data || []).map(row => ({
+        commitment_id: row.commitment_id as string,
+        property_id: row.property_id as string,
+        partner_name: row.partner_name as string,
+        partner_id: (row.partner_id as string) || undefined,
+        milestone_name: row.milestone_name as string,
+        milestone_phase: (row.milestone_phase as string) || undefined,
+        committed_amount: D(row.committed_amount as string | number).toFixed(2),
+        paid_amount: D(row.paid_amount as string | number).toFixed(2),
+        due_date: row.due_date as string,
+        status: row.status as PartnerCommitmentStatus,
+        notes: (row.notes as string) || undefined,
+        created_by: (row.created_by as string) || undefined,
+        created_at: (row.created_at as string) || undefined,
+        updated_at: (row.updated_at as string) || undefined
+      }));
+    } catch (e) {
+      if (isAuthError(e)) throw e;
+      if (this.isSchemaCacheError(e)) return [];
+      console.warn('Failed to load partner commitments:', e);
       return [];
     }
   }
@@ -1832,6 +2273,14 @@ export class ERPSupabaseService {
   static async loadPartnerProfiles(
     supabase: SupabaseClient
   ): Promise<ERPPartnerProfile[]> {
+    if (process.env.NODE_ENV === 'development') {
+      try {
+        const { data: sessionData } = await supabase.auth.getSession();
+        if (!sessionData?.session) return [];
+      } catch {
+        return [];
+      }
+    }
     try {
       const { data, error } = await supabase
         .from('erp_partner_profiles')
@@ -1858,5 +2307,69 @@ export class ERPSupabaseService {
       return [];
     }
   }
+
+  /**
+   * Persist a dated, versioned estimate-to-complete for a unit or property
+   */
+  static async persistUnitEstimate(
+    supabase: SupabaseClient,
+    estimate: ERPUnitEstimate
+  ): Promise<void> {
+    const payload = {
+      estimate_id: ensureUUID(estimate.estimate_id),
+      property_id: estimate.property_id,
+      building_unit_id: estimate.building_unit_id || null,
+      unit_number: estimate.unit_number || null,
+      as_of_date: estimate.as_of_date || new Date().toISOString().split('T')[0],
+      forecast_cost_to_complete: estimate.forecast_cost_to_complete,
+      confidence_score: estimate.confidence_score !== undefined ? estimate.confidence_score : null,
+      notes: estimate.notes || null,
+      created_by: estimate.created_by || 'SYSTEM'
+    };
+
+    const { error } = await supabase.from('erp_unit_estimates').insert(payload);
+    if (error) {
+      if (this.isSchemaCacheError(error)) return;
+      throw error;
+    }
+  }
+
+  /**
+   * Fetch dated, versioned estimates-to-complete for a property or all properties
+   */
+  static async fetchUnitEstimates(
+    supabase: SupabaseClient,
+    propertyId?: string
+  ): Promise<ERPUnitEstimate[]> {
+    try {
+      let query = supabase.from('erp_unit_estimates').select('*').order('as_of_date', { ascending: false });
+      if (propertyId) {
+        query = query.eq('property_id', propertyId);
+      }
+      const { data, error } = await query;
+      if (error) {
+        if (this.isSchemaCacheError(error)) return [];
+        throw error;
+      }
+      return (data || []).map(u => ({
+        estimate_id: u.estimate_id as string,
+        property_id: u.property_id as string,
+        building_unit_id: (u.building_unit_id as string) || undefined,
+        unit_number: (u.unit_number as string) || undefined,
+        as_of_date: u.as_of_date as string,
+        forecast_cost_to_complete: D((u.forecast_cost_to_complete as string | number) || 0).toFixed(2),
+        confidence_score: u.confidence_score !== undefined && u.confidence_score !== null ? Number(u.confidence_score) : undefined,
+        notes: (u.notes as string) || undefined,
+        created_by: (u.created_by as string) || undefined,
+        created_at: (u.created_at as string) || undefined
+      }));
+    } catch (e) {
+      if (isAuthError(e)) throw e;
+      if (this.isSchemaCacheError(e)) return [];
+      console.warn('Failed to fetch unit estimates:', e);
+      return [];
+    }
+  }
 }
+
 

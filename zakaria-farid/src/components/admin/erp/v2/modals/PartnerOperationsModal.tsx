@@ -37,6 +37,7 @@ import { exportPartnerDossierExcel } from '@/lib/erp/excelExporter';
 import { tafqeetEGP } from '@/lib/erp/tafqeet';
 import { toast } from 'sonner';
 import { ZFCustomSelect, ZFCustomSelectItem } from '../common/ZFCustomSelect';
+import { ZFModalShell } from '../common/ZFModalShell';
 import { PRIMARY_DEVELOPER_NAME } from '@/lib/erp/partnersDirectory';
 
 export interface PartnerOperationsModalProps {
@@ -210,11 +211,11 @@ export const PartnerOperationsModal: React.FC<PartnerOperationsModalProps> = ({
         sublabelAr: `${prop.location || 'الشرقية'} • ${prop.area_sqm || 0} م²`,
         sublabelEn: `${prop.location || 'Sharkia'} • ${prop.area_sqm || 0} sqm`,
         badge: prop.completion_status === 'ready' ? (isAr ? 'جاهز' : 'Ready') : (isAr ? 'قيد التطوير' : 'In Progress'),
-        badgeBg: prop.completion_status === 'ready' ? 'rgba(21, 128, 61, 0.08)' : 'rgba(148, 111, 35, 0.08)',
-        badgeTextColor: prop.completion_status === 'ready' ? '#15803d' : '#946f23',
+        badgeBg: prop.completion_status === 'ready' ? 'rgba(21, 128, 61, 0.08)' : '#eff6ff',
+        badgeTextColor: prop.completion_status === 'ready' ? '#15803d' : '#2563eb',
         icon: Building2,
-        iconBg: 'rgba(148, 111, 35, 0.1)',
-        iconColor: '#946f23'
+        iconBg: '#eff6ff',
+        iconColor: '#2563eb'
       }))
     ];
   }, [properties, isAr]);
@@ -241,11 +242,11 @@ export const PartnerOperationsModal: React.FC<PartnerOperationsModalProps> = ({
         sublabelAr: `${prop.location || 'الشرقية'} • ${prop.area_sqm || 0} م²`,
         sublabelEn: `${prop.location || 'Sharkia'} • ${prop.area_sqm || 0} sqm`,
         badge: prop.completion_status === 'ready' ? (isAr ? 'جاهز' : 'Ready') : (isAr ? 'قيد التطوير' : 'In Progress'),
-        badgeBg: prop.completion_status === 'ready' ? 'rgba(21, 128, 61, 0.08)' : 'rgba(148, 111, 35, 0.08)',
-        badgeTextColor: prop.completion_status === 'ready' ? '#15803d' : '#946f23',
+        badgeBg: prop.completion_status === 'ready' ? 'rgba(21, 128, 61, 0.08)' : '#eff6ff',
+        badgeTextColor: prop.completion_status === 'ready' ? '#15803d' : '#2563eb',
         icon: Building2,
-        iconBg: 'rgba(148, 111, 35, 0.1)',
-        iconColor: '#946f23'
+        iconBg: '#eff6ff',
+        iconColor: '#2563eb'
       }))
     ];
   }, [properties, isAr]);
@@ -343,112 +344,32 @@ export const PartnerOperationsModal: React.FC<PartnerOperationsModalProps> = ({
   const injectionNum = parseFloat(injectionAmount) || 0;
 
   return (
-    <div style={{
-      position: 'fixed',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      background: 'rgba(15, 23, 42, 0.65)',
-      backdropFilter: 'blur(10px)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      zIndex: 9999,
-      padding: '1.25rem',
-      direction: isAr ? 'rtl' : 'ltr'
-    }}>
-      <div 
-        style={{
-          background: '#ffffff',
-          border: '1px solid #cbd5e1',
-          borderRadius: '24px',
-          width: '100%',
-          maxWidth: '1200px',
-          maxHeight: '90vh',
-          height: 'min(870px, 90vh)',
-          boxShadow: '0 25px 65px -15px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(0,0,0,0.04)',
-          overflow: 'hidden',
-          display: 'flex',
-          flexDirection: 'column'
-        }}
-        onClick={e => e.stopPropagation()}
-      >
-        {/* ══════════════════════════════════════════════════════════════════════════
-            1. TOP HEADER BAR
-            ══════════════════════════════════════════════════════════════════════════ */}
-        <div style={{
-          padding: 'clamp(0.85rem, 2vw, 1.1rem) clamp(1rem, 2.5vw, 1.75rem)',
-          borderBottom: '1px solid #e2e8f0',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          background: 'linear-gradient(135deg, #f8fafc 0%, #ffffff 100%)',
-          flexShrink: 0
+    <ZFModalShell
+      isOpen={isOpen}
+      onClose={onClose}
+      title={isAr ? 'إدارة وتوزيعات الشركاء والممولين (غرفة العمليات المركزية)' : 'Partner Management & Distributions Workbench'}
+      subtitle={isAr 
+        ? 'متابعة وتدقيق أرصدة الشركاء، صرف دفعات الأرباح، ضخ مساهمات رأس المال، وإصدار كشوف الحسابات بالمليم.' 
+        : 'Track partner balances, disburse profit distributions, inject capital, and view transaction history.'}
+      icon={<Users size={18} />}
+      headerExtra={
+        <span style={{
+          background: 'rgba(184, 144, 62, 0.12)',
+          color: '#946f23',
+          border: '1px solid rgba(184, 144, 62, 0.25)',
+          padding: '0.18rem 0.65rem',
+          borderRadius: '20px',
+          fontSize: '0.72rem',
+          fontWeight: 800
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
-            <div style={{
-              width: '44px',
-              height: '44px',
-              borderRadius: '12px',
-              background: 'linear-gradient(135deg, rgba(184, 144, 62, 0.18) 0%, rgba(184, 144, 62, 0.06) 100%)',
-              border: '1px solid rgba(184, 144, 62, 0.35)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: '#946f23',
-              flexShrink: 0
-            }}>
-              <Users size={22} />
-            </div>
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-                <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: '#0f172a' }}>
-                  {isAr ? 'إدارة وتوزيعات الشركاء والممولين (غرفة العمليات المركزية)' : 'Partner Management & Distributions Workbench'}
-                </h3>
-                <span style={{
-                  background: 'rgba(184, 144, 62, 0.12)',
-                  color: '#946f23',
-                  border: '1px solid rgba(184, 144, 62, 0.25)',
-                  padding: '0.18rem 0.65rem',
-                  borderRadius: '20px',
-                  fontSize: '0.72rem',
-                  fontWeight: 800
-                }}>
-                  {isAr ? 'نظام الشقين • رأس المال والأرباح' : 'Two-Sided Studio'}
-                </span>
-              </div>
-              <p style={{ margin: '0.2rem 0 0', fontSize: '0.75rem', color: '#64748b' }}>
-                {isAr 
-                  ? 'متابعة وتدقيق أرصدة الشركاء، صرف دفعات الأرباح، ضخ مساهمات رأس المال، وإصدار كشوف الحسابات بالمليم.' 
-                  : 'Track partner balances, disburse profit distributions, inject capital, and view transaction history.'}
-              </p>
-            </div>
-          </div>
-
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label={isAr ? 'إغلاق' : 'Close'}
-            style={{
-              background: '#ffffff',
-              border: '1px solid #e2e8f0',
-              borderRadius: '10px',
-              color: '#64748b',
-              width: '44px',
-              height: '44px',
-              minWidth: '44px',
-              minHeight: '44px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              cursor: 'pointer',
-              transition: 'all 0.15s ease'
-            }}
-          >
-            <X size={18} />
-          </button>
-        </div>
+          {isAr ? 'نظام الشقين • رأس المال والأرباح' : 'Two-Sided Studio'}
+        </span>
+      }
+      isAr={isAr}
+      maxWidth="1200px"
+      maxHeight="min(870px, 90vh)"
+      bodyStyle={{ padding: 0, display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}
+    >
 
         {/* ══════════════════════════════════════════════════════════════════════════
             2. TWO-SIDED MASTER-DETAIL GRID
@@ -1191,13 +1112,18 @@ export const PartnerOperationsModal: React.FC<PartnerOperationsModalProps> = ({
 
                     {/* Payment Method Cards */}
                     <div>
-                      <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 800, color: '#0f172a', marginBottom: '0.45rem' }}>
-                        {isAr ? 'طريقة وخزينة صرف الدفعة *' : 'Payout Payment Method *'}
-                      </label>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.45rem' }}>
+                        <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 800, color: '#0f172a' }}>
+                          {isAr ? 'طريقة الصرف والسداد *' : 'Payout Method *'}
+                        </label>
+                        <span style={{ fontSize: '0.66rem', fontWeight: 700, color: '#946f23', background: 'rgba(184, 144, 62, 0.08)', padding: '0.12rem 0.45rem', borderRadius: '5px' }}>
+                          {isAr ? 'جهة الصرف الموحدة: الخزينة التشغيلية الرئيسية (101000)' : 'Source: Main Operating Treasury (101000)'}
+                        </span>
+                      </div>
                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.65rem' }}>
                         {[
-                          { id: 'CASH_101000', title: isAr ? 'خزينة نقدية (101000)' : 'Cash Vault', sub: isAr ? 'صرف كاش باليد من الخزنة' : 'Safe cash', icon: Wallet },
-                          { id: 'INSTAPAY_102000', title: isAr ? 'إنستاباي فوري (102000)' : 'InstaPay Transfer', sub: isAr ? 'تحويل لحساب/محفظة الشريك' : 'Instant mobile transfer', icon: Smartphone }
+                          { id: 'CASH_101000', title: isAr ? 'كاش نقدي باليد' : 'Cash in Hand', sub: isAr ? 'صرف نقدية فعلية من الخزينة (101000)' : 'Vault cash disbursement (101000)', icon: Wallet },
+                          { id: 'INSTAPAY_102000', title: isAr ? 'تحويل إنستاباي فوري' : 'InstaPay Transfer', sub: isAr ? 'تحويل إلكتروني من الخزينة للشريك (101000)' : 'Instant transfer from treasury (101000)', icon: Smartphone }
                         ].map(m => {
                           const Icon = m.icon;
                           const isSelected = payoutMethod === m.id;
@@ -1330,7 +1256,7 @@ export const PartnerOperationsModal: React.FC<PartnerOperationsModalProps> = ({
                             <strong style={{ color: '#d4af37' }}>{formatEGP(payoutNum)}</strong>
                           </div>
                           <div style={{ display: 'flex', justifyContent: 'space-between', color: '#94a3b8', paddingRight: isAr ? '1.5rem' : '0', paddingLeft: isAr ? '0' : '1.5rem' }}>
-                            <span>إلى حـ/ {payoutMethod === 'CASH_101000' ? '101000 خزينة النقدية الرئيسية' : '102000 تحويلات إنستاباي الفورية'} (دائن)</span>
+                            <span>إلى حـ/ {payoutMethod === 'CASH_101000' ? (isAr ? '101000 خزينة النقدية الرئيسية (كاش)' : '101000 Main Cash Vault (Cash)') : (isAr ? '101000 الخزينة الرئيسية (تحويل إنستاباي)' : '101000 Main Treasury (InstaPay)')} (دائن)</span>
                             <strong style={{ color: '#94a3b8' }}>{formatEGP(payoutNum)}</strong>
                           </div>
                         </div>
@@ -1458,13 +1384,18 @@ export const PartnerOperationsModal: React.FC<PartnerOperationsModalProps> = ({
 
                     {/* Payment Method Cards */}
                     <div>
-                      <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 800, color: '#0f172a', marginBottom: '0.45rem' }}>
-                        {isAr ? 'طريقة وخزينة توريد المساهمة *' : 'Capital Injection Method *'}
-                      </label>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.45rem' }}>
+                        <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 800, color: '#0f172a' }}>
+                          {isAr ? 'طريقة الاستلام والتوريد *' : 'Deposit Method *'}
+                        </label>
+                        <span style={{ fontSize: '0.66rem', fontWeight: 700, color: '#047857', background: 'rgba(4, 120, 87, 0.08)', padding: '0.12rem 0.45rem', borderRadius: '5px' }}>
+                          {isAr ? 'جهة الإيداع الموحدة: الخزينة التشغيلية الرئيسية (101000)' : 'Destination: Main Operating Treasury (101000)'}
+                        </span>
+                      </div>
                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.65rem' }}>
                         {[
-                          { id: 'CASH_101000', title: isAr ? 'توريد نقد بالخزينة (101000)' : 'Cash Safe Deposit', sub: isAr ? 'استلام كاش باليد في الخزنة' : 'Vault cash received', icon: Wallet },
-                          { id: 'INSTAPAY_102000', title: isAr ? 'تحويل إنستاباي فوري (102000)' : 'InstaPay Transfer', sub: isAr ? 'تحويل فوري عبر تطبيق إنستاباي' : 'Instant mobile deposit', icon: Smartphone }
+                          { id: 'CASH_101000', title: isAr ? 'كاش نقدي باليد' : 'Cash in Hand', sub: isAr ? 'استلام نقدية فعلية والتوريد بالخزينة (101000)' : 'Safe cash received (101000)', icon: Wallet },
+                          { id: 'INSTAPAY_102000', title: isAr ? 'تحويل إنستاباي فوري' : 'InstaPay Transfer', sub: isAr ? 'تحويل إلكتروني فوري إيداع بالخزينة (101000)' : 'Instant transfer to safe (101000)', icon: Smartphone }
                         ].map(m => {
                           const Icon = m.icon;
                           const isSelected = injectionMethod === m.id;
@@ -1593,7 +1524,7 @@ export const PartnerOperationsModal: React.FC<PartnerOperationsModalProps> = ({
 
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem', fontSize: '0.78rem' }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', color: '#f8fafc' }}>
-                            <span>من حـ/ {injectionMethod === 'CASH_101000' ? '101000 خزينة النقدية الرئيسية' : '102000 تحويلات إنستاباي الفورية'} (مدين)</span>
+                            <span>من حـ/ {injectionMethod === 'CASH_101000' ? (isAr ? '101000 خزينة النقدية الرئيسية (كاش)' : '101000 Main Cash Vault (Cash)') : (isAr ? '101000 الخزينة الرئيسية (تحويل إنستاباي)' : '101000 Main Treasury (InstaPay)')} (مدين)</span>
                             <strong style={{ color: '#d4af37' }}>{formatEGP(injectionNum)}</strong>
                           </div>
                           <div style={{ display: 'flex', justifyContent: 'space-between', color: '#94a3b8', paddingRight: isAr ? '1.5rem' : '0', paddingLeft: isAr ? '0' : '1.5rem' }}>
@@ -1845,7 +1776,6 @@ export const PartnerOperationsModal: React.FC<PartnerOperationsModalProps> = ({
           </div>
 
         </div>
-      </div>
-    </div>
+    </ZFModalShell>
   );
 };

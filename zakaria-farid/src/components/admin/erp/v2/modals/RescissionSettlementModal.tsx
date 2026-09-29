@@ -20,11 +20,13 @@ import {
 } from 'lucide-react';
 import { ERPContract, ERPInstallmentSchedule, ERPAccountingPeriod } from '@/lib/erp/types';
 import { RescissionEngine } from '@/lib/erp/rescission';
+import { resolvePeriodForDate } from '@/lib/erp/ledger';
 import { D, formatEGP } from '@/lib/erp/math';
 import { MoneyCell } from '@/components/erp/MoneyCell';
 import { LegalVerificationTag } from '@/components/erp/LegalVerificationTag';
 import { BranchDecisionCard } from '@/components/erp/BranchDecisionCard';
 import { JournalEntryPreview } from '@/components/erp/JournalEntryPreview';
+import { ZFModalShell } from '../common/ZFModalShell';
 
 export interface RescissionSettlementModalProps {
   isOpen: boolean;
@@ -33,6 +35,7 @@ export interface RescissionSettlementModalProps {
   contracts?: ERPContract[];
   schedules: ERPInstallmentSchedule[];
   activePeriod: ERPAccountingPeriod;
+  periods?: ERPAccountingPeriod[];
   onConfirmRescission: (details: {
     selectedBranch: 'Branch1_PreDelivery' | 'Branch2_PostDelivery';
     rescissionDate: string;
@@ -49,6 +52,7 @@ export const RescissionSettlementModal: React.FC<RescissionSettlementModalProps>
   contracts = [],
   schedules,
   activePeriod,
+  periods,
   onConfirmRescission,
   isMutating = false,
   isAr = true
@@ -118,20 +122,33 @@ export const RescissionSettlementModal: React.FC<RescissionSettlementModalProps>
     return schedules.filter(s => s.contract_id === activeContract.contract_id);
   }, [schedules, activeContract]);
 
+  const targetPeriod = useMemo(() => {
+    return resolvePeriodForDate(rescissionDate, periods || [activePeriod], activePeriod);
+  }, [rescissionDate, periods, activePeriod]);
+  const isTargetPeriodLocked = targetPeriod.status !== 'OPEN';
+
   // Compute rescission metrics
   const computed = useMemo(() => {
-    if (!activeContract) return null;
-    return RescissionEngine.processRescission(
-      activeContract,
-      contractSchedules,
-      activePeriod,
-      rescissionDate,
-      D(activeContract.gross_contract_value).times('0.45').toFixed(),
-      '501000',
-      '151000',
-      'CFO_FARID'
-    );
-  }, [activeContract, contractSchedules, activePeriod, rescissionDate]);
+    if (!activeContract || !targetPeriod) return null;
+    try {
+      const calculationPeriod: ERPAccountingPeriod = targetPeriod.status === 'OPEN'
+        ? targetPeriod
+        : { ...targetPeriod, status: 'OPEN' };
+      return RescissionEngine.processRescission(
+        activeContract,
+        contractSchedules,
+        calculationPeriod,
+        rescissionDate,
+        D(activeContract.gross_contract_value).times('0.45').toFixed(),
+        '501000',
+        '151000',
+        'CFO_FARID'
+      );
+    } catch (err) {
+      console.warn('Rescission preview computation error:', err);
+      return null;
+    }
+  }, [activeContract, contractSchedules, targetPeriod, rescissionDate]);
 
   if (!isOpen || !activeContract || !computed) return null;
 
@@ -162,113 +179,38 @@ export const RescissionSettlementModal: React.FC<RescissionSettlementModalProps>
     });
   };
 
-  return (
-    <div style={{
-      position: 'fixed',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      background: 'rgba(15, 23, 42, 0.65)',
-      backdropFilter: 'blur(10px)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      zIndex: 9999,
-      padding: '1.25rem',
-      direction: isAr ? 'rtl' : 'ltr'
-    }}>
-      <div 
-        style={{
-          background: '#ffffff',
-          border: '1px solid #cbd5e1',
-          borderRadius: '24px',
-          width: '100%',
-          maxWidth: '1180px',
-          maxHeight: '90vh',
-          height: 'min(880px, 90vh)',
-          boxShadow: '0 25px 65px -15px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(0,0,0,0.04)',
-          overflow: 'hidden',
-          display: 'flex',
-          flexDirection: 'column'
-        }}
-        onClick={e => e.stopPropagation()}
-      >
-        {/* ══════════════════════════════════════════════════════════════════════════
-            1. TOP HEADER BAR
-            ══════════════════════════════════════════════════════════════════════════ */}
-        <div style={{
-          padding: 'clamp(0.85rem, 2vw, 1.1rem) clamp(1rem, 2.5vw, 1.75rem)',
-          borderBottom: '1px solid #e2e8f0',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          background: 'linear-gradient(135deg, #fef2f2 0%, #ffffff 100%)',
-          flexShrink: 0
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
-            <div style={{
-              width: '42px',
-              height: '42px',
-              borderRadius: '12px',
-              background: 'rgba(239, 68, 68, 0.12)',
-              border: '1px solid rgba(239, 68, 68, 0.25)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: '#dc2626',
-              flexShrink: 0
-            }}>
-              <RotateCcw size={22} />
-            </div>
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-                <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: '#0f172a' }}>
-                  {isAr ? 'معالج فسخ العقد وتطبيق حد حظر مطالبة العميل بعجز إضافي (Forfeiture Floor)' : 'Contract Rescission & Forfeiture Floor Settlement'}
-                </h3>
-                <span style={{
-                  background: 'rgba(239, 68, 68, 0.1)',
-                  color: '#dc2626',
-                  border: '1px solid rgba(239, 68, 68, 0.25)',
-                  padding: '0.18rem 0.65rem',
-                  borderRadius: '20px',
-                  fontSize: '0.72rem',
-                  fontWeight: 800
-                }}>
-                  {isAr ? 'حد حظر مطالبة العميل بعجز إضافي' : 'Statutory Floor Engine'}
-                </span>
-              </div>
-              <p style={{ margin: '0.2rem 0 0', fontSize: '0.75rem', color: '#64748b' }}>
-                {isAr 
-                  ? 'احتساب غرامة الفسخ القانونية (١٠٪) مع تطبيق حد حظر مطالبة العميل بعجز إضافي (العميل لن يُطالب بأي مبالغ إضافية إذا كانت مدفوعاته أقل من الغرامة)، ورد المستحق وإلغاء الأقساط المستقبلية تلقائياً.' 
-                  : 'Calculate statutory penalty retention with Forfeiture Floor protection (client is never billed for deficits if payments were less than penalty).'}
-              </p>
-            </div>
-          </div>
+  const handleModalClose = () => {
+    setRescissionSuccess(null);
+    onClose();
+  };
 
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label={isAr ? 'إغلاق' : 'Close'}
-            style={{
-              background: '#ffffff',
-              border: '1px solid #e2e8f0',
-              borderRadius: '10px',
-              color: '#64748b',
-              width: '44px',
-              height: '44px',
-              minWidth: '44px',
-              minHeight: '44px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              cursor: 'pointer',
-              transition: 'all 0.15s ease'
-            }}
-          >
-            <X size={18} />
-          </button>
-        </div>
+  return (
+    <ZFModalShell
+      isOpen={isOpen}
+      onClose={handleModalClose}
+      title={isAr ? 'معالج فسخ العقد وتطبيق حد حظر مطالبة العميل بعجز إضافي (Forfeiture Floor)' : 'Contract Rescission & Forfeiture Floor Settlement'}
+      subtitle={isAr 
+        ? 'احتساب غرامة الفسخ القانونية (١٠٪) مع تطبيق حد حظر مطالبة العميل بعجز إضافي (العميل لن يُطالب بأي مبالغ إضافية إذا كانت مدفوعاته أقل من الغرامة)، ورد المستحق وإلغاء الأقساط المستقبلية تلقائياً.' 
+        : 'Calculate statutory penalty retention with Forfeiture Floor protection (client is never billed for deficits if payments were less than penalty).'}
+      icon={<RotateCcw size={18} />}
+      headerExtra={
+        <span style={{
+          background: 'rgba(239, 68, 68, 0.1)',
+          color: '#dc2626',
+          border: '1px solid rgba(239, 68, 68, 0.25)',
+          padding: '0.18rem 0.65rem',
+          borderRadius: '20px',
+          fontSize: '0.72rem',
+          fontWeight: 800
+        }}>
+          {isAr ? 'حد حظر مطالبة العميل بعجز إضافي' : 'Statutory Floor Engine'}
+        </span>
+      }
+      isAr={isAr}
+      maxWidth="1180px"
+      maxHeight="min(880px, 90vh)"
+      bodyStyle={{ padding: 0, display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}
+    >
 
         {/* ══════════════════════════════════════════════════════════════════════════
             2. TWO-SIDED MASTER-DETAIL GRID
@@ -705,6 +647,33 @@ export const RescissionSettlementModal: React.FC<RescissionSettlementModalProps>
                   </div>
                 </div>
 
+                {/* Fiscal Period Locked Warning Banner */}
+                {isTargetPeriodLocked && (
+                  <div style={{
+                    background: '#fef2f2',
+                    border: '1.5px solid #fecaca',
+                    borderRadius: '12px',
+                    padding: '0.85rem 1rem',
+                    marginBottom: '1rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.75rem',
+                    color: '#991b1b'
+                  }}>
+                    <AlertCircle size={20} color="#dc2626" style={{ flexShrink: 0 }} />
+                    <div>
+                      <strong style={{ fontSize: '0.82rem', display: 'block' }}>
+                        {isAr ? 'الفترة المحاسبية لتاريخ الفسخ مقفلة' : 'Fiscal period is locked'}
+                      </strong>
+                      <span style={{ fontSize: '0.73rem', color: '#b91c1c' }}>
+                        {isAr
+                          ? `تاريخ الفسخ يقع في الفترة (${targetPeriod.fiscal_year}-M${targetPeriod.period_number}) وهي مقفلة بموجب المعيار Invariant 0.9. يُحظر تسجيل قيود فسخ داخل فترة مقفلة.`
+                          : `Rescission date falls in period (${targetPeriod.fiscal_year}-M${targetPeriod.period_number}) which is locked per Invariant 0.9.`}
+                      </span>
+                    </div>
+                  </div>
+                )}
+
                 {/* Rescission Decision Cards (Branch 1 Pre-delivery vs Branch 2 Post-delivery) */}
                 <BranchDecisionCard 
                   contract={activeContract}
@@ -813,32 +782,43 @@ export const RescissionSettlementModal: React.FC<RescissionSettlementModalProps>
                   <button
                     type="button"
                     onClick={handleSubmit}
-                    disabled={isMutating}
+                    disabled={isMutating || isTargetPeriodLocked}
                     style={{
-                      background: 'linear-gradient(135deg, #ef4444 0%, #b91c1c 100%)',
+                      background: isTargetPeriodLocked 
+                        ? '#94a3b8' 
+                        : 'linear-gradient(135deg, #ef4444 0%, #b91c1c 100%)',
                       color: '#ffffff',
                       border: 'none',
                       padding: '0.6rem 1.6rem',
                       borderRadius: '10px',
                       fontSize: '0.84rem',
                       fontWeight: 800,
-                      cursor: isMutating ? 'not-allowed' : 'pointer',
+                      cursor: (isMutating || isTargetPeriodLocked) ? 'not-allowed' : 'pointer',
                       minHeight: '44px',
                       display: 'inline-flex',
                       alignItems: 'center',
                       gap: '0.5rem',
-                      boxShadow: '0 4px 14px rgba(239, 68, 68, 0.3)'
+                      boxShadow: isTargetPeriodLocked ? 'none' : '0 4px 14px rgba(239, 68, 68, 0.3)'
                     }}
                   >
-                    {isMutating ? <Loader2 size={15} className="animate-spin" /> : <RotateCcw size={15} />}
-                    <span>{isAr ? 'تأكيد الفسخ وترحيل القيد بالدفاتر' : 'Confirm & Post Rescission Entry'}</span>
+                    {isMutating ? (
+                      <Loader2 size={15} className="animate-spin" />
+                    ) : isTargetPeriodLocked ? (
+                      <AlertCircle size={15} />
+                    ) : (
+                      <RotateCcw size={15} />
+                    )}
+                    <span>
+                      {isTargetPeriodLocked 
+                        ? (isAr ? `الفترة المحاسبية مقفلة (M${targetPeriod.period_number})` : `Period Locked (M${targetPeriod.period_number})`)
+                        : (isAr ? 'تأكيد الفسخ وترحيل القيد بالدفاتر' : 'Confirm & Post Rescission Entry')}
+                    </span>
                   </button>
                 </div>
               </>
             )}
           </div>
         </div>
-      </div>
-    </div>
+    </ZFModalShell>
   );
 };

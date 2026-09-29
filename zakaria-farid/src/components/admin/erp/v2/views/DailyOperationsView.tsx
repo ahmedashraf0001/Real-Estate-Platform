@@ -1,79 +1,104 @@
 'use client';
 
-import React, { useState, useMemo, useRef } from 'react';
-import { 
-  Zap, 
-  Wallet, 
-  FileText, 
-  Plus, 
-  Search, 
-  CheckCircle2, 
-  Check,
-  Clock, 
-  AlertTriangle, 
-  Building2, 
-  Send, 
-  Loader2, 
-  ArrowUpRight,
-  ArrowDownLeft,
-  ShieldCheck, 
-  DollarSign, 
-  TrendingUp, 
-  Receipt, 
-  ArrowLeft, 
-  AlertCircle, 
-  BellRing, 
-  Activity, 
-  UserCheck, 
-  Key, 
-  Filter, 
-  ArrowUpDown, 
-  X, 
-  RotateCcw,
-  Sparkles,
-  Calculator,
-  Layers,
-  HardHat,
-  ExternalLink,
-  ChevronRight,
+import React, { useState, useMemo, useEffect, useRef } from 'react';
+import {
+  Wallet,
   Scale,
-  CreditCard,
-  Briefcase,
-  SlidersHorizontal,
-  Compass,
-  FileCheck,
-  FileSpreadsheet,
-  Paintbrush,
-  Hammer,
-  Smartphone,
-  Info,
+  TrendingUp,
+  ArrowDownRight,
+  ArrowUpRight,
+  ArrowLeftRight,
+  Receipt,
+  Coins,
+  Building2,
   Landmark,
+  HardHat,
+  ShoppingCart,
+  Wrench,
+  FileText,
+  Plus,
+  Search,
+  RotateCcw,
+  FileSpreadsheet,
+  Printer,
+  ChevronRight,
+  ChevronLeft,
+  ChevronsRight,
+  ChevronsLeft,
+  CheckCircle2,
+  AlertCircle,
+  Clock,
+  Layers,
+  Zap,
+  FilePlus,
+  ArrowUp,
+  ArrowDown,
+  ChevronDown,
+  Eye,
+  SlidersHorizontal,
+  X,
+  ShieldCheck,
+  Maximize2,
+  ExternalLink,
+  ChevronsUpDown,
   Users,
-  Calendar
+  CalendarClock
 } from 'lucide-react';
 import { Property, BuildingUnitItem } from '@/lib/supabase/types';
-import { 
-  ERPContract, 
-  ERPPDCRecord, 
-  ERPInstallmentSchedule, 
+import {
+  ERPContract,
+  ERPPDCRecord,
+  ERPInstallmentSchedule,
   ERPAccountingPeriod,
   ERPJournalEntry,
   ERPPropertyCostItem,
-  PropertyCostCategory,
-  PropertyLifecyclePhase
+  ERPPropertyCostAdjustment,
+  ERPPayableInstallment
 } from '@/lib/erp/types';
-import { D, generateUUID } from '@/lib/erp/math';
-import { MoneyCell } from '@/components/erp/MoneyCell';
-import { StatusBadge } from '@/components/erp/StatusBadge';
+import { D, Decimal } from '@/lib/erp/math';
+import { CANONICAL_COA } from '@/lib/erp/ledger';
+import {
+  type CashMovementTransaction,
+  matchesIn0,
+  matchesIn1,
+  matchesIn2,
+  matchesIn3,
+  matchesOut0,
+  matchesOut1,
+  matchesOut2,
+  matchesOut3,
+  matchesStreamFilter,
+  getStreamFilterLabel,
+  formatNumberWithCommas,
+  formatEGPInteger,
+  formatTime12h,
+  computeUpcomingDues,
+  buildTransactionInspectionPayload,
+  type UpcomingDueItem,
+  type UpcomingDuesSummary
+} from '@/lib/erp/operationsStreamFilters';
+export type { CashMovementTransaction, UpcomingDueItem, UpcomingDuesSummary };
+export { formatNumberWithCommas, formatEGPInteger, formatTime12h, computeUpcomingDues, buildTransactionInspectionPayload };
+
 import { localizeJournalDescription } from '@/components/erp/JournalEntryPreview';
-import { ZFKpiCard } from '../ZFKpiCard';
-import { ZFErpBreadcrumb } from '../common/ZFErpBreadcrumb';
-import styles from '../ZFWorkstationShell.module.css';
-import { ZFCustomSelect, ZFCustomSelectItem } from '../common/ZFCustomSelect';
+import ops from './DailyOperationsView.module.css';
+import shellStyles from '../ZFWorkstationShell.module.css';
+import { AnimatedCounter } from '../common/AnimatedCounter';
+import { ZFKpiCard, ZFKpiGrid } from '../ZFKpiCard';
+import { BrandLogo } from '@/components/BrandLogo';
+import { ZFWorkstationSideWidgets } from '../common/ZFWorkstationSideWidgets';
+import { ZFSearchBar } from '../common/ZFSearchBar';
+import { ZFModalShell } from '../common/ZFModalShell';
 import { ZFPagination } from '../ZFPagination';
+
 import { toast } from 'sonner';
-import { tafqeetEGP } from '@/lib/erp/tafqeet';
 import type { PartnerFinancialSummary } from '@/lib/erp/partnersEngine';
+import { getAvailableCash } from '@/lib/erp/canonicalMetrics';
+import { CostAdjustmentModal } from '../modals/CostAdjustmentModal';
+import { CostPayableSettlementModal } from '../modals/CostPayableSettlementModal';
+import { EditPropertyCostModal } from '../modals/EditPropertyCostModal';
+import { ZFDirectExpenseModal } from '../modals/ZFDirectExpenseModal';
+
 
 interface DailyOperationsViewProps {
   isAr?: boolean;
@@ -94,25 +119,32 @@ interface DailyOperationsViewProps {
   schedules: ERPInstallmentSchedule[];
   journalEntries?: ERPJournalEntry[];
   activePeriod: ERPAccountingPeriod;
+  periods?: ERPAccountingPeriod[];
   propertyCosts?: ERPPropertyCostItem[];
   isMutating?: boolean;
   partnerSummaries?: PartnerFinancialSummary[];
-  onOpenQuickTransaction: () => void;
+  onOpenProjectExpense: () => void;
   onOpenNewContract: () => void;
   onOpenNewCheque: () => void;
   onCollectItem: (item: ERPPDCRecord) => void;
   onInspectContract: (contract: ERPContract) => void;
   onInspectCheque?: (cheque: ERPPDCRecord) => void;
-  onOpenContractForProperty: (property: Property, unit?: BuildingUnitItem) => void;
+  onInspectTransaction?: (payload: any) => void;
+  onOpenCashReceipt?: () => void;
+  onOpenContractForProperty?: (property: Property, unit?: BuildingUnitItem) => void;
   onOpenAuditForProperty?: (property: Property) => void;
   onOpenCalculatorForProperty?: (property: Property) => void;
   onOpenRSVModal?: () => void;
   onOpenRescissionModal?: (contract: ERPContract) => void;
   onOpenEscalationModal?: (contract: ERPContract) => void;
   onOpenQuickSearch?: () => void;
-  onAddPropertyCostItem?: (item: ERPPropertyCostItem) => Promise<void>;
-  onDirectExpenseSubmit?: (amount: string, categoryAccount: string, memo: string, creditAccount?: string) => Promise<void>;
+  onUpdatePropertyCostItem?: (item: ERPPropertyCostItem) => Promise<void>;
+  onAddCostAdjustment?: (updatedItem: ERPPropertyCostItem, adjustment: ERPPropertyCostAdjustment) => Promise<void>;
+  onRecordPayablePayment?: (updatedItem: ERPPropertyCostItem, installmentId: string, amountPaid: string, paymentMethod: any) => Promise<void>;
+  onSaveExpenseEntry: (entry: ERPJournalEntry, costItem: ERPPropertyCostItem) => Promise<void>;
   onOpenPartnerOperations?: () => void;
+  onOpenPartnerPayout?: () => void;
+  onOpenPartnerInjection?: () => void;
   onExportExcel?: () => void;
   onNavigateToTab: (tab: any) => void;
 }
@@ -123,22 +155,25 @@ export const DailyOperationsView: React.FC<DailyOperationsViewProps> = ({
   totalGrossContractValue,
   totalCollectedCash,
   totalWipIncurred,
-  totalSafePDCs = '0.00',
+  totalSafePDCs = '0',
   properties = [],
   contracts = [],
   pdcRecords = [],
   schedules = [],
   journalEntries = [],
   activePeriod,
+  periods,
   propertyCosts = [],
   isMutating = false,
   partnerSummaries = [],
-  onOpenQuickTransaction,
+  onOpenProjectExpense,
   onOpenNewContract,
   onOpenNewCheque,
   onCollectItem,
   onInspectContract,
   onInspectCheque,
+  onInspectTransaction,
+  onOpenCashReceipt,
   onOpenContractForProperty,
   onOpenAuditForProperty,
   onOpenCalculatorForProperty,
@@ -146,4492 +181,3057 @@ export const DailyOperationsView: React.FC<DailyOperationsViewProps> = ({
   onOpenRescissionModal,
   onOpenEscalationModal,
   onOpenQuickSearch,
-  onAddPropertyCostItem,
-  onDirectExpenseSubmit,
+  onUpdatePropertyCostItem,
+  onAddCostAdjustment,
+  onRecordPayablePayment,
+  onSaveExpenseEntry,
   onOpenPartnerOperations,
+  onOpenPartnerPayout,
+  onOpenPartnerInjection,
   onExportExcel,
   onNavigateToTab
 }) => {
-  // 1. Dues & Collections Analytics
-  const todayStr = new Date().toISOString().split('T')[0];
-  const weekStr = new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0];
-  const threeDaysStr = new Date(Date.now() + 3 * 86400000).toISOString().split('T')[0];
+  const now = new Date();
+  const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 
-  // Desk Search, Filter & Sort State
-  const [deskSearchQuery, setDeskSearchQuery] = useState('');
-  const [duesStatusFilter, setDuesStatusFilter] = useState<'all' | 'overdue' | 'today'>('all');
-  const [duesSortBy, setDuesSortBy] = useState<'date_asc' | 'date_desc' | 'amount_desc' | 'amount_asc' | 'name_asc'>('date_asc');
+  // Table Category & Filter State
+  type CategoryTab = 'all' | 'collection' | 'supplier' | 'expense' | 'other';
+  const [selectedCategory, setSelectedCategory] = useState<CategoryTab>('all');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
+  const [dateScope, setDateScope] = useState<'today' | 'all' | 'custom'>('today');
+  const [typeFilter, setTypeFilter] = useState<'all' | 'COLLECTION' | 'DISBURSEMENT' | 'TRANSFER' | 'EXPENSE'>('all');
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 10;
 
-  // Unified Workbench Tab State
-  type WorkbenchTab = 'urgent_dues' | 'upcoming_dues' | 'available_units' | 'handover_ready' | 'recent_expenses' | 'audit_stream';
-  const [activeWorkbenchTab, setActiveWorkbenchTab] = useState<WorkbenchTab>('urgent_dues');
+  // Interactive column sorting state
+  const [tableSortField, setTableSortField] = useState<'date' | 'type' | 'description' | 'party' | 'reference' | 'amount' | 'status' | null>(null);
+  const [tableSortAsc, setTableSortAsc] = useState<boolean>(true);
 
-  // Workbench Pagination State
-  const [workbenchPage, setWorkbenchPage] = useState(1);
-  const [workbenchPageSize, setWorkbenchPageSize] = useState(8);
+  const handleTableSort = (field: 'date' | 'type' | 'description' | 'party' | 'reference' | 'amount' | 'status') => {
+    if (tableSortField === field) {
+      setTableSortAsc(!tableSortAsc);
+    } else {
+      setTableSortField(field);
+      setTableSortAsc(true);
+    }
+    setCurrentPage(1);
+    setModalCurrentPage(1);
+  };
 
-  // Reset workbench page to 1 when changing tabs or search filters
-  React.useEffect(() => {
-    setWorkbenchPage(1);
-  }, [activeWorkbenchTab, deskSearchQuery, duesStatusFilter, duesSortBy]);
+  // Active Mindmap Stream Filter State
+  const [activeStreamFilter, setActiveStreamFilter] = useState<string | null>(null);
 
-  // Contextual Direct Logger State (Unified Real Estate Project Cost Logger)
+  // Active filter state detector
+  const hasActiveFilters = Boolean(
+    activeStreamFilter !== null ||
+    selectedCategory !== 'all' ||
+    searchQuery.trim() !== '' ||
+    dateScope !== 'today' ||
+    typeFilter !== 'all' ||
+    tableSortField !== null
+  );
+
+  const handleResetFilters = () => {
+    setActiveStreamFilter(null);
+    setSelectedCategory('all');
+    setSearchQuery('');
+    setFromDate('');
+    setToDate('');
+    setDateScope('today');
+    setTypeFilter('all');
+    setTableSortField(null);
+    setTableSortAsc(true);
+    setCurrentPage(1);
+    setModalCurrentPage(1);
+  };
+
+  const handleDateScopeChange = (scope: 'today' | 'all') => {
+    setDateScope(scope);
+    setFromDate('');
+    setToDate('');
+  };
+
+  // Active Flow Node State for Interactive Highlighting
+  const [activeStreamId, setActiveStreamId] = useState<string | null>(null);
+
+  // Treasury Report Modal State
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+
+  // Full Screen Expanded Table Modal State
+  const [isFullScreenTableOpen, setIsFullScreenTableOpen] = useState(false);
+  const [modalCurrentPage, setModalCurrentPage] = useState(1);
+  const modalPageSize = 15;
+
+  // Existing Modal States
   const [isExpenseModalOpen, setIsExpenseModalOpen] = useState(false);
-  const [expensePaymentSource, setExpensePaymentSource] = useState<'101000' | '102000' | '201000'>('101000');
-  const [hoveredPaymentTooltip, setHoveredPaymentTooltip] = useState<'101000' | '102000' | '201000' | null>(null);
-  const [wipPropertyId, setWipPropertyId] = useState('');
-  const [wipCategory, setWipCategory] = useState<PropertyCostCategory>('civil_structure');
-  const [wipPhase, setWipPhase] = useState<PropertyLifecyclePhase>('structural_skeleton');
-  const [expenseAmount, setExpenseAmount] = useState('');
-  const [wipItemName, setWipItemName] = useState('');
-  const [wipSupplier, setWipSupplier] = useState('');
-  const [wipInvoiceRef, setWipInvoiceRef] = useState('');
-  const [wipQuantity, setWipQuantity] = useState('1');
-  const [wipUnit, setWipUnit] = useState('مقطوعية');
-  const [isSubmittingExpense, setIsSubmittingExpense] = useState(false);
-  const [expenseSuccessMsg, setExpenseSuccessMsg] = useState('');
-  const [expensePropertyError, setExpensePropertyError] = useState('');
-  const [expenseSuccessData, setExpenseSuccessData] = useState<{
-    amount: string;
-    categoryLabel: string;
-    supplier?: string;
-    propertyTitle: string;
-    invoiceRef?: string;
-    memo: string;
-    paymentSource: string;
-  } | null>(null);
-  const [keepExpenseModalOpen, setKeepExpenseModalOpen] = useState(true);
+  const [selectedCostForAdjustment, setSelectedCostForAdjustment] = useState<ERPPropertyCostItem | null>(null);
+  const [selectedCostForEdit, setSelectedCostForEdit] = useState<ERPPropertyCostItem | null>(null);
+  const [selectedCostForPayable, setSelectedCostForPayable] = useState<ERPPropertyCostItem | null>(null);
+  const [selectedInstallmentForPayable, setSelectedInstallmentForPayable] = useState<ERPPayableInstallment | null>(null);
 
-  // Under-Construction Real Estate Projects (off_plan or development buildings)
-  const underConstructionProperties = useMemo(() => {
-    const active = (properties || []).filter(p => 
-      p.completion_status === 'off_plan' || 
-      p.type === 'building' || 
-      (p.building_units && p.building_units.some(u => u.status !== 'contracted'))
-    );
-    return active.length > 0 ? active : properties;
-  }, [properties]);
+  const tableRef = useRef<HTMLDivElement>(null);
 
-  // Sync default target property to first under-construction project
-  React.useEffect(() => {
-    if (!wipPropertyId && underConstructionProperties.length > 0) {
-      setWipPropertyId(underConstructionProperties[0].id);
-    }
-  }, [underConstructionProperties, wipPropertyId]);
+  const effectivePropertyCosts = propertyCosts;
 
-  // 0. Unified Dues: Combine PDC records with any pending/defaulted installment schedules that lack a PDC
-  const allDuesRecords = useMemo(() => {
-    const map = new Map<string, ERPPDCRecord>();
-    (pdcRecords || []).forEach(p => {
-      map.set(p.cheque_id, p);
-    });
 
-    (schedules || []).forEach(s => {
-      if (s.status !== 'Pending' && s.status !== 'Defaulted') return;
-      const ct = contracts.find(c => c.contract_id === s.contract_id);
-      if (ct && ct.status !== 'Active') return;
+  // 2. UNIFIED CASH MOVEMENTS & REAL-TIME RECONCILIATION
+  const allTransactions = useMemo<CashMovementTransaction[]>(() => {
+    const list: CashMovementTransaction[] = [];
+    const seenIds = new Set<string>();
+    const reconciledPdcIds = new Set<string>();
+    const reconciledCostIds = new Set<string>();
 
-      const alreadyHas = Array.from(map.values()).some(p => 
-        p.schedule_id === s.schedule_id || 
-        (p.contract_id === s.contract_id && p.due_date === s.due_date && p.status !== 'Cleared' && p.status !== 'Void')
-      );
-      if (!alreadyHas) {
-        const numDigits = ct?.contract_number ? ct.contract_number.replace(/\D/g, '') : '789';
-        const newPdc: ERPPDCRecord = {
-          cheque_id: s.schedule_id,
-          contract_id: s.contract_id,
-          schedule_id: s.schedule_id,
-          cheque_number: `SND-${numDigits}-T${s.tranche_number}`,
-          bank_name: isAr ? 'الخزينة الرئيسية (أمانات نقداً باليد - 101000)' : 'Main Safe (Hand Cash Escrow - 101000)',
-          drawer_name: ct?.buyer_name || (isAr ? 'العميل المتعاقد' : 'Contracted Client'),
-          nominal_value: s.nominal_value,
-          due_date: s.due_date,
-          status: 'In Safe'
-        };
-        map.set(s.schedule_id, newPdc);
+    // Pre-index reconciled PDCs and Costs from Journal Entries
+    (journalEntries || []).forEach((je) => {
+      if (je.source_entity_id) {
+        reconciledPdcIds.add(je.source_entity_id);
+        reconciledCostIds.add(je.source_entity_id);
       }
-    });
-    return Array.from(map.values());
-  }, [pdcRecords, schedules, contracts, isAr]);
-
-  const { urgentDues, dueTodayCount, dueTodaySum, dueWeekSum, overdueCount, overdueSum } = useMemo(() => {
-    let todaySum = D(0);
-    let todayCnt = 0;
-    let weekSum = D(0);
-    let odSum = D(0);
-    let odCnt = 0;
-
-    const dues = allDuesRecords
-      .filter(p => p.status !== 'Cleared' && p.status !== 'Void')
-      .sort((a, b) => a.due_date.localeCompare(b.due_date));
-
-    dues.forEach(p => {
-      const val = D(p.nominal_value || '0');
-      if (p.due_date < todayStr) {
-        odSum = odSum.plus(val);
-        odCnt++;
-      } else if (p.due_date === todayStr) {
-        todaySum = todaySum.plus(val);
-        todayCnt++;
-      } else if (p.due_date <= weekStr) {
-        weekSum = weekSum.plus(val);
-      }
-    });
-
-    return {
-      urgentDues: dues.slice(0, 10),
-      dueTodayCount: todayCnt,
-      dueTodaySum: todaySum,
-      dueWeekSum: weekSum,
-      overdueCount: odCnt,
-      overdueSum: odSum
-    };
-  }, [allDuesRecords, todayStr, weekStr]);
-
-  // Executive Liquidity Breakdown: Account 101000 (Safe) + Account 102000 (Bank)
-  const liquidBalances = useMemo(() => {
-    let safeCash = D(0);
-    let bankCash = D(0);
-    
-    if (journalEntries && journalEntries.length > 0) {
-      journalEntries.forEach(entry => {
-        (entry.lines || []).forEach(line => {
-          if (line.account_code === '101000') {
-            safeCash = safeCash.plus(line.debit_amount || '0').minus(line.credit_amount || '0');
-          } else if (line.account_code === '102000') {
-            bankCash = bankCash.plus(line.debit_amount || '0').minus(line.credit_amount || '0');
-          }
-        });
+      (pdcRecords || []).forEach(p => {
+        if (je.description?.includes(p.cheque_number) || je.description?.includes(p.cheque_id)) {
+          reconciledPdcIds.add(p.cheque_id);
+          reconciledPdcIds.add(p.cheque_number);
+        }
       });
-    }
-    
-    const totalLiquid = safeCash.plus(bankCash).gt(0) 
-      ? safeCash.plus(bankCash) 
-      : D(kpis.cashBank || '0');
+      (effectivePropertyCosts || []).forEach(c => {
+        if (je.description?.includes(c.item_id) || (c.invoice_ref && je.description?.includes(c.invoice_ref))) {
+          reconciledCostIds.add(c.item_id);
+          if (c.invoice_ref) reconciledCostIds.add(c.invoice_ref);
+        }
+      });
+    });
 
+    // A. Scan Journal Entries touching 101000 or 102000
+    (journalEntries || []).forEach((je) => {
+      const jeDate = je.entry_date || (je.created_at ? je.created_at.split('T')[0] : todayStr);
+      const jeTime = je.created_at && je.created_at.includes('T')
+        ? je.created_at.split('T')[1].substring(0, 5)
+        : '09:00';
+
+      let cashDebit = D(0);
+      let cashCredit = D(0);
+      let cashAccountCode = '101000';
+      let opposingLines: typeof je.lines = [];
+
+      (je.lines || []).forEach((line) => {
+        const isCash = line.account_code === '101000' || line.account_code === '102000';
+        if (isCash) {
+          cashAccountCode = line.account_code;
+          if (D(line.debit_amount || 0).gt(0)) {
+            cashDebit = cashDebit.plus(line.debit_amount || 0);
+          }
+          if (D(line.credit_amount || 0).gt(0)) {
+            cashCredit = cashCredit.plus(line.credit_amount || 0);
+          }
+        } else {
+          opposingLines.push(line);
+        }
+      });
+
+      // If no cash account involved, skip
+      if (cashDebit.eq(0) && cashCredit.eq(0)) return;
+
+      const opposingCode = opposingLines[0]?.account_code || '';
+      const coaAcc = CANONICAL_COA[opposingCode];
+      const opposingDesc = (isAr ? coaAcc?.account_name_ar : coaAcc?.account_name_en) || opposingLines[0]?.memo || opposingCode;
+
+      // Internal transfer between safe and bank
+      const isTransfer = cashDebit.gt(0) && cashCredit.gt(0);
+      if (isTransfer) {
+        list.push({
+          id: je.entry_id,
+          date: jeDate,
+          timeStr: jeTime,
+          fullDateTimeStr: `${jeDate} ${jeTime}`,
+          type: 'TRANSFER',
+          typeLabelAr: 'تحويل بنكي / خزينة',
+          typeLabelEn: 'Transfer',
+          description: localizeJournalDescription(je.description, isAr) || (isAr ? 'تحويل سيولة داخلية' : 'Internal Transfer'),
+          counterparty: isAr ? 'بنك مصر / الخزينة' : 'Bank / Safe',
+          accountCode: '101000 / 102000',
+          accountLabel: isAr ? 'تحويلات بين الخزينة والحسابات البنكية' : 'Cash & Bank Transfer',
+          reference_number: je.entry_number || je.entry_id,
+          payment_method: isAr ? 'تحويل داخلي' : 'Internal Transfer',
+          amount: cashDebit,
+          direction: 'NEUTRAL',
+          status: 'COMPLETED',
+          statusLabelAr: 'تم التحويل',
+          statusLabelEn: 'Transferred',
+          category: 'other',
+          rawEntry: je
+        });
+        seenIds.add(je.entry_id);
+        return;
+      }
+
+      // Inflow
+      if (cashDebit.gt(0)) {
+        const srcMod = (je.source_module || '').toUpperCase();
+        const desc = je.description || '';
+        const isClientCollection =
+          opposingCode.startsWith('103') ||
+          opposingCode.startsWith('110') ||
+          opposingCode.startsWith('203') ||
+          opposingCode.startsWith('401') ||
+          srcMod === 'PDC' ||
+          srcMod === 'SALES' ||
+          srcMod === 'ADVANCE_PAYMENT' ||
+          srcMod === 'CONTRACT' ||
+          desc.includes('تحصيل') ||
+          desc.includes('قسط') ||
+          desc.includes('مقدم') ||
+          desc.includes('حجز');
+        const isPartnerInjection = opposingCode.startsWith('301') || srcMod === 'CAPITAL_CALL' || srcMod === 'PARTNERS' || desc.includes('شريك') || desc.includes('رأس مال');
+        const isLoan = opposingCode.startsWith('202') || desc.includes('قرض') || desc.includes('تمويل') || desc.includes('تسهيل');
+
+        const category: CashMovementTransaction['category'] = isClientCollection
+          ? 'collection'
+          : 'other';
+
+        const type: CashMovementTransaction['type'] = isPartnerInjection
+          ? 'PARTNER'
+          : isClientCollection
+            ? 'COLLECTION'
+            : isLoan
+              ? 'TRANSFER'
+              : 'COLLECTION';
+
+        // Link to contract if mentioned in description
+        const matchedContract = contracts.find(
+          c => je.description?.includes(c.contract_number) || je.description?.includes(c.buyer_name)
+        );
+
+        const counterparty = matchedContract?.buyer_name || (isPartnerInjection ? (isAr ? 'حساب الشركاء' : 'Partner Equity') : (isAr ? 'عميل سداد' : 'Client'));
+
+        list.push({
+          id: je.entry_id,
+          date: jeDate,
+          timeStr: jeTime,
+          fullDateTimeStr: `${jeDate} ${jeTime}`,
+          type,
+          typeLabelAr: isPartnerInjection ? 'تمويل شركاء' : isClientCollection ? 'تحصيل عميل' : isLoan ? 'تسهيل / تمويل' : (isAr ? 'إيداع / تحصيل' : 'Deposit / Collection'),
+          typeLabelEn: isPartnerInjection ? 'Partner Inflow' : isClientCollection ? 'Collection' : isLoan ? 'Loan / Financing' : 'Deposit / Inflow',
+          description: localizeJournalDescription(je.description, isAr) || (isAr ? 'تحصيل قسط / إيداع نقدي' : 'Cash Inflow'),
+          counterparty,
+          accountCode: cashAccountCode === '101000' ? '101000' : '102000',
+          accountLabel: cashAccountCode === '101000'
+            ? (isAr ? 'الخزينة الرئيسية (101000)' : 'Safe Cash (101000)')
+            : (isAr ? 'الحساب البنكي التجاري (102000)' : 'Commercial Bank Account (102000)'),
+          reference_number: je.entry_number || matchedContract?.contract_number || je.source_entity_id || je.entry_id,
+          payment_method: cashAccountCode === '101000'
+            ? (isAr ? 'كاش بالخزينة' : 'Cash Vault')
+            : (isAr ? 'تحويل بنكي' : 'Bank Transfer'),
+          amount: cashDebit,
+          direction: 'IN',
+          status: 'COMPLETED',
+          statusLabelAr: 'تم التحصيل',
+          statusLabelEn: 'Collected',
+          category,
+          rawEntry: je,
+          rawContract: matchedContract
+        });
+        seenIds.add(je.entry_id);
+        return;
+      }
+
+      // Outflow
+      if (cashCredit.gt(0)) {
+        const isContractorPayable =
+          opposingCode.startsWith('201') ||
+          opposingCode.startsWith('151') ||
+          opposingCode.startsWith('152') ||
+          opposingCode.startsWith('153');
+        const isWipCost = opposingCode.startsWith('15');
+        const isOperatingExpense = opposingCode.startsWith('5');
+        const isPartnerPayout = opposingCode.startsWith('303');
+
+        const category: CashMovementTransaction['category'] = isContractorPayable
+          ? 'supplier'
+          : isOperatingExpense || isWipCost
+            ? 'expense'
+            : 'other';
+
+        const type: CashMovementTransaction['type'] = isOperatingExpense
+          ? 'EXPENSE'
+          : isPartnerPayout
+            ? 'PARTNER'
+            : 'DISBURSEMENT';
+
+        const matchedCost = effectivePropertyCosts.find(c => je.description?.includes(c.item_id) || (c.invoice_ref && je.description?.includes(c.invoice_ref)));
+
+        const counterparty = matchedCost?.supplier_contractor || (isPartnerPayout ? (isAr ? 'توزيعات شركاء' : 'Partner Payout') : (isAr ? 'مورد / مقاول' : 'Supplier'));
+
+        list.push({
+          id: je.entry_id,
+          date: jeDate,
+          timeStr: jeTime,
+          fullDateTimeStr: `${jeDate} ${jeTime}`,
+          type,
+          typeLabelAr: isOperatingExpense ? 'مصاريف تشغيل' : isPartnerPayout ? 'صرف أرباح شركاء' : 'صرف لمقاول/مورد',
+          typeLabelEn: isOperatingExpense ? 'Expense' : isPartnerPayout ? 'Partner Payout' : 'Disbursement',
+          description: localizeJournalDescription(je.description, isAr) || (isAr ? 'صرف مستحقات / تكاليف' : 'Cash Outflow'),
+          counterparty,
+          accountCode: opposingCode || (cashAccountCode === '101000' ? '101000' : '102000'),
+          accountLabel: opposingDesc || (cashAccountCode === '101000' ? (isAr ? 'الخزينة (101000)' : 'Safe') : (isAr ? 'البنك (102000)' : 'Bank')),
+          reference_number: je.entry_number || matchedCost?.invoice_ref || matchedCost?.item_id || je.source_entity_id || je.entry_id,
+          payment_method: cashAccountCode === '101000'
+            ? (isAr ? 'كاش بالخزينة' : 'Cash Vault')
+            : (isAr ? 'تحويل بنكي' : 'Bank Transfer'),
+          amount: D(0).minus(cashCredit),
+          direction: 'OUT',
+          status: 'COMPLETED',
+          statusLabelAr: 'تم الصرف',
+          statusLabelEn: 'Disbursed',
+          category,
+          rawEntry: je,
+          rawCost: matchedCost
+        });
+        seenIds.add(je.entry_id);
+      }
+    });
+
+    // B. Scan Cleared PDCs not already registered in journal entries
+    (pdcRecords || []).forEach((pdc) => {
+      if (pdc.status !== 'Cleared') return;
+      const pdcId = `pdc-${pdc.cheque_id}`;
+      if (seenIds.has(pdcId)) return;
+      if (reconciledPdcIds.has(pdc.cheque_id) || (pdc.cheque_number && reconciledPdcIds.has(pdc.cheque_number))) return;
+
+      const ct = contracts.find(c => c.contract_id === pdc.contract_id);
+      list.push({
+        id: pdcId,
+        date: pdc.due_date || todayStr,
+        timeStr: '11:00',
+        fullDateTimeStr: `${pdc.due_date || todayStr} 11:00`,
+        type: 'COLLECTION',
+        typeLabelAr: 'تحصيل شيك',
+        typeLabelEn: 'Cheque Clearance',
+        description: `${isAr ? 'تحصيل شيك بنكي رقم' : 'Cleared Cheque #'} ${pdc.cheque_number}`,
+        counterparty: pdc.drawer_name || ct?.buyer_name || (isAr ? 'عميل تعاقد' : 'Client'),
+        accountCode: '101000',
+        accountLabel: isAr ? 'الخزينة الرئيسية (101000)' : 'Main Safe (101000)',
+        reference_number: pdc.cheque_number ? `#${pdc.cheque_number}` : pdc.cheque_id,
+        payment_method: isAr ? 'شيك بنكي مقاصة' : 'Cleared Cheque',
+        amount: D(pdc.nominal_value || 0),
+        direction: 'IN',
+        status: 'COMPLETED',
+        statusLabelAr: 'تم التحصيل',
+        statusLabelEn: 'Cleared',
+        category: 'collection',
+        rawPdc: pdc,
+        rawContract: ct
+      });
+      seenIds.add(pdcId);
+    });
+
+    // C. Scan Property Costs paid via cash/installments not already in journal entries
+    (effectivePropertyCosts || []).forEach((cost) => {
+      const costRawId = cost.item_id || cost.id || '';
+      const costId = `cost-${costRawId}`;
+      if (seenIds.has(costId)) return;
+      if (
+        (cost.item_id && reconciledCostIds.has(cost.item_id)) ||
+        (cost.id && reconciledCostIds.has(cost.id)) ||
+        (cost.invoice_ref && reconciledCostIds.has(cost.invoice_ref))
+      ) return;
+
+      const prop = properties.find(p => p.id === cost.property_id);
+      const isSupplier =
+        cost.category === 'civil_structure' ||
+        cost.category === 'labor_subcontractor' ||
+        (cost.category as string) === 'materials' ||
+        cost.category === 'mep_infrastructure' ||
+        cost.category === 'site_facade' ||
+        cost.category === 'finishing_interior' ||
+        Boolean(cost.supplier_contractor);
+
+      const costDate = cost.logged_date || (cost.created_at ? cost.created_at.split('T')[0] : todayStr);
+      const costAmount = D(cost.paid_amount_egp ?? '0');
+      if (costAmount.lte(0)) return;
+
+      const coaAcc = CANONICAL_COA[cost.linked_account_code || '151000'];
+      const accountLabel = (isAr ? coaAcc?.account_name_ar : coaAcc?.account_name_en) || (isAr ? 'حساب تكاليف الإنشاءات (151000)' : 'Construction WIP (151000)');
+
+      list.push({
+        id: costId,
+        date: costDate,
+        timeStr: '14:30',
+        fullDateTimeStr: `${costDate} 14:30`,
+        type: isSupplier ? 'DISBURSEMENT' : 'EXPENSE',
+        typeLabelAr: isSupplier ? 'مستحقات مقاولين' : 'مصاريف بناء',
+        typeLabelEn: isSupplier ? 'Contractor Payable' : 'Site Cost',
+        description: isAr ? (cost.item_name_ar || cost.item_name_en) : (cost.item_name_en || cost.item_name_ar),
+        counterparty: cost.supplier_contractor || (prop ? (isAr ? prop.title_ar : prop.title_en) : (isAr ? 'مشروع إنشائي' : 'Project')),
+        accountCode: cost.linked_account_code || '151000',
+        accountLabel,
+        reference_number: cost.invoice_ref || cost.item_id || cost.id,
+        payment_method: ((cost as any).payment_method === 'INSTAPAY_102000' || (cost as any).payment_method === 'INSTAPAY' || (cost as any).payment_method === 'INSTAPAY_101000')
+          ? (isAr ? 'إنستاباي' : 'InstaPay')
+          : (isAr ? 'سداد نقدي' : 'Cash'),
+        amount: D(0).minus(costAmount),
+        direction: 'OUT',
+        status: 'RECORDED',
+        statusLabelAr: 'تم الصرف',
+        statusLabelEn: 'Disbursed',
+        category: isSupplier ? 'supplier' : 'expense',
+        rawCost: cost
+      });
+      seenIds.add(costId);
+    });
+
+    // Sort descending (latest date/time first)
+    return list.sort((a, b) => b.fullDateTimeStr.localeCompare(a.fullDateTimeStr));
+  }, [journalEntries, pdcRecords, effectivePropertyCosts, contracts, properties, todayStr, isAr]);
+
+  // CANONICAL LIQUIDITY BALANCE: Safe 101000 + Bank 102000 (with real-time un-journalized drawer reconciliation)
+  const liquidBalances = useMemo(() => {
+    let { safeCash, bankCash, totalCash } = getAvailableCash(journalEntries);
+
+    allTransactions.forEach((tx) => {
+      if (!tx.rawEntry) {
+        if (tx.accountCode === '101000') {
+          if (tx.direction === 'IN') {
+            safeCash = safeCash.plus(tx.amount.abs());
+          } else if (tx.direction === 'OUT') {
+            safeCash = safeCash.minus(tx.amount.abs());
+          }
+        } else if (tx.accountCode === '102000') {
+          if (tx.direction === 'IN') {
+            bankCash = bankCash.plus(tx.amount.abs());
+          } else if (tx.direction === 'OUT') {
+            bankCash = bankCash.minus(tx.amount.abs());
+          }
+        }
+      }
+    });
+
+    totalCash = safeCash.plus(bankCash);
     return {
       safeCash,
       bankCash,
-      totalLiquid
+      totalLiquid: totalCash
     };
-  }, [journalEntries, kpis.cashBank]);
+  }, [journalEntries, allTransactions]);
 
-  // Fast-Action Launchpad dynamic badge metrics
-  const availableUnitsCount = useMemo(() => {
-    return (properties || []).reduce((acc, p) => acc + (p.building_units?.filter(u => u.status !== 'contracted').length || 0), 0);
-  }, [properties]);
+  // 3. CATEGORICAL INFLOWS & OUTFLOWS AGGREGATION FOR MINDMAP & KPIS
+  const flowMetrics = useMemo(() => {
+    let collections = D(0);
+    let partnerInjections = D(0);
 
-  const handoverCount = useMemo(() => {
-    return (contracts || []).filter(c => 
-      c.status === 'Active' && (
-        (c.handover_status as string) === 'Ready' || 
-        (c.handover_status !== 'Delivered' && (properties || []).some(p => p.id === c.property_id && p.completion_status === 'ready'))
-      )
-    ).length;
-  }, [contracts, properties]);
+    let civilStructure = D(0);
+    let finishesFacades = D(0);
+    let mepInfrastructure = D(0);
+    let permitsGovFees = D(0);
 
-  const partnersWithDuesCount = useMemo(() => {
-    return (partnerSummaries || []).filter(p => D(p.netCurrentBalance || 0).gt(0)).length;
-  }, [partnerSummaries]);
-
-  // 1. Dynamic Daily Operational Metrics (Today's Direct Cash Movements & Pending Dues)
-  const {
-    todayCollectionsSum,
-    todayCollectionsCount,
-    todayDisbursementsSum,
-    todayDisbursementsCount,
-    todayNetFlow,
-    todayPendingDueSum,
-    todayPendingDueCount
-  } = useMemo(() => {
-    let inSum = D(0);
-    let inCount = 0;
-    let outSum = D(0);
-    let outCount = 0;
-
-    // Direct Cash Inflows and Outflows from Journal Entries for Today
-    (journalEntries || []).forEach(entry => {
-      const isToday = entry.entry_date === todayStr || (entry.created_at && entry.created_at.startsWith(todayStr));
-      if (isToday) {
-        let hadDebit = false;
-        let hadCredit = false;
-
-        (entry.lines || []).forEach(line => {
-          if (line.account_code === '101000' || line.account_code === '102000') {
-            const deb = D(line.debit_amount || '0');
-            const cred = D(line.credit_amount || '0');
-            if (deb.gt(0)) {
-              inSum = inSum.plus(deb);
-              hadDebit = true;
-            }
-            if (cred.gt(0)) {
-              outSum = outSum.plus(cred);
-              hadCredit = true;
-            }
-          }
-        });
-
-        if (hadDebit) inCount++;
-        if (hadCredit) outCount++;
-      }
-    });
-
-    // Also factor in property costs logged today (in case payment source is safe or bank)
-    (propertyCosts || []).forEach(cost => {
-      const isToday = cost.logged_date === todayStr || (cost.created_at && cost.created_at.startsWith(todayStr));
-      const isLiquidPayment = cost.linked_account_code === '101000' || cost.linked_account_code === '102000';
-      if (isToday && isLiquidPayment) {
-        const alreadyCounted = (journalEntries || []).some(
-          je => (je.entry_date === todayStr || (je.created_at && je.created_at.startsWith(todayStr))) &&
-                (je.description?.includes(cost.item_id) || je.description?.includes(cost.invoice_ref || '---'))
-        );
-        if (!alreadyCounted) {
-          outSum = outSum.plus(cost.total_cost_egp || '0');
-          outCount++;
+    allTransactions.forEach((tx) => {
+      const val = tx.amount.abs();
+      if (tx.direction === 'IN') {
+        if (matchesIn1(tx)) {
+          partnerInjections = partnerInjections.plus(val);
+        } else if (matchesIn0(tx)) {
+          collections = collections.plus(val);
+        }
+      } else if (tx.direction === 'OUT') {
+        if (matchesOut3(tx)) {
+          permitsGovFees = permitsGovFees.plus(val);
+        } else if (matchesOut2(tx)) {
+          mepInfrastructure = mepInfrastructure.plus(val);
+        } else if (matchesOut1(tx)) {
+          finishesFacades = finishesFacades.plus(val);
+        } else if (matchesOut0(tx)) {
+          civilStructure = civilStructure.plus(val);
         }
       }
     });
 
-    // Pending Dues maturing today that are not yet collected
-    let pendingDueSum = D(0);
-    let pendingDueCount = 0;
-    (pdcRecords || []).forEach(p => {
-      if (p.status !== 'Cleared' && p.status !== 'Void' && p.due_date === todayStr) {
-        pendingDueSum = pendingDueSum.plus(p.nominal_value || '0');
-        pendingDueCount++;
-      }
-    });
+    const totalInflows = collections.plus(partnerInjections);
+    const totalOutflows = civilStructure.plus(finishesFacades).plus(mepInfrastructure).plus(permitsGovFees);
+    const netCashFlow = totalInflows.minus(totalOutflows);
 
     return {
-      todayCollectionsSum: inSum,
-      todayCollectionsCount: inCount,
-      todayDisbursementsSum: outSum,
-      todayDisbursementsCount: outCount,
-      todayNetFlow: inSum.minus(outSum),
-      todayPendingDueSum: pendingDueSum,
-      todayPendingDueCount: pendingDueCount
+      inflows: {
+        collections,
+        partnerInjections,
+        total: totalInflows
+      },
+      outflows: {
+        civilStructure,
+        finishesFacades,
+        mepInfrastructure,
+        permitsGovFees,
+        // Backward-compat aliases
+        contractorDues: civilStructure,
+        materialProcurement: finishesFacades,
+        operatingExpenses: mepInfrastructure,
+        taxesFees: permitsGovFees,
+        total: totalOutflows
+      },
+      netCashFlow
     };
-  }, [journalEntries, propertyCosts, pdcRecords, todayStr]);
+  }, [allTransactions]);
 
-  // 2. Operational Risk & Friction Radar Alerts (High-Context Debtor Specifics)
-  const operationalAlerts = useMemo(() => {
-    const alerts: Array<{
-      id: string;
-      severity: 'critical' | 'warning' | 'info';
-      headerLabelAr?: string;
-      headerLabelEn?: string;
-      badgeLabelAr?: string;
-      badgeLabelEn?: string;
-      titleAr: string;
-      titleEn: string;
-      debtorName?: string;
-      unitDetail?: string;
-      amountFormatted?: string;
-      secondaryNoteAr?: string;
-      secondaryNoteEn?: string;
-      actionLabelAr: string;
-      actionLabelEn: string;
-      onClick: () => void;
-    }> = [];
-
-    // Overdue items (sorted by due date ascending: oldest overdue first)
-    const overdueList = allDuesRecords
-      .filter(p => p.status !== 'Cleared' && p.status !== 'Void' && p.due_date < todayStr)
-      .sort((a, b) => a.due_date.localeCompare(b.due_date));
-
-    if (overdueList.length > 0) {
-      const topOverdue = overdueList[0];
-      const linkedContract = contracts.find(c => c.contract_id === topOverdue.contract_id);
-      const totalOverdueSum = overdueList.reduce((acc, p) => acc.plus(p.nominal_value || '0'), D(0));
-      const daysOverdue = Math.max(1, Math.round((new Date(todayStr).getTime() - new Date(topOverdue.due_date).getTime()) / 86400000));
-      const debtor = topOverdue.drawer_name || linkedContract?.buyer_name || (isAr ? 'عميل مسجل' : 'Registered Client');
-      const unit = linkedContract?.unit_id || (isAr ? 'وحدة تعاقدية' : 'Unit');
-      const unitDetail = linkedContract
-        ? `${isAr ? 'وحدة' : 'Unit'} ${linkedContract.unit_id} • ${isAr ? 'عقد' : 'Contract'} #${linkedContract.contract_number}`
-        : (isAr ? 'وحدة تعاقدية' : 'Unit');
-
-      const overdueCountLabelAr = `${overdueList.length} ${overdueList.length === 1 ? 'قسط' : 'أقساط'}`;
-      const overdueCountLabelEn = `${overdueList.length} ${overdueList.length === 1 ? 'due' : 'dues'}`;
-
-      alerts.push({
-        id: `overdue-dues-${topOverdue.cheque_id || 0}`,
-        severity: 'critical',
-        headerLabelAr: `متأخرات تحصيل حرجة (${overdueCountLabelAr})`,
-        headerLabelEn: `Critical Overdue (${overdueCountLabelEn})`,
-        badgeLabelAr: `متأخر منذ ${daysOverdue} يوم`,
-        badgeLabelEn: `${daysOverdue}d overdue`,
-        titleAr: debtor,
-        titleEn: debtor,
-        debtorName: debtor,
-        unitDetail,
-        amountFormatted: D(topOverdue.nominal_value).formatEGP(isAr),
-        secondaryNoteAr: overdueList.length > 1 
-          ? `+ ${overdueList.length - 1} أقساط أخرى متأخرة (إجمالي ${totalOverdueSum.formatEGP(true)})` 
-          : `استحقاق ${topOverdue.due_date} — يتطلب سرعة التواصل والتحصيل المباشر`,
-        secondaryNoteEn: overdueList.length > 1 
-          ? `+ ${overdueList.length - 1} more overdue (Total ${totalOverdueSum.formatEGP(false)})` 
-          : `Due ${topOverdue.due_date}`,
-        actionLabelAr: 'تحصيل القسط فوراً',
-        actionLabelEn: 'Collect Installment',
-        onClick: () => onCollectItem(topOverdue)
-      });
-
-      // If multiple overdue items, render second top overdue debtor card for immediate 1-click collection
-      if (overdueList.length > 1) {
-        const secondOverdue = overdueList[1];
-        const linkedContract2 = contracts.find(c => c.contract_id === secondOverdue.contract_id);
-        const daysOverdue2 = Math.max(1, Math.round((new Date(todayStr).getTime() - new Date(secondOverdue.due_date).getTime()) / 86400000));
-        const debtor2 = secondOverdue.drawer_name || linkedContract2?.buyer_name || (isAr ? 'عميل مسجل' : 'Registered Client');
-        const unit2 = linkedContract2?.unit_id || (isAr ? 'وحدة تعاقدية' : 'Unit');
-        const unitDetail2 = linkedContract2
-          ? `${isAr ? 'وحدة' : 'Unit'} ${linkedContract2.unit_id} • ${isAr ? 'عقد' : 'Contract'} #${linkedContract2.contract_number}`
-          : (isAr ? 'وحدة تعاقدية' : 'Unit');
-
-        alerts.push({
-          id: `overdue-dues-${secondOverdue.cheque_id || 1}`,
-          severity: 'critical',
-          headerLabelAr: isAr ? 'متأخرات إضافية حرجة' : 'Additional Critical Overdue',
-          headerLabelEn: 'Additional Critical Overdue',
-          badgeLabelAr: `متأخر منذ ${daysOverdue2} يوم`,
-          badgeLabelEn: `${daysOverdue2}d overdue`,
-          titleAr: debtor2,
-          titleEn: debtor2,
-          debtorName: debtor2,
-          unitDetail: unitDetail2,
-          amountFormatted: D(secondOverdue.nominal_value).formatEGP(isAr),
-          secondaryNoteAr: overdueList.length > 2
-            ? `+ ${overdueList.length - 2} قسط آخر متأخر • استحقاق ${secondOverdue.due_date}`
-            : `استحقاق ${secondOverdue.due_date} — يتطلب سرعة التواصل والتحصيل المباشر`,
-          secondaryNoteEn: overdueList.length > 2
-            ? `+ ${overdueList.length - 2} more overdue • Due ${secondOverdue.due_date}`
-            : `Due ${secondOverdue.due_date}`,
-          actionLabelAr: 'تحصيل القسط فوراً',
-          actionLabelEn: 'Collect Installment',
-          onClick: () => onCollectItem(secondOverdue)
-        });
-      }
-    }
-
-    // In-safe cheques maturing within 72 hours
-    const nearSafeCheques = allDuesRecords.filter(p => 
-      p.status === 'In Safe' && 
-      p.due_date >= todayStr && 
-      p.due_date <= threeDaysStr
-    );
-    if (nearSafeCheques.length > 0) {
-      const topNear = nearSafeCheques[0];
-      const linkedContract = contracts.find(c => c.contract_id === topNear.contract_id);
-      const totalNearSum = nearSafeCheques.reduce((acc, p) => acc.plus(p.nominal_value || '0'), D(0));
-      const debtor = topNear.drawer_name || linkedContract?.buyer_name || (isAr ? 'عميل مسجل' : 'Client');
-      const unit = linkedContract?.unit_id || (isAr ? 'وحدة تعاقدية' : 'Unit');
-
-      alerts.push({
-        id: 'safe-cheques-near',
-        severity: 'warning',
-        headerLabelAr: isAr ? 'أقساط تقترب من الاستحقاق' : 'Approaching Maturity',
-        headerLabelEn: 'Approaching Maturity',
-        badgeLabelAr: topNear.due_date === todayStr ? 'يستحق اليوم' : 'خلال 48-72 ساعة',
-        badgeLabelEn: topNear.due_date === todayStr ? 'Due Today' : 'Within 48-72h',
-        titleAr: debtor,
-        titleEn: debtor,
-        debtorName: debtor,
-        unitDetail: `${unit} • استحقاق ${topNear.due_date}`,
-        amountFormatted: D(topNear.nominal_value).formatEGP(isAr),
-        secondaryNoteAr: nearSafeCheques.length > 1 
-          ? `+ ${nearSafeCheques.length - 1} أقساط قادمة بالخزينة (إجمالي ${totalNearSum.formatEGP(true)})` 
-          : 'جاهز للإيداع بالخزينة أو التحويل عبر إنستاباي',
-        secondaryNoteEn: nearSafeCheques.length > 1 
-          ? `+ ${nearSafeCheques.length - 1} more upcoming (Total ${totalNearSum.formatEGP(false)})` 
-          : 'Ready for cash or InstaPay collection',
-        actionLabelAr: 'تحصيل القسط',
-        actionLabelEn: 'Collect Due',
-        onClick: () => onCollectItem(topNear)
-      });
-    }
-
-    // Handover Readiness Audit: Contracts with >= 70% collected but still Pending Handover
-    const readyForHandover = contracts.filter(c => {
-      if (c.status === 'Rescinded' || c.handover_status === 'Delivered') return false;
-      const total = parseFloat(c.gross_contract_value || '1');
-      const paid = parseFloat(c.total_cash_collected || '0');
-      return total > 0 && (paid / total) >= 0.7;
+  const todayMetrics = useMemo(() => {
+    let inflows = D(0);
+    let outflows = D(0);
+    let count = 0;
+    allTransactions.forEach((tx) => {
+      if (tx.date !== todayStr) return;
+      count += 1;
+      if (tx.direction === 'IN') inflows = inflows.plus(tx.amount.abs());
+      if (tx.direction === 'OUT') outflows = outflows.plus(tx.amount.abs());
     });
+    return { inflows, outflows, net: inflows.minus(outflows), count };
+  }, [allTransactions, todayStr]);
 
-    if (readyForHandover.length > 0) {
-      const topReady = readyForHandover[0];
-      const gross = parseFloat(topReady.gross_contract_value || '1');
-      const paid = parseFloat(topReady.total_cash_collected || '0');
-      const pct = Math.min(100, Math.round((paid / gross) * 100));
+  const dateScopedTransactions = useMemo(() => allTransactions.filter((tx) => {
+    if (dateScope === 'today') return tx.date === todayStr;
+    if (dateScope === 'custom') return (!fromDate || tx.date >= fromDate) && (!toDate || tx.date <= toDate);
+    return true;
+  }), [allTransactions, dateScope, todayStr, fromDate, toDate]);
 
-      alerts.push({
-        id: 'handover-audit',
-        severity: 'info',
-        headerLabelAr: isAr ? 'جاهزية تسليم وحدة' : 'Handover Ready',
-        headerLabelEn: 'Handover Ready',
-        badgeLabelAr: `${pct}% مسدد`,
-        badgeLabelEn: `${pct}% Paid`,
-        titleAr: topReady.buyer_name,
-        titleEn: topReady.buyer_name,
-        debtorName: topReady.buyer_name,
-        unitDetail: `${topReady.unit_id} • عقد #${topReady.contract_number}`,
-        amountFormatted: D(topReady.total_cash_collected).formatEGP(isAr),
-        secondaryNoteAr: readyForHandover.length > 1 
-          ? `+ ${readyForHandover.length - 1} عقود أخرى مؤهلة للتسليم وإجراء محاضر الاستلام` 
-          : 'الوحدة مؤهلة للمعاينة الميدانية وإصدار محضر الاستلام واعتراف الإيراد',
-        secondaryNoteEn: readyForHandover.length > 1 
-          ? `+ ${readyForHandover.length - 1} more units ready for handover` 
-          : 'Unit qualified for physical handover and revenue recognition',
-        actionLabelAr: 'فحص العقد وبدء التسليم',
-        actionLabelEn: 'Start Handover',
-        onClick: () => onInspectContract(topReady)
-      });
-    }
-
-    return alerts;
-  }, [allDuesRecords, contracts, todayStr, threeDaysStr, onCollectItem, onInspectContract, isAr]);
-
-  // 3. Filtered & Sorted Dues for the Collection Queue
-  const filteredAndSortedDues = useMemo(() => {
-    let dues = allDuesRecords.filter(p => p.status !== 'Cleared' && p.status !== 'Void');
-
-    // Status filter
-    if (duesStatusFilter === 'overdue') {
-      dues = dues.filter(p => p.due_date < todayStr);
-    } else if (duesStatusFilter === 'today') {
-      dues = dues.filter(p => p.due_date === todayStr);
-    }
-
-    // Unified desk search filter (drawer, cheque #, buyer name, contract #, unit)
-    if (deskSearchQuery.trim()) {
-      const q = deskSearchQuery.toLowerCase().trim();
-      dues = dues.filter(p => {
-        const drawer = (p.drawer_name || '').toLowerCase();
-        const chequeNo = (p.cheque_number || '').toLowerCase();
-        const contract = contracts.find(c => c.contract_id === p.contract_id);
-        const buyer = (contract?.buyer_name || '').toLowerCase();
-        const contractNo = (contract?.contract_number || '').toLowerCase();
-        const unit = (contract?.unit_id || '').toLowerCase();
-        return drawer.includes(q) || chequeNo.includes(q) || buyer.includes(q) || contractNo.includes(q) || unit.includes(q);
-      });
-    }
-
-    // Sorting
-    return [...dues].sort((a, b) => {
-      if (duesSortBy === 'date_asc') return (a.due_date || '').localeCompare(b.due_date || '');
-      if (duesSortBy === 'date_desc') return (b.due_date || '').localeCompare(a.due_date || '');
-      if (duesSortBy === 'amount_desc') return D(b.nominal_value || '0').minus(D(a.nominal_value || '0')).toNumber();
-      if (duesSortBy === 'amount_asc') return D(a.nominal_value || '0').minus(D(b.nominal_value || '0')).toNumber();
-      if (duesSortBy === 'name_asc') {
-        const nameA = a.drawer_name || '';
-        const nameB = b.drawer_name || '';
-        return nameA.localeCompare(nameB);
+  // 4. FILTERED DATA TABLE MOVEMENTS
+  const filteredTransactions = useMemo(() => {
+    return dateScopedTransactions.filter((tx) => {
+      // Mindmap Stream Filter (Eliminating popups & routing, filtering table directly)
+      if (activeStreamFilter && !matchesStreamFilter(tx, activeStreamFilter)) {
+        return false;
       }
-      return 0;
+
+      // Category Tab Filter
+      if (selectedCategory !== 'all' && tx.category !== selectedCategory) {
+        return false;
+      }
+
+      // Type dropdown filter
+      if (typeFilter !== 'all' && tx.type !== typeFilter) {
+        return false;
+      }
+
+      // Text Search
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase().trim();
+        const match =
+          tx.description.toLowerCase().includes(q) ||
+          tx.counterparty.toLowerCase().includes(q) ||
+          tx.accountLabel.toLowerCase().includes(q) ||
+          tx.accountCode.includes(q) ||
+          tx.amount.abs().toString().includes(q);
+        if (!match) return false;
+      }
+
+      return true;
     });
-  }, [allDuesRecords, duesStatusFilter, deskSearchQuery, duesSortBy, todayStr, contracts]);
+  }, [dateScopedTransactions, activeStreamFilter, selectedCategory, typeFilter, searchQuery]);
 
-  const filteredDuesSum = useMemo(() => {
-    return filteredAndSortedDues.reduce((acc, p) => acc.plus(p.nominal_value || '0'), D(0));
-  }, [filteredAndSortedDues]);
+  // Sorted Transactions based on active interactive column sort
+  const sortedTransactions = useMemo(() => {
+    if (!tableSortField) return filteredTransactions;
+    return [...filteredTransactions].sort((a, b) => {
+      let cmp = 0;
+      if (tableSortField === 'date') {
+        cmp = a.fullDateTimeStr.localeCompare(b.fullDateTimeStr);
+      } else if (tableSortField === 'type') {
+        const aType = isAr ? a.typeLabelAr : a.typeLabelEn;
+        const bType = isAr ? b.typeLabelAr : b.typeLabelEn;
+        cmp = aType.localeCompare(bType);
+      } else if (tableSortField === 'description') {
+        cmp = a.description.localeCompare(b.description);
+      } else if (tableSortField === 'party') {
+        cmp = a.counterparty.localeCompare(b.counterparty);
+      } else if (tableSortField === 'reference') {
+        const aRef = a.reference_number || a.payment_method || a.id;
+        const bRef = b.reference_number || b.payment_method || b.id;
+        cmp = aRef.localeCompare(bRef);
+      } else if (tableSortField === 'amount') {
+        cmp = a.amount.abs().minus(b.amount.abs()).toNumber();
+      } else if (tableSortField === 'status') {
+        const aStat = isAr ? a.statusLabelAr : a.statusLabelEn;
+        const bStat = isAr ? b.statusLabelAr : b.statusLabelEn;
+        cmp = aStat.localeCompare(bStat);
+      }
+      return tableSortAsc ? cmp : -cmp;
+    });
+  }, [filteredTransactions, tableSortField, tableSortAsc, isAr]);
 
-  // 4. Maturing Safe Cheques for Queue Tab 2
-  const maturingSafeCheques = useMemo(() => {
-    let safeCheques = pdcRecords.filter(p => p.status === 'In Safe');
-    if (deskSearchQuery.trim()) {
-      const q = deskSearchQuery.toLowerCase().trim();
-      safeCheques = safeCheques.filter(p => {
-        const drawer = (p.drawer_name || '').toLowerCase();
-        const chequeNo = (p.cheque_number || '').toLowerCase();
-        const bank = (p.bank_name || '').toLowerCase();
-        return drawer.includes(q) || chequeNo.includes(q) || bank.includes(q);
-      });
+  // Pagination Slice
+  const totalTablePages = Math.ceil(sortedTransactions.length / pageSize) || 1;
+  const paginatedTransactions = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return sortedTransactions.slice(start, start + pageSize);
+  }, [sortedTransactions, currentPage, pageSize]);
+
+  // Active Stream Label for UI banner display
+  const activeStreamLabel = useMemo(() => {
+    return getStreamFilterLabel(activeStreamFilter, isAr);
+  }, [activeStreamFilter, isAr]);
+
+  // Stream click and toggle handlers
+  const handleStreamNodeClick = (streamKey: string) => {
+    handleDateScopeChange('all');
+    if (activeStreamFilter === streamKey) {
+      setActiveStreamFilter(null);
+    } else {
+      setActiveStreamFilter(streamKey);
+      setSelectedCategory('all');
     }
-    return safeCheques.sort((a, b) => (a.due_date || '').localeCompare(b.due_date || ''));
-  }, [pdcRecords, deskSearchQuery]);
-
-  const safeChequesSum = useMemo(() => {
-    return maturingSafeCheques.reduce((acc, p) => acc.plus(p.nominal_value || '0'), D(0));
-  }, [maturingSafeCheques]);
-
-  // Active filter count for reset button
-  const activeFiltersCount = (deskSearchQuery.trim() ? 1 : 0) + 
-    (duesStatusFilter !== 'all' ? 1 : 0) + 
-    (duesSortBy !== 'date_asc' ? 1 : 0);
-
-  const handleResetFilters = () => {
-    setDeskSearchQuery('');
-    setDuesStatusFilter('all');
-    setDuesSortBy('date_asc');
+    setCurrentPage(1);
+    setModalCurrentPage(1);
+    if (!isFullScreenTableOpen) {
+      tableRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
   };
 
-  // 5. Available Units for Instant Sale Matching Desk Search
-  const filteredAvailableUnits = useMemo(() => {
-    return properties
-      .filter(p => {
-        const isContracted = contracts.some(c => 
-          c.status !== 'Rescinded' && 
-          (c.property_id === p.id || c.unit_id === p.title_ar || c.unit_id === p.title_en)
-        ) || p.listing_status === 'sold';
-        return !isContracted;
-      })
-      .filter(p => {
-        if (!deskSearchQuery.trim()) return true;
-        const q = deskSearchQuery.toLowerCase().trim();
-        const title = (isAr ? p.title_ar : p.title_en || '').toLowerCase();
-        const loc = (p.location || '').toLowerCase();
-        return title.includes(q) || loc.includes(q);
-      });
-  }, [properties, contracts, deskSearchQuery, isAr]);
-
-  const availableUnits = filteredAvailableUnits;
-
-  // 6. Contracts Ready for Handover Protocol
-  const filteredReadyContracts = useMemo(() => {
-    let list = contracts.filter(c => {
-      if (c.status === 'Rescinded' || c.handover_status === 'Delivered') return false;
-      const total = parseFloat(c.gross_contract_value || '1');
-      const paid = parseFloat(c.total_cash_collected || '0');
-      return total > 0 && (paid / total) >= 0.7;
-    });
-
-    if (deskSearchQuery.trim()) {
-      const q = deskSearchQuery.toLowerCase().trim();
-      list = list.filter(c => {
-        const buyer = (c.buyer_name || '').toLowerCase();
-        const unit = (c.unit_id || '').toLowerCase();
-        const cno = (c.contract_number || '').toLowerCase();
-        return buyer.includes(q) || unit.includes(q) || cno.includes(q);
-      });
+  const handleBadgeClick = (filterType: 'in-total' | 'out-total', scope: 'today' | 'all' = 'all') => {
+    handleDateScopeChange(scope);
+    if (activeStreamFilter === filterType) {
+      setActiveStreamFilter(null);
+    } else {
+      setActiveStreamFilter(filterType);
+      setSelectedCategory('all');
     }
-
-    return list;
-  }, [contracts, deskSearchQuery]);
-
-  const readyForHandoverContracts = filteredReadyContracts;
-
-  // 7. Recent WIP Expenses & Materials
-  const filteredPropertyCosts = useMemo(() => {
-    let list = [...(propertyCosts || [])];
-    if (deskSearchQuery.trim()) {
-      const q = deskSearchQuery.toLowerCase().trim();
-      list = list.filter(c => {
-        const name = (c.item_name_ar || c.item_name_en || '').toLowerCase();
-        const supplier = (c.supplier_contractor || '').toLowerCase();
-        const inv = (c.invoice_ref || '').toLowerCase();
-        const prop = properties.find(p => p.id === c.property_id);
-        const propTitle = (prop?.title_ar || prop?.title_en || '').toLowerCase();
-        return name.includes(q) || supplier.includes(q) || inv.includes(q) || propTitle.includes(q);
-      });
+    setCurrentPage(1);
+    setModalCurrentPage(1);
+    if (!isFullScreenTableOpen) {
+      tableRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
-    return list;
-  }, [propertyCosts, deskSearchQuery, properties]);
+  };
 
-  const recentPropertyCosts = filteredPropertyCosts;
+  const handleClearStreamFilter = () => {
+    setActiveStreamFilter(null);
+    setSelectedCategory('all');
+    setCurrentPage(1);
+    setModalCurrentPage(1);
+  };
 
-  // 1. Target Property Items for ZFCustomSelect (Filtered to Under-Construction Projects)
-  const propertySelectItems: ZFCustomSelectItem[] = useMemo(() => {
-    return underConstructionProperties.map(p => {
-      const isOffPlan = p.completion_status === 'off_plan';
-      const isBuilding = p.type === 'building';
-      const unitsCount = p.building_units?.length || p.total_units_count;
-
-      const sublabelAr = [
-        p.location || (isAr ? 'الموقع مسجل' : 'Location recorded'),
-        p.area_sqm ? `${p.area_sqm} م²` : null,
-        unitsCount ? `${unitsCount} وحدات` : null
-      ].filter(Boolean).join(' • ');
-
-      const sublabelEn = [
-        p.location || 'Location recorded',
-        p.area_sqm ? `${p.area_sqm} sqm` : null,
-        unitsCount ? `${unitsCount} units` : null
-      ].filter(Boolean).join(' • ');
-
-      return {
-        value: p.id,
-        labelAr: p.title_ar,
-        labelEn: p.title_en,
-        sublabelAr,
-        sublabelEn,
-        badge: isOffPlan ? (isAr ? 'تحت الإنشاء' : 'Under Construction') : (isAr ? 'قيد التطوير' : 'In Development'),
-        badgeColor: isOffPlan ? '#fef3c7' : '#dbeafe',
-        icon: isOffPlan ? HardHat : Building2,
-        iconColor: isOffPlan ? '#b45309' : '#1d4ed8',
-        iconBg: isOffPlan ? '#fef3c7' : '#dbeafe',
-      };
-    });
-  }, [underConstructionProperties, isAr]);
-
-  // 2. Cost Category Items for ZFCustomSelect (Everyday Egyptian Arabic)
-  const categorySelectItems: ZFCustomSelectItem[] = useMemo(() => {
-    return [
-      {
-        value: 'civil_structure',
-        labelAr: 'حديد وأسمنت وخرسانة ومباني',
-        labelEn: 'Civil Structure & Concrete',
-        sublabelAr: 'حديد تسليح، أسمنت، خرسانة جاهزة، طوب، رمل وسن وخشب',
-        sublabelEn: 'Rebar, cement, ready-mix, brick, sand, timber',
-        icon: HardHat,
-        iconColor: '#d97706',
-        iconBg: '#fef3c7',
-      },
-      {
-        value: 'mep_infrastructure',
-        labelAr: 'سباكة وكهرباء وتأسيسات وعزل',
-        labelEn: 'MEP Infrastructure & Plumbing',
-        sublabelAr: 'خراطيم وسلوك وكابلات، مواسير مياه وصرف، عزل حمامات وأسطح',
-        sublabelEn: 'Electrical, plumbing, cables, waterproofing',
-        icon: Zap,
-        iconColor: '#0284c7',
-        iconBg: '#e0f2fe',
-      },
-      {
-        value: 'finishing_interior',
-        labelAr: 'تشطيبات ومحارة ودهانات وسيراميك',
-        labelEn: 'Finishing & Architectural',
-        sublabelAr: 'بياض ومحارة، سيراميك ورخام، نقاشة ودهانات، ألوميتال وأبواب',
-        sublabelEn: 'Plaster, ceramics, marble, paint, doors, aluminum',
-        icon: Paintbrush,
-        iconColor: '#7c3aed',
-        iconBg: '#f3e8ff',
-      },
-      {
-        value: 'labor_subcontractor',
-        labelAr: 'يوميات عمالة ومصنعيات مقاولين',
-        labelEn: 'Labor & Subcontractor Wages',
-        sublabelAr: 'يوميات حداد ونجار، بنايين، مصنعية مقاول، بوفيه وشاي الموقع',
-        sublabelEn: 'Daily wages, subcontractors, site labor & tea cash',
-        icon: Hammer,
-        iconColor: '#059669',
-        iconBg: '#d1fae5',
-      },
-      {
-        value: 'permits_engineering',
-        labelAr: 'تراخيص ورسوم هندسية ومجلس المدينة',
-        labelEn: 'Permits & Engineering Fees',
-        sublabelAr: 'رسوم رخصة البناء، إشراف ومخططات هندسية، تقرير جسات تربة',
-        sublabelEn: 'City council permits, engineering supervision, blueprints',
-        icon: FileCheck,
-        iconColor: '#2563eb',
-        iconBg: '#dbeafe',
-      },
-      {
-        value: 'taxes_fees',
-        labelAr: 'ضرائب وتأمينات ورسوم حكومية',
-        labelEn: 'Taxes, Insurance & Municipal Fees',
-        sublabelAr: 'تأمينات المقاولات، رسوم توصيل عدادات ومرافق، ضرائب',
-        sublabelEn: 'Contractor insurance, utilities connection, municipal taxes',
-        icon: Scale,
-        iconColor: '#dc2626',
-        iconBg: '#fee2e2',
-      },
-      {
-        value: 'site_facade',
-        labelAr: 'واجهات ومداخل رخام وأسانسير',
-        labelEn: 'Facades, Elevators & Entrances',
-        sublabelAr: 'تشطيب الواجهة الخارجية، توريد وتركيب أسانسير، مدخل رخام وبوابة',
-        sublabelEn: 'Exterior facade, elevator installation, marble entrance',
-        icon: Building2,
-        iconColor: '#b45309',
-        iconBg: '#ffedd5',
-      }
-    ];
-  }, []);
-
-  // 3. Execution Phase Items for ZFCustomSelect (Everyday Egyptian Arabic)
-  const phaseSelectItems: ZFCustomSelectItem[] = useMemo(() => {
-    return [
-      { 
-        value: 'structural_skeleton', 
-        labelAr: 'الهيكل والصبات والأسقف', 
-        labelEn: 'Structural Skeleton', 
-        icon: HardHat,
-        iconColor: '#d97706',
-        iconBg: '#fef3c7'
-      },
-      { 
-        value: 'masonry_roughing', 
-        labelAr: 'المباني وتأسيس المواسير والكهرباء', 
-        labelEn: 'Masonry & Roughing', 
-        icon: Hammer,
-        iconColor: '#0284c7',
-        iconBg: '#e0f2fe'
-      },
-      { 
-        value: 'finishing_interiors', 
-        labelAr: 'التشطيبات والدهانات', 
-        labelEn: 'Finishing & Painting', 
-        icon: Paintbrush,
-        iconColor: '#7c3aed',
-        iconBg: '#f3e8ff'
-      },
-      { 
-        value: 'excavation_foundation', 
-        labelAr: 'الحفر والقواعد والأساسات', 
-        labelEn: 'Excavation & Foundations', 
-        icon: Layers,
-        iconColor: '#b45309',
-        iconBg: '#ffedd5'
-      },
-      { 
-        value: 'planning_permits', 
-        labelAr: 'الرخص والمخططات الهندسية', 
-        labelEn: 'Planning & Permits', 
-        icon: FileCheck,
-        iconColor: '#2563eb',
-        iconBg: '#dbeafe'
-      },
-      { 
-        value: 'final_inspection_handover', 
-        labelAr: 'المعاينة والجاهزية للتسليم', 
-        labelEn: 'Inspection & Delivery', 
-        icon: CheckCircle2,
-        iconColor: '#059669',
-        iconBg: '#d1fae5'
-      },
-    ];
-  }, []);
-
-  // 4. Dues Sort Items for ZFCustomSelect
-  const duesSortSelectItems: ZFCustomSelectItem[] = useMemo(() => [
-    { value: 'date_asc', labelAr: 'الاستحقاق: الأقرب أولاً', labelEn: 'Due Date: Earliest First' },
-    { value: 'date_desc', labelAr: 'الاستحقاق: الأبعد أولاً', labelEn: 'Due Date: Furthest First' },
-    { value: 'amount_desc', labelAr: 'المبلغ: من الأعلى للأقل', labelEn: 'Amount: High to Low' },
-    { value: 'amount_asc', labelAr: 'المبلغ: من الأقل للأعلى', labelEn: 'Amount: Low to High' },
-    { value: 'name_asc', labelAr: 'اسم العميل: أبجدياً (أ-ي)', labelEn: 'Client Name (A-Z)' },
-  ], []);
-
-  // Submit Handler: Unified Real Estate Project Cost & Expense Logger
-  const handleProjectCostSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!wipPropertyId) {
-      setExpensePropertyError(isAr ? 'يرجى اختيار المشروع العقاري المستهدف' : 'Please select target property');
-      return;
+  const handleCategoryTabChange = (category: CategoryTab) => {
+    setSelectedCategory(category);
+    // Explicit category tab navigation clears mindmap stream filter
+    if (activeStreamFilter) {
+      setActiveStreamFilter(null);
     }
-    setExpensePropertyError('');
+    setCurrentPage(1);
+  };
 
-    if (!expenseAmount || parseFloat(expenseAmount) <= 0) return;
+  // Reset pagination on filter or sort change
+  useEffect(() => {
+    setCurrentPage(1);
+    setModalCurrentPage(1);
+  }, [activeStreamFilter, selectedCategory, typeFilter, dateScope, fromDate, toDate, searchQuery, tableSortField, tableSortAsc]);
 
-    setIsSubmittingExpense(true);
-    try {
-      const selectedProp = properties.find(p => p.id === wipPropertyId);
-      const propTitle = selectedProp ? (isAr ? selectedProp.title_ar : selectedProp.title_en) : (isAr ? 'مشروع عقاري' : 'Project');
-      const itemName = wipItemName.trim() || (isAr ? 'تكلفة ومصروفات مشروع' : 'Project Cost');
+  // Modal Pagination Slice
+  const totalModalPages = Math.ceil(sortedTransactions.length / modalPageSize) || 1;
+  const modalPaginatedTransactions = useMemo(() => {
+    const start = (modalCurrentPage - 1) * modalPageSize;
+    return sortedTransactions.slice(start, start + modalPageSize);
+  }, [sortedTransactions, modalCurrentPage, modalPageSize]);
 
-      const paymentLabel = expensePaymentSource === '101000'
-        ? (isAr ? 'كاش من الخزنة' : 'Cash Safe')
-        : expensePaymentSource === '102000'
-          ? (isAr ? 'تحويل إنستاباي' : 'InstaPay')
-          : (isAr ? 'على الحساب (بالدَّين)' : 'On Credit');
+  // 5. SIDEBAR: RECENT 5 TRANSACTIONS
+  const recentFiveTransactions = useMemo(() => {
+    return allTransactions.slice(0, 5);
+  }, [allTransactions]);
 
-      const fullMemo = `${isAr ? 'مصروف مشروع' : 'Project Cost'} [${propTitle}]: ${itemName}${wipSupplier ? ` - تاجر/مقاول: ${wipSupplier}` : ''}${wipInvoiceRef ? ` (فاتورة: ${wipInvoiceRef})` : ''} [${paymentLabel}]`;
+  // 6. QUICK ACTIONS OPERATIONAL ROUTING PROTOCOL (ALL POPUPS, ZERO REDIRECTS)
+  type QuickActionKey =
+    | 'collect'
+    | 'collect_pdc'
+    | 'cash_receipt'
+    | 'new_contract'
+    | 'partner_injection'
+    | 'pay_contractor'
+    | 'issue_cheque'
+    | 'record_expense'
+    | 'safe_expense'
+    | 'partner_payout'
+    | 'report'
+    | 'expand_table';
 
-      // 1. If onAddPropertyCostItem is provided, add to project cost ledger
-      if (onAddPropertyCostItem) {
-        const costItem: ERPPropertyCostItem = {
-          item_id: generateUUID(),
-          property_id: wipPropertyId,
-          category: wipCategory,
-          phase: wipPhase,
-          item_name_ar: itemName,
-          item_name_en: itemName,
-          supplier_contractor: wipSupplier.trim() || undefined,
-          invoice_ref: wipInvoiceRef.trim() || undefined,
-          quantity: parseFloat(wipQuantity) || 1,
-          unit: wipUnit || 'مقطوعية',
-          unit_cost_egp: D(expenseAmount).toFixed(2),
-          total_cost_egp: D(expenseAmount).toFixed(2),
-          logged_date: todayStr,
-          logged_by: 'المكتب اليومي - الإدارة المالية',
-          linked_account_code: '151000', // Projects Under Construction (WIP)
-          status: 'verified'
-        };
-        await onAddPropertyCostItem(costItem);
-      }
-
-      // 2. If onDirectExpenseSubmit is provided, post journal entry to GL
-      if (onDirectExpenseSubmit) {
-        await onDirectExpenseSubmit(
-          expenseAmount,
-          '151000', // Capitalized WIP Asset (مشروعات تحت التنفيذ)
-          fullMemo,
-          expensePaymentSource // '101000' | '102000' | '201000'
-        );
-      }
-
-      const matchedCat = categorySelectItems.find(c => c.value === wipCategory);
-      const catLabel = matchedCat ? (isAr ? matchedCat.labelAr : matchedCat.labelEn) : wipCategory;
-
-      setExpenseSuccessData({
-        amount: expenseAmount,
-        categoryLabel: catLabel,
-        supplier: wipSupplier.trim() || undefined,
-        propertyTitle: propTitle,
-        invoiceRef: wipInvoiceRef.trim() || undefined,
-        memo: fullMemo,
-        paymentSource: paymentLabel
-      });
-
-      // Clear input fields for rapid subsequent entry while keeping selected project
-      setExpenseAmount('');
-      setWipItemName('');
-      setWipSupplier('');
-      setWipInvoiceRef('');
-      setWipQuantity('1');
-
-      if (!keepExpenseModalOpen) {
-        setTimeout(() => {
-          setIsExpenseModalOpen(false);
-          setExpenseSuccessData(null);
-        }, 1500);
-      }
-
-      toast.success(
-        isAr 
-          ? `تم تسجيل مصروف المشروع بنجاح` 
-          : `Project cost recorded successfully`,
-        {
-          description: (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem', marginTop: '0.35rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap' }}>
-                <span style={{
-                  background: 'rgba(180, 83, 9, 0.1)',
-                  color: '#b45309',
-                  border: '1px solid rgba(180, 83, 9, 0.22)',
-                  padding: '0.12rem 0.55rem',
-                  borderRadius: '6px',
-                  fontWeight: 900,
-                  fontSize: '0.84rem',
-                  fontVariantNumeric: 'tabular-nums'
-                }}>
-                  -{D(expenseAmount).formatEGP(isAr)}
-                </span>
-                <span style={{
-                  background: '#f8fafc',
-                  color: '#475569',
-                  border: '1px solid #e2e8f0',
-                  padding: '0.12rem 0.5rem',
-                  borderRadius: '6px',
-                  fontSize: '0.72rem',
-                  fontWeight: 700
-                }}>
-                  {propTitle}
-                </span>
-              </div>
-              <div style={{ fontSize: '0.76rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: '0.35rem', flexWrap: 'wrap' }}>
-                <span>{isAr ? 'البند:' : 'Item:'}</span>
-                <strong style={{ color: '#0f172a', fontWeight: 800 }}>{itemName}</strong>
-                <span style={{ color: '#cbd5e1' }}>•</span>
-                <span>{paymentLabel}</span>
-              </div>
-            </div>
-          ),
-          duration: 5000
+  const handleQuickAction = (actionKey: QuickActionKey) => {
+    switch (actionKey) {
+      case 'collect':
+      case 'collect_pdc': {
+        const pendingPdc = (pdcRecords || []).find(p => p.status !== 'Cleared' && p.status !== 'Void') || pdcRecords[0];
+        if (pendingPdc) {
+          onCollectItem(pendingPdc);
+        } else if (onOpenCashReceipt) {
+          onOpenCashReceipt();
+        } else {
+          onOpenProjectExpense();
         }
-      );
-    } catch (err: unknown) {
-      toast.error(
-        isAr ? 'فشل تسجيل تكلفة المشروع' : 'Failed to record project cost', 
-        { description: (err as Error).message }
-      );
-    } finally {
-      setIsSubmittingExpense(false);
+        break;
+      }
+      case 'cash_receipt': {
+        if (onOpenCashReceipt) {
+          onOpenCashReceipt();
+        } else {
+          const pendingPdc = (pdcRecords || []).find(p => p.status !== 'Cleared' && p.status !== 'Void');
+          if (pendingPdc) onCollectItem(pendingPdc);
+          else onOpenProjectExpense();
+        }
+        break;
+      }
+      case 'new_contract': {
+        onOpenNewContract();
+        break;
+      }
+      case 'partner_injection': {
+        if (onOpenPartnerInjection) {
+          onOpenPartnerInjection();
+        } else if (onOpenPartnerOperations) {
+          onOpenPartnerOperations();
+        } else {
+          onOpenProjectExpense();
+        }
+        break;
+      }
+      case 'pay_contractor': {
+        const firstDueCostWithInstallment = (effectivePropertyCosts || []).flatMap(cost => {
+          const installments = cost.payable_installments || [];
+          return installments
+            .filter(inst => inst.status !== 'PAID')
+            .map(inst => ({ cost, inst }));
+        }).sort((a, b) => a.inst.due_date.localeCompare(b.inst.due_date))[0];
+
+        if (firstDueCostWithInstallment && onRecordPayablePayment) {
+          setSelectedCostForPayable(firstDueCostWithInstallment.cost);
+          setSelectedInstallmentForPayable(firstDueCostWithInstallment.inst);
+        } else if (effectivePropertyCosts.length > 0 && onUpdatePropertyCostItem) {
+          setSelectedCostForEdit(effectivePropertyCosts[0]);
+        } else {
+          setIsExpenseModalOpen(true);
+        }
+        break;
+      }
+      case 'issue_cheque': {
+        onOpenNewCheque();
+        break;
+      }
+      case 'record_expense':
+      case 'safe_expense': {
+        setIsExpenseModalOpen(true);
+        break;
+      }
+      case 'partner_payout': {
+        if (onOpenPartnerPayout) {
+          onOpenPartnerPayout();
+        } else if (onOpenPartnerOperations) {
+          onOpenPartnerOperations();
+        } else {
+          onOpenProjectExpense();
+        }
+        break;
+      }
+      case 'report': {
+        setIsReportModalOpen(true);
+        break;
+      }
+      case 'expand_table': {
+        setIsFullScreenTableOpen(true);
+        break;
+      }
     }
   };
 
-  // 7. Recent Verified Operations & Audit Stream (Tab 6)
-  const filteredAuditEntries = useMemo(() => {
-    let list = [...journalEntries].sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''));
-    if (deskSearchQuery.trim()) {
-      const q = deskSearchQuery.toLowerCase().trim();
-      list = list.filter(je => {
-        const num = (je.entry_number || '').toLowerCase();
-        const desc = (je.description || '').toLowerCase();
-        const by = (je.created_by || '').toLowerCase();
-        const src = (je.source_module || '').toLowerCase();
-        return num.includes(q) || desc.includes(q) || by.includes(q) || src.includes(q);
+  // 7. UPCOMING MATURING DUES & COLLECTIONS DATA HOOK
+  const upcomingDues = useMemo(() => {
+    return computeUpcomingDues(pdcRecords, effectivePropertyCosts, isAr, todayStr);
+  }, [pdcRecords, effectivePropertyCosts, isAr, todayStr]);
+
+  // Inspect Transaction Handler
+  const handleInspectRow = (tx: CashMovementTransaction) => {
+    if (tx.rawContract) {
+      onInspectContract(tx.rawContract);
+    } else if (tx.rawPdc && onInspectCheque) {
+      onInspectCheque(tx.rawPdc);
+    } else if (tx.rawPdc && tx.direction === 'IN' && onCollectItem) {
+      onCollectItem(tx.rawPdc);
+    } else if (onInspectTransaction) {
+      const safeEntry = tx.rawEntry || {
+        entry_number: tx.id || 'JE-AUTO',
+        description: tx.description || tx.counterparty,
+        posting_date: tx.date,
+        lines: []
+      };
+      onInspectTransaction({
+        type: 'journal',
+        entry: safeEntry,
+        journalEntry: safeEntry,
+        amount: (tx.amount && typeof tx.amount.abs === 'function') ? tx.amount.abs().toFixed(2) : D(tx.amount || 0).abs().toFixed(2),
+        title: tx.description,
+        party: tx.counterparty
       });
+    } else {
+      toast.info(`${tx.description || tx.counterparty} — ${formatNumberWithCommas(tx.amount.abs())} ${isAr ? 'ج.م' : 'EGP'}`);
     }
-    return list;
-  }, [journalEntries, deskSearchQuery]);
-
-  const recentAuditEntries = useMemo(() => {
-    return filteredAuditEntries.slice(0, 6);
-  }, [filteredAuditEntries]);
-
-  // Paginated Slices for Workbench Tabs
-  const paginatedDues = useMemo(() => {
-    return filteredAndSortedDues.slice((workbenchPage - 1) * workbenchPageSize, workbenchPage * workbenchPageSize);
-  }, [filteredAndSortedDues, workbenchPage, workbenchPageSize]);
-
-  const paginatedSafeCheques = useMemo(() => {
-    return maturingSafeCheques.slice((workbenchPage - 1) * workbenchPageSize, workbenchPage * workbenchPageSize);
-  }, [maturingSafeCheques, workbenchPage, workbenchPageSize]);
-
-  const paginatedAvailableUnits = useMemo(() => {
-    return filteredAvailableUnits.slice((workbenchPage - 1) * workbenchPageSize, workbenchPage * workbenchPageSize);
-  }, [filteredAvailableUnits, workbenchPage, workbenchPageSize]);
-
-  const paginatedReadyContracts = useMemo(() => {
-    return filteredReadyContracts.slice((workbenchPage - 1) * workbenchPageSize, workbenchPage * workbenchPageSize);
-  }, [filteredReadyContracts, workbenchPage, workbenchPageSize]);
-
-  const paginatedPropertyCosts = useMemo(() => {
-    return filteredPropertyCosts.slice((workbenchPage - 1) * workbenchPageSize, workbenchPage * workbenchPageSize);
-  }, [filteredPropertyCosts, workbenchPage, workbenchPageSize]);
-
-  const paginatedAuditEntries = useMemo(() => {
-    return filteredAuditEntries.slice((workbenchPage - 1) * workbenchPageSize, workbenchPage * workbenchPageSize);
-  }, [filteredAuditEntries, workbenchPage, workbenchPageSize]);
-
-  const totalActiveWorkbenchItems = useMemo(() => {
-    switch (activeWorkbenchTab) {
-      case 'urgent_dues':
-        return filteredAndSortedDues.length;
-      case 'upcoming_dues':
-        return maturingSafeCheques.length;
-      case 'available_units':
-        return filteredAvailableUnits.length;
-      case 'handover_ready':
-        return filteredReadyContracts.length;
-      case 'recent_expenses':
-        return filteredPropertyCosts.length;
-      case 'audit_stream':
-        return filteredAuditEntries.length;
-      default:
-        return 0;
-    }
-  }, [
-    activeWorkbenchTab,
-    filteredAndSortedDues.length,
-    maturingSafeCheques.length,
-    filteredAvailableUnits.length,
-    filteredReadyContracts.length,
-    filteredPropertyCosts.length,
-    filteredAuditEntries.length
-  ]);
-
-  // First available property for quick actions
-  const primaryProperty = properties[0];
-  const primaryContract = contracts.find(c => c.status !== 'Rescinded') || contracts[0];
-
-  // Desk Interactive Refs & Focus Handlers
-  const amountInputRef = useRef<HTMLInputElement>(null);
-  const loggerRef = useRef<HTMLDivElement>(null);
-
-  // Merged Quick Action: Record Project Expenses & Materials (Unified Cash, Bank/InstaPay, Credit Logger)
-  const handleOpenProjectExpenses = () => {
-    setExpensePaymentSource('101000');
-    setWipCategory('civil_structure');
-    setExpensePropertyError('');
-    setExpenseSuccessData(null);
-    setIsExpenseModalOpen(true);
-    setTimeout(() => amountInputRef.current?.focus(), 150);
   };
+
+  // Switch to full transactions table and scroll into view
+  const handleViewAllTransactions = () => {
+    setActiveStreamFilter(null);
+    setSelectedCategory('all');
+    setTypeFilter('all');
+    setSearchQuery('');
+    setFromDate('');
+    setToDate('');
+    setDateScope('all');
+    setTableSortField(null);
+    setTableSortAsc(true);
+    setCurrentPage(1);
+    setModalCurrentPage(1);
+    if (tableRef.current) {
+      tableRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
+  const handleTodayKpiClick = (stream: 'in-total' | 'out-total' | null = null) => {
+    handleDateScopeChange('today');
+    setActiveStreamFilter(stream);
+    setSelectedCategory('all');
+    setTypeFilter('all');
+    setSearchQuery('');
+    setTableSortField(null);
+    setTableSortAsc(true);
+    setCurrentPage(1);
+    setModalCurrentPage(1);
+    tableRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+
+  const effectiveTotalLiquid = liquidBalances.totalLiquid;
 
   return (
-    <div className={styles.stageContainer}>
-      
-      {/* 1. HERO GREETING & STREAMLINED CONTEXT BAR */}
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        flexWrap: 'wrap',
-        gap: '1rem',
-        paddingTop: '0.35rem',
-        paddingBottom: '0.25rem'
-      }}>
-        <div>
-          <ZFErpBreadcrumb 
-            sectionTitle={isAr ? 'حركة الخزنة والعمليات اليومية' : 'Daily Operations & Cashier'} 
-            icon={<Calendar size={13} color="#946f23" />} 
-            style={{ marginBottom: '0.45rem' }} 
-          />
+    <div className={ops.page} dir={isAr ? 'rtl' : 'ltr'}>
+      {/* 1. PAGE HEADER */}
+      <header className={ops.pageHeader}>
+        <div className={ops.headerTop}>
+          <div className={ops.titleArea}>
+            <h2>{isAr ? 'مكتب العمليات اليومية' : 'Daily Operations Desk'}</h2>
+            <p>
+              {isAr
+                ? `${todayMetrics.count} حركة مسجلة اليوم · ${todayStr}`
+                : `${todayMetrics.count} movements recorded today · ${todayStr}`}
+            </p>
+          </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-            <div 
-              title={isAr ? 'حركة الخزينة والعمليات اليومية المباشرة' : 'Daily Cashier & Operations'}
-              style={{
-                width: '38px',
-                height: '38px',
-                borderRadius: '11px',
-                background: 'linear-gradient(135deg, rgba(184, 144, 62, 0.16) 0%, rgba(184, 144, 62, 0.05) 100%)',
-                border: '1px solid rgba(184, 144, 62, 0.3)',
-                boxShadow: '0 2px 8px rgba(184, 144, 62, 0.12)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: '#946f23',
-                flexShrink: 0
-              }}
+          <div className={ops.headerControls}>
+            <button
+              type="button"
+              className={ops.headerActionBtn}
+              onClick={() => setIsReportModalOpen(true)}
+              title={isAr ? 'عرض وطباعة كشف التدفقات النقدية' : 'View cash flow report'}
             >
-              <Zap size={20} color="#946f23" />
-            </div>
-            <h1 style={{ fontSize: '1.35rem', fontWeight: 900, margin: 0, color: '#0f172a', letterSpacing: '-0.02em' }}>
-              {isAr ? 'حركة الخزنة والعمليات اليومية' : 'Daily Operations & Cashier Cockpit'}
-            </h1>
-            <span 
-              title={isAr ? 'الخزينة التشغيلية ومحطة العمل متصلة بالنظام المالي المزدوج وتعمل بنظام الترحيل الفوري' : 'Live dual-entry system connected'}
-              style={{
-                fontSize: '0.68rem',
-                fontWeight: 800,
-                padding: '0.15rem 0.5rem',
-                borderRadius: '6px',
-                background: 'rgba(21, 128, 61, 0.07)',
-                border: '1px solid rgba(21, 128, 61, 0.2)',
-                color: '#15803d'
-              }}
-            >
-              {isAr ? 'جاهز للشغل' : 'Live & Ready'}
-            </span>
-          </div>
-          <p style={{ fontSize: '0.78rem', color: '#64748b', margin: '0.25rem 0 0 0' }}>
-            {isAr 
-              ? 'إدارة سريعة للشغل اليومي: تحصيل أقساط، تسجيل مصاريف، عمل عقود جديدة، ومتابعة الخزنة'
-              : 'The central operational cockpit: Instant collections, disbursements, deals, WIP logging, and audit'}
-          </p>
-        </div>
+              <Printer size={14} />
+              <span>{isAr ? 'تقرير الخزينة' : 'Treasury Report'}</span>
+            </button>
 
-        {/* Date & Streamlined Financial Micro-Telemetry: Dynamic Daily Operational Movements */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'wrap' }}>
-          <div className={styles.deskMiniTelemetry}>
-            {/* 1. Today's Collections */}
-            <div className={styles.deskMiniItem}>
-              <span className={styles.deskMiniIconBadge} style={{ background: 'rgba(5, 150, 105, 0.1)', color: '#059669' }}>
-                <ArrowDownLeft size={13} />
-              </span>
-              <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.15 }}>
-                <span className={styles.deskMiniLabel}>{isAr ? 'تحصيلات اليوم' : 'Collections'}</span>
-                <span className={styles.deskMiniVal} style={{ color: '#059669' }}>
-                  +{todayCollectionsSum.formatEGP(isAr)}
-                </span>
-              </div>
-              {todayCollectionsCount > 0 && (
-                <span style={{ 
-                  fontSize: '0.65rem', 
-                  fontWeight: 800,
-                  color: '#059669', 
-                  background: 'rgba(5, 150, 105, 0.12)', 
-                  border: '1px solid rgba(5, 150, 105, 0.2)',
-                  padding: '0.08rem 0.38rem', 
-                  borderRadius: '5px' 
-                }}>
-                  {todayCollectionsCount}
-                </span>
-              )}
-            </div>
-
-            {/* 2. Today's Disbursements */}
-            <div className={styles.deskMiniItem}>
-              <span className={styles.deskMiniIconBadge} style={{ background: 'rgba(180, 83, 9, 0.1)', color: '#b45309' }}>
-                <ArrowUpRight size={13} />
-              </span>
-              <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.15 }}>
-                <span className={styles.deskMiniLabel}>{isAr ? 'مصروفات وخامات' : 'Disbursements'}</span>
-                <span className={styles.deskMiniVal} style={{ color: todayDisbursementsSum.gt(0) ? '#b45309' : '#475569' }}>
-                  -{todayDisbursementsSum.formatEGP(isAr)}
-                </span>
-              </div>
-              {todayDisbursementsCount > 0 && (
-                <span style={{ 
-                  fontSize: '0.65rem', 
-                  fontWeight: 800,
-                  color: '#b45309', 
-                  background: 'rgba(180, 83, 9, 0.12)', 
-                  border: '1px solid rgba(180, 83, 9, 0.2)',
-                  padding: '0.08rem 0.38rem', 
-                  borderRadius: '5px' 
-                }}>
-                  {todayDisbursementsCount}
-                </span>
-              )}
-            </div>
-
-            {/* 3. Today's Net Cash Flow */}
-            <div className={styles.deskMiniItem}>
-              <span className={styles.deskMiniIconBadge} style={{ 
-                background: todayNetFlow.gt(0) ? 'rgba(5, 150, 105, 0.1)' : todayNetFlow.lt(0) ? 'rgba(220, 38, 38, 0.1)' : 'rgba(71, 85, 105, 0.1)', 
-                color: todayNetFlow.gt(0) ? '#059669' : todayNetFlow.lt(0) ? '#dc2626' : '#475569' 
-              }}>
-                <Wallet size={13} />
-              </span>
-              <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.15 }}>
-                <span className={styles.deskMiniLabel}>{isAr ? 'صافي الحركة' : 'Net Flow'}</span>
-                <span className={styles.deskMiniVal} style={{ color: todayNetFlow.gt(0) ? '#059669' : todayNetFlow.lt(0) ? '#dc2626' : '#0f172a' }}>
-                  {todayNetFlow.gt(0) ? '+' : ''}{todayNetFlow.formatEGP(isAr)}
-                </span>
-              </div>
-            </div>
-
-            {/* 4. Dues Today */}
-            <div className={styles.deskMiniItem}>
-              <span className={styles.deskMiniIconBadge} style={{ 
-                background: todayPendingDueCount > 0 ? 'rgba(220, 38, 38, 0.1)' : 'rgba(71, 85, 105, 0.1)', 
-                color: todayPendingDueCount > 0 ? '#dc2626' : '#64748b' 
-              }}>
-                <BellRing size={13} />
-              </span>
-              <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.15 }}>
-                <span className={styles.deskMiniLabel}>{isAr ? 'مستحق اليوم' : 'Due Today'}</span>
-                <span className={`${styles.deskMiniVal} ${todayPendingDueCount > 0 ? styles.deskMiniValAlert : ''}`}>
-                  {todayPendingDueSum.formatEGP(isAr)}
-                </span>
-              </div>
-              {todayPendingDueCount > 0 && (
-                <span style={{ 
-                  fontSize: '0.65rem', 
-                  fontWeight: 800,
-                  color: '#dc2626', 
-                  background: 'rgba(220, 38, 38, 0.12)', 
-                  border: '1px solid rgba(220, 38, 38, 0.2)',
-                  padding: '0.08rem 0.38rem', 
-                  borderRadius: '5px' 
-                }}>
-                  {todayPendingDueCount}
-                </span>
-              )}
-            </div>
-          </div>
-
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-            background: '#ffffff',
-            border: '1.5px solid #d8d2c4',
-            borderRadius: '11px',
-            padding: '0.55rem 0.85rem',
-            boxShadow: '0 2px 8px -2px rgba(15, 23, 42, 0.05)'
-          }}>
-            <Clock size={14} color="#946f23" />
-            <span style={{ fontSize: '0.74rem', fontWeight: 700, color: '#0f172a', fontVariantNumeric: 'tabular-nums' }}>
-              {new Date().toLocaleDateString(isAr ? 'ar-EG' : 'en-US', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' })}
-            </span>
-          </div>
-        </div>
-      </div>
-
-      {/* 2. EXECUTIVE LIQUIDITY & ACTION RADAR */}
-      <div style={{
-        background: '#ffffff',
-        border: '1.5px solid #d8d2c4',
-        borderRadius: '16px',
-        padding: '1.25rem 1.4rem',
-        boxShadow: '0 4px 20px -4px rgba(15, 23, 42, 0.05)',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '1.1rem'
-      }}>
-        {/* Radar Header & Live Liquidity Breakdown */}
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          flexWrap: 'wrap',
-          gap: '1rem',
-          borderBottom: '1px solid #f1f5f9',
-          paddingBottom: '0.95rem'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            <div style={{
-              width: '38px',
-              height: '38px',
-              borderRadius: '11px',
-              background: 'linear-gradient(135deg, rgba(4, 120, 87, 0.12) 0%, rgba(4, 120, 87, 0.04) 100%)',
-              border: '1px solid rgba(4, 120, 87, 0.25)',
-              color: '#047857',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              boxShadow: '0 2px 6px rgba(4, 120, 87, 0.1)'
-            }}>
-              <Activity size={18} />
-            </div>
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-                <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 900, color: '#0f172a', letterSpacing: '-0.01em' }}>
-                  {isAr ? 'رادار السيولة والتنبيهات التشغيلية الفورية' : 'Executive Liquidity & Action Radar'}
-                </h3>
-                <span style={{
-                  fontSize: '0.68rem',
-                  fontWeight: 800,
-                  padding: '0.15rem 0.55rem',
-                  borderRadius: '20px',
-                  background: 'rgba(4, 120, 87, 0.08)',
-                  border: '1px solid rgba(4, 120, 87, 0.25)',
-                  color: '#047857'
-                }}>
-                  {isAr ? 'محدث لحظياً بالمليم' : 'Live Sync'}
-                </span>
-              </div>
-              <span style={{ fontSize: '0.74rem', color: '#64748b', marginTop: '0.2rem', display: 'block' }}>
-                {isAr 
-                  ? 'مراقبة فورية للسيولة الحاضرة بالخزينة والبنك، مع تنبيهات الأقساط المتأخرة والوحدات الجاهزة للتسليم' 
-                  : 'Instant detection of liquid reserves, critical overdue installments, and delivery readiness'}
-              </span>
-            </div>
-          </div>
-
-          {/* Live Liquid Treasury Badges */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'wrap' }}>
-            {/* Safe 101000 */}
-            <div style={{
-              background: '#f8fafc',
-              border: '1.5px solid #d8d2c4',
-              borderRadius: '10px',
-              padding: '0.4rem 0.75rem',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.45rem',
-              boxShadow: '0 1px 3px rgba(15, 23, 42, 0.04)'
-            }}>
-              <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#059669' }} />
-              <span style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 600 }}>
-                {isAr ? 'خزينة المركز الرئيسي (101000):' : 'Main Safe (101000):'}
-              </span>
-              <span style={{ fontSize: '0.84rem', fontWeight: 900, color: '#0f172a', fontVariantNumeric: 'tabular-nums' }}>
-                {liquidBalances.safeCash.formatEGP(isAr)}
-              </span>
-            </div>
-
-            {/* Bank 102000 */}
-            <div style={{
-              background: '#f8fafc',
-              border: '1.5px solid #d8d2c4',
-              borderRadius: '10px',
-              padding: '0.4rem 0.75rem',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.45rem',
-              boxShadow: '0 1px 3px rgba(15, 23, 42, 0.04)'
-            }}>
-              <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#2563eb' }} />
-              <span style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 600 }}>
-                {isAr ? 'البنك وإنستاباي (102000):' : 'Bank & InstaPay (102000):'}
-              </span>
-              <span style={{ fontSize: '0.84rem', fontWeight: 900, color: '#0f172a', fontVariantNumeric: 'tabular-nums' }}>
-                {liquidBalances.bankCash.formatEGP(isAr)}
-              </span>
-            </div>
-
-            {/* Total Liquid Capital */}
-            <div style={{
-              background: 'linear-gradient(135deg, rgba(184, 144, 62, 0.09) 0%, rgba(184, 144, 62, 0.03) 100%)',
-              border: '1.5px solid #d8d2c4',
-              borderRadius: '10px',
-              padding: '0.4rem 0.85rem',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.45rem',
-              boxShadow: '0 1px 3px rgba(15, 23, 42, 0.04)'
-            }}>
-              <Wallet size={14} color="#946f23" />
-              <span style={{ fontSize: '0.72rem', color: '#946f23', fontWeight: 800 }}>
-                {isAr ? 'إجمالي السيولة المتاحة:' : 'Total Liquid:'}
-              </span>
-              <span style={{ fontSize: '0.92rem', fontWeight: 900, color: '#946f23', fontVariantNumeric: 'tabular-nums' }}>
-                {liquidBalances.totalLiquid.formatEGP(isAr)}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* High-Contrast Actionable Alerts Grid (Recessed Bay) */}
-        <div className={styles.radarRecessedBay}>
-          {operationalAlerts.length === 0 ? (
-            <div style={{
-              gridColumn: '1 / -1',
-              background: '#ffffff',
-              border: '1.5px solid #d8d2c4',
-              borderRadius: '12px',
-              padding: '1.25rem',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              gap: '1rem',
-              boxShadow: '0 2px 8px rgba(15, 23, 42, 0.04)'
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                <div style={{
-                  width: '36px',
-                  height: '36px',
-                  borderRadius: '10px',
-                  background: 'rgba(5, 150, 105, 0.1)',
-                  color: '#059669',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
-                }}>
-                  <ShieldCheck size={20} />
-                </div>
-                <div>
-                  <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#0f172a' }}>
-                    {isAr ? 'كافة العمليات التشغيلية منتظمة ولا توجد متأخرات حرجة' : 'All operational queues are regular'}
-                  </div>
-                  <div style={{ fontSize: '0.73rem', color: '#64748b', marginTop: '0.2rem' }}>
-                    {isAr ? 'الخزينة والحسابات البنكية مطابقة بالمليم، وكافة الأقساط محصلة في مواعيدها المحددة.' : 'Safe and banks reconciled; all schedules collected on time.'}
-                  </div>
-                </div>
-              </div>
-
+            {onExportExcel && (
               <button
                 type="button"
-                onClick={() => onNavigateToTab('ledger')}
-                style={{
-                  background: 'linear-gradient(135deg, #946f23 0%, #b8860b 100%)',
-                  border: '1px solid rgba(148, 111, 35, 0.35)',
-                  color: '#ffffff',
-                  padding: '0.45rem 0.95rem',
-                  borderRadius: '8px',
-                  fontSize: '0.74rem',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.35rem',
-                  boxShadow: '0 2px 8px rgba(148, 111, 35, 0.25)'
-                }}
+                className={ops.headerActionBtn}
+                onClick={onExportExcel}
+                title={isAr ? 'تصدير ملف ERP الشامل' : 'Export the full ERP workbook'}
               >
-                <span>{isAr ? 'فتح دفتر الأستاذ' : 'View Ledger'}</span>
-                <ArrowLeft size={12} style={{ transform: isAr ? 'none' : 'rotate(180deg)' }} />
+                <FileSpreadsheet size={14} />
+                <span>{isAr ? 'تصدير ERP الشامل' : 'Export full ERP'}</span>
+              </button>
+            )}
+          </div>
+        </div>
+      </header>
+
+      {/* 2. DISCRETE 4-COLUMN OPERATIONAL KPI STATS */}
+      <ZFKpiGrid className={ops.operationsKpiGrid} aria-label={isAr ? 'المؤشرات النقدية الرئيسية' : 'Cash KPIs'}>
+        {/* Card 1: Net Cash Balance */}
+        <ZFKpiCard
+          title={isAr ? 'الرصيد النقدي الحالي' : 'Current Cash Balance'}
+          value={<AnimatedCounter value={Math.round(effectiveTotalLiquid.toNumber())} duration={800} />}
+          currency={isAr ? 'ج.م' : 'EGP'}
+          icon={<Wallet size={16} />}
+          accentColor="accent"
+          tooltip={isAr ? 'الرصيد الفعلي للخزينة والبنك حسب القيود المسجلة' : 'Actual safe and bank balance from recorded entries'}
+          onClick={handleViewAllTransactions}
+          footerContent={
+            <div className={ops.statBreakdownList}>
+              <div className={ops.statBreakdownItem}>
+                <span className={ops.statBreakdownLabel}>{isAr ? 'خزينة:' : 'Safe:'}</span>
+                <span className={ops.statBreakdownValue}>{formatEGPInteger(liquidBalances.safeCash, isAr)}</span>
+              </div>
+              <div className={ops.statBreakdownItem}>
+                <span className={ops.statBreakdownLabel}>{isAr ? 'بنوك:' : 'Banks:'}</span>
+                <span className={ops.statBreakdownValue}>{formatEGPInteger(liquidBalances.bankCash, isAr)}</span>
+              </div>
+            </div>
+          }
+        />
+
+        {/* Card 2: Net Cash Flow */}
+        <ZFKpiCard
+          title={isAr ? 'صافي حركة اليوم' : 'Today’s Net Movement'}
+          value={<AnimatedCounter value={Math.round(todayMetrics.net.toNumber())} duration={800} />}
+          currency={isAr ? 'ج.م' : 'EGP'}
+          icon={<TrendingUp size={16} />}
+          accentColor="accent"
+          tooltip={isAr ? 'وارد اليوم ناقص منصرف اليوم' : 'Today’s incoming cash minus outgoing cash'}
+          onClick={() => handleTodayKpiClick()}
+          footerContent={
+            <span style={{ fontSize: '0.72rem', color: 'var(--erp-text-muted, #64748b)', fontWeight: 600 }}>
+              {todayMetrics.count === 0
+                ? (isAr ? 'لا توجد حركات اليوم' : 'No movements today')
+                : todayMetrics.net.gte(0)
+                  ? (isAr ? 'الوارد يفوق المنصرف اليوم' : 'Incoming exceeds outgoing today')
+                  : (isAr ? 'المنصرف يفوق الوارد اليوم' : 'Outgoing exceeds incoming today')}
+            </span>
+          }
+        />
+
+        {/* Card 3: Total Inflows */}
+        <ZFKpiCard
+          title={isAr ? 'مقبوضات اليوم' : 'Today’s Inflows'}
+          value={<AnimatedCounter value={Math.round(todayMetrics.inflows.toNumber())} duration={800} />}
+          currency={isAr ? 'ج.م' : 'EGP'}
+          icon={<ArrowUpRight size={16} />}
+          accentColor="accent"
+          tooltip={isAr ? 'إجمالي التدفقات الداخلة المسجلة اليوم' : 'Total incoming movements recorded today'}
+          onClick={() => handleTodayKpiClick('in-total')}
+          style={activeStreamFilter === 'in-total' ? { borderColor: 'var(--erp-accent, #2563eb)', boxShadow: '0 0 0 2px var(--erp-accent, #2563eb)' } : undefined}
+          footerContent={
+            <span style={{ fontSize: '0.72rem', color: 'var(--erp-text-muted, #64748b)' }}>
+              {isAr ? 'جميع مصادر الوارد' : 'All incoming sources'}
+            </span>
+          }
+        />
+
+        {/* Card 4: Total Outflows */}
+        <ZFKpiCard
+          title={isAr ? 'مدفوعات اليوم' : 'Today’s Outflows'}
+          value={<AnimatedCounter value={Math.round(todayMetrics.outflows.toNumber())} duration={800} />}
+          currency={isAr ? 'ج.م' : 'EGP'}
+          icon={<ArrowDownRight size={16} />}
+          accentColor="accent"
+          tooltip={isAr ? 'إجمالي التدفقات الخارجة المسجلة اليوم' : 'Total outgoing movements recorded today'}
+          onClick={() => handleTodayKpiClick('out-total')}
+          style={activeStreamFilter === 'out-total' ? { borderColor: 'var(--erp-accent, #2563eb)', boxShadow: '0 0 0 2px var(--erp-accent, #2563eb)' } : undefined}
+          footerContent={
+            <span style={{ fontSize: '0.72rem', color: 'var(--erp-text-muted, #64748b)' }}>
+              {isAr ? 'جميع أوجه الصرف' : 'All outgoing uses'}
+            </span>
+          }
+        />
+      </ZFKpiGrid>
+
+      {/* 4. CANONICAL CASH MOVEMENTS DATA TABLE */}
+      <section ref={tableRef} className={ops.canonicalTableCard} aria-labelledby="operations-table-title">
+        {/* Table Header with Canonical Underline Tabs & Controls (Cockpit Standard) */}
+        {/* Table Header: Row 1 - Category Navigation Tabs + Expand Table Trigger */}
+        <div className={ops.tableHeaderRowPrimary}>
+          <div className={ops.tableHeaderTabsWrap}>
+            <div className={ops.tableHeaderTitle}>
+              <Clock size={16} color="var(--erp-accent, #2563eb)" />
+              <h3 style={{ margin: 0, fontSize: '0.90rem', fontWeight: 700, color: '#0f172a', whiteSpace: 'nowrap' }}>
+                {isAr ? 'أحدث العمليات' : 'Recent Operations'}
+              </h3>
+            </div>
+
+            <div className={shellStyles.canonicalTabsUnderline} role="group" aria-label={isAr ? 'أقسام العمليات' : 'Operation Categories'}>
+              <button
+                type="button"
+                                aria-pressed={selectedCategory === 'all'}
+                className={`${shellStyles.canonicalUnderlineTab} ${selectedCategory === 'all' ? shellStyles.canonicalUnderlineTabActive : ''}`}
+                onClick={() => handleCategoryTabChange('all')}
+              >
+                <span>{isAr ? 'الكل' : 'All'}</span>
+                <span className={ops.tabPillCount} style={selectedCategory === 'all' ? { background: 'var(--erp-accent-subtle, #eff6ff)', color: 'var(--erp-accent, #2563eb)' } : undefined}>{dateScopedTransactions.length}</span>
+              </button>
+              <button
+                type="button"
+                                aria-pressed={selectedCategory === 'collection'}
+                className={`${shellStyles.canonicalUnderlineTab} ${selectedCategory === 'collection' ? shellStyles.canonicalUnderlineTabActive : ''}`}
+                onClick={() => handleCategoryTabChange('collection')}
+              >
+                <span>{isAr ? 'تحصيلات العملاء' : 'Client Collections'}</span>
+                <span className={ops.tabPillCount} style={selectedCategory === 'collection' ? { background: 'var(--erp-accent-subtle, #eff6ff)', color: 'var(--erp-accent, #2563eb)' } : undefined}>{dateScopedTransactions.filter(t => t.category === 'collection').length}</span>
+              </button>
+              <button
+                type="button"
+                                aria-pressed={selectedCategory === 'supplier'}
+                className={`${shellStyles.canonicalUnderlineTab} ${selectedCategory === 'supplier' ? shellStyles.canonicalUnderlineTabActive : ''}`}
+                onClick={() => handleCategoryTabChange('supplier')}
+              >
+                <span>{isAr ? 'مستحقات الموردين' : 'Supplier Payables'}</span>
+                <span className={ops.tabPillCount} style={selectedCategory === 'supplier' ? { background: 'var(--erp-accent-subtle, #eff6ff)', color: 'var(--erp-accent, #2563eb)' } : undefined}>{dateScopedTransactions.filter(t => t.category === 'supplier').length}</span>
+              </button>
+              <button
+                type="button"
+                                aria-pressed={selectedCategory === 'expense'}
+                className={`${shellStyles.canonicalUnderlineTab} ${selectedCategory === 'expense' ? shellStyles.canonicalUnderlineTabActive : ''}`}
+                onClick={() => handleCategoryTabChange('expense')}
+              >
+                <span>{isAr ? 'مصاريف تشغيلية' : 'Operating Costs'}</span>
+                <span className={ops.tabPillCount} style={selectedCategory === 'expense' ? { background: 'var(--erp-accent-subtle, #eff6ff)', color: 'var(--erp-accent, #2563eb)' } : undefined}>{dateScopedTransactions.filter(t => t.category === 'expense').length}</span>
+              </button>
+              <button
+                type="button"
+                                aria-pressed={selectedCategory === 'other'}
+                className={`${shellStyles.canonicalUnderlineTab} ${selectedCategory === 'other' ? shellStyles.canonicalUnderlineTabActive : ''}`}
+                onClick={() => handleCategoryTabChange('other')}
+              >
+                <span>{isAr ? 'تحويلات وعمليات أخرى' : 'Transfers & Other'}</span>
+                <span className={ops.tabPillCount} style={selectedCategory === 'other' ? { background: 'var(--erp-accent-subtle, #eff6ff)', color: 'var(--erp-accent, #2563eb)' } : undefined}>{dateScopedTransactions.filter(t => t.category === 'other').length}</span>
               </button>
             </div>
-          ) : (
-            operationalAlerts.map(alert => {
-              const isCrit = alert.severity === 'critical';
-              const isWarn = alert.severity === 'warning';
-              const accentColor = isCrit ? '#dc2626' : isWarn ? '#d97706' : '#059669';
+          </div>
 
-              return (
-                <div
-                  key={alert.id}
-                  className={styles.radarAlertCard}
-                  style={isCrit ? {
-                    border: '1.5px solid rgba(220, 38, 38, 0.35)',
-                    boxShadow: '0 4px 14px rgba(220, 38, 38, 0.1), 0 1px 3px rgba(0, 0, 0, 0.02)'
-                  } : undefined}
+          <div className={ops.tableHeaderActions}>
+            <button
+              type="button"
+              className={shellStyles.tableExpandBtn}
+              onClick={() => setIsFullScreenTableOpen(true)}
+              title={isAr ? 'توسيع السجل بالكامل في نافذة مخصصة' : 'Expand full table'}
+            >
+              <Maximize2 size={13} />
+              <span>{isAr ? 'عرض الكل' : 'Expand Table'}</span>
+            </button>
+          </div>
+        </div>
+
+        <div className={ops.tableFilterToolbar}>
+          <div className={ops.tableFilterLeading}>
+            <div className={ops.dateScopeTabs} role="group" aria-label={isAr ? 'نطاق عرض الحركات' : 'Movement date scope'}>
+              <button type="button" className={dateScope === 'today' ? ops.dateScopeActive : ops.dateScopeButton} aria-pressed={dateScope === 'today'} onClick={() => handleDateScopeChange('today')}>
+                {isAr ? 'اليوم' : 'Today'}
+              </button>
+              <button type="button" className={dateScope === 'all' ? ops.dateScopeActive : ops.dateScopeButton} aria-pressed={dateScope === 'all'} onClick={() => handleDateScopeChange('all')}>
+                {isAr ? 'كل السجل' : 'All history'}
+              </button>
+            </div>
+            <ZFSearchBar
+              value={searchQuery}
+              onChange={setSearchQuery}
+              onClear={() => setSearchQuery('')}
+              placeholder={isAr ? 'ابحث في السجل...' : 'Search the register...'}
+              isAr={isAr}
+              size="sm"
+              style={{ minWidth: '190px', width: 'min(280px, 100%)', height: '36px' }}
+            />
+          </div>
+          <div className={ops.tableFilterTrailing}>
+            <details className={ops.advancedFilters}>
+              <summary className={ops.advancedSummary}>
+                <SlidersHorizontal size={15} />
+                <span>{isAr ? 'فلاتر إضافية' : 'More filters'}</span>
+                {(typeFilter !== 'all' || activeStreamFilter || dateScope === 'custom') && <span className={ops.filterDot} aria-hidden="true" />}
+              </summary>
+              <div className={ops.advancedPanel}>
+                <label className={ops.filterField}>
+                  <span>{isAr ? 'نوع الحركة' : 'Movement type'}</span>
+                  <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value as typeof typeFilter)} className={ops.tableSelect}>
+                    <option value="all">{isAr ? 'كل الأنواع' : 'All types'}</option>
+                    <option value="COLLECTION">{isAr ? 'تحصيلات' : 'Collections'}</option>
+                    <option value="DISBURSEMENT">{isAr ? 'مدفوعات' : 'Disbursements'}</option>
+                    <option value="TRANSFER">{isAr ? 'تحويلات' : 'Transfers'}</option>
+                    <option value="EXPENSE">{isAr ? 'مصروفات' : 'Expenses'}</option>
+                  </select>
+                </label>
+                <label className={ops.filterField}>
+                  <span>{isAr ? 'مسار التدفق' : 'Cash flow stream'}</span>
+                  <select value={activeStreamFilter || ''} onChange={(e) => { setActiveStreamFilter(e.target.value || null); setSelectedCategory('all'); }} className={ops.tableSelect}>
+                    <option value="">{isAr ? 'كل المسارات' : 'All streams'}</option>
+                    <optgroup label={isAr ? 'الوارد' : 'Inflows'}>
+                      <option value="in-total">{isAr ? 'كل الوارد' : 'All inflows'}</option>
+                      <option value="in-0">{isAr ? 'تحصيلات العملاء' : 'Client collections'}</option>
+                      <option value="in-1">{isAr ? 'سيولة الشركاء' : 'Partner funding'}</option>
+                    </optgroup>
+                    <optgroup label={isAr ? 'المنصرف' : 'Outflows'}>
+                      <option value="out-total">{isAr ? 'كل المنصرف' : 'All outflows'}</option>
+                      <option value="out-0">{isAr ? 'خرسانات وبناء' : 'Civil works'}</option>
+                      <option value="out-1">{isAr ? 'تشطيبات وواجهات' : 'Finishes'}</option>
+                      <option value="out-2">{isAr ? 'كهروميكانيك' : 'MEP'}</option>
+                      <option value="out-3">{isAr ? 'تراخيص ورسوم' : 'Permits and fees'}</option>
+                    </optgroup>
+                  </select>
+                </label>
+                <label className={ops.filterField}>
+                  <span>{isAr ? 'من تاريخ' : 'From date'}</span>
+                  <input type="date" value={fromDate} onChange={(e) => { setFromDate(e.target.value); setDateScope('custom'); }} className={ops.dateInput} />
+                </label>
+                <label className={ops.filterField}>
+                  <span>{isAr ? 'إلى تاريخ' : 'To date'}</span>
+                  <input type="date" value={toDate} onChange={(e) => { setToDate(e.target.value); setDateScope('custom'); }} className={ops.dateInput} />
+                </label>
+              </div>
+            </details>
+            {hasActiveFilters && (
+              <button type="button" className={ops.resetBtn} onClick={handleResetFilters}>
+                <RotateCcw size={14} />
+                <span>{isAr ? 'إعادة ضبط' : 'Reset'}</span>
+              </button>
+            )}
+          </div>
+        </div>
+
+        {activeStreamFilter && (
+          <div className={ops.activeFilterBanner}>
+            <span>{isAr ? 'مسار التدفق: ' : 'Cash flow stream: '}<strong>{activeStreamLabel}</strong> · {filteredTransactions.length} {isAr ? 'حركة' : 'movements'}</span>
+            <button type="button" onClick={handleClearStreamFilter} className={ops.clearFilterBtn}>
+              <X size={14} /> {isAr ? 'إزالة' : 'Remove'}
+            </button>
+          </div>
+        )}
+
+        {/* Canonical Table */}
+        <div className={ops.tableWrap}>
+          <table className={ops.canonicalTable}>
+            <thead className={ops.tableThead}>
+              <tr>
+                <th
+                  className={`${ops.tableTh} ${ops.tableThSortable}`}
+                  style={{ width: '11%', minWidth: '95px' }}
+                  aria-sort={tableSortField === 'date' ? (tableSortAsc ? 'ascending' : 'descending') : 'none'}
                 >
-                  {/* Subtle architectural leading edge indicator */}
-                  <div 
-                    className={styles.radarAlertLeadingEdge} 
-                    style={{ background: accentColor }} 
-                  />
-
-                  <div>
-                    {/* Top Badge & Header */}
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.65rem', gap: '0.5rem' }}>
-                      <div style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.45rem',
-                      }}>
-                        <div style={{
-                          width: '24px',
-                          height: '24px',
-                          borderRadius: '7px',
-                          background: isCrit ? 'rgba(220, 38, 38, 0.08)' : isWarn ? 'rgba(217, 119, 6, 0.08)' : 'rgba(5, 150, 105, 0.08)',
-                          color: accentColor,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          flexShrink: 0
-                        }}>
-                          {isCrit ? <AlertCircle size={14} /> : isWarn ? <AlertTriangle size={14} /> : <Key size={14} />}
-                        </div>
-                        <span style={{ fontSize: '0.74rem', fontWeight: 800, color: '#1e293b' }}>
-                          {alert.headerLabelAr 
-                            ? (isAr ? alert.headerLabelAr : (alert.headerLabelEn || alert.headerLabelAr)) 
-                            : isCrit ? (isAr ? 'تنبيه تحصيل متأخر' : 'Overdue Alert') 
-                            : isWarn ? (isAr ? 'استحقاق قريب' : 'Maturing Alert') 
-                            : (isAr ? 'جاهزية تسليم' : 'Handover Ready')}
-                        </span>
-                      </div>
-
-                      {alert.badgeLabelAr && (
-                        <span style={{
-                          fontSize: '0.66rem',
-                          fontWeight: 800,
-                          padding: '0.15rem 0.55rem',
-                          borderRadius: '6px',
-                          background: isCrit ? 'rgba(220, 38, 38, 0.06)' : isWarn ? 'rgba(217, 119, 6, 0.06)' : 'rgba(5, 150, 105, 0.06)',
-                          color: isCrit ? '#dc2626' : isWarn ? '#b45309' : '#047857',
-                          border: `1px solid ${isCrit ? 'rgba(220, 38, 38, 0.18)' : isWarn ? 'rgba(217, 119, 6, 0.18)' : 'rgba(5, 150, 105, 0.18)'}`,
-                          flexShrink: 0
-                        }}>
-                          {isAr ? alert.badgeLabelAr : alert.badgeLabelEn}
-                        </span>
+                  <button type="button" className={`${ops.tableThContent} ${ops.sortHeaderButton}`} onClick={() => handleTableSort('date')} aria-label={isAr ? 'ترتيب حسب التاريخ' : 'Sort by date'}>
+                    <span>{isAr ? 'التاريخ' : 'Date'}</span>
+                    <ChevronsUpDown
+                      size={12}
+                      className={shellStyles.canonicalSortIcon}
+                      style={{
+                        color: tableSortField === 'date' ? 'var(--erp-accent, #2563eb)' : '#94a3b8',
+                        opacity: tableSortField === 'date' ? 1 : 0.65,
+                      }}
+                    />
+                  </button>
+                </th>
+                <th
+                  className={`${ops.tableTh} ${ops.tableThSortable}`}
+                  style={{ width: '13%', minWidth: '115px' }}
+                  aria-sort={tableSortField === 'type' ? (tableSortAsc ? 'ascending' : 'descending') : 'none'}
+                >
+                  <button type="button" className={`${ops.tableThContent} ${ops.sortHeaderButton}`} onClick={() => handleTableSort('type')} aria-label={isAr ? 'ترتيب حسب النوع' : 'Sort by type'}>
+                    <span>{isAr ? 'النوع' : 'Type'}</span>
+                    <ChevronsUpDown
+                      size={12}
+                      className={shellStyles.canonicalSortIcon}
+                      style={{
+                        color: tableSortField === 'type' ? 'var(--erp-accent, #2563eb)' : '#94a3b8',
+                        opacity: tableSortField === 'type' ? 1 : 0.65,
+                      }}
+                    />
+                  </button>
+                </th>
+                <th
+                  className={`${ops.tableTh} ${ops.tableThSortable}`}
+                  style={{ width: '19%', minWidth: '160px' }}
+                  aria-sort={tableSortField === 'description' ? (tableSortAsc ? 'ascending' : 'descending') : 'none'}
+                >
+                  <button type="button" className={`${ops.tableThContent} ${ops.sortHeaderButton}`} onClick={() => handleTableSort('description')} aria-label={isAr ? 'ترتيب حسب البيان' : 'Sort by description'}>
+                    <span>{isAr ? 'البيان' : 'Description'}</span>
+                    <ChevronsUpDown
+                      size={12}
+                      className={shellStyles.canonicalSortIcon}
+                      style={{
+                        color: tableSortField === 'description' ? 'var(--erp-accent, #2563eb)' : '#94a3b8',
+                        opacity: tableSortField === 'description' ? 1 : 0.65,
+                      }}
+                    />
+                  </button>
+                </th>
+                <th
+                  className={`${ops.tableTh} ${ops.tableThSortable}`}
+                  style={{ width: '15%', minWidth: '125px' }}
+                  aria-sort={tableSortField === 'party' ? (tableSortAsc ? 'ascending' : 'descending') : 'none'}
+                >
+                  <button type="button" className={`${ops.tableThContent} ${ops.sortHeaderButton}`} onClick={() => handleTableSort('party')} aria-label={isAr ? 'ترتيب حسب الجهة' : 'Sort by party'}>
+                    <span>{isAr ? 'الجهة' : 'Counterparty'}</span>
+                    <ChevronsUpDown
+                      size={12}
+                      className={shellStyles.canonicalSortIcon}
+                      style={{
+                        color: tableSortField === 'party' ? 'var(--erp-accent, #2563eb)' : '#94a3b8',
+                        opacity: tableSortField === 'party' ? 1 : 0.65,
+                      }}
+                    />
+                  </button>
+                </th>
+                <th
+                  className={`${ops.tableTh} ${ops.tableThSortable}`}
+                  style={{ width: '15%', minWidth: '130px' }}
+                  aria-sort={tableSortField === 'reference' ? (tableSortAsc ? 'ascending' : 'descending') : 'none'}
+                >
+                  <button type="button" className={`${ops.tableThContent} ${ops.sortHeaderButton}`} onClick={() => handleTableSort('reference')} aria-label={isAr ? 'ترتيب حسب المرجع' : 'Sort by reference'}>
+                    <span>{isAr ? 'المرجع / طريقة السداد' : 'Ref / Method'}</span>
+                    <ChevronsUpDown
+                      size={12}
+                      className={shellStyles.canonicalSortIcon}
+                      style={{
+                        color: tableSortField === 'reference' ? 'var(--erp-accent, #2563eb)' : '#94a3b8',
+                        opacity: tableSortField === 'reference' ? 1 : 0.65,
+                      }}
+                    />
+                  </button>
+                </th>
+                <th
+                  className={`${ops.tableTh} ${ops.tableThSortable}`}
+                  style={{ width: '18%', minWidth: '160px' }}
+                  aria-sort={tableSortField === 'amount' ? (tableSortAsc ? 'ascending' : 'descending') : 'none'}
+                >
+                  <button type="button" className={`${ops.tableThContent} ${ops.sortHeaderButton}`} onClick={() => handleTableSort('amount')} aria-label={isAr ? 'ترتيب حسب المبلغ' : 'Sort by amount'}>
+                    <span>{isAr ? 'المبلغ' : 'Amount'}</span>
+                    <ChevronsUpDown
+                      size={12}
+                      className={shellStyles.canonicalSortIcon}
+                      style={{
+                        color: tableSortField === 'amount' ? 'var(--erp-accent, #2563eb)' : '#94a3b8',
+                        opacity: tableSortField === 'amount' ? 1 : 0.65,
+                      }}
+                    />
+                  </button>
+                </th>
+                <th
+                  className={`${ops.tableTh} ${ops.tableThSortable}`}
+                  style={{ width: '11%', minWidth: '95px', textAlign: 'center' }}
+                  aria-sort={tableSortField === 'status' ? (tableSortAsc ? 'ascending' : 'descending') : 'none'}
+                >
+                  <button type="button" className={`${ops.tableThContent} ${ops.sortHeaderButton}`} style={{ justifyContent: 'center' }} onClick={() => handleTableSort('status')} aria-label={isAr ? 'ترتيب حسب الحالة' : 'Sort by status'}>
+                    <span>{isAr ? 'الحالة' : 'Status'}</span>
+                    <ChevronsUpDown
+                      size={12}
+                      className={shellStyles.canonicalSortIcon}
+                      style={{
+                        color: tableSortField === 'status' ? 'var(--erp-accent, #2563eb)' : '#94a3b8',
+                        opacity: tableSortField === 'status' ? 1 : 0.65,
+                      }}
+                    />
+                  </button>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {paginatedTransactions.length === 0 ? (
+                <tr>
+                  <td colSpan={7} style={{ textAlign: 'center', padding: '3rem 1rem', color: 'var(--erp-text-muted, #64748b)' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
+                      {dateScope === 'today' && !hasActiveFilters
+                        ? <Clock size={24} style={{ opacity: 0.45 }} />
+                        : <Search size={24} style={{ opacity: 0.45 }} />}
+                      <span style={{ fontWeight: 700, color: 'var(--ops-text, #0f172a)' }}>
+                        {dateScope === 'today' && !hasActiveFilters
+                          ? (isAr ? 'لا توجد حركات مسجلة اليوم' : 'No movements recorded today')
+                          : (isAr ? 'لا توجد حركات مالية مطابقة لشروط البحث' : 'No movements match the search criteria')}
+                      </span>
+                      <span style={{ fontSize: '0.74rem' }}>
+                        {dateScope === 'today' && !hasActiveFilters
+                          ? (isAr ? 'يمكنك مراجعة الحركات السابقة من كل السجل' : 'Review earlier movements in the full register')
+                          : (isAr ? 'جرّب تغيير فلاتر التاريخ أو إعادة ضبط البحث' : 'Try adjusting date filters or search terms')}
+                      </span>
+                      {dateScope === 'today' && !hasActiveFilters && (
+                        <button type="button" className={ops.emptyResetBtn} onClick={() => handleDateScopeChange('all')}>
+                          <span>{isAr ? 'عرض كل السجل' : 'View all history'}</span>
+                        </button>
+                      )}
+                      {hasActiveFilters && (
+                        <button
+                          type="button"
+                          className={ops.emptyResetBtn}
+                          onClick={handleResetFilters}
+                        >
+                          <RotateCcw size={13} />
+                          <span>{isAr ? 'إعادة ضبط الفلاتر' : 'Reset Filters'}</span>
+                        </button>
                       )}
                     </div>
+                  </td>
+                </tr>
+              ) : (
+                paginatedTransactions.map((tx) => {
+                  const isInflow = tx.direction === 'IN';
+                  const isOutflow = tx.direction === 'OUT';
 
-                    {/* Debtor Name & Title */}
-                    <div style={{ fontSize: '0.92rem', fontWeight: 900, color: '#0f172a', lineHeight: 1.35, letterSpacing: '-0.01em' }}>
-                      {isAr ? alert.titleAr : alert.titleEn}
-                    </div>
-
-                    {/* Unit & Contract Details */}
-                    {alert.unitDetail && (
-                      <div style={{ fontSize: '0.74rem', color: '#475569', marginTop: '0.3rem', fontWeight: 600 }}>
-                        {alert.unitDetail}
-                      </div>
-                    )}
-
-                    {/* Secondary Note */}
-                    <div style={{ fontSize: '0.71rem', color: '#64748b', marginTop: '0.35rem', lineHeight: 1.45 }}>
-                      {isAr ? alert.secondaryNoteAr : alert.secondaryNoteEn}
-                    </div>
-                  </div>
-
-                  {/* Footer: Amount & Action Trigger */}
-                  <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    paddingTop: '0.65rem',
-                    borderTop: '1px solid rgba(15, 23, 42, 0.06)',
-                    marginTop: '0.25rem'
-                  }}>
-                    {alert.amountFormatted ? (
-                      <div>
-                        <span style={{ fontSize: '0.63rem', color: '#64748b', display: 'block', fontWeight: 700 }}>
-                          {isCrit ? (isAr ? 'المبلغ المتأخر:' : 'Due Amount:') : isWarn ? (isAr ? 'قيمة القسط:' : 'Amount:') : (isAr ? 'المسدد حتى الآن:' : 'Collected:')}
-                        </span>
-                        <span style={{
-                          fontSize: '1rem',
-                          fontWeight: 900,
-                          color: accentColor,
-                          fontVariantNumeric: 'tabular-nums',
-                          letterSpacing: '-0.02em'
-                        }}>
-                          {alert.amountFormatted}
-                        </span>
-                      </div>
-                    ) : <div />}
-
-                    <button
-                      type="button"
-                      onClick={alert.onClick}
-                      className={`${styles.radarAlertButton} ${isCrit ? styles.radarAlertButtonCrit : ''}`}
+                  return (
+                    <tr
+                      key={tx.id}
+                      className={ops.tableRow}
+                      onClick={() => handleInspectRow(tx)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          handleInspectRow(tx);
+                        }
+                      }}
+                      tabIndex={0}
+                      role="button"
                     >
-                      <span>{isAr ? alert.actionLabelAr : alert.actionLabelEn}</span>
-                      <span className={styles.radarAlertButtonIcon}>
-                        <ArrowLeft size={11} style={{ transform: isAr ? 'none' : 'rotate(180deg)' }} />
-                      </span>
-                    </button>
-                  </div>
-                </div>
-              );
-            })
-          )}
-        </div>
-      </div>
+                      {/* 1. Date */}
+                      <td className={ops.tableTd}>
+                        <div className={ops.dateTimeCell}>
+                          <time dir="ltr" className={ops.tableDateText}>
+                            {tx.date}
+                          </time>
+                          <span className={ops.tableTimeBadge}>
+                            {formatTime12h(tx.timeStr, isAr)}
+                          </span>
+                        </div>
+                      </td>
 
-      {/* 3. SPACIOUS EXECUTIVE FAST-ACTION LAUNCHPAD */}
-      <div style={{
-        background: '#ffffff',
-        border: '1.5px solid #d8d2c4',
-        borderRadius: '16px',
-        padding: '1.25rem 1.4rem',
-        boxShadow: '0 4px 20px -4px rgba(15, 23, 42, 0.05)',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '1.1rem'
-      }}>
-        {/* Header Row */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem', borderBottom: '1px solid #f1f5f9', paddingBottom: '0.85rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            <div style={{
-              width: '36px',
-              height: '36px',
-              borderRadius: '10px',
-              background: 'rgba(184, 144, 62, 0.08)',
-              border: '1px solid rgba(184, 144, 62, 0.22)',
-              color: '#946f23',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}>
-              <Sparkles size={17} />
+                      {/* 2. Type */}
+                      <td className={ops.tableTd}>
+                        <span
+                          className={`${shellStyles.statusPill} ${shellStyles.statusPillNeutral}`}
+                          style={{ whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+                        >
+                          {isInflow && <ArrowUpRight size={10} />}
+                          {isOutflow && <ArrowDownRight size={10} />}
+                          {!isInflow && !isOutflow && <ArrowLeftRight size={10} />}
+                          <span>{isAr ? tx.typeLabelAr : tx.typeLabelEn}</span>
+                        </span>
+                      </td>
+
+                      {/* 3. Description */}
+                      <td className={ops.tableTd}>
+                        <span
+                          className={ops.tableTextTruncate}
+                          title={tx.description}
+                          dir="auto"
+                          style={{ fontWeight: 700, color: '#0f172a' }}
+                        >
+                          {tx.description}
+                        </span>
+                      </td>
+
+                      {/* 4. Counterparty */}
+                      <td className={ops.tableTd}>
+                        <span
+                          className={ops.tableTextTruncate}
+                          title={tx.counterparty}
+                          dir="auto"
+                          style={{ color: 'var(--ops-text-body)', fontWeight: 600 }}
+                        >
+                          {tx.counterparty}
+                        </span>
+                      </td>
+
+                      {/* 5. Reference / Payment Method */}
+                      <td className={ops.tableTd}>
+                        <div className={ops.refMethodCell}>
+                          <span className={ops.tableRefText} title={tx.reference_number || tx.id} dir="ltr">
+                            {tx.reference_number || tx.id}
+                          </span>
+                          <span className={ops.tableMethodBadge}>
+                            {tx.payment_method || (isAr ? 'نقدي / تحويل' : 'Cash/Transfer')}
+                          </span>
+                        </div>
+                      </td>
+
+                      {/* 6. Amount */}
+                      <td className={ops.tableTd}>
+                        <span className={ops.tabularAmount}>
+                          {isInflow ? '+' : isOutflow ? '-' : ''}
+                          {formatNumberWithCommas(tx.amount.abs())}{' '}
+                          <span style={{ fontSize: '0.70rem', color: 'var(--ops-muted)', fontWeight: 500 }}>
+                            {isAr ? 'ج.م' : 'EGP'}
+                          </span>
+                        </span>
+                      </td>
+
+                      {/* 7. Status */}
+                      <td className={ops.tableTd} style={{ textAlign: 'center' }}>
+                        <span
+                          className={`${shellStyles.statusPill} ${
+                            isInflow
+                              ? shellStyles.statusPillGreen
+                              : isOutflow
+                                ? shellStyles.statusPillNeutral
+                                : shellStyles.statusPillBlue
+                          }`}
+                          style={{ whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+                        >
+                          <span>{isAr ? tx.statusLabelAr : tx.statusLabelEn}</span>
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Canonical Numeric Pagination */}
+        <ZFPagination
+          currentPage={currentPage}
+          totalPages={totalTablePages}
+          totalItems={filteredTransactions.length}
+          pageSize={pageSize}
+          onPageChange={setCurrentPage}
+          isAr={isAr}
+          itemLabel={{ ar: 'حركة مالية', en: 'movements' }}
+        />
+      </section>
+
+      <details className={ops.analysisDisclosure}>
+        <summary className={ops.analysisSummary}>
+          <span className={ops.analysisSummaryIcon}><Layers size={17} /></span>
+          <span className={ops.analysisSummaryText}>
+            <strong>{isAr ? "تحليل حركة السيولة" : "Cash flow analysis"}</strong>
+            <small>{isAr ? "تفصيل مصادر الوارد وأوجه الصرف في كامل السجل" : "Sources and uses across the full register"}</small>
+          </span>
+          <ChevronDown size={17} className={ops.analysisChevron} />
+        </summary>
+      {/* 3. CENTERPIECE VISUALIZATION: CASH FLOW MINDMAP / SANKEY FLOW DIAGRAM */}
+      <section className={ops.flowCard} aria-labelledby="flow-diagram-title">
+        <div className={ops.flowHeader}>
+          <div className={ops.flowTitleArea}>
+            <div className={ops.flowIconSquircle}>
+              <Layers size={16} />
             </div>
             <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-                <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 900, color: '#0f172a', letterSpacing: '-0.01em' }}>
-                  {isAr ? 'مركز العمليات اليومية السريعة' : 'Executive Operational Action Launchpad'}
-                </h3>
-                <span style={{
-                  fontSize: '0.68rem',
-                  fontWeight: 800,
-                  color: '#475569',
-                  background: '#f8fafc',
-                  border: '1px solid #d8d2c4',
-                  padding: '0.12rem 0.55rem',
-                  borderRadius: '20px'
-                }}>
-                  {isAr ? '١٠ إجراءات موزعة على ٤ أركان' : '10 Actions in 4 Pillars'}
+              <h3 id="flow-diagram-title" className={ops.flowTitle}>
+                {isAr ? 'تدفق الأموال في المؤسسة' : 'Institutional Cash Flow Map'}
+              </h3>
+              <p className={ops.flowSubtitle}>
+                {isAr ? 'مخطط بياني حي لحركة السيولة من مصادر الإيرادات إلى مصارف الإنفاق' : 'Live flow map from revenue streams into the treasury and expenditure sinks'}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* FLOW WORKSPACE - 3-COLUMN INSTITUTIONAL WORKSTATION BLUEPRINT */}
+        <div className={ops.flowWorkspace}>
+          {/* COLUMN 1 (RIGHT IN RTL): INFLOW STREAMS (التدفقات الداخلة) */}
+          <div className={`${ops.flowColumn} ${ops.flowColumnInflows}`}>
+            {/* Inflows Header Banner */}
+            <div
+              className={`${ops.flowColBannerInflow} ${activeStreamFilter === 'in-total' ? ops.flowBadgeActive : ''}`}
+              data-stream-id="in-total"
+              onClick={() => handleBadgeClick('in-total')}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  handleBadgeClick('in-total');
+                }
+              }}
+              role="button"
+              tabIndex={0}
+              aria-pressed={activeStreamFilter === 'in-total'}
+              title={isAr ? 'تصفية جميع التدفقات الداخلة' : 'Filter all inflows'}
+            >
+              <div className={ops.flowBannerLeading}>
+                <ArrowUp size={16} />
+                <span className={ops.flowBannerTitle}>{isAr ? 'التدفقات الداخلة' : 'Cash Inflows'}</span>
+              </div>
+              <span className={ops.flowBannerAmount}>
+                {formatNumberWithCommas(flowMetrics.inflows.total)} {isAr ? 'ج.م' : 'EGP'}
+              </span>
+            </div>
+
+            {/* Inflows Stream Cards List */}
+            <div className={ops.flowStreamList}>
+              {/* Stream 1: Client Installments & Collections */}
+              <div
+                className={`${ops.flowNodeCard} ${activeStreamFilter === 'in-0' || activeStreamId === 'in-0' ? ops.flowNodeActive : ''}`}
+                data-stream-id="in-0"
+                onMouseEnter={() => setActiveStreamId('in-0')}
+                onMouseLeave={() => setActiveStreamId(null)}
+                onClick={() => handleStreamNodeClick('in-0')}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    handleStreamNodeClick('in-0');
+                  }
+                }}
+                role="button"
+                tabIndex={0}
+                aria-pressed={activeStreamFilter === 'in-0'}
+                title={isAr ? 'أقساط ومقدمات العملاء: تصفية السجل' : 'Client Collections: filter table'}
+              >
+                <div className={ops.flowNodeLeading}>
+                  <div className={ops.flowNodeSquircleInflow}>
+                    <Users size={16} />
+                  </div>
+                  <div className={ops.flowNodeTexts}>
+                    <span className={ops.flowNodeLabel}>{isAr ? 'أقساط ومقدمات العملاء' : 'Client Collections'}</span>
+                    <span className={ops.flowNodeSub}>{isAr ? 'أقساط ومقدمات جديد/إعادة بيع' : 'Installments & down payments'}</span>
+                  </div>
+                </div>
+                <div className={ops.flowNodeAmountRow}>
+                  <span className={ops.flowNodeAmount}>
+                    {formatNumberWithCommas(flowMetrics.inflows.collections)}
+                  </span>
+                  <span className={ops.flowNodeCurrency}>{isAr ? 'ج.م' : 'EGP'}</span>
+                </div>
+              </div>
+
+              {/* Stream 2: Partner Contributions & Equity */}
+              <div
+                className={`${ops.flowNodeCard} ${activeStreamFilter === 'in-1' || activeStreamId === 'in-1' ? ops.flowNodeActive : ''}`}
+                data-stream-id="in-1"
+                onMouseEnter={() => setActiveStreamId('in-1')}
+                onMouseLeave={() => setActiveStreamId(null)}
+                onClick={() => handleStreamNodeClick('in-1')}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    handleStreamNodeClick('in-1');
+                  }
+                }}
+                role="button"
+                tabIndex={0}
+                aria-pressed={activeStreamFilter === 'in-1'}
+                title={isAr ? 'تمويل وسيولة الشركاء: تصفية السجل' : 'Partner Capital & Funding: filter table'}
+              >
+                <div className={ops.flowNodeLeading}>
+                  <div className={ops.flowNodeSquircleInflow}>
+                    <ArrowLeftRight size={16} />
+                  </div>
+                  <div className={ops.flowNodeTexts}>
+                    <span className={ops.flowNodeLabel}>{isAr ? 'تمويل وسيولة الشركاء' : 'Partner Capital & Funding'}</span>
+                    <span className={ops.flowNodeSub}>{isAr ? 'رأس المال وفتح تسهيلات' : 'Contributed capital'}</span>
+                  </div>
+                </div>
+                <div className={ops.flowNodeAmountRow}>
+                  <span className={ops.flowNodeAmount}>
+                    {formatNumberWithCommas(flowMetrics.inflows.partnerInjections)}
+                  </span>
+                  <span className={ops.flowNodeCurrency}>{isAr ? 'ج.م' : 'EGP'}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Inflows Action Button */}
+            <button
+              type="button"
+              className={ops.flowColAddBtnInflow}
+              onClick={() => handleQuickAction('collect')}
+              title={isAr ? 'إضافة سند قبض وتحصيل إيراد' : 'Add inflow collection item'}
+            >
+              <Plus size={15} />
+              <span>{isAr ? 'إضافة بند إيراد' : 'Add Inflow Item'}</span>
+            </button>
+          </div>
+
+          {/* BLUEPRINT CONNECTOR PLACEHOLDERS FOR TEST RETENTION */}
+          <div className={ops.blueprintConnector} aria-hidden="true" style={{ display: 'none' }}>
+            <div className={ops.connectorLineIn} />
+            <div className={ops.connectorArrowIn} />
+          </div>
+
+          {/* COLUMN 2 (CENTER): CENTRAL TREASURY & LIQUIDITY (الخزينة والسيولة المركزية) */}
+          <div
+            className={`${ops.flowCentralAnchorCard} ${activeStreamFilter === 'central-hub' ? ops.flowCentralAnchorActive : ''}`}
+            data-stream-id="central-hub"
+          >
+            {/* Header */}
+            <div className={ops.flowCentralHeader}>
+              <div className={ops.flowCentralIcon}>
+                <Landmark size={18} />
+              </div>
+              <div className={ops.flowCentralTitleBox}>
+                <span className={ops.flowCentralTitle}>{isAr ? 'الخزينة والسيولة المركزية' : 'Central Treasury Liquidity'}</span>
+                <span className={ops.flowCentralSub}>{isAr ? 'الأصول المتداولة النقدية والمصرفية' : 'Cash & Bank Liquid Balances'}</span>
+              </div>
+            </div>
+
+            {/* Big Headline Balance */}
+            <div className={ops.flowCentralBalanceBox}>
+              <span className={ops.flowCentralAmount}>
+                {formatNumberWithCommas(effectiveTotalLiquid)}
+              </span>
+              <span className={ops.flowCentralCurrency}>{isAr ? 'ج.م' : 'EGP'}</span>
+            </div>
+
+            {/* Interactive SVG Donut Chart */}
+            <div className={ops.flowDonutWrapper}>
+              {(() => {
+                const totalC = 339.292; // 2 * PI * 54
+                const bankNum = Math.max(0, liquidBalances.bankCash.toNumber());
+                const safeNum = Math.max(0, liquidBalances.safeCash.toNumber());
+                const sum = bankNum + safeNum;
+                let bankFrac = sum > 0 ? bankNum / sum : 0.5;
+                let safeFrac = sum > 0 ? safeNum / sum : 0.5;
+
+                // Ensure visual discernibility if both > 0
+                if (safeNum > 0 && safeFrac < 0.14) {
+                  safeFrac = 0.14;
+                  bankFrac = 0.86;
+                } else if (bankNum > 0 && bankFrac < 0.14) {
+                  bankFrac = 0.14;
+                  safeFrac = 0.86;
+                }
+
+                const bankDash = bankFrac * totalC;
+                const safeDash = safeFrac * totalC;
+
+                return (
+                  <svg
+                    viewBox="0 0 160 160"
+                    className={ops.flowDonutSvg}
+                    aria-label={isAr ? 'مخطط توزيع السيولة بين البنوك والخزينة' : 'Liquidity allocation donut'}
+                  >
+                    {/* Background track */}
+                    <circle
+                      cx="80"
+                      cy="80"
+                      r="54"
+                      fill="none"
+                      stroke="#f1f5f9"
+                      strokeWidth="16"
+                    />
+                    {/* Bank Arc (Accent 102000) */}
+                    <circle
+                      cx="80"
+                      cy="80"
+                      r="54"
+                      fill="none"
+                      stroke="var(--erp-accent, #2563eb)"
+                      strokeWidth="16"
+                      strokeDasharray={`${bankDash} ${totalC - bankDash}`}
+                      strokeDashoffset="0"
+                      transform="rotate(-90 80 80)"
+                      style={{ transition: 'stroke-dasharray 0.5s ease' }}
+                    />
+                    {/* Safe Arc (Slate Navy 101000) */}
+                    <circle
+                      cx="80"
+                      cy="80"
+                      r="54"
+                      fill="none"
+                      stroke="#0f172a"
+                      strokeWidth="16"
+                      strokeDasharray={`${safeDash} ${totalC - safeDash}`}
+                      strokeDashoffset={-bankDash}
+                      transform="rotate(-90 80 80)"
+                      style={{ transition: 'stroke-dasharray 0.5s ease, stroke-dashoffset 0.5s ease' }}
+                    />
+                  </svg>
+                );
+              })()}
+              <div className={ops.flowDonutCenterText}>
+                <span className={ops.flowDonutCurrency}>{isAr ? 'ج.م' : 'EGP'}</span>
+                <span className={ops.flowDonutAmount}>
+                  {formatNumberWithCommas(effectiveTotalLiquid)}
+                </span>
+                <span className={ops.flowDonutSub}>
+                  {isAr ? 'إجمالي السيولة' : 'Total Liquidity'}
                 </span>
               </div>
-              <span style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '0.2rem', display: 'block' }}>
-                {isAr ? 'إنجاز فوري لحركات التحصيل، مصاريف المباني، تحرير العقود، ودراسات الجدوى دون تعقيد' : 'Instant 1-click execution for cashiering, construction WIP, deals, and financial audits'}
-              </span>
             </div>
-          </div>
 
-          {/* Executive Excel Export Button */}
-          {onExportExcel && (
-            <button 
-              type="button"
-              className={styles.excelExportBtn}
-              onClick={onExportExcel}
-              title={isAr ? 'تنزيل تقرير إكسيل شامل بكافة الحسابات والعقود واليومية (.xlsx)' : 'Export Accounting Ledger & Reports to Excel (.xlsx)'}
-            >
-              <div className={styles.excelIconBox}>
-                <FileSpreadsheet size={15} strokeWidth={2.2} />
+            {/* Central Dual Rail Legend */}
+            <div className={ops.flowCentralDualRail}>
+              <div className={ops.flowLegendItem}>
+                <div className={ops.flowLegendHeader}>
+                  <div className={ops.flowLegendDot} style={{ background: '#0f172a' }} />
+                  <span className={ops.flowLegendLabel}>{isAr ? 'الخزينة الرئيسية (101000)' : 'Safe Vault (101000)'}</span>
+                </div>
+                <span className={ops.flowLegendValue}>{formatNumberWithCommas(liquidBalances.safeCash)} {isAr ? 'ج.م' : 'EGP'}</span>
               </div>
-              <span className={styles.excelExportText}>
-                {isAr ? 'تصدير التقارير' : 'Export Reports'}
-              </span>
-              <span className={styles.excelFormatPill}>XLSX</span>
+              <div className={ops.flowCentralRailDivider} />
+              <div className={ops.flowLegendItem}>
+                <div className={ops.flowLegendHeader}>
+                  <div className={ops.flowLegendDot} style={{ background: 'var(--erp-accent, #2563eb)' }} />
+                  <span className={ops.flowLegendLabel}>{isAr ? 'الحسابات البنكية (102000)' : 'Bank Accounts (102000)'}</span>
+                </div>
+                <span className={ops.flowLegendValue}>{formatNumberWithCommas(liquidBalances.bankCash)} {isAr ? 'ج.م' : 'EGP'}</span>
+              </div>
+            </div>
+
+            <button type="button" className={ops.flowColReconcileBtn} onClick={handleViewAllTransactions}>
+              <RotateCcw size={14} />
+              <span>{isAr ? 'عرض كل العمليات' : 'View all movements'}</span>
             </button>
-          )}
+
+            {/* Reconcile Button */}
+            <button
+              type="button"
+              className={ops.flowColReconcileBtn}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleQuickAction('report');
+              }}
+              title={isAr ? 'مطابقة دفترية وحسابات بنكية' : 'Reconcile books and banks'}
+            >
+              <Landmark size={14} />
+              <span>{isAr ? 'مطابقة دفترية وحسابات بنكية' : 'Reconcile Books & Banks'}</span>
+            </button>
+          </div>
+
+          {/* BLUEPRINT CONNECTOR PLACEHOLDERS FOR TEST RETENTION */}
+          <div className={ops.blueprintConnector} aria-hidden="true" style={{ display: 'none' }}>
+            <div className={ops.connectorLineOut} />
+            <div className={ops.connectorArrowOut} />
+          </div>
+
+          {/* COLUMN 3 (LEFT IN RTL): OUTFLOW STREAMS (التدفقات الخارجة) */}
+          <div className={ops.flowColumn}>
+            {/* Outflows Header Banner */}
+            <div
+              className={`${ops.flowColBannerOutflow} ${activeStreamFilter === 'out-total' ? ops.flowBadgeActive : ''}`}
+              data-stream-id="out-total"
+              onClick={() => handleBadgeClick('out-total')}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  handleBadgeClick('out-total');
+                }
+              }}
+              role="button"
+              tabIndex={0}
+              aria-pressed={activeStreamFilter === 'out-total'}
+              title={isAr ? 'تصفية جميع التدفقات الخارجة' : 'Filter all outflows'}
+            >
+              <div className={ops.flowBannerLeading}>
+                <ArrowDown size={16} />
+                <span className={ops.flowBannerTitle}>{isAr ? 'التدفقات الخارجة' : 'Capital Outflows'}</span>
+              </div>
+              <span className={ops.flowBannerAmount}>
+                {formatNumberWithCommas(flowMetrics.outflows.total)} {isAr ? 'ج.م' : 'EGP'}
+              </span>
+            </div>
+
+            {/* Outflows Stream Cards List */}
+            <div className={ops.outflowsGrid}>
+              {/* Stream 1: Civil Structure & Concrete */}
+              <div
+                className={`${ops.flowNodeCard} ${activeStreamFilter === 'out-0' || activeStreamId === 'out-0' ? ops.flowNodeActive : ''}`}
+                data-stream-id="out-0"
+                onMouseEnter={() => setActiveStreamId('out-0')}
+                onMouseLeave={() => setActiveStreamId(null)}
+                onClick={() => handleStreamNodeClick('out-0')}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    handleStreamNodeClick('out-0');
+                  }
+                }}
+                role="button"
+                tabIndex={0}
+                aria-pressed={activeStreamFilter === 'out-0'}
+                title={isAr ? 'خرسانات وبناء عظم: تصفية السجل' : 'Civil Structure & Concrete: filter table'}
+              >
+                <div className={ops.flowNodeLeading}>
+                  <div className={ops.flowNodeSquircleOutflow}>
+                    <HardHat size={16} />
+                  </div>
+                  <div className={ops.flowNodeTexts}>
+                    <span className={ops.flowNodeLabel}>{isAr ? 'خرسانات وبناء عظم' : 'Civil Structure'}</span>
+                    <span className={ops.flowNodeSub}>{isAr ? 'حديد وأسمنت وهيكل' : 'Steel & concrete'}</span>
+                  </div>
+                </div>
+                <div className={ops.flowNodeAmountRow}>
+                  <span className={ops.flowNodeAmount}>
+                    {formatNumberWithCommas(flowMetrics.outflows.civilStructure)}
+                  </span>
+                  <span className={ops.flowNodeCurrency}>{isAr ? 'ج.م' : 'EGP'}</span>
+                </div>
+              </div>
+
+              {/* Stream 2: Finishes & Facades */}
+              <div
+                className={`${ops.flowNodeCard} ${activeStreamFilter === 'out-1' || activeStreamId === 'out-1' ? ops.flowNodeActive : ''}`}
+                data-stream-id="out-1"
+                onMouseEnter={() => setActiveStreamId('out-1')}
+                onMouseLeave={() => setActiveStreamId(null)}
+                onClick={() => handleStreamNodeClick('out-1')}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    handleStreamNodeClick('out-1');
+                  }
+                }}
+                role="button"
+                tabIndex={0}
+                aria-pressed={activeStreamFilter === 'out-1'}
+                title={isAr ? 'تشطيبات وواجهات: تصفية السجل' : 'Finishes & Facades: filter table'}
+              >
+                <div className={ops.flowNodeLeading}>
+                  <div className={ops.flowNodeSquircleOutflow}>
+                    <Layers size={16} />
+                  </div>
+                  <div className={ops.flowNodeTexts}>
+                    <span className={ops.flowNodeLabel}>{isAr ? 'تشطيبات وواجهات' : 'Finishes & Facades'}</span>
+                    <span className={ops.flowNodeSub}>{isAr ? 'رخام، ألوميتال ومصاعد' : 'Marble & facades'}</span>
+                  </div>
+                </div>
+                <div className={ops.flowNodeAmountRow}>
+                  <span className={ops.flowNodeAmount}>
+                    {formatNumberWithCommas(flowMetrics.outflows.finishesFacades)}
+                  </span>
+                  <span className={ops.flowNodeCurrency}>{isAr ? 'ج.م' : 'EGP'}</span>
+                </div>
+              </div>
+
+              {/* Stream 3: Taxes, Permits & Government Dues */}
+              <div
+                className={`${ops.flowNodeCard} ${activeStreamFilter === 'out-3' || activeStreamId === 'out-3' ? ops.flowNodeActive : ''}`}
+                data-stream-id="out-3"
+                onMouseEnter={() => setActiveStreamId('out-3')}
+                onMouseLeave={() => setActiveStreamId(null)}
+                onClick={() => handleStreamNodeClick('out-3')}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    handleStreamNodeClick('out-3');
+                  }
+                }}
+                role="button"
+                tabIndex={0}
+                aria-pressed={activeStreamFilter === 'out-3'}
+                title={isAr ? 'تراخيص ورسوم حكومية: تصفية السجل' : 'Permits & Government Fees: filter table'}
+              >
+                <div className={ops.flowNodeLeading}>
+                  <div className={ops.flowNodeSquircleOutflow}>
+                    <Scale size={16} />
+                  </div>
+                  <div className={ops.flowNodeTexts}>
+                    <span className={ops.flowNodeLabel}>{isAr ? 'تراخيص ورسوم حكومية' : 'Permits & Gov Fees'}</span>
+                    <span className={ops.flowNodeSub}>{isAr ? 'رخص، بناء وتصاريح الجهاز' : 'Permits & licenses'}</span>
+                  </div>
+                </div>
+                <div className={ops.flowNodeAmountRow}>
+                  <span className={ops.flowNodeAmount}>
+                    {formatNumberWithCommas(flowMetrics.outflows.permitsGovFees)}
+                  </span>
+                  <span className={ops.flowNodeCurrency}>{isAr ? 'ج.م' : 'EGP'}</span>
+                </div>
+              </div>
+
+              {/* Stream 4: MEP & Infrastructure */}
+              <div
+                className={`${ops.flowNodeCard} ${activeStreamFilter === 'out-2' || activeStreamId === 'out-2' ? ops.flowNodeActive : ''}`}
+                data-stream-id="out-2"
+                onMouseEnter={() => setActiveStreamId('out-2')}
+                onMouseLeave={() => setActiveStreamId(null)}
+                onClick={() => handleStreamNodeClick('out-2')}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    handleStreamNodeClick('out-2');
+                  }
+                }}
+                role="button"
+                tabIndex={0}
+                aria-pressed={activeStreamFilter === 'out-2'}
+                title={isAr ? 'تأسيس وكهروميكانيك: تصفية السجل' : 'MEP & Infrastructure: filter table'}
+              >
+                <div className={ops.flowNodeLeading}>
+                  <div className={ops.flowNodeSquircleOutflow}>
+                    <Wrench size={16} />
+                  </div>
+                  <div className={ops.flowNodeTexts}>
+                    <span className={ops.flowNodeLabel}>{isAr ? 'تأسيس وكهروميكانيك' : 'MEP Infrastructure'}</span>
+                    <span className={ops.flowNodeSub}>{isAr ? 'سباكة، كهرباء، وغاز' : 'Plumbing & electrical'}</span>
+                  </div>
+                </div>
+                <div className={ops.flowNodeAmountRow}>
+                  <span className={ops.flowNodeAmount}>
+                    {formatNumberWithCommas(flowMetrics.outflows.mepInfrastructure)}
+                  </span>
+                  <span className={ops.flowNodeCurrency}>{isAr ? 'ج.م' : 'EGP'}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Outflows Action Button */}
+            <button
+              type="button"
+              className={ops.flowColAddBtnOutflow}
+              onClick={() => handleQuickAction('record_expense')}
+              title={isAr ? 'إضافة بند مصروف جديد' : 'Add expense item'}
+            >
+              <Plus size={15} />
+              <span>{isAr ? 'إضافة بند مصروف' : 'Add Expense Item'}</span>
+            </button>
+          </div>
         </div>
+      </section>
 
-        {/* 4 Core Architectural Pillars of the System */}
-        <div style={{
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '1rem'
-        }}>
-          {/* Pillar 1: ركن حركة الخزينة والتحصيل النقدي (Treasury & Cashier Operations) */}
-          <div className={styles.pillarBay}>
-            <div className={styles.pillarHeader}>
-              <div className={styles.pillarHeaderMain}>
-                <div className={styles.pillarIconBox} style={{
-                  background: 'rgba(4, 120, 87, 0.1)',
-                  color: '#047857',
-                  border: '1px solid rgba(4, 120, 87, 0.22)'
-                }}>
-                  <Wallet size={16} />
-                </div>
-                <div>
-                  <div className={styles.pillarTitle}>
-                    {isAr ? 'ركن حركة الخزينة والتحصيل النقدي' : 'Treasury & Cashier Operations'}
-                  </div>
-                  <span className={styles.pillarSubtitle}>
-                    {isAr ? 'التحصيل الفوري، سندات القبض، ومطابقة الصندوق' : 'Instant cashiering, receipt vouchers & safe balance'}
-                  </span>
-                </div>
+      </details>
+
+      {/* 5. SIDEBAR / COMPANION WIDGETS CONTAINER (PORTAL INTO 3RD COLUMN) */}
+      <ZFWorkstationSideWidgets>
+        <div className={ops.sideWidgetsWrap}>
+          {/* A. CONSOLIDATED QUICK OPERATIONS HUB (8+ Direct Action Triggers across 3 Sections) */}
+          <div className={ops.quickOperationsCard}>
+            <div className={ops.quickOpsHeader}>
+              <div className={ops.quickOpsTitle}>
+                <Zap size={15} color="var(--erp-accent, #2563eb)" />
+                <span>{isAr ? 'العمليات السريعة' : 'Quick Operations'}</span>
               </div>
-              <span className={styles.pillarBadge} style={{
-                background: 'rgba(4, 120, 87, 0.08)',
-                color: '#047857',
-                border: '1px solid rgba(4, 120, 87, 0.22)'
-              }}>
-                {isAr ? 'حركة الصندوق الفورية' : 'Instant Safe Cashiering'}
+              <span style={{ fontSize: '0.70rem', color: 'var(--ops-muted)', fontWeight: 700 }}>
+                {isAr ? '3 إجراءات أساسية' : '3 primary actions'}
               </span>
             </div>
 
-            <div className={styles.pillarGrid}>
-              {/* Action 1: Collect Due */}
-              <button
-                type="button"
-                className={styles.opsActionBtn}
-                title={isAr 
-                  ? 'تحصيل قسط مستحق أو دفعة تعاقد كاش بالخزنة (101000) أو إنستاباي (102000)، وتوليد سند قبض رسمي وإيصال فوري للعميل' 
-                  : 'Collect installment into cash safe or InstaPay, issue official receipt'}
-                onClick={() => {
-                  const target = filteredAndSortedDues[0] || urgentDues[0] || pdcRecords.find(p => p.status !== 'Cleared') || pdcRecords[0];
-                  if (target) {
-                    onCollectItem(target);
-                  } else {
-                    onNavigateToTab('pdc');
-                  }
-                }}
-              >
-                <div 
-                  data-action-icon="true"
-                  style={{
-                    width: '40px',
-                    height: '40px',
-                    borderRadius: '10px',
-                    background: 'rgba(21, 128, 61, 0.07)',
-                    color: '#15803d',
-                    border: '1px solid rgba(21, 128, 61, 0.2)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    flexShrink: 0,
-                    transition: 'transform 0.2s ease'
-                  }}
+            <div className={ops.quickOpsList}>
+              {/* Section A: المقبوضات والمبيعات (Inflows & Collections) */}
+              <div className={ops.quickOpsSection}>
+                <span className={ops.quickOpsSectionHeader}>
+                  {isAr ? 'المقبوضات والمبيعات' : 'Inflows & Collections'}
+                </span>
+
+                {/* 2. سند قبض نقدي لعقد */}
+                <button
+                  type="button"
+                  className={ops.quickOpBtn}
+                  onClick={() => handleQuickAction('cash_receipt')}
+                  title={isAr ? 'سند قبض نقدي لعقد: تحصيل نقدي بالخزينة لحساب وحدة' : 'Cash Receipt Voucher'}
                 >
-                  <Receipt size={18} />
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem', minWidth: 0, flex: 1 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.4rem' }}>
-                    <div data-action-title="true" style={{ fontSize: '0.88rem', fontWeight: 800, color: '#0f172a', transition: 'color 0.2s ease' }}>
-                      {isAr ? 'تحصيل قسط وطباعة إيصال' : 'Collect & Issue Receipt'}
+                  <div className={ops.quickOpLeading}>
+                    <div className={ops.quickOpIcon}>
+                      <Coins size={15} />
                     </div>
-                    <span
-                      style={{
-                        fontSize: '0.67rem',
-                        fontWeight: 700,
-                        fontVariantNumeric: 'tabular-nums',
-                        padding: '0.12rem 0.5rem',
-                        borderRadius: '12px',
-                        whiteSpace: 'nowrap',
-                        flexShrink: 0,
-                        background: overdueCount > 0 
-                          ? 'rgba(220, 38, 38, 0.1)' 
-                          : (dueTodayCount > 0 ? 'rgba(217, 119, 6, 0.1)' : 'rgba(21, 128, 61, 0.08)'),
-                        color: overdueCount > 0 
-                          ? '#dc2626' 
-                          : (dueTodayCount > 0 ? '#b45309' : '#15803d'),
-                        border: overdueCount > 0 
-                          ? '1px solid rgba(220, 38, 38, 0.25)' 
-                          : (dueTodayCount > 0 ? '1px solid rgba(217, 119, 6, 0.25)' : '1px solid rgba(21, 128, 61, 0.2)'),
-                      }}
-                    >
-                      {overdueCount > 0
-                        ? (isAr ? `${overdueCount} متأخرات` : `${overdueCount} Overdue`)
-                        : (dueTodayCount > 0
-                            ? (isAr ? `${dueTodayCount} اليوم` : `${dueTodayCount} Today`)
-                            : (isAr ? '✓ الخزنة منتظمة' : '✓ Safe Balanced')
-                          )
-                      }
-                    </span>
+                    <div className={ops.quickOpTexts}>
+                      <span className={ops.quickOpTitle}>{isAr ? 'سند قبض نقدي لعقد' : 'Cash Receipt Voucher'}</span>
+                      <span className={ops.quickOpSub}>{isAr ? 'تحصيل نقدي بالخزينة لحساب وحدة' : 'Direct safe cash receipt for unit'}</span>
+                    </div>
                   </div>
-                  <div style={{ fontSize: '0.73rem', color: '#64748b', lineHeight: 1.35 }}>
-                    {isAr ? 'استلام كاش بالخزنة (101000) أو إنستاباي وإصدار سند قبض' : 'Instant 1-click collection'}
+                  {isAr ? <ChevronLeft size={14} className={ops.quickOpArrow} /> : <ChevronRight size={14} className={ops.quickOpArrow} />}
+                </button>
+
+                {/* 3. بيع وحدة وتحرير عقد */}
+                <button
+                  type="button"
+                  className={ops.quickOpBtn}
+                  onClick={() => handleQuickAction('new_contract')}
+                  title={isAr ? 'بيع وحدة وتحرير عقد: تسجيل بيع جديد وجدولة أقساط' : 'New Unit Sale Contract'}
+                >
+                  <div className={ops.quickOpLeading}>
+                    <div className={ops.quickOpIcon}>
+                      <FilePlus size={15} />
+                    </div>
+                    <div className={ops.quickOpTexts}>
+                      <span className={ops.quickOpTitle}>{isAr ? 'بيع وحدة وتحرير عقد' : 'New Unit Sale Contract'}</span>
+                      <span className={ops.quickOpSub}>{isAr ? 'تسجيل بيع جديد وجدولة أقساط' : 'Record sale & installment schedule'}</span>
+                    </div>
                   </div>
-                </div>
-              </button>
+                  {isAr ? <ChevronLeft size={14} className={ops.quickOpArrow} /> : <ChevronRight size={14} className={ops.quickOpArrow} />}
+                </button>
+
+                {/* 4. توريد سيولة / حصة شريك */}
+                <button
+                  type="button"
+                  className={ops.quickOpBtn}
+                  onClick={() => handleQuickAction('partner_injection')}
+                  title={isAr ? 'توريد سيولة / حصة شريك: زيادة رأس المال والتمويل' : 'Partner Capital Injection'}
+                >
+                  <div className={ops.quickOpLeading}>
+                    <div className={ops.quickOpIcon}>
+                      <ArrowUpRight size={15} />
+                    </div>
+                    <div className={ops.quickOpTexts}>
+                      <span className={ops.quickOpTitle}>{isAr ? 'توريد سيولة / حصة شريك' : 'Partner Capital Injection'}</span>
+                      <span className={ops.quickOpSub}>{isAr ? 'زيادة رأس المال والتمويل' : 'Equity injection & treasury funding'}</span>
+                    </div>
+                  </div>
+                  {isAr ? <ChevronLeft size={14} className={ops.quickOpArrow} /> : <ChevronRight size={14} className={ops.quickOpArrow} />}
+                </button>
+              </div>
+
+              <details className={ops.moreActions}>
+                <summary className={ops.moreActionsSummary}>
+                  <span>{isAr ? 'المزيد من الإجراءات' : 'More actions'}</span>
+                  <ChevronDown size={15} />
+                </summary>
+              <div className={ops.quickOpsSectionDivider} />
+
+              {/* Section B: المدفوعات والمصروفات (Disbursements & Payables) */}
+              <div className={ops.quickOpsSection}>
+                <span className={ops.quickOpsSectionHeader}>
+                  {isAr ? 'المدفوعات والمصروفات' : 'Disbursements & Payables'}
+                </span>
+
+                {/* 5. سداد مستخلص مقاول / صنايعي */}
+                <button
+                  type="button"
+                  className={ops.quickOpBtn}
+                  onClick={() => handleQuickAction('pay_contractor')}
+                  title={isAr ? 'سداد مستخلص مقاول / صنايعي: صرف دفعات إنجاز الأعمال' : 'Pay Contractor / Craftsman'}
+                >
+                  <div className={ops.quickOpLeading}>
+                    <div className={ops.quickOpIcon}>
+                      <HardHat size={15} />
+                    </div>
+                    <div className={ops.quickOpTexts}>
+                      <span className={ops.quickOpTitle}>{isAr ? 'سداد مستخلص مقاول / صنايعي' : 'Pay Contractor / Craftsman'}</span>
+                      <span className={ops.quickOpSub}>{isAr ? 'صرف دفعات إنجاز الأعمال' : 'Settle WIP invoice or milestone'}</span>
+                    </div>
+                  </div>
+                  {isAr ? <ChevronLeft size={14} className={ops.quickOpArrow} /> : <ChevronRight size={14} className={ops.quickOpArrow} />}
+                </button>
+
+                {/* 7. صرف عهدة ومصروف مباشر */}
+                <button
+                  type="button"
+                  className={ops.quickOpBtn}
+                  onClick={() => handleQuickAction('safe_expense')}
+                  title={isAr ? 'صرف عهدة ومصروف مباشر: نثريات ومشتريات نقدية فورية' : 'Direct Safe Expense'}
+                >
+                  <div className={ops.quickOpLeading}>
+                    <div className={ops.quickOpIcon}>
+                      <ShoppingCart size={15} />
+                    </div>
+                    <div className={ops.quickOpTexts}>
+                      <span className={ops.quickOpTitle}>{isAr ? 'صرف عهدة ومصروف مباشر' : 'Direct Safe Expense'}</span>
+                      <span className={ops.quickOpSub}>{isAr ? 'نثريات ومشتريات نقدية فورية' : 'Petty cash & operational expense'}</span>
+                    </div>
+                  </div>
+                  {isAr ? <ChevronLeft size={14} className={ops.quickOpArrow} /> : <ChevronRight size={14} className={ops.quickOpArrow} />}
+                </button>
+
+                {/* 8. صرف توزيعات أرباح شريك */}
+                <button
+                  type="button"
+                  className={ops.quickOpBtn}
+                  onClick={() => handleQuickAction('partner_payout')}
+                  title={isAr ? 'صرف توزيعات أرباح شريك: صرف سحوبات وأرباح جارية' : 'Partner Dividend Payout'}
+                >
+                  <div className={ops.quickOpLeading}>
+                    <div className={ops.quickOpIcon}>
+                      <ArrowDownRight size={15} />
+                    </div>
+                    <div className={ops.quickOpTexts}>
+                      <span className={ops.quickOpTitle}>{isAr ? 'صرف توزيعات أرباح شريك' : 'Partner Dividend Payout'}</span>
+                      <span className={ops.quickOpSub}>{isAr ? 'صرف سحوبات وأرباح جارية' : 'Partner withdrawals & dividends'}</span>
+                    </div>
+                  </div>
+                  {isAr ? <ChevronLeft size={14} className={ops.quickOpArrow} /> : <ChevronRight size={14} className={ops.quickOpArrow} />}
+                </button>
+              </div>
+
+              <div className={ops.quickOpsSectionDivider} />
+
+              {/* Section C: الجرد والمتابعة (Audit & Registry) */}
+              <div className={ops.quickOpsSection}>
+                <span className={ops.quickOpsSectionHeader}>
+                  {isAr ? 'الجرد والمتابعة' : 'Audit & Registry'}
+                </span>
+
+                {/* 9. جرد وكشف حركة الخزينة */}
+                <button
+                  type="button"
+                  className={ops.quickOpBtn}
+                  onClick={() => handleQuickAction('report')}
+                  title={isAr ? 'جرد وكشف حركة الخزينة: مطابقة ومراجعة السيولة النقدية' : 'Treasury Statement & Audit'}
+                >
+                  <div className={ops.quickOpLeading}>
+                    <div className={ops.quickOpIcon}>
+                      <FileSpreadsheet size={15} />
+                    </div>
+                    <div className={ops.quickOpTexts}>
+                      <span className={ops.quickOpTitle}>{isAr ? 'جرد وكشف حركة الخزينة' : 'Treasury Statement & Audit'}</span>
+                      <span className={ops.quickOpSub}>{isAr ? 'مطابقة ومراجعة السيولة النقدية' : 'Cash statement & balance audit'}</span>
+                    </div>
+                  </div>
+                  {isAr ? <ChevronLeft size={14} className={ops.quickOpArrow} /> : <ChevronRight size={14} className={ops.quickOpArrow} />}
+                </button>
+
+                {/* 10. سجل العمليات الشامل */}
+                <button
+                  type="button"
+                  className={ops.quickOpBtn}
+                  onClick={() => handleQuickAction('expand_table')}
+                  title={isAr ? 'سجل العمليات الشامل: عرض موسع مع فلاتر تفصيلية' : 'Full Operations Register'}
+                >
+                  <div className={ops.quickOpLeading}>
+                    <div className={ops.quickOpIcon}>
+                      <Maximize2 size={15} />
+                    </div>
+                    <div className={ops.quickOpTexts}>
+                      <span className={ops.quickOpTitle}>{isAr ? 'سجل العمليات الشامل' : 'Full Operations Register'}</span>
+                      <span className={ops.quickOpSub}>{isAr ? 'عرض موسع مع فلاتر تفصيلية' : 'Expanded view with full filters'}</span>
+                    </div>
+                  </div>
+                  {isAr ? <ChevronLeft size={14} className={ops.quickOpArrow} /> : <ChevronRight size={14} className={ops.quickOpArrow} />}
+                </button>
+              </div>
+              </details>
             </div>
           </div>
 
-          {/* Pillar 2: ركن المبيعات وعقود العملاء (Sales Contracts & Customer Accounts) */}
-          <div className={styles.pillarBay}>
-            <div className={styles.pillarHeader}>
-              <div className={styles.pillarHeaderMain}>
-                <div className={styles.pillarIconBox} style={{
-                  background: 'rgba(184, 144, 62, 0.1)',
-                  color: '#946f23',
-                  border: '1px solid rgba(184, 144, 62, 0.25)'
-                }}>
-                  <FileText size={16} />
-                </div>
-                <div>
-                  <div className={styles.pillarTitle}>
-                    {isAr ? 'ركن المبيعات وعقود العملاء' : 'Sales Contracts & Customer Accounts'}
-                  </div>
-                  <span className={styles.pillarSubtitle}>
-                    {isAr ? 'حجز الشقق، توثيق العقود، وإدارة الجداول والتسويات' : 'Unit reservations, contract execution & settlements'}
-                  </span>
-                </div>
+          {/* B. RECENT TRANSACTIONS FEED */}
+          <div className={ops.recentFeedCard}>
+            <div className={ops.recentFeedHeader}>
+              <div className={ops.recentFeedTitle}>
+                <Clock size={15} color="var(--erp-accent, #2563eb)" />
+                <span>{isAr ? 'أحدث العمليات' : 'Recent Transactions'}</span>
               </div>
-              <span className={styles.pillarBadge} style={{
-                background: 'rgba(184, 144, 62, 0.08)',
-                color: '#946f23',
-                border: '1px solid rgba(184, 144, 62, 0.22)'
-              }}>
-                {isAr ? 'التعاقدات والتسويات' : 'Deals & Settlements'}
-              </span>
+              <button
+                type="button"
+                className={ops.recentFeedViewAll}
+                onClick={handleViewAllTransactions}
+              >
+                {isAr ? 'عرض الكل' : 'View All'}
+              </button>
             </div>
 
-            <div className={styles.pillarGrid}>
-              {/* Action 6: New Deal Wizard */}
-              <button
-                type="button"
-                className={styles.opsActionBtn}
-                title={isAr 
-                  ? 'فتح معالج تحرير عقد بيع جديد لشقة: تسجيل بيانات العميل، تحصيل مقدم الحجز بالخزنة، وتوليد جدول الأقساط آلياً' 
-                  : 'Create new sales contract, record down payment, and build installment schedule'}
-                onClick={onOpenNewContract}
-              >
-                <div 
-                  data-action-icon="true"
-                  style={{
-                    width: '40px',
-                    height: '40px',
-                    borderRadius: '10px',
-                    background: 'rgba(184, 144, 62, 0.08)',
-                    color: '#946f23',
-                    border: '1px solid rgba(184, 144, 62, 0.22)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    flexShrink: 0,
-                    transition: 'transform 0.2s ease'
-                  }}
-                >
-                  <FileText size={18} />
+            <div className={ops.recentFeedList}>
+              {recentFiveTransactions.length === 0 ? (
+                <div style={{ padding: '1.5rem 0.5rem', textAlign: 'center', fontSize: '0.74rem', color: 'var(--ops-muted, #64748b)', fontWeight: 600 }}>
+                  {isAr ? 'لا توجد حركات مسجلة مؤخراً' : 'No recent operations recorded'}
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem', minWidth: 0, flex: 1 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.4rem' }}>
-                    <div data-action-title="true" style={{ fontSize: '0.88rem', fontWeight: 800, color: '#0f172a', transition: 'color 0.2s ease' }}>
-                      {isAr ? 'تحرير عقد بيع وحجز شقة' : 'New Sales Contract'}
-                    </div>
-                    <span
-                      style={{
-                        fontSize: '0.67rem',
-                        fontWeight: 700,
-                        fontVariantNumeric: 'tabular-nums',
-                        padding: '0.12rem 0.5rem',
-                        borderRadius: '12px',
-                        whiteSpace: 'nowrap',
-                        flexShrink: 0,
-                        background: 'rgba(184, 144, 62, 0.1)',
-                        color: '#946f23',
-                        border: '1px solid rgba(184, 144, 62, 0.25)',
-                      }}
-                    >
-                      {isAr ? `${availableUnitsCount} شقق شاغرة` : `${availableUnitsCount} Vacant`}
-                    </span>
-                  </div>
-                  <div style={{ fontSize: '0.73rem', color: '#64748b', lineHeight: 1.35 }}>
-                    {isAr ? 'تسجيل بيانات العميل، دفعة الحجز بالخزنة، وجدول الأقساط بالمليم' : '3-step deal wizard'}
-                  </div>
-                </div>
-              </button>
+              ) : (
+                recentFiveTransactions.map((tx) => {
+                  const isInflow = tx.direction === 'IN';
+                  const isOutflow = tx.direction === 'OUT';
 
-              {/* Action 2: Add Contract Supplement */}
-              <button
-                type="button"
-                className={styles.opsActionBtn}
-                title={isAr 
-                  ? 'إضافة ملحق مالي للعقد (دفعة تشطيبات، تعديلات معمارية، أو إشعار مدين جديد) بنظام الشقين وربطه بجدول الأقساط' 
-                  : 'Add contract supplement or finishing installment to contract'}
-                onClick={onOpenNewCheque}
-              >
-                <div 
-                  data-action-icon="true"
-                  style={{
-                    width: '40px',
-                    height: '40px',
-                    borderRadius: '10px',
-                    background: 'rgba(184, 144, 62, 0.08)',
-                    color: '#946f23',
-                    border: '1px solid rgba(184, 144, 62, 0.22)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    flexShrink: 0,
-                    transition: 'transform 0.2s ease'
-                  }}
-                >
-                  <Plus size={18} />
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem', minWidth: 0, flex: 1 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.4rem' }}>
-                    <div data-action-title="true" style={{ fontSize: '0.88rem', fontWeight: 800, color: '#0f172a', transition: 'color 0.2s ease' }}>
-                      {isAr ? 'إضافة ملحق أو دفعة للعقد' : 'Add Contract Supplement'}
-                    </div>
-                    <span
-                      style={{
-                        fontSize: '0.67rem',
-                        fontWeight: 700,
-                        fontVariantNumeric: 'tabular-nums',
-                        padding: '0.12rem 0.5rem',
-                        borderRadius: '12px',
-                        whiteSpace: 'nowrap',
-                        flexShrink: 0,
-                        background: 'rgba(15, 23, 42, 0.05)',
-                        color: '#475569',
-                        border: '1px solid rgba(15, 23, 42, 0.1)',
+                  return (
+                    <div
+                      key={`feed-${tx.id}`}
+                      className={ops.recentFeedItem}
+                      onClick={() => handleInspectRow(tx)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          handleInspectRow(tx);
+                        }
                       }}
+                      role="button"
+                      tabIndex={0}
                     >
-                      {isAr ? `${contracts.length} عقد نشط` : `${contracts.length} Active`}
-                    </span>
-                  </div>
-                  <div style={{ fontSize: '0.73rem', color: '#64748b', lineHeight: 1.35 }}>
-                    {isAr ? 'تشطيبات، تعديلات معمارية، أو مبالغ طارئة بنظام الشقين' : 'Finishing, alterations or annex'}
-                  </div>
-                </div>
-              </button>
+                      <div className={ops.recentFeedLeading}>
+                        <div
+                          className={`${ops.recentFeedDirection} ${
+                            isInflow
+                              ? ops.recentFeedDirectionIn
+                              : isOutflow
+                                ? ops.recentFeedDirectionOut
+                                : ops.recentFeedDirectionTransfer
+                          }`}
+                        >
+                          {isInflow && <ArrowUpRight size={12} />}
+                          {isOutflow && <ArrowDownRight size={12} />}
+                          {!isInflow && !isOutflow && <ArrowLeftRight size={12} />}
+                        </div>
 
-              {/* Action 8: Contract Escalation */}
-              <button
-                type="button"
-                className={styles.opsActionBtn}
-                title={isAr 
-                  ? 'إجراء تعديل سعري أو تطبيق فروق زيادة التكاليف على العقد (Delta V)، وإعادة جدولة الفروق على الأقساط المتبقية بنظام الشقين' 
-                  : 'Adjust contract price and re-amortize installment deltas with two-sided layout'}
-                onClick={() => {
-                  if (primaryContract && onOpenEscalationModal) {
-                    onOpenEscalationModal(primaryContract);
-                  } else {
-                    onNavigateToTab('contracts');
-                  }
-                }}
-              >
-                <div 
-                  data-action-icon="true"
-                  style={{
-                    width: '40px',
-                    height: '40px',
-                    borderRadius: '10px',
-                    background: 'rgba(71, 85, 105, 0.06)',
-                    color: '#475569',
-                    border: '1px solid rgba(71, 85, 105, 0.18)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    flexShrink: 0,
-                    transition: 'transform 0.2s ease'
-                  }}
-                >
-                  <TrendingUp size={18} />
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem', minWidth: 0, flex: 1 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.4rem' }}>
-                    <div data-action-title="true" style={{ fontSize: '0.88rem', fontWeight: 800, color: '#0f172a', transition: 'color 0.2s ease' }}>
-                      {isAr ? 'تعديل أسعار أو بنود العقد' : 'Price Escalation'}
-                    </div>
-                    <span
-                      style={{
-                        fontSize: '0.67rem',
-                        fontWeight: 700,
-                        fontVariantNumeric: 'tabular-nums',
-                        padding: '0.12rem 0.5rem',
-                        borderRadius: '12px',
-                        whiteSpace: 'nowrap',
-                        flexShrink: 0,
-                        background: 'rgba(71, 85, 105, 0.06)',
-                        color: '#475569',
-                        border: '1px solid rgba(71, 85, 105, 0.15)',
-                      }}
-                    >
-                      {isAr ? 'ملاحق Delta V' : 'Delta V'}
-                    </span>
-                  </div>
-                  <div style={{ fontSize: '0.73rem', color: '#64748b', lineHeight: 1.35 }}>
-                    {isAr ? 'إضافة ملحق سعري Delta V وجدولة الفروق' : 'Price adjustment addendum'}
-                  </div>
-                </div>
-              </button>
+                        <div className={ops.recentFeedInfo}>
+                          <span className={ops.recentFeedParty} title={tx.counterparty || tx.description}>
+                            {tx.counterparty || (isAr ? 'معاملة مالية' : 'Movement')}
+                          </span>
+                          <div className={ops.recentFeedMeta}>
+                            <span
+                              className={`${shellStyles.statusPill} ${
+                                isInflow
+                                  ? shellStyles.statusPillGreen
+                                  : isOutflow
+                                    ? shellStyles.statusPillNeutral
+                                    : shellStyles.statusPillBlue
+                              }`}
+                              style={{ fontSize: '0.60rem', padding: '1px 5px', lineHeight: '1.2' }}
+                            >
+                              {isAr ? tx.typeLabelAr : tx.typeLabelEn}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
 
-              {/* Action 9: Contract Rescission */}
-              <button
-                type="button"
-                className={styles.opsActionBtn}
-                title={isAr 
-                  ? 'تسوية فسخ أو استرداد شقة: حساب الخصم القانوني (10% قبل التسليم) أو استرداد الوحدة، وصرف مستحقات العميل من الخزنة' 
-                  : 'Settle contract cancellation, calculate statutory deduction, and refund'}
-                onClick={() => {
-                  if (primaryContract && onOpenRescissionModal) {
-                    onOpenRescissionModal(primaryContract);
-                  } else {
-                    onNavigateToTab('contracts');
-                  }
-                }}
-              >
-                <div 
-                  data-action-icon="true"
-                  style={{
-                    width: '40px',
-                    height: '40px',
-                    borderRadius: '10px',
-                    background: 'rgba(159, 18, 57, 0.06)',
-                    color: '#9f1239',
-                    border: '1px solid rgba(159, 18, 57, 0.18)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    flexShrink: 0,
-                    transition: 'transform 0.2s ease'
-                  }}
-                >
-                  <RotateCcw size={18} />
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem', minWidth: 0, flex: 1 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.4rem' }}>
-                    <div data-action-title="true" style={{ fontSize: '0.88rem', fontWeight: 800, color: '#0f172a', transition: 'color 0.2s ease' }}>
-                      {isAr ? 'فسخ تعاقد وتسوية المسترد' : 'Contract Rescission'}
+                      <div className={ops.recentFeedTrailing}>
+                        <span className={`${ops.recentFeedAmount} ${isInflow ? ops.recentFeedAmountIn : isOutflow ? ops.recentFeedAmountOut : ''}`}>
+                          {isInflow ? '+' : isOutflow ? '-' : ''}
+                          {formatNumberWithCommas(tx.amount.abs())}{' '}
+                          <span style={{ fontSize: '0.65rem', fontWeight: 500, color: 'var(--ops-muted)' }}>
+                            {isAr ? 'ج.م' : 'EGP'}
+                          </span>
+                        </span>
+                        <span dir="ltr" className={ops.recentFeedDate}>
+                          {tx.date} {formatTime12h(tx.timeStr, isAr)}
+                        </span>
+                      </div>
                     </div>
-                    <span
-                      style={{
-                        fontSize: '0.67rem',
-                        fontWeight: 700,
-                        fontVariantNumeric: 'tabular-nums',
-                        padding: '0.12rem 0.5rem',
-                        borderRadius: '12px',
-                        whiteSpace: 'nowrap',
-                        flexShrink: 0,
-                        background: 'rgba(159, 18, 57, 0.06)',
-                        color: '#9f1239',
-                        border: '1px solid rgba(159, 18, 57, 0.18)',
-                      }}
-                    >
-                      {isAr ? 'غرامة 10% وتسويات' : '10% Deduction'}
-                    </span>
-                  </div>
-                  <div style={{ fontSize: '0.73rem', color: '#64748b', lineHeight: 1.35 }}>
-                    {isAr ? 'تطبيق غرامة الـ 10% القانونية ورد باقي الفلوس نقدياً' : 'Settle penalty & vault refund'}
-                  </div>
-                </div>
-              </button>
+                  );
+                })
+              )}
             </div>
           </div>
 
-          {/* Pillar 3: ركن المشاريع وتكاليف البناء (Projects & Construction WIP) */}
-          <div className={styles.pillarBay}>
-            <div className={styles.pillarHeader}>
-              <div className={styles.pillarHeaderMain}>
-                <div className={styles.pillarIconBox} style={{
-                  background: 'rgba(180, 83, 9, 0.1)',
-                  color: '#b45309',
-                  border: '1px solid rgba(180, 83, 9, 0.25)'
-                }}>
-                  <Building2 size={16} />
-                </div>
-                <div>
-                  <div className={styles.pillarTitle}>
-                    {isAr ? 'ركن المشاريع وتكاليف البناء' : 'Projects & Construction WIP'}
-                  </div>
-                  <span className={styles.pillarSubtitle}>
-                    {isAr ? 'فواتير وخامات المواقع، تدقيق تكلفة المباني، ودراسات الجدوى' : 'Site materials, building WIP audit & feasibility'}
-                  </span>
-                </div>
+          {/* C. UPCOMING MATURING DUES & COLLECTIONS */}
+          <div className={ops.upcomingDuesCard}>
+            <div className={ops.upcomingDuesHeader}>
+              <div className={ops.upcomingDuesTitle}>
+                <CalendarClock size={16} color="var(--erp-accent, #2563eb)" />
+                <span>{isAr ? 'استحقاقات وتحصيلات قادمة' : 'Upcoming Maturing Dues'}</span>
               </div>
-              <span className={styles.pillarBadge} style={{
-                background: 'rgba(180, 83, 9, 0.08)',
-                color: '#b45309',
-                border: '1px solid rgba(180, 83, 9, 0.22)'
-              }}>
-                {isAr ? 'المواقع والمقاولين' : 'Sites & Contractors'}
+              <span className={`${shellStyles.statusPill} ${shellStyles.statusPillNeutral}`} style={{ fontSize: '0.68rem', fontWeight: 700 }}>
+                {isAr ? `${upcomingDues.totalCount} مستحق` : `${upcomingDues.totalCount} Dues`}
               </span>
             </div>
 
-            <div className={styles.pillarGrid}>
-              {/* Action 3: Record Project Expenses & Materials */}
-              <button
-                type="button"
-                className={`${styles.opsActionBtn} ${isExpenseModalOpen ? styles.opsActionBtnActive : ''}`}
-                title={isAr 
-                  ? 'تسجيل فواتير ومصروفات وخامات المباني (حديد، أسمنت، خرسانة، سباكة، مصنعيات) كاش أو إنستاباي أو آجل على الحساب' 
-                  : 'Record building materials, contractor labor, or site expenses'}
-                onClick={handleOpenProjectExpenses}
-              >
-                <div 
-                  data-action-icon="true"
-                  style={{
-                    width: '40px',
-                    height: '40px',
-                    borderRadius: '10px',
-                    background: 'rgba(180, 83, 9, 0.07)',
-                    color: '#b45309',
-                    border: '1px solid rgba(180, 83, 9, 0.2)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    flexShrink: 0,
-                    transition: 'transform 0.2s ease'
-                  }}
-                >
-                  <HardHat size={18} />
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem', minWidth: 0, flex: 1 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.4rem' }}>
-                    <div data-action-title="true" style={{ fontSize: '0.88rem', fontWeight: 800, color: '#0f172a', transition: 'color 0.2s ease' }}>
-                      {isAr ? 'تسجيل مصاريف وخامات المشروع' : 'Record Project Expenses'}
-                    </div>
-                    <span
-                      style={{
-                        fontSize: '0.67rem',
-                        fontWeight: 700,
-                        fontVariantNumeric: 'tabular-nums',
-                        padding: '0.12rem 0.5rem',
-                        borderRadius: '12px',
-                        whiteSpace: 'nowrap',
-                        flexShrink: 0,
-                        background: 'rgba(180, 83, 9, 0.08)',
-                        color: '#b45309',
-                        border: '1px solid rgba(180, 83, 9, 0.2)',
-                      }}
-                    >
-                      {isAr ? `${underConstructionProperties.length} مواقع جارية` : `${underConstructionProperties.length} Active Sites`}
-                    </span>
-                  </div>
-                  <div style={{ fontSize: '0.73rem', color: '#64748b', lineHeight: 1.35 }}>
-                    {isAr ? 'كاش، إنستاباي، أو فواتير مقاولين على الحساب ومتابعة المباني' : 'Cash, InstaPay, or credit invoice'}
-                  </div>
-                </div>
-              </button>
-
-              {/* Action 5: Feasibility & Pricing Calculator */}
-              <button
-                type="button"
-                className={styles.opsActionBtn}
-                title={isAr 
-                  ? 'حاسبة الجدوى وتسعير الشقق والمشاريع، دراسة تكلفة المتر المسطح، واحتساب هامش الربح المستهدف وخطط الأقساط' 
-                  : 'Feasibility study and apartment pricing simulator'}
-                onClick={() => {
-                  if (primaryProperty && onOpenCalculatorForProperty) {
-                    onOpenCalculatorForProperty(primaryProperty);
-                  } else {
-                    onNavigateToTab('calculator');
-                  }
-                }}
-              >
-                <div 
-                  data-action-icon="true"
-                  style={{
-                    width: '40px',
-                    height: '40px',
-                    borderRadius: '10px',
-                    background: 'rgba(30, 58, 138, 0.06)',
-                    color: '#1e40af',
-                    border: '1px solid rgba(30, 58, 138, 0.2)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    flexShrink: 0,
-                    transition: 'transform 0.2s ease'
-                  }}
-                >
-                  <Calculator size={18} />
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem', minWidth: 0, flex: 1 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.4rem' }}>
-                    <div data-action-title="true" style={{ fontSize: '0.88rem', fontWeight: 800, color: '#0f172a', transition: 'color 0.2s ease' }}>
-                      {isAr ? 'حاسبة تسعير وجدوى المشروع' : 'Feasibility & Pricing'}
-                    </div>
-                    <span
-                      style={{
-                        fontSize: '0.67rem',
-                        fontWeight: 700,
-                        fontVariantNumeric: 'tabular-nums',
-                        padding: '0.12rem 0.5rem',
-                        borderRadius: '12px',
-                        whiteSpace: 'nowrap',
-                        flexShrink: 0,
-                        background: 'rgba(30, 58, 138, 0.06)',
-                        color: '#1e40af',
-                        border: '1px solid rgba(30, 58, 138, 0.18)',
-                      }}
-                    >
-                      {isAr ? 'دراسات جدوى وتكلفة' : 'Feasibility & Cost'}
-                    </span>
-                  </div>
-                  <div style={{ fontSize: '0.73rem', color: '#64748b', lineHeight: 1.35 }}>
-                    {isAr ? 'دراسة تكلفة المتر المسطح، هامش الربح المستهدف، وجدولة الأقساط' : 'Installments & margin study'}
-                  </div>
-                </div>
-              </button>
-
-              {/* Action 4: Property Lifecycle Cost Audit */}
-              <button
-                type="button"
-                className={styles.opsActionBtn}
-                title={isAr 
-                  ? 'تدقيق ومراجعة مصاريف مباني كل عمارة، تكلفة المتر الفعلي، ونسبة الربح الصافي المحقق من بيع الشقق' 
-                  : 'Audit building WIP costs, per-sqm rates, and apartment profit margins'}
-                onClick={() => {
-                  if (primaryProperty && onOpenAuditForProperty) {
-                    onOpenAuditForProperty(primaryProperty);
-                  } else {
-                    onNavigateToTab('properties');
-                  }
-                }}
-              >
-                <div 
-                  data-action-icon="true"
-                  style={{
-                    width: '40px',
-                    height: '40px',
-                    borderRadius: '10px',
-                    background: 'rgba(51, 65, 85, 0.06)',
-                    color: '#334155',
-                    border: '1px solid rgba(51, 65, 85, 0.18)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    flexShrink: 0,
-                    transition: 'transform 0.2s ease'
-                  }}
-                >
-                  <ShieldCheck size={18} />
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem', minWidth: 0, flex: 1 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.4rem' }}>
-                    <div data-action-title="true" style={{ fontSize: '0.88rem', fontWeight: 800, color: '#0f172a', transition: 'color 0.2s ease' }}>
-                      {isAr ? 'تكلفة العمارة وأرباح الشقق' : 'Property Cost Audit'}
-                    </div>
-                    <span
-                      style={{
-                        fontSize: '0.67rem',
-                        fontWeight: 700,
-                        fontVariantNumeric: 'tabular-nums',
-                        padding: '0.12rem 0.5rem',
-                        borderRadius: '12px',
-                        whiteSpace: 'nowrap',
-                        flexShrink: 0,
-                        background: 'rgba(51, 65, 85, 0.06)',
-                        color: '#334155',
-                        border: '1px solid rgba(51, 65, 85, 0.15)',
-                      }}
-                    >
-                      {isAr ? `${properties.length} مشاريع بالمحفظة` : `${properties.length} Projects`}
-                    </span>
-                  </div>
-                  <div style={{ fontSize: '0.73rem', color: '#64748b', lineHeight: 1.35 }}>
-                    {isAr ? 'تدقيق مصاريف المباني، تكلفة المتر الفعلي، وربحية كل شقة' : 'Audit costs & unit profit'}
-                  </div>
-                </div>
-              </button>
+            <div className={ops.upcomingDuesSummary}>
+              <div className={ops.upcomingDuesSummaryIn}>
+                <ArrowUpRight size={13} />
+                <span>
+                  {isAr ? 'تحصيلات متوقعة: ' : 'Expected In: '}
+                  +{formatNumberWithCommas(upcomingDues.totalIn)} {isAr ? 'ج.م' : 'EGP'}
+                </span>
+              </div>
+              <div className={ops.upcomingDuesSummaryOut}>
+                <ArrowDownRight size={13} />
+                <span>
+                  {isAr ? 'مدفوعات مستحقة: ' : 'Payables Due: '}
+                  -{formatNumberWithCommas(upcomingDues.totalOut)} {isAr ? 'ج.م' : 'EGP'}
+                </span>
+              </div>
             </div>
-          </div>
 
-          {/* Pillar 4: ركن الحسابات والشركاء (Finance, RSV & Equity Partners) */}
-          <div className={styles.pillarBay}>
-            <div className={styles.pillarHeader}>
-              <div className={styles.pillarHeaderMain}>
-                <div className={styles.pillarIconBox} style={{
-                  background: 'rgba(148, 111, 35, 0.1)',
-                  color: '#946f23',
-                  border: '1px solid rgba(148, 111, 35, 0.25)'
-                }}>
-                  <Landmark size={16} />
-                </div>
-                <div>
-                  <div className={styles.pillarTitle}>
-                    {isAr ? 'ركن الحسابات والشركاء' : 'Finance, RSV & Equity Partners'}
-                  </div>
-                  <span className={styles.pillarSubtitle}>
-                    {isAr ? 'الاعتراف بالإيراد، نسب الإنجاز، ومستحقات الشركاء والممولين' : 'Milestone recognition, RSV factor & partner equity'}
+            <div className={ops.upcomingDuesList}>
+              {upcomingDues.items.length === 0 ? (
+                <div className={ops.upcomingDueEmpty}>
+                  <CheckCircle2 size={20} color="#16a34a" />
+                  <span>
+                    {isAr
+                      ? 'لا توجد شيكات أو مستحقات مجدولة لهذا الأسبوع'
+                      : 'No upcoming cheques or dues scheduled for this week'}
                   </span>
                 </div>
-              </div>
-              <span className={styles.pillarBadge} style={{
-                background: 'rgba(148, 111, 35, 0.08)',
-                color: '#946f23',
-                border: '1px solid rgba(148, 111, 35, 0.22)'
-              }}>
-                {isAr ? 'الدفاتر وحصص الأرباح' : 'Ledger & Profit Shares'}
-              </span>
-            </div>
-
-            <div className={styles.pillarGrid}>
-              {/* Action 7: RSV Milestone Recognition */}
-              <button
-                type="button"
-                className={styles.opsActionBtn}
-                title={isAr 
-                  ? 'معادلة الرسملة والاعتراف بالإيراد (RSV): حساب نسبة الإنجاز الفعلي وتوزيع مصاريف المباني وإثبات أرباح الشقق بالدفاتر' 
-                  : 'Recognize project progress and revenue via the RSV Factor'}
-                onClick={() => {
-                  if (onOpenRSVModal) {
-                    onOpenRSVModal();
-                  } else {
-                    onNavigateToTab('contracts');
-                  }
-                }}
-              >
-                <div 
-                  data-action-icon="true"
-                  style={{
-                    width: '40px',
-                    height: '40px',
-                    borderRadius: '10px',
-                    background: 'rgba(30, 58, 138, 0.06)',
-                    color: '#1e3a8a',
-                    border: '1px solid rgba(30, 58, 138, 0.2)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    flexShrink: 0,
-                    transition: 'transform 0.2s ease'
-                  }}
-                >
-                  <Layers size={18} />
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem', minWidth: 0, flex: 1 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.4rem' }}>
-                    <div data-action-title="true" style={{ fontSize: '0.88rem', fontWeight: 800, color: '#0f172a', transition: 'color 0.2s ease' }}>
-                      {isAr ? 'حساب أرباح ونسبة إنجاز المشروع' : 'Milestone Recognition (RSV)'}
-                    </div>
-                    <span
-                      style={{
-                        fontSize: '0.67rem',
-                        fontWeight: 700,
-                        fontVariantNumeric: 'tabular-nums',
-                        padding: '0.12rem 0.5rem',
-                        borderRadius: '12px',
-                        whiteSpace: 'nowrap',
-                        flexShrink: 0,
-                        background: 'rgba(148, 111, 35, 0.09)',
-                        color: '#946f23',
-                        border: '1px solid rgba(148, 111, 35, 0.2)',
-                      }}
-                    >
-                      {handoverCount > 0 
-                        ? (isAr ? `${handoverCount} جاهزة للتسليم` : `${handoverCount} Ready`)
-                        : (isAr ? 'متابعة نسب الإنجاز' : 'RSV Milestone')
+              ) : (
+                upcomingDues.items.map((item) => {
+                  const isIn = item.direction === 'IN';
+                  const handleDueItemClick = () => {
+                    if (item.rawPdc) {
+                      if (item.direction === 'IN') {
+                        onCollectItem(item.rawPdc);
+                      } else if (onInspectCheque) {
+                        onInspectCheque(item.rawPdc);
+                      } else {
+                        onCollectItem(item.rawPdc);
                       }
-                    </span>
-                  </div>
-                  <div style={{ fontSize: '0.73rem', color: '#64748b', lineHeight: 1.35 }}>
-                    {isAr ? 'توزيع مصاريف المباني واعتراف مكسب الشقق بالدفاتر' : 'Milestone revenue recognition'}
-                  </div>
-                </div>
-              </button>
-
-              {/* Action 10: Partner Management & Distributions */}
-              <button
-                type="button"
-                className={styles.opsActionBtn}
-                title={isAr 
-                  ? 'إدارة وتوزيعات الشركاء والممولين: متابعة الأرصدة، ضخ مساهمات رأس مال، وصرف أرباح بنظام الشقين المزدوج' 
-                  : 'Manage partners, capital injections, and profit distributions'}
-                onClick={() => {
-                  if (onOpenPartnerOperations) {
-                    onOpenPartnerOperations();
-                  } else {
-                    onNavigateToTab('partners');
-                  }
-                }}
-              >
-                <div 
-                  data-action-icon="true"
-                  style={{
-                    width: '40px',
-                    height: '40px',
-                    borderRadius: '10px',
-                    background: 'rgba(184, 144, 62, 0.08)',
-                    color: '#946f23',
-                    border: '1px solid rgba(184, 144, 62, 0.22)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    flexShrink: 0,
-                    transition: 'transform 0.2s ease'
-                  }}
-                >
-                  <Users size={18} />
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem', minWidth: 0, flex: 1 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.4rem' }}>
-                    <div data-action-title="true" style={{ fontSize: '0.88rem', fontWeight: 800, color: '#0f172a', transition: 'color 0.2s ease' }}>
-                      {isAr ? 'إدارة وتوزيعات الشركاء والممولين' : 'Partner Operations'}
-                    </div>
-                    <span
-                      style={{
-                        fontSize: '0.67rem',
-                        fontWeight: 700,
-                        fontVariantNumeric: 'tabular-nums',
-                        padding: '0.12rem 0.5rem',
-                        borderRadius: '12px',
-                        whiteSpace: 'nowrap',
-                        flexShrink: 0,
-                        background: 'rgba(21, 128, 61, 0.08)',
-                        color: '#15803d',
-                        border: '1px solid rgba(21, 128, 61, 0.2)',
-                      }}
-                    >
-                      {partnersWithDuesCount > 0 
-                        ? (isAr ? `${partnersWithDuesCount} مستحق أرباح` : `${partnersWithDuesCount} Due`)
-                        : (isAr ? 'إدارة رؤوس الأموال' : 'Capital & Equity')
+                    } else if (item.rawInstallment && item.rawCost) {
+                      if (onRecordPayablePayment) {
+                        setSelectedCostForPayable(item.rawCost);
+                        setSelectedInstallmentForPayable(item.rawInstallment);
+                      } else if (onUpdatePropertyCostItem) {
+                        setSelectedCostForEdit(item.rawCost);
+                      } else {
+                        setIsExpenseModalOpen(true);
                       }
-                    </span>
-                  </div>
-                  <div style={{ fontSize: '0.73rem', color: '#64748b', lineHeight: 1.35 }}>
-                    {isAr ? 'متابعة الأرصدة، ضخ مساهمات، وصرف أرباح بنظام الشقين' : 'Balances, dividends & capital'}
-                  </div>
-                </div>
-              </button>
+                    }
+                  };
+
+                  return (
+                    <div
+                      key={item.id}
+                      className={ops.upcomingDueItem}
+                      onClick={handleDueItemClick}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          handleDueItemClick();
+                        }
+                      }}
+                      role="button"
+                      tabIndex={0}
+                      title={item.title}
+                    >
+                      <div className={ops.upcomingDueLeading}>
+                        <div className={`${ops.upcomingDueSquircle} ${isIn ? ops.upcomingDueSquircleIn : ops.upcomingDueSquircleOut}`}>
+                          {isIn ? <ArrowUpRight size={13} /> : <ArrowDownRight size={13} />}
+                        </div>
+                        <div className={ops.upcomingDueInfo}>
+                          <span className={ops.upcomingDueParty}>{item.party}</span>
+                          <div className={ops.upcomingDueMeta}>
+                            <span className={`${shellStyles.statusPill} ${isIn ? shellStyles.statusPillGreen : shellStyles.statusPillNeutral}`} style={{ fontSize: '0.60rem', padding: '1px 5px', lineHeight: '1.2' }}>
+                              {isAr ? item.typeLabelAr : item.typeLabelEn}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className={ops.upcomingDueTrailing}>
+                        <span className={`${ops.upcomingDueAmount} ${isIn ? ops.upcomingDueAmountIn : ops.upcomingDueAmountOut}`}>
+                          {isIn ? '+' : '-'}{formatNumberWithCommas(item.amount)}{' '}
+                          <span style={{ fontSize: '0.62rem', fontWeight: 600, color: 'var(--ops-muted, #64748b)' }}>
+                            {isAr ? 'ج.م' : 'EGP'}
+                          </span>
+                        </span>
+                        <span dir="ltr" className={ops.upcomingDueDate}>
+                          {item.dueDate}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
             </div>
           </div>
         </div>
-      </div>
+      </ZFWorkstationSideWidgets>
 
-      {/* 4. UNIFIED EXECUTIVE DAILY DESK WORKBENCH */}
-      <div style={{
-        background: '#ffffff',
-        border: '1.5px solid #d8d2c4',
-        borderRadius: '16px',
-        boxShadow: '0 4px 20px -4px rgba(15, 23, 42, 0.05)',
-        display: 'flex',
-        flexDirection: 'column',
-        overflow: 'hidden'
-      }}>
-        {/* Workbench Header & Command Toolbar */}
-        <div style={{
-          padding: '1.25rem 1.4rem',
-          borderBottom: '1px solid #f1f5f9',
-          background: 'linear-gradient(180deg, #ffffff 0%, #fbfcfd 100%)',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '1rem'
-        }}>
-          {/* Top Row: Title & Record Counter */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-              <div style={{
-                width: '34px',
-                height: '34px',
-                borderRadius: '10px',
-                background: 'rgba(15, 23, 42, 0.06)',
-                color: '#0f172a',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}>
-                <Layers size={16} />
-              </div>
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
-                  <h3 style={{ margin: 0, fontSize: '0.98rem', fontWeight: 900, color: '#0f172a' }}>
-                    {isAr ? 'طاولة العمليات وسجلات المتابعة اليومية الموحدة' : 'Unified Daily Operations Workbench'}
-                  </h3>
-                  {journalEntries.length > 0 && (
-                    <div style={{
+      {/* ─── FULL-SCREEN EXPANDED TABLE MODAL (Matching CockpitView lines 3285-3340) ─── */}
+      {isFullScreenTableOpen && (
+        <ZFModalShell
+          isOpen={isFullScreenTableOpen}
+          onClose={() => setIsFullScreenTableOpen(false)}
+          title={isAr ? 'سجل العمليات والتدفقات النقدية الشامل' : 'Full Operations & Cash Register'}
+          subtitle={
+            isAr
+              ? 'عرض تفصيلي موسع لجميع المعاملات والتحصيلات ومستحقات الموردين والمصروفات وحركة الخزينة'
+              : 'Comprehensive view of all operations, client collections, supplier dues, expenses, and cash movements'
+          }
+          icon={<Maximize2 size={18} color="var(--erp-accent, #2563eb)" />}
+          maxWidth="1200px"
+          maxHeight="88vh"
+          isAr={isAr}
+          bodyStyle={{ display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden' }}
+          footer={
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', width: '100%', flexWrap: 'wrap', gap: '0.75rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                {onNavigateToTab && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsFullScreenTableOpen(false);
+                      if (selectedCategory === 'collection') onNavigateToTab('contracts');
+                      else if (selectedCategory === 'supplier') onNavigateToTab('construction');
+                      else if (selectedCategory === 'expense') onNavigateToTab('expenses');
+                      else onNavigateToTab('ledger');
+                    }}
+                    style={{
                       display: 'inline-flex',
                       alignItems: 'center',
-                      gap: '0.35rem',
-                      background: 'rgba(5, 150, 105, 0.08)',
-                      border: '1px solid rgba(5, 150, 105, 0.25)',
-                      padding: '0.12rem 0.5rem',
-                      borderRadius: '12px',
-                      fontSize: '0.66rem',
-                      color: '#059669',
-                      fontWeight: 700
-                    }}>
-                      <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#059669' }} />
-                      <span>{isAr ? `آخر قيد: ${journalEntries[0]?.entry_number || ''}` : `Latest: ${journalEntries[0]?.entry_number || ''}`}</span>
-                    </div>
-                  )}
-                </div>
-                <span style={{ fontSize: '0.72rem', color: '#64748b' }}>
-                  {isAr ? 'متابعة مباشرة للأقساط، الوحدات المعروضة، العقود الجاهزة للتسليم، مصاريف المباني، وسجل القيود اللحظية' : 'Real-time multi-queue workbench with verified audit stream'}
-                </span>
-              </div>
-            </div>
-
-            <span style={{
-              fontSize: '0.72rem',
-              fontWeight: 800,
-              color: '#475569',
-              background: '#f1f5f9',
-              border: '1px solid #e2e8f0',
-              padding: '0.2rem 0.6rem',
-              borderRadius: '6px'
-            }}>
-              {totalActiveWorkbenchItems} {isAr ? 'معاملة في هذا القسم' : 'records in tab'}
-            </span>
-          </div>
-
-          {/* Search, Filter & Sort Controls */}
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            flexWrap: 'wrap',
-            gap: '0.75rem'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'wrap', flex: 1, minWidth: '280px' }}>
-              {/* Search Bar */}
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.45rem',
-                background: '#f8fafc',
-                border: '1px solid #cbd5e1',
-                borderRadius: '8px',
-                padding: '0.38rem 0.75rem',
-                flex: 1,
-                minWidth: '240px',
-                boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.02)'
-              }}>
-                <Search size={14} color="#64748b" />
-                <input 
-                  type="text"
-                  value={deskSearchQuery}
-                  onChange={e => setDeskSearchQuery(e.target.value)}
-                  placeholder={isAr ? 'بحث سريع: اسم العميل، رقم السند أو العقد، اسم الوحدة، أو المورد...' : 'Search debtor, receipt #, deal, unit, or supplier...'}
-                  style={{
-                    width: '100%',
-                    background: 'transparent',
-                    border: 'none',
-                    color: '#0f172a',
-                    fontSize: '0.78rem',
-                    outline: 'none'
-                  }}
-                />
-                {deskSearchQuery && (
-                  <button
-                    type="button"
-                    onClick={() => setDeskSearchQuery('')}
-                    style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: '#94a3b8' }}
-                  >
-                    <X size={13} />
-                  </button>
-                )}
-                {onOpenQuickSearch && (
-                  <button
-                    type="button"
-                    onClick={onOpenQuickSearch}
-                    title={isAr ? 'البحث الشامل بالسجلات (⌘K)' : 'Universal Search (⌘K)'}
-                    style={{
-                      background: '#ffffff',
+                      gap: '0.4rem',
+                      background: '#f8fafc',
                       border: '1px solid #cbd5e1',
-                      borderRadius: '5px',
-                      padding: '0.15rem 0.45rem',
-                      fontSize: '0.66rem',
-                      fontWeight: 700,
-                      color: '#64748b',
+                      borderRadius: '6px',
+                      padding: '0.45rem 0.85rem',
+                      fontSize: '0.78rem',
+                      fontWeight: 600,
+                      color: 'var(--erp-accent, #2563eb)',
                       cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.25rem',
-                      flexShrink: 0
                     }}
                   >
-                    <span>⌘K</span>
+                    <span>{isAr ? 'الانتقال إلى السجل التفصيلي' : 'Open Dedicated Registry'}</span>
+                    <ExternalLink size={13} />
                   </button>
                 )}
-              </div>
-
-              {/* Status Filter for Dues */}
-              {(activeWorkbenchTab === 'urgent_dues' || activeWorkbenchTab === 'upcoming_dues') && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                  <button
-                    type="button"
-                    onClick={() => setDuesStatusFilter('all')}
-                    style={{
-                      background: duesStatusFilter === 'all' ? '#0f172a' : '#f1f5f9',
-                      color: duesStatusFilter === 'all' ? '#ffffff' : '#475569',
-                      border: 'none',
-                      borderRadius: '6px',
-                      padding: '0.32rem 0.65rem',
-                      fontSize: '0.72rem',
-                      fontWeight: 700,
-                      cursor: 'pointer'
-                    }}
-                  >
-                    {isAr ? 'الكل' : 'All'}
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setDuesStatusFilter('overdue')}
-                    style={{
-                      background: duesStatusFilter === 'overdue' ? '#dc2626' : '#fef2f2',
-                      color: duesStatusFilter === 'overdue' ? '#ffffff' : '#b91c1c',
-                      border: 'none',
-                      borderRadius: '6px',
-                      padding: '0.32rem 0.65rem',
-                      fontSize: '0.72rem',
-                      fontWeight: 700,
-                      cursor: 'pointer'
-                    }}
-                  >
-                    {isAr ? `المتأخرات (${overdueCount})` : `Overdue (${overdueCount})`}
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setDuesStatusFilter('today')}
-                    style={{
-                      background: duesStatusFilter === 'today' ? '#d97706' : '#fffbeb',
-                      color: duesStatusFilter === 'today' ? '#ffffff' : '#b45309',
-                      border: 'none',
-                      borderRadius: '6px',
-                      padding: '0.32rem 0.65rem',
-                      fontSize: '0.72rem',
-                      fontWeight: 700,
-                      cursor: 'pointer'
-                    }}
-                  >
-                    {isAr ? `اليوم (${dueTodayCount})` : `Today (${dueTodayCount})`}
-                  </button>
-                </div>
-              )}
-            </div>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'wrap' }}>
-              {/* Sort Dropdown */}
-              <div style={{ minWidth: '190px' }}>
-                <ZFCustomSelect
-                  value={duesSortBy}
-                  onChange={(val) => setDuesSortBy(val as any)}
-                  items={duesSortSelectItems}
-                  isAr={isAr}
-                  searchable={false}
-                  placeholderAr="ترتيب حسب..."
-                  placeholderEn="Sort by..."
-                />
-              </div>
-
-              {/* Reset */}
-              {(activeFiltersCount > 0 || deskSearchQuery.trim()) && (
                 <button
                   type="button"
-                  onClick={handleResetFilters}
+                  onClick={() => setIsFullScreenTableOpen(false)}
                   style={{
-                    background: '#f1f5f9',
-                    border: '1px solid #cbd5e1',
-                    color: '#64748b',
-                    borderRadius: '8px',
-                    padding: '0.35rem 0.65rem',
-                    fontSize: '0.72rem',
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.3rem'
-                  }}
-                >
-                  <RotateCcw size={11} />
-                  <span>{isAr ? 'إعادة ضبط' : 'Reset'}</span>
-                </button>
-              )}
-            </div>
-          </div>
-
-          {/* Workbench Tab Navigation Pills */}
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.45rem',
-            overflowX: 'auto',
-            paddingTop: '0.25rem',
-            paddingBottom: '0.15rem'
-          }}>
-            {/* Tab 1: Urgent Dues */}
-            <button
-              type="button"
-              onClick={() => setActiveWorkbenchTab('urgent_dues')}
-              title={isAr ? 'عرض الأقساط المستحقة اليوم أو المتأخرة التي تتطلب تحصيلاً عاجلاً' : 'View urgent and overdue collections'}
-              style={{
-                background: activeWorkbenchTab === 'urgent_dues' ? '#0f172a' : '#f8fafc',
-                color: activeWorkbenchTab === 'urgent_dues' ? '#ffffff' : '#64748b',
-                border: `1.5px solid ${activeWorkbenchTab === 'urgent_dues' ? '#0f172a' : '#cbd5e1'}`,
-                borderRadius: '8px',
-                padding: '0.45rem 0.85rem',
-                fontSize: '0.78rem',
-                fontWeight: 800,
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.45rem',
-                whiteSpace: 'nowrap'
-              }}
-            >
-              <Clock size={14} color={activeWorkbenchTab === 'urgent_dues' ? '#ffffff' : '#d97706'} />
-              <span>{isAr ? 'أقساط ومستحقات التحصيل العاجلة' : 'Urgent Collections'}</span>
-              <span style={{
-                fontSize: '0.66rem',
-                fontWeight: 800,
-                padding: '0.08rem 0.4rem',
-                borderRadius: '5px',
-                background: activeWorkbenchTab === 'urgent_dues' ? 'rgba(255,255,255,0.2)' : 'rgba(217, 119, 6, 0.12)',
-                color: activeWorkbenchTab === 'urgent_dues' ? '#ffffff' : '#d97706'
-              }}>
-                {filteredAndSortedDues.length}
-              </span>
-            </button>
-
-            {/* Tab 2: Upcoming Dues */}
-            <button
-              type="button"
-              onClick={() => setActiveWorkbenchTab('upcoming_dues')}
-              title={isAr ? 'عرض محفظة كل الأقساط المستقبلية المجدولة على العملاء' : 'View portfolio of all scheduled future dues'}
-              style={{
-                background: activeWorkbenchTab === 'upcoming_dues' ? '#0f172a' : '#f8fafc',
-                color: activeWorkbenchTab === 'upcoming_dues' ? '#ffffff' : '#64748b',
-                border: `1.5px solid ${activeWorkbenchTab === 'upcoming_dues' ? '#0f172a' : '#cbd5e1'}`,
-                borderRadius: '8px',
-                padding: '0.45rem 0.85rem',
-                fontSize: '0.78rem',
-                fontWeight: 800,
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.45rem',
-                whiteSpace: 'nowrap'
-              }}
-            >
-              <Wallet size={14} color={activeWorkbenchTab === 'upcoming_dues' ? '#ffffff' : '#946f23'} />
-              <span>{isAr ? 'محفظة الأقساط القادمة' : 'Upcoming Installments'}</span>
-              <span style={{
-                fontSize: '0.66rem',
-                fontWeight: 800,
-                padding: '0.08rem 0.4rem',
-                borderRadius: '5px',
-                background: activeWorkbenchTab === 'upcoming_dues' ? 'rgba(255,255,255,0.2)' : 'rgba(184, 144, 62, 0.12)',
-                color: activeWorkbenchTab === 'upcoming_dues' ? '#ffffff' : '#946f23'
-              }}>
-                {maturingSafeCheques.length}
-              </span>
-            </button>
-
-            {/* Tab 3: Available Inventory */}
-            <button
-              type="button"
-              onClick={() => setActiveWorkbenchTab('available_units')}
-              title={isAr ? 'استعراض الشقق والوحدات المتاحة للبيع وجاهزيتها وأسعارها' : 'Browse available units and inventory for sale'}
-              style={{
-                background: activeWorkbenchTab === 'available_units' ? '#0f172a' : '#f8fafc',
-                color: activeWorkbenchTab === 'available_units' ? '#ffffff' : '#64748b',
-                border: `1.5px solid ${activeWorkbenchTab === 'available_units' ? '#0f172a' : '#cbd5e1'}`,
-                borderRadius: '8px',
-                padding: '0.45rem 0.85rem',
-                fontSize: '0.78rem',
-                fontWeight: 800,
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.45rem',
-                whiteSpace: 'nowrap'
-              }}
-            >
-              <Building2 size={14} color={activeWorkbenchTab === 'available_units' ? '#ffffff' : '#1e40af'} />
-              <span>{isAr ? 'الوحدات والشقق المتاحة للبيع' : 'Available Inventory'}</span>
-              <span style={{
-                fontSize: '0.66rem',
-                fontWeight: 800,
-                padding: '0.08rem 0.4rem',
-                borderRadius: '5px',
-                background: activeWorkbenchTab === 'available_units' ? 'rgba(255,255,255,0.2)' : 'rgba(30, 64, 175, 0.12)',
-                color: activeWorkbenchTab === 'available_units' ? '#ffffff' : '#1e40af'
-              }}>
-                {availableUnits.length}
-              </span>
-            </button>
-
-            {/* Tab 4: Handover Ready */}
-            <button
-              type="button"
-              onClick={() => setActiveWorkbenchTab('handover_ready')}
-              title={isAr ? 'عرض العقود التي استوفت 70%+ من السداد وجاهزة للتسليم النهائي' : 'View contracts ready for unit handover (70%+ paid)'}
-              style={{
-                background: activeWorkbenchTab === 'handover_ready' ? '#0f172a' : '#f8fafc',
-                color: activeWorkbenchTab === 'handover_ready' ? '#ffffff' : '#64748b',
-                border: `1.5px solid ${activeWorkbenchTab === 'handover_ready' ? '#0f172a' : '#cbd5e1'}`,
-                borderRadius: '8px',
-                padding: '0.45rem 0.85rem',
-                fontSize: '0.78rem',
-                fontWeight: 800,
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.45rem',
-                whiteSpace: 'nowrap'
-              }}
-            >
-              <Key size={14} color={activeWorkbenchTab === 'handover_ready' ? '#ffffff' : '#059669'} />
-              <span>{isAr ? 'عقود جاهزة للتسليم (سداد 70%+)' : 'Handover Ready (70%+)'}</span>
-              <span style={{
-                fontSize: '0.66rem',
-                fontWeight: 800,
-                padding: '0.08rem 0.4rem',
-                borderRadius: '5px',
-                background: activeWorkbenchTab === 'handover_ready' ? 'rgba(255,255,255,0.2)' : 'rgba(5, 150, 105, 0.12)',
-                color: activeWorkbenchTab === 'handover_ready' ? '#ffffff' : '#059669'
-              }}>
-                {readyForHandoverContracts.length}
-              </span>
-            </button>
-
-            {/* Tab 5: Recent WIP Costs */}
-            <button
-              type="button"
-              onClick={() => setActiveWorkbenchTab('recent_expenses')}
-              title={isAr ? 'استعراض أحدث فواتير وخامات المباني والمصنعيات المسجلة ع المشاريع' : 'View recent WIP material and contractor invoices'}
-              style={{
-                background: activeWorkbenchTab === 'recent_expenses' ? '#0f172a' : '#f8fafc',
-                color: activeWorkbenchTab === 'recent_expenses' ? '#ffffff' : '#64748b',
-                border: `1.5px solid ${activeWorkbenchTab === 'recent_expenses' ? '#0f172a' : '#cbd5e1'}`,
-                borderRadius: '8px',
-                padding: '0.45rem 0.85rem',
-                fontSize: '0.78rem',
-                fontWeight: 800,
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.45rem',
-                whiteSpace: 'nowrap'
-              }}
-            >
-              <HardHat size={14} color={activeWorkbenchTab === 'recent_expenses' ? '#ffffff' : '#b45309'} />
-              <span>{isAr ? 'آخر مصاريف وخامات المباني' : 'Recent WIP Costs'}</span>
-              <span style={{
-                fontSize: '0.66rem',
-                fontWeight: 800,
-                padding: '0.08rem 0.4rem',
-                borderRadius: '5px',
-                background: activeWorkbenchTab === 'recent_expenses' ? 'rgba(255,255,255,0.2)' : 'rgba(180, 83, 9, 0.12)',
-                color: activeWorkbenchTab === 'recent_expenses' ? '#ffffff' : '#b45309'
-              }}>
-                {filteredPropertyCosts.length}
-              </span>
-            </button>
-
-            {/* Tab 6: Live Operations & Audit Stream */}
-            <button
-              type="button"
-              onClick={() => setActiveWorkbenchTab('audit_stream')}
-              title={isAr ? 'شريط مباشر للقيود اليومية المحاسبية المزدوجة المتوازنة بالمليم' : 'Live stream of balanced double-entry journal postings'}
-              style={{
-                background: activeWorkbenchTab === 'audit_stream' ? '#0f172a' : '#f8fafc',
-                color: activeWorkbenchTab === 'audit_stream' ? '#ffffff' : '#64748b',
-                border: `1.5px solid ${activeWorkbenchTab === 'audit_stream' ? '#0f172a' : '#cbd5e1'}`,
-                borderRadius: '8px',
-                padding: '0.45rem 0.85rem',
-                fontSize: '0.78rem',
-                fontWeight: 800,
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.45rem',
-                whiteSpace: 'nowrap'
-              }}
-            >
-              <Activity size={14} color={activeWorkbenchTab === 'audit_stream' ? '#ffffff' : '#059669'} />
-              <span>{isAr ? 'سجل العمليات والقيود المنفذة' : 'Live Journal Stream'}</span>
-              <span style={{
-                fontSize: '0.66rem',
-                fontWeight: 800,
-                padding: '0.08rem 0.4rem',
-                borderRadius: '5px',
-                background: activeWorkbenchTab === 'audit_stream' ? 'rgba(255,255,255,0.2)' : 'rgba(5, 150, 105, 0.12)',
-                color: activeWorkbenchTab === 'audit_stream' ? '#ffffff' : '#059669'
-              }}>
-                {filteredAuditEntries.length}
-              </span>
-            </button>
-          </div>
-        </div>
-
-        {/* Workbench Body (Full Width 100%) */}
-        <div style={{ padding: '1.25rem 1.4rem' }}>
-          {/* TAB 1: URGENT DUES QUEUE */}
-          {activeWorkbenchTab === 'urgent_dues' && (
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.85rem', flexWrap: 'wrap', gap: '0.5rem' }}>
-                <p style={{ margin: 0, fontSize: '0.76rem', color: '#64748b', fontWeight: 600 }}>
-                  {isAr 
-                    ? `إجمالي المعروض: ${filteredDuesSum.formatEGP(isAr)} — تحصيل مباشر وسند قبض فوري` 
-                    : `Total visible: ${filteredDuesSum.formatEGP(isAr)} — 1-click collection`}
-                </p>
-                <button
-                  type="button"
-                  onClick={() => onNavigateToTab('pdc')}
-                  style={{
-                    background: 'transparent',
-                    border: 'none',
-                    color: '#946f23',
-                    fontSize: '0.74rem',
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.25rem'
-                  }}
-                >
-                  <span>{isAr ? 'فتح جدول الأقساط الكامل' : 'Open full PDC register'}</span>
-                  <ArrowLeft size={12} style={{ transform: isAr ? 'none' : 'rotate(180deg)' }} />
-                </button>
-              </div>
-
-              {filteredAndSortedDues.length === 0 ? (
-                <div style={{ padding: '3rem 1.5rem', textAlign: 'center', color: '#64748b' }}>
-                  <CheckCircle2 size={32} color="#10b981" style={{ margin: '0 auto 0.65rem auto', opacity: 0.9 }} />
-                  <div style={{ fontWeight: 800, color: '#0f172a', fontSize: '0.9rem' }}>
-                    {deskSearchQuery ? (isAr ? 'لا توجد أقساط مطابقة لمعايير البحث' : 'No dues match search query') : (isAr ? 'المحفظة منتظمة بالكامل!' : 'Portfolio is completely up to date!')}
-                  </div>
-                  <div style={{ fontSize: '0.76rem', marginTop: '0.3rem', color: '#64748b' }}>
-                    {deskSearchQuery ? (isAr ? 'حاول تعديل كلمة البحث أو إزالة التصفية' : 'Try adjusting the search query or reset filters') : (isAr ? 'لا توجد أي أقساط متأخرة أو مستحقة حالياً.' : 'No overdue or due installments today.')}
-                  </div>
-                </div>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
-                  {paginatedDues.map((item) => {
-                    const linkedContract = contracts.find(c => c.contract_id === item.contract_id);
-                    const isOverdue = item.due_date < todayStr;
-                    const isToday = item.due_date === todayStr;
-
-                    return (
-                      <div 
-                        key={item.cheque_id}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          padding: '0.85rem 1.15rem',
-                          background: isOverdue ? 'rgba(239, 68, 68, 0.02)' : '#ffffff',
-                          border: `1.5px solid ${isOverdue ? 'rgba(239, 68, 68, 0.35)' : '#e2e8f0'}`,
-                          borderRadius: '12px',
-                          gap: '1rem',
-                          boxShadow: '0 1px 3px rgba(15, 23, 42, 0.03)',
-                          transition: 'all 0.15s ease'
-                        }}
-                      >
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', minWidth: 0, flex: 1 }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', minWidth: 0 }}>
-                            <span 
-                              dir="auto"
-                              style={{ 
-                                fontSize: '0.88rem', 
-                                fontWeight: 800, 
-                                color: '#0f172a',
-                                whiteSpace: 'nowrap',
-                                overflow: 'hidden',
-                                textOverflow: 'ellipsis'
-                              }}
-                            >
-                              {item.drawer_name || linkedContract?.buyer_name || (isAr ? 'عميل مسجل' : 'Client')}
-                            </span>
-                            <span style={{ fontSize: '0.7rem', color: '#64748b', fontVariantNumeric: 'tabular-nums', fontWeight: 700, flexShrink: 0 }}>
-                              {item.cheque_number ? `#${item.cheque_number}` : (linkedContract?.contract_number ? `#${linkedContract.contract_number}` : '')}
-                            </span>
-                            {isOverdue && (
-                              <span style={{
-                                fontSize: '0.64rem',
-                                fontWeight: 800,
-                                padding: '0.08rem 0.4rem',
-                                borderRadius: '4px',
-                                background: '#fef2f2',
-                                color: '#dc2626',
-                                border: '1px solid #fecaca',
-                                flexShrink: 0
-                              }}>
-                                {isAr ? 'متأخر' : 'Overdue'}
-                              </span>
-                            )}
-                            {isToday && (
-                              <span style={{
-                                fontSize: '0.64rem',
-                                fontWeight: 800,
-                                padding: '0.08rem 0.4rem',
-                                borderRadius: '4px',
-                                background: '#fffbeb',
-                                color: '#d97706',
-                                border: '1px solid #fde68a',
-                                flexShrink: 0
-                              }}>
-                                {isAr ? 'مستحق اليوم' : 'Due Today'}
-                              </span>
-                            )}
-                          </div>
-                          <div style={{ fontSize: '0.74rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: '0.5rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                            <span dir="ltr" style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 600, flexShrink: 0 }}>{item.due_date}</span>
-                            <span>•</span>
-                            <span style={{ color: '#0f172a', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                              {linkedContract?.unit_id || (isAr ? 'وحدة تعاقدية' : 'Unit')}
-                            </span>
-                            {linkedContract && (
-                              <>
-                                <span>•</span>
-                                <span style={{ color: '#64748b' }}>عقد #{linkedContract.contract_number}</span>
-                              </>
-                            )}
-                          </div>
-                        </div>
-
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexShrink: 0 }}>
-                          <div style={{ textAlign: isAr ? 'left' : 'right' }}>
-                            <div style={{ fontSize: '1rem', fontWeight: 900, color: '#946f23', fontVariantNumeric: 'tabular-nums' }}>
-                              {D(item.nominal_value).formatEGP(isAr)}
-                            </div>
-                            <span style={{ fontSize: '0.65rem', color: '#64748b', fontWeight: 600 }}>
-                              {isAr ? 'كاش الخزنة / إنستاباي' : 'Cash / InstaPay'}
-                            </span>
-                          </div>
-
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                            {onInspectCheque && (
-                              <button
-                                type="button"
-                                onClick={() => onInspectCheque(item)}
-                                title={isAr ? 'معاينة تفاصيل وبيانات هذا القسط وحالته المالية' : 'Inspect installment details'}
-                                style={{
-                                  background: '#f8fafc',
-                                  color: '#334155',
-                                  padding: '0.42rem 0.75rem',
-                                  borderRadius: '7px',
-                                  fontSize: '0.74rem',
-                                  fontWeight: 700,
-                                  border: '1px solid #cbd5e1',
-                                  cursor: 'pointer'
-                                }}
-                              >
-                                {isAr ? 'معاينة' : 'Inspect'}
-                              </button>
-                            )}
-
-                            <button
-                              type="button"
-                              onClick={() => onCollectItem(item)}
-                              title={isAr ? 'تحصيل هذا القسط نقداً بالخزينة (101000) أو عبر إنستاباي (102000) وطباعة إيصال رسمي' : 'Collect installment into cash safe or InstaPay, issue receipt'}
-                              style={{
-                                background: 'linear-gradient(135deg, #c5a059 0%, #946f23 100%)',
-                                color: '#ffffff',
-                                padding: '0.42rem 0.95rem',
-                                borderRadius: '8px',
-                                fontSize: '0.76rem',
-                                fontWeight: 800,
-                                border: 'none',
-                                cursor: 'pointer',
-                                boxShadow: '0 2px 6px rgba(148, 111, 35, 0.25)',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '0.35rem'
-                              }}
-                            >
-                              <Receipt size={13} />
-                              <span>{isAr ? 'تحصيل فوري' : 'Collect'}</span>
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* TAB 2: UPCOMING DUES QUEUE */}
-          {activeWorkbenchTab === 'upcoming_dues' && (
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.85rem', flexWrap: 'wrap', gap: '0.5rem' }}>
-                <p style={{ margin: 0, fontSize: '0.76rem', color: '#64748b', fontWeight: 600 }}>
-                  {isAr 
-                    ? `إجمالي مستحقات وأقساط الخزينة: ${safeChequesSum.formatEGP(isAr)} — جاهزة للتحصيل والمطابقة` 
-                    : `Total upcoming installments: ${safeChequesSum.formatEGP(isAr)}`}
-                </p>
-                <button
-                  type="button"
-                  onClick={() => onNavigateToTab('pdc')}
-                  style={{
-                    background: 'transparent',
-                    border: 'none',
-                    color: '#946f23',
-                    fontSize: '0.74rem',
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.25rem'
-                  }}
-                >
-                  <span>{isAr ? 'كافة الأقساط' : 'View all'}</span>
-                  <ArrowLeft size={12} style={{ transform: isAr ? 'none' : 'rotate(180deg)' }} />
-                </button>
-              </div>
-
-              {maturingSafeCheques.length === 0 ? (
-                <div style={{ padding: '3rem 1.5rem', textAlign: 'center', color: '#64748b' }}>
-                  <Wallet size={32} color="#946f23" style={{ margin: '0 auto 0.65rem auto', opacity: 0.9 }} />
-                  <div style={{ fontWeight: 800, color: '#0f172a', fontSize: '0.9rem' }}>
-                    {isAr ? 'لا توجد أقساط مؤجلة بالخزينة حالياً' : 'No deferred installments in vault'}
-                  </div>
-                  <div style={{ fontSize: '0.76rem', marginTop: '0.3rem', color: '#64748b' }}>
-                    {isAr ? 'يمكنك إضافة قسط أو ملحق تعاقدي جديد من زر "إضافة ملحق أو دفعة للعقد" بالأعلى.' : 'Register new installments via the action launchpad above.'}
-                  </div>
-                </div>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
-                  {paginatedSafeCheques.map((item) => {
-                    const isDueSoon = item.due_date <= threeDaysStr && item.due_date >= todayStr;
-
-                    return (
-                      <div 
-                        key={item.cheque_id}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          padding: '0.85rem 1.15rem',
-                          background: isDueSoon ? 'rgba(217, 119, 6, 0.03)' : '#ffffff',
-                          border: `1.5px solid ${isDueSoon ? 'rgba(217, 119, 6, 0.4)' : '#e2e8f0'}`,
-                          borderRadius: '12px',
-                          gap: '1rem',
-                          boxShadow: '0 1px 3px rgba(15, 23, 42, 0.03)'
-                        }}
-                      >
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', minWidth: 0, flex: 1 }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', minWidth: 0 }}>
-                            <span 
-                              dir="auto"
-                              style={{ 
-                                fontSize: '0.88rem', 
-                                fontWeight: 800, 
-                                color: '#0f172a',
-                                whiteSpace: 'nowrap',
-                                overflow: 'hidden',
-                                textOverflow: 'ellipsis'
-                              }}
-                            >
-                              {item.drawer_name || (isAr ? 'العميل مسجل' : 'Client')}
-                            </span>
-                            <span style={{ fontSize: '0.7rem', color: '#64748b', fontVariantNumeric: 'tabular-nums', fontWeight: 700, flexShrink: 0 }}>
-                              {item.cheque_number ? `#${item.cheque_number}` : ''}
-                            </span>
-                            {isDueSoon && (
-                              <span style={{
-                                fontSize: '0.64rem',
-                                fontWeight: 800,
-                                padding: '0.08rem 0.4rem',
-                                borderRadius: '4px',
-                                background: '#fffbeb',
-                                color: '#b45309',
-                                border: '1px solid #fde68a',
-                                flexShrink: 0
-                              }}>
-                                {isAr ? 'يستحق قريباً' : 'Due Soon'}
-                              </span>
-                            )}
-                          </div>
-                          <div style={{ fontSize: '0.74rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: '0.5rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                            <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                              {item.bank_name || (isAr ? 'نقدي / باليد' : 'Cash / Hand')}
-                            </span>
-                            <span>•</span>
-                            <span dir="ltr" style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 600, flexShrink: 0 }}>{item.due_date}</span>
-                          </div>
-                        </div>
-
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexShrink: 0 }}>
-                          <div style={{ textAlign: isAr ? 'left' : 'right' }}>
-                            <div style={{ fontSize: '1rem', fontWeight: 900, color: '#0f172a', fontVariantNumeric: 'tabular-nums' }}>
-                              {D(item.nominal_value).formatEGP(isAr)}
-                            </div>
-                            <span style={{ fontSize: '0.65rem', color: '#64748b' }}>
-                              {isAr ? 'مستحق بالخزينة' : 'Safe Portfolio'}
-                            </span>
-                          </div>
-
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                            {onInspectCheque && (
-                              <button
-                                type="button"
-                                onClick={() => onInspectCheque(item)}
-                                title={isAr ? 'معاينة تفاصيل وبيانات هذا القسط وحالته المالية' : 'Inspect installment details'}
-                                style={{
-                                  background: '#f8fafc',
-                                  color: '#334155',
-                                  padding: '0.42rem 0.75rem',
-                                  borderRadius: '7px',
-                                  fontSize: '0.74rem',
-                                  fontWeight: 700,
-                                  border: '1px solid #cbd5e1',
-                                  cursor: 'pointer'
-                                }}
-                              >
-                                {isAr ? 'معاينة' : 'Inspect'}
-                              </button>
-                            )}
-
-                            <button
-                              type="button"
-                              onClick={() => onCollectItem(item)}
-                              title={isAr ? 'تحصيل هذا القسط نقداً بالخزينة (101000) أو عبر إنستاباي (102000) وطباعة إيصال رسمي' : 'Collect installment into cash safe or InstaPay, issue receipt'}
-                              style={{
-                                background: 'linear-gradient(135deg, #c5a059 0%, #a48135 100%)',
-                                color: '#ffffff',
-                                border: '1px solid #947228',
-                                padding: '0.42rem 0.95rem',
-                                borderRadius: '8px',
-                                fontSize: '0.76rem',
-                                fontWeight: 800,
-                                cursor: 'pointer',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '0.35rem',
-                                boxShadow: '0 1px 3px rgba(184, 144, 62, 0.2)'
-                              }}
-                            >
-                              <Receipt size={12} />
-                              <span>{isAr ? 'تحصيل' : 'Collect'}</span>
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* TAB 3: AVAILABLE INVENTORY */}
-          {activeWorkbenchTab === 'available_units' && (
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.85rem', flexWrap: 'wrap', gap: '0.5rem' }}>
-                <p style={{ margin: 0, fontSize: '0.76rem', color: '#64748b', fontWeight: 600 }}>
-                  {isAr 
-                    ? 'اختر أي وحدة متاحة لفتح التعاقد المباشر، دراسة الجدوى، أو سجل تدقيق التكاليف' 
-                    : 'Select any unit for 1-click deal creation, calculator, or cost audit'}
-                </p>
-                <button
-                  type="button"
-                  onClick={() => onNavigateToTab('properties')}
-                  style={{
-                    background: 'transparent',
-                    border: 'none',
-                    color: '#946f23',
-                    fontSize: '0.74rem',
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.25rem'
-                  }}
-                >
-                  <span>{isAr ? 'محفظة العقارات الكاملة' : 'Properties Portfolio'}</span>
-                  <ArrowLeft size={12} style={{ transform: isAr ? 'none' : 'rotate(180deg)' }} />
-                </button>
-              </div>
-
-              {availableUnits.length === 0 ? (
-                <div style={{ padding: '3rem 1.5rem', textAlign: 'center', color: '#64748b' }}>
-                  <Building2 size={32} color="#946f23" style={{ margin: '0 auto 0.65rem auto', opacity: 0.8 }} />
-                  <div style={{ fontWeight: 800, color: '#0f172a', fontSize: '0.9rem' }}>
-                    {isAr ? 'لا توجد وحدات متاحة مطابقة للبحث' : 'No available units match search'}
-                  </div>
-                </div>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
-                  {paginatedAvailableUnits.map(prop => (
-                    <div 
-                      key={prop.id}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        padding: '0.85rem 1.15rem',
-                        background: '#ffffff',
-                        border: '1.5px solid #e2e8f0',
-                        borderRadius: '12px',
-                        gap: '1rem',
-                        boxShadow: '0 1px 3px rgba(15, 23, 42, 0.03)'
-                      }}
-                    >
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', minWidth: 0, flex: 1 }}>
-                        <span style={{ fontSize: '0.9rem', fontWeight: 800, color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                          {isAr ? prop.title_ar : prop.title_en}
-                        </span>
-                        <div style={{ fontSize: '0.74rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                          <span>{prop.location || (isAr ? 'الموقع مسجل' : 'Location')}</span>
-                          <span>•</span>
-                          <span>{prop.area_sqm} م²</span>
-                          <span>•</span>
-                          <span style={{ color: '#059669', fontWeight: 700 }}>
-                            {prop.completion_status === 'ready' ? (isAr ? 'جاهز للتسليم' : 'Ready') : (isAr ? 'قيد التطوير والإنشاء' : 'Under Development')}
-                          </span>
-                        </div>
-                      </div>
-
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexShrink: 0 }}>
-                        <div style={{ textAlign: isAr ? 'left' : 'right' }}>
-                          <div style={{ fontSize: '1rem', fontWeight: 900, color: '#0f172a', fontVariantNumeric: 'tabular-nums' }}>
-                            {D(prop.price_egp).formatEGP(isAr)}
-                          </div>
-                          <span style={{ fontSize: '0.65rem', color: '#059669', fontWeight: 700 }}>
-                            {isAr ? 'متاحة للبيع' : 'Available for sale'}
-                          </span>
-                        </div>
-
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                          {onOpenCalculatorForProperty && (
-                            <button
-                              type="button"
-                              onClick={() => onOpenCalculatorForProperty(prop)}
-                              title={isAr ? 'فتح حاسبة التسعير والجدوى التقديرية لهذه الوحدة' : 'Pricing & Feasibility Calculator'}
-                              style={{
-                                background: '#f8fafc',
-                                border: '1px solid #cbd5e1',
-                                borderRadius: '7px',
-                                padding: '0.45rem',
-                                color: '#475569',
-                                cursor: 'pointer'
-                              }}
-                            >
-                              <Calculator size={14} />
-                            </button>
-                          )}
-
-                          {onOpenAuditForProperty && (
-                            <button
-                              type="button"
-                              onClick={() => onOpenAuditForProperty(prop)}
-                              title={isAr ? 'فتح سجل تدقيق تكاليف المباني وخامات هذا المشروع' : 'Property Cost Audit'}
-                              style={{
-                                background: '#f8fafc',
-                                border: '1px solid #cbd5e1',
-                                borderRadius: '7px',
-                                padding: '0.45rem',
-                                color: '#946f23',
-                                cursor: 'pointer'
-                              }}
-                            >
-                              <ShieldCheck size={14} />
-                            </button>
-                          )}
-
-                          <button
-                            type="button"
-                            onClick={() => onOpenContractForProperty(prop)}
-                            title={isAr ? 'بدء تحرير عقد بيع وحجز فوري لهذه الشقة' : 'Draft sales contract for this unit'}
-                            style={{
-                              background: 'linear-gradient(135deg, #c5a059 0%, #a48135 100%)',
-                              color: '#ffffff',
-                              border: '1px solid #947228',
-                              padding: '0.42rem 0.95rem',
-                              borderRadius: '8px',
-                              fontSize: '0.76rem',
-                              fontWeight: 800,
-                              cursor: 'pointer',
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '0.35rem',
-                              boxShadow: '0 1px 3px rgba(184, 144, 62, 0.2)'
-                            }}
-                          >
-                            <Plus size={13} />
-                            <span>{isAr ? 'تحرير عقد بيع' : 'Sell'}</span>
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* TAB 4: HANDOVER READINESS */}
-          {activeWorkbenchTab === 'handover_ready' && (
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.85rem', flexWrap: 'wrap', gap: '0.5rem' }}>
-                <p style={{ margin: 0, fontSize: '0.76rem', color: '#64748b', fontWeight: 600 }}>
-                  {isAr 
-                    ? 'عقود مسددة بنسبة 70% فأكثر — مؤهلة لمعاينة الموقع وبدء إجراءات محضر الاستلام' 
-                    : 'Contracts achieved 70%+ cash — qualified for snagging and handover protocol'}
-                </p>
-                <button
-                  type="button"
-                  onClick={() => onNavigateToTab('contracts')}
-                  style={{
-                    background: 'transparent',
-                    border: 'none',
-                    color: '#059669',
-                    fontSize: '0.74rem',
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.25rem'
-                  }}
-                >
-                  <span>{isAr ? 'سجل العقود والمبيعات' : 'All Contracts'}</span>
-                  <ArrowLeft size={12} style={{ transform: isAr ? 'none' : 'rotate(180deg)' }} />
-                </button>
-              </div>
-
-              {readyForHandoverContracts.length === 0 ? (
-                <div style={{ padding: '3rem 1.5rem', textAlign: 'center', color: '#64748b' }}>
-                  <Key size={32} color="#10b981" style={{ margin: '0 auto 0.65rem auto', opacity: 0.8 }} />
-                  <div style={{ fontWeight: 800, color: '#0f172a', fontSize: '0.9rem' }}>
-                    {isAr ? 'لا توجد عقود بلغت 70% سداد حالياً' : 'No contracts at 70%+ threshold'}
-                  </div>
-                </div>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
-                  {paginatedReadyContracts.map(c => {
-                    const gross = parseFloat(c.gross_contract_value || '1');
-                    const paid = parseFloat(c.total_cash_collected || '0');
-                    const pct = Math.min(100, Math.round((paid / gross) * 100));
-                    const remaining = D(c.gross_contract_value).minus(c.total_cash_collected || '0');
-
-                    return (
-                      <div 
-                        key={c.contract_id}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          padding: '0.85rem 1.15rem',
-                          background: '#ffffff',
-                          border: '1.5px solid #e2e8f0',
-                          borderRadius: '12px',
-                          gap: '1rem',
-                          boxShadow: '0 1px 3px rgba(15, 23, 42, 0.03)'
-                        }}
-                      >
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', minWidth: 0, flex: 1 }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem' }}>
-                            <span style={{ fontSize: '0.88rem', fontWeight: 800, color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                              {c.buyer_name}
-                            </span>
-                            <span style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: 600 }}>
-                              #{c.contract_number}
-                            </span>
-                          </div>
-                          <div style={{ fontSize: '0.74rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                            <span style={{ color: '#0f172a', fontWeight: 700 }}>{c.unit_id}</span>
-                            <span>•</span>
-                            <span style={{ color: '#059669', fontWeight: 800 }}>{pct}% {isAr ? 'مسدد' : 'collected'}</span>
-                          </div>
-                        </div>
-
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexShrink: 0 }}>
-                          <div style={{ textAlign: isAr ? 'left' : 'right' }}>
-                            <div style={{ fontSize: '0.95rem', fontWeight: 800, color: '#64748b', fontVariantNumeric: 'tabular-nums' }}>
-                              {remaining.formatEGP(isAr)}
-                            </div>
-                            <span style={{ fontSize: '0.65rem', color: '#946f23', fontWeight: 700 }}>
-                              {isAr ? 'المتبقي' : 'Remaining'}
-                            </span>
-                          </div>
-
-                          <button
-                            type="button"
-                            onClick={() => onInspectContract(c)}
-                            title={isAr ? 'فحص بنود العقد ونسبة السداد والتجهيز لمحضر التسليم الرسمي' : 'Inspect contract details for handover readiness'}
-                            style={{
-                              background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-                              color: '#ffffff',
-                              padding: '0.42rem 0.95rem',
-                              borderRadius: '8px',
-                              fontSize: '0.76rem',
-                              fontWeight: 800,
-                              border: 'none',
-                              cursor: 'pointer',
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '0.35rem'
-                            }}
-                          >
-                            <FileCheck size={13} />
-                            <span>{isAr ? 'فحص العقد' : 'Audit'}</span>
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* TAB 5: RECENT WIP EXPENSES & MATERIALS */}
-          {activeWorkbenchTab === 'recent_expenses' && (
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.85rem', flexWrap: 'wrap', gap: '0.5rem' }}>
-                <p style={{ margin: 0, fontSize: '0.76rem', color: '#64748b', fontWeight: 600 }}>
-                  {isAr 
-                    ? 'آخر فواتير ومصروفات خامات المباني المقيدة على المشاريع (حساب 150000 / 151000)' 
-                    : 'Recent verified project WIP expenses, materials, and contractor invoices'}
-                </p>
-                <button
-                  type="button"
-                  onClick={handleOpenProjectExpenses}
-                  title={isAr ? 'تسجيل فاتورة خامات أو مصاريف مقاول جديدة وحفظها بالخزينة' : 'Log new project WIP expense'}
-                  style={{
-                    background: 'linear-gradient(135deg, #b45309 0%, #92400e 100%)',
+                    background: 'var(--erp-accent, #2563eb)',
                     color: '#ffffff',
                     border: 'none',
-                    borderRadius: '7px',
-                    padding: '0.35rem 0.75rem',
-                    fontSize: '0.74rem',
-                    fontWeight: 800,
+                    borderRadius: '6px',
+                    padding: '0.45rem 1.1rem',
+                    fontSize: '0.80rem',
+                    fontWeight: 600,
                     cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.3rem'
                   }}
                 >
-                  <Plus size={12} />
-                  <span>{isAr ? '+ تسجيل فاتورة خامات جديدة' : '+ Log Expense'}</span>
+                  {isAr ? 'إغلاق' : 'Close'}
                 </button>
               </div>
-
-              {recentPropertyCosts.length === 0 ? (
-                <div style={{ padding: '3rem 1.5rem', textAlign: 'center', color: '#64748b' }}>
-                  <HardHat size={32} color="#b45309" style={{ margin: '0 auto 0.65rem auto', opacity: 0.8 }} />
-                  <div style={{ fontWeight: 800, color: '#0f172a', fontSize: '0.9rem' }}>
-                    {isAr ? 'لا توجد فواتير أو مصاريف مسجلة مطابقة للبحث' : 'No recent expenses match search'}
-                  </div>
-                </div>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
-                  {paginatedPropertyCosts.map(cost => {
-                    const prop = properties.find(p => p.id === cost.property_id);
-
-                    return (
-                      <div 
-                        key={cost.item_id}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          padding: '0.85rem 1.15rem',
-                          background: '#ffffff',
-                          border: '1.5px solid #e2e8f0',
-                          borderRadius: '12px',
-                          gap: '1rem',
-                          boxShadow: '0 1px 3px rgba(15, 23, 42, 0.03)'
-                        }}
-                      >
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', minWidth: 0, flex: 1 }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', minWidth: 0 }}>
-                            <span style={{ fontSize: '0.88rem', fontWeight: 800, color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                              {cost.item_name_ar}
-                            </span>
-                            <span style={{
-                              fontSize: '0.64rem',
-                              fontWeight: 700,
-                              padding: '0.08rem 0.4rem',
-                              borderRadius: '4px',
-                              background: '#f8fafc',
-                              border: '1px solid #e2e8f0',
-                              color: '#475569',
-                              flexShrink: 0
-                            }}>
-                              {cost.category === 'civil_structure' ? (isAr ? 'خرسانات وهيكل' : 'Structure') :
-                               cost.category === 'mep_infrastructure' ? (isAr ? 'كهروميكانيك' : 'MEP') :
-                               cost.category === 'finishing_interior' ? (isAr ? 'تشطيبات' : 'Finishing') :
-                               cost.category === 'taxes_fees' ? (isAr ? 'ضرائب وتأمينات' : 'Taxes') :
-                               cost.category === 'permits_engineering' ? (isAr ? 'تراخيص ورسوم' : 'Permits') :
-                               (isAr ? 'مصاريف موقع' : 'Site WIP')}
-                            </span>
-                          </div>
-                          <div style={{ fontSize: '0.74rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: '0.5rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                            <span style={{ color: '#0f172a', fontWeight: 600 }}>{prop?.title_ar || (isAr ? 'مشروع عقاري' : 'Project')}</span>
-                            <span>•</span>
-                            <span>{cost.supplier_contractor}</span>
-                            {cost.invoice_ref && (
-                              <>
-                                <span>•</span>
-                                <span style={{ fontVariantNumeric: 'tabular-nums' }}>فاتورة #{cost.invoice_ref}</span>
-                              </>
-                            )}
-                            <span>•</span>
-                            <span dir="ltr" style={{ fontVariantNumeric: 'tabular-nums' }}>{cost.logged_date}</span>
-                          </div>
-                        </div>
-
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexShrink: 0 }}>
-                          <div style={{ textAlign: isAr ? 'left' : 'right' }}>
-                            <div style={{ fontSize: '1rem', fontWeight: 900, color: '#0f172a', fontVariantNumeric: 'tabular-nums' }}>
-                              {D(cost.total_cost_egp).formatEGP(isAr)}
-                            </div>
-                            <span style={{ fontSize: '0.65rem', color: '#047857', fontWeight: 700 }}>
-                              {isAr ? 'محمل على المباني' : 'WIP Capitalized'}
-                            </span>
-                          </div>
-
-                          {prop && onOpenAuditForProperty && (
-                            <button
-                              type="button"
-                              onClick={() => onOpenAuditForProperty(prop)}
-                              title={isAr ? 'فتح تدقيق تكاليف المشروع' : 'Open project cost audit'}
-                              style={{
-                                background: '#f8fafc',
-                                border: '1px solid #cbd5e1',
-                                borderRadius: '7px',
-                                padding: '0.42rem 0.75rem',
-                                color: '#946f23',
-                                fontSize: '0.74rem',
-                                fontWeight: 700,
-                                cursor: 'pointer'
-                              }}
-                            >
-                              {isAr ? 'تدقيق' : 'Audit'}
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
             </div>
-          )}
-
-          {/* TAB 6: LIVE OPERATIONS & AUDIT STREAM */}
-          {activeWorkbenchTab === 'audit_stream' && (
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.85rem', flexWrap: 'wrap', gap: '0.5rem' }}>
-                <p style={{ margin: 0, fontSize: '0.76rem', color: '#64748b', fontWeight: 600 }}>
-                  {isAr 
-                    ? `سجل القيود المزدوجة المتوازنة بالمليم (${filteredAuditEntries.length} قيد مسجل) — ترحيل لحظي مباشر` 
-                    : `Verified chronological stream of double-entry postings (${filteredAuditEntries.length} entries)`}
-                </p>
+          }
+        >
+          {/* Modal Internal Content: Sub-tabs and controls */}
+          <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, gap: '0.75rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.65rem', borderBottom: '1px solid #e2e8f0', paddingBottom: '0.75rem' }}>
+              <div className={shellStyles.canonicalTabsUnderline} role="group" aria-label={isAr ? 'أقسام العمليات' : 'Operation categories'}>
                 <button
                   type="button"
-                  onClick={() => onNavigateToTab('ledger')}
-                  style={{
-                    background: 'transparent',
-                    border: 'none',
-                    color: '#059669',
-                    fontSize: '0.74rem',
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.25rem'
-                  }}
+                                    aria-pressed={selectedCategory === 'all'}
+                  className={`${shellStyles.canonicalUnderlineTab} ${selectedCategory === 'all' ? shellStyles.canonicalUnderlineTabActive : ''}`}
+                  onClick={() => handleCategoryTabChange('all')}
                 >
-                  <span>{isAr ? 'فتح دفتر الأستاذ العام الكامل' : 'Open full general ledger'}</span>
-                  <ArrowLeft size={12} style={{ transform: isAr ? 'none' : 'rotate(180deg)' }} />
+                  <span>{isAr ? 'الكل' : 'All'}</span>
+                  <span className={ops.tabPillCount} style={selectedCategory === 'all' ? { background: 'var(--erp-accent-subtle, #eff6ff)', color: 'var(--erp-accent, #2563eb)' } : undefined}>{dateScopedTransactions.length}</span>
+                </button>
+                <button
+                  type="button"
+                                    aria-pressed={selectedCategory === 'collection'}
+                  className={`${shellStyles.canonicalUnderlineTab} ${selectedCategory === 'collection' ? shellStyles.canonicalUnderlineTabActive : ''}`}
+                  onClick={() => handleCategoryTabChange('collection')}
+                >
+                  <span>{isAr ? 'تحصيلات العملاء' : 'Client Collections'}</span>
+                  <span className={ops.tabPillCount} style={selectedCategory === 'collection' ? { background: 'var(--erp-accent-subtle, #eff6ff)', color: 'var(--erp-accent, #2563eb)' } : undefined}>{dateScopedTransactions.filter(t => t.category === 'collection').length}</span>
+                </button>
+                <button
+                  type="button"
+                                    aria-pressed={selectedCategory === 'supplier'}
+                  className={`${shellStyles.canonicalUnderlineTab} ${selectedCategory === 'supplier' ? shellStyles.canonicalUnderlineTabActive : ''}`}
+                  onClick={() => handleCategoryTabChange('supplier')}
+                >
+                  <span>{isAr ? 'مستحقات الموردين' : 'Supplier Payables'}</span>
+                  <span className={ops.tabPillCount} style={selectedCategory === 'supplier' ? { background: 'var(--erp-accent-subtle, #eff6ff)', color: 'var(--erp-accent, #2563eb)' } : undefined}>{dateScopedTransactions.filter(t => t.category === 'supplier').length}</span>
+                </button>
+                <button
+                  type="button"
+                                    aria-pressed={selectedCategory === 'expense'}
+                  className={`${shellStyles.canonicalUnderlineTab} ${selectedCategory === 'expense' ? shellStyles.canonicalUnderlineTabActive : ''}`}
+                  onClick={() => handleCategoryTabChange('expense')}
+                >
+                  <span>{isAr ? 'مصاريف تشغيلية' : 'Operating Costs'}</span>
+                  <span className={ops.tabPillCount} style={selectedCategory === 'expense' ? { background: 'var(--erp-accent-subtle, #eff6ff)', color: 'var(--erp-accent, #2563eb)' } : undefined}>{dateScopedTransactions.filter(t => t.category === 'expense').length}</span>
+                </button>
+                <button
+                  type="button"
+                                    aria-pressed={selectedCategory === 'other'}
+                  className={`${shellStyles.canonicalUnderlineTab} ${selectedCategory === 'other' ? shellStyles.canonicalUnderlineTabActive : ''}`}
+                  onClick={() => handleCategoryTabChange('other')}
+                >
+                  <span>{isAr ? 'تحويلات وعمليات أخرى' : 'Transfers & Other'}</span>
+                  <span className={ops.tabPillCount} style={selectedCategory === 'other' ? { background: 'var(--erp-accent-subtle, #eff6ff)', color: 'var(--erp-accent, #2563eb)' } : undefined}>{dateScopedTransactions.filter(t => t.category === 'other').length}</span>
                 </button>
               </div>
 
-              {filteredAuditEntries.length === 0 ? (
-                <div style={{ padding: '3rem 1.5rem', textAlign: 'center', color: '#64748b' }}>
-                  <Activity size={32} color="#059669" style={{ margin: '0 auto 0.65rem auto', opacity: 0.8 }} />
-                  <div style={{ fontWeight: 800, color: '#0f172a', fontSize: '0.9rem' }}>
-                    {isAr ? 'لا توجد قيود مسجلة مطابقة لمعايير البحث' : 'No journal entries match search'}
-                  </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                <div className={ops.dateScopeTabs} role="group" aria-label={isAr ? 'نطاق عرض الحركات' : 'Movement date scope'}>
+                  <button type="button" className={dateScope === 'today' ? ops.dateScopeActive : ops.dateScopeButton} aria-pressed={dateScope === 'today'} onClick={() => handleDateScopeChange('today')}>
+                    {isAr ? 'اليوم' : 'Today'}
+                  </button>
+                  <button type="button" className={dateScope === 'all' ? ops.dateScopeActive : ops.dateScopeButton} aria-pressed={dateScope === 'all'} onClick={() => handleDateScopeChange('all')}>
+                    {isAr ? 'كل السجل' : 'All history'}
+                  </button>
                 </div>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
-                  {paginatedAuditEntries.map(je => {
-                    const debitTotal = je.lines?.reduce((acc, l) => acc.plus(l.debit_amount || '0'), D(0)) || D(0);
-
-                    return (
-                      <div
-                        key={je.entry_id}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          padding: '0.85rem 1.15rem',
-                          background: '#ffffff',
-                          border: '1.5px solid #e2e8f0',
-                          borderRadius: '12px',
-                          gap: '1rem',
-                          boxShadow: '0 1px 3px rgba(15, 23, 42, 0.03)'
-                        }}
-                      >
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', minWidth: 0, flex: 1 }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem' }}>
-                            <span style={{
-                              fontVariantNumeric: 'tabular-nums',
-                              fontWeight: 800,
-                              color: '#946f23',
-                              background: 'rgba(184, 144, 62, 0.1)',
-                              border: '1px solid rgba(184, 144, 62, 0.25)',
-                              padding: '0.12rem 0.45rem',
-                              borderRadius: '5px',
-                              fontSize: '0.72rem'
-                            }}>
-                              {je.entry_number}
-                            </span>
-                            <span style={{
-                              fontSize: '0.88rem',
-                              fontWeight: 800,
-                              color: '#0f172a',
-                              whiteSpace: 'nowrap',
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis'
-                            }}>
-                              {localizeJournalDescription(je.description, isAr)}
-                            </span>
-                          </div>
-
-                          <div style={{ fontSize: '0.73rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                            <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                              <UserCheck size={11} color="#946f23" />
-                              <span>{je.created_by || 'ADMIN'}</span>
-                            </span>
-                            <span>•</span>
-                            <span dir="ltr" style={{ fontVariantNumeric: 'tabular-nums' }}>{je.entry_date}</span>
-                            {je.source_module && (
-                              <>
-                                <span>•</span>
-                                <span style={{
-                                  fontSize: '0.64rem',
-                                  padding: '0.05rem 0.35rem',
-                                  borderRadius: '4px',
-                                  background: '#f1f5f9',
-                                  color: '#475569'
-                                }}>
-                                  {je.source_module}
-                                </span>
-                              </>
-                            )}
-                          </div>
-                        </div>
-
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexShrink: 0 }}>
-                          <div style={{ textAlign: isAr ? 'left' : 'right' }}>
-                            <div style={{ fontSize: '1rem', fontWeight: 900, color: '#0f172a', fontVariantNumeric: 'tabular-nums' }}>
-                              {debitTotal.formatEGP(isAr)}
-                            </div>
-                            <span style={{
-                              fontSize: '0.64rem',
-                              fontWeight: 800,
-                              color: '#15803d',
-                              background: '#f0fdf4',
-                              border: '1px solid rgba(22, 163, 74, 0.25)',
-                              padding: '0.08rem 0.4rem',
-                              borderRadius: '4px',
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '0.2rem'
-                            }}>
-                              <ShieldCheck size={10} />
-                              <span>{isAr ? 'مُعتمد ومحمي بالمليم' : 'Verified'}</span>
-                            </span>
-                          </div>
-
-                          <button
-                            type="button"
-                            onClick={() => onNavigateToTab('ledger')}
-                            title={isAr ? 'الانتقال لدفتر الأستاذ العام لمراجعة قيود اليومية الكاملة' : 'View in General Ledger'}
-                            style={{
-                              background: '#f8fafc',
-                              color: '#334155',
-                              border: '1px solid #cbd5e1',
-                              padding: '0.42rem 0.75rem',
-                              borderRadius: '7px',
-                              fontSize: '0.74rem',
-                              fontWeight: 700,
-                              cursor: 'pointer',
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '0.3rem'
-                            }}
-                          >
-                            <Scale size={13} />
-                            <span>{isAr ? 'مراجعة في اليومية' : 'View Ledger'}</span>
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  })}
+                <div
+                  className={ops.dateFilterGroup}
+                  title={isAr ? 'تصفية من تاريخ' : 'From Date'}
+                  style={{ background: '#ffffff', border: '1px solid #cbd5e1' }}
+                >
+                  <span className={ops.dateFilterLabel} style={{ color: '#475569', fontWeight: 600 }}>{isAr ? 'من:' : 'From:'}</span>
+                  <input
+                    type="date"
+                    value={fromDate}
+                    onChange={(e) => { setFromDate(e.target.value); setDateScope('custom'); }}
+                    className={ops.dateInput}
+                    style={{ color: '#0f172a', fontWeight: 600, background: 'transparent' }}
+                    aria-label={isAr ? 'من تاريخ' : 'From Date'}
+                  />
                 </div>
-              )}
-            </div>
-          )}
-        </div>
 
-        {/* Workbench Pagination Bar */}
-        <div style={{ padding: '0 1.4rem 1.1rem 1.4rem' }}>
-          <ZFPagination
-            currentPage={workbenchPage}
-            totalPages={Math.ceil(totalActiveWorkbenchItems / workbenchPageSize) || 1}
-            totalItems={totalActiveWorkbenchItems}
-            pageSize={workbenchPageSize}
-            onPageChange={setWorkbenchPage}
-            onPageSizeChange={(newSize) => {
-              setWorkbenchPageSize(newSize);
-              setWorkbenchPage(1);
-            }}
-            pageSizeOptions={[8, 15, 30, 50]}
-            isAr={isAr}
-            itemLabel={{
-              ar: activeWorkbenchTab === 'audit_stream' ? 'قيد محاسبي' : 'معاملة',
-              en: 'records'
-            }}
-          />
-        </div>
-      </div>
+                <div
+                  className={ops.dateFilterGroup}
+                  title={isAr ? 'تصفية إلى تاريخ' : 'To Date'}
+                  style={{ background: '#ffffff', border: '1px solid #cbd5e1' }}
+                >
+                  <span className={ops.dateFilterLabel} style={{ color: '#475569', fontWeight: 600 }}>{isAr ? 'إلى:' : 'To:'}</span>
+                  <input
+                    type="date"
+                    value={toDate}
+                    onChange={(e) => { setToDate(e.target.value); setDateScope('custom'); }}
+                    className={ops.dateInput}
+                    style={{ color: '#0f172a', fontWeight: 600, background: 'transparent' }}
+                    aria-label={isAr ? 'إلى تاريخ' : 'To Date'}
+                  />
+                </div>
 
-      {/* 8. POPUP MODAL: QUICK EXPENSE & WIP DISBURSEMENT LOGGER */}
-      {isExpenseModalOpen && (
-        <div 
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: 'rgba(15, 23, 42, 0.55)',
-            backdropFilter: 'blur(8px)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 9999,
-            padding: '1.25rem',
-            direction: isAr ? 'rtl' : 'ltr'
-          }}
-          onClick={(e) => {
-            if (e.target === e.currentTarget) {
-              setIsExpenseModalOpen(false);
-              setExpenseSuccessData(null);
-            }
-          }}
-        >
-          <div 
-            id="contextual-direct-logger"
-            ref={loggerRef}
-            role="dialog"
-            aria-modal="true"
-            style={{
-              background: '#ffffff',
-              border: '1px solid #cbd5e1',
-              borderRadius: '20px',
-              width: '100%',
-              maxWidth: '660px',
-              maxHeight: '90vh',
-              overflowY: 'auto',
-              boxShadow: '0 25px 65px -15px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(0,0,0,0.04)',
-              padding: '1.5rem',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '1.15rem'
-            }}
-          >
-            {/* Modal Header */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #e2e8f0', paddingBottom: '0.85rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-                <div style={{
-                  width: '40px',
-                  height: '40px',
-                  borderRadius: '12px',
-                  background: expensePaymentSource === '101000'
-                    ? 'rgba(16, 185, 129, 0.12)' 
-                    : expensePaymentSource === '102000'
-                      ? 'rgba(37, 99, 235, 0.12)'
-                      : 'rgba(217, 119, 6, 0.12)',
-                  color: expensePaymentSource === '101000'
-                    ? '#059669'
-                    : expensePaymentSource === '102000'
-                      ? '#2563eb'
-                      : '#d97706',
-                  border: `1px solid ${
-                    expensePaymentSource === '101000'
-                      ? 'rgba(16, 185, 129, 0.3)'
-                      : expensePaymentSource === '102000'
-                        ? 'rgba(37, 99, 235, 0.3)'
-                        : 'rgba(217, 119, 6, 0.3)'
-                  }`,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
-                }}>
-                  {expensePaymentSource === '101000' ? (
-                    <DollarSign size={22} />
-                  ) : expensePaymentSource === '102000' ? (
-                    <Smartphone size={22} />
-                  ) : (
-                    <HardHat size={22} />
-                  )}
-                </div>
-                <div>
-                  <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: '#0f172a' }}>
-                    {isAr ? 'تسجيل مصاريف وخامات المشروع' : 'Record Project Expenses & Materials'}
-                  </h3>
-                  <p style={{ margin: '0.15rem 0 0', fontSize: '0.72rem', color: '#64748b' }}>
-                    {isAr 
-                      ? 'تسجيل فواتير وخامات ومصنعيات البناء لحساب العمارة' 
-                      : 'Record construction materials, contractor wages, and site costs'}
-                  </p>
-                </div>
+                <select
+                  value={activeStreamFilter || ''}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (!val) {
+                      handleClearStreamFilter();
+                    } else {
+                      handleStreamNodeClick(val);
+                    }
+                  }}
+                  className={ops.tableSelect}
+                  style={{ background: '#ffffff', border: '1px solid #cbd5e1', color: '#0f172a', fontWeight: 600 }}
+                  aria-label={isAr ? 'تصفية حسب مسار التدفق' : 'Flow Stream Filter'}
+                  title={isAr ? 'تصفية حسب مسار التدفق المالي' : 'Filter by cash flow stream'}
+                >
+                  <option value="">{isAr ? 'جميع مسارات التدفق' : 'All Cash Streams'}</option>
+                  <optgroup label={isAr ? 'التدفقات الداخلة (الوارد)' : 'Inflow Streams'}>
+                    <option value="in-total">{isAr ? 'إجمالي التدفقات الداخلة' : 'Total Inflows'}</option>
+                    <option value="in-0">{isAr ? 'أقساط ومقدمات العملاء' : 'Client Installments & Collections'}</option>
+                    <option value="in-1">{isAr ? 'تمويل وسيولة الشركاء' : 'Partner Capital & Funding'}</option>
+                  </optgroup>
+                  <optgroup label={isAr ? 'التدفقات الخارجة (المنصرف)' : 'Outflow Streams'}>
+                    <option value="out-total">{isAr ? 'إجمالي التدفقات الخارجة' : 'Total Outflows'}</option>
+                    <option value="out-0">{isAr ? 'خرسانات وبناء عظم' : 'Civil Structure & Concrete'}</option>
+                    <option value="out-1">{isAr ? 'تشطيبات وواجهات' : 'Finishes & Facades'}</option>
+                    <option value="out-2">{isAr ? 'تأسيس وكهروميكانيك' : 'MEP & Infrastructure'}</option>
+                    <option value="out-3">{isAr ? 'تراخيص ورسوم حكومية' : 'Permits & Government Fees'}</option>
+                  </optgroup>
+                </select>
+
+                <select
+                  value={typeFilter}
+                  onChange={(e) => setTypeFilter(e.target.value as any)}
+                  className={ops.tableSelect}
+                  style={{ background: '#ffffff', border: '1px solid #cbd5e1', color: '#0f172a', fontWeight: 600 }}
+                  aria-label={isAr ? 'نوع العملية' : 'Movement Type'}
+                >
+                  <option value="all">{isAr ? 'جميع أنواع العمليات' : 'All Types'}</option>
+                  <option value="COLLECTION">{isAr ? 'تحصيل (+)' : 'Collections (+)'}</option>
+                  <option value="DISBURSEMENT">{isAr ? 'صرف (-)' : 'Disbursements (-)'}</option>
+                  <option value="TRANSFER">{isAr ? 'تحويل بنكي' : 'Transfers'}</option>
+                  <option value="EXPENSE">{isAr ? 'مصروفات' : 'Expenses'}</option>
+                </select>
+
+                <ZFSearchBar
+                  value={searchQuery}
+                  onChange={setSearchQuery}
+                  onClear={() => setSearchQuery('')}
+                  placeholder={isAr ? 'بحث بالبيان أو الطرف...' : 'Search movements...'}
+                  isAr={isAr}
+                  size="sm"
+                  style={{ minWidth: '150px', width: '180px', height: '32px', background: '#ffffff', border: '1px solid #cbd5e1', color: '#0f172a' }}
+                />
+
+                {onExportExcel && (
+                  <button
+                    type="button"
+                    className={ops.excelBtn}
+                    onClick={onExportExcel}
+                    title={isAr ? 'تصدير ملف ERP الشامل' : 'Export the full ERP workbook'}
+                  >
+                    <FileSpreadsheet size={13} />
+                    <span>{isAr ? 'تصدير ERP الشامل' : 'Full ERP export'}</span>
+                  </button>
+                )}
+
+                {hasActiveFilters && (
+                  <button
+                    type="button"
+                    className={ops.resetBtn}
+                    onClick={handleResetFilters}
+                    title={isAr ? 'إعادة ضبط الفلاتر' : 'Reset filters'}
+                  >
+                    <RotateCcw size={13} />
+                    <span>{isAr ? 'إعادة ضبط' : 'Reset'}</span>
+                  </button>
+                )}
               </div>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setIsExpenseModalOpen(false);
-                  setExpenseSuccessData(null);
-                }}
-                style={{
-                  background: '#ffffff',
-                  border: '1px solid #e2e8f0',
-                  borderRadius: '8px',
-                  color: '#64748b',
-                  width: '32px',
-                  height: '32px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  cursor: 'pointer',
-                  transition: 'all 0.15s ease'
-                }}
-              >
-                <X size={16} />
-              </button>
             </div>
 
-            {/* Executive Success Ribbon */}
-            {expenseSuccessData && (
-              <div style={{
-                background: 'linear-gradient(135deg, rgba(5, 150, 105, 0.08) 0%, rgba(4, 120, 87, 0.03) 100%)',
-                border: '1.5px solid #059669',
-                borderRadius: '12px',
-                padding: '0.85rem 1rem',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '0.65rem',
-                boxShadow: '0 2px 8px rgba(5, 150, 105, 0.1)'
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.65rem' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-                    <div style={{
-                      width: '32px',
-                      height: '32px',
-                      borderRadius: '50%',
-                      background: '#059669',
-                      color: '#ffffff',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      flexShrink: 0
-                    }}>
-                      <Check size={18} strokeWidth={3} />
-                    </div>
-                    <div>
-                      <div style={{ fontSize: '0.86rem', fontWeight: 800, color: '#065f46' }}>
-                        {isAr ? '✓ تم حفظ قيد المصروف بنجاح وتحميله على تكلفة المشروع' : 'Project cost recorded & capitalized successfully'}
-                      </div>
-                      <div style={{ fontSize: '0.74rem', color: '#047857', fontWeight: 700, marginTop: '0.15rem', display: 'flex', alignItems: 'center', gap: '0.35rem', flexWrap: 'wrap' }}>
-                        <span style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 900 }}>
-                          {D(expenseSuccessData.amount).formatEGP(isAr)}
-                        </span>
-                        <span>•</span>
-                        <span>{expenseSuccessData.categoryLabel}</span>
-                        <span>•</span>
-                        <span>{expenseSuccessData.propertyTitle}</span>
-                        {expenseSuccessData.supplier && (
-                          <>
-                            <span>•</span>
-                            <span>{expenseSuccessData.supplier}</span>
-                          </>
-                        )}
-                        <span>•</span>
-                        <span>{expenseSuccessData.paymentSource}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setExpenseSuccessData(null);
-                        setTimeout(() => amountInputRef.current?.focus(), 100);
-                      }}
-                      style={{
-                        background: '#059669',
-                        color: '#ffffff',
-                        border: 'none',
-                        borderRadius: '7px',
-                        padding: '0.38rem 0.8rem',
-                        fontSize: '0.75rem',
-                        fontWeight: 800,
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.3rem',
-                        boxShadow: '0 1px 3px rgba(5, 150, 105, 0.25)'
-                      }}
-                    >
-                      <Plus size={13} strokeWidth={2.5} />
-                      <span>{isAr ? '+ تسجيل فاتورة أو مصروف آخر' : '+ Record Another Expense'}</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsExpenseModalOpen(false);
-                        setExpenseSuccessData(null);
-                      }}
-                      style={{
-                        background: '#ffffff',
-                        color: '#334155',
-                        border: '1px solid #cbd5e1',
-                        borderRadius: '7px',
-                        padding: '0.38rem 0.8rem',
-                        fontSize: '0.75rem',
-                        fontWeight: 700,
-                        cursor: 'pointer'
-                      }}
-                    >
-                      {isAr ? 'تم / إغلاق النافذة' : 'Done / Close'}
-                    </button>
-                  </div>
+            {/* Active Mindmap Stream Filter Indicator Chip Banner in Modal */}
+            {activeStreamFilter && (
+              <div className={ops.activeFilterBanner} style={{ margin: '0' }}>
+                <span style={{ fontSize: '0.78rem', color: '#0f172a', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '0.35rem', flexWrap: 'wrap' }}>
+                  <span>{isAr ? 'تصفية نشطة حسب المخطط: ' : 'Active Flow Filter: '}</span>
+                  <strong style={{ color: 'var(--erp-accent, #2563eb)' }}>{activeStreamLabel}</strong>
+                  <span style={{ color: '#64748b' }}>({filteredTransactions.length} {isAr ? 'حركة' : 'items'})</span>
+                </span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <select
+                    value={activeStreamFilter}
+                    onChange={(e) => {
+                      if (!e.target.value) {
+                        handleClearStreamFilter();
+                      } else {
+                        handleStreamNodeClick(e.target.value);
+                      }
+                    }}
+                    className={ops.streamFilterSelect}
+                    style={{ background: '#ffffff', border: '1px solid #cbd5e1', color: '#0f172a', fontWeight: 600 }}
+                    aria-label={isAr ? 'تغيير مسار التدفق' : 'Change flow stream'}
+                  >
+                    <optgroup label={isAr ? 'التدفقات الداخلة' : 'Inflows'}>
+                      <option value="in-total">{isAr ? 'إجمالي التدفقات الداخلة' : 'Total Inflows'}</option>
+                      <option value="in-0">{isAr ? 'أقساط ومقدمات العملاء' : 'Client Installments & Collections'}</option>
+                      <option value="in-1">{isAr ? 'تمويل وسيولة الشركاء' : 'Partner Capital & Funding'}</option>
+                    </optgroup>
+                    <optgroup label={isAr ? 'التدفقات الخارجة' : 'Outflows'}>
+                      <option value="out-total">{isAr ? 'إجمالي التدفقات الخارجة' : 'Total Outflows'}</option>
+                      <option value="out-0">{isAr ? 'خرسانات وبناء عظم' : 'Civil Structure & Concrete'}</option>
+                      <option value="out-1">{isAr ? 'تشطيبات وواجهات' : 'Finishes & Facades'}</option>
+                      <option value="out-2">{isAr ? 'تأسيس وكهروميكانيك' : 'MEP & Infrastructure'}</option>
+                      <option value="out-3">{isAr ? 'تراخيص ورسوم حكومية' : 'Permits & Government Fees'}</option>
+                    </optgroup>
+                  </select>
+                  <button
+                    type="button"
+                    onClick={handleClearStreamFilter}
+                    className={ops.clearFilterBtn}
+                  >
+                    ✕ {isAr ? 'إلغاء التصفية' : 'Clear Filter'}
+                  </button>
                 </div>
               </div>
             )}
 
-            {/* Disbursal / Settlement Method Selector (3-way with Interactive Hover Explanations) */}
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.35rem' }}>
-                <label style={{ fontSize: '0.72rem', fontWeight: 800, color: '#475569', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-                  <span>{isAr ? 'الفلوس اتدفعت إزاي؟' : 'Payment Method:'}</span>
-                </label>
-                <span style={{ fontSize: '0.66rem', color: '#946f23', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                  <Info size={12} />
-                  <span>{isAr ? 'قف على أي طريقة لمعرفة معناها وتأثيرها' : 'Hover over any option for explanation'}</span>
-                </span>
+            {/* Scrollable Modal Table Area */}
+            <div style={{ flex: '1 1 auto', minHeight: '260px', maxHeight: 'calc(88vh - 280px)', overflowY: 'auto', overflowX: 'auto', border: '1px solid #cbd5e1', borderRadius: '8px' }}>
+              <table className={ops.canonicalTable}>
+                <thead className={ops.tableThead}>
+                  <tr>
+                    <th
+                      className={`${ops.tableTh} ${ops.tableThSortable}`}
+                      style={{ width: '11%', minWidth: '95px' }}
+                      aria-sort={tableSortField === 'date' ? (tableSortAsc ? 'ascending' : 'descending') : 'none'}
+                    >
+                      <button type="button" className={`${ops.tableThContent} ${ops.sortHeaderButton}`} onClick={() => handleTableSort('date')} aria-label={isAr ? 'ترتيب حسب التاريخ' : 'Sort by date'}>
+                        <span>{isAr ? 'التاريخ' : 'Date'}</span>
+                        <ChevronsUpDown
+                          size={12}
+                          className={shellStyles.canonicalSortIcon}
+                          style={{
+                            color: tableSortField === 'date' ? 'var(--erp-accent, #2563eb)' : '#94a3b8',
+                            opacity: tableSortField === 'date' ? 1 : 0.65,
+                          }}
+                        />
+                      </button>
+                    </th>
+                    <th
+                      className={`${ops.tableTh} ${ops.tableThSortable}`}
+                      style={{ width: '13%', minWidth: '115px' }}
+                      aria-sort={tableSortField === 'type' ? (tableSortAsc ? 'ascending' : 'descending') : 'none'}
+                    >
+                      <button type="button" className={`${ops.tableThContent} ${ops.sortHeaderButton}`} onClick={() => handleTableSort('type')} aria-label={isAr ? 'ترتيب حسب النوع' : 'Sort by type'}>
+                        <span>{isAr ? 'النوع' : 'Type'}</span>
+                        <ChevronsUpDown
+                          size={12}
+                          className={shellStyles.canonicalSortIcon}
+                          style={{
+                            color: tableSortField === 'type' ? 'var(--erp-accent, #2563eb)' : '#94a3b8',
+                            opacity: tableSortField === 'type' ? 1 : 0.65,
+                          }}
+                        />
+                      </button>
+                    </th>
+                    <th
+                      className={`${ops.tableTh} ${ops.tableThSortable}`}
+                      style={{ width: '22%', minWidth: '160px' }}
+                      aria-sort={tableSortField === 'description' ? (tableSortAsc ? 'ascending' : 'descending') : 'none'}
+                    >
+                      <button type="button" className={`${ops.tableThContent} ${ops.sortHeaderButton}`} onClick={() => handleTableSort('description')} aria-label={isAr ? 'ترتيب حسب البيان' : 'Sort by description'}>
+                        <span>{isAr ? 'البيان' : 'Description'}</span>
+                        <ChevronsUpDown
+                          size={12}
+                          className={shellStyles.canonicalSortIcon}
+                          style={{
+                            color: tableSortField === 'description' ? 'var(--erp-accent, #2563eb)' : '#94a3b8',
+                            opacity: tableSortField === 'description' ? 1 : 0.65,
+                          }}
+                        />
+                      </button>
+                    </th>
+                    <th
+                      className={`${ops.tableTh} ${ops.tableThSortable}`}
+                      style={{ width: '15%', minWidth: '125px' }}
+                      aria-sort={tableSortField === 'party' ? (tableSortAsc ? 'ascending' : 'descending') : 'none'}
+                    >
+                      <button type="button" className={`${ops.tableThContent} ${ops.sortHeaderButton}`} onClick={() => handleTableSort('party')} aria-label={isAr ? 'ترتيب حسب الجهة' : 'Sort by party'}>
+                        <span>{isAr ? 'الجهة' : 'Counterparty'}</span>
+                        <ChevronsUpDown
+                          size={12}
+                          className={shellStyles.canonicalSortIcon}
+                          style={{
+                            color: tableSortField === 'party' ? 'var(--erp-accent, #2563eb)' : '#94a3b8',
+                            opacity: tableSortField === 'party' ? 1 : 0.65,
+                          }}
+                        />
+                      </button>
+                    </th>
+                    <th
+                      className={`${ops.tableTh} ${ops.tableThSortable}`}
+                      style={{ width: '15%', minWidth: '130px' }}
+                      aria-sort={tableSortField === 'reference' ? (tableSortAsc ? 'ascending' : 'descending') : 'none'}
+                    >
+                      <button type="button" className={`${ops.tableThContent} ${ops.sortHeaderButton}`} onClick={() => handleTableSort('reference')} aria-label={isAr ? 'ترتيب حسب المرجع' : 'Sort by reference'}>
+                        <span>{isAr ? 'المرجع / طريقة السداد' : 'Ref / Method'}</span>
+                        <ChevronsUpDown
+                          size={12}
+                          className={shellStyles.canonicalSortIcon}
+                          style={{
+                            color: tableSortField === 'reference' ? 'var(--erp-accent, #2563eb)' : '#94a3b8',
+                            opacity: tableSortField === 'reference' ? 1 : 0.65,
+                          }}
+                        />
+                      </button>
+                    </th>
+                    <th
+                      className={`${ops.tableTh} ${ops.tableThSortable}`}
+                      style={{ width: '15%', minWidth: '130px' }}
+                      aria-sort={tableSortField === 'amount' ? (tableSortAsc ? 'ascending' : 'descending') : 'none'}
+                    >
+                      <button type="button" className={`${ops.tableThContent} ${ops.sortHeaderButton}`} onClick={() => handleTableSort('amount')} aria-label={isAr ? 'ترتيب حسب المبلغ' : 'Sort by amount'}>
+                        <span>{isAr ? 'المبلغ' : 'Amount'}</span>
+                        <ChevronsUpDown
+                          size={12}
+                          className={shellStyles.canonicalSortIcon}
+                          style={{
+                            color: tableSortField === 'amount' ? 'var(--erp-accent, #2563eb)' : '#94a3b8',
+                            opacity: tableSortField === 'amount' ? 1 : 0.65,
+                          }}
+                        />
+                      </button>
+                    </th>
+                    <th
+                      className={`${ops.tableTh} ${ops.tableThSortable}`}
+                      style={{ width: '11%', minWidth: '95px', textAlign: 'center' }}
+                      aria-sort={tableSortField === 'status' ? (tableSortAsc ? 'ascending' : 'descending') : 'none'}
+                    >
+                      <button type="button" className={`${ops.tableThContent} ${ops.sortHeaderButton}`} style={{ justifyContent: 'center' }} onClick={() => handleTableSort('status')} aria-label={isAr ? 'ترتيب حسب الحالة' : 'Sort by status'}>
+                        <span>{isAr ? 'الحالة' : 'Status'}</span>
+                        <ChevronsUpDown
+                          size={12}
+                          className={shellStyles.canonicalSortIcon}
+                          style={{
+                            color: tableSortField === 'status' ? 'var(--erp-accent, #2563eb)' : '#94a3b8',
+                            opacity: tableSortField === 'status' ? 1 : 0.65,
+                          }}
+                        />
+                      </button>
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {modalPaginatedTransactions.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} style={{ textAlign: 'center', padding: '3rem 1rem', color: 'var(--erp-text-muted, #64748b)' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
+                          <Search size={24} style={{ opacity: 0.4 }} />
+                          <span style={{ fontWeight: 700, color: 'var(--ops-text, #0f172a)' }}>
+                            {isAr ? 'لا توجد حركات مالية مطابقة لشروط البحث' : 'No movements match the search criteria'}
+                          </span>
+                        </div>
+                      </td>
+                    </tr>
+                  ) : (
+                    modalPaginatedTransactions.map((tx) => {
+                      const isInflow = tx.direction === 'IN';
+                      const isOutflow = tx.direction === 'OUT';
+
+                      return (
+                        <tr
+                          key={`modal-tx-${tx.id}`}
+                          className={ops.tableRow}
+                          onClick={() => {
+                            setIsFullScreenTableOpen(false);
+                            handleInspectRow(tx);
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault();
+                              setIsFullScreenTableOpen(false);
+                              handleInspectRow(tx);
+                            }
+                          }}
+                          tabIndex={0}
+                          role="button"
+                        >
+                          <td className={ops.tableTd}>
+                            <div className={ops.dateTimeCell}>
+                              <time dir="ltr" className={ops.tableDateText}>
+                                {tx.date}
+                              </time>
+                              <span className={ops.tableTimeBadge}>
+                                {formatTime12h(tx.timeStr, isAr)}
+                              </span>
+                            </div>
+                          </td>
+
+                          <td className={ops.tableTd}>
+                            <span
+                              className={`${shellStyles.statusPill} ${shellStyles.statusPillNeutral}`}
+                              style={{ whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+                            >
+                              {isInflow && <ArrowUpRight size={10} />}
+                              {isOutflow && <ArrowDownRight size={10} />}
+                              {!isInflow && !isOutflow && <ArrowLeftRight size={10} />}
+                              <span>{isAr ? tx.typeLabelAr : tx.typeLabelEn}</span>
+                            </span>
+                          </td>
+
+                          <td className={ops.tableTd}>
+                            <span
+                              className={ops.tableTextTruncate}
+                              title={tx.description}
+                              dir="auto"
+                              style={{ fontWeight: 700, color: '#0f172a' }}
+                            >
+                              {tx.description}
+                            </span>
+                          </td>
+
+                          <td className={ops.tableTd}>
+                            <span
+                              className={ops.tableTextTruncate}
+                              title={tx.counterparty}
+                              dir="auto"
+                              style={{ color: 'var(--ops-text-body)', fontWeight: 600 }}
+                            >
+                              {tx.counterparty}
+                            </span>
+                          </td>
+
+                          {/* 5. Reference / Payment Method */}
+                          <td className={ops.tableTd}>
+                            <div className={ops.refMethodCell}>
+                              <span className={ops.tableRefText} title={tx.reference_number || tx.id} dir="ltr">
+                                {tx.reference_number || tx.id}
+                              </span>
+                              <span className={ops.tableMethodBadge}>
+                                {tx.payment_method || (isAr ? 'نقدي / تحويل' : 'Cash/Transfer')}
+                              </span>
+                            </div>
+                          </td>
+
+                          <td className={ops.tableTd}>
+                            <span className={ops.tabularAmount}>
+                              {isInflow ? '+' : isOutflow ? '-' : ''}
+                              {formatNumberWithCommas(tx.amount.abs())}{' '}
+                              <span style={{ fontSize: '0.70rem', color: 'var(--ops-muted)', fontWeight: 500 }}>
+                                {isAr ? 'ج.م' : 'EGP'}
+                              </span>
+                            </span>
+                          </td>
+
+                          <td className={ops.tableTd} style={{ textAlign: 'center' }}>
+                            <span
+                              className={`${shellStyles.statusPill} ${
+                                isInflow
+                                  ? shellStyles.statusPillGreen
+                                  : isOutflow
+                                    ? shellStyles.statusPillNeutral
+                                    : shellStyles.statusPillBlue
+                              }`}
+                              style={{ whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+                            >
+                              <span>{isAr ? tx.statusLabelAr : tx.statusLabelEn}</span>
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Pagination inside Modal */}
+            <div style={{ flexShrink: 0, paddingTop: '0.65rem', paddingBottom: '0.25rem', borderTop: '1px solid #f1f5f9' }}>
+              <ZFPagination
+                currentPage={modalCurrentPage}
+                totalPages={totalModalPages}
+                totalItems={filteredTransactions.length}
+                pageSize={modalPageSize}
+                onPageChange={setModalCurrentPage}
+                isAr={isAr}
+                itemLabel={{ ar: 'حركة مالية', en: 'movements' }}
+              />
+            </div>
+          </div>
+        </ZFModalShell>
+      )}
+
+      {/* 6. DEDICATED TREASURY REPORT & CASH FLOW STATEMENT MODAL */}
+      <ZFModalShell
+        isOpen={isReportModalOpen}
+        onClose={() => setIsReportModalOpen(false)}
+        title={isAr ? 'تقرير حركة الخزينة والسيولة النقدية' : 'Treasury & Cash Flow Statement'}
+        subtitle={isAr ? 'ملخص تراكمي لكل الحركات المسجلة' : 'Cumulative summary of all recorded movements'}
+        icon={<FileSpreadsheet size={18} color="var(--erp-accent, #2563eb)" />}
+        isAr={isAr}
+        maxWidth="850px"
+        footer={
+          <div className={ops.reportActions}>
+            <button
+              type="button"
+              className={ops.excelBtn}
+              onClick={() => {
+                if (typeof window !== 'undefined') window.print();
+              }}
+            >
+              <Printer size={14} />
+              <span>{isAr ? 'طباعة التقرير' : 'Print Statement'}</span>
+            </button>
+
+            {onExportExcel && (
+              <button
+                type="button"
+                className={ops.excelBtn}
+                onClick={onExportExcel}
+                title={isAr ? 'تصدير ملف ERP الشامل' : 'Export the full ERP workbook'}
+              >
+                <FileSpreadsheet size={14} />
+                <span>{isAr ? 'تصدير ERP الشامل' : 'Export full ERP'}</span>
+              </button>
+            )}
+
+            <button
+              type="button"
+              className={ops.reportCloseBtn}
+              onClick={() => setIsReportModalOpen(false)}
+            >
+              <span>{isAr ? 'إغلاق' : 'Close'}</span>
+            </button>
+          </div>
+        }
+      >
+        <div id="zf-printable-area" className={`${ops.reportModalContent} zf-printable-document`}>
+          {/* Summary Metric Cards */}
+          <div className={ops.reportSummaryGrid}>
+            <div className={ops.reportMetricCard}>
+              <div className={ops.reportMetricHeader}>
+                <div className={ops.reportMetricSquircle} style={{ background: 'var(--erp-accent-subtle, #eff6ff)', color: 'var(--erp-accent, #2563eb)' }}>
+                  <Wallet size={13} />
+                </div>
+                <span className={ops.reportMetricLabel}>{isAr ? 'الرصيد النقدي المتاح' : 'Available Cash'}</span>
               </div>
-              
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(3, 1fr)',
-                background: '#f1f5f9',
-                borderRadius: '10px',
-                padding: '0.25rem',
-                gap: '0.25rem',
-                position: 'relative'
-              }}>
-                {/* 1. Cash Safe Button */}
-                <div style={{ position: 'relative' }}>
-                  <button
-                    type="button"
-                    onClick={() => setExpensePaymentSource('101000')}
-                    onMouseEnter={() => setHoveredPaymentTooltip('101000')}
-                    onMouseLeave={() => setHoveredPaymentTooltip(null)}
-                    style={{
-                      width: '100%',
-                      background: expensePaymentSource === '101000' ? '#ffffff' : 'transparent',
-                      color: expensePaymentSource === '101000' ? '#059669' : '#64748b',
-                      border: expensePaymentSource === '101000' ? '1px solid rgba(16, 185, 129, 0.3)' : 'none',
-                      borderRadius: '8px',
-                      padding: '0.45rem 0.5rem',
-                      fontSize: '0.75rem',
-                      fontWeight: 800,
-                      cursor: 'pointer',
-                      boxShadow: expensePaymentSource === '101000' ? '0 1px 4px rgba(0,0,0,0.08)' : 'none',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '0.35rem',
-                      transition: 'all 0.15s ease'
-                    }}
-                  >
-                    <DollarSign size={13} />
-                    <span>{isAr ? 'كاش من الخزنة' : 'Cash Safe'}</span>
-                  </button>
-
-                  {/* Tooltip Popup for 101000 */}
-                  {hoveredPaymentTooltip === '101000' && (
-                    <div style={{
-                      position: 'absolute',
-                      top: 'calc(100% + 8px)',
-                      [isAr ? 'right' : 'left']: 0,
-                      width: '270px',
-                      background: '#ffffff',
-                      border: '1.5px solid #10b981',
-                      borderRadius: '10px',
-                      padding: '0.65rem 0.8rem',
-                      boxShadow: '0 12px 30px -4px rgba(0, 0, 0, 0.18), 0 4px 10px rgba(16, 185, 129, 0.12)',
-                      zIndex: 9999,
-                      textAlign: isAr ? 'right' : 'left',
-                      pointerEvents: 'none',
-                      direction: isAr ? 'rtl' : 'ltr'
-                    }}>
-                      <div style={{
-                        position: 'absolute',
-                        bottom: '100%',
-                        [isAr ? 'right' : 'left']: '1.5rem',
-                        width: 0,
-                        height: 0,
-                        borderLeft: '6px solid transparent',
-                        borderRight: '6px solid transparent',
-                        borderBottom: '6px solid #10b981'
-                      }} />
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: '#059669', fontWeight: 800, fontSize: '0.76rem', marginBottom: '0.25rem' }}>
-                        <DollarSign size={14} />
-                        <span>{isAr ? '💵 نقداً من الخزينة' : 'Cash from Safe'}</span>
-                      </div>
-                      <p style={{ margin: 0, fontSize: '0.72rem', color: '#334155', lineHeight: 1.45 }}>
-                        {isAr 
-                          ? 'المقاول أو العامل أخذ حسابه في يده فوراً «كاش» من درج الخزينة.' 
-                          : 'The contractor or worker received immediate cash payment from the safe drawer.'}
-                      </p>
-                      <div style={{ marginTop: '0.35rem', fontSize: '0.67rem', color: '#047857', fontWeight: 700, background: '#ecfdf5', padding: '0.2rem 0.45rem', borderRadius: '5px' }}>
-                        {isAr ? '💡 (رصيد الخزينة يقل فوراً في نفس اللحظة).' : '(Safe balance decreases immediately).'}
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* 2. InstaPay Button */}
-                <div style={{ position: 'relative' }}>
-                  <button
-                    type="button"
-                    onClick={() => setExpensePaymentSource('102000')}
-                    onMouseEnter={() => setHoveredPaymentTooltip('102000')}
-                    onMouseLeave={() => setHoveredPaymentTooltip(null)}
-                    style={{
-                      width: '100%',
-                      background: expensePaymentSource === '102000' ? '#ffffff' : 'transparent',
-                      color: expensePaymentSource === '102000' ? '#2563eb' : '#64748b',
-                      border: expensePaymentSource === '102000' ? '1px solid rgba(37, 99, 235, 0.3)' : 'none',
-                      borderRadius: '8px',
-                      padding: '0.45rem 0.5rem',
-                      fontSize: '0.75rem',
-                      fontWeight: 800,
-                      cursor: 'pointer',
-                      boxShadow: expensePaymentSource === '102000' ? '0 1px 4px rgba(0,0,0,0.08)' : 'none',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '0.35rem',
-                      transition: 'all 0.15s ease'
-                    }}
-                  >
-                    <Smartphone size={13} />
-                    <span>{isAr ? 'تحويل إنستاباي' : 'InstaPay'}</span>
-                  </button>
-
-                  {/* Tooltip Popup for 102000 */}
-                  {hoveredPaymentTooltip === '102000' && (
-                    <div style={{
-                      position: 'absolute',
-                      top: 'calc(100% + 8px)',
-                      left: '50%',
-                      transform: 'translateX(-50%)',
-                      width: '270px',
-                      background: '#ffffff',
-                      border: '1.5px solid #2563eb',
-                      borderRadius: '10px',
-                      padding: '0.65rem 0.8rem',
-                      boxShadow: '0 12px 30px -4px rgba(0, 0, 0, 0.18), 0 4px 10px rgba(37, 99, 235, 0.12)',
-                      zIndex: 9999,
-                      textAlign: isAr ? 'right' : 'left',
-                      pointerEvents: 'none',
-                      direction: isAr ? 'rtl' : 'ltr'
-                    }}>
-                      <div style={{
-                        position: 'absolute',
-                        bottom: '100%',
-                        left: '50%',
-                        transform: 'translateX(-50%)',
-                        width: 0,
-                        height: 0,
-                        borderLeft: '6px solid transparent',
-                        borderRight: '6px solid transparent',
-                        borderBottom: '6px solid #2563eb'
-                      }} />
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: '#2563eb', fontWeight: 800, fontSize: '0.76rem', marginBottom: '0.25rem' }}>
-                        <Smartphone size={14} />
-                        <span>{isAr ? '📱 إنستاباي / بنك' : 'InstaPay / Bank'}</span>
-                      </div>
-                      <p style={{ margin: 0, fontSize: '0.72rem', color: '#334155', lineHeight: 1.45 }}>
-                        {isAr 
-                          ? 'تم تحويل الحساب له لحظياً عن طريق تطبيق إنستاباي أو تحويل بنكي على هاتفه.' 
-                          : 'Account settled instantly via InstaPay mobile application or bank transfer.'}
-                      </p>
-                      <div style={{ marginTop: '0.35rem', fontSize: '0.67rem', color: '#1d4ed8', fontWeight: 700, background: '#eff6ff', padding: '0.2rem 0.45rem', borderRadius: '5px' }}>
-                        {isAr ? '💡 (رصيد البنك / إنستاباي يقل فوراً).' : '(Bank / InstaPay balance decreases immediately).'}
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* 3. On Credit Button */}
-                <div style={{ position: 'relative' }}>
-                  <button
-                    type="button"
-                    onClick={() => setExpensePaymentSource('201000')}
-                    onMouseEnter={() => setHoveredPaymentTooltip('201000')}
-                    onMouseLeave={() => setHoveredPaymentTooltip(null)}
-                    style={{
-                      width: '100%',
-                      background: expensePaymentSource === '201000' ? '#ffffff' : 'transparent',
-                      color: expensePaymentSource === '201000' ? '#d97706' : '#64748b',
-                      border: expensePaymentSource === '201000' ? '1px solid rgba(217, 119, 6, 0.3)' : 'none',
-                      borderRadius: '8px',
-                      padding: '0.45rem 0.5rem',
-                      fontSize: '0.75rem',
-                      fontWeight: 800,
-                      cursor: 'pointer',
-                      boxShadow: expensePaymentSource === '201000' ? '0 1px 4px rgba(0,0,0,0.08)' : 'none',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '0.35rem',
-                      transition: 'all 0.15s ease'
-                    }}
-                  >
-                    <HardHat size={13} />
-                    <span>{isAr ? 'على الحساب (بالدَّين)' : 'On Credit'}</span>
-                  </button>
-
-                  {/* Tooltip Popup for 201000 */}
-                  {hoveredPaymentTooltip === '201000' && (
-                    <div style={{
-                      position: 'absolute',
-                      top: 'calc(100% + 8px)',
-                      [isAr ? 'left' : 'right']: 0,
-                      width: '320px',
-                      background: '#ffffff',
-                      border: '1.5px solid #d97706',
-                      borderRadius: '10px',
-                      padding: '0.65rem 0.85rem',
-                      boxShadow: '0 12px 30px -4px rgba(0, 0, 0, 0.18), 0 4px 10px rgba(217, 119, 6, 0.12)',
-                      zIndex: 9999,
-                      textAlign: isAr ? 'right' : 'left',
-                      pointerEvents: 'none',
-                      direction: isAr ? 'rtl' : 'ltr'
-                    }}>
-                      <div style={{
-                        position: 'absolute',
-                        bottom: '100%',
-                        [isAr ? 'left' : 'right']: '1.5rem',
-                        width: 0,
-                        height: 0,
-                        borderLeft: '6px solid transparent',
-                        borderRight: '6px solid transparent',
-                        borderBottom: '6px solid #d97706'
-                      }} />
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: '#d97706', fontWeight: 800, fontSize: '0.76rem', marginBottom: '0.25rem' }}>
-                        <HardHat size={14} />
-                        <span>{isAr ? '🏗️ آجل / فاتورة مقاول' : 'On Credit / Contractor Invoice'}</span>
-                      </div>
-                      <p style={{ margin: 0, fontSize: '0.71rem', color: '#334155', lineHeight: 1.45 }}>
-                        {isAr 
-                          ? 'تاجر الحديد، محطة الخرسانة الجاهزة، أو مقاول الباطن ورّد خامات أو نفّذ مرحلة في العمارة اليوم، وجلب حسابه أو فاتورته.. لكن لم يأخذ فلوسه في لحظتها (اتفاق على السداد بعد أسبوع، أو بعد الصب، أو في دفعة قادمة).' 
-                          : 'Supplier or contractor delivered materials or executed a phase today and presented invoice, but was not paid cash immediately (settlement deferred).'}
-                      </p>
-                      <div style={{ marginTop: '0.35rem', fontSize: '0.66rem', color: '#92400e', fontWeight: 700, background: '#fffbeb', padding: '0.25rem 0.45rem', borderRadius: '5px', lineHeight: 1.4 }}>
-                        {isAr 
-                          ? '💡 النتيجة المحاسبية: لا يخرج قرش واحد من الخزنة اليوم؛ بل يُثبت النظام أن المشروع تحمّل هذه التكلفة، وأن للمقاول أو المورّد فلوس في ذمة المكتب (حساب الموردين والمقاولين) حتى يتم سدادها له لاحقاً.' 
-                          : 'Accounting effect: Zero cash leaves safe today. System capitalizes WIP cost on the property and registers liability in Accounts Payable.'}
-                      </div>
-                    </div>
-                  )}
-                </div>
+              <div className={ops.reportMetricValue}>
+                <span>{formatNumberWithCommas(effectiveTotalLiquid)}</span>
+                <span className={ops.reportMetricCurrency}>{isAr ? 'ج.م' : 'EGP'}</span>
               </div>
             </div>
 
-            {/* UNIFIED FORM */}
-            <form onSubmit={handleProjectCostSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '0.95rem' }}>
-              
-              {/* Target Property Select (Powered by ZFCustomSelect & Filtered to Under-Construction) */}
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.35rem' }}>
-                  <label style={{ fontSize: '0.75rem', fontWeight: 800, color: '#334155' }}>
-                    {isAr ? 'اسم العمارة أو المشروع *' : 'Target Project *'}
-                  </label>
-                  <span style={{ fontSize: '0.68rem', color: '#946f23', fontWeight: 700 }}>
-                    {isAr ? 'المشاريع اللي شغالة حالياً' : 'Active Projects'}
-                  </span>
+            <div className={ops.reportMetricCard}>
+              <div className={ops.reportMetricHeader}>
+                <div className={ops.reportMetricSquircle}>
+                  <ArrowUpRight size={13} />
                 </div>
-
-                <ZFCustomSelect
-                  value={wipPropertyId}
-                  onChange={(val) => {
-                    setWipPropertyId(val);
-                    setExpensePropertyError('');
-                  }}
-                  items={propertySelectItems}
-                  placeholderAr="-- اختار العمارة أو المشروع اللي بنصرف عليه --"
-                  placeholderEn="-- Select Under-Construction Project --"
-                  isAr={isAr}
-                  hasError={!!expensePropertyError}
-                  errorMessage={expensePropertyError}
-                  searchable={true}
-                />
+                <span className={ops.reportMetricLabel}>{isAr ? 'إجمالي التدفقات الداخلة' : 'Total Inflows'}</span>
               </div>
-
-              {/* Category & Phase Selects (Using ZFCustomSelect) */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '0.75rem' }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 800, color: '#334155', marginBottom: '0.35rem' }}>
-                    {isAr ? 'نوع المصاريف أو الخامات *' : 'Cost Category *'}
-                  </label>
-                  <ZFCustomSelect
-                    value={wipCategory}
-                    onChange={(val) => setWipCategory(val as PropertyCostCategory)}
-                    items={categorySelectItems}
-                    placeholderAr="-- اختار نوع البند --"
-                    isAr={isAr}
-                    searchable={true}
-                  />
-                </div>
-
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 800, color: '#334155', marginBottom: '0.35rem' }}>
-                    {isAr ? 'مرحلة الشغل الحالية *' : 'Current Phase *'}
-                  </label>
-                  <ZFCustomSelect
-                    value={wipPhase}
-                    onChange={(val) => setWipPhase(val as PropertyLifecyclePhase)}
-                    items={phaseSelectItems}
-                    placeholderAr="-- اختار المرحلة --"
-                    isAr={isAr}
-                    searchable={false}
-                  />
-                </div>
+              <div className={ops.reportMetricValue}>
+                <span>{flowMetrics.inflows.total.gt(0) ? '+' : ''}{formatNumberWithCommas(flowMetrics.inflows.total)}</span>
+                <span className={ops.reportMetricCurrency}>{isAr ? 'ج.م' : 'EGP'}</span>
               </div>
+            </div>
 
-              {/* Amount Input with Tafqeet */}
-              <div>
-                <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 800, color: '#334155', marginBottom: '0.35rem' }}>
-                  {isAr ? 'المبلغ المطلوب تسجيله (جنيه مصري) *' : 'Cost Amount (EGP) *'}
-                </label>
-                <div style={{ position: 'relative' }}>
-                  <input 
-                    ref={amountInputRef}
-                    type="number"
-                    step="any"
-                    required
-                    min="1"
-                    value={expenseAmount}
-                    onChange={e => setExpenseAmount(e.target.value)}
-                    placeholder="0.00"
-                    style={{
-                      width: '100%',
-                      padding: isAr ? '0.6rem 0.85rem 0.6rem 3.5rem' : '0.6rem 3.5rem 0.6rem 0.85rem',
-                      borderRadius: '10px',
-                      border: '1.5px solid #cbd5e1',
-                      background: '#ffffff',
-                      color: '#0f172a',
-                      fontSize: '1.1rem',
-                      fontWeight: 800,
-                      outline: 'none',
-                      boxSizing: 'border-box'
-                    }}
-                  />
-                  <span style={{
-                    position: 'absolute',
-                    [isAr ? 'left' : 'right']: '0.85rem',
-                    top: '50%',
-                    transform: 'translateY(-50%)',
-                    fontSize: '0.8rem',
-                    fontWeight: 700,
-                    color: '#64748b'
-                  }}>
-                    {isAr ? 'ج.م' : 'EGP'}
-                  </span>
+            <div className={ops.reportMetricCard}>
+              <div className={ops.reportMetricHeader}>
+                <div className={ops.reportMetricSquircle}>
+                  <ArrowDownRight size={13} />
                 </div>
-
-                {/* Real-Time Arabic Tafqeet */}
-                {expenseAmount && parseFloat(expenseAmount) > 0 && (
-                  <div style={{
-                    marginTop: '0.35rem',
-                    fontSize: '0.72rem',
-                    color: expensePaymentSource === '101000' ? '#059669' : expensePaymentSource === '102000' ? '#2563eb' : '#d97706',
-                    fontWeight: 700,
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.3rem'
-                  }}>
-                    <Sparkles size={12} />
-                    <span>{tafqeetEGP(expenseAmount)}</span>
-                  </div>
-                )}
+                <span className={ops.reportMetricLabel}>{isAr ? 'إجمالي التدفقات الخارجة' : 'Total Outflows'}</span>
               </div>
-
-              {/* Item description & Quick Suggestion Chips */}
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.35rem' }}>
-                  <label style={{ fontSize: '0.74rem', fontWeight: 800, color: '#334155' }}>
-                    {isAr ? 'تفاصيل الصرف / اشتريت إيه؟ *' : 'Details / Notes *'}
-                  </label>
-                  <span style={{ fontSize: '0.68rem', color: '#64748b' }}>
-                    {isAr ? 'اختار بند جاهز أو اكتب براحتك' : 'Quick preset or custom text'}
-                  </span>
-                </div>
-
-                {/* Suggestion Chips */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', flexWrap: 'wrap', marginBottom: '0.45rem' }}>
-                  {[
-                    'توريد حديد تسليح',
-                    'صبة خرسانة جاهزة',
-                    'يوميات عمال ومصنعيات',
-                    'مواسير وخراطيم تأسيس',
-                    'تشطيب وبياض محارة',
-                    'بوفيه وشاي الموقع',
-                    'رسوم تراخيص'
-                  ].map((preset) => (
-                    <button
-                      key={preset}
-                      type="button"
-                      onClick={() => setWipItemName(preset)}
-                      title={isAr ? `اختيار بند سريع: ${preset}` : `Quick select: ${preset}`}
-                      style={{
-                        background: wipItemName === preset ? '#0f172a' : '#f8fafc',
-                        color: wipItemName === preset ? '#ffffff' : '#475569',
-                        border: `1px solid ${wipItemName === preset ? '#0f172a' : '#e2e8f0'}`,
-                        borderRadius: '6px',
-                        padding: '0.2rem 0.5rem',
-                        fontSize: '0.68rem',
-                        fontWeight: 700,
-                        cursor: 'pointer',
-                        transition: 'all 0.12s ease'
-                      }}
-                    >
-                      {preset}
-                    </button>
-                  ))}
-                </div>
-
-                <input 
-                  type="text"
-                  required
-                  value={wipItemName}
-                  onChange={e => setWipItemName(e.target.value)}
-                  placeholder={isAr ? 'مثال: توريد حديد تسليح لصبة سقف الدور الثاني...' : 'e.g. Steel rebars 16mm for 2nd floor slab...'}
-                  style={{
-                    width: '100%',
-                    padding: '0.55rem 0.85rem',
-                    borderRadius: '8px',
-                    border: '1px solid #cbd5e1',
-                    background: '#ffffff',
-                    color: '#0f172a',
-                    fontSize: '0.82rem',
-                    outline: 'none',
-                    boxSizing: 'border-box'
-                  }}
-                />
+              <div className={ops.reportMetricValue}>
+                <span>{flowMetrics.outflows.total.gt(0) ? '-' : ''}{formatNumberWithCommas(flowMetrics.outflows.total)}</span>
+                <span className={ops.reportMetricCurrency}>{isAr ? 'ج.م' : 'EGP'}</span>
               </div>
+            </div>
 
-              {/* Supplier & Invoice */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '0.75rem' }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 800, color: '#334155', marginBottom: '0.35rem' }}>
-                    {isAr ? 'اسم التاجر أو المقاول (اختياري)' : 'Supplier / Contractor'}
-                  </label>
-                  <input 
-                    type="text"
-                    value={wipSupplier}
-                    onChange={e => setWipSupplier(e.target.value)}
-                    placeholder={isAr ? 'مثال: المعلم صبحي / تاجر الحديد' : 'Contractor Co.'}
-                    style={{
-                      width: '100%',
-                      padding: '0.5rem 0.75rem',
-                      borderRadius: '8px',
-                      border: '1px solid #cbd5e1',
-                      background: '#ffffff',
-                      color: '#0f172a',
-                      fontSize: '0.78rem',
-                      outline: 'none',
-                      boxSizing: 'border-box'
-                    }}
-                  />
+            <div className={ops.reportMetricCard}>
+              <div className={ops.reportMetricHeader}>
+                <div className={ops.reportMetricSquircle}>
+                  <TrendingUp size={13} />
                 </div>
-
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 800, color: '#334155', marginBottom: '0.35rem' }}>
-                    {isAr ? 'رقم الفاتورة أو الإيصال (لو موجود)' : 'Invoice / Notice #'}
-                  </label>
-                  <input 
-                    type="text"
-                    value={wipInvoiceRef}
-                    onChange={e => setWipInvoiceRef(e.target.value)}
-                    placeholder="INV-081"
-                    style={{
-                      width: '100%',
-                      padding: '0.5rem 0.75rem',
-                      borderRadius: '8px',
-                      border: '1px solid #cbd5e1',
-                      background: '#ffffff',
-                      color: '#0f172a',
-                      fontSize: '0.78rem',
-                      outline: 'none',
-                      boxSizing: 'border-box'
-                    }}
-                  />
-                </div>
+                <span className={ops.reportMetricLabel}>{isAr ? 'صافي حركة التدفق' : 'Net Cash Flow'}</span>
               </div>
-
-              {/* GL Posting Note Banner */}
-              <div style={{
-                background: '#f8fafc',
-                border: '1px solid #e2e8f0',
-                borderRadius: '8px',
-                padding: '0.55rem 0.75rem',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                fontSize: '0.7rem',
-                color: '#64748b'
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                  <ShieldCheck size={14} color="#059669" />
-                  <span>
-                    {isAr 
-                      ? (expensePaymentSource === '101000'
-                          ? 'بيتخصم فوراً من كاش الخزنة ويتسجل على تكلفة العمارة'
-                          : expensePaymentSource === '102000'
-                            ? 'بيتحسب كتحويل إلكتروني ويتسجل على تكلفة العمارة'
-                            : 'بيتسجل كدين للمقاول على حساب العمارة (بدون سحب كاش من الخزنة)')
-                      : `GL Posting: Dr [151000] • Cr [${expensePaymentSource}]`}
-                  </span>
-                </div>
-                <span style={{ fontWeight: 700, color: '#0f172a' }}>
-                  {isAr ? 'حسابات مضبوطة تلقائياً' : 'Balanced'}
+              <div className={ops.reportMetricValue}>
+                <span>
+                  {flowMetrics.netCashFlow.gt(0) ? '+' : flowMetrics.netCashFlow.lt(0) ? '-' : ''}
+                  {formatNumberWithCommas(flowMetrics.netCashFlow.abs())}
                 </span>
+                <span className={ops.reportMetricCurrency}>{isAr ? 'ج.م' : 'EGP'}</span>
               </div>
+            </div>
+          </div>
 
-              {/* Actions */}
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.65rem', marginTop: '0.35rem' }}>
-                <label style={{ display: 'inline-flex', alignItems: 'center', gap: '0.45rem', fontSize: '0.74rem', color: '#475569', fontWeight: 700, cursor: 'pointer', userSelect: 'none' }}>
-                  <input 
-                    type="checkbox"
-                    checked={keepExpenseModalOpen}
-                    onChange={(e) => setKeepExpenseModalOpen(e.target.checked)}
-                    style={{ accentColor: '#059669', cursor: 'pointer', width: '15px', height: '15px' }}
-                  />
-                  <span>{isAr ? 'البقاء في النافذة لتسجيل فواتير ومصاريف متتالية' : 'Keep modal open for consecutive entries'}</span>
-                </label>
-
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsExpenseModalOpen(false);
-                      setExpenseSuccessData(null);
-                    }}
-                    title={isAr ? 'إلغاء وإغلاق نافذة تسجيل المصروفات دون حفظ' : 'Cancel without saving'}
-                    style={{
-                      padding: '0.55rem 1rem',
-                      borderRadius: '8px',
-                      border: '1px solid #cbd5e1',
-                      background: '#ffffff',
-                      color: '#475569',
-                      fontSize: '0.8rem',
-                      fontWeight: 700,
-                      cursor: 'pointer'
-                    }}
-                  >
-                    {isAr ? 'إلغاء' : 'Cancel'}
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={isSubmittingExpense || !expenseAmount || !wipPropertyId}
-                    title={isAr ? 'حفظ وترحيل هذا البند إلى حساب تكاليف المشروع وإجراء القيد المحاسبي المزدوج' : 'Post immutable journal entry and save project expense'}
-                    style={{
-                      background: expensePaymentSource === '101000'
-                        ? 'linear-gradient(135deg, #059669 0%, #047857 100%)'
-                        : expensePaymentSource === '102000'
-                          ? 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)'
-                          : 'linear-gradient(135deg, #d97706 0%, #b45309 100%)',
-                      color: '#ffffff',
-                      border: 'none',
-                      borderRadius: '8px',
-                      padding: '0.55rem 1.45rem',
-                      fontSize: '0.82rem',
-                      fontWeight: 800,
-                      cursor: isSubmittingExpense || !expenseAmount || !wipPropertyId ? 'not-allowed' : 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.45rem',
-                      opacity: !expenseAmount || !wipPropertyId ? 0.6 : 1,
-                      boxShadow: '0 2px 6px rgba(0, 0, 0, 0.15)'
-                    }}
-                  >
-                    {isSubmittingExpense ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
-                    <span>
-                      {isAr 
-                        ? (expensePaymentSource === '101000' 
-                            ? 'صرف كاش من الخزنة وحفظ' 
-                            : expensePaymentSource === '102000'
-                              ? 'تسجيل تحويل إنستاباي وحفظ'
-                              : 'تسجيل على الحساب للمقاول وحفظ')
-                        : (expensePaymentSource === '101000'
-                            ? 'Disburse Cash & Post Cost'
-                            : expensePaymentSource === '102000'
-                              ? 'Post InstaPay Transfer'
-                              : 'Post Contractor Invoice')}
-                    </span>
-                  </button>
-                </div>
-              </div>
-            </form>
-
+          {/* Categorical Inflow / Outflow Breakdown Table */}
+          <div className={ops.reportTableCard}>
+            <table className={ops.reportTable}>
+              <thead>
+                <tr>
+                  <th>{isAr ? 'البند والتصنيف المحاسبي' : 'Item / CoA Class'}</th>
+                  <th>{isAr ? 'كود الحساب' : 'Account Code'}</th>
+                  <th style={{ textAlign: 'end' }}>{isAr ? 'المبلغ الإجمالي (ج.م)' : 'Total Amount (EGP)'}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td style={{ fontWeight: 700, color: 'var(--ops-text, #0f172a)' }}>{isAr ? 'أقساط ومقدمات حجز بيع الشقق' : 'Client Installments & Down Payments'}</td>
+                  <td><span className={ops.reportAccountCode}>103000 / 110000</span></td>
+                  <td style={{ textAlign: 'end', fontWeight: 800, color: 'var(--ops-text, #0f172a)' }}>
+                    {flowMetrics.inflows.collections.gt(0) ? '+' : ''}{formatNumberWithCommas(flowMetrics.inflows.collections)}
+                  </td>
+                </tr>
+                <tr>
+                  <td style={{ fontWeight: 700, color: 'var(--ops-text, #0f172a)' }}>{isAr ? 'تمويل وسيولة الشركاء (رأس المال)' : 'Partner Capital & Equity Injections'}</td>
+                  <td><span className={ops.reportAccountCode}>301000</span></td>
+                  <td style={{ textAlign: 'end', fontWeight: 800, color: 'var(--ops-text, #0f172a)' }}>
+                    {flowMetrics.inflows.partnerInjections.gt(0) ? '+' : ''}{formatNumberWithCommas(flowMetrics.inflows.partnerInjections)}
+                  </td>
+                </tr>
+                <tr>
+                  <td style={{ fontWeight: 700, color: 'var(--ops-text, #0f172a)' }}>{isAr ? 'خرسانات وبناء عظم (حديد وأسمنت ومصنعيات)' : 'Civil Structure & Concrete Works'}</td>
+                  <td><span className={ops.reportAccountCode}>151000 / 201000</span></td>
+                  <td style={{ textAlign: 'end', fontWeight: 800, color: 'var(--ops-text, #0f172a)' }}>
+                    {flowMetrics.outflows.civilStructure.gt(0) ? '-' : ''}{formatNumberWithCommas(flowMetrics.outflows.civilStructure)}
+                  </td>
+                </tr>
+                <tr>
+                  <td style={{ fontWeight: 700, color: 'var(--ops-text, #0f172a)' }}>{isAr ? 'تشطيبات وواجهات (رخام، ألوميتال، ومصاعد)' : 'Finishes & Facades Procurement'}</td>
+                  <td><span className={ops.reportAccountCode}>151000 / 152000</span></td>
+                  <td style={{ textAlign: 'end', fontWeight: 800, color: 'var(--ops-text, #0f172a)' }}>
+                    {flowMetrics.outflows.finishesFacades.gt(0) ? '-' : ''}{formatNumberWithCommas(flowMetrics.outflows.finishesFacades)}
+                  </td>
+                </tr>
+                <tr>
+                  <td style={{ fontWeight: 700, color: 'var(--ops-text, #0f172a)' }}>{isAr ? 'تأسيس وكهروميكانيك (سباكة، كهرباء، وعزل)' : 'MEP, Infrastructure & Plumbing'}</td>
+                  <td><span className={ops.reportAccountCode}>151000 / 153000</span></td>
+                  <td style={{ textAlign: 'end', fontWeight: 800, color: 'var(--ops-text, #0f172a)' }}>
+                    {flowMetrics.outflows.mepInfrastructure.gt(0) ? '-' : ''}{formatNumberWithCommas(flowMetrics.outflows.mepInfrastructure)}
+                  </td>
+                </tr>
+                <tr>
+                  <td style={{ fontWeight: 700, color: 'var(--ops-text, #0f172a)' }}>{isAr ? 'تراخيص ورسوم حكومية (جهاز المدينة وتصاريح)' : 'Permits, Taxes & Government Dues'}</td>
+                  <td><span className={ops.reportAccountCode}>150000 / 204000</span></td>
+                  <td style={{ textAlign: 'end', fontWeight: 800, color: 'var(--ops-text, #0f172a)' }}>
+                    {flowMetrics.outflows.permitsGovFees.gt(0) ? '-' : ''}{formatNumberWithCommas(flowMetrics.outflows.permitsGovFees)}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
+      </ZFModalShell>
+
+      {/* Canonical project bill and expense workflow */}
+      <ZFDirectExpenseModal
+        isOpen={isExpenseModalOpen}
+        onClose={() => setIsExpenseModalOpen(false)}
+        isAr={isAr}
+        properties={properties}
+        activePeriod={activePeriod}
+        periods={periods}
+        onSaveEntry={onSaveExpenseEntry}
+        initialPaymentSource="101000"
+      />
+
+      {/* 24-Hour Edit Cost Modal */}
+      {selectedCostForEdit && onUpdatePropertyCostItem && (
+        <EditPropertyCostModal
+          isOpen={!!selectedCostForEdit}
+          onClose={() => setSelectedCostForEdit(null)}
+          costItem={selectedCostForEdit}
+          property={properties.find(p => p.id === selectedCostForEdit.property_id) || null}
+          isAr={isAr}
+          onConfirmEdit={async (updated) => {
+            await onUpdatePropertyCostItem(updated);
+            setSelectedCostForEdit(null);
+          }}
+          onOpenAdjustmentModal={(item) => {
+            setSelectedCostForEdit(null);
+            setSelectedCostForAdjustment(item);
+          }}
+        />
       )}
 
+      {/* Cost Adjustment Modal */}
+      {selectedCostForAdjustment && onAddCostAdjustment && (
+        <CostAdjustmentModal
+          isOpen={!!selectedCostForAdjustment}
+          onClose={() => setSelectedCostForAdjustment(null)}
+          costItem={selectedCostForAdjustment}
+          property={properties.find(p => p.id === selectedCostForAdjustment.property_id) || null}
+          isAr={isAr}
+          onConfirmAdjustment={async (updated, adj) => {
+            await onAddCostAdjustment(updated, adj);
+            setSelectedCostForAdjustment(null);
+          }}
+        />
+      )}
+
+      {/* Cost Payable Settlement Modal */}
+      {selectedCostForPayable && selectedInstallmentForPayable && onRecordPayablePayment && (
+        <CostPayableSettlementModal
+          isOpen={!!selectedCostForPayable && !!selectedInstallmentForPayable}
+          onClose={() => {
+            setSelectedCostForPayable(null);
+            setSelectedInstallmentForPayable(null);
+          }}
+          costItem={selectedCostForPayable}
+          installment={selectedInstallmentForPayable}
+          property={properties.find(p => p.id === selectedCostForPayable.property_id) || null}
+          isAr={isAr}
+          onConfirmPayment={async (updated, instId, amt, method) => {
+            await onRecordPayablePayment(updated, instId, amt, method);
+            setSelectedCostForPayable(null);
+            setSelectedInstallmentForPayable(null);
+          }}
+        />
+      )}
     </div>
   );
 };

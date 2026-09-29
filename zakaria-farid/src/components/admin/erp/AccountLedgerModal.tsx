@@ -8,10 +8,7 @@ import {
   TrendingDown, 
   CheckCircle2, 
   AlertCircle, 
-  ArrowRight, 
   Landmark, 
-  ShieldCheck, 
-  Calendar, 
   FileText, 
   Search, 
   ArrowUpDown, 
@@ -33,10 +30,11 @@ import { localizeJournalDescription, localizeJournalMemo, localizeBuyerName } fr
 import { exportAccountLedgerExcel } from '@/lib/erp/excelExporter';
 import { ZFPrintDocumentLayout } from './v2/common/ZFPrintDocumentLayout';
 import { ZFPagination } from './v2/ZFPagination';
+import { ZFKpiCard } from './v2/ZFKpiCard';
 import styles from './v2/ZFWorkstationShell.module.css';
 
 interface AccountLedgerModalProps {
-  account: ERPAccount | null;
+  account: ERPAccount;
   journalEntries: ERPJournalEntry[];
   contracts?: ERPContract[];
   properties?: Property[];
@@ -243,7 +241,6 @@ export const AccountLedgerModal: React.FC<AccountLedgerModalProps> = ({
   onClose,
   isAr
 }) => {
-  if (!account) return null;
 
   // 1. Fast Lookup Indexes for Contracts and Properties
   const contractLookup = useMemo(() => {
@@ -604,9 +601,9 @@ export const AccountLedgerModal: React.FC<AccountLedgerModalProps> = ({
       return {
         actionBadge: {
           label: isAr ? `قسط دوري #${trancheNum}` : `Tranche #${trancheNum}`,
-          bg: 'rgba(184, 144, 62, 0.08)',
-          text: '#946f23',
-          border: 'rgba(184, 144, 62, 0.28)',
+          bg: '#fffbeb',
+          text: '#92400e',
+          border: 'rgba(217, 119, 6, 0.2)',
           icon: 'installment'
         },
         headline: isAr ? `تحصيل القسط رقم ${trancheNum} من جدول السداد` : `Collection of Scheduled Tranche #${trancheNum}`,
@@ -762,29 +759,28 @@ export const AccountLedgerModal: React.FC<AccountLedgerModalProps> = ({
   }, [resolveContract, resolvePropertyAndUnit, enrichMemo, isAr, account.account_code]);
 
   // 3. Gather all journal lines touching this account
-  const accountLines: {
-    entry_id: string;
-    entry_number: string;
-    entry_date: string;
-    description: string;
-    debit_amount: string;
-    credit_amount: string;
-    memo?: string;
-    contract_id?: string;
-    unit_id?: string;
-  }[] = [];
+  const { accountLines, totalDebits, totalCredits, netBalance } = useMemo(() => {
+    const accountLines: {
+      entry_id: string;
+      entry_number: string;
+      entry_date: string;
+      description: string;
+      debit_amount: string;
+      credit_amount: string;
+      memo?: string;
+      contract_id?: string;
+      unit_id?: string;
+    }[] = [];
+    let totalDebits = D(0);
+    let totalCredits = D(0);
 
-  let totalDebits = D(0);
-  let totalCredits = D(0);
-
-  journalEntries.forEach(entry => {
-    (entry.lines || []).forEach(line => {
-      if (line.account_code === account.account_code) {
-        const dr = D(line.debit_amount);
-        const cr = D(line.credit_amount);
-        totalDebits = totalDebits.plus(dr);
-        totalCredits = totalCredits.plus(cr);
-
+    journalEntries.forEach(entry => {
+      (entry.lines || []).forEach(line => {
+        const isExact = line.account_code === account.account_code;
+        const isChild = account.account_code.endsWith('000') && line.account_code.startsWith(account.account_code.slice(0, 3));
+        if (!isExact && !isChild) return;
+        totalDebits = totalDebits.plus(D(line.debit_amount));
+        totalCredits = totalCredits.plus(D(line.credit_amount));
         accountLines.push({
           entry_id: entry.entry_id,
           entry_number: entry.entry_number,
@@ -796,17 +792,14 @@ export const AccountLedgerModal: React.FC<AccountLedgerModalProps> = ({
           contract_id: line.contract_id || (entry.source_module === 'SALES' ? entry.source_entity_id : undefined),
           unit_id: line.unit_id
         });
-      }
+      });
     });
-  });
+    const netBalance = account.normal_balance === 'DEBIT'
+      ? totalDebits.minus(totalCredits)
+      : totalCredits.minus(totalDebits);
+    return { accountLines, totalDebits, totalCredits, netBalance };
+  }, [journalEntries, account.account_code, account.normal_balance]);
 
-  // Calculate Running Balance
-  const netBalance = account.normal_balance === 'DEBIT' 
-    ? totalDebits.minus(totalCredits) 
-    : totalCredits.minus(totalDebits);
-
-  const isPositive = netBalance.greaterThan(0);
-  const isZero = netBalance.isZero();
 
   // Search, Sort, and Pagination for Account Transactions with enriched text & parsed tags
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -882,7 +875,7 @@ export const AccountLedgerModal: React.FC<AccountLedgerModalProps> = ({
         isAr
       );
       toast.success(isAr ? 'تم تصدير كشف الحساب بنجاح إلى Excel' : 'Statement exported to Excel');
-    } catch (err) {
+    } catch {
       toast.error(isAr ? 'حدث خطأ أثناء تصدير الملف' : 'Export failed');
     } finally {
       setIsExportingExcel(false);
@@ -893,8 +886,9 @@ export const AccountLedgerModal: React.FC<AccountLedgerModalProps> = ({
     window.print();
   };
 
-  const voucherCode = `STM-${account.account_code}-${new Date().getFullYear()}`;
-  const statementDate = new Date().toLocaleDateString(isAr ? 'ar-EG' : 'en-US');
+  const generatedAt = new Date();
+  const voucherCode = `STM-${account.account_code}-${generatedAt.toISOString().slice(0, 10)}`;
+  const statementDate = generatedAt.toLocaleDateString(isAr ? 'ar-EG' : 'en-US');
 
   const printableLedgerBody = (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', direction: isAr ? 'rtl' : 'ltr' }}>
@@ -906,7 +900,7 @@ export const AccountLedgerModal: React.FC<AccountLedgerModalProps> = ({
         border: '1px solid #cbd5e1',
         borderRadius: '10px',
         padding: '1rem',
-        background: '#f8fafc'
+        background: '#ffffff'
       }}>
         <div>
           <span style={{ fontSize: '0.72rem', color: '#64748b', display: 'block', fontWeight: 700 }}>
@@ -919,20 +913,20 @@ export const AccountLedgerModal: React.FC<AccountLedgerModalProps> = ({
             {isAr ? 'طبيعة الحساب' : 'Normal Balance'}
           </span>
           <strong style={{ fontSize: '0.95rem', color: '#334155' }}>
-            {isAr ? (account.normal_balance === 'DEBIT' ? 'مدين (له فلوس)' : 'دائن (التزام عليه)') : account.normal_balance}
+            {isAr ? (account.normal_balance === 'DEBIT' ? 'مدين' : 'دائن') : account.normal_balance}
           </strong>
         </div>
         <div>
           <span style={{ fontSize: '0.72rem', color: '#64748b', display: 'block', fontWeight: 700 }}>
             {isAr ? 'إجمالي الحركات' : 'Transactions'}
           </span>
-          <strong style={{ fontSize: '1.1rem', color: '#0f172a' }}>{sortedLines.length}</strong>
+          <strong style={{ fontSize: '1.1rem', color: '#0f172a', fontVariantNumeric: 'tabular-nums' }}>{enrichedLines.length}</strong>
         </div>
         <div>
           <span style={{ fontSize: '0.72rem', color: '#64748b', display: 'block', fontWeight: 700 }}>
             {isAr ? 'الرصيد الصافي الحالي' : 'Net Balance'}
           </span>
-          <strong style={{ fontSize: '1.2rem', color: '#059669', fontVariantNumeric: 'tabular-nums' }}>
+          <strong style={{ fontSize: '1.2rem', color: '#0f172a', fontVariantNumeric: 'tabular-nums' }}>
             {netBalance.formatEGP(isAr)}
           </strong>
         </div>
@@ -941,18 +935,18 @@ export const AccountLedgerModal: React.FC<AccountLedgerModalProps> = ({
       {/* 2. Statements Table */}
       <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #cbd5e1', fontSize: '0.76rem' }}>
         <thead>
-          <tr style={{ background: '#0f172a', color: '#ffffff' }}>
+          <tr style={{ background: '#fafbfc', color: '#64748b', borderBottom: '1px solid #cbd5e1' }}>
             <th style={{ padding: '0.6rem 0.5rem', textAlign: 'center', width: '5%' }}>#</th>
             <th style={{ padding: '0.6rem 0.5rem', textAlign: 'center', width: '12%' }}>{isAr ? 'التاريخ' : 'Date'}</th>
             <th style={{ padding: '0.6rem 0.5rem', textAlign: 'center', width: '14%' }}>{isAr ? 'رقم القيد' : 'Entry #'}</th>
             <th style={{ padding: '0.6rem 0.75rem', textAlign: isAr ? 'right' : 'left', width: '37%' }}>{isAr ? 'البيان وشرح الحركة' : 'Description'}</th>
-            <th style={{ padding: '0.6rem 0.5rem', textAlign: 'right', width: '16%' }}>{isAr ? 'مدين (+)' : 'Debit'}</th>
-            <th style={{ padding: '0.6rem 0.5rem', textAlign: 'right', width: '16%' }}>{isAr ? 'دائن (-)' : 'Credit'}</th>
+            <th style={{ padding: '0.6rem 0.5rem', textAlign: 'right', width: '16%' }}>{isAr ? 'مدين' : 'Debit'}</th>
+            <th style={{ padding: '0.6rem 0.5rem', textAlign: 'right', width: '16%' }}>{isAr ? 'دائن' : 'Credit'}</th>
           </tr>
         </thead>
         <tbody>
-          {sortedLines.map((line, idx) => (
-            <tr key={idx} style={{ borderBottom: '1px solid #e2e8f0', background: idx % 2 === 1 ? '#f8fafc' : '#ffffff' }}>
+          {enrichedLines.map((line, idx) => (
+            <tr key={idx} style={{ borderBottom: '1px solid #e2e8f0', background: '#ffffff' }}>
               <td style={{ padding: '0.5rem', textAlign: 'center', color: '#64748b' }}>{idx + 1}</td>
               <td style={{ padding: '0.5rem', textAlign: 'center', color: '#334155' }}>{line.entry_date}</td>
               <td style={{ padding: '0.5rem', textAlign: 'center', fontFamily: 'monospace', fontWeight: 700, color: '#0f172a' }}>{line.entry_number}</td>
@@ -960,24 +954,24 @@ export const AccountLedgerModal: React.FC<AccountLedgerModalProps> = ({
                 <div style={{ fontWeight: 700 }}>{line.parsed.headline}</div>
                 {line.parsed.memo && <div style={{ fontSize: '0.7rem', color: '#64748b' }}>{line.parsed.memo}</div>}
               </td>
-              <td style={{ padding: '0.5rem', textAlign: 'right', fontWeight: 700, color: D(line.debit_amount).isZero() ? '#94a3b8' : '#059669' }}>
+              <td style={{ padding: '0.5rem', textAlign: 'right', fontWeight: 700, color: D(line.debit_amount).isZero() ? '#94a3b8' : '#0f172a' }}>
                 {D(line.debit_amount).isZero() ? '—' : D(line.debit_amount).formatEGP(isAr)}
               </td>
-              <td style={{ padding: '0.5rem', textAlign: 'right', fontWeight: 700, color: D(line.credit_amount).isZero() ? '#94a3b8' : '#d97706' }}>
+              <td style={{ padding: '0.5rem', textAlign: 'right', fontWeight: 700, color: D(line.credit_amount).isZero() ? '#94a3b8' : '#0f172a' }}>
                 {D(line.credit_amount).isZero() ? '—' : D(line.credit_amount).formatEGP(isAr)}
               </td>
             </tr>
           ))}
         </tbody>
         <tfoot>
-          <tr style={{ background: '#f1f5f9', borderTop: '2px solid #0f172a', fontWeight: 800 }}>
+          <tr style={{ background: '#ffffff', borderTop: '1px solid #cbd5e1', fontWeight: 800 }}>
             <td colSpan={4} style={{ padding: '0.65rem 1rem', textAlign: isAr ? 'left' : 'right' }}>
-              {isAr ? 'إجمالي الحركات والرصيد الصافي المعتمد:' : 'Totals & Audited Net Balance:'}
+              {isAr ? 'إجمالي طرفي الحركة:' : 'Debit and credit totals:'}
             </td>
-            <td style={{ padding: '0.65rem 0.5rem', textAlign: 'right', color: '#059669' }}>
+            <td style={{ padding: '0.65rem 0.5rem', textAlign: 'right', color: '#0f172a' }}>
               {totalDebits.formatEGP(isAr)}
             </td>
-            <td style={{ padding: '0.65rem 0.5rem', textAlign: 'right', color: '#d97706' }}>
+            <td style={{ padding: '0.65rem 0.5rem', textAlign: 'right', color: '#0f172a' }}>
               {totalCredits.formatEGP(isAr)}
             </td>
           </tr>
@@ -1002,23 +996,23 @@ export const AccountLedgerModal: React.FC<AccountLedgerModalProps> = ({
   };
 
   const typeColorMap: Record<string, { bg: string; text: string; border: string }> = {
-    ASSET: { bg: '#f0fdf4', text: '#15803d', border: '#bbf7d0' },
-    LIABILITY: { bg: '#fffbeb', text: '#b45309', border: 'rgba(217, 119, 6, 0.25)' },
-    CONTRA_LIABILITY: { bg: '#fef2f2', text: '#dc2626', border: '#fecaca' },
-    EQUITY: { bg: '#f8fafc', text: '#946f23', border: 'rgba(184, 144, 62, 0.25)' },
-    REVENUE: { bg: '#f0fdf4', text: '#15803d', border: '#bbf7d0' },
-    EXPENSE: { bg: '#fffbeb', text: '#946f23', border: 'rgba(184, 144, 62, 0.25)' }
+    ASSET: { bg: 'var(--erp-accent-subtle)', text: 'var(--erp-accent)', border: 'var(--erp-accent-tint)' },
+    LIABILITY: { bg: '#fffbeb', text: '#92400e', border: 'rgba(217, 119, 6, 0.2)' },
+    CONTRA_LIABILITY: { bg: '#fef2f2', text: '#b91c1c', border: 'rgba(220, 38, 38, 0.2)' },
+    EQUITY: { bg: '#f1f5f9', text: '#475569', border: '#cbd5e1' },
+    REVENUE: { bg: '#ecfdf5', text: '#166534', border: 'rgba(22, 163, 74, 0.2)' },
+    EXPENSE: { bg: '#fffbeb', text: '#92400e', border: 'rgba(217, 119, 6, 0.2)' }
   };
 
   const getCategoryLabel = (type: string, isArLang: boolean) => {
     if (!isArLang) return type;
     switch (type) {
-      case 'ASSET': return 'أصول وفلوس';
-      case 'LIABILITY': return 'التزامات علينا';
-      case 'CONTRA_LIABILITY': return 'تخفيض التزام';
-      case 'EQUITY': return 'رأس مال';
-      case 'REVENUE': return 'إيرادات ومبيعات';
-      case 'EXPENSE': return 'مصاريف وتشغيل';
+      case 'ASSET': return 'الأصول';
+      case 'LIABILITY': return 'الالتزامات';
+      case 'CONTRA_LIABILITY': return 'حساب مقابل للالتزامات';
+      case 'EQUITY': return 'حقوق الملكية';
+      case 'REVENUE': return 'الإيرادات';
+      case 'EXPENSE': return 'المصروفات';
       default: return type;
     }
   };
@@ -1031,8 +1025,8 @@ export const AccountLedgerModal: React.FC<AccountLedgerModalProps> = ({
         position: 'fixed',
         inset: 0,
         zIndex: 9999,
-        background: 'rgba(15, 23, 42, 0.65)',
-        backdropFilter: 'blur(6px)',
+        background: 'rgba(15, 23, 42, 0.35)',
+        backdropFilter: 'blur(2px)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -1041,40 +1035,58 @@ export const AccountLedgerModal: React.FC<AccountLedgerModalProps> = ({
         animation: 'fadeIn 0.2s ease-out'
       }}
       onClick={onClose}
+      onKeyDown={event => {
+        if (event.key === 'Escape') { event.stopPropagation(); onClose(); return; }
+        if (event.key !== 'Tab' || showPrintPreview) return;
+        const dialog = event.currentTarget.querySelector<HTMLElement>('[role="dialog"]');
+        const controls = dialog?.querySelectorAll<HTMLElement>('button:not(:disabled), input:not(:disabled), select:not(:disabled), summary, [tabindex]:not([tabindex="-1"])');
+        if (!controls?.length) return;
+        const first = controls[0], last = controls[controls.length - 1];
+        if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+        else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+      }}
     >
       <div 
         style={{
           background: '#ffffff',
-          border: '1px solid #e2e8f0',
-          borderRadius: '20px',
+          border: '1px solid #cbd5e1',
+          borderRadius: '12px',
           width: '100%',
-          maxWidth: '860px',
-          maxHeight: '90vh',
+          maxWidth: '960px',
+          maxHeight: '92vh',
           display: 'flex',
           flexDirection: 'column',
-          boxShadow: '0 25px 60px rgba(0, 0, 0, 0.15)',
+          boxShadow: '0 10px 25px rgba(15, 23, 42, 0.12)',
           overflow: 'hidden'
         }}
         onClick={e => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-label={isAr ? `كشف حساب ${account.account_name_ar}` : `Account statement for ${account.account_name_en}`}
       >
         {/* Modal Header */}
         <div style={{
-          padding: '1.25rem 1.5rem',
-          borderBottom: '1px solid #e2e8f0',
+          padding: '1rem 1.25rem',
+          borderBottom: '1px solid #cbd5e1',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          background: '#f8fafc'
+          gap: '0.75rem',
+          flexWrap: 'wrap',
+          background: '#ffffff'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
             <div style={{
-              background: colors.bg,
-              border: `1px solid ${colors.border}`,
-              color: colors.text,
-              padding: '0.65rem',
-              borderRadius: '12px'
+              background: 'var(--erp-accent-subtle)',
+              border: '1px solid var(--erp-accent-tint)',
+              color: 'var(--erp-accent)',
+              width: '28px',
+              height: '28px',
+              display: 'grid',
+              placeItems: 'center',
+              borderRadius: '7px'
             }}>
-              <Landmark size={22} />
+              <Landmark size={16} />
             </div>
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
@@ -1082,9 +1094,9 @@ export const AccountLedgerModal: React.FC<AccountLedgerModalProps> = ({
                   fontVariantNumeric: 'tabular-nums',
                   fontSize: '0.9rem',
                   fontWeight: 800,
-                  color: '#946f23',
-                  background: '#fffbeb',
-                  border: '1px solid rgba(184, 144, 62, 0.25)',
+                  color: 'var(--erp-accent)',
+                  background: 'var(--erp-accent-subtle)',
+                  border: '1px solid var(--erp-accent-tint)',
                   padding: '0.15rem 0.5rem',
                   borderRadius: '6px'
                 }}>
@@ -1109,7 +1121,7 @@ export const AccountLedgerModal: React.FC<AccountLedgerModalProps> = ({
                   padding: '0.15rem 0.55rem',
                   borderRadius: '6px'
                 }}>
-                  {isAr ? (account.normal_balance === 'DEBIT' ? 'مدين (له فلوس)' : 'دائن (التزام عليه)') : account.normal_balance}
+                  {isAr ? (account.normal_balance === 'DEBIT' ? 'طبيعة مدينة' : 'طبيعة دائنة') : account.normal_balance}
                 </span>
               </div>
               <h2 style={{ margin: '0.35rem 0 0', fontSize: '1.25rem', fontWeight: 800, color: '#0f172a' }}>
@@ -1163,7 +1175,7 @@ export const AccountLedgerModal: React.FC<AccountLedgerModalProps> = ({
                 gap: '0.35rem',
                 transition: 'all 0.15s ease'
               }}
-              title={isAr ? 'طباعة كشف الحساب المعتمد' : 'Print Statement'}
+              title={isAr ? 'طباعة كشف الحساب' : 'Print statement'}
             >
               <Printer size={14} />
               <span>{isAr ? 'طباعة الكشف' : 'Print'}</span>
@@ -1173,9 +1185,9 @@ export const AccountLedgerModal: React.FC<AccountLedgerModalProps> = ({
               type="button"
               onClick={() => setShowPrintPreview(true)}
               style={{
-                background: 'rgba(184, 144, 62, 0.08)',
-                border: '1px solid rgba(184, 144, 62, 0.25)',
-                color: '#946f23',
+                background: '#ffffff',
+                border: '1px solid var(--erp-accent)',
+                color: 'var(--erp-accent)',
                 borderRadius: '8px',
                 padding: '0.45rem 0.75rem',
                 fontSize: '0.76rem',
@@ -1186,7 +1198,7 @@ export const AccountLedgerModal: React.FC<AccountLedgerModalProps> = ({
                 gap: '0.35rem',
                 transition: 'all 0.15s ease'
               }}
-              title={isAr ? 'معاينة كشف الحساب المعتمد للطباعة' : 'Preview Statement'}
+              title={isAr ? 'معاينة كشف الحساب للطباعة' : 'Preview statement'}
             >
               <FileText size={14} />
               <span>{isAr ? 'معاينة' : 'Preview'}</span>
@@ -1195,6 +1207,8 @@ export const AccountLedgerModal: React.FC<AccountLedgerModalProps> = ({
             <button
               type="button"
               onClick={onClose}
+              aria-label={isAr ? 'إغلاق كشف الحساب' : 'Close account statement'}
+              autoFocus
               style={{
                 background: '#ffffff',
                 border: '1px solid #cbd5e1',
@@ -1214,134 +1228,19 @@ export const AccountLedgerModal: React.FC<AccountLedgerModalProps> = ({
         </div>
 
         {/* Scrollable Modal Content */}
-        <div style={{ padding: '1.5rem', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+        <div style={{ padding: '1.1rem 1.25rem', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
           {/* Top Analytics Cards */}
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-            gap: '1rem'
-          }}>
-            {/* Net Balance Card */}
-            <div style={{
-              background: isPositive ? '#f0fdf4' : '#f8fafc',
-              border: isPositive ? '1px solid #bbf7d0' : '1px solid #e2e8f0',
-              borderRadius: '14px',
-              padding: '1rem',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '0.3rem'
-            }}>
-              <span style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 700 }}>
-                {isAr ? 'الرصيد الصافي الحالي بالحساب' : 'Current Ledger Balance'}
-              </span>
-              <div style={{
-                fontSize: '1.45rem',
-                fontWeight: 900,
-                fontFamily: 'var(--font-sans), sans-serif',
-                fontVariantNumeric: 'tabular-nums',
-                color: isZero ? '#64748b' : (isPositive ? '#15803d' : '#dc2626'),
-                marginTop: '0.2rem'
-              }}>
-                {netBalance.formatEGP(isAr)}
-              </div>
-              <span style={{ fontSize: '0.68rem', color: '#64748b' }}>
-                {isAr 
-                  ? (account.normal_balance === 'DEBIT' ? 'طبيعة الحساب: مدين (له فلوس / أصل ومصروف)' : 'طبيعة الحساب: دائن (التزام عليه / رأس مال وإيراد)')
-                  : `Normal Balance: ${account.normal_balance}`}
-              </span>
-            </div>
-
-            {/* Total Debits Card */}
-            <div style={{
-              background: '#f8fafc',
-              border: '1px solid #e2e8f0',
-              borderRadius: '14px',
-              padding: '1rem',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '0.3rem'
-            }}>
-              <span style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 700 }}>
-                {isAr ? 'إجمالي الفلوس اللي دخلت أو انصرفت له (مدين)' : 'Total Cumulative Debits'}
-              </span>
-              <div style={{
-                fontSize: '1.25rem',
-                fontWeight: 800,
-                fontVariantNumeric: 'tabular-nums',
-                color: '#0f172a',
-                marginTop: '0.2rem'
-              }}>
-                {totalDebits.formatEGP(isAr)}
-              </div>
-              <span style={{ fontSize: '0.68rem', color: '#64748b' }}>
-                {isAr ? 'مدخلات أو أصول واردة' : 'Inflow / Debit postings'}
-              </span>
-            </div>
-
-            {/* Total Credits Card */}
-            <div style={{
-              background: '#f8fafc',
-              border: '1px solid #e2e8f0',
-              borderRadius: '14px',
-              padding: '1rem',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '0.3rem'
-            }}>
-              <span style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 700 }}>
-                {isAr ? 'إجمالي الفلوس اللي خرجت أو التزمنا بيها (دائن)' : 'Total Cumulative Credits'}
-              </span>
-              <div style={{
-                fontSize: '1.25rem',
-                fontWeight: 800,
-                fontVariantNumeric: 'tabular-nums',
-                color: '#15803d',
-                marginTop: '0.2rem'
-              }}>
-                {totalCredits.formatEGP(isAr)}
-              </div>
-              <span style={{ fontSize: '0.68rem', color: '#64748b' }}>
-                {isAr ? 'مخرجات أو التزامات قائمة' : 'Outflow / Credit postings'}
-              </span>
-            </div>
-          </div>
-
-          {/* Business Explanation Card */}
-          <div style={{
-            background: '#fffbeb',
-            border: '1px solid rgba(184, 144, 62, 0.25)',
-            borderRadius: '14px',
-            padding: '1.1rem',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '0.75rem'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#946f23' }}>
-              <BookOpen size={16} />
-              <h4 style={{ margin: 0, fontSize: '0.85rem', fontWeight: 800 }}>
-                {isAr ? 'إيه وظيفة الحساب ده وفلوسه رايحة فين؟' : 'Real Estate Accounting Function:'}
-              </h4>
-            </div>
-            <p style={{ margin: 0, fontSize: '0.82rem', color: '#475569', lineHeight: 1.6 }}>
-              {isAr ? explanation.roleAr : explanation.roleEn}
-            </p>
-
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: '1fr 1fr',
-              gap: '0.75rem',
-              paddingTop: '0.5rem',
-              borderTop: '1px solid rgba(184, 144, 62, 0.2)'
-            }}>
-              <div style={{ fontSize: '0.75rem', color: '#334155' }}>
-                <span style={{ color: '#0f172a', fontWeight: 700 }}>{isAr ? 'إمتى بيزيد ويدخل فيه فلوس (مدين)؟ ' : 'When Debited: '}</span>
-                <span>{isAr ? explanation.whenDebitedAr : 'Increases / Debited on inflows.'}</span>
-              </div>
-              <div style={{ fontSize: '0.75rem', color: '#334155' }}>
-                <span style={{ color: '#15803d', fontWeight: 700 }}>{isAr ? 'إمتى بينقص ويخرج منه فلوس (دائن)؟ ' : 'When Credited: '}</span>
-                <span>{isAr ? explanation.whenCreditedAr : 'Decreases / Credited on outflows.'}</span>
-              </div>
-            </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(205px, 1fr))', gap: '0.75rem' }}>
+            <ZFKpiCard title={isAr ? 'الرصيد الصافي' : 'Net balance'} value={<span>{netBalance.formatEGP(isAr)}</span>}
+              icon={<Landmark size={16} />} accentColor="accent"
+              subtitleLabel={isAr ? 'طبيعة الحساب' : 'Normal balance'}
+              subtitleValue={account.normal_balance === 'DEBIT' ? (isAr ? 'مدين' : 'Debit') : (isAr ? 'دائن' : 'Credit')} />
+            <ZFKpiCard title={isAr ? 'إجمالي المدين' : 'Total debits'} value={<span>{totalDebits.formatEGP(isAr)}</span>}
+              icon={<TrendingUp size={16} />} accentColor="accent"
+              subtitleLabel={isAr ? 'حركات الحساب' : 'Account movements'} subtitleValue={isAr ? 'مدين' : 'Debit'} />
+            <ZFKpiCard title={isAr ? 'إجمالي الدائن' : 'Total credits'} value={<span>{totalCredits.formatEGP(isAr)}</span>}
+              icon={<TrendingDown size={16} />} accentColor="accent"
+              subtitleLabel={isAr ? 'حركات الحساب' : 'Account movements'} subtitleValue={isAr ? 'دائن' : 'Credit'} />
           </div>
 
           {/* Account Statement (Transactions) */}
@@ -1355,9 +1254,9 @@ export const AccountLedgerModal: React.FC<AccountLedgerModalProps> = ({
               gap: '0.65rem'
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <FileText size={16} color="var(--zf-gold, #d4af37)" />
+                <FileText size={16} color="var(--erp-accent)" />
                 <h3 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 800, color: '#0f172a' }}>
-                  {isAr ? 'كشف حساب الحركات والقيود المرحلة' : 'Account Statement Transactions'}
+                  {isAr ? 'حركات وقيود الحساب' : 'Account ledger movements'}
                 </h3>
               </div>
 
@@ -1368,7 +1267,7 @@ export const AccountLedgerModal: React.FC<AccountLedgerModalProps> = ({
                   <select
                     value={sortBy}
                     onChange={e => {
-                      setSortBy(e.target.value as any);
+                      setSortBy(e.target.value as typeof sortBy);
                       setCurrentPage(1);
                     }}
                     className={styles.sortSelect}
@@ -1423,9 +1322,9 @@ export const AccountLedgerModal: React.FC<AccountLedgerModalProps> = ({
 
                 <span style={{
                   fontSize: '0.72rem',
-                  color: '#946f23',
-                  background: '#fffbeb',
-                  border: '1px solid rgba(184, 144, 62, 0.25)',
+                  color: 'var(--erp-accent)',
+                  background: 'var(--erp-accent-subtle)',
+                  border: '1px solid var(--erp-accent-tint)',
                   padding: '0.2rem 0.55rem',
                   borderRadius: '6px',
                   fontWeight: 700
@@ -1439,7 +1338,7 @@ export const AccountLedgerModal: React.FC<AccountLedgerModalProps> = ({
               <div style={{
                 padding: '2.5rem 1.5rem',
                 textAlign: 'center',
-                background: '#f8fafc',
+                background: '#ffffff',
                 border: '1px dashed #cbd5e1',
                 borderRadius: '12px',
                 color: '#64748b',
@@ -1447,8 +1346,8 @@ export const AccountLedgerModal: React.FC<AccountLedgerModalProps> = ({
               }}>
                 {accountLines.length === 0 
                   ? (isAr 
-                    ? 'لم يتم ترحيل أي قيود يومية على هذا الحساب حتى الآن في الفترة الحالية.'
-                    : 'No journal transactions have been posted to this account yet in the active period.')
+                    ? 'لا توجد حركات مسجلة على هذا الحساب حتى الآن.'
+                    : 'No journal movements recorded for this account yet.')
                   : (isAr
                     ? 'لا توجد حركات تطابق نص البحث المحدد.'
                     : 'No transactions match the specified search term.')}
@@ -1456,25 +1355,25 @@ export const AccountLedgerModal: React.FC<AccountLedgerModalProps> = ({
             ) : (
               <>
                 <div style={{
-                  border: '1px solid #e2e8f0',
+                  border: '1px solid #cbd5e1',
                   borderRadius: '12px',
-                  overflow: 'hidden',
+                  overflowX: 'auto',
                   background: '#ffffff'
                 }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.78rem' }}>
+                  <table style={{ width: '100%', minWidth: '700px', borderCollapse: 'collapse', fontSize: '0.78rem' }}>
                     <thead>
-                      <tr style={{ background: '#f8fafc', borderBottom: '1.5px solid #e2e8f0' }}>
+                      <tr style={{ background: '#fafbfc', borderBottom: '1px solid #cbd5e1' }}>
                         <th style={{ padding: '0.65rem 0.85rem', textAlign: isAr ? 'right' : 'left', color: '#64748b' }}>
                           {isAr ? 'التاريخ ورقم القيد' : 'Date & Entry #'}
                         </th>
                         <th style={{ padding: '0.65rem 0.85rem', textAlign: isAr ? 'right' : 'left', color: '#64748b', minWidth: '360px' }}>
                           {isAr ? 'بيان وشرح الحركة' : 'Description & Memo'}
                         </th>
-                        <th style={{ padding: '0.65rem 0.85rem', textAlign: isAr ? 'left' : 'right', color: '#0f172a' }}>
-                          {isAr ? 'مدين (له فلوس)' : 'Debit'}
+                        <th style={{ padding: '0.65rem 0.85rem', textAlign: isAr ? 'left' : 'right', color: '#64748b' }}>
+                          {isAr ? 'مدين' : 'Debit'}
                         </th>
-                        <th style={{ padding: '0.65rem 0.85rem', textAlign: isAr ? 'left' : 'right', color: '#15803d' }}>
-                          {isAr ? 'دائن (التزام عليه)' : 'Credit'}
+                        <th style={{ padding: '0.65rem 0.85rem', textAlign: isAr ? 'left' : 'right', color: '#64748b' }}>
+                          {isAr ? 'دائن' : 'Credit'}
                         </th>
                       </tr>
                     </thead>
@@ -1488,12 +1387,12 @@ export const AccountLedgerModal: React.FC<AccountLedgerModalProps> = ({
                             key={`${line.entry_id}-${idx}`}
                             style={{
                               borderBottom: '1px solid #f1f5f9',
-                              background: idx % 2 === 0 ? '#ffffff' : '#f8fafc'
+                              background: '#ffffff'
                             }}
                           >
                             <td style={{ padding: '0.75rem 0.85rem', verticalAlign: 'top' }}>
                               <div style={{ fontSize: '0.72rem', color: '#64748b' }}>{line.entry_date}</div>
-                              <div style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 700, color: '#946f23', fontSize: '0.76rem', marginTop: '2px' }}>
+                              <div style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 700, color: 'var(--erp-accent)', fontSize: '0.76rem', marginTop: '2px' }}>
                                 {line.entry_number}
                               </div>
                             </td>
@@ -1535,9 +1434,9 @@ export const AccountLedgerModal: React.FC<AccountLedgerModalProps> = ({
                                         gap: '0.25rem',
                                         fontSize: '0.7rem',
                                         fontWeight: 800,
-                                        color: '#946f23',
-                                        background: 'rgba(184, 144, 62, 0.08)',
-                                        border: '1px solid rgba(184, 144, 62, 0.28)',
+                                        color: 'var(--erp-accent)',
+                                        background: 'var(--erp-accent-subtle)',
+                                        border: '1px solid var(--erp-accent-tint)',
                                         padding: '0.12rem 0.45rem',
                                         borderRadius: '6px',
                                         fontFamily: 'monospace, tabular-nums'
@@ -1661,68 +1560,41 @@ export const AccountLedgerModal: React.FC<AccountLedgerModalProps> = ({
               </>
             )}
           </div>
+          <details style={{ border: '1px solid #cbd5e1', borderRadius: '12px', padding: '0.75rem 1rem', background: '#ffffff' }}>
+            <summary style={{ cursor: 'pointer', color: '#0f172a', fontSize: '0.8rem', fontWeight: 700 }}>
+              {isAr ? 'دليل استخدام هذا الحساب' : 'How this account works'}
+            </summary>
+            <div style={{ paddingTop: '0.75rem', color: '#475569', fontSize: '0.78rem', lineHeight: 1.6 }}>
+              <p style={{ margin: '0 0 0.6rem' }}>{isAr ? explanation.roleAr : explanation.roleEn}</p>
+              <p style={{ margin: '0 0 0.35rem' }}><strong>{isAr ? 'عند المدين: ' : 'When debited: '}</strong>
+                {isAr ? explanation.whenDebitedAr : 'Debit postings increase the debit side.'}</p>
+              <p style={{ margin: 0 }}><strong>{isAr ? 'عند الدائن: ' : 'When credited: '}</strong>
+                {isAr ? explanation.whenCreditedAr : 'Credit postings increase the credit side.'}</p>
+            </div>
+          </details>
         </div>
 
         {/* Modal Footer */}
         <div style={{
-          padding: '1rem 1.5rem',
-          borderTop: '1px solid #e2e8f0',
-          background: '#f8fafc',
+          padding: '0.85rem 1.25rem',
+          borderTop: '1px solid #cbd5e1',
+          background: '#ffffff',
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'space-between'
+          justifyContent: 'space-between',
+          gap: '0.75rem',
+          flexWrap: 'wrap'
         }}>
-          <div style={{ display: 'flex', gap: '0.45rem', alignItems: 'center' }}>
-            <button
-              type="button"
-              onClick={handleExportExcel}
-              disabled={isExportingExcel}
-              style={{
-                background: '#ffffff',
-                border: '1px solid #cbd5e1',
-                color: '#047857',
-                borderRadius: '8px',
-                padding: '0.45rem 0.85rem',
-                fontSize: '0.76rem',
-                fontWeight: 700,
-                cursor: isExportingExcel ? 'not-allowed' : 'pointer',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.35rem'
-              }}
-            >
-              <FileSpreadsheet size={14} />
-              <span>{isExportingExcel ? (isAr ? 'جاري التصدير...' : 'Exporting...') : (isAr ? 'تصدير كشف حساب Excel' : 'Export Excel')}</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={handlePrint}
-              style={{
-                background: '#ffffff',
-                border: '1px solid #cbd5e1',
-                color: '#334155',
-                borderRadius: '8px',
-                padding: '0.45rem 0.85rem',
-                fontSize: '0.76rem',
-                fontWeight: 700,
-                cursor: 'pointer',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.35rem'
-              }}
-            >
-              <Printer size={14} />
-              <span>{isAr ? 'طباعة كشف الحساب' : 'Print Statement'}</span>
-            </button>
-          </div>
+          <span style={{ color: '#64748b', fontSize: '0.74rem', fontVariantNumeric: 'tabular-nums' }}>
+            {isAr ? `${accountLines.length} حركة مسجلة` : `${accountLines.length} recorded movements`}
+          </span>
 
           <button
             onClick={onClose}
             style={{
-              background: 'linear-gradient(135deg, var(--zf-gold, #d4af37) 0%, #b89628 100%)',
-              color: '#0a0c12',
-              border: 'none',
+              background: 'var(--erp-accent)',
+              color: '#ffffff',
+              border: '1px solid var(--erp-accent)',
               borderRadius: '8px',
               padding: '0.5rem 1.25rem',
               fontSize: '0.78rem',
@@ -1765,12 +1637,13 @@ export const AccountLedgerModal: React.FC<AccountLedgerModalProps> = ({
             onClick={e => e.stopPropagation()}
           >
             <ZFPrintDocumentLayout
-              documentTitle={isAr ? 'كشف حساب أستاذ معتمد' : 'Audited General Ledger Statement'}
+              documentTitle={isAr ? 'كشف حساب الأستاذ' : 'General Ledger Statement'}
               documentSubtitle={isAr ? `حساب: ${account.account_code} — ${account.account_name_ar}` : `Account: ${account.account_code} — ${account.account_name_en}`}
               voucherCode={voucherCode}
               date={statementDate}
               onClose={() => setShowPrintPreview(false)}
               isAr={isAr}
+              isReport
             >
               {printableLedgerBody}
             </ZFPrintDocumentLayout>
@@ -1781,11 +1654,12 @@ export const AccountLedgerModal: React.FC<AccountLedgerModalProps> = ({
       {/* Hidden print container: rendered for @media print */}
       <div className="zf-print-only">
         <ZFPrintDocumentLayout
-          documentTitle={isAr ? 'كشف حساب أستاذ معتمد' : 'Audited General Ledger Statement'}
+          documentTitle={isAr ? 'كشف حساب الأستاذ' : 'General Ledger Statement'}
           documentSubtitle={isAr ? `حساب: ${account.account_code} — ${account.account_name_ar}` : `Account: ${account.account_code} — ${account.account_name_en}`}
           voucherCode={voucherCode}
           date={statementDate}
           isAr={isAr}
+          isReport
         >
           {printableLedgerBody}
         </ZFPrintDocumentLayout>
