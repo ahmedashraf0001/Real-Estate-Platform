@@ -48,6 +48,8 @@ import { ERPApexChart } from '../charts/ERPApexChart';
 import { ZFWorkstationSideWidgets } from '../common/ZFWorkstationSideWidgets';
 import { ZFModalShell } from '../common/ZFModalShell';
 import { getPropertyTypeLabel } from './PropertiesPortfolioView';
+import { PropertyAnalysisSideWidgets } from './analysis/PropertyAnalysisSideWidgets';
+import { PropertyAnalysisDossier } from './analysis/PropertyAnalysisDossier';
 
 import shellStyles from '../ZFWorkstationShell.module.css';
 import vStyles from './PropertyAnalysisView.module.css';
@@ -1025,7 +1027,7 @@ export const PropertyAnalysisView: React.FC<PropertyAnalysisViewProps> = ({
     });
 
     const barColors = benchmarkRoiProjects.map(p => {
-      return p.propertyId === selectedPropertyId ? currentAccent : '#94a3b8';
+      return p.propertyId === selectedPropertyId ? currentAccent : '#cbd5e1';
     });
 
     const maxVal = Math.max(...benchmarkRoiProjects.map(p => p.roiPct), 50);
@@ -1081,7 +1083,7 @@ export const PropertyAnalysisView: React.FC<PropertyAnalysisViewProps> = ({
             : (isAr ? 'مشروع مرجعي للمقارنة' : 'Benchmark Property');
           const badgeBg = isCurrent ? 'rgba(37, 99, 235, 0.12)' : '#f1f5f9';
           const badgeColor = isCurrent ? currentAccent : '#64748b';
-          const barColor = isCurrent ? currentAccent : '#94a3b8';
+          const barColor = isCurrent ? currentAccent : '#cbd5e1';
 
           return `
             <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:8px; padding:10px 14px; box-shadow:0 4px 12px rgba(15,23,42,0.08); direction:${isAr ? 'rtl' : 'ltr'}; text-align:${isAr ? 'right' : 'left'}; font-family:inherit; min-width:220px;">
@@ -1176,7 +1178,7 @@ export const PropertyAnalysisView: React.FC<PropertyAnalysisViewProps> = ({
       return formatProjectChartLabel(p.propertyName, isCurrent, isAr);
     });
     const barColors = benchmarkProfitProjects.map(p => {
-      return p.propertyId === selectedPropertyId ? '#16a34a' : '#94a3b8';
+      return p.propertyId === selectedPropertyId ? '#16a34a' : '#cbd5e1';
     });
 
     const maxVal = Math.max(...benchmarkProfitProjects.map(p => p.expectedProfitEgp), 10000000);
@@ -1232,7 +1234,7 @@ export const PropertyAnalysisView: React.FC<PropertyAnalysisViewProps> = ({
             : (isAr ? 'مشروع مرجعي للمقارنة' : 'Benchmark Property');
           const badgeBg = isCurrent ? 'rgba(22, 163, 74, 0.12)' : '#f1f5f9';
           const badgeColor = isCurrent ? '#16a34a' : '#64748b';
-          const barColor = isCurrent ? '#16a34a' : '#94a3b8';
+          const barColor = isCurrent ? '#16a34a' : '#cbd5e1';
 
           return `
             <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:8px; padding:10px 14px; box-shadow:0 4px 12px rgba(15,23,42,0.08); direction:${isAr ? 'rtl' : 'ltr'}; text-align:${isAr ? 'right' : 'left'}; font-family:inherit; min-width:220px;">
@@ -1286,7 +1288,7 @@ export const PropertyAnalysisView: React.FC<PropertyAnalysisViewProps> = ({
     });
 
     const barColors = benchmarkMarginProjects.map(p => {
-      return p.propertyId === selectedPropertyId ? currentAccent : '#94a3b8';
+      return p.propertyId === selectedPropertyId ? currentAccent : '#cbd5e1';
     });
 
     return {
@@ -1339,7 +1341,7 @@ export const PropertyAnalysisView: React.FC<PropertyAnalysisViewProps> = ({
             : (isAr ? 'مشروع مرجعي للمقارنة' : 'Benchmark Property');
           const badgeBg = isCurrent ? 'rgba(37, 99, 235, 0.12)' : '#f1f5f9';
           const badgeColor = isCurrent ? currentAccent : '#64748b';
-          const barColor = isCurrent ? currentAccent : '#94a3b8';
+          const barColor = isCurrent ? currentAccent : '#cbd5e1';
 
           return `
             <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:8px; padding:10px 14px; box-shadow:0 4px 12px rgba(15,23,42,0.08); direction:${isAr ? 'rtl' : 'ltr'}; text-align:${isAr ? 'right' : 'left'}; font-family:inherit; min-width:220px;">
@@ -1402,7 +1404,7 @@ export const PropertyAnalysisView: React.FC<PropertyAnalysisViewProps> = ({
     return {
       chart: { type: 'bar', toolbar: { show: false } },
       grid: cartesianGridBlueprint,
-      colors: [currentAccent, '#94a3b8'],
+      colors: [currentAccent, '#cbd5e1'],
       plotOptions: {
         bar: { 
           borderRadius: 5, 
@@ -1478,7 +1480,7 @@ export const PropertyAnalysisView: React.FC<PropertyAnalysisViewProps> = ({
     });
 
     const barColors = benchmarkAbsorptionProjects.map(p => {
-      return p.propertyId === selectedPropertyId ? '#10b981' : '#94a3b8';
+      return p.propertyId === selectedPropertyId ? '#10b981' : '#cbd5e1';
     });
 
     return {
@@ -1531,7 +1533,7 @@ export const PropertyAnalysisView: React.FC<PropertyAnalysisViewProps> = ({
             : (isAr ? 'مشروع مرجعي للمقارنة' : 'Benchmark Property');
           const badgeBg = isCurrent ? 'rgba(16, 185, 129, 0.12)' : '#f1f5f9';
           const badgeColor = isCurrent ? '#10b981' : '#64748b';
-          const barColor = isCurrent ? '#10b981' : '#94a3b8';
+          const barColor = isCurrent ? '#10b981' : '#cbd5e1';
 
           return `
             <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:8px; padding:10px 14px; box-shadow:0 4px 12px rgba(15,23,42,0.08); direction:${isAr ? 'rtl' : 'ltr'}; text-align:${isAr ? 'right' : 'left'}; font-family:inherit; min-width:220px;">
@@ -1636,7 +1638,7 @@ export const PropertyAnalysisView: React.FC<PropertyAnalysisViewProps> = ({
     });
 
     const barColors = benchmarkInvestmentProjects.map(p => {
-      return p.propertyId === selectedPropertyId ? currentAccent : '#94a3b8';
+      return p.propertyId === selectedPropertyId ? currentAccent : '#cbd5e1';
     });
 
     const maxVal = Math.max(
@@ -1695,7 +1697,7 @@ export const PropertyAnalysisView: React.FC<PropertyAnalysisViewProps> = ({
             : (isAr ? 'مشروع مرجعي للمقارنة' : 'Benchmark Property');
           const badgeBg = isCurrent ? 'rgba(37, 99, 235, 0.12)' : '#f1f5f9';
           const badgeColor = isCurrent ? currentAccent : '#64748b';
-          const barColor = isCurrent ? currentAccent : '#94a3b8';
+          const barColor = isCurrent ? currentAccent : '#cbd5e1';
 
           return `
             <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:8px; padding:10px 14px; box-shadow:0 4px 12px rgba(15,23,42,0.08); direction:${isAr ? 'rtl' : 'ltr'}; text-align:${isAr ? 'right' : 'left'}; font-family:inherit; min-width:220px;">
@@ -2108,7 +2110,8 @@ export const PropertyAnalysisView: React.FC<PropertyAnalysisViewProps> = ({
               </div>
             </div>
 
-            <table className={vStyles.contractsTable} style={{ minWidth: '980px' }}>
+            <div className={vStyles.matrixTableScrollWrapper}>
+              <table className={vStyles.contractsTable} style={{ minWidth: '980px' }}>
               <thead className={vStyles.contractsThead}>
                 <tr>
                   <th scope="col" className={vStyles.contractsTh} style={{ width: '32px', textAlign: 'center' }}>#</th>
@@ -2223,7 +2226,8 @@ export const PropertyAnalysisView: React.FC<PropertyAnalysisViewProps> = ({
                   })
                 )}
               </tbody>
-            </table>
+              </table>
+            </div>
           </div>
         )}
 
@@ -2456,7 +2460,7 @@ export const PropertyAnalysisView: React.FC<PropertyAnalysisViewProps> = ({
                   type="donut"
                   series={donutCategoriesSeries}
                   options={donutCategoriesOptions}
-                  height={260}
+                  height={340}
                   isAr={isAr}
                   primaryColor={currentAccent}
                 />
@@ -2553,1206 +2557,44 @@ export const PropertyAnalysisView: React.FC<PropertyAnalysisViewProps> = ({
           </ZFKpiGrid>
 
           {/* SELECTED PROPERTY DEEP DOSSIER (تحليل دورة حياة العقار المختار) */}
-          <div className={vStyles.dossierCard} id="property-dossier-section">
-            {/* Dossier Header */}
-            <div className={vStyles.propertyPickerBar}>
-              <div className={vStyles.pickerLeading}>
-                <div className={vStyles.cardIconSquircle}>
-                  <Building2 size={15} />
-                </div>
-                <div>
-                  <div className={vStyles.pickerTitle}>
-                    {isAr ? 'ملف دورة حياة العقار ودراسة الجدوى' : 'Property Lifecycle Dossier & Feasibility'}
-                  </div>
-                  <span style={{ fontSize: '0.82rem', color: '#0f172a', fontWeight: 700 }}>
-                    {selectedProperty ? (isAr ? selectedProperty.title_ar : selectedProperty.title_en) : ''}
-                  </span>
-                </div>
-              </div>
-
-              {selectedPropertyAnalysis && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-                  <span className={`${shellStyles.statusPill} ${selectedPropertyAnalysis.status === 'sold' ? shellStyles.statusPillNeutral : shellStyles.statusPillGreen}`}>
-                    {selectedPropertyAnalysis.statusLabel}
-                  </span>
-                  <span style={{ fontSize: '0.76rem', color: '#64748b', fontWeight: 600 }}>
-                    #{selectedPropertyAnalysis.propertyId.slice(0, 8)}
-                  </span>
-                </div>
-              )}
-            </div>
-
-            {/* 3 Consolidated Underline Dossier Tabs */}
-            <div className={vStyles.underlineTabsList} role="tablist">
-              {/* Tab 1: دورة الحياة والبيانات الهندسية */}
-              <button
-                type="button"
-                role="tab"
-                id="dossier-tab-lifecycle"
-                aria-controls="dossier-panel-lifecycle"
-                aria-selected={activeDossierTab === 'lifecycle'}
-                className={`${vStyles.underlineTabBtn} ${activeDossierTab === 'lifecycle' ? vStyles.underlineTabBtnActive : ''}`}
-                onClick={() => setActiveDossierTab('lifecycle')}
-              >
-                <Clock size={14} />
-                <span>{isAr ? 'دورة الحياة والبيانات الهندسية' : 'Lifecycle & Engineering Feasibility'}</span>
-              </button>
-
-              {/* Tab 2: الجدوى المالية والمبيعات */}
-              <button
-                type="button"
-                role="tab"
-                id="dossier-tab-feasibility"
-                aria-controls="dossier-panel-feasibility"
-                aria-selected={activeDossierTab === 'feasibility'}
-                className={`${vStyles.underlineTabBtn} ${activeDossierTab === 'feasibility' ? vStyles.underlineTabBtnActive : ''}`}
-                onClick={() => setActiveDossierTab('feasibility')}
-              >
-                <TrendingUp size={14} />
-                <span>{isAr ? 'الجدوى المالية والمبيعات' : 'Financial Feasibility & Sales'}</span>
-              </button>
-
-              {/* Tab 3: سجل بنود التكاليف والمصروفات */}
-              <button
-                type="button"
-                role="tab"
-                id="dossier-tab-costs"
-                aria-controls="dossier-panel-costs"
-                aria-selected={activeDossierTab === 'costs'}
-                className={`${vStyles.underlineTabBtn} ${activeDossierTab === 'costs' ? vStyles.underlineTabBtnActive : ''}`}
-                onClick={() => setActiveDossierTab('costs')}
-              >
-                <TableIcon size={14} />
-                <span>{isAr ? 'سجل بنود التكاليف والمصروفات' : 'Cost & Expense Register'}</span>
-                {selectedPropertyCostList.length > 0 && (
-                  <span className={vStyles.tabBadgeCount}>
-                    {selectedPropertyCostList.length}
-                  </span>
-                )}
-              </button>
-            </div>
-
-            {/* TAB CONTENTS */}
-            {selectedPropertyAnalysis ? (
-              <div>
-                {/* TAB 1: دورة الحياة والبيانات الهندسية (SPLIT GRID) */}
-                {activeDossierTab === 'lifecycle' && (
-                  <div
-                    role="tabpanel"
-                    id="dossier-panel-lifecycle"
-                    aria-labelledby="dossier-tab-lifecycle"
-                    style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}
-                  >
-                    <div className={vStyles.lifecycleSplitGrid}>
-                      {/* Side A: Vertical Architectural Lifecycle Pipeline */}
-                      <div className={vStyles.verticalPipelineContainer}>
-                        <div className={vStyles.pipelineSpineLine} />
-
-                        {selectedPropertyAnalysis.milestones.map((m, mIdx) => {
-                          const isCompleted = m.status === 'completed';
-                          const isInProgress = m.status === 'in_progress';
-                          const stepNumber = String(mIdx + 1).padStart(2, '0');
-
-                          return (
-                            <div key={m.id} className={vStyles.pipelineStepRow}>
-                              <div className={vStyles.pipelineStepLeading}>
-                                <div className={vStyles.pipelineSquircle}>
-                                  {mIdx === 0 ? <Home size={14} /> :
-                                   mIdx === 1 ? <FileCheck size={14} /> :
-                                   mIdx === 2 ? <Layers size={14} /> :
-                                   mIdx === 3 ? <Sparkles size={14} /> :
-                                   mIdx === 4 ? <Coins size={14} /> :
-                                   <Check size={14} />}
-                                </div>
-                                <span className={vStyles.pipelineStepNum}>{stepNumber}</span>
-                              </div>
-
-                              <div className={`${vStyles.pipelineStepCard} ${
-                                isCompleted ? vStyles.pipelineStepCardCompleted :
-                                isInProgress ? vStyles.pipelineStepCardInProgress :
-                                vStyles.pipelineStepCardPending
-                              }`}>
-                                <div className={vStyles.pipelineCardHeader}>
-                                  <div className={vStyles.pipelineCardTitleWrap}>
-                                    <span className={vStyles.pipelineCardTitle}>
-                                      {isAr ? m.titleAr : m.titleEn}
-                                    </span>
-                                    <span className={`${shellStyles.statusPill} ${
-                                      isCompleted ? shellStyles.statusPillGreen :
-                                      isInProgress ? shellStyles.statusPillAmber :
-                                      shellStyles.statusPillNeutral
-                                    }`}>
-                                      {isCompleted ? (isAr ? 'مكتمل' : 'Completed') :
-                                       isInProgress ? (isAr ? 'قيد التنفيذ' : 'In Progress') :
-                                       (isAr ? 'مخطط' : 'Pending')}
-                                    </span>
-                                  </div>
-
-                                  <div className={vStyles.pipelineCardBadges}>
-                                    {m.date && (
-                                      <span className={vStyles.pipelineDateBadge}>
-                                        <Calendar size={12} />
-                                        <span>{m.date}</span>
-                                      </span>
-                                    )}
-                                    {Number(m.costLoggedEgp) > 0 && (
-                                      <span className={vStyles.pipelineCostBadge}>
-                                        <Coins size={12} />
-                                        <span>
-                                          {isAr
-                                            ? (m.id === 'm5_sales' ? `المبيعات: ${formatCompactEGP(m.costLoggedEgp, true)}` : `التكلفة: ${formatCompactEGP(m.costLoggedEgp, true)}`)
-                                            : (m.id === 'm5_sales' ? `Sales: ${formatCompactEGP(m.costLoggedEgp, false)}` : `Cost: ${formatCompactEGP(m.costLoggedEgp, false)}`)}
-                                        </span>
-                                      </span>
-                                    )}
-                                  </div>
-                                </div>
-
-                                <p className={vStyles.pipelineAuditSummary}>
-                                  {isAr ? m.summaryAr : m.summaryEn}
-                                </p>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-
-                      {/* Side B: Property Specs & Cost Center Distribution Card */}
-                      <div className={vStyles.specsCard}>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: '0.65rem', borderBottom: '1px solid #f1f5f9' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                            <SlidersHorizontal size={15} color={currentAccent} />
-                            <span style={{ fontSize: '0.88rem', fontWeight: 700, color: '#0f172a' }}>
-                              {isAr ? 'مواصفات وتوزيع مراكز التكلفة' : 'Engineering Specs & Cost Centers'}
-                            </span>
-                          </div>
-                          <span className={`${shellStyles.statusPill} ${selectedPropertyAnalysis.status === 'sold' ? shellStyles.statusPillNeutral : shellStyles.statusPillGreen}`}>
-                            {selectedPropertyAnalysis.statusLabel}
-                          </span>
-                        </div>
-
-                        {/* Specs 2x2 Grid */}
-                        <div className={vStyles.showcaseSpecs2x2}>
-                          <div className={vStyles.showcaseSpecItem}>
-                            <span className={vStyles.showcaseSpecLabel}>{isAr ? 'المساحة الكلية' : 'Total Area'}</span>
-                            <span className={vStyles.showcaseSpecVal}>{selectedPropertyAnalysis.areaSqm} م²</span>
-                          </div>
-                          <div className={vStyles.showcaseSpecItem}>
-                            <span className={vStyles.showcaseSpecLabel}>{isAr ? 'عدد الوحدات' : 'Units Count'}</span>
-                            <span className={vStyles.showcaseSpecVal}>{selectedPropertyAnalysis.totalUnits} {isAr ? 'وحدة' : 'units'}</span>
-                          </div>
-                          <div className={vStyles.showcaseSpecItem}>
-                            <span className={vStyles.showcaseSpecLabel}>{isAr ? 'تكلفة المتر التقديرية' : 'Estimated Cost / m²'}</span>
-                            <span className={vStyles.showcaseSpecVal}>{formatCompactEGP(selectedPropertyAnalysis.costPerSqm, isAr)}/م²</span>
-                          </div>
-                          <div className={vStyles.showcaseSpecItem}>
-                            <span className={vStyles.showcaseSpecLabel}>{isAr ? 'متوسط مساحة الوحدة' : 'Avg Unit Area'}</span>
-                            <span className={vStyles.showcaseSpecVal}>
-                              {selectedPropertyAnalysis.totalUnits > 0 ? (selectedPropertyAnalysis.areaSqm / selectedPropertyAnalysis.totalUnits).toFixed(0) : '0'} م²
-                            </span>
-                          </div>
-                        </div>
-
-                        {/* Itemized Cost Centers Distribution */}
-                        <div className={vStyles.specsTable}>
-                          <div className={vStyles.specRow}>
-                            <span className={vStyles.specLabel}>{isAr ? 'حصة الأرض والتخصيص (150000)' : 'Land Allocation (150000)'}</span>
-                            <span className={vStyles.specValue}>{formatCompactEGP(selectedPropertyAnalysis.breakdown.landCost, isAr)}</span>
-                          </div>
-
-                          <div className={vStyles.specRow}>
-                            <span className={vStyles.specLabel}>{isAr ? 'الهيكل الخرساني والحديد (151000)' : 'Structural & Skeleton (151000)'}</span>
-                            <span className={vStyles.specValue}>{formatCompactEGP(selectedPropertyAnalysis.breakdown.structureWip, isAr)}</span>
-                          </div>
-
-                          <div className={vStyles.specRow}>
-                            <span className={vStyles.specLabel}>{isAr ? 'التجهيزات والكهروميكانيك (152000)' : 'MEP Infrastructure (152000)'}</span>
-                            <span className={vStyles.specValue}>{formatCompactEGP(selectedPropertyAnalysis.breakdown.mepWip, isAr)}</span>
-                          </div>
-
-                          <div className={vStyles.specRow}>
-                            <span className={vStyles.specLabel}>{isAr ? 'التشطيبات والواجهات والمصاعد (153000)' : 'Finishing & Elevators (153000)'}</span>
-                            <span className={vStyles.specValue}>{formatCompactEGP(selectedPropertyAnalysis.breakdown.finishingWip, isAr)}</span>
-                          </div>
-
-                          <div className={vStyles.specRow}>
-                            <span className={vStyles.specLabel}>{isAr ? 'التراخيص والرسوم الحكومية (154000)' : 'Permits, Taxes & Fees (154000)'}</span>
-                            <span className={vStyles.specValue}>{formatCompactEGP(selectedPropertyAnalysis.breakdown.permitsFees, isAr)}</span>
-                          </div>
-
-                          <div className={`${vStyles.specRow} ${vStyles.specRowHighlighted}`}>
-                            <span className={vStyles.specLabel} style={{ color: currentAccent }}>{isAr ? 'إجمالي الاستثمار المنفذ' : 'Total Invested Capital'}</span>
-                            <span className={vStyles.specValue} style={{ color: currentAccent }}>{formatCompactEGP(selectedPropertyAnalysis.breakdown.totalInvestedCapital, isAr)}</span>
-                          </div>
-                        </div>
-
-                        {/* Export Action Bar */}
-                        <div className={vStyles.bottomActionBar} style={{ marginTop: 'auto', paddingTop: '0.75rem', borderTop: '1px solid #f1f5f9' }}>
-                          <button
-                            type="button"
-                            className={vStyles.bottomActionBtn}
-                            onClick={handleExportPropertyExcel}
-                            title={isAr ? 'تصدير دراسة الجدوى كملف إكسل رسمي' : 'Export Excel Feasibility'}
-                          >
-                            <TableIcon size={14} color="#16a34a" />
-                            <span>{isAr ? 'تصدير تقرير Excel' : 'Export Excel'}</span>
-                          </button>
-
-                          <button
-                            type="button"
-                            className={vStyles.bottomActionBtn}
-                            onClick={handleExportPropertyPdf}
-                            title={isAr ? 'طباعة تقرير العقار الرسمي وحفظه PDF' : 'Print PDF Dossier'}
-                          >
-                            <Printer size={14} color={currentAccent} />
-                            <span>{isAr ? 'طباعة تقرير PDF' : 'Print PDF'}</span>
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* TAB 2: الجدوى المالية والمبيعات */}
-                {activeDossierTab === 'feasibility' && (
-                  <div
-                    role="tabpanel"
-                    id="dossier-panel-feasibility"
-                    aria-labelledby="dossier-tab-feasibility"
-                    style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}
-                  >
-                    {/* RSV Metrics Grid */}
-                    <div className={vStyles.rsvMetricsGrid}>
-                      {/* Expected Value at Completion */}
-                      <div className={vStyles.rsvMetricCard}>
-                        <span className={vStyles.rsvMetricLabel}>{isAr ? 'القيمة الإجمالية المتوقعة (RSV)' : 'Expected Sales at Completion'}</span>
-                        <span className={vStyles.rsvMetricValue}>
-                          {formatCompactEGP(selectedPropertyAnalysis.expectedTotalSales, isAr)}
-                        </span>
-                        <span className={vStyles.rsvMetricSub}>
-                          {isAr ? 'مستندة للأسعار التعاقدية ودراسة السوق' : 'Based on contracts & market price'}
-                        </span>
-                      </div>
-
-                      {/* Unit Meter Cost vs Sales Meter Price */}
-                      <div className={vStyles.rsvMetricCard}>
-                        <span className={vStyles.rsvMetricLabel}>{isAr ? 'سعر بيع المتر مقابل التكلفة' : 'Selling Price vs Meter Cost'}</span>
-                        <span className={vStyles.rsvMetricValue}>
-                          {formatCompactEGP(selectedPropertyAnalysis.salesMeterPrice, isAr)}
-                        </span>
-                        <span className={vStyles.rsvMetricSub}>
-                          {isAr ? `التكلفة: ${formatCompactEGP(selectedPropertyAnalysis.unitMeterCost, isAr)}/م²` : `Cost: ${formatCompactEGP(selectedPropertyAnalysis.unitMeterCost, false)}/sqm`}
-                        </span>
-                      </div>
-
-                      {/* Net Expected Profit */}
-                      <div className={vStyles.rsvMetricCard}>
-                        <span className={vStyles.rsvMetricLabel}>{isAr ? 'صافي الربح المتوقع (NPV)' : 'Net Expected Profit'}</span>
-                        <span className={vStyles.rsvMetricValue} style={{ color: selectedPropertyAnalysis.netExpectedProfit.gte(0) ? '#16a34a' : '#dc2626' }}>
-                          {formatCompactEGP(selectedPropertyAnalysis.netExpectedProfit, isAr)}
-                        </span>
-                        <span className={vStyles.rsvMetricSub}>
-                          {isAr ? 'بعد خصم كافة فواتير البناء والأرض' : 'Net after land & full construction'}
-                        </span>
-                      </div>
-
-                      {/* Gross Margin % & ROI */}
-                      <div className={vStyles.rsvMetricCard}>
-                        <span className={vStyles.rsvMetricLabel}>{isAr ? 'هامش الربح وعائد الاستثمار (ROI)' : 'Gross Margin & ROI'}</span>
-                        <span className={vStyles.rsvMetricValue}>
-                          {selectedPropertyAnalysis.grossMarginPct.toFixed(1)}%
-                        </span>
-                        <span className={vStyles.rsvMetricSub}>
-                          {isAr ? `عائد الاستثمار: ${selectedPropertyAnalysis.roiPct.toFixed(1)}% ROI` : `ROI: ${selectedPropertyAnalysis.roiPct.toFixed(1)}%`}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Absorption Progress & Cash vs Receivables */}
-                    <div className={vStyles.salesGaugeRow}>
-                      {/* Sales Absorption Progress */}
-                      <div className={vStyles.absorptionProgressCard}>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                          <span style={{ fontSize: '0.86rem', fontWeight: 700, color: '#0f172a' }}>
-                            {isAr ? 'معدل استيعاب المبيعات والحجوزات' : 'Sales Absorption Rate'}
-                          </span>
-                          <span className={`${shellStyles.statusPill} ${shellStyles.statusPillGreen}`}>
-                            {selectedPropertyAnalysis.absorptionRatePct.toFixed(1)}%
-                          </span>
-                        </div>
-
-                        <div className={vStyles.progressTrack}>
-                          <div 
-                            className={vStyles.progressBar} 
-                            style={{ 
-                              width: `${Math.min(100, Math.max(0, selectedPropertyAnalysis.absorptionRatePct.toNumber()))}%`,
-                              backgroundColor: currentAccent
-                            }} 
-                          />
-                        </div>
-
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.76rem', color: '#64748b' }}>
-                          <span>{isAr ? `تم بيع ${selectedPropertyAnalysis.soldUnits} من أصل ${selectedPropertyAnalysis.totalUnits} وحدة` : `Sold ${selectedPropertyAnalysis.soldUnits} of ${selectedPropertyAnalysis.totalUnits} units`}</span>
-                          <span>{isAr ? `المتبقي: ${selectedPropertyAnalysis.remainingUnits} وحدة` : `Remaining: ${selectedPropertyAnalysis.remainingUnits} units`}</span>
-                        </div>
-                      </div>
-
-                      {/* Cash Collected vs Receivables */}
-                      <div className={vStyles.absorptionProgressCard}>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                          <span style={{ fontSize: '0.86rem', fontWeight: 700, color: '#0f172a' }}>
-                            {isAr ? 'التحصيلات النقدية والأقساط المستحقة' : 'Cash Collected vs A/R'}
-                          </span>
-                          <span className={`${shellStyles.statusPill} ${shellStyles.statusPillBlue}`}>
-                            {formatCompactEGP(selectedPropertyAnalysis.contractedSales, isAr)}
-                          </span>
-                        </div>
-
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginTop: '0.25rem' }}>
-                          <div style={{ background: '#f8fafc', padding: '0.5rem 0.75rem', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                            <div style={{ fontSize: '0.70rem', color: '#64748b' }}>{isAr ? 'النقدية المحصلة' : 'Cash Collected'}</div>
-                            <div style={{ fontSize: '1.05rem', fontWeight: 800, color: '#16a34a', fontVariantNumeric: 'tabular-nums' }}>
-                              {formatCompactEGP(selectedPropertyAnalysis.collectedCash, isAr)}
-                            </div>
-                          </div>
-
-                          <div style={{ background: '#f8fafc', padding: '0.5rem 0.75rem', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                            <div style={{ fontSize: '0.70rem', color: '#64748b' }}>{isAr ? 'أقساط وشيكات مستحقة A/R' : 'Pending Receivables'}</div>
-                            <div style={{ fontSize: '1.05rem', fontWeight: 800, color: '#d97706', fontVariantNumeric: 'tabular-nums' }}>
-                              {formatCompactEGP(selectedPropertyAnalysis.pendingReceivables, isAr)}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* CAD Blueprint Cartesian ApexChart */}
-                    <div className={vStyles.macroChartCard}>
-                      <div className={vStyles.chartCardHeader}>
-                        <div className={vStyles.chartTitleWrap}>
-                          <BarChart3 size={15} color={currentAccent} />
-                          <span className={vStyles.chartTitle}>
-                            {isAr ? 'مخطط التوازن المالي والجدوى (CAD Blueprint)' : 'Financial Balance & Feasibility CAD Blueprint'}
-                          </span>
-                        </div>
-                        <span style={{ fontSize: '0.74rem', color: '#64748b' }}>
-                          {isAr ? 'مقارنة القيمة البيعية والتكاليف والأرباح والتدفقات' : 'Comparison of RSV, Costs, Profits & Cashflows'}
-                        </span>
-                      </div>
-                      <ERPApexChart
-                        type="bar"
-                        series={feasibilityComparisonSeries}
-                        options={feasibilityComparisonOptions}
-                        height={300}
-                        isAr={isAr}
-                        primaryColor={currentAccent}
-                      />
-                    </div>
-
-                    {/* Contracts Table */}
-                    <div className={vStyles.contractsTableCard}>
-                      <div style={{ padding: '0.75rem 1rem', borderBottom: '1px solid var(--erp-border, #cbd5e1)', background: '#fafbfc', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#0f172a' }}>
-                          {isAr ? 'عقود البيع المسجلة على هذا العقار' : 'Registered Sales Contracts on Property'}
-                        </span>
-                        <span style={{ fontSize: '0.72rem', color: '#64748b' }}>
-                          {selectedPropertyAnalysis.associatedContracts.length} {isAr ? 'عقد رسمي' : 'contracts'}
-                        </span>
-                      </div>
-
-                      {selectedPropertyAnalysis.associatedContracts.length > 0 ? (
-                        <table className={vStyles.contractsTable}>
-                          <thead className={vStyles.contractsThead}>
-                            <tr>
-                              <th scope="col" className={vStyles.contractsTh}>{isAr ? 'رقم العقد' : 'Contract #'}</th>
-                              <th scope="col" className={vStyles.contractsTh}>{isAr ? 'اسم العميل' : 'Client Name'}</th>
-                              <th scope="col" className={vStyles.contractsTh}>{isAr ? 'الوحدة' : 'Unit'}</th>
-                              <th scope="col" className={vStyles.contractsTh}>{isAr ? 'قيمة العقد' : 'Contract Value'}</th>
-                              <th scope="col" className={vStyles.contractsTh}>{isAr ? 'المحصل' : 'Collected'}</th>
-                              <th scope="col" className={vStyles.contractsTh}>{isAr ? 'الحالة' : 'Status'}</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {selectedPropertyAnalysis.associatedContracts.map(c => {
-                              const handleSelect = () => {
-                                if (onInspectContract) {
-                                  onInspectContract(c);
-                                } else if (onOpenContractForProperty && selectedProperty) {
-                                  onOpenContractForProperty(selectedProperty);
-                                } else if (onNavigateTab) {
-                                  onNavigateTab('contracts', { contractId: c.contract_id });
-                                }
-                              };
-
-                              return (
-                                <tr 
-                                  key={c.contract_id} 
-                                  className={vStyles.contractsRow}
-                                  role="button"
-                                  tabIndex={0}
-                                  onClick={handleSelect}
-                                  onKeyDown={(e) => {
-                                    if (e.key === 'Enter' || e.key === ' ') {
-                                      e.preventDefault();
-                                      handleSelect();
-                                    }
-                                  }}
-                                  title={isAr ? 'فحص تفاصيل العقد' : 'Inspect contract'}
-                                  aria-label={`${c.contract_number} - ${c.buyer_name}`}
-                                >
-                                  <td className={vStyles.contractsTd} style={{ fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>
-                                    {c.contract_number}
-                                  </td>
-                                  <td className={vStyles.contractsTd}>
-                                    {c.buyer_name}
-                                  </td>
-                                  <td className={vStyles.contractsTd}>
-                                    {c.building_unit_number || c.unit_id || '-'}
-                                  </td>
-                                  <td className={vStyles.contractsTd} style={{ fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>
-                                    {formatCompactEGP(c.gross_contract_value, isAr)}
-                                  </td>
-                                  <td className={vStyles.contractsTd} style={{ color: '#16a34a', fontVariantNumeric: 'tabular-nums' }}>
-                                    {formatCompactEGP(c.total_cash_collected, isAr)}
-                                  </td>
-                                  <td className={vStyles.contractsTd}>
-                                    <span className={`${shellStyles.statusPill} ${c.status === 'Active' ? shellStyles.statusPillGreen : shellStyles.statusPillNeutral}`}>
-                                      {c.status === 'Active' ? (isAr ? 'ساري' : 'Active') : c.status}
-                                    </span>
-                                  </td>
-                                </tr>
-                              );
-                            })}
-                          </tbody>
-                        </table>
-                      ) : (
-                        <div style={{ padding: '2rem', textAlign: 'center', color: '#64748b', fontSize: '0.80rem' }}>
-                          {isAr ? 'لا توجد عقود بيع مسجلة بعد على هذا العقار.' : 'No contracts recorded yet for this property.'}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {/* TAB 3: سجل بنود التكاليف والمصروفات (CANONICAL TABLE CARD) */}
-                {activeDossierTab === 'costs' && (
-                  <div
-                    role="tabpanel"
-                    id="dossier-panel-costs"
-                    aria-labelledby="dossier-tab-costs"
-                    style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}
-                  >
-                    <div className={`${shellStyles.canonicalTableCard} ${vStyles.costRegisterCard}`}>
-                      <div className={vStyles.costRegisterHeader}>
-                        <div className={vStyles.costRegisterTitleWrap}>
-                          <div className={vStyles.cardIconSquircle}>
-                            <Coins size={15} />
-                          </div>
-                          <div>
-                            <div style={{ fontSize: '0.88rem', fontWeight: 700, color: '#0f172a' }}>
-                              {isAr ? 'سجل بنود التكاليف والمصروفات المعتمدة للعقار' : 'Property Costs & Incurred Expenses Register'}
-                            </div>
-                            <div style={{ fontSize: '0.72rem', color: '#64748b' }}>
-                              {isAr ? `إجمالي البنود: ${filteredCostItems.length} بند مسجل` : `Total ${filteredCostItems.length} logged items`}
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className={vStyles.costRegisterControls}>
-                          {/* Category Filter */}
-                          <select
-                            value={costCategoryFilter}
-                            onChange={(e) => {
-                              setCostCategoryFilter(e.target.value);
-                              setCostCurrentPage(1);
-                            }}
-                            className={shellStyles.canonicalFilterSelect}
-                          >
-                            <option value="ALL">{isAr ? 'كل بنود التكلفة' : 'All Categories'}</option>
-                            <option value="land_allocation">{isAr ? 'حصة الأرض والتخصيص' : 'Land Allocation'}</option>
-                            <option value="civil_structure">{isAr ? 'الهيكل الخرساني والحديد' : 'Civil & Structure'}</option>
-                            <option value="labor_subcontractor">{isAr ? 'مصنعيات ومقاولات باطن' : 'Labor & Subcontractor'}</option>
-                            <option value="mep_infrastructure">{isAr ? 'شبكات الكهروميكانيك' : 'MEP Infrastructure'}</option>
-                            <option value="finishing_interior">{isAr ? 'تشطيبات وديكور داخلي' : 'Interior Finishes'}</option>
-                            <option value="site_facade">{isAr ? 'واجهات ومداخل الموقع' : 'Facades & Site'}</option>
-                            <option value="permits_engineering">{isAr ? 'تراخيص واستشارات هندسية' : 'Permits & Engineering'}</option>
-                            <option value="taxes_fees">{isAr ? 'ضرائب ورسوم حكومية' : 'Taxes & Fees'}</option>
-                          </select>
-
-                          {/* Status Filter */}
-                          <select
-                            value={costStatusFilter}
-                            onChange={(e) => {
-                              setCostStatusFilter(e.target.value);
-                              setCostCurrentPage(1);
-                            }}
-                            className={shellStyles.canonicalFilterSelect}
-                          >
-                            <option value="ALL">{isAr ? 'كل الحالات' : 'All Statuses'}</option>
-                            <option value="verified">{isAr ? 'معتمد' : 'Verified'}</option>
-                            <option value="capitalized">{isAr ? 'مرسمل' : 'Capitalized'}</option>
-                            <option value="pending_audit">{isAr ? 'قيد التدقيق' : 'Pending Audit'}</option>
-                          </select>
-
-                          {/* Search Input */}
-                          <input
-                            type="text"
-                            value={costSearchQuery}
-                            onChange={(e) => {
-                              setCostSearchQuery(e.target.value);
-                              setCostCurrentPage(1);
-                            }}
-                            placeholder={isAr ? 'بحث في البيان أو المورد...' : 'Search description / vendor...'}
-                            className={vStyles.costSearchInput}
-                          />
-
-                          {/* Add Cost Action Button */}
-                          <button
-                            type="button"
-                            className={vStyles.costAddBtn}
-                            onClick={() => {
-                              if (onOpenQuickExpense && selectedProperty) {
-                                onOpenQuickExpense(selectedProperty.id);
-                              } else if (onOpenQuickExpense) {
-                                onOpenQuickExpense();
-                              } else {
-                                toast.info(isAr ? 'فتح نموذج تسجيل تكلفة جديدة' : 'Open Cost Entry Form');
-                              }
-                            }}
-                          >
-                            <Plus size={14} />
-                            <span>{isAr ? 'إضافة تكلفة / مصروف' : 'Add Cost / Expense'}</span>
-                          </button>
-                        </div>
-                      </div>
-
-                      <div className={shellStyles.tableContainer}>
-                        {filteredCostItems.length > 0 ? (
-                          <table className={shellStyles.canonicalTable}>
-                            <thead className={shellStyles.canonicalThead}>
-                              <tr>
-                                <th scope="col" className={shellStyles.canonicalTh}>{isAr ? 'التاريخ' : 'Date'}</th>
-                                <th scope="col" className={shellStyles.canonicalTh}>{isAr ? 'التصنيف' : 'Category'}</th>
-                                <th scope="col" className={shellStyles.canonicalTh}>{isAr ? 'بيان المصروف' : 'Description'}</th>
-                                <th scope="col" className={shellStyles.canonicalTh}>{isAr ? 'المورد / المقاول' : 'Vendor'}</th>
-                                <th scope="col" className={shellStyles.canonicalTh}>{isAr ? 'المرحلة الهندسية' : 'Phase'}</th>
-                                <th scope="col" className={shellStyles.canonicalTh}>{isAr ? 'المبلغ' : 'Amount'}</th>
-                                <th scope="col" className={shellStyles.canonicalTh}>{isAr ? 'الحالة' : 'Status'}</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {paginatedCostItems.map((item, itemIdx) => {
-                                const isApproved = item.status === 'verified' || item.status === 'capitalized';
-                                const isPending = item.status === 'pending_audit';
-
-                                return (
-                                  <tr key={item.item_id || item.id || `cost-${itemIdx}`} className={shellStyles.canonicalRow}>
-                                    <td className={shellStyles.canonicalTd} style={{ fontVariantNumeric: 'tabular-nums', color: '#64748b' }}>
-                                      {item.logged_date || (item.created_at ? item.created_at.slice(0, 10) : '-')}
-                                    </td>
-                                    <td className={shellStyles.canonicalTd}>
-                                      <span className={`${shellStyles.statusPill} ${shellStyles.statusPillNeutral}`} style={{ fontSize: '0.70rem' }}>
-                                        {getCostCategoryLabel(item.category, isAr)}
-                                      </span>
-                                    </td>
-                                    <td className={shellStyles.canonicalTd} style={{ fontWeight: 600, color: '#0f172a' }}>
-                                      {isAr ? item.item_name_ar : (item.item_name_en || item.item_name_ar)}
-                                    </td>
-                                    <td className={shellStyles.canonicalTd} style={{ color: '#475569' }}>
-                                      {item.supplier_contractor || '-'}
-                                    </td>
-                                    <td className={shellStyles.canonicalTd} style={{ fontSize: '0.74rem', color: '#64748b' }}>
-                                      {getCostPhaseLabel(item.phase, isAr)}
-                                    </td>
-                                    <td className={shellStyles.canonicalTd} style={{ fontWeight: 700, fontVariantNumeric: 'tabular-nums', color: '#0f172a' }}>
-                                      {formatCompactEGP(item.total_cost_egp, isAr)}
-                                    </td>
-                                    <td className={shellStyles.canonicalTd}>
-                                      <span className={`${shellStyles.statusPill} ${
-                                        isApproved ? shellStyles.statusPillGreen :
-                                        isPending ? shellStyles.statusPillAmber :
-                                        shellStyles.statusPillNeutral
-                                      }`}>
-                                        {item.status === 'verified' ? (isAr ? 'معتمد' : 'Verified') :
-                                         item.status === 'capitalized' ? (isAr ? 'مرسمل' : 'Capitalized') :
-                                         item.status === 'pending_audit' ? (isAr ? 'قيد التدقيق' : 'Pending Audit') :
-                                         item.status}
-                                      </span>
-                                    </td>
-                                  </tr>
-                                );
-                              })}
-                            </tbody>
-                          </table>
-                        ) : (
-                          <div style={{ padding: '3rem 1.5rem', textAlign: 'center', color: '#64748b', fontSize: '0.84rem' }}>
-                            {selectedPropertyCostList.length === 0
-                              ? (isAr ? 'لا توجد بنود تكاليف أو مصروفات مسجلة على هذا العقار حتى الآن.' : 'No costs or expenses recorded yet for this property.')
-                              : (isAr ? 'لا توجد بنود تكلفة تطابق خيارات التصفية الحالية.' : 'No cost items match the current filters.')}
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Table Footer with Pagination */}
-                      <div className={shellStyles.canonicalTableFooter}>
-                        <div className={shellStyles.canonicalFooterLeading}>
-                          <span className={shellStyles.canonicalFooterCount}>
-                            {isAr
-                              ? `عرض ${Math.min(filteredCostItems.length, (costCurrentPage - 1) * costPageSize + 1)} إلى ${Math.min(filteredCostItems.length, costCurrentPage * costPageSize)} من أصل ${filteredCostItems.length} سجل`
-                              : `Showing ${Math.min(filteredCostItems.length, (costCurrentPage - 1) * costPageSize + 1)} to ${Math.min(filteredCostItems.length, costCurrentPage * costPageSize)} of ${filteredCostItems.length} records`}
-                          </span>
-                          <select
-                            value={costPageSize}
-                            onChange={(e) => {
-                              setCostPageSize(Number(e.target.value));
-                              setCostCurrentPage(1);
-                            }}
-                            className={shellStyles.canonicalPageSizeSelect}
-                          >
-                            <option value={5}>5 / {isAr ? 'صفحة' : 'page'}</option>
-                            <option value={10}>10 / {isAr ? 'صفحة' : 'page'}</option>
-                            <option value={20}>20 / {isAr ? 'صفحة' : 'page'}</option>
-                            <option value={50}>50 / {isAr ? 'صفحة' : 'page'}</option>
-                          </select>
-                        </div>
-
-                        <div className={shellStyles.canonicalPaginationGroup}>
-                          <button
-                            type="button"
-                            disabled={costCurrentPage <= 1}
-                            onClick={() => setCostCurrentPage(p => Math.max(1, p - 1))}
-                            className={shellStyles.canonicalPaginationBtn}
-                            aria-label={isAr ? 'الصفحة السابقة' : 'Previous Page'}
-                          >
-                            {isAr ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
-                          </button>
-
-                          {Array.from({ length: totalCostPages }, (_, i) => i + 1).map((pageNum) => (
-                            <button
-                              key={pageNum}
-                              type="button"
-                              onClick={() => setCostCurrentPage(pageNum)}
-                              className={`${shellStyles.canonicalPaginationBtn} ${pageNum === costCurrentPage ? shellStyles.canonicalPaginationBtnActive : ''}`}
-                            >
-                              {pageNum}
-                            </button>
-                          ))}
-
-                          <button
-                            type="button"
-                            disabled={costCurrentPage >= totalCostPages}
-                            onClick={() => setCostCurrentPage(p => Math.min(totalCostPages, p + 1))}
-                            className={shellStyles.canonicalPaginationBtn}
-                            aria-label={isAr ? 'الصفحة التالية' : 'Next Page'}
-                          >
-                            {isAr ? <ChevronLeft size={14} /> : <ChevronRight size={14} />}
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div style={{ padding: '3rem', textAlign: 'center', color: '#64748b' }}>
-                {isAr ? 'يرجى اختيار عقار من القائمة لعرض تفاصيل دورة الحياة.' : 'Please select a property to inspect lifecycle dossier.'}
-              </div>
-            )}
-          </div>
+          <PropertyAnalysisDossier
+            properties={properties}
+            propertiesAnalysisMap={propertiesAnalysisMap}
+            selectedProperty={selectedProperty}
+            selectedPropertyAnalysis={selectedPropertyAnalysis}
+            propertyCosts={propertyCosts}
+            onSelectProperty={handleSelectAndInspectProperty}
+            activeDossierTab={activeDossierTab}
+            onDossierTabChange={setActiveDossierTab}
+            onInspectContract={onInspectContract}
+            onOpenContractForProperty={onOpenContractForProperty}
+            onNavigateTab={onNavigateTab}
+            onOpenNewContract={() => {
+              if (selectedProperty && onOpenContractForProperty) {
+                onOpenContractForProperty(selectedProperty);
+              } else if (onNavigateTab) {
+                onNavigateTab('properties');
+              }
+            }}
+            onOpenQuickExpense={onOpenQuickExpense}
+            currentAccent={currentAccent}
+            isAr={isAr}
+          />
         </>
       )}
 
       {/* COMPANION SIDE WIDGETS (COLUMN 3 PORTAL) */}
       <ZFWorkstationSideWidgets>
-        <div className={vStyles.sideWidgetsWrap}>
-          {/* Card 0: دليل المشروعات السريع (Quick Projects Directory) */}
-          <div className={vStyles.sideWidgetCard}>
-            <div className={vStyles.directoryHeader}>
-              <div className={vStyles.sideWidgetTitleWrap}>
-                <div className={vStyles.cardIconSquircle}>
-                  <Building2 size={15} />
-                </div>
-                <h4 className={vStyles.sideWidgetTitle}>
-                  {isAr ? 'دليل المشروعات السريع' : 'Quick Projects Directory'}
-                </h4>
-              </div>
-              <span className={vStyles.directoryCountPill}>
-                {directoryFilteredProperties.length} {isAr ? 'مشروع' : 'projects'}
-              </span>
-            </div>
-
-            {/* Sticky Search Input */}
-            <div className={vStyles.directorySearchWrap}>
-              <Search size={14} className={vStyles.directorySearchIcon} />
-              <input
-                type="text"
-                value={directorySearchQuery}
-                onChange={(e) => setDirectorySearchQuery(e.target.value)}
-                placeholder={isAr ? 'بحث بالعقار أو الموقع...' : 'Search property or location...'}
-                className={vStyles.directorySearchInput}
-              />
-            </div>
-
-            {/* عرض النظرة الكلية للمحفظة at top */}
-            <button
-              type="button"
-              className={`${vStyles.directoryOverviewCard} ${viewMode === 'portfolio' ? vStyles.directoryOverviewCardActive : ''}`}
-              onClick={() => handleViewModeChange('portfolio')}
-            >
-              <div className={vStyles.overviewLeading}>
-                <div className={vStyles.overviewIconSquircle}>
-                  <BarChart3 size={15} />
-                </div>
-                <div className={vStyles.overviewTextWrap}>
-                  <span className={vStyles.overviewTitle}>
-                    {isAr ? 'عرض النظرة الكلية للمحفظة' : 'All Properties Overview'}
-                  </span>
-                  <span className={vStyles.overviewSub}>
-                    {isAr ? 'التحليلات والمقارنة الاستثمارية' : 'Aggregate benchmarks'}
-                  </span>
-                </div>
-              </div>
-              <span className={vStyles.overviewCountBadge}>
-                {properties.length}
-              </span>
-            </button>
-
-            {/* Scrollable list of properties */}
-            <div className={vStyles.directoryListScroll}>
-              {directoryFilteredProperties.length > 0 ? (
-                directoryFilteredProperties.map(p => {
-                  const pAnalysis = propertiesAnalysisMap.get(p.id);
-                  const isSelected = viewMode === 'property' && selectedPropertyId === p.id;
-                  const totalUnits = pAnalysis ? pAnalysis.totalUnits : (p.building_units?.length || 0);
-                  const actualCost = pAnalysis ? pAnalysis.breakdown.totalInvestedCapital : new Decimal(0);
-                  const isSold = p.listing_status === 'sold' || pAnalysis?.status === 'sold';
-                  const isUnderOffer = p.listing_status === 'under_offer' || pAnalysis?.status === 'under_offer';
-                  const isReady = p.completion_status === 'ready' || pAnalysis?.status === 'ready';
-
-                  return (
-                    <div
-                      key={p.id}
-                      className={`${vStyles.directoryPropertyItem} ${isSelected ? vStyles.directoryPropertyItemActive : ''}`}
-                      onClick={() => handleSelectAndInspectProperty(p.id)}
-                      role="button"
-                      tabIndex={0}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                          e.preventDefault();
-                          handleSelectAndInspectProperty(p.id);
-                        }
-                      }}
-                    >
-                      <div className={vStyles.directoryItemTop}>
-                        <div className={vStyles.directoryItemLeading}>
-                          <div className={vStyles.directorySquircleIcon}>
-                            <Building2 size={13} />
-                          </div>
-                          <div className={vStyles.directoryTitleWrap}>
-                            <span className={vStyles.directoryPropertyTitle} title={isAr ? p.title_ar : p.title_en}>
-                              {isAr ? p.title_ar : p.title_en}
-                            </span>
-                            <div className={vStyles.directoryPropertyMeta}>
-                              <span>{p.location || (isAr ? 'غير محدد' : 'N/A')}</span>
-                              <span>•</span>
-                              <span style={{ fontVariantNumeric: 'tabular-nums' }}>{totalUnits} {isAr ? 'وحدة' : 'units'}</span>
-                            </div>
-                          </div>
-                        </div>
-                        <span className={`${shellStyles.statusPill} ${
-                          isSold ? shellStyles.statusPillNeutral :
-                          isReady ? shellStyles.statusPillGreen :
-                          isUnderOffer ? shellStyles.statusPillAmber :
-                          shellStyles.statusPillAmber
-                        }`} style={{ fontSize: '0.62rem', padding: '0.1rem 0.4rem' }}>
-                          {isSold ? (isAr ? 'مباع' : 'Sold') :
-                           isReady ? (isAr ? 'جاهز' : 'Ready') :
-                           isUnderOffer ? (isAr ? 'تحت الحجز' : 'Under Offer') :
-                           (isAr ? 'قيد التنفيذ' : 'In Progress')}
-                        </span>
-                      </div>
-
-                      <div className={vStyles.directoryItemBottom}>
-                        <span className={vStyles.directoryCostLabel}>
-                          {isAr ? 'المنصرف الفعلي:' : 'Incurred Cost:'}
-                        </span>
-                        <span className={vStyles.directoryCostVal}>
-                          {formatCompactEGP(actualCost, isAr)}
-                        </span>
-                      </div>
-                    </div>
-                  );
-                })
-              ) : (
-                <div className={vStyles.directoryEmptyState}>
-                  {isAr ? 'لا توجد مشاريع تطابق البحث' : 'No properties found'}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {viewMode === 'portfolio' ? (
-            <>
-              {/* Card 1: Portfolio Health & Structure */}
-              <div className={vStyles.sideWidgetCard}>
-                <div className={vStyles.sideWidgetHeader}>
-                  <div className={vStyles.sideWidgetTitleWrap}>
-                    <div className={vStyles.cardIconSquircle}>
-                      <BarChart3 size={15} />
-                    </div>
-                    <h4 className={vStyles.sideWidgetTitle}>
-                      {isAr ? 'مؤشرات صحة المحفظة' : 'Portfolio Health Index'}
-                    </h4>
-                  </div>
-                  <span className={`${shellStyles.statusPill} ${shellStyles.statusPillGreen}`}>
-                    {isAr ? `${filteredProperties.length} عقار متاح` : `${filteredProperties.length} Properties`}
-                  </span>
-                </div>
-
-                {/* 2x2 Specs Grid */}
-                <div className={vStyles.showcaseSpecs2x2}>
-                  <div className={vStyles.showcaseSpecItem}>
-                    <span className={vStyles.showcaseSpecLabel}>{isAr ? 'إجمالي المشاريع' : 'Total Projects'}</span>
-                    <span className={vStyles.showcaseSpecVal}>{macroAnalysis.totalPropertiesCount}</span>
-                  </div>
-                  <div className={vStyles.showcaseSpecItem}>
-                    <span className={vStyles.showcaseSpecLabel}>{isAr ? 'متاح للبيع' : 'Available'}</span>
-                    <span className={vStyles.showcaseSpecVal}>
-                      {macroAnalysis.statusDistribution.find(s => s.status === 'active')?.count || 0}
-                    </span>
-                  </div>
-                  <div className={vStyles.showcaseSpecItem}>
-                    <span className={vStyles.showcaseSpecLabel}>{isAr ? 'تحت الحجز' : 'Reserved'}</span>
-                    <span className={vStyles.showcaseSpecVal}>
-                      {macroAnalysis.statusDistribution.find(s => s.status === 'under_offer')?.count || 0}
-                    </span>
-                  </div>
-                  <div className={vStyles.showcaseSpecItem}>
-                    <span className={vStyles.showcaseSpecLabel}>{isAr ? 'مباع بالكامل' : 'Sold Out'}</span>
-                    <span className={vStyles.showcaseSpecVal}>
-                      {macroAnalysis.statusDistribution.find(s => s.status === 'sold')?.count || 0}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Financial Summary Table */}
-                <div className={vStyles.specsTable}>
-                  <div className={vStyles.specRow}>
-                    <span className={vStyles.specLabel}>{isAr ? 'رأس المال المستثمر' : 'Total Invested'}</span>
-                    <span className={vStyles.specValue}>{formatCompactEGP(macroAnalysis.totalInvestedCapital, isAr)}</span>
-                  </div>
-                  <div className={vStyles.specRow}>
-                    <span className={vStyles.specLabel}>{isAr ? 'المبيعات الفعلية' : 'Realized Sales'}</span>
-                    <span className={vStyles.specValue}>{formatCompactEGP(macroAnalysis.totalContractedSales, isAr)}</span>
-                  </div>
-                  <div className={vStyles.specRow}>
-                    <span className={vStyles.specLabel}>{isAr ? 'الأرباح التقديرية' : 'Expected Profit'}</span>
-                    <span className={vStyles.specValue} style={{ color: '#16a34a' }}>{formatCompactEGP(macroAnalysis.totalExpectedProfit, isAr)}</span>
-                  </div>
-                  <div className={`${vStyles.specRow} ${vStyles.specRowHighlighted}`}>
-                    <span className={vStyles.specLabel} style={{ color: currentAccent }}>{isAr ? 'متوسط العائد ROI' : 'Average ROI'}</span>
-                    <span className={vStyles.specValue} style={{ color: currentAccent }}>{macroAnalysis.averageRoiPct.toFixed(1)}%</span>
-                  </div>
-                </div>
-
-                {selectedProperty && (
-                  <button
-                    type="button"
-                    className={vStyles.showcaseFullDetailsBtn}
-                    onClick={() => handleViewModeChange('property')}
-                  >
-                    <span>{isAr ? `فحص ملف: ${selectedProperty.title_ar || selectedProperty.title_en} ↗` : `Inspect ${selectedProperty.title_en || selectedProperty.title_ar} ↗`}</span>
-                    {isAr ? <ChevronLeft size={14} /> : <ChevronRight size={14} />}
-                  </button>
-                )}
-              </div>
-
-              {/* Card 2: Quick Portfolio Operations */}
-              <div className={vStyles.sideWidgetCard}>
-                <div className={vStyles.sideWidgetHeader}>
-                  <div className={vStyles.sideWidgetTitleWrap}>
-                    <div className={vStyles.cardIconSquircle}>
-                      <Sparkles size={15} />
-                    </div>
-                    <h4 className={vStyles.sideWidgetTitle}>
-                      {isAr ? 'إجراءات المحفظة السريعة' : 'Portfolio Operations'}
-                    </h4>
-                  </div>
-                </div>
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                  {/* Action 1: Add Cost / Expense */}
-                  <button
-                    type="button"
-                    className={vStyles.sideQuickActionBtn}
-                    onClick={() => {
-                      if (onOpenQuickExpense) {
-                        onOpenQuickExpense();
-                      } else {
-                        toast.info(isAr ? 'فتح نافذة تسجيل المصروفات السريعة' : 'Open Quick Expense Modal');
-                      }
-                    }}
-                  >
-                    <div className={vStyles.sideQuickActionLeading}>
-                      <div className={vStyles.sideQuickActionIconBox} style={{ color: '#16a34a' }}>
-                        <Plus size={14} />
-                      </div>
-                      <span className={vStyles.sideQuickActionText}>
-                        {isAr ? 'إضافة تكلفة / مصروف للمشاريع' : 'Add Cost / Expense'}
-                      </span>
-                    </div>
-                    {isAr ? <ChevronLeft size={14} color="#64748b" /> : <ChevronRight size={14} color="#64748b" />}
-                  </button>
-
-                  {/* Action 2: Inspect Selected Property */}
-                  {selectedProperty && (
-                    <button
-                      type="button"
-                      className={vStyles.sideQuickActionBtn}
-                      onClick={() => handleViewModeChange('property')}
-                    >
-                      <div className={vStyles.sideQuickActionLeading}>
-                        <div className={vStyles.sideQuickActionIconBox} style={{ color: currentAccent }}>
-                          <Building2 size={14} />
-                        </div>
-                        <span className={vStyles.sideQuickActionText}>
-                          {isAr ? 'فتح ملف العقار المحدد' : 'Open Property Dossier'}
-                        </span>
-                      </div>
-                      {isAr ? <ChevronLeft size={14} color="#64748b" /> : <ChevronRight size={14} color="#64748b" />}
-                    </button>
-                  )}
-
-                  {/* Action 3: Export Feasibility Excel */}
-                  <button
-                    type="button"
-                    className={vStyles.sideQuickActionBtn}
-                    onClick={handleExportPropertyExcel}
-                  >
-                    <div className={vStyles.sideQuickActionLeading}>
-                      <div className={vStyles.sideQuickActionIconBox} style={{ color: '#0ea5e9' }}>
-                        <TableIcon size={14} />
-                      </div>
-                      <span className={vStyles.sideQuickActionText}>
-                        {isAr ? 'تصدير دراسة الجدوى Excel' : 'Export Feasibility Excel'}
-                      </span>
-                    </div>
-                    {isAr ? <ChevronLeft size={14} color="#64748b" /> : <ChevronRight size={14} color="#64748b" />}
-                  </button>
-
-                  {/* Action 4: Construction Hub */}
-                  <button
-                    type="button"
-                    className={vStyles.sideQuickActionBtn}
-                    onClick={() => {
-                      if (onNavigateTab) {
-                        onNavigateTab('construction');
-                      } else {
-                        toast.info(isAr ? 'لوحة إدارة المشاريع والإنشاءات' : 'Construction Projects Hub');
-                      }
-                    }}
-                  >
-                    <div className={vStyles.sideQuickActionLeading}>
-                      <div className={vStyles.sideQuickActionIconBox} style={{ color: '#d97706' }}>
-                        <Layers size={14} />
-                      </div>
-                      <span className={vStyles.sideQuickActionText}>
-                        {isAr ? 'مركز إدارة المشاريع والإنشاءات' : 'Construction Projects Hub'}
-                      </span>
-                    </div>
-                    {isAr ? <ChevronLeft size={14} color="#64748b" /> : <ChevronRight size={14} color="#64748b" />}
-                  </button>
-
-                  {/* Action 5: Print Portfolio Summary */}
-                  <button
-                    type="button"
-                    className={vStyles.sideQuickActionBtn}
-                    onClick={() => {
-                      if (typeof window !== 'undefined') {
-                        window.print();
-                      }
-                    }}
-                  >
-                    <div className={vStyles.sideQuickActionLeading}>
-                      <div className={vStyles.sideQuickActionIconBox} style={{ color: '#6366f1' }}>
-                        <Printer size={14} />
-                      </div>
-                      <span className={vStyles.sideQuickActionText}>
-                        {isAr ? 'طباعة تقرير المحفظة' : 'Print Portfolio Summary'}
-                      </span>
-                    </div>
-                    {isAr ? <ChevronLeft size={14} color="#64748b" /> : <ChevronRight size={14} color="#64748b" />}
-                  </button>
-                </div>
-              </div>
-            </>
-          ) : (
-            <>
-          {selectedPropertyAnalysis && (
-            <div className={vStyles.sideWidgetCard}>
-              <div className={vStyles.sideWidgetHeader}>
-                <div className={vStyles.sideWidgetTitleWrap}>
-                  <div className={vStyles.cardIconSquircle}>
-                    <Building2 size={15} />
-                  </div>
-                  <h4 className={vStyles.sideWidgetTitle}>
-                    {isAr ? 'بطاقة هوية العقار' : 'Property Showcase'}
-                  </h4>
-                </div>
-                <span className={`${shellStyles.statusPill} ${selectedPropertyAnalysis.status === 'sold' ? shellStyles.statusPillNeutral : shellStyles.statusPillGreen}`}>
-                  {selectedPropertyAnalysis.statusLabel}
-                </span>
-              </div>
-
-              <div className={vStyles.propertyShowcaseImageWrap}>
-                <div className={vStyles.showcaseBadgeOverlay}>
-                  <span className={`${shellStyles.statusPill} ${selectedPropertyAnalysis.status === 'sold' ? shellStyles.statusPillNeutral : shellStyles.statusPillGreen}`}>
-                    {selectedPropertyAnalysis.statusLabel}
-                  </span>
-                </div>
-                {selectedPropertyAnalysis.property.property_images && selectedPropertyAnalysis.property.property_images.length > 0 ? (
-                  <img
-                    src={selectedPropertyAnalysis.property.property_images[0].url}
-                    alt={selectedPropertyAnalysis.titleAr}
-                    className={vStyles.propertyShowcaseImage}
-                  />
-                ) : (
-                  <div className={vStyles.propertyShowcasePlaceholder}>
-                    <Building2 size={32} />
-                    <span style={{ fontSize: '0.72rem' }}>{isAr ? 'صورة العقار الرسمية' : 'Property Showcase'}</span>
-                  </div>
-                )}
-              </div>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
-                <span style={{ fontSize: '0.90rem', fontWeight: 800, color: '#0f172a' }}>
-                  {isAr ? selectedPropertyAnalysis.titleAr : selectedPropertyAnalysis.titleEn}
-                </span>
-                <span style={{ fontSize: '0.74rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                  <MapPin size={12} />
-                  {selectedPropertyAnalysis.location || (isAr ? 'غير محدد' : 'N/A')}
-                </span>
-              </div>
-
-              {/* 2x2 Specs Grid */}
-              <div className={vStyles.showcaseSpecs2x2}>
-                <div className={vStyles.showcaseSpecItem}>
-                  <span className={vStyles.showcaseSpecLabel}>{isAr ? 'المساحة الكلية' : 'Total Area'}</span>
-                  <span className={vStyles.showcaseSpecVal}>{selectedPropertyAnalysis.areaSqm} م²</span>
-                </div>
-                <div className={vStyles.showcaseSpecItem}>
-                  <span className={vStyles.showcaseSpecLabel}>{isAr ? 'نوع العقار' : 'Property Type'}</span>
-                  <span className={vStyles.showcaseSpecVal}>
-                    {selectedPropertyAnalysis.property.type === 'apartment' ? (isAr ? 'شقة سكنية' : 'Apartment')
-                      : selectedPropertyAnalysis.property.type === 'building' ? (isAr ? 'عمارة كاملة' : 'Building')
-                      : selectedPropertyAnalysis.property.type === 'villa' ? (isAr ? 'فيلا مستقلة' : 'Villa')
-                      : (isAr ? 'دوبلكس' : 'Duplex')}
-                  </span>
-                </div>
-                <div className={vStyles.showcaseSpecItem}>
-                  <span className={vStyles.showcaseSpecLabel}>{isAr ? 'عدد الوحدات' : 'Units Count'}</span>
-                  <span className={vStyles.showcaseSpecVal}>{selectedPropertyAnalysis.totalUnits} {isAr ? 'وحدة' : 'units'}</span>
-                </div>
-                <div className={vStyles.showcaseSpecItem}>
-                  <span className={vStyles.showcaseSpecLabel}>{isAr ? 'سعر المستهدف' : 'Target Price'}</span>
-                  <span className={vStyles.showcaseSpecVal}>{formatCompactEGP(selectedPropertyAnalysis.expectedTotalSales, isAr)}</span>
-                </div>
-              </div>
-
-              <button
-                type="button"
-                className={vStyles.showcaseFullDetailsBtn}
-                onClick={() => {
-                  const el = document.getElementById('property-dossier-section');
-                  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                }}
-              >
-                <span>{isAr ? 'عرض التفاصيل الكاملة' : 'View Full Details'}</span>
-                {isAr ? <ArrowDownLeft size={14} /> : <ChevronRight size={14} />}
-              </button>
-            </div>
-          )}
-
-          {/* Card 2: Detailed Financial Specs */}
-          {selectedPropertyAnalysis && (
-            <div className={vStyles.sideWidgetCard}>
-              <div className={vStyles.sideWidgetHeader}>
-                <div className={vStyles.sideWidgetTitleWrap}>
-                  <div className={vStyles.cardIconSquircle}>
-                    <SlidersHorizontal size={15} />
-                  </div>
-                  <h4 className={vStyles.sideWidgetTitle}>
-                    {isAr ? 'المواصفات المالية والهندسية' : 'Financial & Engineering Specs'}
-                  </h4>
-                </div>
-              </div>
-
-              <div className={vStyles.specsTable}>
-                <div className={vStyles.specRow}>
-                  <span className={vStyles.specLabel}>{isAr ? 'كود العقار' : 'Property ID'}</span>
-                  <span className={vStyles.specValue}>#{selectedPropertyAnalysis.propertyId.slice(0, 8)}</span>
-                </div>
-
-                <div className={vStyles.specRow}>
-                  <span className={vStyles.specLabel}>{isAr ? 'المساحة الإجمالية' : 'Total Area'}</span>
-                  <span className={vStyles.specValue}>{selectedPropertyAnalysis.areaSqm} م²</span>
-                </div>
-
-                <div className={vStyles.specRow}>
-                  <span className={vStyles.specLabel}>{isAr ? 'عدد الوحدات / الطوابق' : 'Units / Floors'}</span>
-                  <span className={vStyles.specValue}>{selectedPropertyAnalysis.totalUnits} {isAr ? 'وحدة' : 'units'}</span>
-                </div>
-
-                <div className={vStyles.specRow}>
-                  <span className={vStyles.specLabel}>{isAr ? 'حصة الأرض' : 'Land Share'}</span>
-                  <span className={vStyles.specValue}>{formatCompactEGP(selectedPropertyAnalysis.breakdown.landCost, isAr)}</span>
-                </div>
-
-                <div className={vStyles.specRow}>
-                  <span className={vStyles.specLabel}>{isAr ? 'مصاريف البناء WIP' : 'Construction WIP'}</span>
-                  <span className={vStyles.specValue}>{formatCompactEGP(selectedPropertyAnalysis.breakdown.totalConstructionWip, isAr)}</span>
-                </div>
-
-                <div className={`${vStyles.specRow} ${vStyles.specRowHighlighted}`}>
-                  <span className={vStyles.specLabel} style={{ color: currentAccent }}>{isAr ? 'إجمالي الاستثمار' : 'Total Investment'}</span>
-                  <span className={vStyles.specValue} style={{ color: currentAccent }}>{formatCompactEGP(selectedPropertyAnalysis.breakdown.totalInvestedCapital, isAr)}</span>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Card 3: Analysis & Auditing Notes */}
-          <div className={vStyles.sideWidgetCard}>
-            <div className={vStyles.sideWidgetHeader}>
-              <div className={vStyles.sideWidgetTitleWrap}>
-                <div className={vStyles.cardIconSquircle}>
-                  <FileText size={15} />
-                </div>
-                <h4 className={vStyles.sideWidgetTitle}>
-                  {isAr ? 'ملاحظات التحليل والمراجعة' : 'Audit & Analysis Notes'}
-                </h4>
-              </div>
-            </div>
-
-            <textarea
-              value={selectedProperty ? (propertyNotes[selectedProperty.id] || '') : ''}
-              onChange={e => {
-                if (selectedProperty) {
-                  const val = e.target.value;
-                  setPropertyNotes(prev => ({ ...prev, [selectedProperty.id]: val }));
-                }
-              }}
-              placeholder={isAr ? 'أدخل ملاحظات التدقيق ودراسة الجدوى وتوصيات التسعير...' : 'Enter feasibility audit notes and pricing recommendations...'}
-              className={vStyles.auditNotesTextarea}
-            />
-            <span style={{ fontSize: '0.68rem', color: '#64748b' }}>
-              {isAr ? 'يتم حفظ الملاحظات تلقائياً أثناء جلسة العمل' : 'Notes auto-saved during active session'}
-            </span>
-          </div>
-        </>
-      )}
-    </div>
-  </ZFWorkstationSideWidgets>
+        <PropertyAnalysisSideWidgets
+          properties={properties}
+          propertiesAnalysisMap={propertiesAnalysisMap}
+          selectedPropertyId={selectedPropertyId}
+          onSelectProperty={handleSelectAndInspectProperty}
+          viewMode={viewMode}
+          onViewModeChange={handleViewModeChange}
+          isAr={isAr}
+        />
+      </ZFWorkstationSideWidgets>
 
       {/* PRINT PREVIEW MODAL */}
       {selectedProperty && selectedPropertyAnalysis && (

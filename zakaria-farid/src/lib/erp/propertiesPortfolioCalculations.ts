@@ -935,3 +935,157 @@ export function getCuratedProjectImage(property: Property, index: number = 0): s
   return fallbackPool[index % fallbackPool.length];
 }
 
+/**
+ * Robust classifier for property units and standalone properties.
+ * Inspects unitType, property.type, type, property_type, and contextual architectural keywords.
+ * Maps to canonical categories: duplex, villa, commercial, chalet, land, residential, other.
+ */
+export function classifyPropertyUnit(u: any): string {
+  if (!u) return 'other';
+
+  const rawType = (
+    u.unitType ||
+    u.unit_type ||
+    u.property?.type ||
+    u.property?.property_type ||
+    u.type ||
+    u.property_type ||
+    ''
+  ).toString().toLowerCase().trim();
+
+  const titleText = (
+    ((u.unitNumber || '') + ' ' +
+    (u.unit_number || '') + ' ' +
+    (u.projectTitle || '') + ' ' +
+    (u.project_title || '') + ' ' +
+    (u.title_ar || '') + ' ' +
+    (u.title_en || '') + ' ' +
+    (u.property?.title_ar || '') + ' ' +
+    (u.property?.title_en || '') + ' ' +
+    rawType)
+  ).toLowerCase();
+
+  // 1. Duplex / Penthouse / Sky Roof
+  if (
+    rawType === 'duplex' ||
+    rawType === 'penthouse' ||
+    rawType === 'roof' ||
+    rawType === 'sky_slab' ||
+    titleText.includes('دوبلكس') ||
+    titleText.includes('duplex') ||
+    titleText.includes('بنتهاوس') ||
+    titleText.includes('penthouse') ||
+    titleText.includes('روف') ||
+    titleText.includes('رووف') ||
+    titleText.includes('roof') ||
+    titleText.includes('سماوية')
+  ) {
+    return 'duplex';
+  }
+
+  // 2. Villas, Mansions, Palaces & Townhouses
+  if (
+    rawType === 'villa' ||
+    rawType === 'mansion' ||
+    rawType === 'palace' ||
+    rawType === 'townhouse' ||
+    rawType === 'twin_house' ||
+    rawType === 'twin' ||
+    titleText.includes('فيلا') ||
+    titleText.includes('villa') ||
+    titleText.includes('قصر') ||
+    titleText.includes('mansion') ||
+    titleText.includes('palace') ||
+    titleText.includes('تاون') ||
+    titleText.includes('townhouse') ||
+    titleText.includes('توين') ||
+    titleText.includes('twin')
+  ) {
+    return 'villa';
+  }
+
+  // 3. Commercial, Offices, Garages & Retail
+  if (
+    rawType === 'commercial' ||
+    rawType === 'office' ||
+    rawType === 'garage' ||
+    rawType === 'retail' ||
+    rawType === 'parking' ||
+    titleText.includes('تجاري') ||
+    titleText.includes('commercial') ||
+    titleText.includes('إداري') ||
+    titleText.includes('اداري') ||
+    titleText.includes('office') ||
+    titleText.includes('مكتب') ||
+    titleText.includes('جراج') ||
+    titleText.includes('garage') ||
+    titleText.includes('موقف') ||
+    titleText.includes('parking') ||
+    titleText.includes('محل') ||
+    titleText.includes('shop') ||
+    titleText.includes('retail') ||
+    titleText.includes('مول') ||
+    titleText.includes('mall')
+  ) {
+    return 'commercial';
+  }
+
+  // 4. Chalets & Coastal Cabins
+  if (
+    rawType === 'chalet' ||
+    rawType === 'cabin' ||
+    titleText.includes('شاليه') ||
+    titleText.includes('chalet') ||
+    titleText.includes('كابينة') ||
+    titleText.includes('cabin')
+  ) {
+    return 'chalet';
+  }
+
+  // 5. Land & Plots
+  const isLand =
+    rawType === 'land' ||
+    rawType === 'plot' ||
+    titleText.includes('قطعة أرض') ||
+    titleText.includes('قطعة ارض') ||
+    titleText.includes('أراضي') ||
+    titleText.includes('اراضي') ||
+    titleText.includes('أرض فضاء') ||
+    titleText.includes('ارض فضاء') ||
+    /\b(land|plot)\b/i.test(titleText) ||
+    ((/(^|\s)(أرض|ارض)(\s|$)/.test(titleText)) &&
+      !titleText.includes('أرضي') &&
+      !titleText.includes('ارضي') &&
+      !titleText.includes('أرضيات') &&
+      !titleText.includes('ارضيات'));
+
+  if (isLand) {
+    return 'land';
+  }
+
+  // 6. Residential Apartments & Residential Buildings
+  if (
+    rawType === 'apartment' ||
+    rawType === 'building' ||
+    rawType === 'residential' ||
+    rawType === 'flat' ||
+    titleText.includes('شقة') ||
+    titleText.includes('شقق') ||
+    titleText.includes('apartment') ||
+    titleText.includes('flat') ||
+    titleText.includes('سكنية') ||
+    titleText.includes('residential') ||
+    titleText.includes('عمارة') ||
+    titleText.includes('building') ||
+    titleText.includes('مبنى') ||
+    titleText.includes('برج') ||
+    titleText.includes('tower') ||
+    titleText.includes('residence') ||
+    titleText.includes('ريزيدنس')
+  ) {
+    return 'residential';
+  }
+
+  return 'other';
+}
+

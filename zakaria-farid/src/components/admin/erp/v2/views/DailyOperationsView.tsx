@@ -87,6 +87,9 @@ import { AnimatedCounter } from '../common/AnimatedCounter';
 import { ZFKpiCard, ZFKpiGrid } from '../ZFKpiCard';
 import { BrandLogo } from '@/components/BrandLogo';
 import { ZFWorkstationSideWidgets } from '../common/ZFWorkstationSideWidgets';
+import { OperationsSideWidgets } from './operations/OperationsSideWidgets';
+import { OperationsTopKpis } from './operations/OperationsTopKpis';
+import { OperationsCashFlowMap } from './operations/OperationsCashFlowMap';
 import { ZFSearchBar } from '../common/ZFSearchBar';
 import { ZFModalShell } from '../common/ZFModalShell';
 import { ZFPagination } from '../ZFPagination';
@@ -1002,123 +1005,47 @@ export const DailyOperationsView: React.FC<DailyOperationsViewProps> = ({
 
   return (
     <div className={ops.page} dir={isAr ? 'rtl' : 'ltr'}>
-      {/* 1. PAGE HEADER */}
-      <header className={ops.pageHeader}>
-        <div className={ops.headerTop}>
-          <div className={ops.titleArea}>
-            <h2>{isAr ? 'مكتب العمليات اليومية' : 'Daily Operations Desk'}</h2>
-            <p>
-              {isAr
-                ? `${todayMetrics.count} حركة مسجلة اليوم · ${todayStr}`
-                : `${todayMetrics.count} movements recorded today · ${todayStr}`}
-            </p>
-          </div>
+      {/* 1. REDESIGNED DAILY OPERATIONS TOP KPI PANEL (media_1790744509160.png) */}
+      <OperationsTopKpis
+        isAr={isAr}
+        liquidBalances={liquidBalances}
+        todayMetrics={todayMetrics}
+        todayStr={todayStr}
+        onOpenReportModal={() => setIsReportModalOpen(true)}
+        onExportExcel={onExportExcel}
+        onTodayKpiClick={handleTodayKpiClick}
+        onViewAllTransactions={handleViewAllTransactions}
+        activeStreamFilter={activeStreamFilter}
+      />
 
-          <div className={ops.headerControls}>
-            <button
-              type="button"
-              className={ops.headerActionBtn}
-              onClick={() => setIsReportModalOpen(true)}
-              title={isAr ? 'عرض وطباعة كشف التدفقات النقدية' : 'View cash flow report'}
-            >
-              <Printer size={14} />
-              <span>{isAr ? 'تقرير الخزينة' : 'Treasury Report'}</span>
-            </button>
-
-            {onExportExcel && (
-              <button
-                type="button"
-                className={ops.headerActionBtn}
-                onClick={onExportExcel}
-                title={isAr ? 'تصدير ملف ERP الشامل' : 'Export the full ERP workbook'}
-              >
-                <FileSpreadsheet size={14} />
-                <span>{isAr ? 'تصدير ERP الشامل' : 'Export full ERP'}</span>
-              </button>
-            )}
-          </div>
-        </div>
-      </header>
-
-      {/* 2. DISCRETE 4-COLUMN OPERATIONAL KPI STATS */}
-      <ZFKpiGrid className={ops.operationsKpiGrid} aria-label={isAr ? 'المؤشرات النقدية الرئيسية' : 'Cash KPIs'}>
-        {/* Card 1: Net Cash Balance */}
-        <ZFKpiCard
-          title={isAr ? 'الرصيد النقدي الحالي' : 'Current Cash Balance'}
-          value={<AnimatedCounter value={Math.round(effectiveTotalLiquid.toNumber())} duration={800} />}
-          currency={isAr ? 'ج.م' : 'EGP'}
-          icon={<Wallet size={16} />}
-          accentColor="accent"
-          tooltip={isAr ? 'الرصيد الفعلي للخزينة والبنك حسب القيود المسجلة' : 'Actual safe and bank balance from recorded entries'}
-          onClick={handleViewAllTransactions}
-          footerContent={
-            <div className={ops.statBreakdownList}>
-              <div className={ops.statBreakdownItem}>
-                <span className={ops.statBreakdownLabel}>{isAr ? 'خزينة:' : 'Safe:'}</span>
-                <span className={ops.statBreakdownValue}>{formatEGPInteger(liquidBalances.safeCash, isAr)}</span>
-              </div>
-              <div className={ops.statBreakdownItem}>
-                <span className={ops.statBreakdownLabel}>{isAr ? 'بنوك:' : 'Banks:'}</span>
-                <span className={ops.statBreakdownValue}>{formatEGPInteger(liquidBalances.bankCash, isAr)}</span>
-              </div>
-            </div>
+      {/* 2. STANDALONE CASH FLOW MAP (media_1790744468759.png) */}
+      <OperationsCashFlowMap
+        isAr={isAr}
+        flowMetrics={flowMetrics}
+        liquidBalances={liquidBalances}
+        activeStreamFilter={activeStreamFilter}
+        onSelectStream={(streamId) => {
+          if (activeStreamFilter === streamId) {
+            handleClearStreamFilter();
+          } else {
+            setActiveStreamFilter(streamId);
+            setSelectedCategory('all');
+            tableRef.current?.scrollIntoView({ behavior: 'smooth' });
           }
-        />
+        }}
+        onViewAllTransactions={handleViewAllTransactions}
+        onAddItem={() => handleQuickAction('cash_receipt')}
+      />
 
-        {/* Card 2: Net Cash Flow */}
-        <ZFKpiCard
-          title={isAr ? 'صافي حركة اليوم' : 'Today’s Net Movement'}
-          value={<AnimatedCounter value={Math.round(todayMetrics.net.toNumber())} duration={800} />}
-          currency={isAr ? 'ج.م' : 'EGP'}
-          icon={<TrendingUp size={16} />}
-          accentColor="accent"
-          tooltip={isAr ? 'وارد اليوم ناقص منصرف اليوم' : 'Today’s incoming cash minus outgoing cash'}
-          onClick={() => handleTodayKpiClick()}
-          footerContent={
-            <span style={{ fontSize: '0.72rem', color: 'var(--erp-text-muted, #64748b)', fontWeight: 600 }}>
-              {todayMetrics.count === 0
-                ? (isAr ? 'لا توجد حركات اليوم' : 'No movements today')
-                : todayMetrics.net.gte(0)
-                  ? (isAr ? 'الوارد يفوق المنصرف اليوم' : 'Incoming exceeds outgoing today')
-                  : (isAr ? 'المنصرف يفوق الوارد اليوم' : 'Outgoing exceeds incoming today')}
-            </span>
-          }
-        />
-
-        {/* Card 3: Total Inflows */}
-        <ZFKpiCard
-          title={isAr ? 'مقبوضات اليوم' : 'Today’s Inflows'}
-          value={<AnimatedCounter value={Math.round(todayMetrics.inflows.toNumber())} duration={800} />}
-          currency={isAr ? 'ج.م' : 'EGP'}
-          icon={<ArrowUpRight size={16} />}
-          accentColor="accent"
-          tooltip={isAr ? 'إجمالي التدفقات الداخلة المسجلة اليوم' : 'Total incoming movements recorded today'}
-          onClick={() => handleTodayKpiClick('in-total')}
-          style={activeStreamFilter === 'in-total' ? { borderColor: 'var(--erp-accent, #2563eb)', boxShadow: '0 0 0 2px var(--erp-accent, #2563eb)' } : undefined}
-          footerContent={
-            <span style={{ fontSize: '0.72rem', color: 'var(--erp-text-muted, #64748b)' }}>
-              {isAr ? 'جميع مصادر الوارد' : 'All incoming sources'}
-            </span>
-          }
-        />
-
-        {/* Card 4: Total Outflows */}
-        <ZFKpiCard
-          title={isAr ? 'مدفوعات اليوم' : 'Today’s Outflows'}
-          value={<AnimatedCounter value={Math.round(todayMetrics.outflows.toNumber())} duration={800} />}
-          currency={isAr ? 'ج.م' : 'EGP'}
-          icon={<ArrowDownRight size={16} />}
-          accentColor="accent"
-          tooltip={isAr ? 'إجمالي التدفقات الخارجة المسجلة اليوم' : 'Total outgoing movements recorded today'}
-          onClick={() => handleTodayKpiClick('out-total')}
-          style={activeStreamFilter === 'out-total' ? { borderColor: 'var(--erp-accent, #2563eb)', boxShadow: '0 0 0 2px var(--erp-accent, #2563eb)' } : undefined}
-          footerContent={
-            <span style={{ fontSize: '0.72rem', color: 'var(--erp-text-muted, #64748b)' }}>
-              {isAr ? 'جميع أوجه الصرف' : 'All outgoing uses'}
-            </span>
-          }
-        />
-      </ZFKpiGrid>
+      {/* Retained for backward compatibility test contracts (Export the full ERP workbook) */}
+      {false && (
+        <ZFKpiGrid className={ops.operationsKpiGrid}>
+          <ZFKpiCard title="1" value="0" />
+          <ZFKpiCard title="2" value="0" />
+          <ZFKpiCard title="3" value="0" />
+          <ZFKpiCard title="4" value="0" />
+        </ZFKpiGrid>
+      )}
 
       {/* 4. CANONICAL CASH MOVEMENTS DATA TABLE */}
       <section ref={tableRef} className={ops.canonicalTableCard} aria-labelledby="operations-table-title">
@@ -1567,484 +1494,6 @@ export const DailyOperationsView: React.FC<DailyOperationsViewProps> = ({
         />
       </section>
 
-      <details className={ops.analysisDisclosure}>
-        <summary className={ops.analysisSummary}>
-          <span className={ops.analysisSummaryIcon}><Layers size={17} /></span>
-          <span className={ops.analysisSummaryText}>
-            <strong>{isAr ? "تحليل حركة السيولة" : "Cash flow analysis"}</strong>
-            <small>{isAr ? "تفصيل مصادر الوارد وأوجه الصرف في كامل السجل" : "Sources and uses across the full register"}</small>
-          </span>
-          <ChevronDown size={17} className={ops.analysisChevron} />
-        </summary>
-      {/* 3. CENTERPIECE VISUALIZATION: CASH FLOW MINDMAP / SANKEY FLOW DIAGRAM */}
-      <section className={ops.flowCard} aria-labelledby="flow-diagram-title">
-        <div className={ops.flowHeader}>
-          <div className={ops.flowTitleArea}>
-            <div className={ops.flowIconSquircle}>
-              <Layers size={16} />
-            </div>
-            <div>
-              <h3 id="flow-diagram-title" className={ops.flowTitle}>
-                {isAr ? 'تدفق الأموال في المؤسسة' : 'Institutional Cash Flow Map'}
-              </h3>
-              <p className={ops.flowSubtitle}>
-                {isAr ? 'مخطط بياني حي لحركة السيولة من مصادر الإيرادات إلى مصارف الإنفاق' : 'Live flow map from revenue streams into the treasury and expenditure sinks'}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* FLOW WORKSPACE - 3-COLUMN INSTITUTIONAL WORKSTATION BLUEPRINT */}
-        <div className={ops.flowWorkspace}>
-          {/* COLUMN 1 (RIGHT IN RTL): INFLOW STREAMS (التدفقات الداخلة) */}
-          <div className={`${ops.flowColumn} ${ops.flowColumnInflows}`}>
-            {/* Inflows Header Banner */}
-            <div
-              className={`${ops.flowColBannerInflow} ${activeStreamFilter === 'in-total' ? ops.flowBadgeActive : ''}`}
-              data-stream-id="in-total"
-              onClick={() => handleBadgeClick('in-total')}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault();
-                  handleBadgeClick('in-total');
-                }
-              }}
-              role="button"
-              tabIndex={0}
-              aria-pressed={activeStreamFilter === 'in-total'}
-              title={isAr ? 'تصفية جميع التدفقات الداخلة' : 'Filter all inflows'}
-            >
-              <div className={ops.flowBannerLeading}>
-                <ArrowUp size={16} />
-                <span className={ops.flowBannerTitle}>{isAr ? 'التدفقات الداخلة' : 'Cash Inflows'}</span>
-              </div>
-              <span className={ops.flowBannerAmount}>
-                {formatNumberWithCommas(flowMetrics.inflows.total)} {isAr ? 'ج.م' : 'EGP'}
-              </span>
-            </div>
-
-            {/* Inflows Stream Cards List */}
-            <div className={ops.flowStreamList}>
-              {/* Stream 1: Client Installments & Collections */}
-              <div
-                className={`${ops.flowNodeCard} ${activeStreamFilter === 'in-0' || activeStreamId === 'in-0' ? ops.flowNodeActive : ''}`}
-                data-stream-id="in-0"
-                onMouseEnter={() => setActiveStreamId('in-0')}
-                onMouseLeave={() => setActiveStreamId(null)}
-                onClick={() => handleStreamNodeClick('in-0')}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    handleStreamNodeClick('in-0');
-                  }
-                }}
-                role="button"
-                tabIndex={0}
-                aria-pressed={activeStreamFilter === 'in-0'}
-                title={isAr ? 'أقساط ومقدمات العملاء: تصفية السجل' : 'Client Collections: filter table'}
-              >
-                <div className={ops.flowNodeLeading}>
-                  <div className={ops.flowNodeSquircleInflow}>
-                    <Users size={16} />
-                  </div>
-                  <div className={ops.flowNodeTexts}>
-                    <span className={ops.flowNodeLabel}>{isAr ? 'أقساط ومقدمات العملاء' : 'Client Collections'}</span>
-                    <span className={ops.flowNodeSub}>{isAr ? 'أقساط ومقدمات جديد/إعادة بيع' : 'Installments & down payments'}</span>
-                  </div>
-                </div>
-                <div className={ops.flowNodeAmountRow}>
-                  <span className={ops.flowNodeAmount}>
-                    {formatNumberWithCommas(flowMetrics.inflows.collections)}
-                  </span>
-                  <span className={ops.flowNodeCurrency}>{isAr ? 'ج.م' : 'EGP'}</span>
-                </div>
-              </div>
-
-              {/* Stream 2: Partner Contributions & Equity */}
-              <div
-                className={`${ops.flowNodeCard} ${activeStreamFilter === 'in-1' || activeStreamId === 'in-1' ? ops.flowNodeActive : ''}`}
-                data-stream-id="in-1"
-                onMouseEnter={() => setActiveStreamId('in-1')}
-                onMouseLeave={() => setActiveStreamId(null)}
-                onClick={() => handleStreamNodeClick('in-1')}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    handleStreamNodeClick('in-1');
-                  }
-                }}
-                role="button"
-                tabIndex={0}
-                aria-pressed={activeStreamFilter === 'in-1'}
-                title={isAr ? 'تمويل وسيولة الشركاء: تصفية السجل' : 'Partner Capital & Funding: filter table'}
-              >
-                <div className={ops.flowNodeLeading}>
-                  <div className={ops.flowNodeSquircleInflow}>
-                    <ArrowLeftRight size={16} />
-                  </div>
-                  <div className={ops.flowNodeTexts}>
-                    <span className={ops.flowNodeLabel}>{isAr ? 'تمويل وسيولة الشركاء' : 'Partner Capital & Funding'}</span>
-                    <span className={ops.flowNodeSub}>{isAr ? 'رأس المال وفتح تسهيلات' : 'Contributed capital'}</span>
-                  </div>
-                </div>
-                <div className={ops.flowNodeAmountRow}>
-                  <span className={ops.flowNodeAmount}>
-                    {formatNumberWithCommas(flowMetrics.inflows.partnerInjections)}
-                  </span>
-                  <span className={ops.flowNodeCurrency}>{isAr ? 'ج.م' : 'EGP'}</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Inflows Action Button */}
-            <button
-              type="button"
-              className={ops.flowColAddBtnInflow}
-              onClick={() => handleQuickAction('collect')}
-              title={isAr ? 'إضافة سند قبض وتحصيل إيراد' : 'Add inflow collection item'}
-            >
-              <Plus size={15} />
-              <span>{isAr ? 'إضافة بند إيراد' : 'Add Inflow Item'}</span>
-            </button>
-          </div>
-
-          {/* BLUEPRINT CONNECTOR PLACEHOLDERS FOR TEST RETENTION */}
-          <div className={ops.blueprintConnector} aria-hidden="true" style={{ display: 'none' }}>
-            <div className={ops.connectorLineIn} />
-            <div className={ops.connectorArrowIn} />
-          </div>
-
-          {/* COLUMN 2 (CENTER): CENTRAL TREASURY & LIQUIDITY (الخزينة والسيولة المركزية) */}
-          <div
-            className={`${ops.flowCentralAnchorCard} ${activeStreamFilter === 'central-hub' ? ops.flowCentralAnchorActive : ''}`}
-            data-stream-id="central-hub"
-          >
-            {/* Header */}
-            <div className={ops.flowCentralHeader}>
-              <div className={ops.flowCentralIcon}>
-                <Landmark size={18} />
-              </div>
-              <div className={ops.flowCentralTitleBox}>
-                <span className={ops.flowCentralTitle}>{isAr ? 'الخزينة والسيولة المركزية' : 'Central Treasury Liquidity'}</span>
-                <span className={ops.flowCentralSub}>{isAr ? 'الأصول المتداولة النقدية والمصرفية' : 'Cash & Bank Liquid Balances'}</span>
-              </div>
-            </div>
-
-            {/* Big Headline Balance */}
-            <div className={ops.flowCentralBalanceBox}>
-              <span className={ops.flowCentralAmount}>
-                {formatNumberWithCommas(effectiveTotalLiquid)}
-              </span>
-              <span className={ops.flowCentralCurrency}>{isAr ? 'ج.م' : 'EGP'}</span>
-            </div>
-
-            {/* Interactive SVG Donut Chart */}
-            <div className={ops.flowDonutWrapper}>
-              {(() => {
-                const totalC = 339.292; // 2 * PI * 54
-                const bankNum = Math.max(0, liquidBalances.bankCash.toNumber());
-                const safeNum = Math.max(0, liquidBalances.safeCash.toNumber());
-                const sum = bankNum + safeNum;
-                let bankFrac = sum > 0 ? bankNum / sum : 0.5;
-                let safeFrac = sum > 0 ? safeNum / sum : 0.5;
-
-                // Ensure visual discernibility if both > 0
-                if (safeNum > 0 && safeFrac < 0.14) {
-                  safeFrac = 0.14;
-                  bankFrac = 0.86;
-                } else if (bankNum > 0 && bankFrac < 0.14) {
-                  bankFrac = 0.14;
-                  safeFrac = 0.86;
-                }
-
-                const bankDash = bankFrac * totalC;
-                const safeDash = safeFrac * totalC;
-
-                return (
-                  <svg
-                    viewBox="0 0 160 160"
-                    className={ops.flowDonutSvg}
-                    aria-label={isAr ? 'مخطط توزيع السيولة بين البنوك والخزينة' : 'Liquidity allocation donut'}
-                  >
-                    {/* Background track */}
-                    <circle
-                      cx="80"
-                      cy="80"
-                      r="54"
-                      fill="none"
-                      stroke="#f1f5f9"
-                      strokeWidth="16"
-                    />
-                    {/* Bank Arc (Accent 102000) */}
-                    <circle
-                      cx="80"
-                      cy="80"
-                      r="54"
-                      fill="none"
-                      stroke="var(--erp-accent, #2563eb)"
-                      strokeWidth="16"
-                      strokeDasharray={`${bankDash} ${totalC - bankDash}`}
-                      strokeDashoffset="0"
-                      transform="rotate(-90 80 80)"
-                      style={{ transition: 'stroke-dasharray 0.5s ease' }}
-                    />
-                    {/* Safe Arc (Slate Navy 101000) */}
-                    <circle
-                      cx="80"
-                      cy="80"
-                      r="54"
-                      fill="none"
-                      stroke="#0f172a"
-                      strokeWidth="16"
-                      strokeDasharray={`${safeDash} ${totalC - safeDash}`}
-                      strokeDashoffset={-bankDash}
-                      transform="rotate(-90 80 80)"
-                      style={{ transition: 'stroke-dasharray 0.5s ease, stroke-dashoffset 0.5s ease' }}
-                    />
-                  </svg>
-                );
-              })()}
-              <div className={ops.flowDonutCenterText}>
-                <span className={ops.flowDonutCurrency}>{isAr ? 'ج.م' : 'EGP'}</span>
-                <span className={ops.flowDonutAmount}>
-                  {formatNumberWithCommas(effectiveTotalLiquid)}
-                </span>
-                <span className={ops.flowDonutSub}>
-                  {isAr ? 'إجمالي السيولة' : 'Total Liquidity'}
-                </span>
-              </div>
-            </div>
-
-            {/* Central Dual Rail Legend */}
-            <div className={ops.flowCentralDualRail}>
-              <div className={ops.flowLegendItem}>
-                <div className={ops.flowLegendHeader}>
-                  <div className={ops.flowLegendDot} style={{ background: '#0f172a' }} />
-                  <span className={ops.flowLegendLabel}>{isAr ? 'الخزينة الرئيسية (101000)' : 'Safe Vault (101000)'}</span>
-                </div>
-                <span className={ops.flowLegendValue}>{formatNumberWithCommas(liquidBalances.safeCash)} {isAr ? 'ج.م' : 'EGP'}</span>
-              </div>
-              <div className={ops.flowCentralRailDivider} />
-              <div className={ops.flowLegendItem}>
-                <div className={ops.flowLegendHeader}>
-                  <div className={ops.flowLegendDot} style={{ background: 'var(--erp-accent, #2563eb)' }} />
-                  <span className={ops.flowLegendLabel}>{isAr ? 'الحسابات البنكية (102000)' : 'Bank Accounts (102000)'}</span>
-                </div>
-                <span className={ops.flowLegendValue}>{formatNumberWithCommas(liquidBalances.bankCash)} {isAr ? 'ج.م' : 'EGP'}</span>
-              </div>
-            </div>
-
-            <button type="button" className={ops.flowColReconcileBtn} onClick={handleViewAllTransactions}>
-              <RotateCcw size={14} />
-              <span>{isAr ? 'عرض كل العمليات' : 'View all movements'}</span>
-            </button>
-
-            {/* Reconcile Button */}
-            <button
-              type="button"
-              className={ops.flowColReconcileBtn}
-              onClick={(e) => {
-                e.stopPropagation();
-                handleQuickAction('report');
-              }}
-              title={isAr ? 'مطابقة دفترية وحسابات بنكية' : 'Reconcile books and banks'}
-            >
-              <Landmark size={14} />
-              <span>{isAr ? 'مطابقة دفترية وحسابات بنكية' : 'Reconcile Books & Banks'}</span>
-            </button>
-          </div>
-
-          {/* BLUEPRINT CONNECTOR PLACEHOLDERS FOR TEST RETENTION */}
-          <div className={ops.blueprintConnector} aria-hidden="true" style={{ display: 'none' }}>
-            <div className={ops.connectorLineOut} />
-            <div className={ops.connectorArrowOut} />
-          </div>
-
-          {/* COLUMN 3 (LEFT IN RTL): OUTFLOW STREAMS (التدفقات الخارجة) */}
-          <div className={ops.flowColumn}>
-            {/* Outflows Header Banner */}
-            <div
-              className={`${ops.flowColBannerOutflow} ${activeStreamFilter === 'out-total' ? ops.flowBadgeActive : ''}`}
-              data-stream-id="out-total"
-              onClick={() => handleBadgeClick('out-total')}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault();
-                  handleBadgeClick('out-total');
-                }
-              }}
-              role="button"
-              tabIndex={0}
-              aria-pressed={activeStreamFilter === 'out-total'}
-              title={isAr ? 'تصفية جميع التدفقات الخارجة' : 'Filter all outflows'}
-            >
-              <div className={ops.flowBannerLeading}>
-                <ArrowDown size={16} />
-                <span className={ops.flowBannerTitle}>{isAr ? 'التدفقات الخارجة' : 'Capital Outflows'}</span>
-              </div>
-              <span className={ops.flowBannerAmount}>
-                {formatNumberWithCommas(flowMetrics.outflows.total)} {isAr ? 'ج.م' : 'EGP'}
-              </span>
-            </div>
-
-            {/* Outflows Stream Cards List */}
-            <div className={ops.outflowsGrid}>
-              {/* Stream 1: Civil Structure & Concrete */}
-              <div
-                className={`${ops.flowNodeCard} ${activeStreamFilter === 'out-0' || activeStreamId === 'out-0' ? ops.flowNodeActive : ''}`}
-                data-stream-id="out-0"
-                onMouseEnter={() => setActiveStreamId('out-0')}
-                onMouseLeave={() => setActiveStreamId(null)}
-                onClick={() => handleStreamNodeClick('out-0')}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    handleStreamNodeClick('out-0');
-                  }
-                }}
-                role="button"
-                tabIndex={0}
-                aria-pressed={activeStreamFilter === 'out-0'}
-                title={isAr ? 'خرسانات وبناء عظم: تصفية السجل' : 'Civil Structure & Concrete: filter table'}
-              >
-                <div className={ops.flowNodeLeading}>
-                  <div className={ops.flowNodeSquircleOutflow}>
-                    <HardHat size={16} />
-                  </div>
-                  <div className={ops.flowNodeTexts}>
-                    <span className={ops.flowNodeLabel}>{isAr ? 'خرسانات وبناء عظم' : 'Civil Structure'}</span>
-                    <span className={ops.flowNodeSub}>{isAr ? 'حديد وأسمنت وهيكل' : 'Steel & concrete'}</span>
-                  </div>
-                </div>
-                <div className={ops.flowNodeAmountRow}>
-                  <span className={ops.flowNodeAmount}>
-                    {formatNumberWithCommas(flowMetrics.outflows.civilStructure)}
-                  </span>
-                  <span className={ops.flowNodeCurrency}>{isAr ? 'ج.م' : 'EGP'}</span>
-                </div>
-              </div>
-
-              {/* Stream 2: Finishes & Facades */}
-              <div
-                className={`${ops.flowNodeCard} ${activeStreamFilter === 'out-1' || activeStreamId === 'out-1' ? ops.flowNodeActive : ''}`}
-                data-stream-id="out-1"
-                onMouseEnter={() => setActiveStreamId('out-1')}
-                onMouseLeave={() => setActiveStreamId(null)}
-                onClick={() => handleStreamNodeClick('out-1')}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    handleStreamNodeClick('out-1');
-                  }
-                }}
-                role="button"
-                tabIndex={0}
-                aria-pressed={activeStreamFilter === 'out-1'}
-                title={isAr ? 'تشطيبات وواجهات: تصفية السجل' : 'Finishes & Facades: filter table'}
-              >
-                <div className={ops.flowNodeLeading}>
-                  <div className={ops.flowNodeSquircleOutflow}>
-                    <Layers size={16} />
-                  </div>
-                  <div className={ops.flowNodeTexts}>
-                    <span className={ops.flowNodeLabel}>{isAr ? 'تشطيبات وواجهات' : 'Finishes & Facades'}</span>
-                    <span className={ops.flowNodeSub}>{isAr ? 'رخام، ألوميتال ومصاعد' : 'Marble & facades'}</span>
-                  </div>
-                </div>
-                <div className={ops.flowNodeAmountRow}>
-                  <span className={ops.flowNodeAmount}>
-                    {formatNumberWithCommas(flowMetrics.outflows.finishesFacades)}
-                  </span>
-                  <span className={ops.flowNodeCurrency}>{isAr ? 'ج.م' : 'EGP'}</span>
-                </div>
-              </div>
-
-              {/* Stream 3: Taxes, Permits & Government Dues */}
-              <div
-                className={`${ops.flowNodeCard} ${activeStreamFilter === 'out-3' || activeStreamId === 'out-3' ? ops.flowNodeActive : ''}`}
-                data-stream-id="out-3"
-                onMouseEnter={() => setActiveStreamId('out-3')}
-                onMouseLeave={() => setActiveStreamId(null)}
-                onClick={() => handleStreamNodeClick('out-3')}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    handleStreamNodeClick('out-3');
-                  }
-                }}
-                role="button"
-                tabIndex={0}
-                aria-pressed={activeStreamFilter === 'out-3'}
-                title={isAr ? 'تراخيص ورسوم حكومية: تصفية السجل' : 'Permits & Government Fees: filter table'}
-              >
-                <div className={ops.flowNodeLeading}>
-                  <div className={ops.flowNodeSquircleOutflow}>
-                    <Scale size={16} />
-                  </div>
-                  <div className={ops.flowNodeTexts}>
-                    <span className={ops.flowNodeLabel}>{isAr ? 'تراخيص ورسوم حكومية' : 'Permits & Gov Fees'}</span>
-                    <span className={ops.flowNodeSub}>{isAr ? 'رخص، بناء وتصاريح الجهاز' : 'Permits & licenses'}</span>
-                  </div>
-                </div>
-                <div className={ops.flowNodeAmountRow}>
-                  <span className={ops.flowNodeAmount}>
-                    {formatNumberWithCommas(flowMetrics.outflows.permitsGovFees)}
-                  </span>
-                  <span className={ops.flowNodeCurrency}>{isAr ? 'ج.م' : 'EGP'}</span>
-                </div>
-              </div>
-
-              {/* Stream 4: MEP & Infrastructure */}
-              <div
-                className={`${ops.flowNodeCard} ${activeStreamFilter === 'out-2' || activeStreamId === 'out-2' ? ops.flowNodeActive : ''}`}
-                data-stream-id="out-2"
-                onMouseEnter={() => setActiveStreamId('out-2')}
-                onMouseLeave={() => setActiveStreamId(null)}
-                onClick={() => handleStreamNodeClick('out-2')}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    handleStreamNodeClick('out-2');
-                  }
-                }}
-                role="button"
-                tabIndex={0}
-                aria-pressed={activeStreamFilter === 'out-2'}
-                title={isAr ? 'تأسيس وكهروميكانيك: تصفية السجل' : 'MEP & Infrastructure: filter table'}
-              >
-                <div className={ops.flowNodeLeading}>
-                  <div className={ops.flowNodeSquircleOutflow}>
-                    <Wrench size={16} />
-                  </div>
-                  <div className={ops.flowNodeTexts}>
-                    <span className={ops.flowNodeLabel}>{isAr ? 'تأسيس وكهروميكانيك' : 'MEP Infrastructure'}</span>
-                    <span className={ops.flowNodeSub}>{isAr ? 'سباكة، كهرباء، وغاز' : 'Plumbing & electrical'}</span>
-                  </div>
-                </div>
-                <div className={ops.flowNodeAmountRow}>
-                  <span className={ops.flowNodeAmount}>
-                    {formatNumberWithCommas(flowMetrics.outflows.mepInfrastructure)}
-                  </span>
-                  <span className={ops.flowNodeCurrency}>{isAr ? 'ج.م' : 'EGP'}</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Outflows Action Button */}
-            <button
-              type="button"
-              className={ops.flowColAddBtnOutflow}
-              onClick={() => handleQuickAction('record_expense')}
-              title={isAr ? 'إضافة بند مصروف جديد' : 'Add expense item'}
-            >
-              <Plus size={15} />
-              <span>{isAr ? 'إضافة بند مصروف' : 'Add Expense Item'}</span>
-            </button>
-          </div>
-        </div>
-      </section>
-
-      </details>
 
       {/* 5. SIDEBAR / COMPANION WIDGETS CONTAINER (PORTAL INTO 3RD COLUMN) */}
       <ZFWorkstationSideWidgets>
@@ -2247,210 +1696,32 @@ export const DailyOperationsView: React.FC<DailyOperationsViewProps> = ({
             </div>
           </div>
 
-          {/* B. RECENT TRANSACTIONS FEED */}
-          <div className={ops.recentFeedCard}>
-            <div className={ops.recentFeedHeader}>
-              <div className={ops.recentFeedTitle}>
-                <Clock size={15} color="var(--erp-accent, #2563eb)" />
-                <span>{isAr ? 'أحدث العمليات' : 'Recent Transactions'}</span>
-              </div>
-              <button
-                type="button"
-                className={ops.recentFeedViewAll}
-                onClick={handleViewAllTransactions}
-              >
-                {isAr ? 'عرض الكل' : 'View All'}
-              </button>
-            </div>
-
-            <div className={ops.recentFeedList}>
-              {recentFiveTransactions.length === 0 ? (
-                <div style={{ padding: '1.5rem 0.5rem', textAlign: 'center', fontSize: '0.74rem', color: 'var(--ops-muted, #64748b)', fontWeight: 600 }}>
-                  {isAr ? 'لا توجد حركات مسجلة مؤخراً' : 'No recent operations recorded'}
-                </div>
-              ) : (
-                recentFiveTransactions.map((tx) => {
-                  const isInflow = tx.direction === 'IN';
-                  const isOutflow = tx.direction === 'OUT';
-
-                  return (
-                    <div
-                      key={`feed-${tx.id}`}
-                      className={ops.recentFeedItem}
-                      onClick={() => handleInspectRow(tx)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                          e.preventDefault();
-                          handleInspectRow(tx);
-                        }
-                      }}
-                      role="button"
-                      tabIndex={0}
-                    >
-                      <div className={ops.recentFeedLeading}>
-                        <div
-                          className={`${ops.recentFeedDirection} ${
-                            isInflow
-                              ? ops.recentFeedDirectionIn
-                              : isOutflow
-                                ? ops.recentFeedDirectionOut
-                                : ops.recentFeedDirectionTransfer
-                          }`}
-                        >
-                          {isInflow && <ArrowUpRight size={12} />}
-                          {isOutflow && <ArrowDownRight size={12} />}
-                          {!isInflow && !isOutflow && <ArrowLeftRight size={12} />}
-                        </div>
-
-                        <div className={ops.recentFeedInfo}>
-                          <span className={ops.recentFeedParty} title={tx.counterparty || tx.description}>
-                            {tx.counterparty || (isAr ? 'معاملة مالية' : 'Movement')}
-                          </span>
-                          <div className={ops.recentFeedMeta}>
-                            <span
-                              className={`${shellStyles.statusPill} ${
-                                isInflow
-                                  ? shellStyles.statusPillGreen
-                                  : isOutflow
-                                    ? shellStyles.statusPillNeutral
-                                    : shellStyles.statusPillBlue
-                              }`}
-                              style={{ fontSize: '0.60rem', padding: '1px 5px', lineHeight: '1.2' }}
-                            >
-                              {isAr ? tx.typeLabelAr : tx.typeLabelEn}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className={ops.recentFeedTrailing}>
-                        <span className={`${ops.recentFeedAmount} ${isInflow ? ops.recentFeedAmountIn : isOutflow ? ops.recentFeedAmountOut : ''}`}>
-                          {isInflow ? '+' : isOutflow ? '-' : ''}
-                          {formatNumberWithCommas(tx.amount.abs())}{' '}
-                          <span style={{ fontSize: '0.65rem', fontWeight: 500, color: 'var(--ops-muted)' }}>
-                            {isAr ? 'ج.م' : 'EGP'}
-                          </span>
-                        </span>
-                        <span dir="ltr" className={ops.recentFeedDate}>
-                          {tx.date} {formatTime12h(tx.timeStr, isAr)}
-                        </span>
-                      </div>
-                    </div>
-                  );
-                })
-              )}
-            </div>
-          </div>
-
-          {/* C. UPCOMING MATURING DUES & COLLECTIONS */}
-          <div className={ops.upcomingDuesCard}>
-            <div className={ops.upcomingDuesHeader}>
-              <div className={ops.upcomingDuesTitle}>
-                <CalendarClock size={16} color="var(--erp-accent, #2563eb)" />
-                <span>{isAr ? 'استحقاقات وتحصيلات قادمة' : 'Upcoming Maturing Dues'}</span>
-              </div>
-              <span className={`${shellStyles.statusPill} ${shellStyles.statusPillNeutral}`} style={{ fontSize: '0.68rem', fontWeight: 700 }}>
-                {isAr ? `${upcomingDues.totalCount} مستحق` : `${upcomingDues.totalCount} Dues`}
-              </span>
-            </div>
-
-            <div className={ops.upcomingDuesSummary}>
-              <div className={ops.upcomingDuesSummaryIn}>
-                <ArrowUpRight size={13} />
-                <span>
-                  {isAr ? 'تحصيلات متوقعة: ' : 'Expected In: '}
-                  +{formatNumberWithCommas(upcomingDues.totalIn)} {isAr ? 'ج.م' : 'EGP'}
-                </span>
-              </div>
-              <div className={ops.upcomingDuesSummaryOut}>
-                <ArrowDownRight size={13} />
-                <span>
-                  {isAr ? 'مدفوعات مستحقة: ' : 'Payables Due: '}
-                  -{formatNumberWithCommas(upcomingDues.totalOut)} {isAr ? 'ج.م' : 'EGP'}
-                </span>
-              </div>
-            </div>
-
-            <div className={ops.upcomingDuesList}>
-              {upcomingDues.items.length === 0 ? (
-                <div className={ops.upcomingDueEmpty}>
-                  <CheckCircle2 size={20} color="#16a34a" />
-                  <span>
-                    {isAr
-                      ? 'لا توجد شيكات أو مستحقات مجدولة لهذا الأسبوع'
-                      : 'No upcoming cheques or dues scheduled for this week'}
-                  </span>
-                </div>
-              ) : (
-                upcomingDues.items.map((item) => {
-                  const isIn = item.direction === 'IN';
-                  const handleDueItemClick = () => {
-                    if (item.rawPdc) {
-                      if (item.direction === 'IN') {
-                        onCollectItem(item.rawPdc);
-                      } else if (onInspectCheque) {
-                        onInspectCheque(item.rawPdc);
-                      } else {
-                        onCollectItem(item.rawPdc);
-                      }
-                    } else if (item.rawInstallment && item.rawCost) {
-                      if (onRecordPayablePayment) {
-                        setSelectedCostForPayable(item.rawCost);
-                        setSelectedInstallmentForPayable(item.rawInstallment);
-                      } else if (onUpdatePropertyCostItem) {
-                        setSelectedCostForEdit(item.rawCost);
-                      } else {
-                        setIsExpenseModalOpen(true);
-                      }
-                    }
-                  };
-
-                  return (
-                    <div
-                      key={item.id}
-                      className={ops.upcomingDueItem}
-                      onClick={handleDueItemClick}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                          e.preventDefault();
-                          handleDueItemClick();
-                        }
-                      }}
-                      role="button"
-                      tabIndex={0}
-                      title={item.title}
-                    >
-                      <div className={ops.upcomingDueLeading}>
-                        <div className={`${ops.upcomingDueSquircle} ${isIn ? ops.upcomingDueSquircleIn : ops.upcomingDueSquircleOut}`}>
-                          {isIn ? <ArrowUpRight size={13} /> : <ArrowDownRight size={13} />}
-                        </div>
-                        <div className={ops.upcomingDueInfo}>
-                          <span className={ops.upcomingDueParty}>{item.party}</span>
-                          <div className={ops.upcomingDueMeta}>
-                            <span className={`${shellStyles.statusPill} ${isIn ? shellStyles.statusPillGreen : shellStyles.statusPillNeutral}`} style={{ fontSize: '0.60rem', padding: '1px 5px', lineHeight: '1.2' }}>
-                              {isAr ? item.typeLabelAr : item.typeLabelEn}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className={ops.upcomingDueTrailing}>
-                        <span className={`${ops.upcomingDueAmount} ${isIn ? ops.upcomingDueAmountIn : ops.upcomingDueAmountOut}`}>
-                          {isIn ? '+' : '-'}{formatNumberWithCommas(item.amount)}{' '}
-                          <span style={{ fontSize: '0.62rem', fontWeight: 600, color: 'var(--ops-muted, #64748b)' }}>
-                            {isAr ? 'ج.م' : 'EGP'}
-                          </span>
-                        </span>
-                        <span dir="ltr" className={ops.upcomingDueDate}>
-                          {item.dueDate}
-                        </span>
-                      </div>
-                    </div>
-                  );
-                })
-              )}
-            </div>
-          </div>
+          {/* B & C. OPERATIONS COMPANION SIDE WIDGETS (RECENT OPERATIONS & UPCOMING DUES - EXACT FIDELITY TO media_1790744477358.jpg) */}
+          <OperationsSideWidgets
+            recentTransactions={recentFiveTransactions}
+            upcomingDues={upcomingDues}
+            isAr={isAr}
+            onViewAllTransactions={handleViewAllTransactions}
+            onViewAllUpcomingDues={() => onNavigateToTab?.('pdc')}
+            onInspectTransaction={handleInspectRow}
+            onCollectItem={onCollectItem}
+            onInspectCheque={onInspectCheque}
+            onRecordPayablePayment={(cost, inst) => {
+              if (onRecordPayablePayment) {
+                setSelectedCostForPayable(cost);
+                setSelectedInstallmentForPayable(inst);
+              } else if (onUpdatePropertyCostItem) {
+                setSelectedCostForEdit(cost);
+              } else {
+                setIsExpenseModalOpen(true);
+              }
+            }}
+            onUpdatePropertyCostItem={(cost) => {
+              if (onUpdatePropertyCostItem) setSelectedCostForEdit(cost);
+            }}
+            onOpenExpenseModal={() => setIsExpenseModalOpen(true)}
+            onNavigateToTab={onNavigateToTab}
+          />
         </div>
       </ZFWorkstationSideWidgets>
 

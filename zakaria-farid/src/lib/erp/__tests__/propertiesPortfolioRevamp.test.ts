@@ -10,7 +10,8 @@ import {
   getPropertyInventorySummary,
   categorizeFloor,
   groupUnitsByFloor,
-  FlatInventoryUnit
+  FlatInventoryUnit,
+  classifyPropertyUnit
 } from '../propertiesPortfolioCalculations';
 import { Property, BuildingUnitItem } from '@/lib/supabase/types';
 import { ERPContract } from '../types';
@@ -389,4 +390,157 @@ describe('FIN-OS Properties Portfolio & Contract Wizard Revamp Suite', () => {
       assert.strictEqual(page5End, 45);
     });
   });
+
+  describe('5. Portfolio Distribution & Unit Classification Invariants', () => {
+    it('accurately classifies distinct property types across unitType, property_type, and titles', () => {
+      // Apartments / Residential
+      assert.strictEqual(classifyPropertyUnit({ unitType: 'شقق سكنية' }), 'residential');
+      assert.strictEqual(classifyPropertyUnit({ type: 'apartment' }), 'residential');
+      assert.strictEqual(classifyPropertyUnit({ property_type: 'apartment' }), 'residential');
+      assert.strictEqual(classifyPropertyUnit({ title_ar: 'عمارة سكنية كاملة فاخرة – حي النرجس التجمع الخامس' }), 'residential');
+
+      // Ground floor apartment isolation: must NOT be misclassified as land
+      assert.strictEqual(classifyPropertyUnit({ title_ar: 'شقة أرضي بحديقة خاصة – الشيخ زايد', type: 'apartment' }), 'residential');
+
+      // Duplex & Penthouse / Roof
+      assert.strictEqual(classifyPropertyUnit({ unitType: 'دوبلكس وبنتهاوس' }), 'duplex');
+      assert.strictEqual(classifyPropertyUnit({ type: 'duplex' }), 'duplex');
+      assert.strictEqual(classifyPropertyUnit({ type: 'penthouse' }), 'duplex');
+      assert.strictEqual(classifyPropertyUnit({ title_ar: 'شقة دوبلكس سماوية ببرج أوروم – التجمع الخامس' }), 'duplex');
+      assert.strictEqual(classifyPropertyUnit({ title_ar: 'شقة رووف كاملة مع السطح – مدينتي بريفادو' }), 'duplex');
+
+      // Villas & Mansions
+      assert.strictEqual(classifyPropertyUnit({ type: 'villa' }), 'villa');
+      assert.strictEqual(classifyPropertyUnit({ property_type: 'villa' }), 'villa');
+      assert.strictEqual(classifyPropertyUnit({ title_ar: 'فيلا الملاذ المائي بالجونة' }), 'villa');
+      assert.strictEqual(classifyPropertyUnit({ title_ar: 'قصر الأوبسيديان المعماري' }), 'villa');
+      assert.strictEqual(classifyPropertyUnit({ title_en: 'Sodic East Prime Mansion' }), 'villa');
+
+      // Commercial & Offices & Garages
+      assert.strictEqual(classifyPropertyUnit({ unitType: 'تجاري وإداري' }), 'commercial');
+      assert.strictEqual(classifyPropertyUnit({ type: 'commercial' }), 'commercial');
+      assert.strictEqual(classifyPropertyUnit({ type: 'office' }), 'commercial');
+      assert.strictEqual(classifyPropertyUnit({ type: 'garage' }), 'commercial');
+      assert.strictEqual(classifyPropertyUnit({ title_ar: 'جراج تجاري واستثماري خاص – التجمع الخامس' }), 'commercial');
+      assert.strictEqual(classifyPropertyUnit({ title_ar: 'عمارة تجارية وسكنية متكاملة – الشيخ زايد' }), 'commercial');
+
+      // Chalets
+      assert.strictEqual(classifyPropertyUnit({ type: 'chalet' }), 'chalet');
+      assert.strictEqual(classifyPropertyUnit({ title_ar: 'شاليه ساحلي بإطلالة مباشرة' }), 'chalet');
+
+      // Land & Plots
+      assert.strictEqual(classifyPropertyUnit({ type: 'land' }), 'land');
+      assert.strictEqual(classifyPropertyUnit({ title_ar: 'قطعة أرض مميزة بالتجمع الخامس' }), 'land');
+      assert.strictEqual(classifyPropertyUnit({ title_ar: 'أراضي ومواقع استثمارية' }), 'land');
+    });
+
+    it('aggregates a realistic 25-unit portfolio into distinct authentic categories instead of classifying all as other', () => {
+      // 25 units dataset modeled directly after the active database portfolio:
+      // - 12 units in residential buildings
+      // - 6 units in commercial mixed-use building
+      // - 1 standalone garage
+      // - 1 standalone duplex
+      // - 1 standalone roof suite
+      // - 4 standalone apartments
+      const units25 = [
+        ...Array.from({ length: 6 }, (_, i) => ({
+          unitNumber: `شقة 10${i + 1}`,
+          projectTitle: 'عمارة سكنية كاملة فاخرة – حي النرجس التجمع الخامس',
+          unitType: 'شقق سكنية',
+          property: { type: 'apartment', title_ar: 'عمارة سكنية كاملة فاخرة' }
+        })),
+        ...Array.from({ length: 6 }, (_, i) => ({
+          unitNumber: `شقة 20${i + 1}`,
+          projectTitle: 'عمارة سكنية فاخرة مطلة على اللاجون – الجونة البحر الأحمر',
+          unitType: 'شقق سكنية',
+          property: { type: 'apartment', title_ar: 'عمارة سكنية فاخرة بالجونة' }
+        })),
+        ...Array.from({ length: 6 }, (_, i) => ({
+          unitNumber: `مكتب 30${i + 1}`,
+          projectTitle: 'عمارة تجارية وسكنية متكاملة – الشيخ زايد',
+          unitType: 'تجاري وإداري',
+          property: { type: 'apartment', title_ar: 'عمارة تجارية وسكنية' }
+        })),
+        {
+          unitNumber: '1',
+          projectTitle: 'جراج تجاري واستثماري خاص – التجمع الخامس',
+          unitType: 'تجاري وإداري',
+          property: { type: 'apartment', title_ar: 'جراج تجاري واستثماري خاص' }
+        },
+        {
+          unitNumber: '1',
+          projectTitle: 'شقة دوبلكس سماوية ببرج أوروم – التجمع الخامس',
+          unitType: 'دوبلكس وبنتهاوس',
+          property: { type: 'apartment', title_ar: 'شقة دوبلكس سماوية' }
+        },
+        {
+          unitNumber: '1',
+          projectTitle: 'شقة رووف كاملة مع السطح – مدينتي بريفادو',
+          unitType: 'دوبلكس وبنتهاوس',
+          property: { type: 'apartment', title_ar: 'شقة رووف كاملة مع السطح' }
+        },
+        {
+          unitNumber: '1',
+          projectTitle: 'شقة ساحلية بإطلالة جبلية وبحرية – العين السخنة',
+          unitType: 'apartment',
+          property: { type: 'apartment', title_ar: 'شقة ساحلية بإطلالة جبلية' }
+        },
+        {
+          unitNumber: '1',
+          projectTitle: 'شقة أرضي بحديقة خاصة – الشيخ زايد',
+          unitType: 'apartment',
+          property: { type: 'apartment', title_ar: 'شقة أرضي بحديقة خاصة' }
+        },
+        {
+          unitNumber: '1',
+          projectTitle: 'شقة فاخرة بمشروع سوديك إيست – التجمع الخامس',
+          unitType: 'apartment',
+          property: { type: 'apartment', title_ar: 'شقة فاخرة بمشروع سوديك إيست' }
+        },
+        {
+          unitNumber: '1',
+          projectTitle: 'شقة فاخرة قيد الإنشاء – هاسيندا ووترز الساحل الشمالي',
+          unitType: 'apartment',
+          property: { type: 'apartment', title_ar: 'شقة فاخرة قيد الإنشاء' }
+        },
+      ];
+
+      assert.strictEqual(units25.length, 25);
+
+      const counts: Record<string, number> = {
+        residential: 0,
+        commercial: 0,
+        duplex: 0,
+        villa: 0,
+        chalet: 0,
+        land: 0,
+        other: 0,
+      };
+
+      units25.forEach(u => {
+        const cat = classifyPropertyUnit(u);
+        counts[cat] = (counts[cat] || 0) + 1;
+      });
+
+      // Verify that units are authentically classified into distinct categories
+      assert.strictEqual(counts.residential, 16, 'Residential count must be 16');
+      assert.strictEqual(counts.commercial, 7, 'Commercial count must be 7');
+      assert.strictEqual(counts.duplex, 2, 'Duplex count must be 2');
+      assert.strictEqual(counts.other, 0, 'Zero units should be classified as other');
+    });
+
+    it('handles direct raw Property objects without nested property object', () => {
+      const rawProperties = [
+        { type: 'villa', title_ar: 'فيلا الياسمين' },
+        { type: 'apartment', title_ar: 'شقة النرجس' },
+        { property_type: 'duplex', title_ar: 'دوبلكس زايد' },
+        { type: 'commercial', title_ar: 'مول السرايا' },
+        { type: 'land', title_ar: 'أرض التجمع' },
+      ];
+
+      const classifications = rawProperties.map(p => classifyPropertyUnit(p));
+      assert.deepStrictEqual(classifications, ['villa', 'residential', 'duplex', 'commercial', 'land']);
+    });
+  });
 });
+

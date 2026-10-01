@@ -1,0 +1,556 @@
+/* PropertyAnalysisSideWidgets.module.css
+   Matches reference images:
+   - media_1790747012111.png (توزيع حالة العقارات والوحدات)
+   - media_1790747016468.jpg (دليل المشروعات السريع)
+   FIN-OS Invariants: Pure white panels (#ffffff !important;), 1px border (#cbd5e1), 12px radius, tabular-nums
+*/
+
+.sideWidgetsContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Base Widget Card */
+.widgetCard {
+  background: #ffffff !important;
+  border: 1px solid var(--erp-border, #cbd5e1);
+  border-radius: 12px;
+  padding: 1rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  box-sizing: border-box;
+  width: 100%;
+}
+
+.widgetHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.85rem;
+}
+
+.widgetTitleWrap {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.widgetTitle {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--erp-text-title, #0f172a);
+  margin: 0;
+  line-height: 1.3;
+}
+
+.iconSquircleRed {
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  border-radius: 8px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #dc2626;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.iconSquircleGold {
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  border-radius: 8px;
+  background: var(--erp-accent-subtle, #fef9ee);
+  border: 1px solid var(--erp-accent-tint, #fde68a);
+  color: var(--erp-accent, #b8903e);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* WIDGET 1: DISTRIBUTION SPECIFICS (media_1790747012111.png) */
+.totalBox {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 0.75rem 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.totalLabel {
+  font-size: 0.8rem;
+  color: var(--erp-text-muted, #64748b);
+  margin-bottom: 0.15rem;
+}
+
+.totalAmount {
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: var(--erp-text-title, #0f172a);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+
+.totalIconBox {
+  color: #475569;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Stacked Bar */
+.stackedBarWrap {
+  margin: 1rem 0 0.5rem;
+}
+
+.stackedBarTrack {
+  height: 32px;
+  border-radius: 8px;
+  overflow: hidden;
+  display: flex;
+  width: 100%;
+  direction: ltr; /* LTR order matching media_1790747012111.png: Red -> Blue -> Green */
+}
+
+.barSegmentRed {
+  background: #dc2626;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.78rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  min-width: 24px;
+  transition: width 300ms ease;
+}
+
+.barSegmentBlue {
+  background: #0284c7;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.78rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  min-width: 24px;
+  transition: width 300ms ease;
+}
+
+.barSegmentGreen {
+  background: #10b981;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.78rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  min-width: 24px;
+  transition: width 300ms ease;
+}
+
+.scaleTicksRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 0.35rem;
+  direction: ltr;
+}
+
+.scaleTick {
+  font-size: 0.68rem;
+  color: var(--erp-text-muted, #64748b);
+  font-variant-numeric: tabular-nums;
+  position: relative;
+  text-align: center;
+}
+
+.scaleTick::before {
+  content: '';
+  display: block;
+  width: 1px;
+  height: 4px;
+  background: #cbd5e1;
+  margin: 0 auto 2px;
+}
+
+/* Distribution Table */
+.distributionTable {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 0.85rem;
+}
+
+.distTheadTh {
+  background: #f8fafc;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--erp-text-muted, #64748b);
+}
+
+.distTheadTh:first-child {
+  border-top-right-radius: 8px;
+  border-bottom-right-radius: 8px;
+  text-align: right;
+}
+
+.distTheadTh:nth-child(2) {
+  text-align: center;
+}
+
+.distTheadTh:last-child {
+  border-top-left-radius: 8px;
+  border-bottom-left-radius: 8px;
+  text-align: left;
+}
+
+.distTr {
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.distTr:last-child {
+  border-bottom: none;
+}
+
+.distTdStatus {
+  padding: 0.65rem 0.75rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--erp-text-title, #0f172a);
+  text-align: right;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.distTdCount {
+  padding: 0.65rem 0.75rem;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: var(--erp-text-title, #0f172a);
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+.distTdPct {
+  padding: 0.65rem 0.75rem;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: var(--erp-text-title, #0f172a);
+  font-variant-numeric: tabular-nums;
+  text-align: left;
+}
+
+.statusDotRed {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #dc2626;
+  flex-shrink: 0;
+}
+
+.statusDotBlue {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #0284c7;
+  flex-shrink: 0;
+}
+
+.statusDotGreen {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #10b981;
+  flex-shrink: 0;
+}
+
+/* WIDGET 2: QUICK DIRECTORY SPECIFICS (media_1790747016468.jpg) */
+.pillCountGold {
+  background: var(--erp-accent-subtle, #fef9ee);
+  border: 1px solid var(--erp-accent-tint, #fde68a);
+  color: var(--erp-accent, #b8903e);
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.2rem 0.6rem;
+  border-radius: 6px;
+  font-variant-numeric: tabular-nums;
+}
+
+.headerToggleBtn {
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 140ms ease;
+}
+
+.headerToggleBtn:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.searchSortRow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.directorySearchInputWrap {
+  position: relative;
+  flex: 1;
+}
+
+.directorySearchIcon {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #94a3b8;
+  pointer-events: none;
+}
+
+.directorySearchInput {
+  width: 100%;
+  padding: 0.45rem 2rem 0.45rem 0.65rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 0.78rem;
+  font-family: inherit;
+  background: #ffffff;
+  color: #0f172a;
+  box-sizing: border-box;
+}
+
+.directorySearchInput:focus {
+  outline: none;
+  border-color: var(--erp-accent, #2563eb);
+}
+
+.sortDropdownWrap {
+  position: relative;
+}
+
+.sortSelectBtn {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.45rem 0.65rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #ffffff;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #334155;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.sortSelectBtn:hover {
+  background: #f8fafc;
+}
+
+/* Macro Overview Link Banner */
+.overviewBannerCard {
+  background: #ffffff;
+  border: 1px solid var(--erp-accent-tint, #fde68a);
+  border-radius: 10px;
+  padding: 0.75rem 1rem;
+  margin-top: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  transition: all 150ms ease;
+  user-select: none;
+}
+
+.overviewBannerCard:hover {
+  background: var(--erp-accent-subtle, #fef9ee);
+  border-color: var(--erp-accent, #b8903e);
+}
+
+.overviewBannerLeading {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.overviewBannerTexts {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.overviewBannerTitle {
+  font-size: 0.8125rem;
+  font-weight: 800;
+  color: var(--erp-text-title, #0f172a);
+}
+
+.overviewBannerSub {
+  font-size: 0.6875rem;
+  color: var(--erp-text-muted, #64748b);
+}
+
+.overviewBannerAction {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--erp-accent, #b8903e);
+}
+
+/* Property Directory Cards List */
+.directoryCardsList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+  max-height: 440px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  padding-left: 2px;
+}
+
+.directoryCard {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 0.65rem 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  cursor: pointer;
+  transition: all 140ms ease;
+  box-sizing: border-box;
+}
+
+.directoryCard:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+}
+
+.directoryCardActive {
+  border-color: var(--erp-accent, #b8903e) !important;
+  box-shadow: 0 0 0 1px var(--erp-accent, #b8903e);
+  background: var(--erp-accent-subtle, #fef9ee) !important;
+}
+
+.directoryCardThumb {
+  width: 58px;
+  height: 58px;
+  min-width: 58px;
+  border-radius: 8px;
+  object-fit: cover;
+  flex-shrink: 0;
+  background: #f1f5f9;
+}
+
+.directoryCardInfo {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.directoryTitleLine {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.directoryCardTitle {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: var(--erp-text-title, #0f172a);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 140px;
+}
+
+.directoryCardLocation {
+  font-size: 0.6875rem;
+  color: var(--erp-text-muted, #64748b);
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.directoryCardUnits {
+  font-size: 0.6875rem;
+  color: var(--erp-text-muted, #64748b);
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.directoryCardActionCol {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.directorySpentBlock {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: right;
+}
+
+.directorySpentLabel {
+  font-size: 0.625rem;
+  color: var(--erp-text-muted, #64748b);
+}
+
+.directorySpentAmount {
+  font-size: 0.8125rem;
+  font-weight: 800;
+  color: var(--erp-text-title, #0f172a);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+}
+
+.directoryArrowBtn {
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  color: #475569;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 120ms ease;
+  flex-shrink: 0;
+}
+
+.directoryCard:hover .directoryArrowBtn {
+  background: #ffffff;
+  border-color: #94a3b8;
+  color: #0f172a;
+}

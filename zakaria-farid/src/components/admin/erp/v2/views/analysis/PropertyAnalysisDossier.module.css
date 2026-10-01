@@ -1,0 +1,1217 @@
+/* PropertyAnalysisDossier.module.css
+   Matches reference images:
+   - media_1790747076673.png (دورة الحياة والبيانات الهندسية)
+   - media_1790747081627.png (الجدوى المالية والمبيعات)
+   FIN-OS ERP Strict Invariants:
+   - Pure white panels (#ffffff !important;)
+   - 1px border (#cbd5e1)
+   - 12px border radius
+   - Tabular numbers for all currency, percentages and metrics
+*/
+
+.dossierContainer {
+  background: #ffffff !important;
+  border: 1px solid var(--erp-border, #cbd5e1);
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  box-sizing: border-box;
+  width: 100%;
+  margin-top: 1.25rem;
+  overflow: hidden;
+}
+
+/* TOP HEADER & UNDERLINE TABS */
+.dossierHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1.25rem;
+  border-bottom: 1px solid var(--erp-border, #cbd5e1);
+  background: #ffffff;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.dossierTitleWrap {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.dossierTitleIconSquircle {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #dc2626;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dossierTitle {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--erp-text-title, #0f172a);
+  margin: 0;
+}
+
+.underlineTabsList {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.underlineTabBtn {
+  background: transparent;
+  border: none;
+  padding: 0.6rem 0.2rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #64748b;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  position: relative;
+  transition: all 150ms ease;
+  white-space: nowrap;
+}
+
+.underlineTabBtn:hover {
+  color: #0f172a;
+}
+
+.underlineTabBtnActive {
+  color: var(--erp-accent, #b8903e) !important;
+  font-weight: 700;
+}
+
+.underlineTabBtnActive::after {
+  content: '';
+  position: absolute;
+  bottom: -0.75rem;
+  left: 0;
+  right: 0;
+  height: 2.5px;
+  background: var(--erp-accent, #b8903e);
+  border-radius: 2px;
+}
+
+.tabBadge {
+  background: #f1f5f9;
+  color: #475569;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0.1rem 0.45rem;
+  border-radius: 9999px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* TOOLBAR (FILTER / SEARCH / NEW PROJECT) */
+.toolbarRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1.25rem;
+  border-bottom: 1px solid #f1f5f9;
+  background: #ffffff;
+  gap: 0.75rem;
+}
+
+.toolbarActionsRight {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex: 1;
+}
+
+.newProjectBtn {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: #881337;
+  color: #ffffff;
+  border: none;
+  padding: 0.5rem 0.9rem;
+  border-radius: 8px;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 150ms ease;
+  white-space: nowrap;
+}
+
+.newProjectBtn:hover {
+  background: #9f1239;
+}
+
+.filterBtn {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  color: #475569;
+  padding: 0.5rem 0.85rem;
+  border-radius: 8px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 150ms ease;
+}
+
+.filterBtn:hover {
+  background: #f8fafc;
+  color: #0f172a;
+}
+
+.searchInputWrap {
+  position: relative;
+  flex: 1;
+  max-width: 500px;
+}
+
+.searchInputIcon {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #94a3b8;
+  pointer-events: none;
+}
+
+.toolbarSearchInput {
+  width: 100%;
+  padding: 0.5rem 2.2rem 0.5rem 0.75rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 0.8125rem;
+  font-family: inherit;
+  background: #ffffff;
+  color: #0f172a;
+  box-sizing: border-box;
+}
+
+.toolbarSearchInput:focus {
+  outline: none;
+  border-color: var(--erp-accent, #b8903e);
+}
+
+.countDropdownBtn {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.5rem 0.85rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #334155;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* ==========================================================================
+   TAB 1: LIFECYCLE & ENGINEERING DOSSIER (media_1790747076673.png)
+   ========================================================================== */
+.lifecycleGrid {
+  display: grid;
+  grid-template-columns: 290px 1fr;
+  min-height: 700px;
+}
+
+@media (max-width: 1100px) {
+  .lifecycleGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Projects Rail (Left side) */
+.projectsRail {
+  border-left: 1px solid #f1f5f9;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  background: #ffffff;
+}
+
+.railHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.railTitle {
+  font-size: 0.875rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.railSortBtn {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.72rem;
+  color: #475569;
+  cursor: pointer;
+}
+
+.railProjectsList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  max-height: 820px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+.railProjectCard {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 0.65rem 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  cursor: pointer;
+  transition: all 140ms ease;
+}
+
+.railProjectCard:hover {
+  border-color: #cbd5e1;
+  background: #f8fafc;
+}
+
+.railProjectCardActive {
+  border-color: #b91c1c !important;
+  background: #fff5f5 !important;
+  box-shadow: 0 0 0 1px #b91c1c;
+}
+
+.railCardTop {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+}
+
+.railThumb {
+  width: 52px;
+  height: 52px;
+  min-width: 52px;
+  border-radius: 6px;
+  object-fit: cover;
+  background: #f1f5f9;
+}
+
+.railThumbPlaceholder {
+  width: 52px;
+  height: 52px;
+  min-width: 52px;
+  border-radius: 6px;
+  background: #f1f5f9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #94a3b8;
+}
+
+.railCardTexts {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.railTitleLine {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem;
+}
+
+.railCardTitle {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: #0f172a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.railLocationLine {
+  font-size: 0.6875rem;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.railProgressRow {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.railProgressTrack {
+  flex: 1;
+  height: 5px;
+  background: #e2e8f0;
+  border-radius: 9999px;
+  overflow: hidden;
+}
+
+.railProgressBar {
+  height: 100%;
+  background: #b91c1c;
+  border-radius: 9999px;
+}
+
+.railProgressPcts {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  color: #475569;
+  font-variant-numeric: tabular-nums;
+}
+
+.railUnitsCount {
+  font-size: 0.6875rem;
+  color: #64748b;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* Main Dossier Content (Right side) */
+.dossierMainStage {
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  background: #ffffff;
+}
+
+/* 1. Property Hero Card */
+.heroCard {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 1.25rem;
+  display: flex;
+  gap: 1.25rem;
+}
+
+@media (max-width: 860px) {
+  .heroCard {
+    flex-direction: column;
+  }
+}
+
+.heroImage {
+  width: 220px;
+  height: 180px;
+  min-width: 220px;
+  border-radius: 10px;
+  object-fit: cover;
+  background: #f1f5f9;
+}
+
+.heroImagePlaceholder {
+  width: 220px;
+  height: 180px;
+  min-width: 220px;
+  border-radius: 10px;
+  background: #f8fafc;
+  border: 1px dashed #cbd5e1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  color: #94a3b8;
+}
+
+.heroDetails {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.heroTopRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.heroTitle {
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0;
+}
+
+.heroActions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.heroLocation {
+  font-size: 0.8125rem;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 0.25rem;
+}
+
+.heroDescription {
+  font-size: 0.8125rem;
+  color: #475569;
+  line-height: 1.5;
+  margin: 0.35rem 0;
+}
+
+.heroKpisGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.75rem;
+}
+
+@media (max-width: 900px) {
+  .heroKpisGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.heroKpiBox {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 0.6rem 0.8rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.heroKpiLabel {
+  font-size: 0.72rem;
+  color: #64748b;
+  margin-bottom: 2px;
+}
+
+.heroKpiValue {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: #0f172a;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+}
+
+.heroKpiIcon {
+  color: #64748b;
+}
+
+/* 2. Timeline Card: مراحل دورة حياة المشروع */
+.timelineCard {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 1.25rem;
+}
+
+.timelineHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1.25rem;
+}
+
+.timelineTitle {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.horizontalTimelineTrack {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  position: relative;
+  padding: 0.5rem 1rem;
+}
+
+.timelineConnectorLine {
+  position: absolute;
+  top: 26px;
+  right: 5%;
+  left: 5%;
+  height: 2px;
+  background: #e2e8f0;
+  z-index: 1;
+}
+
+.timelineConnectorLineCompleted {
+  background: #b91c1c;
+}
+
+.timelineStepItem {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  flex: 1;
+}
+
+.timelineStepCircle {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 2px solid #cbd5e1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #64748b;
+  margin-bottom: 0.6rem;
+  transition: all 150ms ease;
+}
+
+.timelineStepCircleCompleted {
+  background: #475569;
+  border-color: #475569;
+  color: #ffffff;
+}
+
+.timelineStepCircleActive {
+  background: #b91c1c;
+  border-color: #b91c1c;
+  color: #ffffff;
+}
+
+.timelineStepTitle {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin-bottom: 2px;
+}
+
+.timelineStepDate {
+  font-size: 0.6875rem;
+  color: #64748b;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 3. Dual Cards: نسبة الإنجاز & الوحدات */
+.dualRowGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.25rem;
+}
+
+@media (max-width: 860px) {
+  .dualRowGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.dossierSectionCard {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.sectionCardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.sectionCardTitleWrap {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.sectionCardTitle {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+/* Donut & Completion Body */
+.completionBody {
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  gap: 1rem;
+  padding: 0.5rem 0;
+}
+
+.donutWrapper {
+  position: relative;
+  width: 120px;
+  height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.donutInner {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.donutPct {
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: #0f172a;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.donutSub {
+  font-size: 0.72rem;
+  color: #64748b;
+  margin-top: 2px;
+}
+
+.donutLegendList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.donutLegendItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  font-size: 0.8125rem;
+}
+
+.donutLegendLeading {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  color: #334155;
+}
+
+.donutLegendValue {
+  font-weight: 700;
+  color: #0f172a;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Units Progress Body */
+.unitsProgressBody {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding: 0.5rem 0;
+}
+
+.unitsProgressHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: #334155;
+}
+
+.unitsProgressTrack {
+  height: 12px;
+  background: #e2e8f0;
+  border-radius: 9999px;
+  overflow: hidden;
+}
+
+.unitsProgressBar {
+  height: 100%;
+  background: #b91c1c;
+  border-radius: 9999px;
+}
+
+.unitsBoxesGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.6rem;
+}
+
+.unitsBox {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 0.6rem;
+  text-align: center;
+}
+
+.unitsBoxLabel {
+  font-size: 0.72rem;
+  color: #64748b;
+  margin-bottom: 2px;
+}
+
+.unitsBoxCount {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: #0f172a;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 4. Financial Data Tabs & Activity Log Row */
+.financialInnerTabs {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  border-bottom: 1px solid #e2e8f0;
+  padding-bottom: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.financialInnerTabBtn {
+  background: transparent;
+  border: none;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #64748b;
+  cursor: pointer;
+  padding: 0.2rem 0;
+  position: relative;
+}
+
+.financialInnerTabBtnActive {
+  color: #b91c1c;
+  font-weight: 700;
+}
+
+.financialInnerTabBtnActive::after {
+  content: '';
+  position: absolute;
+  bottom: -0.55rem;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: #b91c1c;
+}
+
+.financialColumnsWrap {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.25rem;
+}
+
+.financialCol {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.financialRowItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.45rem 0;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.financialRowItem:last-child {
+  border-bottom: none;
+}
+
+.financialItemLabel {
+  font-size: 0.8125rem;
+  color: #64748b;
+}
+
+.financialItemValue {
+  font-size: 0.875rem;
+  font-weight: 800;
+  color: #0f172a;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Activity Log */
+.activityList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.activityItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.4rem 0;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.activityItem:last-child {
+  border-bottom: none;
+}
+
+.activityLeading {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.activityIconSquircle {
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  background: #f1f5f9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #475569;
+}
+
+.activityText {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.activityDate {
+  font-size: 0.72rem;
+  color: #64748b;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ==========================================================================
+   TAB 2: FEASIBILITY & SALES (media_1790747081627.png)
+   ========================================================================== */
+.feasibilityContainer {
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.feasibilityBreadcrumbRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.propertyDropdownCard {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  padding: 0.45rem 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  cursor: pointer;
+  min-width: 280px;
+}
+
+.propertyDropdownCard:hover {
+  background: #f8fafc;
+}
+
+.propertyDropdownThumb {
+  width: 36px;
+  height: 36px;
+  border-radius: 6px;
+  object-fit: cover;
+}
+
+.propertyDropdownInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.propertyDropdownTitle {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.propertyDropdownCode {
+  font-size: 0.6875rem;
+  color: #64748b;
+  font-variant-numeric: tabular-nums;
+}
+
+.breadcrumbsTrail {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.78rem;
+  color: #64748b;
+}
+
+.breadcrumbActive {
+  color: #0f172a;
+  font-weight: 600;
+}
+
+/* 4 Discrete Floating Feasibility KPI Cards */
+.feasibilityKpiGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+}
+
+@media (max-width: 1024px) {
+  .feasibilityKpiGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.feasibilityKpiCard {
+  background: #ffffff !important;
+  border: 1px solid var(--erp-border, #cbd5e1);
+  border-radius: 12px;
+  padding: 1rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.kpiCardTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.kpiCardLabel {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #64748b;
+}
+
+.kpiCardSquircle {
+  width: 30px;
+  height: 30px;
+  border-radius: 7px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.kpiCardValue {
+  font-size: 1.45rem;
+  font-weight: 800;
+  color: #0f172a;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+
+.kpiCardSub {
+  font-size: 0.72rem;
+  color: #64748b;
+  margin-top: 2px;
+}
+
+/* Middle Grid: Waterfall Bar Chart & Collections Progress */
+.feasibilityMiddleGrid {
+  display: grid;
+  grid-template-columns: 1.6fr 1fr;
+  gap: 1rem;
+}
+
+@media (max-width: 980px) {
+  .feasibilityMiddleGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Collections & Sales Card */
+.collectionsProgressCard {
+  background: #ffffff !important;
+  border: 1px solid var(--erp-border, #cbd5e1);
+  border-radius: 12px;
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.collectionsDualBoxes {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+.collectionBox {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.collectionBoxLeading {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.collectionBoxLabel {
+  font-size: 0.72rem;
+  color: #64748b;
+}
+
+.collectionBoxValue {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: #0f172a;
+  font-variant-numeric: tabular-nums;
+}
+
+.contractingRateSection {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.contractingRateHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: #334155;
+}
+
+.contractingRateTrack {
+  height: 10px;
+  background: #e2e8f0;
+  border-radius: 9999px;
+  overflow: hidden;
+}
+
+.contractingRateBar {
+  height: 100%;
+  background: var(--erp-accent, #b8903e);
+  border-radius: 9999px;
+}
+
+.contractingRateMeta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.72rem;
+  color: #64748b;
+}
+
+.officialContractsFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 0.65rem;
+  border-top: 1px solid #f1f5f9;
+}
+
+.officialContractsLeading {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #475569;
+}
+
+.officialContractsCount {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: #0f172a;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Contracts Table Card */
+.contractsTableCard {
+  background: #ffffff !important;
+  border: 1px solid var(--erp-border, #cbd5e1);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.contractsTableHeader {
+  padding: 0.75rem 1.25rem;
+  border-bottom: 1px solid var(--erp-border, #cbd5e1);
+  background: #fafbfc;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.contractsTableTitleWrap {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.contractsTableTitle {
+  font-size: 0.875rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.contractsTable {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.contractsTh {
+  padding: 0.65rem 1rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #64748b;
+  background: #fafbfc;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.contractsRow {
+  border-bottom: 1px solid #f1f5f9;
+  cursor: pointer;
+  transition: background 120ms ease;
+}
+
+.contractsRow:hover {
+  background: #f8fafc;
+}
+
+.contractsRow:last-child {
+  border-bottom: none;
+}
+
+.contractsTd {
+  padding: 0.75rem 1rem;
+  font-size: 0.8125rem;
+  color: #1e293b;
+  font-variant-numeric: tabular-nums;
+}

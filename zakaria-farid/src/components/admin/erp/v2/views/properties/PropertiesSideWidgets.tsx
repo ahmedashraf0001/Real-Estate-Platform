@@ -17,7 +17,7 @@ import {
   X
 } from 'lucide-react';
 import { Property } from '@/lib/supabase/types';
-import { FlatInventoryUnit } from '@/lib/erp/propertiesPortfolioCalculations';
+import { FlatInventoryUnit, classifyPropertyUnit } from '@/lib/erp/propertiesPortfolioCalculations';
 import { ZFWorkstationSideWidgets, ZFWidgetCard } from '../../common/ZFWorkstationSideWidgets';
 import { ERPApexChart } from '../../charts/ERPApexChart';
 import { createCachedTileLayer } from '@/lib/mapCache';
@@ -35,7 +35,7 @@ if (typeof window !== 'undefined') {
 
 export interface PropertiesSideWidgetsProps {
   properties: Property[];
-  allInventoryUnits: FlatInventoryUnit[];
+  allInventoryUnits?: FlatInventoryUnit[];
   searchQuery: string;
   onSearchQueryChange: (query: string) => void;
   filterUnitType: string;
@@ -90,9 +90,11 @@ export const getProjectThumbnail = (property: Property, index: number = 0): stri
   return buildingImages[index % buildingImages.length];
 };
 
+export { classifyPropertyUnit };
+
 export const PropertiesSideWidgets: React.FC<PropertiesSideWidgetsProps> = ({
-  properties,
-  allInventoryUnits,
+  properties = [],
+  allInventoryUnits = [],
   searchQuery,
   onSearchQueryChange,
   filterUnitType,
@@ -223,34 +225,54 @@ export const PropertiesSideWidgets: React.FC<PropertiesSideWidgetsProps> = ({
 
   // Distribution Pie Data
   const distributionData = useMemo(() => {
+    const sourceUnits = (allInventoryUnits && allInventoryUnits.length > 0)
+      ? allInventoryUnits
+      : (properties && properties.length > 0 ? properties : []);
+
     let residentialCount = 0;
     let villasCount = 0;
     let duplexRoofCount = 0;
     let commercialCount = 0;
+    let chaletCount = 0;
+    let landCount = 0;
     let otherCount = 0;
 
-    allInventoryUnits.forEach(u => {
-      const t = (u.unitType || '').toLowerCase();
-      if (t.includes('فيلا') || t.includes('villa') || t.includes('قصر')) {
-        villasCount++;
-      } else if (t.includes('دوبلكس') || t.includes('بنتهاوس') || t.includes('رووف') || t.includes('roof')) {
-        duplexRoofCount++;
-      } else if (t.includes('مكتب') || t.includes('تجاري') || t.includes('إداري') || t.includes('office')) {
-        commercialCount++;
-      } else if (t.includes('شقة') || t.includes('apartment')) {
-        residentialCount++;
-      } else {
-        otherCount++;
+    sourceUnits.forEach(u => {
+      const category = classifyPropertyUnit(u);
+      switch (category) {
+        case 'duplex':
+          duplexRoofCount++;
+          break;
+        case 'villa':
+          villasCount++;
+          break;
+        case 'commercial':
+          commercialCount++;
+          break;
+        case 'chalet':
+          chaletCount++;
+          break;
+        case 'land':
+          landCount++;
+          break;
+        case 'residential':
+          residentialCount++;
+          break;
+        default:
+          otherCount++;
+          break;
       }
     });
 
-    const total = allInventoryUnits.length || 1;
+    const total = sourceUnits.length || 1;
     const rawCategories = [
-      { name: isAr ? 'شقق سكنية' : 'Apartments', count: residentialCount, color: '#2563eb' },
-      { name: isAr ? 'فلل وقصور' : 'Villas', count: villasCount, color: '#10b981' },
-      { name: isAr ? 'دوبلكس وبنتهاوس' : 'Duplex/Roof', count: duplexRoofCount, color: '#f59e0b' },
-      { name: isAr ? 'تجاري وإداري' : 'Commercial', count: commercialCount, color: '#8b5cf6' },
-      { name: isAr ? 'وحدات أخرى' : 'Others', count: otherCount, color: '#64748b' },
+      { id: 'residential', typeKey: 'apartment', name: isAr ? 'شقق سكنية' : 'Apartments', count: residentialCount, color: '#2563eb' },
+      { id: 'villa', typeKey: 'villa', name: isAr ? 'فلل وقصور' : 'Villas', count: villasCount, color: '#10b981' },
+      { id: 'duplex', typeKey: 'duplex', name: isAr ? 'دوبلكس وبنتهاوس' : 'Duplex/Roof', count: duplexRoofCount, color: '#f59e0b' },
+      { id: 'commercial', typeKey: 'office', name: isAr ? 'تجاري وإداري' : 'Commercial', count: commercialCount, color: '#8b5cf6' },
+      { id: 'chalet', typeKey: 'chalet', name: isAr ? 'شاليهات ساحلية' : 'Chalets', count: chaletCount, color: '#06b6d4' },
+      { id: 'land', typeKey: 'land', name: isAr ? 'أراضي ومواقع' : 'Land & Plots', count: landCount, color: '#b48c36' },
+      { id: 'other', typeKey: 'all', name: isAr ? 'وحدات أخرى' : 'Others', count: otherCount, color: '#64748b' },
     ];
 
     const activeItems = rawCategories
@@ -264,8 +286,8 @@ export const PropertiesSideWidgets: React.FC<PropertiesSideWidgetsProps> = ({
     const labels = activeItems.map(item => item.name);
     const colors = activeItems.map(item => item.color);
 
-    return { series, labels, colors, items: activeItems };
-  }, [allInventoryUnits, isAr]);
+    return { series, labels, colors, items: activeItems, totalUnits: sourceUnits.length };
+  }, [allInventoryUnits, properties, isAr]);
 
   // Geographic coordinates projection helper for Egypt locations
   const getProjectCoordinates = useCallback((p: Property, idx: number): { cx: number; cy: number; locLabel: string } => {
@@ -542,7 +564,8 @@ export const PropertiesSideWidgets: React.FC<PropertiesSideWidgetsProps> = ({
                   <option value="duplex">{isAr ? 'دوبلكس' : 'Duplex'}</option>
                   <option value="penthouse">{isAr ? 'بنتهاوس رووف' : 'Penthouse'}</option>
                   <option value="chalet">{isAr ? 'شاليه ساحلي' : 'Chalet'}</option>
-                  <option value="office">{isAr ? 'مكتب إداري' : 'Office'}</option>
+                  <option value="office">{isAr ? 'تجاري وإداري' : 'Commercial & Office'}</option>
+                  <option value="land">{isAr ? 'أراضي ومواقع' : 'Land'}</option>
                 </select>
               </div>
 
@@ -725,7 +748,7 @@ export const PropertiesSideWidgets: React.FC<PropertiesSideWidgetsProps> = ({
           icon={<PieChartIcon size={14} />}
           badge={
             <span style={{ fontSize: '0.68rem', color: '#64748b', fontVariantNumeric: 'tabular-nums' }}>
-              {allInventoryUnits.length} {isAr ? 'وحدة' : 'units'}
+              {distributionData.totalUnits} {isAr ? 'وحدة' : 'units'}
             </span>
           }
           isAr={isAr}
@@ -773,7 +796,7 @@ export const PropertiesSideWidgets: React.FC<PropertiesSideWidgetsProps> = ({
                               color: '#64748b',
                               fontSize: '11px',
                               fontWeight: 600,
-                              formatter: () => `${allInventoryUnits.length}`,
+                              formatter: () => `${distributionData.totalUnits}`,
                             },
                           },
                         },
@@ -799,18 +822,53 @@ export const PropertiesSideWidgets: React.FC<PropertiesSideWidgetsProps> = ({
 
             {/* Side / Bottom Legend with counts and percentages */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', borderTop: '1px solid #f1f5f9', paddingTop: '0.5rem' }}>
-              {distributionData.items.map((item) => (
-                <div key={item.name} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.72rem' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                    <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: item.color, flexShrink: 0 }} />
-                    <span style={{ color: '#334155', fontWeight: 600 }}>{item.name}</span>
+              {distributionData.items.map((item) => {
+                const isActive = filterUnitType === item.typeKey;
+                return (
+                  <div
+                    key={item.name}
+                    onClick={() => {
+                      if (item.typeKey) {
+                        onFilterUnitTypeChange(isActive ? 'all' : item.typeKey);
+                      }
+                    }}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        if (item.typeKey) {
+                          onFilterUnitTypeChange(isActive ? 'all' : item.typeKey);
+                        }
+                      }
+                    }}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      fontSize: '0.72rem',
+                      padding: '0.22rem 0.35rem',
+                      borderRadius: '6px',
+                      background: isActive ? 'var(--erp-accent-soft, #eff6ff)' : 'transparent',
+                      border: isActive ? '1px solid var(--erp-accent-tint, #bfdbfe)' : '1px solid transparent',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease',
+                    }}
+                    title={isAr ? `تصفية حسب ${item.name}` : `Filter by ${item.name}`}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                      <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: item.color, flexShrink: 0 }} />
+                      <span style={{ color: isActive ? 'var(--erp-accent, #2563eb)' : '#334155', fontWeight: isActive ? 700 : 600 }}>
+                        {item.name}
+                      </span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontVariantNumeric: 'tabular-nums' }}>
+                      <span style={{ color: '#64748b' }}>({item.count})</span>
+                      <strong style={{ color: '#0f172a' }}>{item.pct}%</strong>
+                    </div>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontVariantNumeric: 'tabular-nums' }}>
-                    <span style={{ color: '#64748b' }}>({item.count})</span>
-                    <strong style={{ color: '#0f172a' }}>{item.pct}%</strong>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         </ZFWidgetCard>

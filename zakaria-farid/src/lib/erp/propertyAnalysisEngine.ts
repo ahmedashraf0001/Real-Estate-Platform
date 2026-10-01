@@ -206,21 +206,28 @@ export function calculateSinglePropertyAnalysis({
   }
 
   const safeArea = property.area_sqm && property.area_sqm > 0 ? property.area_sqm : 1;
-  const audit = calculatePropertyAuditMetrics(property.id, safeArea, propertyCosts || []);
+  const propertyCostList = (propertyCosts || []).filter(
+    c => c.property_id === property.id || (property.slug && c.property_id === property.slug)
+  );
+  const audit = calculatePropertyAuditMetrics(property.id, safeArea, propertyCostList);
   const associatedContracts = getContractsForProperty(property, contracts);
-  const propertyCostList = (propertyCosts || []).filter(c => c.property_id === property.id);
 
   // 1. Costs breakdown
   const byCat = audit.byCategory || {};
   
   // Land cost: check if logged under land_allocation, or target_budget / price
+  const explicitLandLogged = !D(byCat.land_allocation?.total || '0').isZero();
   let landCost = D(byCat.land_allocation?.total || '0');
-  if (landCost.isZero() && propertyCostList.length > 0) {
-    // If site construction costs are logged but no explicit land_allocation record exists,
-    // derive realistic land allocation proportional to built area
-    const estimatedLand = D(safeArea).times(5000);
-    const priceCap = D(property.price_egp || 0).times(0.25);
-    landCost = priceCap.isPositive() && priceCap.lessThan(estimatedLand) && !priceCap.isZero() ? priceCap : estimatedLand;
+  if (!explicitLandLogged) {
+    if ((property as any).purchase_price_egp) {
+      landCost = D((property as any).purchase_price_egp);
+    } else if (propertyCostList.length > 0) {
+      // If site construction costs are logged but no explicit land_allocation record exists,
+      // derive realistic land allocation proportional to built area
+      const estimatedLand = D(safeArea).times(5000);
+      const priceCap = D(property.price_egp || 0).times(0.25);
+      landCost = priceCap.isPositive() && priceCap.lessThan(estimatedLand) && !priceCap.isZero() ? priceCap : estimatedLand;
+    }
   }
   
   // Structure: civil_structure + labor_subcontractor
@@ -229,7 +236,7 @@ export function calculateSinglePropertyAnalysis({
   // Finishing: finishing_interior + site_facade
   const finishingWip = D(byCat.finishing_interior?.total || '0').plus(D(byCat.site_facade?.total || '0'));
   
-  // MEP: mep_infrastructure
+  // MEP: mep_infrastructure (الكهرباء والسباكة والشبكات)
   const mepWip = D(byCat.mep_infrastructure?.total || '0');
   
   // Permits & Fees: permits_engineering + taxes_fees
@@ -237,9 +244,9 @@ export function calculateSinglePropertyAnalysis({
   
   // Total Construction WIP (actual site works excluding land allocation to prevent double-counting)
   const totalLogged = D(audit.totalLoggedCost || '0');
-  const totalConstructionWip = totalLogged.minus(landCost).greaterThan(0)
-    ? totalLogged.minus(landCost)
-    : D(0);
+  const totalConstructionWip = explicitLandLogged
+    ? (totalLogged.minus(landCost).greaterThan(0) ? totalLogged.minus(landCost) : D(0))
+    : totalLogged;
   
   // Other unclassified WIP if any
   const categorizedSum = structureWip.plus(finishingWip).plus(mepWip).plus(permitsFees);
@@ -482,10 +489,10 @@ export function calculateSinglePropertyAnalysis({
     {
       id: 'm4_finishes',
       order: 4,
-      titleAr: 'التشطيبات المعمارية وتأسيس الكهروميكانيك',
-      titleEn: 'Finishing Works & MEP Services',
-      shortAr: 'التشطيبات و MEP',
-      shortEn: 'Finishes & MEP',
+      titleAr: 'التشطيبات المعمارية والشبكات',
+      titleEn: 'Finishing Works & Infrastructure Services',
+      shortAr: 'التشطيبات',
+      shortEn: 'Finishes',
       status: m4Status,
       date: finishesDate,
       summaryAr: hasFinishingCost || mepWip.isPositive()

@@ -1,0 +1,779 @@
+/* OperationsCashFlowMap.module.css
+   Institutional Cash Flow Map matching reference media_1790744468759.png
+   FIN-OS ERP Design System: Pure white panel, concentric radii, tabular numerals, 3-column architecture
+*/
+
+.cashFlowCard {
+  background: #ffffff !important;
+  border: 1px solid var(--erp-border, #e2e8f0);
+  border-radius: 16px;
+  padding: 24px 26px 22px;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  position: relative;
+  overflow: hidden;
+  font-family: inherit;
+  direction: rtl;
+}
+
+/* 1. Header Section (Top Right in RTL) */
+.cardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 14px;
+  margin-bottom: 22px;
+}
+
+.headerIconSquircle {
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+  border-radius: 10px;
+  background: var(--erp-accent-subtle, #fef9ee);
+  border: 1px solid var(--erp-accent-tint, #fde68a);
+  color: var(--erp-accent, #b8903e);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.headerTexts {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.headerTitle {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--erp-text-title, #0f172a);
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+}
+
+.headerSubtitle {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--erp-text-muted, #64748b);
+  line-height: 1.35;
+}
+
+/* 2. Upper 3-Column Workstation Grid */
+.upperWorkspaceGrid {
+  display: grid;
+  grid-template-columns: 1fr 1.08fr 1fr;
+  gap: 18px;
+  width: 100%;
+  box-sizing: border-box;
+  align-items: stretch;
+  direction: ltr; /* Keeps Inflows on the visual left, Central in center, Outflows on visual right */
+}
+
+/* Sub-column wrapper */
+.subColumn {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  box-sizing: border-box;
+  direction: rtl; /* Internal content uses standard Arabic RTL */
+}
+
+/* Header Banners for Inflow & Outflow Columns */
+.columnBanner {
+  background: #fafbfc;
+  border: 1px solid var(--erp-card-border, #e2e8f0);
+  border-radius: 12px;
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  box-sizing: border-box;
+  cursor: pointer;
+  user-select: none;
+  transition: all 160ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.columnBanner:hover {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+}
+
+.columnBanner:focus-visible {
+  outline: 2px solid var(--erp-accent, #2563eb);
+  outline-offset: 2px;
+}
+
+.columnBannerActive {
+  border-color: var(--erp-accent, #2563eb) !important;
+  box-shadow: 0 0 0 2px var(--erp-accent-tint, rgba(37, 99, 235, 0.15));
+}
+
+.bannerLeading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.bannerSquircleInflow {
+  width: 38px;
+  height: 38px;
+  min-width: 38px;
+  border-radius: 9px;
+  background: #ecfdf5;
+  border: 1px solid #bbf7d0;
+  color: #059669;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.bannerSquircleOutflow {
+  width: 38px;
+  height: 38px;
+  min-width: 38px;
+  border-radius: 9px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #dc2626;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.bannerTitleBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.bannerTitle {
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: var(--erp-text-title, #0f172a);
+  line-height: 1.2;
+}
+
+.bannerSubtitle {
+  font-size: 0.71875rem;
+  color: var(--erp-text-muted, #64748b);
+  line-height: 1.2;
+}
+
+.bannerTrailing {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: right;
+  gap: 2px;
+}
+
+.bannerTotalLabel {
+  font-size: 0.6875rem;
+  color: var(--erp-text-muted, #64748b);
+  font-weight: 500;
+  line-height: 1.2;
+}
+
+.bannerTotalAmount {
+  font-size: 1.0625rem;
+  font-weight: 800;
+  color: var(--erp-text-title, #0f172a);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+}
+
+/* Stream Cards Lists */
+.streamCardsList {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  margin-top: 12px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Individual Stream Node Card */
+.streamNodeCard {
+  background: #ffffff;
+  border: 1px solid var(--erp-card-border, #e2e8f0);
+  border-radius: 11px;
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  box-sizing: border-box;
+  cursor: pointer;
+  user-select: none;
+  transition: all 160ms cubic-bezier(0.16, 1, 0.3, 1);
+  text-align: right;
+}
+
+.streamNodeCard:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+  transform: translateY(-1px);
+}
+
+.streamNodeCard:focus-visible {
+  outline: 2px solid var(--erp-accent, #2563eb);
+  outline-offset: 1px;
+}
+
+.streamNodeCardActive {
+  border-color: var(--erp-accent, #2563eb) !important;
+  background: var(--erp-accent-subtle, #eff6ff) !important;
+}
+
+.streamNodeLeading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.streamChevron {
+  color: #94a3b8;
+  flex-shrink: 0;
+  transition: transform 160ms ease;
+}
+
+.streamNodeCard:hover .streamChevron {
+  color: #64748b;
+  transform: translateX(-2px);
+}
+
+.streamIconSquircle {
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  border-radius: 8px;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  color: #475569;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.streamIconSquircleGold {
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  border-radius: 8px;
+  background: var(--erp-accent-subtle, #fef9ee);
+  border: 1px solid var(--erp-accent-tint, #fde68a);
+  color: var(--erp-accent, #b8903e);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.streamTitleBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.streamTitle {
+  font-size: 0.84375rem;
+  font-weight: 700;
+  color: var(--erp-text-title, #0f172a);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.25;
+}
+
+.streamSubtitle {
+  font-size: 0.6875rem;
+  color: var(--erp-text-muted, #64748b);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.25;
+}
+
+.streamTrailing {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 1px;
+  flex-shrink: 0;
+}
+
+.streamAmount {
+  font-size: 0.90625rem;
+  font-weight: 800;
+  color: var(--erp-text-title, #0f172a);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+}
+
+.streamCurrency {
+  font-size: 0.6875rem;
+  color: var(--erp-text-muted, #64748b);
+  line-height: 1.2;
+}
+
+/* 3. Center Column - Available Liquidity Card */
+.centralCard {
+  background: #ffffff;
+  border: 1px solid var(--erp-card-border, #e2e8f0);
+  border-radius: 14px;
+  padding: 20px 22px 18px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  height: 100%;
+  box-sizing: border-box;
+  text-align: center;
+  transition: all 160ms cubic-bezier(0.16, 1, 0.3, 1);
+  direction: rtl;
+}
+
+.centralCard:hover {
+  border-color: #cbd5e1;
+}
+
+.centralCardActive {
+  border-color: var(--erp-accent, #b8903e) !important;
+  box-shadow: 0 0 0 2px var(--erp-accent-tint, rgba(184, 144, 62, 0.15));
+}
+
+.centralTop {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+}
+
+.centralCoinsSquircle {
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  border-radius: 12px;
+  background: var(--erp-accent-subtle, #fef9ee);
+  border: 1px solid var(--erp-accent-tint, #fde68a);
+  color: var(--erp-accent, #b8903e);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 4px;
+}
+
+.centralTitle {
+  font-size: 1.0625rem;
+  font-weight: 800;
+  color: var(--erp-text-title, #0f172a);
+  line-height: 1.2;
+}
+
+.centralSubtitle {
+  font-size: 0.78125rem;
+  color: var(--erp-text-muted, #64748b);
+  line-height: 1.25;
+}
+
+.centralGiantAmountRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 6px;
+  margin: 14px 0 14px;
+  direction: ltr; /* Keeps currency symbol and giant number aligned correctly */
+}
+
+.centralCurrencyGold {
+  font-size: 1.1875rem;
+  font-weight: 700;
+  color: var(--erp-accent, #b8903e);
+}
+
+.centralGiantAmount {
+  font-size: 1.9375rem;
+  font-weight: 800;
+  color: var(--erp-text-title, #0f172a);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+
+/* Horizontal Split Bar Container */
+.splitBarCard {
+  width: 100%;
+  background: #f8fafc;
+  border: 1px solid var(--erp-card-border, #e2e8f0);
+  border-radius: 12px;
+  padding: 12px 14px 12px;
+  box-sizing: border-box;
+}
+
+.splitBarTrack {
+  height: 24px;
+  border-radius: 6px;
+  overflow: hidden;
+  display: flex;
+  width: 100%;
+  direction: ltr; /* Blue Bank on left (58%), Gold Safe on right (42%) */
+}
+
+.splitBarBank {
+  height: 100%;
+  background: #1e3a5f;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  transition: width 400ms ease;
+  min-width: 32px;
+}
+
+.splitBarSafe {
+  height: 100%;
+  background: var(--erp-accent, #b8903e);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  transition: width 400ms ease;
+  min-width: 32px;
+}
+
+.splitBarLegendRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  margin-top: 10px;
+  direction: ltr; /* Matches bar orientation: Banks on Left, Safe on Right */
+}
+
+.legendCol {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.legendHeader {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.legendLabel {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: var(--erp-text-title, #0f172a);
+}
+
+.legendAmount {
+  font-size: 0.9375rem;
+  font-weight: 800;
+  color: var(--erp-text-title, #0f172a);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+}
+
+.legendCurrency {
+  font-size: 0.6875rem;
+  color: var(--erp-text-muted, #64748b);
+}
+
+/* 4. Bottom Visual Flow Ribbon */
+.bottomFlowSection {
+  margin-top: 24px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.ribbonContainer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  position: relative;
+  box-sizing: border-box;
+  direction: ltr; /* Flow goes: Inflow (Left) -> Treasury (Center) -> Outflow (Right) */
+}
+
+/* Pill Nodes */
+.ribbonNodeInflow {
+  background: #ecfdf5;
+  border: 1px solid #bbf7d0;
+  border-radius: 11px;
+  padding: 10px 22px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  flex-shrink: 0;
+  min-width: 180px;
+  box-sizing: border-box;
+  direction: rtl;
+}
+
+.ribbonNodeLabelInflow {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #047857;
+  line-height: 1.25;
+}
+
+.ribbonNodeValue {
+  font-size: 0.96875rem;
+  font-weight: 800;
+  color: var(--erp-text-title, #0f172a);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.25;
+  margin-top: 2px;
+}
+
+.ribbonNodeCenter {
+  background: var(--erp-accent-subtle, #fef9ee);
+  border: 1px solid var(--erp-accent-tint, #fde68a);
+  border-radius: 11px;
+  padding: 9px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  flex-shrink: 0;
+  min-width: 200px;
+  box-sizing: border-box;
+  direction: rtl;
+}
+
+.ribbonCenterSquircle {
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  border-radius: 8px;
+  background: #fef3c7;
+  border: 1px solid #fde68a;
+  color: var(--erp-accent, #b8903e);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.ribbonCenterTexts {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: right;
+  gap: 1px;
+}
+
+.ribbonCenterLabel {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #92400e;
+  line-height: 1.25;
+}
+
+.ribbonNodeOutflow {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 11px;
+  padding: 10px 22px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  flex-shrink: 0;
+  min-width: 180px;
+  box-sizing: border-box;
+  direction: rtl;
+}
+
+.ribbonNodeLabelOutflow {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #b91c1c;
+  line-height: 1.25;
+}
+
+/* Fluid SVG Ribbon Connectors */
+.flowConnector {
+  flex: 1;
+  height: 52px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 60px;
+}
+
+.flowConnectorSvg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.flowChevronBadge {
+  position: relative;
+  z-index: 2;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+  flex-shrink: 0;
+}
+
+.flowChevronBadgeGreen {
+  border: 1px solid #86efac;
+  color: #059669;
+}
+
+.flowChevronBadgeRed {
+  border: 1px solid #fca5a5;
+  color: #dc2626;
+}
+
+/* 5. Footer Buttons */
+.cardFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 22px;
+  width: 100%;
+  direction: rtl; /* "عرض كل العمليات" on left, "+ إضافة بند" on right */
+}
+
+.viewAllButton {
+  background: #ffffff;
+  border: 1px solid var(--erp-border, #cbd5e1);
+  border-radius: 8px;
+  padding: 8px 18px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--erp-text-body, #334155);
+  cursor: pointer;
+  transition: all 140ms ease;
+  user-select: none;
+}
+
+.viewAllButton:hover {
+  background: #f8fafc;
+  border-color: #94a3b8;
+  color: #0f172a;
+  transform: translateY(-1px);
+}
+
+.viewAllButton:active {
+  transform: scale(0.96);
+}
+
+.viewAllButton:focus-visible {
+  outline: 2px solid var(--erp-accent, #2563eb);
+  outline-offset: 2px;
+}
+
+.addItemButton {
+  background: var(--erp-accent, #b8903e);
+  border: 1px solid transparent;
+  border-radius: 8px;
+  padding: 9px 24px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: #ffffff;
+  cursor: pointer;
+  transition: all 140ms ease;
+  user-select: none;
+}
+
+.addItemButton:hover {
+  opacity: 0.92;
+  transform: translateY(-1px);
+}
+
+.addItemButton:active {
+  transform: scale(0.96);
+}
+
+.addItemButton:focus-visible {
+  outline: 2px solid var(--erp-accent, #b8903e);
+  outline-offset: 2px;
+}
+
+/* 6. Responsive Architecture */
+@media (max-width: 980px) {
+  .upperWorkspaceGrid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+    direction: rtl;
+  }
+
+  .subColumn {
+    width: 100%;
+  }
+
+  .ribbonContainer {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .flowConnector {
+    height: 32px;
+    width: 100%;
+  }
+
+  .flowConnectorSvg {
+    display: none;
+  }
+
+  .ribbonNodeInflow,
+  .ribbonNodeCenter,
+  .ribbonNodeOutflow {
+    width: 100%;
+    min-width: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .streamNodeCard,
+  .columnBanner,
+  .viewAllButton,
+  .addItemButton,
+  .splitBarBank,
+  .splitBarSafe {
+    transition: none !important;
+    transform: none !important;
+  }
+}

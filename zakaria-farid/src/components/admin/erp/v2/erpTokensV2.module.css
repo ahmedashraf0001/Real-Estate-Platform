@@ -21,11 +21,15 @@
   --zf2-border-focus: rgba(37, 99, 235, 0.45);
 
   /* Primary Accent: Enterprise Dynamic Accent (Aliased to FIN-OS Palette) */
-  --zf2-gold: var(--erp-accent, #2563eb);
-  --zf2-gold-light: var(--erp-accent-hover, #1d4ed8);
-  --zf2-gold-dark: var(--erp-accent-hover, #1d4ed8);
-  --zf2-gold-dim: var(--erp-accent-subtle, #eff6ff);
-  --zf2-gold-wash: var(--erp-accent-tint, rgba(37, 99, 235, 0.08));
+  --erp-accent: #946f23;
+  --erp-accent-hover: #7c5c1b;
+  --erp-accent-subtle: #fdf8ee;
+  --erp-accent-tint: rgba(148, 111, 35, 0.08);
+  --zf2-gold: var(--erp-accent, #946f23);
+  --zf2-gold-light: var(--erp-accent-hover, #7c5c1b);
+  --zf2-gold-dark: var(--erp-accent-hover, #7c5c1b);
+  --zf2-gold-dim: var(--erp-accent-subtle, #fdf8ee);
+  --zf2-gold-wash: var(--erp-accent-tint, rgba(148, 111, 35, 0.08));
 
   /* High Contrast Deep Slate Typography */
   --zf2-text-primary: #0f172a;

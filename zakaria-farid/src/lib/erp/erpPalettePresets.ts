@@ -12,9 +12,20 @@ export interface ERPPalettePreset {
 
 export const ERP_PALETTE_PRESETS: ERPPalettePreset[] = [
   {
+    id: 'executive_gold',
+    nameEn: 'Executive Gold',
+    nameAr: 'الذهبي التنفيذي (الافتراضي)',
+    accent: '#946f23',
+    hover: '#7c5c1b',
+    subtle: '#fdf8ee',
+    tint: 'rgba(148, 111, 35, 0.08)',
+    chartPrimary: '#b48c36',
+    contrastRatio: '4.61:1',
+  },
+  {
     id: 'royal_blue',
     nameEn: 'Royal Blue',
-    nameAr: 'الأزرق الملكي (الافتراضي)',
+    nameAr: 'الأزرق الملكي',
     accent: '#2563eb',
     hover: '#1d4ed8',
     subtle: '#eff6ff',
@@ -78,17 +89,6 @@ export const ERP_PALETTE_PRESETS: ERPPalettePreset[] = [
     contrastRatio: '8.31:1',
   },
   {
-    id: 'corporate_bronze',
-    nameEn: 'Warm Bronze',
-    nameAr: 'البرونزي المكتبي',
-    accent: '#854d0e',
-    hover: '#713f12',
-    subtle: '#fefce8',
-    tint: 'rgba(133, 77, 14, 0.08)',
-    chartPrimary: '#854d0e',
-    contrastRatio: '6.85:1',
-  },
-  {
     id: 'obsidian_charcoal',
     nameEn: 'Obsidian Charcoal',
     nameAr: 'الفحمي الأوبسيديان',
@@ -106,5 +106,8 @@ export const DEFAULT_PALETTE_PRESET = ERP_PALETTE_PRESETS[0];
 export const FIN_OS_PALETTE_STORAGE_KEY = 'fin_os_accent_preset_v1';
 
 export function getPresetById(id: string): ERPPalettePreset {
+  if (id === 'corporate_bronze') {
+    return ERP_PALETTE_PRESETS[0]; // maps legacy corporate_bronze to executive_gold
+  }
   return ERP_PALETTE_PRESETS.find(p => p.id === id) || DEFAULT_PALETTE_PRESET;
 }

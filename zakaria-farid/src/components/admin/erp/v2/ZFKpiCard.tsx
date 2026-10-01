@@ -12,6 +12,13 @@ export interface ZFKpiDelta {
   label?: string;
 }
 
+export interface ZFKpiExecutiveChart {
+  type: 'spline' | 'bars';
+  color: 'navy' | 'gold';
+  data?: number[];
+  months?: string[];
+}
+
 export interface ZFKpiCardProps {
   title: string;
   value: React.ReactNode | string | number | { toString: () => string; formatEGP?: (isAr?: boolean) => string };
@@ -19,6 +26,8 @@ export interface ZFKpiCardProps {
   unitLabel?: string;
   icon?: React.ReactNode;
   accentColor?: ZFKpiAccentColor;
+  actionButton?: React.ReactNode;
+  executiveChart?: ZFKpiExecutiveChart;
   isFlagship?: boolean;
   variant?: 'standard' | 'flagship' | 'compact' | 'double-bezel';
   subtitleLabel?: string;
@@ -171,9 +180,9 @@ const getIconSquircleStyle = (accent?: ZFKpiAccentColor): React.CSSProperties =>
     case 'gold':
       return {
         ...base,
-        background: '#fefce8',
-        color: '#ca8a04',
-        border: '1px solid rgba(202, 138, 4, 0.18)',
+        background: '#fdf8ee',
+        color: 'var(--erp-accent, #b48c36)',
+        border: '1px solid rgba(180, 140, 54, 0.22)',
       };
     case 'purple':
       return {
@@ -192,6 +201,113 @@ const getIconSquircleStyle = (accent?: ZFKpiAccentColor): React.CSSProperties =>
         border: '1px solid var(--erp-accent-tint, rgba(37, 99, 235, 0.15))',
       };
   }
+};
+
+const DEFAULT_COCKPIT_MONTHS = ['أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر'];
+
+export const CockpitExecutiveChart: React.FC<ZFKpiExecutiveChart> = ({
+  type,
+  color,
+  data,
+  months = DEFAULT_COCKPIT_MONTHS,
+}) => {
+  const chartHeight = 44;
+  const isNavy = color === 'navy';
+  const primaryColor = isNavy ? '#334155' : 'var(--erp-accent, #b48c36)';
+
+  if (type === 'spline') {
+    const rawData = data && data.length >= 6 ? data : (isNavy ? [0.35, 0.48, 0.42, 0.58, 0.60, 0.72] : [0.38, 0.54, 0.50, 0.65, 0.62, 0.78]);
+    const width = 280;
+    const height = chartHeight;
+    const padX = 14;
+    const padY = 6;
+    const stepX = (width - padX * 2) / (rawData.length - 1);
+
+    const points = rawData.map((val, i) => ({
+      x: padX + i * stepX,
+      y: height - padY - val * (height - padY * 2),
+    }));
+
+    let pathD = `M ${points[0].x} ${points[0].y}`;
+    for (let i = 0; i < points.length - 1; i++) {
+      const p0 = points[i];
+      const p1 = points[i + 1];
+      const cpX1 = p0.x + (p1.x - p0.x) / 2;
+      const cpY1 = p0.y;
+      const cpX2 = p0.x + (p1.x - p0.x) / 2;
+      const cpY2 = p1.y;
+      pathD += ` C ${cpX1} ${cpY1}, ${cpX2} ${cpY2}, ${p1.x} ${p1.y}`;
+    }
+
+    const areaD = `${pathD} L ${points[points.length - 1].x} ${height} L ${points[0].x} ${height} Z`;
+    const gradId = `execGrad-${isNavy ? 'navy' : 'gold'}`;
+
+    return (
+      <div style={{ width: '100%', marginTop: 'auto', paddingTop: '0.35rem' }}>
+        <svg
+          viewBox={`0 0 ${width} ${height}`}
+          style={{ width: '100%', height: `${chartHeight}px`, overflow: 'visible', display: 'block' }}
+        >
+          <defs>
+            <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor={isNavy ? '#334155' : '#b48c36'} stopOpacity={isNavy ? 0.22 : 0.28} />
+              <stop offset="100%" stopColor={isNavy ? '#334155' : '#b48c36'} stopOpacity={0} />
+            </linearGradient>
+          </defs>
+          <path d={areaD} fill={`url(#${gradId})`} />
+          <path d={pathD} fill="none" stroke={primaryColor} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          {points.map((pt, idx) => (
+            <g key={idx}>
+              <circle cx={pt.x} cy={pt.y} r="3" fill={primaryColor} />
+              {isNavy && <circle cx={pt.x} cy={pt.y} r="1.2" fill="#ffffff" />}
+            </g>
+          ))}
+        </svg>
+        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0 4px', marginTop: '4px', direction: 'ltr' }}>
+          {months.map((m, i) => (
+            <span key={i} style={{ fontSize: '0.65rem', color: '#64748b', fontWeight: 500 }}>
+              {m}
+            </span>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  // Vertical Bars
+  const rawBars = data && data.length >= 6 ? data : (isNavy ? [22, 28, 42, 54, 66, 82] : [20, 32, 26, 44, 52, 68]);
+  return (
+    <div style={{ width: '100%', marginTop: 'auto', paddingTop: '0.35rem' }}>
+      <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', height: `${chartHeight}px`, padding: '0 8px', direction: 'ltr' }}>
+        {rawBars.map((val, idx) => {
+          const isLast = idx === rawBars.length - 1;
+          const barColor = isNavy
+            ? (isLast ? '#334155' : idx >= 2 ? '#94a3b8' : '#cbd5e1')
+            : (isLast ? 'var(--erp-accent, #b48c36)' : '#f3ecd8');
+          const pctHeight = Math.min(100, Math.max(15, val));
+          return (
+            <div
+              key={idx}
+              style={{
+                width: '14px',
+                height: `${pctHeight}%`,
+                background: barColor,
+                borderRadius: '4px 4px 0 0',
+                transition: 'height 0.3s ease',
+              }}
+            />
+          );
+        })}
+      </div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0 4px', marginTop: '4px', direction: 'ltr' }}>
+        {months.map((m, i) => (
+          <span key={i} style={{ fontSize: '0.65rem', color: '#64748b', fontWeight: 500 }}>
+            {m}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
 };
 
 export { ZFKpiWaveSparkline } from './common/ZFKpiWaveSparkline';
@@ -222,6 +338,8 @@ export const ZFKpiCard: React.FC<ZFKpiCardProps> = ({
   sparklineData,
   sparklineColor,
   showSparkline,
+  actionButton,
+  executiveChart,
   footerContent,
   onClick,
   className,
@@ -335,16 +453,34 @@ export const ZFKpiCard: React.FC<ZFKpiCardProps> = ({
     >
       {/* 1. TOP HEADER: TITLE & INFO ICON / SQUIRCLE */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
-        <span style={{ fontSize: '0.76rem', fontWeight: 600, color: '#64748b' }}>
-          {title}
-        </span>
-
-        {icon ? (
-          <div style={getIconSquircleStyle(accentColor)}>
-            {icon}
-          </div>
+        {actionButton ? (
+          <>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', minWidth: 0 }}>
+              {icon && (
+                <div style={getIconSquircleStyle(accentColor)}>
+                  {icon}
+                </div>
+              )}
+              <span style={{ fontSize: '0.80rem', fontWeight: 700, color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {title}
+              </span>
+            </div>
+            {actionButton}
+          </>
         ) : (
-          <Info size={14} style={{ color: '#94a3b8', flexShrink: 0 }} />
+          <>
+            <span style={{ fontSize: '0.76rem', fontWeight: 600, color: '#64748b' }}>
+              {title}
+            </span>
+
+            {icon ? (
+              <div style={getIconSquircleStyle(accentColor)}>
+                {icon}
+              </div>
+            ) : (
+              <Info size={14} style={{ color: '#94a3b8', flexShrink: 0 }} />
+            )}
+          </>
         )}
       </div>
 
@@ -399,7 +535,7 @@ export const ZFKpiCard: React.FC<ZFKpiCardProps> = ({
               flexShrink: 0
             }}
           >
-            {delta.isPositive ? '▲' : delta.isPositive === false ? '▼' : ''} {delta.value}
+            {delta.isPositive ? '▲' : delta.isPositive === false ? '▼' : ''} {delta.value} {executiveChart && delta.isPositive ? '▲' : ''}
           </span>
           {delta.label && (
             <span style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
@@ -409,8 +545,21 @@ export const ZFKpiCard: React.FC<ZFKpiCardProps> = ({
         </div>
       )}
 
+      {/* 2.3 EXECUTIVE SUBTITLE / BREAKDOWN ROW */}
+      {executiveChart && (subtitleLabel || subtitleValue) && (
+        <div style={{ fontSize: '0.72rem', color: '#64748b', margin: '0 0 0.35rem 0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+          {subtitleLabel && <span>{subtitleLabel}{subtitleValue ? ': ' : ''}</span>}
+          {subtitleValue && <strong style={{ color: '#334155', fontVariantNumeric: 'tabular-nums', fontWeight: 600 }}>{subtitleValue}</strong>}
+        </div>
+      )}
+
+      {/* 2.4 EXECUTIVE EMBEDDED MONTHLY CHART */}
+      {executiveChart && (
+        <CockpitExecutiveChart {...executiveChart} />
+      )}
+
       {/* 2.5 EMBEDDED WAVE SPARKLINE (Rendered when time-series data is provided or showSparkline is true) */}
-      {(showSparkline || Boolean(sparklineData && sparklineData.length >= 2)) && !sparkline && (
+      {!executiveChart && (showSparkline || Boolean(sparklineData && sparklineData.length >= 2)) && !sparkline && (
         <div style={{ height: 32, margin: '0.15rem 0 0.25rem 0', width: '100%', overflow: 'hidden' }}>
           <ZFKpiWaveSparkline
             data={sparklineData && sparklineData.length >= 2 ? sparklineData : [0, 0, 0, 0, 0, 0]}
@@ -447,7 +596,7 @@ export const ZFKpiCard: React.FC<ZFKpiCardProps> = ({
         </div>
       ) : (
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', marginTop: 'auto', paddingTop: '0.35rem' }}>
-          {subtitleLabel || subtitleValue ? (
+          {!executiveChart && (subtitleLabel || subtitleValue) ? (
             <span style={{ fontSize: '0.72rem', color: '#64748b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {subtitleLabel && <span>{subtitleLabel}{subtitleValue ? ': ' : ''}</span>}
               {subtitleValue && <strong style={{ color: '#334155', fontVariantNumeric: 'tabular-nums' }}>{subtitleValue}</strong>}

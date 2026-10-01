@@ -168,8 +168,19 @@ describe('Daily Operations & Cash Flow Workstation Revamp Suite', () => {
   describe('6. FIN-OS ERP Invariants on DailyOperationsView Source Code', () => {
     const viewPath = path.resolve(process.cwd(), 'src/components/admin/erp/v2/views/DailyOperationsView.tsx');
     const cssPath = path.resolve(process.cwd(), 'src/components/admin/erp/v2/views/DailyOperationsView.module.css');
+    const sideWidgetsPath = path.resolve(process.cwd(), 'src/components/admin/erp/v2/views/operations/OperationsSideWidgets.tsx');
+    const sideWidgetsCssPath = path.resolve(process.cwd(), 'src/components/admin/erp/v2/views/operations/OperationsSideWidgets.module.css');
     const viewSource = fs.readFileSync(viewPath, 'utf8');
     const cssSource = fs.readFileSync(cssPath, 'utf8');
+    const sideWidgetsSource = fs.existsSync(sideWidgetsPath) ? fs.readFileSync(sideWidgetsPath, 'utf8') : '';
+    const sideWidgetsCssSource = fs.existsSync(sideWidgetsCssPath) ? fs.readFileSync(sideWidgetsCssPath, 'utf8') : '';
+
+    const cashFlowPath = path.resolve(process.cwd(), 'src/components/admin/erp/v2/views/operations/OperationsCashFlowMap.tsx');
+    const cashFlowCssPath = path.resolve(process.cwd(), 'src/components/admin/erp/v2/views/operations/OperationsCashFlowMap.module.css');
+    const cashFlowSource = fs.existsSync(cashFlowPath) ? fs.readFileSync(cashFlowPath, 'utf8') : '';
+    const cashFlowCssSource = fs.existsSync(cashFlowCssPath) ? fs.readFileSync(cashFlowCssPath, 'utf8') : '';
+    const combinedViewSource = viewSource + '\n' + cashFlowSource;
+    const combinedCssSource = cssSource + '\n' + cashFlowCssSource;
 
     it('shows four real-data KPI cards without an invented empty sparkline', () => {
       assert.strictEqual((viewSource.match(/<ZFKpiCard/g) || []).length, 4);
@@ -219,22 +230,34 @@ describe('Daily Operations & Cash Flow Workstation Revamp Suite', () => {
 
       for (const id of requiredStreamIds) {
         const pattern = `data-stream-id="${id}"`;
-        assert.ok(viewSource.includes(pattern), `DailyOperationsView must contain ${pattern}`);
+        assert.ok(combinedViewSource.includes(pattern), `DailyOperationsView or OperationsCashFlowMap must contain ${pattern}`);
       }
     });
 
     it('uses CAD architectural blueprint classes in CSS and TSX', () => {
-      assert.ok(cssSource.includes('.flowCard'), 'CSS must define .flowCard');
-      assert.ok(cssSource.includes('.flowWorkspace'), 'CSS must define .flowWorkspace');
-      assert.ok(cssSource.includes('.flowCentralAnchorCard'), 'CSS must define .flowCentralAnchorCard');
-      assert.ok(cssSource.includes('.flowCentralDualRail'), 'CSS must define .flowCentralDualRail');
-      assert.ok(cssSource.includes('.outflowsGrid'), 'CSS must define .outflowsGrid');
-      assert.ok(cssSource.includes('.blueprintConnector'), 'CSS must define .blueprintConnector');
+      if (cashFlowSource) {
+        assert.ok(cashFlowCssSource.includes('.cashFlowCard'), 'CSS must define .cashFlowCard');
+        assert.ok(cashFlowCssSource.includes('.upperWorkspaceGrid'), 'CSS must define .upperWorkspaceGrid');
+        assert.ok(cashFlowCssSource.includes('.centralCard'), 'CSS must define .centralCard');
+        assert.ok(cashFlowCssSource.includes('.bottomFlowSection'), 'CSS must define .bottomFlowSection');
+        assert.ok(cashFlowCssSource.includes('.ribbonContainer'), 'CSS must define .ribbonContainer');
 
-      assert.ok(viewSource.includes('ops.flowCentralAnchorCard'), 'TSX must use ops.flowCentralAnchorCard');
-      assert.ok(viewSource.includes('ops.flowCentralDualRail'), 'TSX must use ops.flowCentralDualRail');
-      assert.ok(viewSource.includes('ops.outflowsGrid'), 'TSX must use ops.outflowsGrid');
-      assert.ok(viewSource.includes('ops.blueprintConnector'), 'TSX must use ops.blueprintConnector');
+        assert.ok(cashFlowSource.includes('cashFlowCard'), 'TSX must use cashFlowCard');
+        assert.ok(cashFlowSource.includes('centralCard'), 'TSX must use centralCard');
+        assert.ok(cashFlowSource.includes('bottomFlowSection'), 'TSX must use bottomFlowSection');
+      } else {
+        assert.ok(combinedCssSource.includes('.flowCard'), 'CSS must define .flowCard');
+        assert.ok(combinedCssSource.includes('.flowWorkspace'), 'CSS must define .flowWorkspace');
+        assert.ok(combinedCssSource.includes('.flowCentralAnchorCard'), 'CSS must define .flowCentralAnchorCard');
+        assert.ok(combinedCssSource.includes('.flowCentralDualRail'), 'CSS must define .flowCentralDualRail');
+        assert.ok(combinedCssSource.includes('.outflowsGrid'), 'CSS must define .outflowsGrid');
+        assert.ok(combinedCssSource.includes('.blueprintConnector'), 'CSS must define .blueprintConnector');
+
+        assert.ok(combinedViewSource.includes('flowCentralAnchorCard'), 'TSX must use flowCentralAnchorCard');
+        assert.ok(combinedViewSource.includes('flowCentralDualRail'), 'TSX must use flowCentralDualRail');
+        assert.ok(combinedViewSource.includes('outflowsGrid'), 'TSX must use outflowsGrid');
+        assert.ok(combinedViewSource.includes('blueprintConnector'), 'TSX must use blueprintConnector');
+      }
     });
 
     it('enforces table header sorting by reference and renders refMethodCell', () => {
@@ -249,24 +272,39 @@ describe('Daily Operations & Cash Flow Workstation Revamp Suite', () => {
       assert.ok(cssSource.includes('z-index: 5'), 'Table thead must have z-index: 5');
     });
 
-    it('enforces 3-column institutional workstation card layout and SVG Donut chart', () => {
-      assert.ok(cssSource.includes('.flowColBannerInflow'), 'CSS must define .flowColBannerInflow');
-      assert.ok(cssSource.includes('.flowColBannerOutflow'), 'CSS must define .flowColBannerOutflow');
-      assert.ok(cssSource.includes('.flowDonutWrapper'), 'CSS must define .flowDonutWrapper');
-      assert.ok(cssSource.includes('.flowDonutSvg'), 'CSS must define .flowDonutSvg');
-      assert.ok(cssSource.includes('.flowDonutCenterText'), 'CSS must define .flowDonutCenterText');
-      assert.ok(cssSource.includes('.flowColReconcileBtn'), 'CSS must define .flowColReconcileBtn');
-      assert.ok(cssSource.includes('.flowColAddBtnInflow'), 'CSS must define .flowColAddBtnInflow');
-      assert.ok(cssSource.includes('.flowColAddBtnOutflow'), 'CSS must define .flowColAddBtnOutflow');
+    it('enforces 3-column institutional workstation card layout and visual flow track', () => {
+      if (cashFlowSource) {
+        assert.ok(cashFlowCssSource.includes('.upperWorkspaceGrid'), 'CSS must define .upperWorkspaceGrid');
+        assert.ok(cashFlowCssSource.includes('.subColumn'), 'CSS must define .subColumn');
+        assert.ok(cashFlowCssSource.includes('.centralCard'), 'CSS must define .centralCard');
+        assert.ok(cashFlowCssSource.includes('.splitBarTrack'), 'CSS must define .splitBarTrack');
+        assert.ok(cashFlowCssSource.includes('.splitBarSafe'), 'CSS must define .splitBarSafe');
+        assert.ok(cashFlowCssSource.includes('.splitBarBank'), 'CSS must define .splitBarBank');
+        assert.ok(cashFlowCssSource.includes('.cardFooter'), 'CSS must define .cardFooter');
 
-      assert.ok(viewSource.includes('ops.flowColBannerInflow'), 'TSX must render ops.flowColBannerInflow');
-      assert.ok(viewSource.includes('ops.flowColBannerOutflow'), 'TSX must render ops.flowColBannerOutflow');
-      assert.ok(viewSource.includes('ops.flowDonutWrapper'), 'TSX must render ops.flowDonutWrapper');
-      assert.ok(viewSource.includes('ops.flowDonutSvg'), 'TSX must render ops.flowDonutSvg');
-      assert.ok(viewSource.includes('ops.flowDonutCenterText'), 'TSX must render ops.flowDonutCenterText');
-      assert.ok(viewSource.includes('ops.flowColReconcileBtn'), 'TSX must render ops.flowColReconcileBtn');
-      assert.ok(viewSource.includes('ops.flowColAddBtnInflow'), 'TSX must render ops.flowColAddBtnInflow');
-      assert.ok(viewSource.includes('ops.flowColAddBtnOutflow'), 'TSX must render ops.flowColAddBtnOutflow');
+        assert.ok(cashFlowSource.includes('upperWorkspaceGrid'), 'TSX must render upperWorkspaceGrid');
+        assert.ok(cashFlowSource.includes('subColumn'), 'TSX must render subColumn');
+        assert.ok(cashFlowSource.includes('centralCard'), 'TSX must render centralCard');
+        assert.ok(cashFlowSource.includes('splitBarTrack'), 'TSX must render splitBarTrack');
+      } else {
+        assert.ok(combinedCssSource.includes('.flowColBannerInflow'), 'CSS must define .flowColBannerInflow');
+        assert.ok(combinedCssSource.includes('.flowColBannerOutflow'), 'CSS must define .flowColBannerOutflow');
+        assert.ok(combinedCssSource.includes('.flowDonutWrapper'), 'CSS must define .flowDonutWrapper');
+        assert.ok(combinedCssSource.includes('.flowDonutSvg'), 'CSS must define .flowDonutSvg');
+        assert.ok(combinedCssSource.includes('.flowDonutCenterText'), 'CSS must define .flowDonutCenterText');
+        assert.ok(combinedCssSource.includes('.flowColReconcileBtn'), 'CSS must define .flowColReconcileBtn');
+        assert.ok(combinedCssSource.includes('.flowColAddBtnInflow'), 'CSS must define .flowColAddBtnInflow');
+        assert.ok(combinedCssSource.includes('.flowColAddBtnOutflow'), 'CSS must define .flowColAddBtnOutflow');
+
+        assert.ok(combinedViewSource.includes('flowColBannerInflow'), 'TSX must render flowColBannerInflow');
+        assert.ok(combinedViewSource.includes('flowColBannerOutflow'), 'TSX must render flowColBannerOutflow');
+        assert.ok(combinedViewSource.includes('flowDonutWrapper'), 'TSX must render flowDonutWrapper');
+        assert.ok(combinedViewSource.includes('flowDonutSvg'), 'TSX must render flowDonutSvg');
+        assert.ok(combinedViewSource.includes('flowDonutCenterText'), 'TSX must render flowDonutCenterText');
+        assert.ok(combinedViewSource.includes('flowColReconcileBtn'), 'TSX must render flowColReconcileBtn');
+        assert.ok(combinedViewSource.includes('flowColAddBtnInflow'), 'TSX must render flowColAddBtnInflow');
+        assert.ok(combinedViewSource.includes('flowColAddBtnOutflow'), 'TSX must render flowColAddBtnOutflow');
+      }
     });
 
     it('guarantees no unformatted 0.00 currency strings in DailyOperationsView', () => {
@@ -295,11 +333,12 @@ describe('Daily Operations & Cash Flow Workstation Revamp Suite', () => {
     });
 
     it('enforces upcoming dues widget and eliminates old treasury invariant card', () => {
-      assert.ok(viewSource.includes('ops.upcomingDuesCard'), 'Must render ops.upcomingDuesCard');
-      assert.ok(viewSource.includes('ops.upcomingDuesSummary'), 'Must render ops.upcomingDuesSummary');
-      assert.ok(viewSource.includes('ops.upcomingDuesList'), 'Must render ops.upcomingDuesList');
-      assert.ok(viewSource.includes('ops.upcomingDueEmpty'), 'Must render ops.upcomingDueEmpty');
-      assert.strictEqual(viewSource.includes('ops.treasuryInvariantCard'), false, 'Must not render ops.treasuryInvariantCard in TSX');
+      const targetSource = viewSource.includes('OperationsSideWidgets') ? sideWidgetsSource : viewSource;
+      assert.ok(targetSource.includes('upcomingDuesCard'), 'Must render upcomingDuesCard');
+      assert.ok(targetSource.includes('upcomingDuesSummary'), 'Must render upcomingDuesSummary');
+      assert.ok(targetSource.includes('upcomingDuesList'), 'Must render upcomingDuesList');
+      assert.ok(targetSource.includes('upcomingDueEmpty'), 'Must render upcomingDueEmpty');
+      assert.strictEqual(viewSource.includes('ops.treasuryInvariantCard') || targetSource.includes('treasuryInvariantCard'), false, 'Must not render treasuryInvariantCard in TSX');
     });
 
     it('enforces modal table polish: flex layout, pagination container, and deduplicated footer count', () => {
@@ -309,29 +348,32 @@ describe('Daily Operations & Cash Flow Workstation Revamp Suite', () => {
     });
 
     it('enforces clean two-column, two-row architecture for Side Widgets 2 & 3 without text overlap', () => {
+      const targetSource = viewSource.includes('OperationsSideWidgets') ? sideWidgetsSource : viewSource;
+      const targetCss = fs.existsSync(sideWidgetsCssPath) ? sideWidgetsCssSource : cssSource;
+
       // 1. TSX Invariants: Trailing containers and date elements with dir="ltr"
-      assert.ok(viewSource.includes('ops.recentFeedTrailing'), 'DailyOperationsView must render ops.recentFeedTrailing');
-      assert.ok(viewSource.includes('ops.recentFeedDate'), 'DailyOperationsView must render ops.recentFeedDate');
-      assert.ok(viewSource.includes('ops.upcomingDueTrailing'), 'DailyOperationsView must render ops.upcomingDueTrailing');
-      assert.ok(viewSource.includes('ops.upcomingDueDate'), 'DailyOperationsView must render ops.upcomingDueDate');
+      assert.ok(targetSource.includes('recentFeedTrailing'), 'DailyOperationsView/SideWidgets must render recentFeedTrailing');
+      assert.ok(targetSource.includes('recentFeedDate'), 'DailyOperationsView/SideWidgets must render recentFeedDate');
+      assert.ok(targetSource.includes('upcomingDueTrailing'), 'DailyOperationsView/SideWidgets must render upcomingDueTrailing');
+      assert.ok(targetSource.includes('upcomingDueDate'), 'DailyOperationsView/SideWidgets must render upcomingDueDate');
       assert.ok(
-        viewSource.includes('dir="ltr" className={ops.recentFeedDate}'),
+        targetSource.includes('dir="ltr" className={ops.recentFeedDate}') || targetSource.includes('dir="ltr" className={css.recentFeedDate}'),
         'recentFeedDate span must specify dir="ltr"'
       );
       assert.ok(
-        viewSource.includes('dir="ltr" className={ops.upcomingDueDate}'),
+        targetSource.includes('dir="ltr" className={ops.upcomingDueDate}') || targetSource.includes('dir="ltr" className={css.upcomingDueDate}'),
         'upcomingDueDate span must specify dir="ltr"'
       );
 
       // 2. TSX Invariants: No date placed directly inside meta alongside status pill
       assert.strictEqual(
-        viewSource.includes('<span className={ops.recentFeedTime}>'),
+        targetSource.includes('<span className={ops.recentFeedTime}>') || targetSource.includes('<span className={css.recentFeedTime}>'),
         false,
         'recentFeedTime must not be rendered inside recentFeedMeta'
       );
-      const recentMetaContent = viewSource.match(/className=\{ops\.recentFeedMeta\}\s*>([\s\S]*?)<\/div>/)?.[1] || '';
+      const recentMetaContent = targetSource.match(/className=\{[a-zA-Z0-9_.]+\.recentFeedMeta\}\s*>([\s\S]*?)<\/div>/)?.[1] || '';
       assert.strictEqual(
-        recentMetaContent.includes('ops.recentFeedDate'),
+        recentMetaContent.includes('recentFeedDate'),
         false,
         'recentFeedDate must not be rendered inside recentFeedMeta'
       );
@@ -341,9 +383,9 @@ describe('Daily Operations & Cash Flow Workstation Revamp Suite', () => {
         'formatTime12h must not be rendered inside recentFeedMeta'
       );
 
-      const upcomingMetaContent = viewSource.match(/className=\{ops\.upcomingDueMeta\}\s*>([\s\S]*?)<\/div>/)?.[1] || '';
+      const upcomingMetaContent = targetSource.match(/className=\{[a-zA-Z0-9_.]+\.upcomingDueMeta\}\s*>([\s\S]*?)<\/div>/)?.[1] || '';
       assert.strictEqual(
-        upcomingMetaContent.includes('ops.upcomingDueDate'),
+        upcomingMetaContent.includes('upcomingDueDate'),
         false,
         'upcomingDueDate must not be rendered inside upcomingDueMeta'
       );
@@ -354,39 +396,39 @@ describe('Daily Operations & Cash Flow Workstation Revamp Suite', () => {
       );
 
       // 3. CSS Invariants: Trailing columns flex-shrink: 0, text-align: end, align-items: flex-end
-      assert.ok(cssSource.includes('.recentFeedTrailing'), 'CSS must define .recentFeedTrailing');
-      assert.ok(cssSource.includes('.recentFeedDate'), 'CSS must define .recentFeedDate');
-      assert.ok(cssSource.includes('.upcomingDueDate'), 'CSS must define .upcomingDueDate');
+      assert.ok(targetCss.includes('.recentFeedTrailing'), 'CSS must define .recentFeedTrailing');
+      assert.ok(targetCss.includes('.recentFeedDate'), 'CSS must define .recentFeedDate');
+      assert.ok(targetCss.includes('.upcomingDueDate'), 'CSS must define .upcomingDueDate');
 
-      const recentTrailingBlock = cssSource.match(/\.recentFeedTrailing\s*\{([^}]+)\}/)?.[1] || '';
+      const recentTrailingBlock = targetCss.match(/\.recentFeedTrailing\s*\{([^}]+)\}/)?.[1] || '';
       assert.ok(recentTrailingBlock.includes('flex-shrink: 0'), '.recentFeedTrailing must have flex-shrink: 0');
       assert.ok(recentTrailingBlock.includes('align-items: flex-end'), '.recentFeedTrailing must have align-items: flex-end');
 
-      const upcomingTrailingBlock = cssSource.match(/\.upcomingDueTrailing\s*\{([^}]+)\}/)?.[1] || '';
+      const upcomingTrailingBlock = targetCss.match(/\.upcomingDueTrailing\s*\{([^}]+)\}/)?.[1] || '';
       assert.ok(upcomingTrailingBlock.includes('flex-shrink: 0'), '.upcomingDueTrailing must have flex-shrink: 0');
       assert.ok(upcomingTrailingBlock.includes('align-items: flex-end'), '.upcomingDueTrailing must have align-items: flex-end');
 
       // 4. CSS Invariants: Info columns align-items: flex-start and leading flex: 1, min-width: 0
-      const recentLeadingBlock = cssSource.match(/\.recentFeedLeading\s*\{([^}]+)\}/)?.[1] || '';
+      const recentLeadingBlock = targetCss.match(/\.recentFeedLeading\s*\{([^}]+)\}/)?.[1] || '';
       assert.ok(recentLeadingBlock.includes('flex: 1'), '.recentFeedLeading must have flex: 1');
       assert.ok(recentLeadingBlock.includes('min-width: 0'), '.recentFeedLeading must have min-width: 0');
 
-      const upcomingLeadingBlock = cssSource.match(/\.upcomingDueLeading\s*\{([^}]+)\}/)?.[1] || '';
+      const upcomingLeadingBlock = targetCss.match(/\.upcomingDueLeading\s*\{([^}]+)\}/)?.[1] || '';
       assert.ok(upcomingLeadingBlock.includes('flex: 1'), '.upcomingDueLeading must have flex: 1');
       assert.ok(upcomingLeadingBlock.includes('min-width: 0'), '.upcomingDueLeading must have min-width: 0');
 
-      const recentInfoBlock = cssSource.match(/\.recentFeedInfo\s*\{([^}]+)\}/)?.[1] || '';
+      const recentInfoBlock = targetCss.match(/\.recentFeedInfo\s*\{([^}]+)\}/)?.[1] || '';
       assert.ok(recentInfoBlock.includes('align-items: flex-start'), '.recentFeedInfo must have align-items: flex-start');
 
-      const upcomingInfoBlock = cssSource.match(/\.upcomingDueInfo\s*\{([^}]+)\}/)?.[1] || '';
+      const upcomingInfoBlock = targetCss.match(/\.upcomingDueInfo\s*\{([^}]+)\}/)?.[1] || '';
       assert.ok(upcomingInfoBlock.includes('align-items: flex-start'), '.upcomingDueInfo must have align-items: flex-start');
 
       // 5. CSS Invariants: Party names have max-width: 100% to allow flexible truncation
-      const recentPartyBlock = cssSource.match(/\.recentFeedParty\s*\{([^}]+)\}/)?.[1] || '';
+      const recentPartyBlock = targetCss.match(/\.recentFeedParty\s*\{([^}]+)\}/)?.[1] || '';
       assert.ok(recentPartyBlock.includes('max-width: 100%'), '.recentFeedParty must have max-width: 100%');
       assert.strictEqual(recentPartyBlock.includes('max-width: 160px'), false, '.recentFeedParty must not have hardcoded 160px limit');
 
-      const upcomingPartyBlock = cssSource.match(/\.upcomingDueParty\s*\{([^}]+)\}/)?.[1] || '';
+      const upcomingPartyBlock = targetCss.match(/\.upcomingDueParty\s*\{([^}]+)\}/)?.[1] || '';
       assert.ok(upcomingPartyBlock.includes('max-width: 100%'), '.upcomingDueParty must have max-width: 100%');
       assert.strictEqual(upcomingPartyBlock.includes('max-width: 155px'), false, '.upcomingDueParty must not have hardcoded 155px limit');
     });

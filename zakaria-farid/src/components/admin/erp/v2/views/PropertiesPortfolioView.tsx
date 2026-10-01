@@ -45,9 +45,8 @@ import {
   isPropertyAvailableForContract
 } from '@/lib/erp/propertiesPortfolioCalculations';
 
-import { ZFKpiCard, ZFKpiGrid } from '../ZFKpiCard';
-
 import { PropertiesSideWidgets } from './properties/PropertiesSideWidgets';
+import { PropertiesInventoryKpis } from './properties/PropertiesInventoryKpis';
 import { ProjectShowcaseCard } from './properties/ProjectShowcaseCard';
 import { UnitsFloorMatrixTable } from './properties/UnitsFloorMatrixTable';
 import { PropertiesAnalyticsView } from './properties/PropertiesAnalyticsView';
@@ -241,11 +240,20 @@ export const PropertiesPortfolioView: React.FC<PropertiesPortfolioViewProps> = (
           const basePrice = (u.price_egp || 0) + (u.tax_amount_egp || 0);
           const area = u.area_sqm || 0;
 
+          const uNumLower = (u.unit_number || '').toLowerCase();
+          const pTitleLower = pTitle.toLowerCase();
+          let derivedUnitType = isAr ? 'شقق سكنية' : 'Apartments';
+          if (uNumLower.includes('روف') || uNumLower.includes('roof') || uNumLower.includes('بنتهاوس') || uNumLower.includes('دوبلكس')) {
+            derivedUnitType = isAr ? 'دوبلكس وبنتهاوس' : 'Duplex & Penthouse';
+          } else if (uNumLower.includes('تجاري') || uNumLower.includes('إداري') || uNumLower.includes('مكتب') || pTitleLower.includes('تجاري')) {
+            derivedUnitType = isAr ? 'تجاري وإداري' : 'Commercial';
+          }
+
           unitsList.push({
             id: u.unit_id,
             propertyId: p.id,
             projectTitle: pTitle,
-            unitType: getPropertyTypeLabel(p.type, isAr),
+            unitType: derivedUnitType,
             unitNumber: u.unit_number || 'وحدة',
             floor: u.floor ?? 0,
             areaSqm: area,
@@ -266,11 +274,21 @@ export const PropertiesPortfolioView: React.FC<PropertiesPortfolioViewProps> = (
         const basePrice = p.price_egp || 0;
         const area = p.area_sqm || 0;
 
+        const pTitleLower = ((p.title_ar || '') + ' ' + (p.title_en || '')).toLowerCase();
+        let singleType = getPropertyTypeLabel(p.type, isAr);
+        if (pTitleLower.includes('دوبلكس') || pTitleLower.includes('بنتهاوس') || pTitleLower.includes('روف') || pTitleLower.includes('roof')) {
+          singleType = isAr ? 'دوبلكس وبنتهاوس' : 'Duplex & Penthouse';
+        } else if (pTitleLower.includes('فيلا') || pTitleLower.includes('قصر') || pTitleLower.includes('villa') || pTitleLower.includes('mansion')) {
+          singleType = isAr ? 'فيلات وقصور' : 'Villas & Mansions';
+        } else if (pTitleLower.includes('جراج') || pTitleLower.includes('تجاري') || pTitleLower.includes('مكتب') || pTitleLower.includes('garage') || pTitleLower.includes('commercial')) {
+          singleType = isAr ? 'تجاري وإداري' : 'Commercial';
+        }
+
         unitsList.push({
           id: p.id,
           propertyId: p.id,
           projectTitle: pTitle,
-          unitType: getPropertyTypeLabel(p.type, isAr),
+          unitType: singleType,
           unitNumber: p.title_ar || p.title_en || '1',
           floor: 0,
           areaSqm: area,
@@ -546,82 +564,20 @@ export const PropertiesPortfolioView: React.FC<PropertiesPortfolioViewProps> = (
 
   return (
     <div className={styles.stageContainer}>
-      {/* ─── 1. STAGE HEADER & TELEMETRY ─── */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem', marginBottom: '0.85rem' }}>
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-            <h1 style={{ fontSize: '1.4rem', fontWeight: 800, margin: 0, color: '#0f172a', letterSpacing: '-0.02em' }}>
-              {isAr ? 'المشاريع والشقق المعروضة' : 'Property Portfolio Financial Status'}
-            </h1>
-          </div>
-          <p style={{ fontSize: '0.8rem', color: '#64748b', margin: '0.25rem 0 0 0' }}>
-            {isAr 
-              ? 'متابعة مؤشرات أسعار المتر، المخزون المتاح، رأس المال المنفذ بالبناء، ومعدل حجز الشقق'
-              : 'Tracking price/sqm benchmarks, available inventory, WIP capital absorption, and sales velocity'}
-          </p>
-        </div>
-      </div>
-
-      {/* ─── 2. THE 4 DISCRETE FLOATING KPI STAT CARDS ─── */}
-      <ZFKpiGrid style={{ marginBottom: '0.85rem' }}>
-        {/* Metric 1: Avg Price / SQM */}
-        <ZFKpiCard
-          title={isAr ? 'متوسط سعر المتر البيعي' : 'Portfolio Avg Price / m²'}
-          value={`${avgPricePerSqm.formatEGP(isAr)} / م²`}
-          icon={<Compass size={16} />}
-          accentColor="blue"
-          subtitleLabel={isAr ? 'إجمالي مساحات المحفظة' : 'Recorded Area'}
-          subtitleValue={`${totalAreaSqm.toNumber().toLocaleString()} م² (${totalUnitsCount} ${isAr ? 'وحدة' : 'units'})`}
-          tooltip={isAr 
-            ? 'متوسط سعر بيع المتر المربع عبر كافة شقق ووحدات المحفظة المعروضة بالمتر المسطح.' 
-            : 'Weighted average selling price per square meter across total portfolio catalog.'}
-        />
-
-        {/* Metric 2: Available Inventory Market Value */}
-        <ZFKpiCard
-          title={isAr ? 'قيمة المخزون المتاح للبيع' : 'Available Inventory Value'}
-          value={availableInventoryVal.formatEGP(isAr)}
-          icon={<Layers size={16} />}
-          accentColor="gold"
-          progress={100 - soldPct}
-          progressColor="#946f23"
-          subtitleLabel={isAr ? 'متاح للتعاقد الفوري' : 'Open for Contracts'}
-          subtitleValue={`${availableUnitsCount} ${isAr ? 'وحدة شاغرة' : 'open units'}`}
-          tooltip={isAr 
-            ? 'إجمالي القيمة النقدية المتوقع تحصيلها من بيع كافة الشقق والوحدات الشاغرة المتبقية.' 
-            : 'Total aggregate list value of unsold units currently available for immediate booking.'}
-        />
-
-        {/* Metric 3: Absorbed Construction WIP Capital */}
-        <ZFKpiCard
-          title={isAr ? 'رأس المال المستثمر في المباني' : 'Absorbed WIP Capital'}
-          value={totalWipInvested.formatEGP(isAr)}
-          icon={<Building2 size={16} />}
-          accentColor="amber"
-          subtitleLabel={isAr ? 'أصل استثماري محمل' : 'Capitalized WIP'}
-          subtitleValue={`${propertyCosts.length} ${isAr ? 'فاتورة وبند تكلفة' : 'cost items'}`}
-          tooltip={isAr 
-            ? 'إجمالي ما تم صرفه فعلياً من خرسانات وتشطيبات ورسوم مواقع محملة كرأسمال استثماري (حساب 150000).' 
-            : 'Total capital expenditure incurred on land, structural concrete, and architectural fit-out.'}
-        />
-
-        {/* Metric 4: Portfolio Sales Velocity */}
-        <ZFKpiCard
-          title={isAr ? 'إجمالي مبيعات المحفظة' : 'Contracted Sales Volume'}
-          value={contractedSalesVal.formatEGP(isAr)}
-          isFlagship={true}
-          accentColor="emerald"
-          progress={soldPct}
-          progressColor="#047857"
-          icon={<TrendingUp size={16} />}
-          badge={{ text: `${soldPct}% ${isAr ? 'مبيوع' : 'Sold'}`, variant: 'positive' }}
-          subtitleLabel={isAr ? 'نسبة المبيعات من المحفظة' : 'Portfolio Sold Rate'}
-          subtitleValue={`${soldPct}% (${contractedUnitsCount} ${isAr ? 'وحدة متعاقد عليها' : 'closed'})`}
-          tooltip={isAr 
-            ? 'مجموع أسعار العقود التي تم توثيقها وبيعها بالفعل، ونسبتها من إجمالي قيمة المحفظة.' 
-            : 'Total gross value of contracted deals and the percentage sold against total portfolio ceiling.'}
-        />
-      </ZFKpiGrid>
+      {/* ─── 1. TOP EXECUTIVE INVENTORY & PRICING KPIS (100% REPLICA OF REFERENCE) ─── */}
+      <PropertiesInventoryKpis
+        totalUnitsCount={totalUnitsCount}
+        availableUnitsCount={availableUnitsCount}
+        contractedUnitsCount={contractedUnitsCount}
+        totalCatalogVal={totalCatalogVal}
+        availableInventoryVal={availableInventoryVal}
+        contractedSalesVal={contractedSalesVal}
+        totalAreaSqm={totalAreaSqm}
+        avgPricePerSqm={avgPricePerSqm}
+        totalWipInvested={totalWipInvested}
+        costItemsCount={propertyCosts.length}
+        isAr={isAr}
+      />
 
       {/* ─── 3. SIDE WIDGETS DOCKING (PORTAL INTO #zf-side-widgets-slot) ─── */}
       <PropertiesSideWidgets

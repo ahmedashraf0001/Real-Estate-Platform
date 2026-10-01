@@ -4,6 +4,7 @@
    Slate #f1f5f9 Canvas, Dynamic Accent Reactivity, Tabular Nums, Strict RTL
    ========================================================================== */
 
+.stageContainer,
 .container {
   width: 100%;
   max-width: 100vw;
@@ -305,28 +306,35 @@
   color: var(--erp-accent, #2563eb) !important;
 }
 
-/* ─── FIN-OS HIGH-DENSITY 3-4 COLUMN SHOWCASE GRID ─── */
+/* ─── FIN-OS CANONICAL 3-COLUMN SHOWCASE GRID ─── */
 .showcaseGrid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 1.15rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  gap: 1.25rem;
+  width: 100%;
 }
 
-@container propertiesView (max-width: 1400px) {
+@media (max-width: 1024px) {
   .showcaseGrid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
   }
 }
 
-@container propertiesView (max-width: 900px) {
+@media (max-width: 640px) {
   .showcaseGrid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: 1fr !important;
   }
 }
 
-@container propertiesView (max-width: 580px) {
+@container propertiesView (max-width: 950px) {
   .showcaseGrid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+}
+
+@container propertiesView (max-width: 600px) {
+  .showcaseGrid {
+    grid-template-columns: 1fr !important;
   }
 }
 
