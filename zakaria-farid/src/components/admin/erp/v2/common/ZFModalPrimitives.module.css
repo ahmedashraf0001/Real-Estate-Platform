@@ -615,3 +615,29 @@ textarea.input {
   .shareRow { grid-template-columns: minmax(0, 1fr) 80px 32px; row-gap: 2px; }
   .shareName { grid-column: 1 / -1; white-space: normal; }
 }
+
+/* Data-table cell helpers */
+.table .cellEnd { text-align: end; }
+.table th.cellEnd { text-align: end; }
+.cellStrong { color: #0f172a; font-weight: 700; }
+.cellMuted { color: #94a3b8; }
+.metaValueSuccess { color: #15803d; }
+
+.choiceGrid3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+@media (max-width: 760px) { .choiceGrid3 { grid-template-columns: minmax(0, 1fr); } }
+.choiceStacked { flex-direction: column; align-items: flex-start; gap: 6px; }
+
+/* Number + range slider on one line */
+.rangeRow { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.rangeRow .input { width: 96px; flex-shrink: 0; }
+.range { flex: 1; min-width: 0; accent-color: var(--erp-accent, #946f23); }
+
+/* Equity bar: neutral ramp, accent only for the founder slice */
+.equitySeg { height: 100%; background: #94a3b8; }
+.equitySeg:nth-child(2n) { background: #cbd5e1; }
+.equitySeg + .equitySeg { border-inline-start: 2px solid #ffffff; }
+.equitySegFounder { background: var(--erp-accent, #946f23); }
+
+.toggleRow { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+.textSuccess { color: #15803d; font-weight: 700; }
+.textDanger { color: #b91c1c; font-weight: 700; }
