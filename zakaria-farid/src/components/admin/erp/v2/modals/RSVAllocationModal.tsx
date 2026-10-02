@@ -1,22 +1,20 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { 
-  Calculator, 
-  X, 
-  Loader2, 
-  Building2, 
-  PieChart, 
+import {
+  Calculator,
+  Loader2,
+  Building2,
+  PieChart,
   FolderPlus,
   CheckCircle2,
   RotateCcw
 } from 'lucide-react';
 import { Property } from '@/lib/supabase/types';
-import { D, formatEGP } from '@/lib/erp/math';
-import { MoneyCell } from '@/components/erp/MoneyCell';
+import { D } from '@/lib/erp/math';
 import { ZFCustomSelect, ZFCustomSelectItem } from '../common/ZFCustomSelect';
 import { ZFModalShell } from '../common/ZFModalShell';
-import styles from '../ZFWorkstationShell.module.css';
+import p from '../common/ZFModalPrimitives.module.css';
 
 interface RSVAllocationModalProps {
   isOpen: boolean;
@@ -121,6 +119,14 @@ export const RSVAllocationModal: React.FC<RSVAllocationModalProps> = ({
     }
   };
 
+  const resetForAnother = () => {
+    setSaveSuccessData(null);
+    setSelectedPropertyId('');
+    setProjectName('');
+    setSalesValue('100000000');
+    setWipAmount('45000000');
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (selectionMode === 'portfolio' && !selectedPropertyId) {
@@ -158,538 +164,241 @@ export const RSVAllocationModal: React.FC<RSVAllocationModalProps> = ({
       onClose={onClose}
       title={isAr ? 'معامل التكلفة الإنشائية للشقة الفاخرة (RSV Factor)' : 'Relative Sales Value (RSV) Allocation Wizard'}
       subtitle={isAr ? 'توزيع مصاريف المباني لحساب معامل التكلفة الإنشائية للشقة الفاخرة وتحديد صافي أرباح المكتب بدقة عند التسليم' : 'IFRS 15 relative sales value COGS capitalization factor'}
-      icon={<PieChart size={18} />}
+      icon={<PieChart size={16} />}
       isAr={isAr}
       maxWidth="680px"
       maxHeight="90vh"
-      bodyStyle={{ padding: 0 }}
+      footer={
+        saveSuccessData ? (
+          <>
+            <button type="button" className={p.primaryButton} onClick={onClose}>
+              <CheckCircle2 size={15} />
+              <span>{isAr ? 'تم / إغلاق النافذة' : 'Done / Close Window'}</span>
+            </button>
+            <button type="button" className={p.secondaryButton} onClick={resetForAnother}>
+              <RotateCcw size={14} />
+              <span>{isAr ? 'حساب دراسة لمشروع آخر' : 'Calculate Another Project'}</span>
+            </button>
+          </>
+        ) : (
+          <>
+            <button type="submit" form="rsv-allocation-form" className={p.primaryButton} disabled={isMutating}>
+              {isMutating ? <Loader2 size={14} className={p.spin} /> : <Calculator size={14} />}
+              <span>{isAr ? 'حفظ النسبة وتطبيقها على المشروع' : 'Commit & Save Allocation'}</span>
+            </button>
+            <button type="button" className={p.secondaryButton} onClick={onClose} disabled={isMutating}>
+              {isAr ? 'إلغاء' : 'Cancel'}
+            </button>
+          </>
+        )
+      }
     >
-
-        {saveSuccessData ? (
-          <div style={{ padding: '1.75rem', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '1.25rem', height: '100%' }}>
-            {/* Success Banner */}
-            <div style={{
-              padding: '1.25rem 1.5rem',
-              borderRadius: '16px',
-              background: 'linear-gradient(135deg, #ecfdf5 0%, #f0fdf4 100%)',
-              border: '1.5px solid rgba(5, 150, 105, 0.3)',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '1rem',
-              boxShadow: '0 4px 16px rgba(5, 150, 105, 0.08)'
-            }}>
-              <div style={{
-                width: '46px',
-                height: '46px',
-                borderRadius: '12px',
-                background: '#059669',
-                color: '#ffffff',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexShrink: 0,
-                boxShadow: '0 4px 10px rgba(5, 150, 105, 0.3)'
-              }}>
-                <CheckCircle2 size={26} />
-              </div>
-              <div style={{ flex: 1 }}>
-                <h4 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: '#065f46' }}>
-                  {isAr ? 'تم اعتماد وحفظ معامل التكلفة الإنشائية للشقة الفاخرة (RSV Factor) ونسب الربحية' : 'RSV Allocation & Margin Factor Saved Successfully'}
-                </h4>
-                <p style={{ margin: '0.25rem 0 0', fontSize: '0.78rem', color: '#047857' }}>
-                  {isAr 
-                    ? 'تم تسجيل معامل التكلفة الإنشائية للشقة الفاخرة في دفتر الحسابات لتطبيقه تلقائياً عند تسليم الوحدات واعتراف الإيراد.' 
+      {saveSuccessData ? (
+        <div>
+          <section className={p.section}>
+            <div className={`${p.notice} ${p.noticeSuccess}`} role="status">
+              <CheckCircle2 size={16} className={p.noticeIconSuccess} />
+              <div>
+                <p className={p.noticeTitle}>
+                  {isAr ? 'تم اعتماد وحفظ معامل التكلفة الإنشائية (RSV Factor) ونسب الربحية' : 'RSV Allocation & Margin Factor Saved Successfully'}
+                </p>
+                <p className={p.noticeBody}>
+                  {isAr
+                    ? 'تم تسجيل معامل التكلفة في دفتر الحسابات لتطبيقه تلقائياً عند تسليم الوحدات واعتراف الإيراد.'
                     : 'Cost allocation factor recorded in ledger for automated COGS recognition upon delivery.'}
                 </p>
               </div>
             </div>
+          </section>
 
-            {/* Breakdown Card */}
-            <div style={{
-              background: '#ffffff',
-              border: '1.5px solid #e2e8f0',
-              borderRadius: '16px',
-              padding: '1.25rem',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '1rem',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.03)'
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #f1f5f9', paddingBottom: '0.75rem' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <Building2 size={18} color="#2563eb" />
-                  <strong style={{ fontSize: '1rem', color: '#0f172a' }}>{saveSuccessData.projectName}</strong>
-                </div>
-                <span style={{
-                  background: '#eff6ff',
-                  color: '#2563eb',
-                  border: '1px solid #bfdbfe',
-                  padding: '0.18rem 0.65rem',
-                  borderRadius: '20px',
-                  fontSize: '0.72rem',
-                  fontWeight: 800
-                }}>
-                  {isAr ? 'معتمد بالدفاتر • IFRS 15' : 'Ledger Active • IFRS 15'}
-                </span>
+          <section className={p.section}>
+            <div className={p.sectionHeader}>
+              <h4 className={p.sectionTitle}><bdi>{saveSuccessData.projectName}</bdi></h4>
+              <span className={`${p.pill} ${p.pillSuccess}`}>
+                {isAr ? 'معتمد بالدفاتر · IFRS 15' : 'Ledger Active · IFRS 15'}
+              </span>
+            </div>
+            <dl className={p.metaList}>
+              <div className={p.metaRow}>
+                <dt className={p.metaKey}>{isAr ? 'إجمالي المبيعات المستهدفة للمشروع' : 'Target Sales Value'}</dt>
+                <dd className={p.metaValue}><bdi>{D(saveSuccessData.salesValue || 0).formatEGP(isAr)}</bdi></dd>
               </div>
-
-              {/* 4 Financial metric tiles */}
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: '1fr 1fr',
-                gap: '0.75rem'
-              }}>
-                <div style={{ background: '#f8fafc', padding: '0.85rem 1rem', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
-                  <span style={{ color: '#64748b', fontSize: '0.7rem', display: 'block', fontWeight: 700 }}>
-                    {isAr ? 'إجمالي المبيعات المستهدفة للمشروع:' : 'Target Sales Value:'}
-                  </span>
-                  <strong style={{ color: '#0f172a', fontSize: '1.05rem', fontVariantNumeric: 'tabular-nums', display: 'block', marginTop: '0.15rem' }}>
-                    {formatEGP(saveSuccessData.salesValue)} ج.م
-                  </strong>
-                </div>
-
-                <div style={{ background: '#f8fafc', padding: '0.85rem 1rem', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
-                  <span style={{ color: '#64748b', fontSize: '0.7rem', display: 'block', fontWeight: 700 }}>
-                    {isAr ? 'مصاريف البناء المعتمدة (WIP):' : 'Incurred WIP / Construction:'}
-                  </span>
-                  <strong style={{ color: '#0f172a', fontSize: '1.05rem', fontVariantNumeric: 'tabular-nums', display: 'block', marginTop: '0.15rem' }}>
-                    {formatEGP(saveSuccessData.wipAmount)} ج.م
-                  </strong>
-                </div>
-
-                <div style={{ background: '#eff6ff', padding: '0.85rem 1rem', borderRadius: '10px', border: '1px solid #bfdbfe' }}>
-                  <span style={{ color: '#2563eb', fontSize: '0.7rem', fontWeight: 800, display: 'block' }}>
-                    {isAr ? 'معامل التكلفة الإنشائية للشقة الفاخرة (RSV Factor):' : 'Luxury Unit Construction Cost Factor (RSV):'}
-                  </span>
-                  <strong style={{ color: '#2563eb', fontSize: '1.3rem', fontWeight: 900, fontVariantNumeric: 'tabular-nums', display: 'block', marginTop: '0.15rem' }}>
-                    {saveSuccessData.factorPct}%
-                  </strong>
-                </div>
-
-                <div style={{ background: 'rgba(16, 185, 129, 0.08)', padding: '0.85rem 1rem', borderRadius: '10px', border: '1px solid rgba(16, 185, 129, 0.25)' }}>
-                  <span style={{ color: '#047857', fontSize: '0.7rem', fontWeight: 800, display: 'block' }}>
-                    {isAr ? 'صافي هامش ربحية المكتب:' : 'Projected Gross Margin:'}
-                  </span>
-                  <strong style={{ color: '#059669', fontSize: '1.3rem', fontWeight: 900, fontVariantNumeric: 'tabular-nums', display: 'block', marginTop: '0.15rem' }}>
-                    {saveSuccessData.grossMarginPct}%
-                  </strong>
-                </div>
+              <div className={p.metaRow}>
+                <dt className={p.metaKey}>{isAr ? 'مصاريف البناء المعتمدة (WIP)' : 'Incurred WIP / Construction'}</dt>
+                <dd className={p.metaValue}><bdi>{D(saveSuccessData.wipAmount || 0).formatEGP(isAr)}</bdi></dd>
               </div>
+            </dl>
+          </section>
 
-              {/* Progress bar */}
-              <div style={{ width: '100%', height: '8px', borderRadius: '999px', background: '#e2e8f0', overflow: 'hidden', display: 'flex' }}>
-                <div style={{ width: `${Math.min(parseFloat(saveSuccessData.factorPct) || 0, 100)}%`, background: '#2563eb', height: '100%' }} />
-                <div style={{ flex: 1, background: '#059669', height: '100%' }} />
+          <section className={p.section}>
+            <div className={p.figureGrid}>
+              <div className={p.figure}>
+                <span className={p.figureLabel}>{isAr ? 'معامل التكلفة الإنشائية (RSV)' : 'Construction Cost Factor (RSV)'}</span>
+                <bdi className={`${p.figureValue} ${p.figureValueAccent}`}>{saveSuccessData.factorPct}%</bdi>
               </div>
-
-              {/* Accounting explanation */}
-              <div style={{ fontSize: '0.75rem', color: '#334155', lineHeight: 1.6, borderTop: '1px dashed #e2e8f0', paddingTop: '0.65rem' }}>
-                {isAr 
-                  ? `💡 تم تفعيل معامل التكلفة الإنشائية للشقة الفاخرة (RSV Factor) بنجاح: عند تسليم أي وحدة سكنية في (${saveSuccessData.projectName})، سيتم ترحيل ما نسبته ${saveSuccessData.factorPct}% من قيمة بيع الشقة مباشرة من حساب مشروعات تحت التنفيذ (105000) إلى تكلفة المبيعات (501000)، واعتبار الباقي ${saveSuccessData.grossMarginPct}% صافي ربح حقيقي للمكتب.`
-                  : `Active Accounting Factor: Upon delivery of any unit in (${saveSuccessData.projectName}), ${saveSuccessData.factorPct}% will be charged to COGS (501000) and the remaining ${saveSuccessData.grossMarginPct}% recognized as gross profit.`}
+              <div className={p.figure}>
+                <span className={p.figureLabel}>{isAr ? 'صافي هامش ربحية المكتب' : 'Projected Gross Margin'}</span>
+                <bdi className={`${p.figureValue} ${p.figureValueSuccess}`}>{saveSuccessData.grossMarginPct}%</bdi>
               </div>
             </div>
-
-            {/* Anchored Footer Buttons */}
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'flex-end',
-              gap: '0.65rem',
-              borderTop: '1px solid #e2e8f0',
-              paddingTop: '1.25rem',
-              marginTop: 'auto'
-            }}>
+            <div className={p.ratioBar} aria-hidden>
+              <div className={p.ratioPrimary} style={{ width: `${Math.min(parseFloat(saveSuccessData.factorPct) || 0, 100)}%` }} />
+              <div className={p.ratioSecondary} />
+            </div>
+            <p className={p.hint}>
+              {isAr
+                ? `عند تسليم أي وحدة في (${saveSuccessData.projectName}) يُرحَّل ${saveSuccessData.factorPct}% من قيمة البيع من مشروعات تحت التنفيذ (105000) إلى تكلفة المبيعات (501000)، ويُعتبر الباقي ${saveSuccessData.grossMarginPct}% صافي ربح للمكتب.`
+                : `Upon delivery of any unit in (${saveSuccessData.projectName}), ${saveSuccessData.factorPct}% will be charged to COGS (501000) and the remaining ${saveSuccessData.grossMarginPct}% recognized as gross profit.`}
+            </p>
+          </section>
+        </div>
+      ) : (
+        <form id="rsv-allocation-form" onSubmit={handleSubmit}>
+          <section className={p.section}>
+            <h4 className={p.sectionTitle}>{isAr ? 'المشروع المستهدف' : 'Target Project'}</h4>
+            <div className={p.segmented} role="tablist">
               <button
                 type="button"
-                onClick={() => {
-                  setSaveSuccessData(null);
-                  setSelectedPropertyId('');
-                  setProjectName('');
-                  setSalesValue('100000000');
-                  setWipAmount('45000000');
-                }}
-                style={{
-                  background: '#ffffff',
-                  border: '1px solid #cbd5e1',
-                  color: '#0f172a',
-                  padding: '0.6rem 1.25rem',
-                  borderRadius: '10px',
-                  fontSize: '0.82rem',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  minHeight: '44px',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '0.45rem',
-                  transition: 'all 0.15s ease'
-                }}
+                role="tab"
+                aria-selected={selectionMode === 'portfolio'}
+                onClick={() => handleModeChange('portfolio')}
+                className={selectionMode === 'portfolio' ? `${p.segment} ${p.segmentActive}` : p.segment}
               >
-                <RotateCcw size={14} />
-                <span>{isAr ? '+ حساب دراسة لمشروع آخر' : '+ Calculate Another Project'}</span>
+                <Building2 size={14} />
+                <span>{isAr ? 'من محفظة الشركة' : 'From Company Portfolio'}</span>
               </button>
-
               <button
                 type="button"
-                onClick={onClose}
-                style={{
-                  background: 'linear-gradient(135deg, #059669 0%, #047857 100%)',
-                  color: '#ffffff',
-                  border: 'none',
-                  padding: '0.6rem 1.6rem',
-                  borderRadius: '10px',
-                  fontSize: '0.84rem',
-                  fontWeight: 800,
-                  cursor: 'pointer',
-                  minHeight: '44px',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '0.5rem',
-                  boxShadow: '0 4px 14px rgba(5, 150, 105, 0.3)'
-                }}
+                role="tab"
+                aria-selected={selectionMode === 'custom'}
+                onClick={() => handleModeChange('custom')}
+                className={selectionMode === 'custom' ? `${p.segment} ${p.segmentActive}` : p.segment}
               >
-                <CheckCircle2 size={16} />
-                <span>{isAr ? 'تم / إغلاق النافذة' : 'Done / Close Window'}</span>
+                <FolderPlus size={14} />
+                <span>{isAr ? 'مشروع جديد يدوياً' : 'New / Custom Project'}</span>
               </button>
             </div>
-          </div>
-        ) : (
-          <form onSubmit={handleSubmit} style={{ padding: 'clamp(1rem, 3vw, 1.75rem)', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
-          
-          {/* Mode Switcher: Portfolio vs Custom Project */}
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: '1fr 1fr',
-            gap: '0.35rem',
-            background: '#f1f5f9',
-            padding: '0.3rem',
-            borderRadius: '10px',
-            border: '1px solid #e2e8f0'
-          }}>
-            <button
-              type="button"
-              onClick={() => handleModeChange('portfolio')}
-              style={{
-                padding: '0.5rem 0.85rem',
-                borderRadius: '8px',
-                border: 'none',
-                background: selectionMode === 'portfolio' ? '#ffffff' : 'transparent',
-                color: selectionMode === 'portfolio' ? '#0f172a' : '#64748b',
-                fontWeight: selectionMode === 'portfolio' ? 800 : 600,
-                fontSize: '0.78rem',
-                cursor: 'pointer',
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '0.45rem',
-                boxShadow: selectionMode === 'portfolio' ? '0 1px 3px rgba(0, 0, 0, 0.08)' : 'none',
-                transition: 'all 0.15s ease'
-              }}
-            >
-              <Building2 size={15} color={selectionMode === 'portfolio' ? '#2563eb' : '#64748b'} />
-              <span>{isAr ? 'من مشاريع ومحفظة الشركة' : 'From Company Portfolio'}</span>
-            </button>
 
-            <button
-              type="button"
-              onClick={() => handleModeChange('custom')}
-              style={{
-                padding: '0.5rem 0.85rem',
-                borderRadius: '8px',
-                border: 'none',
-                background: selectionMode === 'custom' ? '#ffffff' : 'transparent',
-                color: selectionMode === 'custom' ? '#0f172a' : '#64748b',
-                fontWeight: selectionMode === 'custom' ? 800 : 600,
-                fontSize: '0.78rem',
-                cursor: 'pointer',
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '0.45rem',
-                boxShadow: selectionMode === 'custom' ? '0 1px 3px rgba(0, 0, 0, 0.08)' : 'none',
-                transition: 'all 0.15s ease'
-              }}
-            >
-              <FolderPlus size={15} color={selectionMode === 'custom' ? '#2563eb' : '#64748b'} />
-              <span>{isAr ? 'مشروع أو دراسة جديدة يدوياً' : 'New / Custom Project'}</span>
-            </button>
-          </div>
-
-          {/* Mode A: Portfolio Selector */}
-          {selectionMode === 'portfolio' ? (
-            <div style={{
-              background: '#f8fafc',
-              border: '1px solid #e2e8f0',
-              borderRadius: '12px',
-              padding: '1rem',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '0.5rem'
-            }}>
-              <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#334155', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                <Building2 size={14} color="#2563eb" />
-                <span>{isAr ? 'العمارة أو المشروع المستهدف *' : 'Target Property / Project *'}</span>
-              </label>
-              <ZFCustomSelect<string>
-                value={selectedPropertyId}
-                onChange={handleSelectProperty}
-                items={propertySelectItems}
-                placeholderAr="-- اضغط لاختيار المشروع أو العمارة من المحفظة --"
-                placeholderEn="-- Choose property from portfolio --"
-                isAr={isAr}
-                searchable={true}
-              />
-
-              {/* Sleek Mini Property Summary Banner */}
-              {selectedProp && (
-                <div style={{
-                  marginTop: '0.35rem',
-                  padding: '0.5rem 0.75rem',
-                  background: '#ffffff',
-                  border: '1px solid #e2e8f0',
-                  borderRadius: '8px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  flexWrap: 'wrap',
-                  gap: '0.5rem',
-                  fontSize: '0.74rem',
-                  color: '#334155'
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap' }}>
-                    <span style={{ fontWeight: 800, color: '#0f172a' }}>
-                      {isAr ? (selectedProp.title_ar || selectedProp.title_en) : (selectedProp.title_en || selectedProp.title_ar)}
+            {selectionMode === 'portfolio' ? (
+              <div className={p.field}>
+                <label className={p.label}>{isAr ? 'العمارة أو المشروع *' : 'Property / Project *'}</label>
+                <ZFCustomSelect<string>
+                  value={selectedPropertyId}
+                  onChange={handleSelectProperty}
+                  items={propertySelectItems}
+                  placeholderAr="اختر المشروع أو العمارة من المحفظة"
+                  placeholderEn="Choose property from portfolio"
+                  isAr={isAr}
+                  searchable={true}
+                />
+                {selectedProp && (
+                  <div className={p.sectionHeader}>
+                    <p className={p.metaLine}>
+                      <bdi className={p.metaLineStrong}>
+                        {isAr ? (selectedProp.title_ar || selectedProp.title_en) : (selectedProp.title_en || selectedProp.title_ar)}
+                      </bdi>
+                      <span className={p.metaDot}>·</span>
+                      <bdi className={p.numeric}>{selectedProp.area_sqm ? `${selectedProp.area_sqm} م²` : (isAr ? 'المساحة غير مُدخلة' : 'Area not entered')}</bdi>
+                      <span className={p.metaDot}>·</span>
+                      <bdi>{selectedProp.location || (isAr ? 'الموقع غير مُدخل' : 'Location not entered')}</bdi>
+                    </p>
+                    <span className={selectedProp.completion_status === 'ready' ? `${p.pill} ${p.pillSuccess}` : `${p.pill} ${p.pillWarning}`}>
+                      {selectedProp.completion_status === 'ready' ? (isAr ? 'جاهز للتسليم' : 'Ready') : (isAr ? 'قيد التطوير' : 'In Progress')}
                     </span>
-                    <span style={{ color: '#cbd5e1' }}>•</span>
-                    <span style={{ fontVariantNumeric: 'tabular-nums' }}>{selectedProp.area_sqm} م²</span>
-                    <span style={{ color: '#cbd5e1' }}>•</span>
-                    <span>{selectedProp.location || (isAr ? 'الشرقية' : 'Sharqia')}</span>
                   </div>
-                  <span style={{
-                    fontSize: '0.68rem',
-                    fontWeight: 700,
-                    padding: '0.18rem 0.55rem',
-                    borderRadius: '999px',
-                    background: selectedProp.completion_status === 'ready' ? '#dcfce7' : '#fef3c7',
-                    color: selectedProp.completion_status === 'ready' ? '#15803d' : '#b45309',
-                    border: `1px solid ${selectedProp.completion_status === 'ready' ? '#bbf7d0' : '#fde68a'}`
-                  }}>
-                    {selectedProp.completion_status === 'ready' ? (isAr ? 'جاهز للتسليم' : 'Ready') : (isAr ? 'قيد التطوير' : 'In Progress')}
-                  </span>
+                )}
+              </div>
+            ) : (
+              <div className={p.field}>
+                <label className={p.label} htmlFor="rsv-project-name">{isAr ? 'اسم العمارة أو المشروع *' : 'Project Name / Phase *'}</label>
+                <input
+                  id="rsv-project-name"
+                  type="text"
+                  required
+                  value={projectName}
+                  onChange={e => setProjectName(e.target.value)}
+                  placeholder={isAr ? 'مثال: عمارة الفردوس - الحي الخامس' : 'e.g. Palatial Villas & Nile Horizons'}
+                  className={p.input}
+                />
+              </div>
+            )}
+          </section>
+
+          <section className={p.section}>
+            <h4 className={p.sectionTitle}>{isAr ? 'المبيعات والتكلفة' : 'Sales & Cost'}</h4>
+            <div className={p.fieldGrid}>
+              <div className={p.field}>
+                <label className={p.label} htmlFor="rsv-sales">{isAr ? 'إجمالي سعر بيع كل الشقق (المبيعات المتوقعة) *' : 'Sales Value Ceiling *'}</label>
+                <div className={p.affixWrap}>
+                  <input
+                    id="rsv-sales"
+                    type="number"
+                    step="100000"
+                    required
+                    value={salesValue}
+                    onChange={e => setSalesValue(e.target.value)}
+                    className={`${p.input} ${p.numeric}`}
+                  />
+                  <span className={p.affix}>{isAr ? 'ج.م' : 'EGP'}</span>
                 </div>
-              )}
-            </div>
-          ) : (
-            /* Mode B: Custom Project Name Input */
-            <div>
-              <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#334155', marginBottom: '0.35rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                <FolderPlus size={14} color="#2563eb" />
-                <span>{isAr ? 'اسم العمارة أو المشروع *' : 'Project Name / Phase *'}</span>
-              </label>
-              <input 
-                type="text"
-                required
-                value={projectName}
-                onChange={e => setProjectName(e.target.value)}
-                placeholder={isAr ? 'اكتب اسم المشروع أو دراسة الجدوى (مثال: عمارة الفردوس - الحي الخامس)' : 'e.g. Palatial Villas & Nile Horizons'}
-                style={{
-                  width: '100%',
-                  padding: '0.6rem 0.85rem',
-                  borderRadius: '8px',
-                  border: '1px solid #cbd5e1',
-                  background: '#ffffff',
-                  color: '#0f172a',
-                  fontSize: '0.82rem',
-                  outline: 'none'
-                }}
-              />
-            </div>
-          )}
-
-          {/* Sales Value & Incurred WIP Grid */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-            {/* Projected Total Sales Value Ceiling */}
-            <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem' }}>
-                <label style={{ fontSize: '0.74rem', fontWeight: 700, color: '#334155', margin: 0 }}>
-                  {isAr ? 'إجمالي سعر بيع كل شقق العمارة (المبيعات المتوقعة) *' : 'Sales Value Ceiling *'}
-                </label>
-                <span style={{ fontSize: '0.72rem', color: '#2563eb', fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}>
-                  {D(salesValue || 0).formatEGP(isAr)}
-                </span>
+                <bdi className={`${p.hint} ${p.numeric}`}>{D(salesValue || 0).formatEGP(isAr)}</bdi>
               </div>
-              <input 
-                type="number"
-                step="100000"
-                required
-                value={salesValue}
-                onChange={e => setSalesValue(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '0.55rem 0.75rem',
-                  borderRadius: '8px',
-                  border: '1px solid #cbd5e1',
-                  background: '#ffffff',
-                  color: '#0f172a',
-                  fontSize: '0.82rem',
-                  outline: 'none'
-                }}
-              />
-            </div>
-
-            {/* Incurred Construction WIP */}
-            <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem' }}>
-                <label style={{ fontSize: '0.74rem', fontWeight: 700, color: '#334155', margin: 0 }}>
-                  {isAr ? 'إجمالي مصاريف المباني والخامات المتوقعة للعمارة *' : 'Incurred Construction WIP *'}
-                </label>
-                <span style={{ fontSize: '0.72rem', color: '#2563eb', fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}>
-                  {D(wipAmount || 0).formatEGP(isAr)}
-                </span>
+              <div className={p.field}>
+                <label className={p.label} htmlFor="rsv-wip">{isAr ? 'إجمالي مصاريف المباني والخامات المتوقعة *' : 'Incurred Construction WIP *'}</label>
+                <div className={p.affixWrap}>
+                  <input
+                    id="rsv-wip"
+                    type="number"
+                    step="100000"
+                    required
+                    value={wipAmount}
+                    onChange={e => setWipAmount(e.target.value)}
+                    className={`${p.input} ${p.numeric}`}
+                  />
+                  <span className={p.affix}>{isAr ? 'ج.م' : 'EGP'}</span>
+                </div>
+                <bdi className={`${p.hint} ${p.numeric}`}>{D(wipAmount || 0).formatEGP(isAr)}</bdi>
               </div>
-              <input 
-                type="number"
-                step="100000"
-                required
-                value={wipAmount}
-                onChange={e => setWipAmount(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '0.55rem 0.75rem',
-                  borderRadius: '8px',
-                  border: '1px solid #cbd5e1',
-                  background: '#ffffff',
-                  color: '#0f172a',
-                  fontSize: '0.82rem',
-                  outline: 'none'
-                }}
-              />
             </div>
-          </div>
+          </section>
 
-          {/* Live Calculation Result Card */}
-          <div style={{
-            background: '#ffffff',
-            border: '1.5px solid #e2e8f0',
-            borderRadius: '14px',
-            padding: '1.15rem',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '0.85rem',
-            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)'
-          }}>
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              fontSize: '0.72rem',
-              color: '#64748b',
-              background: '#f8fafc',
-              border: '1px solid #e2e8f0',
-              padding: '0.45rem 0.75rem',
-              borderRadius: '8px',
-              fontVariantNumeric: 'tabular-nums'
-            }}>
-              <span>{isAr ? 'حسبة معامل التكلفة الإنشائية للشقة الفاخرة (RSV Factor):' : 'Formula:'}</span>
-              <strong style={{ color: '#0f172a' }}>
-                {isAr 
-                  ? `مصاريف المباني (${D(wip).formatEGP(isAr)}) ÷ إجمالي سعر البيع (${D(sales).formatEGP(isAr)}) = ${factorPct}%`
+          <section className={p.section}>
+            <h4 className={p.sectionTitle}>{isAr ? 'النتيجة اللحظية' : 'Live Result'}</h4>
+            <div className={p.figureGrid}>
+              <div className={p.figure}>
+                <span className={p.figureLabel}>{isAr ? 'معامل التكلفة الإنشائية (RSV)' : 'Construction Ratio (RSV)'}</span>
+                <bdi className={`${p.figureValue} ${p.figureValueAccent}`}>{factorPct}%</bdi>
+                <span className={p.figureCaption}>{isAr ? 'تكلفة المباني من ثمن البيع' : 'Cost of sales ratio'}</span>
+              </div>
+              <div className={p.figure}>
+                <span className={p.figureLabel}>{isAr ? 'صافي المكسب من بيع الشقق' : 'Projected Gross Margin'}</span>
+                <bdi className={`${p.figureValue} ${p.figureValueSuccess}`}>{grossMarginPct}%</bdi>
+                <span className={p.figureCaption}>{isAr ? 'مكسب صافي للمكتب' : 'Net office profit margin'}</span>
+              </div>
+            </div>
+            <div className={p.ratioBar} aria-hidden>
+              <div className={p.ratioPrimary} style={{ width: `${Math.min(parseFloat(factorPct) || 0, 100)}%` }} />
+              <div className={p.ratioSecondary} />
+            </div>
+            <div className={p.legend}>
+              <span className={p.legendItem}><span className={p.legendSwatchPrimary} />{isAr ? 'تكلفة المباني' : 'Construction cost'}</span>
+              <span className={p.legendItem}><span className={p.legendSwatchSecondary} />{isAr ? 'هامش الربح' : 'Gross margin'}</span>
+            </div>
+            <p className={`${p.hint} ${p.numeric}`}>
+              <bdi>
+                {isAr
+                  ? `المعادلة: مصاريف المباني (${D(wip).formatEGP(isAr)}) ÷ إجمالي سعر البيع (${D(sales).formatEGP(isAr)}) = ${factorPct}%`
                   : `RSV = WIP (${D(wip).formatEGP(isAr)}) ÷ Sales (${D(sales).formatEGP(isAr)}) = ${factorPct}%`}
-              </strong>
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.85rem' }}>
-              <div style={{ background: '#f8fafc', padding: '0.75rem 1rem', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
-                <span style={{ fontSize: '0.7rem', color: '#64748b', display: 'block', fontWeight: 700 }}>
-                  {isAr ? 'معامل التكلفة الإنشائية للشقة الفاخرة (RSV Factor):' : 'Calculated Construction Ratio (RSV):'}
-                </span>
-                <strong style={{ fontSize: '1.4rem', color: '#2563eb', fontVariantNumeric: 'tabular-nums', display: 'block', marginTop: '0.15rem' }}>
-                  {factorPct}%
-                </strong>
-                <span style={{ fontSize: '0.72rem', color: '#2563eb', fontWeight: 700 }}>
-                  {isAr ? '(نسبة تكلفة خامات ومباني الشقة من ثمن البيع)' : '(cost of sales ratio)'}
-                </span>
-              </div>
-
-              <div style={{ background: '#f8fafc', padding: '0.75rem 1rem', borderRadius: '10px', border: '1px solid #e2e8f0', textAlign: isAr ? 'left' : 'right' }}>
-                <span style={{ fontSize: '0.7rem', color: '#64748b', display: 'block', fontWeight: 700 }}>
-                  {isAr ? 'مكسبنا الصافي من بيع الشقق:' : 'Projected Gross Margin:'}
-                </span>
-                <strong style={{ fontSize: '1.4rem', color: '#15803d', fontVariantNumeric: 'tabular-nums', display: 'block', marginTop: '0.15rem' }}>
-                  {grossMarginPct}%
-                </strong>
-                <span style={{ fontSize: '0.72rem', color: '#15803d', fontWeight: 700 }}>
-                  {isAr ? '(من ثمن الشقة داخل مكسب صافي للمكتب)' : '(net office profit margin)'}
-                </span>
-              </div>
-            </div>
-
-            {/* Visual Progress Bar */}
-            <div style={{ width: '100%', height: '8px', borderRadius: '999px', background: '#e2e8f0', overflow: 'hidden', display: 'flex' }}>
-              <div style={{ width: `${Math.min(parseFloat(factorPct) || 0, 100)}%`, background: '#2563eb', height: '100%' }} />
-              <div style={{ flex: 1, background: '#15803d', height: '100%' }} />
-            </div>
-
-            {/* Explanatory text in simple Egyptian Arabic */}
-            <div style={{ fontSize: '0.74rem', color: '#334155', lineHeight: 1.55, borderTop: '1px dashed #e2e8f0', paddingTop: '0.6rem' }}>
-              {isAr 
-                ? `💡 ما هو معامل التكلفة الإنشائية للشقة الفاخرة (RSV Factor)؟ يعني ببساطة لو بعت شقة بـ 5,000,000 ج.م وسلّمتها للعميل، النظام هيعتبر تلقائياً إن تكلفة مباني الشقة دي حوالي ${(5000000 * factor).toLocaleString()} ج.م (${factorPct}%)، والباقي ${(5000000 * (1 - factor)).toLocaleString()} ج.م ينزل مكسب صافي حقيقي يدخل خزينة وأرباح المكتب فوراً.`
-                : `Ledger Impact: Delivering a 5,000,000 EGP unit will relieve ${(5000000 * factor).toLocaleString()} EGP from WIP (105000) into COGS (501000).`}
-            </div>
-          </div>
-
-          {/* Modal Footer */}
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'flex-end',
-            gap: '0.5rem',
-            borderTop: '1px solid #e2e8f0',
-            paddingTop: '1rem'
-          }}>
-            <button
-              type="button"
-              onClick={onClose}
-              style={{
-                background: '#ffffff',
-                border: '1px solid #cbd5e1',
-                color: '#64748b',
-                padding: '0.55rem 1rem',
-                borderRadius: '8px',
-                fontSize: '0.78rem',
-                fontWeight: 700,
-                cursor: 'pointer',
-                minHeight: '44px'
-              }}
-            >
-              {isAr ? 'إلغاء' : 'Cancel'}
-            </button>
-
-            <button
-              type="submit"
-              disabled={isMutating}
-              style={{
-                background: isMutating ? '#94a3b8' : '#2563eb',
-                color: '#ffffff',
-                border: 'none',
-                padding: '0.55rem 1.35rem',
-                borderRadius: '8px',
-                fontSize: '0.8rem',
-                fontWeight: 800,
-                cursor: isMutating ? 'not-allowed' : 'pointer',
-                minHeight: '44px',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.45rem',
-                boxShadow: isMutating ? 'none' : '0 2px 8px rgba(37, 99, 235, 0.25)'
-              }}
-            >
-              {isMutating ? <Loader2 size={14} className="animate-spin" /> : <Calculator size={14} />}
-              <span>{isAr ? 'حفظ النسبة وتطبيقها على المشروع' : 'Commit & Save Allocation'}</span>
-            </button>
-          </div>
+              </bdi>
+            </p>
+            <p className={p.hint}>
+              {isAr
+                ? `مثال: شقة مباعة بـ 5,000,000 ج.م تُحمَّل بتكلفة مباني ${D(5000000 * factor).formatEGP(isAr)} (${factorPct}%)، والباقي ${D(5000000 * (1 - factor)).formatEGP(isAr)} صافي ربح للمكتب.`
+                : `Example: delivering a 5,000,000 EGP unit relieves ${D(5000000 * factor).formatEGP(isAr)} from WIP (105000) into COGS (501000).`}
+            </p>
+          </section>
         </form>
-        )}
+      )}
     </ZFModalShell>
   );
 };
