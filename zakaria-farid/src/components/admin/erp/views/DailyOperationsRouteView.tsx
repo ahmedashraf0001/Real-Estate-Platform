@@ -37,6 +37,8 @@ export function DailyOperationsRouteView() {
     } else if (action === 'escalate') {
       const target = erp.data.contracts.find(c => c.status !== 'Rescinded') || erp.data.contracts[0];
       if (target) erp.setShowEscalationModal(target);
+    } else if (action === 'partner_ops') {
+      erp.setShowPartnerOperationsModal(true);
     }
   }, [searchParams, erp]);
 

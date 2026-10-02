@@ -69,6 +69,7 @@ export function PartnersManagementRouteView() {
       }}
       onConfirmCommitment={erp.handleCreatePartnerCommitment}
       onSaveProperty={erp.handleSaveProperty}
+      initialAction={searchParams?.get('action')}
     />
   );
 }

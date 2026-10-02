@@ -52,6 +52,8 @@ export interface PartnersManagementViewProps {
   onOpenReallocation?: (property: Property) => void;
   onConfirmCommitment?: (payload: NewPartnerCommitmentPayload) => Promise<void>;
   onSaveProperty?: (updatedProperty: Property) => Promise<void> | void;
+  /** Deep link: 'commit' opens the milestone commitment modal, 'reallocate' the reallocation modal. */
+  initialAction?: string | null;
 }
 
 export const PartnersManagementView: React.FC<PartnersManagementViewProps> = ({
@@ -69,7 +71,8 @@ export const PartnersManagementView: React.FC<PartnersManagementViewProps> = ({
   onOpenDossier: externalOnOpenDossier,
   onOpenReallocation: externalOnOpenReallocation,
   onConfirmCommitment,
-  onSaveProperty
+  onSaveProperty,
+  initialAction
 }) => {
   // Master Workstation Tab Mode: 1: projects (مشاريع الشراكة), 2: directory (دليل الشركاء), 3: transactions (سجل الحركات)
   const [activeTab, setActiveTab] = useState<'projects' | 'directory' | 'transactions'>('projects');
@@ -196,6 +199,21 @@ export const PartnersManagementView: React.FC<PartnersManagementViewProps> = ({
       setReallocationInitialSeller(sellerName);
     }
   };
+
+  const handledInitialActionRef = React.useRef<string | null>(null);
+  useEffect(() => {
+    if (!initialAction || handledInitialActionRef.current === initialAction) return;
+    if (initialAction === 'commit') {
+      handledInitialActionRef.current = initialAction;
+      handleOpenCommitmentModal();
+    } else if (initialAction === 'reallocate') {
+      const target = buildingProperties.find(b => b.id === selectedBuildingId) || buildingProperties[0];
+      if (target) {
+        handledInitialActionRef.current = initialAction;
+        handleOpenReallocation(target);
+      }
+    }
+  }, [initialAction, buildingProperties, selectedBuildingId]);
 
   const handleExportDirectoryExcel = async () => {
     try {
