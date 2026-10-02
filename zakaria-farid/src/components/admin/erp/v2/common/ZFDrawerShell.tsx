@@ -134,7 +134,9 @@ export const ZFDrawerShell: React.FC<ZFDrawerShellProps> = ({
         ) : (
           <div
             style={{
-              padding: '1rem 1.25rem',
+              height: '52px',
+              minHeight: '52px',
+              padding: '0 20px',
               borderBottom: '1px solid var(--erp-border, #cbd5e1)',
               background: '#ffffff',
               display: 'flex',
@@ -150,22 +152,24 @@ export const ZFDrawerShell: React.FC<ZFDrawerShellProps> = ({
               {icon && (
                 <div
                   style={{
-                    width: '32px',
-                    height: '32px',
+                    width: '28px',
+                    height: '28px',
                     borderRadius: '8px',
-                    background: 'var(--erp-accent-subtle, #eff6ff)',
-                    color: 'var(--erp-accent, #2563eb)',
+                    background: 'var(--erp-accent-subtle, #fdf8ee)',
+                    color: 'var(--erp-accent, #946f23)',
+                    border: '1px solid rgba(148, 111, 35, 0.18)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     flexShrink: 0,
+                    boxSizing: 'border-box',
                   }}
                 >
                   {icon}
                 </div>
               )}
               <div style={{ minWidth: 0, flex: 1 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'nowrap', minWidth: 0 }}>
                   {title && (
                     <h3
                       style={{
@@ -175,6 +179,9 @@ export const ZFDrawerShell: React.FC<ZFDrawerShellProps> = ({
                         color: '#0f172a',
                         letterSpacing: '-0.01em',
                         lineHeight: 1.3,
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
                       }}
                     >
                       {title}
@@ -185,9 +192,9 @@ export const ZFDrawerShell: React.FC<ZFDrawerShellProps> = ({
                 {subtitle && (
                   <div
                     style={{
-                      fontSize: '0.74rem',
+                      fontSize: '0.72rem',
                       color: '#64748b',
-                      marginTop: '2px',
+                      marginTop: '1px',
                       lineHeight: 1.35,
                       whiteSpace: 'nowrap',
                       overflow: 'hidden',
@@ -207,7 +214,7 @@ export const ZFDrawerShell: React.FC<ZFDrawerShellProps> = ({
               style={{
                 width: '28px',
                 height: '28px',
-                borderRadius: '6px',
+                borderRadius: '7px',
                 border: '1px solid transparent',
                 background: 'transparent',
                 color: '#64748b',
@@ -216,10 +223,11 @@ export const ZFDrawerShell: React.FC<ZFDrawerShellProps> = ({
                 alignItems: 'center',
                 justifyContent: 'center',
                 flexShrink: 0,
+                boxSizing: 'border-box',
                 transition: 'all 0.15s ease',
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.background = '#f8fafc';
+                e.currentTarget.style.background = '#f1f5f9';
                 e.currentTarget.style.borderColor = '#e2e8f0';
                 e.currentTarget.style.color = '#0f172a';
               }}
@@ -248,6 +256,7 @@ export const ZFDrawerShell: React.FC<ZFDrawerShellProps> = ({
             minHeight: 0,
             overflowY: 'auto',
             boxSizing: 'border-box',
+            padding: '20px 24px',
             ...bodyStyle,
           }}
         >
@@ -258,13 +267,14 @@ export const ZFDrawerShell: React.FC<ZFDrawerShellProps> = ({
         {footer && (
           <div
             style={{
-              padding: '0.85rem 1.25rem',
+              padding: '12px 20px',
+              minHeight: '60px',
               borderTop: '1px solid var(--erp-border, #cbd5e1)',
               background: '#ffffff',
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'flex-end',
-              gap: '0.65rem',
+              justifyContent: 'flex-start',
+              gap: '8px',
               flexShrink: 0,
               boxSizing: 'border-box',
               ...footerStyle,

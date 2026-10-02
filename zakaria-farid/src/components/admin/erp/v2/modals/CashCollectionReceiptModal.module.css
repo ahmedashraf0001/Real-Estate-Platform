@@ -26,7 +26,7 @@
 
 .summaryGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.85rem 1.2rem; padding-top: 0.95rem; }
 .summaryGrid > div { display: grid; grid-template-columns: 18px minmax(0, 1fr); align-items: center; gap: 0.2rem 0.45rem; min-width: 0; }
-.summaryGrid svg { grid-row: span 2; color: var(--erp-accent, #2563eb); }
+.summaryGrid svg { grid-row: span 2; color: var(--erp-accent, #946f23); }
 .summaryGrid span { font-size: 0.68rem; color: var(--erp-text-muted, #64748b); }
 .summaryGrid strong { font-size: 0.78rem; font-weight: 700; color: var(--erp-text-title, #0f172a); overflow-wrap: anywhere; }
 .tabular { font-variant-numeric: tabular-nums; }
@@ -39,32 +39,32 @@
 .noteField span { color: var(--erp-text-muted, #64748b); font-weight: 400; }
 .dateField input, .noteField textarea { width: 100%; min-width: 0; box-sizing: border-box; border: 1px solid var(--erp-border, #cbd5e1); border-radius: 7px; background: #ffffff; color: var(--erp-text-title, #0f172a); padding: 0.55rem 0.65rem; font: inherit; font-size: 0.78rem; font-variant-numeric: tabular-nums; }
 .noteField textarea { resize: vertical; min-height: 64px; }
-.dateField input:focus-visible, .noteField textarea:focus-visible, .destinationField input:focus-visible { outline: 2px solid var(--erp-accent, #2563eb); outline-offset: 2px; }
+.dateField input:focus-visible, .noteField textarea:focus-visible, .destinationField input:focus-visible { outline: 2px solid var(--erp-accent, #946f23); outline-offset: 2px; }
 
 .destinationField { display: flex; flex-wrap: wrap; gap: 0.4rem; min-width: 0; margin: 0; padding: 0; border: 0; }
 .destinationField legend { padding: 0 0 0.4rem; color: var(--erp-text-body, #334155); font-size: 0.75rem; font-weight: 650; }
 .destination, .destinationSelected { display: flex; align-items: center; gap: 0.45rem; flex: 1 1 110px; min-height: 42px; padding: 0.38rem 0.55rem; border: 1px solid var(--erp-border, #cbd5e1); border-radius: 7px; background: #ffffff; cursor: pointer; }
-.destinationSelected { border-color: var(--erp-accent, #2563eb); }
-.destination svg, .destinationSelected svg { flex-shrink: 0; color: var(--erp-accent, #2563eb); }
-.destination input, .destinationSelected input { flex-shrink: 0; margin: 0; accent-color: var(--erp-accent, #2563eb); }
+.destinationSelected { border-color: var(--erp-accent, #946f23); }
+.destination svg, .destinationSelected svg { flex-shrink: 0; color: var(--erp-accent, #946f23); }
+.destination input, .destinationSelected input { flex-shrink: 0; margin: 0; accent-color: var(--erp-accent, #946f23); }
 .destination span, .destinationSelected span { display: flex; flex-direction: column; min-width: 0; gap: 0.1rem; }
 .destination strong, .destinationSelected strong { color: var(--erp-text-title, #0f172a); font-size: 0.72rem; white-space: nowrap; }
 .destination small, .destinationSelected small { color: var(--erp-text-muted, #64748b); font-size: 0.64rem; font-variant-numeric: tabular-nums; }
 
 .noteField, .postingLine { grid-column: 1 / -1; }
 .postingLine { display: flex; align-items: center; flex-wrap: wrap; gap: 0.45rem; padding-top: 0.8rem; border-top: 1px solid var(--erp-card-border, #e2e8f0); color: var(--erp-text-muted, #64748b); font-size: 0.71rem; }
-.postingLine svg { color: var(--erp-accent, #2563eb); }
+.postingLine svg { color: var(--erp-accent, #946f23); }
 .postingLine strong { color: var(--erp-text-title, #0f172a); font-size: 0.74rem; font-variant-numeric: tabular-nums; }
 .postingLine strong span { padding-inline: 0.2rem; color: var(--erp-text-subtle, #94a3b8); }
 
 .footer { width: 100%; display: flex; align-items: center; gap: 0.55rem; }
-.footerHint, .confirmedLabel { margin-inline-end: auto; color: var(--erp-text-muted, #64748b); font-size: 0.71rem; line-height: 1.4; }
+.footerHint, .confirmedLabel { margin-inline-start: auto; color: var(--erp-text-muted, #64748b); font-size: 0.71rem; line-height: 1.4; }
 .confirmedLabel { display: inline-flex; align-items: center; gap: 0.35rem; color: #15803d; font-weight: 700; }
 .secondaryButton, .primaryButton { display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem; min-height: 36px; padding: 0.45rem 0.8rem; border-radius: 7px; font: inherit; font-size: 0.76rem; font-weight: 700; white-space: nowrap; cursor: pointer; }
 .secondaryButton { border: 1px solid var(--erp-border, #cbd5e1); background: #ffffff; color: var(--erp-text-body, #334155); }
-.primaryButton { border: 1px solid var(--erp-accent, #2563eb); background: var(--erp-accent, #2563eb); color: #ffffff; }
-.secondaryButton:hover { border-color: var(--erp-accent, #2563eb); color: var(--erp-accent, #2563eb); }
-.primaryButton:hover { background: var(--erp-accent-hover, #1d4ed8); }
+.primaryButton { border: 1px solid var(--erp-accent, #946f23); background: var(--erp-accent, #946f23); color: #ffffff; }
+.secondaryButton:hover { border-color: var(--erp-accent, #946f23); color: var(--erp-accent, #946f23); }
+.primaryButton:hover { background: var(--erp-accent-hover, #7c5c1b); }
 .secondaryButton:disabled, .primaryButton:disabled { opacity: 0.55; cursor: not-allowed; }
 
 .confirmedBody { padding: 1rem 1.35rem 1.35rem; }

@@ -2,21 +2,11 @@
 
 import React, { useState, useMemo } from 'react';
 import { 
-  X, 
   RotateCcw, 
   PlusCircle, 
   MinusCircle, 
-  FileText, 
-  AlertCircle, 
-  Building2, 
-  Scale, 
-  Calendar, 
-  ArrowRight,
-  Sparkles,
-  Wallet,
-  Landmark,
-  CheckCircle2,
-  ShieldCheck
+  ArrowLeft,
+  ArrowRight
 } from 'lucide-react';
 import { D, Decimal } from '@/lib/erp/math';
 import { ERPPropertyCostItem, CostAdjustmentType, ERPPropertyCostAdjustment } from '@/lib/erp/types';
@@ -25,6 +15,7 @@ import { Property } from '@/lib/supabase/types';
 import { tafqeetEGP } from '@/lib/erp/tafqeet';
 import { toast } from 'sonner';
 import { ZFModalShell } from '../common/ZFModalShell';
+import p from '../common/ZFModalPrimitives.module.css';
 
 interface CostAdjustmentModalProps {
   isOpen: boolean;
@@ -153,243 +144,170 @@ export const CostAdjustmentModal: React.FC<CostAdjustmentModalProps> = ({
       subtitle={isAr 
         ? 'تسوية محاسبية معتمدة لحالات دفع مبالغ بالزيادة واستردادها أو سداد مكمل' 
         : 'Document refunds or supplemental payments without mutating original records'}
-      bodyStyle={{ padding: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
+      footer={
+        <>
+          <button
+            type="submit"
+            form="cost-adjustment-form"
+            className={p.primaryButton}
+            disabled={isSubmitting}
+          >
+            {isSubmitting 
+              ? (isAr ? 'جارٍ الحفظ...' : 'Saving...') 
+              : (isAr ? 'اعتماد بند التسوية الفرعي' : 'Confirm Sub-Item Adjustment')}
+          </button>
+          <button
+            type="button"
+            className={p.secondaryButton}
+            onClick={onClose}
+          >
+            {isAr ? 'إلغاء' : 'Cancel'}
+          </button>
+        </>
+      }
     >
-
-        {/* Content Body */}
-        <form onSubmit={handleSubmit} style={{ padding: '24px', overflowY: 'auto', flex: 1 }}>
-          {/* Base Item Context Card */}
-          <div style={{
-            background: '#F8FAFC',
-            border: '1px solid #e2e8f0',
-            borderRadius: '14px',
-            padding: '16px 20px',
-            marginBottom: '20px'
-          }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-              <span style={{ fontSize: '0.78rem', color: '#64748B', fontWeight: 700 }}>
-                {isAr ? 'البند الأصلي المقفل' : 'Target Base Cost Item'}
-              </span>
-              <span style={{
-                fontSize: '0.75rem',
-                padding: '3px 8px',
-                borderRadius: '6px',
-                background: '#E2E8F0',
-                color: '#334155',
-                fontWeight: 700
-              }}>
-                {property ? (isAr ? property.title_ar : property.title_en) : (isAr ? 'مشروع عقاري' : 'Project')}
-              </span>
+      <form id="cost-adjustment-form" onSubmit={handleSubmit}>
+        {/* Base item */}
+        <section className={p.section}>
+          <div className={p.sectionHeader}>
+            <h4 className={p.sectionTitle}>
+              {isAr ? 'البند الأصلي المقفل' : 'Target Base Cost Item'}
+            </h4>
+            <span className={p.pill}>
+              <bdi>{property ? (isAr ? property.title_ar : property.title_en) : (isAr ? 'مشروع عقاري' : 'Project')}</bdi>
+            </span>
+          </div>
+          <dl className={p.metaList}>
+            <div className={p.metaRow}>
+              <dt className={p.metaKey}>{isAr ? 'اسم البند' : 'Item Name'}</dt>
+              <dd className={p.metaValue}>
+                <bdi>{isAr ? costItem.item_name_ar : (costItem.item_name_en || costItem.item_name_ar)}</bdi>
+              </dd>
             </div>
-            <strong style={{ fontSize: '1rem', color: '#0F172A', display: 'block', marginBottom: '8px' }}>
-              {isAr ? costItem.item_name_ar : (costItem.item_name_en || costItem.item_name_ar)}
-            </strong>
-            <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', fontSize: '0.85rem' }}>
-              <div>
-                <span style={{ color: '#64748B' }}>{isAr ? 'القيمة المسجلة الأصلية:' : 'Base Cost:'} </span>
-                <strong style={{ color: '#0F172A', fontVariantNumeric: 'tabular-nums' }}>
-                  {D(costItem.total_cost_egp).formatEGP(isAr)}
-                </strong>
+            <div className={p.metaRow}>
+              <dt className={p.metaKey}>{isAr ? 'القيمة المسجلة الأصلية' : 'Base Cost'}</dt>
+              <dd className={p.metaValue}>
+                <bdi>{D(costItem.total_cost_egp).formatEGP(isAr)}</bdi>
+              </dd>
+            </div>
+            <div className={p.metaRow}>
+              <dt className={p.metaKey}>{isAr ? 'المورد / المقاول' : 'Supplier'}</dt>
+              <dd className={costItem.supplier_contractor ? p.metaValue : `${p.metaValue} ${p.emptyValue}`}>
+                {costItem.supplier_contractor
+                  ? <bdi>{costItem.supplier_contractor}</bdi>
+                  : (isAr ? 'غير مُدخل' : 'Not entered')}
+              </dd>
+            </div>
+          </dl>
+        </section>
+
+        {/* Adjustment type */}
+        <section className={p.section}>
+          <h4 className={p.sectionTitle}>
+            {isAr ? 'نوع التسوية المحاسبية الفرعية' : 'Adjustment Type'}
+          </h4>
+          <div className={p.choiceGrid} role="radiogroup">
+            <button
+              type="button"
+              role="radio"
+              aria-checked={adjustmentType === 'REFUND_OVERPAYMENT'}
+              onClick={() => setAdjustmentType('REFUND_OVERPAYMENT')}
+              className={adjustmentType === 'REFUND_OVERPAYMENT' ? `${p.choice} ${p.choiceSelected}` : p.choice}
+            >
+              <span className={p.choiceIcon}><MinusCircle size={16} /></span>
+              <span className={p.choiceText}>
+                <span className={p.choiceTitle}>
+                  {isAr ? 'استرداد نقدي (دفع زيادة بالخطأ)' : 'Overpayment Refund (Credit)'}
+                </span>
+                <span className={p.choiceDesc}>
+                  {isAr ? 'يقلل تكلفة المشروع ويزيد الخزينة' : 'Reduces cost, returns cash'}
+                </span>
+              </span>
+            </button>
+            <button
+              type="button"
+              role="radio"
+              aria-checked={adjustmentType === 'SUPPLEMENT_UNDERPAYMENT'}
+              onClick={() => setAdjustmentType('SUPPLEMENT_UNDERPAYMENT')}
+              className={adjustmentType === 'SUPPLEMENT_UNDERPAYMENT' ? `${p.choice} ${p.choiceSelected}` : p.choice}
+            >
+              <span className={p.choiceIcon}><PlusCircle size={16} /></span>
+              <span className={p.choiceText}>
+                <span className={p.choiceTitle}>
+                  {isAr ? 'ملحق سداد (دفع أقل من المستحق)' : 'Supplemental Underpayment'}
+                </span>
+                <span className={p.choiceDesc}>
+                  {isAr ? 'يزيد تكلفة المشروع ويصرف من الخزينة' : 'Increases cost, extra cash paid'}
+                </span>
+              </span>
+            </button>
+          </div>
+        </section>
+
+        {/* Details */}
+        <section className={p.section}>
+          <h4 className={p.sectionTitle}>{isAr ? 'تفاصيل التسوية' : 'Adjustment Details'}</h4>
+          <div className={p.fieldGrid}>
+            <div className={`${p.field} ${p.fieldFull}`}>
+              <label className={p.label} htmlFor="ca-amount">
+                {isAr ? 'مبلغ التسوية' : 'Adjustment Amount'}
+              </label>
+              <div className={p.affixWrap}>
+                <input
+                  id="ca-amount"
+                  type="number"
+                  step="0.01"
+                  min="0.01"
+                  required
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                  placeholder="0.00"
+                  className={`${p.input} ${p.inputLarge} ${p.numeric}`}
+                />
+                <span className={p.affix}>{isAr ? 'ج.م' : 'EGP'}</span>
               </div>
-              {costItem.supplier_contractor && (
-                <div>
-                  <span style={{ color: '#64748B' }}>{isAr ? 'المورد / المقاول:' : 'Supplier:'} </span>
-                  <strong style={{ color: '#0F172A' }}>{costItem.supplier_contractor}</strong>
-                </div>
+              {amount && parseFloat(amount) > 0 && (
+                <p className={p.hint}>{tafqeetEGP(amount)}</p>
               )}
             </div>
-          </div>
 
-          {/* Adjustment Type Tabs */}
-          <div style={{ marginBottom: '20px' }}>
-            <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: '#334155', marginBottom: '8px' }}>
-              {isAr ? 'نوع التسوية المحاسبية الفرعية' : 'Adjustment Type'}
-            </label>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-              <button
-                type="button"
-                onClick={() => setAdjustmentType('REFUND_OVERPAYMENT')}
-                style={{
-                  padding: '12px 14px',
-                  borderRadius: '12px',
-                  border: adjustmentType === 'REFUND_OVERPAYMENT' ? '2px solid #2563eb' : '1px solid #e2e8f0',
-                  background: adjustmentType === 'REFUND_OVERPAYMENT' ? '#eff6ff' : '#FFFFFF',
-                  cursor: 'pointer',
-                  textAlign: 'start',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '10px'
-                }}
-              >
-                <div style={{
-                  width: '32px',
-                  height: '32px',
-                  borderRadius: '8px',
-                  background: adjustmentType === 'REFUND_OVERPAYMENT' ? '#2563eb' : '#F1F5F9',
-                  color: adjustmentType === 'REFUND_OVERPAYMENT' ? '#FFFFFF' : '#64748B',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
-                }}>
-                  <MinusCircle size={16} />
-                </div>
-                <div>
-                  <strong style={{ fontSize: '0.88rem', display: 'block', color: '#0F172A' }}>
-                    {isAr ? 'استرداد نقدي (دفع زيادة بالخطأ)' : 'Overpayment Refund (Credit)'}
-                  </strong>
-                  <span style={{ fontSize: '0.75rem', color: '#64748B' }}>
-                    {isAr ? 'يقلل تكلفة المشروع ويزيد الخزينة' : 'Reduces cost, returns cash'}
-                  </span>
-                </div>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setAdjustmentType('SUPPLEMENT_UNDERPAYMENT')}
-                style={{
-                  padding: '12px 14px',
-                  borderRadius: '12px',
-                  border: adjustmentType === 'SUPPLEMENT_UNDERPAYMENT' ? '2px solid #2563eb' : '1px solid #e2e8f0',
-                  background: adjustmentType === 'SUPPLEMENT_UNDERPAYMENT' ? '#eff6ff' : '#FFFFFF',
-                  cursor: 'pointer',
-                  textAlign: 'start',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '10px'
-                }}
-              >
-                <div style={{
-                  width: '32px',
-                  height: '32px',
-                  borderRadius: '8px',
-                  background: adjustmentType === 'SUPPLEMENT_UNDERPAYMENT' ? '#2563eb' : '#F1F5F9',
-                  color: adjustmentType === 'SUPPLEMENT_UNDERPAYMENT' ? '#FFFFFF' : '#64748B',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
-                }}>
-                  <PlusCircle size={16} />
-                </div>
-                <div>
-                  <strong style={{ fontSize: '0.88rem', display: 'block', color: '#0F172A' }}>
-                    {isAr ? 'ملحق سداد (دفع أقل من المستحق)' : 'Supplemental Underpayment'}
-                  </strong>
-                  <span style={{ fontSize: '0.75rem', color: '#64748B' }}>
-                    {isAr ? 'يزيد تكلفة المشروع ويصرف من الخزينة' : 'Increases cost, extra cash paid'}
-                  </span>
-                </div>
-              </button>
-            </div>
-          </div>
-
-          {/* Amount Input */}
-          <div style={{ marginBottom: '18px' }}>
-            <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
-              {isAr ? 'مبلغ التسوية (بالجنيه المصري)' : 'Adjustment Amount (EGP)'}
-            </label>
-            <div style={{ position: 'relative' }}>
-              <input
-                type="number"
-                step="0.01"
-                min="0.01"
+            <div className={`${p.field} ${p.fieldFull}`}>
+              <label className={p.label} htmlFor="ca-reason">
+                {isAr ? 'سبب وملاحظات التسوية والتصحيح' : 'Reason & Accounting Note'}
+              </label>
+              <textarea
+                id="ca-reason"
                 required
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                placeholder="0.00"
-                style={{
-                  width: '100%',
-                  padding: '12px 16px',
-                  paddingInlineEnd: '56px',
-                  borderRadius: '12px',
-                  border: '1.5px solid #cbd5e1',
-                  fontSize: '1.1rem',
-                  fontWeight: 800,
-                  color: '#0F172A',
-                  background: '#FFFFFF',
-                  fontVariantNumeric: 'tabular-nums'
-                }}
+                rows={2}
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+                placeholder={isAr ? 'مثال: خطأ في احتساب وزن الحديد وتم استرداد الفارق، أو ملحق أعمال إضافية...' : 'Reason for adjustment...'}
+                className={p.input}
               />
-              <span style={{
-                position: 'absolute',
-                top: '50%',
-                insetInlineEnd: '16px',
-                transform: 'translateY(-50%)',
-                fontSize: '0.82rem',
-                fontWeight: 700,
-                color: '#64748b'
-              }}>
-                {isAr ? 'ج.م' : 'EGP'}
-              </span>
             </div>
-            {amount && parseFloat(amount) > 0 && (
-              <p style={{ margin: '6px 0 0', fontSize: '0.78rem', color: '#2563eb', fontWeight: 700 }}>
-                {tafqeetEGP(amount)}
-              </p>
-            )}
-          </div>
 
-          {/* Reason Input */}
-          <div style={{ marginBottom: '18px' }}>
-            <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
-              {isAr ? 'سبب وملاحظات التسوية والتصحيح' : 'Reason & Accounting Note'}
-            </label>
-            <textarea
-              required
-              rows={2}
-              value={reason}
-              onChange={(e) => setReason(e.target.value)}
-              placeholder={isAr ? 'مثال: خطأ في احتساب وزن الحديد وتم استرداد الفارق، أو ملحق أعمال إضافية...' : 'Reason for adjustment...'}
-              style={{
-                width: '100%',
-                padding: '10px 14px',
-                borderRadius: '12px',
-                border: '1.5px solid #cbd5e1',
-                fontSize: '0.88rem',
-                color: '#0F172A',
-                background: '#FFFFFF',
-                resize: 'none'
-              }}
-            />
-          </div>
-
-          {/* Reference Invoice & Payment Method */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '22px' }}>
-            <div>
-              <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
+            <div className={p.field}>
+              <label className={p.label} htmlFor="ca-ref">
                 {isAr ? 'رقم الإيصال / الفاتورة المرجعية' : 'Receipt / Invoice Ref'}
               </label>
               <input
+                id="ca-ref"
                 type="text"
                 value={referenceInvoice}
                 onChange={(e) => setReferenceInvoice(e.target.value)}
                 placeholder={isAr ? 'مثال: INV-REC-2026' : 'e.g. REC-102'}
-                style={{
-                  width: '100%',
-                  padding: '10px 14px',
-                  borderRadius: '10px',
-                  border: '1px solid #cbd5e1',
-                  fontSize: '0.88rem',
-                  color: '#0F172A',
-                  background: '#FFFFFF'
-                }}
+                className={p.input}
               />
             </div>
-            <div>
-              <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
+            <div className={p.field}>
+              <label className={p.label} htmlFor="ca-method">
                 {isAr ? 'طريقة الاسترداد / الصرف' : 'Settlement Method'}
               </label>
               <select
+                id="ca-method"
                 value={paymentMethod}
                 onChange={(e) => setPaymentMethod(e.target.value as any)}
-                style={{
-                  width: '100%',
-                  padding: '10px 14px',
-                  borderRadius: '10px',
-                  border: '1px solid #cbd5e1',
-                  fontSize: '0.88rem',
-                  color: '#0F172A',
-                  background: '#FFFFFF'
-                }}
+                className={p.input}
               >
                 <option value="CASH_101000">{isAr ? 'كاش نقدي باليد (الخزينة 101000)' : 'Cash in Hand (Treasury 101000)'}</option>
                 <option value="INSTAPAY_102000">{isAr ? 'تحويل إنستاباي فوري (الخزينة 101000)' : 'InstaPay Transfer (Treasury 101000)'}</option>
@@ -397,86 +315,28 @@ export const CostAdjustmentModal: React.FC<CostAdjustmentModalProps> = ({
               </select>
             </div>
           </div>
+        </section>
 
-          {/* Live Impact Preview Card */}
-          <div style={{
-            background: '#f8fafc',
-            border: '1.5px dashed #93c5fd',
-            borderRadius: '14px',
-            padding: '16px 20px',
-            marginBottom: '24px'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px', color: '#2563eb' }}>
-              <ShieldCheck size={18} />
-              <strong style={{ fontSize: '0.88rem' }}>
-                {isAr ? 'المعاينة المحاسبية اللحظية للصافي الفعلي' : 'Effective Impact Preview'}
-              </strong>
+        {/* Impact preview */}
+        <section className={p.section}>
+          <h4 className={p.sectionTitle}>
+            {isAr ? 'المعاينة المحاسبية اللحظية للصافي الفعلي' : 'Effective Impact Preview'}
+          </h4>
+          <div className={p.compare}>
+            <div className={p.compareItem}>
+              <span className={p.compareLabel}>{isAr ? 'الصافي الحالي للبند' : 'Current Net'}</span>
+              <bdi className={p.compareValue}>{D(currentTotals.netEffectiveCost).formatEGP(isAr)}</bdi>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div>
-                <span style={{ fontSize: '0.8rem', color: '#64748B', display: 'block' }}>
-                  {isAr ? 'الصافي الحالي للبند:' : 'Current Net:'}
-                </span>
-                <strong style={{ fontSize: '1rem', color: '#334155', fontVariantNumeric: 'tabular-nums' }}>
-                  {D(currentTotals.netEffectiveCost).formatEGP(isAr)}
-                </strong>
-              </div>
-              <ArrowRight size={18} style={{ color: '#2563eb', transform: isAr ? 'rotate(180deg)' : 'none' }} />
-              <div>
-                <span style={{ fontSize: '0.8rem', color: '#64748B', display: 'block' }}>
-                  {isAr ? 'الصافي الفعلي الجديد بعد التسوية:' : 'New Effective Net:'}
-                </span>
-                <strong style={{ 
-                  fontSize: '1.2rem', 
-                  color: '#0F172A', 
-                  fontWeight: 900,
-                  fontVariantNumeric: 'tabular-nums' 
-                }}>
-                  {D(previewNewTotals.net).formatEGP(isAr)}
-                </strong>
-              </div>
+            {isAr
+              ? <ArrowLeft size={18} className={p.compareArrow} aria-hidden />
+              : <ArrowRight size={18} className={p.compareArrow} aria-hidden />}
+            <div className={p.compareItem}>
+              <span className={p.compareLabel}>{isAr ? 'الصافي الفعلي الجديد بعد التسوية' : 'New Effective Net'}</span>
+              <bdi className={p.compareValueStrong}>{D(previewNewTotals.net).formatEGP(isAr)}</bdi>
             </div>
           </div>
-
-          {/* Actions Footer */}
-          <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
-            <button
-              type="button"
-              onClick={onClose}
-              style={{
-                padding: '12px 20px',
-                borderRadius: '12px',
-                border: '1px solid #cbd5e1',
-                background: '#FFFFFF',
-                color: '#475569',
-                fontSize: '0.88rem',
-                fontWeight: 700,
-                cursor: 'pointer'
-              }}
-            >
-              {isAr ? 'إلغاء' : 'Cancel'}
-            </button>
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              style={{
-                padding: '12px 24px',
-                borderRadius: '12px',
-                border: 'none',
-                background: '#2563eb',
-                color: '#FFFFFF',
-                fontSize: '0.88rem',
-                fontWeight: 800,
-                cursor: isSubmitting ? 'not-allowed' : 'pointer',
-                boxShadow: '0 2px 8px rgba(37, 99, 235, 0.25)'
-              }}
-            >
-              {isSubmitting 
-                ? (isAr ? 'جارٍ الحفظ...' : 'Saving...') 
-                : (isAr ? 'اعتماد بند التسوية الفرعي' : 'Confirm Sub-Item Adjustment')}
-            </button>
-          </div>
-        </form>
+        </section>
+      </form>
     </ZFModalShell>
   );
 };

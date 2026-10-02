@@ -118,12 +118,10 @@ export const CashCollectionReceiptModal: React.FC<CashCollectionReceiptModalProp
         bodyStyle={{ padding: 0 }}
         footer={<div className={css.footer}>
           {confirmed ? <>
-            <span className={css.confirmedLabel}><CheckCircle2 size={16} />{isAr ? 'تم اعتماد التحصيل' : 'Collection confirmed'}</span>
-            <button type="button" className={css.secondaryButton} onClick={onClose}>{isAr ? 'إغلاق' : 'Close'}</button>
             <button type="button" className={css.primaryButton} onClick={() => window.print()}><Printer size={15} />{isAr ? 'طباعة الإيصال' : 'Print receipt'}</button>
+            <button type="button" className={css.secondaryButton} onClick={onClose}>{isAr ? 'إغلاق' : 'Close'}</button>
+            <span className={css.confirmedLabel}><CheckCircle2 size={16} />{isAr ? 'تم اعتماد التحصيل' : 'Collection confirmed'}</span>
           </> : <>
-            <span className={css.footerHint}>{isAr ? 'ستُسجل الحركة في الحساب المحدد عند الاعتماد.' : 'The collection posts to the selected account on confirmation.'}</span>
-            <button type="button" className={css.secondaryButton} onClick={onClose} disabled={submitting || isMutating}>{isAr ? 'إلغاء' : 'Cancel'}</button>
             <button type="submit" form="cash-collection-form" className={css.primaryButton} disabled={submitting || isMutating || !amount.gt(0) || isTargetPeriodLocked}>
               {submitting || isMutating ? (
                 <>{isAr ? 'جارٍ التسجيل…' : 'Recording…'}</>
@@ -133,6 +131,8 @@ export const CashCollectionReceiptModal: React.FC<CashCollectionReceiptModalProp
                 <><CheckCircle2 size={15} />{isAr ? 'اعتماد التحصيل' : 'Confirm collection'}</>
               )}
             </button>
+            <button type="button" className={css.secondaryButton} onClick={onClose} disabled={submitting || isMutating}>{isAr ? 'إلغاء' : 'Cancel'}</button>
+            <span className={css.footerHint}>{isAr ? 'ستُسجل الحركة في الحساب المحدد عند الاعتماد.' : 'The collection posts to the selected account on confirmation.'}</span>
           </>}
         </div>}>
         {confirmed ? (

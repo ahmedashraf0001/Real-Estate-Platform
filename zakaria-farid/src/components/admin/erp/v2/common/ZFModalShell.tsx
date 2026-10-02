@@ -114,7 +114,7 @@ export const ZFModalShell: React.FC<ZFModalShellProps> = ({
           background: '#ffffff',
           border: '1px solid var(--erp-border, #cbd5e1)',
           borderRadius: '12px',
-          boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.08)',
+          boxShadow: '0 1px 2px rgba(15,23,42,0.04), 0 16px 40px -12px rgba(15,23,42,0.18)',
           display: 'flex',
           flexDirection: 'column',
           overflow: 'hidden',
@@ -127,7 +127,9 @@ export const ZFModalShell: React.FC<ZFModalShellProps> = ({
         {/* Canonical Header */}
         <div
           style={{
-            padding: '0.95rem 1.25rem',
+            height: '52px',
+            minHeight: '52px',
+            padding: '0 20px',
             borderBottom: '1px solid var(--erp-border, #cbd5e1)',
             background: '#ffffff',
             display: 'flex',
@@ -143,22 +145,24 @@ export const ZFModalShell: React.FC<ZFModalShellProps> = ({
             {icon && (
               <div
                 style={{
-                  width: '32px',
-                  height: '32px',
-                  borderRadius: '50%',
-                  background: 'var(--erp-accent-subtle, #eff6ff)',
-                  color: 'var(--erp-accent, #2563eb)',
+                  width: '28px',
+                  height: '28px',
+                  borderRadius: '8px',
+                  background: 'var(--erp-accent-subtle, #fdf8ee)',
+                  color: 'var(--erp-accent, #946f23)',
+                  border: '1px solid rgba(148, 111, 35, 0.18)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   flexShrink: 0,
+                  boxSizing: 'border-box',
                 }}
               >
                 {icon}
               </div>
             )}
             <div style={{ minWidth: 0, flex: 1 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'nowrap', minWidth: 0 }}>
                 <h3
                   style={{
                     margin: 0,
@@ -167,6 +171,9 @@ export const ZFModalShell: React.FC<ZFModalShellProps> = ({
                     color: '#0f172a',
                     letterSpacing: '-0.01em',
                     lineHeight: 1.3,
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
                   }}
                 >
                   {title}
@@ -176,10 +183,13 @@ export const ZFModalShell: React.FC<ZFModalShellProps> = ({
               {subtitle && (
                 <div
                   style={{
-                    fontSize: '0.74rem',
+                    fontSize: '0.72rem',
                     color: '#64748b',
-                    marginTop: '2px',
+                    marginTop: '1px',
                     lineHeight: 1.35,
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
                   }}
                 >
                   {subtitle}
@@ -193,29 +203,29 @@ export const ZFModalShell: React.FC<ZFModalShellProps> = ({
             onClick={onClose}
             aria-label={isAr ? 'إغلاق' : 'Close'}
             style={{
-              width: '32px',
-              height: '32px',
+              width: '28px',
+              height: '28px',
               borderRadius: '7px',
-              border: '1px solid var(--erp-border, #cbd5e1)',
-              background: '#ffffff',
-              color: '#334155',
+              border: '1px solid transparent',
+              background: 'transparent',
+              color: '#64748b',
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               flexShrink: 0,
-              boxShadow: '0 1px 2px rgba(0, 0, 0, 0.04)',
+              boxSizing: 'border-box',
               transition: 'all 0.15s ease',
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.background = '#f8fafc';
-              e.currentTarget.style.borderColor = '#94a3b8';
+              e.currentTarget.style.background = '#f1f5f9';
+              e.currentTarget.style.borderColor = '#e2e8f0';
               e.currentTarget.style.color = '#0f172a';
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.background = '#ffffff';
-              e.currentTarget.style.borderColor = 'var(--erp-border, #cbd5e1)';
-              e.currentTarget.style.color = '#334155';
+              e.currentTarget.style.background = 'transparent';
+              e.currentTarget.style.borderColor = 'transparent';
+              e.currentTarget.style.color = '#64748b';
             }}
           >
             <X size={16} />
@@ -228,7 +238,7 @@ export const ZFModalShell: React.FC<ZFModalShellProps> = ({
             flex: 1,
             minHeight: 0,
             overflowY: 'auto',
-            padding: '1.25rem 1.35rem',
+            padding: '20px 24px',
             boxSizing: 'border-box',
             ...bodyStyle,
           }}
@@ -240,13 +250,14 @@ export const ZFModalShell: React.FC<ZFModalShellProps> = ({
         {footer && (
           <div
             style={{
-              padding: '0.85rem 1.25rem',
+              padding: '12px 20px',
+              minHeight: '60px',
               borderTop: '1px solid var(--erp-border, #cbd5e1)',
               background: '#ffffff',
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'flex-end',
-              gap: '0.65rem',
+              justifyContent: 'flex-start',
+              gap: '8px',
               flexShrink: 0,
               boxSizing: 'border-box',
               ...footerStyle,
