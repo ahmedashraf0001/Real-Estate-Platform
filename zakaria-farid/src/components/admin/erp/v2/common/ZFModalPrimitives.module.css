@@ -624,7 +624,7 @@ textarea.input {
 .metaValueSuccess { color: #15803d; }
 
 .choiceGrid3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-@media (max-width: 760px) { .choiceGrid3 { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 760px) { .choiceGrid3 { grid-template-columns: minmax(0, 1fr); } .choiceGrid3 .choiceStacked { flex-direction: row; align-items: center; } }
 .choiceStacked { flex-direction: column; align-items: flex-start; gap: 6px; }
 
 /* Number + range slider on one line */
