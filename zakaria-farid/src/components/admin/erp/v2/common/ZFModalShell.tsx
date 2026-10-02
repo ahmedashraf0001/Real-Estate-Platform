@@ -258,6 +258,7 @@ export const ZFModalShell: React.FC<ZFModalShellProps> = ({
               alignItems: 'center',
               justifyContent: 'flex-start',
               gap: '8px',
+              flexWrap: 'wrap',
               flexShrink: 0,
               boxSizing: 'border-box',
               ...footerStyle,

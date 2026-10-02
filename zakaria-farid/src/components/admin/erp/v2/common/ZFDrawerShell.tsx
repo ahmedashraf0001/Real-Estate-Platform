@@ -275,6 +275,7 @@ export const ZFDrawerShell: React.FC<ZFDrawerShellProps> = ({
               alignItems: 'center',
               justifyContent: 'flex-start',
               gap: '8px',
+              flexWrap: 'wrap',
               flexShrink: 0,
               boxSizing: 'border-box',
               ...footerStyle,

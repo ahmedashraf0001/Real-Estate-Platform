@@ -514,3 +514,15 @@ textarea.input {
 .inputReadonly { color: #475569; cursor: default; }
 .footerEnd { margin-inline-start: auto; }
 .lockedState { display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 12px; border: 1px solid #e2e8f0; border-radius: 8px; color: #64748b; font-size: 0.78rem; font-weight: 600; }
+
+/* Overflow guards: grid/flex children must be allowed to shrink below their content width */
+.listPane, .detailPane, .listHeader, .segmentScroll { min-width: 0; }
+@media (max-width: 860px) { .split { grid-template-columns: minmax(0, 1fr); } }
+.listItemMeta > * { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.listItemMeta > :last-child { flex-shrink: 0; }
+@media (max-width: 640px) {
+  .figureGrid { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+  .figure { padding-inline: 0; }
+  .figure + .figure { border-inline-start: none; }
+  .sectionHeader { flex-wrap: wrap; }
+}
