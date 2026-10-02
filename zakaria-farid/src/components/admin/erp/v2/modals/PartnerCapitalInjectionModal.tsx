@@ -23,7 +23,8 @@ import {
   AlertTriangle,
   Sparkles,
   Check,
-  Target
+  Target,
+  Loader2
 } from 'lucide-react';
 import { D } from '@/lib/erp/math';
 import { 
@@ -36,6 +37,8 @@ import { ERPPartnerTransaction, ERPAccountingPeriod, ERPPartnerCommitment } from
 import { resolvePeriodForDate } from '@/lib/erp/ledger';
 import { ZFCustomSelect, ZFCustomSelectItem } from '../common/ZFCustomSelect';
 import { ZFModalShell } from '../common/ZFModalShell';
+import p from '../common/ZFModalPrimitives.module.css';
+import { localizeBuyerName } from '@/components/erp/JournalEntryPreview';
 import { PRIMARY_DEVELOPER_NAME } from '@/lib/erp/partnersDirectory';
 import { tafqeetEGP } from '@/lib/erp/tafqeet';
 import { ZFPrintDocumentLayout } from '../common/ZFPrintDocumentLayout';
@@ -143,15 +146,15 @@ export const PartnerCapitalInjectionModal: React.FC<PartnerCapitalInjectionModal
         value: p.partnerName,
         labelAr: isOwner ? `${p.partnerName} (المالك والمطور الرئيسي)` : p.partnerName,
         labelEn: isOwner ? `${p.partnerName} (Owner & Primary Developer)` : p.partnerName,
-        sublabelAr: isOwner ? `مالك المنظومة • مساهمات سابقة: ${D(p.totalContributedCapital).toNumber().toLocaleString()} ج.م` : `${p.roleTitleAr} • مساهمات سابقة: ${D(p.totalContributedCapital).toNumber().toLocaleString()} ج.م`,
-        sublabelEn: isOwner ? `System Owner • Capital: ${D(p.totalContributedCapital).toNumber().toLocaleString()} EGP` : `${p.roleTitleAr} • Capital: ${D(p.totalContributedCapital).toNumber().toLocaleString()} EGP`,
+        sublabelAr: isOwner ? `مالك المنظومة • مساهمات سابقة: ${D(p.totalContributedCapital || 0).formatEGP(true)}` : `${p.roleTitleAr} • مساهمات سابقة: ${D(p.totalContributedCapital || 0).formatEGP(true)}`,
+        sublabelEn: isOwner ? `System Owner • Capital: ${D(p.totalContributedCapital || 0).formatEGP(false)}` : `${p.roleTitleAr} • Capital: ${D(p.totalContributedCapital || 0).formatEGP(false)}`,
         price: balanceNum,
         badge: isOwner ? (isAr ? 'المالك' : 'Owner') : p.roleTitleAr,
-        badgeBg: isOwner ? '#eff6ff' : 'rgba(37, 99, 235, 0.08)',
-        badgeTextColor: '#2563eb',
+        badgeBg: '#ffffff',
+        badgeTextColor: '#475569',
         icon: isOwner ? Crown : Users,
-        iconBg: isOwner ? '#eff6ff' : 'rgba(37, 99, 235, 0.1)',
-        iconColor: '#2563eb'
+        iconBg: '#f1f5f9',
+        iconColor: '#64748b'
       };
     });
   }, [partners, isAr]);
@@ -165,24 +168,24 @@ export const PartnerCapitalInjectionModal: React.FC<PartnerCapitalInjectionModal
         sublabelAr: isAr ? 'غير مخصص لعمارة محددة (تمويل عام)' : 'Unallocated to a specific property',
         sublabelEn: 'Unallocated to a specific property',
         badge: isAr ? 'محفظة عامة' : 'General',
-        badgeBg: 'rgba(100, 116, 139, 0.08)',
-        badgeTextColor: '#64748b',
+        badgeBg: '#ffffff',
+        badgeTextColor: '#475569',
         icon: Building2,
-        iconBg: 'rgba(100, 116, 139, 0.08)',
+        iconBg: '#f1f5f9',
         iconColor: '#64748b'
       },
       ...buildingProperties.map(p => ({
         value: p.id,
         labelAr: p.title_ar || p.title_en || '',
         labelEn: p.title_en || p.title_ar || '',
-        sublabelAr: `${p.location || 'الشرقية'} • ${p.area_sqm || 0} م²${p.target_budget_egp ? ` • ميزانية: ${D(p.target_budget_egp).formatEGP(true)}` : ''}`,
-        sublabelEn: `${p.location || 'Sharkia'} • ${p.area_sqm || 0} sqm`,
+        sublabelAr: `${p.location || 'الموقع غير مُدخل'} • ${p.area_sqm || 0} م²${p.target_budget_egp ? ` • ميزانية: ${D(p.target_budget_egp).formatEGP(true)}` : ''}`,
+        sublabelEn: `${p.location || 'Location not entered'} • ${p.area_sqm || 0} sqm`,
         badge: p.completion_status === 'ready' ? (isAr ? 'جاهز' : 'Ready') : (isAr ? 'قيد التطوير' : 'In Progress'),
-        badgeBg: p.completion_status === 'ready' ? 'rgba(21, 128, 61, 0.08)' : '#eff6ff',
-        badgeTextColor: p.completion_status === 'ready' ? '#15803d' : '#2563eb',
+        badgeBg: p.completion_status === 'ready' ? '#f0fdf4' : '#fffbeb',
+        badgeTextColor: p.completion_status === 'ready' ? '#15803d' : '#b45309',
         icon: Building2,
-        iconBg: '#eff6ff',
-        iconColor: '#2563eb'
+        iconBg: '#f1f5f9',
+        iconColor: '#64748b'
       }))
     ];
   }, [buildingProperties, isAr]);
@@ -234,15 +237,15 @@ export const PartnerCapitalInjectionModal: React.FC<PartnerCapitalInjectionModal
     const items: ZFCustomSelectItem<string>[] = [
       {
         value: '',
-        labelAr: isAr ? '-- إيداع عام / غير مرتبط بطلب مرحلي معين --' : '-- General Capital Injection (Unlinked) --',
-        labelEn: '-- General Capital Injection (Unlinked) --',
+        labelAr: isAr ? 'إيداع عام غير مرتبط بطلب مرحلي' : 'General capital injection (unlinked)',
+        labelEn: 'General capital injection (unlinked)',
         sublabelAr: isAr ? 'يُقيد كرأس مال عام للشريك بالمشروع/الشركة' : 'Credited directly to partner equity balance',
         sublabelEn: 'Credited directly to partner equity balance',
         badge: isAr ? 'إيداع عام' : 'General',
-        badgeBg: 'rgba(100, 116, 139, 0.08)',
-        badgeTextColor: '#64748b',
+        badgeBg: '#ffffff',
+        badgeTextColor: '#475569',
         icon: Coins,
-        iconBg: 'rgba(100, 116, 139, 0.08)',
+        iconBg: '#f1f5f9',
         iconColor: '#64748b'
       }
     ];
@@ -257,11 +260,11 @@ export const PartnerCapitalInjectionModal: React.FC<PartnerCapitalInjectionModal
         sublabelAr: `${c.partner_name} • استحقاق: ${c.due_date || 'غير محدد'} • الإجمالي: ${D(c.committed_amount).formatEGP(true)}`,
         sublabelEn: `${c.partner_name} • Due: ${c.due_date || 'N/A'} • Total: ${D(c.committed_amount).formatEGP(true)}`,
         badge: isOverdue ? (isAr ? 'متأخر' : 'Overdue') : (isAr ? 'مستحق' : 'Due'),
-        badgeBg: isOverdue ? '#fee2e2' : '#eff6ff',
-        badgeTextColor: isOverdue ? '#b91c1c' : '#2563eb',
+        badgeBg: isOverdue ? '#fef2f2' : '#ffffff',
+        badgeTextColor: isOverdue ? '#b91c1c' : '#475569',
         icon: isOverdue ? AlertTriangle : CheckCircle2,
-        iconBg: isOverdue ? '#fee2e2' : '#eff6ff',
-        iconColor: isOverdue ? '#dc2626' : '#2563eb'
+        iconBg: '#f1f5f9',
+        iconColor: isOverdue ? '#b91c1c' : '#64748b'
       });
     }
 
@@ -622,631 +625,336 @@ export const PartnerCapitalInjectionModal: React.FC<PartnerCapitalInjectionModal
         isOpen={isOpen}
         onClose={onClose}
         title={isAr ? 'إثبات ضخ مساهمة رأس مال' : 'Capital Contribution Injection'}
-        subtitle={isAr 
-          ? 'إثبات قيد إيداع بالخزينة أو البنك وتحديث حصة الشريك وصافي مستحقاته بالمليم' 
-          : 'Balanced immutable double-entry injection into company cash or bank'}
-        icon={<Coins size={18} />}
-        headerExtra={
-          <span style={{
-            fontSize: '0.68rem',
-            fontWeight: 800,
-            padding: '0.15rem 0.5rem',
-            borderRadius: '999px',
-            background: '#eff6ff',
-            color: '#2563eb',
-            border: '1px solid #bfdbfe'
-          }}>
-            {isAr ? 'حـ/ 301000 رأس مال' : 'GL 301000 Equity'}
-          </span>
-        }
+        subtitle={isAr
+          ? 'قيد إيداع بالخزينة أو البنك وتحديث حصة الشريك · حـ 301000 رأس مال'
+          : 'Balanced deposit into cash or bank · GL 301000 Equity'}
+        icon={<Coins size={16} />}
         isAr={isAr}
         maxWidth="680px"
         maxHeight="92vh"
-        bodyStyle={{ padding: 0 }}
+        footer={
+          <>
+            <button
+              type="submit"
+              form="capital-injection-form"
+              className={p.primaryButton}
+              disabled={!isValid || isMutating || isTargetPeriodLocked}
+            >
+              {isMutating ? (
+                <><Loader2 size={14} className={p.spin} /><span>{isAr ? 'جاري ترحيل القيد...' : 'Posting...'}</span></>
+              ) : isTargetPeriodLocked ? (
+                <><AlertTriangle size={14} /><span>{isAr ? `الفترة المحاسبية مقفلة (M${targetPeriod?.period_number ?? ''})` : `Period Locked (M${targetPeriod?.period_number ?? ''})`}</span></>
+              ) : (
+                <><CheckCircle2 size={14} /><span>{isAr ? 'اعتماد المساهمة وإصدار سند التوريد' : 'Commit & Generate Voucher'}</span></>
+              )}
+            </button>
+            <button type="button" className={p.secondaryButton} onClick={onClose} disabled={isMutating}>
+              {isAr ? 'إلغاء' : 'Cancel'}
+            </button>
+          </>
+        }
       >
-
-          {/* FORM */}
-          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', overflowY: 'auto', padding: '1.25rem 1.5rem', gap: '1.15rem' }}>
-            
-            {/* 1. PARTNER IDENTIFICATION */}
+        <form id="capital-injection-form" onSubmit={handleSubmit}>
+          {/* Partner */}
+          <section className={p.section}>
+            <div className={p.sectionHeader}>
+              <h4 className={p.sectionTitle}>{isAr ? 'الشريك المساهم' : 'Contributing Partner'}</h4>
+              {!isLockedToPartner && onOpenNewPartnerModal && (
+                <button
+                  type="button"
+                  className={p.linkButton}
+                  onClick={() => {
+                    onClose();
+                    onOpenNewPartnerModal();
+                  }}
+                >
+                  <PlusCircle size={12} />
+                  <span>{isAr ? 'تسجيل شريك جديد' : 'Onboard New Partner'}</span>
+                </button>
+              )}
+            </div>
             {isLockedToPartner ? (
-              <div style={{
-                background: isOwner 
-                  ? '#eff6ff' 
-                  : '#f8fafc',
-                border: isOwner ? '1.5px solid #bfdbfe' : '1.5px solid #e2e8f0',
-                borderRadius: '12px',
-                padding: '0.85rem 1.15rem',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04)'
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                  <div style={{
-                    width: '40px',
-                    height: '40px',
-                    borderRadius: '10px',
-                    background: isOwner 
-                      ? '#dbeafe' 
-                      : '#f1f5f9',
-                    color: isOwner ? '#2563eb' : '#475569',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontWeight: 900,
-                    fontSize: '1.1rem',
-                    border: isOwner ? '1px solid #bfdbfe' : '1px solid #cbd5e1'
-                  }}>
-                    {isOwner ? (
-                      <Crown size={20} color="#2563eb" />
-                    ) : (
-                      (effectivePartnerName || '').charAt(0)
-                    )}
-                  </div>
-                  <div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                      <span style={{ fontSize: '0.95rem', fontWeight: 800, color: '#0f172a' }}>
-                        {effectivePartnerName}
-                      </span>
-                      {isOwner ? (
-                        <span style={{
-                          fontSize: '0.68rem',
-                          fontWeight: 800,
-                          padding: '0.15rem 0.5rem',
-                          borderRadius: '4px',
-                          background: '#eff6ff',
-                          color: '#2563eb',
-                          border: '1px solid #bfdbfe',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '0.25rem'
-                        }}>
-                          <Crown size={11} color="#2563eb" />
-                          {isAr ? 'المالك' : 'Owner'}
-                        </span>
-                      ) : (
-                        matchedExistingPartner && (
-                          <span style={{
-                            fontSize: '0.68rem',
-                            fontWeight: 700,
-                            padding: '0.1rem 0.45rem',
-                            borderRadius: '4px',
-                            background: '#f1f5f9',
-                            color: '#475569'
-                          }}>
-                            {matchedExistingPartner.roleTitleAr || (isAr ? 'شريك مساهم' : 'Partner')}
-                          </span>
-                        )
-                      )}
-                    </div>
-                    <div style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '0.15rem' }}>
-                      {isAr 
-                        ? '✓ المساهمة المالية مقفولة ومخصصة لهذا الشريك مباشرة' 
-                        : '✓ Capital injection locked to this partner'}
-                    </div>
+              <div className={p.sectionHeader}>
+                <div className={p.identity}>
+                  <span className={p.thumbFallback}>{isOwner ? <Crown size={18} /> : <Users size={18} />}</span>
+                  <div className={p.identityText}>
+                    <h4 className={p.identityTitle}>
+                      <bdi>{effectivePartnerName ? (isAr ? localizeBuyerName(effectivePartnerName) : effectivePartnerName) : (isAr ? 'غير مُدخل' : 'Not entered')}</bdi>
+                    </h4>
+                    <p className={p.hint}>{isAr ? 'المساهمة مخصصة لهذا الشريك مباشرة' : 'Capital injection locked to this partner'}</p>
                   </div>
                 </div>
-
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: '#047857', fontSize: '0.75rem', fontWeight: 800 }}>
-                  <ShieldCheck size={16} color="#047857" />
-                  <span>{isAr ? 'شريك معتمد' : 'Verified'}</span>
-                </div>
+                <span className={isOwner ? `${p.pill} ${p.pillAccent}` : p.pill}>
+                  {isOwner ? (isAr ? 'المالك' : 'Owner') : (matchedExistingPartner?.roleTitleAr || (isAr ? 'شريك مساهم' : 'Partner'))}
+                </span>
               </div>
             ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#334155' }}>
-                    {isAr ? 'اختار الشريك / الممول المساهم *' : 'Select Contributing Partner *'}
-                  </label>
-                  {onOpenNewPartnerModal && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        onClose();
-                        onOpenNewPartnerModal();
-                      }}
-                      style={{
-                        background: 'none',
-                        border: 'none',
-                        color: '#2563eb',
-                        fontSize: '0.74rem',
-                        fontWeight: 800,
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.3rem',
-                        padding: '0.2rem 0.4rem',
-                        borderRadius: '6px'
-                      }}
-                    >
-                      <PlusCircle size={14} />
-                      <span>{isAr ? '+ تسجيل وتوثيق شريك جديد' : '+ Onboard New Partner'}</span>
-                    </button>
-                  )}
-                </div>
-
+              <div className={p.field}>
+                <label className={p.label}>{isAr ? 'اختر الشريك / الممول المساهم *' : 'Select Contributing Partner *'}</label>
                 <ZFCustomSelect<string>
                   value={selectedPartnerName}
                   onChange={(val) => setSelectedPartnerName(val)}
                   items={partnerSelectItems}
-                  placeholderAr="-- اضغط لاختيار الشريك المسجل --"
-                  placeholderEn="-- Select Registered Partner --"
+                  placeholderAr="اختر الشريك المسجل"
+                  placeholderEn="Select registered partner"
                   isAr={isAr}
                   searchable={true}
                   customAction={onOpenNewPartnerModal ? {
-                    labelAr: '+ تسجيل وتوثيق شريك جديد',
-                    labelEn: '+ Onboard New Partner',
+                    labelAr: 'تسجيل شريك جديد',
+                    labelEn: 'Onboard New Partner',
                     icon: PlusCircle,
                     onClick: onOpenNewPartnerModal
                   } : undefined}
                 />
-
                 {matchedExistingPartner && (
-                  <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.5rem',
-                    fontSize: '0.72rem',
-                    color: '#64748b',
-                    background: '#f8fafc',
-                    padding: '0.4rem 0.65rem',
-                    borderRadius: '6px',
-                    border: '1px solid #e2e8f0'
-                  }}>
-                    <ShieldCheck size={14} color="#047857" />
-                    <span>
-                      {isAr 
-                        ? `شريك معتمد: ${matchedExistingPartner.partnerName} • الدور: ${matchedExistingPartner.roleTitleAr}`
-                        : `Verified Partner: ${matchedExistingPartner.partnerName} (${matchedExistingPartner.roleTitleAr})`}
-                    </span>
-                  </div>
+                  <p className={p.hint}>
+                    {isAr ? 'الدور: ' : 'Role: '}{matchedExistingPartner.roleTitleAr || (isAr ? 'غير مُدخل' : 'Not entered')}
+                  </p>
                 )}
               </div>
             )}
+          </section>
 
-            {/* 1.5 MILESTONE CALL LINKAGE (OPTIONAL) */}
-            {candidateCommitments.length > 0 && (
-              <div style={{
-                background: selectedCommitment ? 'rgba(37, 99, 235, 0.03)' : '#f8fafc',
-                border: selectedCommitment ? '1.5px solid #bfdbfe' : '1px solid #e2e8f0',
-                borderRadius: '10px',
-                padding: '0.85rem 1rem',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '0.55rem'
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.76rem', fontWeight: 800, color: '#1e293b' }}>
-                    <Target size={15} color="#2563eb" />
-                    <span>{isAr ? 'ربط السداد بطلب مساهمة إنشائي مرحلي (اختياري):' : 'Link to Milestone Call (Optional):'}</span>
-                  </label>
-                  {selectedCommitment && (
-                    <span style={{
-                      fontSize: '0.68rem',
-                      fontWeight: 800,
-                      padding: '0.15rem 0.5rem',
-                      borderRadius: '4px',
-                      background: '#eff6ff',
-                      color: '#2563eb',
-                      border: '1px solid #bfdbfe'
-                    }}>
-                      {isAr ? '✓ تم الربط وتحديد القيمة' : '✓ Linked'}
-                    </span>
-                  )}
+          {/* Milestone link */}
+          {candidateCommitments.length > 0 && (
+            <section className={p.section}>
+              <div className={p.sectionHeader}>
+                <h4 className={p.sectionTitle}>{isAr ? 'ربط بطلب مساهمة مرحلي (اختياري)' : 'Link to Milestone Call (Optional)'}</h4>
+                {selectedCommitment && <span className={`${p.pill} ${p.pillSuccess}`}>{isAr ? 'مرتبط' : 'Linked'}</span>}
+              </div>
+              <ZFCustomSelect<string>
+                value={selectedCommitmentId}
+                onChange={handleCommitmentChange}
+                items={commitmentSelectItems}
+                placeholderAr="إيداع عام غير مرتبط بطلب مرحلي"
+                placeholderEn="General injection (unlinked)"
+                isAr={isAr}
+                searchable={true}
+              />
+              {selectedCommitment && (
+                <dl className={p.metaList}>
+                  <div className={p.metaRow}>
+                    <dt className={p.metaKey}>{isAr ? 'المطلوب بالمرحلة' : 'Committed'}</dt>
+                    <dd className={p.metaValue}><bdi>{D(selectedCommitment.committed_amount || 0).formatEGP(isAr)}</bdi></dd>
+                  </div>
+                  <div className={p.metaRow}>
+                    <dt className={p.metaKey}>{isAr ? 'المسدد سابقاً' : 'Paid'}</dt>
+                    <dd className={p.metaValue}><bdi>{D(selectedCommitment.paid_amount || 0).formatEGP(isAr)}</bdi></dd>
+                  </div>
+                  <div className={p.metaRow}>
+                    <dt className={p.metaKey}>{isAr ? 'المتبقي مطلوب سداده' : 'Remaining Due'}</dt>
+                    <dd className={`${p.metaValue} ${p.textDanger}`}><bdi>{D(selectedCommitment.committed_amount || 0).minus(selectedCommitment.paid_amount || 0).formatEGP(isAr)}</bdi></dd>
+                  </div>
+                </dl>
+              )}
+            </section>
+          )}
+
+          {/* Amount & building */}
+          <section className={p.section}>
+            <h4 className={p.sectionTitle}>{isAr ? 'المبلغ والمشروع' : 'Amount & Building'}</h4>
+            <div className={p.fieldGrid}>
+              <div className={p.field}>
+                <label className={p.label} htmlFor="ci-amount">{isAr ? 'مبلغ المساهمة المودع *' : 'Injected Capital Amount *'}</label>
+                <div className={p.affixWrap}>
+                  <input
+                    id="ci-amount"
+                    type="number"
+                    min="1"
+                    step="5000"
+                    placeholder="0.00"
+                    value={amount}
+                    onChange={(e) => setAmount(e.target.value)}
+                    required
+                    className={`${p.input} ${p.inputLarge} ${p.numeric}`}
+                  />
+                  <span className={p.affix}>{isAr ? 'ج.م' : 'EGP'}</span>
                 </div>
-
-                <ZFCustomSelect<string>
-                  value={selectedCommitmentId}
-                  onChange={handleCommitmentChange}
-                  items={commitmentSelectItems}
-                  placeholderAr="-- إيداع عام / غير مرتبط بطلب مرحلي معين --"
-                  placeholderEn="-- General Injection (Unlinked) --"
-                  isAr={isAr}
-                  searchable={true}
-                />
-
-                {selectedCommitment && (
-                  <div style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(3, 1fr)',
-                    gap: '0.5rem',
-                    background: '#ffffff',
-                    border: '1px solid #e2e8f0',
-                    borderRadius: '8px',
-                    padding: '0.55rem 0.75rem',
-                    fontSize: '0.72rem'
-                  }}>
-                    <div>
-                      <span style={{ color: '#64748b', display: 'block', fontSize: '0.66rem' }}>
-                        {isAr ? 'المطلوب بالمرحلة:' : 'Committed:'}
-                      </span>
-                      <strong style={{ color: '#0f172a', fontWeight: 800, fontSize: '0.82rem' }}>
-                        {D(selectedCommitment.committed_amount).formatEGP(true)}
-                      </strong>
-                    </div>
-                    <div>
-                      <span style={{ color: '#64748b', display: 'block', fontSize: '0.66rem' }}>
-                        {isAr ? 'المسدد سابقاً:' : 'Paid:'}
-                      </span>
-                      <strong style={{ color: '#059669', fontWeight: 800, fontSize: '0.82rem' }}>
-                        {D(selectedCommitment.paid_amount || 0).formatEGP(true)}
-                      </strong>
-                    </div>
-                    <div>
-                      <span style={{ color: '#64748b', display: 'block', fontSize: '0.66rem' }}>
-                        {isAr ? 'المتبقي مطلوب سداده:' : 'Remaining Due:'}
-                      </span>
-                      <strong style={{ color: '#dc2626', fontWeight: 800, fontSize: '0.82rem' }}>
-                        {D(selectedCommitment.committed_amount || 0).minus(selectedCommitment.paid_amount || 0).formatEGP(true)}
-                      </strong>
-                    </div>
-                  </div>
-                )}
+                {numAmount > 0 && <p className={p.hint}>{tafqeetEGP(amount)}</p>}
               </div>
-            )}
-
-            {/* 2. AMOUNT & PROJECT ALLOCATION */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 200px), 1fr))', gap: '0.85rem' }}>
-              <div>
-                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#334155', marginBottom: '0.35rem' }}>
-                  {isAr ? 'مبلغ المساهمة المودع (ج.م) *' : 'Injected Capital Amount (EGP) *'}
-                </label>
-                <input
-                  type="number"
-                  min="1"
-                  step="5000"
-                  placeholder="0.00"
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
-                  style={{
-                    width: '100%',
-                    background: '#ffffff',
-                    border: '1.5px solid #2563eb',
-                    borderRadius: '8px',
-                    padding: '0.55rem 0.75rem',
-                    fontSize: '0.95rem',
-                    fontWeight: 900,
-                    color: '#0f172a'
-                  }}
-                  required
-                />
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#334155', marginBottom: '0.35rem' }}>
-                  {isAr ? 'المشروع المستهدف (عمارات الشراكة حصراً):' : 'Target Building:'}
-                </label>
+              <div className={p.field}>
+                <label className={p.label}>{isAr ? 'العمارة المستهدفة (عمارات الشراكة)' : 'Target Building'}</label>
                 <ZFCustomSelect<string>
                   value={selectedPropertyId}
                   onChange={(val) => setSelectedPropertyId(val)}
                   items={propertySelectItems}
-                  placeholderAr="-- رأس مال عام لمحفظة الشركة --"
-                  placeholderEn="-- General Portfolio Capital --"
+                  placeholderAr="رأس مال عام لمحفظة الشركة"
+                  placeholderEn="General portfolio capital"
                   isAr={isAr}
                   searchable={true}
                 />
               </div>
             </div>
+          </section>
 
-            {/* DYNAMIC CAPITAL MATCHING STATUS CARD */}
-            {selectedBuilding && partnerCapitalStatus && (
-              <div style={{
-                background: partnerCapitalStatus.hasArrears ? 'rgba(239, 68, 68, 0.04)' : 'rgba(16, 185, 129, 0.04)',
-                border: partnerCapitalStatus.hasArrears ? '1.5px solid rgba(239, 68, 68, 0.25)' : '1.5px solid rgba(16, 185, 129, 0.25)',
-                borderRadius: '12px',
-                padding: '0.95rem 1.15rem',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '0.65rem'
-              }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                    <Building2 size={16} color="#2563eb" />
-                    <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#0f172a' }}>
-                      {isAr ? `الموقف المالي لرأس مال: ${selectedBuilding.title_ar || selectedBuilding.title_en}` : 'Building Capital Position'}
-                    </span>
-                  </div>
-
-                  <span style={{
-                    fontSize: '0.7rem',
-                    fontWeight: 800,
-                    padding: '0.15rem 0.55rem',
-                    borderRadius: '4px',
-                    background: partnerCapitalStatus.hasArrears ? '#fee2e2' : '#dcfce7',
-                    color: partnerCapitalStatus.hasArrears ? '#b91c1c' : '#15803d'
-                  }}>
-                    {partnerCapitalStatus.hasArrears 
-                      ? (isAr ? 'مطلوب سداد متأخرات بموجب ضخ المؤسس' : 'Arrears Due')
-                      : (isAr ? 'موقف المساهمة متطابق' : 'Contribution Up to Date')}
-                  </span>
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.65rem', background: '#ffffff', padding: '0.65rem 0.85rem', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                  <div>
-                    <span style={{ fontSize: '0.68rem', color: '#64748b', display: 'block' }}>
-                      {isAr ? 'المساهمة المطلوبة بالحصة:' : 'Required Contribution:'}
-                    </span>
-                    <strong style={{ fontSize: '0.85rem', color: '#0f172a' }}>
-                      {D(partnerCapitalStatus.requiredContributionEgp).formatEGP(true)}
-                    </strong>
-                  </div>
-                  <div>
-                    <span style={{ fontSize: '0.68rem', color: '#64748b', display: 'block' }}>
-                      {isAr ? 'المسدد سابقاً بالمبنى:' : 'Previously Paid:'}
-                    </span>
-                    <strong style={{ fontSize: '0.85rem', color: '#059669' }}>
-                      {D(partnerCapitalStatus.paidContributionEgp).formatEGP(true)}
-                    </strong>
-                  </div>
-                  <div>
-                    <span style={{ fontSize: '0.68rem', color: '#64748b', display: 'block' }}>
-                      {isAr ? 'المتأخرات بموجب ضخ المؤسس:' : 'Dynamic Arrears:'}
-                    </span>
-                    <strong style={{ fontSize: '0.85rem', color: partnerCapitalStatus.hasArrears ? '#dc2626' : '#059669' }}>
-                      {D(partnerCapitalStatus.arrearsEgp).formatEGP(true)}
-                    </strong>
-                  </div>
-                </div>
-
-                {selectedBuilding.target_budget_egp && (
-                  <div style={{ fontSize: '0.72rem', color: '#64748b', display: 'flex', justifyContent: 'space-between' }}>
-                    <span>{isAr ? 'الميزانية التقديرية الاسترشادية للمبنى:' : 'Target Budget:'}</span>
-                    <strong>{D(selectedBuilding.target_budget_egp).formatEGP(true)}</strong>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* 3. PAYMENT DESTINATION */}
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.35rem' }}>
-                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#334155' }}>
-                  {isAr ? 'طريقة الاستلام والتوريد:' : 'Deposit Method:'}
-                </label>
-                <span style={{ fontSize: '0.66rem', fontWeight: 700, color: '#047857', background: 'rgba(4, 120, 87, 0.08)', padding: '0.12rem 0.45rem', borderRadius: '5px' }}>
-                  {isAr ? 'جهة الإيداع الموحدة: الخزينة التشغيلية الرئيسية (101000)' : 'Destination: Main Treasury Safe (101000)'}
+          {/* Building capital position */}
+          {selectedBuilding && partnerCapitalStatus && (
+            <section className={p.section}>
+              <div className={p.sectionHeader}>
+                <h4 className={p.sectionTitle}>
+                  {isAr ? 'موقف رأس المال: ' : 'Capital position: '}<bdi>{isAr ? (selectedBuilding.title_ar || selectedBuilding.title_en) : (selectedBuilding.title_en || selectedBuilding.title_ar)}</bdi>
+                </h4>
+                <span className={partnerCapitalStatus.hasArrears ? `${p.pill} ${p.pillDanger}` : `${p.pill} ${p.pillSuccess}`}>
+                  {partnerCapitalStatus.hasArrears
+                    ? (isAr ? 'متأخرات مستحقة' : 'Arrears Due')
+                    : (isAr ? 'المساهمة متطابقة' : 'Up to Date')}
                 </span>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.65rem' }}>
-                <button
-                  type="button"
-                  onClick={() => setPaymentMethod('CASH_101000')}
-                  style={{
-                    padding: '0.7rem 0.5rem',
-                    borderRadius: '8px',
-                    border: paymentMethod === 'CASH_101000' ? '2px solid #059669' : '1px solid #e2e8f0',
-                    background: paymentMethod === 'CASH_101000' ? 'rgba(5, 150, 105, 0.05)' : '#ffffff',
-                    color: paymentMethod === 'CASH_101000' ? '#059669' : '#64748b',
-                    fontSize: '0.78rem',
-                    fontWeight: 800,
-                    cursor: 'pointer',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    gap: '0.35rem'
-                  }}
-                >
-                  <Wallet size={20} />
-                  <span>{isAr ? 'كاش نقدي باليد' : 'Cash in Hand'}</span>
-                  <small style={{ fontSize: '0.65rem', fontWeight: 500, color: '#64748b' }}>
-                    {isAr ? 'توريد بالخزينة (101000)' : 'Vault Safe (101000)'}
-                  </small>
-                </button>
+              <dl className={p.metaList}>
+                <div className={p.metaRow}>
+                  <dt className={p.metaKey}>{isAr ? 'المساهمة المطلوبة بالحصة' : 'Required Contribution'}</dt>
+                  <dd className={p.metaValue}><bdi>{D(partnerCapitalStatus.requiredContributionEgp || '0').formatEGP(isAr)}</bdi></dd>
+                </div>
+                <div className={p.metaRow}>
+                  <dt className={p.metaKey}>{isAr ? 'المسدد سابقاً بالمبنى' : 'Previously Paid'}</dt>
+                  <dd className={p.metaValue}><bdi>{D(partnerCapitalStatus.paidContributionEgp || '0').formatEGP(isAr)}</bdi></dd>
+                </div>
+                <div className={p.metaRow}>
+                  <dt className={p.metaKey}>{isAr ? 'المتأخرات بموجب ضخ المؤسس' : 'Founder-Matching Arrears'}</dt>
+                  <dd className={partnerCapitalStatus.hasArrears ? `${p.metaValue} ${p.textDanger}` : p.metaValue}>
+                    <bdi>{D(partnerCapitalStatus.arrearsEgp || '0').formatEGP(isAr)}</bdi>
+                  </dd>
+                </div>
+                <div className={p.metaRow}>
+                  <dt className={p.metaKey}>{isAr ? 'الميزانية التقديرية للمبنى' : 'Target Budget'}</dt>
+                  <dd className={selectedBuilding.target_budget_egp ? p.metaValue : `${p.metaValue} ${p.emptyValue}`}>
+                    {selectedBuilding.target_budget_egp
+                      ? <bdi>{D(selectedBuilding.target_budget_egp).formatEGP(isAr)}</bdi>
+                      : (isAr ? 'غير مُدخل' : 'Not entered')}
+                  </dd>
+                </div>
+              </dl>
+            </section>
+          )}
 
-                <button
-                  type="button"
-                  onClick={() => setPaymentMethod('INSTAPAY_102000')}
-                  style={{
-                    padding: '0.7rem 0.5rem',
-                    borderRadius: '8px',
-                    border: paymentMethod === 'INSTAPAY_102000' ? '2px solid #047857' : '1px solid #e2e8f0',
-                    background: paymentMethod === 'INSTAPAY_102000' ? 'rgba(4, 120, 87, 0.05)' : '#ffffff',
-                    color: paymentMethod === 'INSTAPAY_102000' ? '#047857' : '#64748b',
-                    fontSize: '0.78rem',
-                    fontWeight: 800,
-                    cursor: 'pointer',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    gap: '0.35rem'
-                  }}
-                >
-                  <Coins size={20} />
-                  <span>{isAr ? 'تحويل إنستاباي فوري' : 'Instant InstaPay'}</span>
-                  <small style={{ fontSize: '0.65rem', fontWeight: 500, color: '#64748b' }}>
-                    {isAr ? 'تحويل للخزينة (101000)' : 'Transfer to Safe (101000)'}
-                  </small>
-                </button>
-              </div>
+          {/* Deposit method */}
+          <section className={p.section}>
+            <div className={p.sectionHeader}>
+              <h4 className={p.sectionTitle}>{isAr ? 'طريقة الاستلام' : 'Deposit Method'}</h4>
+              <span className={p.pill}>{isAr ? 'جهة الإيداع: الخزينة الرئيسية 101000' : 'Destination: Main Treasury 101000'}</span>
             </div>
+            <div className={p.choiceGrid} role="radiogroup">
+              <button
+                type="button"
+                role="radio"
+                aria-checked={paymentMethod === 'CASH_101000'}
+                onClick={() => setPaymentMethod('CASH_101000')}
+                className={paymentMethod === 'CASH_101000' ? `${p.choice} ${p.choiceSelected}` : p.choice}
+              >
+                <span className={p.choiceIcon}><Wallet size={16} /></span>
+                <span className={p.choiceText}>
+                  <span className={p.choiceTitle}>{isAr ? 'كاش نقدي باليد' : 'Cash in Hand'}</span>
+                  <span className={p.choiceDesc}>{isAr ? 'توريد بالخزينة (101000)' : 'Vault safe (101000)'}</span>
+                </span>
+              </button>
+              <button
+                type="button"
+                role="radio"
+                aria-checked={paymentMethod === 'INSTAPAY_102000'}
+                onClick={() => setPaymentMethod('INSTAPAY_102000')}
+                className={paymentMethod === 'INSTAPAY_102000' ? `${p.choice} ${p.choiceSelected}` : p.choice}
+              >
+                <span className={p.choiceIcon}><Coins size={16} /></span>
+                <span className={p.choiceText}>
+                  <span className={p.choiceTitle}>{isAr ? 'تحويل إنستاباي فوري' : 'Instant InstaPay'}</span>
+                  <span className={p.choiceDesc}>{isAr ? 'تحويل للخزينة (101000)' : 'Transfer to safe (101000)'}</span>
+                </span>
+              </button>
+            </div>
+          </section>
 
-            {/* 4. METADATA: DATE & RECEIPT REF */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.85rem' }}>
-              <div>
-                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#334155', marginBottom: '0.35rem' }}>
-                  {isAr ? 'تاريخ التوريد والقيد:' : 'Date:'}
-                </label>
+          {/* Entry details */}
+          <section className={p.section}>
+            <h4 className={p.sectionTitle}>{isAr ? 'بيانات القيد' : 'Entry Details'}</h4>
+            {isTargetPeriodLocked && targetPeriod && (
+              <div className={`${p.notice} ${p.noticeDanger}`} role="alert">
+                <AlertTriangle size={16} className={p.noticeIconDanger} />
+                <div>
+                  <p className={p.noticeTitle}>{isAr ? 'الفترة المحاسبية لتاريخ التوريد مقفلة' : 'Fiscal period is locked'}</p>
+                  <p className={p.noticeBody}>
+                    {isAr
+                      ? `تاريخ التوريد يقع في الفترة (${targetPeriod.fiscal_year}-M${targetPeriod.period_number}) وهي مقفلة. افتح الفترة أولاً أو غيّر التاريخ.`
+                      : `The date falls in period (${targetPeriod.fiscal_year}-M${targetPeriod.period_number}), which is locked. Reopen it or change the date.`}
+                  </p>
+                </div>
+              </div>
+            )}
+            <div className={p.fieldGrid}>
+              <div className={p.field}>
+                <label className={p.label} htmlFor="ci-date">{isAr ? 'تاريخ التوريد والقيد' : 'Date'}</label>
                 <input
+                  id="ci-date"
                   type="date"
                   value={injectionDate}
                   onChange={(e) => setInjectionDate(e.target.value)}
-                  style={{
-                    width: '100%',
-                    background: '#ffffff',
-                    border: '1px solid #cbd5e1',
-                    borderRadius: '8px',
-                    padding: '0.5rem 0.75rem',
-                    fontSize: '0.82rem',
-                    color: '#0f172a'
-                  }}
+                  className={`${p.input} ${p.numeric}`}
                 />
               </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#334155', marginBottom: '0.35rem' }}>
-                  {isAr ? 'رقم إشعار / كود السند:' : 'Receipt Code:'}
-                </label>
+              <div className={p.field}>
+                <label className={p.label} htmlFor="ci-ref">{isAr ? 'رقم إشعار / كود السند' : 'Receipt Code'}</label>
                 <input
+                  id="ci-ref"
                   type="text"
                   value={receiptRef}
                   onChange={(e) => setReceiptRef(e.target.value)}
-                  style={{
-                    width: '100%',
-                    background: '#ffffff',
-                    border: '1px solid #cbd5e1',
-                    borderRadius: '8px',
-                    padding: '0.5rem 0.75rem',
-                    fontSize: '0.82rem',
-                    fontFamily: 'monospace',
-                    color: '#0f172a'
-                  }}
+                  className={`${p.input} ${p.numeric}`}
+                />
+              </div>
+              <div className={`${p.field} ${p.fieldFull}`}>
+                <label className={p.label} htmlFor="ci-memo">{isAr ? 'بيان القيد المحاسبي' : 'Journal Memo'}</label>
+                <input
+                  id="ci-memo"
+                  type="text"
+                  placeholder={isAr ? 'مساهمة رأس مال جديدة من الشريك' : 'Capital injection memo'}
+                  value={memo}
+                  onChange={(e) => setMemo(e.target.value)}
+                  className={p.input}
                 />
               </div>
             </div>
+          </section>
 
-            {isTargetPeriodLocked && targetPeriod && (
-              <div style={{
-                background: '#fef2f2',
-                border: '1.5px solid #fecaca',
-                borderRadius: '8px',
-                padding: '0.65rem 0.85rem',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.6rem',
-                color: '#991b1b',
-                fontSize: '0.78rem'
-              }}>
-                <AlertTriangle size={17} color="#dc2626" style={{ flexShrink: 0 }} />
-                <div>
-                  <strong style={{ display: 'block', fontSize: '0.8rem' }}>
-                    {isAr ? 'الفترة المحاسبية لتاريخ التوريد مقفلة' : 'Fiscal period is locked'}
-                  </strong>
-                  <span style={{ fontSize: '0.73rem', color: '#b91c1c' }}>
-                    {isAr
-                      ? `تاريخ التوريد يقع في الفترة (${targetPeriod.fiscal_year}-M${targetPeriod.period_number}) وهي مقفلة بموجب المعيار Invariant 0.9. يُرجى فتح الفترة أولاً.`
-                      : `Injection date falls in period (${targetPeriod.fiscal_year}-M${targetPeriod.period_number}) which is locked per Invariant 0.9.`}
-                  </span>
-                </div>
-              </div>
-            )}
-
-            {/* 5. MEMO */}
-            <div>
-              <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#334155', marginBottom: '0.35rem' }}>
-                {isAr ? 'شرح وبيان القيد المحاسبي:' : 'Journal Memo:'}
-              </label>
-              <input
-                type="text"
-                placeholder={isAr ? `مساهمة رأس مال جديدة من الشريك ${effectivePartnerName}` : 'Capital injection memo'}
-                value={memo}
-                onChange={(e) => setMemo(e.target.value)}
-                style={{
-                  width: '100%',
-                  background: '#ffffff',
-                  border: '1px solid #cbd5e1',
-                  borderRadius: '8px',
-                  padding: '0.55rem 0.75rem',
-                  fontSize: '0.82rem',
-                  color: '#0f172a'
-                }}
-              />
+          {/* Journal preview */}
+          <section className={p.section}>
+            <div className={p.sectionHeader}>
+              <h4 className={p.sectionTitle}>{isAr ? 'معاينة قيد اليومية' : 'Journal Entry Preview'}</h4>
+              <span className={`${p.pill} ${p.pillSuccess}`}>{isAr ? 'متوازن' : 'Balanced'}</span>
             </div>
-
-            {/* 6. GL ENTRY PREVIEW */}
-            <div style={{
-              background: '#fafaf9',
-              border: '1px solid #e2e8f0',
-              borderRadius: '10px',
-              padding: '0.75rem 1rem',
-              fontSize: '0.74rem'
-            }}>
-              <div style={{ fontWeight: 800, color: '#334155', marginBottom: '0.35rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                <Scale size={14} color="#2563eb" />
-                <span>{isAr ? 'معاينة القيد المحاسبي المتوازن بالمليم:' : 'Balanced Double-Entry Preview:'}</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', color: '#047857', fontWeight: 700, marginBottom: '0.2rem' }}>
-                <span>
-                  {paymentMethod === 'BANK_102000'
-                    ? (isAr ? 'من حـ/ 102000 (حساب البنك التجاري)' : 'Dr 102000 Commercial Bank')
-                    : paymentMethod === 'INSTAPAY_102000'
-                    ? (isAr ? 'من حـ/ 101000 (الخزينة الرئيسية - تحويل إنستاباي)' : 'Dr 101000 Main Treasury (InstaPay)')
-                    : (isAr ? 'من حـ/ 101000 (الخزينة النقدية الرئيسية - كاش)' : 'Dr 101000 Main Cash Safe (Cash)')}
-                </span>
-                <span>{numAmount > 0 ? `${D(numAmount).formatEGP(true)} (مدين)` : '0.00'}</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', color: '#1d4ed8', fontWeight: 700 }}>
-                <span>
-                  {isAr ? `إلى حـ/ 301000 (رأس مال الشركاء - ${effectivePartnerName || 'الشريك'})` : `Cr 301000 Partner Capital (${effectivePartnerName})`}
-                </span>
-                <span>{numAmount > 0 ? `${D(numAmount).formatEGP(true)} (دائن)` : '0.00'}</span>
-              </div>
+            <div className={p.tableWrap}>
+              <table className={p.table}>
+                <thead>
+                  <tr>
+                    <th>{isAr ? 'الحساب' : 'Account'}</th>
+                    <th className={p.cellEnd}>{isAr ? 'مدين' : 'Debit'}</th>
+                    <th className={p.cellEnd}>{isAr ? 'دائن' : 'Credit'}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td className={p.cellStrong}>
+                      {paymentMethod === 'BANK_102000'
+                        ? <><bdi>102000</bdi> · {isAr ? 'حساب البنك التجاري' : 'Commercial Bank'}</>
+                        : paymentMethod === 'INSTAPAY_102000'
+                        ? <><bdi>101000</bdi> · {isAr ? 'الخزينة الرئيسية (إنستاباي)' : 'Main Treasury (InstaPay)'}</>
+                        : <><bdi>101000</bdi> · {isAr ? 'الخزينة النقدية الرئيسية (كاش)' : 'Main Cash Safe (Cash)'}</>}
+                    </td>
+                    <td className={`${p.cellEnd} ${p.cellStrong}`}><bdi>{D(numAmount).formatEGP(isAr)}</bdi></td>
+                    <td className={`${p.cellEnd} ${p.cellMuted}`}><bdi>{D(0).formatEGP(isAr)}</bdi></td>
+                  </tr>
+                  <tr>
+                    <td className={p.cellStrong}>
+                      <bdi>301000</bdi> · {isAr ? 'رأس مال الشركاء' : 'Partner Capital'}
+                      {effectivePartnerName && <> · <bdi>{isAr ? localizeBuyerName(effectivePartnerName) : effectivePartnerName}</bdi></>}
+                    </td>
+                    <td className={`${p.cellEnd} ${p.cellMuted}`}><bdi>{D(0).formatEGP(isAr)}</bdi></td>
+                    <td className={`${p.cellEnd} ${p.cellStrong}`}><bdi>{D(numAmount).formatEGP(isAr)}</bdi></td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
-
-            {/* FOOTER BUTTONS */}
-            <div style={{
-              display: 'flex',
-              justifyContent: 'flex-end',
-              gap: '0.65rem',
-              marginTop: '0.5rem',
-              borderTop: '1px solid #e2e8f0',
-              paddingTop: '1rem'
-            }}>
-              <button
-                type="button"
-                onClick={onClose}
-                style={{
-                  padding: '0.55rem 1.15rem',
-                  borderRadius: '8px',
-                  border: '1px solid #cbd5e1',
-                  background: '#ffffff',
-                  color: '#64748b',
-                  fontSize: '0.8rem',
-                  fontWeight: 700,
-                  cursor: 'pointer'
-                }}
-              >
-                {isAr ? 'إلغاء' : 'Cancel'}
-              </button>
-
-              <button
-                type="submit"
-                disabled={!isValid || isMutating || isTargetPeriodLocked}
-                style={{
-                  padding: '0.55rem 1.45rem',
-                  borderRadius: '8px',
-                  border: 'none',
-                  background: !isValid || isMutating || isTargetPeriodLocked ? '#94a3b8' : '#2563eb',
-                  color: '#ffffff',
-                  fontSize: '0.82rem',
-                  fontWeight: 800,
-                  cursor: !isValid || isMutating || isTargetPeriodLocked ? 'not-allowed' : 'pointer',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '0.45rem',
-                  boxShadow: !isValid || isMutating || isTargetPeriodLocked ? 'none' : '0 2px 8px rgba(37, 99, 235, 0.25)'
-                }}
-              >
-                {isMutating ? (
-                  <>
-                    <CheckCircle2 size={16} />
-                    <span>{isAr ? 'جاري ترحيل القيد...' : 'Posting...'}</span>
-                  </>
-                ) : isTargetPeriodLocked ? (
-                  <>
-                    <AlertTriangle size={16} />
-                    <span>{isAr ? `الفترة المحاسبية مقفلة (M${targetPeriod?.period_number ?? ''})` : `Period Locked (M${targetPeriod?.period_number ?? ''})`}</span>
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle2 size={16} />
-                    <span>{isAr ? 'اعتماد المساهمة وإصدار سند التوريد' : 'Commit & Generate Voucher'}</span>
-                  </>
-                )}
-              </button>
-            </div>
-          </form>
-        </ZFModalShell>
+          </section>
+        </form>
+      </ZFModalShell>
 
       {/* MODAL PRINT PREVIEW OVERLAY */}
       {showPrintPreview && confirmedVoucher && (

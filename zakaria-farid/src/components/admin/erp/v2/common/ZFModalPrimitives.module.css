@@ -641,3 +641,18 @@ textarea.input {
 .toggleRow { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
 .textSuccess { color: #15803d; font-weight: 700; }
 .textDanger { color: #b91c1c; font-weight: 700; }
+
+/* Underline tabs (in-pane workbench switcher) */
+.tabs { display: flex; gap: 4px; border-bottom: 1px solid #e2e8f0; overflow-x: auto; scrollbar-width: none; }
+.tabs::-webkit-scrollbar { display: none; }
+.tab {
+  display: inline-flex; align-items: center; gap: 6px; height: 38px; padding: 0 12px; margin-bottom: -1px;
+  border: none; border-bottom: 2px solid transparent; background: transparent; color: #64748b;
+  font: inherit; font-size: 0.78rem; font-weight: 600; white-space: nowrap; cursor: pointer;
+}
+.tab:hover { color: #0f172a; }
+.tab:focus-visible { outline: 2px solid var(--erp-accent, #946f23); outline-offset: -2px; }
+.tabActive, .tabActive:hover { color: #0f172a; border-bottom-color: var(--erp-accent, #946f23); }
+.listFooter { padding: 12px 16px; border-top: 1px solid #f1f5f9; }
+.listFooter .secondaryButton { width: 100%; }
+.holdingList { display: flex; flex-wrap: wrap; gap: 6px; }
