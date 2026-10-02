@@ -41,6 +41,9 @@ export function PropertiesPortfolioRouteView() {
       } else {
         erp.handleOpenGenericNewContract();
       }
+    } else if (action === 'audit') {
+      const target = foundProp || erp.data.properties[0];
+      if (target) erp.setAuditModalProperty(target);
     } else if (action === 'calc' && foundProp) {
       erp.handleOpenCalculatorForProperty(foundProp);
     } else if (foundProp && (action === 'audit' || inspectParam)) {
