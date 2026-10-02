@@ -12,7 +12,10 @@ import {
   ArrowLeft,
   Wallet,
   Landmark,
-  AlertCircle
+  AlertCircle,
+  Banknote,
+  KeyRound,
+  CalendarClock
 } from 'lucide-react';
 import { Property } from '@/lib/supabase/types';
 import { 
@@ -86,6 +89,33 @@ interface NewContractWizardModalProps {
   onContractCreated: (contractData: NewContractWizardPayload) => Promise<void>;
 }
 
+const PAYMENT_PLANS = [
+  {
+    id: 'FULL_CASH' as const,
+    labelAr: 'كاش كامل',
+    labelEn: 'Full cash',
+    descAr: 'سداد ١٠٠٪ عند التعاقد بدون أقساط',
+    descEn: '100% on signing, no installments',
+    icon: Banknote,
+  },
+  {
+    id: 'UPFRONT_HANDOVER' as const,
+    labelAr: 'مقدم والباقي عند الاستلام',
+    labelEn: 'Down payment + handover',
+    descAr: 'دفعة حجز الآن والباقي دفعة واحدة عند التسليم',
+    descEn: 'Deposit now, balance in one payment at delivery',
+    icon: KeyRound,
+  },
+  {
+    id: 'INSTALLMENTS' as const,
+    labelAr: 'تقسيط',
+    labelEn: 'Installments',
+    descAr: 'مقدم ثم أقساط دورية مجدولة',
+    descEn: 'Down payment, then scheduled installments',
+    icon: CalendarClock,
+  },
+];
+
 export const NewContractWizardModal: React.FC<NewContractWizardModalProps> = ({
   isOpen,
   onClose,
@@ -120,7 +150,7 @@ export const NewContractWizardModal: React.FC<NewContractWizardModalProps> = ({
 
   // Step 2: Payment Terms
   const [basePriceInput, setBasePriceInput] = useState<string>('');
-  const [paymentPlanType, setPaymentPlanType] = useState<'INSTALLMENTS' | 'FULL_CASH'>('INSTALLMENTS');
+  const [paymentPlanType, setPaymentPlanType] = useState<'FULL_CASH' | 'UPFRONT_HANDOVER' | 'INSTALLMENTS'>('INSTALLMENTS');
   const [downPaymentInputPct, setDownPaymentInputPct] = useState<string>('15');
   const [downPaymentAmountInput, setDownPaymentAmountInput] = useState<string>('');
   const [numInstallments, setNumInstallments] = useState<string>('8');
@@ -265,6 +295,8 @@ export const NewContractWizardModal: React.FC<NewContractWizardModalProps> = ({
     return Math.round(totalNominalValue * pct);
   }, [paymentPlanType, totalNominalValue, downPaymentAmountInput, downPaymentInputPct]);
 
+  const selectedPlan = PAYMENT_PLANS.find(plan => plan.id === paymentPlanType) || PAYMENT_PLANS[2];
+
   // Selected Property Object
   const selectedProperty = useMemo(() => {
     return properties.find(p => p.id === selectedPropertyId);
@@ -302,7 +334,8 @@ export const NewContractWizardModal: React.FC<NewContractWizardModalProps> = ({
   // Generate Tranche Schedule Preview
   const previewSchedule = useMemo(() => {
     if (paymentPlanType === 'FULL_CASH') return [];
-    const count = parseInt(numInstallments) || 0;
+    // Upfront + handover is a single remaining payment due on the handover date.
+    const count = paymentPlanType === 'UPFRONT_HANDOVER' ? 1 : (parseInt(numInstallments) || 0);
     if (count <= 0) return [];
 
     const remainingToFinance = Math.max(0, totalNominalValue - modalDpAmount);
@@ -402,7 +435,7 @@ export const NewContractWizardModal: React.FC<NewContractWizardModalProps> = ({
       totalNominalValue,
       downPaymentAmount: modalDpAmount,
       paymentPlanType,
-      numInstallments: paymentPlanType === 'FULL_CASH' ? 0 : parseInt(numInstallments),
+      numInstallments: paymentPlanType === 'FULL_CASH' ? 0 : paymentPlanType === 'UPFRONT_HANDOVER' ? 1 : parseInt(numInstallments),
       installmentFrequency,
       firstPaymentDate,
       firstInstallmentDueDate,
@@ -783,7 +816,56 @@ export const NewContractWizardModal: React.FC<NewContractWizardModalProps> = ({
             </section>
 
             <section className={p.section}>
-              <h4 className={p.sectionTitle}>{isAr ? 'المقدم والأقساط' : 'Down Payment & Installments'}</h4>
+              <h4 className={p.sectionTitle}>{isAr ? 'طريقة السداد' : 'Payment Plan'}</h4>
+              <div className={`${p.choiceGrid} ${p.choiceGrid3}`} role="radiogroup" aria-label={isAr ? 'طريقة السداد' : 'Payment Plan'}>
+                {PAYMENT_PLANS.map(plan => {
+                  const Icon = plan.icon;
+                  const isSelected = paymentPlanType === plan.id;
+                  return (
+                    <button
+                      key={plan.id}
+                      type="button"
+                      role="radio"
+                      aria-checked={isSelected}
+                      onClick={() => {
+                        setPaymentPlanType(plan.id);
+                        if (contractErrors.downPayment) setContractErrors(prev => ({ ...prev, downPayment: '' }));
+                      }}
+                      className={isSelected ? `${p.choice} ${p.choiceSelected}` : p.choice}
+                    >
+                      <span className={p.choiceIcon}><Icon size={16} /></span>
+                      <span className={p.choiceText}>
+                        <span className={p.choiceTitle}>{isAr ? plan.labelAr : plan.labelEn}</span>
+                        <span className={p.choiceDesc}>{isAr ? plan.descAr : plan.descEn}</span>
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </section>
+
+            {paymentPlanType === 'FULL_CASH' ? (
+              <section className={p.section}>
+                <h4 className={p.sectionTitle}>{isAr ? 'السداد الكامل' : 'Full Payment'}</h4>
+                <div className={p.fieldGrid}>
+                  <div className={p.figure}>
+                    <span className={p.figureLabel}>{isAr ? 'المبلغ المسدد عند التعاقد' : 'Paid on signing'}</span>
+                    <bdi className={p.figureValue}>{D(totalNominalValue).formatEGP(isAr)}</bdi>
+                    <span className={p.figureCaption}>{isAr ? 'بدون أقساط متبقية' : 'No remaining installments'}</span>
+                  </div>
+                  <div className={p.field}>
+                    <label className={p.label} htmlFor="ncw-cash-date">{isAr ? 'تاريخ السداد' : 'Payment Date'}</label>
+                    <input id="ncw-cash-date" type="date" className={`${p.input} ${p.numeric}`} value={firstPaymentDate} onChange={e => setFirstPaymentDate(e.target.value)} />
+                  </div>
+                </div>
+              </section>
+            ) : (
+            <section className={p.section}>
+              <h4 className={p.sectionTitle}>
+                {paymentPlanType === 'UPFRONT_HANDOVER'
+                  ? (isAr ? 'المقدم ودفعة الاستلام' : 'Down Payment & Handover Payment')
+                  : (isAr ? 'المقدم والأقساط' : 'Down Payment & Installments')}
+              </h4>
               <div className={`${p.fieldGrid} ${p.fieldGrid3}`}>
                 <div className={p.field}>
                   <label className={p.label} htmlFor="ncw-dp-pct">{isAr ? 'نسبة المقدم ٪' : 'Down Payment %'}</label>
@@ -816,40 +898,54 @@ export const NewContractWizardModal: React.FC<NewContractWizardModalProps> = ({
                   <p className={p.hint}>{isAr ? 'تُسدد فوراً عند التعاقد.' : 'Paid on signing.'}</p>
                   {contractErrors.downPayment && <span className={p.errorText}>{contractErrors.downPayment}</span>}
                 </div>
-                <div className={p.field}>
-                  <label className={p.label} htmlFor="ncw-count">{isAr ? 'عدد الأقساط' : 'Number of Installments'}</label>
-                  <select id="ncw-count" className={p.input} value={numInstallments} onChange={e => setNumInstallments(e.target.value)}>
-                    <option value="4">4 {isAr ? 'أقساط' : 'tranches'}</option>
-                    <option value="8">8 {isAr ? 'أقساط (سنتان ربع سنوي)' : 'tranches (2 yrs)'}</option>
-                    <option value="12">12 {isAr ? 'قسطاً (٣ سنوات ربع سنوي)' : 'tranches (3 yrs)'}</option>
-                    <option value="16">16 {isAr ? 'قسطاً (٤ سنوات ربع سنوي)' : 'tranches (4 yrs)'}</option>
-                    <option value="20">20 {isAr ? 'قسطاً (٥ سنوات ربع سنوي)' : 'tranches (5 yrs)'}</option>
-                    <option value="24">24 {isAr ? 'قسطاً (سنتان شهرياً)' : 'tranches (2 yrs monthly)'}</option>
-                  </select>
-                </div>
-                <div className={p.field}>
-                  <label className={p.label} htmlFor="ncw-freq">{isAr ? 'تكرار السداد' : 'Payment Frequency'}</label>
-                  <select id="ncw-freq" className={p.input} value={installmentFrequency} onChange={e => setInstallmentFrequency(e.target.value as any)}>
-                    <option value="MONTHLY">{isAr ? 'شهري' : 'Monthly'}</option>
-                    <option value="QUARTERLY">{isAr ? 'ربع سنوي (كل ٣ أشهر)' : 'Quarterly'}</option>
-                    <option value="SEMI_ANNUAL">{isAr ? 'نصف سنوي (كل ٦ أشهر)' : 'Semi-Annual'}</option>
-                  </select>
-                </div>
+                {paymentPlanType === 'INSTALLMENTS' && (
+                  <>
+                    <div className={p.field}>
+                      <label className={p.label} htmlFor="ncw-count">{isAr ? 'عدد الأقساط' : 'Number of Installments'}</label>
+                      <select id="ncw-count" className={p.input} value={numInstallments} onChange={e => setNumInstallments(e.target.value)}>
+                        <option value="4">4 {isAr ? 'أقساط' : 'tranches'}</option>
+                        <option value="6">6 {isAr ? 'أقساط (سنة ونصف ربع سنوي)' : 'tranches (1.5 yrs)'}</option>
+                        <option value="8">8 {isAr ? 'أقساط (سنتان ربع سنوي)' : 'tranches (2 yrs)'}</option>
+                        <option value="12">12 {isAr ? 'قسطاً (٣ سنوات ربع سنوي)' : 'tranches (3 yrs)'}</option>
+                        <option value="16">16 {isAr ? 'قسطاً (٤ سنوات ربع سنوي)' : 'tranches (4 yrs)'}</option>
+                        <option value="20">20 {isAr ? 'قسطاً (٥ سنوات ربع سنوي)' : 'tranches (5 yrs)'}</option>
+                        <option value="24">24 {isAr ? 'قسطاً (سنتان شهرياً)' : 'tranches (2 yrs monthly)'}</option>
+                      </select>
+                    </div>
+                    <div className={p.field}>
+                      <label className={p.label} htmlFor="ncw-freq">{isAr ? 'تكرار السداد' : 'Payment Frequency'}</label>
+                      <select id="ncw-freq" className={p.input} value={installmentFrequency} onChange={e => setInstallmentFrequency(e.target.value as any)}>
+                        <option value="MONTHLY">{isAr ? 'شهري' : 'Monthly'}</option>
+                        <option value="QUARTERLY">{isAr ? 'ربع سنوي (كل ٣ أشهر)' : 'Quarterly'}</option>
+                        <option value="SEMI_ANNUAL">{isAr ? 'نصف سنوي (كل ٦ أشهر)' : 'Semi-Annual'}</option>
+                      </select>
+                    </div>
+                  </>
+                )}
                 <div className={p.field}>
                   <label className={p.label} htmlFor="ncw-dp-date">{isAr ? 'تاريخ سداد المقدم' : 'Down Payment Date'}</label>
                   <input id="ncw-dp-date" type="date" className={`${p.input} ${p.numeric}`} value={firstPaymentDate} onChange={e => setFirstPaymentDate(e.target.value)} />
                 </div>
                 <div className={p.field}>
-                  <label className={p.label} htmlFor="ncw-first-due">{isAr ? 'استحقاق أول قسط' : 'First Tranche Due'}</label>
+                  <label className={p.label} htmlFor="ncw-first-due">
+                    {paymentPlanType === 'UPFRONT_HANDOVER'
+                      ? (isAr ? 'تاريخ الاستلام (استحقاق الباقي)' : 'Handover Date (balance due)')
+                      : (isAr ? 'استحقاق أول قسط' : 'First Tranche Due')}
+                  </label>
                   <input id="ncw-first-due" type="date" className={`${p.input} ${p.numeric}`} value={firstInstallmentDueDate} onChange={e => setFirstInstallmentDueDate(e.target.value)} />
                 </div>
               </div>
             </section>
+            )}
 
             {previewSchedule.length > 0 && (
               <section className={p.section}>
                 <div className={p.sectionHeader}>
-                  <h4 className={p.sectionTitle}>{isAr ? `معاينة الجدول (المقدم + ${previewSchedule.length} أقساط)` : `Schedule preview (Tranche 0 + ${previewSchedule.length})`}</h4>
+                  <h4 className={p.sectionTitle}>
+                    {paymentPlanType === 'UPFRONT_HANDOVER'
+                      ? (isAr ? 'معاينة الجدول (المقدم + دفعة الاستلام)' : 'Schedule preview (Tranche 0 + handover)')
+                      : (isAr ? `معاينة الجدول (المقدم + ${previewSchedule.length} أقساط)` : `Schedule preview (Tranche 0 + ${previewSchedule.length})`)}
+                  </h4>
                   <bdi className={`${p.hint} ${p.numeric}`}>{isAr ? 'القسط ' : 'Per tranche '}{D(previewSchedule[0]?.amount || 0).formatEGP(isAr)}</bdi>
                 </div>
                 <div className={`${p.tableWrap} ${p.tableScroll}`}>
@@ -869,7 +965,7 @@ export const NewContractWizardModal: React.FC<NewContractWizardModalProps> = ({
                           <td><bdi>{t.index}</bdi></td>
                           <td><bdi>{t.dueDate}</bdi></td>
                           <td><bdi>{D(t.amount).formatEGP(isAr)}</bdi></td>
-                          <td>{isAr ? 'قسط مجدول' : 'Scheduled'}</td>
+                          <td>{paymentPlanType === 'UPFRONT_HANDOVER' ? (isAr ? 'دفعة الاستلام' : 'Handover payment') : (isAr ? 'قسط مجدول' : 'Scheduled')}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -964,6 +1060,10 @@ export const NewContractWizardModal: React.FC<NewContractWizardModalProps> = ({
                 <div className={p.metaRow}>
                   <dt className={p.metaKey}>{isAr ? 'القيمة التعاقدية' : 'Gross Value'}</dt>
                   <dd className={p.metaValue}><bdi>{D(totalNominalValue).formatEGP(isAr)}</bdi></dd>
+                </div>
+                <div className={p.metaRow}>
+                  <dt className={p.metaKey}>{isAr ? 'طريقة السداد' : 'Payment Plan'}</dt>
+                  <dd className={p.metaValue}>{isAr ? selectedPlan.labelAr : selectedPlan.labelEn}</dd>
                 </div>
                 <div className={p.metaRow}>
                   <dt className={p.metaKey}>{isAr ? 'دفعة الحجز والمقدم' : 'Down Payment (Tranche 0)'}</dt>
