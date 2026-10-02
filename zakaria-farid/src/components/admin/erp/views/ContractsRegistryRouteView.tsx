@@ -38,6 +38,14 @@ export function ContractsRegistryRouteView() {
       }
     }
 
+    if (action === 'handover') {
+      const target = erp.data.contracts.find(c => c.handover_status !== 'Delivered' && c.status !== 'Rescinded');
+      if (target) {
+        handledKeyRef.current = key;
+        erp.setShowHandoverModal(target);
+      }
+    }
+
     if (action === 'new') {
       handledKeyRef.current = key;
       if (propertyId) {
