@@ -1,28 +1,18 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { 
-  Plus, 
-  X, 
-  Loader2, 
-  Building2, 
-  User, 
-  Calendar, 
-  DollarSign, 
-  FileText, 
-  CheckCircle2, 
-  AlertCircle, 
-  Layers, 
-  ShieldCheck, 
-  Users, 
+import {
+  Plus,
+  Loader2,
+  Building2,
+  CheckCircle2,
+  Users,
   Trash2,
   ArrowRight,
   ArrowLeft,
-  Coins,
-  Percent,
   Wallet,
   Landmark,
-  DoorOpen
+  AlertCircle
 } from 'lucide-react';
 import { Property } from '@/lib/supabase/types';
 import { 
@@ -40,7 +30,6 @@ import {
 } from '@/lib/erp/partnersDirectory';
 import { D } from '@/lib/erp/math';
 import { ZFCustomSelect, ZFCustomSelectSection, ZFCustomSelectItem } from '../common/ZFCustomSelect';
-import { MoneyCell } from '@/components/erp/MoneyCell';
 import { ZFModalShell } from '../common/ZFModalShell';
 import { 
   isPropertyAvailableForContract,
@@ -50,7 +39,7 @@ import {
   canSellWholeBuilding,
   getPropertyInventorySummary,
 } from '@/lib/erp/propertiesPortfolioCalculations';
-import shellStyles from '../ZFWorkstationShell.module.css';
+import p from '../common/ZFModalPrimitives.module.css';
 
 export interface NewContractWizardPayload {
   propertyId: string;
@@ -451,15 +440,15 @@ export const NewContractWizardModal: React.FC<NewContractWizardModalProps> = ({
       let sublabelAr = `${p.location || (isAr ? 'الموقع مسجل' : 'Registered Location')}${p.area_sqm ? ` • ${p.area_sqm} م²` : ''}`;
       let sublabelEn = `${p.location || 'Location'}${p.area_sqm ? ` • ${p.area_sqm} m²` : ''}`;
       let badge = isAr ? 'متاح للتعاقد' : 'Available';
-      let badgeBg = '#ecfdf5';
-      let badgeTextColor = '#059669';
+      let badgeBg = '#f0fdf4';
+      let badgeTextColor = '#15803d';
 
       if (summary.isMultiUnit) {
         sublabelAr += ` • ${isAr ? `المتبقي: ${summary.availableUnits} من أصل ${summary.totalUnits} وحدة` : `${summary.availableUnits} of ${summary.totalUnits} units available`}`;
         sublabelEn += ` • ${summary.availableUnits} of ${summary.totalUnits} units available`;
         badge = isAr ? `المتبقي ${summary.availableUnits} من ${summary.totalUnits}` : `${summary.availableUnits}/${summary.totalUnits} avail`;
-        badgeBg = '#eff6ff';
-        badgeTextColor = 'var(--erp-accent, #2563eb)';
+        badgeBg = '#ffffff';
+        badgeTextColor = '#334155';
       }
 
       const item: ZFCustomSelectItem = {
@@ -539,6 +528,26 @@ export const NewContractWizardModal: React.FC<NewContractWizardModalProps> = ({
     }));
   }, [leads, isAr]);
 
+  const splitsBalanced = Math.abs(totalSplitsPct - 100) <= 0.01;
+  const goToStep = (target: 1 | 2 | 3) => {
+    if (target >= 2 && !validateStep1()) { setStep(1); return; }
+    if (target === 3 && !validateStep2()) { setStep(2); return; }
+    setStep(target);
+  };
+  const wizardSteps: { s: 1 | 2 | 3; titleAr: string; titleEn: string }[] = [
+    { s: 1, titleAr: 'الوحدة والمشتري', titleEn: 'Unit & Buyer' },
+    { s: 2, titleAr: 'الشروط وجدولة السداد', titleEn: 'Payment Terms' },
+    { s: 3, titleAr: 'الشركاء والاعتماد', titleEn: 'Partners & Posting' },
+  ];
+  const targetLabel = selectedBuildingUnit
+    ? `${selectedProperty?.title_ar || selectedProperty?.title_en || ''} · ${selectedBuildingUnit.unit_number}`
+    : selectedProperty
+      ? (selectedProperty.title_ar || selectedProperty.title_en)
+      : customUnitName;
+  const BackIcon = isAr ? ArrowRight : ArrowLeft;
+  const NextIcon = isAr ? ArrowLeft : ArrowRight;
+  const notEntered = isAr ? 'غير مُدخل' : 'Not entered';
+
   if (!isOpen) return null;
 
   return (
@@ -546,1180 +555,436 @@ export const NewContractWizardModal: React.FC<NewContractWizardModalProps> = ({
       isOpen={isOpen}
       onClose={handleModalClose}
       isAr={isAr}
-      title={isAr ? 'تحرير وتوثيق عقد بيع عقاري جديد' : 'Execute Real Estate Sales Contract'}
-      subtitle={isAr ? 'معالج مالي متكامل: ربط الوحدة، جدولة السداد، حصص الشركاء، والترحيل للدفاتر' : 'Executive deal workflow: Property specs, tranches, partner splits & ledger posting'}
-      icon={<Plus size={18} />}
+      title={isAr ? 'تحرير عقد بيع عقاري جديد' : 'New Real Estate Sales Contract'}
+      subtitle={isAr ? 'ربط الوحدة، جدولة السداد، حصص الشركاء، والترحيل للدفاتر' : 'Unit, payment schedule, partner splits and ledger posting'}
+      icon={<Plus size={16} />}
       maxWidth="900px"
       maxHeight="92vh"
-      bodyStyle={{ padding: 0, overflow: 'hidden' }}
-    >
-      {/* 3-Step Wizard Navigation Ribbon */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-        gap: '0.5rem',
-        padding: '0.65rem clamp(0.75rem, 3vw, 1.75rem)',
-        background: '#f8fafc',
-        borderBottom: '1px solid #e2e8f0'
-      }}>
-        {[
-          { s: 1, titleAr: '١. أطراف التعاقد والوحدة', titleEn: '1. Unit & Buyer', descAr: 'الوحدة العقارية وهوية المشتري' },
-          { s: 2, titleAr: '٢. الشروط وجدولة السداد', titleEn: '2. Payment Terms', descAr: 'السعر والمقدم ونظام الأقساط' },
-          { s: 3, titleAr: '٣. الشركاء والاعتماد', titleEn: '3. Equity & Final Posting', descAr: 'حصص التمويل والتوجيه المالي' }
-        ].map(item => {
-          const isActive = step === item.s;
-          const isCompleted = step > item.s;
-          return (
-            <button
-              key={item.s}
-              type="button"
-              onClick={() => {
-                if (item.s === 2 && !validateStep1()) return;
-                if (item.s === 3) {
-                  if (!validateStep1()) { setStep(1); return; }
-                  if (!validateStep2()) { setStep(2); return; }
-                }
-                setStep(item.s as 1 | 2 | 3);
-              }}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.6rem',
-                padding: '0.6rem 0.85rem',
-                borderRadius: '10px',
-                background: isActive ? '#ffffff' : isCompleted ? '#f1f5f9' : 'transparent',
-                border: isActive ? '1.5px solid var(--erp-accent, #2563eb)' : isCompleted ? '1px solid #cbd5e1' : '1px solid transparent',
-                boxShadow: isActive ? '0 2px 6px var(--erp-accent-tint, rgba(37, 99, 235, 0.15))' : 'none',
-                cursor: 'pointer',
-                textAlign: isAr ? 'right' : 'left'
-              }}
-            >
-              <div style={{
-                width: '24px',
-                height: '24px',
-                borderRadius: '50%',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '0.72rem',
-                fontWeight: 800,
-                flexShrink: 0,
-                background: isActive ? 'var(--erp-accent, #2563eb)' : isCompleted ? '#059669' : '#e2e8f0',
-                color: isActive || isCompleted ? '#ffffff' : '#64748b'
-              }}>
-                {isCompleted ? '✓' : item.s}
-              </div>
-              <div style={{ overflow: 'hidden' }}>
-                <div style={{ fontSize: '0.78rem', fontWeight: 800, color: isActive ? 'var(--erp-accent, #2563eb)' : '#0f172a', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
-                  {isAr ? item.titleAr : item.titleEn}
-                </div>
-                <div style={{ fontSize: '0.66rem', color: '#64748b', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
-                  {item.descAr}
-                </div>
-              </div>
+      footer={
+        <>
+          {step < 3 ? (
+            <button type="button" className={p.primaryButton} onClick={() => goToStep((step + 1) as 2 | 3)}>
+              <span>{step === 1 ? (isAr ? 'التالي: الشروط المالية' : 'Next: Payment Terms') : (isAr ? 'التالي: الشركاء والاعتماد' : 'Next: Partners')}</span>
+              <NextIcon size={14} />
             </button>
-          );
-        })}
-      </div>
-
-        {/* Wizard Body Form */}
-        <form onSubmit={handleFinalSubmit} style={{ padding: 'clamp(1rem, 3vw, 1.75rem)', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '1.25rem', flex: 1 }}>
-          
-          {/* ═══════════════════════════════════════════════════════════ */}
-          {/* STEP 1: PROPERTY & BUYER                                   */}
-          {/* ═══════════════════════════════════════════════════════════ */}
-          {step === 1 && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
-              {/* Card 1: Property Unit Selection */}
-              <div style={{
-                background: '#ffffff',
-                border: '1px solid var(--erp-border, #cbd5e1)',
-                borderRadius: '12px',
-                padding: '1.15rem',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '0.85rem',
-                boxShadow: '0 1px 3px rgba(0,0,0,0.03)'
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <Building2 size={16} color="var(--erp-accent, #2563eb)" />
-                  <h4 style={{ margin: 0, fontSize: '0.88rem', fontWeight: 800, color: '#0f172a' }}>
-                    {isAr ? 'الوحدة العقارية موضوع التعاقد:' : 'Contract Target Property Unit:'}
-                  </h4>
-                </div>
-
-                <ZFCustomSelect 
-                  value={selectedPropertyId}
-                  onChange={(val: string) => handlePropertyChange(val)}
-                  sections={propertySections}
-                  placeholderAr="-- اختر الوحدة العقارية من الكتالوج المعتمد --"
-                  placeholderEn="-- Choose Property Unit from Catalog --"
-                  isAr={isAr}
-                  hasError={!!contractErrors.property}
-                  errorMessage={contractErrors.property}
-                  customAction={{
-                    labelAr: '+ إدخال وحدة / مشروع مخصص لزكريا فريد',
-                    labelEn: '+ Custom Developer Project / Unit',
-                    onClick: () => handlePropertyChange('custom_unit')
-                  }}
-                />
-
-                {/* Building Unit / Apartment Sub-Selector */}
-                {selectedProperty && selectedProperty.building_units && selectedProperty.building_units.length > 0 && (
-                  <div style={{
-                    background: '#f8fafc',
-                    border: '1px solid var(--erp-border, #cbd5e1)',
-                    borderRadius: '8px',
-                    padding: '0.85rem',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '0.45rem'
-                  }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <label style={{ fontSize: '0.76rem', fontWeight: 700, color: '#334155', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                        {isAr ? 'تحديد الشقة أو التعاقد على العمارة بالكامل:' : 'Select Apartment or Whole Building:'}
-                      </label>
-                      {selectedBuildingUnitId ? (
-                        <span className={`${shellStyles.statusPill} ${shellStyles.statusPillGreen}`}>
-                          {isAr ? `شقة رقم ${selectedBuildingUnit?.unit_number || ''}` : `Apt #${selectedBuildingUnit?.unit_number || ''}`}
-                        </span>
-                      ) : (
-                        <span className={`${shellStyles.statusPill} ${canSellWhole ? shellStyles.statusPillBlue : shellStyles.statusPillAmber}`}>
-                          {canSellWhole 
-                            ? (isAr ? 'عقد بيع عمارة شروة واحدة' : 'Whole Building Sale')
-                            : (isAr ? 'بيع العمارة بالكامل غير متاح' : 'Whole Building Sale Unavailable')}
-                        </span>
-                      )}
-                    </div>
-                    <select
-                      value={selectedBuildingUnitId || (canSellWhole ? 'whole' : '')}
-                      onChange={e => handleBuildingUnitChange(e.target.value === 'whole' ? '' : e.target.value)}
-                      style={{
-                        width: '100%',
-                        padding: '0.55rem 0.75rem',
-                        borderRadius: '8px',
-                        border: '1px solid var(--erp-border, #cbd5e1)',
-                        background: '#ffffff',
-                        color: '#0f172a',
-                        fontSize: '0.82rem',
-                        fontWeight: 600,
-                        outline: 'none',
-                        cursor: 'pointer'
-                      }}
-                    >
-                      {canSellWhole ? (
-                        <option value="whole">
-                          {isAr ? '🏢 بيع العمارة بالكامل شروة واحدة (متاح - 0 وحدات مباعة)' : '🏢 Whole Building Sale (Available - 0 units sold)'}
-                        </option>
-                      ) : (
-                        <option value="" disabled>
-                          {isAr ? '-- اختر الشقة المتاحة (بيع العمارة بالكامل غير متاح - توجد وحدات مباعة) --' : '-- Choose available apartment (Whole building sale not allowed) --'}
-                        </option>
-                      )}
-                      {availableBuildingUnits.map(u => (
-                        <option key={u.unit_id} value={u.unit_id}>
-                          {u.unit_number} ({isAr ? `الدور ${u.floor}` : `Floor ${u.floor}`} • {u.area_sqm} {isAr ? 'م²' : 'm²'} • {D(u.price_egp).formatEGP(isAr)})
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-
-                {/* Custom Unit Input */}
-                {selectedPropertyId === 'custom_unit' && (
-                  <div>
-                    <label style={{ fontSize: '0.74rem', fontWeight: 700, color: '#334155', marginBottom: '0.25rem', display: 'block' }}>
-                      {isAr ? 'اسم المشروع / الوحدة المخصصة *' : 'Custom Unit Name *'}
-                    </label>
-                    <input
-                      type="text"
-                      value={customUnitName}
-                      onChange={e => setCustomUnitName(e.target.value)}
-                      placeholder={isAr ? 'مثال: فيلا A12 - حي النرجس التجمع الخامس' : 'e.g. Villa A12 - New Cairo'}
-                      style={{
-                        width: '100%',
-                        padding: '0.55rem 0.75rem',
-                        borderRadius: '8px',
-                        border: '1px solid #cbd5e1',
-                        background: '#ffffff',
-                        color: '#0f172a',
-                        fontSize: '0.82rem',
-                        outline: 'none'
-                      }}
-                      required
-                    />
-                  </div>
-                )}
-
-                {/* Property Preview Card */}
-                {selectedProperty && (
-                  <div style={{
-                    background: '#f8fafc',
-                    border: '1px solid var(--erp-border, #cbd5e1)',
-                    borderRadius: '10px',
-                    padding: '0.85rem 1rem',
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(3, 1fr)',
-                    gap: '0.75rem',
-                    fontSize: '0.76rem'
-                  }}>
-                    <div>
-                      <span style={{ color: '#64748b', fontSize: '0.7rem', display: 'block' }}>{isAr ? 'الموضوع والنوع:' : 'Target & Type:'}</span>
-                      <strong style={{ color: '#0f172a' }}>
-                        {selectedBuildingUnit 
-                          ? `${isAr ? 'شقة منفصلة:' : 'Apartment:'} ${selectedBuildingUnit.unit_number}` 
-                          : selectedProperty.type === 'building' 
-                            ? (isAr ? 'عمارة بالكامل (شروة واحدة)' : 'Entire Building') 
-                            : selectedProperty.type}
-                      </strong>
-                    </div>
-                    <div>
-                      <span style={{ color: '#64748b', fontSize: '0.7rem', display: 'block' }}>{isAr ? 'المساحة الصافية:' : 'Net Area:'}</span>
-                      <strong style={{ color: '#0f172a' }}>
-                        {selectedBuildingUnit 
-                          ? `${selectedBuildingUnit.area_sqm} م² (${isAr ? 'الدور' : 'Floor'} ${selectedBuildingUnit.floor})` 
-                          : `${selectedProperty.area_sqm || '—'} م²`}
-                      </strong>
-                    </div>
-                    <div>
-                      <span style={{ color: '#64748b', fontSize: '0.7rem', display: 'block' }}>{isAr ? 'السعر المقترح بالكتالوج:' : 'Catalog Price:'}</span>
-                      <strong style={{ color: 'var(--erp-accent, #2563eb)' }}>
-                        {selectedBuildingUnit 
-                          ? D(selectedBuildingUnit.price_egp || 0).formatEGP(isAr) 
-                          : D(selectedProperty.price_egp || 0).formatEGP(isAr)}
-                      </strong>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Card 2: Buyer & CRM Sync */}
-              <div style={{
-                background: '#ffffff',
-                border: '1px solid var(--erp-border, #cbd5e1)',
-                borderRadius: '12px',
-                padding: '1.15rem',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '0.85rem',
-                boxShadow: '0 1px 3px rgba(0,0,0,0.03)'
-              }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <User size={16} color="var(--erp-accent, #2563eb)" />
-                    <h4 style={{ margin: 0, fontSize: '0.88rem', fontWeight: 800, color: '#0f172a' }}>
-                      {isAr ? 'بيانات المشتري وهوية التعاقد:' : 'Buyer Identity & CRM Sync:'}
-                    </h4>
-                  </div>
-
-                  {/* Toggle CRM lead vs new */}
-                  <div style={{ display: 'flex', gap: '0.35rem' }}>
-                    <button
-                      type="button"
-                      onClick={() => setLeadSelectionMode('NEW_LEAD')}
-                      style={{
-                        padding: '0.3rem 0.65rem',
-                        borderRadius: '6px',
-                        fontSize: '0.72rem',
-                        fontWeight: 700,
-                        cursor: 'pointer',
-                        background: leadSelectionMode === 'NEW_LEAD' ? 'var(--erp-accent-subtle, #eff6ff)' : '#f1f5f9',
-                        color: leadSelectionMode === 'NEW_LEAD' ? 'var(--erp-accent, #2563eb)' : '#64748b',
-                        border: leadSelectionMode === 'NEW_LEAD' ? '1px solid var(--erp-accent, #2563eb)' : '1px solid transparent'
-                      }}
-                    >
-                      {isAr ? 'عميل جديد' : 'New Buyer'}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setLeadSelectionMode('EXISTING_LEAD')}
-                      style={{
-                        padding: '0.3rem 0.65rem',
-                        borderRadius: '6px',
-                        fontSize: '0.72rem',
-                        fontWeight: 700,
-                        cursor: 'pointer',
-                        background: leadSelectionMode === 'EXISTING_LEAD' ? 'var(--erp-accent-subtle, #eff6ff)' : '#f1f5f9',
-                        color: leadSelectionMode === 'EXISTING_LEAD' ? 'var(--erp-accent, #2563eb)' : '#64748b',
-                        border: leadSelectionMode === 'EXISTING_LEAD' ? '1px solid var(--erp-accent, #2563eb)' : '1px solid transparent'
-                      }}
-                    >
-                      {isAr ? 'اختيار عميل مسجل' : 'Existing CRM Lead'}
-                    </button>
-                  </div>
-                </div>
-
-                {/* CRM Lead Selector */}
-                {leadSelectionMode === 'EXISTING_LEAD' && (
-                  <ZFCustomSelect 
-                    value={selectedLeadId}
-                    onChange={(val: string) => handleLeadChange(val)}
-                    items={leadItems}
-                    placeholderAr="-- اختر العميل من قاعدة بيانات العملاء المسجلين --"
-                    placeholderEn="-- Choose Registered CRM Lead --"
-                    isAr={isAr}
-                  />
-                )}
-
-                {/* Buyer Fields Grid */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.85rem' }}>
-                  <div>
-                    <label style={{ fontSize: '0.74rem', fontWeight: 700, color: '#334155', marginBottom: '0.25rem', display: 'block' }}>
-                      {isAr ? 'الاسم القانوني الثلاثي / الرباعي *' : 'Full Legal Name *'}
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={buyerName}
-                      onChange={e => setBuyerName(e.target.value)}
-                      placeholder={isAr ? 'مثال: م. أحمد عبد الرحمن الشرقاوي' : 'e.g. John Doe'}
-                      style={{
-                        width: '100%',
-                        padding: '0.55rem 0.75rem',
-                        borderRadius: '8px',
-                        border: contractErrors.buyerName ? '1.5px solid #dc2626' : '1px solid #cbd5e1',
-                        background: '#ffffff',
-                        color: '#0f172a',
-                        fontSize: '0.82rem',
-                        outline: 'none'
-                      }}
-                    />
-                    {contractErrors.buyerName && (
-                      <span style={{ fontSize: '0.7rem', color: '#dc2626', fontWeight: 700 }}>{contractErrors.buyerName}</span>
-                    )}
-                  </div>
-
-                  <div>
-                    <label style={{ fontSize: '0.74rem', fontWeight: 700, color: '#334155', marginBottom: '0.25rem', display: 'block' }}>
-                      {isAr ? 'الرقم القومي / جواز السفر *' : 'National ID / Passport *'}
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={buyerNationalId}
-                      onChange={e => setBuyerNationalId(e.target.value)}
-                      placeholder="29401010102555"
-                      style={{
-                        width: '100%',
-                        padding: '0.55rem 0.75rem',
-                        borderRadius: '8px',
-                        border: contractErrors.buyerNationalId ? '1.5px solid #dc2626' : '1px solid #cbd5e1',
-                        background: '#ffffff',
-                        color: '#0f172a',
-                        fontSize: '0.82rem',
-                        fontVariantNumeric: 'tabular-nums',
-                        outline: 'none'
-                      }}
-                    />
-                    {contractErrors.buyerNationalId && (
-                      <span style={{ fontSize: '0.7rem', color: '#dc2626', fontWeight: 700 }}>{contractErrors.buyerNationalId}</span>
-                    )}
-                  </div>
-
-                  <div>
-                    <label style={{ fontSize: '0.74rem', fontWeight: 700, color: '#334155', marginBottom: '0.25rem', display: 'block' }}>
-                      {isAr ? 'رقم الهاتف المحمول:' : 'Mobile Phone:'}
-                    </label>
-                    <input
-                      type="tel"
-                      value={buyerPhone}
-                      onChange={e => setBuyerPhone(e.target.value)}
-                      placeholder="010XXXXXXXX"
-                      style={{
-                        width: '100%',
-                        padding: '0.55rem 0.75rem',
-                        borderRadius: '8px',
-                        border: '1px solid #cbd5e1',
-                        background: '#ffffff',
-                        color: '#0f172a',
-                        fontSize: '0.82rem',
-                        outline: 'none'
-                      }}
-                    />
-                  </div>
-
-                  <div>
-                    <label style={{ fontSize: '0.74rem', fontWeight: 700, color: '#334155', marginBottom: '0.25rem', display: 'block' }}>
-                      {isAr ? 'البريد الإلكتروني:' : 'Email Address:'}
-                    </label>
-                    <input
-                      type="email"
-                      value={buyerEmail}
-                      onChange={e => setBuyerEmail(e.target.value)}
-                      placeholder="client@domain.com"
-                      style={{
-                        width: '100%',
-                        padding: '0.55rem 0.75rem',
-                        borderRadius: '8px',
-                        border: '1px solid #cbd5e1',
-                        background: '#ffffff',
-                        color: '#0f172a',
-                        fontSize: '0.82rem',
-                        outline: 'none'
-                      }}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Step 1 Navigation Buttons */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '0.5rem', flexWrap: 'wrap', gap: '0.5rem' }}>
-                <button
-                  type="button"
-                  onClick={handleModalClose}
-                  style={{
-                    background: '#ffffff',
-                    border: '1px solid #cbd5e1',
-                    color: '#64748b',
-                    padding: '0.6rem 1.25rem',
-                    minHeight: '44px',
-                    borderRadius: '8px',
-                    fontSize: '0.8rem',
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '0.35rem',
-                  }}
-                >
-                  <X size={15} />
-                  <span>{isAr ? 'إلغاء' : 'Cancel'}</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (validateStep1()) setStep(2);
-                  }}
-                  style={{
-                    background: 'var(--erp-accent, #2563eb)',
-                    color: '#ffffff',
-                    border: '1px solid var(--erp-accent, #2563eb)',
-                    padding: '0.65rem 1.45rem',
-                    minHeight: '44px',
-                    borderRadius: '8px',
-                    fontSize: '0.82rem',
-                    fontWeight: 800,
-                    cursor: 'pointer',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '0.45rem',
-                    boxShadow: '0 2px 8px var(--erp-accent-tint, rgba(37, 99, 235, 0.25))',
-                    transition: 'all 0.15s ease'
-                  }}
-                  onMouseEnter={e => e.currentTarget.style.background = 'var(--erp-accent-hover, #1d4ed8)'}
-                  onMouseLeave={e => e.currentTarget.style.background = 'var(--erp-accent, #2563eb)'}
-                >
-                  <span>{isAr ? 'المتابعة للشروط المالية وجدولة السداد' : 'Proceed to Payment Terms'}</span>
-                  <ArrowRight size={15} style={{ transform: isAr ? 'rotate(180deg)' : 'none' }} />
-                </button>
-              </div>
-            </div>
+          ) : (
+            <button type="submit" form="new-contract-form" className={p.primaryButton} disabled={isMutating || !splitsBalanced}>
+              {isMutating ? <Loader2 size={14} className={p.spin} /> : <CheckCircle2 size={14} />}
+              <span>{isAr ? 'اعتماد العقد وترحيل الدفعة' : 'Execute Contract & Post'}</span>
+            </button>
           )}
+          {step > 1 && (
+            <button type="button" className={p.secondaryButton} onClick={() => setStep((step - 1) as 1 | 2)}>
+              <BackIcon size={14} />
+              <span>{isAr ? 'السابق' : 'Back'}</span>
+            </button>
+          )}
+          <button type="button" className={`${p.secondaryButton} ${p.footerEnd}`} onClick={handleModalClose}>
+            {isAr ? 'إلغاء' : 'Cancel'}
+          </button>
+        </>
+      }
+    >
+      <form id="new-contract-form" onSubmit={handleFinalSubmit}>
+        <section className={p.section}>
+          <ol className={p.steps} aria-label={isAr ? 'خطوات العقد' : 'Contract steps'}>
+            {wizardSteps.map((item, i) => {
+              const cls = [p.step, step === item.s ? p.stepActive : '', step > item.s ? p.stepDone : ''].filter(Boolean).join(' ');
+              return (
+                <React.Fragment key={item.s}>
+                  {i > 0 && <li className={p.stepSep} aria-hidden />}
+                  <li>
+                    <button type="button" className={cls} aria-current={step === item.s ? 'step' : undefined} onClick={() => goToStep(item.s)}>
+                      <span className={p.stepNum}>{step > item.s ? <CheckCircle2 size={12} /> : item.s}</span>
+                      <span className={p.stepLabel}>{isAr ? item.titleAr : item.titleEn}</span>
+                    </button>
+                  </li>
+                </React.Fragment>
+              );
+            })}
+          </ol>
+        </section>
 
-          {/* ═══════════════════════════════════════════════════════════ */}
-          {/* STEP 2: PAYMENT TERMS & SCHEDULE GENERATOR                 */}
-          {/* ═══════════════════════════════════════════════════════════ */}
-          {step === 2 && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
-              {/* Pricing breakdown */}
-              <div style={{
-                background: '#ffffff',
-                border: '1px solid var(--erp-border, #cbd5e1)',
-                borderRadius: '12px',
-                padding: '1.15rem',
-                display: 'grid',
-                gridTemplateColumns: 'repeat(3, 1fr)',
-                gap: '1rem',
-                boxShadow: '0 1px 3px rgba(0,0,0,0.03)'
-              }}>
-                <div>
-                  <label style={{ fontSize: '0.74rem', fontWeight: 700, color: '#334155', marginBottom: '0.25rem', display: 'block' }}>
-                    {isAr ? 'سعر الوحدة الأساسي (ج.م) *' : 'Base Unit Price (EGP) *'}
-                  </label>
+        {step === 1 && (
+          <>
+            <section className={p.section}>
+              <h4 className={p.sectionTitle}>{isAr ? 'الوحدة العقارية موضوع التعاقد' : 'Contract Property Unit'}</h4>
+              <ZFCustomSelect
+                value={selectedPropertyId}
+                onChange={(val: string) => handlePropertyChange(val)}
+                sections={propertySections}
+                placeholderAr="اختر الوحدة العقارية من الكتالوج"
+                placeholderEn="Choose a property unit from the catalog"
+                isAr={isAr}
+                hasError={!!contractErrors.property}
+                errorMessage={contractErrors.property}
+                customAction={{
+                  labelAr: 'إدخال وحدة أو مشروع مخصص',
+                  labelEn: 'Custom project / unit',
+                  onClick: () => handlePropertyChange('custom_unit')
+                }}
+              />
+
+              {selectedProperty && selectedProperty.building_units && selectedProperty.building_units.length > 0 && (
+                <div className={p.field}>
+                  <div className={p.labelRow}>
+                    <label className={p.label} htmlFor="ncw-unit">{isAr ? 'الشقة أو العمارة بالكامل' : 'Apartment or Whole Building'}</label>
+                    {selectedBuildingUnitId ? (
+                      <span className={`${p.pill} ${p.pillSuccess}`}><bdi>{isAr ? `شقة ${selectedBuildingUnit?.unit_number || ''}` : `Apt ${selectedBuildingUnit?.unit_number || ''}`}</bdi></span>
+                    ) : (
+                      <span className={canSellWhole ? p.pill : `${p.pill} ${p.pillWarning}`}>
+                        {canSellWhole ? (isAr ? 'بيع العمارة بالكامل' : 'Whole Building Sale') : (isAr ? 'بيع العمارة بالكامل غير متاح' : 'Whole building unavailable')}
+                      </span>
+                    )}
+                  </div>
+                  <select
+                    id="ncw-unit"
+                    className={p.input}
+                    value={selectedBuildingUnitId || (canSellWhole ? 'whole' : '')}
+                    onChange={e => handleBuildingUnitChange(e.target.value === 'whole' ? '' : e.target.value)}
+                  >
+                    {canSellWhole ? (
+                      <option value="whole">{isAr ? 'بيع العمارة بالكامل (لا توجد وحدات مباعة)' : 'Whole building sale (0 units sold)'}</option>
+                    ) : (
+                      <option value="" disabled>{isAr ? 'اختر شقة متاحة (توجد وحدات مباعة)' : 'Choose an available apartment (units already sold)'}</option>
+                    )}
+                    {availableBuildingUnits.map(u => (
+                      <option key={u.unit_id} value={u.unit_id}>
+                        {u.unit_number} · {isAr ? `الدور ${u.floor}` : `Floor ${u.floor}`} · {u.area_sqm} {isAr ? 'م²' : 'm²'} · {D(u.price_egp).formatEGP(isAr)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {selectedPropertyId === 'custom_unit' && (
+                <div className={p.field}>
+                  <label className={p.label} htmlFor="ncw-custom">{isAr ? 'اسم المشروع / الوحدة المخصصة *' : 'Custom Unit Name *'}</label>
                   <input
-                    type="number"
-                    step="1000"
+                    id="ncw-custom"
+                    type="text"
+                    className={p.input}
+                    value={customUnitName}
+                    onChange={e => setCustomUnitName(e.target.value)}
+                    placeholder={isAr ? 'مثال: فيلا A12 - حي النرجس' : 'e.g. Villa A12 - New Cairo'}
                     required
-                    value={basePriceInput}
-                    onChange={e => setBasePriceInput(e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '0.55rem 0.75rem',
-                      borderRadius: '8px',
-                      border: '1px solid #cbd5e1',
-                      background: '#ffffff',
-                      color: '#0f172a',
-                      fontSize: '0.95rem',
-                      fontWeight: 700,
-                      outline: 'none'
-                    }}
                   />
                 </div>
+              )}
 
-                <div style={{
-                  background: 'var(--erp-accent-subtle, #eff6ff)',
-                  border: '1px solid var(--erp-accent-tint, rgba(37, 99, 235, 0.25))',
-                  borderRadius: '10px',
-                  padding: '0.75rem',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'center'
-                }}>
-                  <span style={{ fontSize: '0.7rem', color: 'var(--erp-accent, #2563eb)', fontWeight: 800 }}>
-                    {isAr ? 'إجمالي قيمة العقد الاسمية (V):' : 'Gross Contract Value (V):'}
-                  </span>
-                  <strong style={{ fontSize: '1.25rem', color: 'var(--erp-accent, #2563eb)', fontWeight: 900 }}>
-                    <MoneyCell amount={totalNominalValue.toString()} isAr={isAr} highlight />
-                  </strong>
+              {selectedProperty && (
+                <dl className={p.metaList}>
+                  <div className={p.metaRow}>
+                    <dt className={p.metaKey}>{isAr ? 'الموضوع' : 'Target'}</dt>
+                    <dd className={p.metaValue}>
+                      <bdi>
+                        {selectedBuildingUnit
+                          ? `${isAr ? 'شقة' : 'Apartment'} ${selectedBuildingUnit.unit_number}`
+                          : selectedProperty.type === 'building'
+                            ? (isAr ? 'عمارة بالكامل' : 'Entire Building')
+                            : selectedProperty.type}
+                      </bdi>
+                    </dd>
+                  </div>
+                  <div className={p.metaRow}>
+                    <dt className={p.metaKey}>{isAr ? 'المساحة الصافية' : 'Net Area'}</dt>
+                    <dd className={(selectedBuildingUnit?.area_sqm || selectedProperty.area_sqm) ? p.metaValue : `${p.metaValue} ${p.emptyValue}`}>
+                      <bdi>
+                        {selectedBuildingUnit
+                          ? `${selectedBuildingUnit.area_sqm} م² · ${isAr ? 'الدور' : 'Floor'} ${selectedBuildingUnit.floor}`
+                          : selectedProperty.area_sqm ? `${selectedProperty.area_sqm} م²` : notEntered}
+                      </bdi>
+                    </dd>
+                  </div>
+                  <div className={p.metaRow}>
+                    <dt className={p.metaKey}>{isAr ? 'سعر الكتالوج' : 'Catalog Price'}</dt>
+                    <dd className={p.metaValue}>
+                      <bdi>{D((selectedBuildingUnit ? selectedBuildingUnit.price_egp : selectedProperty.price_egp) || 0).formatEGP(isAr)}</bdi>
+                    </dd>
+                  </div>
+                </dl>
+              )}
+            </section>
+
+            <section className={p.section}>
+              <div className={p.sectionHeader}>
+                <h4 className={p.sectionTitle}>{isAr ? 'بيانات المشتري' : 'Buyer Identity'}</h4>
+                <div className={p.segmented} role="tablist">
+                  <button type="button" role="tab" aria-selected={leadSelectionMode === 'NEW_LEAD'}
+                    className={leadSelectionMode === 'NEW_LEAD' ? `${p.segment} ${p.segmentActive}` : p.segment}
+                    onClick={() => setLeadSelectionMode('NEW_LEAD')}>
+                    {isAr ? 'عميل جديد' : 'New Buyer'}
+                  </button>
+                  <button type="button" role="tab" aria-selected={leadSelectionMode === 'EXISTING_LEAD'}
+                    className={leadSelectionMode === 'EXISTING_LEAD' ? `${p.segment} ${p.segmentActive}` : p.segment}
+                    onClick={() => setLeadSelectionMode('EXISTING_LEAD')}>
+                    {isAr ? 'عميل مسجل' : 'Existing Lead'}
+                  </button>
                 </div>
               </div>
+              {leadSelectionMode === 'EXISTING_LEAD' && (
+                <ZFCustomSelect
+                  value={selectedLeadId}
+                  onChange={(val: string) => handleLeadChange(val)}
+                  items={leadItems}
+                  placeholderAr="اختر العميل من قاعدة العملاء المسجلين"
+                  placeholderEn="Choose a registered CRM lead"
+                  isAr={isAr}
+                />
+              )}
+              <div className={p.fieldGrid}>
+                <div className={p.field}>
+                  <label className={p.label} htmlFor="ncw-name">{isAr ? 'الاسم القانوني الكامل *' : 'Full Legal Name *'}</label>
+                  <input id="ncw-name" type="text" required className={p.input} value={buyerName}
+                    onChange={e => setBuyerName(e.target.value)}
+                    placeholder={isAr ? 'مثال: م. أحمد عبد الرحمن الشرقاوي' : 'e.g. Ahmed Abdelrahman'} />
+                  {contractErrors.buyerName && <span className={p.errorText}>{contractErrors.buyerName}</span>}
+                </div>
+                <div className={p.field}>
+                  <label className={p.label} htmlFor="ncw-nid">{isAr ? 'الرقم القومي / جواز السفر *' : 'National ID / Passport *'}</label>
+                  <input id="ncw-nid" type="text" required className={`${p.input} ${p.numeric}`} value={buyerNationalId}
+                    onChange={e => setBuyerNationalId(e.target.value)} placeholder="29401010102555" dir="ltr" />
+                  {contractErrors.buyerNationalId && <span className={p.errorText}>{contractErrors.buyerNationalId}</span>}
+                </div>
+                <div className={p.field}>
+                  <label className={p.label} htmlFor="ncw-phone">{isAr ? 'رقم الهاتف المحمول' : 'Mobile Phone'}</label>
+                  <input id="ncw-phone" type="tel" className={`${p.input} ${p.numeric}`} value={buyerPhone}
+                    onChange={e => setBuyerPhone(e.target.value)} placeholder="010XXXXXXXX" dir="ltr" />
+                </div>
+                <div className={p.field}>
+                  <label className={p.label} htmlFor="ncw-email">{isAr ? 'البريد الإلكتروني' : 'Email Address'}</label>
+                  <input id="ncw-email" type="email" className={p.input} value={buyerEmail}
+                    onChange={e => setBuyerEmail(e.target.value)} placeholder="client@domain.com" dir="ltr" />
+                </div>
+              </div>
+            </section>
+          </>
+        )}
 
-              {/* Down Payment & Tranche Count Controls */}
-              <div style={{
-                background: '#ffffff',
-                border: '1px solid var(--erp-border, #cbd5e1)',
-                borderRadius: '12px',
-                padding: '1.15rem',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '1rem',
-                boxShadow: '0 1px 3px rgba(0,0,0,0.03)'
-              }}>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem' }}>
-                  {/* Down payment % */}
-                  <div>
-                    <label style={{ fontSize: '0.74rem', fontWeight: 700, color: '#334155', marginBottom: '0.25rem', display: 'block' }}>
-                      {isAr ? 'نسبة المقدم (٪):' : 'Down Payment %:'}
-                    </label>
-                    <input
-                      type="number"
-                      min="5"
-                      max="100"
-                      value={downPaymentInputPct}
-                      onChange={e => {
-                        setDownPaymentInputPct(e.target.value);
-                        setDownPaymentAmountInput('');
-                      }}
-                      style={{
-                        width: '100%',
-                        padding: '0.55rem 0.75rem',
-                        borderRadius: '8px',
-                        border: '1px solid #cbd5e1',
-                        background: '#ffffff',
-                        color: '#0f172a',
-                        fontSize: '0.85rem',
-                        fontWeight: 700,
-                        outline: 'none'
-                      }}
-                    />
-                    {/* Quick Preset Chips */}
-                    <div style={{ display: 'flex', gap: '0.3rem', marginTop: '0.35rem', flexWrap: 'wrap' }}>
-                      {[10, 15, 20, 25, 30].map(p => (
-                        <button
-                          key={p}
-                          type="button"
-                          onClick={() => {
-                            setDownPaymentInputPct(p.toString());
-                            setDownPaymentAmountInput('');
-                          }}
-                          style={{
-                            padding: '0.15rem 0.45rem',
-                            borderRadius: '4px',
-                            border: downPaymentInputPct === p.toString() ? '1px solid var(--erp-accent, #2563eb)' : '1px solid #cbd5e1',
-                            background: downPaymentInputPct === p.toString() ? 'var(--erp-accent, #2563eb)' : '#ffffff',
-                            color: downPaymentInputPct === p.toString() ? '#ffffff' : '#334155',
-                            fontSize: '0.68rem',
-                            fontWeight: 700,
-                            cursor: 'pointer'
-                          }}
-                        >
-                          {p}%
-                        </button>
-                      ))}
-                    </div>
+        {step === 2 && (
+          <>
+            <section className={p.section}>
+              <h4 className={p.sectionTitle}>{isAr ? 'السعر' : 'Price'}</h4>
+              <div className={p.fieldGrid}>
+                <div className={p.field}>
+                  <label className={p.label} htmlFor="ncw-price">{isAr ? 'سعر الوحدة الأساسي *' : 'Base Unit Price *'}</label>
+                  <div className={p.affixWrap}>
+                    <input id="ncw-price" type="number" step="1000" required className={`${p.input} ${p.numeric}`}
+                      value={basePriceInput} onChange={e => setBasePriceInput(e.target.value)} />
+                    <span className={p.affix}>{isAr ? 'ج.م' : 'EGP'}</span>
                   </div>
+                  {contractErrors.price && <span className={p.errorText}>{contractErrors.price}</span>}
+                </div>
+                <div className={p.figure}>
+                  <span className={p.figureLabel}>{isAr ? 'إجمالي قيمة العقد' : 'Gross Contract Value'}</span>
+                  <bdi className={p.figureValue}>{D(totalNominalValue).formatEGP(isAr)}</bdi>
+                </div>
+              </div>
+            </section>
 
-                  {/* Down payment cash amount with plain-language Tranche 0 clarification */}
-                  <div>
-                    <label style={{ fontSize: '0.74rem', fontWeight: 700, color: '#334155', marginBottom: '0.25rem', display: 'block' }}>
-                      {isAr ? 'دفعة الحجز والمقدم النقدي (Tranche 0):' : 'Down Payment & Reservation (Tranche 0):'}
-                    </label>
-                    <input
-                      type="number"
-                      step="1000"
+            <section className={p.section}>
+              <h4 className={p.sectionTitle}>{isAr ? 'المقدم والأقساط' : 'Down Payment & Installments'}</h4>
+              <div className={`${p.fieldGrid} ${p.fieldGrid3}`}>
+                <div className={p.field}>
+                  <label className={p.label} htmlFor="ncw-dp-pct">{isAr ? 'نسبة المقدم ٪' : 'Down Payment %'}</label>
+                  <input id="ncw-dp-pct" type="number" min="5" max="100" className={`${p.input} ${p.numeric}`}
+                    value={downPaymentInputPct}
+                    onChange={e => { setDownPaymentInputPct(e.target.value); setDownPaymentAmountInput(''); }} />
+                  <div className={p.chipRow}>
+                    {[10, 15, 20, 25, 30].map(pct => (
+                      <button key={pct} type="button"
+                        className={downPaymentAmountInput === '' && downPaymentInputPct === pct.toString() ? `${p.chip} ${p.chipActive}` : p.chip}
+                        onClick={() => { setDownPaymentInputPct(pct.toString()); setDownPaymentAmountInput(''); }}>
+                        <bdi className={p.numeric}>{pct}%</bdi>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className={p.field}>
+                  <label className={p.label} htmlFor="ncw-dp-amt">{isAr ? 'دفعة الحجز والمقدم (الدفعة 0)' : 'Down Payment (Tranche 0)'}</label>
+                  <div className={p.affixWrap}>
+                    <input id="ncw-dp-amt" type="number" step="1000" className={`${p.input} ${p.numeric}`}
                       value={modalDpAmount}
                       onChange={e => {
                         setDownPaymentAmountInput(e.target.value);
                         if (totalNominalValue > 0) {
                           setDownPaymentInputPct(((parseFloat(e.target.value) || 0) / totalNominalValue * 100).toFixed(1));
                         }
-                      }}
-                      style={{
-                        width: '100%',
-                        padding: '0.55rem 0.75rem',
-                        borderRadius: '8px',
-                        border: '1.5px solid #059669',
-                        background: '#ffffff',
-                        color: '#059669',
-                        fontSize: '0.95rem',
-                        fontWeight: 900,
-                        outline: 'none'
-                      }}
-                    />
-                    <span style={{ fontSize: '0.67rem', color: '#64748b', display: 'block', marginTop: '0.2rem' }}>
-                      {isAr ? '💡 Tranche 0 تعني دفعة الحجز والمقدم النقدي المسددة فوراً عند التعاقد' : 'Tranche 0 covers the upfront reservation & down payment'}
-                    </span>
+                      }} />
+                    <span className={p.affix}>{isAr ? 'ج.م' : 'EGP'}</span>
                   </div>
-
-                  {/* Installment count */}
-                  <div>
-                    <label style={{ fontSize: '0.74rem', fontWeight: 700, color: '#334155', marginBottom: '0.25rem', display: 'block' }}>
-                      {isAr ? 'عدد الأقساط الدورية:' : 'Number of Installments:'}
-                    </label>
-                    <select
-                      value={numInstallments}
-                      onChange={e => setNumInstallments(e.target.value)}
-                      style={{
-                        width: '100%',
-                        padding: '0.55rem 0.75rem',
-                        borderRadius: '8px',
-                        border: '1px solid #cbd5e1',
-                        background: '#ffffff',
-                        color: '#0f172a',
-                        fontSize: '0.82rem',
-                        outline: 'none'
-                      }}
-                    >
-                      <option value="4">4 {isAr ? 'أقساط' : 'Tranches'}</option>
-                      <option value="8">8 {isAr ? 'أقساط (سنتان ربع سنوي)' : 'Tranches (2 Yrs)'}</option>
-                      <option value="12">12 {isAr ? 'قسطاً (٣ سنوات ربع سنوي)' : 'Tranches (3 Yrs)'}</option>
-                      <option value="16">16 {isAr ? 'قسطاً (٤ سنوات ربع سنوي)' : 'Tranches (4 Yrs)'}</option>
-                      <option value="20">20 {isAr ? 'قسطاً (٥ سنوات ربع سنوي)' : 'Tranches (5 Yrs)'}</option>
-                      <option value="24">24 {isAr ? 'قسطاً (سنتان شهرياً)' : 'Tranches (2 Yrs Monthly)'}</option>
-                    </select>
-                  </div>
+                  <p className={p.hint}>{isAr ? 'تُسدد فوراً عند التعاقد.' : 'Paid on signing.'}</p>
+                  {contractErrors.downPayment && <span className={p.errorText}>{contractErrors.downPayment}</span>}
                 </div>
-
-                {/* Dates & Frequency */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem' }}>
-                  <div>
-                    <label style={{ fontSize: '0.74rem', fontWeight: 700, color: '#334155', marginBottom: '0.25rem', display: 'block' }}>
-                      {isAr ? 'تكرار سداد القسط:' : 'Payment Frequency:'}
-                    </label>
-                    <select
-                      value={installmentFrequency}
-                      onChange={e => setInstallmentFrequency(e.target.value as any)}
-                      style={{
-                        width: '100%',
-                        padding: '0.55rem 0.75rem',
-                        borderRadius: '8px',
-                        border: '1px solid #cbd5e1',
-                        background: '#ffffff',
-                        color: '#0f172a',
-                        fontSize: '0.82rem',
-                        outline: 'none'
-                      }}
-                    >
-                      <option value="MONTHLY">{isAr ? 'شهري (كل شهر)' : 'Monthly'}</option>
-                      <option value="QUARTERLY">{isAr ? 'ربع سنوي (كل ٣ أشهر)' : 'Quarterly (Every 3 Mo)'}</option>
-                      <option value="SEMI_ANNUAL">{isAr ? 'نصف سنوي (كل ٦ أشهر)' : 'Semi-Annual (Every 6 Mo)'}</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label style={{ fontSize: '0.74rem', fontWeight: 700, color: '#334155', marginBottom: '0.25rem', display: 'block' }}>
-                      {isAr ? 'تاريخ سداد المقدم:' : 'Down Payment Date:'}
-                    </label>
-                    <input
-                      type="date"
-                      value={firstPaymentDate}
-                      onChange={e => setFirstPaymentDate(e.target.value)}
-                      style={{
-                        width: '100%',
-                        padding: '0.55rem 0.75rem',
-                        borderRadius: '8px',
-                        border: '1px solid #cbd5e1',
-                        background: '#ffffff',
-                        color: '#0f172a',
-                        fontSize: '0.82rem',
-                        outline: 'none'
-                      }}
-                    />
-                  </div>
-
-                  <div>
-                    <label style={{ fontSize: '0.74rem', fontWeight: 700, color: '#334155', marginBottom: '0.25rem', display: 'block' }}>
-                      {isAr ? 'تاريخ استحقاق أول قسط:' : 'First Tranche Due Date:'}
-                    </label>
-                    <input
-                      type="date"
-                      value={firstInstallmentDueDate}
-                      onChange={e => setFirstInstallmentDueDate(e.target.value)}
-                      style={{
-                        width: '100%',
-                        padding: '0.55rem 0.75rem',
-                        borderRadius: '8px',
-                        border: '1px solid #cbd5e1',
-                        background: '#ffffff',
-                        color: '#0f172a',
-                        fontSize: '0.82rem',
-                        outline: 'none'
-                      }}
-                    />
-                  </div>
+                <div className={p.field}>
+                  <label className={p.label} htmlFor="ncw-count">{isAr ? 'عدد الأقساط' : 'Number of Installments'}</label>
+                  <select id="ncw-count" className={p.input} value={numInstallments} onChange={e => setNumInstallments(e.target.value)}>
+                    <option value="4">4 {isAr ? 'أقساط' : 'tranches'}</option>
+                    <option value="8">8 {isAr ? 'أقساط (سنتان ربع سنوي)' : 'tranches (2 yrs)'}</option>
+                    <option value="12">12 {isAr ? 'قسطاً (٣ سنوات ربع سنوي)' : 'tranches (3 yrs)'}</option>
+                    <option value="16">16 {isAr ? 'قسطاً (٤ سنوات ربع سنوي)' : 'tranches (4 yrs)'}</option>
+                    <option value="20">20 {isAr ? 'قسطاً (٥ سنوات ربع سنوي)' : 'tranches (5 yrs)'}</option>
+                    <option value="24">24 {isAr ? 'قسطاً (سنتان شهرياً)' : 'tranches (2 yrs monthly)'}</option>
+                  </select>
+                </div>
+                <div className={p.field}>
+                  <label className={p.label} htmlFor="ncw-freq">{isAr ? 'تكرار السداد' : 'Payment Frequency'}</label>
+                  <select id="ncw-freq" className={p.input} value={installmentFrequency} onChange={e => setInstallmentFrequency(e.target.value as any)}>
+                    <option value="MONTHLY">{isAr ? 'شهري' : 'Monthly'}</option>
+                    <option value="QUARTERLY">{isAr ? 'ربع سنوي (كل ٣ أشهر)' : 'Quarterly'}</option>
+                    <option value="SEMI_ANNUAL">{isAr ? 'نصف سنوي (كل ٦ أشهر)' : 'Semi-Annual'}</option>
+                  </select>
+                </div>
+                <div className={p.field}>
+                  <label className={p.label} htmlFor="ncw-dp-date">{isAr ? 'تاريخ سداد المقدم' : 'Down Payment Date'}</label>
+                  <input id="ncw-dp-date" type="date" className={`${p.input} ${p.numeric}`} value={firstPaymentDate} onChange={e => setFirstPaymentDate(e.target.value)} />
+                </div>
+                <div className={p.field}>
+                  <label className={p.label} htmlFor="ncw-first-due">{isAr ? 'استحقاق أول قسط' : 'First Tranche Due'}</label>
+                  <input id="ncw-first-due" type="date" className={`${p.input} ${p.numeric}`} value={firstInstallmentDueDate} onChange={e => setFirstInstallmentDueDate(e.target.value)} />
                 </div>
               </div>
+            </section>
 
-              {/* Tranche Preview Schedule Table */}
-              {previewSchedule.length > 0 && (
-                <div style={{
-                  background: '#f8fafc',
-                  border: '1px solid var(--erp-border, #cbd5e1)',
-                  borderRadius: '12px',
-                  padding: '1rem',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '0.6rem'
-                }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontSize: '0.76rem', fontWeight: 800, color: '#0f172a' }}>
-                      {isAr ? `معاينة جدول الدفعات والأقساط (دفعة الحجز والمقدم النقدي + ${previewSchedule.length} أقساط):` : `Payment & Installments Schedule (Tranche 0 + ${previewSchedule.length} Tranches):`}
-                    </span>
-                    <span style={{ fontSize: '0.72rem', color: '#64748b' }}>
-                      {isAr ? `قيمة القسط الدوري: ${D(previewSchedule[0]?.amount || 0).formatEGP(isAr)}` : `Per Tranche: ${D(previewSchedule[0]?.amount || 0).formatEGP(isAr)}`}
-                    </span>
-                  </div>
+            {previewSchedule.length > 0 && (
+              <section className={p.section}>
+                <div className={p.sectionHeader}>
+                  <h4 className={p.sectionTitle}>{isAr ? `معاينة الجدول (المقدم + ${previewSchedule.length} أقساط)` : `Schedule preview (Tranche 0 + ${previewSchedule.length})`}</h4>
+                  <bdi className={`${p.hint} ${p.numeric}`}>{isAr ? 'القسط ' : 'Per tranche '}{D(previewSchedule[0]?.amount || 0).formatEGP(isAr)}</bdi>
+                </div>
+                <div className={`${p.tableWrap} ${p.tableScroll}`}>
+                  <table className={p.table}>
+                    <thead>
+                      <tr><th scope="col">#</th><th scope="col">{isAr ? 'الاستحقاق' : 'Due Date'}</th><th scope="col">{isAr ? 'القيمة' : 'Amount'}</th><th scope="col">{isAr ? 'البيان' : 'Description'}</th></tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td><bdi>0</bdi></td>
+                        <td><bdi>{firstPaymentDate || notEntered}</bdi></td>
+                        <td><bdi>{D(modalDpAmount).formatEGP(isAr)}</bdi></td>
+                        <td><span className={`${p.pill} ${p.pillSuccess}`}>{isAr ? 'المقدم عند التعاقد' : 'Paid on signing'}</span></td>
+                      </tr>
+                      {previewSchedule.slice(0, 10).map(t => (
+                        <tr key={t.index}>
+                          <td><bdi>{t.index}</bdi></td>
+                          <td><bdi>{t.dueDate}</bdi></td>
+                          <td><bdi>{D(t.amount).formatEGP(isAr)}</bdi></td>
+                          <td>{isAr ? 'قسط مجدول' : 'Scheduled'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+            )}
+          </>
+        )}
 
-                  <div style={{ maxHeight: '150px', overflowY: 'auto', overflowX: 'auto', WebkitOverflowScrolling: 'touch', border: '1px solid var(--erp-border, #cbd5e1)', borderRadius: '8px' }}>
-                    <table style={{ width: '100%', minWidth: '460px', borderCollapse: 'collapse', fontSize: '0.74rem', textAlign: isAr ? 'right' : 'left' }}>
-                      <thead>
-                        <tr style={{ background: '#f1f5f9', color: '#475569' }}>
-                          <th style={{ padding: '0.4rem 0.6rem' }}>#</th>
-                          <th style={{ padding: '0.4rem 0.6rem' }}>{isAr ? 'تاريخ الاستحقاق' : 'Due Date'}</th>
-                          <th style={{ padding: '0.4rem 0.6rem' }}>{isAr ? 'قيمة الدفعة' : 'Amount'}</th>
-                          <th style={{ padding: '0.4rem 0.6rem' }}>{isAr ? 'البيان / الحالة الدفترية' : 'Description / Status'}</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {/* Tranche 0: Down payment / Reservation */}
-                        <tr style={{ borderTop: '1px solid #e2e8f0', background: 'rgba(5, 150, 105, 0.04)' }}>
-                          <td style={{ padding: '0.4rem 0.6rem', fontWeight: 800, color: '#059669' }}>#0</td>
-                          <td style={{ padding: '0.4rem 0.6rem', fontVariantNumeric: 'tabular-nums', color: '#0f172a' }}>{firstPaymentDate}</td>
-                          <td style={{ padding: '0.4rem 0.6rem', fontWeight: 800, color: '#059669' }}>{D(modalDpAmount).formatEGP(isAr)}</td>
-                          <td style={{ padding: '0.4rem 0.6rem', color: '#047857', fontWeight: 700 }}>
-                            {isAr ? 'دفعة الحجز والمقدم النقدي (Tranche 0 مسددة)' : 'Tranche 0: Reservation & Down Payment (Paid)'}
-                          </td>
-                        </tr>
-                        {previewSchedule.slice(0, 10).map(t => (
-                          <tr key={t.index} style={{ borderTop: '1px solid #e2e8f0', background: '#ffffff' }}>
-                            <td style={{ padding: '0.4rem 0.6rem', fontWeight: 700 }}>#{t.index}</td>
-                            <td style={{ padding: '0.4rem 0.6rem', fontVariantNumeric: 'tabular-nums' }}>{t.dueDate}</td>
-                            <td style={{ padding: '0.4rem 0.6rem', fontWeight: 700, color: 'var(--erp-accent, #2563eb)' }}>{D(t.amount).formatEGP(isAr)}</td>
-                            <td style={{ padding: '0.4rem 0.6rem', color: '#64748b' }}>{isAr ? 'قسط دوري مجدول باليد' : 'Pending Hand'}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+        {step === 3 && (
+          <>
+            <section className={p.section}>
+              <div className={p.sectionHeader}>
+                <h4 className={p.sectionTitle}>{isAr ? 'حصص الشركاء في التمويل' : 'Partner Equity Splits'}</h4>
+                <span className={splitsBalanced ? `${p.pill} ${p.pillSuccess}` : `${p.pill} ${p.pillDanger}`}>
+                  <bdi className={p.numeric}>{isAr ? 'الإجمالي ' : 'Total '}{totalSplitsPct.toFixed(1)}%</bdi>
+                </span>
+              </div>
+              <div className={p.ratioBar} aria-hidden>
+                {partnerSplits.map(item => (
+                  <div key={item.partnerName} className={p.ratioSegment} style={{ width: `${Math.max(0, item.sharePct)}%` }} title={`${item.partnerName}: ${item.sharePct}%`} />
+                ))}
+              </div>
+              <div>
+                {partnerSplits.map((item, idx) => (
+                  <div key={item.partnerName} className={p.shareRow}>
+                    <bdi className={p.shareName}>{item.partnerName}</bdi>
+                    <bdi className={p.shareAmount}>{D(totalNominalValue * (item.sharePct / 100)).formatEGP(isAr)}</bdi>
+                    <div className={p.affixWrap}>
+                      <input type="number" min="0" max="100" className={`${p.input} ${p.numeric}`}
+                        aria-label={isAr ? `حصة ${item.partnerName}` : `${item.partnerName} share`}
+                        value={item.sharePct}
+                        onChange={e => {
+                          const val = parseFloat(e.target.value) || 0;
+                          setPartnerSplits(partnerSplits.map((ps, i) => i === idx ? { ...ps, sharePct: val } : ps));
+                        }} />
+                      <span className={p.affix}>%</span>
+                    </div>
+                    {idx > 0 ? (
+                      <button type="button" className={p.iconButton} aria-label={isAr ? `حذف ${item.partnerName}` : `Remove ${item.partnerName}`}
+                        onClick={() => setPartnerSplits(smartRemovePartner(partnerSplits, idx))}>
+                        <Trash2 size={14} />
+                      </button>
+                    ) : <span aria-hidden />}
                   </div>
+                ))}
+              </div>
+              {contractErrors.splits && (
+                <div className={`${p.notice} ${p.noticeDanger}`} role="alert">
+                  <AlertCircle size={16} className={p.noticeIconDanger} />
+                  <p className={p.noticeBody}>{contractErrors.splits}</p>
                 </div>
               )}
+            </section>
 
-              {/* Step 2 Footer Navigation */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '0.5rem', flexWrap: 'wrap', gap: '0.5rem' }}>
-                <div style={{ display: 'flex', gap: '0.5rem' }}>
-                  <button
-                    type="button"
-                    onClick={() => setStep(1)}
-                    style={{
-                      background: '#ffffff',
-                      border: '1px solid #cbd5e1',
-                      color: '#334155',
-                      padding: '0.6rem 1.25rem',
-                      minHeight: '44px',
-                      borderRadius: '8px',
-                      fontSize: '0.8rem',
-                      fontWeight: 700,
-                      cursor: 'pointer',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      justifyContent: 'center'
-                    }}
-                  >
-                    {isAr ? 'السابق: الوحدة والمشتري →' : '← Back: Property & Buyer'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleModalClose}
-                    style={{
-                      background: '#ffffff',
-                      border: '1px solid #cbd5e1',
-                      color: '#64748b',
-                      padding: '0.6rem 1.25rem',
-                      minHeight: '44px',
-                      borderRadius: '8px',
-                      fontSize: '0.8rem',
-                      fontWeight: 700,
-                      cursor: 'pointer',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '0.35rem',
-                    }}
-                  >
-                    <X size={15} />
-                    <span>{isAr ? 'إلغاء' : 'Cancel'}</span>
-                  </button>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (validateStep2()) setStep(3);
-                  }}
-                  style={{
-                    background: 'var(--erp-accent, #2563eb)',
-                    color: '#ffffff',
-                    border: '1px solid var(--erp-accent, #2563eb)',
-                    padding: '0.65rem 1.45rem',
-                    minHeight: '44px',
-                    borderRadius: '8px',
-                    fontSize: '0.82rem',
-                    fontWeight: 800,
-                    cursor: 'pointer',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '0.45rem',
-                    boxShadow: '0 2px 8px var(--erp-accent-tint, rgba(37, 99, 235, 0.25))',
-                    transition: 'all 0.15s ease'
-                  }}
-                  onMouseEnter={e => e.currentTarget.style.background = 'var(--erp-accent-hover, #1d4ed8)'}
-                  onMouseLeave={e => e.currentTarget.style.background = 'var(--erp-accent, #2563eb)'}
-                >
-                  <span>{isAr ? 'المتابعة لتوزيع الشركاء والاعتماد' : 'Proceed to Partner Splits'}</span>
-                  <ArrowRight size={15} style={{ transform: isAr ? 'rotate(180deg)' : 'none' }} />
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* ═══════════════════════════════════════════════════════════ */}
-          {/* STEP 3: PARTNER SPLITS & FINAL COMMIT                       */}
-          {/* ═══════════════════════════════════════════════════════════ */}
-          {step === 3 && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
-              {/* Partner Equity Allocation */}
-              <div style={{
-                background: '#ffffff',
-                border: '1px solid var(--erp-border, #cbd5e1)',
-                borderRadius: '12px',
-                padding: '1.15rem',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '0.85rem',
-                boxShadow: '0 1px 3px rgba(0,0,0,0.03)'
-              }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <Users size={16} color="var(--erp-accent, #2563eb)" />
-                    <h4 style={{ margin: 0, fontSize: '0.88rem', fontWeight: 800, color: '#0f172a' }}>
-                      {isAr ? 'توزيع حصص التمويل ورأس المال بين الشركاء:' : 'Partner Equity & Capital Splits:'}
-                    </h4>
-                  </div>
-
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                    <span style={{ fontSize: '0.72rem', color: '#64748b' }}>{isAr ? 'إجمالي الحصص:' : 'Total Splits:'}</span>
-                    <strong style={{
-                      fontSize: '0.82rem',
-                      fontWeight: 800,
-                      color: Math.abs(totalSplitsPct - 100) < 0.01 ? '#059669' : '#dc2626'
-                    }}>
-                      {totalSplitsPct.toFixed(1)}% {Math.abs(totalSplitsPct - 100) < 0.01 ? '✓' : '⚠️'}
-                    </strong>
-                  </div>
-                </div>
-
-                {/* Progress Visual Bar */}
-                <div style={{ width: '100%', height: '8px', borderRadius: '999px', background: '#e2e8f0', overflow: 'hidden', display: 'flex' }}>
-                  {partnerSplits.map((p, idx) => (
-                    <div
-                      key={p.partnerName}
-                      style={{
-                        width: `${Math.max(0, p.sharePct)}%`,
-                        background: idx === 0 ? 'var(--erp-accent, #2563eb)' : idx === 1 ? '#0284c7' : '#15803d',
-                        height: '100%'
-                      }}
-                      title={`${p.partnerName}: ${p.sharePct}%`}
-                    />
-                  ))}
-                </div>
-
-                {/* Partner Rows */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                  {partnerSplits.map((item, idx) => (
-                    <div
-                      key={item.partnerName}
-                      style={{
-                        display: 'grid',
-                        gridTemplateColumns: '2fr 1.5fr 1fr auto',
-                        gap: '0.6rem',
-                        alignItems: 'center',
-                        background: '#f8fafc',
-                        border: '1px solid var(--erp-border, #cbd5e1)',
-                        borderRadius: '8px',
-                        padding: '0.5rem 0.75rem'
-                      }}
-                    >
-                      <strong style={{ fontSize: '0.78rem', color: '#0f172a' }}>{item.partnerName}</strong>
-                      <span style={{ fontSize: '0.72rem', color: '#64748b' }}>
-                        {D(totalNominalValue * (item.sharePct / 100)).formatEGP(isAr)}
-                      </span>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.2rem' }}>
-                        <input
-                          type="number"
-                          min="0"
-                          max="100"
-                          value={item.sharePct}
-                          onChange={e => {
-                            const val = parseFloat(e.target.value) || 0;
-                            const updated = partnerSplits.map((p, i) => i === idx ? { ...p, sharePct: val } : p);
-                            setPartnerSplits(updated);
-                          }}
-                          style={{
-                            width: '55px',
-                            padding: '0.25rem 0.4rem',
-                            borderRadius: '6px',
-                            border: '1px solid #cbd5e1',
-                            background: '#ffffff',
-                            color: '#0f172a',
-                            fontSize: '0.78rem',
-                            fontWeight: 700,
-                            textAlign: 'center'
-                          }}
-                        />
-                        <span style={{ fontSize: '0.72rem', color: '#64748b' }}>%</span>
-                      </div>
-                      {idx > 0 && (
-                        <button
-                          type="button"
-                          onClick={() => setPartnerSplits(smartRemovePartner(partnerSplits, idx))}
-                          style={{
-                            background: 'transparent',
-                            border: 'none',
-                            color: '#dc2626',
-                            cursor: 'pointer',
-                            padding: '0.2rem'
-                          }}
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      )}
-                    </div>
-                  ))}
-                </div>
-
-                {/* Destination Treasury Selector */}
-                <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: '0.85rem' }}>
-                  <label style={{ fontSize: '0.74rem', fontWeight: 700, color: '#334155', marginBottom: '0.4rem', display: 'block' }}>
-                    {isAr ? 'خزينة استلام وتوريد الدفعة المقدمة:' : 'Down Payment Destination Treasury:'}
-                  </label>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
-                    <button
-                      type="button"
-                      onClick={() => setDestinationTreasury('SAFE_101000')}
-                      style={{
-                        padding: '0.55rem 0.85rem',
-                        borderRadius: '8px',
-                        border: destinationTreasury === 'SAFE_101000' ? '1.5px solid #059669' : '1px solid #cbd5e1',
-                        background: destinationTreasury === 'SAFE_101000' ? 'rgba(16, 185, 129, 0.08)' : '#ffffff',
-                        color: destinationTreasury === 'SAFE_101000' ? '#059669' : '#475569',
-                        fontSize: '0.76rem',
-                        fontWeight: 700,
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.4rem'
-                      }}
-                    >
-                      <Wallet size={14} />
-                      <span>{isAr ? 'خزينة المركز الرئيسي [101000]' : 'Main Safe [101000]'}</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setDestinationTreasury('BANK_102000')}
-                      style={{
-                        padding: '0.55rem 0.85rem',
-                        borderRadius: '8px',
-                        border: destinationTreasury === 'BANK_102000' ? '1.5px solid var(--erp-accent, #2563eb)' : '1px solid #cbd5e1',
-                        background: destinationTreasury === 'BANK_102000' ? 'var(--erp-accent-subtle, #eff6ff)' : '#ffffff',
-                        color: destinationTreasury === 'BANK_102000' ? 'var(--erp-accent, #2563eb)' : '#475569',
-                        fontSize: '0.76rem',
-                        fontWeight: 700,
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.4rem'
-                      }}
-                    >
-                      <Landmark size={14} />
-                      <span>{isAr ? 'الحساب البنكي التجاري [102000]' : 'Commercial Bank [102000]'}</span>
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              {/* Deal Summary & Automated Posting Confirmation */}
-              <div style={{
-                background: '#ffffff',
-                border: '1px solid var(--erp-border, #cbd5e1)',
-                borderRadius: '12px',
-                padding: '1rem',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '0.75rem',
-                boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
-              }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--erp-accent, #2563eb)' }}>
-                    {isAr ? 'ملخص الصفقة والأثر الدفتري التلقائي بالدفاتر:' : 'Deal Summary & GL Impact:'}
+            <section className={p.section}>
+              <h4 className={p.sectionTitle}>{isAr ? 'خزينة استلام المقدم' : 'Down Payment Treasury'}</h4>
+              <div className={p.choiceGrid} role="radiogroup">
+                <button type="button" role="radio" aria-checked={destinationTreasury === 'SAFE_101000'}
+                  className={destinationTreasury === 'SAFE_101000' ? `${p.choice} ${p.choiceSelected}` : p.choice}
+                  onClick={() => setDestinationTreasury('SAFE_101000')}>
+                  <span className={p.choiceIcon}><Wallet size={16} /></span>
+                  <span className={p.choiceText}>
+                    <span className={p.choiceTitle}>{isAr ? 'الخزينة الرئيسية' : 'Main Safe'}</span>
+                    <bdi className={`${p.choiceDesc} ${p.numeric}`}>101000</bdi>
                   </span>
-                  <ShieldCheck size={16} color="var(--erp-accent, #2563eb)" />
-                </div>
-
-                <div style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(5, 1fr)',
-                  gap: '0.75rem',
-                  fontSize: '0.74rem',
-                  background: '#f8fafc',
-                  padding: '0.65rem 0.85rem',
-                  borderRadius: '8px'
-                }}>
-                  <div>
-                    <span style={{ color: '#64748b', display: 'block', fontSize: '0.68rem' }}>{isAr ? 'الوحدة / المشروع:' : 'Unit / Project:'}</span>
-                    <strong style={{ color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'block' }}>
-                      {selectedBuildingUnit 
-                        ? `${selectedProperty?.title_ar || selectedProperty?.title_en} - ${selectedBuildingUnit.unit_number}`
-                        : selectedProperty 
-                          ? (selectedProperty.title_ar || selectedProperty.title_en)
-                          : (customUnitName || '—')}
-                    </strong>
-                  </div>
-                  <div>
-                    <span style={{ color: '#64748b', display: 'block', fontSize: '0.68rem' }}>{isAr ? 'المشتري:' : 'Buyer:'}</span>
-                    <strong style={{ color: '#0f172a' }}>{buyerName || '—'}</strong>
-                  </div>
-                  <div>
-                    <span style={{ color: '#64748b', display: 'block', fontSize: '0.68rem' }}>{isAr ? 'القيمة التعاقدية:' : 'Gross Value:'}</span>
-                    <strong style={{ color: 'var(--erp-accent, #2563eb)' }}>{D(totalNominalValue).formatEGP(isAr)}</strong>
-                  </div>
-                  <div>
-                    <span style={{ color: '#64748b', display: 'block', fontSize: '0.68rem' }}>{isAr ? 'دفعة الحجز والمقدم النقدي:' : 'Down Payment & Reservation (Tranche 0):'}</span>
-                    <strong style={{ color: '#059669' }}>{D(modalDpAmount).formatEGP(isAr)}</strong>
-                  </div>
-                  <div>
-                    <span style={{ color: '#64748b', display: 'block', fontSize: '0.68rem' }}>{isAr ? 'تاريخ التوقيع:' : 'Contract Date:'}</span>
-                    <strong style={{ color: '#0f172a' }}>{firstPaymentDate}</strong>
-                  </div>
-                </div>
-
-                <div style={{ fontSize: '0.72rem', color: '#065f46', background: 'rgba(16, 185, 129, 0.08)', padding: '0.5rem 0.75rem', borderRadius: '6px' }}>
-                  {isAr 
-                    ? `التوجيه المحاسبي اللحظي: مدين [${destinationTreasury === 'SAFE_101000' ? '101000 خزينة' : '102000 بنك'}] بمبلغ ${D(modalDpAmount).formatEGP(isAr)} • دائن [203000 إيرادات مؤجلة] بمبلغ ${D(modalDpAmount).formatEGP(isAr)}.`
-                    : `Instant GL Posting: Dr [${destinationTreasury === 'SAFE_101000' ? '101000 Safe' : '102000 Bank'}] ${D(modalDpAmount).formatEGP(isAr)} • Cr [203000 Deferred Revenue] ${D(modalDpAmount).formatEGP(isAr)}.`}
-                </div>
-              </div>
-
-              {/* Step 3 Footer Navigation */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '0.5rem', flexWrap: 'wrap', gap: '0.5rem' }}>
-                <div style={{ display: 'flex', gap: '0.5rem' }}>
-                  <button
-                    type="button"
-                    onClick={() => setStep(2)}
-                    style={{
-                      background: '#ffffff',
-                      border: '1px solid #cbd5e1',
-                      color: '#334155',
-                      padding: '0.6rem 1.25rem',
-                      minHeight: '44px',
-                      borderRadius: '8px',
-                      fontSize: '0.8rem',
-                      fontWeight: 700,
-                      cursor: 'pointer',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      justifyContent: 'center'
-                    }}
-                  >
-                    {isAr ? 'السابق: الشروط المالية →' : '← Back: Payment Terms'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleModalClose}
-                    style={{
-                      background: '#ffffff',
-                      border: '1px solid #cbd5e1',
-                      color: '#64748b',
-                      padding: '0.6rem 1.25rem',
-                      minHeight: '44px',
-                      borderRadius: '8px',
-                      fontSize: '0.8rem',
-                      fontWeight: 700,
-                      cursor: 'pointer',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '0.35rem',
-                    }}
-                  >
-                    <X size={15} />
-                    <span>{isAr ? 'إلغاء' : 'Cancel'}</span>
-                  </button>
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={isMutating || Math.abs(totalSplitsPct - 100) > 0.01}
-                  style={{
-                    background: 'var(--erp-accent, #2563eb)',
-                    color: '#ffffff',
-                    border: '1px solid var(--erp-accent, #2563eb)',
-                    padding: '0.65rem 1.65rem',
-                    minHeight: '44px',
-                    borderRadius: '8px',
-                    fontSize: '0.82rem',
-                    fontWeight: 800,
-                    cursor: isMutating ? 'not-allowed' : 'pointer',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '0.45rem',
-                    boxShadow: '0 2px 10px var(--erp-accent-tint, rgba(37, 99, 235, 0.3))',
-                    transition: 'all 0.15s ease'
-                  }}
-                  onMouseEnter={e => {
-                    if (!isMutating && Math.abs(totalSplitsPct - 100) <= 0.01) {
-                      e.currentTarget.style.background = 'var(--erp-accent-hover, #1d4ed8)';
-                    }
-                  }}
-                  onMouseLeave={e => {
-                    if (!isMutating) {
-                      e.currentTarget.style.background = 'var(--erp-accent, #2563eb)';
-                    }
-                  }}
-                >
-                  {isMutating ? <Loader2 size={15} className="animate-spin" /> : <CheckCircle2 size={15} />}
-                  <span>{isAr ? 'اعتماد العقد وترحيل الدفعة للخزينة' : 'Execute Real Contract & Post'}</span>
+                </button>
+                <button type="button" role="radio" aria-checked={destinationTreasury === 'BANK_102000'}
+                  className={destinationTreasury === 'BANK_102000' ? `${p.choice} ${p.choiceSelected}` : p.choice}
+                  onClick={() => setDestinationTreasury('BANK_102000')}>
+                  <span className={p.choiceIcon}><Landmark size={16} /></span>
+                  <span className={p.choiceText}>
+                    <span className={p.choiceTitle}>{isAr ? 'الحساب البنكي' : 'Commercial Bank'}</span>
+                    <bdi className={`${p.choiceDesc} ${p.numeric}`}>102000</bdi>
+                  </span>
                 </button>
               </div>
-            </div>
-          )}
+            </section>
 
-        </form>
+            <section className={p.section}>
+              <h4 className={p.sectionTitle}>{isAr ? 'ملخص الصفقة' : 'Deal Summary'}</h4>
+              <dl className={p.metaList}>
+                <div className={p.metaRow}>
+                  <dt className={p.metaKey}><Building2 size={12} aria-hidden /> {isAr ? 'الوحدة / المشروع' : 'Unit / Project'}</dt>
+                  <dd className={targetLabel ? p.metaValue : `${p.metaValue} ${p.emptyValue}`}><bdi>{targetLabel || notEntered}</bdi></dd>
+                </div>
+                <div className={p.metaRow}>
+                  <dt className={p.metaKey}><Users size={12} aria-hidden /> {isAr ? 'المشتري' : 'Buyer'}</dt>
+                  <dd className={buyerName ? p.metaValue : `${p.metaValue} ${p.emptyValue}`}><bdi>{buyerName || notEntered}</bdi></dd>
+                </div>
+                <div className={p.metaRow}>
+                  <dt className={p.metaKey}>{isAr ? 'القيمة التعاقدية' : 'Gross Value'}</dt>
+                  <dd className={p.metaValue}><bdi>{D(totalNominalValue).formatEGP(isAr)}</bdi></dd>
+                </div>
+                <div className={p.metaRow}>
+                  <dt className={p.metaKey}>{isAr ? 'دفعة الحجز والمقدم' : 'Down Payment (Tranche 0)'}</dt>
+                  <dd className={p.metaValue}><bdi>{D(modalDpAmount).formatEGP(isAr)}</bdi></dd>
+                </div>
+                <div className={p.metaRow}>
+                  <dt className={p.metaKey}>{isAr ? 'تاريخ التوقيع' : 'Contract Date'}</dt>
+                  <dd className={firstPaymentDate ? p.metaValue : `${p.metaValue} ${p.emptyValue}`}><bdi>{firstPaymentDate || notEntered}</bdi></dd>
+                </div>
+              </dl>
+              <p className={`${p.hint} ${p.numeric}`}>
+                <bdi>
+                  {isAr
+                    ? `القيد: مدين ${destinationTreasury === 'SAFE_101000' ? '101000 خزينة' : '102000 بنك'} ${D(modalDpAmount).formatEGP(isAr)} · دائن 203000 إيرادات مؤجلة ${D(modalDpAmount).formatEGP(isAr)}`
+                    : `Entry: Dr ${destinationTreasury === 'SAFE_101000' ? '101000 Safe' : '102000 Bank'} ${D(modalDpAmount).formatEGP(isAr)} · Cr 203000 Deferred Revenue ${D(modalDpAmount).formatEGP(isAr)}`}
+                </bdi>
+              </p>
+            </section>
+          </>
+        )}
+      </form>
     </ZFModalShell>
   );
 };

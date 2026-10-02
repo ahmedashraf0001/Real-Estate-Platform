@@ -595,3 +595,23 @@ textarea.input {
 .tableScroll { max-height: 200px; overflow: auto; }
 .chipActive, .chipActive:hover:not(:disabled) { border-color: var(--erp-accent, #946f23); color: var(--erp-accent, #946f23); }
 .figureValue { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* Clickable filter rows (phase / category breakdowns) */
+.rowButton { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; width: 100%; padding: 8px 0; border: none; border-bottom: 1px solid #f1f5f9; background: none; font: inherit; font-size: 0.8rem; color: #334155; text-align: start; cursor: pointer; }
+.rowButton:last-child { border-bottom: none; }
+.rowButton:hover:not(:disabled) { color: #0f172a; }
+.rowButton:disabled { cursor: default; opacity: 0.5; }
+.rowButton:focus-visible { outline: 2px solid var(--erp-accent, #946f23); outline-offset: 2px; border-radius: 4px; }
+.rowButtonActive, .rowButtonActive:hover:not(:disabled) { color: var(--erp-accent, #946f23); font-weight: 700; }
+.rowLead { display: inline-flex; align-items: center; gap: 8px; min-width: 0; }
+.rowMeta { display: inline-flex; align-items: baseline; gap: 12px; flex-shrink: 0; font-variant-numeric: tabular-nums; }
+.rowCount { font-size: 0.7rem; color: #64748b; font-weight: 500; }
+.pager { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 0.74rem; color: #64748b; }
+.pagerControls { display: inline-flex; align-items: center; gap: 6px; }
+.cellSub { display: block; margin-top: 2px; font-size: 0.68rem; color: #94a3b8; white-space: normal; }
+.cellWrap { white-space: normal; min-width: 200px; }
+.srOnly { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+@media (max-width: 640px) {
+  .shareRow { grid-template-columns: minmax(0, 1fr) 80px 32px; row-gap: 2px; }
+  .shareName { grid-column: 1 / -1; white-space: normal; }
+}
