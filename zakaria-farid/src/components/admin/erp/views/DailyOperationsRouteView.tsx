@@ -34,6 +34,9 @@ export function DailyOperationsRouteView() {
     } else if (action === 'new_cheque') {
       erp.setSupplementInitialContractId(null);
       erp.setShowNewPDCModal(true);
+    } else if (action === 'escalate') {
+      const target = erp.data.contracts.find(c => c.status !== 'Rescinded') || erp.data.contracts[0];
+      if (target) erp.setShowEscalationModal(target);
     }
   }, [searchParams, erp]);
 
