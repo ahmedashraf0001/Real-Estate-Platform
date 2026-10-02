@@ -3,8 +3,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Image from 'next/image';
 import {
-  Building2, CalendarDays, CheckCircle2, CreditCard, FileText,
-  Home, MapPin, Maximize2, Phone, Printer, Receipt, User, Wallet, Coins
+  Building2, CreditCard, FileText, Home, Printer
 } from 'lucide-react';
 import type { ERPContract, ERPInstallmentSchedule } from '@/lib/erp/types';
 import type { Property } from '@/lib/supabase/types';
@@ -12,8 +11,7 @@ import { D, Decimal } from '@/lib/erp/math';
 import { formatCompactNumber, getContractPaymentStatus } from '@/lib/erp/contractsPipeline';
 import { localizeBuyerName } from '@/components/erp/JournalEntryPreview';
 import { ZFModalShell } from '../common/ZFModalShell';
-import shellStyles from '../ZFWorkstationShell.module.css';
-import css from './ZFContractInspectionModal.module.css';
+import p from '../common/ZFModalPrimitives.module.css';
 
 export interface ZFContractInspectionModalProps {
   isOpen: boolean;
@@ -60,125 +58,207 @@ export const ZFContractInspectionModal: React.FC<ZFContractInspectionModalProps>
   const pending = contractSchedules.find(s => s.status === 'Defaulted') || contractSchedules.find(s => s.status === 'Pending' || s.status === 'Partially Paid');
   const deposit = contractSchedules.find(s => s.tranche_number === 0);
   const status = getContractPaymentStatus(contract, contractSchedules);
-  const statusClass = status === 'overdue' ? shellStyles.statusPillRed : status === 'completed' ? shellStyles.statusPillGreen : status === 'rescinded' ? shellStyles.statusPillNeutral : shellStyles.statusPillBlue;
+  const statusTone = status === 'overdue' ? p.pillDanger : status === 'completed' ? p.pillSuccess : status === 'rescinded' ? p.pillMuted : p.pillAccent;
   const statusText = status === 'overdue' ? (isAr ? 'متأخر' : 'Overdue') : status === 'completed' ? (isAr ? 'مكتمل السداد' : 'Paid in full') : status === 'rescinded' ? (isAr ? 'مفسوخ' : 'Rescinded') : (isAr ? 'ساري' : 'Active');
   const projectName = property ? (isAr ? property.title_ar : property.title_en) : (isAr ? 'عقار غير مرتبط' : 'Unlinked property');
-  const paymentPlan = contract.payment_plan_type === 'FULL_CASH' ? (isAr ? 'سداد نقدي' : 'Full cash') : contract.payment_plan_type === 'UPFRONT_HANDOVER' ? (isAr ? 'مقدم واستلام' : 'Upfront handover') : contract.payment_plan_type === 'INSTALLMENTS' ? (isAr ? 'أقساط' : 'Installments') : '—';
+  const empty = isAr ? 'غير مُدخل' : 'Not entered';
+  const paymentPlan = contract.payment_plan_type === 'FULL_CASH' ? (isAr ? 'سداد نقدي' : 'Full cash') : contract.payment_plan_type === 'UPFRONT_HANDOVER' ? (isAr ? 'مقدم واستلام' : 'Upfront handover') : contract.payment_plan_type === 'INSTALLMENTS' ? (isAr ? 'أقساط' : 'Installments') : null;
   const money = (amount: string | number | Decimal) => `${formatCompactNumber(amount)} ${isAr ? 'ج.م' : 'EGP'}`;
+  const buyerName = isAr ? localizeBuyerName(contract.buyer_name) : contract.buyer_name;
+  const area = unit?.area_sqm || property?.area_sqm;
+  const canHandover = !!onOpenHandoverModal && contract.handover_status !== 'Delivered' && contract.status !== 'Rescinded';
+  const canCollect = !!onOpenCollectionModal && !!pending && contract.status !== 'Rescinded';
   const scheduleState = (s: ERPInstallmentSchedule) => {
-    if (s.status === 'Paid') return { cls: shellStyles.statusPillGreen, label: isAr ? 'مدفوع' : 'Paid' };
-    if (s.status === 'Defaulted' || ((s.status === 'Pending' || s.status === 'Partially Paid') && s.due_date < new Date().toISOString().split('T')[0])) return { cls: shellStyles.statusPillRed, label: isAr ? 'متأخر' : 'Overdue' };
-    if (s.status === 'Partially Paid') return { cls: shellStyles.statusPillBlue, label: isAr ? 'مدفوع جزئياً' : 'Part paid' };
-    return { cls: shellStyles.statusPillAmber, label: isAr ? 'مستحق' : 'Due' };
+    if (s.status === 'Paid') return { tone: p.pillSuccess, label: isAr ? 'مدفوع' : 'Paid' };
+    if (s.status === 'Defaulted' || ((s.status === 'Pending' || s.status === 'Partially Paid') && s.due_date < new Date().toISOString().split('T')[0])) return { tone: p.pillDanger, label: isAr ? 'متأخر' : 'Overdue' };
+    if (s.status === 'Partially Paid') return { tone: p.pillAccent, label: isAr ? 'مدفوع جزئياً' : 'Part paid' };
+    return { tone: p.pillWarning, label: isAr ? 'مستحق' : 'Due' };
   };
+  const metaRow = (label: string, value: React.ReactNode, isEmpty = false) => (
+    <div className={p.metaRow}>
+      <dt className={p.metaKey}>{label}</dt>
+      <dd className={isEmpty ? `${p.metaValue} ${p.emptyValue}` : p.metaValue}>{isEmpty ? empty : value}</dd>
+    </div>
+  );
 
   return (
-    <ZFModalShell isOpen={isOpen} onClose={onClose} maxWidth="1460px" maxHeight="92vh" isAr={isAr}
-      icon={<FileText size={18} />}
+    <ZFModalShell isOpen={isOpen} onClose={onClose} maxWidth="1280px" maxHeight="92vh" isAr={isAr}
+      icon={<FileText size={16} />}
       title={isAr ? 'تفاصيل العقد ومتابعة الأقساط' : 'Contract and installment inspection'}
-      subtitle={<span className={css.tabular}>{contract.contract_number} • {projectName}</span>}
-      bodyStyle={{ padding: 0, overflowY: 'hidden' }}>
-      <div className={css.dualLayout}>
-        <section className={css.pane} aria-labelledby="contract-pane-title">
-          <div className={css.paneHeader}>
-            <FileText size={17} />
-            <h4 id="contract-pane-title">{isAr ? 'تفاصيل العقد' : 'Contract details'}</h4>
-          </div>
-          <div className={css.paneBody}>
-            <div className={css.propertyCard}>
-              {image?.url ? <div className={css.propertyImage}><Image src={image.url} alt={isAr ? image.alt_text_ar || projectName : image.alt_text_en || projectName} fill sizes="(max-width: 900px) 100vw, 260px" unoptimized /></div>
-                : <div className={css.propertyImageEmpty}><Building2 size={28} /><span>{isAr ? 'لا توجد صورة للعقار' : 'No property photo'}</span></div>}
-              <div className={css.propertyInfo}>
-                <strong>{projectName}</strong>
-                <span className={css.tabular}>{contract.unit_id}</span>
-                <div className={css.propertyFacts}>
-                  <span><Home size={13} />{contract.is_whole_building_sale ? (isAr ? 'عمارة كاملة' : 'Whole building') : isAr ? 'وحدة عقارية' : 'Property unit'}</span>
-                  {(unit?.area_sqm || property?.area_sqm) ? <span><Maximize2 size={13} />{unit?.area_sqm || property?.area_sqm} {isAr ? 'م²' : 'sqm'}</span> : null}
-                  {property?.location && <span><MapPin size={13} />{property.location}</span>}
+      subtitle={<bdi className={p.numeric}>{contract.contract_number} · {projectName}</bdi>}
+      bodyStyle={{ padding: 0, display: 'flex', minHeight: 0 }}
+      footer={
+        <>
+          {canCollect && (
+            <button type="button" className={p.primaryButton} onClick={() => { onClose(); onOpenCollectionModal!(contract, pending); }}>
+              <CreditCard size={14} />
+              <span>{isAr ? 'تحصيل القسط' : 'Collect installment'}</span>
+            </button>
+          )}
+          {canHandover && (
+            <button type="button" className={p.secondaryButton} onClick={() => { onClose(); onOpenHandoverModal!(contract); }}>
+              <Home size={14} />
+              <span>{isAr ? 'إجراءات التسليم' : 'Handover actions'}</span>
+            </button>
+          )}
+          <button type="button" className={p.secondaryButton} onClick={onClose}>
+            {isAr ? 'إغلاق' : 'Close'}
+          </button>
+          <button type="button" className={`${p.secondaryButton} ${p.footerEnd}`} onClick={() => window.print()}>
+            <Printer size={14} />
+            <span>{isAr ? 'طباعة كشف الأقساط' : 'Print schedule'}</span>
+          </button>
+        </>
+      }>
+      <div className={p.duo}>
+        {/* Contract details */}
+        <section className={p.duoPane} aria-labelledby="contract-pane-title">
+          <section className={p.section}>
+            <div className={p.sectionHeader}>
+              <div className={p.identity}>
+                {image?.url ? (
+                  <div className={p.thumbWide}>
+                    <Image src={image.url} alt={isAr ? image.alt_text_ar || projectName : image.alt_text_en || projectName} fill sizes="96px" unoptimized />
+                  </div>
+                ) : (
+                  <span className={p.thumbFallback}><Building2 size={20} /></span>
+                )}
+                <div className={p.identityText}>
+                  <h4 id="contract-pane-title" className={p.identityTitle}><bdi>{projectName}</bdi></h4>
+                  <p className={p.metaLine}>
+                    <bdi className={p.numeric}>{contract.unit_id || empty}</bdi>
+                    <span className={p.metaDot}>·</span>
+                    <span>{contract.is_whole_building_sale ? (isAr ? 'عمارة كاملة' : 'Whole building') : (isAr ? 'وحدة عقارية' : 'Property unit')}</span>
+                    {area ? (<><span className={p.metaDot}>·</span><bdi className={p.numeric}>{area} {isAr ? 'م²' : 'sqm'}</bdi></>) : null}
+                    {property?.location ? (<><span className={p.metaDot}>·</span><bdi>{property.location}</bdi></>) : null}
+                  </p>
                 </div>
               </div>
+              <span className={`${p.pill} ${statusTone}`}>{statusText}</span>
             </div>
+            <dl className={p.metaList}>
+              {metaRow(isAr ? 'العميل' : 'Client', <bdi>{buyerName}</bdi>, !contract.buyer_name)}
+              {metaRow(isAr ? 'رقم الهاتف' : 'Phone', <bdi dir="ltr" className={p.numeric}>{contract.buyer_phone}</bdi>, !contract.buyer_phone)}
+            </dl>
+          </section>
 
-            <div className={css.clientCard}>
-              <div><User size={15} /><span>{isAr ? 'العميل' : 'Client'}</span><strong>{isAr ? localizeBuyerName(contract.buyer_name) : contract.buyer_name}</strong></div>
-              <div><Phone size={15} /><span>{isAr ? 'رقم الهاتف' : 'Phone'}</span><strong dir="ltr" className={css.tabular}>{contract.buyer_phone || '—'}</strong></div>
-              <span className={`${shellStyles.statusPill} ${statusClass}`}>{statusText}</span>
-            </div>
-
-            <div className={css.tabs} role="tablist" aria-label={isAr ? 'بيانات العقد' : 'Contract sections'}>
+          <section className={p.section}>
+            <div className={p.segmented} role="tablist" aria-label={isAr ? 'بيانات العقد' : 'Contract sections'}>
               {(['data', 'obligations', 'notes'] as const).map(key => (
                 <button key={key} type="button" role="tab" aria-selected={detailTab === key}
-                  className={detailTab === key ? css.tabActive : css.tab}
+                  className={detailTab === key ? `${p.segment} ${p.segmentActive}` : p.segment}
                   onClick={() => setDetailTab(key)}>
                   {key === 'data' ? (isAr ? 'بيانات العقد' : 'Contract data') : key === 'obligations' ? (isAr ? 'الالتزامات' : 'Obligations') : (isAr ? 'الملاحظات' : 'Notes')}
                 </button>
               ))}
             </div>
-            {detailTab === 'data' && <div className={css.factsGrid}>
-              <div><FileText size={15} /><span>{isAr ? 'رقم العقد' : 'Contract number'}</span><strong className={css.tabular}>{contract.contract_number}</strong></div>
-              <div><CalendarDays size={15} /><span>{isAr ? 'تاريخ التوقيع' : 'Signed'}</span><strong className={css.tabular}>{contract.contract_date}</strong></div>
-              <div><Wallet size={15} /><span>{isAr ? 'قيمة العقد' : 'Contract value'}</span><strong className={css.tabular}>{money(gross)}</strong></div>
-              <div><CreditCard size={15} /><span>{isAr ? 'نظام السداد' : 'Payment plan'}</span><strong>{paymentPlan}</strong></div>
-              <div><CalendarDays size={15} /><span>{isAr ? 'موعد التسليم' : 'Handover'}</span><strong className={css.tabular}>{contract.handover_date || '—'}</strong></div>
-              <div><Home size={15} /><span>{isAr ? 'حالة التسليم' : 'Handover status'}</span><strong>{contract.handover_status === 'Delivered' ? (isAr ? 'تم التسليم' : 'Delivered') : (isAr ? 'لم يسلم' : 'Pending')}</strong></div>
-            </div>}
-            {detailTab === 'obligations' && <div className={css.factsGrid}>
-              <div><Wallet size={15} /><span>{isAr ? 'مقدم العقد المسجل' : 'Recorded deposit'}</span><strong className={css.tabular}>{deposit ? money(deposit.nominal_value) : '—'}</strong></div>
-              <div><CalendarDays size={15} /><span>{isAr ? 'الأقساط المجدولة' : 'Scheduled installments'}</span><strong className={css.tabular}>{installments.length}</strong></div>
-              <div><Receipt size={15} /><span>{isAr ? 'المدفوع حتى الآن' : 'Collected'}</span><strong className={css.tabular}>{money(collected)}</strong></div>
-              <div><CreditCard size={15} /><span>{isAr ? 'المتبقي' : 'Outstanding'}</span><strong className={css.tabular}>{money(remaining)}</strong></div>
-            </div>}
-            {detailTab === 'notes' && <div className={css.emptyNote}>{isAr ? 'لا توجد ملاحظات مرتبطة بهذا العقد في السجل الحالي.' : 'No notes are attached to this contract record.'}</div>}
+            {detailTab === 'data' && (
+              <dl className={p.metaList}>
+                {metaRow(isAr ? 'رقم العقد' : 'Contract number', <bdi className={p.numeric}>{contract.contract_number}</bdi>)}
+                {metaRow(isAr ? 'تاريخ التوقيع' : 'Signed', <bdi className={p.numeric}>{contract.contract_date}</bdi>, !contract.contract_date)}
+                {metaRow(isAr ? 'قيمة العقد' : 'Contract value', <bdi className={p.numeric}>{money(gross)}</bdi>)}
+                {metaRow(isAr ? 'نظام السداد' : 'Payment plan', paymentPlan, !paymentPlan)}
+                {metaRow(isAr ? 'موعد التسليم' : 'Handover', <bdi className={p.numeric}>{contract.handover_date}</bdi>, !contract.handover_date)}
+                {metaRow(isAr ? 'حالة التسليم' : 'Handover status', contract.handover_status === 'Delivered' ? (isAr ? 'تم التسليم' : 'Delivered') : (isAr ? 'لم يسلم' : 'Pending'))}
+              </dl>
+            )}
+            {detailTab === 'obligations' && (
+              <dl className={p.metaList}>
+                {metaRow(isAr ? 'مقدم العقد المسجل' : 'Recorded deposit', <bdi className={p.numeric}>{deposit ? money(deposit.nominal_value) : ''}</bdi>, !deposit)}
+                {metaRow(isAr ? 'الأقساط المجدولة' : 'Scheduled installments', <bdi className={p.numeric}>{installments.length}</bdi>)}
+                {metaRow(isAr ? 'المدفوع حتى الآن' : 'Collected', <bdi className={p.numeric}>{money(collected)}</bdi>)}
+                {metaRow(isAr ? 'المتبقي' : 'Outstanding', <bdi className={p.numeric}>{money(remaining)}</bdi>)}
+              </dl>
+            )}
+            {detailTab === 'notes' && (
+              <p className={p.hint}>{isAr ? 'لا توجد ملاحظات مرتبطة بهذا العقد في السجل الحالي.' : 'No notes are attached to this contract record.'}</p>
+            )}
+          </section>
 
-            <div className={css.attachments}>
-              <h5>{isAr ? 'مرفقات العقد' : 'Contract attachments'}</h5>
-              <p>{isAr ? 'لا توجد ملفات مرفقة بهذا العقد في السجل الحالي.' : 'No documents are linked to this contract record.'}</p>
-            </div>
-            <div className={css.paneFooter}>
-              {onOpenHandoverModal && contract.handover_status !== 'Delivered' && contract.status !== 'Rescinded' && <button type="button" className={css.secondaryButton} onClick={() => { onClose(); onOpenHandoverModal(contract); }}>{isAr ? 'إجراءات التسليم' : 'Handover actions'}</button>}
-            </div>
-          </div>
+          <section className={p.section}>
+            <h4 className={p.sectionTitle}>{isAr ? 'مرفقات العقد' : 'Contract attachments'}</h4>
+            <p className={p.hint}>{isAr ? 'لا توجد ملفات مرفقة بهذا العقد في السجل الحالي.' : 'No documents are linked to this contract record.'}</p>
+          </section>
         </section>
 
-        <section ref={schedulePaneRef} tabIndex={-1} className={css.pane} aria-labelledby="schedule-pane-title">
-          <div className={css.paneHeader}>
-            <CalendarDays size={17} />
-            <h4 id="schedule-pane-title">{isAr ? 'متابعة الأقساط' : 'Installment tracking'}</h4>
-          </div>
-          <div className={css.paneBody}>
-            <div className={css.scheduleIdentity}>
-              {image?.url ? <div className={css.scheduleThumb}><Image src={image.url} alt="" fill sizes="120px" unoptimized /></div> : <Building2 size={24} />}
-              <div><strong>{projectName}</strong><span className={css.tabular}>{contract.contract_number}</span></div>
-              <div className={css.scheduleClient}><span>{isAr ? 'العميل' : 'Client'}</span><strong>{isAr ? localizeBuyerName(contract.buyer_name) : contract.buyer_name}</strong></div>
+        {/* Installment tracking */}
+        <section ref={schedulePaneRef} tabIndex={-1} className={p.duoPane} aria-labelledby="schedule-pane-title">
+          <section className={p.section}>
+            <h4 id="schedule-pane-title" className={p.paneTitle}>{isAr ? 'متابعة الأقساط' : 'Installment tracking'}</h4>
+            <div className={p.figureGrid}>
+              <div className={p.figure}>
+                <span className={p.figureLabel}>{isAr ? 'قيمة العقد' : 'Contract value'}</span>
+                <bdi className={`${p.figureValue} ${p.figureValueSm}`}>{money(gross)}</bdi>
+              </div>
+              <div className={p.figure}>
+                <span className={p.figureLabel}>{isAr ? 'المتبقي' : 'Outstanding'}</span>
+                <bdi className={`${p.figureValue} ${p.figureValueSm}`}>{money(remaining)}</bdi>
+              </div>
             </div>
-            <div className={css.metrics}>
-              <div><Coins size={16} /><span>{isAr ? 'قيمة العقد' : 'Contract value'}</span><strong>{money(gross)}</strong></div>
-              <div><CheckCircle2 size={16} /><span>{isAr ? 'المحصل' : 'Collected'}</span><strong>{money(collected)}</strong><small>{Math.round(progress)}%</small></div>
-              <div><CreditCard size={16} /><span>{isAr ? 'المتبقي' : 'Outstanding'}</span><strong>{money(remaining)}</strong></div>
-              <div><CalendarDays size={16} /><span>{isAr ? 'عدد الأقساط' : 'Installments'}</span><strong>{installments.length}</strong></div>
+            <div className={p.ratioBar} aria-hidden>
+              <div className={p.ratioPrimary} style={{ width: `${progress}%` }} />
             </div>
-            <section className={css.tableCard} aria-labelledby="installments-heading">
-              <div className={css.tableHeading}><h5 id="installments-heading">{isAr ? 'جدول الأقساط' : 'Installment schedule'}</h5><span>{installments.length}</span></div>
-              <div className={css.tableScroll}><table>
+            <div className={p.legend}>
+              <span className={p.legendItem}>
+                <span className={p.legendSwatchPrimary} />
+                <bdi className={p.numeric}>{isAr ? `المحصل ${money(collected)} · ${Math.round(progress)}%` : `Collected ${money(collected)} · ${Math.round(progress)}%`}</bdi>
+              </span>
+              <span className={p.legendItem}>
+                <bdi className={p.numeric}>{isAr ? `${installments.length} قسط` : `${installments.length} installments`}</bdi>
+              </span>
+            </div>
+          </section>
+
+          <section className={p.section} aria-labelledby="installments-heading">
+            <div className={p.sectionHeader}>
+              <h4 id="installments-heading" className={p.sectionTitle}>{isAr ? 'جدول الأقساط' : 'Installment schedule'}</h4>
+              <span className={p.pill}><bdi className={p.numeric}>{installments.length}</bdi></span>
+            </div>
+            <div className={p.tableWrap}>
+              <table className={p.table}>
                 <thead><tr><th scope="col">#</th><th scope="col">{isAr ? 'الاستحقاق' : 'Due'}</th><th scope="col">{isAr ? 'المبلغ' : 'Amount'}</th><th scope="col">{isAr ? 'الحالة' : 'Status'}</th><th scope="col">{isAr ? 'السداد' : 'Paid on'}</th></tr></thead>
-                <tbody>{contractSchedules.length ? contractSchedules.map(s => {
-                  const state = scheduleState(s);
-                  return <tr key={s.schedule_id}><td>{s.tranche_number === 0 ? (isAr ? 'مقدم' : 'Deposit') : s.tranche_number}</td><td className={css.tabular}>{s.due_date || '—'}</td><td className={css.tabular}>{money(s.nominal_value)}</td><td><span className={`${shellStyles.statusPill} ${state.cls}`}>{state.label}</span></td><td className={css.tabular}>{s.paid_date || '—'}</td></tr>;
-                }) : <tr><td colSpan={5} className={css.emptyCell}>{isAr ? 'لا توجد أقساط مسجلة لهذا العقد.' : 'No installments recorded for this contract.'}</td></tr>}</tbody>
-              </table></div>
-            </section>
-            <section className={css.tableCard} aria-labelledby="payments-heading">
-              <div className={css.tableHeading}><h5 id="payments-heading">{isAr ? 'سجل المدفوعات' : 'Payment history'}</h5><span>{paidSchedules.length}</span></div>
-              <div className={css.tableScroll}><table>
-                <thead><tr><th scope="col">{isAr ? 'تاريخ السداد' : 'Paid on'}</th><th scope="col">{isAr ? 'الدفعة' : 'Tranche'}</th><th scope="col">{isAr ? 'المبلغ' : 'Amount'}</th></tr></thead>
-                <tbody>{paidSchedules.length ? paidSchedules.map(s => <tr key={s.schedule_id}><td className={css.tabular}>{s.paid_date || '—'}</td><td>{s.tranche_number === 0 ? (isAr ? 'مقدم' : 'Deposit') : s.tranche_number}</td><td className={css.tabular}>{money(s.amount_paid || s.nominal_value)}</td></tr>) : <tr><td colSpan={3} className={css.emptyCell}>{isAr ? 'لا توجد دفعات مفصلة في الجدول.' : 'No itemized payments recorded.'}</td></tr>}</tbody>
-              </table></div>
-            </section>
-            <div className={css.paneFooter}>
-              <button type="button" className={css.secondaryButton} onClick={() => window.print()}><Printer size={15} />{isAr ? 'طباعة كشف الأقساط' : 'Print schedule'}</button>
-              {onOpenCollectionModal && pending && contract.status !== 'Rescinded' && <button type="button" className={css.primaryButton} onClick={() => { onClose(); onOpenCollectionModal(contract, pending); }}><CreditCard size={15} />{isAr ? 'تحصيل القسط' : 'Collect installment'}</button>}
+                <tbody>
+                  {contractSchedules.length ? contractSchedules.map(s => {
+                    const state = scheduleState(s);
+                    return (
+                      <tr key={s.schedule_id}>
+                        <td>{s.tranche_number === 0 ? (isAr ? 'مقدم' : 'Deposit') : <bdi>{s.tranche_number}</bdi>}</td>
+                        <td><bdi>{s.due_date || empty}</bdi></td>
+                        <td><bdi>{money(s.nominal_value)}</bdi></td>
+                        <td><span className={`${p.pill} ${state.tone}`}>{state.label}</span></td>
+                        <td className={s.paid_date ? undefined : p.emptyValue}><bdi>{s.paid_date || (isAr ? 'لم يُسدد' : 'Not paid')}</bdi></td>
+                      </tr>
+                    );
+                  }) : (
+                    <tr><td colSpan={5} className={p.tableEmpty}>{isAr ? 'لا توجد أقساط مسجلة لهذا العقد.' : 'No installments recorded for this contract.'}</td></tr>
+                  )}
+                </tbody>
+              </table>
             </div>
-          </div>
+          </section>
+
+          <section className={p.section} aria-labelledby="payments-heading">
+            <div className={p.sectionHeader}>
+              <h4 id="payments-heading" className={p.sectionTitle}>{isAr ? 'سجل المدفوعات' : 'Payment history'}</h4>
+              <span className={p.pill}><bdi className={p.numeric}>{paidSchedules.length}</bdi></span>
+            </div>
+            <div className={p.tableWrap}>
+              <table className={p.table}>
+                <thead><tr><th scope="col">{isAr ? 'تاريخ السداد' : 'Paid on'}</th><th scope="col">{isAr ? 'الدفعة' : 'Tranche'}</th><th scope="col">{isAr ? 'المبلغ' : 'Amount'}</th></tr></thead>
+                <tbody>
+                  {paidSchedules.length ? paidSchedules.map(s => (
+                    <tr key={s.schedule_id}>
+                      <td><bdi>{s.paid_date || empty}</bdi></td>
+                      <td>{s.tranche_number === 0 ? (isAr ? 'مقدم' : 'Deposit') : <bdi>{s.tranche_number}</bdi>}</td>
+                      <td><bdi>{money(s.amount_paid || s.nominal_value)}</bdi></td>
+                    </tr>
+                  )) : (
+                    <tr><td colSpan={3} className={p.tableEmpty}>{isAr ? 'لا توجد دفعات مفصلة في الجدول.' : 'No itemized payments recorded.'}</td></tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </section>
         </section>
       </div>
     </ZFModalShell>
