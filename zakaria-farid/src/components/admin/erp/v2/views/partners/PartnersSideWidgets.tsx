@@ -7,8 +7,10 @@ import {
   Users, 
   Coins, 
   Receipt, 
+  Wallet,
   FileSpreadsheet, 
-  ArrowUpRight,
+  ChevronLeft,
+  ChevronRight,
   Building2,
   ArrowRightLeft,
   Zap,
@@ -124,11 +126,11 @@ export const PartnersSideWidgets: React.FC<PartnersSideWidgetsProps> = ({
           icon={hasUrgentAlerts ? <AlertTriangle size={15} color="#dc2626" /> : <ShieldCheck size={15} color="#64748b" />}
           badge={
             hasUrgentAlerts ? (
-              <span className={`${styles.statusPill} ${styles.statusPillAmber}`} style={{ fontSize: '0.65rem' }}>
+              <span className={`${styles.statusPill} ${styles.statusPillAmber}`} style={{ fontSize: '0.75rem' }}>
                 {imbalancedBuildings.length + partnersWithArrears.length} {isAr ? 'تنبيه' : 'alerts'}
               </span>
             ) : (
-              <span className={`${styles.statusPill} ${styles.statusPillNeutral}`} style={{ fontSize: '0.65rem' }}>
+              <span className={`${styles.statusPill} ${styles.statusPillNeutral}`} style={{ fontSize: '0.75rem' }}>
                 {isAr ? 'مستقر' : 'Stable'}
               </span>
             )
@@ -136,8 +138,8 @@ export const PartnersSideWidgets: React.FC<PartnersSideWidgetsProps> = ({
           isAr={isAr}
         >
           {imbalancedBuildings.length > 0 && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '0.6rem' }}>
-              <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#dc2626' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '0.5rem' }}>
+              <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#dc2626' }}>
                 {isAr ? 'خلل في مجموع حصص العماير التالية:' : 'Imbalanced Equity Splits:'}
               </span>
               {imbalancedBuildings.map(({ property, totalPct, deviationPct }) => (
@@ -147,32 +149,49 @@ export const PartnersSideWidgets: React.FC<PartnersSideWidgetsProps> = ({
                     display: 'flex',
                     justifyContent: 'space-between',
                     alignItems: 'center',
-                    padding: '0.55rem 0.75rem',
+                    padding: '0.5rem 0.75rem',
                     background: '#ffffff',
                     border: '1px solid #cbd5e1',
                     borderRadius: '8px',
-                    fontSize: '0.72rem'
+                    fontSize: '0.75rem',
+                    transition: 'all 0.15s ease'
                   }}
                 >
-                  <div>
-                    <strong style={{ color: '#0f172a', display: 'block', fontSize: '0.76rem' }}>
-                      {property.title_ar || property.title_en}
-                    </strong>
-                    <span style={{ color: '#64748b', fontSize: '0.7rem' }}>
-                      {isAr ? `إجمالي الحصص: ${totalPct}% (${deviationPct > 0 ? '+' : ''}${deviationPct}%)` : `Total: ${totalPct}%`}
-                    </span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <div style={{
+                      width: '28px',
+                      height: '28px',
+                      borderRadius: '7px',
+                      background: '#fef2f2',
+                      border: '1px solid rgba(220, 38, 38, 0.18)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: '#dc2626',
+                      flexShrink: 0
+                    }}>
+                      <Building2 size={14} />
+                    </div>
+                    <div>
+                      <strong style={{ color: '#0f172a', display: 'block', fontSize: '0.75rem' }}>
+                        {property.title_ar || property.title_en}
+                      </strong>
+                      <span className={`${styles.statusPill} ${styles.statusPillRed}`} style={{ fontSize: '0.75rem', marginTop: '2px', display: 'inline-block' }}>
+                        {isAr ? `إجمالي الحصص: ${totalPct}% (${deviationPct > 0 ? '+' : ''}${deviationPct}%)` : `Total: ${totalPct}%`}
+                      </span>
+                    </div>
                   </div>
                   {onOpenReallocation && (
                     <button
                       type="button"
                       onClick={() => onOpenReallocation(property)}
                       style={{
-                        padding: '0.3rem 0.6rem',
+                        padding: '0.25rem 0.5rem',
                         borderRadius: '6px',
                         background: '#ffffff',
                         color: 'var(--erp-accent, #2563eb)',
                         border: '1px solid #cbd5e1',
-                        fontSize: '0.7rem',
+                        fontSize: '0.75rem',
                         fontWeight: 700,
                         cursor: 'pointer',
                         display: 'inline-flex',
@@ -182,6 +201,7 @@ export const PartnersSideWidgets: React.FC<PartnersSideWidgetsProps> = ({
                     >
                       <ArrowRightLeft size={11} />
                       <span>{isAr ? 'ضبط الحصص' : 'Rebalance'}</span>
+                      {isAr ? <ChevronLeft size={12} /> : <ChevronRight size={12} />}
                     </button>
                   )}
                 </div>
@@ -191,7 +211,7 @@ export const PartnersSideWidgets: React.FC<PartnersSideWidgetsProps> = ({
 
           {partnersWithArrears.length > 0 && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '0.5rem' }}>
-              <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#d97706' }}>
+              <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#d97706' }}>
                 {isAr ? 'متأخرات مساهمات تمويل معلقة:' : 'Pending Capital Arrears:'}
               </span>
               {partnersWithArrears.slice(0, 4).map((item, idx) => (
@@ -201,19 +221,36 @@ export const PartnersSideWidgets: React.FC<PartnersSideWidgetsProps> = ({
                     display: 'flex',
                     justifyContent: 'space-between',
                     alignItems: 'center',
-                    padding: '0.55rem 0.75rem',
+                    padding: '0.5rem 0.75rem',
                     background: '#ffffff',
                     border: '1px solid #cbd5e1',
                     borderRadius: '8px',
-                    fontSize: '0.72rem'
+                    fontSize: '0.75rem',
+                    transition: 'all 0.15s ease'
                   }}
                 >
-                  <div>
-                    <strong style={{ color: '#0f172a', display: 'block', fontSize: '0.76rem' }}>{item.partnerName}</strong>
-                    <span style={{ color: '#64748b', fontSize: '0.7rem' }}>{item.buildingTitle}</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <div style={{
+                      width: '28px',
+                      height: '28px',
+                      borderRadius: '7px',
+                      background: '#fffbeb',
+                      border: '1px solid rgba(217, 119, 6, 0.18)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: '#d97706',
+                      flexShrink: 0
+                    }}>
+                      <Coins size={14} />
+                    </div>
+                    <div>
+                      <strong style={{ color: '#0f172a', display: 'block', fontSize: '0.75rem' }}>{item.partnerName}</strong>
+                      <span style={{ color: '#64748b', fontSize: '0.75rem' }}>{item.buildingTitle}</span>
+                    </div>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <strong style={{ color: '#0f172a', fontVariantNumeric: 'tabular-nums', fontSize: '0.78rem' }}>
+                    <strong style={{ color: '#0f172a', fontVariantNumeric: 'tabular-nums', fontSize: '0.75rem', whiteSpace: 'nowrap' }}>
                       {D(item.arrearsEgp).formatEGP(isAr)}
                     </strong>
                     {onOpenInjection && (
@@ -226,12 +263,16 @@ export const PartnersSideWidgets: React.FC<PartnersSideWidgetsProps> = ({
                           background: '#ffffff',
                           color: '#0f172a',
                           border: '1px solid #cbd5e1',
-                          fontSize: '0.68rem',
+                          fontSize: '0.75rem',
                           fontWeight: 700,
-                          cursor: 'pointer'
+                          cursor: 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '0.25rem'
                         }}
                       >
-                        {isAr ? 'تسوية' : 'Settle'}
+                        <span>{isAr ? 'تسوية' : 'Settle'}</span>
+                        {isAr ? <ChevronLeft size={12} /> : <ChevronRight size={12} />}
                       </button>
                     )}
                   </div>
@@ -245,15 +286,30 @@ export const PartnersSideWidgets: React.FC<PartnersSideWidgetsProps> = ({
               display: 'flex',
               alignItems: 'center',
               gap: '0.5rem',
-              padding: '0.55rem 0.75rem',
-              background: '#f8fafc',
+              padding: '0.5rem 0.75rem',
+              background: '#ffffff',
               border: '1px solid #e2e8f0',
               borderRadius: '8px',
               color: '#64748b',
-              fontSize: '0.74rem'
+              fontSize: '0.75rem'
             }}>
-              <ShieldCheck size={14} color="#64748b" />
-              <span>{isAr ? 'لا توجد متأخرات أو تنبيهات معلقة حالياً' : 'No pending alerts or arrears'}</span>
+              <div style={{
+                width: '28px',
+                height: '28px',
+                borderRadius: '7px',
+                background: '#f1f5f9',
+                border: '1px solid rgba(71, 85, 105, 0.15)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#475569',
+                flexShrink: 0
+              }}>
+                <ShieldCheck size={14} />
+              </div>
+              <span style={{ fontSize: '0.75rem', color: '#475569', fontWeight: 600 }}>
+                {isAr ? 'لا توجد متأخرات أو تنبيهات معلقة حالياً' : 'No pending alerts or arrears'}
+              </span>
             </div>
           )}
         </ZFWidgetCard>
@@ -264,7 +320,7 @@ export const PartnersSideWidgets: React.FC<PartnersSideWidgetsProps> = ({
           title={isAr ? 'حالة هياكل الملكية' : 'Equity Structure Status'}
           icon={<Building2 size={15} color="var(--erp-accent, #2563eb)" />}
           badge={
-            <span className={`${styles.statusPill} ${styles.statusPillNeutral}`} style={{ fontSize: '0.65rem' }}>
+            <span className={`${styles.statusPill} ${styles.statusPillNeutral}`} style={{ fontSize: '0.75rem' }}>
               {totalProjects} {isAr ? 'مشروع' : 'projects'}
             </span>
           }
@@ -272,17 +328,17 @@ export const PartnersSideWidgets: React.FC<PartnersSideWidgetsProps> = ({
         >
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
             {/* Status counts */}
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
-              <span className={`${styles.statusPill} ${styles.statusPillGreen}`} style={{ fontSize: '0.7rem' }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+              <span className={`${styles.statusPill} ${styles.statusPillGreen}`} style={{ fontSize: '0.75rem' }}>
                 {isAr ? `سليمة: ${balancedCount}` : `Balanced: ${balancedCount}`}
               </span>
               {imbalancedCount > 0 && (
-                <span className={`${styles.statusPill} ${styles.statusPillRed}`} style={{ fontSize: '0.7rem' }}>
+                <span className={`${styles.statusPill} ${styles.statusPillRed}`} style={{ fontSize: '0.75rem' }}>
                   {isAr ? `تحتاج مراجعة: ${imbalancedCount}` : `Needs Review: ${imbalancedCount}`}
                 </span>
               )}
               {arrearsCount > 0 && (
-                <span className={`${styles.statusPill} ${styles.statusPillAmber}`} style={{ fontSize: '0.7rem' }}>
+                <span className={`${styles.statusPill} ${styles.statusPillAmber}`} style={{ fontSize: '0.75rem' }}>
                   {isAr ? `متأخرات معلقة: ${arrearsCount}` : `Arrears: ${arrearsCount}`}
                 </span>
               )}
@@ -293,9 +349,9 @@ export const PartnersSideWidgets: React.FC<PartnersSideWidgetsProps> = ({
               <div style={{
                 display: 'flex',
                 justifyContent: 'space-between',
-                fontSize: '0.7rem',
+                fontSize: '0.75rem',
                 color: '#64748b',
-                marginBottom: '0.35rem'
+                marginBottom: '0.25rem'
               }}>
                 <span>{isAr ? 'نسبة انضباط هياكل الملكية' : 'Equity Invariant Compliance'}</span>
                 <span style={{ fontWeight: 700, fontVariantNumeric: 'tabular-nums', color: '#0f172a' }}>{balancedPercent}%</span>
@@ -315,7 +371,7 @@ export const PartnersSideWidgets: React.FC<PartnersSideWidgetsProps> = ({
               </div>
             </div>
 
-            <span style={{ fontSize: '0.68rem', color: '#64748b', lineHeight: 1.4 }}>
+            <span style={{ fontSize: '0.75rem', color: '#64748b', lineHeight: 1.4 }}>
               {isAr
                 ? 'متابعة التوازن الهندسي لملكية كافة عماير المحفظة ومطابقة شرط الـ 100% الإلزامي.'
                 : 'Enforcing the strict 100% equity balance invariant across all portfolio properties.'}
@@ -330,7 +386,7 @@ export const PartnersSideWidgets: React.FC<PartnersSideWidgetsProps> = ({
           icon={<Zap size={15} color="var(--erp-accent, #2563eb)" />}
           isAr={isAr}
         >
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.5rem' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
             {onOpenNewPartner && (
               <button
                 type="button"
@@ -338,20 +394,42 @@ export const PartnersSideWidgets: React.FC<PartnersSideWidgetsProps> = ({
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '0.4rem',
-                  padding: '0.55rem 0.65rem',
+                  justifyContent: 'space-between',
+                  padding: '0.5rem 0.75rem',
                   borderRadius: '8px',
                   background: '#ffffff',
                   border: '1px solid #cbd5e1',
                   color: '#0f172a',
-                  fontSize: '0.74rem',
-                  fontWeight: 700,
                   cursor: 'pointer',
-                  textAlign: isAr ? 'right' : 'left'
+                  textAlign: isAr ? 'right' : 'left',
+                  transition: 'all 0.15s ease'
                 }}
               >
-                <Users size={13} color="var(--erp-accent, #2563eb)" />
-                <span>{isAr ? 'شريك جديد' : 'New Partner'}</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <div style={{
+                    width: '28px',
+                    height: '28px',
+                    borderRadius: '7px',
+                    background: 'var(--erp-accent-subtle, #eff6ff)',
+                    border: '1px solid var(--erp-accent-tint, rgba(37, 99, 235, 0.08))',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: 'var(--erp-accent, #2563eb)',
+                    flexShrink: 0
+                  }}>
+                    <Users size={14} />
+                  </div>
+                  <div>
+                    <strong style={{ color: '#0f172a', display: 'block', fontSize: '0.75rem' }}>
+                      {isAr ? 'إضافة شريك جديد' : 'New Partner'}
+                    </strong>
+                    <span style={{ color: '#64748b', fontSize: '0.75rem' }}>
+                      {isAr ? 'تسجيل ملف شريك أو ممول جديد' : 'Register new partner profile'}
+                    </span>
+                  </div>
+                </div>
+                {isAr ? <ChevronLeft size={14} color="#94a3b8" /> : <ChevronRight size={14} color="#94a3b8" />}
               </button>
             )}
 
@@ -362,20 +440,42 @@ export const PartnersSideWidgets: React.FC<PartnersSideWidgetsProps> = ({
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '0.4rem',
-                  padding: '0.55rem 0.65rem',
+                  justifyContent: 'space-between',
+                  padding: '0.5rem 0.75rem',
                   borderRadius: '8px',
                   background: '#ffffff',
                   border: '1px solid #cbd5e1',
                   color: '#0f172a',
-                  fontSize: '0.74rem',
-                  fontWeight: 700,
                   cursor: 'pointer',
-                  textAlign: isAr ? 'right' : 'left'
+                  textAlign: isAr ? 'right' : 'left',
+                  transition: 'all 0.15s ease'
                 }}
               >
-                <Coins size={13} color="var(--erp-accent, #2563eb)" />
-                <span>{isAr ? 'ضخ رأس مال' : 'Capital Injection'}</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <div style={{
+                    width: '28px',
+                    height: '28px',
+                    borderRadius: '7px',
+                    background: 'var(--erp-accent-subtle, #eff6ff)',
+                    border: '1px solid var(--erp-accent-tint, rgba(37, 99, 235, 0.08))',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: 'var(--erp-accent, #2563eb)',
+                    flexShrink: 0
+                  }}>
+                    <Coins size={14} />
+                  </div>
+                  <div>
+                    <strong style={{ color: '#0f172a', display: 'block', fontSize: '0.75rem' }}>
+                      {isAr ? 'ضخ رأس مال / مساهمة' : 'Capital Injection'}
+                    </strong>
+                    <span style={{ color: '#64748b', fontSize: '0.75rem' }}>
+                      {isAr ? 'توريد دفعة نقدية أو إنستاباي' : 'Deposit cash or InstaPay'}
+                    </span>
+                  </div>
+                </div>
+                {isAr ? <ChevronLeft size={14} color="#94a3b8" /> : <ChevronRight size={14} color="#94a3b8" />}
               </button>
             )}
 
@@ -386,20 +486,42 @@ export const PartnersSideWidgets: React.FC<PartnersSideWidgetsProps> = ({
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '0.4rem',
-                  padding: '0.55rem 0.65rem',
+                  justifyContent: 'space-between',
+                  padding: '0.5rem 0.75rem',
                   borderRadius: '8px',
                   background: '#ffffff',
                   border: '1px solid #cbd5e1',
                   color: '#0f172a',
-                  fontSize: '0.74rem',
-                  fontWeight: 700,
                   cursor: 'pointer',
-                  textAlign: isAr ? 'right' : 'left'
+                  textAlign: isAr ? 'right' : 'left',
+                  transition: 'all 0.15s ease'
                 }}
               >
-                <Receipt size={13} color="var(--erp-accent, #2563eb)" />
-                <span>{isAr ? 'صرف أرباح' : 'Pay Dividend'}</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <div style={{
+                    width: '28px',
+                    height: '28px',
+                    borderRadius: '7px',
+                    background: 'var(--erp-accent-subtle, #eff6ff)',
+                    border: '1px solid var(--erp-accent-tint, rgba(37, 99, 235, 0.08))',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: 'var(--erp-accent, #2563eb)',
+                    flexShrink: 0
+                  }}>
+                    <Receipt size={14} />
+                  </div>
+                  <div>
+                    <strong style={{ color: '#0f172a', display: 'block', fontSize: '0.75rem' }}>
+                      {isAr ? 'صرف أرباح للشركاء' : 'Pay Dividend'}
+                    </strong>
+                    <span style={{ color: '#64748b', fontSize: '0.75rem' }}>
+                      {isAr ? 'سداد مسحوبات وأرباح من الخزينة' : 'Distribute profit dividend'}
+                    </span>
+                  </div>
+                </div>
+                {isAr ? <ChevronLeft size={14} color="#94a3b8" /> : <ChevronRight size={14} color="#94a3b8" />}
               </button>
             )}
 
@@ -410,20 +532,42 @@ export const PartnersSideWidgets: React.FC<PartnersSideWidgetsProps> = ({
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '0.4rem',
-                  padding: '0.55rem 0.65rem',
+                  justifyContent: 'space-between',
+                  padding: '0.5rem 0.75rem',
                   borderRadius: '8px',
                   background: '#ffffff',
                   border: '1px solid #cbd5e1',
                   color: '#0f172a',
-                  fontSize: '0.74rem',
-                  fontWeight: 700,
                   cursor: 'pointer',
-                  textAlign: isAr ? 'right' : 'left'
+                  textAlign: isAr ? 'right' : 'left',
+                  transition: 'all 0.15s ease'
                 }}
               >
-                <FileSpreadsheet size={13} color="#64748b" />
-                <span>{isAr ? 'تصدير Excel' : 'Export Excel'}</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <div style={{
+                    width: '28px',
+                    height: '28px',
+                    borderRadius: '7px',
+                    background: '#f1f5f9',
+                    border: '1px solid #e2e8f0',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: '#64748b',
+                    flexShrink: 0
+                  }}>
+                    <FileSpreadsheet size={14} />
+                  </div>
+                  <div>
+                    <strong style={{ color: '#0f172a', display: 'block', fontSize: '0.75rem' }}>
+                      {isAr ? 'تصدير دليل الشركاء Excel' : 'Export Excel Directory'}
+                    </strong>
+                    <span style={{ color: '#64748b', fontSize: '0.75rem' }}>
+                      {isAr ? 'كشف حساب ومطابقات الحصص' : 'Full statement and splits'}
+                    </span>
+                  </div>
+                </div>
+                {isAr ? <ChevronLeft size={14} color="#94a3b8" /> : <ChevronRight size={14} color="#94a3b8" />}
               </button>
             )}
           </div>
@@ -443,39 +587,49 @@ export const PartnersSideWidgets: React.FC<PartnersSideWidgetsProps> = ({
                 display: 'flex',
                 justifyContent: 'space-between',
                 alignItems: 'center',
-                padding: '0.55rem 0.75rem',
+                padding: '0.5rem 0.75rem',
                 borderRadius: '8px',
                 background: '#ffffff',
-                border: '1px solid #e2e8f0',
+                border: '1px solid #cbd5e1',
                 textDecoration: 'none',
-                color: '#0f172a'
+                color: '#0f172a',
+                transition: 'all 0.15s ease'
               }}
             >
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                  <strong style={{ color: '#0f172a', fontSize: '0.78rem' }}>
-                    {isAr ? 'حساب رأس مال الشركاء' : 'Partner Capital'}
-                  </strong>
-                  <span style={{
-                    fontSize: '0.64rem',
-                    fontWeight: 700,
-                    padding: '0.1rem 0.35rem',
-                    borderRadius: '4px',
-                    background: '#f1f5f9',
-                    color: '#475569'
-                  }}>
-                    301000
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <div style={{
+                  width: '28px',
+                  height: '28px',
+                  borderRadius: '7px',
+                  background: 'var(--erp-accent-subtle, #eff6ff)',
+                  border: '1px solid var(--erp-accent-tint, rgba(37, 99, 235, 0.08))',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: 'var(--erp-accent, #2563eb)',
+                  flexShrink: 0
+                }}>
+                  <Coins size={14} />
+                </div>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <strong style={{ color: '#0f172a', fontSize: '0.75rem' }}>
+                      {isAr ? 'حساب رأس مال الشركاء' : 'Partner Capital'}
+                    </strong>
+                    <span className={`${styles.statusPill} ${styles.statusPillNeutral}`} style={{ fontSize: '0.75rem' }}>
+                      301000
+                    </span>
+                  </div>
+                  <span style={{ fontSize: '0.75rem', color: '#64748b', display: 'block', marginTop: '2px' }}>
+                    {isAr ? 'حقوق الملكية والمساهمات الرأسمالية' : 'Contributed Equity'}
                   </span>
                 </div>
-                <span style={{ fontSize: '0.68rem', color: '#64748b', display: 'block', marginTop: '2px' }}>
-                  {isAr ? 'حقوق الملكية والمساهمات الرأسمالية' : 'Contributed Equity'}
-                </span>
               </div>
-              <div style={{ textAlign: isAr ? 'left' : 'right' }}>
-                <strong style={{ display: 'block', color: '#0f172a', fontVariantNumeric: 'tabular-nums', fontSize: '0.78rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <strong style={{ display: 'block', color: '#0f172a', fontVariantNumeric: 'tabular-nums', fontSize: '0.75rem' }}>
                   {totalInjections.formatEGP(isAr)}
                 </strong>
-                <ArrowUpRight size={13} color="#94a3b8" style={{ marginInlineStart: 'auto' }} />
+                {isAr ? <ChevronLeft size={14} color="#94a3b8" /> : <ChevronRight size={14} color="#94a3b8" />}
               </div>
             </Link>
 
@@ -485,39 +639,49 @@ export const PartnersSideWidgets: React.FC<PartnersSideWidgetsProps> = ({
                 display: 'flex',
                 justifyContent: 'space-between',
                 alignItems: 'center',
-                padding: '0.55rem 0.75rem',
+                padding: '0.5rem 0.75rem',
                 borderRadius: '8px',
                 background: '#ffffff',
-                border: '1px solid #e2e8f0',
+                border: '1px solid #cbd5e1',
                 textDecoration: 'none',
-                color: '#0f172a'
+                color: '#0f172a',
+                transition: 'all 0.15s ease'
               }}
             >
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                  <strong style={{ color: '#0f172a', fontSize: '0.78rem' }}>
-                    {isAr ? 'توزيعات وأرباح الشركاء' : 'Partner Distributions'}
-                  </strong>
-                  <span style={{
-                    fontSize: '0.64rem',
-                    fontWeight: 700,
-                    padding: '0.1rem 0.35rem',
-                    borderRadius: '4px',
-                    background: '#f1f5f9',
-                    color: '#475569'
-                  }}>
-                    303000
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <div style={{
+                  width: '28px',
+                  height: '28px',
+                  borderRadius: '7px',
+                  background: 'var(--erp-accent-subtle, #eff6ff)',
+                  border: '1px solid var(--erp-accent-tint, rgba(37, 99, 235, 0.08))',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: 'var(--erp-accent, #2563eb)',
+                  flexShrink: 0
+                }}>
+                  <Receipt size={14} />
+                </div>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <strong style={{ color: '#0f172a', fontSize: '0.75rem' }}>
+                      {isAr ? 'توزيعات وأرباح الشركاء' : 'Partner Distributions'}
+                    </strong>
+                    <span className={`${styles.statusPill} ${styles.statusPillNeutral}`} style={{ fontSize: '0.75rem' }}>
+                      303000
+                    </span>
+                  </div>
+                  <span style={{ fontSize: '0.75rem', color: '#64748b', display: 'block', marginTop: '2px' }}>
+                    {isAr ? 'المسحوبات والأرباح المنصرفة' : 'Profit Distributions Paid'}
                   </span>
                 </div>
-                <span style={{ fontSize: '0.68rem', color: '#64748b', display: 'block', marginTop: '2px' }}>
-                  {isAr ? 'المسحوبات والأرباح المنصرفة' : 'Profit Distributions Paid'}
-                </span>
               </div>
-              <div style={{ textAlign: isAr ? 'left' : 'right' }}>
-                <strong style={{ display: 'block', color: '#0f172a', fontVariantNumeric: 'tabular-nums', fontSize: '0.78rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <strong style={{ display: 'block', color: '#0f172a', fontVariantNumeric: 'tabular-nums', fontSize: '0.75rem' }}>
                   {totalDistributions.formatEGP(isAr)}
                 </strong>
-                <ArrowUpRight size={13} color="#94a3b8" style={{ marginInlineStart: 'auto' }} />
+                {isAr ? <ChevronLeft size={14} color="#94a3b8" /> : <ChevronRight size={14} color="#94a3b8" />}
               </div>
             </Link>
 
@@ -527,39 +691,49 @@ export const PartnersSideWidgets: React.FC<PartnersSideWidgetsProps> = ({
                 display: 'flex',
                 justifyContent: 'space-between',
                 alignItems: 'center',
-                padding: '0.55rem 0.75rem',
+                padding: '0.5rem 0.75rem',
                 borderRadius: '8px',
                 background: '#ffffff',
-                border: '1px solid #e2e8f0',
+                border: '1px solid #cbd5e1',
                 textDecoration: 'none',
-                color: '#0f172a'
+                color: '#0f172a',
+                transition: 'all 0.15s ease'
               }}
             >
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                  <strong style={{ color: '#0f172a', fontSize: '0.78rem' }}>
-                    {isAr ? 'حسابات البنوك والخزينة' : 'Bank & Vault Liquidity'}
-                  </strong>
-                  <span style={{
-                    fontSize: '0.64rem',
-                    fontWeight: 700,
-                    padding: '0.1rem 0.35rem',
-                    borderRadius: '4px',
-                    background: '#f1f5f9',
-                    color: '#475569'
-                  }}>
-                    102000 / 101000
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <div style={{
+                  width: '28px',
+                  height: '28px',
+                  borderRadius: '7px',
+                  background: 'var(--erp-accent-subtle, #eff6ff)',
+                  border: '1px solid var(--erp-accent-tint, rgba(37, 99, 235, 0.08))',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: 'var(--erp-accent, #2563eb)',
+                  flexShrink: 0
+                }}>
+                  <Wallet size={14} />
+                </div>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <strong style={{ color: '#0f172a', fontSize: '0.75rem' }}>
+                      {isAr ? 'حسابات البنوك والخزينة' : 'Bank & Vault Liquidity'}
+                    </strong>
+                    <span className={`${styles.statusPill} ${styles.statusPillNeutral}`} style={{ fontSize: '0.75rem' }}>
+                      101000
+                    </span>
+                  </div>
+                  <span style={{ fontSize: '0.75rem', color: '#64748b', display: 'block', marginTop: '2px' }}>
+                    {isAr ? 'الخزينة النقدية ومطابقة إنستاباي' : 'Cash Vault & InstaPay'}
                   </span>
                 </div>
-                <span style={{ fontSize: '0.68rem', color: '#64748b', display: 'block', marginTop: '2px' }}>
-                  {isAr ? 'الخزينة النقدية ومطابقة إنستاباي' : 'Cash Vault & InstaPay'}
-                </span>
               </div>
-              <div style={{ textAlign: isAr ? 'left' : 'right' }}>
-                <strong style={{ display: 'block', color: '#0f172a', fontVariantNumeric: 'tabular-nums', fontSize: '0.78rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <strong style={{ display: 'block', color: '#0f172a', fontVariantNumeric: 'tabular-nums', fontSize: '0.75rem' }}>
                   {netVaultBalance.formatEGP(isAr)}
                 </strong>
-                <ArrowUpRight size={13} color="#94a3b8" style={{ marginInlineStart: 'auto' }} />
+                {isAr ? <ChevronLeft size={14} color="#94a3b8" /> : <ChevronRight size={14} color="#94a3b8" />}
               </div>
             </Link>
           </div>

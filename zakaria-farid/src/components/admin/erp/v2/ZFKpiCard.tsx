@@ -14,7 +14,7 @@ export interface ZFKpiDelta {
 
 export interface ZFKpiExecutiveChart {
   type: 'spline' | 'bars';
-  color: 'navy' | 'gold';
+  color?: 'navy' | 'gold' | 'accent';
   data?: number[];
   months?: string[];
 }
@@ -213,7 +213,12 @@ export const CockpitExecutiveChart: React.FC<ZFKpiExecutiveChart> = ({
 }) => {
   const chartHeight = 44;
   const isNavy = color === 'navy';
-  const primaryColor = isNavy ? '#334155' : 'var(--erp-accent, #b48c36)';
+  const isGold = color === 'gold';
+  const primaryColor = isNavy
+    ? '#334155'
+    : isGold
+      ? 'var(--erp-accent, #b48c36)'
+      : 'var(--erp-accent, #2563eb)';
 
   if (type === 'spline') {
     const rawData = data && data.length >= 6 ? data : (isNavy ? [0.35, 0.48, 0.42, 0.58, 0.60, 0.72] : [0.38, 0.54, 0.50, 0.65, 0.62, 0.78]);
@@ -240,7 +245,7 @@ export const CockpitExecutiveChart: React.FC<ZFKpiExecutiveChart> = ({
     }
 
     const areaD = `${pathD} L ${points[points.length - 1].x} ${height} L ${points[0].x} ${height} Z`;
-    const gradId = `execGrad-${isNavy ? 'navy' : 'gold'}`;
+    const gradId = `execGrad-${color || 'accent'}`;
 
     return (
       <div style={{ width: '100%', marginTop: 'auto', paddingTop: '0.35rem' }}>
@@ -250,8 +255,8 @@ export const CockpitExecutiveChart: React.FC<ZFKpiExecutiveChart> = ({
         >
           <defs>
             <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor={isNavy ? '#334155' : '#b48c36'} stopOpacity={isNavy ? 0.22 : 0.28} />
-              <stop offset="100%" stopColor={isNavy ? '#334155' : '#b48c36'} stopOpacity={0} />
+              <stop offset="0%" stopColor={isNavy ? '#334155' : isGold ? '#b48c36' : 'var(--erp-accent, #2563eb)'} stopOpacity={isNavy ? 0.22 : 0.28} />
+              <stop offset="100%" stopColor={isNavy ? '#334155' : isGold ? '#b48c36' : 'var(--erp-accent, #2563eb)'} stopOpacity={0} />
             </linearGradient>
           </defs>
           <path d={areaD} fill={`url(#${gradId})`} />
@@ -283,7 +288,7 @@ export const CockpitExecutiveChart: React.FC<ZFKpiExecutiveChart> = ({
           const isLast = idx === rawBars.length - 1;
           const barColor = isNavy
             ? (isLast ? '#334155' : idx >= 2 ? '#94a3b8' : '#cbd5e1')
-            : (isLast ? 'var(--erp-accent, #b48c36)' : '#f3ecd8');
+            : (isLast ? primaryColor : (isGold ? '#f3ecd8' : 'var(--erp-accent-subtle, #eff6ff)'));
           const pctHeight = Math.min(100, Math.max(15, val));
           return (
             <div
@@ -547,7 +552,7 @@ export const ZFKpiCard: React.FC<ZFKpiCardProps> = ({
 
       {/* 2.3 EXECUTIVE SUBTITLE / BREAKDOWN ROW */}
       {executiveChart && (subtitleLabel || subtitleValue) && (
-        <div style={{ fontSize: '0.72rem', color: '#64748b', margin: '0 0 0.35rem 0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+        <div style={{ fontSize: '0.72rem', color: '#64748b', margin: '0 0 0.35rem 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.2rem 0.5rem', lineHeight: 1.35 }}>
           {subtitleLabel && <span>{subtitleLabel}{subtitleValue ? ': ' : ''}</span>}
           {subtitleValue && <strong style={{ color: '#334155', fontVariantNumeric: 'tabular-nums', fontWeight: 600 }}>{subtitleValue}</strong>}
         </div>
@@ -595,12 +600,12 @@ export const ZFKpiCard: React.FC<ZFKpiCardProps> = ({
           {footerContent}
         </div>
       ) : (
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', marginTop: 'auto', paddingTop: '0.35rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.2rem 0.5rem', marginTop: 'auto', paddingTop: '0.35rem', lineHeight: 1.35 }}>
           {!executiveChart && (subtitleLabel || subtitleValue) ? (
-            <span style={{ fontSize: '0.72rem', color: '#64748b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.2rem 0.5rem', lineHeight: 1.35, fontSize: '0.72rem', color: '#64748b', width: (!sparkline && !badge) ? '100%' : undefined }}>
               {subtitleLabel && <span>{subtitleLabel}{subtitleValue ? ': ' : ''}</span>}
-              {subtitleValue && <strong style={{ color: '#334155', fontVariantNumeric: 'tabular-nums' }}>{subtitleValue}</strong>}
-            </span>
+              {subtitleValue && <strong style={{ color: '#334155', fontVariantNumeric: 'tabular-nums', fontWeight: 600 }}>{subtitleValue}</strong>}
+            </div>
           ) : (
             <span />
           )}

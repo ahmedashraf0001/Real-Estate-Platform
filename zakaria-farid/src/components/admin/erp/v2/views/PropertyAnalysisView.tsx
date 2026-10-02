@@ -50,6 +50,7 @@ import { ZFModalShell } from '../common/ZFModalShell';
 import { getPropertyTypeLabel } from './PropertiesPortfolioView';
 import { PropertyAnalysisSideWidgets } from './analysis/PropertyAnalysisSideWidgets';
 import { PropertyAnalysisDossier } from './analysis/PropertyAnalysisDossier';
+import { PropertyKpiBlueprintCards } from './analysis/PropertyKpiBlueprintCards';
 
 import shellStyles from '../ZFWorkstationShell.module.css';
 import vStyles from './PropertyAnalysisView.module.css';
@@ -205,7 +206,7 @@ const PrintableDossierContent: React.FC<{
               {isAr ? 'مؤسسة زكريا فريد للتطوير العقاري والمقاولات' : 'Zakaria Farid Real Estate Development'}
             </h2>
             <p className={vStyles.printBrandSub}>
-              {isAr ? 'نظام FIN-OS ERP — ملف دراسة الجدوى والتحليل المالي والهندسي المعتمد' : 'FIN-OS ERP — Executive Feasibility & Engineering Dossier'}
+              {isAr ? 'نظام FIN-OS ERP: ملف دراسة الجدوى والتحليل المالي والهندسي المعتمد' : 'FIN-OS ERP: Executive Feasibility & Engineering Dossier'}
             </p>
           </div>
         </div>
@@ -289,7 +290,7 @@ const PrintableDossierContent: React.FC<{
 
           <div className={vStyles.printKpiBox}>
             <span className={vStyles.printKpiLabel}>{isAr ? 'العائد على الاستثمار (ROI)' : 'Return on Investment'}</span>
-            <span className={vStyles.printKpiVal} style={{ color: '#0ea5e9' }}>
+            <span className={vStyles.printKpiVal} style={{ color: 'var(--erp-accent, #2563eb)' }}>
               {analysis.roiPct.toNumber().toFixed(1)}%
             </span>
             <span className={vStyles.printKpiSub}>
@@ -536,7 +537,7 @@ function formatProjectChartLabel(rawName: string, isSelected: boolean, isAr: boo
   const prefix = isSelected ? '⭐ ' : '';
 
   // Check for dash separators
-  const separator = [' – ', ' - ', ' — '].find(sep => name.includes(sep));
+  const separator = [' - ', String.fromCharCode(32, 8211, 32), String.fromCharCode(32, 8212, 32)].find(sep => name.includes(sep));
   if (separator) {
     const parts = name.split(separator);
     const line1 = `${prefix}${parts[0].trim()}`;
@@ -690,8 +691,8 @@ export const PropertyAnalysisView: React.FC<PropertyAnalysisViewProps> = ({
     }
   }, [initialPropertyId, properties]);
 
-  // Macro Studio Tabs: 5 discrete analytical dimensions (including Comprehensive Matrix)
-  const [activeMacroTab, setActiveMacroTab] = useState<'overview' | 'matrix' | 'roi' | 'rsv' | 'investments'>('overview');
+  // Macro Studio Tabs: 2 unified dimensions (Cohesive Analytical Charts Studio & Comprehensive Matrix)
+  const [activeMacroTab, setActiveMacroTab] = useState<'charts' | 'matrix'>('charts');
 
   // Dossier Tabs: 3 streamlined tabs (Lifecycle, Feasibility, Costs Register)
   const [activeDossierTab, setActiveDossierTab] = useState<'lifecycle' | 'feasibility' | 'costs'>('lifecycle');
@@ -1086,7 +1087,7 @@ export const PropertyAnalysisView: React.FC<PropertyAnalysisViewProps> = ({
           const barColor = isCurrent ? currentAccent : '#cbd5e1';
 
           return `
-            <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:8px; padding:10px 14px; box-shadow:0 4px 12px rgba(15,23,42,0.08); direction:${isAr ? 'rtl' : 'ltr'}; text-align:${isAr ? 'right' : 'left'}; font-family:inherit; min-width:220px;">
+            <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:8px; padding:10px 14px; box-shadow:0 4px 12px rgba(15,23,42,0.08); direction:${isAr ? 'rtl' : 'ltr'}; text-align:${isAr ? 'right' : 'left'}; font-family:inherit; min-width:220px;"><!-- design-lint: allow R20 tooltip template -->
               <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:6px; border-bottom:1px solid #f1f5f9; padding-bottom:6px;">
                 <span style="font-size:12px; font-weight:700; color:#0f172a;">${item.propertyName}</span>
                 <span style="font-size:10px; font-weight:700; padding:2px 6px; border-radius:4px; background:${badgeBg}; color:${badgeColor};">${badgeText}</span>
@@ -1237,7 +1238,7 @@ export const PropertyAnalysisView: React.FC<PropertyAnalysisViewProps> = ({
           const barColor = isCurrent ? '#16a34a' : '#cbd5e1';
 
           return `
-            <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:8px; padding:10px 14px; box-shadow:0 4px 12px rgba(15,23,42,0.08); direction:${isAr ? 'rtl' : 'ltr'}; text-align:${isAr ? 'right' : 'left'}; font-family:inherit; min-width:220px;">
+            <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:8px; padding:10px 14px; box-shadow:0 4px 12px rgba(15,23,42,0.08); direction:${isAr ? 'rtl' : 'ltr'}; text-align:${isAr ? 'right' : 'left'}; font-family:inherit; min-width:220px;"><!-- design-lint: allow R20 tooltip template -->
               <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:6px; border-bottom:1px solid #f1f5f9; padding-bottom:6px;">
                 <span style="font-size:12px; font-weight:700; color:#0f172a;">${item.propertyName}</span>
                 <span style="font-size:10px; font-weight:700; padding:2px 6px; border-radius:4px; background:${badgeBg}; color:${badgeColor};">${badgeText}</span>
@@ -1344,7 +1345,7 @@ export const PropertyAnalysisView: React.FC<PropertyAnalysisViewProps> = ({
           const barColor = isCurrent ? currentAccent : '#cbd5e1';
 
           return `
-            <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:8px; padding:10px 14px; box-shadow:0 4px 12px rgba(15,23,42,0.08); direction:${isAr ? 'rtl' : 'ltr'}; text-align:${isAr ? 'right' : 'left'}; font-family:inherit; min-width:220px;">
+            <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:8px; padding:10px 14px; box-shadow:0 4px 12px rgba(15,23,42,0.08); direction:${isAr ? 'rtl' : 'ltr'}; text-align:${isAr ? 'right' : 'left'}; font-family:inherit; min-width:220px;"><!-- design-lint: allow R20 tooltip template -->
               <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:6px; border-bottom:1px solid #f1f5f9; padding-bottom:6px;">
                 <span style="font-size:12px; font-weight:700; color:#0f172a;">${item.titleAr || item.titleEn}</span>
                 <span style="font-size:10px; font-weight:700; padding:2px 6px; border-radius:4px; background:${badgeBg}; color:${badgeColor};">${badgeText}</span>
@@ -1536,7 +1537,7 @@ export const PropertyAnalysisView: React.FC<PropertyAnalysisViewProps> = ({
           const barColor = isCurrent ? '#10b981' : '#cbd5e1';
 
           return `
-            <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:8px; padding:10px 14px; box-shadow:0 4px 12px rgba(15,23,42,0.08); direction:${isAr ? 'rtl' : 'ltr'}; text-align:${isAr ? 'right' : 'left'}; font-family:inherit; min-width:220px;">
+            <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:8px; padding:10px 14px; box-shadow:0 4px 12px rgba(15,23,42,0.08); direction:${isAr ? 'rtl' : 'ltr'}; text-align:${isAr ? 'right' : 'left'}; font-family:inherit; min-width:220px;"><!-- design-lint: allow R20 tooltip template -->
               <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:6px; border-bottom:1px solid #f1f5f9; padding-bottom:6px;">
                 <span style="font-size:12px; font-weight:700; color:#0f172a;">${item.titleAr || item.titleEn}</span>
                 <span style="font-size:10px; font-weight:700; padding:2px 6px; border-radius:4px; background:${badgeBg}; color:${badgeColor};">${badgeText}</span>
@@ -1700,7 +1701,7 @@ export const PropertyAnalysisView: React.FC<PropertyAnalysisViewProps> = ({
           const barColor = isCurrent ? currentAccent : '#cbd5e1';
 
           return `
-            <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:8px; padding:10px 14px; box-shadow:0 4px 12px rgba(15,23,42,0.08); direction:${isAr ? 'rtl' : 'ltr'}; text-align:${isAr ? 'right' : 'left'}; font-family:inherit; min-width:220px;">
+            <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:8px; padding:10px 14px; box-shadow:0 4px 12px rgba(15,23,42,0.08); direction:${isAr ? 'rtl' : 'ltr'}; text-align:${isAr ? 'right' : 'left'}; font-family:inherit; min-width:220px;"><!-- design-lint: allow R20 tooltip template -->
               <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:6px; border-bottom:1px solid #f1f5f9; padding-bottom:6px;">
                 <span style="font-size:12px; font-weight:700; color:#0f172a;">${item.titleAr || item.titleEn}</span>
                 <span style="font-size:10px; font-weight:700; padding:2px 6px; border-radius:4px; background:${badgeBg}; color:${badgeColor};">${badgeText}</span>
@@ -2014,14 +2015,14 @@ export const PropertyAnalysisView: React.FC<PropertyAnalysisViewProps> = ({
           <button
             type="button"
             role="tab"
-            id="macro-tab-overview"
-            aria-controls="macro-panel-overview"
-            aria-selected={activeMacroTab === 'overview'}
-            className={`${vStyles.underlineTabBtn} ${activeMacroTab === 'overview' ? vStyles.underlineTabBtnActive : ''}`}
-            onClick={() => setActiveMacroTab('overview')}
+            id="macro-tab-charts"
+            aria-controls="macro-panel-charts"
+            aria-selected={activeMacroTab === 'charts'}
+            className={`${vStyles.underlineTabBtn} ${activeMacroTab === 'charts' ? vStyles.underlineTabBtnActive : ''}`}
+            onClick={() => setActiveMacroTab('charts')}
           >
-            <PieChartIcon size={14} />
-            <span>{isAr ? 'تحليل العقارات وحالتها' : 'Property Breakdown'}</span>
+            <BarChart3 size={14} />
+            <span>{isAr ? 'لوحة التحليلات والمخططات البيانية' : 'Portfolio Analytical Studio'}</span>
           </button>
 
           <button
@@ -2035,45 +2036,6 @@ export const PropertyAnalysisView: React.FC<PropertyAnalysisViewProps> = ({
           >
             <TableIcon size={14} />
             <span>{isAr ? 'جدول مقارنة المحفظة الشامل' : 'Portfolio Matrix'}</span>
-          </button>
-
-          <button
-            type="button"
-            role="tab"
-            id="macro-tab-roi"
-            aria-controls="macro-panel-roi"
-            aria-selected={activeMacroTab === 'roi'}
-            className={`${vStyles.underlineTabBtn} ${activeMacroTab === 'roi' ? vStyles.underlineTabBtnActive : ''}`}
-            onClick={() => setActiveMacroTab('roi')}
-          >
-            <TrendingUp size={14} />
-            <span>{isAr ? 'تحليل الربحية و ROI' : 'Profitability & ROI'}</span>
-          </button>
-
-          <button
-            type="button"
-            role="tab"
-            id="macro-tab-rsv"
-            aria-controls="macro-panel-rsv"
-            aria-selected={activeMacroTab === 'rsv'}
-            className={`${vStyles.underlineTabBtn} ${activeMacroTab === 'rsv' ? vStyles.underlineTabBtnActive : ''}`}
-            onClick={() => setActiveMacroTab('rsv')}
-          >
-            <Layers size={14} />
-            <span>{isAr ? 'تحليل RSV وتخصيص التكاليف' : 'RSV & Allocation'}</span>
-          </button>
-
-          <button
-            type="button"
-            role="tab"
-            id="macro-tab-investments"
-            aria-controls="macro-panel-investments"
-            aria-selected={activeMacroTab === 'investments'}
-            className={`${vStyles.underlineTabBtn} ${activeMacroTab === 'investments' ? vStyles.underlineTabBtnActive : ''}`}
-            onClick={() => setActiveMacroTab('investments')}
-          >
-            <Coins size={14} />
-            <span>{isAr ? 'توزيع الاستثمارات الإنشائية' : 'Investment Allocation'}</span>
           </button>
         </div>
 
@@ -2231,330 +2193,172 @@ export const PropertyAnalysisView: React.FC<PropertyAnalysisViewProps> = ({
           </div>
         )}
 
-        {/* 2-Column Cartesian Charts (Dynamically toggled per macro tab) */}
-        {activeMacroTab !== 'matrix' && (
-          <div className={vStyles.chartsGrid} role="tabpanel" id={`macro-panel-${activeMacroTab}`} aria-labelledby={`macro-tab-${activeMacroTab}`}>
-            {/* TAB 1: OVERVIEW */}
-            {activeMacroTab === 'overview' && (
-              <>
-                {/* Chart 1: Donut - Status Distribution with Reference Comp Side Legend */}
-                <div className={vStyles.chartContainerCard}>
-                  <div className={vStyles.chartHeader}>
-                    <div className={vStyles.chartTitleWrap}>
-                      <PieChartIcon size={14} color={currentAccent} />
-                      <h4 className={vStyles.chartTitle}>
-                        {isAr ? 'توزيع حالة العقارات والوحدات' : 'Property Status Distribution'}
-                      </h4>
-                    </div>
-                    <span className={vStyles.chartSubtitle}>
-                      {isAr ? 'النسب المئوية للأعداد' : 'Share of inventory'}
-                    </span>
-                  </div>
-                  <div className={vStyles.donutWithLegendGrid}>
-                    <div className={vStyles.donutChartArea}>
-                      <ERPApexChart
-                        type="donut"
-                        series={donutStatusSeries}
-                        options={donutStatusOptions}
-                        height={220}
-                        isAr={isAr}
-                        primaryColor={currentAccent}
-                      />
-                    </div>
-                    <div className={vStyles.donutLegendList}>
-                      {macroAnalysis.statusDistribution.map((item, idx) => {
-                        const isSelectedStatus = selectedPropertyAnalysis?.status === item.status;
-                        return (
-                          <div key={item.status} className={vStyles.donutLegendItem}>
-                            <div className={vStyles.donutLegendItemLeading}>
-                              <span 
-                                className={vStyles.donutLegendDot} 
-                                style={{ backgroundColor: donutColors[idx % donutColors.length] }} 
-                              />
-                              <span className={vStyles.donutLegendLabel}>
-                                {isAr ? item.labelAr : item.labelEn}
-                              </span>
-                              {isSelectedStatus && (
-                                <span className={vStyles.donutSelectedPropertyTag}>
-                                  {isAr ? 'العقار المختار' : 'Selected'}
-                                </span>
-                              )}
-                            </div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                              <span className={vStyles.donutLegendValue}>
-                                {item.count}
-                              </span>
-                              <span className={vStyles.donutLegendPct}>
-                                ({item.percentage}%)
-                              </span>
-                            </div>
-                          </div>
-                        );
-                      })}
-
-                      {selectedPropertyAnalysis && (
-                        <div className={vStyles.donutFocalNote}>
-                          <div className={vStyles.donutFocalNoteLeading}>
-                            <div className={vStyles.cardIconSquircle} style={{ width: 22, height: 22 }}>
-                              <Building2 size={12} />
-                            </div>
-                            <span style={{ fontSize: '0.74rem', color: '#0f172a', fontWeight: 700 }}>
-                              {isAr ? 'موقع العقار المختار بالمحفظة' : 'Selected Property Position'}
-                            </span>
-                          </div>
-                          <span style={{ fontSize: '0.72rem', color: '#475569' }}>
-                            {isAr 
-                              ? `العقار "${selectedPropertyAnalysis.titleAr}" حالته (${selectedPropertyAnalysis.statusLabel}) ويمثل حصة ${((1 / Math.max(1, macroAnalysis.totalPropertiesCount)) * 100).toFixed(1)}% من إجمالي عقارات المحفظة (${macroAnalysis.totalPropertiesCount} عقار)`
-                              : `Property "${selectedPropertyAnalysis.titleEn}" is (${selectedPropertyAnalysis.statusLabel}), accounting for ${((1 / Math.max(1, macroAnalysis.totalPropertiesCount)) * 100).toFixed(1)}% of total portfolio (${macroAnalysis.totalPropertiesCount} units).`}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
+        {/* Unified CAD Blueprint Analytical Charts Grid */}
+        {activeMacroTab === 'charts' && (
+          <div className={vStyles.chartsGrid} role="tabpanel" id="macro-panel-charts" aria-labelledby="macro-tab-charts">
+            {/* Chart 1: Donut - Status Distribution with Reference Comp Side Legend */}
+            <div className={vStyles.chartContainerCard}>
+              <div className={vStyles.chartHeader}>
+                <div className={vStyles.chartTitleWrap}>
+                  <PieChartIcon size={14} color={currentAccent} />
+                  <h4 className={vStyles.chartTitle}>
+                    {isAr ? 'توزيع حالة العقارات والوحدات' : 'Property Status Distribution'}
+                  </h4>
                 </div>
-
-                {/* Chart 2: Cartesian Bar - ROI % Benchmark Comparison */}
-                <div className={vStyles.chartContainerCard}>
-                  <div className={vStyles.chartHeader}>
-                    <div className={vStyles.chartTitleWrap}>
-                      <BarChart3 size={14} color={currentAccent} />
-                      <h4 className={vStyles.chartTitle}>
-                        {isAr ? 'مقارنة العائد المتوقع (ROI %) مع العقار المختار' : 'Expected ROI Benchmark vs Selected Property'}
-                      </h4>
-                    </div>
-                    <span className={vStyles.chartSubtitle}>
-                      {isAr ? 'العقار المختار مميز باللون والرمز ⭐ مقارنة بأعلى المشاريع' : 'Selected property highlighted ⭐ vs top projects'}
-                    </span>
-                  </div>
+                <span className={vStyles.chartSubtitle}>
+                  {isAr ? 'النسب المئوية للأعداد بالمحفظة' : 'Share of inventory'}
+                </span>
+              </div>
+              <div className={vStyles.donutWithLegendGrid}>
+                <div className={vStyles.donutChartArea}>
                   <ERPApexChart
-                    type="bar"
-                    series={barRoiSeries}
-                    options={barRoiOptions}
-                    height={340}
+                    type="donut"
+                    series={donutStatusSeries}
+                    options={donutStatusOptions}
+                    height={220}
                     isAr={isAr}
                     primaryColor={currentAccent}
                   />
                 </div>
-              </>
-            )}
+                <div className={vStyles.donutLegendList}>
+                  {macroAnalysis.statusDistribution.map((item, idx) => {
+                    const isSelectedStatus = selectedPropertyAnalysis?.status === item.status;
+                    return (
+                      <div key={item.status} className={vStyles.donutLegendItem}>
+                        <div className={vStyles.donutLegendItemLeading}>
+                          <span 
+                            className={vStyles.donutLegendDot} 
+                            style={{ backgroundColor: donutColors[idx % donutColors.length] }} 
+                          />
+                          <span className={vStyles.donutLegendLabel}>
+                            {isAr ? item.labelAr : item.labelEn}
+                          </span>
+                          {isSelectedStatus && (
+                            <span className={vStyles.donutSelectedPropertyTag}>
+                              {isAr ? 'العقار المختار' : 'Selected'}
+                            </span>
+                          )}
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                          <span className={vStyles.donutLegendValue}>
+                            {item.count}
+                          </span>
+                          <span className={vStyles.donutLegendPct}>
+                            ({item.percentage}%)
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
 
-          {/* TAB 2: ROI & PROFITABILITY */}
-          {activeMacroTab === 'roi' && (
-            <>
-              {/* Chart 1: Net Expected Profit (NPV) */}
-              <div className={vStyles.chartContainerCard}>
-                <div className={vStyles.chartHeader}>
-                  <div className={vStyles.chartTitleWrap}>
-                    <TrendingUp size={14} color="#16a34a" />
-                    <h4 className={vStyles.chartTitle}>
-                      {isAr ? 'صافي الأرباح المتوقعة بالمشروع (ج.م)' : 'Net Expected Profit by Project'}
-                    </h4>
-                  </div>
-                  <span className={vStyles.chartSubtitle}>
-                    {isAr ? 'الأرباح بعد خصم الأرض والبناء' : 'Net after full WIP'}
-                  </span>
+                  {selectedPropertyAnalysis && (
+                    <div className={vStyles.donutFocalNote}>
+                      <div className={vStyles.donutFocalNoteLeading}>
+                        <div className={vStyles.cardIconSquircle} style={{ width: 22, height: 22 }}>
+                          <Building2 size={12} />
+                        </div>
+                        <span style={{ fontSize: '0.74rem', color: '#0f172a', fontWeight: 700 }}>
+                          {isAr ? 'موقع العقار المختار بالمحفظة' : 'Selected Property Position'}
+                        </span>
+                      </div>
+                      <span style={{ fontSize: '0.72rem', color: '#475569' }}>
+                        {isAr 
+                          ? `العقار "${selectedPropertyAnalysis.titleAr}" حالته (${selectedPropertyAnalysis.statusLabel}) ويمثل حصة ${((1 / Math.max(1, macroAnalysis.totalPropertiesCount)) * 100).toFixed(1)}% من إجمالي عقارات المحفظة (${macroAnalysis.totalPropertiesCount} عقار)`
+                          : `Property "${selectedPropertyAnalysis.titleEn}" is (${selectedPropertyAnalysis.statusLabel}), accounting for ${((1 / Math.max(1, macroAnalysis.totalPropertiesCount)) * 100).toFixed(1)}% of total portfolio (${macroAnalysis.totalPropertiesCount} units).`}
+                      </span>
+                    </div>
+                  )}
                 </div>
-                <ERPApexChart
-                  type="bar"
-                  series={barNetProfitSeries}
-                  options={barNetProfitOptions}
-                  height={340}
-                  isAr={isAr}
-                  primaryColor="#16a34a"
-                />
               </div>
+            </div>
 
-              {/* Chart 2: Gross Margin % */}
-              <div className={vStyles.chartContainerCard}>
-                <div className={vStyles.chartHeader}>
-                  <div className={vStyles.chartTitleWrap}>
-                    <Percent size={14} color={currentAccent} />
-                    <h4 className={vStyles.chartTitle}>
-                      {isAr ? 'مقارنة هامش الربح الإجمالي (%)' : 'Gross Margin % Comparison'}
-                    </h4>
-                  </div>
-                  <span className={vStyles.chartSubtitle}>
-                    {isAr ? 'النسبة المئوية لهامش المشروع' : 'Margin % across projects'}
-                  </span>
+            {/* Chart 2: Cartesian Bar - ROI % Benchmark Comparison */}
+            <div className={vStyles.chartContainerCard}>
+              <div className={vStyles.chartHeader}>
+                <div className={vStyles.chartTitleWrap}>
+                  <BarChart3 size={14} color={currentAccent} />
+                  <h4 className={vStyles.chartTitle}>
+                    {isAr ? 'مقارنة العائد المتوقع (ROI %) مع العقار المختار' : 'Expected ROI Benchmark vs Selected Property'}
+                  </h4>
                 </div>
-                <ERPApexChart
-                  type="bar"
-                  series={barGrossMarginSeries}
-                  options={barGrossMarginOptions}
-                  height={340}
-                  isAr={isAr}
-                  primaryColor={currentAccent}
-                />
+                <span className={vStyles.chartSubtitle}>
+                  {isAr ? 'العقار المختار مميز باللون والرمز ⭐ مقارنة بأعلى المشاريع' : 'Selected property highlighted ⭐ vs top projects'}
+                </span>
               </div>
-            </>
-          )}
+              <ERPApexChart
+                type="bar"
+                series={barRoiSeries}
+                options={barRoiOptions}
+                height={340}
+                isAr={isAr}
+                primaryColor={currentAccent}
+              />
+            </div>
 
-          {/* TAB 3: RSV & ALLOCATION */}
-          {activeMacroTab === 'rsv' && (
-            <>
-              {/* Chart 1: Contracted Sales vs RSV */}
-              <div className={vStyles.chartContainerCard}>
-                <div className={vStyles.chartHeader}>
-                  <div className={vStyles.chartTitleWrap}>
-                    <Layers size={14} color={currentAccent} />
-                    <h4 className={vStyles.chartTitle}>
-                      {isAr ? 'المبيعات المحققة مقابل القيمة التقديرية (RSV)' : 'Contracted Sales vs Total RSV'}
-                    </h4>
-                  </div>
-                  <span className={vStyles.chartSubtitle}>
-                    {isAr ? 'المبيعات المبرمة مقارنة بالمستهدف' : 'Sales volume comparison'}
-                  </span>
+            {/* Chart 3: Net Expected Profit (NPV) */}
+            <div className={vStyles.chartContainerCard}>
+              <div className={vStyles.chartHeader}>
+                <div className={vStyles.chartTitleWrap}>
+                  <TrendingUp size={14} color="#16a34a" />
+                  <h4 className={vStyles.chartTitle}>
+                    {isAr ? 'صافي الأرباح المتوقعة بالمشروع (ج.م)' : 'Net Expected Profit by Project'}
+                  </h4>
                 </div>
-                <ERPApexChart
-                  type="bar"
-                  series={barSalesVsRsvSeries}
-                  options={barSalesVsRsvOptions}
-                  height={350}
-                  isAr={isAr}
-                  primaryColor={currentAccent}
-                />
+                <span className={vStyles.chartSubtitle}>
+                  {isAr ? 'الأرباح بعد خصم الأرض والبناء' : 'Net after full WIP'}
+                </span>
               </div>
+              <ERPApexChart
+                type="bar"
+                series={barNetProfitSeries}
+                options={barNetProfitOptions}
+                height={340}
+                isAr={isAr}
+                primaryColor="#16a34a"
+              />
+            </div>
 
-              {/* Chart 2: Absorption % */}
-              <div className={vStyles.chartContainerCard}>
-                <div className={vStyles.chartHeader}>
-                  <div className={vStyles.chartTitleWrap}>
-                    <FileCheck size={14} color="#10b981" />
-                    <h4 className={vStyles.chartTitle}>
-                      {isAr ? 'معدل استيعاب الوحدات والمبيعات (%)' : 'Sales Absorption Rate (%)'}
-                    </h4>
-                  </div>
-                  <span className={vStyles.chartSubtitle}>
-                    {isAr ? 'نسبة الوحدات المباعة للوحدات المتاحة' : 'Units sold ratio'}
-                  </span>
+            {/* Chart 4: Cost Categories Breakdown (Donut) */}
+            <div className={vStyles.chartContainerCard}>
+              <div className={vStyles.chartHeader}>
+                <div className={vStyles.chartTitleWrap}>
+                  <Coins size={14} color={currentAccent} />
+                  <h4 className={vStyles.chartTitle}>
+                    {isAr ? 'توزيع الاستثمارات حسب بنود التكلفة' : 'Investment by Cost Category'}
+                  </h4>
                 </div>
-                <ERPApexChart
-                  type="bar"
-                  series={barAbsorptionSeries}
-                  options={barAbsorptionOptions}
-                  height={340}
-                  isAr={isAr}
-                  primaryColor="#10b981"
-                />
+                <span className={vStyles.chartSubtitle}>
+                  {isAr ? 'الأرض والخرسانات والتشطيبات والتراخيص' : 'WIP category distribution'}
+                </span>
               </div>
-            </>
-          )}
-
-          {/* TAB 4: INVESTMENTS BREAKDOWN */}
-          {activeMacroTab === 'investments' && (
-            <>
-              {/* Chart 1: Donut - Cost Categories Breakdown */}
-              <div className={vStyles.chartContainerCard}>
-                <div className={vStyles.chartHeader}>
-                  <div className={vStyles.chartTitleWrap}>
-                    <Coins size={14} color={currentAccent} />
-                    <h4 className={vStyles.chartTitle}>
-                      {isAr ? 'توزيع الاستثمارات حسب بنود التكلفة' : 'Investment by Cost Category'}
-                    </h4>
-                  </div>
-                  <span className={vStyles.chartSubtitle}>
-                    {isAr ? 'الأرض والخرسانات والتشطيبات' : 'WIP category distribution'}
-                  </span>
-                </div>
-                <ERPApexChart
-                  type="donut"
-                  series={donutCategoriesSeries}
-                  options={donutCategoriesOptions}
-                  height={340}
-                  isAr={isAr}
-                  primaryColor={currentAccent}
-                />
-              </div>
-
-              {/* Chart 2: Total Invested Capital by Project */}
-              <div className={vStyles.chartContainerCard}>
-                <div className={vStyles.chartHeader}>
-                  <div className={vStyles.chartTitleWrap}>
-                    <BarChart3 size={14} color={currentAccent} />
-                    <h4 className={vStyles.chartTitle}>
-                      {isAr ? 'إجمالي الاستثمار المنفذ حسب المشروع' : 'Invested Capital by Project'}
-                    </h4>
-                  </div>
-                  <span className={vStyles.chartSubtitle}>
-                    {isAr ? 'إجمالي تكاليف الأرض والبناء' : 'Total Land + WIP'}
-                  </span>
-                </div>
-                <ERPApexChart
-                  type="bar"
-                  series={barInvestmentByProjectSeries}
-                  options={barInvestmentByProjectOptions}
-                  height={340}
-                  isAr={isAr}
-                  primaryColor={currentAccent}
-                />
-              </div>
-            </>
-          )}
-        </div>
-      )}
-    </div>
-        </>
-      )}
+              <ERPApexChart
+                type="donut"
+                series={donutCategoriesSeries}
+                options={donutCategoriesOptions}
+                height={340}
+                isAr={isAr}
+                primaryColor={currentAccent}
+              />
+            </div>
+          </div>
+        )}
+      </div>
+    </>
+  )}
 
       {/* ========================================================================= */}
       {/* VIEW MODE 2: SINGLE PROPERTY LIFECYCLE DOSSIER */}
       {/* ========================================================================= */}
       {viewMode === 'property' && (
         <>
-          {/* 4 DISCRETE FLOATING PROPERTY-SPECIFIC KPI CARDS WITH WAVE SPARKLINES */}
-          <ZFKpiGrid>
-            {/* Property KPI 1: Invested Capital */}
-            <ZFKpiCard
-              title={isAr ? 'إجمالي رأس المال المستثمر' : 'Invested Capital (Cost)'}
-              value={selectedPropertyAnalysis ? formatCompactEGP(selectedPropertyAnalysis.breakdown.totalInvestedCapital, isAr) : '0 ج.م'}
-              icon={<Coins size={16} />}
-              accentColor="accent"
-              showSparkline={true}
-              sparklineData={[15, 25, 38, 50, 65, 78, 90]}
-              delta={{ value: '+8.4%', isPositive: true, label: isAr ? 'رأس مال منفق' : 'invested' }}
-              subtitleLabel={isAr ? 'تكلفة المتر التقديرية' : 'Estimated Cost / m²'}
-              subtitleValue={selectedPropertyAnalysis ? `${formatCompactEGP(selectedPropertyAnalysis.costPerSqm, isAr)} / م²` : '0'}
+          {/* 4 DISCRETE FLOATING PROPERTY-SPECIFIC BLUEPRINT KPI CARDS */}
+          {selectedPropertyAnalysis && (
+            <PropertyKpiBlueprintCards
+              analysis={selectedPropertyAnalysis}
+              isAr={isAr}
+              currentAccent={currentAccent}
             />
-
-            {/* Property KPI 2: Expected RSV */}
-            <ZFKpiCard
-              title={isAr ? 'القيمة البيعية المتوقعة (RSV)' : 'Expected Sales Value (RSV)'}
-              value={selectedPropertyAnalysis ? formatCompactEGP(selectedPropertyAnalysis.expectedTotalSales, isAr) : '0 ج.م'}
-              icon={<FileCheck size={16} />}
-              accentColor="accent"
-              showSparkline={true}
-              sparklineData={[20, 35, 48, 62, 75, 88, 100]}
-              delta={{ value: '+14.2%', isPositive: true, label: isAr ? 'قيمة تعاقدية' : 'contracted' }}
-              subtitleLabel={isAr ? 'المبيعات الفعلية المحققة' : 'Contracted Sales'}
-              subtitleValue={selectedPropertyAnalysis ? formatCompactEGP(selectedPropertyAnalysis.contractedSales, isAr) : '0 ج.م'}
-            />
-
-            {/* Property KPI 3: Net Profit NPV & ROI */}
-            <ZFKpiCard
-              title={isAr ? 'صافي الربح المتوقع (NPV)' : 'Net Expected Profit'}
-              value={selectedPropertyAnalysis ? formatCompactEGP(selectedPropertyAnalysis.netExpectedProfit, isAr) : '0 ج.م'}
-              icon={<TrendingUp size={16} />}
-              accentColor="accent"
-              showSparkline={true}
-              sparklineData={[10, 16, 24, 30, 38, 44, 52]}
-              delta={{ value: selectedPropertyAnalysis ? `${selectedPropertyAnalysis.roiPct.toFixed(1)}%` : '0%', isPositive: selectedPropertyAnalysis ? selectedPropertyAnalysis.roiPct.gte(0) : true, label: isAr ? 'عائد ROI' : 'ROI' }}
-              subtitleLabel={isAr ? 'العائد على الاستثمار' : 'ROI %'}
-              subtitleValue={selectedPropertyAnalysis ? `${selectedPropertyAnalysis.roiPct.toFixed(1)}% ROI` : '0%'}
-            />
-
-            {/* Property KPI 4: Sales Absorption */}
-            <ZFKpiCard
-              title={isAr ? 'نسبة الامتصاص والمبيعات' : 'Sales Absorption Rate'}
-              value={selectedPropertyAnalysis ? `${selectedPropertyAnalysis.absorptionRatePct.toFixed(1)}%` : '0%'}
-              icon={<Percent size={16} />}
-              accentColor="accent"
-              showSparkline={true}
-              sparklineData={[0, 15, 30, 45, 60, 75, Math.min(100, Math.max(0, Math.round(selectedPropertyAnalysis ? selectedPropertyAnalysis.absorptionRatePct.toNumber() : 0)))]}
-              delta={{ value: selectedPropertyAnalysis ? `${selectedPropertyAnalysis.soldUnits}/${selectedPropertyAnalysis.totalUnits}` : '0', isPositive: true, label: isAr ? 'وحدات مباعة' : 'units' }}
-              subtitleLabel={isAr ? 'الوحدات المتعاقد عليها' : 'Sold Units'}
-              subtitleValue={selectedPropertyAnalysis ? `${selectedPropertyAnalysis.soldUnits} ${isAr ? 'من' : 'of'} ${selectedPropertyAnalysis.totalUnits} ${isAr ? 'وحدة' : 'units'}` : '0'}
-            />
-          </ZFKpiGrid>
+          )}
 
           {/* SELECTED PROPERTY DEEP DOSSIER (تحليل دورة حياة العقار المختار) */}
           <PropertyAnalysisDossier

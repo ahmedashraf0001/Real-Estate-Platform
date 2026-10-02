@@ -42,16 +42,16 @@
 }
 
 .headerTitle {
-  font-size: 1.35rem;
-  font-weight: 800;
+  font-size: 1.4rem;
+  font-weight: 700;
   color: #0f172a;
   letter-spacing: -0.015em;
   margin: 0;
-  line-height: 1.2;
+  line-height: 1.25;
 }
 
 .headerSubtitle {
-  font-size: 0.85rem;
+  font-size: 0.8125rem;
   color: #64748b;
   font-weight: 500;
   margin: 0;
@@ -75,7 +75,7 @@
   border: 1px solid #cbd5e1;
   border-radius: 9px;
   padding: 0.48rem 0.95rem;
-  font-size: 0.82rem;
+  font-size: 0.8125rem;
   font-weight: 600;
   color: #1e293b;
   cursor: pointer;
@@ -94,7 +94,6 @@
 }
 
 .headerActionBtn:active {
-  transform: scale(0.98);
   background: #f1f5f9;
 }
 
@@ -184,7 +183,7 @@
 }
 
 .cardTitle {
-  font-size: 0.95rem;
+  font-size: 0.875rem;
   font-weight: 700;
   color: #0f172a;
   margin: 0;
@@ -205,7 +204,7 @@
 }
 
 .kpiCard:hover .squircleIcon {
-  transform: scale(1.05);
+  /* Quiet hover: no scale transform */
 }
 
 .squircleGold {
@@ -241,8 +240,8 @@
 }
 
 .cardValue {
-  font-size: 1.68rem;
-  font-weight: 800;
+  font-size: 1.45rem;
+  font-weight: 700;
   color: #0f172a;
   line-height: 1.15;
   font-variant-numeric: tabular-nums;
@@ -250,7 +249,7 @@
 }
 
 .cardCurrency {
-  font-size: 0.85rem;
+  font-size: 0.75rem;
   font-weight: 600;
   color: #475569;
   margin-inline-start: 0.2rem;
@@ -258,7 +257,7 @@
 
 /* ─── CARD SUBTITLE TEXT ─── */
 .cardSubtitleText {
-  font-size: 0.78rem;
+  font-size: 0.75rem;
   color: #64748b;
   font-weight: 500;
   margin: 0 0 0.65rem 0;
@@ -278,7 +277,7 @@
   display: flex;
   align-items: center;
   gap: 0.4rem;
-  font-size: 0.78rem;
+  font-size: 0.75rem;
   font-variant-numeric: tabular-nums;
 }
 
@@ -374,7 +373,7 @@
 }
 
 .barAmount {
-  font-size: 0.68rem;
+  font-size: 0.75rem;
   color: #64748b;
   font-weight: 500;
   font-variant-numeric: tabular-nums;
@@ -384,7 +383,7 @@
 .barPct {
   font-weight: 700;
   color: #0f172a;
-  font-size: 0.75rem;
+  font-size: 0.70rem;
   min-width: 26px;
   text-align: start;
   font-variant-numeric: tabular-nums;
@@ -409,15 +408,15 @@
 }
 
 .miniColVal {
-  font-size: 0.95rem;
-  font-weight: 800;
+  font-size: 0.875rem;
+  font-weight: 700;
   color: #0f172a;
   font-variant-numeric: tabular-nums;
   line-height: 1.2;
 }
 
 .miniColCurrency {
-  font-size: 0.68rem;
+  font-size: 0.70rem;
   color: #64748b;
   font-weight: 600;
   line-height: 1;
@@ -444,7 +443,7 @@
 }
 
 .miniColLabel {
-  font-size: 0.72rem;
+  font-size: 0.75rem;
   color: #64748b;
   font-weight: 600;
 }
@@ -455,36 +454,28 @@
   background: #f1f5f9;
 }
 
-/* ─── CARDS 3 & 4 BOTTOM: SPARKLINE BARS + STATUS ─── */
-.sparklineContainer {
+/* ─── CARDS 3 & 4 BOTTOM: HONEST ZERO-STATE ─── */
+.honestZeroState {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   width: 100%;
-  gap: 0.5rem;
-  padding-top: 0.25rem;
+  gap: 0.25rem;
+  padding: 0.4rem 0 0.15rem 0;
 }
 
-.sparklineBars {
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  gap: 4px;
-  height: 24px;
-  width: 100%;
-}
-
-.sparklineBar {
-  width: 2.5px;
-  background: #e2e8f0;
-  border-radius: 1.5px;
-  transition: height 0.3s ease, background-color 0.2s ease;
-}
-
-.sparklineLabel {
-  font-size: 0.73rem;
+.zeroStateText {
+  font-size: 0.75rem;
   color: #64748b;
-  font-weight: 600;
+  font-weight: 500;
   text-align: center;
+  line-height: 1.35;
+}
+
+.zeroStateSubtext {
+  font-size: 0.75rem;
+  color: #94a3b8;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
 }

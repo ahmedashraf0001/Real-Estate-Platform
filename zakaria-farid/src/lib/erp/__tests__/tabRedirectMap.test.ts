@@ -141,7 +141,7 @@ describe('FIN-OS Tab Redirection & Backward Compatibility Suite', () => {
     assert.strictEqual(isSideWidgetsTab('cost-allocation'), false);
     assert.strictEqual(isSideWidgetsTab('properties'), false);
     assert.strictEqual(isSideWidgetsTab('construction'), false);
-    assert.strictEqual(isSideWidgetsTab('calculator'), false);
+    assert.strictEqual(isSideWidgetsTab('calculator'), true);
     assert.strictEqual(isSideWidgetsTab('contracts'), false);
     assert.strictEqual(isSideWidgetsTab('pdc'), false);
     assert.strictEqual(isSideWidgetsTab('rescissions'), false);

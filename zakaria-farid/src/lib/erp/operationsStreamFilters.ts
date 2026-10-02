@@ -294,8 +294,8 @@ export function computeUpcomingDues(
       list.push({
         id: `pdc-${pdcId}`,
         title: pdc.cheque_number
-          ? (isAr ? `شيك رقم ${pdc.cheque_number}` : `Cheque #${pdc.cheque_number}`)
-          : (isAr ? 'شيك آجل برسم التحصيل' : 'PDC Cheque'),
+          ? (isAr ? `قسط مرجعي #${pdc.cheque_number}` : `Installment Ref #${pdc.cheque_number}`)
+          : (isAr ? 'قسط آجل برسم التحصيل' : 'Deferred Installment'),
         party,
         dueDate,
         amount,

@@ -1,0 +1,418 @@
+/* CalculatorSideWidgets.module.css
+ * Canonical FIN-OS Enterprise Resource Planning Design System
+ * Invariants: #ffffff panels, 1px #cbd5e1 border, 12px radius, zero tinted card backgrounds.
+ */
+
+.sideWidgetsWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  width: 100%;
+}
+
+/* 1. Feasibility & ROI Summary Widget */
+.roiSummaryCard {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.profitHeroBox {
+  background: #ffffff;
+  border: 1px solid var(--erp-border, #cbd5e1);
+  border-radius: 8px;
+  padding: 0.75rem 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.heroLabel {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.profitValueRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.profitAmount {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: #16a34a;
+  font-variant-numeric: tabular-nums;
+  unicode-bidi: isolate;
+}
+
+.rocBadge {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #16a34a;
+  background: #ecfdf5;
+  /* design-lint: allow R20 semantic pill border */
+  border: 1px solid rgba(22, 163, 74, 0.15);
+  border-radius: 6px;
+  padding: 0.15rem 0.45rem;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Breakeven row */
+.metricRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.45rem 0;
+  border-top: 1px solid #f1f5f9;
+  font-size: 0.75rem;
+}
+
+.metricLabel {
+  color: #475569;
+  font-weight: 600;
+}
+
+.metricValue {
+  font-weight: 700;
+  color: #0f172a;
+  font-variant-numeric: tabular-nums;
+  unicode-bidi: isolate;
+}
+
+/* Margin progress bar */
+.progressSection {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding-top: 0.45rem;
+  border-top: 1px solid #f1f5f9;
+}
+
+.progressHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.72rem;
+}
+
+.progressLabel {
+  font-weight: 700;
+  color: #475569;
+}
+
+.progressPct {
+  font-weight: 800;
+  color: #16a34a;
+  font-variant-numeric: tabular-nums;
+}
+
+.progressBarTrack {
+  width: 100%;
+  height: 7px;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 9999px;
+  overflow: hidden;
+}
+
+.progressBarFill {
+  height: 100%;
+  background: #16a34a;
+  border-radius: 9999px;
+  transition: width 0.3s ease;
+}
+
+.progressTicks {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.68rem;
+  color: #94a3b8;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 2. Quick Actions Widget */
+.quickActionsList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.actionRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.55rem 0.65rem;
+  background: #ffffff;
+  border: 1px solid var(--erp-border, #cbd5e1);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+  user-select: none;
+  text-align: start;
+  font-family: inherit;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.actionRow:hover {
+  background: #f8fafc;
+  border-color: #94a3b8;
+}
+
+.actionRow:focus-visible {
+  outline: 2px solid var(--erp-accent, #2563eb);
+  outline-offset: 1px;
+}
+
+.actionLeading {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  min-width: 0;
+}
+
+.actionSquircle {
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.actionSquircleGreen {
+  background: #ecfdf5;
+  color: #16a34a;
+  /* design-lint: allow R20 semantic border */
+  border: 1px solid rgba(22, 163, 74, 0.2);
+}
+
+.actionSquircleAmber {
+  background: #fffbeb;
+  color: #d97706;
+  /* design-lint: allow R20 semantic border */
+  border: 1px solid rgba(217, 119, 6, 0.2);
+}
+
+.actionSquircleAccent {
+  background: var(--erp-accent-subtle, #eff6ff);
+  color: var(--erp-accent, #2563eb);
+  border: 1px solid var(--erp-border, #cbd5e1);
+}
+
+.actionSquircleSlate {
+  background: #f1f5f9;
+  color: #334155;
+  border: 1px solid #cbd5e1;
+}
+
+.actionSquircleEmerald {
+  background: #ecfdf5;
+  color: #15803d;
+  /* design-lint: allow R20 semantic border */
+  border: 1px solid rgba(21, 128, 61, 0.2);
+}
+
+.actionText {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.actionTitle {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #0f172a;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.actionSub {
+  font-size: 0.68rem;
+  color: #64748b;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.actionChevron {
+  color: #94a3b8;
+  flex-shrink: 0;
+  transition: transform 0.15s ease;
+}
+
+.actionRow:hover .actionChevron {
+  color: #334155;
+}
+
+/* 3. Cost Sensitivity Widget */
+.sensitivityCard {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.scenarioTabs {
+  display: flex;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 2px;
+  gap: 2px;
+}
+
+.scenarioTabBtn {
+  flex: 1;
+  padding: 0.35rem 0.2rem;
+  border: none;
+  background: transparent;
+  color: #64748b;
+  font-size: 0.68rem;
+  font-weight: 700;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-family: inherit;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+.scenarioTabBtnActive {
+  background: #ffffff;
+  color: #0f172a;
+  font-weight: 800;
+  /* design-lint: allow R20 subtle active tab shadow */
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.scenarioHeroBox {
+  background: #ffffff;
+  border: 1px solid var(--erp-border, #cbd5e1);
+  border-radius: 8px;
+  padding: 0.65rem 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.scenarioBadgeRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.scenarioDetailRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.72rem;
+}
+
+.scenarioDetailLabel {
+  color: #64748b;
+}
+
+.scenarioDetailValue {
+  font-weight: 700;
+  color: #0f172a;
+  font-variant-numeric: tabular-nums;
+  unicode-bidi: isolate;
+}
+
+/* 4. Connected GL Accounts Widget */
+.accountsList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.accountCard {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.55rem 0.65rem;
+  background: #ffffff;
+  border: 1px solid var(--erp-border, #cbd5e1);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+  user-select: none;
+  font-family: inherit;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.accountCard:hover {
+  background: #f8fafc;
+  border-color: #94a3b8;
+}
+
+.accountLeading {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.accountTitleRow {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.accountCodeBadge {
+  font-family: monospace;
+  font-size: 0.68rem;
+  font-weight: 800;
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  color: #334155;
+  padding: 0.1rem 0.35rem;
+  border-radius: 6px;
+  font-variant-numeric: tabular-nums;
+}
+
+.accountName {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #0f172a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.accountSub {
+  font-size: 0.68rem;
+  color: #64748b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.accountTrailing {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.accountBalance {
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: #0f172a;
+  font-variant-numeric: tabular-nums;
+  unicode-bidi: isolate;
+}

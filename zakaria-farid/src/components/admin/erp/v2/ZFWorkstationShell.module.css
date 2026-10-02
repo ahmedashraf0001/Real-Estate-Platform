@@ -679,11 +679,11 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), filter 0.2s ease;
+  transition: opacity 0.15s ease;
 }
 
 .brandLogoLink:hover {
-  transform: scale(1.04);
+  opacity: 0.85;
 }
 
 .brandTaglineCol {
@@ -4077,12 +4077,11 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  transition: background 0.15s ease, transform 0.15s ease;
+  transition: background 0.15s ease;
 }
 
 .quickActionBtn:hover .quickActionIconCircle {
   background: var(--erp-accent-subtle, rgba(37, 99, 235, 0.15));
-  transform: scale(1.05);
 }
 
 .quickActionIconCirclePrimary {
@@ -9137,11 +9136,12 @@
   flex-wrap: wrap;
 }
 
+.cockpitPrimaryBtn,
 .cockpitPrimaryGoldBtn {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  background: var(--erp-accent, #946f23);
+  background: var(--erp-accent, #2563eb);
   color: #ffffff !important;
   border: none;
   border-radius: 8px;
@@ -9150,14 +9150,15 @@
   font-weight: 700;
   cursor: pointer;
   transition: all 0.15s ease;
-  box-shadow: 0 1px 3px rgba(148, 111, 35, 0.25);
+  box-shadow: 0 1px 3px var(--erp-accent-tint, rgba(37, 99, 235, 0.25));
   user-select: none;
   white-space: nowrap;
 }
 
+.cockpitPrimaryBtn:hover,
 .cockpitPrimaryGoldBtn:hover {
-  background: var(--erp-accent-hover, #7c5c1b);
-  box-shadow: 0 2px 6px rgba(148, 111, 35, 0.35);
+  background: var(--erp-accent-hover, #1d4ed8);
+  box-shadow: 0 2px 6px var(--erp-accent-tint, rgba(37, 99, 235, 0.35));
   transform: translateY(-1px);
 }
 

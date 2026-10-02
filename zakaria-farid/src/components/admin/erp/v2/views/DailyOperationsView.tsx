@@ -349,12 +349,12 @@ export const DailyOperationsView: React.FC<DailyOperationsViewProps> = ({
           timeStr: jeTime,
           fullDateTimeStr: `${jeDate} ${jeTime}`,
           type: 'TRANSFER',
-          typeLabelAr: 'تحويل بنكي / خزينة',
+          typeLabelAr: 'تحويل داخلي',
           typeLabelEn: 'Transfer',
           description: localizeJournalDescription(je.description, isAr) || (isAr ? 'تحويل سيولة داخلية' : 'Internal Transfer'),
-          counterparty: isAr ? 'بنك مصر / الخزينة' : 'Bank / Safe',
-          accountCode: '101000 / 102000',
-          accountLabel: isAr ? 'تحويلات بين الخزينة والحسابات البنكية' : 'Cash & Bank Transfer',
+          counterparty: isAr ? 'إنستاباي / الخزينة' : 'InstaPay / Safe',
+          accountCode: '101000',
+          accountLabel: isAr ? 'تحويلات داخلية بين الخزينة وإنستاباي' : 'Cash & InstaPay Transfer',
           reference_number: je.entry_number || je.entry_id,
           payment_method: isAr ? 'تحويل داخلي' : 'Internal Transfer',
           amount: cashDebit,
@@ -421,11 +421,11 @@ export const DailyOperationsView: React.FC<DailyOperationsViewProps> = ({
           accountCode: cashAccountCode === '101000' ? '101000' : '102000',
           accountLabel: cashAccountCode === '101000'
             ? (isAr ? 'الخزينة الرئيسية (101000)' : 'Safe Cash (101000)')
-            : (isAr ? 'الحساب البنكي التجاري (102000)' : 'Commercial Bank Account (102000)'),
+            : (isAr ? 'إنستاباي (101000)' : 'InstaPay (101000)'),
           reference_number: je.entry_number || matchedContract?.contract_number || je.source_entity_id || je.entry_id,
           payment_method: cashAccountCode === '101000'
-            ? (isAr ? 'كاش بالخزينة' : 'Cash Vault')
-            : (isAr ? 'تحويل بنكي' : 'Bank Transfer'),
+            ? (isAr ? 'كاش بالخزينة' : 'Cash in Hand')
+            : (isAr ? 'إنستاباي' : 'InstaPay'),
           amount: cashDebit,
           direction: 'IN',
           status: 'COMPLETED',
@@ -477,11 +477,11 @@ export const DailyOperationsView: React.FC<DailyOperationsViewProps> = ({
           description: localizeJournalDescription(je.description, isAr) || (isAr ? 'صرف مستحقات / تكاليف' : 'Cash Outflow'),
           counterparty,
           accountCode: opposingCode || (cashAccountCode === '101000' ? '101000' : '102000'),
-          accountLabel: opposingDesc || (cashAccountCode === '101000' ? (isAr ? 'الخزينة (101000)' : 'Safe') : (isAr ? 'البنك (102000)' : 'Bank')),
+          accountLabel: opposingDesc || (cashAccountCode === '101000' ? (isAr ? 'الخزينة (101000)' : 'Safe') : (isAr ? 'إنستاباي (101000)' : 'InstaPay (101000)')),
           reference_number: je.entry_number || matchedCost?.invoice_ref || matchedCost?.item_id || je.source_entity_id || je.entry_id,
           payment_method: cashAccountCode === '101000'
-            ? (isAr ? 'كاش بالخزينة' : 'Cash Vault')
-            : (isAr ? 'تحويل بنكي' : 'Bank Transfer'),
+            ? (isAr ? 'كاش بالخزينة' : 'Cash in Hand')
+            : (isAr ? 'إنستاباي' : 'InstaPay'),
           amount: D(0).minus(cashCredit),
           direction: 'OUT',
           status: 'COMPLETED',
@@ -509,14 +509,14 @@ export const DailyOperationsView: React.FC<DailyOperationsViewProps> = ({
         timeStr: '11:00',
         fullDateTimeStr: `${pdc.due_date || todayStr} 11:00`,
         type: 'COLLECTION',
-        typeLabelAr: 'تحصيل شيك',
-        typeLabelEn: 'Cheque Clearance',
-        description: `${isAr ? 'تحصيل شيك بنكي رقم' : 'Cleared Cheque #'} ${pdc.cheque_number}`,
+        typeLabelAr: 'قسط محصل',
+        typeLabelEn: 'Installment Collection',
+        description: `${isAr ? 'تحصيل قسط عميل رقم' : 'Client Installment Collection #'} ${pdc.cheque_number || pdc.cheque_id}`,
         counterparty: pdc.drawer_name || ct?.buyer_name || (isAr ? 'عميل تعاقد' : 'Client'),
         accountCode: '101000',
         accountLabel: isAr ? 'الخزينة الرئيسية (101000)' : 'Main Safe (101000)',
         reference_number: pdc.cheque_number ? `#${pdc.cheque_number}` : pdc.cheque_id,
-        payment_method: isAr ? 'شيك بنكي مقاصة' : 'Cleared Cheque',
+        payment_method: isAr ? 'قسط محصل' : 'Collected Installment',
         amount: D(pdc.nominal_value || 0),
         direction: 'IN',
         status: 'COMPLETED',
@@ -965,7 +965,7 @@ export const DailyOperationsView: React.FC<DailyOperationsViewProps> = ({
         party: tx.counterparty
       });
     } else {
-      toast.info(`${tx.description || tx.counterparty} — ${formatNumberWithCommas(tx.amount.abs())} ${isAr ? 'ج.م' : 'EGP'}`);
+      toast.info(`${tx.description || tx.counterparty} · ${formatNumberWithCommas(tx.amount.abs())} ${isAr ? 'ج.م' : 'EGP'}`);
     }
   };
 
@@ -1055,7 +1055,7 @@ export const DailyOperationsView: React.FC<DailyOperationsViewProps> = ({
           <div className={ops.tableHeaderTabsWrap}>
             <div className={ops.tableHeaderTitle}>
               <Clock size={16} color="var(--erp-accent, #2563eb)" />
-              <h3 style={{ margin: 0, fontSize: '0.90rem', fontWeight: 700, color: '#0f172a', whiteSpace: 'nowrap' }}>
+              <h3 style={{ margin: 0, fontSize: '0.875rem', fontWeight: 700, color: '#0f172a', whiteSpace: 'nowrap' }}>
                 {isAr ? 'أحدث العمليات' : 'Recent Operations'}
               </h3>
             </div>
@@ -1345,7 +1345,7 @@ export const DailyOperationsView: React.FC<DailyOperationsViewProps> = ({
                           ? (isAr ? 'لا توجد حركات مسجلة اليوم' : 'No movements recorded today')
                           : (isAr ? 'لا توجد حركات مالية مطابقة لشروط البحث' : 'No movements match the search criteria')}
                       </span>
-                      <span style={{ fontSize: '0.74rem' }}>
+                      <span style={{ fontSize: '0.75rem' }}>
                         {dateScope === 'today' && !hasActiveFilters
                           ? (isAr ? 'يمكنك مراجعة الحركات السابقة من كل السجل' : 'Review earlier movements in the full register')
                           : (isAr ? 'جرّب تغيير فلاتر التاريخ أو إعادة ضبط البحث' : 'Try adjusting date filters or search terms')}
@@ -1762,7 +1762,7 @@ export const DailyOperationsView: React.FC<DailyOperationsViewProps> = ({
                       border: '1px solid #cbd5e1',
                       borderRadius: '6px',
                       padding: '0.45rem 0.85rem',
-                      fontSize: '0.78rem',
+                      fontSize: '0.8125rem',
                       fontWeight: 600,
                       color: 'var(--erp-accent, #2563eb)',
                       cursor: 'pointer',
@@ -1781,7 +1781,7 @@ export const DailyOperationsView: React.FC<DailyOperationsViewProps> = ({
                     border: 'none',
                     borderRadius: '6px',
                     padding: '0.45rem 1.1rem',
-                    fontSize: '0.80rem',
+                    fontSize: '0.8125rem',
                     fontWeight: 600,
                     cursor: 'pointer',
                   }}
@@ -1924,7 +1924,7 @@ export const DailyOperationsView: React.FC<DailyOperationsViewProps> = ({
                   <option value="all">{isAr ? 'جميع أنواع العمليات' : 'All Types'}</option>
                   <option value="COLLECTION">{isAr ? 'تحصيل (+)' : 'Collections (+)'}</option>
                   <option value="DISBURSEMENT">{isAr ? 'صرف (-)' : 'Disbursements (-)'}</option>
-                  <option value="TRANSFER">{isAr ? 'تحويل بنكي' : 'Transfers'}</option>
+                  <option value="TRANSFER">{isAr ? 'تحويلات داخلية' : 'Transfers'}</option>
                   <option value="EXPENSE">{isAr ? 'مصروفات' : 'Expenses'}</option>
                 </select>
 
@@ -1967,7 +1967,7 @@ export const DailyOperationsView: React.FC<DailyOperationsViewProps> = ({
             {/* Active Mindmap Stream Filter Indicator Chip Banner in Modal */}
             {activeStreamFilter && (
               <div className={ops.activeFilterBanner} style={{ margin: '0' }}>
-                <span style={{ fontSize: '0.78rem', color: '#0f172a', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '0.35rem', flexWrap: 'wrap' }}>
+                <span style={{ fontSize: '0.8125rem', color: '#0f172a', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '0.35rem', flexWrap: 'wrap' }}>
                   <span>{isAr ? 'تصفية نشطة حسب المخطط: ' : 'Active Flow Filter: '}</span>
                   <strong style={{ color: 'var(--erp-accent, #2563eb)' }}>{activeStreamLabel}</strong>
                   <span style={{ color: '#64748b' }}>({filteredTransactions.length} {isAr ? 'حركة' : 'items'})</span>

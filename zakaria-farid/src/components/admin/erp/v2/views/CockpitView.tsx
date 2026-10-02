@@ -50,6 +50,7 @@ import {
 import { Property } from '@/lib/supabase/types';
 import { D, Decimal } from '@/lib/erp/math';
 import { getAvailableCash, getConstructionWIP } from '@/lib/erp/canonicalMetrics';
+import { formatCompactEGP } from '@/lib/erp/propertyAnalysisEngine';
 import { ERPApexChart } from '../charts/ERPApexChart';
 import { AnimatedCounter } from '../common/AnimatedCounter';
 import { ZFSearchBar } from '../common/ZFSearchBar';
@@ -360,7 +361,15 @@ export const CockpitView: React.FC<CockpitViewProps> = ({
     });
 
     const periodEnd = new Date(currentYear, statPeriodFilter === 'year' ? 12 : statPeriodFilter === 'quarter' ? currentQuarter * 3 + 3 : currentMonth + 1, 1);
-    const { totalCash, safeCash, bankCash } = getAvailableCash(projectJournal, { filter: e => new Date(e.entry_date) < periodEnd });
+    let { totalCash, safeCash, bankCash } = getAvailableCash(projectJournal, { filter: e => new Date(e.entry_date) < periodEnd });
+    if (totalCash.isZero()) {
+      const allCash = getAvailableCash(projectJournal);
+      if (!allCash.totalCash.isZero()) {
+        totalCash = allCash.totalCash;
+        safeCash = allCash.safeCash;
+        bankCash = allCash.bankCash;
+      }
+    }
     const currentPeriodNet = getAvailableCash(projectJournal, { filter: e => isInCurrentPeriod(e.entry_date) }).totalCash;
     const priorPeriodNet = getAvailableCash(projectJournal, { filter: e => isInPriorPeriod(e.entry_date) }).totalCash;
     const delta = formatDelta(currentPeriodNet, priorPeriodNet);
@@ -394,13 +403,41 @@ export const CockpitView: React.FC<CockpitViewProps> = ({
     });
 
     const delta = formatDelta(currentPeriodSum, priorPeriodSum);
-    const val = currentPeriodSum;
+    const val = currentPeriodSum.gt(0) ? currentPeriodSum : (totalAllTimeSum.gt(0) ? totalAllTimeSum : D(totalGrossContractValue || 0));
 
     return {
       grossContractsNum: Math.round(val.toNumber()),
       contractsDelta: delta
     };
   }, [contracts, isPropertyInProject, isInCurrentPeriod, isInPriorPeriod, formatDelta]);
+
+  // Canonical Collections & Outstanding Receivables from Contracts & Schedules
+  const { collectedContractsNum, remainingContractsNum } = useMemo(() => {
+    const projectContracts = contracts.filter(c => c.status !== 'Rescinded' && isPropertyInProject(c.property_id, c.unit_id));
+    let collectedSum = D(0);
+    let grossSum = D(0);
+
+    projectContracts.forEach(c => {
+      const gv = D(c.gross_contract_value || 0);
+      grossSum = grossSum.plus(gv);
+
+      let collected = D(c.total_cash_collected || 0);
+      if (collected.isZero()) {
+        const cSchedules = schedules.filter(s => s.contract_id === c.contract_id && !['Void', 'SUPERSEDED'].includes(s.status));
+        const schedCollected = cSchedules.reduce((sum, s) => sum.plus(s.amount_paid || 0), D(0));
+        if (schedCollected.gt(0)) {
+          collected = schedCollected;
+        }
+      }
+      collectedSum = collectedSum.plus(collected);
+    });
+
+    const remainingSum = Decimal.max(0, grossSum.minus(collectedSum));
+    return {
+      collectedContractsNum: Math.round(collectedSum.toNumber()),
+      remainingContractsNum: Math.round(remainingSum.toNumber())
+    };
+  }, [contracts, schedules, isPropertyInProject]);
 
   // 3. Construction WIP (Canonical metric: tiered fallback across approved allocations -> property costs -> GL WIP accounts)
   const { wipNum, wipDelta } = useMemo(() => {
@@ -461,8 +498,23 @@ export const CockpitView: React.FC<CockpitViewProps> = ({
     const sum = (matches: (date?: string) => boolean) => outstandingSchedules.reduce((total, s) =>
       matches(s.due_date) ? total.plus(D(s.nominal_value || 0).minus(s.amount_paid || 0).max(0)) : total, D(0));
     const current = sum(isInCurrentPeriod);
-    return { safePdcNum: current.toNumber(), pdcDelta: formatDelta(current, sum(isInPriorPeriod)) };
-  }, [outstandingSchedules, isInCurrentPeriod, isInPriorPeriod, formatDelta]);
+    const totalOutstanding = outstandingSchedules.reduce((total, s) =>
+      total.plus(D(s.nominal_value || 0).minus(s.amount_paid || 0).max(0)), D(0));
+    const val = current.gt(0) ? current : (totalOutstanding.gt(0) ? totalOutstanding : D(kpis?.accountsReceivable || totalSafePDCs || 0));
+    return { safePdcNum: Math.round(val.toNumber()), pdcDelta: formatDelta(current, sum(isInPriorPeriod)) };
+  }, [outstandingSchedules, isInCurrentPeriod, isInPriorPeriod, formatDelta, kpis?.accountsReceivable, totalSafePDCs]);
+
+  // Real Today's Dues from Outstanding Schedules
+  const { dueTodayCount, dueTodayAmount } = useMemo(() => {
+    const today = new Date().toISOString().slice(0, 10);
+    const todaySchedules = outstandingSchedules.filter(s => {
+      if (!s.due_date) return false;
+      return s.due_date.slice(0, 10) === today;
+    });
+    const count = todaySchedules.length;
+    const amount = todaySchedules.reduce((sum, s) => sum + Math.max(0, Number(s.nominal_value || 0) - Number(s.amount_paid || 0)), 0);
+    return { dueTodayCount: count, dueTodayAmount: amount };
+  }, [outstandingSchedules]);
 
   const chartData = useMemo(() => {
     const start = new Date(currentYear, statPeriodFilter === 'year' ? 0 : statPeriodFilter === 'quarter' ? currentQuarter * 3 : currentMonth, 1);
@@ -692,14 +744,19 @@ export const CockpitView: React.FC<CockpitViewProps> = ({
   }), [comparisonChartData, currentAccent, isAr]);
 
   const cockpitDualChartProjects = useMemo(() => {
-    return comparisonChartData.categories.map((name, i) => ({
-      name,
-      sales: comparisonChartData.sales[i] || 0,
-      costs: comparisonChartData.costs[i] || 0,
-      marginPct: comparisonChartData.costs[i] > 0
-        ? `${(((comparisonChartData.sales[i] - comparisonChartData.costs[i]) / comparisonChartData.costs[i]) * 100).toFixed(1)}%`
-        : '0.0%'
-    }));
+    return comparisonChartData.categories.map((name, i) => {
+      const sales = comparisonChartData.sales[i] || 0;
+      const costs = comparisonChartData.costs[i] || 0;
+      const marginPct = sales > 0 && costs > 0
+        ? `${Math.max(0, Math.min(99.9, ((sales - costs) / sales) * 100)).toFixed(1)}%`
+        : '0.0%';
+      return {
+        name,
+        sales,
+        costs,
+        marginPct
+      };
+    });
   }, [comparisonChartData]);
 
   const cockpitDualChartTimeline = useMemo(() => {
@@ -1038,65 +1095,11 @@ export const CockpitView: React.FC<CockpitViewProps> = ({
   }, [properties, propertyCosts, statProjectFilter, isPropertyInProject, isAr]);
 
   const displayProjects = useMemo(() => {
-    const fallbackProjects = [
-      {
-        id: 'proj_tagamoa',
-        name: isAr ? 'فيلا التجمع الخامس - قطاع 4' : 'Tagamoa Villa - Sector 4',
-        pct: 75,
-        totalUnits: 1,
-        contractedUnits: 1,
-        imageUrl: '/images/sunlit-hero-villa.png',
-        statusText: isAr ? 'قيد الإنشاء' : 'Under Construction',
-        statusPillClass: 'statusPillAmber',
-        color: 'var(--erp-accent, #946f23)',
-        bgWash: 'var(--erp-accent-subtle, #fdf8ee)',
-      },
-      {
-        id: 'proj_yasmin',
-        name: isAr ? 'برج الياسمين - التجاري السكني' : 'Al Yasmin Tower',
-        pct: 45,
-        totalUnits: 12,
-        contractedUnits: 4,
-        imageUrl: '/images/about-hero.png',
-        statusText: isAr ? 'قيد الإنشاء' : 'Under Construction',
-        statusPillClass: 'statusPillAmber',
-        color: 'var(--erp-accent, #946f23)',
-        bgWash: 'var(--erp-accent-subtle, #fdf8ee)',
-      },
-      {
-        id: 'proj_narges',
-        name: isAr ? 'عمارة النرجس - النزهة الجديدة' : 'Al Narges Building',
-        pct: 100,
-        totalUnits: 8,
-        contractedUnits: 8,
-        imageUrl: '/images/about-interior.png',
-        statusText: isAr ? 'مكتمل' : 'Completed',
-        statusPillClass: 'statusPillGreen',
-        color: '#16a34a',
-        bgWash: '#ecfdf5',
-      },
-      {
-        id: 'proj_shorouk',
-        name: isAr ? 'مول الشروق بلازا' : 'Al Shorouk Plaza Mall',
-        pct: 30,
-        totalUnits: 6,
-        contractedUnits: 2,
-        imageUrl: '/placeholder-property.png',
-        statusText: isAr ? 'قيد الإنشاء' : 'Under Construction',
-        statusPillClass: 'statusPillAmber',
-        color: 'var(--erp-accent, #946f23)',
-        bgWash: 'var(--erp-accent-subtle, #fdf8ee)',
-      },
-    ];
-
     if (!projectsProgressData || projectsProgressData.length === 0) {
-      return fallbackProjects;
+      return [];
     }
-    if (projectsProgressData.length >= 4) {
-      return projectsProgressData.slice(0, 4);
-    }
-    return [...projectsProgressData, ...fallbackProjects].slice(0, 4);
-  }, [projectsProgressData, isAr]);
+    return projectsProgressData.slice(0, 4);
+  }, [projectsProgressData]);
 
   // Real Upcoming Agenda Events (Next 30 Days - Real Data Only)
   interface AgendaEventItem {
@@ -1281,37 +1284,6 @@ export const CockpitView: React.FC<CockpitViewProps> = ({
           });
         }
       }
-    }
-
-    if (events.filter(e => e.due_date === '2026-09-30').length === 0) {
-      events.push(
-        {
-          id: 'sample_dues_1',
-          type: 'pdc',
-          title: isAr ? 'شيك صرف - مقاولات سيراميك' : 'Cheque - Ceramic Contractor',
-          due_date: '2026-09-30',
-          dateLabel: isAr ? 'د. كريم حسن • بنك مصر' : 'Dr. Karim Hassan • Banque Misr',
-          formattedAmount: isAr ? '2,475,000 ج.م' : '2,475,000 EGP',
-          iconBg: '#eff6ff',
-          iconColor: '#2563eb',
-          badgeText: isAr ? 'مستحق اليوم' : 'Due Today',
-          badgeClass: 'statusPillRed',
-          onClick: () => { if (onNavigateTab) onNavigateTab('pdc'); },
-        },
-        {
-          id: 'sample_dues_2',
-          type: 'installment',
-          title: isAr ? 'قسط تحصيل - وحدة A104' : 'Installment - Unit A104',
-          due_date: '2026-09-30',
-          dateLabel: isAr ? 'طارق عبد الرحمن • فيلا التجمع' : 'Tarek Abdel-Rahman • Tagamoa Villa',
-          formattedAmount: isAr ? '150,000 ج.م' : '150,000 EGP',
-          iconBg: '#ecfdf5',
-          iconColor: '#16a34a',
-          badgeText: isAr ? 'قيد التحصيل' : 'In Collection',
-          badgeClass: 'statusPillGreen',
-          onClick: () => { if (onNavigateTab) onNavigateTab('contracts'); },
-        }
-      );
     }
 
     events.sort((a, b) => (a.due_date || '').localeCompare(b.due_date || ''));
@@ -1622,11 +1594,11 @@ export const CockpitView: React.FC<CockpitViewProps> = ({
             </button>
           </div>
 
-          {/* Gold Action Button: + عملية جديدة */}
+          {/* Primary Action Button: + عملية جديدة */}
           <div style={{ position: 'relative' }}>
             <button
               type="button"
-              className={styles.cockpitPrimaryGoldBtn}
+              className={styles.cockpitPrimaryBtn || styles.cockpitPrimaryGoldBtn}
               onClick={() => setIsNewActionMenuOpen(prev => !prev)}
             >
               <Plus size={14} />
@@ -1684,18 +1656,18 @@ export const CockpitView: React.FC<CockpitViewProps> = ({
             {/* Stat 1: Available Cash */}
             <ZFKpiCard
               title={isAr ? 'الرصيد النقدي المتاح' : 'Available Liquidity'}
-              value={<AnimatedCounter value={cashNum > 0 ? cashNum : 339181251} duration={800} />}
+              value={<AnimatedCounter value={cashNum} duration={800} />}
               currency={isAr ? 'ج.م' : 'EGP'}
               icon={<Wallet size={16} />}
-              accentColor="gold"
+              accentColor="accent"
               showSparkline={true}
               sparklineData={kpiWaves.cash}
-              delta={{
-                value: '+2.4%',
-                isPositive: true,
-                label: isAr ? 'عن الشهر السابق' : 'vs prior month'
-              }}
-              subtitleValue={isAr ? `خزينة: ${safeCashFormatted !== '0 ج.م' ? safeCashFormatted : '65,154,584 ج.م'} • بنك: ${bankCashFormatted !== '0 ج.م' ? bankCashFormatted : '16,667,000 ج.م'}` : `Safe: ${safeCashFormatted} • Bank: ${bankCashFormatted}`}
+              delta={cashDelta ? {
+                value: cashDelta,
+                isPositive: !cashDelta.startsWith('-'),
+                label: isAr ? 'عن الفترة السابقة' : 'vs prior period'
+              } : undefined}
+              subtitleValue={isAr ? `خزينة: ${safeCashFormatted} ج.م • إنستاباي: ${bankCashFormatted} ج.م` : `Safe: ${safeCashFormatted} EGP • InstaPay: ${bankCashFormatted} EGP`}
               actionButton={
                 <button
                   type="button"
@@ -1706,30 +1678,26 @@ export const CockpitView: React.FC<CockpitViewProps> = ({
                   {isAr ? <ChevronLeft size={13} /> : <ChevronRight size={13} />}
                 </button>
               }
-              executiveChart={{
-                type: 'spline',
-                color: 'gold',
-                data: [280, 295, 310, 318, 332, 339.18],
-                months: isAr ? ['أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر'] : ['Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep']
-              }}
-              tooltip={isAr ? 'الرصيد الفعلي المتوفر في الخزائن والحسابات البنكية' : 'Available cash across safes and bank accounts'}
+              tooltip={isAr ? 'الرصيد الفعلي المتوفر في الخزائن وحسابات إنستاباي' : 'Available cash across safes and InstaPay accounts'}
             />
 
             {/* Stat 2: Total Sales Contracts */}
             <ZFKpiCard
               title={isAr ? 'إجمالي المبيعات التعاقدية' : 'Gross Contract Value'}
-              value={<AnimatedCounter value={grossContractsNum > 0 ? grossContractsNum : 15850000} duration={800} />}
+              value={<AnimatedCounter value={grossContractsNum} duration={800} />}
               currency={isAr ? 'ج.م' : 'EGP'}
               icon={<FileText size={16} />}
-              accentColor="gold"
+              accentColor="accent"
               showSparkline={true}
               sparklineData={kpiWaves.contracts}
-              delta={{
-                value: '+12.5%',
-                isPositive: true,
-                label: isAr ? 'عن الشهر السابق' : 'vs prior month'
-              }}
-              subtitleValue={isAr ? 'المحصل: 9,250,000 ج.م • المتبقي: 6,600,000 ج.م' : 'Collected: 9.25M • Remaining: 6.6M'}
+              delta={contractsDelta ? {
+                value: contractsDelta,
+                isPositive: !contractsDelta.startsWith('-'),
+                label: isAr ? 'عن الفترة السابقة' : 'vs prior period'
+              } : undefined}
+              subtitleValue={isAr
+                ? `المحصل: ${formatCompactEGP(collectedContractsNum, true)} • المتبقي: ${formatCompactEGP(remainingContractsNum, true)}`
+                : `Collected: ${formatCompactEGP(collectedContractsNum, false)} • Remaining: ${formatCompactEGP(remainingContractsNum, false)}`}
               actionButton={
                 <button
                   type="button"
@@ -1740,30 +1708,26 @@ export const CockpitView: React.FC<CockpitViewProps> = ({
                   {isAr ? <ChevronLeft size={13} /> : <ChevronRight size={13} />}
                 </button>
               }
-              executiveChart={{
-                type: 'bars',
-                color: 'gold',
-                data: [18, 25, 32, 21, 28, 35],
-                months: isAr ? ['أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر'] : ['Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep']
-              }}
               tooltip={isAr ? 'القيمة الإجمالية للعقود المبرمة' : 'Gross value of signed contracts'}
             />
 
             {/* Stat 3: Scheduled Receivables */}
             <ZFKpiCard
               title={isAr ? 'مستحقات واجبة التحصيل' : 'Due Collections'}
-              value={<AnimatedCounter value={safePdcNum > 0 ? safePdcNum : 2625000} duration={800} />}
+              value={<AnimatedCounter value={safePdcNum} duration={800} />}
               currency={isAr ? 'ج.م' : 'EGP'}
               icon={<Receipt size={16} />}
-              accentColor="gold"
+              accentColor="accent"
               showSparkline={true}
               sparklineData={kpiWaves.dues}
               delta={{
-                value: isAr ? '2 مستحق اليوم' : '2 Due Today',
+                value: isAr ? `${dueTodayCount} مستحق اليوم` : `${dueTodayCount} Due Today`,
                 isPositive: undefined,
-                label: isAr ? 'متأخر: 150,000 ج.م' : 'Overdue: 150K'
+                label: isAr ? `متأخر: ${formatCompactEGP(overdueChequesAmount, true)}` : `Overdue: ${formatCompactEGP(overdueChequesAmount, false)}`
               }}
-              subtitleValue={isAr ? 'اليوم: 2,625,000 ج.م • متأخرات: 150,000 ج.م' : 'Today: 2.62M • Overdue: 150K'}
+              subtitleValue={isAr
+                ? `اليوم: ${formatCompactEGP(dueTodayAmount, true)} • متأخرات: ${formatCompactEGP(overdueChequesAmount, true)}`
+                : `Today: ${formatCompactEGP(dueTodayAmount, false)} • Overdue: ${formatCompactEGP(overdueChequesAmount, false)}`}
               actionButton={
                 <button
                   type="button"
@@ -1774,30 +1738,26 @@ export const CockpitView: React.FC<CockpitViewProps> = ({
                   {isAr ? <ChevronLeft size={13} /> : <ChevronRight size={13} />}
                 </button>
               }
-              executiveChart={{
-                type: 'bars',
-                color: 'gold',
-                data: [8, 12, 15, 9, 14, 26],
-                months: isAr ? ['أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر'] : ['Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep']
-              }}
               tooltip={isAr ? 'المتبقي من أقساط العملاء المستحقة في الفترة المختارة' : 'Outstanding customer installments due in the selected period'}
             />
 
             {/* Stat 4: Upcoming Payables & Expenses */}
             <ZFKpiCard
               title={isAr ? 'التزامات ومصروفات قادمة' : 'Upcoming Payables'}
-              value={<AnimatedCounter value={pendingContractorsNum > 0 ? pendingContractorsNum : 1200000} duration={800} />}
+              value={<AnimatedCounter value={pendingContractorsNum} duration={800} />}
               currency={isAr ? 'ج.م' : 'EGP'}
               icon={<HardHat size={16} />}
-              accentColor="gold"
+              accentColor="accent"
               showSparkline={true}
               sparklineData={kpiWaves.wip}
               delta={{
-                value: isAr ? 'خلال 30 يوم' : 'Next 30 Days',
+                value: isAr ? `${pendingContractorsCount} مستخلص معلق` : `${pendingContractorsCount} Pending`,
                 isPositive: undefined,
-                label: ''
+                label: isAr ? 'خلال 30 يوم' : 'Next 30 Days'
               }}
-              subtitleValue={isAr ? 'موردين: 750,000 ج.م • تشغيل: 450,000 ج.م' : 'Suppliers: 750K • Ops: 450K'}
+              subtitleValue={isAr
+                ? `إجمالي المستحق: ${formatCompactEGP(pendingContractorsNum, true)} (${pendingContractorsCount} مستخلص)`
+                : `Total Due: ${formatCompactEGP(pendingContractorsNum, false)} (${pendingContractorsCount} items)`}
               actionButton={
                 <button
                   type="button"
@@ -1808,12 +1768,6 @@ export const CockpitView: React.FC<CockpitViewProps> = ({
                   {isAr ? <ChevronLeft size={13} /> : <ChevronRight size={13} />}
                 </button>
               }
-              executiveChart={{
-                type: 'bars',
-                color: 'gold',
-                data: [4, 6, 5, 7, 8, 12],
-                months: isAr ? ['أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر'] : ['Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep']
-              }}
               tooltip={isAr ? 'إجمالي مستحقات المقاولين ومصاريف المواقع القادمة' : 'Total upcoming contractor and project expenses'}
             />
           </ZFKpiGrid>
@@ -1840,7 +1794,7 @@ export const CockpitView: React.FC<CockpitViewProps> = ({
               data-testid="cockpit-shortcut-contract"
             >
               <div className={styles.quickShortcutLeading}>
-                <div className={styles.quickShortcutIconWrap} style={{ background: 'var(--erp-accent-subtle, #fdf8ee)', color: 'var(--erp-accent, #946f23)' }}>
+                <div className={styles.quickShortcutIconWrap} style={{ background: 'var(--erp-accent-subtle, #eff6ff)', color: 'var(--erp-accent, #2563eb)' }}>
                   <FileText size={18} />
                 </div>
                 <div className={styles.quickShortcutContent}>
@@ -1862,7 +1816,7 @@ export const CockpitView: React.FC<CockpitViewProps> = ({
               data-testid="cockpit-shortcut-expense"
             >
               <div className={styles.quickShortcutLeading}>
-                <div className={styles.quickShortcutIconWrap} style={{ background: 'var(--erp-accent-subtle, #fdf8ee)', color: 'var(--erp-accent, #946f23)' }}>
+                <div className={styles.quickShortcutIconWrap} style={{ background: 'var(--erp-accent-subtle, #eff6ff)', color: 'var(--erp-accent, #2563eb)' }}>
                   <Wallet size={18} />
                 </div>
                 <div className={styles.quickShortcutContent}>
@@ -1884,7 +1838,7 @@ export const CockpitView: React.FC<CockpitViewProps> = ({
               data-testid="cockpit-shortcut-installments"
             >
               <div className={styles.quickShortcutLeading}>
-                <div className={styles.quickShortcutIconWrap} style={{ background: '#eff6ff', color: '#2563eb' }}>
+                <div className={styles.quickShortcutIconWrap} style={{ background: 'var(--erp-accent-subtle, #eff6ff)', color: 'var(--erp-accent, #2563eb)' }}>
                   <Calendar size={18} />
                 </div>
                 <div className={styles.quickShortcutContent}>
@@ -1906,7 +1860,7 @@ export const CockpitView: React.FC<CockpitViewProps> = ({
               data-testid="cockpit-shortcut-contractor"
             >
               <div className={styles.quickShortcutLeading}>
-                <div className={styles.quickShortcutIconWrap} style={{ background: 'var(--erp-accent-subtle, #fdf8ee)', color: 'var(--erp-accent, #946f23)' }}>
+                <div className={styles.quickShortcutIconWrap} style={{ background: 'var(--erp-accent-subtle, #eff6ff)', color: 'var(--erp-accent, #2563eb)' }}>
                   <HardHat size={18} />
                 </div>
                 <div className={styles.quickShortcutContent}>
@@ -2870,7 +2824,7 @@ export const CockpitView: React.FC<CockpitViewProps> = ({
               id="cockpit-mini-calendar"
               className={styles.cockpitRailCard}
               title={isAr ? 'التقويم المالي' : 'Financial Calendar'}
-              icon={<Calendar size={15} color="var(--erp-accent, #946f23)" />}
+              icon={<Calendar size={15} color="var(--erp-accent, #2563eb)" />}
               headerAction={
                 <div className={styles.calendarScopeTabs}>
                   <button
@@ -2932,7 +2886,7 @@ export const CockpitView: React.FC<CockpitViewProps> = ({
                     setSelectedCalendarDay(30);
                   }}
                 >
-                  {isAr ? 'اليوم 📅' : 'Today 📅'}
+                  {isAr ? 'اليوم' : 'Today'}
                 </button>
               </div>
 
@@ -2958,7 +2912,7 @@ export const CockpitView: React.FC<CockpitViewProps> = ({
                         isSelected ? styles.miniCalendarDayCellActive : ''
                       }`}
                       style={isSelected ? {
-                        background: 'var(--erp-accent, #946f23)',
+                        background: 'var(--erp-accent, #2563eb)',
                         color: '#ffffff',
                         fontWeight: 700,
                         position: 'relative'
@@ -3002,7 +2956,7 @@ export const CockpitView: React.FC<CockpitViewProps> = ({
                     style={{
                       background: 'none',
                       border: 'none',
-                      color: 'var(--erp-accent, #946f23)',
+                      color: 'var(--erp-accent, #2563eb)',
                       fontSize: '0.70rem',
                       fontWeight: 700,
                       cursor: 'pointer',
@@ -3015,55 +2969,61 @@ export const CockpitView: React.FC<CockpitViewProps> = ({
               </div>
 
               <div className={styles.miniCalendarAgenda}>
-                {upcomingAgendaEvents.slice(0, 3).map((evt) => (
-                  <div
-                    key={evt.id}
-                    className={styles.miniCalendarAgendaItem}
-                    onClick={evt.onClick}
-                    role="button"
-                    onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); event.currentTarget.click(); } }}
-                    tabIndex={0}
-                    title={evt.title}
-                  >
-                    <div
-                      className={styles.miniCalendarAgendaIconWrap}
-                      style={{
-                        background: evt.iconBg,
-                        color: evt.iconColor,
-                        width: '32px',
-                        height: '32px',
-                        borderRadius: '8px',
-                      }}
-                    >
-                      {evt.type === 'installment' && <Banknote size={15} />}
-                      {evt.type === 'contractor' && <HardHat size={15} />}
-                      {evt.type === 'pdc' && <CreditCard size={15} />}
-                    </div>
-                    <div className={styles.miniCalendarAgendaContent}>
-                      <span className={styles.miniCalendarAgendaTitle} style={{ fontWeight: 700 }}>
-                        {evt.title}
-                      </span>
-                      <span className={styles.miniCalendarAgendaTime} style={{ fontSize: '0.70rem', color: '#64748b' }}>
-                        {evt.dateLabel}
-                      </span>
-                    </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '3px', flexShrink: 0 }}>
-                      <span className={`${styles.urgentAlertAmount} tabularNums`} style={{
-                        fontSize: '0.82rem',
-                        fontWeight: 800,
-                        color: evt.type === 'pdc' ? '#dc2626' : '#16a34a',
-                        fontVariantNumeric: 'tabular-nums'
-                      }}>
-                        {evt.formattedAmount}
-                      </span>
-                      {evt.badgeText && (
-                        <span className={`statusPill ${evt.badgeClass || (evt.type === 'pdc' ? 'statusPillRed' : 'statusPillGreen')}`} style={{ fontSize: '0.66rem', padding: '1px 6px' }}>
-                          {evt.badgeText}
-                        </span>
-                      )}
-                    </div>
+                {upcomingAgendaEvents.length === 0 ? (
+                  <div style={{ padding: '1.25rem 0.5rem', textAlign: 'center', color: '#64748b', fontSize: '0.76rem' }}>
+                    {isAr ? 'لا توجد استحقاقات مجدولة في هذه الفترة' : 'No upcoming dues scheduled for this period'}
                   </div>
-                ))}
+                ) : (
+                  upcomingAgendaEvents.slice(0, 3).map((evt) => (
+                    <div
+                      key={evt.id}
+                      className={styles.miniCalendarAgendaItem}
+                      onClick={evt.onClick}
+                      role="button"
+                      onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); event.currentTarget.click(); } }}
+                      tabIndex={0}
+                      title={evt.title}
+                    >
+                      <div
+                        className={styles.miniCalendarAgendaIconWrap}
+                        style={{
+                          background: evt.iconBg,
+                          color: evt.iconColor,
+                          width: '28px',
+                          height: '28px',
+                          borderRadius: '7px',
+                        }}
+                      >
+                        {evt.type === 'installment' && <Banknote size={15} />}
+                        {evt.type === 'contractor' && <HardHat size={15} />}
+                        {evt.type === 'pdc' && <CreditCard size={15} />}
+                      </div>
+                      <div className={styles.miniCalendarAgendaContent}>
+                        <span className={styles.miniCalendarAgendaTitle} style={{ fontWeight: 700 }}>
+                          {evt.title}
+                        </span>
+                        <span className={styles.miniCalendarAgendaTime} style={{ fontSize: '0.70rem', color: '#64748b' }}>
+                          {evt.dateLabel}
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '3px', flexShrink: 0 }}>
+                        <span className={`${styles.urgentAlertAmount} tabularNums`} style={{
+                          fontSize: '0.82rem',
+                          fontWeight: 800,
+                          color: evt.type === 'pdc' ? '#dc2626' : '#16a34a',
+                          fontVariantNumeric: 'tabular-nums'
+                        }}>
+                          {evt.formattedAmount}
+                        </span>
+                        {evt.badgeText && (
+                          <span className={`statusPill ${evt.badgeClass || (evt.type === 'pdc' ? 'statusPillRed' : 'statusPillGreen')}`} style={{ fontSize: '0.66rem', padding: '1px 6px' }}>
+                            {evt.badgeText}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
 
               {/* Full Width All Dues Button */}
@@ -3074,7 +3034,7 @@ export const CockpitView: React.FC<CockpitViewProps> = ({
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                   <List size={14} />
-                  <span>{isAr ? `عرض جميع الاستحقاقات (${allAgendaEvents.length > 0 ? allAgendaEvents.length : 18})` : `View all upcoming dues (${allAgendaEvents.length > 0 ? allAgendaEvents.length : 18})`}</span>
+                  <span>{isAr ? `عرض جميع الاستحقاقات (${allAgendaEvents.length})` : `View all upcoming dues (${allAgendaEvents.length})`}</span>
                 </div>
                 {isAr ? <ChevronLeft size={13} /> : <ChevronRight size={13} />}
                 {upcomingAgendaEvents.length > 3 && null}
@@ -3086,10 +3046,10 @@ export const CockpitView: React.FC<CockpitViewProps> = ({
               id="cockpit-projects-progress"
               className={styles.cockpitRailCard}
               title={isAr ? 'موقف المشروعات' : 'Project Status'}
-              icon={<Building2 size={15} color="var(--erp-accent, #946f23)" />}
+              icon={<Building2 size={15} color="var(--erp-accent, #2563eb)" />}
               badge={
                 <span className="statusPill statusPillNeutral">
-                  {`${projectsProgressData.length > 0 ? projectsProgressData.length : 10} ${isAr ? 'مشاريع' : 'projects'}`}
+                  {`${projectsProgressData.length} ${isAr ? 'مشاريع' : 'projects'}`}
                 </span>
               }
               headerAction={
@@ -3099,7 +3059,7 @@ export const CockpitView: React.FC<CockpitViewProps> = ({
                   style={{
                     background: 'none',
                     border: 'none',
-                    color: 'var(--erp-accent, #946f23)',
+                    color: 'var(--erp-accent, #2563eb)',
                     fontSize: '0.72rem',
                     fontWeight: 700,
                     cursor: 'pointer',
@@ -3117,87 +3077,99 @@ export const CockpitView: React.FC<CockpitViewProps> = ({
               isAr={isAr}
             >
               <div className={styles.projectsProgressList}>
-                {displayProjects.map((proj) => (
-                  <div
-                    key={proj.id}
-                    className={styles.projectProgressItem}
-                    onClick={() => {
-                      if (onNavigateTab) {
-                        onNavigateTab('properties', { propertyId: proj.id });
-                      } else {
-                        setIsProjectsModalOpen(true);
-                      }
-                    }}
-                    role="button"
-                    onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); event.currentTarget.click(); } }}
-                    tabIndex={0}
-                    title={proj.name}
-                  >
-                    <div className={styles.projectProgressThumb}>
-                      {proj.imageUrl ? (
-                        <img
-                          src={proj.imageUrl}
-                          alt={proj.name}
-                          loading="lazy"
-                          decoding="async"
-                          className={styles.projectProgressImg}
-                          onError={(e) => {
-                            const target = e.currentTarget;
-                            target.style.display = 'none';
-                            const fallback = target.nextElementSibling as HTMLElement | null;
-                            if (fallback) fallback.style.display = 'flex';
-                          }}
-                        />
-                      ) : null}
-                      <div
-                        style={{
-                          display: proj.imageUrl ? 'none' : 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          width: '100%',
-                          height: '100%',
-                          background: 'var(--erp-accent-subtle, #fdf8ee)',
-                          color: 'var(--erp-accent, #946f23)',
-                        }}
-                      >
-                        <Building2 size={20} />
-                      </div>
-                    </div>
-
-                    <div className={styles.projectProgressMain} style={{ flex: 1, minWidth: 0 }}>
-                      <div className={styles.projectProgressTopRow}>
-                        <span className={styles.projectProgressName} title={proj.name}>
-                          {proj.name}
-                        </span>
-                        <span className={`statusPill ${proj.statusPillClass || (proj.pct >= 100 ? 'statusPillGreen' : 'statusPillAmber')}`} style={{ fontSize: '0.66rem', padding: '1px 6px' }}>
-                          {proj.statusText || (proj.pct >= 100 ? (isAr ? 'مكتمل' : 'Completed') : (isAr ? 'قيد الإنشاء' : 'In Progress'))}
-                        </span>
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.68rem', color: '#64748b', marginTop: '2px' }}>
-                        <Building2 size={13} />
-                        <span>{isAr ? `${proj.contractedUnits}/${proj.totalUnits} وحدة متعاقد عليها` : `${proj.contractedUnits}/${proj.totalUnits} contracted units`}</span>
-                      </div>
-                      {/* Micro Progress Bar */}
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '6px' }}>
-                        <span className={styles.projectProgressPct}>
-                          {Math.min(100, Math.max(0, proj.pct))}%
-                        </span>
-                        <div className={styles.projectProgressBarTrack} style={{ flex: 1, height: '5px', background: '#f1f5f9', borderRadius: '999px', overflow: 'hidden' }}>
-                          <div
-                            className={styles.projectProgressBarFill}
-                            style={{
-                              width: `${Math.min(100, Math.max(0, proj.pct))}%`,
-                              height: '100%',
-                              backgroundColor: 'var(--erp-accent, #2563eb)',
-                              borderRadius: '999px',
-                              transition: 'width 0.4s ease',
+                {displayProjects.length === 0 ? (
+                  <div style={{ padding: '1.25rem 0.5rem', textAlign: 'center', color: '#64748b', fontSize: '0.76rem' }}>
+                    {isAr ? 'لا توجد مشاريع مسجلة حالياً' : 'No registered projects currently'}
+                  </div>
+                ) : (
+                  displayProjects.map((proj) => (
+                    <div
+                      key={proj.id}
+                      className={styles.projectProgressItem}
+                      onClick={() => {
+                        if (onNavigateTab) {
+                          onNavigateTab('properties', { propertyId: proj.id });
+                        } else {
+                          setIsProjectsModalOpen(true);
+                        }
+                      }}
+                      role="button"
+                      onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); event.currentTarget.click(); } }}
+                      tabIndex={0}
+                      title={proj.name}
+                    >
+                      <div className={styles.projectProgressThumb}>
+                        {proj.imageUrl ? (
+                          <img
+                            src={proj.imageUrl}
+                            alt={proj.name}
+                            loading="lazy"
+                            decoding="async"
+                            className={styles.projectProgressImg}
+                            onError={(e) => {
+                              const target = e.currentTarget;
+                              target.style.display = 'none';
+                              const fallback = target.nextElementSibling as HTMLElement | null;
+                              if (fallback) fallback.style.display = 'flex';
                             }}
                           />
+                        ) : null}
+                        <div
+                          style={{
+                            display: proj.imageUrl ? 'none' : 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            width: '100%',
+                            height: '100%',
+                            background: 'var(--erp-accent-subtle, #eff6ff)',
+                            color: 'var(--erp-accent, #2563eb)',
+                          }}
+                        >
+                          <Building2 size={20} />
+                        </div>
+                      </div>
+
+                      <div className={styles.projectProgressMain} style={{ flex: 1, minWidth: 0 }}>
+                        <div className={styles.projectProgressTopRow}>
+                          <span className={styles.projectProgressName} title={proj.name}>
+                            {proj.name}
+                          </span>
+                          <span className={`statusPill ${proj.statusPillClass || (proj.pct >= 100 ? 'statusPillGreen' : 'statusPillAmber')}`} style={{ fontSize: '0.66rem', padding: '1px 6px' }}>
+                            {proj.statusText || (proj.pct >= 100 ? (isAr ? 'مكتمل' : 'Completed') : (isAr ? 'قيد الإنشاء' : 'In Progress'))}
+                          </span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.68rem', color: '#64748b', marginTop: '3px' }}>
+                          <FileText size={12} style={{ flexShrink: 0 }} />
+                          <span>{isAr ? `مبيعات متعاقد عليها: ${proj.contractedUnits}/${proj.totalUnits} وحدة` : `Contracted Sales: ${proj.contractedUnits}/${proj.totalUnits} units`}</span>
+                        </div>
+                        {/* Micro Progress Bar - Construction Progress */}
+                        <div style={{ marginTop: '5px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '3px' }}>
+                            <span style={{ fontSize: '0.67rem', color: '#64748b', fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                              <HardHat size={11} style={{ flexShrink: 0 }} />
+                              <span>{isAr ? 'الإنجاز الإنشائي' : 'Construction Progress'}</span>
+                            </span>
+                            <span className={styles.projectProgressPct} style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 700, fontSize: '0.68rem' }}>
+                              {Math.min(100, Math.max(0, proj.pct))}%
+                            </span>
+                          </div>
+                          <div className={styles.projectProgressBarTrack} style={{ height: '5px', background: '#f1f5f9', borderRadius: '999px', overflow: 'hidden' }}>
+                            <div
+                              className={styles.projectProgressBarFill}
+                              style={{
+                                width: `${Math.min(100, Math.max(0, proj.pct))}%`,
+                                height: '100%',
+                                backgroundColor: 'var(--erp-accent, #2563eb)',
+                                borderRadius: '999px',
+                                transition: 'width 0.4s ease',
+                              }}
+                            />
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  ))
+                )}
               </div>
             </ZFWidgetCard>
 
@@ -3206,10 +3178,10 @@ export const CockpitView: React.FC<CockpitViewProps> = ({
               id="cockpit-urgent-alerts"
               className={styles.cockpitRailCard}
               title={isAr ? 'المتابعة المالية' : 'Financial Follow-up'}
-              icon={<Activity size={15} color="var(--erp-accent, #946f23)" />}
+              icon={<Activity size={15} color="var(--erp-accent, #2563eb)" />}
               badge={
-                <span className="statusPill statusPillAmber">
-                  {isAr ? '1 يحتاج متابعة' : '1 Needs Review'}
+                <span className={`statusPill ${(overdueChequesCount + pendingContractorsCount) > 0 ? 'statusPillAmber' : 'statusPillNeutral'}`}>
+                  {isAr ? `${overdueChequesCount + pendingContractorsCount} يحتاج متابعة` : `${overdueChequesCount + pendingContractorsCount} Needs Review`}
                 </span>
               }
               headerAction={
@@ -3219,7 +3191,7 @@ export const CockpitView: React.FC<CockpitViewProps> = ({
                   style={{
                     background: 'none',
                     border: 'none',
-                    color: 'var(--erp-accent, #946f23)',
+                    color: 'var(--erp-accent, #2563eb)',
                     fontSize: '0.72rem',
                     fontWeight: 700,
                     cursor: 'pointer',
@@ -3255,9 +3227,9 @@ export const CockpitView: React.FC<CockpitViewProps> = ({
                     <div
                       className={styles.urgentAlertSquircle}
                       style={{
-                        width: '32px',
-                        height: '32px',
-                        borderRadius: '50%',
+                        width: '28px',
+                        height: '28px',
+                        borderRadius: '7px',
                         background: '#fef2f2',
                         color: '#dc2626',
                         border: '1px solid rgba(220, 38, 38, 0.2)',
@@ -3267,24 +3239,24 @@ export const CockpitView: React.FC<CockpitViewProps> = ({
                         flexShrink: 0
                       }}
                     >
-                      <AlertCircle size={15} />
+                      <AlertCircle size={14} />
                     </div>
                     <div className={styles.urgentAlertInfo}>
                       <span className={styles.urgentAlertLabel} style={{ fontWeight: 700 }}>
                         {isAr ? 'تحصيلات متأخرة' : 'Overdue Collections'}
                       </span>
                       <span className={styles.urgentAlertSubtext}>
-                        {isAr ? '1 قسط تجاوز تاريخ الاستحقاق' : '1 installment past due date'}
+                        {isAr ? `${overdueChequesCount} قسط تجاوز تاريخ الاستحقاق` : `${overdueChequesCount} installments past due date`}
                       </span>
                     </div>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '2px', flexShrink: 0 }}>
-                      <span className={`${styles.urgentAlertAmount} tabularNums`} style={{ color: '#dc2626', fontWeight: 800, fontSize: '0.82rem' }}>
-                        {isAr ? '150,000 ج.م' : '150,000 EGP'}
+                      <span className={`${styles.urgentAlertAmount} tabularNums`} style={{ color: overdueChequesAmount > 0 ? '#dc2626' : '#64748b', fontWeight: 800, fontSize: '0.82rem' }}>
+                        {overdueChequesAmountFormatted}
                       </span>
-                      <span className="statusPill statusPillRed" style={{ fontSize: '0.66rem', padding: '1px 6px' }}>
-                        {isAr ? '● يتطلب متابعة' : '● Action Required'}
+                      <span className={`statusPill ${overdueChequesCount > 0 ? 'statusPillRed' : 'statusPillNeutral'}`} style={{ fontSize: '0.66rem', padding: '1px 6px' }}>
+                        {overdueChequesCount > 0 ? (isAr ? '● يتطلب متابعة' : '● Action Required') : (isAr ? '● لا متأخرات' : '● Up to Date')}
                       </span>
                     </div>
                     <ChevronLeft size={14} color="#94a3b8" />
@@ -3309,36 +3281,38 @@ export const CockpitView: React.FC<CockpitViewProps> = ({
                     <div
                       className={styles.urgentAlertSquircle}
                       style={{
-                        width: '32px',
-                        height: '32px',
-                        borderRadius: '50%',
-                        background: '#f8fafc',
-                        color: '#475569',
-                        border: '1px solid rgba(148, 163, 184, 0.25)',
+                        width: '28px',
+                        height: '28px',
+                        borderRadius: '7px',
+                        background: '#fffbeb',
+                        color: '#d97706',
+                        border: '1px solid rgba(217, 119, 6, 0.2)',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
                         flexShrink: 0
                       }}
                     >
-                      <HardHat size={15} />
+                      <HardHat size={14} />
                     </div>
                     <div className={styles.urgentAlertInfo}>
                       <span className={styles.urgentAlertLabel} style={{ fontWeight: 700 }}>
                         {isAr ? 'مستحقات مقاولين مستحقة' : 'Contractor Dues'}
                       </span>
                       <span className={styles.urgentAlertSubtext}>
-                        {isAr ? 'لا توجد مستحقات معلقة' : 'No pending contractor dues'}
+                        {pendingContractorsCount > 0
+                          ? (isAr ? `${pendingContractorsCount} مستخلص قيد الصرف` : `${pendingContractorsCount} pending invoices`)
+                          : (isAr ? 'لا توجد مستحقات معلقة' : 'No pending contractor dues')}
                       </span>
                     </div>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '2px', flexShrink: 0 }}>
-                      <span className={`${styles.urgentAlertAmount} tabularNums`} style={{ color: '#0f172a', fontWeight: 800, fontSize: '0.82rem' }}>
-                        {isAr ? '0 ج.م' : '0 EGP'}
+                      <span className={`${styles.urgentAlertAmount} tabularNums`} style={{ color: pendingContractorsNum > 0 ? '#d97706' : '#0f172a', fontWeight: 800, fontSize: '0.82rem' }}>
+                        {pendingContractorsAmountFormatted}
                       </span>
-                      <span className="statusPill statusPillNeutral" style={{ fontSize: '0.66rem', padding: '1px 6px' }}>
-                        {isAr ? '● مستقر' : '● Stable'}
+                      <span className={`statusPill ${pendingContractorsCount > 0 ? 'statusPillAmber' : 'statusPillNeutral'}`} style={{ fontSize: '0.66rem', padding: '1px 6px' }}>
+                        {pendingContractorsCount > 0 ? (isAr ? '● قيد الصرف' : '● Pending') : (isAr ? '● مستقر' : '● Stable')}
                       </span>
                     </div>
                     <ChevronLeft size={14} color="#94a3b8" />
@@ -3363,33 +3337,33 @@ export const CockpitView: React.FC<CockpitViewProps> = ({
                     <div
                       className={styles.urgentAlertSquircle}
                       style={{
-                        width: '32px',
-                        height: '32px',
-                        borderRadius: '50%',
-                        background: '#f0fdf4',
-                        color: '#16a34a',
-                        border: '1px solid rgba(22, 163, 74, 0.2)',
+                        width: '28px',
+                        height: '28px',
+                        borderRadius: '7px',
+                        background: '#ecfdf5',
+                        color: '#059669',
+                        border: '1px solid rgba(5, 150, 105, 0.2)',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
                         flexShrink: 0
                       }}
                     >
-                      <Wallet size={15} />
+                      <Wallet size={14} />
                     </div>
                     <div className={styles.urgentAlertInfo}>
                       <span className={styles.urgentAlertLabel} style={{ fontWeight: 700 }}>
                         {isAr ? 'رصيد السيولة النقدية' : 'Liquid Cash Balance'}
                       </span>
                       <span className={styles.urgentAlertSubtext}>
-                        {isAr ? `خزينة: ${safeCashFormatted !== '0 ج.م' ? safeCashFormatted : '65,154,584'} • بنك: ${bankCashFormatted !== '0 ج.م' ? bankCashFormatted : '16,667,000'}` : `Safe: ${safeCashFormatted} • Bank: ${bankCashFormatted}`}
+                        {isAr ? `خزينة: ${safeCashFormatted} ج.م • إنستاباي: ${bankCashFormatted} ج.م` : `Safe: ${safeCashFormatted} EGP • InstaPay: ${bankCashFormatted} EGP`}
                       </span>
                     </div>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '2px', flexShrink: 0 }}>
                       <span className={`${styles.urgentAlertAmount} tabularNums`} style={{ color: '#16a34a', fontWeight: 800, fontSize: '0.82rem' }}>
-                        {cashNum > 0 ? `${cashNum.toLocaleString('en-US')} ${isAr ? 'ج.م' : 'EGP'}` : (isAr ? '339,181,251 ج.م' : '339,181,251 EGP')}
+                        {`${cashNum.toLocaleString('en-US')} ${isAr ? 'ج.م' : 'EGP'}`}
                       </span>
                       <span className="statusPill statusPillGreen" style={{ fontSize: '0.66rem', padding: '1px 6px' }}>
                         {isAr ? '● جيد' : '● Good'}
@@ -4051,7 +4025,7 @@ export const CockpitView: React.FC<CockpitViewProps> = ({
                   </span>
                 </div>
                 <div style={{ fontSize: '0.92rem', fontWeight: 800, color: '#0f172a', fontVariantNumeric: 'tabular-nums', margin: '0.35rem 0 0.15rem 0' }}>
-                  {isAr ? `خزينة: ${safeCashFormatted} • بنك: ${bankCashFormatted}` : `Safe: ${safeCashFormatted} • Bank: ${bankCashFormatted}`}
+                  {isAr ? `خزينة: ${safeCashFormatted} • إنستاباي: ${bankCashFormatted}` : `Safe: ${safeCashFormatted} • InstaPay: ${bankCashFormatted}`}
                 </div>
                 <div style={{ fontSize: '0.72rem', color: '#64748b' }}>
                   {isAr ? 'إجمالي السيولة النقدية الحالية بالجنيه' : 'Current working liquidity in EGP'}
@@ -4112,7 +4086,7 @@ export const CockpitView: React.FC<CockpitViewProps> = ({
                     {pendingContractorsItems.length === 0 ? (
                       <tr>
                         <td colSpan={6} className={styles.canonicalTd} style={{ textAlign: 'center', padding: '1.75rem', color: '#94a3b8' }}>
-                          <CheckCircle2 size={24} color="#10b981" style={{ display: 'block', margin: '0 auto 0.4rem auto' }} />
+                          <CheckCircle2 size={24} color="#16a34a" style={{ display: 'block', margin: '0 auto 0.4rem auto' }} />
                           {isAr ? 'لا توجد مستحقات مقاولين معلقة في الوقت الحالي.' : 'No pending contractor payables at this time.'}
                         </td>
                       </tr>

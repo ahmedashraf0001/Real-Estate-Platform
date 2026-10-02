@@ -2355,15 +2355,15 @@
 }
 
 .pipelineStepCardCompleted {
-  border-inline-start: 3px solid #16a34a;
+  border-color: #16a34a;
 }
 
 .pipelineStepCardInProgress {
-  border-inline-start: 3px solid var(--erp-accent, #2563eb);
+  border-color: var(--erp-accent, #2563eb);
 }
 
 .pipelineStepCardPending {
-  border-inline-start: 3px solid var(--erp-border, #cbd5e1);
+  border-color: var(--erp-border, #cbd5e1);
   opacity: 0.85;
 }
 

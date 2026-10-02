@@ -1099,15 +1099,6 @@ export function ERPWorkstationProvider({
   const [isGuidedTourActive, setIsGuidedTourActive] = useState(false);
   const [showFirstTimeTourPrompt, setShowFirstTimeTourPrompt] = useState(false);
 
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const completed = localStorage.getItem('zf_fin_os_tour_completed_v1');
-      if (!completed) {
-        setShowFirstTimeTourPrompt(true);
-      }
-    }
-  }, []);
-
   // Modal State Declarations
   const [showNewContractModal, setShowNewContractModal] = useState(false);
   const [selectedPropertyId, setSelectedPropertyId] = useState('');

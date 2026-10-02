@@ -154,16 +154,16 @@
 }
 
 .bannerTitle {
-  font-size: 0.9375rem;
+  font-size: 0.875rem;
   font-weight: 700;
   color: var(--erp-text-title, #0f172a);
-  line-height: 1.2;
+  line-height: 1.25;
 }
 
 .bannerSubtitle {
-  font-size: 0.71875rem;
+  font-size: 0.75rem;
   color: var(--erp-text-muted, #64748b);
-  line-height: 1.2;
+  line-height: 1.25;
 }
 
 .bannerTrailing {
@@ -175,15 +175,15 @@
 }
 
 .bannerTotalLabel {
-  font-size: 0.6875rem;
+  font-size: 0.70rem;
   color: var(--erp-text-muted, #64748b);
   font-weight: 500;
   line-height: 1.2;
 }
 
 .bannerTotalAmount {
-  font-size: 1.0625rem;
-  font-weight: 800;
+  font-size: 1rem;
+  font-weight: 700;
   color: var(--erp-text-title, #0f172a);
   font-variant-numeric: tabular-nums;
   line-height: 1.2;
@@ -286,7 +286,7 @@
 }
 
 .streamTitle {
-  font-size: 0.84375rem;
+  font-size: 0.875rem;
   font-weight: 700;
   color: var(--erp-text-title, #0f172a);
   white-space: nowrap;
@@ -296,7 +296,7 @@
 }
 
 .streamSubtitle {
-  font-size: 0.6875rem;
+  font-size: 0.75rem;
   color: var(--erp-text-muted, #64748b);
   white-space: nowrap;
   overflow: hidden;
@@ -313,15 +313,15 @@
 }
 
 .streamAmount {
-  font-size: 0.90625rem;
-  font-weight: 800;
+  font-size: 0.875rem;
+  font-weight: 700;
   color: var(--erp-text-title, #0f172a);
   font-variant-numeric: tabular-nums;
   line-height: 1.2;
 }
 
 .streamCurrency {
-  font-size: 0.6875rem;
+  font-size: 0.70rem;
   color: var(--erp-text-muted, #64748b);
   line-height: 1.2;
 }
@@ -375,14 +375,14 @@
 }
 
 .centralTitle {
-  font-size: 1.0625rem;
-  font-weight: 800;
+  font-size: 1rem;
+  font-weight: 700;
   color: var(--erp-text-title, #0f172a);
-  line-height: 1.2;
+  line-height: 1.25;
 }
 
 .centralSubtitle {
-  font-size: 0.78125rem;
+  font-size: 0.75rem;
   color: var(--erp-text-muted, #64748b);
   line-height: 1.25;
 }
@@ -397,14 +397,14 @@
 }
 
 .centralCurrencyGold {
-  font-size: 1.1875rem;
+  font-size: 1rem;
   font-weight: 700;
   color: var(--erp-accent, #b8903e);
 }
 
 .centralGiantAmount {
-  font-size: 1.9375rem;
-  font-weight: 800;
+  font-size: 1.5rem;
+  font-weight: 700;
   color: var(--erp-text-title, #0f172a);
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.02em;
@@ -461,7 +461,10 @@
 .splitBarLegendRow {
   display: flex;
   align-items: center;
-  justify-content: space-around;
+  justify-content: space-between;
+  padding: 0 12px;
+  width: 100%;
+  box-sizing: border-box;
   margin-top: 10px;
   direction: ltr; /* Matches bar orientation: Banks on Left, Safe on Right */
 }
@@ -470,7 +473,13 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2px;
+  gap: 3px;
+}
+
+.legendValueRow {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
 }
 
 .legendHeader {
@@ -480,21 +489,21 @@
 }
 
 .legendLabel {
-  font-size: 0.8125rem;
+  font-size: 0.75rem;
   font-weight: 700;
   color: var(--erp-text-title, #0f172a);
 }
 
 .legendAmount {
-  font-size: 0.9375rem;
-  font-weight: 800;
+  font-size: 0.8125rem;
+  font-weight: 700;
   color: var(--erp-text-title, #0f172a);
   font-variant-numeric: tabular-nums;
   line-height: 1.2;
 }
 
 .legendCurrency {
-  font-size: 0.6875rem;
+  font-size: 0.70rem;
   color: var(--erp-text-muted, #64748b);
 }
 
@@ -540,8 +549,8 @@
 }
 
 .ribbonNodeValue {
-  font-size: 0.96875rem;
-  font-weight: 800;
+  font-size: 0.9375rem;
+  font-weight: 700;
   color: var(--erp-text-title, #0f172a);
   font-variant-numeric: tabular-nums;
   line-height: 1.25;
@@ -694,7 +703,7 @@
 }
 
 .viewAllButton:active {
-  transform: scale(0.96);
+  background: #f1f5f9;
 }
 
 .viewAllButton:focus-visible {
@@ -724,7 +733,7 @@
 }
 
 .addItemButton:active {
-  transform: scale(0.96);
+  opacity: 0.85;
 }
 
 .addItemButton:focus-visible {

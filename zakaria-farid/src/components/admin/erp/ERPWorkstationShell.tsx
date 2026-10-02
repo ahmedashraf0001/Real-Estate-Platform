@@ -17,7 +17,8 @@ import {
   BookOpen,
   HardHat,
   Calendar,
-  Users 
+  Users,
+  Calculator 
 } from 'lucide-react';
 
 import shellStyles from './v2/ZFWorkstationShell.module.css';
@@ -98,6 +99,8 @@ const SIDE_WIDGETS_CONFIG_AR: Record<string, { title: string; badge?: string; ic
   vault: { title: 'أجندة الخزينة والتحليلات', badge: '', icon: Calendar },
   partners: { title: 'إحصائيات الشركاء والعمليات السريعة', badge: '', icon: Users },
   partner: { title: 'إحصائيات الشركاء والعمليات السريعة', badge: '', icon: Users },
+  calculator: { title: 'أدوات الجدوى وهيكلة التكاليف', badge: '', icon: Calculator },
+  feasibility: { title: 'أدوات الجدوى وهيكلة التكاليف', badge: '', icon: Calculator },
 };
 
 const SIDE_WIDGETS_CONFIG_EN: Record<string, { title: string; badge?: string; icon: React.ComponentType<{ size?: number | string; strokeWidth?: number; className?: string }> }> = {
@@ -113,6 +116,8 @@ const SIDE_WIDGETS_CONFIG_EN: Record<string, { title: string; badge?: string; ic
   vault: { title: 'Vault Agenda & Analytics', badge: '', icon: Calendar },
   partners: { title: 'Partner Analytics & Quick Actions', badge: '', icon: Users },
   partner: { title: 'Partner Analytics & Quick Actions', badge: '', icon: Users },
+  calculator: { title: 'Feasibility & Cost Structuring', badge: '', icon: Calculator },
+  feasibility: { title: 'Feasibility & Cost Structuring', badge: '', icon: Calculator },
 };
 
 export function ERPWorkstationShell({ children }: { children: React.ReactNode }) {
@@ -670,19 +675,19 @@ export function ERPWorkstationShell({ children }: { children: React.ReactNode })
       style={{
         '--erp-bg-canvas': '#f8fafc',
         '--erp-border': '#cbd5e1',
-        '--erp-accent': erp.activePreset?.accent || '#946f23',
-        '--erp-accent-hover': erp.activePreset?.hover || '#7c5c1b',
-        '--erp-accent-subtle': erp.activePreset?.subtle || '#fdf8ee',
-        '--erp-accent-tint': erp.activePreset?.tint || 'rgba(148, 111, 35, 0.08)',
-        '--zf2-gold': erp.activePreset?.accent || '#946f23',
-        '--zf2-gold-light': erp.activePreset?.hover || '#7c5c1b',
-        '--zf2-gold-dark': erp.activePreset?.hover || '#7c5c1b',
-        '--zf2-gold-dim': erp.activePreset?.subtle || '#fdf8ee',
-        '--zf2-gold-wash': erp.activePreset?.tint || 'rgba(148, 111, 35, 0.08)',
-        '--zf2-accent-primary': erp.activePreset?.accent || '#946f23',
-        '--ops-accent': erp.activePreset?.accent || '#946f23',
-        '--ops-accent-hover': erp.activePreset?.hover || '#7c5c1b',
-        '--ops-accent-soft': erp.activePreset?.subtle || '#fdf8ee',
+        '--erp-accent': erp.activePreset?.accent || '#2563eb',
+        '--erp-accent-hover': erp.activePreset?.hover || '#1d4ed8',
+        '--erp-accent-subtle': erp.activePreset?.subtle || '#eff6ff',
+        '--erp-accent-tint': erp.activePreset?.tint || 'rgba(37, 99, 235, 0.08)',
+        '--zf2-gold': erp.activePreset?.accent || '#2563eb',
+        '--zf2-gold-light': erp.activePreset?.hover || '#1d4ed8',
+        '--zf2-gold-dark': erp.activePreset?.hover || '#1d4ed8',
+        '--zf2-gold-dim': erp.activePreset?.subtle || '#eff6ff',
+        '--zf2-gold-wash': erp.activePreset?.tint || 'rgba(37, 99, 235, 0.08)',
+        '--zf2-accent-primary': erp.activePreset?.accent || '#2563eb',
+        '--ops-accent': erp.activePreset?.accent || '#2563eb',
+        '--ops-accent-hover': erp.activePreset?.hover || '#1d4ed8',
+        '--ops-accent-soft': erp.activePreset?.subtle || '#eff6ff',
         '--ops-accent-subtle': erp.activePreset?.subtle || '#eff6ff',
       } as React.CSSProperties}
     >
@@ -784,6 +789,7 @@ export function ERPWorkstationShell({ children }: { children: React.ReactNode })
                       : 'Database Notice: ERP accounting tables are not yet deployed in your Supabase database. Run 006_erp_financial_engine.sql in Supabase SQL Editor to enable persistent cloud storage. Operating in interactive live mode.'}
                   </span>
                 </div>
+                {/* design-lint: allow R20 warning migration badge */}
                 <span style={{ fontVariantNumeric: 'tabular-nums', fontSize: '0.72rem', background: '#fef3c7', color: '#78350f', border: '1px solid #fcd34d', padding: '0.2rem 0.5rem', borderRadius: '4px', flexShrink: 0, fontWeight: 700 }}>
                   supabase/migrations/006_erp_financial_engine.sql
                 </span>
@@ -1012,121 +1018,6 @@ export function ERPWorkstationShell({ children }: { children: React.ReactNode })
         onNavigateToModule={(mod) => erp.navigateToTab(mod, false)}
         isAr={erp.isAr}
       />
-
-      {/* 4.4 FIRST-TIME WELCOME & WALKTHROUGH INVITATION BANNER */}
-      {erp.showFirstTimeTourPrompt && !erp.isGuidedTourActive && (
-        <div
-          style={{
-            position: 'fixed',
-            bottom: '24px',
-            left: '50%',
-            transform: 'translateX(-50%)',
-            maxWidth: '460px',
-            width: 'calc(100vw - 48px)',
-            background: 'rgba(255, 255, 255, 0.98)',
-            backdropFilter: 'blur(16px)',
-            border: '1.5px solid #e2e8f0',
-            borderRadius: '16px',
-            padding: '0.95rem 1.15rem',
-            boxShadow: '0 20px 45px rgba(15, 23, 42, 0.12), 0 0 0 1px rgba(37, 99, 235, 0.1)',
-            zIndex: 99998,
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '0.65rem',
-            direction: erp.isAr ? 'rtl' : 'ltr',
-            animation: 'fadeIn 0.3s ease-out'
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '0.5rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-              <div style={{
-                width: '32px',
-                height: '32px',
-                borderRadius: '8px',
-                background: '#eff6ff',
-                border: '1px solid #dbeafe',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: '#2563eb',
-                flexShrink: 0
-              }}>
-                <Compass size={18} />
-              </div>
-              <div>
-                <div style={{ fontSize: '0.86rem', fontWeight: 800, color: '#0F172A' }}>
-                  {erp.isAr ? 'مرحباً بك في FIN-OS' : 'Welcome to FIN-OS'}
-                </div>
-                <div style={{ fontSize: '0.74rem', color: '#64748B' }}>
-                  {erp.isAr ? 'هل تود استكشاف الشاشات والمؤشرات الأساسية عبر جولة حية لكافة وحدات النظام الـ ١٢؟' : 'Would you like an interactive walkthrough of all 12 core modules?'}
-                </div>
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={() => {
-                erp.setShowFirstTimeTourPrompt(false);
-                if (typeof window !== 'undefined') {
-                  localStorage.setItem('zf_fin_os_tour_completed_v1', 'dismissed');
-                }
-              }}
-              style={{ background: 'transparent', border: 'none', color: '#94A3B8', cursor: 'pointer', padding: '0.2rem' }}
-              title={erp.isAr ? 'إغلاق' : 'Dismiss'}
-            >
-              <X size={15} />
-            </button>
-          </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', alignSelf: erp.isAr ? 'flex-start' : 'flex-end' }}>
-            <button
-              type="button"
-              onClick={() => {
-                erp.setShowFirstTimeTourPrompt(false);
-                erp.setIsGuidedTourActive(true);
-              }}
-              style={{
-                background: '#2563eb',
-                border: '1px solid #1d4ed8',
-                color: '#FFFFFF',
-                borderRadius: '8px',
-                padding: '0.45rem 0.95rem',
-                fontSize: '0.78rem',
-                fontWeight: 700,
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.4rem',
-                boxShadow: '0 2px 8px rgba(37, 99, 235, 0.25)'
-              }}
-            >
-              <Compass size={14} />
-              <span>{erp.isAr ? 'ابدأ الجولة التفاعلية' : 'Start Tour'}</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                erp.setShowFirstTimeTourPrompt(false);
-                if (typeof window !== 'undefined') {
-                  localStorage.setItem('zf_fin_os_tour_completed_v1', 'dismissed');
-                }
-              }}
-              style={{
-                background: '#f8fafc',
-                border: '1px solid #e2e8f0',
-                color: '#475569',
-                borderRadius: '8px',
-                padding: '0.45rem 0.85rem',
-                fontSize: '0.76rem',
-                fontWeight: 700,
-                cursor: 'pointer'
-              }}
-            >
-              {erp.isAr ? 'لاحقاً' : 'Later'}
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* 4.5 EXECUTIVE NOTIFICATION & ALERT CENTER */}
       <ZFNotificationCenter 

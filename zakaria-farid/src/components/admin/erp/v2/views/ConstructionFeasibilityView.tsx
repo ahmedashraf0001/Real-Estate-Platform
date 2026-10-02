@@ -13,6 +13,7 @@ interface ConstructionFeasibilityViewProps {
   onOpenAuditForProperty?: (property: Property) => void;
   onOpenContractForProperty?: (property: Property, unit?: BuildingUnitItem) => void;
   onUpdateSellingPrice?: (propertyId: string, newPriceEgp: number) => Promise<void>;
+  onNavigateToTab?: (tab: string) => void;
   isAr?: boolean;
 }
 
@@ -23,6 +24,7 @@ export const ConstructionFeasibilityView: React.FC<ConstructionFeasibilityViewPr
   onOpenAuditForProperty,
   onOpenContractForProperty,
   onUpdateSellingPrice,
+  onNavigateToTab,
   isAr = true
 }) => {
   return (
@@ -34,6 +36,7 @@ export const ConstructionFeasibilityView: React.FC<ConstructionFeasibilityViewPr
         onOpenAuditForProperty={onOpenAuditForProperty}
         onOpenContractForProperty={onOpenContractForProperty}
         onUpdateSellingPrice={onUpdateSellingPrice}
+        onNavigateToTab={onNavigateToTab}
         isAr={isAr}
       />
     </div>

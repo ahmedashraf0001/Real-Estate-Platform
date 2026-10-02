@@ -1838,3 +1838,693 @@
 .purchaseOrdersList > div { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; padding: 10px 0; border-top: 1px solid #f1f5f9; overflow-wrap: anywhere; }
 
 .canonicalRow:focus-visible, .sortableTh:focus-visible { outline: 2px solid var(--erp-accent); outline-offset: -2px; }
+
+/* ============================================================================
+   REDESIGNED CONSTRUCTION PAYABLES WIDGETS & CHARTS STYLING
+   ============================================================================ */
+
+/* 1. Quick Actions Widget */
+.quickActionsList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+.quickActionRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 0.65rem 0.85rem;
+  border-radius: 10px;
+  background: #f8fafc;
+  border: 1px solid var(--erp-border, #cbd5e1);
+  color: var(--erp-text-title, #0f172a);
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  box-sizing: border-box;
+}
+
+.quickActionRow:hover {
+  background: #f1f5f9;
+  border-color: #94a3b8;
+}
+
+.quickActionRowActive {
+  background: #8b1d24 !important;
+  border-color: #7f1d1d !important;
+  color: #ffffff !important;
+}
+
+.quickActionRowActive:hover {
+  background: #7a181e !important;
+}
+
+.quickActionLeading {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.quickActionIconSquircle {
+  width: 30px;
+  height: 30px;
+  border-radius: 7px;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #475569;
+  flex-shrink: 0;
+}
+
+.quickActionIconSquircleActive {
+  width: 30px;
+  height: 30px;
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  flex-shrink: 0;
+}
+
+.quickActionLabel {
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: var(--erp-text-title, #0f172a);
+}
+
+.quickActionLabelActive {
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.quickActionChevron {
+  color: #94a3b8;
+  flex-shrink: 0;
+}
+
+.quickActionChevronActive {
+  color: #ffffff;
+  flex-shrink: 0;
+}
+
+/* 2. Contractor Aging Widget */
+.agingCardContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  width: 100%;
+}
+
+.agingMainCard {
+  background: #ffffff;
+  border: 1px solid var(--erp-border, #cbd5e1);
+  border-radius: 10px;
+  padding: 0.95rem 1rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.agingTotalHeader {
+  text-align: center;
+  margin-bottom: 0.35rem;
+}
+
+.agingTotalLabel {
+  display: block;
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: var(--erp-text-muted, #64748b);
+  margin-bottom: 0.25rem;
+}
+
+.agingTotalAmountWrap {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 0.35rem;
+}
+
+.agingTotalNumber {
+  font-size: 1.85rem;
+  font-weight: 800;
+  color: var(--erp-text-title, #0f172a);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+
+.agingTotalCurrency {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--erp-text-title, #0f172a);
+}
+
+.agingSegmentedBar {
+  display: flex;
+  width: 100%;
+  height: 10px;
+  border-radius: 5px;
+  background: #f1f5f9;
+  overflow: hidden;
+  margin: 0.85rem 0 0.35rem;
+}
+
+.agingSegmentBar90 {
+  background: #8b1d24;
+  height: 100%;
+  transition: width 0.3s ease;
+}
+
+.agingSegmentBar6090 {
+  background: #f59e0b;
+  height: 100%;
+  transition: width 0.3s ease;
+}
+
+.agingSegmentBar3160 {
+  background: #64748b;
+  height: 100%;
+  transition: width 0.3s ease;
+}
+
+.agingSegmentBar030 {
+  background: #10b981;
+  height: 100%;
+  transition: width 0.3s ease;
+}
+
+.agingBarPercentages {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 2px;
+  margin-bottom: 0.75rem;
+}
+
+.agingBarPct90 {
+  font-size: 0.70rem;
+  font-weight: 700;
+  color: #8b1d24;
+  font-variant-numeric: tabular-nums;
+}
+
+.agingBarPct6090 {
+  font-size: 0.70rem;
+  font-weight: 700;
+  color: #f59e0b;
+  font-variant-numeric: tabular-nums;
+}
+
+.agingBarPct3160 {
+  font-size: 0.70rem;
+  font-weight: 700;
+  color: #64748b;
+  font-variant-numeric: tabular-nums;
+}
+
+.agingBarPct030 {
+  font-size: 0.70rem;
+  font-weight: 700;
+  color: #10b981;
+  font-variant-numeric: tabular-nums;
+}
+
+.agingBracketsList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  border-top: 1px dashed #f1f5f9;
+  padding-top: 0.65rem;
+}
+
+.agingBracketRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.74rem;
+  padding: 0.2rem 0;
+}
+
+.agingBracketLeading {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 1.2;
+}
+
+.agingDotRed {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #8b1d24;
+  flex-shrink: 0;
+}
+
+.agingDotYellow {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #f59e0b;
+  flex-shrink: 0;
+}
+
+.agingDotBlue {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #64748b;
+  flex-shrink: 0;
+}
+
+.agingDotGreen {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #10b981;
+  flex-shrink: 0;
+}
+
+.agingBracketLabel {
+  font-weight: 600;
+  color: var(--erp-text-body, #334155);
+}
+
+.agingBracketAmount {
+  font-weight: 700;
+  color: var(--erp-text-title, #0f172a);
+  font-variant-numeric: tabular-nums;
+  flex: 1;
+  text-align: center;
+}
+
+.agingPillRed {
+  background: #fee2e2;
+  color: #991b1b;
+  font-size: 0.70rem;
+  font-weight: 700;
+  padding: 0.15rem 0.5rem;
+  border-radius: 6px;
+  font-variant-numeric: tabular-nums;
+  min-width: 38px;
+  text-align: center;
+}
+
+.agingPillYellow {
+  background: #fef3c7;
+  color: #b45309;
+  font-size: 0.70rem;
+  font-weight: 700;
+  padding: 0.15rem 0.5rem;
+  border-radius: 6px;
+  font-variant-numeric: tabular-nums;
+  min-width: 38px;
+  text-align: center;
+}
+
+.agingPillBlue {
+  background: #f1f5f9;
+  color: #475569;
+  font-size: 0.70rem;
+  font-weight: 700;
+  padding: 0.15rem 0.5rem;
+  border-radius: 6px;
+  font-variant-numeric: tabular-nums;
+  min-width: 38px;
+  text-align: center;
+}
+
+.agingPillGreen {
+  background: #dcfce7;
+  color: #15803d;
+  font-size: 0.70rem;
+  font-weight: 700;
+  padding: 0.15rem 0.5rem;
+  border-radius: 6px;
+  font-variant-numeric: tabular-nums;
+  min-width: 38px;
+  text-align: center;
+}
+
+.agingDualCards {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.55rem;
+}
+
+.agingOverdueCard {
+  background: #fff5f5;
+  border: 1px solid #fecaca;
+  border-radius: 10px;
+  padding: 0.65rem 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.agingCurrentCard {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 10px;
+  padding: 0.65rem 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.agingDualCardText {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.agingDualCardLabel {
+  font-size: 0.70rem;
+  font-weight: 600;
+  color: var(--erp-text-muted, #64748b);
+}
+
+.agingOverdueValue {
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: #991b1b;
+  font-variant-numeric: tabular-nums;
+}
+
+.agingCurrentValue {
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: var(--erp-text-title, #0f172a);
+  font-variant-numeric: tabular-nums;
+}
+
+.agingOverdueIcon {
+  color: #dc2626;
+  flex-shrink: 0;
+}
+
+.agingCurrentIcon {
+  color: #16a34a;
+  flex-shrink: 0;
+}
+
+/* 3. Top Contractors Widget */
+.topContractorsTable {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  border: 1px solid var(--erp-border, #cbd5e1);
+  border-radius: 10px;
+  overflow: hidden;
+  background: #ffffff;
+}
+
+.topContractorsHead {
+  display: grid;
+  grid-template-columns: 1.6fr 1.2fr 1.2fr;
+  align-items: center;
+  padding: 0.5rem 0.65rem;
+  background: #f8fafc;
+  border-bottom: 1px solid var(--erp-border, #cbd5e1);
+  font-size: 0.70rem;
+  font-weight: 700;
+  color: var(--erp-text-muted, #64748b);
+}
+
+.topContractorsRowItem {
+  display: grid;
+  grid-template-columns: 1.6fr 1.2fr 1.2fr;
+  align-items: center;
+  padding: 0.55rem 0.65rem;
+  border-bottom: 1px solid #f1f5f9;
+  transition: background 0.15s ease;
+}
+
+.topContractorsRowItem:last-child {
+  border-bottom: none;
+}
+
+.topContractorsRowItem:hover {
+  background: #f8fafc;
+}
+
+.topContractorColInfo {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.45rem;
+  min-width: 0;
+}
+
+.topContractorRank {
+  width: 20px;
+  height: 20px;
+  border-radius: 5px;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  color: #475569;
+  font-size: 0.70rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.topContractorDetails {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.topContractorTitle {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--erp-text-title, #0f172a);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.topContractorColAmount {
+  font-size: 0.82rem;
+  font-weight: 800;
+  color: var(--erp-text-title, #0f172a);
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+.topContractorColPct {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.topContractorPctNum {
+  font-size: 0.80rem;
+  font-weight: 800;
+  color: var(--erp-text-title, #0f172a);
+  font-variant-numeric: tabular-nums;
+}
+
+.topContractorBarBg {
+  width: 100%;
+  height: 6px;
+  border-radius: 3px;
+  background: #f1f5f9;
+  overflow: hidden;
+}
+
+.topContractorBarFill {
+  height: 100%;
+  background: #8b1d24;
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+/* 4. Chart Header Select Filter */
+.chartHeaderSelectWrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.chartHeaderSelect {
+  appearance: none;
+  background: #f8fafc;
+  border: 1px solid var(--erp-border, #cbd5e1);
+  border-radius: 8px;
+  padding: 0.35rem 1.6rem 0.35rem 0.75rem;
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: var(--erp-text-body, #334155);
+  font-family: inherit;
+  cursor: pointer;
+  outline: none;
+}
+
+.chartHeaderSelectChevron {
+  position: absolute;
+  inset-inline-end: 0.5rem;
+  pointer-events: none;
+  color: #64748b;
+}
+
+/* 5. Specialty Donut telemetry bottom strip */
+.specialtyTelemetryStrip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #f8fafc;
+  border: 1px solid var(--erp-border, #cbd5e1);
+  border-radius: 10px;
+  padding: 0.55rem 1rem;
+  margin-top: 0.85rem;
+}
+
+.specialtyTelemetryItem {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.specialtyTelemetryIconSquircle {
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  background: #ffffff;
+  border: 1px solid var(--erp-border, #cbd5e1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #475569;
+  flex-shrink: 0;
+}
+
+.specialtyTelemetryText {
+  display: flex;
+  align-items: baseline;
+  gap: 0.45rem;
+}
+
+.specialtyTelemetryLabel {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--erp-text-muted, #64748b);
+}
+
+.specialtyTelemetryValue {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--erp-text-title, #0f172a);
+  font-variant-numeric: tabular-nums;
+}
+
+/* 6. Timeline dual telemetry cards at bottom */
+.timelineTelemetryGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.65rem;
+  margin-top: 0.85rem;
+}
+
+.timelineTelemetryCard {
+  background: #ffffff;
+  border: 1px solid var(--erp-border, #cbd5e1);
+  border-radius: 10px;
+  padding: 0.65rem 0.85rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.timelineTelemetryLeading {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.timelineTelemetryIconRed {
+  width: 32px;
+  height: 32px;
+  border-radius: 7px;
+  background: #fee2e2;
+  border: 1px solid #fecaca;
+  color: #b91c1c;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.timelineTelemetryIconGreen {
+  width: 32px;
+  height: 32px;
+  border-radius: 7px;
+  background: #dcfce7;
+  border: 1px solid #bbf7d0;
+  color: #15803d;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.timelineTelemetryInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.timelineTelemetryLabel {
+  font-size: 0.70rem;
+  font-weight: 600;
+  color: var(--erp-text-muted, #64748b);
+}
+
+.timelineTelemetryValue {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--erp-text-title, #0f172a);
+  font-variant-numeric: tabular-nums;
+}
+
+.timelineTelemetryTrendRed {
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: #b91c1c;
+  font-variant-numeric: tabular-nums;
+}
+
+.timelineTelemetryTrendGreen {
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: #15803d;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Modal and summary helpers for design lint */
+.inspectMetricDue {
+  color: #d97706;
+}
+
+.inspectMetricPaid {
+  color: #10b981;
+}
+
+.contractorSummaryDue {
+  color: #d97706;
+}
+
+.contractorSummaryPaid {
+  color: #10b981;
+}

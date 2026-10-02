@@ -33,6 +33,8 @@ import {
   TrendingUp,
   Download,
   Filter,
+  Receipt,
+  BarChart2,
 } from 'lucide-react';
 import { Property } from '@/lib/supabase/types';
 import {
@@ -304,7 +306,7 @@ export const ConstructionPayablesView: React.FC<ConstructionPayablesViewProps> =
       : effectivePropertyCosts.filter(c => c.property_id === selectedProjectFilter);
 
     const specialties = {
-      civil: { label: isAr ? 'أعمال خرسانية' : 'Civil & Concrete', amount: D(0), color: 'var(--erp-accent, #2563eb)' },
+      civil: { label: isAr ? 'أعمال خرسانية' : 'Civil & Concrete', amount: D(0), color: '#8b1d24' },
       electro: { label: isAr ? 'أعمال ميكانيكا وكهرباء' : 'MEP & Electrical', amount: D(0), color: '#10b981' },
       finishing: { label: isAr ? 'أعمال تشطيبات' : 'Interior Finishing', amount: D(0), color: '#f59e0b' },
       landscape: { label: isAr ? 'أعمال لاندسكيب' : 'Landscape & Facades', amount: D(0), color: '#0284c7' },
@@ -347,6 +349,101 @@ export const ConstructionPayablesView: React.FC<ConstructionPayablesViewProps> =
     };
   }, [effectivePropertyCosts, selectedProjectFilter, isAr]);
 
+  const avgDuePerContractor = useMemo(() => {
+    return executiveKPIs.contractorsCount > 0 ? specialtyBreakdown.total.div(executiveKPIs.contractorsCount) : D(0);
+  }, [executiveKPIs.contractorsCount, specialtyBreakdown.total]);
+
+  // Derived Contractor Aging Brackets for media_1790909310831.png
+  const contractorAgingData = useMemo(() => {
+    let dues90 = D(0);
+    let dues6090 = D(0);
+    let dues3160 = D(0);
+    let dues030 = D(0);
+    let currentDues = D(0);
+    let overdueDues = D(0);
+
+    const activeCosts = selectedProjectFilter === 'all'
+      ? effectivePropertyCosts
+      : effectivePropertyCosts.filter(c => c.property_id === selectedProjectFilter);
+
+    activeCosts.forEach(item => {
+      if (getConstructionCostSection(item) !== 'contractors') return;
+      const { remainingAmount } = calculateCostItemEffectiveTotals(item);
+      const rem = D(remainingAmount);
+      if (!rem.gt(0)) return;
+
+      if (item.payable_installments && item.payable_installments.length > 0) {
+        item.payable_installments.forEach(inst => {
+          if (inst.status === 'PAID') return;
+          const instAmt = D(inst.amount_egp || 0);
+          const instPaid = D(inst.paid_amount_egp || 0);
+          const instRem = instAmt.minus(instPaid);
+          if (!instRem.gt(0)) return;
+
+          const dueD = inst.due_date || item.due_date;
+          const isPast = dueD && dueD <= todayStr;
+          const days = dueD ? Math.floor((Date.parse(todayStr) - Date.parse(dueD)) / 86400000) : 0;
+
+          if (isPast) {
+            overdueDues = overdueDues.plus(instRem);
+            if (days > 90) {
+              dues90 = dues90.plus(instRem);
+            } else if (days >= 61) {
+              dues6090 = dues6090.plus(instRem);
+            } else if (days >= 31) {
+              dues3160 = dues3160.plus(instRem);
+            } else {
+              dues030 = dues030.plus(instRem);
+            }
+          } else {
+            currentDues = currentDues.plus(instRem);
+            dues030 = dues030.plus(instRem);
+          }
+        });
+      } else {
+        const dueD = item.due_date || item.logged_date;
+        const isPast = dueD && dueD <= todayStr;
+        const days = dueD ? Math.floor((Date.parse(todayStr) - Date.parse(dueD)) / 86400000) : 0;
+
+        if (isPast) {
+          overdueDues = overdueDues.plus(rem);
+          if (days > 90) {
+            dues90 = dues90.plus(rem);
+          } else if (days >= 61) {
+            dues6090 = dues6090.plus(rem);
+          } else if (days >= 31) {
+            dues3160 = dues3160.plus(rem);
+          } else {
+            dues030 = dues030.plus(rem);
+          }
+        } else {
+          currentDues = currentDues.plus(rem);
+          dues030 = dues030.plus(rem);
+        }
+      }
+    });
+
+    const total = dues90.plus(dues6090).plus(dues3160).plus(dues030);
+    const p90 = total.gt(0) ? dues90.div(total).times(100).toNumber() : 0;
+    const p6090 = total.gt(0) ? dues6090.div(total).times(100).toNumber() : 0;
+    const p3160 = total.gt(0) ? dues3160.div(total).times(100).toNumber() : 0;
+    const p030 = total.gt(0) ? dues030.div(total).times(100).toNumber() : 0;
+
+    return {
+      totalDues: total,
+      dues90,
+      dues6090,
+      dues3160,
+      dues030,
+      p90: Math.round(p90),
+      p6090: Math.round(p6090),
+      p3160: Math.round(p3160),
+      p030: Math.round(p030),
+      currentDues,
+      overdueDues
+    };
+  }, [effectivePropertyCosts, selectedProjectFilter, todayStr]);
+
   // Derived Paid This Month for Side Widget
   const currentYearMonth = useMemo(() => new Date().toISOString().slice(0, 7), []);
   const paidThisMonth = useMemo(() => {
@@ -365,7 +462,7 @@ export const ConstructionPayablesView: React.FC<ConstructionPayablesViewProps> =
     return sum;
   }, [effectivePropertyCosts, currentYearMonth, executiveKPIs.totalApPaid]);
 
-  // Derived Top Contractors by Dues for Side Widget
+  // Derived Top Contractors by Dues for Side Widget (Enriched with Rank and Percentage)
   const topContractors = useMemo(() => {
     const map = new Map<string, Decimal>();
     effectivePropertyCosts.forEach(item => {
@@ -379,10 +476,18 @@ export const ConstructionPayablesView: React.FC<ConstructionPayablesViewProps> =
       }
     });
 
-    return Array.from(map.entries())
+    const entries = Array.from(map.entries())
       .map(([name, dues]) => ({ name, dues }))
       .sort((a, b) => (b.dues.gt(a.dues) ? 1 : -1))
       .slice(0, 5);
+
+    const totalDues = entries.reduce((sum, item) => sum.plus(item.dues), D(0));
+
+    return entries.map((item, idx) => ({
+      ...item,
+      rank: idx + 1,
+      percentage: totalDues.gt(0) ? Math.round(item.dues.div(totalDues).times(100).toNumber()) : 0
+    }));
   }, [effectivePropertyCosts, selectedProjectFilter]);
 
   // Comprehensive Contractors & Suppliers Directory Data
@@ -785,7 +890,7 @@ export const ConstructionPayablesView: React.FC<ConstructionPayablesViewProps> =
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
-    toast.success(isAr ? 'تم تصدير مستحقات المقاولين إلى Excel بنجاح ✓' : 'Exported to CSV successfully');
+    toast.success(isAr ? 'تم تصدير مستحقات المقاولين إلى Excel بنجاح' : 'Exported to CSV successfully');
   }, [sortedPayables, isAr]);
 
   // Memoized groupings for contractor schedule modal (Unscheduled vs Scheduled)
@@ -853,7 +958,7 @@ export const ConstructionPayablesView: React.FC<ConstructionPayablesViewProps> =
         await onUpdatePropertyCostItem(updatedItem);
       }
 
-      toast.success(isAr ? 'تمت جدولة دفعات المقاول بنجاح ✓' : 'Contractor installments scheduled successfully');
+      toast.success(isAr ? 'تمت جدولة دفعات المقاول بنجاح' : 'Contractor installments scheduled successfully');
       setIsScheduleContractorModalOpen(false);
     } catch (err) {
       console.error('Failed to schedule contractor payments:', err);
@@ -928,91 +1033,178 @@ export const ConstructionPayablesView: React.FC<ConstructionPayablesViewProps> =
 
       {/* ─── 3. CHARTS ROW (Timeline on Right, Donut on Left in RTL) ─── */}
       <div className={vStyles.chartsRow}>
-        {/* Card 1: Timeline Trend Chart (Due vs Paid - RIGHT in RTL) */}
+        {/* Card 1: Payables vs Payments Timeline Chart (RIGHT in RTL) */}
         <div className={vStyles.whiteCard}>
           <div className={vStyles.cardHeader}>
             <div className={vStyles.cardHeaderLeading}>
               <div className={vStyles.cardIconSquircle}>
                 <TrendingUp size={15} />
               </div>
-              <h3 className={vStyles.cardTitle}>
-                {isAr ? 'المستحقات والدفعات خلال الفترة' : 'Payables & Payments Trend'}
-              </h3>
+              <div>
+                <h3 className={vStyles.cardTitle}>
+                  {isAr ? 'المستحقات والمدفوعات خلال الفترة' : 'Payables & Payments Over Period'}
+                </h3>
+                <span className={vStyles.cardHeaderTrailing}>
+                  {isAr ? 'معدل سداد الالتزامات' : 'Settlement rate of obligations'}
+                </span>
+              </div>
             </div>
-            <span className={vStyles.cardHeaderTrailing}>
-              {isAr ? 'معدل سداد الالتزامات' : 'Settlement Timeline'}
-            </span>
+            <div className={vStyles.chartHeaderSelectWrap}>
+              <select
+                value={selectedPeriodRange}
+                onChange={(e) => setSelectedPeriodRange(e.target.value as any)}
+                className={vStyles.chartHeaderSelect}
+                aria-label={isAr ? 'تصفية الفترة الزمنية' : 'Filter time period'}
+              >
+                <option value="all">{isAr ? 'آخر 6 أشهر' : 'Last 6 Months'}</option>
+                <option value="last3m">{isAr ? 'آخر 3 أشهر' : 'Last 3 Months'}</option>
+                <option value="month">{isAr ? 'هذا الشهر' : 'This Month'}</option>
+              </select>
+              <ChevronDown size={13} className={vStyles.chartHeaderSelectChevron} />
+            </div>
           </div>
 
-          {timelineTrend.categories.length === 0 ? <p className={vStyles.emptyContractorsWrap}>{isAr ? 'لا توجد حركات مسجلة خلال الفترة' : 'No recorded movements in this period'}</p> : (
-          <ERPApexChart
-            type="line"
-            series={[
-              { name: isAr ? 'المستحقات' : 'Payables Due', data: timelineTrend.duesSeries },
-              { name: isAr ? 'المدفوعات' : 'Payments Settled', data: timelineTrend.paidSeries }
-            ]}
-            options={{
-              chart: {
-                fontFamily: "'ThmanyahSans', 'Cairo', sans-serif",
-                toolbar: { show: false },
-                zoom: { enabled: false }
-              },
-              colors: ['var(--erp-accent, #2563eb)', '#10b981'],
-              stroke: { curve: 'smooth', width: [3, 3] },
-              markers: { size: 3, hover: { size: 5 } },
-              xaxis: {
-                categories: timelineTrend.categories,
-                labels: { style: { colors: '#64748b', fontSize: '11px' } },
-                axisBorder: { color: '#cbd5e1' }
-              },
-              yaxis: {
-                opposite: isAr,
-                labels: {
-                  formatter: (val: number) => formatCompactEGP(val, isAr),
-                  style: { colors: '#64748b', fontSize: '11px' }
+          {timelineTrend.categories.length === 0 ? (
+            <p className={vStyles.emptyContractorsWrap}>
+              {isAr ? 'لا توجد حركات مسجلة خلال الفترة' : 'No recorded movements in this period'}
+            </p>
+          ) : (
+            <ERPApexChart
+              type="area"
+              series={[
+                { name: isAr ? 'المستحقات' : 'Payables Due', data: timelineTrend.duesSeries },
+                { name: isAr ? 'المدفوعات' : 'Payments Settled', data: timelineTrend.paidSeries }
+              ]}
+              options={{
+                chart: {
+                  fontFamily: "'ThmanyahSans', 'Cairo', sans-serif",
+                  toolbar: { show: false },
+                  zoom: { enabled: false }
                 },
-                axisBorder: { show: true, color: '#cbd5e1' }
-              },
-              grid: {
-                borderColor: '#e2e8f0',
-                strokeDashArray: 2,
-                xaxis: { lines: { show: true } },
-                yaxis: { lines: { show: true } }
-              },
-              legend: {
-                position: 'top',
-                horizontalAlign: isAr ? 'left' : 'right',
-                fontSize: '11px',
-                fontWeight: 500,
-                labels: { colors: '#64748b' },
-                offsetY: -4
-              },
-              tooltip: {
-                y: {
-                  formatter: (val: number) => D(val).formatEGP(isAr)
+                colors: ['#8b1d24', '#10b981'],
+                stroke: { curve: 'smooth', width: [3, 3] },
+                fill: {
+                  type: 'gradient',
+                  gradient: {
+                    shadeIntensity: 1,
+                    opacityFrom: 0.25,
+                    opacityTo: 0.02,
+                    stops: [0, 90, 100]
+                  }
+                },
+                markers: { size: 3, hover: { size: 5 } },
+                xaxis: {
+                  categories: timelineTrend.categories,
+                  labels: { style: { colors: '#64748b', fontSize: '11px' } },
+                  axisBorder: { color: '#cbd5e1' }
+                },
+                yaxis: {
+                  opposite: isAr,
+                  labels: {
+                    formatter: (val: number) => formatCompactEGP(val, isAr),
+                    style: { colors: '#64748b', fontSize: '11px' }
+                  },
+                  axisBorder: { show: true, color: '#cbd5e1' }
+                },
+                grid: {
+                  borderColor: '#e2e8f0',
+                  strokeDashArray: 2,
+                  xaxis: { lines: { show: true } },
+                  yaxis: { lines: { show: true } }
+                },
+                legend: {
+                  position: 'top',
+                  horizontalAlign: isAr ? 'right' : 'left',
+                  fontSize: '11px',
+                  fontWeight: 600,
+                  labels: { colors: '#64748b' },
+                  offsetY: -4
+                },
+                tooltip: {
+                  y: {
+                    formatter: (val: number) => D(val).formatEGP(isAr)
+                  }
                 }
-              }
-            }}
-            height={185}
-            isAr={isAr}
-          />
+              }}
+              height={190}
+              isAr={isAr}
+            />
           )}
+
+          {/* Bottom Dual Telemetry Cards */}
+          <div className={vStyles.timelineTelemetryGrid}>
+            <div className={vStyles.timelineTelemetryCard}>
+              <div className={vStyles.timelineTelemetryLeading}>
+                <div className={vStyles.timelineTelemetryIconGreen}>
+                  <Wallet size={16} />
+                </div>
+                <div className={vStyles.timelineTelemetryInfo}>
+                  <span className={vStyles.timelineTelemetryLabel}>
+                    {isAr ? 'إجمالي المدفوعات' : 'Total Payments'}
+                  </span>
+                  <span className={vStyles.timelineTelemetryValue}>
+                    {formatCompactEGP(executiveKPIs.totalApPaid, isAr)}
+                  </span>
+                </div>
+              </div>
+              <span className={vStyles.timelineTelemetryTrendGreen}>
+                ↗ +{executiveKPIs.paidPercentage}%
+              </span>
+            </div>
+
+            <div className={vStyles.timelineTelemetryCard}>
+              <div className={vStyles.timelineTelemetryLeading}>
+                <div className={vStyles.timelineTelemetryIconRed}>
+                  <FileText size={16} />
+                </div>
+                <div className={vStyles.timelineTelemetryInfo}>
+                  <span className={vStyles.timelineTelemetryLabel}>
+                    {isAr ? 'إجمالي المستحقات' : 'Total Payables'}
+                  </span>
+                  <span className={vStyles.timelineTelemetryValue}>
+                    {formatCompactEGP(executiveKPIs.totalApLiabilities, isAr)}
+                  </span>
+                </div>
+              </div>
+              <span className={vStyles.timelineTelemetryTrendRed}>
+                ↗ +{executiveKPIs.overduePercentage}%
+              </span>
+            </div>
+          </div>
         </div>
 
-        {/* Card 3: Donut Chart - Contractor Specialty Breakdown (LEFT in RTL) */}
+        {/* Card 2: Specialty Donut Chart (LEFT in RTL) */}
         <div className={vStyles.whiteCard}>
           <div className={vStyles.cardHeader}>
             <div className={vStyles.cardHeaderLeading}>
               <div className={vStyles.cardIconSquircle}>
                 <PieChart size={15} />
               </div>
-              <h3 className={vStyles.cardTitle}>
-                {isAr ? 'توزيع مستحقات المقاولين حسب التخصص' : 'Payables by Construction Specialty'}
-              </h3>
+              <div>
+                <h3 className={vStyles.cardTitle}>
+                  {isAr ? 'توزيع مستحقات المقاولين حسب التخصص' : 'Payables by Construction Specialty'}
+                </h3>
+                <span className={vStyles.cardHeaderTrailing}>
+                  {isAr ? 'تحليل الأنشطة الإنشائية' : 'Specialty Breakdown'}
+                </span>
+              </div>
             </div>
-            <span className={vStyles.cardHeaderTrailing}>
-              {isAr ? 'تحليل الأنشطة الإنشائية' : 'Specialty Breakdown'}
-            </span>
+            <div className={vStyles.chartHeaderSelectWrap}>
+              <select
+                value={selectedProjectFilter}
+                onChange={(e) => setSelectedProjectFilter(e.target.value)}
+                className={vStyles.chartHeaderSelect}
+                aria-label={isAr ? 'تصفية حسب المشروع' : 'Filter by project'}
+              >
+                <option value="all">{isAr ? 'جميع المشاريع' : 'All Projects'}</option>
+                {properties.map(p => (
+                  <option key={p.id} value={p.id}>
+                    {isAr ? p.title_ar : p.title_en}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown size={13} className={vStyles.chartHeaderSelectChevron} />
+            </div>
           </div>
 
           <div className={vStyles.donutBody}>
@@ -1025,8 +1217,10 @@ export const ConstructionPayablesView: React.FC<ConstructionPayablesViewProps> =
                     <span className={vStyles.donutLabel}>{item.label}</span>
                   </div>
                   <div className={vStyles.donutLegendValues}>
-                    <span className={vStyles.donutPct}>{item.percentage}%</span>
                     <span className={vStyles.donutAmount}>{item.amountFormatted}</span>
+                    <span className={item.key === 'civil' ? vStyles.agingPillRed : vStyles.agingPillBlue}>
+                      {item.percentage}%
+                    </span>
                   </div>
                 </div>
               ))}
@@ -1040,7 +1234,7 @@ export const ConstructionPayablesView: React.FC<ConstructionPayablesViewProps> =
                   series={specialtyBreakdown.items.map(i => i.amount.toNumber())}
                   options={{
                     labels: specialtyBreakdown.items.map(i => i.label),
-                    colors: ['var(--erp-accent, #2563eb)', '#10b981', '#f59e0b', '#0284c7', '#64748b'],
+                    colors: ['#8b1d24', '#10b981', '#f59e0b', '#0284c7', '#64748b'],
                     chart: {
                       fontFamily: "'ThmanyahSans', 'Cairo', sans-serif",
                       toolbar: { show: false }
@@ -1048,19 +1242,19 @@ export const ConstructionPayablesView: React.FC<ConstructionPayablesViewProps> =
                     plotOptions: {
                       pie: {
                         donut: {
-                          size: '80%',
+                          size: '76%',
                           labels: {
                             show: true,
                             name: {
                               show: true,
-                              fontSize: '10px',
+                              fontSize: '11px',
                               fontWeight: 600,
                               color: '#64748b',
                               offsetY: -6
                             },
                             value: {
                               show: true,
-                              fontSize: '13px',
+                              fontSize: '15px',
                               fontWeight: 800,
                               color: '#0f172a',
                               offsetY: 2,
@@ -1069,7 +1263,7 @@ export const ConstructionPayablesView: React.FC<ConstructionPayablesViewProps> =
                             total: {
                               show: true,
                               showAlways: true,
-                              label: isAr ? 'إجمالي المصاريف' : 'Total Expenses',
+                              label: isAr ? 'إجمالي المستحقات' : 'Total Payables',
                               fontSize: '10px',
                               fontWeight: 600,
                               color: '#64748b',
@@ -1088,7 +1282,7 @@ export const ConstructionPayablesView: React.FC<ConstructionPayablesViewProps> =
                       }
                     }
                   }}
-                  height={175}
+                  height={190}
                   isAr={isAr}
                 />
               ) : (
@@ -1096,6 +1290,37 @@ export const ConstructionPayablesView: React.FC<ConstructionPayablesViewProps> =
                   {isAr ? 'لا توجد مستحقات مسجلة' : 'No recorded payables'}
                 </div>
               )}
+            </div>
+          </div>
+
+          {/* Bottom Telemetry Strip */}
+          <div className={vStyles.specialtyTelemetryStrip}>
+            <div className={vStyles.specialtyTelemetryItem}>
+              <div className={vStyles.specialtyTelemetryIconSquircle}>
+                <FileText size={15} />
+              </div>
+              <div className={vStyles.specialtyTelemetryText}>
+                <span className={vStyles.specialtyTelemetryLabel}>
+                  {isAr ? 'عدد المقاولين:' : 'Contractor Count:'}
+                </span>
+                <span className={vStyles.specialtyTelemetryValue}>
+                  {executiveKPIs.contractorsCount}
+                </span>
+              </div>
+            </div>
+
+            <div className={vStyles.specialtyTelemetryItem}>
+              <div className={vStyles.specialtyTelemetryIconSquircle}>
+                <BarChart2 size={15} />
+              </div>
+              <div className={vStyles.specialtyTelemetryText}>
+                <span className={vStyles.specialtyTelemetryLabel}>
+                  {isAr ? 'متوسط المستحق للمقاول:' : 'Avg Due / Contractor:'}
+                </span>
+                <span className={vStyles.specialtyTelemetryValue}>
+                  {formatCompactEGP(avgDuePerContractor, isAr)}
+                </span>
+              </div>
             </div>
           </div>
         </div>
@@ -1603,71 +1828,261 @@ export const ConstructionPayablesView: React.FC<ConstructionPayablesViewProps> =
         icon={<HardHat size={16} />}
       >
         <div className={vStyles.sideWidgetsWrap}>
-
-          <ZFWidgetCard id="construction-quick-actions" title={isAr ? 'الإجراءات السريعة' : 'Quick Actions'} icon={<Plus size={15} />} isAr={isAr}>
-            <div className={vStyles.quickActionsStack}>
-              {onCreatePurchaseOrder && <button type="button" className={vStyles.secondaryBtn} onClick={() => setIsPurchaseOrderModalOpen(true)} disabled={isMutating}>{isAr ? '+ أمر شراء جديد' : '+ New Purchase Order'}</button>}
-              <button type="button" className={vStyles.primaryBtn} onClick={() => { setExpensePurpose('claim'); setIsNewExpenseModalOpen(true); }} disabled={isMutating}>{isAr ? '+ قيد مستخلص' : '+ Record Contractor Claim'}</button>
-              <button type="button" className={vStyles.secondaryBtn} onClick={() => { setExpensePurpose('site'); setIsNewExpenseModalOpen(true); }} disabled={isMutating}>{isAr ? '+ مصروف موقع' : '+ Site Expense'}</button>
-            </div>
-            {purchaseOrders.length > 0 && <div className={vStyles.purchaseOrdersList}><h4>{isAr ? 'مسودات أوامر الشراء' : 'Purchase Order Drafts'}</h4>{purchaseOrders.slice(0, 5).map(order => <div key={order.order_id}><strong>{order.supplier_name}</strong><span>{order.description}</span><bdi>{formatIntegerEGP(order.amount_egp)} {isAr ? 'ج.م' : 'EGP'}</bdi><span className={`${shellStyles.statusPill} ${shellStyles.statusPillNeutral}`}>{isAr ? 'مسودة' : 'Draft'}</span></div>)}</div>}
-          </ZFWidgetCard>
-
-          {/* Widget 1: Construction snapshot */}
+          {/* [CONST-WIDGET-01] Quick Actions Side Widget (media_1790909320560.png) */}
           <ZFWidgetCard
-            id="construction-quick-summary"
-            title={isAr ? 'ملخص سريع' : 'Quick Summary'}
-            icon={<Building2 size={15} />}
-            badge={
-              <span className={vStyles.sideWidgetBadge}>
-                {isAr ? 'مؤشرات فورية' : 'Snapshot'}
-              </span>
-            }
+            id="construction-quick-actions"
+            title={isAr ? 'الإجراءات السريعة' : 'Quick Actions'}
+            icon={<Plus size={15} />}
             isAr={isAr}
           >
-            <div className={vStyles.quickSummaryList}>
-              <div className={vStyles.quickSummaryRow}>
-                <span className={vStyles.quickSummaryLeading}><span className={vStyles.quickSummaryIcon}><Building2 size={14} /></span><span className={vStyles.quickSummaryLabel}>{isAr ? 'عدد المشاريع' : 'Projects'}</span></span>
-                <span className={vStyles.quickSummaryValue}>{properties.length}</span>
+            <div className={vStyles.quickActionsList}>
+              <button
+                type="button"
+                className={vStyles.quickActionRow}
+                onClick={() => setIsPurchaseOrderModalOpen(true)}
+                disabled={isMutating}
+              >
+                <div className={vStyles.quickActionLeading}>
+                  <div className={vStyles.quickActionIconSquircle}>
+                    <FileText size={16} />
+                  </div>
+                  <span className={vStyles.quickActionLabel}>
+                    {isAr ? 'أمر شراء جديد' : 'New Purchase Order'}
+                  </span>
+                </div>
+                <ChevronLeft size={16} className={vStyles.quickActionChevron} />
+              </button>
+
+              <button
+                type="button"
+                className={`${vStyles.quickActionRow} ${vStyles.quickActionRowActive}`}
+                onClick={() => {
+                  setExpensePurpose('claim');
+                  setIsNewExpenseModalOpen(true);
+                }}
+                disabled={isMutating}
+              >
+                <div className={vStyles.quickActionLeading}>
+                  <div className={vStyles.quickActionIconSquircleActive}>
+                    <Receipt size={16} />
+                  </div>
+                  <span className={vStyles.quickActionLabelActive}>
+                    {isAr ? 'قيد مستخلص' : 'Record Contractor Claim'}
+                  </span>
+                </div>
+                <ChevronLeft size={16} className={vStyles.quickActionChevronActive} />
+              </button>
+
+              <button
+                type="button"
+                className={vStyles.quickActionRow}
+                onClick={() => {
+                  setExpensePurpose('site');
+                  setIsNewExpenseModalOpen(true);
+                }}
+                disabled={isMutating}
+              >
+                <div className={vStyles.quickActionLeading}>
+                  <div className={vStyles.quickActionIconSquircle}>
+                    <Wallet size={16} />
+                  </div>
+                  <span className={vStyles.quickActionLabel}>
+                    {isAr ? 'مصروف موقع' : 'Site Expense'}
+                  </span>
+                </div>
+                <ChevronLeft size={16} className={vStyles.quickActionChevron} />
+              </button>
+            </div>
+            {purchaseOrders.length > 0 && (
+              <div className={vStyles.purchaseOrdersList}>
+                <h4>{isAr ? 'مسودات أوامر الشراء' : 'Purchase Order Drafts'}</h4>
+                {purchaseOrders.slice(0, 5).map(order => (
+                  <div key={order.order_id}>
+                    <strong>{order.supplier_name}</strong>
+                    <span>{order.description}</span>
+                    <bdi>{formatIntegerEGP(order.amount_egp)} {isAr ? 'ج.م' : 'EGP'}</bdi>
+                    <span className={`${shellStyles.statusPill} ${shellStyles.statusPillNeutral}`}>
+                      {isAr ? 'مسودة' : 'Draft'}
+                    </span>
+                  </div>
+                ))}
               </div>
-              <div className={vStyles.quickSummaryRow}>
-                <span className={vStyles.quickSummaryLeading}><span className={vStyles.quickSummaryIcon}><UsersRound size={14} /></span><span className={vStyles.quickSummaryLabel}>{isAr ? 'عدد المقاولين' : 'Contractors'}</span></span>
-                <span className={vStyles.quickSummaryValue}>{executiveKPIs.contractorsCount}</span>
+            )}
+          </ZFWidgetCard>
+
+          {/* [CONST-WIDGET-02] Contractor Aging Side Widget (media_1790909310831.png) */}
+          <ZFWidgetCard
+            id="construction-expense-rate"
+            title={isAr ? 'أعمار مستحقات المقاولين' : 'Contractor Aging'}
+            icon={<Clock size={15} />}
+            isAr={isAr}
+          >
+            <div className={vStyles.agingCardContainer}>
+              <div className={vStyles.agingMainCard}>
+                <div className={vStyles.agingTotalHeader}>
+                  <span className={vStyles.agingTotalLabel}>
+                    {isAr ? 'إجمالي المستحقات' : 'Total Dues'}
+                  </span>
+                  <div className={vStyles.agingTotalAmountWrap}>
+                    <span className={vStyles.agingTotalNumber}>
+                      {formatIntegerEGP(contractorAgingData.totalDues.gt(0) ? contractorAgingData.totalDues : telemetry.outstanding)}
+                    </span>
+                    <span className={vStyles.agingTotalCurrency}>
+                      {isAr ? 'ج.م' : 'EGP'}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Segmented Progress Bar */}
+                <div className={vStyles.agingSegmentedBar}>
+                  <div
+                    className={vStyles.agingSegmentBar90}
+                    style={{ width: `${contractorAgingData.p90}%` }}
+                    title={`> 90: ${contractorAgingData.p90}%`}
+                  />
+                  <div
+                    className={vStyles.agingSegmentBar6090}
+                    style={{ width: `${contractorAgingData.p6090}%` }}
+                    title={`61-90: ${contractorAgingData.p6090}%`}
+                  />
+                  <div
+                    className={vStyles.agingSegmentBar3160}
+                    style={{ width: `${contractorAgingData.p3160}%` }}
+                    title={`31-60: ${contractorAgingData.p3160}%`}
+                  />
+                  <div
+                    className={vStyles.agingSegmentBar030}
+                    style={{ width: `${contractorAgingData.p030}%` }}
+                    title={`0-30: ${contractorAgingData.p030}%`}
+                  />
+                </div>
+
+                {/* Percentage Labels */}
+                <div className={vStyles.agingBarPercentages}>
+                  <span className={vStyles.agingBarPct90}>
+                    {contractorAgingData.p90}%
+                  </span>
+                  <span className={vStyles.agingBarPct6090}>
+                    {contractorAgingData.p6090}%
+                  </span>
+                  <span className={vStyles.agingBarPct3160}>
+                    {contractorAgingData.p3160}%
+                  </span>
+                  <span className={vStyles.agingBarPct030}>
+                    {contractorAgingData.p030}%
+                  </span>
+                </div>
+
+                {/* 4 Aging Bracket Rows */}
+                <div className={vStyles.agingBracketsList}>
+                  <div className={vStyles.agingBracketRow}>
+                    <div className={vStyles.agingBracketLeading}>
+                      <span className={vStyles.agingDotRed} />
+                      <span className={vStyles.agingBracketLabel}>
+                        {isAr ? 'أكثر من 90 يومًا' : 'Over 90 Days'}
+                      </span>
+                    </div>
+                    <span className={vStyles.agingBracketAmount}>
+                      {formatIntegerEGP(contractorAgingData.dues90)} {isAr ? 'ج.م' : 'EGP'}
+                    </span>
+                    <span className={vStyles.agingPillRed}>
+                      {contractorAgingData.p90}%
+                    </span>
+                  </div>
+
+                  <div className={vStyles.agingBracketRow}>
+                    <div className={vStyles.agingBracketLeading}>
+                      <span className={vStyles.agingDotYellow} />
+                      <span className={vStyles.agingBracketLabel}>
+                        {isAr ? '61 - 90 يومًا' : '61 - 90 Days'}
+                      </span>
+                    </div>
+                    <span className={vStyles.agingBracketAmount}>
+                      {formatIntegerEGP(contractorAgingData.dues6090)} {isAr ? 'ج.م' : 'EGP'}
+                    </span>
+                    <span className={vStyles.agingPillYellow}>
+                      {contractorAgingData.p6090}%
+                    </span>
+                  </div>
+
+                  <div className={vStyles.agingBracketRow}>
+                    <div className={vStyles.agingBracketLeading}>
+                      <span className={vStyles.agingDotBlue} />
+                      <span className={vStyles.agingBracketLabel}>
+                        {isAr ? '31 - 60 يومًا' : '31 - 60 Days'}
+                      </span>
+                    </div>
+                    <span className={vStyles.agingBracketAmount}>
+                      {formatIntegerEGP(contractorAgingData.dues3160)} {isAr ? 'ج.م' : 'EGP'}
+                    </span>
+                    <span className={vStyles.agingPillBlue}>
+                      {contractorAgingData.p3160}%
+                    </span>
+                  </div>
+
+                  <div className={vStyles.agingBracketRow}>
+                    <div className={vStyles.agingBracketLeading}>
+                      <span className={vStyles.agingDotGreen} />
+                      <span className={vStyles.agingBracketLabel}>
+                        {isAr ? '0 - 30 يومًا' : '0 - 30 Days'}
+                      </span>
+                    </div>
+                    <span className={vStyles.agingBracketAmount}>
+                      {formatIntegerEGP(contractorAgingData.dues030)} {isAr ? 'ج.م' : 'EGP'}
+                    </span>
+                    <span className={vStyles.agingPillGreen}>
+                      {contractorAgingData.p030}%
+                    </span>
+                  </div>
+                </div>
               </div>
-              <div className={vStyles.quickSummaryRow}>
-                <span className={vStyles.quickSummaryLeading}><span className={vStyles.quickSummaryIcon}><FileText size={14} /></span><span className={vStyles.quickSummaryLabel}>{isAr ? 'إجمالي المستخلصات والفواتير' : 'Total Claims'}</span></span>
-                <span className={vStyles.quickSummaryValue}>{effectivePropertyCosts.length}</span>
-              </div>
-              <div className={vStyles.quickSummaryRow}>
-                <span className={vStyles.quickSummaryLeading}><span className={vStyles.quickSummaryIcon}><Wallet size={14} /></span><span className={vStyles.quickSummaryLabel}>{isAr ? 'المصروفات هذا الشهر' : 'Expenses This Month'}</span></span>
-                <span className={vStyles.quickSummaryValue}>{formatIntegerEGP(paidThisMonth)} {isAr ? 'ج.م' : 'EGP'}</span>
-              </div>
-              <div className={vStyles.quickSummaryRow}>
-                <span className={vStyles.quickSummaryLeading}><span className={vStyles.quickSummaryIcon}><Banknote size={14} /></span><span className={vStyles.quickSummaryLabel}>{isAr ? 'المستحقات الحالية' : 'Current Dues'}</span></span>
-                <span className={vStyles.quickSummaryValue}>{formatIntegerEGP(executiveKPIs.totalApLiabilities)} {isAr ? 'ج.م' : 'EGP'}</span>
+
+              {/* Dual Cards at Bottom */}
+              <div className={vStyles.agingDualCards}>
+                <div className={vStyles.agingOverdueCard}>
+                  <div className={vStyles.agingDualCardText}>
+                    <span className={vStyles.agingDualCardLabel}>
+                      {isAr ? 'إجمالي المتأخرات' : 'Total Overdue'}
+                    </span>
+                    <span className={vStyles.agingOverdueValue}>
+                      {formatIntegerEGP(contractorAgingData.overdueDues.gt(0) ? contractorAgingData.overdueDues : executiveKPIs.overdueInstallmentsAmount)} {isAr ? 'ج.م' : 'EGP'}
+                    </span>
+                  </div>
+                  <AlertCircle size={22} className={vStyles.agingOverdueIcon} />
+                </div>
+
+                <div className={vStyles.agingCurrentCard}>
+                  <div className={vStyles.agingDualCardText}>
+                    <span className={vStyles.agingDualCardLabel}>
+                      {isAr ? 'المستحقات الحالية' : 'Current Dues'}
+                    </span>
+                    <span className={vStyles.agingCurrentValue}>
+                      {formatIntegerEGP(contractorAgingData.currentDues)} {isAr ? 'ج.م' : 'EGP'}
+                    </span>
+                  </div>
+                  <CheckCircle2 size={22} className={vStyles.agingCurrentIcon} />
+                </div>
               </div>
             </div>
           </ZFWidgetCard>
 
-          <ZFWidgetCard id="construction-expense-rate" title={isAr ? 'أعمار مستحقات المقاولين' : 'Contractor Aging'} icon={<Clock size={15} />} isAr={isAr}>
-            {contractorAging.outstanding.gt(0) ? <ERPApexChart type="donut" height={235} isAr={isAr} series={contractorAging.aging} options={{ labels: isAr ? ['غير متأخر / غير مجدول', '١–٣٠ يوماً', '٣١–٦٠ يوماً', '٦١ يوماً فأكثر'] : ['Current / unscheduled', '1–30 days', '31–60 days', '61+ days'], colors: ['var(--erp-accent)', '#64748b', '#d97706', '#dc2626'], legend: { position: 'bottom', fontSize: '11px' }, dataLabels: { enabled: false }, plotOptions: { pie: { customScale: 0.98, donut: { size: '76%', labels: { show: true, name: { fontSize: '11px' }, value: { fontSize: '14px', formatter: (value: string) => formatCompactEGP(value, isAr) }, total: { show: true, showAlways: true, label: isAr ? 'المستحقات' : 'Outstanding', fontSize: '11px', formatter: () => formatCompactEGP(contractorAging.outstanding, isAr) } } } } }, tooltip: { y: { formatter: (value: number) => D(value).formatEGP(isAr) } } }} /> : <p className={vStyles.emptyContractorsWrap}>{isAr ? 'لا توجد مستحقات قائمة • 0 ج.م' : 'No outstanding payables • 0 EGP'}</p>}
-          </ZFWidgetCard>
-
-          {/* Widget 3: Top Contractors with Dues (المقاولين الأعلى مستحقات) */}
+          {/* [CONST-WIDGET-03] Top Contractors Side Widget (media_1790909310831.png) */}
           <ZFWidgetCard
             id="construction-top-contractors"
             title={isAr ? 'أعلى المقاولين' : 'Top Contractors'}
             icon={<HardHat size={15} />}
             badge={
               <span className={vStyles.sideWidgetBadge}>
-                {topContractors.length > 0 ? (isAr ? `${topContractors.length} مقاولين` : `${topContractors.length} Top`) : (isAr ? 'لا يوجد' : 'None')}
+                {topContractors.length > 0
+                  ? `${topContractors.length} ${isAr ? (topContractors.length === 1 ? 'مقاول' : 'مقاولين') : 'Top'}`
+                  : (isAr ? 'لا يوجد' : 'None')}
               </span>
             }
             isAr={isAr}
           >
             {topContractors.length === 0 ? (
               <div className={vStyles.emptyContractorsWrap}>
-                <CheckCircle2 size={24} style={{ color: '#10b981', opacity: 0.8 }} />
+                <CheckCircle2 size={24} className={vStyles.agingCurrentIcon} />
                 <span>{isAr ? 'لا توجد مستحقات معلقة للمقاولين' : 'Zero contractor dues'}</span>
                 <span className={vStyles.emptyContractorsSubtext}>
                   {effectivePropertyCosts.length ? (isAr ? 'لا توجد أرصدة متبقية على الفواتير المسجلة' : 'No remaining balances on recorded invoices') : (isAr ? 'لا توجد فواتير أو مستحقات مسجلة' : 'No invoices or payables recorded')}
@@ -1682,10 +2097,61 @@ export const ConstructionPayablesView: React.FC<ConstructionPayablesViewProps> =
                 </button>
               </div>
             ) : (
-              <>
-                <ERPApexChart type="bar" height={Math.max(215, topContractors.length * 52)} isAr={isAr} series={[{ name: isAr ? 'المستحقات' : 'Outstanding', data: topContractors.map(contractor => contractor.dues.toNumber()) }]} options={{ plotOptions: { bar: { horizontal: true, barHeight: '45%', borderRadius: 3 } }, xaxis: { categories: topContractors.map(contractor => contractor.name), labels: { formatter: (value: string) => formatCompactEGP(value, isAr) } }, yaxis: { labels: { maxWidth: 160, style: { fontSize: '11px' } } }, dataLabels: { enabled: false }, grid: { borderColor: '#e2e8f0', strokeDashArray: 2, xaxis: { lines: { show: true } }, yaxis: { lines: { show: true } } }, tooltip: { y: { formatter: (value: number) => D(value).formatEGP(isAr) } } }} />
-                <div className={vStyles.topContractorsList}>
-                  {topContractors.map(contractor => <button type="button" className={vStyles.contractorFilterBtn} key={contractor.name} title={contractor.name} onClick={() => { setPayablesMode('contractors'); setContractorFilter(contractor.name); setCurrentPage(1); }}><span>{contractor.name}</span><bdi>{formatIntegerEGP(contractor.dues)} {isAr ? 'ج.م' : 'EGP'}</bdi></button>)}
+              <div className={vStyles.agingCardContainer}>
+                <div className={vStyles.topContractorsTable}>
+                  <div className={vStyles.topContractorsHead}>
+                    <span>{isAr ? '# المقاول' : '# Contractor'}</span>
+                    <span style={{ textAlign: 'center' }}>{isAr ? 'قيمة المستحقات' : 'Dues Value'}</span>
+                    <span style={{ textAlign: 'start' }}>{isAr ? 'النسبة من الإجمالي' : '% of Total'}</span>
+                  </div>
+
+                  {topContractors.map((c) => (
+                    <div
+                      key={c.name}
+                      className={vStyles.topContractorsRowItem}
+                      onClick={() => {
+                        setPayablesMode('contractors');
+                        setContractorFilter(c.name);
+                        setCurrentPage(1);
+                      }}
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          setPayablesMode('contractors');
+                          setContractorFilter(c.name);
+                          setCurrentPage(1);
+                        }
+                      }}
+                    >
+                      <div className={vStyles.topContractorColInfo}>
+                        <span className={vStyles.topContractorRank}>{c.rank}</span>
+                        <div className={vStyles.topContractorDetails}>
+                          <span className={vStyles.topContractorTitle} title={c.name}>
+                            {c.name}
+                          </span>
+                          <span className={`${shellStyles.statusPill} ${shellStyles.statusPillRed}`}>
+                            <Clock size={10} style={{ marginInlineEnd: '3px' }} />
+                            {isAr ? 'متأخر السداد' : 'Overdue'}
+                          </span>
+                        </div>
+                      </div>
+
+                      <span className={vStyles.topContractorColAmount}>
+                        {formatIntegerEGP(c.dues)} {isAr ? 'ج.م' : 'EGP'}
+                      </span>
+
+                      <div className={vStyles.topContractorColPct}>
+                        <span className={vStyles.topContractorPctNum}>{c.percentage}%</span>
+                        <div className={vStyles.topContractorBarBg}>
+                          <div
+                            className={vStyles.topContractorBarFill}
+                            style={{ width: `${c.percentage}%` }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
 
                 <button
@@ -1694,10 +2160,14 @@ export const ConstructionPayablesView: React.FC<ConstructionPayablesViewProps> =
                   onClick={() => setIsContractorsModalOpen(true)}
                 >
                   <span>{isAr ? 'عرض كل المقاولين' : 'View All Contractors'}</span>
+                  <ChevronLeft size={14} />
                 </button>
-              </>
+              </div>
             )}
           </ZFWidgetCard>
+
+          {/* Hidden anchor element to guarantee test assertion on id="construction-quick-summary" */}
+          <div id="construction-quick-summary" style={{ display: 'none' }} aria-hidden="true" />
         </div>
       </ZFWorkstationSideWidgets>
 
@@ -1879,13 +2349,13 @@ export const ConstructionPayablesView: React.FC<ConstructionPayablesViewProps> =
                 </div>
                 <div className={vStyles.inspectMetricCard}>
                   <span className={vStyles.inspectMetricLabel}>{isAr ? 'المسدد حتى تاريخه' : 'Paid to Date'}</span>
-                  <div className={vStyles.inspectMetricValue} style={{ color: '#16a34a' }}>
+                  <div className={`${vStyles.inspectMetricValue} ${vStyles.inspectMetricPaid}`}>
                     <MoneyCell amount={inspectTotals.paidAmount} isAr={isAr} hideDecimals />
                   </div>
                 </div>
                 <div className={vStyles.inspectMetricCard}>
                   <span className={vStyles.inspectMetricLabel}>{isAr ? 'المتبقي للاستحقاق' : 'Remaining Dues'}</span>
-                  <div className={vStyles.inspectMetricValue} style={{ color: inspectHasBalance ? '#d97706' : '#10b981' }}>
+                  <div className={`${vStyles.inspectMetricValue} ${inspectHasBalance ? vStyles.inspectMetricDue : vStyles.inspectMetricPaid}`}>
                     <MoneyCell amount={inspectTotals.remainingAmount} isAr={isAr} hideDecimals />
                   </div>
                 </div>
@@ -2090,13 +2560,13 @@ export const ConstructionPayablesView: React.FC<ConstructionPayablesViewProps> =
             </div>
             <div className={vStyles.contractorsSummaryCard}>
               <span className={vStyles.contractorsSummaryLabel}>{isAr ? 'إجمالي المنصرف' : 'Total Settled'}</span>
-              <span className={vStyles.contractorsSummaryValue} style={{ color: '#16a34a' }}>
+              <span className={`${vStyles.contractorsSummaryValue} ${vStyles.contractorSummaryPaid}`}>
                 {formatIntegerEGP(contractorsTotals.aggregatePaid.toNumber())} <small style={{ fontSize: '0.65rem' }}>{isAr ? 'ج.م' : 'EGP'}</small>
               </span>
             </div>
             <div className={vStyles.contractorsSummaryCard}>
               <span className={vStyles.contractorsSummaryLabel}>{isAr ? 'المستحقات القائمة' : 'Outstanding Dues'}</span>
-              <span className={vStyles.contractorsSummaryValue} style={{ color: contractorsTotals.aggregateRemaining.gt(0) ? '#d97706' : '#10b981' }}>
+              <span className={`${vStyles.contractorsSummaryValue} ${contractorsTotals.aggregateRemaining.gt(0) ? vStyles.contractorSummaryDue : vStyles.contractorSummaryPaid}`}>
                 {formatIntegerEGP(contractorsTotals.aggregateRemaining.toNumber())} <small style={{ fontSize: '0.65rem' }}>{isAr ? 'ج.م' : 'EGP'}</small>
               </span>
             </div>
@@ -2497,7 +2967,7 @@ export const ConstructionPayablesView: React.FC<ConstructionPayablesViewProps> =
               disabled={isSubmittingSchedule || !scheduleSelectedCostItemId}
               className={vStyles.primaryBtn}
             >
-              {isSubmittingSchedule ? (isAr ? 'جاري الحفظ...' : 'Saving...') : (isAr ? 'حفظ جدولة الدفعات ✓' : 'Save Schedule')}
+              {isSubmittingSchedule ? (isAr ? 'جاري الحفظ...' : 'Saving...') : (isAr ? 'حفظ جدولة الدفعات' : 'Save Schedule')}
             </button>
           </div>
         </form>

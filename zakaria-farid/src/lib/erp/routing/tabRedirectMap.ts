@@ -78,6 +78,8 @@ export const TABS_WITH_SIDE_WIDGETS = new Set<string>([
   'analysis',
   'partners',
   'partner',
+  'calculator',
+  'feasibility',
 ]);
 
 export function isSideWidgetsTab(tab: string): boolean {

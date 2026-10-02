@@ -148,13 +148,19 @@ export const PartnersAnalyticsCharts: React.FC<PartnersAnalyticsChartsProps> = (
     plotOptions: {
       bar: {
         horizontal: false,
-        columnWidth: '45%',
+        columnWidth: '38%',
         borderRadius: 4,
       }
     },
     dataLabels: { enabled: false },
     stroke: { show: true, width: 2, colors: ['transparent'] },
-    colors: ['#2563eb', '#64748b'],
+    colors: ['var(--erp-accent, #2563eb)', '#64748b'],
+    grid: {
+      borderColor: '#e2e8f0',
+      strokeDashArray: 2,
+      xaxis: { lines: { show: true } },
+      yaxis: { lines: { show: true } }
+    },
     xaxis: {
       categories: capitalComparisonData.categories,
       labels: {
@@ -188,7 +194,30 @@ export const PartnersAnalyticsCharts: React.FC<PartnersAnalyticsChartsProps> = (
       fontFamily: 'inherit',
     },
     labels: roleDistributionData.labels,
-    colors: ['#2563eb', '#3b82f6', '#d97706', '#64748b'],
+    colors: ['var(--erp-accent, #2563eb)', '#0d9488', '#d97706', '#64748b'],
+    plotOptions: {
+      pie: {
+        donut: {
+          size: '72%',
+          labels: {
+            show: true,
+            total: {
+              show: true,
+              showAlways: true,
+              label: isAr ? 'إجمالي المساهمات' : 'Total Capital',
+              fontSize: '12px',
+              fontFamily: 'inherit',
+              color: '#64748b',
+              formatter: (w) => {
+                const sum = w.globals.seriesTotals.reduce((a: number, b: number) => a + b, 0);
+                if (sum >= 1000000) return `${(sum / 1000000).toFixed(1)} ${isAr ? 'مليون ج.م' : 'M EGP'}`;
+                return `${sum.toLocaleString('en-US')} ${isAr ? 'ج.م' : 'EGP'}`;
+              }
+            }
+          }
+        }
+      }
+    },
     dataLabels: {
       enabled: true,
       formatter: (val: number) => `${Math.round(val)}%`

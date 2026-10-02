@@ -1,14 +1,18 @@
 /* PropertyAnalysisSideWidgets.module.css
-   Matches reference images:
-   - media_1790747012111.png (توزيع حالة العقارات والوحدات)
-   - media_1790747016468.jpg (دليل المشروعات السريع)
-   FIN-OS Invariants: Pure white panels (#ffffff !important;), 1px border (#cbd5e1), 12px radius, tabular-nums
+   FIN-OS ERP Strict Invariants:
+   - Pure white panels (#ffffff !important;)
+   - 1px border (#cbd5e1)
+   - 12px border radius
+   - Tightened padding (0.75rem 0.85rem)
+   - 28x28px squircle icons consuming var(--erp-accent)
+   - Tabular figures (font-variant-numeric: tabular-nums)
+   - Clean ERP semantic color palette (No legacy gold, no red for non-errors)
 */
 
 .sideWidgetsContainer {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 0.75rem;
   width: 100%;
   box-sizing: border-box;
 }
@@ -18,8 +22,8 @@
   background: #ffffff !important;
   border: 1px solid var(--erp-border, #cbd5e1);
   border-radius: 12px;
-  padding: 1rem;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  padding: 0.75rem 0.85rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04); /* design-lint: allow R20 neutral shadow */
   box-sizing: border-box;
   width: 100%;
 }
@@ -28,68 +32,56 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 0.85rem;
+  margin-bottom: 0.5rem;
 }
 
 .widgetTitleWrap {
   display: flex;
   align-items: center;
-  gap: 0.6rem;
+  gap: 0.5rem;
 }
 
 .widgetTitle {
-  font-size: 0.95rem;
+  font-size: 0.875rem;
   font-weight: 800;
   color: var(--erp-text-title, #0f172a);
   margin: 0;
-  line-height: 1.3;
+  line-height: 1.25;
 }
 
-.iconSquircleRed {
-  width: 32px;
-  height: 32px;
-  min-width: 32px;
-  border-radius: 8px;
-  background: #fef2f2;
-  border: 1px solid #fecaca;
-  color: #dc2626;
+.iconSquircle {
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+  border-radius: 7px;
+  background: var(--erp-accent-subtle, #f8fafc);
+  border: 1px solid var(--erp-accent-tint, #e2e8f0);
+  color: var(--erp-accent, #2563eb);
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
 }
 
-.iconSquircleGold {
-  width: 32px;
-  height: 32px;
-  min-width: 32px;
-  border-radius: 8px;
-  background: var(--erp-accent-subtle, #fef9ee);
-  border: 1px solid var(--erp-accent-tint, #fde68a);
-  color: var(--erp-accent, #b8903e);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-/* WIDGET 1: DISTRIBUTION SPECIFICS (media_1790747012111.png) */
+/* WIDGET 1: DISTRIBUTION SPECIFICS */
 .totalBox {
   background: #f8fafc;
   border: 1px solid #e2e8f0;
-  border-radius: 10px;
-  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  padding: 0.5rem 0.75rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
 }
 
 .totalLabel {
-  font-size: 0.8rem;
+  font-size: 0.75rem;
   color: var(--erp-text-muted, #64748b);
-  margin-bottom: 0.15rem;
+  margin-bottom: 0.1rem;
 }
 
 .totalAmount {
-  font-size: 1.4rem;
+  font-size: 1.25rem;
   font-weight: 800;
   color: var(--erp-text-title, #0f172a);
   font-variant-numeric: tabular-nums;
@@ -97,7 +89,7 @@
 }
 
 .totalIconBox {
-  color: #475569;
+  color: #64748b;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -105,25 +97,25 @@
 
 /* Stacked Bar */
 .stackedBarWrap {
-  margin: 1rem 0 0.5rem;
+  margin: 0.65rem 0 0.35rem;
 }
 
 .stackedBarTrack {
-  height: 32px;
-  border-radius: 8px;
+  height: 24px;
+  border-radius: 6px;
   overflow: hidden;
   display: flex;
   width: 100%;
-  direction: ltr; /* LTR order matching media_1790747012111.png: Red -> Blue -> Green */
+  direction: ltr;
 }
 
-.barSegmentRed {
-  background: #dc2626;
+.barSegmentSold {
+  background: var(--erp-accent, #2563eb);
   color: #ffffff;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.78rem;
+  font-size: 0.72rem;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   min-width: 24px;
@@ -131,12 +123,12 @@
 }
 
 .barSegmentBlue {
-  background: #0284c7;
+  background: #2563eb;
   color: #ffffff;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.78rem;
+  font-size: 0.72rem;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   min-width: 24px;
@@ -149,7 +141,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.78rem;
+  font-size: 0.72rem;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   min-width: 24px;
@@ -160,12 +152,12 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-top: 0.35rem;
+  margin-top: 0.25rem;
   direction: ltr;
 }
 
 .scaleTick {
-  font-size: 0.68rem;
+  font-size: 0.65rem;
   color: var(--erp-text-muted, #64748b);
   font-variant-numeric: tabular-nums;
   position: relative;
@@ -176,7 +168,7 @@
   content: '';
   display: block;
   width: 1px;
-  height: 4px;
+  height: 3px;
   background: #cbd5e1;
   margin: 0 auto 2px;
 }
@@ -185,20 +177,20 @@
 .distributionTable {
   width: 100%;
   border-collapse: collapse;
-  margin-top: 0.85rem;
+  margin-top: 0.5rem;
 }
 
 .distTheadTh {
   background: #f8fafc;
-  padding: 0.5rem 0.75rem;
-  font-size: 0.75rem;
+  padding: 0.4rem 0.6rem;
+  font-size: 0.72rem;
   font-weight: 700;
   color: var(--erp-text-muted, #64748b);
 }
 
 .distTheadTh:first-child {
-  border-top-right-radius: 8px;
-  border-bottom-right-radius: 8px;
+  border-top-right-radius: 6px;
+  border-bottom-right-radius: 6px;
   text-align: right;
 }
 
@@ -207,8 +199,8 @@
 }
 
 .distTheadTh:last-child {
-  border-top-left-radius: 8px;
-  border-bottom-left-radius: 8px;
+  border-top-left-radius: 6px;
+  border-bottom-left-radius: 6px;
   text-align: left;
 }
 
@@ -221,19 +213,19 @@
 }
 
 .distTdStatus {
-  padding: 0.65rem 0.75rem;
-  font-size: 0.8125rem;
+  padding: 0.45rem 0.6rem;
+  font-size: 0.75rem;
   font-weight: 600;
   color: var(--erp-text-title, #0f172a);
   text-align: right;
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.4rem;
 }
 
 .distTdCount {
-  padding: 0.65rem 0.75rem;
-  font-size: 0.8125rem;
+  padding: 0.45rem 0.6rem;
+  font-size: 0.75rem;
   font-weight: 700;
   color: var(--erp-text-title, #0f172a);
   font-variant-numeric: tabular-nums;
@@ -241,54 +233,54 @@
 }
 
 .distTdPct {
-  padding: 0.65rem 0.75rem;
-  font-size: 0.8125rem;
+  padding: 0.45rem 0.6rem;
+  font-size: 0.75rem;
   font-weight: 700;
   color: var(--erp-text-title, #0f172a);
   font-variant-numeric: tabular-nums;
   text-align: left;
 }
 
-.statusDotRed {
-  width: 10px;
-  height: 10px;
+.statusDotAccent {
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
-  background: #dc2626;
+  background: var(--erp-accent, #2563eb);
   flex-shrink: 0;
 }
 
 .statusDotBlue {
-  width: 10px;
-  height: 10px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
-  background: #0284c7;
+  background: #2563eb;
   flex-shrink: 0;
 }
 
 .statusDotGreen {
-  width: 10px;
-  height: 10px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
   background: #10b981;
   flex-shrink: 0;
 }
 
-/* WIDGET 2: QUICK DIRECTORY SPECIFICS (media_1790747016468.jpg) */
-.pillCountGold {
-  background: var(--erp-accent-subtle, #fef9ee);
-  border: 1px solid var(--erp-accent-tint, #fde68a);
-  color: var(--erp-accent, #b8903e);
-  font-size: 0.75rem;
+/* WIDGET 2: QUICK DIRECTORY SPECIFICS */
+.pillCountNeutral {
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  color: var(--erp-text-title, #0f172a);
+  font-size: 0.72rem;
   font-weight: 700;
-  padding: 0.2rem 0.6rem;
+  padding: 0.15rem 0.5rem;
   border-radius: 6px;
   font-variant-numeric: tabular-nums;
 }
 
 .headerToggleBtn {
-  width: 28px;
-  height: 28px;
-  border-radius: 7px;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
   background: #f8fafc;
   border: 1px solid #cbd5e1;
   color: #64748b;
@@ -307,8 +299,8 @@
 .searchSortRow {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  margin-top: 0.75rem;
+  gap: 0.4rem;
+  margin-top: 0.5rem;
 }
 
 .directorySearchInputWrap {
@@ -318,7 +310,7 @@
 
 .directorySearchIcon {
   position: absolute;
-  right: 10px;
+  right: 8px;
   top: 50%;
   transform: translateY(-50%);
   color: #94a3b8;
@@ -327,10 +319,10 @@
 
 .directorySearchInput {
   width: 100%;
-  padding: 0.45rem 2rem 0.45rem 0.65rem;
+  padding: 0.35rem 1.8rem 0.35rem 0.55rem;
   border: 1px solid #cbd5e1;
-  border-radius: 8px;
-  font-size: 0.78rem;
+  border-radius: 6px;
+  font-size: 0.75rem;
   font-family: inherit;
   background: #ffffff;
   color: #0f172a;
@@ -349,10 +341,10 @@
 .sortSelectBtn {
   display: flex;
   align-items: center;
-  gap: 0.35rem;
-  padding: 0.45rem 0.65rem;
+  gap: 0.25rem;
+  padding: 0.35rem 0.55rem;
   border: 1px solid #cbd5e1;
-  border-radius: 8px;
+  border-radius: 6px;
   background: #ffffff;
   font-size: 0.72rem;
   font-weight: 600;
@@ -368,10 +360,10 @@
 /* Macro Overview Link Banner */
 .overviewBannerCard {
   background: #ffffff;
-  border: 1px solid var(--erp-accent-tint, #fde68a);
-  border-radius: 10px;
-  padding: 0.75rem 1rem;
-  margin-top: 0.75rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 0.55rem 0.75rem;
+  margin-top: 0.5rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -381,14 +373,14 @@
 }
 
 .overviewBannerCard:hover {
-  background: var(--erp-accent-subtle, #fef9ee);
-  border-color: var(--erp-accent, #b8903e);
+  background: var(--erp-accent-subtle, #f8fafc);
+  border-color: var(--erp-accent, #2563eb);
 }
 
 .overviewBannerLeading {
   display: flex;
   align-items: center;
-  gap: 0.6rem;
+  gap: 0.5rem;
 }
 
 .overviewBannerTexts {
@@ -398,46 +390,45 @@
 }
 
 .overviewBannerTitle {
-  font-size: 0.8125rem;
+  font-size: 0.78rem;
   font-weight: 800;
   color: var(--erp-text-title, #0f172a);
 }
 
 .overviewBannerSub {
-  font-size: 0.6875rem;
+  font-size: 0.65rem;
   color: var(--erp-text-muted, #64748b);
 }
 
 .overviewBannerAction {
   display: flex;
   align-items: center;
-  gap: 0.3rem;
-  font-size: 0.75rem;
+  gap: 0.25rem;
+  font-size: 0.72rem;
   font-weight: 700;
-  color: var(--erp-accent, #b8903e);
+  color: var(--erp-accent, #2563eb);
 }
 
 /* Property Directory Cards List */
 .directoryCardsList {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
-  margin-top: 0.75rem;
-  max-height: 440px;
+  gap: 0.45rem;
+  margin-top: 0.5rem;
+  max-height: 480px;
   overflow-y: auto;
   scrollbar-width: thin;
-  padding-left: 2px;
+  padding-left: 1px;
 }
 
 .directoryCard {
   background: #ffffff;
   border: 1px solid #e2e8f0;
-  border-radius: 10px;
-  padding: 0.65rem 0.75rem;
+  border-radius: 8px;
+  padding: 0.55rem 0.65rem;
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
+  flex-direction: column;
+  gap: 0.4rem;
   cursor: pointer;
   transition: all 140ms ease;
   box-sizing: border-box;
@@ -449,19 +440,39 @@
 }
 
 .directoryCardActive {
-  border-color: var(--erp-accent, #b8903e) !important;
-  box-shadow: 0 0 0 1px var(--erp-accent, #b8903e);
-  background: var(--erp-accent-subtle, #fef9ee) !important;
+  border-color: var(--erp-accent, #2563eb) !important;
+  box-shadow: 0 0 0 1px var(--erp-accent, #2563eb);
+  background: var(--erp-accent-subtle, #f8fafc) !important;
+}
+
+.directoryCardTopRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
 }
 
 .directoryCardThumb {
-  width: 58px;
-  height: 58px;
-  min-width: 58px;
-  border-radius: 8px;
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  border-radius: 6px;
   object-fit: cover;
   flex-shrink: 0;
   background: #f1f5f9;
+}
+
+.directoryCardThumbPlaceholder {
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  border-radius: 6px;
+  background: #f1f5f9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #94a3b8;
+  flex-shrink: 0;
 }
 
 .directoryCardInfo {
@@ -475,82 +486,90 @@
 .directoryTitleLine {
   display: flex;
   align-items: center;
-  gap: 0.4rem;
+  gap: 0.35rem;
 }
 
 .directoryCardTitle {
-  font-size: 0.8125rem;
+  font-size: 0.78rem;
   font-weight: 700;
-  color: var(--erp-text-title, #0f172a);
+  color: #0f172a;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 140px;
+}
+
+.directoryMetaLine {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.68rem;
+  color: #64748b;
 }
 
 .directoryCardLocation {
-  font-size: 0.6875rem;
-  color: var(--erp-text-muted, #64748b);
   display: flex;
   align-items: center;
-  gap: 3px;
+  gap: 2px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .directoryCardUnits {
-  font-size: 0.6875rem;
-  color: var(--erp-text-muted, #64748b);
   display: flex;
   align-items: center;
-  gap: 3px;
-}
-
-.directoryCardActionCol {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
+  gap: 2px;
+  font-variant-numeric: tabular-nums;
   flex-shrink: 0;
 }
 
-.directorySpentBlock {
+/* Progression bar in directory card */
+.cardProgressRow {
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  text-align: right;
+  align-items: center;
+  gap: 0.45rem;
+  margin-top: 0.1rem;
+}
+
+.cardProgressTrack {
+  flex: 1;
+  height: 4px;
+  background: #e2e8f0;
+  border-radius: 9999px;
+  overflow: hidden;
+}
+
+.cardProgressBar {
+  height: 100%;
+  border-radius: 9999px;
+  transition: width 200ms ease;
+}
+
+.cardProgressText {
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: #64748b;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Incurred cost line */
+.directoryCardFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-top: 1px solid #f1f5f9;
+  padding-top: 0.3rem;
+  margin-top: 0.1rem;
 }
 
 .directorySpentLabel {
-  font-size: 0.625rem;
+  font-size: 0.65rem;
   color: var(--erp-text-muted, #64748b);
 }
 
 .directorySpentAmount {
-  font-size: 0.8125rem;
+  font-size: 0.75rem;
   font-weight: 800;
   color: var(--erp-text-title, #0f172a);
   font-variant-numeric: tabular-nums;
-  line-height: 1.2;
-}
-
-.directoryArrowBtn {
-  width: 28px;
-  height: 28px;
-  border-radius: 7px;
-  background: #f8fafc;
-  border: 1px solid #cbd5e1;
-  color: #475569;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all 120ms ease;
-  flex-shrink: 0;
-}
-
-.directoryCard:hover .directoryArrowBtn {
-  background: #ffffff;
-  border-color: #94a3b8;
-  color: #0f172a;
 }

@@ -54,8 +54,6 @@ export interface OperationsTopKpisProps {
   activeStreamFilter?: string | null;
 }
 
-// 21 sparkline bars matching screenshot cadence exactly
-const SPARKLINE_BARS = [6, 16, 10, 13, 12, 11, 8, 11, 8, 9, 8, 9, 9, 10, 13, 11, 15, 16, 20, 11, 13];
 
 function toNum(val: unknown): number {
   if (val === null || val === undefined) return 0;
@@ -209,7 +207,7 @@ export const OperationsTopKpis: React.FC<OperationsTopKpisProps> = ({
               </div>
               <div className={styles.dotRow}>
                 <span className={styles.slateDot} />
-                <span className={styles.dotLabel}>{isAr ? 'بنوك:' : 'Banks:'}</span>
+                <span className={styles.dotLabel}>{isAr ? 'إنستاباي:' : 'InstaPay:'}</span>
                 <span className={styles.dotValue}>
                   <bdi>{displayBankCash} {currencyLabel}</bdi>
                 </span>
@@ -237,9 +235,9 @@ export const OperationsTopKpis: React.FC<OperationsTopKpisProps> = ({
               <span className={styles.barPct}>{safePct}%</span>
             </div>
 
-            {/* Bank Cash Bar */}
+            {/* Bank Cash Bar (InstaPay) */}
             <div className={styles.barItem}>
-              <span className={styles.barLabel}>{isAr ? 'بنوك' : 'Banks'}</span>
+              <span className={styles.barLabel}>{isAr ? 'إنستاباي' : 'InstaPay'}</span>
               <div className={styles.barTrackWrap}>
                 <div className={styles.barTrack}>
                   <div
@@ -358,18 +356,12 @@ export const OperationsTopKpis: React.FC<OperationsTopKpisProps> = ({
 
           <hr className={styles.hairlineDivider} />
 
-          <div className={styles.sparklineContainer}>
-            <div className={styles.sparklineBars} aria-hidden="true">
-              {SPARKLINE_BARS.map((height, idx) => (
-                <span
-                  key={idx}
-                  className={styles.sparklineBar}
-                  style={{ height: `${height}px` }}
-                />
-              ))}
-            </div>
-            <span className={styles.sparklineLabel}>
-              {isAr ? 'لا توجد مقبوضات اليوم' : 'No inflows today'}
+          <div className={styles.honestZeroState}>
+            <span className={styles.zeroStateText}>
+              {isAr ? 'لا توجد مقبوضات مسجلة اليوم' : 'No inflows recorded today'}
+            </span>
+            <span className={styles.zeroStateSubtext}>
+              <bdi>0</bdi> {currencyLabel}
             </span>
           </div>
         </div>
@@ -407,18 +399,12 @@ export const OperationsTopKpis: React.FC<OperationsTopKpisProps> = ({
 
           <hr className={styles.hairlineDivider} />
 
-          <div className={styles.sparklineContainer}>
-            <div className={styles.sparklineBars} aria-hidden="true">
-              {SPARKLINE_BARS.map((height, idx) => (
-                <span
-                  key={idx}
-                  className={styles.sparklineBar}
-                  style={{ height: `${height}px` }}
-                />
-              ))}
-            </div>
-            <span className={styles.sparklineLabel}>
-              {isAr ? 'لا توجد مدفوعات اليوم' : 'No outflows today'}
+          <div className={styles.honestZeroState}>
+            <span className={styles.zeroStateText}>
+              {isAr ? 'لا توجد مدفوعات مسجلة اليوم' : 'No outflows recorded today'}
+            </span>
+            <span className={styles.zeroStateSubtext}>
+              <bdi>0</bdi> {currencyLabel}
             </span>
           </div>
         </div>

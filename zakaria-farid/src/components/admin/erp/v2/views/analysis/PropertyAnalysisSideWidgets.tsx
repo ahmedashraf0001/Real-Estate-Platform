@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useState, useMemo } from 'react';
 import {
   PieChart as PieChartIcon,
@@ -121,15 +123,15 @@ export const PropertyAnalysisSideWidgets: React.FC<PropertyAnalysisSideWidgetsPr
 
   return (
     <div className={styles.sideWidgetsContainer} dir={isAr ? 'rtl' : 'ltr'}>
-      {/* WIDGET 1: توزيع حالة العقارات والوحدات (media_1790747012111.png) */}
+      {/* WIDGET 1: توزيع حالة العقارات والوحدات */}
       <div className={styles.widgetCard}>
         <div className={styles.widgetHeader}>
           <div className={styles.widgetTitleWrap}>
-            <div className={styles.iconSquircleRed}>
-              <PieChartIcon size={16} />
+            <div className={styles.iconSquircle}>
+              <PieChartIcon size={15} />
             </div>
             <h4 className={styles.widgetTitle}>
-              {isAr ? 'توزيع حالة العقارات والوحدات' : 'Property & Units Distribution'}
+              {isAr ? 'توزيع حالة العقارات' : 'Property Distribution'}
             </h4>
           </div>
         </div>
@@ -145,7 +147,7 @@ export const PropertyAnalysisSideWidgets: React.FC<PropertyAnalysisSideWidgetsPr
             </div>
           </div>
           <div className={styles.totalIconBox}>
-            <Building2 size={24} />
+            <Building2 size={20} />
           </div>
         </div>
 
@@ -154,7 +156,7 @@ export const PropertyAnalysisSideWidgets: React.FC<PropertyAnalysisSideWidgetsPr
           <div className={styles.stackedBarTrack}>
             {distribution.soldPct > 0 && (
               <div
-                className={styles.barSegmentRed}
+                className={styles.barSegmentSold}
                 style={{ width: `${distribution.soldPct}%` }}
                 title={`${isAr ? 'تم البيع' : 'Sold'}: ${distribution.soldPct}%`}
               >
@@ -204,7 +206,7 @@ export const PropertyAnalysisSideWidgets: React.FC<PropertyAnalysisSideWidgetsPr
           <tbody>
             <tr className={styles.distTr}>
               <td className={styles.distTdStatus}>
-                <span className={styles.statusDotRed} />
+                <span className={styles.statusDotAccent} />
                 <span>{isAr ? 'تم البيع' : 'Sold Out'}</span>
               </td>
               <td className={styles.distTdCount}>{distribution.soldCount}</td>
@@ -230,28 +232,28 @@ export const PropertyAnalysisSideWidgets: React.FC<PropertyAnalysisSideWidgetsPr
         </table>
       </div>
 
-      {/* WIDGET 2: دليل المشروعات السريع (media_1790747016468.jpg) */}
+      {/* WIDGET 2: دليل المشروعات السريع */}
       <div className={styles.widgetCard}>
         <div className={styles.widgetHeader}>
           <div className={styles.widgetTitleWrap}>
-            <div className={styles.iconSquircleGold}>
-              <Building2 size={16} />
+            <div className={styles.iconSquircle}>
+              <Building2 size={15} />
             </div>
             <h4 className={styles.widgetTitle}>
               {isAr ? 'دليل المشروعات السريع' : 'Quick Projects Directory'}
             </h4>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-            <span className={styles.pillCountGold}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+            <span className={styles.pillCountNeutral}>
               {filteredProperties.length} {isAr ? 'مشروع' : 'projects'}
             </span>
             <button
               type="button"
               className={styles.headerToggleBtn}
               onClick={() => setShowSortMenu((prev) => !prev)}
-              aria-label="Toggle filter"
+              aria-label={isAr ? 'خيارات الترتيب' : 'Sort options'}
             >
-              <ChevronDown size={14} />
+              <ChevronDown size={13} />
             </button>
           </div>
         </div>
@@ -259,12 +261,12 @@ export const PropertyAnalysisSideWidgets: React.FC<PropertyAnalysisSideWidgetsPr
         {/* Search & Sort Row */}
         <div className={styles.searchSortRow}>
           <div className={styles.directorySearchInputWrap}>
-            <Search size={14} className={styles.directorySearchIcon} />
+            <Search size={13} className={styles.directorySearchIcon} />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder={isAr ? 'ابحث بالعقار أو الموقع ...' : 'Search property or location...'}
+              placeholder={isAr ? 'بحث بالعقار أو الموقع...' : 'Search property or location...'}
               className={styles.directorySearchInput}
             />
           </div>
@@ -275,17 +277,17 @@ export const PropertyAnalysisSideWidgets: React.FC<PropertyAnalysisSideWidgetsPr
               className={styles.sortSelectBtn}
               onClick={() => setShowSortMenu((prev) => !prev)}
             >
-              <SlidersHorizontal size={12} />
+              <SlidersHorizontal size={11} />
               <span>
                 {sortBy === 'performance'
-                  ? isAr ? 'الأداء المالي' : 'Financial Perf'
+                  ? isAr ? 'الأداء' : 'Perf'
                   : sortBy === 'cost'
                   ? isAr ? 'المنصرف' : 'Cost'
                   : sortBy === 'name'
                   ? isAr ? 'الاسم' : 'Name'
                   : isAr ? 'الأحدث' : 'Newest'}
               </span>
-              <ChevronDown size={12} />
+              <ChevronDown size={11} />
             </button>
 
             {showSortMenu && (
@@ -299,9 +301,9 @@ export const PropertyAnalysisSideWidgets: React.FC<PropertyAnalysisSideWidgetsPr
                   background: '#ffffff',
                   border: '1px solid #cbd5e1',
                   borderRadius: '8px',
-                  boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                  boxShadow: '0 4px 12px rgba(15,23,42,0.1)',
                   zIndex: 20,
-                  minWidth: '130px',
+                  minWidth: '120px',
                   overflow: 'hidden'
                 }}
               >
@@ -316,7 +318,7 @@ export const PropertyAnalysisSideWidgets: React.FC<PropertyAnalysisSideWidgetsPr
                     type="button"
                     style={{
                       width: '100%',
-                      padding: '0.45rem 0.75rem',
+                      padding: '0.4rem 0.65rem',
                       textAlign: isAr ? 'right' : 'left',
                       background: sortBy === opt.key ? '#f8fafc' : '#ffffff',
                       border: 'none',
@@ -355,8 +357,8 @@ export const PropertyAnalysisSideWidgets: React.FC<PropertyAnalysisSideWidgetsPr
           }}
         >
           <div className={styles.overviewBannerLeading}>
-            <div className={styles.iconSquircleGold}>
-              <BarChart3 size={15} />
+            <div className={styles.iconSquircle}>
+              <BarChart3 size={14} />
             </div>
             <div className={styles.overviewBannerTexts}>
               <span className={styles.overviewBannerTitle}>
@@ -368,8 +370,8 @@ export const PropertyAnalysisSideWidgets: React.FC<PropertyAnalysisSideWidgetsPr
             </div>
           </div>
           <div className={styles.overviewBannerAction}>
-            <span>{isAr ? 'فتح النظرة الكلية' : 'Open Macro'}</span>
-            {isAr ? <ChevronLeft size={13} /> : <ChevronRight size={13} />}
+            <span>{isAr ? 'فتح' : 'Open'}</span>
+            {isAr ? <ChevronLeft size={12} /> : <ChevronRight size={12} />}
           </div>
         </div>
 
@@ -387,6 +389,9 @@ export const PropertyAnalysisSideWidgets: React.FC<PropertyAnalysisSideWidgetsPr
               const isSold = p.listing_status === 'sold' || pAnalysis?.status === 'sold';
               const isReady = p.completion_status === 'ready' || pAnalysis?.status === 'ready';
               const isUnderOffer = p.listing_status === 'under_offer' || pAnalysis?.status === 'under_offer';
+
+              // Visual progression for the project card
+              const progressPct = isSold ? 100 : isReady ? 85 : 45;
 
               const thumbUrl =
                 p.property_images && p.property_images.length > 0
@@ -413,95 +418,90 @@ export const PropertyAnalysisSideWidgets: React.FC<PropertyAnalysisSideWidgetsPr
                     }
                   }}
                 >
-                  {/* Left Column (Actions & Spent) */}
-                  <div className={styles.directoryCardActionCol}>
-                    <div className={styles.directorySpentBlock}>
-                      <span className={styles.directorySpentLabel}>
-                        {isAr ? 'المنصرف المالي' : 'Incurred Cost'}
-                      </span>
+                  <div className={styles.directoryCardTopRow}>
+                    {/* Thumbnail */}
+                    {thumbUrl ? (
+                      <img
+                        src={thumbUrl}
+                        alt={p.title_ar || p.title_en || ''}
+                        className={styles.directoryCardThumb}
+                      />
+                    ) : (
+                      <div className={styles.directoryCardThumbPlaceholder}>
+                        <Building2 size={18} />
+                      </div>
+                    )}
+
+                    {/* Info */}
+                    <div className={styles.directoryCardInfo}>
+                      <div className={styles.directoryTitleLine}>
+                        <span
+                          className={styles.directoryCardTitle}
+                          title={isAr ? p.title_ar : p.title_en}
+                        >
+                          {isAr ? p.title_ar : p.title_en}
+                        </span>
+                        <span
+                          style={{
+                            fontSize: '0.625rem',
+                            fontWeight: 700,
+                            padding: '0.1rem 0.35rem',
+                            borderRadius: '4px',
+                            background: isSold ? '#f1f5f9' : isReady ? '#ecfdf5' : '#eff6ff',
+                            color: isSold ? '#475569' : isReady ? '#059669' : '#0284c7',
+                            border: `1px solid ${isSold ? '#cbd5e1' : isReady ? '#a7f3d0' : '#bae6fd'}`,
+                            flexShrink: 0
+                          }}
+                        >
+                          {isSold
+                            ? isAr ? 'مباع' : 'Sold'
+                            : isReady
+                            ? isAr ? 'جاهز' : 'Ready'
+                            : isUnderOffer
+                            ? isAr ? 'محجوز' : 'Reserved'
+                            : isAr ? 'قيد الإنشاء' : 'In Progress'}
+                        </span>
+                      </div>
+
+                      <div className={styles.directoryMetaLine}>
+                        <div className={styles.directoryCardLocation}>
+                          <MapPin size={10} />
+                          <span>{p.location || (isAr ? 'غير محدد' : 'N/A')}</span>
+                        </div>
+                        <div className={styles.directoryCardUnits}>
+                          <Building2 size={10} />
+                          <span>{totalUnits} {isAr ? 'وحدة' : 'units'}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Progress Row (inherited from old dossier rail) */}
+                  <div className={styles.cardProgressRow}>
+                    <div className={styles.cardProgressTrack}>
+                      <div 
+                        className={styles.cardProgressBar}
+                        style={{ 
+                          width: `${progressPct}%`, 
+                          backgroundColor: isSold ? '#0284c7' : isReady ? '#10b981' : 'var(--erp-accent, #2563eb)' 
+                        }}
+                      />
+                    </div>
+                    <span className={styles.cardProgressText}>{progressPct}%</span>
+                  </div>
+
+                  {/* Footer (Incurred Capital & Arrow) */}
+                  <div className={styles.directoryCardFooter}>
+                    <span className={styles.directorySpentLabel}>
+                      {isAr ? 'المنصرف الرأسمالي:' : 'Capital Incurred:'}
+                    </span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
                       <span className={styles.directorySpentAmount}>
                         {formatCompactEGP(actualCost, isAr)}
                       </span>
-                    </div>
-                    <div className={styles.directoryArrowBtn}>
-                      {isAr ? <ChevronLeft size={14} /> : <ChevronRight size={14} />}
+                      {isAr ? <ChevronLeft size={12} color="#64748b" /> : <ChevronRight size={12} color="#64748b" />}
                     </div>
                   </div>
-
-                  {/* Middle Column (Info) */}
-                  <div className={styles.directoryCardInfo}>
-                    <div className={styles.directoryTitleLine}>
-                      {/* Status Pill */}
-                      <span
-                        style={{
-                          fontSize: '0.625rem',
-                          fontWeight: 700,
-                          padding: '0.12rem 0.4rem',
-                          borderRadius: '6px',
-                          background: isSold
-                            ? '#f1f5f9'
-                            : isReady
-                            ? '#ecfdf5'
-                            : '#eff6ff',
-                          color: isSold
-                            ? '#475569'
-                            : isReady
-                            ? '#059669'
-                            : '#0284c7',
-                          border: `1px solid ${
-                            isSold ? '#cbd5e1' : isReady ? '#a7f3d0' : '#bae6fd'
-                          }`
-                        }}
-                      >
-                        {isSold
-                          ? isAr ? 'مباع' : 'Sold'
-                          : isReady
-                          ? isAr ? 'جاهز' : 'Ready'
-                          : isUnderOffer
-                          ? isAr ? 'محجوز' : 'Reserved'
-                          : isAr ? 'قيد الإنشاء' : 'In Progress'}
-                      </span>
-                      <span
-                        className={styles.directoryCardTitle}
-                        title={isAr ? p.title_ar : p.title_en}
-                      >
-                        {isAr ? p.title_ar : p.title_en}
-                      </span>
-                    </div>
-
-                    <div className={styles.directoryCardLocation}>
-                      <MapPin size={11} />
-                      <span>{p.location || (isAr ? 'غير محدد' : 'N/A')}</span>
-                    </div>
-
-                    <div className={styles.directoryCardUnits}>
-                      <Building2 size={11} />
-                      <span style={{ fontVariantNumeric: 'tabular-nums' }}>
-                        {totalUnits} {isAr ? 'وحدات' : 'units'}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Right Column (Thumbnail) */}
-                  {thumbUrl ? (
-                    <img
-                      src={thumbUrl}
-                      alt={p.title_ar || p.title_en || ''}
-                      className={styles.directoryCardThumb}
-                    />
-                  ) : (
-                    <div
-                      className={styles.directoryCardThumb}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        color: '#94a3b8'
-                      }}
-                    >
-                      <Building2 size={20} />
-                    </div>
-                  )}
                 </div>
               );
             })
@@ -511,7 +511,7 @@ export const PropertyAnalysisSideWidgets: React.FC<PropertyAnalysisSideWidgetsPr
                 textAlign: 'center',
                 padding: '2rem 1rem',
                 color: '#64748b',
-                fontSize: '0.8rem'
+                fontSize: '0.78rem'
               }}
             >
               {isAr ? 'لا توجد مشاريع تطابق البحث' : 'No properties match search'}

@@ -143,7 +143,7 @@ export const OperationsSideWidgets: React.FC<OperationsSideWidgetsProps> = ({
               // Status pill text
               let pillLabel = isAr ? tx.typeLabelAr : tx.typeLabelEn;
               if (isCheque) {
-                pillLabel = isAr ? 'تحصيل شيك' : 'Cheque Collection';
+                pillLabel = isAr ? 'قسط محصل' : 'Collected Installment';
               } else if (isInflow) {
                 pillLabel = isAr ? 'تحصيل عميل' : 'Client Collection';
               }
@@ -168,7 +168,7 @@ export const OperationsSideWidgets: React.FC<OperationsSideWidgetsProps> = ({
                   {/* Leading (Right in RTL): Squircle + Party & Status Pill */}
                   <div className={css.recentFeedLeading}>
                     <div className={css.itemSquircleGreen} aria-hidden="true">
-                      {isCheque ? <CreditCard size={17} color="#16a34a" /> : <User size={17} color="#16a34a" />}
+                      {isCheque ? <Coins size={17} color="#16a34a" /> : <User size={17} color="#16a34a" />}
                     </div>
 
                     <div className={css.recentFeedInfo}>
@@ -219,16 +219,18 @@ export const OperationsSideWidgets: React.FC<OperationsSideWidgetsProps> = ({
               <h3 id="zf-upcoming-dues-title" className={css.upcomingDuesTitle}>
                 {isAr ? 'استحقاقات وتحصيلات قادمة' : 'Upcoming Dues & Collections'}
               </h3>
-              <span className={css.cardSubtitle}>
-                {isAr ? 'الاستحقاقات والتحصيلات خلال الفترة القادمة' : 'Scheduled dues in upcoming period'}
-              </span>
+              <div className={css.subtitleWithBadge}>
+                <span className={css.amberBadge}>
+                  {isAr ? `${upcomingDues.totalCount} مستحق` : `${upcomingDues.totalCount} Dues`}
+                </span>
+                <span className={css.cardSubtitle}>
+                  {isAr ? 'مستحقات خلال 7 أيام قادمة' : 'Dues in next 7 days'}
+                </span>
+              </div>
             </div>
           </div>
 
           <div className={css.headerTrailing}>
-            <span className={css.amberBadge}>
-              {isAr ? `${upcomingDues.totalCount} مستحق` : `${upcomingDues.totalCount} Dues`}
-            </span>
             <button
               type="button"
               className={css.upcomingDuesViewAll}
@@ -287,14 +289,14 @@ export const OperationsSideWidgets: React.FC<OperationsSideWidgetsProps> = ({
               <CheckCircle2 size={20} color="#16a34a" />
               <span>
                 {isAr
-                  ? 'لا توجد شيكات أو مستحقات مجدولة للفترة القادمة'
-                  : 'No upcoming cheques or dues scheduled'}
+                  ? 'لا توجد أقساط أو مستحقات مجدولة للفترة القادمة'
+                  : 'No upcoming installments or dues scheduled'}
               </span>
             </div>
           ) : (
             displayedUpcoming.map((item) => {
               const isIn = item.direction === 'IN';
-              const pillLabel = isAr ? item.typeLabelAr || 'شيك وارد' : item.typeLabelEn || 'Incoming Cheque';
+              const pillLabel = isAr ? item.typeLabelAr || 'قسط محصل' : item.typeLabelEn || 'Collected Installment';
 
               return (
                 <div

@@ -294,8 +294,8 @@
     "semantic_hash": "96737d506b11f7a4f004b24e7c1e2b2d"
   },
   "next.config.ts": {
-    "mtime": 1786882446.381365,
-    "seen": 1789130525.4070308,
+    "mtime": 1790848488.57144,
+    "seen": 1790869002.6028554,
     "ast_hash": "b7b6ea199cd7f37b4f9c5618d4bedf0f",
     "semantic_hash": "b7b6ea199cd7f37b4f9c5618d4bedf0f"
   },
@@ -4740,8 +4740,8 @@
     "semantic_hash": ""
   },
   "src/components/admin/erp/ZFNavigationDock.tsx": {
-    "mtime": 1790374496.851652,
-    "seen": 1790382341.6638515,
+    "mtime": 1790848488.5700123,
+    "seen": 1790869002.6166694,
     "ast_hash": "72b17498f11caa62bff35871ee9d61df",
     "semantic_hash": ""
   },
@@ -4974,15 +4974,15 @@
     "semantic_hash": "e4c542caccb03c63c07ae02f05dd9784"
   },
   "src/components/admin/erp/v2/ZFWorkstationHeader.tsx": {
-    "mtime": 1789560912.2017362,
-    "seen": 1790181102.4792092,
+    "mtime": 1790848488.5669067,
+    "seen": 1790869002.6173422,
     "ast_hash": "b4857e8573df23da594eeaf35ab01859",
     "semantic_hash": ""
   },
   "src/components/admin/erp/v2/views/CockpitView.tsx": {
-    "mtime": 1790748074.6693022,
-    "seen": 1790837669.5990503,
-    "ast_hash": "d6072abcca419fac1b71d814d2c1f4d5",
+    "mtime": 1790868894.582721,
+    "seen": 1790869002.6211686,
+    "ast_hash": "0f0020577d07c4f611f1a4efa699b29a",
     "semantic_hash": ""
   },
   "src/lib/erp/propertyCostEngine.ts": {
@@ -5190,9 +5190,9 @@
     "semantic_hash": "a730f2532c4944ebd5b4e843b3c3e355"
   },
   "src/components/admin/erp/v2/ZFKpiCard.tsx": {
-    "mtime": 1790746236.4929833,
-    "seen": 1790837669.5953834,
-    "ast_hash": "de03a85db650d572494ba2e6f4f354c9",
+    "mtime": 1790868550.710887,
+    "seen": 1790869002.6172407,
+    "ast_hash": "b21fbf20743cc4bd37c7a1213835ff7e",
     "semantic_hash": ""
   },
   "src/components/admin/erp/v2/ZFPagination.tsx": {
@@ -8544,9 +8544,9 @@
     "semantic_hash": ""
   },
   "src/components/admin/erp/v2/views/CockpitDualCharts.tsx": {
-    "mtime": 1790744104.6473963,
-    "seen": 1790837669.5990465,
-    "ast_hash": "c49781d2ceb506ef7b4997755eb3ad1b",
+    "mtime": 1790868576.2566419,
+    "seen": 1790869002.621166,
+    "ast_hash": "ed643932f4ec4531bcfdd5935e3f338e",
     "semantic_hash": ""
   },
   "src/components/admin/erp/v2/views/operations/OperationsCashFlowMap.tsx": {

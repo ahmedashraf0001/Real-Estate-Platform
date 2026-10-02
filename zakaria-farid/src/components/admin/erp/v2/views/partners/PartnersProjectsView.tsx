@@ -162,6 +162,14 @@ export const PartnersProjectsView: React.FC<PartnersProjectsViewProps> = ({
     return { req, committed, paid, arrears, collections, distributions };
   }, [buildingRowsData]);
 
+  const allBalanced = useMemo(() => {
+    return buildingRowsData.length > 0 && buildingRowsData.every(r => r.balanceReport.isBalanced);
+  }, [buildingRowsData]);
+
+  const totalsPartnersCount = useMemo(() => {
+    return buildingRowsData.reduce((sum, r) => sum + r.partnersCount, 0);
+  }, [buildingRowsData]);
+
   // Recent activity feed across projects (combining transactions and property reallocations)
   const recentActivityLogs = useMemo(() => {
     const list: Array<{
@@ -225,7 +233,16 @@ export const PartnersProjectsView: React.FC<PartnersProjectsViewProps> = ({
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
       
-      {/* 1. PROJECT FILTER PILLS AT TOP & SEARCH */}
+      {/* 1. ANALYTICS & CAD CARTESIAN CHARTS */}
+      <PartnersAnalyticsCharts
+        properties={buildingProperties}
+        transactions={transactions}
+        summaries={summaries}
+        selectedBuildingId={selectedBuildingId}
+        isAr={isAr}
+      />
+
+      {/* 2. PROJECT FILTER PILLS AT TOP & SEARCH */}
       <div style={{
         display: 'flex',
         flexWrap: 'wrap',
@@ -257,14 +274,14 @@ export const PartnersProjectsView: React.FC<PartnersProjectsViewProps> = ({
             style={{
               display: 'inline-flex',
               alignItems: 'center',
-              gap: '0.45rem',
-              padding: '0.45rem 0.85rem',
+              gap: '0.5rem',
+              padding: '0.5rem 0.75rem',
               borderRadius: '20px',
               border: selectedFilterId === 'ALL' ? '1px solid var(--erp-accent, #2563eb)' : '1px solid #cbd5e1',
               background: selectedFilterId === 'ALL' ? 'var(--erp-accent-tint, rgba(37, 99, 235, 0.08))' : '#ffffff',
               color: selectedFilterId === 'ALL' ? 'var(--erp-accent, #2563eb)' : '#334155',
               fontWeight: selectedFilterId === 'ALL' ? 800 : 600,
-              fontSize: '0.78rem',
+              fontSize: '0.75rem',
               cursor: 'pointer',
               whiteSpace: 'nowrap',
               transition: 'all 0.15s ease'
@@ -273,7 +290,7 @@ export const PartnersProjectsView: React.FC<PartnersProjectsViewProps> = ({
             <Building2 size={14} color={selectedFilterId === 'ALL' ? 'var(--erp-accent, #2563eb)' : '#64748b'} />
             <span>{isAr ? 'جميع المشروعات' : 'All Projects'}</span>
             <span style={{
-              fontSize: '0.68rem',
+              fontSize: '0.75rem',
               padding: '0.1rem 0.4rem',
               borderRadius: '10px',
               background: selectedFilterId === 'ALL' ? 'var(--erp-accent, #2563eb)' : '#f1f5f9',
@@ -300,14 +317,14 @@ export const PartnersProjectsView: React.FC<PartnersProjectsViewProps> = ({
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',
-                  gap: '0.45rem',
-                  padding: '0.45rem 0.85rem',
+                  gap: '0.5rem',
+                  padding: '0.5rem 0.75rem',
                   borderRadius: '20px',
                   border: isSelected ? '1px solid var(--erp-accent, #2563eb)' : '1px solid #cbd5e1',
                   background: isSelected ? 'var(--erp-accent-tint, rgba(37, 99, 235, 0.08))' : '#ffffff',
                   color: isSelected ? 'var(--erp-accent, #2563eb)' : '#334155',
                   fontWeight: isSelected ? 800 : 600,
-                  fontSize: '0.78rem',
+                  fontSize: '0.75rem',
                   cursor: 'pointer',
                   whiteSpace: 'nowrap',
                   transition: 'all 0.15s ease'
@@ -334,10 +351,10 @@ export const PartnersProjectsView: React.FC<PartnersProjectsViewProps> = ({
             placeholder={isAr ? 'بحث في المشروعات...' : 'Search projects...'}
             style={{
               width: '100%',
-              padding: '0.45rem 0.75rem 0.45rem 2rem',
+              padding: '0.5rem 0.75rem 0.5rem 2rem',
               borderRadius: '8px',
               border: '1px solid #cbd5e1',
-              fontSize: '0.78rem',
+              fontSize: '0.75rem',
               outline: 'none',
               background: '#f8fafc'
             }}
@@ -349,8 +366,8 @@ export const PartnersProjectsView: React.FC<PartnersProjectsViewProps> = ({
               position: 'absolute', 
               top: '50%', 
               transform: 'translateY(-50%)', 
-              left: isAr ? '0.65rem' : 'auto', 
-              right: isAr ? 'auto' : '0.65rem' 
+              left: isAr ? '0.75rem' : 'auto', 
+              right: isAr ? 'auto' : '0.75rem' 
             }} 
           />
         </div>
@@ -369,11 +386,11 @@ export const PartnersProjectsView: React.FC<PartnersProjectsViewProps> = ({
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          padding: '0.85rem 1.15rem',
+          padding: '0.75rem 1rem',
           borderBottom: '1px solid #cbd5e1',
           background: '#ffffff'
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <div style={{
               width: '28px',
               height: '28px',
@@ -387,16 +404,16 @@ export const PartnersProjectsView: React.FC<PartnersProjectsViewProps> = ({
               <Building2 size={16} />
             </div>
             <div>
-              <h2 style={{ margin: 0, fontSize: '0.96rem', fontWeight: 800, color: '#0f172a' }}>
+              <h2 style={{ margin: 0, fontSize: '1rem', fontWeight: 800, color: '#0f172a' }}>
                 {isAr ? 'أداء المشروعات والعمائر' : 'Project Equity & Performance'}
               </h2>
-              <span style={{ fontSize: '0.72rem', color: '#64748b' }}>
+              <span style={{ fontSize: '0.75rem', color: '#64748b' }}>
                 {isAr ? 'مؤشرات رؤوس الأموال، نسب الحصص، التحصيلات، والمنصرف لكل مشروع' : 'Capital, equity splits, collections, and payouts across projects'}
               </span>
             </div>
           </div>
 
-          <span className={`${styles.statusPill} ${styles.statusPillNeutral}`} style={{ fontSize: '0.72rem', fontWeight: 700 }}>
+          <span className={`${styles.statusPill} ${styles.statusPillNeutral}`} style={{ fontSize: '0.75rem', fontWeight: 700 }}>
             {filteredBuildings.length} {isAr ? 'مشروع مسجل' : 'projects'}
           </span>
         </div>
@@ -405,24 +422,24 @@ export const PartnersProjectsView: React.FC<PartnersProjectsViewProps> = ({
         <div style={{ overflowX: 'auto' }}>
           <table style={{
             width: '100%',
-            minWidth: '1150px',
+            minWidth: '1380px',
             borderCollapse: 'collapse',
-            fontSize: '0.78rem',
+            fontSize: '0.75rem',
             textAlign: isAr ? 'right' : 'left'
           }}>
             <thead>
-              <tr style={{ background: '#f8fafc', borderBottom: '1px solid #cbd5e1', color: '#64748b' }}>
-                <th style={{ padding: '0.75rem 1rem', fontWeight: 700 }}>{isAr ? 'المشروع والعمارة' : 'Project / Building'}</th>
-                <th style={{ padding: '0.75rem 0.65rem', fontWeight: 700, textAlign: 'center' }}>{isAr ? 'الشركاء' : 'Partners'}</th>
-                <th style={{ padding: '0.75rem 0.65rem', fontWeight: 700, textAlign: 'center' }}>{isAr ? 'ميزان الحصص' : 'Equity Invariant'}</th>
-                <th style={{ padding: '0.75rem 0.65rem', fontWeight: 700 }}>{isAr ? 'رأس المال المستهدف' : 'Required (EGP)'}</th>
-                <th style={{ padding: '0.75rem 0.65rem', fontWeight: 700 }}>{isAr ? 'المطلوب بالمراحل' : 'Committed (EGP)'}</th>
-                <th style={{ padding: '0.75rem 0.65rem', fontWeight: 700 }}>{isAr ? 'المسدد فعلياً' : 'Paid (EGP)'}</th>
-                <th style={{ padding: '0.75rem 0.65rem', fontWeight: 700 }}>{isAr ? 'المتأخرات' : 'Arrears (EGP)'}</th>
-                <th style={{ padding: '0.75rem 0.65rem', fontWeight: 700 }}>{isAr ? 'التحصيلات' : 'Collections (EGP)'}</th>
-                <th style={{ padding: '0.75rem 0.65rem', fontWeight: 700 }}>{isAr ? 'المنصرف أرباح' : 'Distributions (EGP)'}</th>
-                <th style={{ padding: '0.75rem 0.65rem', fontWeight: 700, textAlign: 'center' }}>{isAr ? 'حالة التمويل' : 'Status'}</th>
-                <th style={{ padding: '0.75rem 1rem', fontWeight: 700, textAlign: 'center' }}>{isAr ? 'إجراء' : 'Action'}</th>
+              <tr style={{ background: '#fafbfc', borderBottom: '1px solid #cbd5e1', color: '#475569', height: '46px' }}>
+                <th style={{ padding: '0.75rem 1rem', minWidth: '260px', fontWeight: 700, whiteSpace: 'nowrap' }}>{isAr ? 'المشروع والعمارة' : 'Project / Building'}</th>
+                <th style={{ padding: '0.75rem 0.5rem', width: '100px', fontWeight: 700, textAlign: 'center', whiteSpace: 'nowrap' }}>{isAr ? 'الشركاء' : 'Partners'}</th>
+                <th style={{ padding: '0.75rem 0.5rem', width: '120px', fontWeight: 700, textAlign: 'center', whiteSpace: 'nowrap' }}>{isAr ? 'ميزان الحصص' : 'Equity Invariant'}</th>
+                <th style={{ padding: '0.75rem 0.75rem', minWidth: '140px', fontWeight: 700, whiteSpace: 'nowrap' }}>{isAr ? 'رأس المال المستهدف' : 'Required (EGP)'}</th>
+                <th style={{ padding: '0.75rem 0.75rem', minWidth: '140px', fontWeight: 700, whiteSpace: 'nowrap' }}>{isAr ? 'المطلوب بالمراحل' : 'Committed (EGP)'}</th>
+                <th style={{ padding: '0.75rem 0.75rem', minWidth: '140px', fontWeight: 700, whiteSpace: 'nowrap' }}>{isAr ? 'المسدد فعلياً' : 'Paid (EGP)'}</th>
+                <th style={{ padding: '0.75rem 0.75rem', minWidth: '140px', fontWeight: 700, whiteSpace: 'nowrap' }}>{isAr ? 'المتأخرات' : 'Arrears (EGP)'}</th>
+                <th style={{ padding: '0.75rem 0.75rem', minWidth: '140px', fontWeight: 700, whiteSpace: 'nowrap' }}>{isAr ? 'التحصيلات' : 'Collections (EGP)'}</th>
+                <th style={{ padding: '0.75rem 0.75rem', minWidth: '140px', fontWeight: 700, whiteSpace: 'nowrap' }}>{isAr ? 'المنصرف أرباح' : 'Distributions (EGP)'}</th>
+                <th style={{ padding: '0.75rem 0.5rem', width: '120px', fontWeight: 700, textAlign: 'center', whiteSpace: 'nowrap' }}>{isAr ? 'حالة التمويل' : 'Status'}</th>
+                <th style={{ padding: '0.75rem 0.75rem', width: '100px', fontWeight: 700, textAlign: 'center', whiteSpace: 'nowrap' }}>{isAr ? 'إجراء' : 'Action'}</th>
               </tr>
             </thead>
             <tbody>
@@ -445,12 +462,13 @@ export const PartnersProjectsView: React.FC<PartnersProjectsViewProps> = ({
                         borderBottom: '1px solid #f1f5f9',
                         background: isSelected ? 'var(--erp-accent-tint, rgba(37, 99, 235, 0.05))' : (idx % 2 === 1 ? '#fafbfc' : '#ffffff'),
                         cursor: 'pointer',
-                        transition: 'background 0.15s ease'
+                        transition: 'background 0.15s ease',
+                        height: '54px'
                       }}
                     >
                       {/* Project title + location + thumbnail */}
-                      <td style={{ padding: '0.75rem 1rem' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                      <td style={{ padding: '0.75rem 1rem', whiteSpace: 'nowrap' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                           {b.property_images?.[0]?.url ? (
                             <img
                               src={b.property_images[0].url}
@@ -480,10 +498,10 @@ export const PartnersProjectsView: React.FC<PartnersProjectsViewProps> = ({
                             </div>
                           )}
                           <div>
-                            <strong style={{ color: '#0f172a', display: 'block', fontSize: '0.82rem' }}>
+                            <strong style={{ color: '#0f172a', display: 'block', fontSize: '0.75rem' }}>
                               {b.title_ar || b.title_en}
                             </strong>
-                            <span style={{ fontSize: '0.68rem', color: '#64748b' }}>
+                            <span style={{ fontSize: '0.75rem', color: '#64748b' }}>
                               {b.total_units_count ? `${b.total_units_count} ${isAr ? 'وحدة' : 'units'}` : ''} 
                               {b.location ? ` • ${b.location}` : ''}
                             </span>
@@ -492,12 +510,12 @@ export const PartnersProjectsView: React.FC<PartnersProjectsViewProps> = ({
                       </td>
 
                       {/* Partners Count */}
-                      <td style={{ padding: '0.75rem 0.65rem', textAlign: 'center' }}>
+                      <td style={{ padding: '0.75rem 0.5rem', textAlign: 'center', whiteSpace: 'nowrap' }}>
                         <span style={{
-                          padding: '0.2rem 0.5rem',
+                          padding: '0.25rem 0.5rem',
                           borderRadius: '6px',
                           background: '#f1f5f9',
-                          fontSize: '0.72rem',
+                          fontSize: '0.75rem',
                           fontWeight: 700,
                           color: '#334155'
                         }}>
@@ -506,68 +524,74 @@ export const PartnersProjectsView: React.FC<PartnersProjectsViewProps> = ({
                       </td>
 
                       {/* 100% Equity Split Invariant */}
-                      <td style={{ padding: '0.75rem 0.65rem', textAlign: 'center' }}>
-                        <span className={`${styles.statusPill} ${row.balanceReport.isBalanced ? styles.statusPillGreen : styles.statusPillRed}`} style={{ fontSize: '0.68rem', whiteSpace: 'nowrap' }}>
-                          {row.balanceReport.isBalanced
-                            ? (isAr ? '100% متطابق ✓' : '100% Balanced ✓')
-                            : (isAr ? `خلل (${row.balanceReport.totalActiveSharePct}%)` : `Imbalanced (${row.balanceReport.totalActiveSharePct}%)`)}
+                      <td style={{ padding: '0.75rem 0.5rem', textAlign: 'center', whiteSpace: 'nowrap' }}>
+                        <span className={`${styles.statusPill} ${row.balanceReport.isBalanced ? styles.statusPillGreen : styles.statusPillRed}`} style={{ fontSize: '0.75rem', whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                          {row.balanceReport.isBalanced ? (
+                            <>
+                              <CheckCircle2 size={12} />
+                              <span>{isAr ? '100% متطابق' : '100% Balanced'}</span>
+                            </>
+                          ) : (
+                            <span>{isAr ? `خلل (${row.balanceReport.totalActiveSharePct}%)` : `Imbalanced (${row.balanceReport.totalActiveSharePct}%)`}</span>
+                          )}
                         </span>
                       </td>
 
                       {/* Required / Target Budget */}
-                      <td style={{ padding: '0.75rem 0.65rem', fontWeight: 700, color: '#0f172a', fontVariantNumeric: 'tabular-nums' }}>
+                      <td style={{ padding: '0.75rem 0.75rem', fontWeight: 700, color: '#0f172a', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
                         {row.requiredCapitalEgp.formatEGP(isAr)}
                       </td>
 
                       {/* Milestone Committed */}
-                      <td style={{ padding: '0.75rem 0.65rem', fontWeight: 600, color: '#334155', fontVariantNumeric: 'tabular-nums' }}>
+                      <td style={{ padding: '0.75rem 0.75rem', fontWeight: 600, color: '#334155', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
                         {row.committedEgp.formatEGP(isAr)}
                       </td>
 
                       {/* Actual Paid (GL 301000) */}
-                      <td style={{ padding: '0.75rem 0.65rem', fontWeight: 800, color: 'var(--erp-accent, #2563eb)', fontVariantNumeric: 'tabular-nums' }}>
+                      <td style={{ padding: '0.75rem 0.75rem', fontWeight: 800, color: 'var(--erp-accent, #2563eb)', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
                         {row.actualPaidEgp.formatEGP(isAr)}
                       </td>
 
                       {/* Arrears */}
                       <td style={{
-                        padding: '0.75rem 0.65rem',
+                        padding: '0.75rem 0.75rem',
                         fontWeight: 700,
                         color: row.arrearsEgp.gt(0) ? '#dc2626' : '#64748b',
-                        fontVariantNumeric: 'tabular-nums'
+                        fontVariantNumeric: 'tabular-nums',
+                        whiteSpace: 'nowrap'
                       }}>
                         {row.arrearsEgp.formatEGP(isAr)}
                       </td>
 
                       {/* Collections */}
-                      <td style={{ padding: '0.75rem 0.65rem', fontWeight: 600, color: '#334155', fontVariantNumeric: 'tabular-nums' }}>
+                      <td style={{ padding: '0.75rem 0.75rem', fontWeight: 600, color: '#334155', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
                         {row.collectionsEgp.formatEGP(isAr)}
                       </td>
 
                       {/* Profit Distributions Paid (GL 303000) */}
-                      <td style={{ padding: '0.75rem 0.65rem', fontWeight: 700, color: '#0f172a', fontVariantNumeric: 'tabular-nums' }}>
+                      <td style={{ padding: '0.75rem 0.75rem', fontWeight: 700, color: '#0f172a', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
                         {row.distributionsEgp.formatEGP(isAr)}
                       </td>
 
                       {/* Funding Status Pill */}
-                      <td style={{ padding: '0.75rem 0.65rem', textAlign: 'center' }}>
+                      <td style={{ padding: '0.75rem 0.5rem', textAlign: 'center', whiteSpace: 'nowrap' }}>
                         {row.fundingRatio >= 100 ? (
-                          <span className={`${styles.statusPill} ${styles.statusPillGreen}`} style={{ fontSize: '0.68rem', whiteSpace: 'nowrap' }}>
+                          <span className={`${styles.statusPill} ${styles.statusPillGreen}`} style={{ fontSize: '0.75rem', whiteSpace: 'nowrap' }}>
                             {isAr ? 'مكتمل التمويل' : 'Fully Funded'}
                           </span>
                         ) : row.fundingRatio > 0 ? (
-                          <span className={`${styles.statusPill} ${styles.statusPillBlue}`} style={{ fontSize: '0.68rem', whiteSpace: 'nowrap' }}>
+                          <span className={`${styles.statusPill} ${styles.statusPillBlue}`} style={{ fontSize: '0.75rem', whiteSpace: 'nowrap' }}>
                             {isAr ? `تمويل ${row.fundingRatio}%` : `${row.fundingRatio}% Funded`}
                           </span>
                         ) : (
-                          <span className={`${styles.statusPill} ${styles.statusPillNeutral}`} style={{ fontSize: '0.68rem', whiteSpace: 'nowrap' }}>
+                          <span className={`${styles.statusPill} ${styles.statusPillNeutral}`} style={{ fontSize: '0.75rem', whiteSpace: 'nowrap' }}>
                             {isAr ? 'قيد التأسيس' : 'Pending'}
                           </span>
                         )}
                       </td>
 
                       {/* Single Action Trigger */}
-                      <td style={{ padding: '0.75rem 1rem', textAlign: 'center' }}>
+                      <td style={{ padding: '0.75rem 0.75rem', textAlign: 'center', whiteSpace: 'nowrap' }}>
                         <button
                           type="button"
                           onClick={(e) => {
@@ -575,12 +599,12 @@ export const PartnersProjectsView: React.FC<PartnersProjectsViewProps> = ({
                             onOpenReallocation(b);
                           }}
                           style={{
-                            padding: '0.3rem 0.6rem',
+                            padding: '0.25rem 0.5rem',
                             borderRadius: '6px',
                             background: '#ffffff',
                             border: '1px solid #cbd5e1',
                             color: '#0f172a',
-                            fontSize: '0.72rem',
+                            fontSize: '0.75rem',
                             fontWeight: 700,
                             cursor: 'pointer',
                             display: 'inline-flex',
@@ -600,44 +624,43 @@ export const PartnersProjectsView: React.FC<PartnersProjectsViewProps> = ({
             </tbody>
             {/* Table Footer Summary Bar */}
             <tfoot>
-              <tr style={{ background: '#f8fafc', borderTop: '2px solid #cbd5e1', fontWeight: 800 }}>
-                <td style={{ padding: '0.75rem 1rem', color: '#0f172a' }}>
+              <tr style={{ background: '#fafbfc', borderTop: '2px solid #cbd5e1', fontWeight: 800, height: '54px' }}>
+                <td style={{ padding: '0.75rem 1rem', color: '#0f172a', whiteSpace: 'nowrap' }}>
                   {isAr ? `الإجمالي (${buildingRowsData.length} مشروع)` : `Totals (${buildingRowsData.length} projects)`}
                 </td>
-                <td colSpan={2} />
-                <td style={{ padding: '0.75rem 0.65rem', color: '#0f172a', fontVariantNumeric: 'tabular-nums' }}>
+                <td style={{ padding: '0.75rem 0.5rem', textAlign: 'center', color: '#64748b', fontSize: '0.75rem', whiteSpace: 'nowrap' }}>
+                  {totalsPartnersCount} {isAr ? 'شريك' : 'partners'}
+                </td>
+                <td style={{ padding: '0.75rem 0.5rem', textAlign: 'center', whiteSpace: 'nowrap' }}>
+                  <span className={`${styles.statusPill} ${allBalanced ? styles.statusPillGreen : styles.statusPillAmber}`} style={{ fontSize: '0.75rem', whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                    <CheckCircle2 size={12} />
+                    <span>{allBalanced ? (isAr ? '100% منضبط' : '100% Balanced') : (isAr ? 'مراجعة' : 'Review')}</span>
+                  </span>
+                </td>
+                <td style={{ padding: '0.75rem 0.75rem', color: '#0f172a', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
                   {totals.req.formatEGP(isAr)}
                 </td>
-                <td style={{ padding: '0.75rem 0.65rem', color: '#334155', fontVariantNumeric: 'tabular-nums' }}>
+                <td style={{ padding: '0.75rem 0.75rem', color: '#334155', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
                   {totals.committed.formatEGP(isAr)}
                 </td>
-                <td style={{ padding: '0.75rem 0.65rem', color: 'var(--erp-accent, #2563eb)', fontVariantNumeric: 'tabular-nums' }}>
+                <td style={{ padding: '0.75rem 0.75rem', color: 'var(--erp-accent, #2563eb)', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
                   {totals.paid.formatEGP(isAr)}
                 </td>
-                <td style={{ padding: '0.75rem 0.65rem', color: totals.arrears.gt(0) ? '#dc2626' : '#64748b', fontVariantNumeric: 'tabular-nums' }}>
+                <td style={{ padding: '0.75rem 0.75rem', color: totals.arrears.gt(0) ? '#dc2626' : '#64748b', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
                   {totals.arrears.formatEGP(isAr)}
                 </td>
-                <td style={{ padding: '0.75rem 0.65rem', color: '#334155', fontVariantNumeric: 'tabular-nums' }}>
+                <td style={{ padding: '0.75rem 0.75rem', color: '#334155', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
                   {totals.collections.formatEGP(isAr)}
                 </td>
-                <td style={{ padding: '0.75rem 0.65rem', color: '#0f172a', fontVariantNumeric: 'tabular-nums' }}>
+                <td style={{ padding: '0.75rem 0.75rem', color: '#0f172a', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
                   {totals.distributions.formatEGP(isAr)}
                 </td>
-                <td colSpan={2} />
+                <td colSpan={2} style={{ padding: '0.75rem 0.75rem', textAlign: 'center' }} />
               </tr>
             </tfoot>
           </table>
         </div>
       </div>
-
-      {/* 3. DUAL CHARTS SECTION (Grouped Bar + Partner Role Donut) */}
-      <PartnersAnalyticsCharts
-        properties={buildingProperties}
-        transactions={transactions}
-        summaries={summaries}
-        selectedBuildingId={selectedBuildingId}
-        isAr={isAr}
-      />
 
       {/* 4. RECENT ACTIVITY FEED TABLE (أحدث الحركات) */}
       <div style={{
@@ -652,11 +675,11 @@ export const PartnersProjectsView: React.FC<PartnersProjectsViewProps> = ({
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          padding: '0.85rem 1.15rem',
+          padding: '0.75rem 1rem',
           borderBottom: '1px solid #cbd5e1',
           background: '#ffffff'
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <div style={{
               width: '28px',
               height: '28px',
@@ -670,23 +693,23 @@ export const PartnersProjectsView: React.FC<PartnersProjectsViewProps> = ({
               <History size={16} />
             </div>
             <div>
-              <h3 style={{ margin: 0, fontSize: '0.92rem', fontWeight: 800, color: '#0f172a' }}>
+              <h3 style={{ margin: 0, fontSize: '0.875rem', fontWeight: 800, color: '#0f172a' }}>
                 {isAr ? 'أحدث الحركات والتوريدات' : 'Recent Transactions & Equity Activity'}
               </h3>
-              <span style={{ fontSize: '0.72rem', color: '#64748b' }}>
+              <span style={{ fontSize: '0.75rem', color: '#64748b' }}>
                 {isAr ? 'سجل العمليات الرأسمالية الأخيرة والتعديلات المنفذة' : 'Latest capital injections, dividends, and equity adjustments'}
               </span>
             </div>
           </div>
 
-          <span className={`${styles.statusPill} ${styles.statusPillNeutral}`} style={{ fontSize: '0.68rem', fontWeight: 700 }}>
+          <span className={`${styles.statusPill} ${styles.statusPillNeutral}`} style={{ fontSize: '0.75rem', fontWeight: 700 }}>
             {recentActivityLogs.length} {isAr ? 'حركة حديثة' : 'recent logs'}
           </span>
         </div>
 
         {/* Minimal Table */}
         {recentActivityLogs.length === 0 ? (
-          <div style={{ padding: '2rem', textAlign: 'center', color: '#64748b', fontSize: '0.78rem' }}>
+          <div style={{ padding: '2rem', textAlign: 'center', color: '#64748b', fontSize: '0.75rem' }}>
             {isAr ? 'لا توجد حركات رأسمالية مسجلة حديثاً' : 'No recent transactions recorded'}
           </div>
         ) : (
@@ -695,18 +718,18 @@ export const PartnersProjectsView: React.FC<PartnersProjectsViewProps> = ({
               width: '100%',
               minWidth: '780px',
               borderCollapse: 'collapse',
-              fontSize: '0.78rem',
+              fontSize: '0.75rem',
               textAlign: isAr ? 'right' : 'left'
             }}>
               <thead>
                 <tr style={{ background: '#f8fafc', borderBottom: '1px solid #cbd5e1', color: '#64748b' }}>
-                  <th style={{ padding: '0.65rem 1rem', fontWeight: 700 }}>{isAr ? 'المرجع والتاريخ' : 'Ref & Date'}</th>
-                  <th style={{ padding: '0.65rem 0.75rem', fontWeight: 700, textAlign: 'center' }}>{isAr ? 'نوع الحركة' : 'Action Type'}</th>
-                  <th style={{ padding: '0.65rem 0.75rem', fontWeight: 700 }}>{isAr ? 'المشروع' : 'Project'}</th>
-                  <th style={{ padding: '0.65rem 0.75rem', fontWeight: 700 }}>{isAr ? 'الشريك / الأطراف' : 'Partner / Parties'}</th>
-                  <th style={{ padding: '0.65rem 0.75rem', fontWeight: 700 }}>{isAr ? 'المبلغ' : 'Amount'}</th>
-                  <th style={{ padding: '0.65rem 0.75rem', fontWeight: 700 }}>{isAr ? 'حساب السداد / الطريقة' : 'Method / Account'}</th>
-                  <th style={{ padding: '0.65rem 1rem', fontWeight: 700, textAlign: 'center' }}>{isAr ? 'الحالة' : 'Status'}</th>
+                  <th style={{ padding: '0.5rem 0.75rem', fontWeight: 700 }}>{isAr ? 'المرجع والتاريخ' : 'Ref & Date'}</th>
+                  <th style={{ padding: '0.5rem 0.75rem', fontWeight: 700, textAlign: 'center' }}>{isAr ? 'نوع الحركة' : 'Action Type'}</th>
+                  <th style={{ padding: '0.5rem 0.75rem', fontWeight: 700 }}>{isAr ? 'المشروع' : 'Project'}</th>
+                  <th style={{ padding: '0.5rem 0.75rem', fontWeight: 700 }}>{isAr ? 'الشريك / الأطراف' : 'Partner / Parties'}</th>
+                  <th style={{ padding: '0.5rem 0.75rem', fontWeight: 700 }}>{isAr ? 'المبلغ' : 'Amount'}</th>
+                  <th style={{ padding: '0.5rem 0.75rem', fontWeight: 700 }}>{isAr ? 'حساب السداد / الطريقة' : 'Method / Account'}</th>
+                  <th style={{ padding: '0.5rem 0.75rem', fontWeight: 700, textAlign: 'center' }}>{isAr ? 'الحالة' : 'Status'}</th>
                 </tr>
               </thead>
               <tbody>
@@ -718,44 +741,45 @@ export const PartnersProjectsView: React.FC<PartnersProjectsViewProps> = ({
                       background: idx % 2 === 1 ? '#fafbfc' : '#ffffff'
                     }}
                   >
-                    <td style={{ padding: '0.65rem 1rem' }}>
-                      <strong style={{ color: '#0f172a', display: 'block', fontSize: '0.76rem' }}>
+                    <td style={{ padding: '0.5rem 1rem' }}>
+                      <strong style={{ color: '#0f172a', display: 'block', fontSize: '0.75rem' }}>
                         {log.id.length > 14 ? `${log.id.slice(0, 12)}...` : log.id}
                       </strong>
-                      <span style={{ fontSize: '0.68rem', color: '#64748b', fontVariantNumeric: 'tabular-nums' }}>
+                      <span style={{ fontSize: '0.75rem', color: '#64748b', fontVariantNumeric: 'tabular-nums' }}>
                         {log.date || '—'}
                       </span>
                     </td>
 
-                    <td style={{ padding: '0.65rem 0.75rem', textAlign: 'center' }}>
+                    <td style={{ padding: '0.5rem 0.75rem', textAlign: 'center' }}>
                       <span className={`${styles.statusPill} ${
                         log.type === 'INJECTION' ? styles.statusPillBlue :
                         log.type === 'DISTRIBUTION' ? styles.statusPillGreen :
                         styles.statusPillAmber
-                      }`} style={{ fontSize: '0.68rem', whiteSpace: 'nowrap' }}>
+                      }`} style={{ fontSize: '0.75rem', whiteSpace: 'nowrap' }}>
                         {log.typeLabel}
                       </span>
                     </td>
 
-                    <td style={{ padding: '0.65rem 0.75rem', fontWeight: 600, color: '#334155' }}>
+                    <td style={{ padding: '0.5rem 0.75rem', fontWeight: 600, color: '#334155' }}>
                       {log.projectTitle}
                     </td>
 
-                    <td style={{ padding: '0.65rem 0.75rem', fontWeight: 600, color: '#0f172a' }}>
+                    <td style={{ padding: '0.5rem 0.75rem', fontWeight: 600, color: '#0f172a' }}>
                       {log.partnerName}
                     </td>
 
-                    <td style={{ padding: '0.65rem 0.75rem', fontWeight: 700, color: '#0f172a', fontVariantNumeric: 'tabular-nums' }}>
+                    <td style={{ padding: '0.5rem 0.75rem', fontWeight: 700, color: '#0f172a', fontVariantNumeric: 'tabular-nums' }}>
                       {D(log.amount).formatEGP(isAr)}
                     </td>
 
-                    <td style={{ padding: '0.65rem 0.75rem', color: '#64748b', fontSize: '0.72rem' }}>
+                    <td style={{ padding: '0.5rem 0.75rem', color: '#64748b', fontSize: '0.75rem' }}>
                       {log.method}
                     </td>
 
-                    <td style={{ padding: '0.65rem 1rem', textAlign: 'center' }}>
-                      <span className={`${styles.statusPill} ${styles.statusPillGreen}`} style={{ fontSize: '0.66rem' }}>
-                        {isAr ? 'مكتمل ✓' : 'Completed ✓'}
+                    <td style={{ padding: '0.5rem 1rem', textAlign: 'center' }}>
+                      <span className={`${styles.statusPill} ${styles.statusPillGreen}`} style={{ fontSize: '0.75rem', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                        <CheckCircle2 size={12} />
+                        <span>{isAr ? 'مكتمل' : 'Completed'}</span>
                       </span>
                     </td>
                   </tr>

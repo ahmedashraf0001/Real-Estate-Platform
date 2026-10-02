@@ -335,14 +335,14 @@ export function OperationsCashFlowMap({
             role="button"
             tabIndex={0}
             aria-pressed={activeStreamFilter === 'central-hub'}
-            title={isAr ? 'السيولة المتاحة: الخزينة والبنوك' : 'Available Liquidity: Treasury & Banks'}
+            title={isAr ? 'السيولة المتاحة: الخزينة وإنستاباي (101000)' : 'Available Liquidity: Safe & InstaPay (101000)'}
           >
             <div className={s.centralTop}>
               <div className={s.centralCoinsSquircle} aria-hidden="true">
                 <Coins size={22} strokeWidth={2} />
               </div>
               <span className={s.centralTitle}>{isAr ? 'السيولة المتاحة' : 'Available Liquidity'}</span>
-              <span className={s.centralSubtitle}>{isAr ? 'الخزينة والبنوك' : 'Treasury & Banks'}</span>
+              <span className={s.centralSubtitle}>{isAr ? 'الخزينة وإنستاباي (101000)' : 'Safe & InstaPay (101000)'}</span>
             </div>
 
             <div className={s.centralGiantAmountRow}>
@@ -357,12 +357,12 @@ export function OperationsCashFlowMap({
                 aria-valuenow={bankPct}
                 aria-valuemin={0}
                 aria-valuemax={100}
-                aria-label={isAr ? 'نسبة توزيع السيولة بين البنوك والخزينة' : 'Liquidity split between banks and vault'}
+                aria-label={isAr ? 'نسبة توزيع السيولة بين إنستاباي والخزينة' : 'Liquidity split between InstaPay and Safe'}
               >
                 <div
                   className={s.splitBarBank}
                   style={{ width: `${bankPct}%` }}
-                  title={`${isAr ? 'بنوك' : 'Banks'}: ${bankPct}%`}
+                  title={`${isAr ? 'إنستاباي' : 'InstaPay'}: ${bankPct}%`}
                 >
                   {bankPct}%
                 </div>
@@ -379,10 +379,12 @@ export function OperationsCashFlowMap({
                 <div className={s.legendCol}>
                   <div className={s.legendHeader}>
                     <Landmark size={15} color="#1e3a5f" aria-hidden="true" />
-                    <span className={s.legendLabel}>{isAr ? 'بنوك' : 'Banks'}</span>
+                    <span className={s.legendLabel}>{isAr ? 'إنستاباي' : 'InstaPay'}</span>
                   </div>
-                  <span className={s.legendAmount}>{formatNumberWithCommas(bankCash)}</span>
-                  <span className={s.legendCurrency}>{currencyLabel}</span>
+                  <div className={s.legendValueRow}>
+                    <bdi className={s.legendAmount}>{formatNumberWithCommas(bankCash)}</bdi>
+                    <span className={s.legendCurrency}>{currencyLabel}</span>
+                  </div>
                 </div>
 
                 <div className={s.legendCol}>
@@ -390,8 +392,10 @@ export function OperationsCashFlowMap({
                     <Wallet size={15} color="#b8903e" aria-hidden="true" />
                     <span className={s.legendLabel}>{isAr ? 'خزينة' : 'Treasury'}</span>
                   </div>
-                  <span className={s.legendAmount}>{formatNumberWithCommas(safeCash)}</span>
-                  <span className={s.legendCurrency}>{currencyLabel}</span>
+                  <div className={s.legendValueRow}>
+                    <bdi className={s.legendAmount}>{formatNumberWithCommas(safeCash)}</bdi>
+                    <span className={s.legendCurrency}>{currencyLabel}</span>
+                  </div>
                 </div>
               </div>
             </div>
