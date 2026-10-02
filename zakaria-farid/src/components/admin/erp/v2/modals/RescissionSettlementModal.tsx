@@ -1,32 +1,23 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { 
-  RotateCcw, 
-  X, 
-  Loader2, 
-  AlertCircle, 
-  ShieldAlert, 
-  ArrowRight, 
-  ArrowLeft,
-  Calendar,
+import {
+  RotateCcw,
+  Loader2,
+  AlertCircle,
+  ShieldAlert,
   CheckCircle2,
-  FileText,
   Search,
-  User,
   Building2,
-  Check,
-  Scale
+  Undo2
 } from 'lucide-react';
 import { ERPContract, ERPInstallmentSchedule, ERPAccountingPeriod } from '@/lib/erp/types';
 import { RescissionEngine } from '@/lib/erp/rescission';
 import { resolvePeriodForDate } from '@/lib/erp/ledger';
-import { D, formatEGP } from '@/lib/erp/math';
-import { MoneyCell } from '@/components/erp/MoneyCell';
-import { LegalVerificationTag } from '@/components/erp/LegalVerificationTag';
-import { BranchDecisionCard } from '@/components/erp/BranchDecisionCard';
-import { JournalEntryPreview } from '@/components/erp/JournalEntryPreview';
+import { D } from '@/lib/erp/math';
+import { JournalEntryPreview, localizeBuyerName } from '@/components/erp/JournalEntryPreview';
 import { ZFModalShell } from '../common/ZFModalShell';
+import p from '../common/ZFModalPrimitives.module.css';
 
 export interface RescissionSettlementModalProps {
   isOpen: boolean;
@@ -179,6 +170,28 @@ export const RescissionSettlementModal: React.FC<RescissionSettlementModalProps>
     });
   };
 
+  const buyerLabel = (name: string) => (name ? (isAr ? localizeBuyerName(name) : name) : (isAr ? 'العميل غير مُدخل' : 'Client not entered'));
+  const unitLabel = (id: string) => id || (isAr ? 'الوحدة غير مُدخلة' : 'Unit not entered');
+  const isDelivered = activeContract.handover_status === 'Delivered';
+  const branches: { id: 'Branch1_PreDelivery' | 'Branch2_PostDelivery'; icon: React.ReactNode; titleAr: string; titleEn: string; descAr: string; descEn: string }[] = [
+    {
+      id: 'Branch1_PreDelivery',
+      icon: <Undo2 size={16} />,
+      titleAr: 'المسار ١: إلغاء قبل التسليم',
+      titleEn: 'Branch 1: Pre-Delivery Cancellation',
+      descAr: 'الوحدة لم تُسلّم. لا اعتراف بالإيراد؛ النقدية في الإيرادات المؤجلة (203000).',
+      descEn: 'No handover yet. Revenue not recognized; cash rests in Deferred Revenue (203000).',
+    },
+    {
+      id: 'Branch2_PostDelivery',
+      icon: <Building2 size={16} />,
+      titleAr: 'المسار ٢: استرداد بعد التسليم',
+      titleEn: 'Branch 2: Post-Delivery Repossession',
+      descAr: 'سُلّمت الوحدة واعتُرف بالإيراد (401000). يعكس الإيراد ويسوي المدينين (103000) ويستعيد أصل WIP.',
+      descEn: 'Handover occurred; revenue in 401000. Reverses revenue, clears A/R (103000), restores inventory.',
+    },
+  ];
+
   const handleModalClose = () => {
     setRescissionSuccess(null);
     onClose();
@@ -188,637 +201,268 @@ export const RescissionSettlementModal: React.FC<RescissionSettlementModalProps>
     <ZFModalShell
       isOpen={isOpen}
       onClose={handleModalClose}
-      title={isAr ? 'معالج فسخ العقد وتطبيق حد حظر مطالبة العميل بعجز إضافي (Forfeiture Floor)' : 'Contract Rescission & Forfeiture Floor Settlement'}
-      subtitle={isAr 
-        ? 'احتساب غرامة الفسخ القانونية (١٠٪) مع تطبيق حد حظر مطالبة العميل بعجز إضافي (العميل لن يُطالب بأي مبالغ إضافية إذا كانت مدفوعاته أقل من الغرامة)، ورد المستحق وإلغاء الأقساط المستقبلية تلقائياً.' 
-        : 'Calculate statutory penalty retention with Forfeiture Floor protection (client is never billed for deficits if payments were less than penalty).'}
-      icon={<RotateCcw size={18} />}
-      headerExtra={
-        <span style={{
-          background: 'rgba(239, 68, 68, 0.1)',
-          color: '#dc2626',
-          border: '1px solid rgba(239, 68, 68, 0.25)',
-          padding: '0.18rem 0.65rem',
-          borderRadius: '20px',
-          fontSize: '0.72rem',
-          fontWeight: 800
-        }}>
-          {isAr ? 'حد حظر مطالبة العميل بعجز إضافي' : 'Statutory Floor Engine'}
-        </span>
-      }
+      title={isAr ? 'فسخ العقد وتسوية الغرامة' : 'Contract Rescission & Settlement'}
+      subtitle={isAr
+        ? 'غرامة فسخ ١٠٪ بحد حظر المطالبة بعجز إضافي، ورد المستحق وإلغاء الأقساط المستقبلية تلقائياً'
+        : '10% statutory penalty with Forfeiture Floor protection; refund and future installments voided automatically'}
+      icon={<RotateCcw size={16} />}
       isAr={isAr}
-      maxWidth="1180px"
-      maxHeight="min(880px, 90vh)"
-      bodyStyle={{ padding: 0, display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}
+      maxWidth="1120px"
+      maxHeight="min(880px, 92vh)"
+      bodyStyle={{ padding: 0, display: 'flex', minHeight: 0 }}
+      footer={
+        rescissionSuccess ? (
+          <>
+            <button type="button" className={p.primaryButton} onClick={handleModalClose}>
+              <CheckCircle2 size={14} />
+              <span>{isAr ? 'تم / إغلاق النافذة' : 'Done / Close Window'}</span>
+            </button>
+            <button type="button" className={p.secondaryButton} onClick={() => setRescissionSuccess(null)}>
+              <RotateCcw size={14} />
+              <span>{isAr ? 'معالجة عقد آخر' : 'Process Another Contract'}</span>
+            </button>
+          </>
+        ) : (
+          <>
+            <button type="button" className={p.dangerButton} onClick={handleSubmit} disabled={isMutating || isTargetPeriodLocked}>
+              {isMutating ? <Loader2 size={14} className={p.spin} /> : isTargetPeriodLocked ? <AlertCircle size={14} /> : <RotateCcw size={14} />}
+              <span>
+                {isTargetPeriodLocked
+                  ? (isAr ? `الفترة المحاسبية مقفلة (M${targetPeriod.period_number})` : `Period Locked (M${targetPeriod.period_number})`)
+                  : (isAr ? 'تأكيد الفسخ وترحيل القيد' : 'Confirm & Post Rescission Entry')}
+              </span>
+            </button>
+            <button type="button" className={p.secondaryButton} onClick={handleModalClose} disabled={isMutating}>
+              {isAr ? 'إلغاء' : 'Cancel'}
+            </button>
+          </>
+        )
+      }
     >
-
-        {/* ══════════════════════════════════════════════════════════════════════════
-            2. TWO-SIDED MASTER-DETAIL GRID
-            ══════════════════════════════════════════════════════════════════════════ */}
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 360px), 1fr))',
-          flex: 1,
-          minHeight: 0,
-          overflowY: 'auto'
-        }}>
-
-          {/* ──────────────────────────────────────────────────────────────────
-              SIDE 1 (MASTER): SEARCHABLE LIST OF ACTIVE CONTRACTS
-              ────────────────────────────────────────────────────────────────── */}
-          <div style={{
-            background: '#f8fafc',
-            borderLeft: isAr ? '1px solid #e2e8f0' : 'none',
-            borderRight: isAr ? 'none' : '1px solid #e2e8f0',
-            display: 'flex',
-            flexDirection: 'column',
-            overflow: 'hidden'
-          }}>
-            {/* Search Header */}
-            <div style={{ padding: '1rem', borderBottom: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
-              <div style={{ position: 'relative' }}>
-                <input
-                  type="text"
-                  placeholder={isAr ? 'بحث بالعميل، كود العقد، أو الوحدة...' : 'Search client, contract or unit...'}
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: isAr ? '0.55rem 2.2rem 0.55rem 0.85rem' : '0.55rem 0.85rem 0.55rem 2.2rem',
-                    borderRadius: '10px',
-                    border: '1px solid #cbd5e1',
-                    background: '#ffffff',
-                    fontSize: '0.82rem',
-                    outline: 'none',
-                    boxSizing: 'border-box'
-                  }}
-                />
-                <Search size={15} style={{
-                  position: 'absolute',
-                  [isAr ? 'right' : 'left']: '0.75rem',
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  color: '#94a3b8'
-                }} />
-              </div>
-
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.72rem', color: '#64748b' }}>
-                <span style={{ fontWeight: 700 }}>{isAr ? 'العقود النشطة القابلة للتسوية:' : 'Eligible Contracts:'}</span>
-                <span style={{
-                  background: '#e2e8f0',
-                  padding: '0.15rem 0.5rem',
-                  borderRadius: '10px',
-                  fontWeight: 800,
-                  color: '#334155'
-                }}>
-                  {filteredContracts.length} {isAr ? 'عقد' : 'contracts'}
-                </span>
-              </div>
-            </div>
-
-            {/* Scrollable List of Contracts */}
-            <div style={{ flex: 1, overflowY: 'auto', padding: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-              {filteredContracts.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '2rem 1rem', color: '#94a3b8', fontSize: '0.8rem' }}>
-                  {isAr ? 'لا توجد عقود نشطة مطابقة للبحث' : 'No matching active contracts found'}
-                </div>
-              ) : (
-                filteredContracts.map((c) => {
-                  const isSelected = c.contract_id === activeContract.contract_id;
-                  const paidVal = D(c.total_cash_collected || '0');
-                  const grossVal = D(c.gross_contract_value || '0');
-
-                  return (
-                    <div
-                      key={c.contract_id}
-                      onClick={() => setSelectedContractId(c.contract_id)}
-                      style={{
-                        padding: '0.85rem',
-                        borderRadius: '12px',
-                        border: isSelected ? '1.5px solid #946f23' : '1px solid #e2e8f0',
-                        background: '#ffffff',
-                        boxShadow: isSelected 
-                          ? '0 4px 14px rgba(148, 111, 35, 0.12), 0 0 0 1px rgba(148, 111, 35, 0.22)' 
-                          : '0 1px 3px rgba(0,0,0,0.02)',
-                        cursor: 'pointer',
-                        transition: 'all 0.15s ease',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: '0.45rem',
-                        position: 'relative'
-                      }}
-                    >
-                      {/* Client Name & Unit ID */}
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', minWidth: 0 }}>
-                          <User size={14} color="#64748b" style={{ flexShrink: 0 }} />
-                          <span style={{ fontWeight: 800, fontSize: '0.86rem', color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                            {c.buyer_name}
-                          </span>
-                        </div>
-                        <span style={{
-                          fontSize: '0.68rem',
-                          fontWeight: 700,
-                          padding: '0.12rem 0.5rem',
-                          borderRadius: '12px',
-                          background: '#f8fafc',
-                          color: '#334155',
-                          border: '1px solid #e2e8f0',
-                          flexShrink: 0
-                        }}>
-                          {c.unit_id}
-                        </span>
-                      </div>
-
-                      {/* Contract Number */}
-                      <div style={{ fontSize: '0.72rem', color: '#64748b' }}>
-                        {c.contract_number}
-                      </div>
-
-                      {/* Financial Footprint: Paid vs Total */}
-                      <div style={{
-                        display: 'grid',
-                        gridTemplateColumns: '1fr 1fr',
-                        gap: '0.5rem',
-                        borderTop: '1px dashed #f1f5f9',
-                        paddingTop: '0.4rem',
-                        marginTop: '0.15rem',
-                        fontSize: '0.72rem'
-                      }}>
-                        <div>
-                          <span style={{ color: '#94a3b8', fontSize: '0.68rem', display: 'block' }}>
-                            {isAr ? 'المسدد بالخزينة:' : 'Paid:'}
-                          </span>
-                          <strong style={{ color: '#059669', fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}>
-                            {formatEGP(paidVal.toString())} ج.م
-                          </strong>
-                        </div>
-                        <div>
-                          <span style={{ color: '#94a3b8', fontSize: '0.68rem', display: 'block' }}>
-                            {isAr ? 'إجمالي العقد:' : 'Gross:'}
-                          </span>
-                          <strong style={{ color: '#0f172a', fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}>
-                            {formatEGP(grossVal.toString())} ج.م
-                          </strong>
-                        </div>
-                      </div>
-
-                      {isSelected && (
-                        <div style={{
-                          position: 'absolute',
-                          [isAr ? 'left' : 'right']: '0.6rem',
-                          top: '0.6rem',
-                          width: '18px',
-                          height: '18px',
-                          borderRadius: '50%',
-                          background: '#946f23',
-                          color: '#ffffff',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center'
-                        }}>
-                          <Check size={11} strokeWidth={3} />
-                        </div>
-                      )}
-                    </div>
-                  );
-                })
-              )}
+      <div className={p.split}>
+        {/* Contracts list */}
+        <aside className={p.listPane}>
+          <div className={p.listHeader}>
+            <div className={p.searchWrap}>
+              <Search size={14} className={p.searchIcon} aria-hidden />
+              <input
+                type="text"
+                className={p.input}
+                placeholder={isAr ? 'بحث بالعميل، كود العقد، أو الوحدة...' : 'Search client, contract or unit...'}
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                aria-label={isAr ? 'بحث في العقود' : 'Search contracts'}
+              />
             </div>
           </div>
+          <div className={p.listSummary}>
+            <span>{isAr ? 'العقود القابلة للتسوية' : 'Eligible contracts'}</span>
+            <bdi className={p.numeric}>{filteredContracts.length}</bdi>
+          </div>
+          <div className={p.listBody}>
+            {filteredContracts.length === 0 ? (
+              <div className={p.emptyState}>
+                <Search size={28} className={p.emptyStateIcon} aria-hidden />
+                <span>{isAr ? 'لا توجد عقود نشطة مطابقة للبحث' : 'No matching active contracts found'}</span>
+              </div>
+            ) : (
+              filteredContracts.map((c) => {
+                const isSelected = c.contract_id === activeContract.contract_id;
+                return (
+                  <button
+                    key={c.contract_id}
+                    type="button"
+                    onClick={() => setSelectedContractId(c.contract_id)}
+                    aria-pressed={isSelected}
+                    className={isSelected ? `${p.listItem} ${p.listItemSelected}` : p.listItem}
+                  >
+                    <span className={p.listItemTop}>
+                      <bdi className={p.listItemTitle}>{buyerLabel(c.buyer_name)}</bdi>
+                      <bdi className={p.listItemCode}>#{c.contract_number}</bdi>
+                    </span>
+                    <span className={p.listItemMeta}>
+                      <bdi>{unitLabel(c.unit_id)}</bdi>
+                      <bdi className={p.listItemAmount}>{D(c.gross_contract_value || '0').formatEGP(isAr)}</bdi>
+                    </span>
+                    <span className={p.listItemMeta}>
+                      <span>{isAr ? 'المسدد' : 'Paid'}</span>
+                      <bdi className={p.numeric}>{D(c.total_cash_collected || '0').formatEGP(isAr)}</bdi>
+                    </span>
+                  </button>
+                );
+              })
+            )}
+          </div>
+        </aside>
 
-          {/* ──────────────────────────────────────────────────────────────────
-              SIDE 2 (DETAIL): RESCISSION DECISION, COMPUTATIONS & JOURNAL ENTRY
-              ────────────────────────────────────────────────────────────────── */}
-          <div style={{
-            background: '#ffffff',
-            display: 'flex',
-            flexDirection: 'column',
-            overflowY: 'auto',
-            padding: 'clamp(1rem, 2.5vw, 1.75rem)',
-            gap: '1.25rem'
-          }}>
-            {rescissionSuccess ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', height: '100%' }}>
-                {/* Success Banner */}
-                <div style={{
-                  padding: '1.25rem 1.5rem',
-                  borderRadius: '16px',
-                  background: 'linear-gradient(135deg, #ecfdf5 0%, #f0fdf4 100%)',
-                  border: '1.5px solid rgba(5, 150, 105, 0.3)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '1rem',
-                  boxShadow: '0 4px 16px rgba(5, 150, 105, 0.08)'
-                }}>
-                  <div style={{
-                    width: '46px',
-                    height: '46px',
-                    borderRadius: '12px',
-                    background: '#059669',
-                    color: '#ffffff',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    flexShrink: 0,
-                    boxShadow: '0 4px 10px rgba(5, 150, 105, 0.3)'
-                  }}>
-                    <CheckCircle2 size={26} />
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <h4 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: '#065f46' }}>
-                      {isAr ? 'تم اعتماد فسخ العقد وترحيل قيود الرد المالي بنجاح' : 'Contract Rescission Successfully Posted'}
-                    </h4>
-                    <p style={{ margin: '0.25rem 0 0', fontSize: '0.78rem', color: '#047857' }}>
-                      {isAr 
-                        ? 'تم إلغاء كافة الأقساط المتبقية وتحديث قيد الاسترداد بالدفاتر المحاسبية وأصبحت الوحدة متاحة لإعادة البيع.'
-                        : 'Future installment schedules voided, statutory penalty retained, and net refund liability credited to ledger.'}
+        {/* Detail */}
+        <div className={p.detailPane}>
+          {rescissionSuccess ? (
+            <div>
+              <section className={p.section}>
+                <div className={`${p.notice} ${p.noticeSuccess}`} role="status">
+                  <CheckCircle2 size={16} className={p.noticeIconSuccess} />
+                  <div>
+                    <p className={p.noticeTitle}>{isAr ? 'تم اعتماد فسخ العقد وترحيل قيود الرد المالي' : 'Contract Rescission Successfully Posted'}</p>
+                    <p className={p.noticeBody}>
+                      {isAr
+                        ? 'أُلغيت الأقساط المتبقية وحُدِّث قيد الاسترداد، وأصبحت الوحدة متاحة لإعادة البيع.'
+                        : 'Future installments voided, penalty retained, and net refund liability credited to the ledger.'}
                     </p>
                   </div>
                 </div>
-
-                {/* Settlement Confirmation Card */}
-                <div style={{
-                  background: '#ffffff',
-                  border: '1.5px solid #e2e8f0',
-                  borderRadius: '16px',
-                  padding: '1.25rem',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '1rem',
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.03)'
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #f1f5f9', paddingBottom: '0.75rem', flexWrap: 'wrap', gap: '0.5rem' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <Building2 size={16} color="#946f23" />
-                      <strong style={{ fontSize: '0.95rem', color: '#0f172a' }}>{rescissionSuccess.buyer}</strong>
-                      <span style={{ fontSize: '0.76rem', color: '#64748b' }}>({rescissionSuccess.contractNumber})</span>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <span style={{
-                        background: 'rgba(5, 150, 105, 0.1)',
-                        color: '#047857',
-                        border: '1px solid rgba(5, 150, 105, 0.25)',
-                        padding: '0.15rem 0.6rem',
-                        borderRadius: '20px',
-                        fontSize: '0.72rem',
-                        fontWeight: 800
-                      }}>
-                        {isAr ? `الوحدة ${rescissionSuccess.unitId} (متاحة للبيع)` : `Unit ${rescissionSuccess.unitId} (Available)`}
-                      </span>
-                      <span style={{ fontSize: '0.75rem', color: '#94a3b8', fontVariantNumeric: 'tabular-nums' }}>
-                        {rescissionSuccess.rescissionDate}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Financial Grid */}
-                  <div style={{
-                    display: 'grid',
-                    gridTemplateColumns: '1fr 1fr',
-                    gap: '0.75rem'
-                  }}>
-                    <div style={{ background: '#f8fafc', padding: '0.75rem 1rem', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
-                      <span style={{ color: '#64748b', fontSize: '0.7rem', display: 'block' }}>
-                        {isAr ? 'قيمة العقد الأصلية:' : 'Gross Contract Value:'}
-                      </span>
-                      <strong style={{ color: '#0f172a', fontSize: '0.95rem', fontVariantNumeric: 'tabular-nums' }}>
-                        {formatEGP(rescissionSuccess.grossContractValue)} ج.م
-                      </strong>
-                    </div>
-
-                    <div style={{ background: '#f8fafc', padding: '0.75rem 1rem', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
-                      <span style={{ color: '#64748b', fontSize: '0.7rem', display: 'block' }}>
-                        {isAr ? 'إجمالي المحصل بالخزينة:' : 'Total Cash Collected:'}
-                      </span>
-                      <strong style={{ color: '#0f172a', fontSize: '0.95rem', fontVariantNumeric: 'tabular-nums' }}>
-                        {formatEGP(rescissionSuccess.totalCashCollected)} ج.م
-                      </strong>
-                    </div>
-
-                    <div style={{ background: 'rgba(184, 144, 62, 0.08)', padding: '0.75rem 1rem', borderRadius: '10px', border: '1px solid rgba(184, 144, 62, 0.25)' }}>
-                      <span style={{ color: '#946f23', fontSize: '0.7rem', fontWeight: 800, display: 'block' }}>
-                        {isAr ? 'غرامة الفسخ المحتجزة (حد حظر مطالبة العميل بعجز إضافي):' : 'Retained Penalty (Forfeiture Floor):'}
-                      </span>
-                      <strong style={{ color: '#946f23', fontSize: '1.05rem', fontWeight: 900, fontVariantNumeric: 'tabular-nums' }}>
-                        {formatEGP(rescissionSuccess.penaltyRetained)} ج.م
-                      </strong>
-                      <span style={{ fontSize: '0.65rem', color: '#946f23', display: 'block', marginTop: '0.2rem' }}>
-                        {isAr ? 'تم تطبيق حد حظر مطالبة العميل بعجز إضافي (Forfeiture Floor)' : 'Forfeiture Floor rule applied'}
-                      </span>
-                    </div>
-
-                    <div style={{ background: 'rgba(16, 185, 129, 0.08)', padding: '0.75rem 1rem', borderRadius: '10px', border: '1px solid rgba(16, 185, 129, 0.25)' }}>
-                      <span style={{ color: '#047857', fontSize: '0.7rem', fontWeight: 800, display: 'block' }}>
-                        {isAr ? 'صافي رد العميل المستحق (حساب 206200):' : 'Net Refund Liability (206200):'}
-                      </span>
-                      <strong style={{ color: '#059669', fontSize: '1.05rem', fontWeight: 900, fontVariantNumeric: 'tabular-nums' }}>
-                        {formatEGP(rescissionSuccess.netRefundLiability)} ج.م
-                      </strong>
-                    </div>
-                  </div>
-
-                  {/* Statutory & Procedural Banner */}
-                  <div style={{
-                    padding: '0.75rem 1rem',
-                    borderRadius: '10px',
-                    background: '#f8fafc',
-                    border: '1px solid #e2e8f0',
-                    fontSize: '0.76rem',
-                    color: '#475569',
-                    lineHeight: 1.55
-                  }}>
-                    {isAr ? (
-                      <>
-                        📌 <strong>الإجراء المحاسبي المكتمل:</strong> تم تطبيق حد حظر مطالبة العميل بعجز إضافي (Forfeiture Floor) بحيث لا يُطالب العميل بأي عجز إضافي إذا كانت مدفوعاته أقل من الغرامة. تم ترحيل صافي المبلغ المسترد إلى ذمة العميل بحساب الالتزامات (206200)، وإثبات غرامة الفسخ كإيراد استثنائي محتجز، مع تحرير الوحدة السكنية للبيع مجدداً.
-                      </>
-                    ) : (
-                      <>
-                        📌 <strong>Accounting Audit:</strong> Forfeiture Floor applied (client is never billed for deficits). Net refund credited to buyer liability account (206200), penalty retained as miscellaneous gain, and unit unlocked for new sales contracts.
-                      </>
-                    )}
-                  </div>
+              </section>
+              <section className={p.section}>
+                <div className={p.sectionHeader}>
+                  <p className={p.metaLine}>
+                    <bdi className={p.metaLineStrong}>{buyerLabel(rescissionSuccess.buyer)}</bdi>
+                    <span className={p.metaDot}>·</span>
+                    <bdi className={p.numeric}>#{rescissionSuccess.contractNumber}</bdi>
+                    <span className={p.metaDot}>·</span>
+                    <bdi className={p.numeric}>{rescissionSuccess.rescissionDate}</bdi>
+                  </p>
+                  <span className={`${p.pill} ${p.pillSuccess}`}>
+                    <bdi>{isAr ? `الوحدة ${unitLabel(rescissionSuccess.unitId)} متاحة للبيع` : `Unit ${unitLabel(rescissionSuccess.unitId)} available`}</bdi>
+                  </span>
                 </div>
-
-                {/* Anchored Footer Buttons */}
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'flex-end',
-                  gap: '0.65rem',
-                  borderTop: '1px solid #e2e8f0',
-                  paddingTop: '1.25rem',
-                  marginTop: 'auto'
-                }}>
-                  <button
-                    type="button"
-                    onClick={() => setRescissionSuccess(null)}
-                    style={{
-                      background: '#ffffff',
-                      border: '1px solid #cbd5e1',
-                      color: '#0f172a',
-                      padding: '0.6rem 1.25rem',
-                      borderRadius: '10px',
-                      fontSize: '0.82rem',
-                      fontWeight: 700,
-                      cursor: 'pointer',
-                      minHeight: '44px',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '0.45rem',
-                      transition: 'all 0.15s ease'
-                    }}
-                  >
-                    <RotateCcw size={14} />
-                    <span>{isAr ? 'معالجة عقد آخر' : 'Process Another Contract'}</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={onClose}
-                    style={{
-                      background: 'linear-gradient(135deg, #059669 0%, #047857 100%)',
-                      color: '#ffffff',
-                      border: 'none',
-                      padding: '0.6rem 1.6rem',
-                      borderRadius: '10px',
-                      fontSize: '0.84rem',
-                      fontWeight: 800,
-                      cursor: 'pointer',
-                      minHeight: '44px',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '0.5rem',
-                      boxShadow: '0 4px 14px rgba(5, 150, 105, 0.3)'
-                    }}
-                  >
-                    <CheckCircle2 size={16} />
-                    <span>{isAr ? 'تم / إغلاق النافذة' : 'Done / Close Window'}</span>
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <>
-                {/* Active Contract Header Dossier Strip */}
-                <div style={{
-                  background: '#f8fafc',
-                  border: '1px solid #e2e8f0',
-                  borderRadius: '14px',
-                  padding: '1rem 1.25rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  flexWrap: 'wrap',
-                  gap: '1rem'
-                }}>
-                  <div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <Building2 size={16} color="#946f23" />
-                      <strong style={{ fontSize: '0.95rem', color: '#0f172a' }}>
-                        {activeContract.buyer_name}
-                      </strong>
-                      <span style={{ fontSize: '0.75rem', color: '#64748b' }}>
-                        ({activeContract.contract_number} • {activeContract.unit_id})
-                      </span>
-                    </div>
+                <dl className={p.metaList}>
+                  <div className={p.metaRow}>
+                    <dt className={p.metaKey}>{isAr ? 'قيمة العقد الأصلية' : 'Gross Contract Value'}</dt>
+                    <dd className={p.metaValue}><bdi>{D(rescissionSuccess.grossContractValue || '0').formatEGP(isAr)}</bdi></dd>
                   </div>
-
-                  {/* Effective Rescission Date Input */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <label style={{ fontSize: '0.74rem', fontWeight: 700, color: '#475569', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                      <Calendar size={13} />
-                      <span>{isAr ? 'تاريخ الفسخ المعتمد:' : 'Effective Date:'}</span>
-                    </label>
-                    <input 
+                  <div className={p.metaRow}>
+                    <dt className={p.metaKey}>{isAr ? 'إجمالي المحصل بالخزينة' : 'Total Cash Collected'}</dt>
+                    <dd className={p.metaValue}><bdi>{D(rescissionSuccess.totalCashCollected || '0').formatEGP(isAr)}</bdi></dd>
+                  </div>
+                  <div className={p.metaRow}>
+                    <dt className={p.metaKey}>{isAr ? 'غرامة الفسخ المحتجزة' : 'Retained Penalty'}</dt>
+                    <dd className={p.metaValue}><bdi>{D(rescissionSuccess.penaltyRetained || '0').formatEGP(isAr)}</bdi></dd>
+                  </div>
+                  <div className={p.metaRow}>
+                    <dt className={p.metaKey}>{isAr ? 'صافي رد العميل المستحق (206200)' : 'Net Refund Liability (206200)'}</dt>
+                    <dd className={p.metaValue}><bdi>{D(rescissionSuccess.netRefundLiability || '0').formatEGP(isAr)}</bdi></dd>
+                  </div>
+                </dl>
+                <p className={p.hint}>
+                  {isAr
+                    ? 'طُبّق حد حظر المطالبة بعجز إضافي، ورُحّل صافي المسترد إلى ذمة العميل (206200)، وأُثبتت الغرامة كإيراد استثنائي.'
+                    : 'Forfeiture Floor applied: net refund credited to buyer liability (206200) and penalty recognized as miscellaneous gain.'}
+                </p>
+              </section>
+            </div>
+          ) : (
+            <div>
+              <section className={p.section}>
+                <div className={p.sectionHeader}>
+                  <p className={p.metaLine}>
+                    <bdi className={p.metaLineStrong}>{buyerLabel(activeContract.buyer_name)}</bdi>
+                    <span className={p.metaDot}>·</span>
+                    <bdi className={p.numeric}>#{activeContract.contract_number}</bdi>
+                    <span className={p.metaDot}>·</span>
+                    <bdi>{unitLabel(activeContract.unit_id)}</bdi>
+                  </p>
+                  <span className={isDelivered ? `${p.pill} ${p.pillSuccess}` : `${p.pill} ${p.pillMuted}`}>
+                    {isDelivered ? (isAr ? 'مسلّمة' : 'Delivered') : (isAr ? 'لم تُسلّم' : 'Not delivered')}
+                  </span>
+                </div>
+                <div className={p.fieldGrid}>
+                  <div className={p.field}>
+                    <label className={p.label} htmlFor="resc-date">{isAr ? 'تاريخ الفسخ المعتمد' : 'Effective Date'}</label>
+                    <input
+                      id="resc-date"
                       type="date"
                       value={rescissionDate}
                       onChange={e => setRescissionDate(e.target.value)}
-                      style={{
-                        padding: '0.4rem 0.65rem',
-                        borderRadius: '8px',
-                        border: '1px solid #cbd5e1',
-                        background: '#ffffff',
-                        color: '#0f172a',
-                        fontSize: '0.78rem',
-                        outline: 'none'
-                      }}
                       required
+                      className={`${p.input} ${p.numeric}`}
                     />
                   </div>
                 </div>
-
-                {/* Fiscal Period Locked Warning Banner */}
                 {isTargetPeriodLocked && (
-                  <div style={{
-                    background: '#fef2f2',
-                    border: '1.5px solid #fecaca',
-                    borderRadius: '12px',
-                    padding: '0.85rem 1rem',
-                    marginBottom: '1rem',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.75rem',
-                    color: '#991b1b'
-                  }}>
-                    <AlertCircle size={20} color="#dc2626" style={{ flexShrink: 0 }} />
+                  <div className={`${p.notice} ${p.noticeDanger}`} role="alert">
+                    <AlertCircle size={16} className={p.noticeIconDanger} />
                     <div>
-                      <strong style={{ fontSize: '0.82rem', display: 'block' }}>
-                        {isAr ? 'الفترة المحاسبية لتاريخ الفسخ مقفلة' : 'Fiscal period is locked'}
-                      </strong>
-                      <span style={{ fontSize: '0.73rem', color: '#b91c1c' }}>
-                        {isAr
-                          ? `تاريخ الفسخ يقع في الفترة (${targetPeriod.fiscal_year}-M${targetPeriod.period_number}) وهي مقفلة بموجب المعيار Invariant 0.9. يُحظر تسجيل قيود فسخ داخل فترة مقفلة.`
-                          : `Rescission date falls in period (${targetPeriod.fiscal_year}-M${targetPeriod.period_number}) which is locked per Invariant 0.9.`}
-                      </span>
+                      <p className={p.noticeTitle}>{isAr ? 'الفترة المحاسبية لتاريخ الفسخ مقفلة' : 'Fiscal period is locked'}</p>
+                      <p className={p.noticeBody}>
+                        <bdi>
+                          {isAr
+                            ? `التاريخ يقع في الفترة ${targetPeriod.fiscal_year}-M${targetPeriod.period_number} وهي مقفلة (Invariant 0.9). اختر تاريخاً في فترة مفتوحة.`
+                            : `The date falls in period ${targetPeriod.fiscal_year}-M${targetPeriod.period_number}, which is locked (Invariant 0.9). Pick a date in an open period.`}
+                        </bdi>
+                      </p>
                     </div>
                   </div>
                 )}
+              </section>
 
-                {/* Rescission Decision Cards (Branch 1 Pre-delivery vs Branch 2 Post-delivery) */}
-                <BranchDecisionCard 
-                  contract={activeContract}
-                  selectedBranch={selectedBranch}
-                  onSelectBranch={setSelectedBranch}
-                  isAr={isAr}
-                />
-
-                {/* 4-Box Financial Split HUD */}
-                <div style={{
-                  background: '#f8fafc',
-                  border: '1px solid #e2e8f0',
-                  borderRadius: '14px',
-                  padding: '1.15rem',
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(2, 1fr)',
-                  gap: '1rem'
-                }}>
-                  <div>
-                    <span style={{ color: '#64748b', fontSize: '0.7rem', display: 'block' }}>
-                      {isAr ? 'قيمة العقد الإجمالية (V):' : 'Gross Contract Value (V):'}
-                    </span>
-                    <strong style={{ color: '#0f172a', fontSize: '1rem' }}>
-                      <MoneyCell amount={preview.grossContractValue} isAr={isAr} />
-                    </strong>
-                  </div>
-
-                  <div>
-                    <span style={{ color: '#64748b', fontSize: '0.7rem', display: 'block' }}>
-                      {isAr ? 'المحصل نقداً حتى الآن (C):' : 'Total Cash Collected (C):'}
-                    </span>
-                    <strong style={{ color: '#0f172a', fontSize: '1rem' }}>
-                      <MoneyCell amount={preview.totalCashCollected} isAr={isAr} />
-                    </strong>
-                  </div>
-
-                  <div style={{
-                    background: 'rgba(184, 144, 62, 0.08)',
-                    border: '1px solid rgba(184, 144, 62, 0.25)',
-                    borderRadius: '10px',
-                    padding: '0.75rem'
-                  }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.2rem' }}>
-                      <span style={{ color: '#946f23', fontSize: '0.7rem', fontWeight: 800 }}>
-                        {isAr ? 'غرامة الفسخ المحتجزة (حد حظر مطالبة العميل بعجز إضافي):' : 'Retained Penalty (Forfeiture Floor):'}
+              <section className={p.section}>
+                <h4 className={p.sectionTitle}>{isAr ? 'المسار المحاسبي للفسخ' : 'Rescission Branch'}</h4>
+                <div className={p.choiceGrid} role="radiogroup">
+                  {branches.map(b => (
+                    <button
+                      key={b.id}
+                      type="button"
+                      role="radio"
+                      aria-checked={selectedBranch === b.id}
+                      onClick={() => setSelectedBranch(b.id)}
+                      className={selectedBranch === b.id ? `${p.choice} ${p.choiceSelected}` : p.choice}
+                    >
+                      <span className={p.choiceIcon}>{b.icon}</span>
+                      <span className={p.choiceText}>
+                        <span className={p.choiceTitle}>{isAr ? b.titleAr : b.titleEn}</span>
+                        <span className={p.choiceDesc}>{isAr ? b.descAr : b.descEn}</span>
                       </span>
-                      <LegalVerificationTag label={isAr ? 'حد أقصى ١٠٪' : '10% Floor'} isAr={isAr} />
-                    </div>
-                    <strong style={{ color: '#946f23', fontSize: '1.1rem', fontWeight: 900 }}>
-                      <MoneyCell amount={preview.penaltyRetained} isAr={isAr} highlight />
-                    </strong>
-                    <span style={{ fontSize: '0.66rem', color: '#946f23', display: 'block', marginTop: '0.3rem', lineHeight: 1.4 }}>
-                      {isAr 
-                        ? '🛡️ حد حظر مطالبة العميل بعجز إضافي (Forfeiture Floor): العميل لن يُطالب بأي مبالغ إضافية إذا كانت مدفوعاته أقل من الغرامة.'
-                        : 'Forfeiture Floor: Client will never be asked to pay additional deficits if payments were less than the penalty.'}
-                    </span>
-                  </div>
+                    </button>
+                  ))}
+                </div>
+                <p className={p.hint}>
+                  {isAr
+                    ? `الحالة المسجلة للوحدة: ${isDelivered ? 'مسلّمة' : 'لم تُسلّم'}. حدد المسار المطابق قبل الترحيل (Invariant 4.10).`
+                    : `Recorded unit status: ${isDelivered ? 'Delivered' : 'Not delivered'}. Confirm the matching branch before posting (Invariant 4.10).`}
+                </p>
+              </section>
 
-                  <div style={{
-                    background: 'rgba(16, 185, 129, 0.08)',
-                    border: '1px solid rgba(16, 185, 129, 0.25)',
-                    borderRadius: '10px',
-                    padding: '0.75rem'
-                  }}>
-                    <span style={{ color: '#047857', fontSize: '0.7rem', fontWeight: 800, display: 'block', marginBottom: '0.2rem' }}>
-                      {isAr ? 'صافي رد العميل المستحق (حساب 206200):' : 'Net Refund Liability (206200):'}
-                    </span>
-                    <strong style={{ color: '#059669', fontSize: '1.1rem', fontWeight: 900 }}>
-                      <MoneyCell amount={preview.netRefundLiability} isAr={isAr} />
-                    </strong>
+              <section className={p.section}>
+                <h4 className={p.sectionTitle}>{isAr ? 'التسوية المالية' : 'Financial Settlement'}</h4>
+                <div className={p.figureGrid}>
+                  <div className={p.figure}>
+                    <span className={p.figureLabel}>{isAr ? 'غرامة الفسخ المحتجزة' : 'Retained Penalty'}</span>
+                    <bdi className={p.figureValue}>{D(preview.penaltyRetained || '0').formatEGP(isAr)}</bdi>
+                    <span className={p.figureCaption}>{isAr ? 'حد أقصى ١٠٪ من قيمة العقد' : 'Capped at 10% of contract value'}</span>
+                  </div>
+                  <div className={p.figure}>
+                    <span className={p.figureLabel}>{isAr ? 'صافي رد العميل (206200)' : 'Net Refund Liability (206200)'}</span>
+                    <bdi className={`${p.figureValue} ${p.figureValueSuccess}`}>{D(preview.netRefundLiability || '0').formatEGP(isAr)}</bdi>
                   </div>
                 </div>
+                <dl className={p.metaList}>
+                  <div className={p.metaRow}>
+                    <dt className={p.metaKey}>{isAr ? 'قيمة العقد الإجمالية' : 'Gross Contract Value'}</dt>
+                    <dd className={p.metaValue}><bdi>{D(preview.grossContractValue || '0').formatEGP(isAr)}</bdi></dd>
+                  </div>
+                  <div className={p.metaRow}>
+                    <dt className={p.metaKey}>{isAr ? 'المحصل نقداً حتى الآن' : 'Total Cash Collected'}</dt>
+                    <dd className={p.metaValue}><bdi>{D(preview.totalCashCollected || '0').formatEGP(isAr)}</bdi></dd>
+                  </div>
+                </dl>
+                <div className={p.notice}>
+                  <ShieldAlert size={16} className={p.noticeIconAccent} />
+                  <p className={p.noticeBody}>
+                    {isAr
+                      ? 'حد حظر المطالبة بعجز إضافي: لن يُطالب العميل بأي مبالغ إضافية إذا كانت مدفوعاته أقل من الغرامة.'
+                      : 'Forfeiture Floor: the client is never billed for a deficit if payments were less than the penalty.'}
+                  </p>
+                </div>
+              </section>
 
-                {/* Journal Entry Preview */}
+              <section className={p.section}>
+                <h4 className={p.sectionTitle}>{isAr ? 'معاينة القيد المحاسبي' : 'Journal Entry Preview'}</h4>
                 <JournalEntryPreview entry={preview.journalEntry} isDraft={true} isAr={isAr} />
-
-                {/* Anchored Footer Buttons */}
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'flex-end',
-                  gap: '0.65rem',
-                  borderTop: '1px solid #e2e8f0',
-                  paddingTop: '1.25rem',
-                  marginTop: 'auto'
-                }}>
-                  <button
-                    type="button"
-                    onClick={onClose}
-                    style={{
-                      background: '#ffffff',
-                      border: '1px solid #cbd5e1',
-                      color: '#64748b',
-                      padding: '0.6rem 1.25rem',
-                      borderRadius: '10px',
-                      fontSize: '0.82rem',
-                      fontWeight: 700,
-                      cursor: 'pointer',
-                      minHeight: '44px',
-                      transition: 'all 0.15s ease'
-                    }}
-                  >
-                    {isAr ? 'إلغاء' : 'Cancel'}
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={handleSubmit}
-                    disabled={isMutating || isTargetPeriodLocked}
-                    style={{
-                      background: isTargetPeriodLocked 
-                        ? '#94a3b8' 
-                        : 'linear-gradient(135deg, #ef4444 0%, #b91c1c 100%)',
-                      color: '#ffffff',
-                      border: 'none',
-                      padding: '0.6rem 1.6rem',
-                      borderRadius: '10px',
-                      fontSize: '0.84rem',
-                      fontWeight: 800,
-                      cursor: (isMutating || isTargetPeriodLocked) ? 'not-allowed' : 'pointer',
-                      minHeight: '44px',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '0.5rem',
-                      boxShadow: isTargetPeriodLocked ? 'none' : '0 4px 14px rgba(239, 68, 68, 0.3)'
-                    }}
-                  >
-                    {isMutating ? (
-                      <Loader2 size={15} className="animate-spin" />
-                    ) : isTargetPeriodLocked ? (
-                      <AlertCircle size={15} />
-                    ) : (
-                      <RotateCcw size={15} />
-                    )}
-                    <span>
-                      {isTargetPeriodLocked 
-                        ? (isAr ? `الفترة المحاسبية مقفلة (M${targetPeriod.period_number})` : `Period Locked (M${targetPeriod.period_number})`)
-                        : (isAr ? 'تأكيد الفسخ وترحيل القيد بالدفاتر' : 'Confirm & Post Rescission Entry')}
-                    </span>
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
+              </section>
+            </div>
+          )}
         </div>
+      </div>
     </ZFModalShell>
   );
 };
