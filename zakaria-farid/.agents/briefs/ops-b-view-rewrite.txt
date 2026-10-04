@@ -1,0 +1,8 @@
+ROLE: LEAF — implementer. TRACK: SURFACE_UI. cwd = zakaria-farid.
+Your complete brief is the file .agents/briefs/ops-b-view-rewrite.body.txt (≈37 KB).
+1. Read that file IN FULL first (all sections: files, step_1..step_4, gates, report contract).
+2. Execute it exactly. It is deterministic: every string, class name, CSS rule and test is given.
+   Do not redesign, add sections, colors, or copy.
+3. Run the gates listed in it in the FOREGROUND, then return the report in its
+   <structured_output_contract>. Use the `caveman` skill for prose.
+Do NOT git add/commit/stash/checkout/restore. Do NOT touch files not listed in the body file.

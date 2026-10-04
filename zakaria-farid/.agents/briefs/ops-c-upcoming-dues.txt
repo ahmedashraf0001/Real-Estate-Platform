@@ -1,0 +1,4 @@
+ROLE: LEAF — implementer. cwd = zakaria-farid.
+Your complete brief is .agents/briefs/ops-c-upcoming-dues.body.txt. Read it IN FULL first, then execute it
+exactly (deterministic: every string, class, CSS rule and test is given). Run its gates in the FOREGROUND and
+return its report. Use the `caveman` skill. Do NOT git add/commit/stash/checkout/restore. Touch only its <files>.

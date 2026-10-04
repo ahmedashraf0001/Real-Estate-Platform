@@ -1,0 +1,36 @@
+<task>
+Repo: Next.js 16 app, cwd = zakaria-farid. Read AGENTS.md.
+Single file in scope: src/components/admin/erp/v2/views/CockpitView.tsx (large; targeted edits only).
+A helper already exists: src/lib/erp/projectStatusHelper.ts → `computeProjectStatusMetrics(...)` (read its signature). Accounting is cash-basis (user-confirmed).
+
+1. Project Status side widget (~line 3170-3200: renders proj.name, proj.statusText, "Contracted Sales: X/Y units", "Construction Progress"). Browser-verified bug: a unit with an ACTIVE contract shows "Completed · 0/1 units · 100%". Build the widget's project list with `computeProjectStatusMetrics` (or reuse its counting logic) so contractedUnits counts non-rescinded contracts matching property_id/unit_id/building_unit_id, status text/pill come from the helper, and construction progress shows "—" / "No construction data" (EN/AR) when there is none — never default to 100% or "Completed". Remove the `proj.pct >= 100 ? 'Completed'` fallback.
+2. "View all upcoming dues (N)" (~line 3083) counts `allAgendaEvents.length` (showed 10 with only 5 open tranches). N must equal open (Pending / Partially Paid) installment tranches of non-rescinded contracts due today or later, plus unpaid payables if the agenda includes them; deduplicate events that represent the same tranche (schedule + mirrored due/cheque record). Fix the event list source so the calendar dots and the count agree.
+3. "Recent Transactions" (~line 2160 and ~3601 empty states) shows "No matching transactions" even though a down payment, a partial collection and journal entries exist. Build rows from real journal entries (newest first): receipts (JE-RCP-*, JE-IP-*), advance/down-payment (JE-PAY-*), rescission (JE-RESC-*), refunds, expenses/payables. Row: date, type label (EN/AR), party (buyer from linked contract via journal lines contract_id or entry source_entity_id; supplier for costs), reference (entry_number), amount (sum of debits), status pill. Respect existing tab filters (All / Client Collections / Contractor Payables / Cash Journal), status filter and pagination. No fake rows.
+4. "Due Collections" KPI card (~line 1762): title → "Scheduled collections (off-ledger)" / "تحصيلات مجدولة (خارج الدفاتر)"; tooltip: comes from installment schedules, not booked in the GL (cash-basis). Value unchanged.
+5. Remove hardcoded sparkline arrays passed to ZFKpiCard in this file (e.g. `sparklineData={[15, 24, ...]}` literal arrays) — use real series if one already exists in scope (e.g. kpiWaves), otherwise pass none/hide the sparkline. Report each.
+</task>
+<execution_rules>
+- Run every shell command in the FOREGROUND. Never start background tasks or wait for background jobs.
+- Edits first, gates once at the end. If a command takes >3 min, skip it and say so.
+- Always finish with the report, even if incomplete. Use the `caveman` skill for prose.
+- Another agent edits OTHER files in this tree concurrently. Touch only files allowed in your brief. Report unrelated tsc errors; do not fix them.
+- Preserve UTF-8 (Arabic strings). Do targeted edits; never rewrite whole files. Do not delete imports/lines you did not intend to change.
+- After any "remove X" change, grep for X and confirm 0 remaining references (or justify each).
+- Hooks: never place a hook after an early return.
+</execution_rules>
+
+<verification_loop>
+  npx tsc --noEmit                (must be clean for your files)
+  npx eslint <files you touched>  (no new errors vs HEAD; report counts)
+  git diff --stat -- <files you touched>
+For every target grep given in the brief: count + reason for each remaining hit.
+</verification_loop>
+
+<action_safety>Do NOT git add/commit/stash/checkout/restore. No DB access, no migrations.</action_safety>
+
+<structured_output_contract>
+1. Per numbered item: done/skipped + file:line
+2. Decisions you made that the brief left open
+3. Gates (tsc, eslint per file vs HEAD, grep counts)
+4. Open questions
+</structured_output_contract>

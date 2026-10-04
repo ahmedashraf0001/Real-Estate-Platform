@@ -1,0 +1,43 @@
+<task>
+Repo: Next.js 16 app at the current working directory (zakaria-farid). Single file in scope:
+  src/components/admin/CADBlueprintBuilder.tsx  (~9.5k lines — use targeted edits only, never rewrite the file)
+
+PROBLEM: The floor-plan SVG canvas hardcodes the OLD dark canvas color in 20 places: `#0A0E1A` and `#0D1220` (stroke=, fill=, and ternaries like `composerTool === 'door' ? '#0A0E1A' : ...`). Find them with:
+  grep -nE "#0A0E1A|#0D1220" src/components/admin/CADBlueprintBuilder.tsx
+In LIGHT mode the canvas is light, so these render as dark slabs. Known instances:
+  - "Wall cutout gap" lines for doors/windows (~lines 5572, 5648): `<line ... stroke="#0A0E1A" strokeWidth="6" />` paint the canvas color over the wall to make an opening. They must paint whatever color is ACTUALLY behind the wall on the canvas, in both themes.
+  - Corner resize gripper circles (~5168-5171, 5371-5469): `stroke="#0A0E1A"` / `stroke="#0D1220"` is a halo ring separating the handle from the drawing — should be the canvas color too.
+  - Hover-action pills and dimension label chips (~5609, 5672, 5713, 5947): `<rect fill="#0D1220" ...>` dark chips with light text. Make them theme-aware: chip fill = surface color, and make sure the text inside stays readable (check the <text> fill next to each rect; switch it to the text token if it is hardcoded light).
+  - Toolbar/tool-preview ternaries (~5786, 5822): `'#0A0E1A'` used as an icon/fill color → use the text/canvas token as appropriate so it is visible in both themes.
+
+HOW: The component already defines CSS variables in its embedded <style> block (search `--fp-canvas-bg:`; dark block ~line 7007, light block ~line 7027, another ~line 7952): --fp-canvas-bg, --fp-surface, --fp-line, --fp-text, --fp-text-dim, --fp-gold. FIRST determine what is actually painted behind the walls: check whether the SVG draws its own background <rect> or grid, and check `.fp-canvas-panel` and its `[data-theme="light"]` override (~line 7159, which sets `background: #F8FAFC`, a different value from --fp-canvas-bg). The cutout color must equal that actual backdrop. If they disagree, make them consistent by pointing the override at the variable (or define one variable such as --fp-drawing-bg used by both) — do not leave two different values.
+IMPORTANT SVG detail: `var()` inside SVG presentation ATTRIBUTES (stroke="var(--x)") is unreliable. Use the style prop instead: `style={{ stroke: 'var(--fp-canvas-bg)' }}` / `style={{ fill: 'var(--fp-surface)' }}`, and remove the attribute you replace. For ternaries, put the ternary inside the style value.
+
+Do NOT change geometry, coordinates, sizes, stroke widths, event handlers, logic, or any color other than these dark-canvas literals (and the text inside the chips if needed for contrast). Preserve UTF-8 (Arabic strings in this file).
+</task>
+
+<execution_rules>
+- Run every shell command in the FOREGROUND and wait for it. Never start background tasks/terminals and never "wait for" a background job.
+- Do the edits FIRST, then run gates once at the end. Do not establish lint baselines; the orchestrator has them.
+- If a command takes more than ~3 minutes, skip it and say so in the report.
+- Always finish with the report in <structured_output_contract>, even if incomplete.
+</execution_rules>
+
+<verification_loop>
+  npx tsc --noEmit                         (must be clean)
+  npx eslint src/components/admin/CADBlueprintBuilder.tsx   (baseline is 27 errors; must not increase)
+  grep -cE "#0A0E1A|#0D1220" src/components/admin/CADBlueprintBuilder.tsx   (target 0; justify any that remain)
+  git diff --stat   (only CADBlueprintBuilder.tsx; ignore graphify-out/ changes, which a hook makes)
+</verification_loop>
+
+<action_safety>
+Only this file, only these colors. Do NOT git add, commit, stash, checkout, or restore. Leave changes uncommitted.
+</action_safety>
+
+<structured_output_contract>
+End with:
+  1. What is actually behind the walls (the backdrop you found) and how cutouts now match it in both themes
+  2. Every replaced literal: line → new value
+  3. Gate outcomes (tsc, eslint error count, grep count)
+  4. Anything left or uncertain
+</structured_output_contract>

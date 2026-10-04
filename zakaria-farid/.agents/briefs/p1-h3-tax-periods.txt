@@ -1,0 +1,43 @@
+<task>
+Repo: Next.js 16 app, cwd = zakaria-farid. Read AGENTS.md. FINANCIAL_CORE: every JE balanced; respect period locks.
+User-confirmed (PROJECT_SPEC.md 2026-10-04):
+ (a) Tax goes through the accrued disposition tax liability 204000.
+ (b) Accounting periods are created AUTOMATICALLY when needed; the user can also MANUALLY close a fiscal year.
+Account 604000 "Real Estate Disposition Tax Expense" (EXPENSE, DEBIT) now exists in the DB and in CANONICAL_COA (src/lib/erp/ledger.ts).
+
+1. Tax accrual (src/components/admin/erp/context/ERPWorkstationContext.tsx):
+   - `handleRecordTax` currently records the tax row with NO journal entry. Change: after inserting the tax row, post JE: Dr 604000 / Cr 204000 for tax_amount, dated the record date, in the period resolved for that date, source_module consistent with other tax entries, description incl. tax type + contract number. Persist via the existing journal persistence function; add to local journalEntries.
+   - `handleRemitTax` (~search "Remitted to ETA") currently posts Dr 150000 / Cr 101000. Change to Dr 204000 / Cr 101000 or 102000 (let the user choose Safe/Bank in the remit confirm — add the choice in src/components/admin/erp/v2/views/ApartmentTaxesView.tsx; default 101000).
+   - Update user-facing copy in ApartmentTaxesView that says taxes are off-ledger until remitted → "Recorded taxes are accrued to 204000 and cleared when paid."
+2. Automatic periods: today the DB has only 2026 periods while schedules run into 2027–2028. Add a function (src/lib/erp/supabaseService.ts) `ensurePeriodsForDate(supabase, date)` that, when no period covers the date, inserts all 12 calendar-month periods of that fiscal year (status OPEN, period_id `prd-YYYY-MM`, same shape as existing rows; on conflict do nothing), and returns the period. Call it (a) from loadLiveData after fetching when the current month has no period, and (b) wherever a JE is about to be posted and `resolvePeriodForDate` finds no matching period (find the central posting path(s) in ERPWorkstationContext; keep it to the central helper(s) — list them). Update local `data.periods` after inserting.
+3. Manual fiscal-year close: in src/components/admin/erp/v2/views/GeneralLedgerView.tsx (period controls near `onTogglePeriodStatus`) add "Close fiscal year" (EN/AR) for a selected year: confirm dialog stating it will set all 12 periods of that year to CLOSED and block new postings; then set every period of that year to 'CLOSED' via the existing period-status persistence (`ERPSupabaseService.persistPeriodStatus` / `handleTogglePeriodStatus` — extend the status type to include 'CLOSED' where the UI prop type only allows OPEN|LOCKED). Disallow closing a year that contains the current month unless the user confirms a second explicit warning. Add a handler `handleCloseFiscalYear(year)` in the context and wire through src/components/admin/erp/views/GeneralLedgerRouteView.tsx.
+   - Replace the hardcoded 'CFO_FARID' actor passed to persistPeriodStatus with the current user's email/id from the context (currentUser), falling back to 'system'.
+
+Gate addition: `npx tsx --test src/lib/erp/__tests__/periodLockAndPosting.test.ts src/lib/erp/__tests__/invariants.test.ts` (report; update a test only if it asserts the old Dr 150000 remittance, and say so).
+Files allowed: ERPWorkstationContext.tsx (tax handlers, period helpers/handlers, loadLiveData call site, context value/type), supabaseService.ts (new ensurePeriodsForDate + period status), ApartmentTaxesView.tsx, GeneralLedgerView.tsx, GeneralLedgerRouteView.tsx, the 2 test files. Nothing else.
+</task>
+<execution_rules>
+- Run every shell command in the FOREGROUND. Never start background tasks or wait for background jobs.
+- Edits first, gates once at the end. If a command takes >3 min, skip it and say so.
+- Always finish with the report, even if incomplete. Use the `caveman` skill for prose.
+- Another agent edits OTHER files in this tree concurrently. Touch only files allowed in your brief. Report unrelated tsc errors; do not fix them.
+- Preserve UTF-8 (Arabic strings). Do targeted edits; never rewrite whole files. Do not delete imports/lines you did not intend to change.
+- After any "remove X" change, grep for X and confirm 0 remaining references (or justify each).
+- Hooks: never place a hook after an early return.
+</execution_rules>
+
+<verification_loop>
+  npx tsc --noEmit                (must be clean for your files)
+  npx eslint <files you touched>  (no new errors vs HEAD; report counts)
+  git diff --stat -- <files you touched>
+For every target grep given in the brief: count + reason for each remaining hit.
+</verification_loop>
+
+<action_safety>Do NOT git add/commit/stash/checkout/restore. No DB access, no migrations.</action_safety>
+
+<structured_output_contract>
+1. Per numbered item: done/skipped + file:line
+2. Decisions you made that the brief left open
+3. Gates (tsc, eslint per file vs HEAD, grep counts)
+4. Open questions
+</structured_output_contract>

@@ -1,0 +1,92 @@
+ROLE: LEAF — implementer. TRACK: FINANCIAL_CORE. cwd = zakaria-farid. Execute exactly; no redesign.
+
+<execution_rules>
+- FOREGROUND commands only; never background or wait on jobs. Edits first, gates once at the end.
+- Always finish with the report. `caveman` skill for prose. Do NOT git add/commit/stash/checkout/restore.
+- Touch ONLY files listed. Targeted edits; keep UTF-8 Arabic; do not delete unrelated lines.
+</execution_rules>
+
+<rule>
+User-confirmed 2026-10-05: money paid/received by InstaPay lives in account 102000 (InstaPay). Cash lives
+in 101000 (Main Safe). Today partner payouts, partner capital injections and contractor payable
+settlements post InstaPay to 101000. Fix every code path and every label/preview so:
+  CASH_101000 | CASH                         -> 101000  (label AR 'الخزينة (101000)', EN 'Safe (101000)')
+  INSTAPAY_102000 | INSTAPAY | INSTAPAY_101000(legacy) | BANK_102000 -> 102000 (label AR 'إنستاباي (102000)', EN 'InstaPay (102000)')
+The DB function settle_construction_payable is ALREADY migrated (orchestrator): accepts CASH_101000 /
+INSTAPAY_102000 (/legacy INSTAPAY_101000), credits 102000 for InstaPay, stores payment_method
+'INSTAPAY_102000' and treasury_account_code '102000', memo = `${'إنستاباي'|'كاش بالخزينة'} • ${supplier_contractor ?? item_name_ar} • ${'إنستاباي 102000'|'الخزينة 101000'}`.
+</rule>
+
+<files>
+src/components/admin/erp/context/ERPWorkstationContext.tsx   (only handleConfirmPartnerPayout, handleConfirmPartnerInjection, handleRecordCostPayablePayment)
+src/lib/erp/partnersEngine.ts                                  (createPayoutJournalEntry ~987-1010, createCapitalInjectionJournalEntry ~1050-1070 fallbacks only)
+src/lib/erp/constructionSettlement.ts
+src/lib/erp/types.ts                                           (ERPPayableInstallment.treasury_account_code only)
+src/components/admin/erp/v2/modals/CostPayableSettlementModal.tsx
+src/components/admin/erp/v2/modals/PartnerPayoutModal.tsx
+src/components/admin/erp/v2/modals/PartnerCapitalInjectionModal.tsx
+src/components/admin/erp/v2/modals/PartnerOperationsModal.tsx
+src/components/admin/erp/v2/modals/ZFDirectExpenseModal.tsx    (rename only, step 6)
+any component that passes a CostPayableSettlementModal `paymentMethod`/`defaultPaymentMethod` (grep; type fixes only)
+tests: src/lib/erp/__tests__/unifiedTreasuryPaymentMethods.test.ts, constructionModernization.test.ts,
+  partners.test.ts, partnersOverhaul.test.ts, full_workflow_simulation_stress.test.ts, periodLockAndPosting.test.ts
+  — change ONLY assertions that pin InstaPay -> 101000; say which in the report.
+</files>
+
+<steps>
+1. Context handlers: in handleConfirmPartnerPayout and handleConfirmPartnerInjection replace
+   `details.paymentMethod === 'BANK_102000' ? '102000' : '101000'` with
+   `details.paymentMethod === 'CASH_101000' ? '101000' : '102000'`. Update the payout balance error's
+   account names: 101000 -> 'الخزينة (101000)' / 'Safe (101000)', 102000 -> 'إنستاباي (102000)' / 'InstaPay (102000)'.
+2. handleRecordCostPayablePayment: the cash guard currently asserts on '101000'. Determine the paid
+   installment exactly like constructionSettlement does (the one installment whose paid_amount_egp grew,
+   not 'inst-prior-'), account = its payment_method === 'CASH_101000' ? '101000' : '102000', and assert on
+   that account. Update the comment.
+3. partnersEngine fallbacks (when params.routingAccount is not given):
+   account = (paymentMethod === 'CASH_101000' || paymentMethod === 'CASH') ? '101000' : '102000'.
+   Fix any memo/label in those two functions that says InstaPay is 101000.
+4. constructionSettlement.ts: method = installment.payment_method === 'CASH_101000' ? 'CASH_101000'
+   : (payment_method is 'INSTAPAY_102000' or 'INSTAPAY_101000') ? 'INSTAPAY_102000' : throw
+   'Only cash (101000) and InstaPay (102000) are supported.'; account = cash ? '101000' : '102000';
+   memo EXACTLY as in <rule>; credit line uses account; updatedItem sets payment_method: method,
+   treasury_account_code: account. Remove the "always routed to 101000" comment. request.p_method = method.
+   types.ts: treasury_account_code?: '101000' | '102000'.
+5. CostPayableSettlementModal: method union 'CASH_101000' | 'INSTAPAY_102000' (default 'CASH_101000');
+   options: <option value="CASH_101000">{isAr ? 'نقدي — الخزينة (101000)' : 'Cash — Safe (101000)'}</option>
+   <option value="INSTAPAY_102000">{isAr ? 'إنستاباي (102000)' : 'InstaPay (102000)'}</option>.
+   Replace every other 'INSTAPAY_101000' in the file with 'INSTAPAY_102000' and any text saying InstaPay is
+   101000 accordingly. Fix callers' types.
+6. ZFDirectExpenseModal: rename the literal 'INSTAPAY_101000' -> 'INSTAPAY_102000' everywhere in the
+   file (mapping to account 102000 already exists; behavior unchanged).
+7. Partner modals (Payout, CapitalInjection, Operations): every label, card subtitle, "جهة الصرف/الإيداع
+   الموحدة: الخزينة التشغيلية الرئيسية (101000)" banner, voucher text and JE preview line must show the
+   account of the CURRENTLY selected method using the mapping in <rule>. Replace the fixed banner with
+   {isAr ? `الحساب: ${acctAr}` : `Account: ${acctEn}`} computed from the selected method. InstaPay option
+   subtitles: AR 'تحويل إنستاباي (102000)', EN 'InstaPay transfer (102000)'. Cash option: AR 'نقدي بالخزينة
+   (101000)', EN 'Cash — Safe (101000)'. JE preview table headers: AR 'مدين' / 'دائن' (remove "(له فلوس)" and
+   "(عليه فلوس)"), EN 'Debit' / 'Credit'. The modal subtitle in PartnerPayoutModal that hardcodes
+   'دائن حـ/101000' must use the selected account.
+</steps>
+
+<verify>
+grep -rn "INSTAPAY_101000" src --include=*.ts --include=*.tsx  -> only allowed: legacy acceptance in
+  constructionSettlement.ts + types.ts union + tests asserting legacy normalization. List each hit + reason.
+grep -rn "له فلوس\|عليه فلوس" src  -> 0
+grep -n "تحويل للخزينة (101000)\|الخزينة الرئيسية (تحويل إنستاباي)" src -r -> 0
+Add tests (append to unifiedTreasuryPaymentMethods.test.ts, rename its describe titles to say "Cash 101000 / InstaPay 102000"):
+  a. PartnersEngine.createCapitalInjectionJournalEntry with paymentMethod 'INSTAPAY_102000' and no routingAccount -> debit line 102000.
+  b. createPayoutJournalEntry 'INSTAPAY_102000' no routingAccount -> credit line 102000; 'CASH_101000' -> 101000.
+  c. prepareConstructionSettlement with installment.payment_method 'INSTAPAY_101000' -> journal credit 102000,
+     updatedItem installment payment_method 'INSTAPAY_102000', treasury_account_code '102000', memo endsWith 'إنستاباي 102000'.
+     (Reuse an existing fixture from constructionModernization.test.ts if one exists.)
+</verify>
+
+<gates>
+npx tsc --noEmit
+npx tsx --test src/lib/erp/__tests__/unifiedTreasuryPaymentMethods.test.ts src/lib/erp/__tests__/constructionModernization.test.ts src/lib/erp/__tests__/partners.test.ts src/lib/erp/__tests__/partnersOverhaul.test.ts src/lib/erp/__tests__/full_workflow_simulation_stress.test.ts src/lib/erp/__tests__/periodLockAndPosting.test.ts src/lib/erp/__tests__/treasuryLedger.test.ts
+</gates>
+
+<structured_output_contract>
+STATUS | per step: done/skipped + file:line | tests changed (which assertion, old->new) | grep results with
+reasons | GATES pass/fail + first failing line | OPEN. Caveman, ≤25 lines.
+</structured_output_contract>

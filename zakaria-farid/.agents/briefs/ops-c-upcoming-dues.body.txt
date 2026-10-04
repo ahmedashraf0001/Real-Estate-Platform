@@ -1,0 +1,230 @@
+ROLE: LEAF — implementer. Execute exactly. Do not redesign, add colors, or invent copy.
+TRACK: SURFACE_UI + FINANCIAL_CORE (read-only data). cwd = zakaria-farid.
+
+<execution_rules>
+- Run every shell command in the FOREGROUND and wait for it. Never start background tasks.
+- Edits first, gates once at the end. If a command takes >3 min, skip it and say so.
+- Always finish with the report. Use the `caveman` skill. Do NOT git add/commit/stash/checkout/restore.
+- Touch ONLY files in <files>. Preserve UTF-8 Arabic. Targeted edits; do not rewrite unrelated code.
+- To drop an optional callback, omit it — never pass a no-op function.
+</execution_rules>
+
+<why>
+The "upcoming dues" side widget (OperationsSideWidgets) reads only PDC cheque rows + contractor payables.
+The business has NO cheques (user-confirmed): customer dues live in installment schedules, which it ignores.
+Visually it is broken: amber "0 مستحق" badge collides with the header, red "عرض الكل" link, two cramped
+columns truncate labels, tinted icon squircles, and the empty state says "شيكات" (cheques).
+Replace it with a native card inside DailyOperationsView using the page's existing `ops.*` design.
+</why>
+
+<files>
+EDIT   src/lib/erp/treasuryLedger.ts                      (append only — do not change existing exports)
+EDIT   src/lib/erp/__tests__/treasuryLedger.test.ts       (append one describe block)
+EDIT   src/components/admin/erp/v2/views/DailyOperationsView.tsx
+EDIT   src/components/admin/erp/v2/views/DailyOperationsView.module.css   (append only)
+EDIT   src/lib/erp/__tests__/dailyOperationsView.test.ts  (append cases)
+DELETE (git rm) src/components/admin/erp/v2/views/operations/OperationsSideWidgets.tsx
+DELETE (git rm) src/components/admin/erp/v2/views/operations/OperationsSideWidgets.module.css
+DELETE (git rm) src/components/admin/erp/v2/views/operations/index.ts
+DELETE (git rm) src/lib/erp/__tests__/operationsSideWidgets.test.ts
+(After deleting, `src/components/admin/erp/v2/views/operations/` must be empty/gone.)
+DO NOT TOUCH src/lib/erp/operationsStreamFilters.ts or any other file.
+</files>
+
+<step_1 name="treasuryLedger.ts — append">
+Add imports to the existing type import: ERPInstallmentSchedule, ERPPropertyCostItem, ERPPayableInstallment.
+
+export interface UpcomingDue {
+  id: string;                 // IN: `sch-${schedule.schedule_id}`; OUT: `pay-${cost.item_id}-${inst.installment_id}`
+  direction: 'IN' | 'OUT';
+  dueDate: string;            // YYYY-MM-DD
+  isOverdue: boolean;         // dueDate < todayStr
+  title: string;
+  party: string;
+  amount: Decimal;            // remaining = nominal - paid (> 0)
+  schedule?: ERPInstallmentSchedule;
+  contract?: ERPContract;
+  cost?: ERPPropertyCostItem;
+  installment?: ERPPayableInstallment;
+}
+export interface UpcomingDuesResult {
+  items: UpcomingDue[];       // ALL matching items, sorted dueDate asc, tie -> id asc
+  inTotal: Decimal; outTotal: Decimal; inCount: number; outCount: number; overdueCount: number;
+  horizonEnd: string;         // todayStr + horizonDays (toLocalDateStr)
+}
+
+export function buildUpcomingDues(params: {
+  schedules?: ERPInstallmentSchedule[] | null;
+  contracts?: ERPContract[] | null;
+  propertyCosts?: ERPPropertyCostItem[] | null;
+  todayStr: string;
+  horizonDays?: number;       // default 30
+  isAr: boolean;
+}): UpcomingDuesResult
+
+Rules:
+- horizonEnd = date of (todayStr + horizonDays) computed like getTreasuryPeriodRange does (new Date(y, m-1, d+N)).
+- Include an item only if dueDate <= horizonEnd (overdue items always qualify) and remaining > 0.
+- IN from schedules: status in ['Pending','Partially Paid','Defaulted'] only; contract = contracts.find(c =>
+  c.contract_id === s.contract_id); skip if no contract or contract.status !== 'Active'.
+  remaining = D(s.nominal_value || 0).minus(D(s.amount_paid || 0)).
+  title (isAr): s.tranche_number === 0 ? `دفعة المقدم — ${contract.contract_number}` : `القسط ${s.tranche_number} — ${contract.contract_number}`
+  title (en):   tranche 0 ? `Down payment — ${n}` : `Installment ${t} — ${n}`
+  party = contract.buyer_name || '—'
+- OUT from propertyCosts[].payable_installments: skip inst.status === 'PAID';
+  remaining = D(inst.amount_egp || 0).minus(D(inst.paid_amount_egp || 0)).
+  title = isAr ? (inst.title_ar || cost.item_name_ar) : (inst.title_en || inst.title_ar || cost.item_name_en || cost.item_name_ar)
+  party = cost.supplier_contractor || '—'
+- Never mutate inputs.
+</step_1>
+
+<step_2 name="treasuryLedger.test.ts — append describe('buildUpcomingDues')">
+Fixture (cast with `as unknown as T`), todayStr '2026-10-04', default horizon:
+contracts: c1 {contract_id:'c1', contract_number:'ZF-1', buyer_name:'A', status:'Active'},
+           c2 {contract_id:'c2', contract_number:'ZF-2', buyer_name:'B', status:'Rescinded'}
+schedules (schedule_id, contract_id, tranche_number, due_date, nominal_value, amount_paid, status):
+  s0 c1 0 '2026-09-30' '100000' '0'     'Pending'
+  s1 c1 1 '2026-10-20' '50000'  '20000' 'Partially Paid'
+  s2 c1 2 '2026-12-20' '50000'  '0'     'Pending'      (beyond horizon)
+  s3 c1 3 '2026-10-10' '50000'  '50000' 'Paid'
+  s4 c2 1 '2026-10-10' '70000'  '0'     'Pending'      (rescinded contract)
+  s5 c1 4 '2026-10-12' '50000'  '0'     'SUPERSEDED'
+propertyCosts: [{ item_id:'k1', item_name_ar:'أعمال خرسانة', supplier_contractor:'Contractor X', payable_installments: [
+  { installment_id:'i1', title_ar:'دفعة ١', due_date:'2026-10-15', amount_egp:'40000', paid_amount_egp:'0', status:'PENDING' },
+  { installment_id:'i2', title_ar:'دفعة ٢', due_date:'2026-10-01', amount_egp:'10000', paid_amount_egp:'10000', status:'PAID' },
+  { installment_id:'i3', title_ar:'دفعة ٣', due_date:'2026-10-02', amount_egp:'25000', paid_amount_egp:'5000', status:'OVERDUE' } ] }]
+Assertions:
+ 1. items ids in order: ['sch-s0','pay-k1-i3','pay-k1-i1','sch-s1']
+ 2. sch-s0: direction IN, isOverdue true, amount 100000, title 'دفعة المقدم — ZF-1', party 'A'
+ 3. sch-s1 amount 30000, title 'القسط 1 — ZF-1'; pay-k1-i3 amount 20000, isOverdue true, party 'Contractor X'
+ 4. inTotal 130000, inCount 2, outTotal 60000, outCount 2, overdueCount 2, horizonEnd '2026-11-03'
+ 5. isAr false: sch-s0 title 'Down payment — ZF-1'
+ 6. empty: buildUpcomingDues({ todayStr:'2026-10-04', isAr:true }) -> items [], inTotal eq 0, overdueCount 0
+</step_2>
+
+<step_3 name="DailyOperationsView.tsx">
+a. Remove imports: OperationsSideWidgets; `computeUpcomingDues` from the operationsStreamFilters import
+   ONLY in the import list — KEEP the line
+   `export { formatNumberWithCommas, formatEGPInteger, formatTime12h, computeUpcomingDues, buildTransactionInspectionPayload };`
+   working (it must still import computeUpcomingDues for that re-export; so keep computeUpcomingDues in the
+   import list and just stop calling it). Remove the `upcomingDues` useMemo.
+b. Add `buildUpcomingDues` and type `UpcomingDue` to the treasuryLedger import. Add lucide icons
+   `CalendarClock` to the lucide import. Destructure `schedules = []` from props (it is already in the interface).
+c. Add memo:
+   const dues = useMemo(() => buildUpcomingDues({ schedules, contracts, propertyCosts, todayStr, isAr }), [schedules, contracts, propertyCosts, todayStr, isAr]);
+d. Add handler:
+   const handleDueClick = (d: UpcomingDue) => {
+     if (d.direction === 'IN' && d.schedule && d.contract) {
+       onCollectItem({
+         cheque_id: `SCH-${d.schedule.schedule_id}`,
+         contract_id: d.contract.contract_id,
+         schedule_id: d.schedule.schedule_id,
+         cheque_number: '',
+         bank_name: '',
+         drawer_name: d.contract.buyer_name,
+         nominal_value: d.amount.toFixed(2),
+         due_date: d.dueDate,
+         status: 'In Safe',
+       } as ERPPDCRecord);
+       return;
+     }
+     if (d.direction === 'OUT' && d.cost && d.installment) {
+       if (onRecordPayablePayment) { setSelectedCostForPayable(d.cost); setSelectedInstallmentForPayable(d.installment); }
+       else if (onUpdatePropertyCostItem) { setSelectedCostForEdit(d.cost); }
+     }
+   };
+   (If ERPPDCRecord requires more fields, fill them with '' / undefined-safe values and list them in the report.)
+e. Replace the whole `<OperationsSideWidgets ... />` element with exactly:
+
+<div className={ops.card}>
+  <div className={ops.cardHeader}>
+    <div className={ops.cardTitleGroup}>
+      <span className={ops.iconSquircle}><CalendarClock size={15} /></span>
+      <div className={ops.cardTitleStack}>
+        <h2 className={ops.cardTitle}>{isAr ? 'مستحقات قادمة' : 'Upcoming dues'}</h2>
+        <span className={ops.cardHint}>{isAr ? 'المتأخر + الـ٣٠ يوماً القادمة' : 'Overdue + next 30 days'}</span>
+      </div>
+    </div>
+    <button type="button" className={ops.linkBtn} onClick={() => onNavigateToTab('pdc')}>{isAr ? 'عرض الكل' : 'View all'}</button>
+  </div>
+  <dl className={ops.dueSummary}>
+    <div className={ops.dueSummaryRow}>
+      <dt>{isAr ? 'تحصيلات متوقعة' : 'Expected receipts'} <span className={ops.dueCount}>{dues.inCount}</span></dt>
+      <dd><span className={`${ops.amount} ${ops.amountIn}`}>{fmt(dues.inTotal)}</span> <span className={ops.dueCur}>{cur}</span></dd>
+    </div>
+    <div className={ops.dueSummaryRow}>
+      <dt>{isAr ? 'مدفوعات مستحقة' : 'Payments due'} <span className={ops.dueCount}>{dues.outCount}</span></dt>
+      <dd><span className={`${ops.amount} ${ops.amountOut}`}>{fmt(dues.outTotal)}</span> <span className={ops.dueCur}>{cur}</span></dd>
+    </div>
+  </dl>
+  {dues.items.length === 0 ? (
+    <div className={ops.empty}>{isAr ? 'لا توجد أقساط أو مستحقات خلال الـ٣٠ يوماً القادمة' : 'No installments or payables due in the next 30 days'}</div>
+  ) : (
+    <ul className={ops.dueList}>
+      {dues.items.slice(0, 6).map(d => (
+        <li key={d.id}>
+          <button type="button" className={ops.dueItem} disabled={isMutating} onClick={() => handleDueClick(d)}>
+            <span className={ops.dueTexts}>
+              <span className={ops.dueTitle}>{d.title}</span>
+              <span className={ops.dueMeta}>{d.party} · {displayDate(d.dueDate)}</span>
+            </span>
+            <span className={ops.dueAmountCol}>
+              <span className={`${ops.amount} ${d.direction === 'IN' ? ops.amountIn : ops.amountOut}`}>{d.direction === 'IN' ? '+' : '-'}{fmt(d.amount)}</span>
+              {d.isOverdue && <span className={`${shellStyles.statusPill} ${shellStyles.statusPillRed}`}>{isAr ? 'متأخر' : 'Overdue'}</span>}
+            </span>
+          </button>
+        </li>
+      ))}
+    </ul>
+  )}
+  {dues.items.length > 6 && (
+    <div className={ops.dueMore}>{isAr ? `+ ${dues.items.length - 6} مستحقات أخرى` : `+ ${dues.items.length - 6} more`}</div>
+  )}
+</div>
+
+   Use the existing `fmt`, `cur`, `displayDate` helpers already in the file (if a helper is named
+   differently, use the existing one and report it). Remove any now-unused imports/variables
+   (eslint no-unused-vars) — e.g. onInspectCheque if it becomes unused (stop destructuring it; keep it in the interface).
+</step_3>
+
+<step_4 name="DailyOperationsView.module.css — append exactly">
+.cardTitleStack { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.cardTitleStack .cardHint { text-align: start; }
+.linkBtn { flex-shrink: 0; padding: 0.2rem 0.4rem; border: 0; border-radius: 6px; background: transparent; font: inherit; font-size: 0.75rem; font-weight: 700; color: var(--erp-accent); cursor: pointer; }
+.linkBtn:hover { background: var(--erp-accent-subtle); }
+.linkBtn:focus-visible, .dueItem:focus-visible { outline: 2px solid var(--erp-accent); outline-offset: 2px; }
+.dueSummary { margin: 0; padding: 0.4rem 1rem; display: flex; flex-direction: column; border-bottom: 1px solid var(--erp-border-subtle); }
+.dueSummaryRow { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; padding: 0.35rem 0; }
+.dueSummaryRow dt { display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.76rem; font-weight: 700; color: var(--erp-text-body); }
+.dueSummaryRow dd { margin: 0; white-space: nowrap; }
+.dueCount { padding: 0 0.4rem; border: 1px solid var(--erp-border); border-radius: 9999px; font-size: 0.66rem; font-variant-numeric: tabular-nums; color: var(--erp-text-muted); }
+.dueCur { font-size: 0.68rem; color: var(--erp-text-muted); }
+.dueList { list-style: none; margin: 0; padding: 0.35rem 0.5rem 0.5rem; display: flex; flex-direction: column; }
+.dueItem { display: flex; align-items: center; justify-content: space-between; gap: 0.6rem; width: 100%; padding: 0.55rem 0.5rem; border: 0; border-radius: 8px; background: transparent; font: inherit; text-align: start; cursor: pointer; }
+.dueItem:hover { background: var(--erp-border-subtle); }
+.dueItem:disabled { opacity: 0.5; cursor: not-allowed; }
+.dueTexts { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
+.dueTitle { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.78rem; font-weight: 700; color: var(--erp-text-title); }
+.dueMeta { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.68rem; color: var(--erp-text-muted); }
+.dueAmountCol { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; flex-shrink: 0; font-size: 0.78rem; }
+.dueMore { padding: 0 1rem 0.75rem; font-size: 0.7rem; color: var(--erp-text-muted); }
+</step_4>
+
+<step_5 name="dailyOperationsView.test.ts — append cases">
+ 6. view source does NOT contain 'OperationsSideWidgets', 'computeUpcomingDues(' (call), 'شيكات', 'شيك'.
+ 7. view source contains 'buildUpcomingDues(' and "onNavigateToTab('pdc')".
+ 8. fs.existsSync('src/components/admin/erp/v2/views/operations/OperationsSideWidgets.tsx') === false.
+ Existing test 3/4 (no hex, no gradient/box-shadow) must still pass with the appended CSS.
+</step_5>
+
+<gates>
+npx tsc --noEmit                                                            (0 errors)
+npx tsx --test src/lib/erp/__tests__/treasuryLedger.test.ts src/lib/erp/__tests__/dailyOperationsView.test.ts src/lib/erp/__tests__/dailyOperationsRevamp.test.ts src/lib/erp/__tests__/operationsStreamFilters.test.ts   (all pass)
+npx eslint src/lib/erp/treasuryLedger.ts src/components/admin/erp/v2/views/DailyOperationsView.tsx   (report counts; DailyOperationsView had 3 pre-existing `any` errors in the props interface — do not add more)
+grep -rn "OperationsSideWidgets" src     (only hits allowed: the guard test in dailyOperationsView.test.ts)
+</gates>
+
+<structured_output_contract>
+Report (caveman, ≤15 lines): STATUS | FILES (+/-) | GATES (pass/fail + first failing line) |
+DEVIATIONS (each + reason, or none) | OPEN (or none)
+</structured_output_contract>

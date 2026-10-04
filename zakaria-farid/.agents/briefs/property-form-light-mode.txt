@@ -1,0 +1,60 @@
+<task>
+Repo: Next.js 16 app at the current working directory (zakaria-farid). Read AGENTS.md first (Next.js here has breaking changes; you should not need any Next API for this task).
+
+GOAL: The admin "add / edit property" flow (/admin/[locale]/properties/new and /properties/[id]/edit, both render src/components/admin/AdminPropertyForm.tsx) is broken in LIGHT mode and uses a legacy gold palette. Make it render correctly in BOTH themes using the ERP-aligned admin tokens, with light mode as the priority.
+
+How theming works: the admin root `<html>` gets `data-theme="light"|"dark"`. Everything renders inside `.adminWrapper` (src/app/admin/admin.module.css), which defines CSS custom properties for both themes. Available tokens (already defined by a previous task — read admin.module.css to confirm exact names before using them):
+  --admin-canvas-bg --admin-card-bg --admin-card-bg-subtle --admin-card-border --admin-card-border-subtle --admin-divider
+  --admin-text-title --admin-text-body --admin-text-muted --admin-text-dim
+  --admin-input-bg --admin-input-border --admin-track-bg --admin-dropzone-bg --admin-dropzone-border --admin-drawer-bg --admin-modal-bg
+  --admin-accent --admin-accent-hover --admin-accent-subtle --admin-accent-tint --admin-accent-border
+  --admin-success-text --admin-success-bg --admin-success-border
+Light values: canvas #f1f5f9, cards #ffffff, borders #e2e8f0/#cbd5e1, text #0f172a/#334155/#64748b, accent #2563eb. Dark: canvas #111622, cards #1a2232, accent #3b82f6.
+
+Files in scope (only these):
+  src/components/admin/AdminPropertyForm.tsx
+  src/components/admin/AdminPropertyForm.module.css
+  src/components/admin/ZoneInspector.tsx
+  src/components/admin/CADBlueprintBuilder.tsx
+  src/components/admin/MapPicker.tsx
+  src/components/admin/DynamicMapPicker.tsx
+
+Known defects to fix:
+1. ZoneInspector.tsx is DARK-ONLY: its inline styles and its embedded <style> block hardcode #0D1220 / #0A0E18 panel backgrounds, #EDE8DD text, rgba(255,255,255,0.04) fills, rgba(0,0,0,0.2) wells, and gold #DDA752 / rgba(221,167,82,…). In light mode this is a dark slab with poor contrast. Convert every surface/text/border/accent color to the --admin-* tokens so it follows the theme. Destructive red stays red (use #dc2626 light-friendly or keep the existing red if contrast is fine in both).
+2. AdminPropertyForm.tsx has ~140 inline color literals. Some are light-only (#FFFFFF backgrounds, #0F172A text on <option>, white cards) and some are gold (#946F23, #C5A059, #B8860B, rgba(148,111,35,…), rgba(197,160,89,…), var(--zf-gold, …)). Replace with tokens: surfaces → --admin-card-bg / --admin-input-bg; text → --admin-text-*; borders → --admin-card-border / --admin-input-border; gold → --admin-accent family (solid → accent, hover/dark → accent-hover, alpha ≤0.12 → accent-tint, 0.13–0.4 → accent-border). Keep white text ONLY where it sits on a solid accent/green/red fill (buttons, check badges). <select>/<option> backgrounds must use --admin-input-bg and --admin-text-title so dropdowns are readable in both themes.
+3. AdminPropertyForm.module.css: replace gold literals and the warm alabaster neutrals (#D8D2C4 #EAE6DC #F4F1EA #E3DDD1 #F7F4EE #FCFAF7) with tokens. Its many `[data-theme="light"]` override rules should become unnecessary once base rules use tokens — collapse them where the token already produces the same result; keep an override only when light and dark genuinely need different non-token values.
+4. CADBlueprintBuilder.tsx (very large, ~9.5k lines, has an embedded <style> with ~53 `[data-theme="light"]` rules): fix only the UI CHROME — toolbars, side panels, floor tabs, buttons, inputs, modals, tooltips, legends — so they are legible and on-palette in light mode and use accent instead of gold. Do NOT change the geometry, drawing logic, SVG shapes, coordinates, or behavior. Inside the SVG drawing itself, only change a color if it is gold (→ accent) or if it is invisible/near-invisible on the light canvas; leave other drawing colors alone. Work with targeted edits, never rewrite the file wholesale.
+5. MapPicker.tsx / DynamicMapPicker.tsx: replace gold literals with accent tokens; make any panel chrome theme-aware.
+
+Rules: never use pure black #000; no heavy shadows (1px hairline borders instead); no colored card backgrounds for status (use small pill: accent-subtle/success-bg background + matching text). Do not change copy, layout structure, form logic, validation, data flow, or props. Preserve UTF-8 encoding — these files contain Arabic strings; do not mangle them.
+DO NOT touch any other file (especially src/app/admin/admin.module.css, src/components/admin/erp/**, src/app/fin-os/**, src/lib/**, src/app/globals.css).
+</task>
+
+<verification_loop>
+Run from repo root and fix anything they surface:
+  npx tsc --noEmit
+  npx eslint src/components/admin/AdminPropertyForm.tsx src/components/admin/ZoneInspector.tsx src/components/admin/CADBlueprintBuilder.tsx src/components/admin/MapPicker.tsx src/components/admin/DynamicMapPicker.tsx --no-warn-ignored   (fix only errors you introduced; report pre-existing)
+Confirm zero hits:
+  grep -niE "#E5B869|#946F23|#C5A059|#DDA752|#B8860B|#D4AF37|#B8903E|#B8934A|229, ?184, ?105|148, ?111, ?35|197, ?160, ?89|221, ?167, ?82|zf-gold" src/components/admin/AdminPropertyForm.tsx src/components/admin/AdminPropertyForm.module.css src/components/admin/ZoneInspector.tsx src/components/admin/CADBlueprintBuilder.tsx src/components/admin/MapPicker.tsx src/components/admin/DynamicMapPicker.tsx
+Also report: count of remaining `#0D1220|#0A0E18|#0A0E1A|#EDE8DD` in ZoneInspector.tsx (target 0) and in CADBlueprintBuilder.tsx (explain each that remains).
+Confirm `git diff --stat` lists only the six in-scope files (other files may already be modified by a previous task — do not touch or revert them).
+</verification_loop>
+
+<action_safety>
+Scope strictly to colors/theming in the six files. No refactors, renames, or logic changes. Do NOT git add, commit, stash, checkout, or restore anything. Leave work uncommitted.
+</action_safety>
+
+<structured_output_contract>
+End with:
+  1. What changed and why (per file)
+  2. Files touched
+  3. Gate outcomes (tsc, eslint counts, grep results, remaining dark literals with justification)
+  4. Deviations, open questions, anything left unfixed
+</structured_output_contract>
+
+<execution_rules>
+- Run every shell command in the FOREGROUND and wait for it. Never start background tasks/terminals and never "wait for" a background job — a previous run stalled for 30 minutes doing that and produced no report.
+- Do the edits FIRST, then run gates once at the end. Do not spend time establishing lint baselines; the orchestrator already has them.
+- If a command takes more than ~3 minutes, skip it and say so in the report.
+- Always finish with the report in <structured_output_contract>, even if something is incomplete.
+</execution_rules>

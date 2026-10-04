@@ -1,0 +1,154 @@
+ROLE: LEAF — implementer. TRACK: FINANCIAL_CORE + SURFACE_UI. cwd = zakaria-farid. Execute exactly; no redesign,
+no extra features, tokens var(--erp-*) only (no hex), shellStyles classes where named.
+
+<execution_rules>
+- FOREGROUND commands only; never background or wait on jobs. Edits first, gates once at the end.
+- Always finish with the report. `caveman` skill. Do NOT git add/commit/stash/checkout/restore.
+- Touch ONLY files listed. Targeted edits; keep UTF-8 Arabic; do not delete unrelated lines.
+- To drop an optional callback, omit it — never pass a no-op function. Hooks never after an early return.
+</execution_rules>
+
+<why>
+1. There is no way to move money between the Main Safe (101000) and InstaPay (102000), e.g. depositing
+   cash. The treasury cash book already shows transfers (both cash lines, opposite signs).
+2. The sidebar "+ طلب جديد" button always opens the construction-expense popup and its label shows two
+   plus signs (icon + '+' text). It should open a small menu of the common actions.
+</why>
+
+<files>
+CREATE src/components/admin/erp/v2/modals/ZFCashTransferModal.tsx
+CREATE src/components/admin/erp/v2/modals/ZFCashTransferModal.module.css
+EDIT   src/components/admin/erp/context/ERPWorkstationContext.tsx  (new handler + state + interface + value only)
+EDIT   src/components/admin/erp/ERPWorkstationShell.tsx
+EDIT   src/components/admin/erp/ZFNavigationDock.tsx (+ its existing CSS module: append classes only)
+EDIT   src/components/admin/erp/views/DailyOperationsRouteView.tsx  (pass one prop)
+EDIT   src/components/admin/erp/v2/views/DailyOperationsView.tsx    (one prop + one action row)
+CREATE src/lib/erp/__tests__/cashTransfer.test.ts
+</files>
+
+<step_1 name="Context: handleInternalTransfer">
+State: const [showCashTransferModal, setShowCashTransferModal] = useState(false); expose both.
+Handler (useCallback; expose in interface + value):
+  handleInternalTransfer(details: { from: '101000' | '102000'; to: '101000' | '102000'; amount: string; date: string; notes: string }): Promise<void>
+  - if (details.from === details.to) throw new Error(isAr ? 'اختر حسابين مختلفين' : 'Choose two different accounts');
+  - const amt = D(details.amount || '0'); if (!amt.gt(0)) throw new Error(isAr ? 'المبلغ يجب أن يكون أكبر من صفر' : 'Amount must be greater than zero');
+  - const targetPeriod = await resolveAndEnsurePeriodForDate(details.date);
+    if (!ensureActivePeriodOpen(isAr ? 'تحويل نقدية' : 'Cash transfer', targetPeriod)) throw new Error(isAr ? 'الفترة المحاسبية مغلقة' : 'Accounting period is closed');
+  - setIsMutating(true); try {
+      const label = (c: string) => c === '101000' ? 'الخزينة 101000' : 'إنستاباي 102000';
+      const memo = `تحويل من ${label(details.from)} إلى ${label(details.to)}${details.notes.trim() ? ` • ${details.notes.trim()}` : ''}`;
+      const entry = GeneralLedgerEngine.validateAndCreateEntry({
+        entry_number: `TRF-${details.date.replace(/-/g, '')}-${generateUUID().slice(0, 6).toUpperCase()}`,
+        entry_date: details.date, period: targetPeriod, description: memo, source_module: 'MANUAL_ADJUSTMENT',
+        created_by: currentUser?.id || 'FIN_OS',
+        lines: [
+          { account_code: details.to, debit_amount: amt.toFixed(2), credit_amount: '0.00', memo },
+          { account_code: details.from, debit_amount: '0.00', credit_amount: amt.toFixed(2), memo },
+        ],
+      });
+      await persistJournalEntryGuarded(entry);   // existing guard blocks overdrawing the source account
+      (append entry to data.journalEntries the same way other handlers in this file do after persisting — copy that pattern)
+      toast.success(isAr ? 'تم تسجيل التحويل' : 'Transfer recorded');
+    } catch (err) { toast.error(isAr ? 'تعذر تسجيل التحويل' : 'Transfer failed', { description: err instanceof Error ? err.message : String(err) }); throw err; }
+    finally { setIsMutating(false); }
+  Use the file's existing imports for D, GeneralLedgerEngine, generateUUID (add to imports only if missing).
+  If persistJournalEntryGuarded already appends to state, do not append twice — check and report.
+</step_1>
+
+<step_2 name="ZFCashTransferModal">
+Props: isOpen, onClose, isAr, isMutating, safeBalance: Decimal, instapayBalance: Decimal,
+  onConfirm: (d: { from: '101000'|'102000'; to: '101000'|'102000'; amount: string; date: string; notes: string }) => Promise<void>
+ZFModalShell: title AR 'تحويل بين الخزينة وإنستاباي' EN 'Transfer between Safe and InstaPay', subtitle AR 'يُسجل قيد واحد: مدين الحساب المستلم، دائن الحساب المحوِّل.' EN 'Posts one entry: debit the receiving account, credit the sending account.', icon <ArrowLeftRight size={16} />, maxWidth '480px'.
+State: direction: 'SAFE_TO_INSTAPAY' | 'INSTAPAY_TO_SAFE' (default 'SAFE_TO_INSTAPAY'), amount '', date today (local), notes '', error ''. Reset on open inside useEffect body.
+from/to: SAFE_TO_INSTAPAY -> from '101000' to '102000'; else reversed. sourceBalance = from === '101000' ? safeBalance : instapayBalance.
+Layout (module classes):
+  1. Segmented (css.segGroup / css.seg / css.segActive, aria-pressed):
+     AR 'من الخزينة إلى إنستاباي' EN 'Safe → InstaPay' ; AR 'من إنستاباي إلى الخزينة' EN 'InstaPay → Safe'.
+  2. Balances block (css.balances): two rows (css.balanceRow): AR 'رصيد الخزينة (101000)' / EN 'Safe (101000)' -> formatNumberWithCommas(safeBalance) + currency;
+     AR 'رصيد إنستاباي (102000)' / EN 'InstaPay (102000)' -> same. Negative value gets class css.negative.
+  3. Row: amount input (inputMode decimal, label AR 'المبلغ' EN 'Amount') + date input (label AR 'التاريخ' EN 'Date').
+  4. Notes input (label AR 'ملاحظات (اختياري)' EN 'Notes (optional)').
+  5. css.error paragraph when error set.
+Validation on submit: amount > 0 else AR 'أدخل مبلغاً أكبر من صفر' EN 'Enter an amount above zero';
+  amount <= sourceBalance else AR 'المبلغ أكبر من رصيد الحساب المحوِّل' EN 'Amount exceeds the sending account balance'; date required.
+Footer: shellStyles.btnSecondary 'إلغاء'/'Cancel'; shellStyles.btnPrimary 'تسجيل التحويل'/'Record transfer' (disabled when isMutating/submitting).
+Submit: await onConfirm({ from, to, amount: D(amount).toFixed(2), date, notes }); onClose(). On throw: stay open, set error to the message.
+CSS module (exact):
+.form { display: flex; flex-direction: column; gap: 0.9rem; }
+.field { display: flex; flex-direction: column; gap: 0.35rem; min-width: 0; }
+.label { font-size: 0.74rem; font-weight: 700; color: var(--erp-text-body); }
+.row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0.75rem; }
+.input { height: 36px; padding: 0 0.7rem; border: 1px solid var(--erp-border); border-radius: 8px; background: var(--erp-bg-panel); color: var(--erp-text-title); font: inherit; font-size: 0.82rem; }
+.input:focus-visible, .seg:focus-visible { outline: 2px solid var(--erp-accent); outline-offset: 1px; }
+.segGroup { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+.seg { height: 38px; border: 1px solid var(--erp-border); border-radius: 8px; background: var(--erp-bg-panel); color: var(--erp-text-body); font: inherit; font-size: 0.78rem; font-weight: 700; cursor: pointer; }
+.segActive { border-color: var(--erp-accent); color: var(--erp-accent); background: var(--erp-accent-subtle); }
+.balances { display: flex; flex-direction: column; border: 1px solid var(--erp-card-border); border-radius: 10px; }
+.balanceRow { display: flex; justify-content: space-between; gap: 0.75rem; padding: 0.55rem 0.75rem; font-size: 0.78rem; color: var(--erp-text-body); }
+.balanceRow + .balanceRow { border-top: 1px solid var(--erp-border-subtle); }
+.balanceValue { direction: ltr; unicode-bidi: isolate; font-variant-numeric: tabular-nums; font-weight: 700; color: var(--erp-text-title); }
+.negative { color: var(--erp-danger); }
+.error { margin: 0; font-size: 0.75rem; font-weight: 700; color: var(--erp-danger); }
+@media (max-width: 560px) { .row { grid-template-columns: minmax(0, 1fr); } }
+</step_2>
+
+<step_3 name="Shell">
+Mount <ZFCashTransferModal isOpen={erp.showCashTransferModal} onClose={() => erp.setShowCashTransferModal(false)} isAr={erp.isAr}
+  isMutating={erp.isMutating} safeBalance={cash.safeCash} instapayBalance={cash.bankCash} onConfirm={erp.handleInternalTransfer} />
+where `const cash = useMemo(() => getAvailableCash(erp.data.journalEntries), [erp.data.journalEntries]);` (import getAvailableCash from '@/lib/erp/canonicalMetrics'; place the hook at top level before any early return).
+Replace `onQuickRequest={() => erp.setShowProjectExpenseModal(true)}` on ZFNavigationDock with `quickMenu={[...]}` items:
+  { key: 'collect',  labelAr: 'تحصيل قسط',        labelEn: 'Collect installment', icon: <Coins size={15} />,         onSelect: () => erp.openCollect({}) }
+  { key: 'expense',  labelAr: 'مصروف أو فاتورة',  labelEn: 'Expense or bill',     icon: <Receipt size={15} />,       onSelect: () => erp.setShowProjectExpenseModal(true) }
+  { key: 'transfer', labelAr: 'تحويل بين الخزينة وإنستاباي', labelEn: 'Safe ⇄ InstaPay transfer', icon: <ArrowLeftRight size={15} />, onSelect: () => erp.setShowCashTransferModal(true) }
+  { key: 'contract', labelAr: 'عقد بيع جديد',     labelEn: 'New sales contract',  icon: <FileSignature size={15} />, onSelect: () => erp.handleOpenGenericNewContract() }
+(If FileSignature is not in lucide-react, use FileText and report. `erp.openCollect` exists from a previous change; if it does not exist, STOP and report.)
+</step_3>
+
+<step_4 name="ZFNavigationDock">
+- New optional prop: quickMenu?: Array<{ key: string; labelAr: string; labelEn: string; icon: React.ReactNode; onSelect: () => void }>.
+- Button label: remove the leading '+ ' from both text strings ('طلب جديد' / 'New request'); title AR 'إجراء جديد' EN 'New action'. Keep the Plus icon.
+- If quickMenu?.length: the button toggles `isQuickMenuOpen` (aria-haspopup="menu", aria-expanded). Render below the button, inside
+  styles.actionBtnWrapper (make it position: relative via the new class), <div role="menu" className={styles.quickMenu}> with one
+  <button role="menuitem" type="button" className={styles.quickMenuItem} onClick={() => { setIsQuickMenuOpen(false); item.onSelect(); }}>
+  {item.icon}<span>{isAr ? item.labelAr : item.labelEn}</span></button> per item.
+  Close on Escape (keydown listener while open) and on outside click (mousedown listener on document checking a ref on the wrapper).
+  When collapsed (isCollapsed), the menu still opens (labels shown). Else (no quickMenu) keep the old onClick behavior.
+- Append to the dock's CSS module:
+.quickMenuAnchor { position: relative; }
+.quickMenu { position: absolute; inset-inline: 0; top: calc(100% + 6px); z-index: 50; min-width: 220px; display: flex; flex-direction: column; padding: 4px; background: var(--erp-bg-panel); border: 1px solid var(--erp-border); border-radius: 10px; }
+.quickMenuItem { display: flex; align-items: center; gap: 0.6rem; width: 100%; padding: 0.55rem 0.6rem; border: 0; border-radius: 7px; background: transparent; font: inherit; font-size: 0.8rem; font-weight: 600; color: var(--erp-text-title); text-align: start; cursor: pointer; }
+.quickMenuItem:hover { background: var(--erp-border-subtle); }
+.quickMenuItem:focus-visible { outline: 2px solid var(--erp-accent); outline-offset: -2px; }
+.quickMenuItem svg { color: var(--erp-accent); flex-shrink: 0; }
+  Add `styles.quickMenuAnchor` to the wrapper's className alongside styles.actionBtnWrapper.
+</step_4>
+
+<step_5 name="Operations treasury actions">
+- DailyOperationsView: new optional prop onOpenCashTransfer?: () => void (add to the props interface and destructure).
+  In the treasury actions card, add a third group after 'صرف': label AR 'تحويل' EN 'Transfer', one action row via the existing
+  renderAction helper: key 'transfer', icon <ArrowLeftRight size={15} />, title AR 'تحويل بين الخزينة وإنستاباي' EN 'Safe ⇄ InstaPay transfer',
+  sub AR 'إيداع نقدية أو سحب من إنستاباي' EN 'Deposit cash or withdraw from InstaPay'. Extend the handleQuickAction key union with
+  'transfer' -> onOpenCashTransfer?.(). Render this group only when onOpenCashTransfer is provided.
+- DailyOperationsRouteView: pass onOpenCashTransfer={() => erp.setShowCashTransferModal(true)}.
+</step_5>
+
+<step_6 name="tests (cashTransfer.test.ts)">
+ 1. GeneralLedgerEngine.validateAndCreateEntry with the exact line shape from step 1 (to 102000 Dr 5000, from 101000 Cr 5000,
+    an OPEN period fixture covering the date) -> balanced entry with 2 lines.
+ 2. buildTreasuryMovements([that entry], [], true) -> 1 movement, direction 'TRANSFER', account '102000', fromAccount '101000',
+    amount 5000; summarizeTreasury(..., 'all', date) TOTAL closing eq 0, 101000 closing eq -5000, 102000 closing eq 5000.
+ 3. Source checks: ZFCashTransferModal.module.css has no hex / 'gradient' / 'box-shadow'; ERPWorkstationShell.tsx contains
+    'quickMenu=' and does not contain 'onQuickRequest={() => erp.setShowProjectExpenseModal(true)}';
+    ZFNavigationDock.tsx does not contain "'+ طلب جديد'".
+</step_6>
+
+<gates>
+npx tsc --noEmit
+npx tsx --test src/lib/erp/__tests__/cashTransfer.test.ts src/lib/erp/__tests__/treasuryLedger.test.ts src/lib/erp/__tests__/dailyOperationsView.test.ts
+npx eslint src/components/admin/erp/v2/modals/ZFCashTransferModal.tsx  (0 errors)
+</gates>
+
+<structured_output_contract>
+STATUS | per step done/skipped + file:line | whether persistJournalEntryGuarded already updates state | GATES pass/fail + first
+failing line | OPEN. Caveman, ≤25 lines.
+</structured_output_contract>

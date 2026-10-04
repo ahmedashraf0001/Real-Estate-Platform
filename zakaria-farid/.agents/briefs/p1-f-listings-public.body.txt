@@ -1,0 +1,17 @@
+<task>
+Repo: Next.js 16 app, cwd = zakaria-farid. Read AGENTS.md (Next.js has breaking changes; check node_modules/next/dist/docs/ before touching data-fetching/route code).
+User-confirmed decision (PROJECT_SPEC.md 2026-10-04): public website demo/fallback listings are REMOVED; an empty DB shows honest empty states.
+
+1. Remove public demo listings. `FALLBACK_PROPERTIES` (src/lib/data/fallbackProperties.ts) is used as a fallback in:
+   src/lib/supabase/queries.ts (~26, ~93, ~140, ~157, ~176-177), src/components/home/HomeView.tsx (~72-73), src/components/catalog/CatalogView.tsx (~132-133), src/components/map/MapSection.tsx (~34-37), src/components/map/MapView.tsx (~55-56), src/components/property/PropertyDetailView.tsx (~174), src/components/ClientAppShell.tsx (~162), src/app/api/properties/saved/route.ts (~67, ~140).
+   Replace each fallback with the real DB result (empty array / null → existing not-found or empty UI). Unknown slug must 404 (use the existing notFound path), not show a demo property. generateStaticParams-style helpers must return only real slugs. If a view has no empty state, add a minimal one (EN/AR: "No properties available yet" / "لا توجد عقارات متاحة حالياً"). Keep the fallbackProperties.ts file only if tests import it; otherwise delete it. Target grep: `FALLBACK_PROPERTIES` in src (excluding __tests__) = 0.
+2. Sold units: src/components/property/PropertyDetailView.tsx (and any inquiry CTA component it renders) must hide/disable "Inquire for Acquisition" when listing_status is 'sold' (show a "Sold" badge/notice, EN/AR). 'under_offer' keeps inquiry but shows an "Under offer" notice.
+3. Admin property form (src/components/admin/AdminPropertyForm.tsx):
+   a. Publishing must require a map pin (latitude & longitude). Block "Confirm & Publish" on step 4 with a clear message and a link/button back to step 2 when missing. Photos: warn (non-blocking) when 0 photos.
+   b. After a successful save (URL gets `saved=true` / step 5), disable or hide the publish button(s) so a second click can't create a duplicate; offer "View live" / "Back to list" only.
+4. Floor-plan wizard ignores declared area (declared 180 m², generated rooms total 82 m²). In src/components/admin/CADBlueprintBuilder.tsx find the wizard generate function (search "Generate Blueprint" / wizard generate handler). When a declared area is available, scale generated room dimensions proportionally so the total ≈ declared area (±5%), keeping proportions and grid snapping. Targeted edit only; do not change other CAD logic.
+5. src/components/admin/PropertiesAdminClient.tsx (~361-365): the type filter offers villa/townhouse/duplex/chalet but the data model types are apartment / building / garage. Make filter options match the model (All, Apartments, Buildings, Garages) and make filtering compare against `type`.
+6. Admin dashboard src/app/admin/(dashboard)/[adminLocale]/(dashboard-pages)/page.tsx: "Response SLA 100% — All inquiries handled <12h" shows while an untouched `new` lead exists. Compute SLA from leads: a lead is "handled" if its stage != 'new' (or it has a response/updated timestamp, if one exists); SLA % = handled within 12h / total leads older than 0; untouched `new` leads count against it once older than 12h, and the subtitle must say "N awaiting first response" when any `new` lead exists. Keep layout.
+
+Files allowed: those listed above only.
+</task>

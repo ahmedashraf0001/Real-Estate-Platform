@@ -1,0 +1,63 @@
+<task>
+Repo: Next.js 16 app at the current working directory (zakaria-farid). Read AGENTS.md (Next.js here has breaking changes; you should not need any Next API).
+
+GOAL: The admin panel and the FIN-OS ERP must show the REAL database only. Today, when a Supabase table is empty, the code substitutes hardcoded demo data and in some places INSERTS fake rows into the real DB. The DB was just wiped for testing, and the cockpit still shows 103.6M liquidity, 315.75M contract value, and 4 fake "benchmark" cost-allocation rows were written back. Remove every such fallback so empty tables render honest empty/zero states.
+
+CHANGE (admin + ERP only):
+
+A. src/lib/erp/supabaseService.ts — fetchLiveERPData (read path):
+  1. ~line 109: `rawProps.length > 0 ? rawProps : FALLBACK_PROPERTIES` → use rawProps only.
+  2. ~line 188: `if (leads.length === 0) { leads = [ ...hardcoded leads... ] }` → delete the block.
+  3. ~line 250: any spread of `createInitialERPState()` used as a fallback dataset → return an empty dataset of the same shape instead.
+  4. ~line 415 `const fallbackInit = createInitialERPState();` and every `: fallbackInit.X` (contracts ~441, schedules ~458, journalEntries ~485, pdcRecords ~502, and any others) → `: []`. Remove the fallbackInit variable.
+  5. ~line 504-600: `if (pdcRecords.length === 0 && contracts.length > 0) { generate PDCs ... insert }` read-path auto-generation → delete (generation + both inserts ~549, ~596).
+  6. ~line 632-659: "Auto-seed benchmark RSV allocation if empty" → delete the whole block incl. the insert.
+  7. ~line 661-710: "Auto-generate 2.5% ... Tax if empty" read-path block incl. insert ~708 → delete.
+  8. ~line 286-305: accounting periods: KEEP the existing DB periods logic, but when the DB has no periods do NOT insert hardcoded periods; return [] (periods are managed setup data; the DB currently has 12).
+  Remove imports (FALLBACK_PROPERTIES, createInitialERPState, generateUUID, etc.) only if they become unused in this file.
+  DO NOT touch the write paths that run when a user ACTS (creating a contract inserts its schedules/PDCs/tax ~lines 891-969, journal posting, purchase orders, partner transactions, etc.). Those are business logic, not fallbacks.
+
+B. src/components/admin/erp/context/ERPWorkstationContext.tsx:
+  1. ~line 566-587: the `process.env.NODE_ENV === 'development'` initial state that uses createInitialERPState() + FALLBACK_PROPERTIES → use the same empty initial state as the non-dev branch (one code path).
+  2. ~line 729-730: `useState(INITIAL_PARTNER_PROFILES)` / `useState(INITIAL_PARTNER_TRANSACTIONS)` → `useState([])`.
+  3. In loadLiveData (~line 748-753 and the retry branch ~767-772): set partner profiles/transactions from the DB result unconditionally (`?? []`), not only when length > 0.
+  Remove now-unused imports.
+
+C. Hardcoded defaults that leak demo data when a prop is missing → default to `[]`:
+  - src/components/admin/erp/v2/views/PartnersManagementView.tsx (~58-59)
+  - src/components/admin/erp/v2/modals/PartnerCapitalInjectionModal.tsx (~80)
+  - src/lib/erp/partnersEngine.ts default params (~631, ~634, ~834) — keep the exported INITIAL_* constants themselves (tests import them), only change the default parameter values.
+  - src/components/admin/erp/ZFQuickSearchModal.tsx (~170, ~174): fallback to FALLBACK_PROPERTIES → [].
+  - src/lib/erp/propertyCostEngine.ts (~263): `properties.length > 0 ? properties : FALLBACK_PROPERTIES` → properties.
+  - src/lib/erp/partnersDirectory.ts (~75-91): the registered-partners registry falls back to / merges INITIAL_REGISTERED_PARTNERS → return only what is stored (or [] ). Keep the exported constant. src/components/admin/AdminPropertyForm.tsx ~268 uses INITIAL_REGISTERED_PARTNERS as the SSR default → [].
+
+DO NOT TOUCH the public website fallbacks (src/lib/supabase/queries.ts, src/components/home, catalog, map, property, ClientAppShell, src/app/api/properties/saved) — pending a product decision.
+Do not change UI layout or copy. If a view crashes or shows NaN/undefined on empty arrays, add the minimal guard needed so it shows 0 / empty state — list each such guard in the report.
+</task>
+
+<execution_rules>
+- Run every shell command in the FOREGROUND and wait for it. Never start background tasks/terminals and never "wait for" a background job.
+- Do the edits FIRST, then run gates once at the end. Do not establish lint baselines; the orchestrator has them.
+- If a command takes more than ~3 minutes, skip it and say so in the report.
+- Always finish with the report in <structured_output_contract>, even if incomplete.
+- Use the `caveman` skill for all prose and the final report: terse, no recap, payload (paths, line numbers, counts, errors) verbatim.
+</execution_rules>
+
+<verification_loop>
+  npx tsc --noEmit        (must be clean)
+  npx eslint src/lib/erp/supabaseService.ts src/components/admin/erp/context/ERPWorkstationContext.tsx src/lib/erp/partnersEngine.ts src/lib/erp/partnersDirectory.ts src/lib/erp/propertyCostEngine.ts src/components/admin/erp/ZFQuickSearchModal.tsx src/components/admin/erp/v2/views/PartnersManagementView.tsx src/components/admin/erp/v2/modals/PartnerCapitalInjectionModal.tsx src/components/admin/AdminPropertyForm.tsx   (must not add errors vs HEAD)
+  grep -nE "fallbackInit|createInitialERPState|FALLBACK_PROPERTIES|benchmarkAllocation" src/lib/erp/supabaseService.ts src/components/admin/erp/context/ERPWorkstationContext.tsx src/components/admin/erp/ZFQuickSearchModal.tsx src/lib/erp/propertyCostEngine.ts   (target 0)
+  For EVERY remaining hit of any grep above: line + one-line reason.
+  git diff --stat  (only files named above; ignore graphify-out/)
+</verification_loop>
+
+<action_safety>
+Scope strictly to removing demo fallbacks and read-path auto-inserts. Do NOT git add, commit, stash, checkout, or restore. Do not run anything against the database.
+</action_safety>
+
+<structured_output_contract>
+1. Per item (A1-A8, B1-B3, C): done / skipped + why
+2. Empty-state guards added (file:line)
+3. Gate outcomes (tsc, eslint per file vs HEAD, grep counts + reasons)
+4. Open questions
+</structured_output_contract>
