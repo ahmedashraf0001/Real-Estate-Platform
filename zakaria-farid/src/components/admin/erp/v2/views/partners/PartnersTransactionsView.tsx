@@ -473,7 +473,7 @@ export const PartnersTransactionsView: React.FC<PartnersTransactionsViewProps> =
                         whiteSpace: 'nowrap'
                       }}>
                         {isReallocation ? (isAr ? 'تنازل ملكية' : 'Equity Transfer') :
-                         tx.payment_method.includes('INSTAPAY') ? (isAr ? 'إنستاباي (خزينة 101000)' : 'InstaPay (101000)') :
+                         tx.payment_method.includes('INSTAPAY') ? (isAr ? 'إنستاباي (102000)' : 'InstaPay (102000)') :
                          tx.payment_method.includes('CASH') ? (isAr ? 'كاش (خزينة 101000)' : 'Cash (101000)') : (isAr ? 'بنكي 102000' : 'Bank 102000')}
                       </span>
                     </td>

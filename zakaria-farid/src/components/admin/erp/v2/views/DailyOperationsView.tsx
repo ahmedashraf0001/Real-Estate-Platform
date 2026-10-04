@@ -421,7 +421,7 @@ export const DailyOperationsView: React.FC<DailyOperationsViewProps> = ({
           accountCode: cashAccountCode === '101000' ? '101000' : '102000',
           accountLabel: cashAccountCode === '101000'
             ? (isAr ? 'الخزينة الرئيسية (101000)' : 'Safe Cash (101000)')
-            : (isAr ? 'إنستاباي (101000)' : 'InstaPay (101000)'),
+            : (isAr ? 'إنستاباي (102000)' : 'InstaPay (102000)'),
           reference_number: je.entry_number || matchedContract?.contract_number || je.source_entity_id || je.entry_id,
           payment_method: cashAccountCode === '101000'
             ? (isAr ? 'كاش بالخزينة' : 'Cash in Hand')

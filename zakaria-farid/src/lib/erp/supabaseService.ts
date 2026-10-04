@@ -2201,7 +2201,8 @@ export class ERPSupabaseService {
 
     const { error } = await supabase.from('erp_tax_records').insert([taxRow]);
     if (error) {
-      console.warn('Could not insert manual tax record into erp_tax_records:', error);
+      // Must fail loudly: the caller posts the accrual JE only after the record exists.
+      throw new Error(`Tax record insert failed: ${error.message}`);
     }
     return taxRow;
   }

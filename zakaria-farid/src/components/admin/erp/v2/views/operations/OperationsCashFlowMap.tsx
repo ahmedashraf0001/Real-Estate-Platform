@@ -335,14 +335,14 @@ export function OperationsCashFlowMap({
             role="button"
             tabIndex={0}
             aria-pressed={activeStreamFilter === 'central-hub'}
-            title={isAr ? 'السيولة المتاحة: الخزينة وإنستاباي (101000)' : 'Available Liquidity: Safe & InstaPay (101000)'}
+            title={isAr ? 'السيولة المتاحة: الخزينة (101000) وإنستاباي (102000)' : 'Available Liquidity: Safe (101000) & InstaPay (102000)'}
           >
             <div className={s.centralTop}>
               <div className={s.centralCoinsSquircle} aria-hidden="true">
                 <Coins size={22} strokeWidth={2} />
               </div>
               <span className={s.centralTitle}>{isAr ? 'السيولة المتاحة' : 'Available Liquidity'}</span>
-              <span className={s.centralSubtitle}>{isAr ? 'الخزينة وإنستاباي (101000)' : 'Safe & InstaPay (101000)'}</span>
+              <span className={s.centralSubtitle}>{isAr ? 'الخزينة (101000) وإنستاباي (102000)' : 'Safe (101000) & InstaPay (102000)'}</span>
             </div>
 
             <div className={s.centralGiantAmountRow}>

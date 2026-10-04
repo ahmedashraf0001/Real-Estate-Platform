@@ -161,8 +161,9 @@ export const ApartmentTaxesView: React.FC<ApartmentTaxesViewProps> = ({
     setIsSubmittingRecord(true);
     try {
       const handler = onRecordTax || erpContext?.handleRecordTax;
+      let saved: unknown = null;
       if (handler) {
-        await handler({
+        saved = await handler({
           contract_id: recordContractId,
           tax_type: recordTaxType || (isAr ? 'ضريبة يدوية' : 'Manual tax'),
           taxable_base: recordTaxableBase || 0,
@@ -172,6 +173,9 @@ export const ApartmentTaxesView: React.FC<ApartmentTaxesViewProps> = ({
           notes: recordNotes
         });
       }
+      // Keep the form (and the user's input) open if saving failed.
+      if (!saved) return;
+      setActiveMode('disposition_archive');
       setIsRecordModalOpen(false);
       setRecordContractId('');
       setRecordTaxableBase('');

@@ -3186,7 +3186,7 @@ export function ERPWorkstationProvider({
                 <span>{isAr ? 'العميل:' : 'Client:'}</span>
                 <strong style={{ color: '#0f172a', fontWeight: 800 }}>{localizedBuyer}</strong>
                 <span style={{ color: '#cbd5e1' }}>•</span>
-                <span>{isInstaPay ? (isAr ? 'الخزينة الرئيسية - تحويل إنستاباي (101000)' : 'Treasury - InstaPay (101000)') : (isAr ? 'الخزينة الرئيسية - كاش باليد (101000)' : 'Treasury - Cash (101000)')}</span>
+                <span>{isInstaPay ? (isAr ? 'الحساب البنكي - تحويل إنستاباي (102000)' : 'Bank - InstaPay (102000)') : (isAr ? 'الخزينة الرئيسية - كاش باليد (101000)' : 'Treasury - Cash (101000)')}</span>
               </div>
             </div>
           ),

@@ -194,7 +194,7 @@ export const PartnersProjectsView: React.FC<PartnersProjectsViewProps> = ({
         partnerName: t.partner_name,
         amount: t.amount,
         method: t.payment_method === 'CASH_101000' ? (isAr ? 'كاش (خزينة 101000)' : 'Cash (Safe 101000)') :
-                t.payment_method === 'INSTAPAY_102000' ? (isAr ? 'إنستاباي (خزينة 101000)' : 'InstaPay (101000)') : (isAr ? 'بنكي 102000' : 'Bank 102000')
+                t.payment_method === 'INSTAPAY_102000' ? (isAr ? 'إنستاباي (102000)' : 'InstaPay (102000)') : (isAr ? 'بنكي 102000' : 'Bank 102000')
       });
     });
 
