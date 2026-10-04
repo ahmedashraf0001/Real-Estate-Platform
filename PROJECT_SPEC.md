@@ -139,3 +139,13 @@ The platform combines a public-facing property showcase with a comprehensive bac
 - **Admin Shell Redesign**: The administrative shell chrome (`src/components/admin/AdminSidebar.tsx` and `AdminUniversalHeader.tsx`) is explicitly deferred pending a dedicated independent design review; `SURFACE_UI` must not modify the Admin shell.
 - **Operational Modal Deduplication**: Consolidation of parallel modal implementations (`CashCollectionReceiptModal` vs `HandCollectionModal`, and `PartnerOperationsModal` vs standalone modals) is reserved for a future gated work order.
 - **Installment Revenue Recognition Migration**: Gradual transition from Model B Handover Recognition to installment-proportional revenue recognition is queued for future financial core iteration.
+
+## Decisions — 2026-10-04 (E2E P1 round)
+- [user-confirmed] Public website demo/fallback listings (`FALLBACK_PROPERTIES`) are removed; empty DB shows honest empty states.
+- [user-confirmed] Contract rescission penalty is user-adjustable per rescission (default 10%), not hardcoded.
+- [user-confirmed] Taxes (incl. 2.5% disposal tax) are entered and recorded manually by the user; no automatic tax generation.
+- [user-confirmed] Accounting basis is unified cash-basis: GL is the single source of truth for financial figures; schedule-based dues are shown as off-ledger "scheduled collections", never as accrual receivables.
+- [user-confirmed] Tax remittance goes through the accrued disposition tax liability (204000): recording a tax accrues it to 204000; remitting clears 204000 against cash.
+- [user-confirmed] Accounting periods are created automatically for any new year/month as needed; the user can also manually close a fiscal year.
+- [user-confirmed] There are NO cheques. Payments are either direct cash or InstaPay transfer. Money is recorded only when actually received (no post-dated cheque records, no auto-generated PDCs).
+- [user-confirmed] The down payment is NOT auto-collected when a contract is created; it stays pending until actually received and recorded.
