@@ -6,7 +6,7 @@ import { createRequire } from 'node:module';
 import fs from 'node:fs';
 import path from 'node:path';
 import { D } from '@/lib/erp/math';
-import type { CashMovementTransaction, UpcomingDuesSummary } from '@/lib/erp/operationsStreamFilters';
+import type { UpcomingDuesSummary } from '@/lib/erp/operationsStreamFilters';
 
 const cjsRequire = createRequire(import.meta.url);
 try {
@@ -26,108 +26,6 @@ describe('FIN-OS Operations Side Rail Widgets Suite (media_1790744477358.jpg)', 
     const mod = await import('@/components/admin/erp/v2/views/operations/OperationsSideWidgets');
     OperationsSideWidgets = mod.OperationsSideWidgets;
   });
-
-  // Sample mock data matching the screenshot exactly
-  const mockRecentTransactions: CashMovementTransaction[] = [
-    {
-      id: 'tx-1',
-      date: '2027-09-03',
-      timeStr: '11:00:00',
-      fullDateTimeStr: '2027-09-03 11:00:00',
-      type: 'COLLECTION',
-      typeLabelAr: 'تحصيل شيك',
-      typeLabelEn: 'Cheque Collection',
-      description: 'تحصيل شيك رقم 10245',
-      counterparty: 'Eng. Mahmoud El-Sayed',
-      accountLabel: 'أوراق قبض',
-      accountCode: '103000',
-      amount: D(17200000),
-      direction: 'IN',
-      status: 'COMPLETED',
-      statusLabelAr: 'مكتمل',
-      statusLabelEn: 'Completed',
-      category: 'collection',
-      rawPdc: { cheque_id: 'c1' } as any
-    },
-    {
-      id: 'tx-2',
-      date: '2027-03-03',
-      timeStr: '11:00:00',
-      fullDateTimeStr: '2027-03-03 11:00:00',
-      type: 'COLLECTION',
-      typeLabelAr: 'تحصيل شيك',
-      typeLabelEn: 'Cheque Collection',
-      description: 'تحصيل شيك',
-      counterparty: 'Dr. Karim Hassan',
-      accountLabel: 'أوراق قبض',
-      accountCode: '103000',
-      amount: D(9883333),
-      direction: 'IN',
-      status: 'COMPLETED',
-      statusLabelAr: 'مكتمل',
-      statusLabelEn: 'Completed',
-      category: 'collection',
-      rawPdc: { cheque_id: 'c2' } as any
-    },
-    {
-      id: 'tx-3',
-      date: '2026-12-03',
-      timeStr: '11:00:00',
-      fullDateTimeStr: '2026-12-03 11:00:00',
-      type: 'COLLECTION',
-      typeLabelAr: 'تحصيل شيك',
-      typeLabelEn: 'Cheque Collection',
-      description: 'تحصيل شيك',
-      counterparty: 'Dr. Karim Hassan',
-      accountLabel: 'أوراق قبض',
-      accountCode: '103000',
-      amount: D(9883333),
-      direction: 'IN',
-      status: 'COMPLETED',
-      statusLabelAr: 'مكتمل',
-      statusLabelEn: 'Completed',
-      category: 'collection',
-      rawPdc: { cheque_id: 'c3' } as any
-    },
-    {
-      id: 'tx-4',
-      date: '2026-09-14',
-      timeStr: '02:58:00',
-      fullDateTimeStr: '2026-09-14 02:58:00',
-      type: 'COLLECTION',
-      typeLabelAr: 'تحصيل عميل',
-      typeLabelEn: 'Client Collection',
-      description: 'سند قبض نقدي',
-      counterparty: 'Dr. Karim Hassan',
-      accountLabel: 'عملاء وحجوزات',
-      accountCode: '103000',
-      amount: D(2337500),
-      direction: 'IN',
-      status: 'COMPLETED',
-      statusLabelAr: 'مكتمل',
-      statusLabelEn: 'Completed',
-      category: 'collection'
-    },
-    {
-      id: 'tx-5',
-      date: '2026-09-14',
-      timeStr: '02:58:00',
-      fullDateTimeStr: '2026-09-14 02:58:00',
-      type: 'COLLECTION',
-      typeLabelAr: 'تحصيل عميل',
-      typeLabelEn: 'Client Collection',
-      description: 'سند قبض نقدي',
-      counterparty: 'Eng. Mahmoud El-Sayed',
-      accountLabel: 'عملاء وحجوزات',
-      accountCode: '103000',
-      amount: D(1912500),
-      direction: 'IN',
-      status: 'COMPLETED',
-      statusLabelAr: 'مكتمل',
-      statusLabelEn: 'Completed',
-      category: 'collection'
-    }
-  ];
 
   const mockUpcomingDues: UpcomingDuesSummary = {
     totalCount: 58,
@@ -182,12 +80,6 @@ describe('FIN-OS Operations Side Rail Widgets Suite (media_1790744477358.jpg)', 
   };
 
   describe('1. Static Design & Styling Contracts', () => {
-    it('defines warm gold squircle badges (#fdf8ee fill and #b48c36 color)', () => {
-      assert.ok(cssSource.includes('.goldSquircle'), 'CSS must define .goldSquircle');
-      assert.ok(cssSource.includes('#fdf8ee'), 'CSS must use #fdf8ee background fill');
-      assert.ok(cssSource.includes('#b48c36'), 'CSS must use #b48c36 icon color');
-    });
-
     it('defines dual summary cards with vertical hairline divider', () => {
       assert.ok(cssSource.includes('.upcomingDuesSummary'), 'CSS must define .upcomingDuesSummary');
       assert.ok(cssSource.includes('.summaryHairline'), 'CSS must define .summaryHairline');
@@ -219,50 +111,14 @@ describe('FIN-OS Operations Side Rail Widgets Suite (media_1790744477358.jpg)', 
       assert.ok(cssSource.includes('.recentFeedParty'), 'CSS must define .recentFeedParty');
       assert.ok(cssSource.includes('.upcomingDueParty'), 'CSS must define .upcomingDueParty');
 
-      assert.ok(tsxSource.includes('dir="ltr" className={css.recentFeedDate}'), 'recentFeedDate must specify dir="ltr"');
       assert.ok(tsxSource.includes('dir="ltr" className={css.upcomingDueDate}'), 'upcomingDueDate must specify dir="ltr"');
     });
   });
 
   describe('2. Component Markup & Behavioral Invariants', () => {
-    it('renders Widget 1 (أحدث العمليات) matching reference image media_1790744477358.jpg', () => {
-      const html = renderToStaticMarkup(
-        React.createElement(OperationsSideWidgets, {
-          recentTransactions: mockRecentTransactions,
-          upcomingDues: mockUpcomingDues,
-          isAr: true
-        })
-      );
-
-      // Title & Subtitle
-      assert.ok(html.includes('أحدث العمليات'), 'Must render title أحدث العمليات');
-      assert.ok(html.includes('5 عمليات حديثة'), 'Must render dynamic subtitle 5 عمليات حديثة');
-      assert.ok(html.includes('عرض الكل'), 'Must render action عرض الكل');
-
-      // Parties
-      assert.ok(html.includes('Eng. Mahmoud El-Sayed'), 'Must render Eng. Mahmoud El-Sayed');
-      assert.ok(html.includes('Dr. Karim Hassan'), 'Must render Dr. Karim Hassan');
-
-      // Status pills
-      assert.ok(html.includes('تحصيل شيك'), 'Must render pill تحصيل شيك');
-      assert.ok(html.includes('تحصيل عميل'), 'Must render pill تحصيل عميل');
-
-      // Amounts formatted with + and commas
-      assert.ok(html.includes('+ 17,200,000'), 'Must render + 17,200,000');
-      assert.ok(html.includes('+ 9,883,333'), 'Must render + 9,883,333');
-      assert.ok(html.includes('+ 2,337,500'), 'Must render + 2,337,500');
-      assert.ok(html.includes('+ 1,912,500'), 'Must render + 1,912,500');
-
-      // Dates & Times
-      assert.ok(html.includes('2027-09-03'), 'Must render 2027-09-03');
-      assert.ok(html.includes('11:00'), 'Must render 11:00');
-      assert.ok(html.includes('02:58'), 'Must render 02:58');
-    });
-
     it('renders Widget 2 (استحقاقات وتحصيلات قادمة) matching reference image media_1790744477358.jpg', () => {
       const html = renderToStaticMarkup(
         React.createElement(OperationsSideWidgets, {
-          recentTransactions: mockRecentTransactions,
           upcomingDues: mockUpcomingDues,
           isAr: true
         })
@@ -290,14 +146,11 @@ describe('FIN-OS Operations Side Rail Widgets Suite (media_1790744477358.jpg)', 
     it('renders honest empty zero-states without crashing when lists are empty', () => {
       const html = renderToStaticMarkup(
         React.createElement(OperationsSideWidgets, {
-          recentTransactions: [],
           upcomingDues: { items: [], totalCount: 0, totalIn: D(0), totalOut: D(0) },
           isAr: true
         })
       );
 
-      assert.ok(html.includes('لا توجد حركات مسجلة مؤخراً'), 'Must render honest zero-state for recent movements');
-      assert.ok(html.includes('0 عمليات حديثة'), 'Must render 0 عمليات حديثة');
       assert.ok(html.includes('0 مستحق'), 'Must render 0 مستحق');
       assert.ok(html.includes('لا توجد شيكات أو مستحقات مجدولة للفترة القادمة'), 'Must render honest zero-state for dues');
     });

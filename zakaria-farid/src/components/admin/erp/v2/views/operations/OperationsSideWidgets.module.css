@@ -56,13 +56,13 @@
   width: 36px;
   height: 36px;
   border-radius: 10px;
-  background-color: #fdf8ee;
+  background-color: var(--erp-accent-subtle);
   border: 1px solid rgba(180, 140, 54, 0.18);
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  color: #b48c36;
+  color: var(--erp-accent);
 }
 
 .headerTexts {

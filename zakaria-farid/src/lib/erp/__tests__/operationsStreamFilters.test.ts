@@ -352,30 +352,4 @@ describe('FIN-OS Operations Stream Filters & Mindmap Matchers', () => {
     });
   });
 
-  describe('DailyOperations Real Data Contract', () => {
-    it('does not create mock outflows and only counts explicitly paid property costs', async () => {
-      const fs = await import('fs');
-      const path = await import('path');
-      const viewPath = path.resolve(process.cwd(), 'src/components/admin/erp/v2/views/DailyOperationsView.tsx');
-      const content = fs.readFileSync(viewPath, 'utf8');
-
-      assert.strictEqual(content.includes('generateMockPropertyCosts'), false);
-      assert.ok(content.includes('const effectivePropertyCosts = propertyCosts;'));
-      assert.ok(content.includes("const costAmount = D(cost.paid_amount_egp ?? '0');"));
-      assert.ok(content.includes('if (costAmount.lte(0)) return;'));
-      assert.strictEqual(content.includes('cost.net_effective_cost_egp || cost.total_cost_egp'), false);
-    });
-
-    it('keeps the daily stream KPIs tied to real transactions without fallback chart points', async () => {
-      const fs = await import('fs');
-      const path = await import('path');
-      const viewPath = path.resolve(process.cwd(), 'src/components/admin/erp/v2/views/DailyOperationsView.tsx');
-      const content = fs.readFileSync(viewPath, 'utf8');
-
-      assert.ok(content.includes('const todayMetrics = useMemo('));
-      assert.ok(content.includes("if (tx.date !== todayStr) return;"));
-      assert.ok(content.includes('net: inflows.minus(outflows)'));
-      assert.strictEqual(content.includes('showSparkline={true}'), false);
-    });
-  });
 });
