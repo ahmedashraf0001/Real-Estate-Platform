@@ -5165,10 +5165,10 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
                               strokeWidth="1"
                             />
                             {/* Corner Baluster Posts */}
-                            <circle cx={s.x + 3} cy={s.y + 3} r="3.5" fill="#7FB4D8" stroke="#0D1220" strokeWidth="1" />
-                            <circle cx={s.x + s.w - 3} cy={s.y + 3} r="3.5" fill="#7FB4D8" stroke="#0D1220" strokeWidth="1" />
-                            <circle cx={s.x + 3} cy={s.y + s.h - 3} r="3.5" fill="#7FB4D8" stroke="#0D1220" strokeWidth="1" />
-                            <circle cx={s.x + s.w - 3} cy={s.y + s.h - 3} r="3.5" fill="#7FB4D8" stroke="#0D1220" strokeWidth="1" />
+                            <circle cx={s.x + 3} cy={s.y + 3} r="3.5" fill="#7FB4D8" strokeWidth="1" style={{ stroke: 'var(--fp-canvas-bg)' }} />
+                            <circle cx={s.x + s.w - 3} cy={s.y + 3} r="3.5" fill="#7FB4D8" strokeWidth="1" style={{ stroke: 'var(--fp-canvas-bg)' }} />
+                            <circle cx={s.x + 3} cy={s.y + s.h - 3} r="3.5" fill="#7FB4D8" strokeWidth="1" style={{ stroke: 'var(--fp-canvas-bg)' }} />
+                            <circle cx={s.x + s.w - 3} cy={s.y + s.h - 3} r="3.5" fill="#7FB4D8" strokeWidth="1" style={{ stroke: 'var(--fp-canvas-bg)' }} />
                             {/* Exterior Badge Stamp */}
                             <rect
                               x={s.x + s.w / 2 - 38}
@@ -5368,9 +5368,8 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
                                 cy={s.y + s.h}
                                 r="3.5"
                                 fill="#2563eb"
-                                stroke="#0A0E1A"
                                 strokeWidth="1"
-                                style={{ cursor: 'nwse-resize' }}
+                                style={{ cursor: 'nwse-resize', stroke: 'var(--fp-canvas-bg)' }}
                                 onPointerDown={(ev) => handleResizePointerDown(s.zone.id, 'se', ev)}
                               >
                                 <title>{isAr ? 'اسحب لتغيير الأبعاد (الزاوية)' : 'Drag to resize room (Corner)'}</title>
@@ -5380,9 +5379,8 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
                                 cy={s.y + s.h}
                                 r="3.5"
                                 fill="#2563eb"
-                                stroke="#0A0E1A"
                                 strokeWidth="1"
-                                style={{ cursor: 'nesw-resize' }}
+                                style={{ cursor: 'nesw-resize', stroke: 'var(--fp-canvas-bg)' }}
                                 onPointerDown={(ev) => handleResizePointerDown(s.zone.id, 'sw', ev)}
                               >
                                 <title>{isAr ? 'اسحب لتغيير الأبعاد (الزاوية)' : 'Drag to resize room (Corner)'}</title>
@@ -5392,9 +5390,8 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
                                 cy={s.y}
                                 r="3.5"
                                 fill="#2563eb"
-                                stroke="#0A0E1A"
                                 strokeWidth="1"
-                                style={{ cursor: 'nesw-resize' }}
+                                style={{ cursor: 'nesw-resize', stroke: 'var(--fp-canvas-bg)' }}
                                 onPointerDown={(ev) => handleResizePointerDown(s.zone.id, 'ne', ev)}
                               >
                                 <title>{isAr ? 'اسحب لتغيير الأبعاد (الزاوية)' : 'Drag to resize room (Corner)'}</title>
@@ -5404,9 +5401,8 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
                                 cy={s.y}
                                 r="3.5"
                                 fill="#2563eb"
-                                stroke="#0A0E1A"
                                 strokeWidth="1"
-                                style={{ cursor: 'nwse-resize' }}
+                                style={{ cursor: 'nwse-resize', stroke: 'var(--fp-canvas-bg)' }}
                                 onPointerDown={(ev) => handleResizePointerDown(s.zone.id, 'nw', ev)}
                               >
                                 <title>{isAr ? 'اسحب لتغيير الأبعاد (الزاوية)' : 'Drag to resize room (Corner)'}</title>
@@ -5421,9 +5417,8 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
                                 height="14"
                                 rx="2.5"
                                 fill="#2563eb"
-                                stroke="#0A0E1A"
                                 strokeWidth="0.8"
-                                style={{ cursor: 'ew-resize' }}
+                                style={{ cursor: 'ew-resize', stroke: 'var(--fp-canvas-bg)' }}
                                 onPointerDown={(ev) => handleResizePointerDown(s.zone.id, 'e', ev)}
                               >
                                 <title>{isAr ? 'اسحب الجانب الأيمن للتوسيع أو التضييق' : 'Drag right side to expand or shrink'}</title>
@@ -5436,9 +5431,8 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
                                 height="14"
                                 rx="2.5"
                                 fill="#2563eb"
-                                stroke="#0A0E1A"
                                 strokeWidth="0.8"
-                                style={{ cursor: 'ew-resize' }}
+                                style={{ cursor: 'ew-resize', stroke: 'var(--fp-canvas-bg)' }}
                                 onPointerDown={(ev) => handleResizePointerDown(s.zone.id, 'w', ev)}
                               >
                                 <title>{isAr ? 'اسحب الجانب الأيسر للتوسيع أو التضييق' : 'Drag left side to expand or shrink'}</title>
@@ -5451,9 +5445,8 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
                                 height="5"
                                 rx="2.5"
                                 fill="#2563eb"
-                                stroke="#0A0E1A"
                                 strokeWidth="0.8"
-                                style={{ cursor: 'ns-resize' }}
+                                style={{ cursor: 'ns-resize', stroke: 'var(--fp-canvas-bg)' }}
                                 onPointerDown={(ev) => handleResizePointerDown(s.zone.id, 's', ev)}
                               >
                                 <title>{isAr ? 'اسحب الجانب السفلي للتوسيع أو التضييق' : 'Drag bottom side to expand or shrink'}</title>
@@ -5466,9 +5459,8 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
                                 height="5"
                                 rx="2.5"
                                 fill="#2563eb"
-                                stroke="#0A0E1A"
                                 strokeWidth="0.8"
-                                style={{ cursor: 'ns-resize' }}
+                                style={{ cursor: 'ns-resize', stroke: 'var(--fp-canvas-bg)' }}
                                 onPointerDown={(ev) => handleResizePointerDown(s.zone.id, 'n', ev)}
                               >
                                 <title>{isAr ? 'اسحب الجانب العلوي للتوسيع أو التضييق' : 'Drag top side to expand or shrink'}</title>
@@ -5569,7 +5561,7 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
                             <title>{isAr ? 'باب — اسحب لتحريك الموضع على الجدار' : 'Door — Drag along wall to reposition, or use hover actions'}</title>
 
                             {/* Wall cutout gap */}
-                            <line x1={seg.x1} y1={seg.y1} x2={seg.x2} y2={seg.y2} stroke="#0A0E1A" strokeWidth="6" />
+                            <line x1={seg.x1} y1={seg.y1} x2={seg.x2} y2={seg.y2} strokeWidth="6" style={{ stroke: 'var(--fp-canvas-bg)' }} />
 
                             {/* Jamb End Caps */}
                             <rect
@@ -5606,7 +5598,7 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
                               transform={`translate(${(seg.x1 + seg.x2) / 2 - 26}, ${(seg.y1 + seg.y2) / 2 - 20})`}
                               className="fp-opening-hover-actions"
                             >
-                              <rect width="52" height="18" rx="5" fill="#0D1220" stroke="#2563eb" strokeWidth="1" />
+                              <rect width="52" height="18" rx="5" stroke="#2563eb" strokeWidth="1" style={{ fill: 'var(--fp-surface)' }} />
                               {/* Flip button */}
                               <g
                                 style={{ cursor: 'pointer' }}
@@ -5645,7 +5637,7 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
                           <title>{isAr ? 'نافذة — اسحب لتحريك الموضع على الجدار' : 'Window — Drag along wall to reposition, or use hover actions'}</title>
 
                           {/* Wall Cutout Gap */}
-                          <line x1={seg.x1} y1={seg.y1} x2={seg.x2} y2={seg.y2} stroke="#0A0E1A" strokeWidth="6" />
+                          <line x1={seg.x1} y1={seg.y1} x2={seg.x2} y2={seg.y2} strokeWidth="6" style={{ stroke: 'var(--fp-canvas-bg)' }} />
 
                           {/* Outer Projecting Stone Sill Ledge */}
                           <line x1={sillX1} y1={sillY1} x2={sillX2} y2={sillY2} stroke="#7FB4D8" strokeWidth="2.8" strokeLinecap="round" />
@@ -5669,13 +5661,13 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
                             transform={`translate(${(seg.x1 + seg.x2) / 2 - 32}, ${(seg.y1 + seg.y2) / 2 - 20})`}
                             className="fp-opening-hover-actions"
                           >
-                            <rect width="64" height="18" rx="5" fill="#0D1220" stroke="#7FB4D8" strokeWidth="1" />
+                            <rect width="64" height="18" rx="5" stroke="#7FB4D8" strokeWidth="1" style={{ fill: 'var(--fp-surface)' }} />
                             {/* Width Adjust */}
                             <g
                               style={{ cursor: 'pointer' }}
                               onPointerDown={(ev) => { ev.stopPropagation(); ev.preventDefault(); handleAdjustWindowWidth(s.zone.id, seg.id); }}
                             >
-                              <text x="18" y="12" fontSize="7.5" fill="#7FB4D8" textAnchor="middle" fontWeight="800">{seg.width_m}m</text>
+                              <text x="18" y="12" fontSize="7.5" textAnchor="middle" fontWeight="800" style={{ fill: 'var(--fp-text)' }}>{seg.width_m}m</text>
                               <title>{isAr ? 'تغيير العرض' : 'Change width'}</title>
                             </g>
                             <line x1="36" y1="3" x2="36" y2="15" stroke="rgba(127,180,216,0.3)" strokeWidth="0.8" />
@@ -5710,10 +5702,10 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
                           width={barW}
                           height={barH}
                           rx="6"
-                          fill="#0D1220"
                           stroke="#2563eb"
                           strokeWidth="1.2"
                           filter="url(#adminGoldGlow)"
+                          style={{ fill: 'var(--fp-surface)' }}
                         />
 
                         {/* ⟲ 90° Rotate */}
@@ -5783,9 +5775,9 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
                             x="19"
                             y="12.5"
                             fontSize="8.5"
-                            fill={composerTool === 'door' ? '#0A0E1A' : '#FFFFFF'}
                             textAnchor="middle"
                             fontWeight="800"
+                            style={{ fill: composerTool === 'door' ? 'var(--fp-canvas-bg)' : 'var(--fp-text)' }}
                           >
                             {isAr ? '+ باب' : '+ Door'}
                           </text>
@@ -5819,9 +5811,9 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
                             x="22"
                             y="12.5"
                             fontSize="8.5"
-                            fill={composerTool === 'window' ? '#0A0E1A' : '#7FB4D8'}
                             textAnchor="middle"
                             fontWeight="800"
+                            style={{ fill: composerTool === 'window' ? 'var(--fp-canvas-bg)' : '#7FB4D8' }}
                           >
                             {isAr ? '+ نافذة' : '+ Window'}
                           </text>
@@ -5944,7 +5936,7 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
                       />
                       {canvasDrag.snapLabel && (
                         <g transform={`translate(${canvasDrag.snap.x + canvasDrag.snap.w / 2}, ${canvasDrag.snap.y - 8})`}>
-                          <rect x="-60" y="-8" width="120" height="15" rx="3" fill="#0A0E1A" stroke="#2563eb" strokeWidth="0.8" />
+                          <rect x="-60" y="-8" width="120" height="15" rx="3" stroke="#2563eb" strokeWidth="0.8" style={{ fill: 'var(--fp-surface)' }} />
                           <text y="2" fontSize="7" fill="#2563eb" textAnchor="middle" fontWeight="800" fontFamily="'Plus Jakarta Sans', sans-serif">
                             {canvasDrag.snapLabel}
                           </text>
@@ -7157,7 +7149,7 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
         }
 
         [data-theme="light"] .fp-canvas-panel {
-          background: #F8FAFC;
+          background: var(--fp-canvas-bg);
           border: 1.5px solid var(--admin-card-border, #CBD5E1);
           box-shadow: 0 12px 32px rgba(28,26,22,0.06);
         }
