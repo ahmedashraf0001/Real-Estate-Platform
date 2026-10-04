@@ -8,5 +8,5 @@ export default function FinOSLocaleLoading() {
   const pathname = usePathname() || '';
   const isAr = !pathname.includes('/en');
 
-  return <ZFERPLoadingWorkstation isAr={isAr} />;
+  return <ZFERPLoadingWorkstation isAr={isAr} mode="stage" />;
 }

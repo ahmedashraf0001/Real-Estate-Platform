@@ -1149,7 +1149,14 @@ export const UnitsFloorMatrixTable: React.FC<UnitsFloorMatrixTableProps> = ({
                                   cursor: 'pointer',
                                 }}
                               >
-                                {isIsolated ? (isAr ? 'إلغاء التصفية ✕' : 'Clear ✕') : (isAr ? 'تصفية المشروع' : 'Isolate')}
+                                {isIsolated ? (
+                                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                                    <span>{isAr ? 'إلغاء التصفية' : 'Clear'}</span>
+                                    <X size={11} />
+                                  </span>
+                                ) : (
+                                  isAr ? 'تصفية المشروع' : 'Isolate'
+                                )}
                               </button>
                             )}
                           </div>

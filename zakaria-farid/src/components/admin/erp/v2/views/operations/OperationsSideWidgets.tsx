@@ -91,7 +91,7 @@ export const OperationsSideWidgets: React.FC<OperationsSideWidgetsProps> = ({
         <div className={css.recentFeedHeader}>
           <div className={css.recentFeedTitleWrap}>
             <div className={css.goldSquircle} aria-hidden="true">
-              <Clock size={19} color="#b48c36" />
+              <Clock size={15} color="var(--erp-accent, #2563eb)" />
             </div>
             <div className={css.headerTexts}>
               <h3 id="zf-recent-ops-title" className={css.recentFeedTitle}>
@@ -143,9 +143,9 @@ export const OperationsSideWidgets: React.FC<OperationsSideWidgetsProps> = ({
               // Status pill text
               let pillLabel = isAr ? tx.typeLabelAr : tx.typeLabelEn;
               if (isCheque) {
-                pillLabel = isAr ? 'قسط محصل' : 'Collected Installment';
+                pillLabel = isAr ? (tx.typeLabelAr || 'تحصيل شيك') : (tx.typeLabelEn || 'Cheque Collection');
               } else if (isInflow) {
-                pillLabel = isAr ? 'تحصيل عميل' : 'Client Collection';
+                pillLabel = isAr ? (tx.typeLabelAr || 'تحصيل عميل') : (tx.typeLabelEn || 'Client Collection');
               }
 
               const timeDisplay = tx.timeStr ? tx.timeStr.slice(0, 5) : '11:00';
@@ -168,18 +168,14 @@ export const OperationsSideWidgets: React.FC<OperationsSideWidgetsProps> = ({
                   {/* Leading (Right in RTL): Squircle + Party & Status Pill */}
                   <div className={css.recentFeedLeading}>
                     <div className={css.itemSquircleGreen} aria-hidden="true">
-                      {isCheque ? <Coins size={17} color="#16a34a" /> : <User size={17} color="#16a34a" />}
+                      {isCheque ? <Coins size={15} color="#16a34a" /> : <User size={15} color="#16a34a" />}
                     </div>
 
                     <div className={css.recentFeedInfo}>
-                      <span className={css.recentFeedParty} title={tx.counterparty || tx.description}>
+                      <bdi className={css.recentFeedParty} title={tx.counterparty || tx.description}>
                         {tx.counterparty || tx.description || (isAr ? 'معاملة مالية' : 'Movement')}
-                      </span>
-                      <div className={css.recentFeedMeta}>
-                        <span className={css.statusPillGreen}>
-                          {pillLabel}
-                        </span>
-                      </div>
+                      </bdi>
+                      <span className={css.itemTypeLabel}>{pillLabel}</span>
                     </div>
                   </div>
 
@@ -187,17 +183,16 @@ export const OperationsSideWidgets: React.FC<OperationsSideWidgetsProps> = ({
                   <div className={css.recentFeedTrailing}>
                     <div className={css.trailingTextGroup}>
                       <span className={`${css.recentFeedAmount} ${isOutflow ? css.amountOut : ''}`}>
-                        {isInflow ? '+ ' : isOutflow ? '- ' : ''}
-                        {formatNumberWithCommas(tx.amount.abs())}{' '}
+                        <bdi>{isInflow ? '+ ' : isOutflow ? '- ' : ''}{formatNumberWithCommas(tx.amount.abs())}</bdi>{' '}
                         <span className={css.currencySuffix}>{isAr ? 'ج.م' : 'EGP'}</span>
                       </span>
                       <span dir="ltr" className={css.recentFeedDate}>
-                        {tx.date} {timeDisplay} <Clock size={11} color="#64748b" />
+                        <bdi>{tx.date}</bdi> <bdi>{timeDisplay}</bdi> <Clock size={11} color="#64748b" />
                       </span>
                     </div>
 
                     <div className={css.arrowButton} aria-hidden="true">
-                      <ArrowUpRight size={15} />
+                      <ArrowUpRight size={13} />
                     </div>
                   </div>
                 </div>
@@ -213,18 +208,15 @@ export const OperationsSideWidgets: React.FC<OperationsSideWidgetsProps> = ({
         <div className={css.upcomingDuesHeader}>
           <div className={css.upcomingDuesTitleWrap}>
             <div className={css.goldSquircle} aria-hidden="true">
-              <Calendar size={19} color="#b48c36" />
+              <Calendar size={15} color="var(--erp-accent, #2563eb)" />
             </div>
             <div className={css.headerTexts}>
               <h3 id="zf-upcoming-dues-title" className={css.upcomingDuesTitle}>
                 {isAr ? 'استحقاقات وتحصيلات قادمة' : 'Upcoming Dues & Collections'}
               </h3>
-              <div className={css.subtitleWithBadge}>
-                <span className={css.amberBadge}>
-                  {isAr ? `${upcomingDues.totalCount} مستحق` : `${upcomingDues.totalCount} Dues`}
-                </span>
+              <div className={css.headerSubtitleWrap}>
                 <span className={css.cardSubtitle}>
-                  {isAr ? 'مستحقات خلال 7 أيام قادمة' : 'Dues in next 7 days'}
+                  <bdi>{upcomingDues.totalCount} {isAr ? 'مستحق' : 'Dues'}</bdi> · {isAr ? 'الاستحقاقات والتحصيلات خلال الفترة القادمة' : 'Upcoming dues and collections'}
                 </span>
               </div>
             </div>
@@ -255,7 +247,7 @@ export const OperationsSideWidgets: React.FC<OperationsSideWidgetsProps> = ({
                 {isAr ? 'تحصيلات متوقعة' : 'Expected In'}
               </span>
               <span className={css.summaryValueGreen}>
-                {formatNumberWithCommas(upcomingDues.totalIn)} {isAr ? 'ج.م' : 'EGP'}
+                <bdi>{formatNumberWithCommas(upcomingDues.totalIn)}</bdi> <span className={css.currencySuffix}>{isAr ? 'ج.م' : 'EGP'}</span>
               </span>
             </div>
             <div className={css.summarySquircleGreen} aria-hidden="true">
@@ -273,7 +265,7 @@ export const OperationsSideWidgets: React.FC<OperationsSideWidgetsProps> = ({
                 {isAr ? 'مدفوعات مستحقة' : 'Payables Due'}
               </span>
               <span className={css.summaryValueNeutral}>
-                {formatNumberWithCommas(upcomingDues.totalOut)} {isAr ? 'ج.م' : 'EGP'}
+                <bdi>{formatNumberWithCommas(upcomingDues.totalOut)}</bdi> <span className={css.currencySuffix}>{isAr ? 'ج.م' : 'EGP'}</span>
               </span>
             </div>
             <div className={css.summarySquircleNeutral} aria-hidden="true">
@@ -289,7 +281,7 @@ export const OperationsSideWidgets: React.FC<OperationsSideWidgetsProps> = ({
               <CheckCircle2 size={20} color="#16a34a" />
               <span>
                 {isAr
-                  ? 'لا توجد أقساط أو مستحقات مجدولة للفترة القادمة'
+                  ? 'لا توجد شيكات أو مستحقات مجدولة للفترة القادمة'
                   : 'No upcoming installments or dues scheduled'}
               </span>
             </div>
@@ -316,18 +308,14 @@ export const OperationsSideWidgets: React.FC<OperationsSideWidgetsProps> = ({
                   {/* Leading (Right in RTL): Blue Squircle with FileText + Client Name & Soft Blue Pill */}
                   <div className={css.upcomingDueLeading}>
                     <div className={css.itemSquircleBlue} aria-hidden="true">
-                      <FileText size={17} color="#2563eb" />
+                      <FileText size={15} color="#2563eb" />
                     </div>
 
                     <div className={css.upcomingDueInfo}>
-                      <span className={css.upcomingDueParty} title={item.party}>
+                      <bdi className={css.upcomingDueParty} title={item.party}>
                         {item.party}
-                      </span>
-                      <div className={css.upcomingDueMeta}>
-                        <span className={css.statusPillBlue}>
-                          {pillLabel}
-                        </span>
-                      </div>
+                      </bdi>
+                      <span className={css.itemTypeLabel}>{pillLabel}</span>
                     </div>
                   </div>
 
@@ -335,17 +323,16 @@ export const OperationsSideWidgets: React.FC<OperationsSideWidgetsProps> = ({
                   <div className={css.upcomingDueTrailing}>
                     <div className={css.trailingTextGroup}>
                       <span className={`${css.upcomingDueAmount} ${!isIn ? css.amountOut : ''}`}>
-                        {isIn ? '+ ' : '- '}
-                        {formatNumberWithCommas(item.amount)}{' '}
+                        <bdi>{isIn ? '+ ' : '- '}{formatNumberWithCommas(item.amount)}</bdi>{' '}
                         <span className={css.currencySuffix}>{isAr ? 'ج.م' : 'EGP'}</span>
                       </span>
                       <span dir="ltr" className={css.upcomingDueDate}>
-                        {item.dueDate} <Clock size={11} color="#64748b" />
+                        <bdi>{item.dueDate}</bdi> <Clock size={11} color="#64748b" />
                       </span>
                     </div>
 
                     <div className={css.arrowButton} aria-hidden="true">
-                      <ArrowUpRight size={15} />
+                      <ArrowUpRight size={13} />
                     </div>
                   </div>
                 </div>

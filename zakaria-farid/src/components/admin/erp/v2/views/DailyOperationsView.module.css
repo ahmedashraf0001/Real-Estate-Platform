@@ -16,19 +16,29 @@
   --ops-muted: #64748b;
   --ops-subtle-text: #94a3b8;
 
-  /* Sovereign Brand Accents */
-  --ops-accent: var(--erp-accent, #2563eb);
-  --ops-accent-hover: var(--erp-accent-hover, #1d4ed8);
-  --ops-accent-subtle: var(--erp-accent-subtle, #eff6ff);
-  --ops-accent-tint: var(--erp-accent-tint, rgba(37, 99, 235, 0.08));
+  /* Accent: always the runtime palette preset (set on <html>), never a literal */
+  --ops-accent: var(--erp-accent);
+  --ops-accent-hover: var(--erp-accent-hover);
+  --ops-accent-subtle: var(--erp-accent-subtle);
+  --ops-accent-tint: var(--erp-accent-tint);
+  --ops-accent-ring: color-mix(in srgb, var(--erp-accent) 22%, transparent);
 
-  /* Executive Semantic Colors */
-  --ops-emerald: #16a34a;
-  --ops-emerald-subtle: #ecfdf5;
-  --ops-rose: #dc2626;
+  /* Semantic status colours (one set, used only for meaning) */
+  --ops-emerald: #15803d;
+  --ops-emerald-subtle: #f0fdf4;
+  --ops-emerald-border: #bbf7d0;
+  --ops-rose: #b91c1c;
   --ops-rose-subtle: #fef2f2;
-  --ops-amber: #d97706;
+  --ops-rose-border: #fecaca;
+  --ops-amber: #b45309;
   --ops-amber-subtle: #fffbeb;
+  --ops-amber-border: #fde68a;
+
+  /* Scales */
+  --ops-radius-control: 8px;
+  --ops-radius-card: 12px;
+  --ops-shadow-card: 0 1px 2px rgba(15, 23, 42, 0.04);
+  --ops-track: #f1f5f9;
 
   width: 100%;
   max-width: 100vw;
@@ -37,7 +47,7 @@
   display: flex;
   flex-direction: column;
   gap: 1.15rem;
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
   line-height: 1.5;
   box-sizing: border-box;
 
@@ -65,7 +75,7 @@
 }
 
 .titleArea h2 {
-  font-size: 1.4rem;
+  font-size: 1.15rem;
   line-height: 1.3;
   font-weight: 800;
   letter-spacing: -0.02em;
@@ -76,7 +86,7 @@
 .titleArea p {
   margin: 0.25rem 0 0 0;
   color: var(--ops-muted);
-  font-size: 0.8125rem;
+  font-size: 0.75rem;
   line-height: 1.45;
 }
 
@@ -209,7 +219,7 @@
   gap: 1rem;
   flex-wrap: wrap;
   padding-bottom: 0.75rem;
-  border-bottom: 1px solid var(--ops-border-subtle, #f1f5f9);
+  border-bottom: 1px solid var(--ops-border-card, #e2e8f0);
 }
 
 .flowTitleArea {
@@ -232,7 +242,7 @@
 }
 
 .flowTitle {
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
   font-weight: 800;
   color: var(--ops-text, #0f172a);
   margin: 0;
@@ -240,7 +250,7 @@
 }
 
 .flowSubtitle {
-  font-size: 0.75rem;
+  font-size: 0.6875rem;
   color: var(--ops-muted, #64748b);
   margin: 0;
 }
@@ -918,7 +928,7 @@
 
 .tableHeaderTitle h3 {
   margin: 0;
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
   font-weight: 700;
   color: var(--ops-text, #0f172a);
   white-space: nowrap;
@@ -2126,7 +2136,7 @@
 }
 
 .titleArea h2 {
-  font-size: 1.4rem;
+  font-size: 1.15rem;
   letter-spacing: -0.025em;
 }
 

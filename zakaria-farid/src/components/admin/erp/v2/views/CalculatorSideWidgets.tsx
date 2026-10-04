@@ -287,7 +287,116 @@ export const CalculatorSideWidgets: React.FC<CalculatorSideWidgetsProps> = ({
           </div>
         </ZFWidgetCard>
 
-        {/* ─── WIDGET 2: QUICK ACTIONS ─── */}
+        {/* ─── WIDGET 2: COST SENSITIVITY & MARKET SCENARIOS ─── */}
+        <ZFWidgetCard
+          id="calculator-sensitivity"
+          title={isAr ? 'تحليل الحساسية وسيناريوهات السوق' : 'Cost Sensitivity & Scenarios'}
+          icon={<SlidersHorizontal size={14} />}
+          badge={
+            <span style={{ fontSize: '0.68rem', color: 'var(--erp-accent, #2563eb)', fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>
+              ±10%
+            </span>
+          }
+          isAr={isAr}
+        >
+          <div className={styles.sensitivityCard}>
+            {/* Scenario Selector Tabs */}
+            <div className={styles.scenarioTabs} role="tablist">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={activeScenario === 'down10'}
+                className={`${styles.scenarioTabBtn} ${activeScenario === 'down10' ? styles.scenarioTabBtnActive : ''}`}
+                onClick={() => setActiveScenario('down10')}
+              >
+                {isAr ? 'وفر -10%' : 'Save -10%'}
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={activeScenario === 'base'}
+                className={`${styles.scenarioTabBtn} ${activeScenario === 'base' ? styles.scenarioTabBtnActive : ''}`}
+                onClick={() => setActiveScenario('base')}
+              >
+                {isAr ? 'الأساس 0%' : 'Base 0%'}
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={activeScenario === 'up10'}
+                className={`${styles.scenarioTabBtn} ${activeScenario === 'up10' ? styles.scenarioTabBtnActive : ''}`}
+                onClick={() => setActiveScenario('up10')}
+              >
+                {isAr ? 'تضخم +10%' : 'Inflation +10%'}
+              </button>
+            </div>
+
+            {/* Scenario Result Hero Box */}
+            <div className={styles.scenarioHeroBox}>
+              <div className={styles.scenarioBadgeRow}>
+                <span style={{ fontSize: '0.74rem', fontWeight: 800, color: '#0f172a' }}>
+                  {activeScenario === 'up10' 
+                    ? (isAr ? 'سيناريو زيادة تكاليف الخامات (+10%)' : 'Material Inflation (+10%)')
+                    : activeScenario === 'down10'
+                    ? (isAr ? 'سيناريو وفر وخفض التكاليف (-10%)' : 'Operational Savings (-10%)')
+                    : (isAr ? 'السيناريو الأساسي المعتمد بالدراسة' : 'Base Audited Feasibility')}
+                </span>
+                {activeScenario === 'up10' ? (
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.2rem', color: '#dc2626', fontSize: '0.7rem', fontWeight: 700 }}>
+                    <ArrowUpRight size={13} />
+                    <span>+10%</span>
+                  </span>
+                ) : activeScenario === 'down10' ? (
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.2rem', color: '#16a34a', fontSize: '0.7rem', fontWeight: 700 }}>
+                    <ArrowDownRight size={13} />
+                    <span>-10%</span>
+                  </span>
+                ) : (
+                  <span style={{ color: 'var(--erp-accent, #2563eb)', fontSize: '0.7rem', fontWeight: 700 }}>
+                    0%
+                  </span>
+                )}
+              </div>
+
+              <div className={styles.scenarioDetailRow}>
+                <span className={styles.scenarioDetailLabel}>
+                  {isAr ? 'تكلفة المتر المحسوبة بالسيناريو:' : 'Scenario Cost / Sqm:'}
+                </span>
+                <span className={styles.scenarioDetailValue}>
+                  {renderMoney(scenarioCostPerSqm, 'م²')}
+                </span>
+              </div>
+
+              <div className={styles.scenarioDetailRow}>
+                <span className={styles.scenarioDetailLabel}>
+                  {isAr ? 'الأثر على إجمالي الأرباح:' : 'Profit Shift Impact:'}
+                </span>
+                <span 
+                  className={styles.scenarioDetailValue} 
+                  style={{ color: costDelta > 0 ? '#dc2626' : costDelta < 0 ? '#16a34a' : '#0f172a' }}
+                >
+                  {costDelta === 0 
+                    ? (isAr ? 'الأساس بدون تغيير' : 'No shift')
+                    : `${costDelta < 0 ? '+' : '-'}${renderMoney(Math.abs(costDelta))}`}
+                </span>
+              </div>
+
+              <div className={styles.scenarioDetailRow}>
+                <span className={styles.scenarioDetailLabel}>
+                  {isAr ? 'هامش الربح بعد أثر السيناريو:' : 'Resulting Net Margin:'}
+                </span>
+                <span 
+                  className={styles.scenarioDetailValue} 
+                  style={{ color: scenarioMargin >= 30 ? '#16a34a' : 'var(--erp-accent, #2563eb)' }}
+                >
+                  {scenarioMargin}%
+                </span>
+              </div>
+            </div>
+          </div>
+        </ZFWidgetCard>
+
+        {/* ─── WIDGET 3: QUICK ACTIONS ─── */}
         <ZFWidgetCard
           id="calculator-quick-actions"
           title={isAr ? 'الإجراءات السريعة للدراسة' : 'Study Quick Actions'}
@@ -413,7 +522,7 @@ export const CalculatorSideWidgets: React.FC<CalculatorSideWidgetsProps> = ({
                     <Plus size={15} />
                   </div>
                   <div className={styles.actionText}>
-                    <span className={styles.actionTitle} style={{ color: '#15803d' }}>
+                    <span className={styles.actionTitle} style={{ color: 'var(--erp-accent, #2563eb)' }}>
                       {isAr ? `+ عقد جديد لشقة ${activeUnit.unit_number}` : `+ Contract Unit ${activeUnit.unit_number}`}
                     </span>
                     <span className={styles.actionSub}>
@@ -424,115 +533,6 @@ export const CalculatorSideWidgets: React.FC<CalculatorSideWidgetsProps> = ({
                 <ChevronIcon size={14} className={styles.actionChevron} />
               </div>
             )}
-          </div>
-        </ZFWidgetCard>
-
-        {/* ─── WIDGET 3: COST SENSITIVITY & MARKET SCENARIOS ─── */}
-        <ZFWidgetCard
-          id="calculator-sensitivity"
-          title={isAr ? 'تحليل الحساسية وسيناريوهات السوق' : 'Cost Sensitivity & Scenarios'}
-          icon={<SlidersHorizontal size={14} />}
-          badge={
-            <span style={{ fontSize: '0.68rem', color: 'var(--erp-accent, #2563eb)', fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>
-              ±10%
-            </span>
-          }
-          isAr={isAr}
-        >
-          <div className={styles.sensitivityCard}>
-            {/* Scenario Selector Tabs */}
-            <div className={styles.scenarioTabs} role="tablist">
-              <button
-                type="button"
-                role="tab"
-                aria-selected={activeScenario === 'down10'}
-                className={`${styles.scenarioTabBtn} ${activeScenario === 'down10' ? styles.scenarioTabBtnActive : ''}`}
-                onClick={() => setActiveScenario('down10')}
-              >
-                {isAr ? 'وفر -10%' : 'Save -10%'}
-              </button>
-              <button
-                type="button"
-                role="tab"
-                aria-selected={activeScenario === 'base'}
-                className={`${styles.scenarioTabBtn} ${activeScenario === 'base' ? styles.scenarioTabBtnActive : ''}`}
-                onClick={() => setActiveScenario('base')}
-              >
-                {isAr ? 'الأساس 0%' : 'Base 0%'}
-              </button>
-              <button
-                type="button"
-                role="tab"
-                aria-selected={activeScenario === 'up10'}
-                className={`${styles.scenarioTabBtn} ${activeScenario === 'up10' ? styles.scenarioTabBtnActive : ''}`}
-                onClick={() => setActiveScenario('up10')}
-              >
-                {isAr ? 'تضخم +10%' : 'Inflation +10%'}
-              </button>
-            </div>
-
-            {/* Scenario Result Hero Box */}
-            <div className={styles.scenarioHeroBox}>
-              <div className={styles.scenarioBadgeRow}>
-                <span style={{ fontSize: '0.74rem', fontWeight: 800, color: '#0f172a' }}>
-                  {activeScenario === 'up10' 
-                    ? (isAr ? 'سيناريو زيادة تكاليف الخامات (+10%)' : 'Material Inflation (+10%)')
-                    : activeScenario === 'down10'
-                    ? (isAr ? 'سيناريو وفر وخفض التكاليف (-10%)' : 'Operational Savings (-10%)')
-                    : (isAr ? 'السيناريو الأساسي المعتمد بالدراسة' : 'Base Audited Feasibility')}
-                </span>
-                {activeScenario === 'up10' ? (
-                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.2rem', color: '#dc2626', fontSize: '0.7rem', fontWeight: 700 }}>
-                    <ArrowUpRight size={13} />
-                    <span>+10%</span>
-                  </span>
-                ) : activeScenario === 'down10' ? (
-                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.2rem', color: '#16a34a', fontSize: '0.7rem', fontWeight: 700 }}>
-                    <ArrowDownRight size={13} />
-                    <span>-10%</span>
-                  </span>
-                ) : (
-                  <span style={{ color: 'var(--erp-accent, #2563eb)', fontSize: '0.7rem', fontWeight: 700 }}>
-                    0%
-                  </span>
-                )}
-              </div>
-
-              <div className={styles.scenarioDetailRow}>
-                <span className={styles.scenarioDetailLabel}>
-                  {isAr ? 'تكلفة المتر المحسوبة بالسيناريو:' : 'Scenario Cost / Sqm:'}
-                </span>
-                <span className={styles.scenarioDetailValue}>
-                  {renderMoney(scenarioCostPerSqm, 'م²')}
-                </span>
-              </div>
-
-              <div className={styles.scenarioDetailRow}>
-                <span className={styles.scenarioDetailLabel}>
-                  {isAr ? 'الأثر على إجمالي الأرباح:' : 'Profit Shift Impact:'}
-                </span>
-                <span 
-                  className={styles.scenarioDetailValue} 
-                  style={{ color: costDelta > 0 ? '#dc2626' : costDelta < 0 ? '#16a34a' : '#0f172a' }}
-                >
-                  {costDelta === 0 
-                    ? (isAr ? 'الأساس بدون تغيير' : 'No shift')
-                    : `${costDelta < 0 ? '+' : '-'}${renderMoney(Math.abs(costDelta))}`}
-                </span>
-              </div>
-
-              <div className={styles.scenarioDetailRow}>
-                <span className={styles.scenarioDetailLabel}>
-                  {isAr ? 'هامش الربح بعد أثر السيناريو:' : 'Resulting Net Margin:'}
-                </span>
-                <span 
-                  className={styles.scenarioDetailValue}
-                  style={{ color: scenarioMargin >= 30 ? '#16a34a' : 'var(--erp-accent, #2563eb)' }}
-                >
-                  {scenarioMargin}%
-                </span>
-              </div>
-            </div>
           </div>
         </ZFWidgetCard>
 

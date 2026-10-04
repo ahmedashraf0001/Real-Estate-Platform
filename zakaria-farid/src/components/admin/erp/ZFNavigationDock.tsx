@@ -78,6 +78,9 @@ interface ZFNavigationDockProps {
   onQuickRequest?: () => void;
   width?: number;
   isResizing?: boolean;
+  userName?: string;
+  userRole?: string;
+  userInitials?: string;
 }
 
 export const ZFNavigationDock: React.FC<ZFNavigationDockProps> = ({
@@ -96,7 +99,13 @@ export const ZFNavigationDock: React.FC<ZFNavigationDockProps> = ({
   onQuickRequest,
   width,
   isResizing = false,
+  userName,
+  userRole,
+  userInitials,
 }) => {
+  const effectiveUserName = userName || (isAr ? 'فريد زكريا' : 'Farid Zakaria');
+  const effectiveUserRole = userRole || (isAr ? 'المطور العقاري' : 'Real Estate Developer');
+  const effectiveUserInitials = userInitials || (isAr ? 'ف.ز' : 'FZ');
   const pathname = usePathname() || '';
   const router = useRouter();
 
@@ -278,15 +287,22 @@ export const ZFNavigationDock: React.FC<ZFNavigationDockProps> = ({
           <Link 
             href={`/fin-os/${isAr ? 'ar' : 'en'}`} 
             className={styles.brandLogoLink}
-            title={isAr ? 'آل زكريا للتطوير والاستثمار العقاري' : 'Al Zakaria Real Estate Development & ERP'}
+            title={isAr ? 'آل زكريا للتطوير والاستثمار العقاري - FIN-OS' : 'Al Zakaria Real Estate Development & ERP'}
           >
-            <BrandLogo size="sm" locale={isAr ? 'ar' : 'en'} emblemOnly />
+            <div className={styles.brandEmblemContainer}>
+              <BrandLogo size="sm" locale={isAr ? 'ar' : 'en'} emblemOnly />
+            </div>
           </Link>
           {!isCollapsed && (
             <div className={styles.brandTaglineCol}>
-              <span className={styles.brandTitleText}>
-                {isAr ? 'آل زكريا' : 'Al Zakaria'}
-              </span>
+              <div className={styles.brandTitleRow}>
+                <span className={styles.brandTitleText}>
+                  {isAr ? 'آل زكريا' : 'Al Zakaria'}
+                </span>
+                <span className={styles.brandSystemBadge}>
+                  ERP
+                </span>
+              </div>
               <span className={styles.brandTaglineText}>
                 {isAr ? 'للتطوير والاستثمار العقاري' : 'Real Estate Development & ERP'}
               </span>
@@ -333,22 +349,43 @@ export const ZFNavigationDock: React.FC<ZFNavigationDockProps> = ({
         {/* User Profile Card (directly below brand header, above CTA button) */}
         {!isCollapsed ? (
           <div className={styles.profileCard}>
-            <div className={styles.profileAvatar}>
-              {isAr ? 'ف.ز' : 'FZ'}
+            <div className={styles.profileMain}>
+              <div className={styles.profileAvatarWrap}>
+                <div className={styles.profileAvatar}>
+                  {effectiveUserInitials}
+                </div>
+                <span 
+                  className={styles.profileStatusDot} 
+                  title={isAr ? 'متصل - جلسة نشطة' : 'Active Session'}
+                  aria-label={isAr ? 'متصل' : 'Active'}
+                />
+              </div>
+              <div className={styles.profileInfo}>
+                <span className={styles.profileName}>
+                  {effectiveUserName}
+                </span>
+                <span className={styles.profileRole}>
+                  {effectiveUserRole}
+                </span>
+              </div>
             </div>
-            <div className={styles.profileInfo}>
-              <span className={styles.profileName}>
-                {isAr ? 'فريد زكريا' : 'Farid Zakaria'}
-              </span>
-              <span className={styles.profileRole}>
-                {isAr ? 'المطور العقاري' : 'Real Estate Developer'}
-              </span>
-            </div>
+            <span className={styles.profileRoleBadge}>
+              {isAr ? 'المالك' : 'Owner'}
+            </span>
           </div>
         ) : (
-          <div className={styles.profileCardCollapsed} title={isAr ? 'فريد زكريا - المطور العقاري' : 'Farid Zakaria - Real Estate Developer'}>
-            <div className={styles.profileAvatarSmall}>
-              {isAr ? 'ف.ز' : 'FZ'}
+          <div 
+            className={styles.profileCardCollapsed} 
+            title={`${effectiveUserName} - ${effectiveUserRole} (${isAr ? 'المالك' : 'Owner'})`}
+          >
+            <div className={styles.profileAvatarSmallWrap}>
+              <div className={styles.profileAvatarSmall}>
+                {effectiveUserInitials}
+              </div>
+              <span 
+                className={styles.profileStatusDotSmall}
+                title={isAr ? 'متصل' : 'Active'} 
+              />
             </div>
           </div>
         )}

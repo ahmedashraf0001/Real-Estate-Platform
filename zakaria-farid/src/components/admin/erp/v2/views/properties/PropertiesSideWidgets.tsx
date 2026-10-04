@@ -331,7 +331,7 @@ export const PropertiesSideWidgets: React.FC<PropertiesSideWidgetsProps> = ({
       icon={<SlidersHorizontal size={16} />}
       badge={isAr ? `${allInventoryUnits.length} وحدة` : `${allInventoryUnits.length} units`}
     >
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem', width: '100%' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', width: '100%' }}>
         
         {/* ─── WIDGET 0: QUICK ACTIONS ─── */}
         {onOpenNewContract && (
@@ -341,7 +341,7 @@ export const PropertiesSideWidgets: React.FC<PropertiesSideWidgetsProps> = ({
             icon={<Zap size={14} />}
             isAr={isAr}
           >
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem', padding: '0.1rem 0' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', padding: '0.25rem 0' }}>
               <button
                 type="button"
                 onClick={onOpenNewContract}
@@ -351,8 +351,8 @@ export const PropertiesSideWidgets: React.FC<PropertiesSideWidgetsProps> = ({
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  gap: '0.45rem',
-                  padding: '0.55rem 0.75rem',
+                  gap: '0.5rem',
+                  padding: '0.5rem 0.75rem',
                   fontSize: '0.8rem',
                   fontWeight: 700,
                   boxShadow: '0 1px 3px rgba(37, 99, 235, 0.2)',
@@ -386,7 +386,7 @@ export const PropertiesSideWidgets: React.FC<PropertiesSideWidgetsProps> = ({
                   fontWeight: 700,
                   display: 'inline-flex',
                   alignItems: 'center',
-                  gap: '0.2rem',
+                  gap: '0.25rem',
                 }}
               >
                 <RotateCcw size={11} />
@@ -395,14 +395,14 @@ export const PropertiesSideWidgets: React.FC<PropertiesSideWidgetsProps> = ({
             ) : undefined
           }
         >
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', padding: '0.1rem 0' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', padding: '0.25rem 0' }}>
             {/* 1. Search Query Input with Squircle Icon and Clear Button */}
             <div style={{ position: 'relative', width: '100%' }}>
               <div style={{
                 position: 'absolute',
                 top: '50%',
                 transform: 'translateY(-50%)',
-                [isAr ? 'right' : 'left']: '0.45rem',
+                [isAr ? 'right' : 'left']: '0.5rem',
                 width: '24px',
                 height: '24px',
                 borderRadius: '6px',
@@ -426,9 +426,9 @@ export const PropertiesSideWidgets: React.FC<PropertiesSideWidgetsProps> = ({
                   background: '#ffffff',
                   border: '1px solid var(--erp-border, #cbd5e1)',
                   borderRadius: '8px',
-                  padding: '0.45rem 0.65rem',
+                  padding: '0.5rem 0.75rem',
                   paddingInlineStart: '2.2rem',
-                  paddingInlineEnd: searchQuery ? '1.8rem' : '0.65rem',
+                  paddingInlineEnd: searchQuery ? '1.8rem' : '0.75rem',
                   fontSize: '0.78rem',
                   color: '#0f172a',
                   outline: 'none',
@@ -462,10 +462,10 @@ export const PropertiesSideWidgets: React.FC<PropertiesSideWidgetsProps> = ({
 
             {/* 2. Sale Status Segmented Toggle Pills */}
             <div>
-              <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 700, color: '#475569', marginBottom: '0.3rem' }}>
+              <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 700, color: '#475569', marginBottom: '0.25rem' }}>
                 {isAr ? 'حالة البيع والتعاقد:' : 'Sales Status:'}
               </label>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.25rem', background: '#f8fafc', padding: '0.2rem', borderRadius: '7px', border: '1px solid #e2e8f0' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.25rem', background: '#f8fafc', padding: '0.25rem', borderRadius: '7px', border: '1px solid #e2e8f0' }}>
                 {[
                   { key: 'all', labelAr: 'الكل', labelEn: 'All' },
                   { key: 'available', labelAr: 'متاح', labelEn: 'Avail.' },
@@ -479,7 +479,7 @@ export const PropertiesSideWidgets: React.FC<PropertiesSideWidgetsProps> = ({
                       type="button"
                       onClick={() => onFilterStatusChange(item.key)}
                       style={{
-                        padding: '0.3rem 0.2rem',
+                        padding: '0.25rem 0.5rem',
                         borderRadius: '5px',
                         border: 'none',
                         background: isActive ? 'var(--erp-accent, #2563eb)' : 'transparent',
@@ -501,10 +501,10 @@ export const PropertiesSideWidgets: React.FC<PropertiesSideWidgetsProps> = ({
 
             {/* 3. Completion Status Segmented Toggle Pills */}
             <div>
-              <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 700, color: '#475569', marginBottom: '0.3rem' }}>
+              <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 700, color: '#475569', marginBottom: '0.25rem' }}>
                 {isAr ? 'حالة الإنجاز والإنشاء:' : 'Completion Status:'}
               </label>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.25rem', background: '#f8fafc', padding: '0.2rem', borderRadius: '7px', border: '1px solid #e2e8f0' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.25rem', background: '#f8fafc', padding: '0.25rem', borderRadius: '7px', border: '1px solid #e2e8f0' }}>
                 {[
                   { key: 'all', labelAr: 'كافة الحالات', labelEn: 'All' },
                   { key: 'ready', labelAr: 'جاهز للتسليم', labelEn: 'Ready' },
@@ -517,7 +517,7 @@ export const PropertiesSideWidgets: React.FC<PropertiesSideWidgetsProps> = ({
                       type="button"
                       onClick={() => onFilterCompletionStatusChange && onFilterCompletionStatusChange(item.key)}
                       style={{
-                        padding: '0.3rem 0.2rem',
+                        padding: '0.25rem 0.5rem',
                         borderRadius: '5px',
                         border: 'none',
                         background: isActive ? 'var(--erp-accent, #2563eb)' : 'transparent',
@@ -538,9 +538,9 @@ export const PropertiesSideWidgets: React.FC<PropertiesSideWidgetsProps> = ({
             </div>
 
             {/* 4. Dropdowns Grid: Unit Type & City */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.45rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
               <div>
-                <label style={{ display: 'block', fontSize: '0.68rem', fontWeight: 700, color: '#64748b', marginBottom: '0.2rem' }}>
+                <label style={{ display: 'block', fontSize: '0.68rem', fontWeight: 700, color: '#64748b', marginBottom: '0.25rem' }}>
                   {isAr ? 'نوع الوحدة:' : 'Unit Type:'}
                 </label>
                 <select
@@ -551,7 +551,7 @@ export const PropertiesSideWidgets: React.FC<PropertiesSideWidgetsProps> = ({
                     background: '#ffffff',
                     border: '1px solid var(--erp-border, #cbd5e1)',
                     borderRadius: '7px',
-                    padding: '0.38rem 0.45rem',
+                    padding: '0.5rem',
                     fontSize: '0.73rem',
                     color: '#0f172a',
                     cursor: 'pointer',
@@ -570,7 +570,7 @@ export const PropertiesSideWidgets: React.FC<PropertiesSideWidgetsProps> = ({
               </div>
 
               <div>
-                <label style={{ display: 'block', fontSize: '0.68rem', fontWeight: 700, color: '#64748b', marginBottom: '0.2rem' }}>
+                <label style={{ display: 'block', fontSize: '0.68rem', fontWeight: 700, color: '#64748b', marginBottom: '0.25rem' }}>
                   {isAr ? 'المدينة / الموقع:' : 'City:'}
                 </label>
                 <select
@@ -581,7 +581,7 @@ export const PropertiesSideWidgets: React.FC<PropertiesSideWidgetsProps> = ({
                     background: '#ffffff',
                     border: '1px solid var(--erp-border, #cbd5e1)',
                     borderRadius: '7px',
-                    padding: '0.38rem 0.45rem',
+                    padding: '0.5rem',
                     fontSize: '0.73rem',
                     color: '#0f172a',
                     cursor: 'pointer',
@@ -598,7 +598,7 @@ export const PropertiesSideWidgets: React.FC<PropertiesSideWidgetsProps> = ({
 
             {/* 5. Project Selector */}
             <div>
-              <label style={{ display: 'block', fontSize: '0.68rem', fontWeight: 700, color: '#64748b', marginBottom: '0.2rem' }}>
+              <label style={{ display: 'block', fontSize: '0.68rem', fontWeight: 700, color: '#64748b', marginBottom: '0.25rem' }}>
                 {isAr ? 'تصفية المشروع:' : 'Select Project:'}
               </label>
               <select
@@ -609,7 +609,7 @@ export const PropertiesSideWidgets: React.FC<PropertiesSideWidgetsProps> = ({
                   background: '#ffffff',
                   border: '1px solid var(--erp-border, #cbd5e1)',
                   borderRadius: '7px',
-                  padding: '0.38rem 0.45rem',
+                  padding: '0.5rem',
                   fontSize: '0.73rem',
                   color: '#0f172a',
                   cursor: 'pointer',
@@ -628,7 +628,7 @@ export const PropertiesSideWidgets: React.FC<PropertiesSideWidgetsProps> = ({
               <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 700, color: '#475569', marginBottom: '0.25rem' }}>
                 {isAr ? 'نطاق السعر (ج.م):' : 'Price Range (EGP):'}
               </label>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.4rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
                 <input
                   type="number"
                   placeholder={isAr ? 'الحد الأدنى' : 'Min Price'}
@@ -640,7 +640,7 @@ export const PropertiesSideWidgets: React.FC<PropertiesSideWidgetsProps> = ({
                     background: '#ffffff',
                     border: '1px solid var(--erp-border, #cbd5e1)',
                     borderRadius: '7px',
-                    padding: '0.35rem 0.5rem',
+                    padding: '0.5rem',
                     fontSize: '0.73rem',
                     color: '#0f172a',
                     outline: 'none',
@@ -658,7 +658,7 @@ export const PropertiesSideWidgets: React.FC<PropertiesSideWidgetsProps> = ({
                     background: '#ffffff',
                     border: '1px solid var(--erp-border, #cbd5e1)',
                     borderRadius: '7px',
-                    padding: '0.35rem 0.5rem',
+                    padding: '0.5rem',
                     fontSize: '0.73rem',
                     color: '#0f172a',
                     outline: 'none',
@@ -668,7 +668,7 @@ export const PropertiesSideWidgets: React.FC<PropertiesSideWidgetsProps> = ({
               </div>
 
               {/* Quick Presets */}
-              <div style={{ display: 'flex', gap: '0.25rem', marginTop: '0.35rem', flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', gap: '0.25rem', marginTop: '0.5rem', flexWrap: 'wrap' }}>
                 {[
                   { labelAr: '< 3M', min: '', max: '3000000' },
                   { labelAr: '3M - 6M', min: '3000000', max: '6000000' },
@@ -686,7 +686,7 @@ export const PropertiesSideWidgets: React.FC<PropertiesSideWidgetsProps> = ({
                       background: '#f8fafc',
                       border: '1px solid #cbd5e1',
                       borderRadius: '5px',
-                      padding: '0.15rem 0.45rem',
+                      padding: '0.25rem 0.5rem',
                       fontSize: '0.65rem',
                       fontWeight: 600,
                       color: '#475569',
@@ -700,7 +700,7 @@ export const PropertiesSideWidgets: React.FC<PropertiesSideWidgetsProps> = ({
             </div>
 
             {/* 7. Action Buttons (Apply & Clear) */}
-            <div style={{ display: 'flex', gap: '0.45rem', marginTop: '0.2rem' }}>
+            <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.25rem' }}>
               <button
                 type="button"
                 onClick={onApplyFilters || (() => {})}
@@ -710,8 +710,8 @@ export const PropertiesSideWidgets: React.FC<PropertiesSideWidgetsProps> = ({
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  gap: '0.35rem',
-                  padding: '0.45rem 0.75rem',
+                  gap: '0.5rem',
+                  padding: '0.5rem 0.75rem',
                   fontSize: '0.76rem',
                   fontWeight: 700,
                   cursor: 'pointer',
@@ -726,7 +726,7 @@ export const PropertiesSideWidgets: React.FC<PropertiesSideWidgetsProps> = ({
                   onClick={onResetAllFilters}
                   className={shellStyles.btnSecondary}
                   style={{
-                    padding: '0.45rem 0.65rem',
+                    padding: '0.5rem 0.75rem',
                     fontSize: '0.74rem',
                     fontWeight: 600,
                     cursor: 'pointer',
@@ -821,7 +821,7 @@ export const PropertiesSideWidgets: React.FC<PropertiesSideWidgetsProps> = ({
             </div>
 
             {/* Side / Bottom Legend with counts and percentages */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', borderTop: '1px solid #f1f5f9', paddingTop: '0.5rem' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', borderTop: '1px solid #f1f5f9', paddingTop: '0.5rem' }}>
               {distributionData.items.map((item) => {
                 const isActive = filterUnitType === item.typeKey;
                 return (
@@ -847,7 +847,7 @@ export const PropertiesSideWidgets: React.FC<PropertiesSideWidgetsProps> = ({
                       alignItems: 'center',
                       justifyContent: 'space-between',
                       fontSize: '0.72rem',
-                      padding: '0.22rem 0.35rem',
+                      padding: '0.25rem 0.5rem',
                       borderRadius: '6px',
                       background: isActive ? 'var(--erp-accent-soft, #eff6ff)' : 'transparent',
                       border: isActive ? '1px solid var(--erp-accent-tint, #bfdbfe)' : '1px solid transparent',
@@ -856,13 +856,13 @@ export const PropertiesSideWidgets: React.FC<PropertiesSideWidgetsProps> = ({
                     }}
                     title={isAr ? `تصفية حسب ${item.name}` : `Filter by ${item.name}`}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                       <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: item.color, flexShrink: 0 }} />
                       <span style={{ color: isActive ? 'var(--erp-accent, #2563eb)' : '#334155', fontWeight: isActive ? 700 : 600 }}>
                         {item.name}
                       </span>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontVariantNumeric: 'tabular-nums' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontVariantNumeric: 'tabular-nums' }}>
                       <span style={{ color: '#64748b' }}>({item.count})</span>
                       <strong style={{ color: '#0f172a' }}>{item.pct}%</strong>
                     </div>
@@ -885,7 +885,7 @@ export const PropertiesSideWidgets: React.FC<PropertiesSideWidgetsProps> = ({
           }
           isAr={isAr}
         >
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
             {/* Interactive Real Leaflet Mini Map Container */}
             <div 
               ref={miniMapContainerRef}
@@ -910,8 +910,8 @@ export const PropertiesSideWidgets: React.FC<PropertiesSideWidgetsProps> = ({
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                gap: '0.45rem',
-                padding: '0.45rem',
+                gap: '0.5rem',
+                padding: '0.5rem',
                 borderRadius: '7px',
                 background: '#ffffff',
                 border: '1px solid var(--erp-border, #cbd5e1)',

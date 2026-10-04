@@ -67,9 +67,9 @@
 }
 
 .stepItemCompleted .stepNumber {
-  background: #ecfdf5;
-  color: #10b981;
-  border-color: #a7f3d0;
+  background: #ffffff;
+  color: #16a34a;
+  border-color: #cbd5e1;
 }
 
 .stepTitle {
@@ -110,7 +110,7 @@
   padding: 14px;
   border: 1px solid var(--erp-border, #cbd5e1);
   border-radius: 10px;
-  background: #ffffff;
+  background: #ffffff !important;
 }
 
 .sectionHeading {
@@ -231,14 +231,14 @@
 }
 
 .tafqeetDisplay {
-  padding: 0.55rem 0.75rem;
-  background: var(--erp-accent-subtle, #eff6ff);
-  border: 1px solid var(--erp-accent-tint, rgba(37, 99, 235, 0.18));
-  border-radius: 7px;
-  color: var(--erp-accent, #2563eb);
-  font-size: 0.75rem;
+  padding: 0.65rem 0.85rem;
+  background: #ffffff !important;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  color: #0f172a;
+  font-size: 0.78rem;
   font-weight: 700;
-  line-height: 1.45;
+  line-height: 1.5;
 }
 
 .paymentOptions {
@@ -289,11 +289,13 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 26px;
-  height: 26px;
-  border-radius: 6px;
-  background: var(--erp-accent-subtle, #eff6ff);
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
   color: var(--erp-accent, #2563eb);
+  flex-shrink: 0;
 }
 
 .paymentOption span,
@@ -314,10 +316,10 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
-  padding: 10px 12px;
+  padding: 12px 14px;
   border: 1px solid var(--erp-border, #cbd5e1);
   border-radius: 8px;
-  background: #f8fafc;
+  background: #ffffff !important;
 }
 
 .schedulePanel {
@@ -549,10 +551,10 @@
   align-items: center;
   gap: 8px;
   padding: 8px 12px;
-  border: 1px solid #fecaca;
+  border: 1px solid #cbd5e1;
   border-radius: 8px;
-  background: #fef2f2;
-  color: #b91c1c;
+  background: #ffffff !important;
+  color: #dc2626;
   font-size: 0.72rem;
   font-weight: 700;
   line-height: 1.4;

@@ -134,9 +134,9 @@ export const ZFDrawerShell: React.FC<ZFDrawerShellProps> = ({
         ) : (
           <div
             style={{
-              height: '52px',
-              minHeight: '52px',
-              padding: '0 20px',
+              height: '54px',
+              minHeight: '54px',
+              padding: '0 22px',
               borderBottom: '1px solid var(--erp-border, #cbd5e1)',
               background: '#ffffff',
               display: 'flex',
@@ -154,10 +154,10 @@ export const ZFDrawerShell: React.FC<ZFDrawerShellProps> = ({
                   style={{
                     width: '28px',
                     height: '28px',
-                    borderRadius: '8px',
-                    background: 'var(--erp-accent-subtle, #fdf8ee)',
-                    color: 'var(--erp-accent, #946f23)',
-                    border: '1px solid rgba(148, 111, 35, 0.18)',
+                    borderRadius: '7px',
+                    background: 'var(--erp-accent-subtle, #eff6ff)',
+                    color: 'var(--erp-accent, #2563eb)',
+                    border: '1px solid var(--erp-accent-tint, rgba(37, 99, 235, 0.12))',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',

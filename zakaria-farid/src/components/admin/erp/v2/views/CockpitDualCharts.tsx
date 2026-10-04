@@ -172,6 +172,15 @@ export const CockpitDualCharts: React.FC<CockpitDualChartsProps> = ({
     return Math.ceil(highestVal / 25) * 25;
   }, [comparisonProjects]);
 
+  // Dynamic scale ticks for blueprint axis (0%, 25%, 50%, 75%, 100%)
+  const scaleTicks = useMemo(() => {
+    const step = maxProjectScale / 4;
+    return [0, 1, 2, 3, 4].map((i) => ({
+      val: Math.round(i * step),
+      pct: i * 25
+    }));
+  }, [maxProjectScale]);
+
   // Format project values based on selected unit
   const formatProjectValue = (valInMillions: number) => {
     switch (unitScale) {
@@ -214,12 +223,13 @@ export const CockpitDualCharts: React.FC<CockpitDualChartsProps> = ({
       chart: {
         type: 'bar',
         toolbar: { show: false },
-        fontFamily: 'inherit'
+        fontFamily: 'inherit',
+        parentHeightOffset: 0
       },
       plotOptions: {
         bar: {
           horizontal: true,
-          barHeight: '52%',
+          barHeight: '62%',
           borderRadius: 3
         }
       },
@@ -240,7 +250,13 @@ export const CockpitDualCharts: React.FC<CockpitDualChartsProps> = ({
         borderColor: '#e2e8f0',
         strokeDashArray: 2,
         xaxis: { lines: { show: true } },
-        yaxis: { lines: { show: true } }
+        yaxis: { lines: { show: true } },
+        padding: {
+          top: -6,
+          right: 10,
+          bottom: 0,
+          left: 10
+        }
       },
       legend: {
         show: false
@@ -357,7 +373,8 @@ export const CockpitDualCharts: React.FC<CockpitDualChartsProps> = ({
         chart: {
           type: 'line',
           toolbar: { show: false },
-          fontFamily: 'inherit'
+          fontFamily: 'inherit',
+          parentHeightOffset: 0
         },
         colors: ['var(--erp-accent, #2563eb)', '#0d9488'],
         stroke: {
@@ -366,7 +383,7 @@ export const CockpitDualCharts: React.FC<CockpitDualChartsProps> = ({
         },
         plotOptions: {
           bar: {
-            columnWidth: '32%',
+            columnWidth: '45%',
             borderRadius: 3
           }
         },
@@ -396,7 +413,13 @@ export const CockpitDualCharts: React.FC<CockpitDualChartsProps> = ({
           borderColor: '#e2e8f0',
           strokeDashArray: 2,
           xaxis: { lines: { show: true } },
-          yaxis: { lines: { show: true } }
+          yaxis: { lines: { show: true } },
+          padding: {
+            top: -6,
+            right: 10,
+            bottom: 0,
+            left: 10
+          }
         },
         annotations: {
           yaxis: [
@@ -425,7 +448,8 @@ export const CockpitDualCharts: React.FC<CockpitDualChartsProps> = ({
       chart: {
         type: 'line',
         toolbar: { show: false },
-        fontFamily: 'inherit'
+        fontFamily: 'inherit',
+        parentHeightOffset: 0
       },
       colors: ['#16a34a', '#dc2626', 'var(--erp-accent, #2563eb)'],
       stroke: {
@@ -434,7 +458,7 @@ export const CockpitDualCharts: React.FC<CockpitDualChartsProps> = ({
       },
       plotOptions: {
         bar: {
-          columnWidth: '38%',
+          columnWidth: '58%',
           borderRadius: 3
         }
       },
@@ -469,7 +493,13 @@ export const CockpitDualCharts: React.FC<CockpitDualChartsProps> = ({
         borderColor: '#e2e8f0',
         strokeDashArray: 2,
         xaxis: { lines: { show: true } },
-        yaxis: { lines: { show: true } }
+        yaxis: { lines: { show: true } },
+        padding: {
+          top: -6,
+          right: 10,
+          bottom: 0,
+          left: 10
+        }
       },
       legend: { show: false }
     };
@@ -631,74 +661,90 @@ export const CockpitDualCharts: React.FC<CockpitDualChartsProps> = ({
                     }
                   }}
                 >
-                  {/* Project Title Line with Status Margin Pill */}
+                  {/* Project Title Line with Tabular Values & Status Margin Pill */}
                   <div className={styles.projectRowMeta}>
                     <div className={styles.projectRowTitleArea}>
                       <Building2 size={13} className={styles.projectRowIcon} />
                       <span className={styles.projectRowTitle}>{proj.name}</span>
                     </div>
 
-                    {/* Margin Soft Pastel Micro-Pill */}
-                    <div className={styles.projectRowPillArea}>
-                      {proj.hasEnteredCost ? (
-                        <span
-                          className={`${shellStyles.statusPill} ${proj.isPositive ? shellStyles.statusPillGreen : shellStyles.statusPillAmber}`}
-                          title={`${isAr ? 'هامش الربح على التكلفة' : 'Return on Capital Cost'}: ${proj.marginPct}`}
-                        >
-                          <bdi>{proj.marginPct}</bdi>
+                    <div className={styles.projectRowTrailing}>
+                      <div
+                        className={styles.projectTrackValues}
+                        title={isAr
+                          ? `بيع: ${formattedSales} | تكلفة: ${proj.hasEnteredCost ? formattedCost : 'غير مُدخل'}`
+                          : `Sales: ${formattedSales} | Cost: ${proj.hasEnteredCost ? formattedCost : 'N/A'}`}
+                      >
+                        <span className={styles.valSales}>
+                          <bdi>{formattedSales}</bdi>
                         </span>
-                      ) : (
-                        <span
-                          className={`${shellStyles.statusPill} ${shellStyles.statusPillNeutral}`}
-                          title={isAr ? 'لم تسجل تكاليف فعلية لهذا المشروع بعد' : 'No actual costs recorded yet'}
-                        >
-                          {isAr ? 'غير مُدخل' : 'N/A'}
+                        <span className={styles.valDivider}>/</span>
+                        <span className={proj.hasEnteredCost ? styles.valCost : styles.valUnentered}>
+                          <bdi>{proj.hasEnteredCost ? formattedCost : (isAr ? 'غير مُدخل' : 'N/A')}</bdi>
                         </span>
-                      )}
+                      </div>
+
+                      {/* Margin Soft Pastel Micro-Pill */}
+                      <div className={styles.projectRowPillArea}>
+                        {proj.hasEnteredCost ? (
+                          <span
+                            className={`${shellStyles.statusPill} ${proj.isPositive ? shellStyles.statusPillGreen : shellStyles.statusPillAmber}`}
+                            title={`${isAr ? 'هامش الربح على التكلفة' : 'Return on Capital Cost'}: ${proj.marginPct}`}
+                          >
+                            <bdi>{proj.marginPct}</bdi>
+                          </span>
+                        ) : (
+                          <span
+                            className={`${shellStyles.statusPill} ${shellStyles.statusPillNeutral}`}
+                            title={isAr ? 'لم تسجل تكاليف فعلية لهذا المشروع بعد' : 'No actual costs recorded yet'}
+                          >
+                            {isAr ? 'غير مُدخل' : 'N/A'}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
 
-                  {/* Compact Dual Track: Paired Sales & Cost Rails + Tabular Values */}
-                  <div className={styles.projectCompactTrackRow}>
-                    <div className={styles.dualBarRail}>
-                      <div className={styles.barFillSales} style={{ width: `${salesPct}%` }} />
-                      {proj.hasEnteredCost ? (
-                        <div className={styles.barFillCost} style={{ width: `${costPct}%` }} />
-                      ) : (
-                        <div className={styles.barFillCostPlaceholder} />
-                      )}
-                    </div>
-
-                    <div className={styles.projectTrackValues}>
-                      <span className={styles.valSales}>
-                        <span className={styles.valLabel}>{isAr ? 'بيع:' : 'Sales:'}</span>
-                        <bdi>{formattedSales}</bdi>
-                      </span>
-                      <span className={styles.valDivider}>/</span>
-                      <span className={proj.hasEnteredCost ? styles.valCost : styles.valUnentered}>
-                        <span className={styles.valLabel}>{isAr ? 'تكلفة:' : 'Cost:'}</span>
-                        <bdi>{proj.hasEnteredCost ? formattedCost : (isAr ? 'غير مُدخل' : 'N/A')}</bdi>
-                      </span>
-                    </div>
+                  {/* Dual Bar Track spanning full width */}
+                  <div className={styles.dualBarRail}>
+                    <div className={styles.barFillSales} style={{ width: `${salesPct}%` }} />
+                    {proj.hasEnteredCost ? (
+                      <div className={styles.barFillCost} style={{ width: `${costPct}%` }} />
+                    ) : (
+                      <div className={styles.barFillCostPlaceholder} />
+                    )}
                   </div>
                 </div>
               );
             })}
 
-            {/* Bottom Scale Axis */}
+            {/* Bottom Scale Axis spanning full width */}
             <div className={styles.blueprintScaleRow}>
               <div className={styles.blueprintScaleTicksTrack}>
-                {[0, 25, 50, 75, 100].map((tick) => (
+                {scaleTicks.map((tick) => (
                   <span
-                    key={tick}
+                    key={tick.pct}
                     className={styles.blueprintTick}
-                    style={{ [isAr ? 'right' : 'left']: `${tick}%` }}
+                    style={{
+                      [isAr ? 'right' : 'left']: `${tick.pct}%`,
+                      transform: isAr
+                        ? tick.pct === 0
+                          ? 'translateX(0)'
+                          : tick.pct === 100
+                            ? 'translateX(100%)'
+                            : 'translateX(50%)'
+                        : tick.pct === 0
+                          ? 'translateX(0)'
+                          : tick.pct === 100
+                            ? 'translateX(-100%)'
+                            : 'translateX(-50%)'
+                    }}
                   >
-                    {tick}
+                    <bdi>{tick.val}</bdi>
                   </span>
                 ))}
               </div>
-              <span style={{ textAlign: 'end', fontSize: '0.64rem' }}>{unitDropdownLabel}</span>
+              <span className={styles.blueprintUnitLabel}>{unitDropdownLabel}</span>
             </div>
           </div>
         )}
@@ -710,7 +756,7 @@ export const CockpitDualCharts: React.FC<CockpitDualChartsProps> = ({
               type="bar"
               series={apexBarSeries}
               options={apexBarOptions}
-              height={200}
+              height={270}
               isAr={isAr}
             />
           </div>
@@ -814,7 +860,7 @@ export const CockpitDualCharts: React.FC<CockpitDualChartsProps> = ({
             type="line"
             series={cashflowSeries}
             options={cashflowOptions}
-            height={195}
+            height={250}
             isAr={isAr}
           />
         </div>

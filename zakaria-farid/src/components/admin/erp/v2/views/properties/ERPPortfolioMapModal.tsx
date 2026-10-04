@@ -37,7 +37,6 @@ import {
   getCuratedProjectImage 
 } from '@/lib/erp/propertiesPortfolioCalculations';
 import { getPropertyTypeLabel } from '../PropertiesPortfolioView';
-import { createCachedTileLayer } from '@/lib/mapCache';
 import shellStyles from '../../ZFWorkstationShell.module.css';
 
 export { getPropertyCoordinates, getPropertyStats };
@@ -70,8 +69,9 @@ export const ERPPortfolioMapModal: React.FC<ERPPortfolioMapModalProps> = ({
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [isSatelliteMode, setIsSatelliteMode] = useState<boolean>(false);
   const [isMaximized, setIsMaximized] = useState<boolean>(false);
+  const [containerEl, setContainerEl] = useState<HTMLDivElement | null>(null);
 
-  const mapContainerRef = useRef<HTMLDivElement>(null);
+  const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapInstanceRef = useRef<any>(null);
   const tileLayerRef = useRef<any>(null);
   const markersRef = useRef<{ [key: string]: any }>({});
@@ -104,7 +104,7 @@ export const ERPPortfolioMapModal: React.FC<ERPPortfolioMapModalProps> = ({
 
   // Initialize Real Leaflet Map
   useEffect(() => {
-    if (!isOpen || typeof window === 'undefined' || !mapContainerRef.current) return;
+    if (!isOpen || typeof window === 'undefined' || !containerEl) return;
 
     const Leaflet = L || require('leaflet');
 
@@ -118,8 +118,8 @@ export const ERPPortfolioMapModal: React.FC<ERPPortfolioMapModalProps> = ({
       mapInstanceRef.current = null;
     }
 
-    if ((mapContainerRef.current as any)._leaflet_id) {
-      delete (mapContainerRef.current as any)._leaflet_id;
+    if ((containerEl as any)._leaflet_id) {
+      delete (containerEl as any)._leaflet_id;
     }
 
     // Determine initial center
@@ -135,7 +135,7 @@ export const ERPPortfolioMapModal: React.FC<ERPPortfolioMapModalProps> = ({
       }
     }
 
-    const map = Leaflet.map(mapContainerRef.current, {
+    const map = Leaflet.map(containerEl, {
       center: initialCenter,
       zoom: initialZoom,
       zoomControl: false,
@@ -144,13 +144,7 @@ export const ERPPortfolioMapModal: React.FC<ERPPortfolioMapModalProps> = ({
 
     // Helper to safely load cached or regular tiles
     const loadTiles = (url: string, opts: any) => {
-      try {
-        const cached = createCachedTileLayer(url, opts);
-        if (cached) return cached;
-      } catch {
-        // Fallback to standard Leaflet tile layer
-      }
-      return Leaflet.tileLayer(url, opts);
+      return Leaflet.tileLayer(url, { maxZoom: 19, ...opts });
     };
 
     // Real Light Map Tiles: ESRI World Street Map by default (crisp, accurate Egyptian roads & places, no watermarks)
@@ -223,7 +217,7 @@ export const ERPPortfolioMapModal: React.FC<ERPPortfolioMapModalProps> = ({
         mapInstanceRef.current = null;
       }
     };
-  }, [isOpen, properties, isAr]);
+  }, [isOpen, containerEl, properties, isAr]);
 
   // Sync marker active classes whenever selectedPropertyId changes
   useEffect(() => {
@@ -253,13 +247,7 @@ export const ERPPortfolioMapModal: React.FC<ERPPortfolioMapModalProps> = ({
     }
 
     const loadTiles = (url: string, opts: any) => {
-      try {
-        const cached = createCachedTileLayer(url, opts);
-        if (cached) return cached;
-      } catch {
-        // fallback
-      }
-      return Leaflet.tileLayer(url, opts);
+      return Leaflet.tileLayer(url, { maxZoom: 19, ...opts });
     };
 
     if (isSatelliteMode) {
@@ -401,7 +389,7 @@ export const ERPPortfolioMapModal: React.FC<ERPPortfolioMapModalProps> = ({
           border-radius: 50%;
           background: var(--erp-accent, #2563eb);
           border: 2px solid #ffffff;
-          box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25), 0 0 10px rgba(37, 99, 235, 0.5);
+          box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
           z-index: 2;
           transition: all 0.2s ease;
         }
@@ -410,33 +398,24 @@ export const ERPPortfolioMapModal: React.FC<ERPPortfolioMapModalProps> = ({
         .erp-map-pin.active .erp-pin-core {
           background: #1d4ed8;
           border-color: #ffffff;
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35), 0 0 16px rgba(37, 99, 235, 0.85);
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
           transform: scale(1.25);
         }
 
         .erp-pin-pulse {
           position: absolute;
-          inset: 0;
+          inset: -4px;
           border-radius: 50%;
-          background: rgba(37, 99, 235, 0.2);
-          border: 1.5px solid rgba(37, 99, 235, 0.6);
-          animation: erpPinPulse 2.4s cubic-bezier(0.25, 1, 0.5, 1) infinite;
+          background: rgba(37, 99, 235, 0.15);
+          border: 1px solid rgba(37, 99, 235, 0.4);
+          opacity: 0;
+          transition: opacity 0.2s ease;
+          pointer-events: none;
         }
 
+        .erp-map-pin:hover .erp-pin-pulse,
         .erp-map-pin.active .erp-pin-pulse {
-          animation: erpPinPulseActive 1.4s cubic-bezier(0.25, 1, 0.5, 1) infinite;
-        }
-
-        @keyframes erpPinPulse {
-          0% { transform: scale(0.8); opacity: 0.9; }
-          70% { transform: scale(2.0); opacity: 0; }
-          100% { transform: scale(2.0); opacity: 0; }
-        }
-
-        @keyframes erpPinPulseActive {
-          0% { transform: scale(0.8); opacity: 1; }
-          70% { transform: scale(2.4); opacity: 0; }
-          100% { transform: scale(2.4); opacity: 0; }
+          opacity: 1;
         }
 
         .erp-pin-label {
@@ -836,7 +815,10 @@ export const ERPPortfolioMapModal: React.FC<ERPPortfolioMapModalProps> = ({
         >
           {/* Map Target Container */}
           <div
-            ref={mapContainerRef}
+            ref={(el) => {
+              mapContainerRef.current = el;
+              setContainerEl(el);
+            }}
             id="erp-leaflet-map-container"
             style={{
               width: '100%',

@@ -51,6 +51,7 @@ import { ProjectShowcaseCard } from './properties/ProjectShowcaseCard';
 import { UnitsFloorMatrixTable } from './properties/UnitsFloorMatrixTable';
 import { PropertiesAnalyticsView } from './properties/PropertiesAnalyticsView';
 import { ERPPortfolioMapModal } from './properties/ERPPortfolioMapModal';
+import { ZFModalShell } from '../common/ZFModalShell';
 
 import styles from './PropertiesPortfolioView.module.css';
 import shellStyles from '../ZFWorkstationShell.module.css';
@@ -691,9 +692,10 @@ export const PropertiesPortfolioView: React.FC<PropertiesPortfolioViewProps> = (
                     type="button"
                     onClick={() => setSelectedCategoryPill('all')}
                     className={shellStyles.btnSecondary}
-                    style={{ padding: '0.2rem 0.5rem', fontSize: '0.7rem' }}
+                    style={{ padding: '0.2rem 0.5rem', fontSize: '0.7rem', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}
                   >
-                    {isAr ? 'عرض الكل ✕' : 'Clear ✕'}
+                    <span>{isAr ? 'عرض الكل' : 'Clear'}</span>
+                    <X size={11} />
                   </button>
                 )}
               </div>
@@ -877,104 +879,92 @@ export const PropertiesPortfolioView: React.FC<PropertiesPortfolioViewProps> = (
       />
 
       {/* ─── MANUAL APARTMENT TAX EDITING MODAL ─── */}
-      {editingTaxUnit && (
-        <div className={styles.modalOverlay} onClick={() => setEditingTaxUnit(null)}>
-          <div className={styles.modalDialog} onClick={(e) => e.stopPropagation()} style={{ maxWidth: '440px' }}>
-            <div className={styles.modalHeader}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-                <div className={styles.sideCardIconSquircle}>
-                  <ShieldCheck size={16} />
-                </div>
-                <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 800, color: '#0f172a' }}>
-                  {isAr ? 'تعديل ضريبة الوحدة العقارية' : 'Edit Unit Property Tax'}
-                </h3>
-              </div>
-              <button
-                type="button"
-                className={styles.modalCloseBtn}
-                onClick={() => setEditingTaxUnit(null)}
-              >
-                <X size={16} />
-              </button>
+      <ZFModalShell
+        isOpen={Boolean(editingTaxUnit)}
+        onClose={() => setEditingTaxUnit(null)}
+        title={isAr ? 'تعديل ضريبة الوحدة العقارية' : 'Edit Unit Property Tax'}
+        icon={<ShieldCheck size={16} />}
+        maxWidth="440px"
+        isAr={isAr}
+        footer={
+          <div style={{ display: 'flex', gap: '0.75rem', width: '100%' }}>
+            <button
+              type="button"
+              className={shellStyles.btnPrimary}
+              style={{ flex: 1 }}
+              onClick={handleSaveUnitTax}
+              disabled={isSavingTax}
+            >
+              {isSavingTax ? (isAr ? 'جاري الحفظ...' : 'Saving...') : (isAr ? 'حفظ التعديلات' : 'Save Tax')}
+            </button>
+            <button
+              type="button"
+              className={shellStyles.btnSecondary}
+              onClick={() => setEditingTaxUnit(null)}
+            >
+              {isAr ? 'إلغاء' : 'Cancel'}
+            </button>
+          </div>
+        }
+      >
+        {editingTaxUnit && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <div>
+              <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#475569', marginBottom: '0.35rem' }}>
+                {isAr ? 'رقم الوحدة' : 'Unit Number'}
+              </label>
+              <input
+                type="text"
+                disabled
+                value={editingTaxUnit.unitNumber}
+                className={styles.filterInput}
+                style={{ background: '#f8fafc', color: '#64748b' }}
+              />
             </div>
 
-            <div className={styles.modalBody} style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              <div>
-                <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#475569', marginBottom: '0.35rem' }}>
-                  {isAr ? 'رقم الوحدة' : 'Unit Number'}
-                </label>
-                <input
-                  type="text"
-                  disabled
-                  value={editingTaxUnit.unitNumber}
-                  className={styles.filterInput}
-                  style={{ background: '#f8fafc', color: '#64748b' }}
-                />
-              </div>
+            <div>
+              <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#475569', marginBottom: '0.35rem' }}>
+                {isAr ? 'السعر الأساسي' : 'Base Price'}
+              </label>
+              <input
+                type="text"
+                disabled
+                value={`${editingTaxUnit.basePrice.toLocaleString()} ج.م`}
+                className={styles.filterInput}
+                style={{ background: '#f8fafc', color: '#64748b' }}
+              />
+            </div>
 
-              <div>
-                <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#475569', marginBottom: '0.35rem' }}>
-                  {isAr ? 'السعر الأساسي' : 'Base Price'}
-                </label>
-                <input
-                  type="text"
-                  disabled
-                  value={`${editingTaxUnit.basePrice.toLocaleString()} ج.م`}
-                  className={styles.filterInput}
-                  style={{ background: '#f8fafc', color: '#64748b' }}
-                />
-              </div>
+            <div>
+              <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#0f172a', marginBottom: '0.35rem' }}>
+                {isAr ? 'قيمة الضريبة (ج.م)' : 'Tax Amount (EGP)'}
+              </label>
+              <input
+                type="number"
+                min="0"
+                step="1000"
+                value={editingTaxUnit.taxAmount}
+                onChange={(e) => setEditingTaxUnit({ ...editingTaxUnit, taxAmount: e.target.value })}
+                className={styles.filterInput}
+                placeholder="0"
+              />
+            </div>
 
-              <div>
-                <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#0f172a', marginBottom: '0.35rem' }}>
-                  {isAr ? 'قيمة الضريبة (ج.م)' : 'Tax Amount (EGP)'}
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  step="1000"
-                  value={editingTaxUnit.taxAmount}
-                  onChange={(e) => setEditingTaxUnit({ ...editingTaxUnit, taxAmount: e.target.value })}
-                  className={styles.filterInput}
-                  placeholder="0"
-                />
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#0f172a', marginBottom: '0.35rem' }}>
-                  {isAr ? 'بيان / سبب الضريبة' : 'Tax Description'}
-                </label>
-                <input
-                  type="text"
-                  value={editingTaxUnit.taxDesc}
-                  onChange={(e) => setEditingTaxUnit({ ...editingTaxUnit, taxDesc: e.target.value })}
-                  className={styles.filterInput}
-                  placeholder={isAr ? 'مثال: ضريبة تصرفات عقارية أو قيمة مضافة' : 'e.g. Real estate transaction tax'}
-                />
-              </div>
-
-              <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem' }}>
-                <button
-                  type="button"
-                  className={shellStyles.btnPrimary}
-                  style={{ flex: 1 }}
-                  onClick={handleSaveUnitTax}
-                  disabled={isSavingTax}
-                >
-                  {isSavingTax ? (isAr ? 'جاري الحفظ...' : 'Saving...') : (isAr ? 'حفظ التعديلات' : 'Save Tax')}
-                </button>
-                <button
-                  type="button"
-                  className={shellStyles.btnSecondary}
-                  onClick={() => setEditingTaxUnit(null)}
-                >
-                  {isAr ? 'إلغاء' : 'Cancel'}
-                </button>
-              </div>
+            <div>
+              <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#0f172a', marginBottom: '0.35rem' }}>
+                {isAr ? 'بيان / سبب الضريبة' : 'Tax Description'}
+              </label>
+              <input
+                type="text"
+                value={editingTaxUnit.taxDesc}
+                onChange={(e) => setEditingTaxUnit({ ...editingTaxUnit, taxDesc: e.target.value })}
+                className={styles.filterInput}
+                placeholder={isAr ? 'مثال: ضريبة تصرفات عقارية أو قيمة مضافة' : 'e.g. Real estate transaction tax'}
+              />
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </ZFModalShell>
     </div>
   );
 };

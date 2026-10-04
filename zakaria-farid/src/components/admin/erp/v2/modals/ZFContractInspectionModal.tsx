@@ -211,8 +211,10 @@ export const ZFContractInspectionModal: React.FC<ZFContractInspectionModalProps>
 
           <section className={p.section} aria-labelledby="installments-heading">
             <div className={p.sectionHeader}>
-              <h4 id="installments-heading" className={p.sectionTitle}>{isAr ? 'جدول الأقساط' : 'Installment schedule'}</h4>
-              <span className={p.pill}><bdi className={p.numeric}>{installments.length}</bdi></span>
+              <h4 id="installments-heading" className={p.sectionTitle}>
+                <span>{isAr ? 'جدول الأقساط' : 'Installment schedule'}</span>
+                <span className={p.sectionCount}>(<bdi className={p.numeric}>{installments.length}</bdi>)</span>
+              </h4>
             </div>
             <div className={p.tableWrap}>
               <table className={p.table}>
@@ -222,11 +224,11 @@ export const ZFContractInspectionModal: React.FC<ZFContractInspectionModalProps>
                     const state = scheduleState(s);
                     return (
                       <tr key={s.schedule_id}>
-                        <td>{s.tranche_number === 0 ? (isAr ? 'مقدم' : 'Deposit') : <bdi>{s.tranche_number}</bdi>}</td>
-                        <td><bdi>{s.due_date || empty}</bdi></td>
-                        <td><bdi>{money(s.nominal_value)}</bdi></td>
+                        <td>{s.tranche_number === 0 ? (isAr ? 'مقدم' : 'Deposit') : <bdi className={p.numeric}>{s.tranche_number}</bdi>}</td>
+                        <td><bdi className={p.numeric}>{s.due_date || empty}</bdi></td>
+                        <td className={p.cellStrong}><bdi className={p.numeric}>{money(s.nominal_value)}</bdi></td>
                         <td><span className={`${p.pill} ${state.tone}`}>{state.label}</span></td>
-                        <td className={s.paid_date ? undefined : p.emptyValue}><bdi>{s.paid_date || (isAr ? 'لم يُسدد' : 'Not paid')}</bdi></td>
+                        <td className={s.paid_date ? undefined : p.emptyValue}><bdi className={p.numeric}>{s.paid_date || (isAr ? 'لم يُسدد' : 'Not paid')}</bdi></td>
                       </tr>
                     );
                   }) : (
@@ -239,8 +241,10 @@ export const ZFContractInspectionModal: React.FC<ZFContractInspectionModalProps>
 
           <section className={p.section} aria-labelledby="payments-heading">
             <div className={p.sectionHeader}>
-              <h4 id="payments-heading" className={p.sectionTitle}>{isAr ? 'سجل المدفوعات' : 'Payment history'}</h4>
-              <span className={p.pill}><bdi className={p.numeric}>{paidSchedules.length}</bdi></span>
+              <h4 id="payments-heading" className={p.sectionTitle}>
+                <span>{isAr ? 'سجل المدفوعات' : 'Payment history'}</span>
+                <span className={p.sectionCount}>(<bdi className={p.numeric}>{paidSchedules.length}</bdi>)</span>
+              </h4>
             </div>
             <div className={p.tableWrap}>
               <table className={p.table}>
@@ -248,9 +252,9 @@ export const ZFContractInspectionModal: React.FC<ZFContractInspectionModalProps>
                 <tbody>
                   {paidSchedules.length ? paidSchedules.map(s => (
                     <tr key={s.schedule_id}>
-                      <td><bdi>{s.paid_date || empty}</bdi></td>
-                      <td>{s.tranche_number === 0 ? (isAr ? 'مقدم' : 'Deposit') : <bdi>{s.tranche_number}</bdi>}</td>
-                      <td><bdi>{money(s.amount_paid || s.nominal_value)}</bdi></td>
+                      <td><bdi className={p.numeric}>{s.paid_date || empty}</bdi></td>
+                      <td>{s.tranche_number === 0 ? (isAr ? 'مقدم' : 'Deposit') : <bdi className={p.numeric}>{s.tranche_number}</bdi>}</td>
+                      <td className={p.cellStrong}><bdi className={p.numeric}>{money(s.amount_paid || s.nominal_value)}</bdi></td>
                     </tr>
                   )) : (
                     <tr><td colSpan={3} className={p.tableEmpty}>{isAr ? 'لا توجد دفعات مفصلة في الجدول.' : 'No itemized payments recorded.'}</td></tr>

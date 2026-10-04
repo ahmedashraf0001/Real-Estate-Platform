@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
+import styles from './ZFModalShell.module.css';
 
 export interface ZFModalShellProps {
   isOpen: boolean;
@@ -78,120 +79,39 @@ export const ZFModalShell: React.FC<ZFModalShellProps> = ({
       role="dialog"
       aria-modal="true"
       dir={isAr ? 'rtl' : 'ltr'}
-      style={{
-        position: 'fixed',
-        inset: 0,
-        background: 'rgba(15, 23, 42, 0.35)',
-        backdropFilter: 'blur(2px)',
-        WebkitBackdropFilter: 'blur(2px)',
-        zIndex,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '1rem',
-        boxSizing: 'border-box',
-        animation: 'zfModalOverlayFadeIn 0.18s cubic-bezier(0.16, 1, 0.3, 1)',
-      }}
+      className={styles.overlay}
+      style={{ zIndex }}
       onClick={closeOnBackdropClick ? onClose : undefined}
     >
-      <style>{`
-        @keyframes zfModalOverlayFadeIn {
-          from { opacity: 0; }
-          to { opacity: 1; }
-        }
-        @keyframes zfModalCardScaleIn {
-          from { opacity: 0; transform: scale(0.97) translateY(6px); }
-          to { opacity: 1; transform: scale(1) translateY(0); }
-        }
-      `}</style>
-
       <div
-        className={className}
+        className={`${styles.card} ${className}`}
         style={{
-          width: '100%',
           maxWidth: `min(94vw, ${maxWidth})`,
           maxHeight,
-          background: '#ffffff',
-          border: '1px solid var(--erp-border, #cbd5e1)',
-          borderRadius: '12px',
-          boxShadow: '0 1px 2px rgba(15,23,42,0.04), 0 16px 40px -12px rgba(15,23,42,0.18)',
-          display: 'flex',
-          flexDirection: 'column',
-          overflow: 'hidden',
-          boxSizing: 'border-box',
-          animation: 'zfModalCardScaleIn 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
           ...cardStyle,
         }}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Canonical Header */}
+        {/* Canonical Header (fixed 54px with visible 1px solid #cbd5e1 separating line) */}
         <div
-          style={{
-            height: '52px',
-            minHeight: '52px',
-            padding: '0 20px',
-            borderBottom: '1px solid var(--erp-border, #cbd5e1)',
-            background: '#ffffff',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: '0.75rem',
-            flexShrink: 0,
-            boxSizing: 'border-box',
-            ...headerStyle,
-          }}
+          className={styles.header}
+          style={headerStyle}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', minWidth: 0, flex: 1 }}>
+          <div className={styles.headerLead}>
             {icon && (
-              <div
-                style={{
-                  width: '28px',
-                  height: '28px',
-                  borderRadius: '8px',
-                  background: 'var(--erp-accent-subtle, #fdf8ee)',
-                  color: 'var(--erp-accent, #946f23)',
-                  border: '1px solid rgba(148, 111, 35, 0.18)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  flexShrink: 0,
-                  boxSizing: 'border-box',
-                }}
-              >
+              <div className={styles.headerIcon}>
                 {icon}
               </div>
             )}
-            <div style={{ minWidth: 0, flex: 1 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'nowrap', minWidth: 0 }}>
-                <h3
-                  style={{
-                    margin: 0,
-                    fontSize: '0.92rem',
-                    fontWeight: 700,
-                    color: '#0f172a',
-                    letterSpacing: '-0.01em',
-                    lineHeight: 1.3,
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                  }}
-                >
+            <div className={styles.headerText}>
+              <div className={styles.headerTitleRow}>
+                <h3 className={styles.title}>
                   {title}
                 </h3>
                 {headerExtra}
               </div>
               {subtitle && (
-                <div
-                  style={{
-                    fontSize: '0.72rem',
-                    color: '#64748b',
-                    marginTop: '1px',
-                    lineHeight: 1.35,
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                  }}
-                >
+                <div className={styles.subtitle}>
                   {subtitle}
                 </div>
               )}
@@ -202,31 +122,7 @@ export const ZFModalShell: React.FC<ZFModalShellProps> = ({
             type="button"
             onClick={onClose}
             aria-label={isAr ? 'إغلاق' : 'Close'}
-            style={{
-              width: '28px',
-              height: '28px',
-              borderRadius: '7px',
-              border: '1px solid transparent',
-              background: 'transparent',
-              color: '#64748b',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              flexShrink: 0,
-              boxSizing: 'border-box',
-              transition: 'all 0.15s ease',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = '#f1f5f9';
-              e.currentTarget.style.borderColor = '#e2e8f0';
-              e.currentTarget.style.color = '#0f172a';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'transparent';
-              e.currentTarget.style.borderColor = 'transparent';
-              e.currentTarget.style.color = '#64748b';
-            }}
+            className={styles.closeBtn}
           >
             <X size={16} />
           </button>
@@ -234,35 +130,17 @@ export const ZFModalShell: React.FC<ZFModalShellProps> = ({
 
         {/* Canonical Scrollable Body */}
         <div
-          style={{
-            flex: 1,
-            minHeight: 0,
-            overflowY: 'auto',
-            padding: '20px 24px',
-            boxSizing: 'border-box',
-            ...bodyStyle,
-          }}
+          className={styles.body}
+          style={bodyStyle}
         >
           {children}
         </div>
 
-        {/* Optional Sticky Footer Action Bar */}
+        {/* Optional Sticky Footer Action Bar (with visible 1px solid #cbd5e1 separating line) */}
         {footer && (
           <div
-            style={{
-              padding: '12px 20px',
-              minHeight: '60px',
-              borderTop: '1px solid var(--erp-border, #cbd5e1)',
-              background: '#ffffff',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'flex-start',
-              gap: '8px',
-              flexWrap: 'wrap',
-              flexShrink: 0,
-              boxSizing: 'border-box',
-              ...footerStyle,
-            }}
+            className={styles.footer}
+            style={footerStyle}
           >
             {footer}
           </div>

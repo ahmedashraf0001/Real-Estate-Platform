@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useRef, useEffect, useMemo } from 'react';
+import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { 
   ChevronDown, 
   Search, 
@@ -102,18 +103,106 @@ export function ZFCustomSelect<T = string>({
 }: ZFCustomSelectProps<T>) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [mounted, setMounted] = useState(false);
+  const [dropdownCoords, setDropdownCoords] = useState<{
+    top?: number;
+    bottom?: number;
+    left: number;
+    width: number;
+    maxHeight: number;
+    placement: 'bottom' | 'top';
+  } | null>(null);
   const [hoveredTooltip, setHoveredTooltip] = useState<{
     item: ZFCustomSelectItem<T>;
     top: number;
     left: number;
   } | null>(null);
+
   const containerRef = useRef<HTMLDivElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  // Close when clicking outside
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Compute position relative to viewport so the popover floats above any modal/drawer without clipping
+  const updateDropdownPosition = useCallback(() => {
+    if (!containerRef.current) return;
+    const rect = containerRef.current.getBoundingClientRect();
+
+    if (rect.width === 0 && rect.height === 0) return;
+
+    const vh = typeof window !== 'undefined' ? window.innerHeight : 800;
+    const vw = typeof window !== 'undefined' ? window.innerWidth : 1200;
+
+    // If trigger element has completely scrolled off-screen, close popover
+    if (rect.bottom < 0 || rect.top > vh) {
+      setIsOpen(false);
+      setHoveredTooltip(null);
+      return;
+    }
+
+    const spaceBelow = vh - rect.bottom - 12;
+    const spaceAbove = rect.top - 12;
+
+    // Flip upwards if space below is limited (< 220px) and there's more space above
+    const placeTop = spaceBelow < 220 && spaceAbove > spaceBelow;
+    const maxHeight = Math.min(360, Math.max(160, placeTop ? spaceAbove : spaceBelow));
+
+    let left = rect.left;
+    let width = rect.width;
+
+    // Ensure dropdown stays inside viewport horizontally
+    if (left + width > vw - 10) {
+      left = Math.max(10, vw - width - 10);
+    }
+    if (left < 10) {
+      left = 10;
+    }
+
+    setDropdownCoords({
+      top: placeTop ? undefined : rect.bottom + 6,
+      bottom: placeTop ? (vh - rect.top + 6) : undefined,
+      left,
+      width,
+      maxHeight,
+      placement: placeTop ? 'top' : 'bottom'
+    });
+  }, []);
+
+  // Reposition on scroll (capture phase catches modal/drawer scrolling) and window resize
+  useEffect(() => {
+    if (!isOpen) {
+      setDropdownCoords(null);
+      setSearchQuery('');
+      setHoveredTooltip(null);
+      return;
+    }
+
+    updateDropdownPosition();
+
+    const handleScrollOrResize = () => {
+      updateDropdownPosition();
+    };
+
+    window.addEventListener('scroll', handleScrollOrResize, true);
+    window.addEventListener('resize', handleScrollOrResize);
+
+    return () => {
+      window.removeEventListener('scroll', handleScrollOrResize, true);
+      window.removeEventListener('resize', handleScrollOrResize);
+    };
+  }, [isOpen, updateDropdownPosition]);
+
+  // Close when clicking outside both the trigger button and the portaled dropdown
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+      const target = e.target as Node;
+      const clickedInsideTrigger = containerRef.current && containerRef.current.contains(target);
+      const clickedInsideDropdown = dropdownRef.current && dropdownRef.current.contains(target);
+
+      if (!clickedInsideTrigger && !clickedInsideDropdown) {
         setIsOpen(false);
         setHoveredTooltip(null);
       }
@@ -122,14 +211,25 @@ export function ZFCustomSelect<T = string>({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  // Close on Escape key
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.stopPropagation();
+        setIsOpen(false);
+        setHoveredTooltip(null);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown, true);
+    return () => window.removeEventListener('keydown', handleKeyDown, true);
+  }, [isOpen]);
+
   // Autofocus search on open
   useEffect(() => {
     if (isOpen && searchable) {
-      setTimeout(() => searchInputRef.current?.focus(), 50);
-    }
-    if (!isOpen) {
-      setSearchQuery('');
-      setHoveredTooltip(null);
+      const timer = setTimeout(() => searchInputRef.current?.focus(), 50);
+      return () => clearTimeout(timer);
     }
   }, [isOpen, searchable]);
 
@@ -199,13 +299,36 @@ export function ZFCustomSelect<T = string>({
     setHoveredTooltip({ item, top, left });
   };
 
+  const handleToggle = () => {
+    if (disabled) return;
+    if (!isOpen) {
+      updateDropdownPosition();
+      setIsOpen(true);
+    } else {
+      setIsOpen(false);
+      setHoveredTooltip(null);
+    }
+  };
+
   return (
     <div ref={containerRef} style={{ position: 'relative', width: '100%' }}>
+      {/* Dynamic Keyframes for smooth entrance animation */}
+      <style>{`
+        @keyframes zfSelectFadeInDown {
+          from { opacity: 0; transform: translateY(-4px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes zfSelectFadeInUp {
+          from { opacity: 0; transform: translateY(4px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+      `}</style>
+
       {/* 1. TRIGGER BUTTON */}
       <button
         type="button"
         disabled={disabled}
-        onClick={() => !disabled && setIsOpen(!isOpen)}
+        onClick={handleToggle}
         style={{
           width: '100%',
           display: 'flex',
@@ -308,24 +431,34 @@ export function ZFCustomSelect<T = string>({
         </span>
       )}
 
-      {/* 2. FLOATING DROPDOWN POPOVER */}
-      {isOpen && (
-        <div style={{
-          position: 'absolute',
-          top: 'calc(100% + 6px)',
-          left: 0,
-          right: 0,
-          background: '#ffffff',
-          border: '1px solid var(--erp-border, #cbd5e1)',
-          borderRadius: '14px',
-          boxShadow: '0 12px 32px -4px rgba(0, 0, 0, 0.12), 0 4px 12px rgba(0, 0, 0, 0.04)',
-          zIndex: 9999,
-          overflow: 'hidden',
-          display: 'flex',
-          flexDirection: 'column',
-          maxHeight: '360px',
-          animation: 'fadeInDown 0.15s ease-out'
-        }}>
+      {/* 2. FLOATING DROPDOWN POPOVER (Portaled to document.body to avoid clipping inside modals/drawers) */}
+      {mounted && isOpen && dropdownCoords && typeof document !== 'undefined' && createPortal(
+        <div 
+          ref={dropdownRef}
+          style={{
+            position: 'fixed',
+            ...(dropdownCoords.placement === 'bottom'
+              ? { top: `${dropdownCoords.top}px` }
+              : { bottom: `${dropdownCoords.bottom}px` }),
+            left: `${dropdownCoords.left}px`,
+            width: `${dropdownCoords.width}px`,
+            maxHeight: `${dropdownCoords.maxHeight}px`,
+            background: '#ffffff',
+            border: '1px solid var(--erp-border, #cbd5e1)',
+            borderRadius: '14px',
+            boxShadow: '0 12px 32px -4px rgba(0, 0, 0, 0.12), 0 4px 12px rgba(0, 0, 0, 0.04)',
+            zIndex: 99999,
+            overflow: 'hidden',
+            display: 'flex',
+            flexDirection: 'column',
+            direction: isAr ? 'rtl' : 'ltr',
+            textAlign: isAr ? 'right' : 'left',
+            boxSizing: 'border-box',
+            animation: dropdownCoords.placement === 'bottom' 
+              ? 'zfSelectFadeInDown 0.15s ease-out' 
+              : 'zfSelectFadeInUp 0.15s ease-out'
+          }}
+        >
           {/* Internal Search Box */}
           {searchable && (
             <div style={{
@@ -585,11 +718,12 @@ export function ZFCustomSelect<T = string>({
               })
             )}
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* 3. FLOATING EXPLANATORY TOOLTIP POPUP */}
-      {isOpen && hoveredTooltip && (hoveredTooltip.item.tooltipAr || hoveredTooltip.item.tooltipEn) && (
+      {mounted && isOpen && hoveredTooltip && (hoveredTooltip.item.tooltipAr || hoveredTooltip.item.tooltipEn) && typeof document !== 'undefined' && createPortal(
         <div
           role="tooltip"
           style={{
@@ -603,7 +737,7 @@ export function ZFCustomSelect<T = string>({
             boxShadow: '0 10px 25px -5px rgba(15, 23, 42, 0.15)',
             borderRadius: '10px',
             padding: '0.65rem 0.85rem',
-            zIndex: 10005,
+            zIndex: 100005,
             pointerEvents: 'none',
             direction: isAr ? 'rtl' : 'ltr',
             textAlign: isAr ? 'right' : 'left',
@@ -630,7 +764,8 @@ export function ZFCustomSelect<T = string>({
           }}>
             {isAr ? hoveredTooltip.item.tooltipAr : (hoveredTooltip.item.tooltipEn || hoveredTooltip.item.tooltipAr)}
           </p>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

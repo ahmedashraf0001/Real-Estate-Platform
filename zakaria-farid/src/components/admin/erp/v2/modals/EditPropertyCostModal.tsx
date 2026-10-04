@@ -1,21 +1,18 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Edit3, 
-  Clock, 
   Lock, 
   AlertTriangle, 
   CheckCircle2, 
   RotateCcw,
-  Building2,
-  Calendar,
-  Save,
-  FileText
+  Save
 } from 'lucide-react';
 import { D } from '@/lib/erp/math';
-import { ERPPropertyCostItem, PropertyCostCategory, PropertyLifecyclePhase } from '@/lib/erp/types';
-import { isItemWithinGracePeriod, getRemainingGraceHours, updateCostItemDirectly } from '@/lib/erp/propertyCostEngine';
+import { ERPPropertyCostItem, ERPAccountingPeriod } from '@/lib/erp/types';
+import { updateCostItemDirectly } from '@/lib/erp/propertyCostEngine';
+import { resolvePeriodForDate } from '@/lib/erp/ledger';
 import { Property } from '@/lib/supabase/types';
 import { toast } from 'sonner';
 import { ZFModalShell } from '../common/ZFModalShell';
@@ -25,6 +22,8 @@ interface EditPropertyCostModalProps {
   onClose: () => void;
   costItem: ERPPropertyCostItem | null;
   property?: Property | null;
+  activePeriod?: ERPAccountingPeriod;
+  periods?: ERPAccountingPeriod[];
   isAr?: boolean;
   onConfirmEdit: (updatedItem: ERPPropertyCostItem) => Promise<void> | void;
   onOpenAdjustmentModal: (item: ERPPropertyCostItem) => void;
@@ -35,6 +34,8 @@ export const EditPropertyCostModal: React.FC<EditPropertyCostModalProps> = ({
   onClose,
   costItem,
   property,
+  activePeriod,
+  periods,
   isAr = true,
   onConfirmEdit,
   onOpenAdjustmentModal
@@ -60,18 +61,22 @@ export const EditPropertyCostModal: React.FC<EditPropertyCostModalProps> = ({
     }
   }, [costItem]);
 
+  const itemDate = costItem?.logged_date || costItem?.created_at?.split('T')[0];
+  const targetPeriod = useMemo(() => {
+    return resolvePeriodForDate(itemDate, periods || (activePeriod ? [activePeriod] : []), activePeriod);
+  }, [itemDate, periods, activePeriod]);
+
   if (!isOpen || !costItem) return null;
 
-  const withinGrace = isItemWithinGracePeriod(costItem.created_at, 24);
-  const remainingHours = getRemainingGraceHours(costItem.created_at, 24);
+  const isLocked = targetPeriod.status !== 'OPEN';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!withinGrace) {
+    if (isLocked) {
       toast.error(
         isAr 
-          ? 'لا يمكن التعديل المباشر بعد انقضاء مهلة الـ 24 ساعة، استخدم بند تسوية فرعي' 
-          : 'Grace period expired. Please use an adjustment sub-item.'
+          ? `لا يمكن التعديل المباشر لأن الفترة المحاسبية (${targetPeriod.period_id}) مقفلة (${targetPeriod.status})، استخدم بند تسوية فرعي` 
+          : `Accounting period (${targetPeriod.period_id}) is ${targetPeriod.status}. Direct editing is locked; please use an adjustment sub-item.`
       );
       return;
     }
@@ -97,7 +102,7 @@ export const EditPropertyCostModal: React.FC<EditPropertyCostModalProps> = ({
         unit_cost_egp: unitCost,
         total_cost_egp: D(totalCost).toFixed(2),
         notes: notes.trim() || undefined
-      });
+      }, { targetPeriod });
 
       await onConfirmEdit(updated);
 
@@ -120,25 +125,29 @@ export const EditPropertyCostModal: React.FC<EditPropertyCostModalProps> = ({
       onClose={onClose}
       isAr={isAr}
       maxWidth="640px"
-      icon={withinGrace ? <Edit3 size={18} /> : <Lock size={18} />}
+      icon={!isLocked ? <Edit3 size={18} /> : <Lock size={18} />}
       title={isAr ? 'تعديل بيانات بند التكلفة' : 'Edit Cost Item'}
-      subtitle={isAr ? 'تعديل مباشر خلال مهلة الـ 24 ساعة من تاريخ الإضافة' : 'Direct editing within 24-hour grace period'}
+      subtitle={
+        !isLocked
+          ? (isAr ? `تعديل مباشر متاح: الفترة المحاسبية مفتوحة (${targetPeriod.period_id})` : `Direct editing enabled: Accounting period is open (${targetPeriod.period_id})`)
+          : (isAr ? `مقفل محاسبياً: الفترة المحاسبية مقفلة (${targetPeriod.status})` : `Accounting Lock: Target period is locked (${targetPeriod.status})`)
+      }
       headerExtra={
-        withinGrace ? (
+        !isLocked ? (
           <span style={{
             display: 'inline-flex',
             alignItems: 'center',
             gap: '4px',
             padding: '2px 8px',
             borderRadius: '6px',
-            background: '#eff6ff',
-            color: '#2563eb',
+            background: 'var(--erp-accent-tint, rgba(37, 99, 235, 0.08))',
+            color: 'var(--erp-accent, #2563eb)',
             fontSize: '0.74rem',
             fontWeight: 700,
-            border: '1px solid #dbeafe'
+            border: '1px solid var(--erp-accent-subtle, rgba(37, 99, 235, 0.2))'
           }}>
-            <Clock size={12} />
-            <span>{isAr ? `متاح: ${remainingHours} ساعة` : `${remainingHours}h left`}</span>
+            <CheckCircle2 size={12} />
+            <span>{isAr ? `فترة مفتوحة: ${targetPeriod.period_id}` : `Period Open: ${targetPeriod.period_id}`}</span>
           </span>
         ) : (
           <span style={{
@@ -151,10 +160,10 @@ export const EditPropertyCostModal: React.FC<EditPropertyCostModalProps> = ({
             color: '#64748b',
             fontSize: '0.74rem',
             fontWeight: 700,
-            border: '1px solid #e2e8f0'
+            border: '1px solid #cbd5e1'
           }}>
             <Lock size={12} />
-            <span>{isAr ? 'مقفل محاسبياً' : 'Locked'}</span>
+            <span>{isAr ? `مقفل محاسبياً (${targetPeriod.status})` : `Locked (${targetPeriod.status})`}</span>
           </span>
         )
       }
@@ -162,25 +171,28 @@ export const EditPropertyCostModal: React.FC<EditPropertyCostModalProps> = ({
     >
       {/* Content Body */}
       <form onSubmit={handleSubmit} style={{ padding: '20px 24px', overflowY: 'auto', flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-        {!withinGrace && (
+        {isLocked && (
           <div style={{
-            background: '#FFFBEB',
-            border: '1px solid #FDE68A',
-            borderRadius: '12px',
+            background: '#ffffff',
+            border: '1px solid #cbd5e1',
+            borderInlineStart: '3px solid #d97706',
+            borderRadius: '8px',
             padding: '14px 16px',
             display: 'flex',
             gap: '12px',
             alignItems: 'flex-start'
           }}>
-            <AlertTriangle size={18} color="#D97706" style={{ flexShrink: 0, marginTop: '2px' }} />
+            <AlertTriangle size={18} color="#d97706" style={{ flexShrink: 0, marginTop: '2px' }} />
             <div>
-              <strong style={{ fontSize: '0.86rem', color: '#92400E', display: 'block' }}>
-                {isAr ? 'تم قفل هذا البند محاسبياً (انقضت مهلة الـ 24 ساعة)' : 'Accounting Lock: 24h grace period expired'}
-              </strong>
-              <p style={{ margin: '4px 0 10px', fontSize: '0.78rem', color: '#B45309', lineHeight: 1.5 }}>
+              <strong style={{ fontSize: '0.86rem', color: '#0f172a', display: 'block' }}>
                 {isAr 
-                  ? 'لحماية الاتزان المالي والتدقيق المحاسبي، لا يمكن تعديل أصل البند مباشرة بعد 24 ساعة. إذا حدث خطأ بدفع زيادة أو دفع ناقص، يمكنك تسجيل بند تسوية فرعي مرتبط به.'
-                  : 'To preserve accounting immutability, this item cannot be mutated directly. Please record an adjustment sub-item instead.'}
+                  ? `تم قفل هذا البند محاسبياً (الفترة ${targetPeriod.period_id} مقفلة)` 
+                  : `Accounting Lock: Period ${targetPeriod.period_id} is locked`}
+              </strong>
+              <p style={{ margin: '4px 0 10px', fontSize: '0.78rem', color: '#475569', lineHeight: 1.5 }}>
+                {isAr 
+                  ? 'لحماية الاتزان المالي والتدقيق المحاسبي، لا يمكن تعديل أصل البند مباشرة بعد إقفال الفترة المحاسبية. إذا حدث خطأ بدفع زيادة أو دفع ناقص، يمكنك تسجيل بند تسوية فرعي مرتبط به.'
+                  : 'To preserve accounting immutability, this item cannot be mutated directly in a locked period. Please record an adjustment sub-item instead.'}
               </p>
               <button
                 type="button"
@@ -191,9 +203,9 @@ export const EditPropertyCostModal: React.FC<EditPropertyCostModalProps> = ({
                 style={{
                   padding: '6px 12px',
                   borderRadius: '6px',
-                  border: '1px solid #D97706',
-                  background: '#FEF3C7',
-                  color: '#92400E',
+                  border: '1px solid #cbd5e1',
+                  background: '#ffffff',
+                  color: '#0f172a',
                   fontSize: '0.78rem',
                   fontWeight: 700,
                   cursor: 'pointer',
@@ -217,7 +229,7 @@ export const EditPropertyCostModal: React.FC<EditPropertyCostModalProps> = ({
           <input
             type="text"
             required
-            disabled={!withinGrace}
+            disabled={isLocked}
             value={itemNameAr}
             onChange={(e) => setItemNameAr(e.target.value)}
             style={{
@@ -226,8 +238,8 @@ export const EditPropertyCostModal: React.FC<EditPropertyCostModalProps> = ({
               borderRadius: '8px',
               border: '1px solid #cbd5e1',
               fontSize: '0.86rem',
-              color: '#0F172A',
-              background: withinGrace ? '#FFFFFF' : '#F8FAFC',
+              color: '#0f172a',
+              background: !isLocked ? '#ffffff' : '#f8fafc',
               boxSizing: 'border-box'
             }}
           />
@@ -241,7 +253,7 @@ export const EditPropertyCostModal: React.FC<EditPropertyCostModalProps> = ({
             </label>
             <input
               type="text"
-              disabled={!withinGrace}
+              disabled={isLocked}
               value={supplier}
               onChange={(e) => setSupplier(e.target.value)}
               style={{
@@ -250,8 +262,8 @@ export const EditPropertyCostModal: React.FC<EditPropertyCostModalProps> = ({
                 borderRadius: '8px',
                 border: '1px solid #cbd5e1',
                 fontSize: '0.82rem',
-                color: '#0F172A',
-                background: withinGrace ? '#FFFFFF' : '#F8FAFC',
+                color: '#0f172a',
+                background: !isLocked ? '#ffffff' : '#f8fafc',
                 boxSizing: 'border-box'
               }}
             />
@@ -262,7 +274,7 @@ export const EditPropertyCostModal: React.FC<EditPropertyCostModalProps> = ({
             </label>
             <input
               type="text"
-              disabled={!withinGrace}
+              disabled={isLocked}
               value={invoiceRef}
               onChange={(e) => setInvoiceRef(e.target.value)}
               style={{
@@ -271,8 +283,8 @@ export const EditPropertyCostModal: React.FC<EditPropertyCostModalProps> = ({
                 borderRadius: '8px',
                 border: '1px solid #cbd5e1',
                 fontSize: '0.82rem',
-                color: '#0F172A',
-                background: withinGrace ? '#FFFFFF' : '#F8FAFC',
+                color: '#0f172a',
+                background: !isLocked ? '#ffffff' : '#f8fafc',
                 boxSizing: 'border-box'
               }}
             />
@@ -289,7 +301,7 @@ export const EditPropertyCostModal: React.FC<EditPropertyCostModalProps> = ({
               <input
                 type="number"
                 step="any"
-                disabled={!withinGrace}
+                disabled={isLocked}
                 value={quantity}
                 onChange={(e) => setQuantity(e.target.value)}
                 style={{
@@ -298,14 +310,14 @@ export const EditPropertyCostModal: React.FC<EditPropertyCostModalProps> = ({
                   borderRadius: '8px',
                   border: '1px solid #cbd5e1',
                   fontSize: '0.82rem',
-                  color: '#0F172A',
-                  background: withinGrace ? '#FFFFFF' : '#F8FAFC',
+                  color: '#0f172a',
+                  background: !isLocked ? '#ffffff' : '#f8fafc',
                   boxSizing: 'border-box'
                 }}
               />
               <input
                 type="text"
-                disabled={!withinGrace}
+                disabled={isLocked}
                 value={unit}
                 onChange={(e) => setUnit(e.target.value)}
                 style={{
@@ -314,8 +326,8 @@ export const EditPropertyCostModal: React.FC<EditPropertyCostModalProps> = ({
                   borderRadius: '8px',
                   border: '1px solid #cbd5e1',
                   fontSize: '0.82rem',
-                  color: '#0F172A',
-                  background: withinGrace ? '#FFFFFF' : '#F8FAFC',
+                  color: '#0f172a',
+                  background: !isLocked ? '#ffffff' : '#f8fafc',
                   boxSizing: 'border-box'
                 }}
               />
@@ -330,7 +342,7 @@ export const EditPropertyCostModal: React.FC<EditPropertyCostModalProps> = ({
               step="0.01"
               min="0.01"
               required
-              disabled={!withinGrace}
+              disabled={isLocked}
               value={totalCost}
               onChange={(e) => setTotalCost(e.target.value)}
               style={{
@@ -340,8 +352,8 @@ export const EditPropertyCostModal: React.FC<EditPropertyCostModalProps> = ({
                 border: '1px solid #cbd5e1',
                 fontSize: '0.95rem',
                 fontWeight: 700,
-                color: '#0F172A',
-                background: withinGrace ? '#FFFFFF' : '#F8FAFC',
+                color: '#0f172a',
+                background: !isLocked ? '#ffffff' : '#f8fafc',
                 fontVariantNumeric: 'tabular-nums',
                 boxSizing: 'border-box'
               }}
@@ -356,7 +368,7 @@ export const EditPropertyCostModal: React.FC<EditPropertyCostModalProps> = ({
           </label>
           <textarea
             rows={2}
-            disabled={!withinGrace}
+            disabled={isLocked}
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             style={{
@@ -365,8 +377,8 @@ export const EditPropertyCostModal: React.FC<EditPropertyCostModalProps> = ({
               borderRadius: '8px',
               border: '1px solid #cbd5e1',
               fontSize: '0.82rem',
-              color: '#0F172A',
-              background: withinGrace ? '#FFFFFF' : '#F8FAFC',
+              color: '#0f172a',
+              background: !isLocked ? '#ffffff' : '#f8fafc',
               resize: 'none',
               boxSizing: 'border-box'
             }}
@@ -379,7 +391,7 @@ export const EditPropertyCostModal: React.FC<EditPropertyCostModalProps> = ({
           gap: '10px', 
           justifyContent: 'flex-end', 
           paddingTop: '12px', 
-          borderTop: '1px solid #e2e8f0', 
+          borderTop: '1px solid #cbd5e1', 
           marginTop: 'auto' 
         }}>
           <button
@@ -389,7 +401,7 @@ export const EditPropertyCostModal: React.FC<EditPropertyCostModalProps> = ({
               padding: '8px 16px',
               borderRadius: '8px',
               border: '1px solid #cbd5e1',
-              background: '#FFFFFF',
+              background: '#ffffff',
               color: '#475569',
               fontSize: '0.82rem',
               fontWeight: 600,
@@ -398,7 +410,7 @@ export const EditPropertyCostModal: React.FC<EditPropertyCostModalProps> = ({
           >
             {isAr ? 'إغلاق' : 'Close'}
           </button>
-          {withinGrace && (
+          {!isLocked && (
             <button
               type="submit"
               disabled={isSubmitting}
@@ -406,12 +418,12 @@ export const EditPropertyCostModal: React.FC<EditPropertyCostModalProps> = ({
                 padding: '8px 20px',
                 borderRadius: '8px',
                 border: 'none',
-                background: isSubmitting ? '#94a3b8' : '#2563eb',
-                color: '#FFFFFF',
+                background: isSubmitting ? '#94a3b8' : 'var(--erp-accent, #2563eb)',
+                color: '#ffffff',
                 fontSize: '0.82rem',
                 fontWeight: 700,
                 cursor: isSubmitting ? 'not-allowed' : 'pointer',
-                boxShadow: '0 2px 8px rgba(37, 99, 235, 0.25)',
+                boxShadow: '0 2px 8px var(--erp-accent-subtle, rgba(37, 99, 235, 0.25))',
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '6px'

@@ -29,11 +29,11 @@
   background: #ffffff !important;
   border: 1px solid #cbd5e1 !important;
   border-radius: 12px !important;
-  padding: 14px 16px !important;
+  padding: 12px 14px !important;
   display: flex !important;
   flex-direction: column !important;
-  justify-content: flex-start !important;
-  gap: 6px;
+  justify-content: space-between !important;
+  gap: 5px;
   /* design-lint: allow R20 card elevation */
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04) !important;
   min-width: 0;
@@ -47,7 +47,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  margin-bottom: 2px;
+  margin-bottom: 0px;
   flex-wrap: wrap;
 }
 
@@ -248,38 +248,41 @@
 .projectListContainer {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 5px;
   flex: 1;
   min-width: 0;
+  justify-content: space-between;
 }
 
 .projectRowItem {
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  padding: 3px 5px;
+  gap: 5px;
+  padding: 6px 8px;
   border-radius: 6px;
-  transition: background-color 0.15s ease;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
   cursor: pointer;
-  border-bottom: 1px solid #f8fafc;
+  border: 1px solid #f8fafc;
+  background: #ffffff;
 }
 
 .projectRowItem:hover {
   background: #f8fafc;
+  border-color: #e2e8f0;
 }
 
 .projectRowMeta {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 6px;
+  gap: 8px;
   min-width: 0;
 }
 
 .projectRowTitleArea {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 5px;
   min-width: 0;
   flex: 1;
 }
@@ -290,7 +293,7 @@
 }
 
 .projectRowTitle {
-  font-size: 0.74rem;
+  font-size: 0.71rem;
   font-weight: 700;
   color: #0f172a;
   white-space: nowrap;
@@ -299,22 +302,21 @@
   line-height: 1.2;
 }
 
+.projectRowTrailing {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
 .projectRowPillArea {
   flex-shrink: 0;
 }
 
-/* Compact Dual Track Row (Rail + Inline Values) */
-.projectCompactTrackRow {
-  display: grid;
-  grid-template-columns: 1fr 140px;
-  align-items: center;
-  gap: 8px;
-}
-
 .dualBarRail {
   background: #f1f5f9;
-  height: 8px;
-  border-radius: 2px;
+  height: 9px;
+  border-radius: 3px;
   position: relative;
   width: 100%;
   overflow: hidden;
@@ -360,27 +362,25 @@
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 4px;
-  font-size: 0.67rem;
+  gap: 2px;
+  font-size: 0.65rem;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
   flex-shrink: 0;
 }
 
 .valSales {
-  color: #0f172a;
+  color: var(--erp-accent, #2563eb);
   font-weight: 700;
   display: inline-flex;
   align-items: center;
-  gap: 2px;
 }
 
 .valCost {
-  color: #475569;
+  color: #64748b;
   font-weight: 600;
   display: inline-flex;
   align-items: center;
-  gap: 2px;
 }
 
 .valUnentered {
@@ -388,7 +388,6 @@
   font-weight: 600;
   display: inline-flex;
   align-items: center;
-  gap: 2px;
 }
 
 .valLabel {
@@ -404,36 +403,53 @@
 
 /* Blueprint Scale Axis at bottom of Left Card */
 .blueprintScaleRow {
-  display: grid;
-  grid-template-columns: 1fr 140px;
+  display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 8px;
-  padding-top: 4px;
-  margin-top: 2px;
+  padding-top: 6px;
+  margin-top: 4px;
   border-top: 1px solid #f1f5f9;
   font-size: 0.66rem;
   color: #94a3b8;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
+  position: relative;
+  width: 100%;
 }
 
 .blueprintScaleTicksTrack {
   position: relative;
-  width: 100%;
+  flex: 1;
   height: 12px;
+  margin-inline: 4px;
 }
 
 .blueprintTick {
   position: absolute;
   top: 0;
-  transform: translateX(50%);
   font-size: 0.64rem;
+  color: #94a3b8;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.blueprintUnitLabel {
+  flex-shrink: 0;
+  font-size: 0.64rem;
+  color: #94a3b8;
+  text-align: end;
+  white-space: nowrap;
 }
 
 /* ─── ERPApexChart Canvas Wrapper ─── */
 .apexChartWrapper {
   width: 100%;
-  min-height: 195px;
+  min-height: 250px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
   position: relative;
 }
 

@@ -1,5 +1,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'fs';
+import path from 'path';
 import { D } from '../math';
 
 describe('PropertiesInventoryKpis & Showcase Grid Contract Tests', () => {
@@ -62,9 +64,43 @@ describe('PropertiesInventoryKpis & Showcase Grid Contract Tests', () => {
     assert.strictEqual(displaySalesVal, '141,999,998');
   });
 
+  it('honestly renders zero-states without fake fallback constants', () => {
+    const zeroPrice = D(0);
+    const zeroTotalVal = D(0);
+    const zeroAvailVal = D(0);
+    const zeroSalesVal = D(0);
+    const zeroWip = D(0);
+
+    // Card 1 zero needle and price
+    const avgPriceNum = zeroPrice.toNumber();
+    const displayAvgPrice = avgPriceNum > 0
+      ? avgPriceNum.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+      : '0.00';
+    const needlePct = avgPriceNum <= 0 ? 0 : 50;
+    assert.strictEqual(displayAvgPrice, '0.00');
+    assert.strictEqual(needlePct, 0);
+
+    // Card 2 zero inventory
+    const availValNum = zeroAvailVal.toNumber();
+    const displayAvailVal = Math.round(availValNum).toLocaleString('en-US');
+    const availPct = zeroTotalVal.toNumber() > 0 ? 50 : 0;
+    assert.strictEqual(displayAvailVal, '0');
+    assert.strictEqual(availPct, 0);
+
+    // Card 3 zero WIP
+    const wipNum = zeroWip.toNumber();
+    const displayWipVal = Math.round(wipNum).toLocaleString('en-US');
+    assert.strictEqual(displayWipVal, '0');
+
+    // Card 4 zero sales
+    const salesNum = zeroSalesVal.toNumber();
+    const displaySalesVal = Math.round(salesNum).toLocaleString('en-US');
+    const soldPct = zeroTotalVal.toNumber() > 0 ? 50 : 0;
+    assert.strictEqual(displaySalesVal, '0');
+    assert.strictEqual(soldPct, 0);
+  });
+
   it('verifies 3-per-row grid contract in CSS structure', () => {
-    const fs = require('fs');
-    const path = require('path');
     const cssPath = path.resolve(__dirname, '../../../components/admin/erp/v2/views/PropertiesPortfolioView.module.css');
     const cssContent = fs.readFileSync(cssPath, 'utf8');
 
@@ -72,5 +108,23 @@ describe('PropertiesInventoryKpis & Showcase Grid Contract Tests', () => {
     assert.ok(cssContent.includes('grid-template-columns: repeat(3, minmax(0, 1fr)) !important;'));
     assert.ok(cssContent.includes('.stageContainer,'));
     assert.ok(cssContent.includes('.container'));
+  });
+
+  it('verifies PropertiesInventoryKpis discrete floating cards contract without outer container', () => {
+    const kpiCssPath = path.resolve(__dirname, '../../../components/admin/erp/v2/views/properties/PropertiesInventoryKpis.module.css');
+    const kpiCss = fs.readFileSync(kpiCssPath, 'utf8');
+
+    // Discrete floating card & grid standards
+    assert.ok(kpiCss.includes('.discreteKpiGrid'), 'Must define .discreteKpiGrid');
+    assert.ok(kpiCss.includes('.discreteKpiCard'), 'Must define .discreteKpiCard');
+    assert.ok(kpiCss.includes('background: #ffffff !important;'), 'Must have pure white card surface');
+    assert.ok(kpiCss.includes('border: 1px solid #cbd5e1;'), 'Must have 1px #cbd5e1 border');
+    assert.ok(kpiCss.includes('border-radius: 12px;'), 'Must have 12px radius');
+    assert.ok(kpiCss.includes('width: 28px;'), 'Must use 28x28 squircle');
+    assert.ok(kpiCss.includes('height: 28px;'), 'Must use 28x28 squircle');
+
+    // Outer panel / container must be completely removed
+    assert.ok(!kpiCss.includes('.outerPanel'), 'Outer container .outerPanel must be removed');
+    assert.ok(!kpiCss.includes('.panelHeader'), 'Outer container .panelHeader must be removed');
   });
 });

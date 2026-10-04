@@ -416,8 +416,9 @@ export const PartnerCapitalInjectionModal: React.FC<PartnerCapitalInjectionModal
         <div style={{ textAlign: isAr ? 'left' : 'right' }}>
           <div style={{ fontSize: '0.74rem', color: '#64748b' }}>{isAr ? 'تاريخ التوريد:' : 'Date:'}</div>
           <div style={{ fontSize: '0.95rem', fontWeight: 800, color: '#0f172a' }}>{confirmedVoucher.date}</div>
-          <div style={{ fontSize: '0.74rem', color: '#059669', fontWeight: 800, marginTop: '0.2rem' }}>
-            {isAr ? '✓ قيد مرحل بالأستاذ العام' : '✓ Posted to General Ledger'}
+          <div style={{ fontSize: '0.74rem', color: '#059669', fontWeight: 800, marginTop: '0.2rem', display: 'flex', alignItems: 'center', gap: '4px', justifyContent: isAr ? 'flex-end' : 'flex-start' }}>
+            <Check size={13} strokeWidth={2.5} />
+            <span>{isAr ? 'قيد مرحل بالأستاذ العام' : 'Posted to General Ledger'}</span>
           </div>
         </div>
       </div>

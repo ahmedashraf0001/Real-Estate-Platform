@@ -41,8 +41,22 @@ export function CockpitRouteView() {
       const target = erp.data.pdcRecords.find(p => p.status !== 'Cleared' && p.status !== 'Void') || erp.data.pdcRecords[0];
       if (target) {
         erp.setCollectingPDCItem(target);
-      } else {
-        erp.setShowProjectExpenseModal(true);
+      } else if (erp.data.contracts.length > 0) {
+        const ct = erp.data.contracts.find(c => c.status === 'Active') || erp.data.contracts[0];
+        const sc = erp.data.schedules.find(s => s.contract_id === ct.contract_id && s.status === 'Pending') || erp.data.schedules.find(s => s.contract_id === ct.contract_id);
+        if (sc) {
+          erp.setCollectingPDCItem({
+            cheque_id: sc.schedule_id || `SND-${ct.contract_id}-${sc.tranche_number}`,
+            contract_id: ct.contract_id,
+            schedule_id: sc.schedule_id,
+            drawer_name: ct.buyer_name,
+            cheque_number: `REC-${ct.contract_number || ct.contract_id.slice(-4)}-T${sc.tranche_number}`,
+            bank_name: erp.isAr ? 'الخزينة النقدية الرئيسية' : 'Main Cash Safe',
+            due_date: sc.due_date,
+            nominal_value: sc.nominal_value,
+            status: 'In Safe'
+          });
+        }
       }
     } else if (action === 'new_contract') {
       erp.handleOpenGenericNewContract();

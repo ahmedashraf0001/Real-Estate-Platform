@@ -42,7 +42,8 @@ import {
   ExternalLink,
   ChevronsUpDown,
   Users,
-  CalendarClock
+  CalendarClock,
+  ScrollText
 } from 'lucide-react';
 import { Property, BuildingUnitItem } from '@/lib/supabase/types';
 import {
@@ -100,7 +101,7 @@ import { getAvailableCash } from '@/lib/erp/canonicalMetrics';
 import { CostAdjustmentModal } from '../modals/CostAdjustmentModal';
 import { CostPayableSettlementModal } from '../modals/CostPayableSettlementModal';
 import { EditPropertyCostModal } from '../modals/EditPropertyCostModal';
-import { ZFDirectExpenseModal } from '../modals/ZFDirectExpenseModal';
+
 
 
 interface DailyOperationsViewProps {
@@ -268,7 +269,6 @@ export const DailyOperationsView: React.FC<DailyOperationsViewProps> = ({
   const modalPageSize = 15;
 
   // Existing Modal States
-  const [isExpenseModalOpen, setIsExpenseModalOpen] = useState(false);
   const [selectedCostForAdjustment, setSelectedCostForAdjustment] = useState<ERPPropertyCostItem | null>(null);
   const [selectedCostForEdit, setSelectedCostForEdit] = useState<ERPPropertyCostItem | null>(null);
   const [selectedCostForPayable, setSelectedCostForPayable] = useState<ERPPropertyCostItem | null>(null);
@@ -902,7 +902,7 @@ export const DailyOperationsView: React.FC<DailyOperationsViewProps> = ({
         } else if (effectivePropertyCosts.length > 0 && onUpdatePropertyCostItem) {
           setSelectedCostForEdit(effectivePropertyCosts[0]);
         } else {
-          setIsExpenseModalOpen(true);
+          onOpenProjectExpense();
         }
         break;
       }
@@ -912,7 +912,7 @@ export const DailyOperationsView: React.FC<DailyOperationsViewProps> = ({
       }
       case 'record_expense':
       case 'safe_expense': {
-        setIsExpenseModalOpen(true);
+        onOpenProjectExpense();
         break;
       }
       case 'partner_payout': {
@@ -1054,9 +1054,9 @@ export const DailyOperationsView: React.FC<DailyOperationsViewProps> = ({
         <div className={ops.tableHeaderRowPrimary}>
           <div className={ops.tableHeaderTabsWrap}>
             <div className={ops.tableHeaderTitle}>
-              <Clock size={16} color="var(--erp-accent, #2563eb)" />
-              <h3 style={{ margin: 0, fontSize: '0.875rem', fontWeight: 700, color: '#0f172a', whiteSpace: 'nowrap' }}>
-                {isAr ? 'أحدث العمليات' : 'Recent Operations'}
+              <ScrollText size={16} color="var(--erp-accent, #2563eb)" />
+              <h3 style={{ margin: 0, fontSize: '0.8125rem', fontWeight: 700, color: '#0f172a', whiteSpace: 'nowrap' }}>
+                {isAr ? 'سجل العمليات والتدفقات النقدية' : 'Daily Cash Movement & Audit Stream'}
               </h3>
             </div>
 
@@ -1713,13 +1713,13 @@ export const DailyOperationsView: React.FC<DailyOperationsViewProps> = ({
               } else if (onUpdatePropertyCostItem) {
                 setSelectedCostForEdit(cost);
               } else {
-                setIsExpenseModalOpen(true);
+                onOpenProjectExpense();
               }
             }}
             onUpdatePropertyCostItem={(cost) => {
               if (onUpdatePropertyCostItem) setSelectedCostForEdit(cost);
             }}
-            onOpenExpenseModal={() => setIsExpenseModalOpen(true)}
+            onOpenExpenseModal={onOpenProjectExpense}
             onNavigateToTab={onNavigateToTab}
           />
         </div>
@@ -2438,25 +2438,16 @@ export const DailyOperationsView: React.FC<DailyOperationsViewProps> = ({
         </div>
       </ZFModalShell>
 
-      {/* Canonical project bill and expense workflow */}
-      <ZFDirectExpenseModal
-        isOpen={isExpenseModalOpen}
-        onClose={() => setIsExpenseModalOpen(false)}
-        isAr={isAr}
-        properties={properties}
-        activePeriod={activePeriod}
-        periods={periods}
-        onSaveEntry={onSaveExpenseEntry}
-        initialPaymentSource="101000"
-      />
 
-      {/* 24-Hour Edit Cost Modal */}
+      {/* Edit Cost Modal (Accounting Period Guard) */}
       {selectedCostForEdit && onUpdatePropertyCostItem && (
         <EditPropertyCostModal
           isOpen={!!selectedCostForEdit}
           onClose={() => setSelectedCostForEdit(null)}
           costItem={selectedCostForEdit}
           property={properties.find(p => p.id === selectedCostForEdit.property_id) || null}
+          activePeriod={activePeriod}
+          periods={periods}
           isAr={isAr}
           onConfirmEdit={async (updated) => {
             await onUpdatePropertyCostItem(updated);

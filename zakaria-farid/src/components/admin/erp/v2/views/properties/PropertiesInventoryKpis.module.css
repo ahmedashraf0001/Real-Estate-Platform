@@ -1,101 +1,59 @@
 /**
- * FIN-OS Properties Inventory KPIs Panel Styles
- * Exact 100% replica of reference image media_1790745002516.png
+ * FIN-OS Properties Inventory KPIs Styles
+ * 4 Discrete Floating White Cards (.discreteKpiCard in .discreteKpiGrid)
+ * Follows FIN-OS Design System Invariants & Anti-Slop Guidelines:
+ * - Neutral white card surfaces (#ffffff !important; 1px #cbd5e1 border, 12px radius)
+ * - Zero enclosing outer panel / container
+ * - 28x28px squircle icons consuming dynamic accents
+ * - Western Arabic numerals, tabular numbers, strict RTL layout with logical properties
  */
 
-.outerPanel {
-  background: #ffffff !important;
-  border: 1px solid #cbd5e1;
-  border-radius: 14px;
-  padding: 1.35rem 1.5rem 1.45rem 1.5rem;
-  margin-bottom: 1.15rem;
-  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.02);
-  width: 100%;
-  box-sizing: border-box;
-}
-
-/* ─── PANEL HEADER ─── */
-.panelHeader {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  margin-bottom: 1.25rem;
-}
-
-.headerIconBox {
-  width: 40px;
-  height: 40px;
-  border-radius: 10px;
-  background: #f1f5f9;
-  border: 1px solid #e2e8f0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #475569;
-  flex-shrink: 0;
-}
-
-.headerTitles {
-  display: flex;
-  flex-direction: column;
-  gap: 0.2rem;
-}
-
-.headerTitle {
-  font-size: 1.2rem;
-  font-weight: 800;
-  color: #0f172a;
-  letter-spacing: -0.015em;
-  margin: 0;
-  line-height: 1.2;
-}
-
-.headerSubtitle {
-  font-size: 0.82rem;
-  color: #64748b;
-  font-weight: 500;
-  margin: 0;
-  line-height: 1.35;
-}
-
 /* ─── 4 DISCRETE FLOATING KPI CARDS GRID ─── */
+.discreteKpiGrid,
 .cardsGrid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 1rem;
   width: 100%;
+  min-width: 0;
+  max-width: 100vw;
+  box-sizing: border-box;
 }
 
 @media (max-width: 1180px) {
+  .discreteKpiGrid,
   .cardsGrid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
 @media (max-width: 620px) {
+  .discreteKpiGrid,
   .cardsGrid {
     grid-template-columns: 1fr;
   }
 }
 
-/* ─── KPI CARD ─── */
+/* ─── DISCRETE FLOATING KPI CARD ─── */
+.discreteKpiCard,
 .kpiCard {
   background: #ffffff !important;
   border: 1px solid #cbd5e1;
   border-radius: 12px;
-  padding: 1.25rem 1.35rem 1.15rem 1.35rem;
+  padding: 1.25rem;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.02);
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
-  min-height: 200px;
+  transition: border-color 0.15s ease;
+  min-height: 190px;
+  min-width: 0;
   box-sizing: border-box;
 }
 
+.discreteKpiCard:hover,
 .kpiCard:hover {
   border-color: #94a3b8;
-  box-shadow: 0 3px 8px -1px rgba(15, 23, 42, 0.05);
 }
 
 .cardTopContent {
@@ -109,11 +67,11 @@
   align-items: center;
   justify-content: space-between;
   gap: 0.5rem;
-  margin-bottom: 0.65rem;
+  margin-bottom: 0.75rem;
 }
 
 .cardTitle {
-  font-size: 0.92rem;
+  font-size: 0.88rem;
   font-weight: 700;
   color: #334155;
   margin: 0;
@@ -122,27 +80,18 @@
   text-overflow: ellipsis;
 }
 
-/* SQUIRCLE ICONS */
+/* ─── 28x28px SQUIRCLE ICONS ─── */
 .squircleIcon {
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-}
-
-.squircleRed {
-  background: #fef2f2;
-  border: 1px solid #fee2e2;
-  color: #ef4444;
-}
-
-.squircleGold {
-  background: #fdf8ee;
-  border: 1px solid #fde68a;
-  color: #b48c36;
+  background: var(--erp-accent-subtle, #eff6ff);
+  border: 1px solid var(--erp-accent-tint, rgba(37, 99, 235, 0.18));
+  color: var(--erp-accent, #2563eb);
 }
 
 .squircleSlate {
@@ -161,8 +110,8 @@
 .cardValueRow {
   display: flex;
   align-items: baseline;
-  gap: 0.4rem;
-  margin-bottom: 0.85rem;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
 }
 
 .cardValue {
@@ -175,7 +124,7 @@
 }
 
 .cardUnit {
-  font-size: 0.95rem;
+  font-size: 0.88rem;
   font-weight: 700;
   color: #475569;
   font-variant-numeric: tabular-nums;
@@ -183,7 +132,7 @@
 
 /* ─── MIDDLE TELEMETRY ─── */
 .middleTelemetry {
-  margin-bottom: 0.85rem;
+  margin-bottom: 0.75rem;
   min-height: 44px;
   display: flex;
   flex-direction: column;
@@ -197,21 +146,21 @@
   height: 8px;
   background: #e2e8f0;
   border-radius: 4px;
-  margin-bottom: 0.4rem;
+  margin-bottom: 0.5rem;
 }
 
 .gaugeZone {
   position: absolute;
   top: 0;
   bottom: 0;
-  background: #fca5a5;
+  background: var(--erp-accent-tint, rgba(37, 99, 235, 0.18));
   border-radius: 4px;
 }
 
 .gaugeNeedle {
   position: absolute;
   top: -4px;
-  width: 2.5px;
+  width: 2px;
   height: 16px;
   background: #0f172a;
   border-radius: 1px;
@@ -240,8 +189,8 @@
 .progressBarRow {
   display: flex;
   align-items: center;
-  gap: 0.55rem;
-  margin-bottom: 0.35rem;
+  gap: 0.5rem;
+  margin-bottom: 0.25rem;
 }
 
 .progressBarTrack {
@@ -252,9 +201,9 @@
   overflow: hidden;
 }
 
-.progressFillGold {
+.progressFillAccent {
   height: 100%;
-  background: #b48c36;
+  background: var(--erp-accent, #2563eb);
   border-radius: 4px;
   transition: width 0.4s ease;
 }
@@ -262,7 +211,7 @@
 .progressPctText {
   font-size: 0.82rem;
   font-weight: 800;
-  color: #92400e;
+  color: var(--erp-accent, #2563eb);
   font-variant-numeric: tabular-nums;
 }
 
@@ -291,7 +240,7 @@
   border-radius: 4px;
   overflow: hidden;
   gap: 2px;
-  margin-bottom: 0.4rem;
+  margin-bottom: 0.5rem;
 }
 
 .segmentDark {
@@ -322,7 +271,7 @@
   display: inline-block;
   width: 6px;
   height: 6px;
-  border-radius: 50%;
+  border-radius: 4px;
   margin-inline-end: 4px;
   vertical-align: middle;
 }
@@ -359,7 +308,7 @@
   color: #16a34a;
   font-size: 0.72rem;
   font-weight: 700;
-  padding: 1px 7px;
+  padding: 2px 8px;
   border-radius: 6px;
   font-variant-numeric: tabular-nums;
   display: inline-flex;
@@ -369,7 +318,7 @@
 
 .card4BottomSpacer {
   margin-top: auto;
-  min-height: 42px;
+  min-height: 40px;
 }
 
 /* ─── Bottom Metadata Rows ─── */
@@ -386,7 +335,7 @@
 .metaItem {
   display: flex;
   align-items: center;
-  gap: 0.4rem;
+  gap: 0.5rem;
 }
 
 .metaIcon {
@@ -421,20 +370,21 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 0.35rem;
+  gap: 0.5rem;
 }
 
 .card1SubItem {
   display: flex;
   align-items: center;
-  gap: 0.4rem;
+  gap: 0.5rem;
   flex: 1;
 }
 
 .card1Divider {
   width: 1px;
-  height: 26px;
+  height: 24px;
   background: #e2e8f0;
   flex-shrink: 0;
-  margin: 0 0.25rem;
+  margin-inline-start: 0.25rem;
+  margin-inline-end: 0.25rem;
 }

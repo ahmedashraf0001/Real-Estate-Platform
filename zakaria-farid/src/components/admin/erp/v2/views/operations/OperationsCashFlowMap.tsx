@@ -246,8 +246,8 @@ export function OperationsCashFlowMap({
             </div>
             <div className={s.bannerTrailing}>
               <span className={s.bannerTotalLabel}>{isAr ? 'إجمالي التدفقات الداخلة' : 'Total Inflows'}</span>
-              <span className={s.bannerTotalAmount}>
-                {formatNumberWithCommas(totalInflows)} {currencyLabel}
+              <span className={s.bannerTotalAmount} style={{ color: '#16a34a' }}>
+                + {formatNumberWithCommas(totalInflows)} {currencyLabel}
               </span>
             </div>
           </div>
@@ -281,7 +281,7 @@ export function OperationsCashFlowMap({
                 </div>
               </div>
               <div className={s.streamTrailing}>
-                <span className={s.streamAmount}>{formatNumberWithCommas(collections)}</span>
+                <span className={s.streamAmount} style={{ color: '#16a34a' }}>+ {formatNumberWithCommas(collections)}</span>
                 <span className={s.streamCurrency}>{currencyLabel}</span>
               </div>
             </div>
@@ -313,7 +313,7 @@ export function OperationsCashFlowMap({
                 </div>
               </div>
               <div className={s.streamTrailing}>
-                <span className={s.streamAmount}>{formatNumberWithCommas(partnerInjections)}</span>
+                <span className={s.streamAmount} style={{ color: '#16a34a' }}>+ {formatNumberWithCommas(partnerInjections)}</span>
                 <span className={s.streamCurrency}>{currencyLabel}</span>
               </div>
             </div>
@@ -335,14 +335,14 @@ export function OperationsCashFlowMap({
             role="button"
             tabIndex={0}
             aria-pressed={activeStreamFilter === 'central-hub'}
-            title={isAr ? 'السيولة المتاحة: الخزينة وإنستاباي (101000)' : 'Available Liquidity: Safe & InstaPay (101000)'}
+            title={isAr ? 'السيولة المتاحة: الخزينة والبنوك (101000)' : 'Available Liquidity: Treasury & Banks (101000)'}
           >
             <div className={s.centralTop}>
               <div className={s.centralCoinsSquircle} aria-hidden="true">
                 <Coins size={22} strokeWidth={2} />
               </div>
               <span className={s.centralTitle}>{isAr ? 'السيولة المتاحة' : 'Available Liquidity'}</span>
-              <span className={s.centralSubtitle}>{isAr ? 'الخزينة وإنستاباي (101000)' : 'Safe & InstaPay (101000)'}</span>
+              <span className={s.centralSubtitle}>{isAr ? 'الخزينة والبنوك' : 'Treasury & Banks'}</span>
             </div>
 
             <div className={s.centralGiantAmountRow}>
@@ -357,12 +357,12 @@ export function OperationsCashFlowMap({
                 aria-valuenow={bankPct}
                 aria-valuemin={0}
                 aria-valuemax={100}
-                aria-label={isAr ? 'نسبة توزيع السيولة بين إنستاباي والخزينة' : 'Liquidity split between InstaPay and Safe'}
+                aria-label={isAr ? 'نسبة توزيع السيولة بين البنوك والخزينة' : 'Liquidity split between Banks and Treasury'}
               >
                 <div
                   className={s.splitBarBank}
                   style={{ width: `${bankPct}%` }}
-                  title={`${isAr ? 'إنستاباي' : 'InstaPay'}: ${bankPct}%`}
+                  title={`${isAr ? 'بنوك' : 'Banks'}: ${bankPct}%`}
                 >
                   {bankPct}%
                 </div>
@@ -379,7 +379,7 @@ export function OperationsCashFlowMap({
                 <div className={s.legendCol}>
                   <div className={s.legendHeader}>
                     <Landmark size={15} color="#1e3a5f" aria-hidden="true" />
-                    <span className={s.legendLabel}>{isAr ? 'إنستاباي' : 'InstaPay'}</span>
+                    <span className={s.legendLabel}>{isAr ? 'بنوك' : 'Banks'}</span>
                   </div>
                   <div className={s.legendValueRow}>
                     <bdi className={s.legendAmount}>{formatNumberWithCommas(bankCash)}</bdi>
@@ -389,7 +389,7 @@ export function OperationsCashFlowMap({
 
                 <div className={s.legendCol}>
                   <div className={s.legendHeader}>
-                    <Wallet size={15} color="#b8903e" aria-hidden="true" />
+                    <Wallet size={15} color="var(--erp-accent, #2563eb)" aria-hidden="true" />
                     <span className={s.legendLabel}>{isAr ? 'خزينة' : 'Treasury'}</span>
                   </div>
                   <div className={s.legendValueRow}>
@@ -422,8 +422,8 @@ export function OperationsCashFlowMap({
           >
             <div className={s.bannerTrailing}>
               <span className={s.bannerTotalLabel}>{isAr ? 'إجمالي التدفقات الخارجة' : 'Total Outflows'}</span>
-              <span className={s.bannerTotalAmount}>
-                {formatNumberWithCommas(totalOutflows)} {currencyLabel}
+              <span className={s.bannerTotalAmount} style={{ color: '#dc2626' }}>
+                − {formatNumberWithCommas(totalOutflows)} {currencyLabel}
               </span>
             </div>
             <div className={s.bannerLeading}>
@@ -456,7 +456,7 @@ export function OperationsCashFlowMap({
               title={isAr ? 'خرسانات وبناء عظم: تصفية السجل' : 'Civil Structure: filter table'}
             >
               <div className={s.streamTrailing} style={{ alignItems: 'flex-start' }}>
-                <span className={s.streamAmount}>{formatNumberWithCommas(civilStructure)}</span>
+                <span className={s.streamAmount} style={{ color: '#dc2626' }}>− {formatNumberWithCommas(civilStructure)}</span>
                 <span className={s.streamCurrency}>{currencyLabel}</span>
               </div>
               <div className={s.streamNodeLeading} style={{ justifyContent: 'flex-end' }}>
@@ -488,7 +488,7 @@ export function OperationsCashFlowMap({
               title={isAr ? 'تشطيبات وواجهات: تصفية السجل' : 'Finishes & Facades: filter table'}
             >
               <div className={s.streamTrailing} style={{ alignItems: 'flex-start' }}>
-                <span className={s.streamAmount}>{formatNumberWithCommas(finishesFacades)}</span>
+                <span className={s.streamAmount} style={{ color: '#dc2626' }}>− {formatNumberWithCommas(finishesFacades)}</span>
                 <span className={s.streamCurrency}>{currencyLabel}</span>
               </div>
               <div className={s.streamNodeLeading} style={{ justifyContent: 'flex-end' }}>
@@ -520,7 +520,7 @@ export function OperationsCashFlowMap({
               title={isAr ? 'تراخيص ورسوم حكومية: تصفية السجل' : 'Permits & Government Fees: filter table'}
             >
               <div className={s.streamTrailing} style={{ alignItems: 'flex-start' }}>
-                <span className={s.streamAmount}>{formatNumberWithCommas(permitsGovFees)}</span>
+                <span className={s.streamAmount} style={{ color: '#dc2626' }}>− {formatNumberWithCommas(permitsGovFees)}</span>
                 <span className={s.streamCurrency}>{currencyLabel}</span>
               </div>
               <div className={s.streamNodeLeading} style={{ justifyContent: 'flex-end' }}>
@@ -552,7 +552,7 @@ export function OperationsCashFlowMap({
               title={isAr ? 'تأسيس وكهروميكانيك: تصفية السجل' : 'MEP Infrastructure: filter table'}
             >
               <div className={s.streamTrailing} style={{ alignItems: 'flex-start' }}>
-                <span className={s.streamAmount}>{formatNumberWithCommas(mepInfrastructure)}</span>
+                <span className={s.streamAmount} style={{ color: '#dc2626' }}>− {formatNumberWithCommas(mepInfrastructure)}</span>
                 <span className={s.streamCurrency}>{currencyLabel}</span>
               </div>
               <div className={s.streamNodeLeading} style={{ justifyContent: 'flex-end' }}>
@@ -576,8 +576,8 @@ export function OperationsCashFlowMap({
           {/* Left Inflow Node */}
           <div className={s.ribbonNodeInflow}>
             <span className={s.ribbonNodeLabelInflow}>{isAr ? 'إجمالي الداخل' : 'Total Inflow'}</span>
-            <span className={s.ribbonNodeValue}>
-              {formatNumberWithCommas(totalInflows)} {currencyLabel}
+            <span className={s.ribbonNodeValue} style={{ color: '#16a34a' }}>
+              + {formatNumberWithCommas(totalInflows)} {currencyLabel}
             </span>
           </div>
 
@@ -645,8 +645,8 @@ export function OperationsCashFlowMap({
           {/* Right Outflow Node */}
           <div className={s.ribbonNodeOutflow}>
             <span className={s.ribbonNodeLabelOutflow}>{isAr ? 'إجمالي الخارج' : 'Total Outflow'}</span>
-            <span className={s.ribbonNodeValue}>
-              {formatNumberWithCommas(totalOutflows)} {currencyLabel}
+            <span className={s.ribbonNodeValue} style={{ color: '#dc2626' }}>
+              − {formatNumberWithCommas(totalOutflows)} {currencyLabel}
             </span>
           </div>
         </div>

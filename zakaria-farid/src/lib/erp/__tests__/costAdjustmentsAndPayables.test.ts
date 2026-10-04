@@ -7,12 +7,13 @@ import {
   addCostAdjustment,
   generatePayableInstallmentSchedule,
   recordPayableInstallmentPayment,
-  updateCostItemDirectly
+  updateCostItemDirectly,
+  isCostItemEditable
 } from '../propertyCostEngine';
 import { ERPSupabaseService } from '../supabaseService';
 import { GeneralLedgerEngine } from '../ledger';
 import { D, Decimal } from '../math';
-import { ERPPropertyCostItem, ERPJournalEntry } from '../types';
+import { ERPPropertyCostItem, ERPJournalEntry, ERPAccountingPeriod } from '../types';
 import { findOrphanedWipEntries } from '../../../../scripts/check_historical_orphaned_costs';
 
 describe('Project Cost Lifecycle: 24-Hour Grace Period & Sub-Item Adjustments', () => {
@@ -62,6 +63,71 @@ describe('Project Cost Lifecycle: 24-Hour Grace Period & Sub-Item Adjustments', 
     assert.throws(() => {
       updateCostItemDirectly(expiredItem, { total_cost_egp: '900000.00' });
     }, /Accounting Lock/);
+  });
+
+  it('allows direct modification when target accounting period is OPEN even after 24 hours', () => {
+    const expiredItem: ERPPropertyCostItem = {
+      ...baseItem,
+      created_at: new Date(Date.now() - 48 * 3600 * 1000).toISOString(), // 48 hours ago
+      logged_date: '2026-09-14'
+    };
+
+    const openPeriod: ERPAccountingPeriod = {
+      period_id: 'prd-2026-09',
+      fiscal_year: 2026,
+      period_number: 9,
+      start_date: '2026-09-01',
+      end_date: '2026-09-30',
+      status: 'OPEN'
+    };
+
+    assert.equal(isCostItemEditable(expiredItem, openPeriod), true);
+
+    const updated = updateCostItemDirectly(expiredItem, {
+      total_cost_egp: '870000.00'
+    }, { targetPeriod: openPeriod });
+
+    assert.equal(updated.total_cost_egp, '870000.00');
+    assert.ok(updated.updated_at);
+  });
+
+  it('rejects direct modification when target accounting period is LOCKED or CLOSED', () => {
+    const itemInLockedPeriod: ERPPropertyCostItem = {
+      ...baseItem,
+      created_at: '2026-03-10T10:00:00.000Z',
+      logged_date: '2026-03-10'
+    };
+
+    const lockedPeriod: ERPAccountingPeriod = {
+      period_id: 'prd-2026-03',
+      fiscal_year: 2026,
+      period_number: 3,
+      start_date: '2026-03-01',
+      end_date: '2026-03-31',
+      status: 'LOCKED',
+      locked_at: '2026-04-01T00:00:00.000Z'
+    };
+
+    assert.equal(isCostItemEditable(itemInLockedPeriod, lockedPeriod), false);
+
+    assert.throws(() => {
+      updateCostItemDirectly(itemInLockedPeriod, { total_cost_egp: '900000.00' }, { targetPeriod: lockedPeriod });
+    }, /Accounting Lock.*LOCKED/);
+
+    const closedPeriod: ERPAccountingPeriod = {
+      ...lockedPeriod,
+      period_id: 'prd-2026-02',
+      period_number: 2,
+      start_date: '2026-02-01',
+      end_date: '2026-02-28',
+      status: 'CLOSED'
+    };
+
+    assert.equal(isCostItemEditable(itemInLockedPeriod, closedPeriod), false);
+
+    assert.throws(() => {
+      updateCostItemDirectly(itemInLockedPeriod, { total_cost_egp: '900000.00' }, closedPeriod);
+    }, /Accounting Lock.*CLOSED/);
   });
 
   it('adds a refund adjustment sub-item (overpayment return) and reduces net effective cost', () => {

@@ -1,297 +1,270 @@
 /**
- * FIN-OS Daily Operations Top KPI Panel Styles
- * Exact 100% replica of reference image media_1790744509160.png
- * Adheres strictly to FIN-OS Design System & /impeccable:
- * - Pure white surfaces (#ffffff !important) on cool neutral slate canvas
- * - 4 discrete floating KPI cards with 1px border (#cbd5e1), 12px radius
- * - Semantic squircle badges (36x36px, 9px radius) with soft pastel backgrounds
- * - Tabular numerals on all values, dates, percentages, and breakdowns
- * - Generous 20-24px outer padding, zero cramped text
- * - Strict RTL native layout and container query responsiveness
+ * FIN-OS Daily Operations Top KPI Row
+ * 4 discrete floating white cards: #ffffff !important, 1px #cbd5e1, 12px radius.
+ * No tinted fills, no truncation, tabular numerals on every figure.
  */
 
-.outerPanel {
-  background: #ffffff !important;
-  border: 1px solid #cbd5e1;
-  border-radius: 14px;
-  padding: 1.35rem 1.5rem 1.45rem 1.5rem;
-  margin-bottom: 1.15rem;
-  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.02);
+.kpiSection {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
   width: 100%;
   max-width: 100vw;
-  min-width: 0;
   box-sizing: border-box;
-  container-type: inline-size;
-  container-name: operationsTopKpis;
+  border-radius: 14px;
 }
 
-/* ─── PANEL HEADER ─── */
+/* Header: title block on start, actions on end */
 .panelHeader {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 1rem;
-  margin-bottom: 1.35rem;
+  gap: 12px 20px;
   width: 100%;
 }
 
 .headerTitles {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  gap: 4px;
+  min-width: 0;
 }
 
 .headerTitle {
-  font-size: 1.4rem;
-  font-weight: 700;
-  color: #0f172a;
-  letter-spacing: -0.015em;
   margin: 0;
-  line-height: 1.25;
+  font-size: 1.125rem;
+  font-weight: 800;
+  line-height: 1.35;
+  color: #0f172a;
 }
 
 .headerSubtitle {
-  font-size: 0.8125rem;
-  color: #64748b;
-  font-weight: 500;
   margin: 0;
-  line-height: 1.35;
+  font-size: 0.78rem;
+  line-height: 1.5;
+  color: #64748b;
   font-variant-numeric: tabular-nums;
 }
 
-/* Header Action Buttons */
 .headerControls {
   display: flex;
-  align-items: center;
-  gap: 0.65rem;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .headerActionBtn {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  background: #ffffff;
+  gap: 6px;
+  min-height: 36px;
+  padding: 0 14px;
   border: 1px solid #cbd5e1;
-  border-radius: 9px;
-  padding: 0.48rem 0.95rem;
-  font-size: 0.8125rem;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #334155;
+  font: inherit;
+  font-size: 0.78rem;
   font-weight: 600;
-  color: #1e293b;
   cursor: pointer;
-  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.02);
-  transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
-  font-family: inherit;
-  line-height: 1.2;
-  white-space: nowrap;
+  transition: background 0.15s ease-out, border-color 0.15s ease-out, color 0.15s ease-out;
 }
 
 .headerActionBtn:hover {
   background: #f8fafc;
   border-color: #94a3b8;
   color: #0f172a;
-  box-shadow: 0 2px 5px -1px rgba(15, 23, 42, 0.05);
 }
 
-.headerActionBtn:active {
-  background: #f1f5f9;
+.headerActionBtn:focus-visible {
+  outline: 2px solid var(--erp-accent, #2563eb);
+  outline-offset: 2px;
 }
 
 .btnIcon {
-  color: #475569;
   flex-shrink: 0;
+  color: #64748b;
 }
 
-/* ─── 4 DISCRETE FLOATING KPI CARDS GRID ─── */
-.cardsGrid {
+/* ── 4 Discrete Floating KPI Cards ── */
+.discreteKpiGrid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 1rem;
+  gap: 12px;
   width: 100%;
-}
-
-@media (max-width: 1180px) {
-  .cardsGrid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-@media (max-width: 640px) {
-  .cardsGrid {
-    grid-template-columns: 1fr;
-  }
+  container-type: inline-size;
+  container-name: operationsTopKpis;
 }
 
 @container operationsTopKpis (max-width: 900px) {
-  .cardsGrid {
+  .discreteKpiGrid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
-@container operationsTopKpis (max-width: 580px) {
-  .cardsGrid {
-    grid-template-columns: 1fr;
+@container operationsTopKpis (max-width: 480px) {
+  .discreteKpiGrid {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
-/* ─── KPI CARD ─── */
+.discreteKpiCard,
 .kpiCard {
-  background: #ffffff !important;
-  border: 1px solid #cbd5e1;
-  border-radius: 12px;
-  padding: 1.25rem 1.35rem 1.15rem 1.35rem;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.02);
-  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
-  min-height: 204px;
+  gap: 12px;
+  min-width: 0;
+  padding: 16px;
+  background: #ffffff !important;
+  border: 1px solid #cbd5e1;
+  border-radius: 12px;
   box-sizing: border-box;
-  position: relative;
   text-align: start;
+  transition: border-color 0.15s ease-out, box-shadow 0.15s ease-out;
 }
 
 .kpiCardClickable {
   cursor: pointer;
 }
 
-.kpiCard:hover {
+.kpiCardClickable:hover {
   border-color: #94a3b8;
-  box-shadow: 0 4px 12px -2px rgba(15, 23, 42, 0.06);
-  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06);
 }
 
-.kpiCardActive {
-  border-color: var(--erp-accent, #2563eb) !important;
-  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15) !important;
+.kpiCardClickable:focus-visible {
+  outline: 2px solid var(--erp-accent, #2563eb);
+  outline-offset: 2px;
+}
+
+.kpiCardActive,
+.kpiCardActive:hover {
+  border-color: var(--erp-accent, #2563eb);
+  box-shadow: 0 0 0 1px var(--erp-accent, #2563eb);
 }
 
 .cardTopContent {
   display: flex;
   flex-direction: column;
-  width: 100%;
+  gap: 10px;
 }
 
-/* ─── CARD HEADER ─── */
 .cardHeader {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 0.5rem;
-  margin-bottom: 0.65rem;
-  width: 100%;
+  gap: 8px;
 }
 
 .cardTitle {
-  font-size: 0.875rem;
-  font-weight: 700;
-  color: #0f172a;
   margin: 0;
-  white-space: nowrap;
-  letter-spacing: -0.01em;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  line-height: 1.4;
+  color: #334155;
+  overflow-wrap: anywhere;
 }
 
-/* Semantic Squircles */
+/* 28x28 squircle icons consuming dynamic accents */
 .squircleIcon {
-  width: 36px;
-  height: 36px;
-  border-radius: 9px;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  transition: transform 0.15s ease;
-}
-
-.kpiCard:hover .squircleIcon {
-  /* Quiet hover: no scale transform */
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  box-sizing: border-box;
 }
 
 .squircleGold {
-  background: #fdf8ee;
-  border: 1px solid #f9ebcc;
-  color: #b48c36;
+  background: var(--erp-accent-subtle, #eff6ff);
+  border: 1px solid var(--erp-accent-tint, rgba(37, 99, 235, 0.18));
+  color: var(--erp-accent, #2563eb);
 }
 
 .squircleGreen {
-  background: #f0fdf4;
-  border: 1px solid #dcfce7;
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
   color: #16a34a;
 }
 
 .squircleAmber {
-  background: #fffbeb;
-  border: 1px solid #fef3c7;
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
   color: #d97706;
 }
 
 .squircleOrange {
-  background: #fff7ed;
-  border: 1px solid #ffedd5;
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
   color: #ea580c;
 }
 
-/* ─── MAIN VALUE ROW ─── */
 .cardValueRow {
   display: flex;
+  flex-wrap: wrap;
   align-items: baseline;
-  gap: 0.35rem;
-  margin-bottom: 0.45rem;
+  gap: 4px 6px;
+  min-width: 0;
 }
 
 .cardValue {
-  font-size: 1.45rem;
-  font-weight: 700;
+  font-size: 1.375rem;
+  font-weight: 800;
+  line-height: 1.25;
   color: #0f172a;
-  line-height: 1.15;
   font-variant-numeric: tabular-nums;
-  letter-spacing: -0.02em;
 }
 
 .cardCurrency {
   font-size: 0.75rem;
   font-weight: 600;
-  color: #475569;
-  margin-inline-start: 0.2rem;
-}
-
-/* ─── CARD SUBTITLE TEXT ─── */
-.cardSubtitleText {
-  font-size: 0.75rem;
   color: #64748b;
-  font-weight: 500;
-  margin: 0 0 0.65rem 0;
-  line-height: 1.35;
 }
 
-/* ─── CARD 1: BREAKDOWN WITH DOTS ─── */
-.dotBreakdownList {
+.cardSubtitleText {
+  margin: 0;
+  font-size: 0.75rem;
+  line-height: 1.5;
+  color: #64748b;
+  overflow-wrap: anywhere;
+}
+
+.hairlineDivider {
+  margin: 0;
+  border: 0;
+  border-top: 1px solid #e2e8f0;
+}
+
+/* Card 1: Dots and Progress Bars */
+.dotRowContainer {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
-  margin-bottom: 0.65rem;
-  width: 100%;
+  gap: 6px;
 }
 
 .dotRow {
   display: flex;
   align-items: center;
-  gap: 0.4rem;
+  gap: 6px;
   font-size: 0.75rem;
   font-variant-numeric: tabular-nums;
 }
 
 .goldDot {
-  width: 7px;
-  height: 7px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
-  background: #d97706;
+  background: var(--erp-accent, #2563eb);
   flex-shrink: 0;
 }
 
 .slateDot {
-  width: 7px;
-  height: 7px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
   background: #64748b;
   flex-shrink: 0;
@@ -303,131 +276,114 @@
 }
 
 .dotValue {
-  color: #0f172a;
+  margin-inline-start: auto;
+  color: #1e293b;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
 
-/* ─── HAIRLINE SEPARATOR ─── */
-.hairlineDivider {
-  height: 1px;
-  background: #f1f5f9;
-  border: none;
-  margin: 0.5rem 0 0.75rem 0;
-  width: 100%;
-}
-
-/* ─── CARD 1 BOTTOM: PROGRESS BARS ─── */
-.progressBarsWrap {
+.barContainer {
   display: flex;
   flex-direction: column;
-  gap: 0.65rem;
-  width: 100%;
+  gap: 6px;
 }
 
 .barItem {
   display: flex;
   align-items: center;
-  gap: 0.65rem;
-  width: 100%;
+  gap: 8px;
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
 }
 
 .barLabel {
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: #475569;
-  min-width: 30px;
+  width: 38px;
+  color: #64748b;
+  font-weight: 500;
+  flex-shrink: 0;
 }
 
 .barTrackWrap {
   flex: 1;
   display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
+  align-items: center;
+  gap: 6px;
 }
 
 .barTrack {
+  flex: 1;
   height: 6px;
+  border-radius: 999px;
   background: #f1f5f9;
-  border-radius: 9999px;
   overflow: hidden;
-  width: 100%;
-  position: relative;
 }
 
 .barFill {
   height: 100%;
-  border-radius: 9999px;
-  position: absolute;
-  top: 0;
-  inset-inline-start: 0;
-  transition: width 0.4s ease;
+  border-radius: 999px;
+  transition: width 0.3s ease;
 }
 
 .goldBarFill {
-  background: #cca343;
+  background: var(--erp-accent, #2563eb);
 }
 
 .slateBarFill {
-  background: #5f6f84;
+  background: #64748b;
 }
 
 .barAmount {
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   color: #64748b;
-  font-weight: 500;
   font-variant-numeric: tabular-nums;
-  line-height: 1.2;
+  white-space: nowrap;
 }
 
 .barPct {
+  font-size: 0.72rem;
   font-weight: 700;
-  color: #0f172a;
-  font-size: 0.70rem;
-  min-width: 26px;
-  text-align: start;
+  color: #334155;
+  width: 32px;
+  text-align: end;
   font-variant-numeric: tabular-nums;
 }
 
-/* ─── CARD 2 BOTTOM: 3 MINI COLUMNS ─── */
+/* Card 2: 3 Mini Columns */
 .miniColsContainer {
-  display: grid;
-  grid-template-columns: 1fr auto 1fr auto 1fr;
+  display: flex;
   align-items: center;
-  width: 100%;
-  text-align: center;
-  padding-top: 0.15rem;
+  justify-content: space-between;
+  gap: 4px;
 }
 
 .miniCol {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: 0.15rem;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+  text-align: center;
 }
 
 .miniColVal {
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
   font-weight: 700;
   color: #0f172a;
   font-variant-numeric: tabular-nums;
-  line-height: 1.2;
+  white-space: nowrap;
 }
 
 .miniColCurrency {
-  font-size: 0.70rem;
+  font-size: 0.65rem;
   color: #64748b;
-  font-weight: 600;
-  line-height: 1;
 }
 
 .miniColIcon {
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-top: 0.2rem;
-  height: 14px;
+  margin: 2px 0;
 }
 
 .miniColGreenArrow {
@@ -439,43 +395,59 @@
 }
 
 .miniColEqualIcon {
-  color: #94a3b8;
+  color: #64748b;
 }
 
 .miniColLabel {
-  font-size: 0.75rem;
-  color: #64748b;
+  font-size: 0.7rem;
   font-weight: 600;
+  color: #64748b;
+  white-space: nowrap;
 }
 
 .miniColDivider {
   width: 1px;
-  height: 38px;
-  background: #f1f5f9;
+  height: 28px;
+  background: #e2e8f0;
+  flex-shrink: 0;
 }
 
-/* ─── CARDS 3 & 4 BOTTOM: HONEST ZERO-STATE ─── */
-.honestZeroState {
+/* Cards 3 & 4: Sparkline and Honest Zero State */
+.sparklineContainer {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  justify-content: center;
-  width: 100%;
-  gap: 0.25rem;
-  padding: 0.4rem 0 0.15rem 0;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 28px;
 }
 
-.zeroStateText {
-  font-size: 0.75rem;
-  color: #64748b;
+.sparklineBars {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 22px;
+}
+
+.sparklineBar {
+  width: 3px;
+  border-radius: 1px;
+  background: #cbd5e1;
+  transition: height 0.2s ease;
+}
+
+.sparklineLabel {
+  font-size: 0.72rem;
   font-weight: 500;
-  text-align: center;
-  line-height: 1.35;
+  color: #64748b;
+  white-space: nowrap;
 }
 
-.zeroStateSubtext {
-  font-size: 0.75rem;
-  color: #94a3b8;
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
+@media (prefers-reduced-motion: reduce) {
+  .discreteKpiCard,
+  .kpiCard,
+  .headerActionBtn,
+  .barFill,
+  .sparklineBar {
+    transition: none;
+  }
 }

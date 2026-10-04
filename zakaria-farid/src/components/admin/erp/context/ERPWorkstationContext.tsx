@@ -417,6 +417,14 @@ export function ERPWorkstationProvider({
   const supabase = useMemo(() => createClient(), []);
 
   const [currentUser, setCurrentUser] = useState<any>(null);
+  const currentUserRef = useRef<any>(currentUser);
+  useEffect(() => {
+    currentUserRef.current = currentUser;
+  }, [currentUser]);
+
+  // Track initial boot completion to strictly satisfy invariant:
+  // "No blocking unmount on shell once data exists: initial boot only."
+  const initialBootDoneRef = useRef<boolean>(false);
 
   // Accent Palette Customization State & Runtime Injection
   const [activePreset, setActivePreset] = useState<ERPPalettePreset>(DEFAULT_PALETTE_PRESET);
@@ -564,28 +572,6 @@ export function ERPWorkstationProvider({
 
   // Master Live Database State
   const [data, setData] = useState<LiveERPDataset>(() => {
-    if (process.env.NODE_ENV === 'development') {
-      const init = createInitialERPState();
-      const fallbackProps = FALLBACK_PROPERTIES as Property[];
-      return {
-        periods: init.periods,
-        contracts: init.contracts,
-        schedules: init.schedules,
-        journalEntries: init.journalEntries,
-        pdcRecords: init.pdcRecords,
-        rescissions: init.rescissions,
-        amendments: init.amendments,
-        costAllocations: init.costAllocations,
-        taxRecords: init.taxRecords,
-        partnerCalls: init.partnerCalls,
-        partnerCommitments: init.partnerCommitments || [],
-        makerCheckerRequests: init.makerCheckerRequests,
-        properties: fallbackProps,
-        leads: [],
-        propertyCosts: [],
-        isSchemaMigrated: true
-      };
-    }
     return {
       periods: [],
       contracts: [],
@@ -726,31 +712,29 @@ export function ERPWorkstationProvider({
   }, []);
 
   // Partner Profiles & Transactions State
-  const [partnerProfiles, setPartnerProfiles] = useState<ERPPartnerProfile[]>(INITIAL_PARTNER_PROFILES);
-  const [partnerTransactions, setPartnerTransactions] = useState<ERPPartnerTransaction[]>(INITIAL_PARTNER_TRANSACTIONS);
+  const [partnerProfiles, setPartnerProfiles] = useState<ERPPartnerProfile[]>([INITIAL_PARTNER_PROFILES[0]]);
+  const [partnerTransactions, setPartnerTransactions] = useState<ERPPartnerTransaction[]>([]);
 
   // Live Data Fetcher
   const loadLiveData = useCallback(async (isSilent = false) => {
+    // Invariant: No blocking unmount on shell once data exists: initial boot only.
+    const shouldBlock = !isSilent && !initialBootDoneRef.current;
     try {
-      if (!isSilent) setIsLoading(true);
+      if (shouldBlock) setIsLoading(true);
       const [dataset, liveProfiles, liveTransactions] = await Promise.all([
         ERPSupabaseService.fetchLiveERPData(supabase),
         ERPSupabaseService.loadPartnerProfiles(supabase),
         ERPSupabaseService.loadPartnerTransactions(supabase)
       ]);
-      if (!currentUser && process.env.NODE_ENV === 'development' && typeof window !== 'undefined') {
+      if (!currentUserRef.current && process.env.NODE_ENV === 'development' && typeof window !== 'undefined') {
         try {
           const saved = JSON.parse(window.localStorage.getItem('fin_os_local_purchase_orders') || '[]');
           dataset.purchaseOrders = Array.isArray(saved) ? saved.filter(order => order.order_id && order.property_id && order.status === 'DRAFT') : [];
         } catch { dataset.purchaseOrders = []; }
       }
       setData(dataset);
-      if (liveProfiles && liveProfiles.length > 0) {
-        setPartnerProfiles(liveProfiles);
-      }
-      if (liveTransactions && liveTransactions.length > 0) {
-        setPartnerTransactions(liveTransactions);
-      }
+      setPartnerProfiles(liveProfiles && liveProfiles.length > 0 ? liveProfiles : [INITIAL_PARTNER_PROFILES[0]]);
+      setPartnerTransactions(liveTransactions || []);
       return dataset;
     } catch (err: any) {
       console.error('Failed to load ERP dataset from Supabase:', err);
@@ -764,12 +748,8 @@ export function ERPWorkstationProvider({
               ERPSupabaseService.loadPartnerTransactions(supabase)
             ]);
             setData(retryDataset);
-            if (retryProfiles && retryProfiles.length > 0) {
-              setPartnerProfiles(retryProfiles);
-            }
-            if (retryTransactions && retryTransactions.length > 0) {
-              setPartnerTransactions(retryTransactions);
-            }
+            setPartnerProfiles(retryProfiles && retryProfiles.length > 0 ? retryProfiles : [INITIAL_PARTNER_PROFILES[0]]);
+            setPartnerTransactions(retryTransactions || []);
             return retryDataset;
           }
         } catch (refreshErr) {
@@ -784,9 +764,10 @@ export function ERPWorkstationProvider({
       }
       return null;
     } finally {
-      if (!isSilent) setIsLoading(false);
+      if (shouldBlock) setIsLoading(false);
+      initialBootDoneRef.current = true;
     }
-  }, [supabase, currentUser]);
+  }, [supabase]);
 
   // Real-Time WebSocket Sync Hook
   const {

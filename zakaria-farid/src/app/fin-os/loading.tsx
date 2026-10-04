@@ -8,5 +8,5 @@ export default function FinOSLoading() {
   const pathname = usePathname() || '';
   const isAr = !pathname.includes('/en');
 
-  return <ZFERPLoadingWorkstation isAr={isAr} />;
+  return <ZFERPLoadingWorkstation isAr={isAr} mode="full" />;
 }

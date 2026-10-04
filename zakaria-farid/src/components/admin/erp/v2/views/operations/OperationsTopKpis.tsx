@@ -1,21 +1,16 @@
 /**
- * FIN-OS Daily Operations Top KPI Panel
- * Exact 100% replica of reference image media_1790744509160.png
- * Features:
- * 1. Outer white panel with squircle header:
- *    - Title: 'مكتب العمليات اليومية'
- *    - Subtitle: '0 حركة مسجلة اليوم · 30-09-2026'
- *    - Action buttons: 'تقرير الخزينة' (BarChart3) and 'تصدير ERP الشامل' (FileText)
- * 2. 4 discrete floating cards in 1 row:
- *    - Card 1 (Right): 'الرصيد النقدي الحالي' (471,147,918 ج.م) with Wallet gold squircle
- *      Dots breakdown: خزينة: 197,131,251 ج.م (42% gold bar) & بنوك: 274,016,667 ج.م (58% slate bar)
- *    - Card 2: 'صافي حركة اليوم' (0 ج.م) with TrendingUp green squircle, subtitle 'لا توجد حركات اليوم'
- *      3 mini columns: 0 ج.م الداخل (green arrow), 0 ج.م الخارج (red arrow), 0 ج.م الصافي (equal icon)
- *    - Card 3: 'مقبوضات اليوم' (0 ج.م) with ArrowUpRight amber squircle, subtitle 'جميع مصادر الإيراد'
- *      Mini sparkline bars with 'لا توجد مقبوضات اليوم'
- *    - Card 4 (Left): 'مدفوعات اليوم' (0 ج.م) with ArrowDownRight orange squircle, subtitle 'جميع أوجه الصرف'
- *      Mini sparkline bars with 'لا توجد مدفوعات اليوم'
- * Adheres strictly to FIN-OS Design System, RTL isolation, tabular numerals, /impeccable standards.
+ * FIN-OS Daily Operations Top KPI Row
+ *
+ * Header (title, count · date, report/export actions) followed by 4 discrete
+ * floating white cards (.discreteKpiGrid > .discreteKpiCard):
+ *   1. الرصيد النقدي الحالي  - total liquid + safe/bank split (real props only)
+ *   2. صافي حركة اليوم       - signed net, direction icon, movement count
+ *   3. مقبوضات اليوم         - today's inflows
+ *   4. مدفوعات اليوم         - today's outflows
+ *
+ * Every number is derived from props; missing data renders an honest zero.
+ * Direction is communicated with an explicit +/- sign and a Lucide icon.
+ * Nothing truncates: labels and breakdown rows wrap cleanly.
  */
 
 'use client';
@@ -24,8 +19,9 @@ import React, { useMemo } from 'react';
 import {
   Wallet,
   TrendingUp,
+  TrendingDown,
+  ArrowDownLeft,
   ArrowUpRight,
-  ArrowDownRight,
   ArrowDown,
   BarChart3,
   FileText
@@ -54,21 +50,26 @@ export interface OperationsTopKpisProps {
   activeStreamFilter?: string | null;
 }
 
+// Sparkline bar heights for visual cadence
+const SPARKLINE_BARS = [6, 16, 10, 13, 12, 11, 8, 11, 8, 9, 8, 9, 9, 10, 13, 11, 15, 16, 20, 11, 13];
 
 function toNum(val: unknown): number {
   if (val === null || val === undefined) return 0;
-  if (typeof val === 'number') return isNaN(val) ? 0 : val;
-  if (typeof (val as any).toNumber === 'function') return (val as any).toNumber();
+  if (typeof val === 'number') return Number.isFinite(val) ? val : 0;
+  if (typeof (val as { toNumber?: unknown }).toNumber === 'function') {
+    const n = (val as { toNumber: () => number }).toNumber();
+    return Number.isFinite(n) ? n : 0;
+  }
   const parsed = parseFloat(String(val).replace(/,/g, ''));
-  return isNaN(parsed) ? 0 : parsed;
+  return Number.isFinite(parsed) ? parsed : 0;
 }
 
 function formatEgp(num: number): string {
-  return Math.round(num).toLocaleString('en-US');
+  return Math.round(Math.abs(num)).toLocaleString('en-US');
 }
 
 function formatDisplayDate(dateStr?: string): string {
-  if (!dateStr) return '30-09-2026';
+  if (!dateStr) return '';
   if (/^\d{2}-\d{2}-\d{4}$/.test(dateStr)) return dateStr;
   if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
     const [y, m, d] = dateStr.split('-');
@@ -91,59 +92,45 @@ export const OperationsTopKpis: React.FC<OperationsTopKpisProps> = ({
   const currencyLabel = isAr ? 'ج.م' : 'EGP';
   const formattedDate = useMemo(() => formatDisplayDate(todayStr), [todayStr]);
 
-  // Card 1 Calculations (Liquid Balance)
-  const rawTotalLiquid = liquidBalances?.totalLiquid ? toNum(liquidBalances.totalLiquid) : null;
-  const rawSafeCash = liquidBalances?.safeCash ? toNum(liquidBalances.safeCash) : null;
-  const rawBankCash = liquidBalances?.bankCash ? toNum(liquidBalances.bankCash) : null;
+  // Card 1: liquidity
+  const safeCashNum = toNum(liquidBalances?.safeCash);
+  const bankCashNum = toNum(liquidBalances?.bankCash);
+  const totalLiquidNum =
+    liquidBalances?.totalLiquid !== undefined ? toNum(liquidBalances.totalLiquid) : safeCashNum + bankCashNum;
 
-  // Use values if present and positive; otherwise fallback to reference screenshot fidelity defaults
-  const totalLiquidNum = rawTotalLiquid !== null && rawTotalLiquid > 0 ? rawTotalLiquid : 471147918;
-  const safeCashNum = rawSafeCash !== null && rawSafeCash > 0 ? rawSafeCash : 197131251;
-  const bankCashNum = rawBankCash !== null && rawBankCash > 0 ? rawBankCash : 274016667;
+  const splitBase = Math.max(0, safeCashNum) + Math.max(0, bankCashNum);
+  const hasSplit = splitBase > 0;
+  const safePct = hasSplit ? Math.round((Math.max(0, safeCashNum) / splitBase) * 100) : 0;
+  const bankPct = hasSplit ? 100 - safePct : 0;
 
-  const displayTotalLiquid = useMemo(() => formatEgp(totalLiquidNum), [totalLiquidNum]);
-  const displaySafeCash = useMemo(() => formatEgp(safeCashNum), [safeCashNum]);
-  const displayBankCash = useMemo(() => formatEgp(bankCashNum), [bankCashNum]);
-
-  const safePct = totalLiquidNum > 0 ? Math.round((safeCashNum / totalLiquidNum) * 100) : 42;
-  const bankPct = Math.max(0, 100 - safePct);
-
-  // Card 2 Calculations (Today Net Movement)
+  // Cards 2-4: today's movement
   const countToday = todayMetrics?.count ?? 0;
-  const rawInflows = todayMetrics?.inflows !== undefined ? toNum(todayMetrics.inflows) : 0;
-  const rawOutflows = todayMetrics?.outflows !== undefined ? toNum(todayMetrics.outflows) : 0;
-  const rawNet = todayMetrics?.net !== undefined ? toNum(todayMetrics.net) : (rawInflows - rawOutflows);
+  const inflowsNum = toNum(todayMetrics?.inflows);
+  const outflowsNum = toNum(todayMetrics?.outflows);
+  const netNum = todayMetrics?.net !== undefined ? toNum(todayMetrics.net) : inflowsNum - outflowsNum;
+  const netSign = netNum > 0 ? '+' : netNum < 0 ? '−' : '';
+  const NetIcon = netNum < 0 ? TrendingDown : TrendingUp;
 
-  const displayNet = useMemo(() => formatEgp(rawNet), [rawNet]);
-  const displayInflows = useMemo(() => formatEgp(rawInflows), [rawInflows]);
-  const displayOutflows = useMemo(() => formatEgp(rawOutflows), [rawOutflows]);
+  const netNote =
+    countToday === 0
+      ? isAr ? 'لا توجد حركات اليوم' : 'No movements today'
+      : netNum > 0
+        ? isAr ? 'الوارد يفوق المنصرف اليوم' : 'Inflows exceed outflows today'
+        : netNum < 0
+          ? isAr ? 'المنصرف يفوق الوارد اليوم' : 'Outflows exceed inflows today'
+          : isAr ? 'الوارد يساوي المنصرف اليوم' : 'Inflows equal outflows today';
 
-  const subtitleNet = useMemo(() => {
-    if (countToday === 0) {
-      return isAr ? 'لا توجد حركات اليوم' : 'No movements today';
-    }
-    if (rawNet > 0) {
-      return isAr ? 'الوارد يفوق المنصرف اليوم' : 'Incoming exceeds outgoing today';
-    }
-    if (rawNet < 0) {
-      return isAr ? 'المنصرف يفوق الوارد اليوم' : 'Outgoing exceeds incoming today';
-    }
-    return isAr ? 'صافي الحركات متوازن اليوم' : 'Net movements balanced today';
-  }, [countToday, rawNet, isAr]);
+  const subtitle = isAr
+    ? `${countToday} حركة مسجلة اليوم${formattedDate ? ` · ${formattedDate}` : ''}`
+    : `${countToday} movements recorded today${formattedDate ? ` · ${formattedDate}` : ''}`;
 
   return (
-    <div className={styles.outerPanel} dir={isAr ? 'rtl' : 'ltr'}>
-      {/* ─── 1. PANEL HEADER ─── */}
+    <div className={styles.kpiSection} dir={isAr ? 'rtl' : 'ltr'}>
+      {/* ─── PANEL HEADER ─── */}
       <div className={styles.panelHeader}>
         <div className={styles.headerTitles}>
-          <h2 className={styles.headerTitle}>
-            {isAr ? 'مكتب العمليات اليومية' : 'Daily Operations Desk'}
-          </h2>
-          <p className={styles.headerSubtitle}>
-            {isAr
-              ? `${countToday} حركة مسجلة اليوم · ${formattedDate}`
-              : `${countToday} movements recorded today · ${formattedDate}`}
-          </p>
+          <h2 className={styles.headerTitle}>{isAr ? 'مكتب العمليات اليومية' : 'Daily Operations Desk'}</h2>
+          <p className={styles.headerSubtitle}>{subtitle}</p>
         </div>
 
         <div className={styles.headerControls}>
@@ -153,7 +140,7 @@ export const OperationsTopKpis: React.FC<OperationsTopKpisProps> = ({
             onClick={onOpenReportModal}
             title={isAr ? 'عرض وطباعة كشف التدفقات النقدية' : 'View cash flow report'}
           >
-            <BarChart3 size={15} className={styles.btnIcon} />
+            <BarChart3 size={15} className={styles.btnIcon} aria-hidden="true" />
             <span>{isAr ? 'تقرير الخزينة' : 'Treasury Report'}</span>
           </button>
 
@@ -164,60 +151,67 @@ export const OperationsTopKpis: React.FC<OperationsTopKpisProps> = ({
               onClick={onExportExcel}
               title={isAr ? 'تصدير ملف ERP الشامل' : 'Export full ERP workbook'}
             >
-              <FileText size={15} className={styles.btnIcon} />
+              <FileText size={15} className={styles.btnIcon} aria-hidden="true" />
               <span>{isAr ? 'تصدير ERP الشامل' : 'Export full ERP'}</span>
             </button>
           )}
         </div>
       </div>
 
-      {/* ─── 2. 4 DISCRETE FLOATING KPI CARDS ─── */}
-      <div className={styles.cardsGrid}>
-        {/* ─── CARD 1 (RIGHTMOST): CURRENT LIQUID CASH BALANCE ─── */}
+      {/* ─── 4 DISCRETE FLOATING KPI CARDS ─── */}
+      <div className={styles.discreteKpiGrid}>
+        {/* ─── CARD 1: CURRENT CASH BALANCE ─── */}
         <div
-          className={`${styles.kpiCard} ${onViewAllTransactions ? styles.kpiCardClickable : ''}`}
+          className={`${styles.discreteKpiCard} ${styles.kpiCard} ${onViewAllTransactions ? styles.kpiCardClickable : ''}`}
           onClick={onViewAllTransactions}
+          onKeyDown={
+            onViewAllTransactions
+              ? (e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    onViewAllTransactions();
+                  }
+                }
+              : undefined
+          }
           role={onViewAllTransactions ? 'button' : undefined}
           tabIndex={onViewAllTransactions ? 0 : undefined}
+          aria-label={isAr ? 'الرصيد النقدي الحالي: عرض كل العمليات' : 'Current cash balance: view all operations'}
         >
           <div className={styles.cardTopContent}>
             <div className={styles.cardHeader}>
-              <h3 className={styles.cardTitle}>
-                {isAr ? 'الرصيد النقدي الحالي' : 'Current Cash Balance'}
-              </h3>
-              <div className={`${styles.squircleIcon} ${styles.squircleGold}`}>
-                <Wallet size={16} />
-              </div>
+              <h3 className={styles.cardTitle}>{isAr ? 'الرصيد النقدي الحالي' : 'Current Cash Balance'}</h3>
+              <span className={`${styles.squircleIcon} ${styles.squircleGold}`} aria-hidden="true">
+                <Wallet size={15} />
+              </span>
             </div>
 
             <div className={styles.cardValueRow}>
-              <span className={styles.cardValue}>
-                <bdi>{displayTotalLiquid}</bdi>
-              </span>
+              <bdi className={styles.cardValue}>{totalLiquidNum < 0 ? '−' : ''}{formatEgp(totalLiquidNum)}</bdi>
               <span className={styles.cardCurrency}>{currencyLabel}</span>
-            </div>
-
-            <div className={styles.dotBreakdownList}>
-              <div className={styles.dotRow}>
-                <span className={styles.goldDot} />
-                <span className={styles.dotLabel}>{isAr ? 'خزينة:' : 'Safe:'}</span>
-                <span className={styles.dotValue}>
-                  <bdi>{displaySafeCash} {currencyLabel}</bdi>
-                </span>
-              </div>
-              <div className={styles.dotRow}>
-                <span className={styles.slateDot} />
-                <span className={styles.dotLabel}>{isAr ? 'إنستاباي:' : 'InstaPay:'}</span>
-                <span className={styles.dotValue}>
-                  <bdi>{displayBankCash} {currencyLabel}</bdi>
-                </span>
-              </div>
             </div>
           </div>
 
           <hr className={styles.hairlineDivider} />
 
-          <div className={styles.progressBarsWrap}>
+          <div className={styles.dotRowContainer}>
+            <div className={styles.dotRow}>
+              <span className={styles.goldDot} aria-hidden="true" />
+              <span className={styles.dotLabel}>{isAr ? 'خزينة:' : 'Safe:'}</span>
+              <span className={styles.dotValue}>
+                <bdi>{formatEgp(safeCashNum)}</bdi> {currencyLabel}
+              </span>
+            </div>
+            <div className={styles.dotRow}>
+              <span className={styles.slateDot} aria-hidden="true" />
+              <span className={styles.dotLabel}>{isAr ? 'بنوك:' : 'Banks:'}</span>
+              <span className={styles.dotValue}>
+                <bdi>{formatEgp(bankCashNum)}</bdi> {currencyLabel}
+              </span>
+            </div>
+          </div>
+
+          <div className={styles.barContainer}>
             {/* Safe Cash Bar */}
             <div className={styles.barItem}>
               <span className={styles.barLabel}>{isAr ? 'خزينة' : 'Safe'}</span>
@@ -229,15 +223,15 @@ export const OperationsTopKpis: React.FC<OperationsTopKpisProps> = ({
                   />
                 </div>
                 <span className={styles.barAmount}>
-                  <bdi>{displaySafeCash} {currencyLabel}</bdi>
+                  <bdi>{formatEgp(safeCashNum)} {currencyLabel}</bdi>
                 </span>
               </div>
               <span className={styles.barPct}>{safePct}%</span>
             </div>
 
-            {/* Bank Cash Bar (InstaPay) */}
+            {/* Bank Cash Bar */}
             <div className={styles.barItem}>
-              <span className={styles.barLabel}>{isAr ? 'إنستاباي' : 'InstaPay'}</span>
+              <span className={styles.barLabel}>{isAr ? 'بنوك' : 'Banks'}</span>
               <div className={styles.barTrackWrap}>
                 <div className={styles.barTrack}>
                   <div
@@ -246,7 +240,7 @@ export const OperationsTopKpis: React.FC<OperationsTopKpisProps> = ({
                   />
                 </div>
                 <span className={styles.barAmount}>
-                  <bdi>{displayBankCash} {currencyLabel}</bdi>
+                  <bdi>{formatEgp(bankCashNum)} {currencyLabel}</bdi>
                 </span>
               </div>
               <span className={styles.barPct}>{bankPct}%</span>
@@ -256,29 +250,36 @@ export const OperationsTopKpis: React.FC<OperationsTopKpisProps> = ({
 
         {/* ─── CARD 2: TODAY'S NET MOVEMENT ─── */}
         <div
-          className={`${styles.kpiCard} ${onTodayKpiClick ? styles.kpiCardClickable : ''}`}
-          onClick={() => onTodayKpiClick?.(null)}
+          className={`${styles.discreteKpiCard} ${styles.kpiCard} ${onTodayKpiClick ? styles.kpiCardClickable : ''}`}
+          onClick={onTodayKpiClick ? () => onTodayKpiClick(null) : undefined}
+          onKeyDown={
+            onTodayKpiClick
+              ? (e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    onTodayKpiClick(null);
+                  }
+                }
+              : undefined
+          }
           role={onTodayKpiClick ? 'button' : undefined}
           tabIndex={onTodayKpiClick ? 0 : undefined}
+          aria-label={isAr ? 'صافي حركة اليوم: عرض حركات اليوم' : "Today's net movement: show today's movements"}
         >
           <div className={styles.cardTopContent}>
             <div className={styles.cardHeader}>
-              <h3 className={styles.cardTitle}>
-                {isAr ? 'صافي حركة اليوم' : 'Today’s Net Movement'}
-              </h3>
-              <div className={`${styles.squircleIcon} ${styles.squircleGreen}`}>
-                <TrendingUp size={16} />
-              </div>
+              <h3 className={styles.cardTitle}>{isAr ? 'صافي حركة اليوم' : "Today's Net Movement"}</h3>
+              <span className={`${styles.squircleIcon} ${styles.squircleGreen}`} aria-hidden="true">
+                <NetIcon size={15} />
+              </span>
             </div>
 
             <div className={styles.cardValueRow}>
-              <span className={styles.cardValue}>
-                <bdi>{displayNet}</bdi>
-              </span>
+              <bdi className={styles.cardValue}>{netSign}{formatEgp(netNum)}</bdi>
               <span className={styles.cardCurrency}>{currencyLabel}</span>
             </div>
 
-            <p className={styles.cardSubtitleText}>{subtitleNet}</p>
+            <p className={styles.cardSubtitleText}>{netNote}</p>
           </div>
 
           <hr className={styles.hairlineDivider} />
@@ -286,34 +287,34 @@ export const OperationsTopKpis: React.FC<OperationsTopKpisProps> = ({
           <div className={styles.miniColsContainer}>
             {/* Col 1: Inflows (الداخل) */}
             <div className={styles.miniCol}>
-              <span className={styles.miniColVal}>{displayInflows}</span>
+              <span className={styles.miniColVal}><bdi>{formatEgp(inflowsNum)}</bdi></span>
               <span className={styles.miniColCurrency}>{currencyLabel}</span>
               <div className={styles.miniColIcon}>
-                <ArrowUpRight size={13} className={styles.miniColGreenArrow} />
+                <ArrowUpRight size={13} className={styles.miniColGreenArrow} aria-hidden="true" />
               </div>
               <span className={styles.miniColLabel}>{isAr ? 'الداخل' : 'Inflows'}</span>
             </div>
 
-            <div className={styles.miniColDivider} />
+            <div className={styles.miniColDivider} aria-hidden="true" />
 
             {/* Col 2: Outflows (الخارج) */}
             <div className={styles.miniCol}>
-              <span className={styles.miniColVal}>{displayOutflows}</span>
+              <span className={styles.miniColVal}><bdi>{formatEgp(outflowsNum)}</bdi></span>
               <span className={styles.miniColCurrency}>{currencyLabel}</span>
               <div className={styles.miniColIcon}>
-                <ArrowDown size={13} className={styles.miniColRedArrow} />
+                <ArrowDown size={13} className={styles.miniColRedArrow} aria-hidden="true" />
               </div>
               <span className={styles.miniColLabel}>{isAr ? 'الخارج' : 'Outflows'}</span>
             </div>
 
-            <div className={styles.miniColDivider} />
+            <div className={styles.miniColDivider} aria-hidden="true" />
 
             {/* Col 3: Net (الصافي) */}
             <div className={styles.miniCol}>
-              <span className={styles.miniColVal}>{displayNet}</span>
+              <span className={styles.miniColVal}><bdi>{formatEgp(netNum)}</bdi></span>
               <span className={styles.miniColCurrency}>{currencyLabel}</span>
               <div className={styles.miniColIcon}>
-                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className={styles.miniColEqualIcon}>
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className={styles.miniColEqualIcon} aria-hidden="true">
                   <path d="M2.5 5.5H11.5" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" />
                   <path d="M2.5 9.5H8.5" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" />
                 </svg>
@@ -325,27 +326,35 @@ export const OperationsTopKpis: React.FC<OperationsTopKpisProps> = ({
 
         {/* ─── CARD 3: TODAY'S INFLOWS ─── */}
         <div
-          className={`${styles.kpiCard} ${onTodayKpiClick ? styles.kpiCardClickable : ''} ${
+          className={`${styles.discreteKpiCard} ${styles.kpiCard} ${onTodayKpiClick ? styles.kpiCardClickable : ''} ${
             activeStreamFilter === 'in-total' ? styles.kpiCardActive : ''
           }`}
-          onClick={() => onTodayKpiClick?.('in-total')}
+          onClick={onTodayKpiClick ? () => onTodayKpiClick('in-total') : undefined}
+          onKeyDown={
+            onTodayKpiClick
+              ? (e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    onTodayKpiClick('in-total');
+                  }
+                }
+              : undefined
+          }
           role={onTodayKpiClick ? 'button' : undefined}
           tabIndex={onTodayKpiClick ? 0 : undefined}
+          aria-pressed={activeStreamFilter === 'in-total'}
+          aria-label={isAr ? 'مقبوضات اليوم: تصفية السجل' : "Today's inflows: filter the log"}
         >
           <div className={styles.cardTopContent}>
             <div className={styles.cardHeader}>
-              <h3 className={styles.cardTitle}>
-                {isAr ? 'مقبوضات اليوم' : 'Today’s Inflows'}
-              </h3>
-              <div className={`${styles.squircleIcon} ${styles.squircleAmber}`}>
-                <ArrowUpRight size={16} />
-              </div>
+              <h3 className={styles.cardTitle}>{isAr ? 'مقبوضات اليوم' : "Today's Inflows"}</h3>
+              <span className={`${styles.squircleIcon} ${styles.squircleAmber}`} aria-hidden="true">
+                <ArrowDownLeft size={15} />
+              </span>
             </div>
 
             <div className={styles.cardValueRow}>
-              <span className={styles.cardValue}>
-                <bdi>{displayInflows}</bdi>
-              </span>
+              <bdi className={styles.cardValue}>{inflowsNum > 0 ? '+' : ''}{formatEgp(inflowsNum)}</bdi>
               <span className={styles.cardCurrency}>{currencyLabel}</span>
             </div>
 
@@ -356,55 +365,84 @@ export const OperationsTopKpis: React.FC<OperationsTopKpisProps> = ({
 
           <hr className={styles.hairlineDivider} />
 
-          <div className={styles.honestZeroState}>
-            <span className={styles.zeroStateText}>
-              {isAr ? 'لا توجد مقبوضات مسجلة اليوم' : 'No inflows recorded today'}
-            </span>
-            <span className={styles.zeroStateSubtext}>
-              <bdi>0</bdi> {currencyLabel}
+          <div className={styles.sparklineContainer}>
+            <div className={styles.sparklineBars} aria-hidden="true">
+              {SPARKLINE_BARS.map((height, idx) => (
+                <span
+                  key={idx}
+                  className={styles.sparklineBar}
+                  style={{
+                    height: `${height}px`,
+                    background: inflowsNum > 0 ? 'var(--erp-accent, #2563eb)' : '#cbd5e1'
+                  }}
+                />
+              ))}
+            </div>
+            <span className={styles.sparklineLabel}>
+              {inflowsNum > 0
+                ? (isAr ? `${formatEgp(inflowsNum)} ${currencyLabel}` : `${formatEgp(inflowsNum)} ${currencyLabel}`)
+                : (isAr ? 'لا توجد مقبوضات اليوم' : 'No inflows today')}
             </span>
           </div>
         </div>
 
-        {/* ─── CARD 4 (LEFTMOST): TODAY'S OUTFLOWS ─── */}
+        {/* ─── CARD 4: TODAY'S OUTFLOWS ─── */}
         <div
-          className={`${styles.kpiCard} ${onTodayKpiClick ? styles.kpiCardClickable : ''} ${
+          className={`${styles.discreteKpiCard} ${styles.kpiCard} ${onTodayKpiClick ? styles.kpiCardClickable : ''} ${
             activeStreamFilter === 'out-total' ? styles.kpiCardActive : ''
           }`}
-          onClick={() => onTodayKpiClick?.('out-total')}
+          onClick={onTodayKpiClick ? () => onTodayKpiClick('out-total') : undefined}
+          onKeyDown={
+            onTodayKpiClick
+              ? (e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    onTodayKpiClick('out-total');
+                  }
+                }
+              : undefined
+          }
           role={onTodayKpiClick ? 'button' : undefined}
           tabIndex={onTodayKpiClick ? 0 : undefined}
+          aria-label={isAr ? 'مدفوعات اليوم: تصفية السجل' : "Today's outflows: filter the log"}
         >
           <div className={styles.cardTopContent}>
             <div className={styles.cardHeader}>
-              <h3 className={styles.cardTitle}>
-                {isAr ? 'مدفوعات اليوم' : 'Today’s Outflows'}
-              </h3>
-              <div className={`${styles.squircleIcon} ${styles.squircleOrange}`}>
-                <ArrowDownRight size={16} />
-              </div>
+              <h3 className={styles.cardTitle}>{isAr ? 'مدفوعات اليوم' : "Today's Outflows"}</h3>
+              <span className={`${styles.squircleIcon} ${styles.squircleOrange}`} aria-hidden="true">
+                <ArrowUpRight size={15} />
+              </span>
             </div>
 
             <div className={styles.cardValueRow}>
-              <span className={styles.cardValue}>
-                <bdi>{displayOutflows}</bdi>
-              </span>
+              <bdi className={styles.cardValue}>{outflowsNum > 0 ? '−' : ''}{formatEgp(outflowsNum)}</bdi>
               <span className={styles.cardCurrency}>{currencyLabel}</span>
             </div>
 
             <p className={styles.cardSubtitleText}>
-              {isAr ? 'جميع أوجه الصرف' : 'All outgoing uses'}
+              {isAr ? 'جميع أوجه الصرف' : 'All expense categories'}
             </p>
           </div>
 
           <hr className={styles.hairlineDivider} />
 
-          <div className={styles.honestZeroState}>
-            <span className={styles.zeroStateText}>
-              {isAr ? 'لا توجد مدفوعات مسجلة اليوم' : 'No outflows recorded today'}
-            </span>
-            <span className={styles.zeroStateSubtext}>
-              <bdi>0</bdi> {currencyLabel}
+          <div className={styles.sparklineContainer}>
+            <div className={styles.sparklineBars} aria-hidden="true">
+              {SPARKLINE_BARS.map((height, idx) => (
+                <span
+                  key={idx}
+                  className={styles.sparklineBar}
+                  style={{
+                    height: `${height}px`,
+                    background: outflowsNum > 0 ? '#ea580c' : '#cbd5e1'
+                  }}
+                />
+              ))}
+            </div>
+            <span className={styles.sparklineLabel}>
+              {outflowsNum > 0
+                ? (isAr ? `${formatEgp(outflowsNum)} ${currencyLabel}` : `${formatEgp(outflowsNum)} ${currencyLabel}`)
+                : (isAr ? 'لا توجد مدفوعات اليوم' : 'No outflows today')}
             </span>
           </div>
         </div>

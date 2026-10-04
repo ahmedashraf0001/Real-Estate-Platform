@@ -197,12 +197,11 @@ describe('FIN-OS Operations Side Rail Widgets Suite (media_1790744477358.jpg)', 
       assert.ok(cssSource.includes('.summarySquircleNeutral'), 'CSS must define .summarySquircleNeutral');
     });
 
-    it('defines soft pastel micro-pills with 6px geometry', () => {
-      assert.ok(cssSource.includes('.statusPillGreen'), 'CSS must define .statusPillGreen');
-      assert.ok(cssSource.includes('.statusPillBlue'), 'CSS must define .statusPillBlue');
-      assert.ok(cssSource.includes('.amberBadge'), 'CSS must define .amberBadge');
-      assert.ok(cssSource.includes('#fef3c7'), 'Amber badge must use #fef3c7 background');
-      assert.ok(cssSource.includes('#b45309'), 'Amber badge must use #b45309 text color');
+    it('enforces removal of pills and uses clean metadata typography (brief O3)', () => {
+      assert.ok(cssSource.includes('.itemTypeLabel'), 'CSS must define .itemTypeLabel');
+      assert.ok(!cssSource.includes('.statusPillGreen'), 'CSS must NOT include .statusPillGreen (pills removed per O3)');
+      assert.ok(!cssSource.includes('.statusPillBlue'), 'CSS must NOT include .statusPillBlue (pills removed per O3)');
+      assert.ok(!cssSource.includes('.amberBadge'), 'CSS must NOT include .amberBadge (pills removed per O3)');
     });
 
     it('defines squircle arrow action buttons with #f8fafc background and 1px border', () => {

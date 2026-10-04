@@ -4,11 +4,13 @@ import {
   PropertyLifecyclePhase,
   ERPPropertyCostAdjustment,
   ERPPayableInstallment,
-  CostPaymentTerm
+  CostPaymentTerm,
+  ERPAccountingPeriod
 } from './types';
 import { Property } from '@/lib/supabase/types';
 import { FALLBACK_PROPERTIES } from '@/lib/data/fallbackProperties';
 import { D, Decimal, generateUUID } from './math';
+import { resolvePeriodForDate } from './ledger';
 
 export interface CategoryMeta {
   key: PropertyCostCategory;
@@ -1523,15 +1525,97 @@ export function sortPayableItems<T extends {
 }
 
 /**
- * Updates a cost item directly, strictly guarded by the 24-hour grace period rule.
+ * Checks whether a cost item can be directly modified.
+ * Cost items are editable whenever the target accounting period is OPEN.
+ * If targetPeriod is not provided, falls back to the 24-hour grace period.
+ */
+export function isCostItemEditable(
+  item: ERPPropertyCostItem,
+  periodOrPeriods?: ERPAccountingPeriod | ERPAccountingPeriod[],
+  activePeriod?: ERPAccountingPeriod
+): boolean {
+  if (periodOrPeriods) {
+    if (Array.isArray(periodOrPeriods)) {
+      const resolved = resolvePeriodForDate(
+        item.logged_date || item.created_at?.split('T')[0],
+        periodOrPeriods,
+        activePeriod
+      );
+      return resolved.status === 'OPEN';
+    } else {
+      return periodOrPeriods.status === 'OPEN';
+    }
+  }
+  if (activePeriod) {
+    const resolved = resolvePeriodForDate(
+      item.logged_date || item.created_at?.split('T')[0],
+      [activePeriod],
+      activePeriod
+    );
+    return resolved.status === 'OPEN';
+  }
+  return isItemWithinGracePeriod(item.created_at, 24);
+}
+
+/**
+ * Updates a cost item directly, strictly guarded by accounting period status.
+ * Cost items can be modified directly whenever the accounting period is OPEN (resolvePeriodForDate).
+ * Locks only when the target period is locked or closed (targetPeriod.status !== 'OPEN').
+ * Falls back to 24-hour grace period if no accounting period context is provided.
  */
 export function updateCostItemDirectly(
   item: ERPPropertyCostItem,
   updates: Partial<ERPPropertyCostItem>,
-  forceOverride: boolean = false
+  options?: boolean | ERPAccountingPeriod | {
+    forceOverride?: boolean;
+    targetPeriod?: ERPAccountingPeriod;
+    periods?: ERPAccountingPeriod[];
+    activePeriod?: ERPAccountingPeriod;
+  }
 ): ERPPropertyCostItem {
-  if (!forceOverride && !isItemWithinGracePeriod(item.created_at, 24)) {
-    throw new Error('Accounting Lock: Item cannot be modified directly after the 24-hour grace period. Please use an adjustment sub-item.');
+  let isLocked = false;
+  let lockReason = '';
+
+  if (typeof options === 'boolean') {
+    if (!options && !isItemWithinGracePeriod(item.created_at, 24)) {
+      isLocked = true;
+      lockReason = 'Accounting Lock: Item cannot be modified directly after the 24-hour grace period. Please use an adjustment sub-item.';
+    }
+  } else if (options && 'status' in options && 'period_id' in options) {
+    // Directly passed ERPAccountingPeriod
+    if (options.status !== 'OPEN') {
+      isLocked = true;
+      lockReason = `Accounting Lock: Target period (${options.period_id}) is ${options.status}. Cost items can only be modified directly when the accounting period is OPEN.`;
+    }
+  } else if (typeof options === 'object' && options !== null) {
+    if (options.forceOverride) {
+      isLocked = false;
+    } else if (options.targetPeriod) {
+      if (options.targetPeriod.status !== 'OPEN') {
+        isLocked = true;
+        lockReason = `Accounting Lock: Target period (${options.targetPeriod.period_id}) is ${options.targetPeriod.status}. Cost items can only be modified directly when the accounting period is OPEN.`;
+      }
+    } else if (options.periods || options.activePeriod) {
+      const period = resolvePeriodForDate(
+        item.logged_date || item.created_at?.split('T')[0],
+        options.periods || (options.activePeriod ? [options.activePeriod] : []),
+        options.activePeriod
+      );
+      if (period && period.status !== 'OPEN') {
+        isLocked = true;
+        lockReason = `Accounting Lock: Target period (${period.period_id}) is ${period.status}. Cost items can only be modified directly when the accounting period is OPEN.`;
+      }
+    } else if (!isItemWithinGracePeriod(item.created_at, 24)) {
+      isLocked = true;
+      lockReason = 'Accounting Lock: Item cannot be modified directly after the 24-hour grace period. Please use an adjustment sub-item.';
+    }
+  } else if (!isItemWithinGracePeriod(item.created_at, 24)) {
+    isLocked = true;
+    lockReason = 'Accounting Lock: Item cannot be modified directly after the 24-hour grace period. Please use an adjustment sub-item.';
+  }
+
+  if (isLocked) {
+    throw new Error(lockReason || 'Accounting Lock: Item cannot be modified directly.');
   }
 
   const updated: ERPPropertyCostItem = {

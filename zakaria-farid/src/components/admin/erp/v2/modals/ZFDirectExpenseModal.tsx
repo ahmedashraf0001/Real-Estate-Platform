@@ -33,6 +33,7 @@ import {
   createDirectConstructionExpense,
   type ConstructionExpensePaymentSource
 } from '@/lib/erp/propertyCostEngine';
+import { formatNumberWithCommas } from '@/lib/erp/operationsStreamFilters';
 import { tafqeetEGP, tafqeetNumber } from '@/lib/erp/tafqeet';
 import {
   type ERPAccountingPeriod,
@@ -128,16 +129,17 @@ export const ZFDirectExpenseModal: React.FC<ZFDirectExpenseModalProps> = ({
     return active.length > 0 ? active : properties;
   }, [properties]);
 
+  const prevIsOpenRef = useRef(false);
+
   useEffect(() => {
-    if (!isOpen) return;
-    const resetTimer = window.setTimeout(() => {
+    if (isOpen && !prevIsOpenRef.current) {
       setPropertyId(initialPropertyId || underConstructionProperties[0]?.id || '');
       setPaymentMethod(initialPaymentSource === '201000' ? 'DEFERRED_201000' : 'CASH_101000');
       setScheduleNow(false);
       setCurrentStep(1);
       setSuccess(null);
-    }, 0);
-    return () => window.clearTimeout(resetTimer);
+    }
+    prevIsOpenRef.current = isOpen;
   }, [initialPaymentSource, initialPropertyId, isOpen, underConstructionProperties]);
 
   const propertyItems: ZFCustomSelectItem[] = useMemo(() => underConstructionProperties.map(property => ({
@@ -782,7 +784,9 @@ export const ZFDirectExpenseModal: React.FC<ZFDirectExpenseModalProps> = ({
                 {isSubmitting ? <Loader2 size={15} className={styles.spinner} /> : <Send size={15} />}
                 {isTargetPeriodLocked
                   ? (isAr ? `الفترة مقفلة (M${targetPeriod.period_number})` : `Period Locked (M${targetPeriod.period_number})`)
-                  : (isAr ? 'تأكيد وتسجيل المصروف' : 'Confirm & Log Expense')}
+                  : (isAr
+                      ? `تأكيد وتسجيل المصروف${total.gt(0) ? ` (${formatNumberWithCommas(total)} ج.م)` : ''}`
+                      : `Confirm & Log Expense${total.gt(0) ? ` (${formatNumberWithCommas(total)} EGP)` : ''}`)}
               </button>
             )}
           </div>

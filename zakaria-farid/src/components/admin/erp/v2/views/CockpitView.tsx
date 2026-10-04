@@ -128,11 +128,31 @@ export const CockpitView: React.FC<CockpitViewProps> = ({
   const { activePreset } = useERPWorkstation();
   const currentAccent = activePreset?.accent || '#2563eb';
 
-  // Open the operational collection agenda, never the quarantined cheque workflow.
+  // Open the canonical hand collection modal for installments.
   const handleOpenInstallmentCollection = useCallback(() => {
-    if (onNavigateTab) onNavigateTab('pdc');
-    else if (contracts[0]) onInspectContract(contracts[0]);
-  }, [contracts, onNavigateTab, onInspectContract]);
+    const target = pdcRecords.find(p => p.status !== 'Cleared' && p.status !== 'Void') || pdcRecords[0];
+    if (target && onCollectItem) {
+      onCollectItem(target);
+    } else if (onCollectItem && contracts[0]) {
+      const sc = schedules.find(s => s.contract_id === contracts[0].contract_id && s.status === 'Pending') || schedules.find(s => s.contract_id === contracts[0].contract_id);
+      onCollectItem({
+        cheque_id: sc?.schedule_id || `SND-${contracts[0].contract_id}-1`,
+        contract_id: contracts[0].contract_id,
+        schedule_id: sc?.schedule_id,
+        drawer_name: contracts[0].buyer_name,
+        cheque_number: `REC-${contracts[0].contract_number || contracts[0].contract_id.slice(-4)}`,
+        bank_name: isAr ? 'الخزينة النقدية الرئيسية' : 'Main Cash Safe',
+        due_date: sc?.due_date || new Date().toISOString().split('T')[0],
+        nominal_value: sc?.nominal_value || '0',
+        status: 'In Safe'
+      });
+    } else if (onNavigateTab) {
+      onNavigateTab('pdc');
+    } else if (contracts[0] && onInspectContract) {
+      onInspectContract(contracts[0]);
+    }
+  }, [pdcRecords, onCollectItem, contracts, schedules, isAr, onNavigateTab, onInspectContract]);
+
 
   // Stat block interactive filters
   const [statPeriodFilter, setStatPeriodFilter] = useState<'month' | 'quarter' | 'year'>('month');
@@ -1852,8 +1872,8 @@ export const CockpitView: React.FC<CockpitViewProps> = ({
             {/* Shortcut 4: Pay Contractor (سداد مستحقات مقاول) */}
             <div
               className={styles.quickShortcutCard}
-              onClick={() => onNavigateTab ? onNavigateTab('construction') : (onOpenProjectExpense ? onOpenProjectExpense() : null)}
-              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); if (onNavigateTab) onNavigateTab('construction'); else if (onOpenProjectExpense) onOpenProjectExpense(); } }}
+              onClick={() => onOpenNewCheque ? onOpenNewCheque() : (onNavigateTab ? onNavigateTab('construction') : (onOpenProjectExpense ? onOpenProjectExpense() : null))}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); if (onOpenNewCheque) onOpenNewCheque(); else if (onNavigateTab) onNavigateTab('construction'); else if (onOpenProjectExpense) onOpenProjectExpense(); } }}
               role="button"
               tabIndex={0}
               title={isAr ? 'سداد مستحقات مقاول' : 'Pay Contractor'}

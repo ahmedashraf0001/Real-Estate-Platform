@@ -63,9 +63,9 @@
    No search bar or profile chip.
    -------------------------------------------------------------------------- */
 .header {
-  height: 50px;
-  min-height: 50px;
-  max-height: 50px;
+  height: 52px;
+  min-height: 52px;
+  max-height: 52px;
   width: 100%;
   flex-shrink: 0;
   position: relative;
@@ -346,9 +346,9 @@
 }
 
 .sideWidgetsHeader {
-  height: 50px;
-  min-height: 50px;
-  max-height: 50px;
+  height: 52px;
+  min-height: 52px;
+  max-height: 52px;
   width: 100%;
   flex-shrink: 0;
   position: relative;
@@ -590,9 +590,9 @@
 }
 
 .sidebarCollapsed .sidebarHeader {
-  height: 50px !important;
-  min-height: 50px !important;
-  max-height: 50px !important;
+  height: 52px !important;
+  min-height: 52px !important;
+  max-height: 52px !important;
   padding: 0 0.5rem !important;
   margin: 0 !important;
   margin-bottom: 0 !important;
@@ -628,9 +628,9 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: 50px;
-  min-height: 50px;
-  max-height: 50px;
+  height: 52px;
+  min-height: 52px;
+  max-height: 52px;
   box-sizing: border-box;
   padding: 0 0.85rem;
   margin: 0;
@@ -638,10 +638,12 @@
   border-bottom: 1px solid var(--erp-border, #cbd5e1) !important;
   gap: 0.5rem;
   flex-shrink: 0;
+  background: #ffffff !important;
+  z-index: 20;
 }
 
 .sidebarBody {
-  padding: 0.65rem 0.85rem 1.35rem 0.85rem;
+  padding: 9px 0.85rem 1.35rem 0.85rem;
   display: flex;
   flex-direction: column;
   flex: 1;
@@ -660,13 +662,13 @@
 }
 
 .sidebarCollapsed .sidebarBody {
-  padding: 0.65rem 0.5rem 1.35rem 0.5rem;
+  padding: 9px 0.5rem 1.35rem 0.5rem;
 }
 
 .brandBlock {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.625rem;
   min-width: 0;
   flex: 1;
   height: 100%;
@@ -679,57 +681,120 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  transition: opacity 0.15s ease;
+  cursor: pointer;
 }
 
-.brandLogoLink:hover {
-  opacity: 0.85;
+.brandEmblemContainer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  background: #ffffff !important;
+  border: 1px solid var(--erp-card-border, #e2e8f0);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  flex-shrink: 0;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+  overflow: hidden;
+}
+
+.brandEmblemContainer:hover {
+  border-color: var(--erp-border, #cbd5e1);
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
+}
+
+.brandEmblemContainer :global(.luxury-brand-logo) {
+  gap: 0 !important;
+}
+
+.brandEmblemContainer :global(.luxury-brand-logo:hover) {
+  transform: none !important;
+}
+
+.brandEmblemContainer :global(.brand-emblem-wrap) {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.brandEmblemContainer :global(.brand-emblem-img) {
+  width: 24px !important;
+  height: 24px !important;
+  object-fit: contain;
 }
 
 .brandTaglineCol {
   display: flex;
   flex-direction: column;
-  justify-content: flex-start;
+  justify-content: center;
   min-width: 0;
   flex: 1;
-  padding-top: 11.5px;
+  gap: 1.5px;
   box-sizing: border-box;
 }
 
+.brandTitleRow {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-width: 0;
+  line-height: 1.2;
+}
+
 .brandTitleText {
-  font-family: 'IBM Plex Sans Arabic', 'ThmanyahSans', 'Cairo', 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
-  font-size: 1.12rem;
-  font-weight: 800;
+  font-family: var(--erp-font-family);
+  font-size: 0.92rem;
+  font-weight: 700;
   color: var(--erp-text-title, #0f172a);
-  line-height: 1.15;
-  letter-spacing: 0;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  display: block;
+  display: inline-block;
+}
+
+.brandSystemBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.56rem;
+  font-weight: 700;
+  line-height: 1;
+  padding: 2px 4px;
+  border-radius: 4px;
+  background: var(--erp-border-subtle, #f1f5f9);
+  border: 1px solid var(--erp-card-border, #e2e8f0);
+  color: var(--erp-text-body, #334155);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+  user-select: none;
 }
 
 .brandTaglineText {
-  font-family: 'IBM Plex Sans Arabic', 'ThmanyahSans', 'Cairo', 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
-  font-size: 0.62rem;
+  font-family: var(--erp-font-family);
+  font-size: 0.64rem;
   font-weight: 500;
   color: var(--erp-text-muted, #64748b);
-  line-height: 1.1;
+  line-height: 1.2;
   letter-spacing: 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  margin-top: 2px;
   display: block;
-  opacity: 0.9;
 }
 
 .collapseBtn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
+  width: 30px;
+  height: 30px;
   border-radius: 7px;
   border: 1px solid var(--erp-border, #cbd5e1);
   background: #ffffff;
@@ -747,6 +812,7 @@
 }
 
 .collapseBtn:active {
+  transform: scale(0.96);
   background: #e2e8f0;
 }
 
@@ -754,38 +820,77 @@
   display: none;
 }
 
-/* User Profile Block (Clean Neutral Card - No Accent Tint) */
+/* User Profile Block (Clean Neutral Card - No Accent Tint, Squircle Avatar, Exact Rhythm) */
 .profileCard {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 0.65rem;
   background: #ffffff !important;
   border: 1px solid var(--erp-border, #cbd5e1);
   border-radius: 10px;
   padding: 0.55rem 0.75rem;
-  margin-bottom: 0.55rem;
+  margin-bottom: 9px;
   box-sizing: border-box;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.02);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.profileCard:hover {
+  border-color: #94a3b8;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
+}
+
+.profileMain {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.profileAvatarWrap {
+  position: relative;
+  flex-shrink: 0;
+  display: inline-flex;
 }
 
 .profileAvatar {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  background: #f1f5f9 !important;
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  background: #f8fafc !important;
   border: 1px solid #cbd5e1 !important;
-  color: #475569 !important;
-  font-size: 0.74rem;
+  color: #334155 !important;
+  font-size: 0.76rem;
   font-weight: 700;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  user-select: none;
+  font-variant-numeric: tabular-nums;
+}
+
+.profileStatusDot {
+  position: absolute;
+  bottom: -2px;
+  inset-inline-end: -2px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--erp-success, #16a34a);
+  border: 1.5px solid #ffffff;
+  box-shadow: 0 0 0 1px rgba(22, 163, 74, 0.25);
+  display: block;
 }
 
 .profileInfo {
   display: flex;
   flex-direction: column;
   min-width: 0;
+  flex: 1;
+  gap: 1px;
 }
 
 .profileName {
@@ -799,37 +904,89 @@
 }
 
 .profileRole {
-  font-size: 0.70rem;
+  font-size: 0.68rem;
   color: var(--erp-text-muted, #64748b);
-  line-height: 1.25;
+  line-height: 1.2;
+  font-weight: 500;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
+.profileRoleBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.62rem;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 5px;
+  background: var(--erp-border-subtle, #f1f5f9);
+  border: 1px solid var(--erp-card-border, #e2e8f0);
+  color: var(--erp-text-body, #475569);
+  white-space: nowrap;
+  flex-shrink: 0;
+  user-select: none;
+  font-variant-numeric: tabular-nums;
+}
+
 .profileCardCollapsed {
   display: flex;
   justify-content: center;
-  margin-bottom: 0.55rem;
+  align-items: center;
+  width: 44px;
+  height: 44px;
+  margin: 0 auto 9px auto;
+  background: #ffffff !important;
+  border: 1px solid var(--erp-border, #cbd5e1);
+  border-radius: 10px;
+  box-sizing: border-box;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.02);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.profileCardCollapsed:hover {
+  border-color: #94a3b8;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
+}
+
+.profileAvatarSmallWrap {
+  position: relative;
+  display: inline-flex;
 }
 
 .profileAvatarSmall {
   width: 32px;
   height: 32px;
-  border-radius: 50%;
-  background: #f1f5f9 !important;
+  border-radius: 7px;
+  background: #f8fafc !important;
   border: 1px solid #cbd5e1 !important;
-  color: #475569 !important;
+  color: #334155 !important;
   font-size: 0.74rem;
   font-weight: 700;
   display: flex;
   align-items: center;
   justify-content: center;
+  user-select: none;
+  font-variant-numeric: tabular-nums;
+}
+
+.profileStatusDotSmall {
+  position: absolute;
+  bottom: -1.5px;
+  inset-inline-end: -1.5px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--erp-success, #16a34a);
+  border: 1.5px solid #ffffff;
+  box-shadow: 0 0 0 1px rgba(22, 163, 74, 0.25);
+  display: block;
 }
 
 /* Full-width Solid Primary Button (Full Pill) */
 .actionBtnWrapper {
-  margin-bottom: 0.75rem;
+  margin-bottom: 12px;
 }
 
 .primaryActionButton {

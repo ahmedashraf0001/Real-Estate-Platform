@@ -247,7 +247,31 @@ export class ERPSupabaseService {
 
       if (!hasSession) {
         return {
-          ...createInitialERPState(),
+          periods: [
+            { period_id: 'prd-2026-01', fiscal_year: 2026, period_number: 1, start_date: '2026-01-01', end_date: '2026-01-31', status: 'OPEN' },
+            { period_id: 'prd-2026-02', fiscal_year: 2026, period_number: 2, start_date: '2026-02-01', end_date: '2026-02-28', status: 'OPEN' },
+            { period_id: 'prd-2026-03', fiscal_year: 2026, period_number: 3, start_date: '2026-03-01', end_date: '2026-03-31', status: 'OPEN' },
+            { period_id: 'prd-2026-04', fiscal_year: 2026, period_number: 4, start_date: '2026-04-01', end_date: '2026-04-30', status: 'OPEN' },
+            { period_id: 'prd-2026-05', fiscal_year: 2026, period_number: 5, start_date: '2026-05-01', end_date: '2026-05-31', status: 'OPEN' },
+            { period_id: 'prd-2026-06', fiscal_year: 2026, period_number: 6, start_date: '2026-06-01', end_date: '2026-06-30', status: 'OPEN' },
+            { period_id: 'prd-2026-07', fiscal_year: 2026, period_number: 7, start_date: '2026-07-01', end_date: '2026-07-31', status: 'OPEN' },
+            { period_id: 'prd-2026-08', fiscal_year: 2026, period_number: 8, start_date: '2026-08-01', end_date: '2026-08-31', status: 'OPEN' },
+            { period_id: 'prd-2026-09', fiscal_year: 2026, period_number: 9, start_date: '2026-09-01', end_date: '2026-09-30', status: 'OPEN' },
+            { period_id: 'prd-2026-10', fiscal_year: 2026, period_number: 10, start_date: '2026-10-01', end_date: '2026-10-31', status: 'OPEN' },
+            { period_id: 'prd-2026-11', fiscal_year: 2026, period_number: 11, start_date: '2026-11-01', end_date: '2026-11-30', status: 'OPEN' },
+            { period_id: 'prd-2026-12', fiscal_year: 2026, period_number: 12, start_date: '2026-12-01', end_date: '2026-12-31', status: 'OPEN' }
+          ],
+          contracts: [],
+          schedules: [],
+          journalEntries: [],
+          pdcRecords: [],
+          rescissions: [],
+          amendments: [],
+          costAllocations: [],
+          taxRecords: [],
+          partnerCalls: [],
+          partnerCommitments: [],
+          makerCheckerRequests: [],
           properties,
           leads,
           propertyCosts: [],
@@ -412,7 +436,6 @@ export class ERPSupabaseService {
     }
 
     // 3. Contracts
-    const fallbackInit = createInitialERPState();
     const contracts: ERPContract[] = (contractsData && contractsData.length > 0)
       ? contractsData.map(c => ({
           contract_id: c.contract_id as string,
@@ -438,7 +461,7 @@ export class ERPSupabaseService {
           payment_plan_type: (c.payment_plan_type as ERPContract['payment_plan_type']) || undefined,
           sale_model: (c.sale_model as ERPContract['sale_model']) || undefined,
         }))
-      : fallbackInit.contracts;
+      : [];
 
     // 4. Installment Schedules
     const schedules: ERPInstallmentSchedule[] = (schedulesData && schedulesData.length > 0)
@@ -455,7 +478,7 @@ export class ERPSupabaseService {
           amount_paid: D((s.amount_paid as string | number) || 0).toFixed(),
           paid_date: s.paid_date as string | undefined
         }))
-      : fallbackInit.schedules;
+      : [];
 
     // 5. Journal Entries & Lines
     const journalEntries: ERPJournalEntry[] = (entriesData && entriesData.length > 0)
@@ -482,7 +505,7 @@ export class ERPSupabaseService {
             memo: l.memo as string | undefined
           }))
         }))
-      : fallbackInit.journalEntries;
+      : [];
 
     // 6. PDCs — Auto-sync with contracts if empty
     let pdcRecords: ERPPDCRecord[] = (pdcData && pdcData.length > 0)
@@ -499,7 +522,7 @@ export class ERPSupabaseService {
           deposited_date: p.deposited_date as string | undefined,
           cleared_date: p.cleared_date as string | undefined
         }))
-      : fallbackInit.pdcRecords;
+      : [];
 
     if (pdcRecords.length === 0 && contracts.length > 0) {
       const generatedPDCs: ERPPDCRecord[] = [];
@@ -629,7 +652,7 @@ export class ERPSupabaseService {
       created_at: a.created_at as string
     }));
 
-    // 9. Cost Allocations — Auto-seed benchmark RSV allocation if empty
+    // 9. Cost Allocations
     let costAllocations: ERPCostAllocation[] = (costAllocationsData || []).map(ca => ({
       allocation_id: ca.allocation_id as string,
       project_name: ca.project_name as string,
@@ -638,25 +661,6 @@ export class ERPSupabaseService {
       rsv_factor: ca.rsv_factor as string,
       calculated_at: ca.calculated_at as string
     }));
-
-    if (costAllocations.length === 0) {
-      const benchmarkAllocation: ERPCostAllocation = {
-        allocation_id: generateUUID(),
-        project_name: 'مشروع بالاشيال فيلاز & نايل هورايزونز',
-        total_incurred_wip: '45000000.00',
-        total_sales_value: '100000000.00',
-        rsv_factor: '0.450000',
-        calculated_at: new Date().toISOString()
-      };
-      costAllocations = [benchmarkAllocation];
-      if (isSchemaMigrated) {
-        try {
-          await supabase.from('erp_cost_allocations').insert([benchmarkAllocation]);
-        } catch (e) {
-          console.warn('Silent auto-sync costAllocations insert:', e);
-        }
-      }
-    }
 
     // 10. Tax Records — Auto-generate 2.5% Statutory Real Estate Disposal Tax if empty
     let taxRecords: ERPTaxRecord[] = (taxData || []).map(t => ({

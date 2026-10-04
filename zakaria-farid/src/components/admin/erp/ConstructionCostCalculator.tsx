@@ -31,7 +31,9 @@ import {
   DoorOpen,
   Plus,
   Printer,
-  BarChart3
+  BarChart3,
+  Tag,
+  Home
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { exportFeasibilityExcel } from '@/lib/erp/excelExporter';
@@ -837,6 +839,37 @@ export const ConstructionCostCalculator: React.FC<ConstructionCostCalculatorProp
     </div>
   );
 
+  // Derived metrics for 4 discrete floating KPI cards (PropertiesInventoryKpis pattern)
+  const kpiArea = pricingScope === 'apartment' && activeUnit ? activeUnit.area_sqm : (selectedProperty?.area_sqm || 0);
+  const kpiUnitsCount = selectedProperty?.building_units?.length || 1;
+  const kpiIncurredCost = pricingScope === 'apartment' && activeUnit ? activeUnit.totalApartmentCost : (parseFloat(propertyAudit.totalLoggedCost) || 0);
+  const kpiCostPerSqm = pricingScope === 'apartment' && activeUnit ? Math.round(activeUnit.totalApartmentCost / (activeUnit.area_sqm || 1)) : (parseFloat(propertyAudit.costPerSqm) || 0);
+  const kpiSuggestedPrice = pricingScope === 'apartment' && activeUnit ? activeUnit.suggestedPrice : (parseFloat(builtPricing.estimatedSellingPrice) || 0);
+  const kpiPricePerSqm = pricingScope === 'apartment' && activeUnit ? activeUnit.pricePerSqm : Math.round(parseFloat(builtPricing.estimatedSellingPricePerSqm) || 0);
+  const kpiMarginPct = pricingScope === 'apartment' && activeUnit ? (parseFloat(activeUnit.grossMargin as string) || 0) : (parseFloat(builtPricing.grossMarginPct) || 0);
+  const kpiRocPct = pricingScope === 'apartment' && activeUnit ? (activeUnit.totalApartmentCost > 0 ? (((activeUnit.suggestedPrice - activeUnit.totalApartmentCost) / activeUnit.totalApartmentCost) * 100).toFixed(1) : '0.0') : builtPricing.returnOnCostPct;
+  const kpiProfitMoney = pricingScope === 'apartment' && activeUnit ? (activeUnit.suggestedPrice - activeUnit.totalApartmentCost) : (parseFloat(builtPricing.targetProfitMoney) || 0);
+
+  const gaugeMin = 15000;
+  const gaugeMax = 65000;
+  const kpiGaugeNeedlePct = useMemo(() => {
+    const val = kpiPricePerSqm > 0 ? kpiPricePerSqm : marketMeterPrice;
+    const clamped = Math.max(gaugeMin, Math.min(gaugeMax, val));
+    return Math.round(((clamped - gaugeMin) / (gaugeMax - gaugeMin)) * 100);
+  }, [kpiPricePerSqm, marketMeterPrice]);
+
+  const kpiBenchmarkVal = kpiArea * marketMeterPrice;
+  const kpiMarketProgressPct = useMemo(() => {
+    if (kpiBenchmarkVal > 0 && kpiSuggestedPrice > 0) {
+      return Math.min(100, Math.max(10, Math.round((kpiSuggestedPrice / kpiBenchmarkVal) * 100)));
+    }
+    return 85;
+  }, [kpiBenchmarkVal, kpiSuggestedPrice]);
+
+  const kpiMarginProgressPct = useMemo(() => {
+    return Math.min(100, Math.max(0, Math.round((kpiMarginPct / 40) * 100)));
+  }, [kpiMarginPct]);
+
   return (
     <div className={styles.calculatorContainer} dir={isAr ? 'rtl' : 'ltr'}>
       {/* 0. DOCKED CANONICAL SIDE WIDGETS (PORTAL INTO #zf-side-widgets-slot) */}
@@ -1093,485 +1126,578 @@ export const ConstructionCostCalculator: React.FC<ConstructionCostCalculatorProp
         )}
       </div>
 
-      {/* 2. 4 DISCRETE FLOATING STAT CARDS */}
-      <ZFKpiGrid>
-        {calculatorMode === 'BUILT_PROPERTY_PRICING' ? (
-          <>
-            <ZFKpiCard
-              title={isAr ? 'إجمالي التكلفة الرأسمالية المحملة' : 'Total Capitalized Incurred Cost'}
-              value={pricingScope === 'apartment' && activeUnit ? activeUnit.totalApartmentCost : propertyAudit.totalLoggedCost}
-              currency="ج.م"
-              icon={<HardHat size={16} />}
-              accentColor="accent"
-              subtitleLabel={isAr ? 'قاعدة التكلفة' : 'Cost Basis'}
-              subtitleValue={pricingScope === 'apartment' && activeUnit ? (isAr ? `نصيب ${formatUnitName(activeUnit.unit_number)}` : formatUnitName(activeUnit.unit_number)) : (isAr ? `${propertyAudit.itemsCount} بند معتمد` : `${propertyAudit.itemsCount} Items`)}
-              tooltip={isAr ? 'إجمالي المصروفات الرأسمالية المحملة على حساب هذا العقار بالدفاتر' : 'Audited capital expenses incurred on this property'}
-            />
-            <ZFKpiCard
-              title={isAr ? 'متوسط تكلفة المتر المربع' : 'Cost per Square Meter'}
-              value={pricingScope === 'apartment' && activeUnit ? Math.round(activeUnit.totalApartmentCost / (activeUnit.area_sqm || 1)) : propertyAudit.costPerSqm}
-              currency="ج.م"
-              unitLabel="م²"
-              icon={<Layers size={16} />}
-              accentColor="slate"
-              subtitleLabel={isAr ? 'المساحة المبنية' : 'Built Area'}
-              subtitleValue={`${pricingScope === 'apartment' && activeUnit ? activeUnit.area_sqm : (selectedProperty?.area_sqm || 0)} م²`}
-              tooltip={isAr ? 'متوسط تكلفة المتر المربع الفعلي بناءً على المساحة المبنية' : 'Actual cost per sqm based on built-up area'}
-            />
-            <ZFKpiCard
-              title={isAr ? 'القيمة البيعية المقترحة' : 'Suggested Selling Price'}
-              value={pricingScope === 'apartment' && activeUnit ? activeUnit.suggestedPrice : builtPricing.estimatedSellingPrice}
-              currency="ج.م"
-              icon={<Coins size={16} />}
-              accentColor="emerald"
-              subtitleLabel={isAr ? 'سعر بيع المتر' : 'Price / sqm'}
-              subtitleValue={`${(pricingScope === 'apartment' && activeUnit ? activeUnit.pricePerSqm : Math.round(parseFloat(builtPricing.estimatedSellingPricePerSqm) || 0)).toLocaleString('en-US')} ج.م`}
-              tooltip={isAr ? 'سعر البيع الموصى به لتحقيق هامش الربح المستهدف' : 'Recommended selling price to achieve target profit margin'}
-            />
-            <ZFKpiCard
-              title={isAr ? 'هامش الربح والعائد المتوقع' : 'Target Margin & Return'}
-              value={`${pricingScope === 'apartment' && activeUnit ? activeUnit.grossMargin : builtPricing.grossMarginPct}%`}
-              icon={<TrendingUp size={16} />}
-              accentColor="accent"
-              subtitleLabel={isAr ? 'العائد على التكلفة' : 'Return on Cost'}
-              subtitleValue={`${pricingScope === 'apartment' && activeUnit ? (activeUnit.totalApartmentCost > 0 ? (((activeUnit.suggestedPrice - activeUnit.totalApartmentCost) / activeUnit.totalApartmentCost) * 100).toFixed(1) : '0.0') : builtPricing.returnOnCostPct}%`}
-              tooltip={isAr ? 'نسبة هامش الربح الإجمالي والعائد على التكلفة الاستثمارية' : 'Gross profit margin and return on invested capital'}
-            />
-          </>
-        ) : (
-          <>
-            <ZFKpiCard
-              title={isAr ? 'إجمالي تكلفة واستثمار المشروع' : 'Total Project Investment'}
-              value={feasibilityCalculations.grandProjectCost}
-              currency="ج.م"
-              icon={<HardHat size={16} />}
-              accentColor="accent"
-              subtitleLabel={isAr ? 'مكونات التكلفة' : 'Cost Breakdown'}
-              subtitleValue={isAr ? `أرض (${(feasibilityCalculations.totalLandCost).toLocaleString('en-US')} ج.م) + مباني` : 'Land + Construction'}
-              tooltip={isAr ? 'إجمالي التكاليف الاستثمارية التقديرية (أرض + مباني وهيكل وتشطيبات)' : 'Estimated total project investment including land and construction'}
-            />
-            <ZFKpiCard
-              title={isAr ? 'إجمالي تكلفة المتر المبني' : 'Total Cost per Built Sqm'}
-              value={feasibilityCalculations.grandCostPerSqm}
-              currency="ج.م"
-              unitLabel="م²"
-              icon={<Layers size={16} />}
-              accentColor="slate"
-              subtitleLabel={isAr ? 'مباني / أرض' : 'WIP / Land'}
-              subtitleValue={`${feasibilityCalculations.constructionCostPerSqm.toLocaleString('en-US')} / ${feasibilityCalculations.landCostPerBuiltSqm.toLocaleString('en-US')} ج.م`}
-              tooltip={isAr ? 'إجمالي تكلفة المتر المربع المبني شاملاً نصيب الأرض والتشطيب' : 'Total cost per built-up sqm including land share'}
-            />
-            <ZFKpiCard
-              title={isAr ? 'إجمالي الإيرادات المتوقعة' : 'Projected Gross Revenue'}
-              value={feasibilityCalculations.projectedGrossRevenue}
-              currency="ج.م"
-              icon={<Coins size={16} />}
-              accentColor="emerald"
-              subtitleLabel={isAr ? 'سعر المتر المستهدف' : 'Target Price / sqm'}
-              subtitleValue={`${targetSalePricePerSqm.toLocaleString('en-US')} ج.م`}
-              tooltip={isAr ? 'إجمالي المبيعات المتوقعة بسعر المتر المستهدف' : 'Gross projected sales revenue at target sale price'}
-            />
-            <ZFKpiCard
-              title={isAr ? 'هامش الأرباح وصافي العائد' : 'Projected Profit Margin & ROI'}
-              value={`${feasibilityCalculations.developerMarginPercent}%`}
-              icon={<TrendingUp size={16} />}
-              accentColor="accent"
-              subtitleLabel={isAr ? 'صافي الربح التقديري' : 'Net Profit'}
-              subtitleValue={formatCompactMoney(feasibilityCalculations.projectedNetProfit, isAr)}
-              tooltip={isAr ? 'نسبة العائد على الاستثمار وصافي الأرباح التقديرية' : 'Projected ROI and net profit'}
-            />
-          </>
-        )}
-      </ZFKpiGrid>
+      {/* 2. 4 DISCRETE FLOATING KPI CARDS (REUSED PATTERN FROM PROPERTIES INVENTORY) */}
+      <div className={styles.kpiOuterPanel}>
+        <div className={styles.kpiPanelHeader}>
+          <div className={styles.kpiHeaderIconBox}>
+            <BarChart3 size={20} />
+          </div>
+          <div className={styles.kpiHeaderTitles}>
+            <h2 className={styles.kpiHeaderTitle}>
+              {isAr ? 'مؤشرات التكاليف والتسعير الاستثماري' : 'Cost & Pricing Feasibility Metrics'}
+            </h2>
+            <p className={styles.kpiHeaderSubtitle}>
+              {isAr 
+                ? 'متابعة متوسط سعر المتر، ورأس المال المحمل، والقيمة البيعية المقترحة، وهامش الربح والعائد الاستثماري.' 
+                : 'Tracking average price/m², absorbed capital, suggested valuation, and target margin ROI.'}
+            </p>
+          </div>
+        </div>
+
+        <div className={styles.kpiCardsGrid}>
+          {calculatorMode === 'BUILT_PROPERTY_PRICING' ? (
+            <>
+              {/* CARD 1: AVG PRICE / SQM WITH BENCHMARK GAUGE */}
+              <div className={styles.kpiCard}>
+                <div className={styles.cardTopContent}>
+                  <div className={styles.cardHeader}>
+                    <h3 className={styles.cardTitle}>
+                      {isAr ? 'متوسط سعر المتر البيعي' : 'Average Price / m²'}
+                    </h3>
+                    <div className={`${styles.squircleIcon} ${styles.squircleAccent}`}>
+                      <Tag size={16} />
+                    </div>
+                  </div>
+
+                  <div className={styles.cardValueRow}>
+                    <span className={styles.cardValue}>
+                      <bdi>{kpiPricePerSqm > 0 ? kpiPricePerSqm.toLocaleString('en-US') : (marketMeterPrice.toLocaleString('en-US'))}</bdi>
+                    </span>
+                    <span className={styles.cardUnit}>
+                      {isAr ? 'ج.م / م²' : 'EGP / m²'}
+                    </span>
+                  </div>
+
+                  {/* Benchmark Range Gauge */}
+                  <div className={styles.middleTelemetry}>
+                    <div className={styles.gaugeTrack} dir="ltr">
+                      <div className={styles.gaugeZone} style={{ left: '35%', width: '30%' }} />
+                      <div 
+                        className={styles.gaugeNeedle} 
+                        style={{ left: `${kpiGaugeNeedlePct}%` }}
+                        title={`${isAr ? 'سعر المتر الحالي' : 'Current Price'}: ${kpiPricePerSqm.toLocaleString('en-US')}`}
+                      />
+                    </div>
+                    <div className={styles.gaugeLabels} dir="ltr">
+                      <span>{gaugeMin.toLocaleString('en-US')}</span>
+                      <span className={styles.gaugeBenchmarkText}>{isAr ? 'متوسط السوق' : 'Market Avg'}</span>
+                      <span>{gaugeMax.toLocaleString('en-US')}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className={styles.card1SubRow}>
+                  <div className={styles.card1SubItem}>
+                    <Calculator size={15} className={styles.metaIcon} />
+                    <div className={styles.metaTextGroup}>
+                      <span className={styles.metaSecondary}>{isAr ? 'المساحة المبنية' : 'Built Area'}</span>
+                      <span className={styles.metaPrimary}>{kpiArea.toLocaleString('en-US')} {isAr ? 'م²' : 'm²'}</span>
+                    </div>
+                  </div>
+                  <div className={styles.card1Divider} />
+                  <div className={styles.card1SubItem}>
+                    <Home size={15} className={styles.metaIcon} />
+                    <div className={styles.metaTextGroup}>
+                      <span className={styles.metaPrimary}>{kpiUnitsCount} {isAr ? 'وحدات' : 'units'}</span>
+                      <span className={styles.metaSecondary}>{isAr ? 'بالعقار' : 'in property'}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* CARD 2: CAPITALIZED INCURRED COST WITH WIP BREAKDOWN */}
+              <div className={styles.kpiCard}>
+                <div className={styles.cardTopContent}>
+                  <div className={styles.cardHeader}>
+                    <h3 className={styles.cardTitle}>
+                      {isAr ? 'إجمالي التكلفة الرأسمالية المحملة' : 'Capitalized Incurred Cost'}
+                    </h3>
+                    <div className={`${styles.squircleIcon} ${styles.squircleSlate}`}>
+                      <Coins size={16} />
+                    </div>
+                  </div>
+
+                  <div className={styles.cardValueRow}>
+                    <span className={styles.cardValue}>
+                      <bdi>{Math.round(kpiIncurredCost).toLocaleString('en-US')}</bdi>
+                    </span>
+                    <span className={styles.cardUnit}>
+                      {isAr ? 'ج.م' : 'EGP'}
+                    </span>
+                  </div>
+
+                  {/* 3-Segment Progress Bar */}
+                  <div className={styles.middleTelemetry}>
+                    <div className={styles.segmentedBarTrack} dir="ltr">
+                      <div className={styles.segmentDark} style={{ width: '48%' }} />
+                      <div className={styles.segmentMedium} style={{ width: '32%' }} />
+                      <div className={styles.segmentLight} style={{ width: '20%' }} />
+                    </div>
+                    <div className={styles.segmentLegend}>
+                      <span>
+                        <span className={styles.legendDot} style={{ background: '#334155' }} />
+                        {isAr ? 'خرسانات' : 'Civil'}
+                      </span>
+                      <span>
+                        <span className={styles.legendDot} style={{ background: '#64748b' }} />
+                        {isAr ? 'تشطيبات' : 'Finishes'}
+                      </span>
+                      <span>
+                        <span className={styles.legendDot} style={{ background: '#cbd5e1' }} />
+                        {isAr ? 'أخرى' : 'Other'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className={styles.bottomMetaRow}>
+                  <div className={styles.metaTextGroup}>
+                    <span className={styles.metaSecondary}>{isAr ? 'أصل استثماري محمل بالدفاتر' : 'Capitalized WIP Assets'}</span>
+                    <span className={styles.metaPrimary}>
+                      {propertyAudit.itemsCount} {isAr ? 'فواتير وبند تكلفة معتمد' : 'audited cost items'}
+                    </span>
+                  </div>
+                  <FileText size={17} className={styles.metaIcon} />
+                </div>
+              </div>
+
+              {/* CARD 3: SUGGESTED SELLING PRICE WITH BENCHMARK PROGRESS */}
+              <div className={styles.kpiCard}>
+                <div className={styles.cardTopContent}>
+                  <div className={styles.cardHeader}>
+                    <h3 className={styles.cardTitle}>
+                      {isAr ? 'القيمة البيعية المقترحة' : 'Suggested Selling Price'}
+                    </h3>
+                    <div className={`${styles.squircleIcon} ${styles.squircleAccent}`}>
+                      <Layers size={16} />
+                    </div>
+                  </div>
+
+                  <div className={styles.cardValueRow}>
+                    <span className={styles.cardValue}>
+                      <bdi>{Math.round(kpiSuggestedPrice).toLocaleString('en-US')}</bdi>
+                    </span>
+                    <span className={styles.cardUnit}>
+                      {isAr ? 'ج.م' : 'EGP'}
+                    </span>
+                  </div>
+
+                  {/* Progress Bar vs Market */}
+                  <div className={styles.middleTelemetry}>
+                    <div className={styles.progressBarRow} dir="ltr">
+                      <div className={styles.progressBarTrack}>
+                        <div className={styles.progressFillAccent} style={{ width: `${kpiMarketProgressPct}%` }} />
+                      </div>
+                      <span className={styles.progressPctText}>{kpiMarketProgressPct}%</span>
+                    </div>
+                    <div className={styles.progressSublabelWrap}>
+                      <span className={styles.progressSublabel}>
+                        {isAr ? 'مقارنة بقيمة السوق الاسترشادية' : 'vs market benchmark valuation'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className={styles.bottomMetaRow}>
+                  <div className={styles.metaTextGroup}>
+                    <span className={styles.metaSecondary}>{isAr ? 'سعر بيع المتر المقترح' : 'Target Price / m²'}</span>
+                    <span className={styles.metaPrimary}>
+                      {kpiPricePerSqm.toLocaleString('en-US')} {isAr ? 'ج.م / م²' : 'EGP / m²'}
+                    </span>
+                  </div>
+                  <Calculator size={17} className={styles.metaIcon} />
+                </div>
+              </div>
+
+              {/* CARD 4: TARGET PROFIT MARGIN & RETURN */}
+              <div className={styles.kpiCard}>
+                <div className={styles.cardTopContent}>
+                  <div className={styles.cardHeader}>
+                    <h3 className={styles.cardTitle}>
+                      {isAr ? 'هامش الربح والعائد المتوقع' : 'Target Margin & Return'}
+                    </h3>
+                    <div className={`${styles.squircleIcon} ${styles.squircleGreen}`}>
+                      <TrendingUp size={16} />
+                    </div>
+                  </div>
+
+                  <div className={styles.cardValueRow}>
+                    <span className={styles.cardValue}>
+                      <bdi>{kpiMarginPct}%</bdi>
+                    </span>
+                    <span className={styles.cardUnit}>
+                      {isAr ? 'هامش' : 'margin'}
+                    </span>
+                  </div>
+
+                  {/* Green Progress Bar & ROC Pill */}
+                  <div className={styles.middleTelemetry}>
+                    <div className={styles.progressBarTrack} dir="ltr" style={{ width: '100%', marginBottom: '0.45rem' }}>
+                      <div className={styles.progressFillGreen} style={{ width: `${kpiMarginProgressPct}%` }} />
+                    </div>
+                    <div className={styles.card4PillRow}>
+                      <span className={styles.pillLabelText}>
+                        {isAr ? 'العائد على التكلفة (ROC):' : 'Return on Cost:'}
+                      </span>
+                      <div className={styles.card4Divider} />
+                      <span className={styles.statusPillGreen}>
+                        +{kpiRocPct}% ROC
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className={styles.bottomMetaRow}>
+                  <div className={styles.metaTextGroup}>
+                    <span className={styles.metaSecondary}>{isAr ? 'صافي الربح المتوقع' : 'Target Net Profit'}</span>
+                    <span className={styles.metaPrimary} style={{ color: '#16a34a' }}>
+                      +{Math.round(kpiProfitMoney).toLocaleString('en-US')} {isAr ? 'ج.م' : 'EGP'}
+                    </span>
+                  </div>
+                  <TrendingUp size={17} className={styles.metaIcon} />
+                </div>
+              </div>
+            </>
+          ) : (
+            <>
+              {/* FEASIBILITY MODE 4 CARDS */}
+              {/* Card 1: Cost per Built Sqm */}
+              <div className={styles.kpiCard}>
+                <div className={styles.cardTopContent}>
+                  <div className={styles.cardHeader}>
+                    <h3 className={styles.cardTitle}>
+                      {isAr ? 'تكلفة المتر المبني التقديرية' : 'Estimated Cost / Built Sqm'}
+                    </h3>
+                    <div className={`${styles.squircleIcon} ${styles.squircleSlate}`}>
+                      <Layers size={16} />
+                    </div>
+                  </div>
+                  <div className={styles.cardValueRow}>
+                    <span className={styles.cardValue}>
+                      <bdi>{feasibilityCalculations.grandCostPerSqm.toLocaleString('en-US')}</bdi>
+                    </span>
+                    <span className={styles.cardUnit}>{isAr ? 'ج.م / م²' : 'EGP / m²'}</span>
+                  </div>
+                  <div className={styles.middleTelemetry}>
+                    <div className={styles.progressBarRow} dir="ltr">
+                      <div className={styles.progressBarTrack}>
+                        <div className={styles.progressFillAccent} style={{ width: '70%' }} />
+                      </div>
+                      <span className={styles.progressPctText}>70%</span>
+                    </div>
+                    <div className={styles.progressSublabelWrap}>
+                      <span className={styles.progressSublabel}>{isAr ? 'نسبة تكلفة المباني من السعر المستهدف' : 'Cost ratio of target sale price'}</span>
+                    </div>
+                  </div>
+                </div>
+                <div className={styles.bottomMetaRow}>
+                  <div className={styles.metaTextGroup}>
+                    <span className={styles.metaSecondary}>{isAr ? 'مباني / أرض للمتر' : 'WIP / Land Share'}</span>
+                    <span className={styles.metaPrimary}>
+                      {feasibilityCalculations.constructionCostPerSqm.toLocaleString('en-US')} / {feasibilityCalculations.landCostPerBuiltSqm.toLocaleString('en-US')} {isAr ? 'ج.م' : 'EGP'}
+                    </span>
+                  </div>
+                  <Calculator size={17} className={styles.metaIcon} />
+                </div>
+              </div>
+
+              {/* Card 2: Total Project Cost */}
+              <div className={styles.kpiCard}>
+                <div className={styles.cardTopContent}>
+                  <div className={styles.cardHeader}>
+                    <h3 className={styles.cardTitle}>
+                      {isAr ? 'إجمالي تكلفة المشروع' : 'Total Project Investment'}
+                    </h3>
+                    <div className={`${styles.squircleIcon} ${styles.squircleAccent}`}>
+                      <HardHat size={16} />
+                    </div>
+                  </div>
+                  <div className={styles.cardValueRow}>
+                    <span className={styles.cardValue}>
+                      <bdi>{Math.round(feasibilityCalculations.grandProjectCost).toLocaleString('en-US')}</bdi>
+                    </span>
+                    <span className={styles.cardUnit}>{isAr ? 'ج.م' : 'EGP'}</span>
+                  </div>
+                  <div className={styles.middleTelemetry}>
+                    <div className={styles.segmentedBarTrack} dir="ltr">
+                      <div className={styles.segmentDark} style={{ width: '55%' }} />
+                      <div className={styles.segmentMedium} style={{ width: '30%' }} />
+                      <div className={styles.segmentLight} style={{ width: '15%' }} />
+                    </div>
+                    <div className={styles.segmentLegend}>
+                      <span><span className={styles.legendDot} style={{ background: '#334155' }} />{isAr ? 'أرض' : 'Land'}</span>
+                      <span><span className={styles.legendDot} style={{ background: '#64748b' }} />{isAr ? 'خرسانات' : 'Civil'}</span>
+                      <span><span className={styles.legendDot} style={{ background: '#cbd5e1' }} />{isAr ? 'تشطيب' : 'Finish'}</span>
+                    </div>
+                  </div>
+                </div>
+                <div className={styles.bottomMetaRow}>
+                  <div className={styles.metaTextGroup}>
+                    <span className={styles.metaSecondary}>{isAr ? 'المساحة المبنية الإجمالية' : 'Total Built Area'}</span>
+                    <span className={styles.metaPrimary}>{builtUpAreaSqm.toLocaleString('en-US')} {isAr ? 'م²' : 'm²'}</span>
+                  </div>
+                  <FileText size={17} className={styles.metaIcon} />
+                </div>
+              </div>
+
+              {/* Card 3: Projected Revenue */}
+              <div className={styles.kpiCard}>
+                <div className={styles.cardTopContent}>
+                  <div className={styles.cardHeader}>
+                    <h3 className={styles.cardTitle}>
+                      {isAr ? 'إجمالي الإيرادات المتوقعة' : 'Projected Gross Revenue'}
+                    </h3>
+                    <div className={`${styles.squircleIcon} ${styles.squircleSlate}`}>
+                      <Coins size={16} />
+                    </div>
+                  </div>
+                  <div className={styles.cardValueRow}>
+                    <span className={styles.cardValue}>
+                      <bdi>{Math.round(feasibilityCalculations.projectedGrossRevenue).toLocaleString('en-US')}</bdi>
+                    </span>
+                    <span className={styles.cardUnit}>{isAr ? 'ج.م' : 'EGP'}</span>
+                  </div>
+                  <div className={styles.middleTelemetry}>
+                    <div className={styles.progressBarRow} dir="ltr">
+                      <div className={styles.progressBarTrack}>
+                        <div className={styles.progressFillAccent} style={{ width: '100%' }} />
+                      </div>
+                      <span className={styles.progressPctText}>100%</span>
+                    </div>
+                    <div className={styles.progressSublabelWrap}>
+                      <span className={styles.progressSublabel}>{isAr ? 'القيمة الإجمالية عند اكتمال البيع' : 'Gross Portfolio Realization'}</span>
+                    </div>
+                  </div>
+                </div>
+                <div className={styles.bottomMetaRow}>
+                  <div className={styles.metaTextGroup}>
+                    <span className={styles.metaSecondary}>{isAr ? 'سعر المتر المستهدف' : 'Target Price / m²'}</span>
+                    <span className={styles.metaPrimary}>{targetSalePricePerSqm.toLocaleString('en-US')} {isAr ? 'ج.م' : 'EGP'}</span>
+                  </div>
+                  <Calculator size={17} className={styles.metaIcon} />
+                </div>
+              </div>
+
+              {/* Card 4: Profit & ROI */}
+              <div className={styles.kpiCard}>
+                <div className={styles.cardTopContent}>
+                  <div className={styles.cardHeader}>
+                    <h3 className={styles.cardTitle}>
+                      {isAr ? 'هامش الأرباح وصافي العائد' : 'Projected Margin & ROI'}
+                    </h3>
+                    <div className={`${styles.squircleIcon} ${styles.squircleGreen}`}>
+                      <TrendingUp size={16} />
+                    </div>
+                  </div>
+                  <div className={styles.cardValueRow}>
+                    <span className={styles.cardValue}>
+                      <bdi>{feasibilityCalculations.developerMarginPercent}%</bdi>
+                    </span>
+                    <span className={styles.cardUnit}>{isAr ? 'عائد' : 'ROI'}</span>
+                  </div>
+                  <div className={styles.middleTelemetry}>
+                    <div className={styles.progressBarTrack} dir="ltr" style={{ width: '100%', marginBottom: '0.45rem' }}>
+                      <div className={styles.progressFillGreen} style={{ width: `${Math.min(100, Math.max(0, feasibilityCalculations.developerMarginPercent))}%` }} />
+                    </div>
+                    <div className={styles.card4PillRow}>
+                      <span className={styles.pillLabelText}>{isAr ? 'العائد على التكلفة:' : 'Developer ROI:'}</span>
+                      <div className={styles.card4Divider} />
+                      <span className={styles.statusPillGreen}>+{feasibilityCalculations.developerMarginPercent}% ROI</span>
+                    </div>
+                  </div>
+                </div>
+                <div className={styles.bottomMetaRow}>
+                  <div className={styles.metaTextGroup}>
+                    <span className={styles.metaSecondary}>{isAr ? 'صافي الربح التقديري' : 'Estimated Net Profit'}</span>
+                    <span className={styles.metaPrimary} style={{ color: '#16a34a' }}>
+                      +{formatCompactMoney(feasibilityCalculations.projectedNetProfit, isAr)}
+                    </span>
+                  </div>
+                  <TrendingUp size={17} className={styles.metaIcon} />
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
 
       {/* 3. WORKSTATION STAGE: MODE 1 (ACTUAL BUILT PRICING) */}
       {calculatorMode === 'BUILT_PROPERTY_PRICING' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-          {/* THE 3-PILLAR EXECUTIVE WORKSPACE GRID */}
-          <div className={styles.pillarsGrid}>
-            
-            {/* PILLAR 1: ACTUAL COST BASIS */}
-            <div className={styles.pillarCard}>
-              <div className={styles.pillarHeader}>
-                <div className={styles.pillarTitleGroup}>
-                  <ShieldCheck size={16} color="var(--erp-accent, #2563eb)" />
-                  <span className={styles.pillarTitle}>
+          {/* COMPACT UNIFIED PRICING CONFIGURATION STRIP */}
+          <div className={styles.pricingConfigStrip}>
+            <div className={styles.configStripHeader}>
+              <div className={styles.configStripTitleGroup}>
+                <div className={styles.configStripIconBox}>
+                  <SlidersHorizontal size={15} />
+                </div>
+                <div className={styles.configStripTitles}>
+                  <h3 className={styles.configStripTitle}>
+                    {isAr ? 'محددات التسعير وهامش الربح المستهدف' : 'Pricing Parameters & Target Margin'}
+                  </h3>
+                  <span className={styles.configStripSubtitle}>
                     {pricingScope === 'apartment' && activeUnit
-                      ? (isAr ? `1. نصيب ${formatUnitName(activeUnit.unit_number)} من التكاليف` : `1. Unit ${activeUnit.unit_number} Cost Basis`)
-                      : (isAr ? '1. قاعدة التكلفة الفعلية المعتمدة' : '1. Incurred Cost Basis')}
+                      ? (isAr ? `تسعير شقة ${formatUnitName(activeUnit.unit_number)} (دور ${activeUnit.floor})` : `Pricing unit ${activeUnit.unit_number}`)
+                      : (isAr ? 'تحديد سعر المتر الاسترشادي بالسوق ونسبة الربح لحساب القيمة البيعية واعتمادها' : 'Set market rate and margin to calculate selling price')}
                   </span>
                 </div>
-                {pricingScope === 'apartment' && activeUnit && (
-                  <span className={`${shellStyles.statusPill} ${shellStyles.statusPillBlue}`}>
-                    {isAr ? `الدور ${activeUnit.floor}` : `Floor ${activeUnit.floor}`}
-                  </span>
-                )}
               </div>
 
-              {/* Incurred Cost Hero Box */}
-              <div className={styles.pillarHeroBox}>
-                <span className={styles.pillarHeroLabel}>
-                  {pricingScope === 'apartment' && activeUnit
-                    ? (isAr ? 'إجمالي تكلفة الشقة الفعلية المحملة:' : 'Total Apportioned Unit Cost:')
-                    : (isAr ? 'إجمالي التكلفة الرأسمالية المحملة:' : 'Total Audited Incurred Capital:')}
+              <div className={styles.configStripSummaryBadge}>
+                <span>{isAr ? 'سعر البيع المقترح:' : 'Suggested Price:'}</span>
+                <strong style={{ color: '#0f172a', fontVariantNumeric: 'tabular-nums' }}>
+                  {renderMoney(pricingScope === 'apartment' && activeUnit ? activeUnit.suggestedPrice : builtPricing.estimatedSellingPrice)}
+                </strong>
+                <span style={{ color: '#cbd5e1' }}>•</span>
+                <span style={{ color: '#16a34a', fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>
+                  {pricingScope === 'apartment' && activeUnit ? activeUnit.grossMargin : builtPricing.grossMarginPct}% {isAr ? 'هامش' : 'margin'}
                 </span>
-                <div>
-                  {renderMoney(
-                    pricingScope === 'apartment' && activeUnit ? activeUnit.totalApartmentCost : propertyAudit.totalLoggedCost,
-                    undefined,
-                    { size: '1.5rem', weight: 800, color: '#0f172a' }
-                  )}
-                </div>
               </div>
-
-              {/* Metric Subgrid: Cost / Sqm & Area */}
-              <div className={styles.pillarSubGrid}>
-                <div className={styles.pillarSubCard}>
-                  <span className={styles.pillarSubLabel}>
-                    {pricingScope === 'apartment' && activeUnit ? (isAr ? 'تكلفة متر الشقة:' : 'Unit Cost / Sqm:') : (isAr ? 'تكلفة متر المباني الفعلي:' : 'Actual Cost / Sqm:')}
-                  </span>
-                  <div className={styles.pillarSubValue}>
-                    {renderMoney(
-                      pricingScope === 'apartment' && activeUnit
-                        ? Math.round(activeUnit.totalApartmentCost / (activeUnit.area_sqm || 1))
-                        : propertyAudit.costPerSqm,
-                      'م²'
-                    )}
-                  </div>
-                </div>
-
-                <div className={styles.pillarSubCard}>
-                  <span className={styles.pillarSubLabel}>
-                    {pricingScope === 'apartment' && activeUnit ? (isAr ? 'مساحة الشقة:' : 'Unit Area:') : (isAr ? 'مساحة المباني:' : 'Built Area:')}
-                  </span>
-                  <div className={styles.pillarSubValue}>
-                    {pricingScope === 'apartment' && activeUnit ? activeUnit.area_sqm : (selectedProperty?.area_sqm || 0)} م²
-                  </div>
-                </div>
-              </div>
-
-              {/* Expense Apportionment Breakdown */}
-              {pricingScope === 'apartment' && activeUnit ? (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: 'auto', paddingTop: '0.5rem', borderTop: '1px solid #f1f5f9' }}>
-                  <span style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 700 }}>
-                    {isAr ? 'تفاصيل تحميل التكلفة على الشقة:' : 'Unit Cost Apportionment:'}
-                  </span>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem' }}>
-                    <span style={{ color: '#475569' }}>{isAr ? 'نصيبها من مباني وهيكل العمارة:' : 'Building WIP Share:'}</span>
-                    <strong style={{ color: '#0f172a' }}>{renderMoney(activeUnit.apportionedCost)}</strong>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem' }}>
-                    <span style={{ color: '#475569' }}>{isAr ? 'رسوم وتراخيص خاصة بالشقة:' : 'Unit Specific Fees:'}</span>
-                    <strong style={{ color: '#0f172a' }}>{renderMoney(activeUnit.unitTaxesPaid)}</strong>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem' }}>
-                    <span style={{ color: '#475569' }}>{isAr ? 'نسبة المساحة من إجمالي العمارة:' : 'Area Ratio:'}</span>
-                    <span style={{ fontWeight: 700, color: '#16a34a', fontVariantNumeric: 'tabular-nums' }}>
-                      {((activeUnit.area_sqm / (selectedProperty?.area_sqm || 1)) * 100).toFixed(1)}%
-                    </span>
-                  </div>
-                </div>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: 'auto', paddingTop: '0.5rem', borderTop: '1px solid #f1f5f9' }}>
-                  <span style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 700 }}>
-                    {isAr ? 'أبرز بنود التكلفة المسجلة:' : 'Top Recorded Cost Categories:'}
-                  </span>
-                  {PROPERTY_COST_CATEGORIES.slice(0, 4).map(cat => {
-                    const val = propertyAudit.byCategory[cat.key]?.total || '0.00';
-                    return (
-                      <div key={cat.key} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem' }}>
-                        <span style={{ color: '#475569', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                          <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--erp-accent, #2563eb)' }} />
-                          {isAr ? cat.nameAr : cat.nameEn}
-                        </span>
-                        <span style={{ fontWeight: 700, color: '#0f172a', fontVariantNumeric: 'tabular-nums' }}>
-                          {formatCompactMoney(val)}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
             </div>
 
-            {/* PILLAR 2: PRICING LEVERS & TARGET MARGIN */}
-            <div className={styles.pillarCard}>
-              <div className={styles.pillarHeader}>
-                <div className={styles.pillarTitleGroup}>
-                  <TrendingUp size={16} color="var(--erp-accent, #2563eb)" />
-                  <span className={styles.pillarTitle}>
-                    {isAr ? '2. محددات التسعير وهامش الربح' : '2. Pricing Levers & Margin'}
-                  </span>
-                </div>
-              </div>
-
-              {/* Lever 1: Market Benchmark Price */}
-              <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem' }}>
-                  <label className={styles.inputLabel}>
-                    {isAr ? 'سعر المتر الاسترشادي بالسوق:' : 'Market Benchmark / Sqm:'}
-                  </label>
-                  <span style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--erp-accent, #2563eb)' }}>
+            <div className={styles.configGrid}>
+              {/* Field 1: Market Meter Price */}
+              <div className={styles.configField}>
+                <label className={styles.configInputLabel}>
+                  <span>{isAr ? 'سعر المتر الاسترشادي بالسوق:' : 'Market Rate / Sqm:'}</span>
+                  <strong style={{ color: 'var(--erp-accent, #2563eb)' }}>
                     {renderMoney(marketMeterPrice, 'م²')}
-                  </span>
-                </div>
+                  </strong>
+                </label>
                 <input
                   type="number"
                   min="5000"
                   step="500"
                   value={marketMeterPrice}
                   onChange={(e) => setMarketMeterPrice(Math.max(1, parseFloat(e.target.value) || 0))}
-                  className={styles.formInput}
+                  className={styles.configInput}
                 />
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.72rem', color: '#64748b', marginTop: '0.35rem' }}>
-                  <span>
-                    {pricingScope === 'apartment' && activeUnit
-                      ? (isAr ? `قيمة الشقة (${activeUnit.area_sqm} م²) بسعر السوق:` : 'Unit Market Benchmark:')
-                      : (isAr ? 'قيمة العقار بأسعار السوق:' : 'Market Benchmark Value:')}
-                  </span>
+                <span className={styles.configHint}>
+                  {isAr ? 'القيمة بأسعار السوق: ' : 'Market Benchmark: '}
                   <strong style={{ color: '#0f172a' }}>
-                    {renderMoney(
-                      pricingScope === 'apartment' && activeUnit
-                        ? (activeUnit.area_sqm * marketMeterPrice)
-                        : builtPricing.marketBenchmarkValue
-                    )}
+                    {formatCompactMoney(pricingScope === 'apartment' && activeUnit ? (activeUnit.area_sqm * marketMeterPrice) : builtPricing.marketBenchmarkValue, isAr)}
                   </strong>
-                </div>
+                </span>
               </div>
 
-              {/* Lever 2: Target Profit Mode */}
-              <div>
-                <label className={styles.inputLabel}>
-                  {isAr ? 'هامش الربح المستهدف:' : 'Target Profit Target:'}
+              {/* Field 2: Target Profit Mode Toggle */}
+              <div className={styles.configField}>
+                <label className={styles.configInputLabel}>
+                  <span>{isAr ? 'طريقة حساب الهامش:' : 'Profit Mode:'}</span>
                 </label>
-
-                {/* Profit Mode Switcher */}
-                <div style={{
-                  display: 'grid',
-                  gridTemplateColumns: '1fr 1fr',
-                  gap: '0.35rem',
-                  background: '#f1f5f9',
-                  padding: '3px',
-                  borderRadius: '8px',
-                  border: '1px solid #e2e8f0',
-                  marginBottom: '0.5rem'
-                }}>
+                <div className={styles.configSegmentedControl}>
                   <button
                     type="button"
                     onClick={() => setProfitMode('PERCENTAGE')}
-                    style={{
-                      background: profitMode === 'PERCENTAGE' ? '#ffffff' : 'transparent',
-                      color: profitMode === 'PERCENTAGE' ? '#16a34a' : '#64748b',
-                      border: 'none',
-                      borderRadius: '6px',
-                      padding: '0.4rem',
-                      fontSize: '0.74rem',
-                      fontWeight: 700,
-                      cursor: 'pointer'
-                    }}
+                    className={`${styles.configSegmentBtn} ${profitMode === 'PERCENTAGE' ? styles.configSegmentBtnActive : ''}`}
                   >
                     {isAr ? 'نسبة مئوية %' : 'Percentage %'}
                   </button>
                   <button
                     type="button"
                     onClick={() => setProfitMode('FIXED_AMOUNT')}
-                    style={{
-                      background: profitMode === 'FIXED_AMOUNT' ? '#ffffff' : 'transparent',
-                      color: profitMode === 'FIXED_AMOUNT' ? '#16a34a' : '#64748b',
-                      border: 'none',
-                      borderRadius: '6px',
-                      padding: '0.4rem',
-                      fontSize: '0.74rem',
-                      fontWeight: 700,
-                      cursor: 'pointer'
-                    }}
+                    className={`${styles.configSegmentBtn} ${profitMode === 'FIXED_AMOUNT' ? styles.configSegmentBtnActive : ''}`}
                   >
-                    {isAr ? 'مبلغ مقطوع (ج.م)' : 'Fixed Cash'}
+                    {isAr ? 'مبلغ مقطوع' : 'Fixed Cash'}
                   </button>
                 </div>
+                <span className={styles.configHint}>
+                  {profitMode === 'PERCENTAGE' 
+                    ? (isAr ? 'تطبيق نسبة مئوية على التكلفة' : 'Percentage of total cost') 
+                    : (isAr ? 'مبلغ ربح نقدي محدد' : 'Lump sum cash target')}
+                </span>
+              </div>
+
+              {/* Field 3: Target Profit Value & Presets */}
+              <div className={styles.configField}>
+                <label className={styles.configInputLabel}>
+                  <span>{isAr ? 'الهامش المستهدف:' : 'Target Margin:'}</span>
+                  <span style={{ color: '#16a34a', fontWeight: 800 }}>
+                    +{formatCompactMoney(pricingScope === 'apartment' && activeUnit ? (activeUnit.suggestedPrice - activeUnit.totalApartmentCost) : builtPricing.targetProfitMoney, isAr)}
+                  </span>
+                </label>
 
                 {profitMode === 'PERCENTAGE' ? (
-                  <div>
+                  <>
                     <input
                       type="number"
                       min="1"
                       max="300"
                       value={targetProfitPercent}
                       onChange={(e) => setTargetProfitPercent(Math.max(1, parseFloat(e.target.value) || 0))}
-                      className={styles.formInput}
+                      className={styles.configInput}
                     />
-                    <div className={styles.profitPresetGroup}>
+                    <div className={styles.configPresetsRow}>
                       {[20, 25, 30, 35, 40].map(pct => (
                         <button
                           key={pct}
                           type="button"
                           onClick={() => setTargetProfitPercent(pct)}
-                          className={`${styles.presetBtn} ${targetProfitPercent === pct ? styles.presetBtnActive : ''}`}
+                          className={`${styles.configPresetBtn} ${targetProfitPercent === pct ? styles.configPresetBtnActive : ''}`}
                         >
                           {pct}%
                         </button>
                       ))}
                     </div>
-                  </div>
+                  </>
                 ) : (
-                  <div>
-                    <input
-                      type="number"
-                      step="50000"
-                      value={targetProfitCashAmount}
-                      onChange={(e) => setTargetProfitCashAmount(e.target.value)}
-                      placeholder="3000000"
-                      className={styles.formInput}
-                    />
-                  </div>
+                  <input
+                    type="number"
+                    step="50000"
+                    value={targetProfitCashAmount}
+                    onChange={(e) => setTargetProfitCashAmount(e.target.value)}
+                    placeholder="3000000"
+                    className={styles.configInput}
+                  />
                 )}
-
-                {/* Profit Strip */}
-                <div className={styles.profitStrip}>
-                  <span style={{ color: '#16a34a', fontWeight: 700 }}>
-                    {pricingScope === 'apartment' && activeUnit
-                      ? (isAr ? `مكسب شقة (${activeUnit.unit_number}):` : 'Unit Target Profit:')
-                      : (isAr ? 'مبلغ الربح المضاف:' : 'Target Profit (P):')}
-                  </span>
-                  <div>
-                    <span style={{ color: '#16a34a', fontWeight: 800, marginInlineEnd: '0.15rem' }}>+</span>
-                    {renderMoney(
-                      pricingScope === 'apartment' && activeUnit
-                        ? (activeUnit.suggestedPrice - activeUnit.totalApartmentCost)
-                        : builtPricing.targetProfitMoney,
-                      undefined,
-                      { color: '#16a34a', weight: 800, size: '0.85rem' }
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* PILLAR 3: VALUATION RECOMMENDATION */}
-            <div className={styles.pillarCard}>
-              <div className={styles.pillarHeader}>
-                <div className={styles.pillarTitleGroup}>
-                  <Coins size={16} color="var(--erp-accent, #2563eb)" />
-                  <span className={styles.pillarTitle}>
-                    {pricingScope === 'apartment' && activeUnit
-                      ? (isAr ? `3. سعر بيع ${formatUnitName(activeUnit.unit_number)}` : `3. Unit ${activeUnit.unit_number} Price`)
-                      : (isAr ? '3. القيمة البيعية الاسترشادية' : '3. Valuation Recommendation')}
-                  </span>
-                </div>
-                <span className={`${shellStyles.statusPill} ${shellStyles.statusPillBlue}`}>
-                  {pricingScope === 'apartment' && activeUnit ? (isAr ? `دور ${activeUnit.floor}` : `Floor ${activeUnit.floor}`) : (isAr ? 'التكلفة + الربح' : 'Cost + Margin')}
-                </span>
               </div>
 
-              {/* Recommended Selling Price Hero Box */}
-              <div className={styles.pillarHeroBox}>
-                <span className={styles.pillarHeroLabel}>
-                  {pricingScope === 'apartment' && activeUnit
-                    ? (isAr ? `سعر البيع المقترح لـ ${formatUnitName(activeUnit.unit_number)}:` : `Unit ${activeUnit.unit_number} Suggested Price:`)
-                    : (isAr ? 'سعر البيع المقترح للعقار بالكامل:' : 'Recommended Selling Price:')}
-                </span>
-                <div>
-                  {renderMoney(
-                    pricingScope === 'apartment' && activeUnit ? activeUnit.suggestedPrice : builtPricing.estimatedSellingPrice,
-                    undefined,
-                    { size: '1.5rem', weight: 800, color: '#0f172a' }
-                  )}
-                </div>
-                <div style={{ fontSize: '0.75rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '0.2rem' }}>
-                  <span>{pricingScope === 'apartment' && activeUnit ? (isAr ? 'سعر متر الشقة:' : 'Unit Price / m²:') : (isAr ? 'سعر بيع المتر المقترح:' : 'Price / Sqm:')}</span>
-                  <strong style={{ color: '#0f172a' }}>
-                    {renderMoney(
-                      pricingScope === 'apartment' && activeUnit ? activeUnit.pricePerSqm : builtPricing.estimatedSellingPricePerSqm,
-                      'م²'
-                    )}
-                  </strong>
-                </div>
-              </div>
-
-              {/* Profitability KPIs Subgrid */}
-              <div className={styles.pillarSubGrid}>
-                <div className={styles.pillarSubCard}>
-                  <span className={styles.pillarSubLabel}>
-                    {isAr ? 'نسبة صافي الربح:' : 'Gross Margin:'}
-                  </span>
-                  <div className={styles.pillarSubValue}>
-                    {pricingScope === 'apartment' && activeUnit ? activeUnit.grossMargin : builtPricing.grossMarginPct}%
-                  </div>
-                </div>
-
-                <div className={styles.pillarSubCard}>
-                  <span className={styles.pillarSubLabel}>
-                    {isAr ? 'العائد على التكلفة:' : 'Return on Cost:'}
-                  </span>
-                  <div className={styles.pillarSubValue}>
-                    {pricingScope === 'apartment' && activeUnit
-                      ? (activeUnit.totalApartmentCost > 0 
-                          ? (((activeUnit.suggestedPrice - activeUnit.totalApartmentCost) / activeUnit.totalApartmentCost) * 100).toFixed(1)
-                          : '0.0')
-                      : builtPricing.returnOnCostPct}%
-                  </div>
-                </div>
-              </div>
-
-              {/* Primary Action Buttons */}
-              {pricingScope === 'apartment' && activeUnit ? (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: 'auto' }}>
-                  {activeUnit.status === 'contracted' ? (
-                    <div style={{
-                      padding: '0.75rem',
-                      borderRadius: '8px',
-                      background: '#ecfdf5',
-                      border: '1px solid #16a34a',
-                      color: '#15803d',
-                      fontSize: '0.78rem',
-                      fontWeight: 700,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '0.4rem'
-                    }}>
-                      <CheckCircle2 size={16} />
-                      <span>{isAr ? `${formatUnitName(activeUnit.unit_number)} تم التعاقد وبيعها بالفعل` : `Unit ${activeUnit.unit_number} contracted`}</span>
-                    </div>
+              {/* Field 4: Actions (Update Catalog / Contract) */}
+              <div className={styles.configActions}>
+                {pricingScope === 'apartment' && activeUnit ? (
+                  activeUnit.status === 'contracted' ? (
+                    <span className={`${shellStyles.statusPill} ${shellStyles.statusPillGreen}`} style={{ height: '36px', padding: '0 0.85rem' }}>
+                      <CheckCircle2 size={14} />
+                      <span>{isAr ? `${formatUnitName(activeUnit.unit_number)} متعاقد عليها` : `Unit ${activeUnit.unit_number} Sold`}</span>
+                    </span>
                   ) : onOpenContractForProperty ? (
                     <button
                       type="button"
                       onClick={() => onOpenContractForProperty(selectedProperty, activeUnit)}
-                      className={styles.btnPrimaryGreen}
+                      className={styles.configSaveBtn}
                     >
-                      <Plus size={16} />
-                      <span>{isAr ? `+ تحرير عقد بيع لـ ${formatUnitName(activeUnit.unit_number)}` : `Create Contract for Unit ${activeUnit.unit_number}`}</span>
+                      <Plus size={14} />
+                      <span>{isAr ? `تحرير عقد لـ ${formatUnitName(activeUnit.unit_number)}` : `Contract Unit ${activeUnit.unit_number}`}</span>
                     </button>
-                  ) : null}
-                </div>
-              ) : (
-                onUpdateSellingPrice && selectedProperty && (
-                  <button
-                    type="button"
-                    onClick={handleApplyUpdatedSellingPrice}
-                    disabled={isUpdatingPrice}
-                    className={priceUpdateSuccess ? styles.btnPrimaryGreen : styles.btnPrimaryAccent}
-                  >
-                    {priceUpdateSuccess ? (
-                      <>
-                        <CheckCircle2 size={15} />
-                        <span>{isAr ? 'تم اعتماد وحفظ السعر بنجاح' : 'Price Updated'}</span>
-                      </>
-                    ) : (
-                      <>
-                        <ShieldCheck size={15} />
-                        <span>
-                          {isUpdatingPrice
-                            ? (isAr ? 'جاري الحفظ...' : 'Saving...')
-                            : (isAr ? 'اعتماد وحفظ السعر بالكتالوج' : 'Update Catalog Price')}
-                        </span>
-                      </>
-                    )}
-                  </button>
-                )
-              )}
+                  ) : null
+                ) : (
+                  onUpdateSellingPrice && selectedProperty && (
+                    <button
+                      type="button"
+                      onClick={handleApplyUpdatedSellingPrice}
+                      disabled={isUpdatingPrice}
+                      className={priceUpdateSuccess ? styles.configSaveBtnSuccess : styles.configSaveBtn}
+                    >
+                      {priceUpdateSuccess ? (
+                        <>
+                          <CheckCircle2 size={14} />
+                          <span>{isAr ? 'تم حفظ السعر' : 'Price Updated'}</span>
+                        </>
+                      ) : (
+                        <>
+                          <ShieldCheck size={14} />
+                          <span>
+                            {isUpdatingPrice 
+                              ? (isAr ? 'جاري الحفظ...' : 'Saving...') 
+                              : (isAr ? 'اعتماد السعر بالكتالوج' : 'Update Catalog Price')}
+                          </span>
+                        </>
+                      )}
+                    </button>
+                  )
+                )}
+              </div>
             </div>
-
           </div>
 
           {/* CAD CARTESIAN CHART VISUALIZATION DECK */}
@@ -1714,31 +1840,24 @@ export const ConstructionCostCalculator: React.FC<ConstructionCostCalculatorProp
                               {isContracted ? (isAr ? 'تم التعاقد' : 'Contracted') : (isAr ? 'متاح للبيع' : 'Available')}
                             </span>
                           </td>
-                          <td className={styles.unitsTd}>
-                            {isContracted ? (
-                              <span style={{ fontSize: '0.72rem', color: '#64748b' }}>{isAr ? 'معتمد' : 'Approved'}</span>
-                            ) : onOpenContractForProperty ? (
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  onOpenContractForProperty(selectedProperty, u);
-                                }}
-                                style={{
-                                  background: 'var(--erp-accent-subtle, #eff6ff)',
-                                  color: 'var(--erp-accent, #2563eb)',
-                                  border: '1px solid var(--erp-border, #cbd5e1)',
-                                  borderRadius: '6px',
-                                  padding: '0.3rem 0.6rem',
-                                  fontSize: '0.72rem',
-                                  fontWeight: 700,
-                                  cursor: 'pointer'
-                                }}
-                              >
-                                {isAr ? 'تحرير عقد' : 'Contract'}
-                              </button>
-                            ) : null}
-                          </td>
+                            <td className={styles.unitsTd}>
+                              {isContracted ? (
+                                <span style={{ fontSize: '0.72rem', color: '#64748b' }}>{isAr ? 'معتمد' : 'Approved'}</span>
+                              ) : onOpenContractForProperty ? (
+                                <button
+                                  type="button"
+                                  className={styles.unitActionBtn}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    onOpenContractForProperty(selectedProperty, u);
+                                  }}
+                                  title={isAr ? `تحرير عقد بيع للوحدة ${formatUnitName(u.unit_number)}` : `Create sales contract for unit ${u.unit_number}`}
+                                >
+                                  <FileText size={13} />
+                                  <span>{isAr ? 'تحرير عقد' : 'Contract'}</span>
+                                </button>
+                              ) : null}
+                            </td>
                         </tr>
                       );
                     })}

@@ -37,7 +37,6 @@ import { ZFErpAcademyModal } from './ZFErpAcademyModal';
 import { ZFErpGuidedTour } from './ZFErpGuidedTour';
 import { ZFNotificationCenter } from './ZFNotificationCenter';
 import { NewContractWizardModal } from './v2/modals/NewContractWizardModal';
-import { CashCollectionReceiptModal } from './v2/modals/CashCollectionReceiptModal';
 import { ContractEscalationModal } from './v2/modals/ContractEscalationModal';
 import { RescissionSettlementModal } from './v2/modals/RescissionSettlementModal';
 import { RSVAllocationModal } from './v2/modals/RSVAllocationModal';
@@ -653,8 +652,15 @@ export function ERPWorkstationShell({ children }: { children: React.ReactNode })
     }
   }, [handleToggleMinimizeSideWidgets, triggerLayoutReflow]);
 
-  if (erp.isLoading) {
-    return <ZFERPLoadingWorkstation isAr={erp.isAr} />;
+  const hasData = (
+    (erp.data?.periods && erp.data.periods.length > 0) ||
+    (erp.data?.contracts && erp.data.contracts.length > 0) ||
+    (erp.data?.properties && erp.data.properties.length > 0)
+  );
+
+  // Invariant: No blocking unmount on shell once data exists: initial boot only.
+  if (erp.isLoading && !hasData) {
+    return <ZFERPLoadingWorkstation isAr={erp.isAr} mode="full" />;
   }
 
   const moduleTitle = erp.isAr
@@ -1085,20 +1091,6 @@ export function ERPWorkstationShell({ children }: { children: React.ReactNode })
         }}
       />
 
-      {/* CASH COLLECTION & RECEIPT VOUCHER MODAL */}
-      <CashCollectionReceiptModal 
-        isOpen={!!erp.showPayModal}
-        onClose={() => erp.setShowPayModal(null)}
-        contract={erp.showPayModal?.contract}
-        schedule={erp.showPayModal?.schedule}
-        activePeriod={erp.activePeriod}
-        periods={erp.data.periods}
-        isAr={erp.isAr}
-        isMutating={erp.isMutating}
-        onConfirmCollection={async (details) => {
-          await erp.handleCollectPayment(details);
-        }}
-      />
 
       {/* ESCALATION MODAL */}
       <ContractEscalationModal 
@@ -1189,17 +1181,35 @@ export function ERPWorkstationShell({ children }: { children: React.ReactNode })
         isAr={erp.isAr}
       />
 
-      {/* HAND CASH COLLECTION PROCESS MODAL */}
+      {/* HAND CASH COLLECTION PROCESS MODAL - SINGLE CANONICAL MODAL */}
       <HandCollectionModal 
-        isOpen={!!erp.collectingPDCItem}
-        onClose={() => erp.setCollectingPDCItem(null)}
-        item={erp.collectingPDCItem}
+        isOpen={!!erp.collectingPDCItem || !!erp.showPayModal}
+        onClose={() => {
+          erp.setCollectingPDCItem(null);
+          erp.setShowPayModal(null);
+        }}
+        item={erp.collectingPDCItem || (erp.showPayModal ? (
+          erp.data.pdcRecords.find(p => p.schedule_id === erp.showPayModal?.schedule.schedule_id) || {
+            cheque_id: erp.showPayModal.schedule.schedule_id || `SND-${erp.showPayModal.contract.contract_id}-${erp.showPayModal.schedule.tranche_number}`,
+            contract_id: erp.showPayModal.contract.contract_id,
+            schedule_id: erp.showPayModal.schedule.schedule_id,
+            drawer_name: erp.showPayModal.contract.buyer_name,
+            cheque_number: `REC-${erp.showPayModal.contract.contract_number || erp.showPayModal.contract.contract_id.slice(-4)}-T${erp.showPayModal.schedule.tranche_number}`,
+            bank_name: erp.isAr ? 'الخزينة النقدية الرئيسية' : 'Main Cash Safe',
+            due_date: erp.showPayModal.schedule.due_date,
+            nominal_value: erp.showPayModal.schedule.nominal_value,
+            status: 'In Safe'
+          }
+        ) : null)}
         allItems={erp.data.pdcRecords}
         contracts={erp.data.contracts}
         schedules={erp.data.schedules}
         properties={erp.data.properties}
-        linkedContract={erp.data.contracts.find(c => c.contract_id === erp.collectingPDCItem?.contract_id)}
-        onConfirmCollection={erp.handleConfirmHandCollection}
+        linkedContract={erp.showPayModal?.contract || erp.data.contracts.find(c => c.contract_id === erp.collectingPDCItem?.contract_id)}
+        onConfirmCollection={async (item, receiptNo, date, amount, notes, method) => {
+          await erp.handleConfirmHandCollection(item, receiptNo, date, amount, notes, method);
+          erp.setShowPayModal(null);
+        }}
         isMutating={erp.isMutating}
         isAr={erp.isAr}
       />

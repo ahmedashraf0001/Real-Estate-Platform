@@ -162,9 +162,9 @@
     "semantic_hash": "b288010d695320af37e2fa2a7a00bcff"
   },
   ".open-next/cloudflare/cache-assets-manifest.sql": {
-    "mtime": 1786882446.317771,
-    "seen": 1788000353.5457518,
-    "ast_hash": "",
+    "mtime": 1789118618.6994889,
+    "seen": 1790975961.6322074,
+    "ast_hash": "b2f232f76cd947e454eb104ee4f55964",
     "semantic_hash": ""
   },
   ".open-next/cloudflare/images.js": {
@@ -985,32 +985,32 @@
   },
   "supabase/migrations/001_initial_schema.sql": {
     "mtime": 1786882446.468537,
-    "seen": 1788000353.5459208,
-    "ast_hash": "",
+    "seen": 1790975961.632732,
+    "ast_hash": "2d5bee2c915008c801843ffe948659ea",
     "semantic_hash": ""
   },
   "supabase/migrations/002_add_spec_layers.sql": {
     "mtime": 1786882446.468537,
-    "seen": 1788000353.5459218,
-    "ast_hash": "",
+    "seen": 1790975961.6327329,
+    "ast_hash": "dd34476bae82d50ce129ade2e6b40603",
     "semantic_hash": ""
   },
   "supabase/migrations/003_add_lead_pipeline.sql": {
-    "mtime": 1786882446.4698863,
-    "seen": 1788000353.545923,
-    "ast_hash": "",
+    "mtime": 1786882446.469886,
+    "seen": 1790975961.632734,
+    "ast_hash": "ed22501ea283b084c4a87dc42f9205fd",
     "semantic_hash": ""
   },
   "supabase/migrations/004_add_viewing_bookings.sql": {
-    "mtime": 1787310834.5529108,
-    "seen": 1788000353.545924,
-    "ast_hash": "",
+    "mtime": 1787310834.55291,
+    "seen": 1790975961.632735,
+    "ast_hash": "175629655ebfed57ea90e84811239e74",
     "semantic_hash": ""
   },
   "supabase/migrations/005_update_property_types.sql": {
-    "mtime": 1787583200.6128988,
-    "seen": 1788000353.545925,
-    "ast_hash": "",
+    "mtime": 1787583200.612898,
+    "seen": 1790975961.6327374,
+    "ast_hash": "2ed3927ecec649181fbea5a3bd7a1335",
     "semantic_hash": ""
   },
   "sync_all_views.js": {
@@ -4692,9 +4692,9 @@
     "semantic_hash": ""
   },
   "src/app/fin-os/layout.tsx": {
-    "mtime": 1789675723.2249033,
-    "seen": 1790181102.478421,
-    "ast_hash": "1c0e230cce1b2eadaccb837a20090fc8",
+    "mtime": 1790909247.1113167,
+    "seen": 1790938291.6734133,
+    "ast_hash": "5a3ef6c6d62a2a5f239d05f16e07b460",
     "semantic_hash": ""
   },
   "src/app/fin-os/page.tsx": {
@@ -4722,9 +4722,9 @@
     "semantic_hash": ""
   },
   "src/components/admin/erp/ConstructionCostCalculator.tsx": {
-    "mtime": 1789758254.2558155,
-    "seen": 1790837669.5940475,
-    "ast_hash": "11c62e44cbc514e8ef82e8e71612ce38",
+    "mtime": 1791019554.503066,
+    "seen": 1791020441.5330462,
+    "ast_hash": "b6545120532c37507d16511bf22c5d97",
     "semantic_hash": ""
   },
   "src/components/admin/erp/PropertyFinancialMatrix.tsx": {
@@ -4740,9 +4740,9 @@
     "semantic_hash": ""
   },
   "src/components/admin/erp/ZFNavigationDock.tsx": {
-    "mtime": 1790848488.5700123,
-    "seen": 1790869002.6166694,
-    "ast_hash": "72b17498f11caa62bff35871ee9d61df",
+    "mtime": 1791029508.267685,
+    "seen": 1791030119.2853956,
+    "ast_hash": "ef6c193cb1388f8ed8a8c2fa90d0dfd2",
     "semantic_hash": ""
   },
   "src/components/admin/erp/ZFQuickSearchModal.tsx": {
@@ -4896,21 +4896,21 @@
     "semantic_hash": "83e2d84f2c390b5a83429465a7ce1a44"
   },
   "supabase/migrations/005_add_property_videos.sql": {
-    "mtime": 1788037553.4473727,
-    "seen": 1788392751.790455,
-    "ast_hash": "",
+    "mtime": 1788037553.447372,
+    "seen": 1790975961.6327362,
+    "ast_hash": "f18436efabce7f228ff26b7193d0734f",
     "semantic_hash": ""
   },
   "supabase/migrations/006_erp_financial_engine.sql": {
-    "mtime": 1788400310.2567136,
-    "seen": 1788400385.3226871,
-    "ast_hash": "",
+    "mtime": 1788400310.256713,
+    "seen": 1790975961.6327384,
+    "ast_hash": "a3a1b6d4f200950f3a17bc011026341f",
     "semantic_hash": ""
   },
   "supabase/migrations/007_erp_permissions_and_types.sql": {
-    "mtime": 1788391312.5693624,
-    "seen": 1788392751.7904584,
-    "ast_hash": "",
+    "mtime": 1788391312.569362,
+    "seen": 1790975961.6327393,
+    "ast_hash": "1f41771e84e160c8001adefc3a3d00de",
     "semantic_hash": ""
   },
   "src/lib/supabase/middleware.ts": {
@@ -4920,9 +4920,9 @@
     "semantic_hash": "36ee8c83d6dfbd9834bae004ae5205ef"
   },
   "supabase/migrations/008_enforce_admin_erp_security.sql": {
-    "mtime": 1788435319.4967167,
-    "seen": 1788435452.3960204,
-    "ast_hash": "",
+    "mtime": 1788435319.496716,
+    "seen": 1790975961.6327403,
+    "ast_hash": "647edb4642040115f510dd871d107804",
     "semantic_hash": ""
   },
   "src/components/admin/erp/ZFNotificationCenter.tsx": {
@@ -4938,9 +4938,9 @@
     "semantic_hash": ""
   },
   "src/components/admin/erp/NewChequeModal.tsx": {
-    "mtime": 1789776334.8326411,
-    "seen": 1790181102.479056,
-    "ast_hash": "458a205d24f9fb664953da8416c21c16",
+    "mtime": 1790929315.2803476,
+    "seen": 1790938291.6767468,
+    "ast_hash": "23e69d615250eb0856b6a96d68ed2ef2",
     "semantic_hash": ""
   },
   "src/lib/erp/tafqeet.ts": {
@@ -4962,16 +4962,16 @@
     "semantic_hash": ""
   },
   "src/components/admin/erp/HandCollectionModal.tsx": {
-    "mtime": 1790460942.7074566,
-    "seen": 1790463294.0851567,
-    "ast_hash": "89e67fde1806b8387c4161fa4a6d0be7",
+    "mtime": 1790931049.9253142,
+    "seen": 1790938291.6767452,
+    "ast_hash": "c731ecc50f6281f10ff759d9109d8846",
     "semantic_hash": ""
   },
   "src/components/admin/erp/PropertyLifecycleAuditModal.tsx": {
-    "mtime": 1788751432.2290778,
-    "seen": 1789130525.407135,
-    "ast_hash": "e4c542caccb03c63c07ae02f05dd9784",
-    "semantic_hash": "e4c542caccb03c63c07ae02f05dd9784"
+    "mtime": 1790941824.442694,
+    "seen": 1790975961.632415,
+    "ast_hash": "1b48277097f2518d870bdd825a47d9c1",
+    "semantic_hash": ""
   },
   "src/components/admin/erp/v2/ZFWorkstationHeader.tsx": {
     "mtime": 1790848488.5669067,
@@ -4980,45 +4980,45 @@
     "semantic_hash": ""
   },
   "src/components/admin/erp/v2/views/CockpitView.tsx": {
-    "mtime": 1790868894.582721,
-    "seen": 1790869002.6211686,
-    "ast_hash": "0f0020577d07c4f611f1a4efa699b29a",
+    "mtime": 1790975185.853225,
+    "seen": 1790975961.6324885,
+    "ast_hash": "27407eee019e9153a3d236416c066443",
     "semantic_hash": ""
   },
   "src/lib/erp/propertyCostEngine.ts": {
-    "mtime": 1790533617.8643003,
-    "seen": 1790535222.9111805,
-    "ast_hash": "21f1561faa874eb73716a054e094e1a2",
+    "mtime": 1791031683.2021463,
+    "seen": 1791032209.0529103,
+    "ast_hash": "ee09dccecbca0251954bde982b14f17b",
     "semantic_hash": ""
   },
   "supabase/migrations/009_property_lifecycle_costs.sql": {
-    "mtime": 1788453543.6086314,
-    "seen": 1788463220.7598896,
-    "ast_hash": "",
+    "mtime": 1788453543.608631,
+    "seen": 1790975961.6327426,
+    "ast_hash": "382a386c509f3554375202d173447cbc",
     "semantic_hash": ""
   },
   "supabase/migrations/010_building_sales_modes.sql": {
-    "mtime": 1788454936.9645655,
-    "seen": 1788463220.7598908,
-    "ast_hash": "",
+    "mtime": 1788454936.964565,
+    "seen": 1790975961.6327436,
+    "ast_hash": "5518b420eb4d8685c0df64fa84815531",
     "semantic_hash": ""
   },
   "supabase/migrations/011_manual_apartment_taxes.sql": {
-    "mtime": 1788458385.7560997,
-    "seen": 1788463220.7598917,
-    "ast_hash": "",
+    "mtime": 1788458385.756099,
+    "seen": 1790975961.632745,
+    "ast_hash": "4be4ddba845335ca8795272778575320",
     "semantic_hash": ""
   },
   "supabase/migrations/012_property_cost_taxes_and_units.sql": {
-    "mtime": 1788460349.5857222,
-    "seen": 1788463220.7598925,
-    "ast_hash": "",
+    "mtime": 1788460349.585722,
+    "seen": 1790975961.632746,
+    "ast_hash": "60541674f099fec3db51957338e4ef01",
     "semantic_hash": ""
   },
   "src/components/admin/erp/v2/views/PropertiesPortfolioView.tsx": {
-    "mtime": 1790753294.9190147,
-    "seen": 1790837669.5998244,
-    "ast_hash": "5c8a22fe6a6862f5442a88bb5ee8c9b9",
+    "mtime": 1791026917.0050719,
+    "seen": 1791028866.7633011,
+    "ast_hash": "006892f7f36281311ea0cb748c57ab0f",
     "semantic_hash": ""
   },
   "src/components/admin/erp/v2/views/ContractsRegistryView.tsx": {
@@ -5034,10 +5034,10 @@
     "semantic_hash": ""
   },
   "src/components/admin/erp/v2/views/ConstructionFeasibilityView.tsx": {
-    "mtime": 1789451975.7425528,
-    "seen": 1790837669.599055,
-    "ast_hash": "17d8c6e87322cf877a93be075ce164f7",
-    "semantic_hash": "17d8c6e87322cf877a93be075ce164f7"
+    "mtime": 1790917336.0500603,
+    "seen": 1790938291.6809022,
+    "ast_hash": "0b5fce07feda2cf82668f6174ecd4aa8",
+    "semantic_hash": ""
   },
   "src/components/admin/erp/v2/views/ContractRescissionsView.tsx": {
     "mtime": 1789904911.3068287,
@@ -5064,45 +5064,45 @@
     "semantic_hash": ""
   },
   "src/components/admin/erp/v2/modals/CashCollectionReceiptModal.tsx": {
-    "mtime": 1790459420.107141,
-    "seen": 1790463294.0858257,
-    "ast_hash": "917070748e6e28f95715eea5d096932d",
+    "mtime": 1791029558.45312,
+    "seen": 1791030119.285426,
+    "ast_hash": "c8f1f67996409cfd732689888b8b9be5",
     "semantic_hash": ""
   },
   "src/components/admin/erp/v2/modals/ContractEscalationModal.tsx": {
-    "mtime": 1789528476.512603,
-    "seen": 1790181102.4792328,
-    "ast_hash": "2dcf4b195b4233be84cd46d0737ea8e7",
+    "mtime": 1790935318.802231,
+    "seen": 1790938291.6793578,
+    "ast_hash": "eb713ed5a5f60d8644d0d73816202367",
     "semantic_hash": ""
   },
   "src/components/admin/erp/v2/modals/NewContractWizardModal.tsx": {
-    "mtime": 1790535971.3992524,
-    "seen": 1790536101.930648,
-    "ast_hash": "bb99df6f46f334d40b159cdc71284f17",
+    "mtime": 1790952881.894251,
+    "seen": 1790975961.6324646,
+    "ast_hash": "0aa5376f15ca4986e24c2f278092e111",
     "semantic_hash": ""
   },
   "src/components/admin/erp/v2/modals/RSVAllocationModal.tsx": {
-    "mtime": 1789528411.4708498,
-    "seen": 1790181102.479401,
-    "ast_hash": "1571c07cb3d668349a7eb01e5d785e5b",
+    "mtime": 1790928517.5642097,
+    "seen": 1790938291.6804643,
+    "ast_hash": "7e9b62d595626bc9c5c331602849e9fa",
     "semantic_hash": ""
   },
   "src/components/admin/erp/v2/modals/RescissionSettlementModal.tsx": {
-    "mtime": 1790222937.8458476,
-    "seen": 1790837669.5985181,
-    "ast_hash": "609821d2f21d9994812704714318feb0",
+    "mtime": 1790937827.3835478,
+    "seen": 1790938291.680466,
+    "ast_hash": "e6b15b3c39ff2b0134a62d60ec873665",
     "semantic_hash": ""
   },
   "src/components/admin/erp/v2/views/DailyOperationsView.tsx": {
-    "mtime": 1790836686.8222678,
-    "seen": 1790837669.599303,
-    "ast_hash": "f0406acd481da0169fff50168e42afde",
+    "mtime": 1791031957.8962133,
+    "seen": 1791032209.052722,
+    "ast_hash": "998b3809b44b7b3e5eaa90ecfb15e441",
     "semantic_hash": ""
   },
   "src/components/admin/erp/v2/common/ZFCustomSelect.tsx": {
-    "mtime": 1789528714.3967006,
-    "seen": 1790181102.4792147,
-    "ast_hash": "da3d602e3162480ea3988ccbeeff87f6",
+    "mtime": 1791026851.11241,
+    "seen": 1791028866.7632375,
+    "ast_hash": "66fc11a67d7e8d6d27d7a454c543a582",
     "semantic_hash": ""
   },
   ".open-next/assets/_next/static/chunks/005dr1evzn2qq.js": {
@@ -5514,9 +5514,9 @@
     "semantic_hash": ""
   },
   "src/components/admin/erp/v2/modals/PartnerCapitalInjectionModal.tsx": {
-    "mtime": 1790462910.193436,
-    "seen": 1790837669.5979466,
-    "ast_hash": "c12b2e2831f26e5efe669a77489fa557",
+    "mtime": 1790975721.2211926,
+    "seen": 1790975961.6324687,
+    "ast_hash": "aac6efaa3d50b6effb06c1307b3441ef",
     "semantic_hash": ""
   },
   "src/components/admin/erp/v2/modals/PartnerDossierModal.tsx": {
@@ -5526,15 +5526,15 @@
     "semantic_hash": "ca73c40c608a4c4a11067bd10295dad6"
   },
   "src/components/admin/erp/v2/modals/PartnerPayoutModal.tsx": {
-    "mtime": 1790632186.6546667,
-    "seen": 1790633195.1860025,
-    "ast_hash": "40cd381aa8e65a334d72acd1049353ee",
+    "mtime": 1790944515.7163813,
+    "seen": 1790975961.6324725,
+    "ast_hash": "f218578df804b7c9a239bd404c8f13a8",
     "semantic_hash": ""
   },
   "src/components/admin/erp/v2/views/PartnersManagementView.tsx": {
-    "mtime": 1790404244.542987,
-    "seen": 1790404687.9647682,
-    "ast_hash": "7279c854f2354d56080a9aaefeb87573",
+    "mtime": 1790943019.6478126,
+    "seen": 1790975961.6325028,
+    "ast_hash": "c70256c420a4d645b656f3ba7a2c612d",
     "semantic_hash": ""
   },
   "src/lib/erp/__tests__/partners.test.ts": {
@@ -5568,9 +5568,9 @@
     "semantic_hash": ""
   },
   "src/components/admin/erp/v2/modals/HandoverExecutionModal.tsx": {
-    "mtime": 1790222794.8203783,
-    "seen": 1790837669.5976887,
-    "ast_hash": "8ccfbde4cab1887237e3ef7ea93b4367",
+    "mtime": 1790939644.5519736,
+    "seen": 1790975961.632462,
+    "ast_hash": "f24a8180aaaaaf91a61a89bb1ce701f3",
     "semantic_hash": ""
   },
   ".open-next/assets/_next/static/chunks/00legm6ecufo3.js": {
@@ -6030,15 +6030,15 @@
     "semantic_hash": ""
   },
   "src/components/admin/erp/ERPWorkstationShell.tsx": {
-    "mtime": 1790741892.4839911,
-    "seen": 1790837669.5940495,
-    "ast_hash": "ac75d6ea78f84ef9dd37a17880ec91ec",
+    "mtime": 1790975569.3217185,
+    "seen": 1790975961.6324096,
+    "ast_hash": "c50d06f033a8f3a061479e9c124a147f",
     "semantic_hash": ""
   },
   "src/components/admin/erp/context/ERPWorkstationContext.tsx": {
-    "mtime": 1790534240.8946075,
-    "seen": 1790535222.9060936,
-    "ast_hash": "7d8a9170579e378204abf17cc4a068e2",
+    "mtime": 1790872907.1807792,
+    "seen": 1790938291.6775267,
+    "ast_hash": "bb39cb3e63fdad01b3b14df218dc5e7d",
     "semantic_hash": ""
   },
   "src/components/admin/erp/v2/ZFERPLoadingWorkstation.tsx": {
@@ -6060,9 +6060,9 @@
     "semantic_hash": ""
   },
   "src/components/admin/erp/v2/common/ZFDrawerShell.tsx": {
-    "mtime": 1789528692.1657848,
-    "seen": 1790837669.5962281,
-    "ast_hash": "2c9ab97c9f6458a29d0aebb662d9f821",
+    "mtime": 1790974990.0334086,
+    "seen": 1790975961.63244,
+    "ast_hash": "25c3e245cf68f2e8e5c226cece30d0bd",
     "semantic_hash": ""
   },
   "src/components/admin/erp/v2/common/ZFErpBreadcrumb.tsx": {
@@ -6072,9 +6072,9 @@
     "semantic_hash": ""
   },
   "src/components/admin/erp/v2/common/ZFModalShell.tsx": {
-    "mtime": 1790620032.4308712,
-    "seen": 1790622166.7623594,
-    "ast_hash": "265014f93980ca21d4e0d20e74ae1fd1",
+    "mtime": 1790975044.786977,
+    "seen": 1790975961.632444,
+    "ast_hash": "91cf22e53471a886b6b05687f21647c6",
     "semantic_hash": ""
   },
   "src/components/admin/erp/v2/common/ZFPaletteCustomizer.tsx": {
@@ -6102,9 +6102,9 @@
     "semantic_hash": ""
   },
   "src/components/admin/erp/v2/modals/CostAdjustmentModal.tsx": {
-    "mtime": 1790462977.869229,
-    "seen": 1790463294.08586,
-    "ast_hash": "fc06fecf45908437f66696c83ed76e58",
+    "mtime": 1790925632.4380188,
+    "seen": 1790938291.6793592,
+    "ast_hash": "5683341122c83e1f734cf9c767724521",
     "semantic_hash": ""
   },
   "src/components/admin/erp/v2/modals/CostPayableSettlementModal.tsx": {
@@ -6114,15 +6114,15 @@
     "semantic_hash": ""
   },
   "src/components/admin/erp/v2/modals/EditPropertyCostModal.tsx": {
-    "mtime": 1789448373.8816557,
-    "seen": 1790837669.5976863,
-    "ast_hash": "15e7527e96912e148500fc653b52efa7",
+    "mtime": 1791031826.791667,
+    "seen": 1791032209.052682,
+    "ast_hash": "f088df53f3712fe1ae1f7763ddfd0e8e",
     "semantic_hash": ""
   },
   "src/components/admin/erp/v2/modals/PartnerReallocationModal.tsx": {
-    "mtime": 1789528344.464104,
-    "seen": 1790181102.4793997,
-    "ast_hash": "dad2c9873e1d8b2d4c8205e007962e98",
+    "mtime": 1790944868.4891255,
+    "seen": 1790975961.6324737,
+    "ast_hash": "495bf9b802aaa91d3518a5ac8914a316",
     "semantic_hash": ""
   },
   "src/components/admin/erp/v2/modals/ZFDirectExpenseModal.tsx": {
@@ -6132,15 +6132,15 @@
     "semantic_hash": ""
   },
   "src/components/admin/erp/v2/views/ConstructionPayablesView.tsx": {
-    "mtime": 1790536043.119977,
-    "seen": 1790837669.5990584,
-    "ast_hash": "c5a9b37c011b3709ea281da0afd6fc12",
+    "mtime": 1791031939.5426216,
+    "seen": 1791032209.0527167,
+    "ast_hash": "cbcae4a6b0e90e737088f5be650be51d",
     "semantic_hash": ""
   },
   "src/components/admin/erp/v2/views/PropertyAnalysisView.tsx": {
-    "mtime": 1790841001.720345,
-    "seen": 1790841157.037437,
-    "ast_hash": "e17fa30b66cbaad3f9f0e748312ec5db",
+    "mtime": 1790913381.425819,
+    "seen": 1790938291.6817274,
+    "ast_hash": "3109b58fcea4e58ca3694b051d89c29a",
     "semantic_hash": ""
   },
   "src/components/admin/erp/views/ApartmentTaxesRouteView.tsx": {
@@ -6150,15 +6150,15 @@
     "semantic_hash": ""
   },
   "src/components/admin/erp/views/CockpitRouteView.tsx": {
-    "mtime": 1790125006.9635289,
-    "seen": 1790181102.4794855,
-    "ast_hash": "43dfef92e9573552c7976278bad8bddc",
+    "mtime": 1790975207.4473686,
+    "seen": 1790975961.632543,
+    "ast_hash": "430f2773745ba57f6c0f3cb64b55c3cb",
     "semantic_hash": ""
   },
   "src/components/admin/erp/views/ConstructionFeasibilityRouteView.tsx": {
-    "mtime": 1789439887.8932486,
-    "seen": 1790181102.4794867,
-    "ast_hash": "390137a8a3f2c1129c8f034b10a59eb2",
+    "mtime": 1790917317.1698318,
+    "seen": 1790938291.6837282,
+    "ast_hash": "dcb5bdda52405ea636dc748a25a4ad94",
     "semantic_hash": ""
   },
   "src/components/admin/erp/views/ConstructionPayablesRouteView.tsx": {
@@ -6174,9 +6174,9 @@
     "semantic_hash": ""
   },
   "src/components/admin/erp/views/ContractsRegistryRouteView.tsx": {
-    "mtime": 1790184088.3438828,
-    "seen": 1790185332.5702884,
-    "ast_hash": "b394af7412ec45548e93da959a4c0bef",
+    "mtime": 1790935431.93185,
+    "seen": 1790938291.6839287,
+    "ast_hash": "bd545617a920f164416ff6f5f933e2f1",
     "semantic_hash": ""
   },
   "src/components/admin/erp/views/CostAllocationRouteView.tsx": {
@@ -6186,9 +6186,9 @@
     "semantic_hash": ""
   },
   "src/components/admin/erp/views/DailyOperationsRouteView.tsx": {
-    "mtime": 1790221493.3082078,
-    "seen": 1790276562.9280357,
-    "ast_hash": "6e53f96043b9a4e81a04cdd1e45ea762",
+    "mtime": 1790975248.9570627,
+    "seen": 1790975961.6325502,
+    "ast_hash": "8a96c0195eae856684cdec855cc893b4",
     "semantic_hash": ""
   },
   "src/components/admin/erp/views/GeneralLedgerRouteView.tsx": {
@@ -6204,15 +6204,15 @@
     "semantic_hash": ""
   },
   "src/components/admin/erp/views/PartnersManagementRouteView.tsx": {
-    "mtime": 1790400953.0036075,
-    "seen": 1790403654.767267,
-    "ast_hash": "de1682a0b39917883d98e70a07a02038",
+    "mtime": 1790943044.8226032,
+    "seen": 1790975961.632554,
+    "ast_hash": "35267bf9c8cc57ac421c20a4ec6dc329",
     "semantic_hash": ""
   },
   "src/components/admin/erp/views/PropertiesPortfolioRouteView.tsx": {
-    "mtime": 1790467620.3330266,
-    "seen": 1790837669.60247,
-    "ast_hash": "9cc2fa31e9bc06da3d0bc82e512bba92",
+    "mtime": 1790940384.1610944,
+    "seen": 1790975961.632555,
+    "ast_hash": "bd10a84ae0c9e6fd5939d7205e74aee6",
     "semantic_hash": ""
   },
   "src/components/admin/erp/views/PropertyAnalysisRouteView.tsx": {
@@ -6246,9 +6246,9 @@
     "semantic_hash": ""
   },
   "src/lib/erp/__tests__/costAdjustmentsAndPayables.test.ts": {
-    "mtime": 1790172738.030455,
-    "seen": 1790181102.4803603,
-    "ast_hash": "d9f87c87b895718edf8af5d5db39dad9",
+    "mtime": 1791031725.3713822,
+    "seen": 1791032209.05283,
+    "ast_hash": "7731f5d521fca9d2cda97f3f5bf60d86",
     "semantic_hash": ""
   },
   "src/lib/erp/__tests__/erpPalettePresets.test.ts": {
@@ -6288,9 +6288,9 @@
     "semantic_hash": ""
   },
   "src/lib/erp/__tests__/tabRedirectMap.test.ts": {
-    "mtime": 1790398556.170296,
-    "seen": 1790399092.9520438,
-    "ast_hash": "ee69d39d261405395b76b1b5aa98ae46",
+    "mtime": 1790920728.354639,
+    "seen": 1790938291.6918044,
+    "ast_hash": "c7ae9324909d813adfd2824353be1222",
     "semantic_hash": ""
   },
   "src/lib/erp/canonicalMetrics.ts": {
@@ -6306,15 +6306,15 @@
     "semantic_hash": ""
   },
   "src/lib/erp/erpPalettePresets.ts": {
-    "mtime": 1790741814.07119,
-    "seen": 1790837669.6099172,
-    "ast_hash": "2c702d1e7eee12f91856324bf1584086",
+    "mtime": 1790872942.7098582,
+    "seen": 1790938291.6926858,
+    "ast_hash": "77d96689ef205ed68ed929f3d9045ec7",
     "semantic_hash": ""
   },
   "src/lib/erp/operationsStreamFilters.ts": {
-    "mtime": 1790632374.0392458,
-    "seen": 1790633195.1895905,
-    "ast_hash": "b915734f5b45353bc9d3042373f7bdec",
+    "mtime": 1790920826.819201,
+    "seen": 1790938291.6937633,
+    "ast_hash": "fe03cf859698aa8907e83b86245da4cc",
     "semantic_hash": ""
   },
   "src/lib/erp/propertyAnalysisEngine.ts": {
@@ -6324,9 +6324,9 @@
     "semantic_hash": ""
   },
   "src/lib/erp/routing/tabRedirectMap.ts": {
-    "mtime": 1790398518.2713993,
-    "seen": 1790399092.9524457,
-    "ast_hash": "a290a9705246e6aa17277a681e90a010",
+    "mtime": 1790917256.0487225,
+    "seen": 1790938291.6944797,
+    "ast_hash": "08d08cff33da1c67f2ba16f5e0c379b5",
     "semantic_hash": ""
   },
   "DESIGN_SYSTEM.md": {
@@ -8034,9 +8034,9 @@
     "semantic_hash": ""
   },
   "src/components/admin/erp/v2/modals/ZFContractInspectionModal.tsx": {
-    "mtime": 1790185941.84592,
-    "seen": 1790190913.4339888,
-    "ast_hash": "77da0af7698be8d1ad73d86452d9fc22",
+    "mtime": 1791032746.4407914,
+    "seen": 1791033158.1083612,
+    "ast_hash": "b5a0eef1d38c67387cbdbdf238238414",
     "semantic_hash": ""
   },
   "src/components/admin/erp/v2/views/COAFileExplorer.tsx": {
@@ -8298,9 +8298,9 @@
     "semantic_hash": ""
   },
   "src/components/admin/erp/v2/views/partners/PartnersAnalyticsCharts.tsx": {
-    "mtime": 1790403133.0934458,
-    "seen": 1790403654.76698,
-    "ast_hash": "00ec659a2b3b6ccb9a5933d497d3d93e",
+    "mtime": 1790915297.2534597,
+    "seen": 1790938291.682686,
+    "ast_hash": "8917b3864f978ee86fafeecb13ba2bc6",
     "semantic_hash": ""
   },
   "src/components/admin/erp/v2/views/partners/PartnersDirectoryView.tsx": {
@@ -8310,15 +8310,15 @@
     "semantic_hash": ""
   },
   "src/components/admin/erp/v2/views/partners/PartnersProjectsView.tsx": {
-    "mtime": 1790459845.537268,
-    "seen": 1790837669.6008115,
-    "ast_hash": "18532036abfcb36044446a9cdb59f488",
+    "mtime": 1790915844.713696,
+    "seen": 1790938291.6827898,
+    "ast_hash": "4f626dacb66ac1f64684601f31c169b2",
     "semantic_hash": ""
   },
   "src/components/admin/erp/v2/views/partners/PartnersSideWidgets.tsx": {
-    "mtime": 1790404230.2570443,
-    "seen": 1790837669.6008134,
-    "ast_hash": "21294c573700c0984f30cab2ca1e2055",
+    "mtime": 1790915393.1756358,
+    "seen": 1790938291.6827915,
+    "ast_hash": "a955152f81472f88b65ca0ee848a8682",
     "semantic_hash": ""
   },
   "src/components/admin/erp/v2/views/partners/PartnersTransactionsView.tsx": {
@@ -8352,9 +8352,9 @@
     "semantic_hash": ""
   },
   "src/components/admin/erp/v2/modals/NewPartnerCommitmentModal.tsx": {
-    "mtime": 1790401310.5181904,
-    "seen": 1790837669.5978322,
-    "ast_hash": "c36d20820357abd7bcb9c34d4fd9a11f",
+    "mtime": 1790943127.8003287,
+    "seen": 1790975961.632466,
+    "ast_hash": "d21a53b586a654beea41809a4a032183",
     "semantic_hash": ""
   },
   "src/lib/erp/__tests__/partnerAgingEngine.test.ts": {
@@ -8442,9 +8442,9 @@
     "semantic_hash": ""
   },
   "src/components/admin/erp/v2/views/properties/ERPPortfolioMapModal.tsx": {
-    "mtime": 1790471046.7020733,
-    "seen": 1790484298.4229512,
-    "ast_hash": "5e28139b2f99c639a0bf831fb4d57b42",
+    "mtime": 1791025271.026039,
+    "seen": 1791025857.409646,
+    "ast_hash": "df8bb56f4c73ecdf4f49162bff97293c",
     "semantic_hash": ""
   },
   "src/components/admin/erp/v2/views/properties/ProjectShowcaseCard.tsx": {
@@ -8460,15 +8460,15 @@
     "semantic_hash": ""
   },
   "src/components/admin/erp/v2/views/properties/PropertiesSideWidgets.tsx": {
-    "mtime": 1790753438.9466467,
-    "seen": 1790837669.601176,
-    "ast_hash": "25e8a98852037ff1f7cf05d6c23dfa4e",
+    "mtime": 1791023287.3012617,
+    "seen": 1791025857.4096518,
+    "ast_hash": "a8740a6e2b9d1599b6a924850c1b4d08",
     "semantic_hash": ""
   },
   "src/components/admin/erp/v2/views/properties/UnitsFloorMatrixTable.tsx": {
-    "mtime": 1790535094.1729882,
-    "seen": 1790535222.9086452,
-    "ast_hash": "5fb37ee7aeca91fd215d60ef23157649",
+    "mtime": 1791026929.218206,
+    "seen": 1791028866.7633386,
+    "ast_hash": "aed406d8e1cc40d1875064ae76518336",
     "semantic_hash": ""
   },
   "src/lib/erp/__tests__/financialAgendaDualTables.test.ts": {
@@ -8544,27 +8544,27 @@
     "semantic_hash": ""
   },
   "src/components/admin/erp/v2/views/CockpitDualCharts.tsx": {
-    "mtime": 1790868576.2566419,
-    "seen": 1790869002.621166,
-    "ast_hash": "ed643932f4ec4531bcfdd5935e3f338e",
+    "mtime": 1790974958.1073735,
+    "seen": 1790975961.6324875,
+    "ast_hash": "768119607704da9b349f8dddc2368394",
     "semantic_hash": ""
   },
   "src/components/admin/erp/v2/views/operations/OperationsCashFlowMap.tsx": {
-    "mtime": 1790835403.1194704,
-    "seen": 1790837669.6004016,
-    "ast_hash": "1170c340fd7f7acf8f5b3c31ca832717",
+    "mtime": 1791022586.0524695,
+    "seen": 1791025857.409633,
+    "ast_hash": "a93b3dae29a655040828ca2be30e9fd3",
     "semantic_hash": ""
   },
   "src/components/admin/erp/v2/views/operations/OperationsSideWidgets.tsx": {
-    "mtime": 1790834329.3901742,
-    "seen": 1790837669.6004033,
-    "ast_hash": "6a7f82a819fad643debc8ea410c02f9d",
+    "mtime": 1791022401.800142,
+    "seen": 1791025857.4096348,
+    "ast_hash": "53c233c1dc6ce7834f34f849775c3247",
     "semantic_hash": ""
   },
   "src/components/admin/erp/v2/views/operations/OperationsTopKpis.tsx": {
-    "mtime": 1790835371.6015904,
-    "seen": 1790837669.6004055,
-    "ast_hash": "032826e44425916f2830811e414972a1",
+    "mtime": 1791022325.6506548,
+    "seen": 1791025857.409636,
+    "ast_hash": "d5009bb9d833bfd9d9723277fd5a7ea9",
     "semantic_hash": ""
   },
   "src/components/admin/erp/v2/views/operations/index.ts": {
@@ -8634,15 +8634,123 @@
     "semantic_hash": ""
   },
   "src/components/admin/erp/v2/views/analysis/PropertyAnalysisDossier.tsx": {
-    "mtime": 1790840732.426303,
-    "seen": 1790841157.0374405,
-    "ast_hash": "3546ab48ff87c3e07c6f39f1759c85cc",
+    "mtime": 1790911920.896092,
+    "seen": 1790938291.6817293,
+    "ast_hash": "cc2c50f16d9ae33bcb218acf4770c677",
     "semantic_hash": ""
   },
   "src/components/admin/erp/v2/views/analysis/PropertyAnalysisSideWidgets.tsx": {
-    "mtime": 1790840649.3986032,
-    "seen": 1790841157.0374424,
-    "ast_hash": "13cdcb3d2091a6a92f1512f853c9bb57",
+    "mtime": 1791029860.6135314,
+    "seen": 1791030119.2854822,
+    "ast_hash": "dd1b856b70c3740c1f27e7de0cf10aad",
+    "semantic_hash": ""
+  },
+  "src/components/admin/erp/v2/views/CalculatorSideWidgets.tsx": {
+    "mtime": 1791019067.0124233,
+    "seen": 1791020441.533134,
+    "ast_hash": "1d2c885fcbbf3163dc5165d23e706835",
+    "semantic_hash": ""
+  },
+  "src/components/admin/erp/v2/views/analysis/PropertyKpiBlueprintCards.tsx": {
+    "mtime": 1790911743.1330173,
+    "seen": 1790938291.6817327,
+    "ast_hash": "3736a0054c169b9122be504646dca606",
+    "semantic_hash": ""
+  },
+  "src/components/admin/erp/v2/modals/HandCollectionModal.tsx": {
+    "mtime": 1790975081.502897,
+    "seen": 1790975961.6324608,
+    "ast_hash": "c09eae8899ddcad30abf8445505fe7ad",
+    "semantic_hash": ""
+  },
+  "src/components/admin/erp/v2/modals/NewChequeModal.tsx": {
+    "mtime": 1790975094.0631897,
+    "seen": 1790975961.6324637,
+    "ast_hash": "359700d88d4f86acd72be3889a1f26ff",
+    "semantic_hash": ""
+  },
+  "src/components/admin/erp/v2/modals/QuickTransactionModal.tsx": {
+    "mtime": 1790975102.9781363,
+    "seen": 1790975961.632475,
+    "ast_hash": "29966b7276d479fdc2749d3da92c071c",
+    "semantic_hash": ""
+  },
+  "supabase/check_historical_orphaned_costs.sql": {
+    "mtime": 1789429643.5391245,
+    "seen": 1790975961.6327307,
+    "ast_hash": "caf15c8674a2ad10b6805581f2e303c9",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/009_erp_coas_additions.sql": {
+    "mtime": 1788715554.0186665,
+    "seen": 1790975961.6327415,
+    "ast_hash": "b65f438ac49e5c3548aec392b76e40c6",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/013_erp_schedule_immutability_and_partner_tables.sql": {
+    "mtime": 1788888028.85242,
+    "seen": 1790975961.632747,
+    "ast_hash": "1b1592c14f995f9bc6d97dedc10ecdf2",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/014_enforce_rls_and_security_hardening.sql": {
+    "mtime": 1788918689.4375126,
+    "seen": 1790975961.6327481,
+    "ast_hash": "d9852a278b7a5cdb82eef68118a18db8",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/015_performance_indexes_and_rls_optimization.sql": {
+    "mtime": 1788919161.487197,
+    "seen": 1790975961.6327488,
+    "ast_hash": "1b70f646986c3a45572fa8e8305809ac",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/016_harden_security_and_leads_rls.sql": {
+    "mtime": 1789116929.423005,
+    "seen": 1790975961.6327498,
+    "ast_hash": "f019bb2587d639e34192865c479cc8d0",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/017_sale_models_and_margin_exposure.sql": {
+    "mtime": 1790397376.3285146,
+    "seen": 1790975961.6327507,
+    "ast_hash": "561f9fb8202568724985c9388da8cdcc",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/018_partner_commitments_and_property_splits.sql": {
+    "mtime": 1790399940.635422,
+    "seen": 1790975961.632752,
+    "ast_hash": "a46addc7a4873ba223bc163c9f9328aa",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/019_drop_legacy_partner_calls.sql": {
+    "mtime": 1790402007.279258,
+    "seen": 1790975961.632753,
+    "ast_hash": "7fba6ee5c9ef7fff519cff82722e8c37",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/020_property_costs_adjustments_and_payables.sql": {
+    "mtime": 1790404138.2204137,
+    "seen": 1790975961.6327536,
+    "ast_hash": "879b50d1b749d04bf3ed4a4389918252",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/20260927183842_construction_orders_and_atomic_settlement.sql": {
+    "mtime": 1790534225.562804,
+    "seen": 1790975961.6327548,
+    "ast_hash": "92b71bb227bcb55e715752b7b73ce9cc",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/20260927190807_construction_settlement_opening_balances.sql": {
+    "mtime": 1790536043.1849768,
+    "seen": 1790975961.632756,
+    "ast_hash": "ff989941b1f89c81058b6587b35e8048",
+    "semantic_hash": ""
+  },
+  "src/lib/erp/__tests__/zfNavigationDockRedesign.test.ts": {
+    "mtime": 1791029697.62248,
+    "seen": 1791030119.2856243,
+    "ast_hash": "2a588aa69b7e6138ff333bfc91cb389a",
     "semantic_hash": ""
   }
 }

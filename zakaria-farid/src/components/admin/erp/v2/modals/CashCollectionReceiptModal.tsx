@@ -56,6 +56,11 @@ export const CashCollectionReceiptModal: React.FC<CashCollectionReceiptModalProp
     setPaymentMethod('CASH');
   }, [isOpen]);
 
+  const targetPeriod = useMemo(() => {
+    return resolvePeriodForDate(receiptDate, periods || (activePeriod ? [activePeriod] : []), activePeriod);
+  }, [receiptDate, periods, activePeriod]);
+  const isTargetPeriodLocked = targetPeriod ? targetPeriod.status !== 'OPEN' : false;
+
   if (!isOpen || !contract || !schedule) return null;
 
   const amount = D(schedule.nominal_value || '0');
@@ -67,11 +72,6 @@ export const CashCollectionReceiptModal: React.FC<CashCollectionReceiptModalProp
     : (isAr ? 'توريد كاش باليد' : 'Cash in Hand');
   const creditAccount = contract.handover_status === 'Delivered' ? '103000' : '203000';
   const money = (value: Decimal) => `${value.formatEGP(isAr)}`;
-
-  const targetPeriod = useMemo(() => {
-    return resolvePeriodForDate(receiptDate, periods || (activePeriod ? [activePeriod] : []), activePeriod);
-  }, [receiptDate, periods, activePeriod]);
-  const isTargetPeriodLocked = targetPeriod ? targetPeriod.status !== 'OPEN' : false;
 
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();

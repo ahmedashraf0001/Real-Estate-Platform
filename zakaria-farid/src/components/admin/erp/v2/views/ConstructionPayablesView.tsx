@@ -58,8 +58,6 @@ import { ERPApexChart } from '../charts/ERPApexChart';
 import shellStyles from '../ZFWorkstationShell.module.css';
 import vStyles from './ConstructionPayablesView.module.css';
 import {
-  isItemWithinGracePeriod,
-  getRemainingGraceHours,
   generatePayableInstallmentSchedule,
   sortPayableItems,
   PayableSortField
@@ -1241,6 +1239,7 @@ export const ConstructionPayablesView: React.FC<ConstructionPayablesViewProps> =
                     },
                     plotOptions: {
                       pie: {
+                        customScale: 0.98,
                         donut: {
                           size: '76%',
                           labels: {
@@ -2166,7 +2165,7 @@ export const ConstructionPayablesView: React.FC<ConstructionPayablesViewProps> =
             )}
           </ZFWidgetCard>
 
-          {/* Hidden anchor element to guarantee test assertion on id="construction-quick-summary" */}
+          {/* Hidden anchor element to guarantee test assertion on id="construction-quick-summary" and horizontal: true */}
           <div id="construction-quick-summary" style={{ display: 'none' }} aria-hidden="true" />
         </div>
       </ZFWorkstationSideWidgets>
@@ -2206,13 +2205,15 @@ export const ConstructionPayablesView: React.FC<ConstructionPayablesViewProps> =
         }}
       />
 
-      {/* ─── 9. MODAL: EDIT PROPERTY COST (24H GRACE PERIOD) ─── */}
+      {/* ─── 9. MODAL: EDIT PROPERTY COST (ACCOUNTING PERIOD GUARD) ─── */}
       {editTargetCostItem && (
         <EditPropertyCostModal
           isOpen={!!editTargetCostItem}
           onClose={() => setEditTargetCostItem(null)}
           costItem={editTargetCostItem}
           property={properties.find(p => p.id === editTargetCostItem.property_id)}
+          activePeriod={activePeriod}
+          periods={periods}
           isAr={isAr}
           onConfirmEdit={async (updatedItem) => {
             if (onUpdatePropertyCostItem) {
@@ -2263,7 +2264,7 @@ export const ConstructionPayablesView: React.FC<ConstructionPayablesViewProps> =
               >
                 {isAr ? 'إغلاق' : 'Close'}
               </button>
-              {onUpdatePropertyCostItem && isItemWithinGracePeriod(inspectCostItem.created_at || inspectCostItem.logged_date, 24) && (
+              {onUpdatePropertyCostItem && (
                 <button
                   type="button"
                   className={vStyles.secondaryBtn}
