@@ -318,6 +318,15 @@ export const CANONICAL_COA: Record<string, ERPAccount> = {
     normal_balance: 'DEBIT',
     is_active: true,
     notes: 'Site utilities, corporate overhead bills and running expenses'
+  },
+  '604000': {
+    account_code: '604000',
+    account_name_en: 'Real Estate Disposition Tax Expense',
+    account_name_ar: 'مصروف ضريبة التصرفات العقارية',
+    account_type: 'EXPENSE',
+    normal_balance: 'DEBIT',
+    is_active: true,
+    notes: 'Manually recorded disposition / transaction taxes; accrued to 204000'
   }
 };
 
