@@ -80,4 +80,48 @@ describe('DailyOperationsView Source & Architecture Invariants', () => {
       'OperationsCashFlowMap.tsx must not exist in operations/ directory'
     );
   });
+
+  it('6. view source does NOT contain OperationsSideWidgets, computeUpcomingDues( (call), شيكات, شيك', () => {
+    assert.strictEqual(
+      viewSource.includes('OperationsSideWidgets'),
+      false,
+      'DailyOperationsView.tsx must NOT contain OperationsSideWidgets'
+    );
+    assert.strictEqual(
+      viewSource.includes('computeUpcomingDues('),
+      false,
+      'DailyOperationsView.tsx must NOT contain computeUpcomingDues('
+    );
+    assert.strictEqual(
+      viewSource.includes('شيكات'),
+      false,
+      'DailyOperationsView.tsx must NOT contain شيكات'
+    );
+    assert.strictEqual(
+      viewSource.includes('شيك'),
+      false,
+      'DailyOperationsView.tsx must NOT contain شيك'
+    );
+  });
+
+  it('7. view source contains buildUpcomingDues( and onNavigateToTab(\'pdc\')', () => {
+    assert.ok(
+      viewSource.includes('buildUpcomingDues('),
+      'DailyOperationsView.tsx must contain buildUpcomingDues('
+    );
+    assert.ok(
+      viewSource.includes("onNavigateToTab('pdc')"),
+      'DailyOperationsView.tsx must contain onNavigateToTab(\'pdc\')'
+    );
+  });
+
+  it('8. OperationsSideWidgets.tsx does not exist', () => {
+    const sideWidgetsPath = path.join(opsDir, 'OperationsSideWidgets.tsx');
+    assert.strictEqual(
+      fs.existsSync(sideWidgetsPath),
+      false,
+      'OperationsSideWidgets.tsx must not exist'
+    );
+  });
 });
+

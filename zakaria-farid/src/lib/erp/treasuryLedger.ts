@@ -1,5 +1,11 @@
 import { D, Decimal } from '@/lib/erp/math';
-import type { ERPJournalEntry, ERPContract } from '@/lib/erp/types';
+import type {
+  ERPJournalEntry,
+  ERPContract,
+  ERPInstallmentSchedule,
+  ERPPropertyCostItem,
+  ERPPayableInstallment,
+} from '@/lib/erp/types';
 
 export type CashAccountCode = '101000' | '102000';
 export type TreasuryPeriod = 'today' | '7d' | 'month' | 'all';
@@ -571,3 +577,156 @@ export function summarizeTreasury(
     byKind,
   };
 }
+
+export interface UpcomingDue {
+  id: string;                 // IN: `sch-${schedule.schedule_id}`; OUT: `pay-${cost.item_id}-${inst.installment_id}`
+  direction: 'IN' | 'OUT';
+  dueDate: string;            // YYYY-MM-DD
+  isOverdue: boolean;         // dueDate < todayStr
+  title: string;
+  party: string;
+  amount: Decimal;            // remaining = nominal - paid (> 0)
+  schedule?: ERPInstallmentSchedule;
+  contract?: ERPContract;
+  cost?: ERPPropertyCostItem;
+  installment?: ERPPayableInstallment;
+}
+
+export interface UpcomingDuesResult {
+  items: UpcomingDue[];       // ALL matching items, sorted dueDate asc, tie -> id asc
+  inTotal: Decimal;
+  outTotal: Decimal;
+  inCount: number;
+  outCount: number;
+  overdueCount: number;
+  horizonEnd: string;         // todayStr + horizonDays (toLocalDateStr)
+}
+
+export function buildUpcomingDues(params: {
+  schedules?: ERPInstallmentSchedule[] | null;
+  contracts?: ERPContract[] | null;
+  propertyCosts?: ERPPropertyCostItem[] | null;
+  todayStr: string;
+  horizonDays?: number;       // default 30
+  isAr: boolean;
+}): UpcomingDuesResult {
+  const horizon = params.horizonDays ?? 30;
+  const parts = params.todayStr.split('-');
+  const y = parseInt(parts[0], 10);
+  const m = parseInt(parts[1], 10);
+  const d = parseInt(parts[2], 10);
+  const horizonDate = new Date(y, m - 1, d + horizon);
+  const horizonEnd = toLocalDateStr(horizonDate);
+
+  const items: UpcomingDue[] = [];
+
+  const allowedScheduleStatuses = new Set(['Pending', 'Partially Paid', 'Defaulted']);
+
+  if (params.schedules) {
+    for (const s of params.schedules) {
+      if (!s || !s.status || !allowedScheduleStatuses.has(s.status)) continue;
+      const contract = params.contracts?.find((c) => c && c.contract_id === s.contract_id);
+      if (!contract || contract.status !== 'Active') continue;
+
+      const remaining = D(s.nominal_value || 0).minus(D(s.amount_paid || 0));
+      if (!remaining.gt(0)) continue;
+
+      const dueDate = s.due_date || '';
+      if (!dueDate || dueDate > horizonEnd) continue;
+
+      const isOverdue = dueDate < params.todayStr;
+      const title = params.isAr
+        ? (s.tranche_number === 0
+            ? `دفعة المقدم — ${contract.contract_number}`
+            : `القسط ${s.tranche_number} — ${contract.contract_number}`)
+        : (s.tranche_number === 0
+            ? `Down payment — ${contract.contract_number}`
+            : `Installment ${s.tranche_number} — ${contract.contract_number}`);
+
+      const party = contract.buyer_name || '—';
+
+      items.push({
+        id: `sch-${s.schedule_id}`,
+        direction: 'IN',
+        dueDate,
+        isOverdue,
+        title,
+        party,
+        amount: remaining,
+        schedule: s,
+        contract,
+      });
+    }
+  }
+
+  if (params.propertyCosts) {
+    for (const cost of params.propertyCosts) {
+      if (!cost || !cost.payable_installments) continue;
+      for (const inst of cost.payable_installments) {
+        if (!inst || inst.status === 'PAID') continue;
+
+        const remaining = D(inst.amount_egp || 0).minus(D(inst.paid_amount_egp || 0));
+        if (!remaining.gt(0)) continue;
+
+        const dueDate = inst.due_date || '';
+        if (!dueDate || dueDate > horizonEnd) continue;
+
+        const isOverdue = dueDate < params.todayStr;
+        const title = params.isAr
+          ? (inst.title_ar || cost.item_name_ar || '')
+          : (inst.title_en || inst.title_ar || cost.item_name_en || cost.item_name_ar || '');
+
+        const party = cost.supplier_contractor || '—';
+
+        items.push({
+          id: `pay-${cost.item_id}-${inst.installment_id}`,
+          direction: 'OUT',
+          dueDate,
+          isOverdue,
+          title,
+          party,
+          amount: remaining,
+          cost,
+          installment: inst,
+        });
+      }
+    }
+  }
+
+  items.sort((a, b) => {
+    if (a.dueDate !== b.dueDate) {
+      return a.dueDate.localeCompare(b.dueDate);
+    }
+    return a.id.localeCompare(b.id);
+  });
+
+  let inTotal = D(0);
+  let outTotal = D(0);
+  let inCount = 0;
+  let outCount = 0;
+  let overdueCount = 0;
+
+  for (const item of items) {
+    if (item.direction === 'IN') {
+      inTotal = inTotal.plus(item.amount);
+      inCount++;
+    } else {
+      outTotal = outTotal.plus(item.amount);
+      outCount++;
+    }
+    if (item.isOverdue) {
+      overdueCount++;
+    }
+  }
+
+  return {
+    items,
+    inTotal,
+    outTotal,
+    inCount,
+    outCount,
+    overdueCount,
+    horizonEnd,
+  };
+}
+

@@ -21,7 +21,8 @@ import {
   ArrowUp,
   ArrowDown,
   ArrowUpDown,
-  X
+  X,
+  CalendarClock
 } from 'lucide-react';
 import type {
   ERPContract,
@@ -41,13 +42,15 @@ import {
   getTreasuryPeriodRange,
   isInTreasuryPeriod,
   toLocalDateStr,
+  buildUpcomingDues,
   CASH_MOVEMENT_KIND_LABELS,
   CASH_ACCOUNT_LABELS,
   TREASURY_PERIOD_LABELS,
   type TreasuryMovement,
   type TreasuryPeriod,
   type CashMovementKind,
-  type CashAccountCode
+  type CashAccountCode,
+  type UpcomingDue
 } from '@/lib/erp/treasuryLedger';
 import {
   formatNumberWithCommas,
@@ -65,7 +68,6 @@ import { ZFKpiCard } from '../ZFKpiCard';
 import { ZFWorkstationSideWidgets } from '../common/ZFWorkstationSideWidgets';
 import { ZFSearchBar } from '../common/ZFSearchBar';
 import { ZFPagination } from '../ZFPagination';
-import { OperationsSideWidgets } from './operations/OperationsSideWidgets';
 import { CostAdjustmentModal } from '../modals/CostAdjustmentModal';
 import { CostPayableSettlementModal } from '../modals/CostPayableSettlementModal';
 import { EditPropertyCostModal } from '../modals/EditPropertyCostModal';
@@ -131,6 +133,7 @@ export const DailyOperationsView: React.FC<DailyOperationsViewProps> = ({
   properties = [],
   contracts = [],
   pdcRecords = [],
+  schedules = [],
   journalEntries = [],
   activePeriod,
   periods,
@@ -138,7 +141,6 @@ export const DailyOperationsView: React.FC<DailyOperationsViewProps> = ({
   isMutating = false,
   onOpenProjectExpense,
   onCollectItem,
-  onInspectCheque,
   onInspectTransaction,
   onOpenCashReceipt,
   onUpdatePropertyCostItem,
@@ -230,9 +232,28 @@ export const DailyOperationsView: React.FC<DailyOperationsViewProps> = ({
     return sorted.slice((safePage - 1) * pageSize, safePage * pageSize);
   }, [sorted, safePage, pageSize]);
 
-  const upcomingDues = useMemo(() => {
-    return computeUpcomingDues(pdcRecords, propertyCosts, isAr, todayStr);
-  }, [pdcRecords, propertyCosts, isAr, todayStr]);
+  const dues = useMemo(() => buildUpcomingDues({ schedules, contracts, propertyCosts, todayStr, isAr }), [schedules, contracts, propertyCosts, todayStr, isAr]);
+
+  const handleDueClick = (d: UpcomingDue) => {
+    if (d.direction === 'IN' && d.schedule && d.contract) {
+      onCollectItem({
+        cheque_id: `SCH-${d.schedule.schedule_id}`,
+        contract_id: d.contract.contract_id,
+        schedule_id: d.schedule.schedule_id,
+        cheque_number: '',
+        bank_name: '',
+        drawer_name: d.contract.buyer_name,
+        nominal_value: d.amount.toFixed(2),
+        due_date: d.dueDate,
+        status: 'In Safe',
+      } as ERPPDCRecord);
+      return;
+    }
+    if (d.direction === 'OUT' && d.cost && d.installment) {
+      if (onRecordPayablePayment) { setSelectedCostForPayable(d.cost); setSelectedInstallmentForPayable(d.installment); }
+      else if (onUpdatePropertyCostItem) { setSelectedCostForEdit(d.cost); }
+    }
+  };
 
   const periodLabel = TREASURY_PERIOD_LABELS[period][isAr ? 'ar' : 'en'];
   const dateLabel = useMemo(() => {
@@ -787,28 +808,51 @@ export const DailyOperationsView: React.FC<DailyOperationsViewProps> = ({
               {renderAction('partner_payout', <HandCoins size={15} />, isAr ? 'توزيع على الشركاء' : 'Partner distribution', isAr ? 'أرباح أو مسحوبات' : 'Profit or drawings')}
             </div>
           </div>
-          <OperationsSideWidgets
-            upcomingDues={upcomingDues}
-            isAr={isAr}
-            onViewAllUpcomingDues={() => onNavigateToTab?.('pdc')}
-            onCollectItem={onCollectItem}
-            onInspectCheque={onInspectCheque}
-            onRecordPayablePayment={(cost, inst) => {
-              if (onRecordPayablePayment) {
-                setSelectedCostForPayable(cost);
-                setSelectedInstallmentForPayable(inst);
-              } else if (onUpdatePropertyCostItem) {
-                setSelectedCostForEdit(cost);
-              } else {
-                setIsExpenseModalOpen(true);
-              }
-            }}
-            onUpdatePropertyCostItem={(cost) => {
-              if (onUpdatePropertyCostItem) setSelectedCostForEdit(cost);
-            }}
-            onOpenExpenseModal={() => setIsExpenseModalOpen(true)}
-            onNavigateToTab={onNavigateToTab}
-          />
+          <div className={ops.card}>
+            <div className={ops.cardHeader}>
+              <div className={ops.cardTitleGroup}>
+                <span className={ops.iconSquircle}><CalendarClock size={15} /></span>
+                <div className={ops.cardTitleStack}>
+                  <h2 className={ops.cardTitle}>{isAr ? 'مستحقات قادمة' : 'Upcoming dues'}</h2>
+                  <span className={ops.cardHint}>{isAr ? 'المتأخر + الـ٣٠ يوماً القادمة' : 'Overdue + next 30 days'}</span>
+                </div>
+              </div>
+              <button type="button" className={ops.linkBtn} onClick={() => onNavigateToTab('pdc')}>{isAr ? 'عرض الكل' : 'View all'}</button>
+            </div>
+            <dl className={ops.dueSummary}>
+              <div className={ops.dueSummaryRow}>
+                <dt>{isAr ? 'تحصيلات متوقعة' : 'Expected receipts'} <span className={ops.dueCount}>{dues.inCount}</span></dt>
+                <dd><span className={`${ops.amount} ${ops.amountIn}`}>{fmt(dues.inTotal)}</span> <span className={ops.dueCur}>{cur}</span></dd>
+              </div>
+              <div className={ops.dueSummaryRow}>
+                <dt>{isAr ? 'مدفوعات مستحقة' : 'Payments due'} <span className={ops.dueCount}>{dues.outCount}</span></dt>
+                <dd><span className={`${ops.amount} ${ops.amountOut}`}>{fmt(dues.outTotal)}</span> <span className={ops.dueCur}>{cur}</span></dd>
+              </div>
+            </dl>
+            {dues.items.length === 0 ? (
+              <div className={ops.empty}>{isAr ? 'لا توجد أقساط أو مستحقات خلال الـ٣٠ يوماً القادمة' : 'No installments or payables due in the next 30 days'}</div>
+            ) : (
+              <ul className={ops.dueList}>
+                {dues.items.slice(0, 6).map(d => (
+                  <li key={d.id}>
+                    <button type="button" className={ops.dueItem} disabled={isMutating} onClick={() => handleDueClick(d)}>
+                      <span className={ops.dueTexts}>
+                        <span className={ops.dueTitle}>{d.title}</span>
+                        <span className={ops.dueMeta}>{d.party} · {displayDate(d.dueDate)}</span>
+                      </span>
+                      <span className={ops.dueAmountCol}>
+                        <span className={`${ops.amount} ${d.direction === 'IN' ? ops.amountIn : ops.amountOut}`}>{d.direction === 'IN' ? '+' : '-'}{fmt(d.amount)}</span>
+                        {d.isOverdue && <span className={`${shellStyles.statusPill} ${shellStyles.statusPillRed}`}>{isAr ? 'متأخر' : 'Overdue'}</span>}
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {dues.items.length > 6 && (
+              <div className={ops.dueMore}>{isAr ? `+ ${dues.items.length - 6} مستحقات أخرى` : `+ ${dues.items.length - 6} more`}</div>
+            )}
+          </div>
         </div>
       </ZFWorkstationSideWidgets>
 

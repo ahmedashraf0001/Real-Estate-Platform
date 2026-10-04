@@ -4,10 +4,11 @@ import {
   buildTreasuryMovements,
   summarizeTreasury,
   getTreasuryPeriodRange,
+  buildUpcomingDues,
 } from '../treasuryLedger';
 import { D } from '../math';
 import { getAvailableCash } from '../canonicalMetrics';
-import type { ERPJournalEntry, ERPContract } from '../types';
+import type { ERPJournalEntry, ERPContract, ERPInstallmentSchedule, ERPPropertyCostItem } from '../types';
 
 type LineTuple = [string, number | string, number | string, Record<string, unknown>?];
 
@@ -296,3 +297,91 @@ describe('Treasury Ledger: Cash Book & Operations', () => {
     assert.equal(beforeStr, afterStr);
   });
 });
+
+describe('buildUpcomingDues', () => {
+  const contracts = [
+    { contract_id: 'c1', contract_number: 'ZF-1', buyer_name: 'A', status: 'Active' },
+    { contract_id: 'c2', contract_number: 'ZF-2', buyer_name: 'B', status: 'Rescinded' },
+  ] as unknown as ERPContract[];
+
+  const schedules = [
+    { schedule_id: 's0', contract_id: 'c1', tranche_number: 0, due_date: '2026-09-30', nominal_value: '100000', amount_paid: '0', status: 'Pending' },
+    { schedule_id: 's1', contract_id: 'c1', tranche_number: 1, due_date: '2026-10-20', nominal_value: '50000', amount_paid: '20000', status: 'Partially Paid' },
+    { schedule_id: 's2', contract_id: 'c1', tranche_number: 2, due_date: '2026-12-20', nominal_value: '50000', amount_paid: '0', status: 'Pending' },
+    { schedule_id: 's3', contract_id: 'c1', tranche_number: 3, due_date: '2026-10-10', nominal_value: '50000', amount_paid: '50000', status: 'Paid' },
+    { schedule_id: 's4', contract_id: 'c2', tranche_number: 1, due_date: '2026-10-10', nominal_value: '70000', amount_paid: '0', status: 'Pending' },
+    { schedule_id: 's5', contract_id: 'c1', tranche_number: 4, due_date: '2026-10-12', nominal_value: '50000', amount_paid: '0', status: 'SUPERSEDED' },
+  ] as unknown as ERPInstallmentSchedule[];
+
+  const propertyCosts = [
+    {
+      item_id: 'k1',
+      item_name_ar: 'أعمال خرسانة',
+      supplier_contractor: 'Contractor X',
+      payable_installments: [
+        { installment_id: 'i1', title_ar: 'دفعة ١', due_date: '2026-10-15', amount_egp: '40000', paid_amount_egp: '0', status: 'PENDING' },
+        { installment_id: 'i2', title_ar: 'دفعة ٢', due_date: '2026-10-01', amount_egp: '10000', paid_amount_egp: '10000', status: 'PAID' },
+        { installment_id: 'i3', title_ar: 'دفعة ٣', due_date: '2026-10-02', amount_egp: '25000', paid_amount_egp: '5000', status: 'OVERDUE' },
+      ],
+    },
+  ] as unknown as ERPPropertyCostItem[];
+
+  it('1-4. filters, sorts and aggregates upcoming dues correctly (Arabic)', () => {
+    const res = buildUpcomingDues({
+      schedules,
+      contracts,
+      propertyCosts,
+      todayStr: '2026-10-04',
+      isAr: true,
+    });
+
+    // 1. items ids in order: ['sch-s0','pay-k1-i3','pay-k1-i1','sch-s1']
+    assert.deepEqual(res.items.map(i => i.id), ['sch-s0', 'pay-k1-i3', 'pay-k1-i1', 'sch-s1']);
+
+    // 2. sch-s0: direction IN, isOverdue true, amount 100000, title 'دفعة المقدم — ZF-1', party 'A'
+    const s0 = res.items.find(i => i.id === 'sch-s0')!;
+    assert.equal(s0.direction, 'IN');
+    assert.equal(s0.isOverdue, true);
+    assert.ok(s0.amount.eq(D(100000)));
+    assert.equal(s0.title, 'دفعة المقدم — ZF-1');
+    assert.equal(s0.party, 'A');
+
+    // 3. sch-s1 amount 30000, title 'القسط 1 — ZF-1'; pay-k1-i3 amount 20000, isOverdue true, party 'Contractor X'
+    const s1 = res.items.find(i => i.id === 'sch-s1')!;
+    assert.ok(s1.amount.eq(D(30000)));
+    assert.equal(s1.title, 'القسط 1 — ZF-1');
+
+    const i3 = res.items.find(i => i.id === 'pay-k1-i3')!;
+    assert.ok(i3.amount.eq(D(20000)));
+    assert.equal(i3.isOverdue, true);
+    assert.equal(i3.party, 'Contractor X');
+
+    // 4. inTotal 130000, inCount 2, outTotal 60000, outCount 2, overdueCount 2, horizonEnd '2026-11-03'
+    assert.ok(res.inTotal.eq(D(130000)));
+    assert.equal(res.inCount, 2);
+    assert.ok(res.outTotal.eq(D(60000)));
+    assert.equal(res.outCount, 2);
+    assert.equal(res.overdueCount, 2);
+    assert.equal(res.horizonEnd, '2026-11-03');
+  });
+
+  it('5. isAr false: sch-s0 title "Down payment — ZF-1"', () => {
+    const res = buildUpcomingDues({
+      schedules,
+      contracts,
+      propertyCosts,
+      todayStr: '2026-10-04',
+      isAr: false,
+    });
+    const s0 = res.items.find(i => i.id === 'sch-s0')!;
+    assert.equal(s0.title, 'Down payment — ZF-1');
+  });
+
+  it('6. empty: buildUpcomingDues({ todayStr:"2026-10-04", isAr:true }) -> items [], inTotal eq 0, overdueCount 0', () => {
+    const res = buildUpcomingDues({ todayStr: '2026-10-04', isAr: true });
+    assert.deepEqual(res.items, []);
+    assert.ok(res.inTotal.eq(0));
+    assert.equal(res.overdueCount, 0);
+  });
+});
+
