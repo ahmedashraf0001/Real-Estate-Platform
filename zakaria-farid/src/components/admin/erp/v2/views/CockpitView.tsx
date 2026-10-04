@@ -51,6 +51,7 @@ import { Property } from '@/lib/supabase/types';
 import { D, Decimal } from '@/lib/erp/math';
 import { getAvailableCash, getConstructionWIP } from '@/lib/erp/canonicalMetrics';
 import { formatCompactEGP } from '@/lib/erp/propertyAnalysisEngine';
+import { computeProjectStatusMetrics } from '@/lib/erp/projectStatusHelper';
 import { ERPApexChart } from '../charts/ERPApexChart';
 import { AnimatedCounter } from '../common/AnimatedCounter';
 import { ZFSearchBar } from '../common/ZFSearchBar';
@@ -867,93 +868,175 @@ export const CockpitView: React.FC<CockpitViewProps> = ({
   const allRecentTransactions = useMemo<RecentTxItem[]>(() => {
     const list: RecentTxItem[] = [];
 
-    // 1. Client Collections from contracts
-    contracts.filter(c => isPropertyInProject(c.property_id, c.unit_id) && isInCurrentPeriod(c.contract_date)).forEach((c) => {
-      const isDelivered = c.handover_status === 'Delivered';
-      const isRescinded = c.status === 'Rescinded';
-      const rawCollectedVal = parseFloat(
-        (c as any).total_cash_collected ??
-        (c as any).collected_amount ??
-        (c as any).paid_amount ??
-        '0'
-      );
-      const rawContractVal = parseFloat(
-        (c as any).gross_contract_value ??
-        (c as any).total_contract_value ??
-        c.base_price ??
-        '0'
-      );
-      const amt = rawCollectedVal > 0 ? rawCollectedVal : rawContractVal;
+    const contractsMap = new Map<string, ERPContract>();
+    for (const c of contracts) {
+      contractsMap.set(c.contract_id, c);
+    }
+
+    const costsMap = new Map<string, ERPPropertyCostItem>();
+    if (propertyCosts) {
+      for (const cost of propertyCosts) {
+        if (cost.item_id) costsMap.set(cost.item_id, cost);
+        if ((cost as any).id) costsMap.set((cost as any).id, cost);
+        if (cost.invoice_ref) costsMap.set(cost.invoice_ref, cost);
+      }
+    }
+
+    // Build rows from real journal entries (newest first)
+    for (const j of journalEntries) {
+      const lineContractId = j.lines?.find(l => l.contract_id)?.contract_id;
+      const linkedContract = (lineContractId ? contractsMap.get(lineContractId) : undefined) ||
+        (j.source_entity_id ? contractsMap.get(j.source_entity_id) : undefined);
+
+      const linkedCost = (j.source_entity_id ? costsMap.get(j.source_entity_id) : undefined) ||
+        (j.entry_number ? costsMap.get(j.entry_number) : undefined);
+
+      // Project scoping filter
+      if (statProjectFilter !== 'all') {
+        const isProjectMatch =
+          (linkedContract && isPropertyInProject(linkedContract.property_id, linkedContract.unit_id || linkedContract.building_unit_number)) ||
+          (linkedCost && isPropertyInProject(linkedCost.property_id)) ||
+          isPropertyInProject(j.source_entity_id) ||
+          (j.lines && j.lines.some(l => isPropertyInProject(undefined, l.unit_id)));
+        if (!isProjectMatch) continue;
+      }
+
+      const num = j.entry_number || '';
+      const desc = j.description || '';
+      const mod = j.source_module;
+      const accountCodes = (j.lines || []).map(l => l.account_code);
+
+      // Classify transaction into collection / contractor / journal
+      const isReceipt =
+        num.startsWith('JE-RCP-') ||
+        num.startsWith('JE-IP-') ||
+        num.startsWith('JE-COLL-') ||
+        num.startsWith('JE-PDC-CLR-') ||
+        num.startsWith('JE-COL-') ||
+        (/receipt|collection|إيصال|تحصيل|إنستاباي/i.test(desc) && !num.startsWith('JE-PAY-'));
+
+      const isAdvancePayment =
+        num.startsWith('JE-PAY-') ||
+        (/advance|down payment|مقدم تعاقد|دفعة مقدمة/i.test(desc) && !num.startsWith('JE-RCP-') && !num.startsWith('JE-IP-'));
+
+      const isRescission =
+        num.startsWith('JE-RESC-') ||
+        /rescission|فسخ واسترداد|فسخ/i.test(desc);
+
+      const isRefund =
+        num.startsWith('JE-REF-') ||
+        /refund|رد أموال|استرداد نقدي/i.test(desc);
+
+      const isExpenseOrPayable =
+        num.startsWith('JE-EXP-') ||
+        num.startsWith('JE-WIP-') ||
+        num.startsWith('JE-BILL-') ||
+        mod === 'WIP_ALLOCATION' ||
+        accountCodes.some(c => c.startsWith('15') || c.startsWith('50') || c.startsWith('201') || c.startsWith('202')) ||
+        (/expense|payable|مصروف|مقاول|مستخلص|فاتورة مورد/i.test(desc) && !isReceipt && !isAdvancePayment);
+
+      let type: 'collection' | 'contractor' | 'cheque' | 'journal' = 'journal';
+      let typeLabel = isAr ? 'حركة خزينة' : 'Cash Journal';
+      let typeColor = '#6366f1';
+      let statusLabel = isAr ? 'مرحل ومطابق' : 'Posted';
+      let statusClass = styles.statusPillGreen;
+
+      if (isReceipt) {
+        type = 'collection';
+        if (num.startsWith('JE-IP-') || /instapay|إنستاباي/i.test(desc)) {
+          typeLabel = isAr ? 'تحصيل إنستاباي' : 'InstaPay Receipt';
+        } else if (num.startsWith('JE-RCP-') || /إيصال/i.test(desc)) {
+          typeLabel = isAr ? 'إيصال استلام' : 'Collection Receipt';
+        } else {
+          typeLabel = isAr ? 'تحصيل عميل' : 'Client Collection';
+        }
+        typeColor = '#16a34a';
+        statusLabel = isAr ? 'مرحل ومطابق' : 'Posted';
+        statusClass = styles.statusPillGreen;
+      } else if (isAdvancePayment) {
+        type = 'collection';
+        typeLabel = isAr ? 'مقدم تعاقد' : 'Down Payment';
+        typeColor = '#059669';
+        statusLabel = isAr ? 'ساري التعاقد' : 'Active';
+        statusClass = styles.statusPillGreen;
+      } else if (isRescission) {
+        type = 'collection';
+        typeLabel = isAr ? 'فسخ واسترداد' : 'Rescission';
+        typeColor = '#dc2626';
+        statusLabel = isAr ? 'فسخ واسترداد' : 'Rescinded';
+        statusClass = styles.statusPillRed;
+      } else if (isRefund) {
+        type = 'collection';
+        typeLabel = isAr ? 'رد أموال' : 'Refund';
+        typeColor = '#ea580c';
+        statusLabel = isAr ? 'مسترد' : 'Refunded';
+        statusClass = styles.statusPillAmber;
+      } else if (isExpenseOrPayable) {
+        type = 'contractor';
+        typeLabel = isAr ? 'مستحقات مقاول' : 'Contractor Payable';
+        typeColor = '#d97706';
+        statusLabel = isAr ? 'معتمد للصرف' : 'Approved';
+        statusClass = styles.statusPillBlue;
+      } else {
+        type = 'journal';
+        typeLabel = isAr ? 'حركة خزينة' : 'Cash Journal';
+        typeColor = '#6366f1';
+        statusLabel = isAr ? 'مرحل بالدفاتر' : 'Posted';
+        statusClass = styles.statusPillGreen;
+      }
+
+      // Party: buyer from linked contract via journal lines contract_id or entry source_entity_id; supplier for costs
+      let party = '';
+      if (linkedContract?.buyer_name) {
+        party = linkedContract.buyer_name;
+      } else if (linkedCost?.supplier_contractor) {
+        party = linkedCost.supplier_contractor;
+      } else if (isExpenseOrPayable) {
+        const memo = j.lines?.find(l => l.memo && l.memo.trim())?.memo;
+        party = memo || (desc ? desc.replace(/^[^:]*:\s*/, '').slice(0, 30) : (isAr ? 'مورد / مقاول' : 'Supplier / Contractor'));
+      } else if (isReceipt || isAdvancePayment || isRescission || isRefund) {
+        const parenMatch = desc.match(/\(([^)]+)\)/);
+        party = parenMatch ? parenMatch[1] : (isAr ? 'عميل تعاقد' : 'Contract Client');
+      } else {
+        party = desc || (isAr ? 'حركة خزينة نقدية' : 'Cash Safe Entry');
+      }
+
+      // Reference: entry_number
+      const reference = num || (j.entry_id ? `#${j.entry_id.slice(0, 8)}` : '—');
+
+      // Amount: sum of debits
+      const debitsSum = (j.lines || []).reduce((sum, line) => sum.plus(D(line.debit_amount || '0')), D(0)).toNumber();
+      const amount = debitsSum;
+      const formattedAmount = `${amount.toLocaleString('en-US')} ${isAr ? 'ج.م' : 'EGP'}`;
+
+      const onClick = () => {
+        if (linkedContract && onInspectContract) {
+          onInspectContract(linkedContract);
+        } else if (type === 'contractor' && onNavigateTab) {
+          onNavigateTab('construction');
+        } else if (onNavigateTab) {
+          onNavigateTab('ledger');
+        }
+      };
 
       list.push({
-        id: `c_${c.contract_id}`,
-        date: c.contract_date || '',
-        type: 'collection',
-        typeLabel: isAr ? 'تحصيل عميل' : 'Client Collection',
-        typeColor: '#16a34a',
-        party: c.buyer_name || (isAr ? 'عميل تعاقد' : 'Contract Client'),
-        reference: c.building_unit_number 
-          ? (isAr ? `وحدة ${c.building_unit_number}` : `Unit ${c.building_unit_number}`) 
-          : (c.unit_id || '—'),
-        amount: amt,
-        formattedAmount: `${amt.toLocaleString('en-US')} ${isAr ? 'ج.م' : 'EGP'}`,
-        statusLabel: isDelivered 
-          ? (isAr ? 'تم التسليم' : 'Delivered') 
-          : isRescinded 
-            ? (isAr ? 'فسخ واسترداد' : 'Rescinded') 
-            : (isAr ? 'ساري التعاقد' : 'Active'),
-        statusClass: isDelivered ? styles.statusPillBlue : isRescinded ? styles.statusPillRed : styles.statusPillGreen,
-        onClick: () => onInspectContract(c),
-      });
-    });
-
-    // 2. Contractor Payables from propertyCosts
-    propertyCosts.filter(c => isPropertyInProject(c.property_id) && isInCurrentPeriod(c.logged_date)).forEach((cost) => {
-      const amt = parseFloat(cost.total_cost_egp || String((cost as any).total_amount || '0'));
-      const isCap = cost.status === 'capitalized';
-      const isPending = cost.status === 'pending_audit';
-
-      list.push({
-        id: `pc_${cost.item_id || (cost as any).id}`,
-        date: cost.logged_date || '',
-        type: 'contractor',
-        typeLabel: isAr ? 'دفع مقاول' : 'Contractor Payout',
-        typeColor: '#d97706',
-        party: cost.supplier_contractor || (isAr ? cost.item_name_ar : cost.item_name_en) || (isAr ? 'مقاول غير محدد' : 'Unspecified Contractor'),
-        reference: cost.invoice_ref || (cost.building_unit_id ? `CON-${cost.building_unit_id}` : (cost.item_id ? `#${cost.item_id.slice(0, 8)}` : '—')),
-        amount: amt,
-        formattedAmount: `${amt.toLocaleString('en-US')} ${isAr ? 'ج.م' : 'EGP'}`,
-        statusLabel: isCap 
-          ? (isAr ? 'مسدد بالكامل' : 'Paid') 
-          : isPending 
-            ? (isAr ? 'قيد المراجعة' : 'In Review') 
-            : (isAr ? 'معتمد للصرف' : 'Approved'),
-        statusClass: isCap ? styles.statusPillGreen : isPending ? styles.statusPillAmber : styles.statusPillBlue,
-        onClick: () => onNavigateTab && onNavigateTab('construction'),
-      });
-    });
-
-    // 4. Cash journal entries
-    journalEntries.filter(j => isInCurrentPeriod(j.entry_date) && (statProjectFilter === 'all' || isPropertyInProject(j.source_entity_id) || j.lines?.some(line => isPropertyInProject(undefined, line.unit_id) || isPropertyInProject(contracts.find(c => c.contract_id === line.contract_id)?.property_id)))).forEach((j) => {
-      const amt = parseFloat(j.lines?.[0]?.debit_amount || j.lines?.[0]?.credit_amount || '0');
-      list.push({
-        id: `j_${j.entry_id}`,
+        id: `j_${j.entry_id || num}`,
         date: j.entry_date ? String(j.entry_date).slice(0, 10) : '',
-        type: 'journal',
-        typeLabel: isAr ? 'حركة خزينة' : 'Cash Journal',
-        typeColor: '#6366f1',
-        party: j.description || (isAr ? 'حركة خزينة نقدية' : 'Cash Safe Entry'),
-        reference: `#${j.entry_id ? j.entry_id.slice(0, 8) : '001'}`,
-        amount: amt,
-        formattedAmount: `${amt.toLocaleString('en-US')} ${isAr ? 'ج.م' : 'EGP'}`,
-        statusLabel: isAr ? 'مرحل ومطابق' : 'Posted',
-        statusClass: styles.statusPillGreen,
-        onClick: () => onNavigateTab && onNavigateTab('ledger'),
+        type,
+        typeLabel,
+        typeColor,
+        party,
+        reference,
+        amount,
+        formattedAmount,
+        statusLabel,
+        statusClass,
+        onClick,
       });
-    });
+    }
 
-    return list.sort((a, b) => b.date.localeCompare(a.date));
-  }, [contracts, propertyCosts, pdcRecords, journalEntries, isAr, onInspectContract, onInspectCheque, onNavigateTab, isPropertyInProject, isInCurrentPeriod, statProjectFilter]);
+    return list.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+  }, [journalEntries, contracts, propertyCosts, statProjectFilter, isPropertyInProject, isAr, onInspectContract, onNavigateTab]);
 
   // Filtered & sorted Recent Transactions
   const filteredAllTransactions = useMemo(() => {
