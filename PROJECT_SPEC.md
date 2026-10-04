@@ -149,3 +149,4 @@ The platform combines a public-facing property showcase with a comprehensive bac
 - [user-confirmed] Accounting periods are created automatically for any new year/month as needed; the user can also manually close a fiscal year.
 - [user-confirmed] There are NO cheques. Payments are either direct cash or InstaPay transfer. Money is recorded only when actually received (no post-dated cheque records, no auto-generated PDCs).
 - [user-confirmed] The down payment is NOT auto-collected when a contract is created; it stays pending until actually received and recorded.
+- [user-confirmed 2026-10-05] InstaPay money is recorded in account 102000 (InstaPay) everywhere: collections, expenses, contractor settlements, partner funding and partner payouts. Cash is 101000 (Main Safe). Supersedes the older "unified treasury 101000" design.

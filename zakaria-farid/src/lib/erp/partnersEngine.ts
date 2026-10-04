@@ -995,11 +995,11 @@ export class PartnersEngine {
     const amt = D(params.amount).toFixed(2);
     const creditAccount = params.routingAccount
       ? params.routingAccount
-      : (params.paymentMethod === 'BANK_102000' ? '102000' : '101000');
+      : ((params.paymentMethod === 'CASH_101000' || params.paymentMethod === 'CASH') ? '101000' : '102000');
     const isInstaPay = String(params.paymentMethod).includes('INSTAPAY');
     const paymentLabel = creditAccount === '101000'
-      ? (isInstaPay ? 'الخزينة الرئيسية (تحويل إنستاباي فوري 101000)' : 'خزينة النقدية الرئيسية (كاش باليد 101000)')
-      : 'حساب البنك التجاري (102000)';
+      ? 'الخزينة (101000)'
+      : (isInstaPay ? 'إنستاباي (102000)' : 'حساب البنك التجاري (102000)');
     const ref = params.receiptRef || `PAY-${Date.now().toString().slice(-6)}`;
     const entryDate = params.date || new Date().toISOString().split('T')[0];
     const year = parseInt(entryDate.split('-')[0], 10) || new Date().getFullYear();
@@ -1058,11 +1058,11 @@ export class PartnersEngine {
     const amt = D(params.amount).toFixed(2);
     const debitAccount = params.routingAccount
       ? params.routingAccount
-      : (params.paymentMethod === 'BANK_102000' ? '102000' : '101000');
+      : ((params.paymentMethod === 'CASH_101000' || params.paymentMethod === 'CASH') ? '101000' : '102000');
     const isInstaPay = String(params.paymentMethod).includes('INSTAPAY');
     const paymentLabel = debitAccount === '101000'
-      ? (isInstaPay ? 'الخزينة الرئيسية (تحويل إنستاباي فوري 101000)' : 'خزينة النقدية الرئيسية (كاش باليد 101000)')
-      : 'حساب البنك التجاري (102000)';
+      ? 'الخزينة (101000)'
+      : (isInstaPay ? 'إنستاباي (102000)' : 'حساب البنك التجاري (102000)');
     const ref = params.receiptRef || `REC-${Date.now().toString().slice(-6)}`;
     const entryDate = params.date || new Date().toISOString().split('T')[0];
     const year = parseInt(entryDate.split('-')[0], 10) || new Date().getFullYear();

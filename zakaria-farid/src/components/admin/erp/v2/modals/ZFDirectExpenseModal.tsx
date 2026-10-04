@@ -59,7 +59,7 @@ export interface ZFDirectExpenseModalProps {
   initialPaymentSource?: ConstructionExpensePaymentSource;
 }
 
-export type StrictPaymentMethod = 'CASH_101000' | 'INSTAPAY_101000' | 'DEFERRED_201000';
+export type StrictPaymentMethod = 'CASH_101000' | 'INSTAPAY_102000' | 'DEFERRED_201000';
 
 interface ExpenseSuccessData {
   amount: string;
@@ -299,7 +299,7 @@ export const ZFDirectExpenseModal: React.FC<ZFDirectExpenseModalProps> = ({
 
     // Map strict payment method to accounting payment source
     const paymentSource: ConstructionExpensePaymentSource =
-      paymentMethod === 'DEFERRED_201000' ? '201000' : paymentMethod === 'INSTAPAY_101000' ? '102000' : '101000';
+      paymentMethod === 'DEFERRED_201000' ? '201000' : paymentMethod === 'INSTAPAY_102000' ? '102000' : '101000';
 
     const property = properties.find(candidate => candidate.id === propertyId);
     const propertyTitle = property ? (isAr ? property.title_ar : property.title_en) : propertyId;
@@ -313,7 +313,7 @@ export const ZFDirectExpenseModal: React.FC<ZFDirectExpenseModalProps> = ({
       propertyTitle ? `${isAr ? 'مشروع' : 'Project'}: ${propertyTitle}` : '',
       supplier.trim() ? `${isAr ? 'المورد/المقاول' : 'Supplier'}: ${supplier.trim()}` : '',
       invoiceRef.trim() ? `${isAr ? 'مرجع' : 'Ref'}: ${invoiceRef.trim()}` : '',
-      paymentMethod === 'INSTAPAY_101000'
+      paymentMethod === 'INSTAPAY_102000'
         ? (instapayRef.trim() ? `[إنستاباي: ${instapayRef.trim()}]` : '[إنستاباي / InstaPay]')
         : paymentMethod === 'CASH_101000'
           ? '[كاش بالخزينة]'
@@ -323,7 +323,7 @@ export const ZFDirectExpenseModal: React.FC<ZFDirectExpenseModalProps> = ({
 
     const finalNotes = [
       notes.trim(),
-      paymentMethod === 'INSTAPAY_101000' && instapayRef.trim() ? `مرجع إنستاباي: ${instapayRef.trim()}` : ''
+      paymentMethod === 'INSTAPAY_102000' && instapayRef.trim() ? `مرجع إنستاباي: ${instapayRef.trim()}` : ''
     ].filter(Boolean).join(' | ');
 
     setIsSubmitting(true);
@@ -399,7 +399,7 @@ export const ZFDirectExpenseModal: React.FC<ZFDirectExpenseModalProps> = ({
     ? (isAr
         ? `تُحمّل ${categoryLabel} على تكلفة المشروع (حساب 151000)، ويُصرف المبلغ فوراً من الخزينة الرئيسية (حساب 101000).`
         : `${categoryLabel} is debited to project WIP and credited to physical treasury cash (101000).`)
-    : paymentMethod === 'INSTAPAY_101000'
+    : paymentMethod === 'INSTAPAY_102000'
       ? (isAr
           ? `تُحمّل ${categoryLabel} على تكلفة المشروع (حساب 151000)، ويُسدد فورياً بتحويل إنستاباي من الحساب البنكي (حساب 102000).`
           : `${categoryLabel} is debited to project WIP and paid instantly by InstaPay from the bank account (102000).`)
@@ -636,12 +636,12 @@ export const ZFDirectExpenseModal: React.FC<ZFDirectExpenseModalProps> = ({
                 <small>{isAr ? 'صرف نقدي فوري من الخزينة الرئيسية (حساب 101000)' : 'Instant cash payout from treasury (101000)'}</small>
               </div>
 
-              {/* Method 2: InstaPay Transfer (101000) */}
+              {/* Method 2: InstaPay Transfer (102000) */}
               <div
-                className={paymentMethod === 'INSTAPAY_101000' ? styles.paymentOptionActive : styles.paymentOption}
-                onClick={() => setPaymentMethod('INSTAPAY_101000')}
+                className={paymentMethod === 'INSTAPAY_102000' ? styles.paymentOptionActive : styles.paymentOption}
+                onClick={() => setPaymentMethod('INSTAPAY_102000')}
                 role="radio"
-                aria-checked={paymentMethod === 'INSTAPAY_101000'}
+                aria-checked={paymentMethod === 'INSTAPAY_102000'}
                 tabIndex={0}
               >
                 <div className={styles.paymentOptionHeader}>
@@ -668,7 +668,7 @@ export const ZFDirectExpenseModal: React.FC<ZFDirectExpenseModalProps> = ({
             </div>
 
             {/* InstaPay Transfer Reference Box */}
-            {paymentMethod === 'INSTAPAY_101000' && (
+            {paymentMethod === 'INSTAPAY_102000' && (
               <div className={styles.instapayBox}>
                 <label>
                   <span>{isAr ? 'الرقم المرجعي لعملية إنستاباي (اختياري)' : 'InstaPay Transaction Reference'}</span>

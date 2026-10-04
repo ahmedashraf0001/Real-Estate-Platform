@@ -168,12 +168,17 @@ export const PartnerPayoutModal: React.FC<PartnerPayoutModalProps> = ({
     onClose();
   };
 
+  const isCash = paymentMethod === 'CASH_101000';
+  const selectedAccountCode = isCash ? '101000' : '102000';
+  const selectedAccountLabelAr = isCash ? 'الخزينة (101000)' : 'إنستاباي (102000)';
+  const selectedAccountLabelEn = isCash ? 'Safe (101000)' : 'InstaPay (102000)';
+
   return (
     <ZFModalShell
       isOpen={isOpen}
       onClose={onClose}
       title={isAr ? 'صرف دفعة أرباح وتسديد مستحقات شريك' : 'Partner Profit Payout & Settlement'}
-      subtitle={isAr ? 'إنشاء قيد يومية متوازن آلياً (مدين حـ/303000 أرباح الشركاء - دائن حـ/101000 الخزينة الرئيسية)' : 'Audited double-entry journal posting for partner distribution (Main Treasury 101000)'}
+      subtitle={isAr ? `إنشاء قيد يومية متوازن آلياً (مدين حـ/303000 أرباح الشركاء - دائن حـ/${selectedAccountCode} ${selectedAccountLabelAr})` : `Audited double-entry journal posting for partner distribution (${selectedAccountLabelEn})`}
       icon={<Receipt size={18} />}
       isAr={isAr}
       maxWidth="680px"
@@ -382,7 +387,7 @@ export const PartnerPayoutModal: React.FC<PartnerPayoutModalProps> = ({
                 {isAr ? 'طريقة الصرف والسداد:' : 'Disbursement Method:'}
               </label>
               <span style={{ fontSize: '0.66rem', fontWeight: 700, color: '#946f23', background: 'rgba(184, 144, 62, 0.08)', padding: '0.12rem 0.45rem', borderRadius: '5px' }}>
-                {isAr ? 'جهة الصرف الموحدة: الخزينة التشغيلية الرئيسية (101000)' : 'Source: Operating Treasury Safe (101000)'}
+                {isAr ? `الحساب: ${selectedAccountLabelAr}` : `Account: ${selectedAccountLabelEn}`}
               </span>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
@@ -408,7 +413,7 @@ export const PartnerPayoutModal: React.FC<PartnerPayoutModalProps> = ({
                     {isAr ? 'تحويل إنستاباي فوري' : 'Instant InstaPay Transfer'}
                   </span>
                   <span style={{ fontSize: '0.67rem', color: '#64748b' }}>
-                    {isAr ? 'صرف إلكتروني من الخزينة لحساب الشريك' : 'Digital transfer from treasury'}
+                    {isAr ? 'تحويل إنستاباي (102000)' : 'InstaPay transfer (102000)'}
                   </span>
                 </div>
               </button>
@@ -435,7 +440,7 @@ export const PartnerPayoutModal: React.FC<PartnerPayoutModalProps> = ({
                     {isAr ? 'كاش نقدي باليد' : 'Cash in Hand'}
                   </span>
                   <span style={{ fontSize: '0.67rem', color: '#64748b' }}>
-                    {isAr ? 'صرف نقدية فعلية من الخزينة الرئيسية' : 'Cash disbursement from main safe'}
+                    {isAr ? 'نقدي بالخزينة (101000)' : 'Cash — Safe (101000)'}
                   </span>
                 </div>
               </button>
@@ -554,8 +559,8 @@ export const PartnerPayoutModal: React.FC<PartnerPayoutModalProps> = ({
                 <thead>
                   <tr style={{ borderBottom: '1px solid #e2e8f0', color: '#64748b' }}>
                     <th style={{ textAlign: isAr ? 'right' : 'left', padding: '0.3rem 0.4rem' }}>{isAr ? 'الحساب' : 'Account'}</th>
-                    <th style={{ textAlign: isAr ? 'left' : 'right', padding: '0.3rem 0.4rem' }}>{isAr ? 'مدين (له فلوس)' : 'Debit'}</th>
-                    <th style={{ textAlign: isAr ? 'left' : 'right', padding: '0.3rem 0.4rem' }}>{isAr ? 'دائن (عليه فلوس)' : 'Credit'}</th>
+                    <th style={{ textAlign: isAr ? 'left' : 'right', padding: '0.3rem 0.4rem' }}>{isAr ? 'مدين' : 'Debit'}</th>
+                    <th style={{ textAlign: isAr ? 'left' : 'right', padding: '0.3rem 0.4rem' }}>{isAr ? 'دائن' : 'Credit'}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -572,11 +577,7 @@ export const PartnerPayoutModal: React.FC<PartnerPayoutModalProps> = ({
                   </tr>
                   <tr>
                     <td style={{ padding: '0.35rem 0.4rem', fontWeight: 700, color: '#0f172a' }}>
-                      {paymentMethod === 'BANK_102000'
-                        ? (isAr ? '102000 — حساب البنك التجاري' : '102000 — Commercial Bank Account')
-                        : paymentMethod === 'INSTAPAY_102000'
-                        ? (isAr ? '101000 — الخزينة الرئيسية (تحويل إنستاباي)' : '101000 — Main Treasury (InstaPay Transfer)')
-                        : (isAr ? '101000 — خزينة النقدية الرئيسية (كاش)' : '101000 — Main Cash Safe (Cash)')}
+                      {selectedAccountCode} — {isAr ? selectedAccountLabelAr : selectedAccountLabelEn}
                     </td>
                     <td style={{ padding: '0.35rem 0.4rem', textAlign: isAr ? 'left' : 'right', color: '#94a3b8' }}>
                       0.00

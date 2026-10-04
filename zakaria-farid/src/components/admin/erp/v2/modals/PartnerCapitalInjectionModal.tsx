@@ -318,6 +318,10 @@ export const PartnerCapitalInjectionModal: React.FC<PartnerCapitalInjectionModal
   const isTargetPeriodLocked = targetPeriod ? targetPeriod.status !== 'OPEN' : false;
 
   const numAmount = parseFloat(amount) || 0;
+  const isCash = paymentMethod === 'CASH_101000';
+  const selectedAccountCode = isCash ? '101000' : '102000';
+  const selectedAccountLabelAr = isCash ? 'الخزينة (101000)' : 'إنستاباي (102000)';
+  const selectedAccountLabelEn = isCash ? 'Safe (101000)' : 'InstaPay (102000)';
   const isValid = effectivePartnerName.length > 0 && numAmount > 0 && !isTargetPeriodLocked;
 
   const handleCloseEntirely = () => {
@@ -508,11 +512,9 @@ export const PartnerCapitalInjectionModal: React.FC<PartnerCapitalInjectionModal
             {isAr ? 'الخزينة أو الحساب المستلم:' : 'Receiving Treasury / Account:'}
           </span>
           <strong style={{ fontSize: '0.9rem', color: '#059669', fontWeight: 800, marginTop: '0.2rem', display: 'block' }}>
-            {confirmedVoucher.paymentMethod === 'BANK_102000'
-              ? (isAr ? 'حـ/ 102000 - حساب البنك التجاري' : 'GL 102000 - Commercial Bank Account')
-              : confirmedVoucher.paymentMethod === 'INSTAPAY_102000'
-              ? (isAr ? 'حـ/ 101000 - الخزينة الرئيسية (تحويل إنستاباي فوري)' : 'GL 101000 - Main Treasury (InstaPay Transfer)')
-              : (isAr ? 'حـ/ 101000 - الخزينة النقدية الرئيسية (كاش)' : 'GL 101000 - Main Cash Safe (Cash)')}
+            {confirmedVoucher.paymentMethod === 'CASH_101000'
+              ? (isAr ? 'حـ/ 101000 - الخزينة (101000)' : 'GL 101000 - Safe (101000)')
+              : (isAr ? 'حـ/ 102000 - إنستاباي (102000)' : 'GL 102000 - InstaPay (102000)')}
           </strong>
         </div>
 
@@ -546,11 +548,9 @@ export const PartnerCapitalInjectionModal: React.FC<PartnerCapitalInjectionModal
 
         <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.35rem 0', borderBottom: '1px dashed #e2e8f0', color: '#059669', fontWeight: 800, fontSize: '0.8rem' }}>
           <span>
-            {confirmedVoucher.paymentMethod === 'BANK_102000'
-              ? (isAr ? 'من حـ/ 102000 (حساب البنك التجاري)' : 'Dr 102000 Operating Bank')
-              : confirmedVoucher.paymentMethod === 'INSTAPAY_102000'
-              ? (isAr ? 'من حـ/ 101000 (الخزينة الرئيسية - تحويل إنستاباي)' : 'Dr 101000 Main Treasury (InstaPay)')
-              : (isAr ? 'من حـ/ 101000 (الخزينة النقدية الرئيسية - كاش)' : 'Dr 101000 Cash Safe (Cash)')}
+            {confirmedVoucher.paymentMethod === 'CASH_101000'
+              ? (isAr ? 'من حـ/ 101000 (الخزينة 101000)' : 'Dr 101000 Safe (101000)')
+              : (isAr ? 'من حـ/ 102000 (إنستاباي 102000)' : 'Dr 102000 InstaPay (102000)')}
           </span>
           <span>{D(confirmedVoucher.amount).formatEGP(true)} (مدين / Debit)</span>
         </div>
@@ -1004,7 +1004,7 @@ export const PartnerCapitalInjectionModal: React.FC<PartnerCapitalInjectionModal
                   {isAr ? 'طريقة الاستلام والتوريد:' : 'Deposit Method:'}
                 </label>
                 <span style={{ fontSize: '0.66rem', fontWeight: 700, color: '#047857', background: 'rgba(4, 120, 87, 0.08)', padding: '0.12rem 0.45rem', borderRadius: '5px' }}>
-                  {isAr ? 'جهة الإيداع الموحدة: الخزينة التشغيلية الرئيسية (101000)' : 'Destination: Main Treasury Safe (101000)'}
+                  {isAr ? `الحساب: ${selectedAccountLabelAr}` : `Account: ${selectedAccountLabelEn}`}
                 </span>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.65rem' }}>
@@ -1029,7 +1029,7 @@ export const PartnerCapitalInjectionModal: React.FC<PartnerCapitalInjectionModal
                   <Wallet size={20} />
                   <span>{isAr ? 'كاش نقدي باليد' : 'Cash in Hand'}</span>
                   <small style={{ fontSize: '0.65rem', fontWeight: 500, color: '#64748b' }}>
-                    {isAr ? 'توريد بالخزينة (101000)' : 'Vault Safe (101000)'}
+                    {isAr ? 'نقدي بالخزينة (101000)' : 'Cash — Safe (101000)'}
                   </small>
                 </button>
 
@@ -1054,7 +1054,7 @@ export const PartnerCapitalInjectionModal: React.FC<PartnerCapitalInjectionModal
                   <Coins size={20} />
                   <span>{isAr ? 'تحويل إنستاباي فوري' : 'Instant InstaPay'}</span>
                   <small style={{ fontSize: '0.65rem', fontWeight: 500, color: '#64748b' }}>
-                    {isAr ? 'تحويل للخزينة (101000)' : 'Transfer to Safe (101000)'}
+                    {isAr ? 'تحويل إنستاباي (102000)' : 'InstaPay transfer (102000)'}
                   </small>
                 </button>
               </div>
@@ -1166,11 +1166,9 @@ export const PartnerCapitalInjectionModal: React.FC<PartnerCapitalInjectionModal
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', color: '#047857', fontWeight: 700, marginBottom: '0.2rem' }}>
                 <span>
-                  {paymentMethod === 'BANK_102000'
-                    ? (isAr ? 'من حـ/ 102000 (حساب البنك التجاري)' : 'Dr 102000 Commercial Bank')
-                    : paymentMethod === 'INSTAPAY_102000'
-                    ? (isAr ? 'من حـ/ 101000 (الخزينة الرئيسية - تحويل إنستاباي)' : 'Dr 101000 Main Treasury (InstaPay)')
-                    : (isAr ? 'من حـ/ 101000 (الخزينة النقدية الرئيسية - كاش)' : 'Dr 101000 Main Cash Safe (Cash)')}
+                  {selectedAccountCode === '101000'
+                    ? (isAr ? 'من حـ/ 101000 (الخزينة 101000)' : 'Dr 101000 Safe (101000)')
+                    : (isAr ? 'من حـ/ 102000 (إنستاباي 102000)' : 'Dr 102000 InstaPay (102000)')}
                 </span>
                 <span>{numAmount > 0 ? `${D(numAmount).formatEGP(true)} (مدين)` : '0.00'}</span>
               </div>

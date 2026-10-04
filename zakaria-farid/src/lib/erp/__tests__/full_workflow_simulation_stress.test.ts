@@ -432,7 +432,7 @@ describe('FIN-OS Full Workflows Simulation & Stress Audit (Dual-Gated)', () => {
       assert.notStrictEqual(invalidSum, 100, 'Invalid splits must not equal 100%');
     });
 
-    it('Should create balanced partner capital injection entry via InstaPay into Treasury (Dr 101000 / Cr 301000)', () => {
+    it('Should create balanced partner capital injection entry via InstaPay into Treasury (Dr 102000 / Cr 301000)', () => {
       const entry = PartnersEngine.createCapitalInjectionJournalEntry({
         partnerName: 'م. أحمد الشريف',
         amount: '10000000.00',
@@ -443,7 +443,7 @@ describe('FIN-OS Full Workflows Simulation & Stress Audit (Dual-Gated)', () => {
       });
 
       assert.strictEqual(InvariantsValidator.verifyDoubleEntryBalance([entry]).passed, true);
-      assert.strictEqual(entry.lines[0].account_code, '101000');
+      assert.strictEqual(entry.lines[0].account_code, '102000');
       assert.strictEqual(entry.lines[1].account_code, '301000');
     });
 

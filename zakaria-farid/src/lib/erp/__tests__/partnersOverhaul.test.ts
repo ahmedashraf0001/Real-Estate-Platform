@@ -264,7 +264,7 @@ describe('Partners & Project Equity Overhaul Test Suite (§14 & INV-Partnership)
   });
 
   describe('3. Double-Entry GL Journal Invariants (§INV-4.1)', () => {
-    it('creates perfectly balanced capital injection journal entry via InstaPay into Treasury (Dr 101000 / Cr 301000)', () => {
+    it('creates perfectly balanced capital injection journal entry via InstaPay into Treasury (Dr 102000 / Cr 301000)', () => {
       const je = PartnersEngine.createCapitalInjectionJournalEntry({
         partnerName: 'م. أحمد الشريف',
         amount: '3500000.00',
@@ -278,12 +278,12 @@ describe('Partners & Project Equity Overhaul Test Suite (§14 & INV-Partnership)
       const balanceCheck = InvariantsValidator.verifyDoubleEntryBalance([je]);
       assert.strictEqual(balanceCheck.passed, true, 'Capital injection must be strictly balanced');
 
-      const dr101 = je.lines.find(l => l.account_code === '101000');
+      const dr102 = je.lines.find(l => l.account_code === '102000');
       const cr301 = je.lines.find(l => l.account_code === '301000');
 
-      assert.ok(dr101, 'Must debit Treasury Safe account 101000 for InstaPay channel');
-      assert.strictEqual(dr101.debit_amount, '3500000.00');
-      assert.strictEqual(dr101.credit_amount, '0.00');
+      assert.ok(dr102, 'Must debit account 102000 for InstaPay channel');
+      assert.strictEqual(dr102.debit_amount, '3500000.00');
+      assert.strictEqual(dr102.credit_amount, '0.00');
 
       assert.ok(cr301, 'Must credit account 301000 (Partner Capital)');
       assert.strictEqual(cr301.debit_amount, '0.00');
@@ -335,7 +335,7 @@ describe('Partners & Project Equity Overhaul Test Suite (§14 & INV-Partnership)
       assert.strictEqual(cr301.credit_amount, '1200000.00');
     });
 
-    it('creates profit payout / dividend journal entry via InstaPay from Treasury (Dr 303000 / Cr 101000)', () => {
+    it('creates profit payout / dividend journal entry via InstaPay (Dr 303000 / Cr 102000)', () => {
       const payoutInstaJe = PartnersEngine.createPayoutJournalEntry({
         partnerName: 'د. هاني المنياوي',
         amount: '750000.00',
@@ -349,12 +349,12 @@ describe('Partners & Project Equity Overhaul Test Suite (§14 & INV-Partnership)
       assert.strictEqual(balCheck.passed, true);
 
       const dr303 = payoutInstaJe.lines.find(l => l.account_code === '303000');
-      const cr101 = payoutInstaJe.lines.find(l => l.account_code === '101000');
+      const cr102 = payoutInstaJe.lines.find(l => l.account_code === '102000');
 
       assert.ok(dr303, 'Must debit account 303000 (Partner Profit Distributions & Withdrawals)');
       assert.strictEqual(dr303.debit_amount, '750000.00');
-      assert.ok(cr101, 'Must credit Treasury Safe account 101000 (InstaPay channel)');
-      assert.strictEqual(cr101.credit_amount, '750000.00');
+      assert.ok(cr102, 'Must credit InstaPay account 102000');
+      assert.strictEqual(cr102.credit_amount, '750000.00');
     });
 
     it('creates profit payout / dividend journal entry via Commercial Bank (Dr 303000 / Cr 102000)', () => {

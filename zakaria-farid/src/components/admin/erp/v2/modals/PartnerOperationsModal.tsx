@@ -121,6 +121,14 @@ export const PartnerOperationsModal: React.FC<PartnerOperationsModalProps> = ({
   // EXCEL EXPORT STATE
   const [isExportingExcel, setIsExportingExcel] = useState<boolean>(false);
 
+  const payoutAccountCode = payoutMethod === 'CASH_101000' ? '101000' : '102000';
+  const payoutAccountLabelAr = payoutAccountCode === '101000' ? 'الخزينة (101000)' : 'إنستاباي (102000)';
+  const payoutAccountLabelEn = payoutAccountCode === '101000' ? 'Safe (101000)' : 'InstaPay (102000)';
+
+  const injectionAccountCode = injectionMethod === 'CASH_101000' ? '101000' : '102000';
+  const injectionAccountLabelAr = injectionAccountCode === '101000' ? 'الخزينة (101000)' : 'إنستاباي (102000)';
+  const injectionAccountLabelEn = injectionAccountCode === '101000' ? 'Safe (101000)' : 'InstaPay (102000)';
+
   // Initialize selected partner on open
   useEffect(() => {
     if (isOpen) {
@@ -1117,13 +1125,13 @@ export const PartnerOperationsModal: React.FC<PartnerOperationsModalProps> = ({
                           {isAr ? 'طريقة الصرف والسداد *' : 'Payout Method *'}
                         </label>
                         <span style={{ fontSize: '0.66rem', fontWeight: 700, color: '#946f23', background: 'rgba(184, 144, 62, 0.08)', padding: '0.12rem 0.45rem', borderRadius: '5px' }}>
-                          {isAr ? 'جهة الصرف الموحدة: الخزينة التشغيلية الرئيسية (101000)' : 'Source: Main Operating Treasury (101000)'}
+                          {isAr ? `الحساب: ${payoutAccountLabelAr}` : `Account: ${payoutAccountLabelEn}`}
                         </span>
                       </div>
                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.65rem' }}>
                         {[
-                          { id: 'CASH_101000', title: isAr ? 'كاش نقدي باليد' : 'Cash in Hand', sub: isAr ? 'صرف نقدية فعلية من الخزينة (101000)' : 'Vault cash disbursement (101000)', icon: Wallet },
-                          { id: 'INSTAPAY_102000', title: isAr ? 'تحويل إنستاباي فوري' : 'InstaPay Transfer', sub: isAr ? 'تحويل إلكتروني من الخزينة للشريك (101000)' : 'Instant transfer from treasury (101000)', icon: Smartphone }
+                          { id: 'CASH_101000', title: isAr ? 'كاش نقدي باليد' : 'Cash in Hand', sub: isAr ? 'نقدي بالخزينة (101000)' : 'Cash — Safe (101000)', icon: Wallet },
+                          { id: 'INSTAPAY_102000', title: isAr ? 'تحويل إنستاباي فوري' : 'InstaPay Transfer', sub: isAr ? 'تحويل إنستاباي (102000)' : 'InstaPay transfer (102000)', icon: Smartphone }
                         ].map(m => {
                           const Icon = m.icon;
                           const isSelected = payoutMethod === m.id;
@@ -1256,7 +1264,7 @@ export const PartnerOperationsModal: React.FC<PartnerOperationsModalProps> = ({
                             <strong style={{ color: '#d4af37' }}>{formatEGP(payoutNum)}</strong>
                           </div>
                           <div style={{ display: 'flex', justifyContent: 'space-between', color: '#94a3b8', paddingRight: isAr ? '1.5rem' : '0', paddingLeft: isAr ? '0' : '1.5rem' }}>
-                            <span>إلى حـ/ {payoutMethod === 'CASH_101000' ? (isAr ? '101000 خزينة النقدية الرئيسية (كاش)' : '101000 Main Cash Vault (Cash)') : (isAr ? '101000 الخزينة الرئيسية (تحويل إنستاباي)' : '101000 Main Treasury (InstaPay)')} (دائن)</span>
+                            <span>إلى حـ/ {payoutAccountCode === '101000' ? (isAr ? '101000 الخزينة (101000)' : '101000 Safe (101000)') : (isAr ? '102000 إنستاباي (102000)' : '102000 InstaPay (102000)')} (دائن)</span>
                             <strong style={{ color: '#94a3b8' }}>{formatEGP(payoutNum)}</strong>
                           </div>
                         </div>
@@ -1389,13 +1397,13 @@ export const PartnerOperationsModal: React.FC<PartnerOperationsModalProps> = ({
                           {isAr ? 'طريقة الاستلام والتوريد *' : 'Deposit Method *'}
                         </label>
                         <span style={{ fontSize: '0.66rem', fontWeight: 700, color: '#047857', background: 'rgba(4, 120, 87, 0.08)', padding: '0.12rem 0.45rem', borderRadius: '5px' }}>
-                          {isAr ? 'جهة الإيداع الموحدة: الخزينة التشغيلية الرئيسية (101000)' : 'Destination: Main Operating Treasury (101000)'}
+                          {isAr ? `الحساب: ${injectionAccountLabelAr}` : `Account: ${injectionAccountLabelEn}`}
                         </span>
                       </div>
                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.65rem' }}>
                         {[
-                          { id: 'CASH_101000', title: isAr ? 'كاش نقدي باليد' : 'Cash in Hand', sub: isAr ? 'استلام نقدية فعلية والتوريد بالخزينة (101000)' : 'Safe cash received (101000)', icon: Wallet },
-                          { id: 'INSTAPAY_102000', title: isAr ? 'تحويل إنستاباي فوري' : 'InstaPay Transfer', sub: isAr ? 'تحويل إلكتروني فوري إيداع بالخزينة (101000)' : 'Instant transfer to safe (101000)', icon: Smartphone }
+                          { id: 'CASH_101000', title: isAr ? 'كاش نقدي باليد' : 'Cash in Hand', sub: isAr ? 'نقدي بالخزينة (101000)' : 'Cash — Safe (101000)', icon: Wallet },
+                          { id: 'INSTAPAY_102000', title: isAr ? 'تحويل إنستاباي فوري' : 'InstaPay Transfer', sub: isAr ? 'تحويل إنستاباي (102000)' : 'InstaPay transfer (102000)', icon: Smartphone }
                         ].map(m => {
                           const Icon = m.icon;
                           const isSelected = injectionMethod === m.id;
@@ -1524,7 +1532,7 @@ export const PartnerOperationsModal: React.FC<PartnerOperationsModalProps> = ({
 
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem', fontSize: '0.78rem' }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', color: '#f8fafc' }}>
-                            <span>من حـ/ {injectionMethod === 'CASH_101000' ? (isAr ? '101000 خزينة النقدية الرئيسية (كاش)' : '101000 Main Cash Vault (Cash)') : (isAr ? '101000 الخزينة الرئيسية (تحويل إنستاباي)' : '101000 Main Treasury (InstaPay)')} (مدين)</span>
+                            <span>من حـ/ {injectionAccountCode === '101000' ? (isAr ? '101000 الخزينة (101000)' : '101000 Safe (101000)') : (isAr ? '102000 إنستاباي (102000)' : '102000 InstaPay (102000)')} (مدين)</span>
                             <strong style={{ color: '#d4af37' }}>{formatEGP(injectionNum)}</strong>
                           </div>
                           <div style={{ display: 'flex', justifyContent: 'space-between', color: '#94a3b8', paddingRight: isAr ? '1.5rem' : '0', paddingLeft: isAr ? '0' : '1.5rem' }}>

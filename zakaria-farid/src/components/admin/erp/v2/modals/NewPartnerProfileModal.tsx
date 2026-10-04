@@ -1032,7 +1032,7 @@ export const NewPartnerProfileModal: React.FC<NewPartnerProfileModalProps> = ({
                             {isAr ? 'تحويل إنستاباي فوري' : 'Instant InstaPay'}
                           </strong>
                           <span style={{ fontSize: '0.64rem', color: '#64748b' }}>
-                            {isAr ? 'تحويل للخزينة (101000)' : 'Transfer to Safe (101000)'}
+                            {isAr ? 'تحويل إنستاباي (102000)' : 'InstaPay transfer (102000)'}
                           </span>
                         </div>
                       </button>
@@ -1094,8 +1094,8 @@ export const NewPartnerProfileModal: React.FC<NewPartnerProfileModalProps> = ({
                   fontWeight: 600
                 }}>
                   {isAr
-                    ? `✓ سيتم ترحيل قيد يومية متوازن تلقائياً: مدين: الخزينة التشغيلية الرئيسية (101000) [عبر ${depositPaymentMethod === 'INSTAPAY_102000' ? 'إنستاباي' : 'كاش باليد'}] · دائن: رأس مال الشركاء (301000).`
-                    : `✓ Automatic balanced journal entry: Dr: Operating Treasury Safe (101000) [via ${depositPaymentMethod === 'INSTAPAY_102000' ? 'InstaPay' : 'Cash'}] · Cr: Partner Capital (301000).`}
+                    ? `✓ سيتم ترحيل قيد يومية متوازن تلقائياً: مدين: ${depositPaymentMethod === 'CASH_101000' ? 'الخزينة (101000)' : 'إنستاباي (102000)'} · دائن: رأس مال الشركاء (301000).`
+                    : `✓ Automatic balanced journal entry: Dr: ${depositPaymentMethod === 'CASH_101000' ? 'Safe (101000)' : 'InstaPay (102000)'} · Cr: Partner Capital (301000).`}
                 </div>
               </div>
             )}

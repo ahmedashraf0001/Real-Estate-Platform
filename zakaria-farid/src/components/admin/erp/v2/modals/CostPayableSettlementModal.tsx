@@ -33,13 +33,13 @@ export interface CostPayableSettlementModalProps {
   property?: Property | null;
   availableCosts?: ERPPropertyCostItem[];
   properties?: Property[];
-  defaultPaymentMethod?: 'CASH_101000' | 'INSTAPAY_101000';
+  defaultPaymentMethod?: 'CASH_101000' | 'INSTAPAY_102000';
   isAr?: boolean;
   onConfirmPayment: (
     updatedItem: ERPPropertyCostItem,
     installmentId: string,
     amountPaid: string,
-    paymentMethod: 'CASH_101000' | 'INSTAPAY_101000'
+    paymentMethod: 'CASH_101000' | 'INSTAPAY_102000'
   ) => Promise<void> | void;
 }
 
@@ -132,7 +132,7 @@ export const CostPayableSettlementModal: React.FC<CostPayableSettlementModalProp
 
   // Form Fields
   const [amountToPay, setAmountToPay] = useState<string>('');
-  const [paymentMethod, setPaymentMethod] = useState<'CASH_101000' | 'INSTAPAY_101000'>(defaultPaymentMethod);
+  const [paymentMethod, setPaymentMethod] = useState<'CASH_101000' | 'INSTAPAY_102000'>(defaultPaymentMethod);
   const [paymentDate, setPaymentDate] = useState<string>(new Date().toISOString().split('T')[0]);
   const [notes, setNotes] = useState<string>('');
   const [paymentId, setPaymentId] = useState(() => generateUUID());
@@ -204,7 +204,7 @@ export const CostPayableSettlementModal: React.FC<CostPayableSettlementModalProp
         paymentMethod,
         paymentDate,
         formattedNotes,
-        { ...activeInstallment, payment_id: paymentId, treasury_account_code: '101000' }
+        { ...activeInstallment, payment_id: paymentId, treasury_account_code: paymentMethod === 'CASH_101000' ? '101000' : '102000' }
       );
 
       const targetTranche = updatedItem.payable_installments?.find(i => i.installment_id === activeInstallment.installment_id)
@@ -245,7 +245,7 @@ export const CostPayableSettlementModal: React.FC<CostPayableSettlementModalProp
       maxWidth="680px"
       icon={<CreditCard size={18} />}
       title={isAr ? 'سداد مستحقات المقاولين والموقع' : 'Settle Contractor & Site Payables'}
-      subtitle={isAr ? 'كاش بالخزينة أو إنستاباي • الخزينة الموحدة 101000' : 'Cash in Hand or InstaPay • Unified Treasury 101000'}
+      subtitle={isAr ? 'كاش بالخزينة (101000) أو إنستاباي (102000)' : 'Cash — Safe (101000) or InstaPay (102000)'}
       bodyStyle={{ padding: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
     >
       {/* If general mode and no pending costs exist, display an honest empty state */}
@@ -488,8 +488,8 @@ export const CostPayableSettlementModal: React.FC<CostPayableSettlementModalProp
                   boxSizing: 'border-box'
                 }}
               >
-                <option value="CASH_101000">{isAr ? 'كاش بالخزينة' : 'Cash in Hand (Treasury 101000)'}</option>
-                <option value="INSTAPAY_101000">{isAr ? 'إنستاباي' : 'InstaPay Transfer (Treasury 101000)'}</option>
+                <option value="CASH_101000">{isAr ? 'نقدي — الخزينة (101000)' : 'Cash — Safe (101000)'}</option>
+                <option value="INSTAPAY_102000">{isAr ? 'إنستاباي (102000)' : 'InstaPay (102000)'}</option>
               </select>
             </div>
             <div>

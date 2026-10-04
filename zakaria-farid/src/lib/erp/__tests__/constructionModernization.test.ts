@@ -39,14 +39,14 @@ describe('Construction modernization financial integrity', () => {
   for (const method of ['CASH_101000', 'INSTAPAY_101000'] as const) {
     it(`posts ${method} to unified treasury and preserves prior paid amounts`, () => {
       const original = { ...cost, paid_amount_egp: '200.00', remaining_amount_egp: '800.00' };
-      const updated = recordPayableInstallmentPayment(original, 'direct', '100', method, '2026-09-27', 'payment', { ...installment, amount_egp: '800', payment_id: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd', treasury_account_code: '101000' });
+      const updated = recordPayableInstallmentPayment(original, 'direct', '100', method, '2026-09-27', 'payment', { ...installment, amount_egp: '800', payment_id: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd', treasury_account_code: method === 'CASH_101000' ? '101000' : '102000' });
       const settlement = prepareConstructionSettlement(original, updated, period);
       assert.equal(settlement.request.p_amount, '100.00');
       assert.equal(settlement.request.p_expected_paid, '200.00');
-      assert.equal(settlement.request.p_method, method);
+      assert.equal(settlement.request.p_method, method === 'INSTAPAY_101000' ? 'INSTAPAY_102000' : method);
       assert.equal(settlement.journal.lines[0].account_code, '201000');
       assert.equal(settlement.journal.lines[0].debit_amount, '100.00');
-      assert.equal(settlement.journal.lines[1].account_code, '101000');
+      assert.equal(settlement.journal.lines[1].account_code, method === 'CASH_101000' ? '101000' : '102000');
       assert.equal(settlement.journal.lines[1].credit_amount, '100.00');
       assert.equal(settlement.updatedItem.paid_amount_egp, '300.00');
     });
@@ -84,7 +84,7 @@ describe('Construction modernization financial integrity', () => {
   });
   it('restricts settlement UI to two methods and canonical side chart geometry', () => {
     const modal = readFileSync('src/components/admin/erp/v2/modals/CostPayableSettlementModal.tsx', 'utf8');
-    assert.equal((modal.match(/<option value="(?:CASH|INSTAPAY)_101000"/g) || []).length, 2);
+    assert.equal((modal.match(/<option value="(?:CASH_101000|INSTAPAY_102000)"/g) || []).length, 2);
     assert.ok(!/BANK_102000|شيك|Cheque/.test(modal));
     const view = readFileSync('src/components/admin/erp/v2/views/ConstructionPayablesView.tsx', 'utf8');
     assert.ok(view.includes("size: '76%'")); assert.ok(view.includes('customScale: 0.98')); assert.ok(view.includes('horizontal: true')); assert.ok(!view.includes('generateMockPropertyCosts'));

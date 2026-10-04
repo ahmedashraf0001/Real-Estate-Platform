@@ -3499,7 +3499,7 @@ export function ERPWorkstationProvider({
     }
     setIsMutating(true);
     try {
-      const routingAccount = details.paymentMethod === 'BANK_102000' ? '102000' : '101000';
+      const routingAccount = details.paymentMethod === 'CASH_101000' ? '101000' : '102000';
       let cashBalance = D(0);
       for (const jEntry of data.journalEntries) {
         for (const line of jEntry.lines) {
@@ -3511,8 +3511,8 @@ export function ERPWorkstationProvider({
 
       const payoutAmt = D(details.amount);
       if (cashBalance.lt(payoutAmt)) {
-        const accNameAr = routingAccount === '101000' ? 'الخزينة الرئيسية (101000)' : 'الحساب البنكي التجاري (102000)';
-        const accNameEn = routingAccount === '101000' ? 'Main Safe (101000)' : 'Commercial Bank Account (102000)';
+        const accNameAr = routingAccount === '101000' ? 'الخزينة (101000)' : 'إنستاباي (102000)';
+        const accNameEn = routingAccount === '101000' ? 'Safe (101000)' : 'InstaPay (102000)';
         throw new Error(
           isAr
             ? `عفواً! رصيد ${accNameAr} غير كافٍ لصرف الأرباح. الرصيد المتاح: ${cashBalance.formatEGP(true)}، والمطلوب صرفه: ${payoutAmt.formatEGP(true)} (معيار INV-4.5).`
@@ -3628,7 +3628,7 @@ export function ERPWorkstationProvider({
     }
     setIsMutating(true);
     try {
-      const routingAccount = details.paymentMethod === 'BANK_102000' ? '102000' : '101000';
+      const routingAccount = details.paymentMethod === 'CASH_101000' ? '101000' : '102000';
       const entry = PartnersEngine.createCapitalInjectionJournalEntry({
         partnerName: details.partnerName,
         amount: details.amount,
@@ -4247,13 +4247,15 @@ export function ERPWorkstationProvider({
     try {
       const original = data.propertyCosts.find(item => item.item_id === updatedItem.item_id);
       if (!original) throw new Error('The payable is no longer available. Refresh and try again.');
-      // Settlement pays out of the Main Safe (101000): block if the Safe can't cover the new payment.
       const sumPaid = (it: ERPPropertyCostItem) => (it.payable_installments || []).reduce((acc, i) => acc.plus(i.paid_amount_egp || '0'), D(0));
       const paymentDelta = sumPaid(updatedItem).minus(sumPaid(original));
+      const paidInstallment = updatedItem.payable_installments?.find(inst => D(inst.paid_amount_egp).gt(original.payable_installments?.find(prior => prior.installment_id === inst.installment_id)?.paid_amount_egp || 0) && !inst.installment_id.startsWith('inst-prior-'));
+      const account = paidInstallment?.payment_method === 'CASH_101000' ? '101000' : '102000';
+      // Settlement pays out of the selected treasury account (101000 Safe or 102000 InstaPay): block if the account can't cover the new payment.
       if (paymentDelta.gt(0)) {
-        assertCashOutflowAllowed([{ account_code: '101000', debit_amount: '0', credit_amount: paymentDelta.toFixed(2) }]);
+        assertCashOutflowAllowed([{ account_code: account, debit_amount: '0', credit_amount: paymentDelta.toFixed(2) }]);
       }
-      const paymentDate = updatedItem.payable_installments?.find(inst => D(inst.paid_amount_egp).gt(original.payable_installments?.find(prior => prior.installment_id === inst.installment_id)?.paid_amount_egp || 0) && !inst.installment_id.startsWith('inst-prior-'))?.payment_date || new Date().toISOString().slice(0, 10);
+      const paymentDate = paidInstallment?.payment_date || new Date().toISOString().slice(0, 10);
       const period = resolvePeriodForDate(paymentDate, data.periods, activePeriod);
       let result: { item: ERPPropertyCostItem; journal: ERPJournalEntry };
       if (!currentUser && process.env.NODE_ENV === 'development') {
