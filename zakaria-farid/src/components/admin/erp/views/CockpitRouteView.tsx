@@ -28,7 +28,7 @@ export function CockpitRouteView() {
       if (contract) {
         erp.handleInspectContract(contract);
       } else {
-        const cheque = erp.data.pdcRecords.find(p => p.cheque_id === inspect || p.cheque_number === inspect);
+        const cheque = (erp.data.pdcRecords || []).filter(p => p.cheque_id === inspect || p.cheque_number === inspect)[0];
         if (cheque) {
           erp.handleInspectCheque(cheque);
         }
@@ -38,12 +38,7 @@ export function CockpitRouteView() {
     if (action === 'tx') {
       erp.setShowProjectExpenseModal(true);
     } else if (action === 'receipt') {
-      const target = erp.data.pdcRecords.find(p => p.status !== 'Cleared' && p.status !== 'Void') || erp.data.pdcRecords[0];
-      if (target) {
-        erp.setCollectingPDCItem(target);
-      } else {
-        erp.setShowProjectExpenseModal(true);
-      }
+      erp.openCollect({});
     } else if (action === 'new_contract') {
       erp.handleOpenGenericNewContract();
     }
@@ -72,6 +67,7 @@ export function CockpitRouteView() {
       onInspectContract={erp.handleInspectContract}
       onInspectCheque={erp.handleInspectCheque}
       onCollectItem={erp.setCollectingPDCItem}
+      onOpenCollect={() => erp.openCollect({})}
       onOpenNewContract={erp.handleOpenGenericNewContract}
       onNavigateTab={(tab) => erp.navigateToTab(tab)}
     />

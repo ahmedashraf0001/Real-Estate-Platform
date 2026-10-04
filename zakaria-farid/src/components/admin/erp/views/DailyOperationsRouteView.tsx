@@ -23,12 +23,7 @@ export function DailyOperationsRouteView() {
     if (action === 'tx') {
       erp.setShowProjectExpenseModal(true);
     } else if (action === 'receipt') {
-      const target = erp.data.pdcRecords.find(p => p.status !== 'Cleared' && p.status !== 'Void') || erp.data.pdcRecords[0];
-      if (target) {
-        erp.setCollectingPDCItem(target);
-      } else {
-        erp.setShowProjectExpenseModal(true);
-      }
+      erp.openCollect({});
     } else if (action === 'new_contract') {
       erp.handleOpenGenericNewContract();
     }
@@ -55,22 +50,7 @@ export function DailyOperationsRouteView() {
       onOpenProjectExpense={() => erp.setShowProjectExpenseModal(true)}
       onOpenNewContract={erp.handleOpenGenericNewContract}
       onCollectItem={erp.setCollectingPDCItem}
-      onOpenCashReceipt={() => {
-        const target = erp.data.pdcRecords.find(p => p.status !== 'Cleared' && p.status !== 'Void') || erp.data.pdcRecords[0];
-        if (target) {
-          erp.setCollectingPDCItem(target);
-        } else if (erp.data.contracts.length > 0) {
-          const ct = erp.data.contracts.find(c => c.status === 'Active') || erp.data.contracts[0];
-          const sc = erp.data.schedules.find(s => s.contract_id === ct.contract_id && s.status === 'Pending') || erp.data.schedules.find(s => s.contract_id === ct.contract_id);
-          if (sc) {
-            erp.setShowPayModal({ contract: ct, schedule: sc });
-          } else {
-            erp.setShowProjectExpenseModal(true);
-          }
-        } else {
-          erp.setShowProjectExpenseModal(true);
-        }
-      }}
+      onOpenCashReceipt={() => erp.openCollect({})}
       onInspectContract={erp.handleInspectContract}
       onInspectCheque={erp.handleInspectCheque}
       onInspectTransaction={(payload) => erp.setInspectorPayload(payload)}

@@ -96,6 +96,7 @@ interface CockpitViewProps {
   onInspectContract: (contract: ERPContract) => void;
   onInspectCheque: (cheque: ERPPDCRecord) => void;
   onCollectItem?: (item: ERPPDCRecord) => void;
+  onOpenCollect?: () => void;
   onOpenNewCheque?: () => void;
   onOpenNewContract?: () => void;
   onNavigateTab?: (tab: string, filterParams?: any) => void;
@@ -122,6 +123,7 @@ export const CockpitView: React.FC<CockpitViewProps> = ({
   onInspectContract,
   onInspectCheque,
   onCollectItem,
+  onOpenCollect,
   onOpenNewCheque,
   onOpenNewContract,
   onNavigateTab,
@@ -131,9 +133,9 @@ export const CockpitView: React.FC<CockpitViewProps> = ({
 
   // Open the operational collection agenda, never the quarantined cheque workflow.
   const handleOpenInstallmentCollection = useCallback(() => {
-    if (onNavigateTab) onNavigateTab('pdc');
-    else if (contracts[0]) onInspectContract(contracts[0]);
-  }, [contracts, onNavigateTab, onInspectContract]);
+    if (onOpenCollect) onOpenCollect();
+    else if (onNavigateTab) onNavigateTab('pdc');
+  }, [onOpenCollect, onNavigateTab]);
 
   // Stat block interactive filters
   const [statPeriodFilter, setStatPeriodFilter] = useState<'month' | 'quarter' | 'year'>('month');
@@ -1641,9 +1643,9 @@ export const CockpitView: React.FC<CockpitViewProps> = ({
                 <button
                   type="button"
                   className={styles.cockpitDropdownMenuItem}
-                  onClick={() => { setIsNewActionMenuOpen(false); if (onOpenNewCheque) onOpenNewCheque(); else if (onOpenProjectExpense) onOpenProjectExpense(); }}
+                  onClick={() => { setIsNewActionMenuOpen(false); if (onOpenProjectExpense) onOpenProjectExpense(); }}
                 >
-                  <span>{isAr ? 'سند صرف / شيك' : 'Disbursement / Cheque'}</span>
+                  <span>{isAr ? 'مصروف أو فاتورة' : 'Expense or bill'}</span>
                 </button>
                 <button
                   type="button"
@@ -1651,13 +1653,6 @@ export const CockpitView: React.FC<CockpitViewProps> = ({
                   onClick={() => { setIsNewActionMenuOpen(false); handleOpenInstallmentCollection(); }}
                 >
                   <span>{isAr ? 'تحصيل قسط عميل' : 'Collect Installment'}</span>
-                </button>
-                <button
-                  type="button"
-                  className={styles.cockpitDropdownMenuItem}
-                  onClick={() => { setIsNewActionMenuOpen(false); if (onNavigateTab) onNavigateTab('ledger', { openNewEntry: true }); }}
-                >
-                  <span>{isAr ? 'قيد يومية يدوي' : 'Manual Journal Entry'}</span>
                 </button>
               </div>
             )}

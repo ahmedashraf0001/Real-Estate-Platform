@@ -116,6 +116,8 @@ export const TAB_TITLES_EN: Record<ERPWorkspaceTab, string> = {
 
 
 
+export interface CollectRequest { contractId?: string; scheduleId?: string }
+
 export interface ERPWorkstationContextValue {
   // Locale & Base
   locale: string;
@@ -269,6 +271,10 @@ export interface ERPWorkstationContextValue {
   setSelectedLeadId: (id: string) => void;
   contractWizardStep: 1 | 2 | 3;
   setContractWizardStep: (step: 1 | 2 | 3) => void;
+
+  collectRequest: CollectRequest | null;
+  setCollectRequest: (req: CollectRequest | null) => void;
+  openCollect: (req?: CollectRequest) => void;
 
   showPayModal: { contract: ERPContract; schedule: ERPInstallmentSchedule } | null;
   setShowPayModal: (val: { contract: ERPContract; schedule: ERPInstallmentSchedule } | null) => void;
@@ -1273,6 +1279,9 @@ export function ERPWorkstationProvider({
   const [selectedLeadId, setSelectedLeadId] = useState<string>('');
   const [contractWizardStep, setContractWizardStep] = useState<1 | 2 | 3>(1);
 
+  const [collectRequest, setCollectRequest] = useState<CollectRequest | null>(null);
+  const openCollect = useCallback((req: CollectRequest = {}) => setCollectRequest(req), []);
+
   const [showPayModal, setShowPayModal] = useState<{ contract: ERPContract; schedule: ERPInstallmentSchedule } | null>(null);
   const [showEscalationModal, setShowEscalationModal] = useState<ERPContract | null>(null);
   const [escalationDelta, setEscalationDelta] = useState('1500000.00');
@@ -1309,7 +1318,7 @@ export function ERPWorkstationProvider({
 
   useEffect(() => {
     if (showCostModal) {
-      const p = (selectedAuditPropertyId ? data.properties.find(prop => prop.id === selectedAuditPropertyId) : null) || data.properties[0] || null;
+      const p = (selectedAuditPropertyId ? data.properties.find(prop => prop.id === selectedAuditPropertyId) : null) || null;
       setAuditModalProperty(p);
       setShowCostModal(false);
     }
@@ -4133,8 +4142,8 @@ export function ERPWorkstationProvider({
   }, [navigateToTab]);
 
   const handleOpenAuditForProperty = useCallback((prop?: Property) => {
-    setAuditModalProperty(prop || data.properties[0] || null);
-  }, [data.properties]);
+    setAuditModalProperty(prop || null);
+  }, []);
 
   const handleAddPropertyCostItem = useCallback(async (item: ERPPropertyCostItem) => {
     setIsMutating(true);
@@ -4439,6 +4448,10 @@ export function ERPWorkstationProvider({
     setSelectedLeadId,
     contractWizardStep,
     setContractWizardStep,
+
+    collectRequest,
+    setCollectRequest,
+    openCollect,
 
     showPayModal,
     setShowPayModal,

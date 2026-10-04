@@ -37,13 +37,12 @@ import { ZFErpAcademyModal } from './ZFErpAcademyModal';
 import { ZFErpGuidedTour } from './ZFErpGuidedTour';
 import { ZFNotificationCenter } from './ZFNotificationCenter';
 import { NewContractWizardModal } from './v2/modals/NewContractWizardModal';
-import { CashCollectionReceiptModal } from './v2/modals/CashCollectionReceiptModal';
+import { ZFCollectInstallmentModal } from './v2/modals/ZFCollectInstallmentModal';
 import { ContractEscalationModal } from './v2/modals/ContractEscalationModal';
 import { RescissionSettlementModal } from './v2/modals/RescissionSettlementModal';
 import { RSVAllocationModal } from './v2/modals/RSVAllocationModal';
 import { HandoverExecutionModal } from './v2/modals/HandoverExecutionModal';
 import { NewChequeModal } from './NewChequeModal';
-import { HandCollectionModal } from './HandCollectionModal';
 import { ZFDirectExpenseModal } from './v2/modals/ZFDirectExpenseModal';
 import { PropertyLifecycleAuditModal } from './PropertyLifecycleAuditModal';
 import { PartnerPayoutModal } from './v2/modals/PartnerPayoutModal';
@@ -131,6 +130,19 @@ export function ERPWorkstationShell({ children }: { children: React.ReactNode })
       stageRef.current.scrollTop = 0;
     }
   }, [pathname]);
+
+  // Auto-route legacy collectingPDCItem callers to modern collectRequest modal
+  useEffect(() => {
+    if (!erp.collectingPDCItem) return;
+    const item = erp.collectingPDCItem;
+    const rawSched = item.schedule_id || (item.cheque_id?.startsWith('SCH-') ? item.cheque_id : undefined);
+    const scheduleId = rawSched ? rawSched.replace(/^SCH-/, '') : undefined;
+    erp.openCollect({
+      contractId: item.contract_id,
+      scheduleId,
+    });
+    erp.setCollectingPDCItem(null);
+  }, [erp.collectingPDCItem, erp.openCollect, erp.setCollectingPDCItem]);
 
   // Splitter and side widgets resizable & collapsible states
   const [sidebarWidth, setSidebarWidth] = useState<number>(260);
@@ -957,9 +969,8 @@ export function ERPWorkstationShell({ children }: { children: React.ReactNode })
             }
           }
         }}
-        isAr={erp.isAr}
-        isOverModal={!!(erp.showNewPDCModal || erp.showRSVModal || erp.showProjectExpenseModal || erp.collectingPDCItem || erp.showEscalationModal || erp.showRescissionModal || erp.auditModalProperty || erp.showHandoverModal)}
-        onPayInstallment={(c, sch) => erp.setShowPayModal({ contract: c, schedule: sch })}
+        isOverModal={!!(erp.showNewPDCModal || erp.showRSVModal || erp.showProjectExpenseModal || erp.collectingPDCItem || erp.showEscalationModal || erp.showRescissionModal || erp.auditModalProperty || erp.showHandoverModal || erp.collectRequest)}
+        onPayInstallment={(c, sch) => erp.openCollect({ contractId: c.contract_id, scheduleId: sch.schedule_id })}
         onOpenEscalation={(c) => {
           erp.setShowEscalationModal(c);
           erp.setEscalationDelta('1500000.00');
@@ -1085,19 +1096,18 @@ export function ERPWorkstationShell({ children }: { children: React.ReactNode })
         }}
       />
 
-      {/* CASH COLLECTION & RECEIPT VOUCHER MODAL */}
-      <CashCollectionReceiptModal 
-        isOpen={!!erp.showPayModal}
-        onClose={() => erp.setShowPayModal(null)}
-        contract={erp.showPayModal?.contract}
-        schedule={erp.showPayModal?.schedule}
-        activePeriod={erp.activePeriod}
-        periods={erp.data.periods}
+      {/* CUSTOMER INSTALLMENT COLLECTION MODAL */}
+      <ZFCollectInstallmentModal
+        isOpen={!!erp.collectRequest}
+        onClose={() => erp.setCollectRequest(null)}
         isAr={erp.isAr}
         isMutating={erp.isMutating}
-        onConfirmCollection={async (details) => {
-          await erp.handleCollectPayment(details);
-        }}
+        contracts={erp.data.contracts}
+        schedules={erp.data.schedules}
+        properties={erp.data.properties}
+        initialContractId={erp.collectRequest?.contractId}
+        initialScheduleId={erp.collectRequest?.scheduleId}
+        onConfirm={erp.handleConfirmHandCollection}
       />
 
       {/* ESCALATION MODAL */}
@@ -1189,20 +1199,6 @@ export function ERPWorkstationShell({ children }: { children: React.ReactNode })
         isAr={erp.isAr}
       />
 
-      {/* HAND CASH COLLECTION PROCESS MODAL */}
-      <HandCollectionModal 
-        isOpen={!!erp.collectingPDCItem}
-        onClose={() => erp.setCollectingPDCItem(null)}
-        item={erp.collectingPDCItem}
-        allItems={erp.data.pdcRecords}
-        contracts={erp.data.contracts}
-        schedules={erp.data.schedules}
-        properties={erp.data.properties}
-        linkedContract={erp.data.contracts.find(c => c.contract_id === erp.collectingPDCItem?.contract_id)}
-        onConfirmCollection={erp.handleConfirmHandCollection}
-        isMutating={erp.isMutating}
-        isAr={erp.isAr}
-      />
 
       {/* CANONICAL PROJECT BILL & EXPENSE MODAL */}
       <ZFDirectExpenseModal

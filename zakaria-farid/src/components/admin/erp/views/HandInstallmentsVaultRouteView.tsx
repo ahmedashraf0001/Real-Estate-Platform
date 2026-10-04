@@ -52,7 +52,7 @@ export function HandInstallmentsVaultRouteView() {
       onInspectCheque={erp.handleInspectCheque}
       onBounceItem={erp.handleConfirmBounceCheque}
       onOpenNewSupplement={(contractId) => {
-        erp.setSupplementInitialContractId(contractId || erp.data.contracts[0]?.contract_id || null);
+        erp.setSupplementInitialContractId(contractId || null);
         erp.setShowNewPDCModal(true);
       }}
       onPDCStatusChange={erp.handlePDCStatusChange}

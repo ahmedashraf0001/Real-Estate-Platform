@@ -72,6 +72,9 @@ import { CostAdjustmentModal } from '../modals/CostAdjustmentModal';
 import { CostPayableSettlementModal } from '../modals/CostPayableSettlementModal';
 import { EditPropertyCostModal } from '../modals/EditPropertyCostModal';
 import { ZFDirectExpenseModal } from '../modals/ZFDirectExpenseModal';
+import { D } from '@/lib/erp/math';
+import { toast } from 'sonner';
+import { calculateCostItemEffectiveTotals } from '@/lib/erp/propertyCostEngine';
 
 export type { CashMovementTransaction, UpcomingDueItem, UpcomingDuesSummary };
 export { formatNumberWithCommas, formatEGPInteger, formatTime12h, computeUpcomingDues, buildTransactionInspectionPayload };
@@ -168,6 +171,7 @@ export const DailyOperationsView: React.FC<DailyOperationsViewProps> = ({
   const [selectedCostForAdjustment, setSelectedCostForAdjustment] = useState<ERPPropertyCostItem | null>(null);
   const [selectedCostForPayable, setSelectedCostForPayable] = useState<ERPPropertyCostItem | null>(null);
   const [selectedInstallmentForPayable, setSelectedInstallmentForPayable] = useState<ERPPayableInstallment | null>(null);
+  const [isPayablePickerOpen, setIsPayablePickerOpen] = useState<boolean>(false);
 
   const ledgerRef = useRef<HTMLDivElement>(null);
 
@@ -350,13 +354,7 @@ export const DailyOperationsView: React.FC<DailyOperationsViewProps> = ({
   const handleQuickAction = (key: 'cash_receipt' | 'partner_injection' | 'pay_contractor' | 'record_expense' | 'partner_payout') => {
     switch (key) {
       case 'cash_receipt': {
-        if (onOpenCashReceipt) {
-          onOpenCashReceipt();
-        } else {
-          const p = pdcRecords.find(x => x.status !== 'Cleared' && x.status !== 'Void');
-          if (p) onCollectItem(p);
-          else onOpenProjectExpense();
-        }
+        if (onOpenCashReceipt) onOpenCashReceipt();
         break;
       }
       case 'partner_injection': {
@@ -365,21 +363,14 @@ export const DailyOperationsView: React.FC<DailyOperationsViewProps> = ({
         break;
       }
       case 'pay_contractor': {
-        const firstDueCostWithInstallment = (propertyCosts || []).flatMap(cost => {
-          const installments = cost.payable_installments || [];
-          return installments
-            .filter(inst => inst.status !== 'PAID')
-            .map(inst => ({ cost, inst }));
-        }).sort((a, b) => a.inst.due_date.localeCompare(b.inst.due_date))[0];
-
-        if (firstDueCostWithInstallment && onRecordPayablePayment) {
-          setSelectedCostForPayable(firstDueCostWithInstallment.cost);
-          setSelectedInstallmentForPayable(firstDueCostWithInstallment.inst);
-        } else if (propertyCosts.length > 0 && onUpdatePropertyCostItem) {
-          setSelectedCostForEdit(propertyCosts[0]);
-        } else {
-          setIsExpenseModalOpen(true);
+        const open = (propertyCosts || []).filter(
+          c => c.linked_account_code === '201000' && D(calculateCostItemEffectiveTotals(c).remainingAmount).gt(0)
+        );
+        if (open.length === 0) {
+          toast.info(isAr ? 'لا توجد مستحقات مقاولين مفتوحة للسداد' : 'No open contractor payables');
+          return;
         }
+        setIsPayablePickerOpen(true);
         break;
       }
       case 'record_expense': {
@@ -918,6 +909,22 @@ export const DailyOperationsView: React.FC<DailyOperationsViewProps> = ({
             await onRecordPayablePayment(updated, instId, amt, method);
             setSelectedCostForPayable(null);
             setSelectedInstallmentForPayable(null);
+          }}
+        />
+      )}
+
+      {onRecordPayablePayment && (
+        <CostPayableSettlementModal
+          isOpen={isPayablePickerOpen}
+          onClose={() => setIsPayablePickerOpen(false)}
+          costItem={null}
+          installment={null}
+          availableCosts={propertyCosts}
+          properties={properties}
+          isAr={isAr}
+          onConfirmPayment={async (updated, instId, amt, method) => {
+            await onRecordPayablePayment?.(updated, instId, amt, method);
+            setIsPayablePickerOpen(false);
           }}
         />
       )}
