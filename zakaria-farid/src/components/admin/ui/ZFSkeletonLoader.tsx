@@ -66,11 +66,11 @@ const GlobalSkeletonStyles: React.FC = () => (
       --zf-skel-base: #E2E8F0;
       --zf-skel-highlight: #F1F5F9;
       --zf-skel-card-bg: #FFFFFF;
-      --zf-skel-card-border: #D8D2C4;
+      --zf-skel-card-border: #E2E8F0;
       --zf-skel-card-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px -1px rgba(0, 0, 0, 0.03);
       --zf-skel-subtle: #F8FAFC;
-      --zf-skel-gold: #946F23;
-      --zf-skel-gold-glow: rgba(197, 160, 89, 0.12);
+      --zf-skel-gold: #2563EB;
+      --zf-skel-gold-glow: rgba(37, 99, 235, 0.12);
       width: 100%;
       box-sizing: border-box;
       font-family: var(--font-sans, 'ThmanyahSans', 'Cairo', -apple-system, BlinkMacSystemFont, sans-serif);
@@ -84,10 +84,10 @@ const GlobalSkeletonStyles: React.FC = () => (
       --zf-skel-base: #E2E8F0;
       --zf-skel-highlight: #F1F5F9;
       --zf-skel-card-bg: #FFFFFF;
-      --zf-skel-card-border: #D8D2C4;
+      --zf-skel-card-border: #E2E8F0;
       --zf-skel-card-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px -1px rgba(0, 0, 0, 0.03);
       --zf-skel-subtle: #F8FAFC;
-      --zf-skel-gold: #946F23;
+      --zf-skel-gold: #2563EB;
     }
 
     /* Dark Theme Specifics */
@@ -101,7 +101,7 @@ const GlobalSkeletonStyles: React.FC = () => (
       --zf-skel-card-border: rgba(255, 255, 255, 0.08);
       --zf-skel-card-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
       --zf-skel-subtle: rgba(255, 255, 255, 0.03);
-      --zf-skel-gold: #C5A059;
+      --zf-skel-gold: #3B82F6;
     }
 
     .zf-skeleton-shimmer {

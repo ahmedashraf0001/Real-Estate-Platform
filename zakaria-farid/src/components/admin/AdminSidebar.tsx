@@ -108,16 +108,8 @@ export default function AdminSidebar({ adminLocale }: AdminSidebarProps) {
         { 
           href: `/fin-os/${adminLocale}`, 
           label: isAr ? 'محطة العمل المالية FIN-OS' : 'FIN-OS Workstation', 
-          badge: 'v2.4',
           icon: Landmark, 
           exact: false,
-          subItems: [
-            { href: `/fin-os/${adminLocale}/operations`, label: isAr ? 'الخزينة والعمليات' : 'Treasury & Ops' },
-            { href: `/fin-os/${adminLocale}/contracts`, label: isAr ? 'عقود البيع والعملاء' : 'Contracts & Clients' },
-            { href: `/fin-os/${adminLocale}/pdc`, label: isAr ? 'أجندة الأقساط والشيكات' : 'PDC & Due Cheques' },
-            { href: `/fin-os/${adminLocale}/ledger`, label: isAr ? 'الدفتر العام واليومية' : 'General Ledger' },
-            { href: `/fin-os/${adminLocale}/partners`, label: isAr ? 'الشركاء والأرباح' : 'Partners & Equity' },
-          ]
         },
       ]
     },
@@ -210,7 +202,7 @@ export default function AdminSidebar({ adminLocale }: AdminSidebarProps) {
                   {grp.title}
                 </span>
                 {grp.items.map((item) => {
-                  const { href, label, icon: Icon, exact, badge, subItems } = item as any;
+                  const { href, label, icon: Icon, exact } = item;
                   const isActive = exact ? pathname === href : pathname.startsWith(href);
                   return (
                     <div key={href} style={{ display: 'flex', flexDirection: 'column' }}>
@@ -223,25 +215,8 @@ export default function AdminSidebar({ adminLocale }: AdminSidebarProps) {
                           <Icon size={17} strokeWidth={isActive ? 2.2 : 1.7} />
                         </div>
                         <span className={styles.navLabel}>{label}</span>
-                        {badge && <span className={styles.erpVersionBadge}>{badge}</span>}
-                        {isActive && !badge && <div className={styles.activeDot} />}
+                        {isActive && <div className={styles.activeDot} />}
                       </Link>
-
-                      {subItems && (
-                        <div className={styles.subItemsList}>
-                          {subItems.map((sub: { href: string; label: string }) => (
-                            <Link
-                              key={sub.href}
-                              href={sub.href}
-                              className={styles.subItem}
-                              onClick={() => setIsOpen(false)}
-                            >
-                              <span className={styles.subItemDot}>•</span>
-                              <span className={styles.subItemLabel}>{sub.label}</span>
-                            </Link>
-                          ))}
-                        </div>
-                      )}
                     </div>
                   );
                 })}

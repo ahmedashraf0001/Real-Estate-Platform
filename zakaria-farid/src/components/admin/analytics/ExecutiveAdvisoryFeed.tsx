@@ -77,21 +77,21 @@ export default function ExecutiveAdvisoryFeed({ advisories, adminLocale }: Execu
           };
         case 'medium':
           return {
-            themeColor: '#946F23',
-            bgGradient: 'linear-gradient(145deg, #FFFFFF 0%, #FDFBF7 100%)',
-            border: '#D8D2C4',
-            topBorder: '#946F23',
-            badgeBg: 'rgba(148, 111, 35, 0.08)',
-            badgeColor: '#946F23',
-            badgeBorder: 'rgba(148, 111, 35, 0.25)',
+            themeColor: '#2563EB',
+            bgGradient: 'linear-gradient(145deg, #FFFFFF 0%, #F8FAFC 100%)',
+            border: '#E2E8F0',
+            topBorder: '#2563EB',
+            badgeBg: 'rgba(37, 99, 235, 0.08)',
+            badgeColor: '#2563EB',
+            badgeBorder: 'rgba(37, 99, 235, 0.25)',
             badgeLabel: isAr ? 'فرصة نمو استثمارية' : 'GROWTH OPPORTUNITY',
-            btnBg: 'rgba(148, 111, 35, 0.08)',
-            btnBorder: 'rgba(148, 111, 35, 0.25)',
-            btnColor: '#946F23',
-            btnHoverBg: '#946F23',
+            btnBg: 'rgba(37, 99, 235, 0.08)',
+            btnBorder: 'rgba(37, 99, 235, 0.25)',
+            btnColor: '#2563EB',
+            btnHoverBg: '#2563EB',
             btnHoverColor: '#FFFFFF',
-            metricBg: 'rgba(148, 111, 35, 0.08)',
-            metricColor: '#946F23',
+            metricBg: 'rgba(37, 99, 235, 0.08)',
+            metricColor: '#2563EB',
           };
         case 'info':
         default:
@@ -136,21 +136,21 @@ export default function ExecutiveAdvisoryFeed({ advisories, adminLocale }: Execu
         };
       case 'medium':
         return {
-          themeColor: '#E5B869',
-          bgGradient: 'linear-gradient(145deg, rgba(229, 184, 105, 0.12) 0%, rgba(16, 20, 29, 0.95) 100%)',
-          border: 'rgba(229, 184, 105, 0.3)',
-          topBorder: '#E5B869',
-          badgeBg: 'rgba(229, 184, 105, 0.15)',
-          badgeColor: '#E5B869',
-          badgeBorder: 'rgba(229, 184, 105, 0.35)',
+          themeColor: '#3B82F6',
+          bgGradient: 'linear-gradient(145deg, rgba(59, 130, 246, 0.12) 0%, rgba(16, 20, 29, 0.95) 100%)',
+          border: 'rgba(59, 130, 246, 0.3)',
+          topBorder: '#3B82F6',
+          badgeBg: 'rgba(59, 130, 246, 0.15)',
+          badgeColor: '#3B82F6',
+          badgeBorder: 'rgba(59, 130, 246, 0.35)',
           badgeLabel: isAr ? 'فرصة نمو استثمارية' : 'GROWTH OPPORTUNITY',
-          btnBg: 'linear-gradient(135deg, rgba(229, 184, 105, 0.15) 0%, rgba(197, 160, 89, 0.08) 100%)',
-          btnBorder: 'rgba(229, 184, 105, 0.35)',
-          btnColor: '#E5B869',
-          btnHoverBg: 'linear-gradient(135deg, #E5B869 0%, #C5A059 100%)',
-          btnHoverColor: '#0A0C10',
-          metricBg: 'rgba(229, 184, 105, 0.12)',
-          metricColor: '#E5B869',
+          btnBg: 'rgba(59, 130, 246, 0.15)',
+          btnBorder: 'rgba(59, 130, 246, 0.35)',
+          btnColor: '#93C5FD',
+          btnHoverBg: '#3B82F6',
+          btnHoverColor: '#FFFFFF',
+          metricBg: 'rgba(59, 130, 246, 0.12)',
+          metricColor: '#3B82F6',
         };
       case 'info':
       default:
@@ -307,7 +307,7 @@ export default function ExecutiveAdvisoryFeed({ advisories, adminLocale }: Execu
 
         .advisory-master-container.is-light {
           background: #FFFFFF;
-          border: 1.5px solid #D8D2C4;
+          border: 1px solid #E2E8F0;
           box-shadow: 0 12px 36px rgba(15, 23, 42, 0.08);
         }
 
@@ -327,20 +327,20 @@ export default function ExecutiveAdvisoryFeed({ advisories, adminLocale }: Execu
           width: 38px;
           height: 38px;
           border-radius: 10px;
-          background: rgba(229, 184, 105, 0.12);
+          background: rgba(59, 130, 246, 0.12);
           display: flex;
           align-items: center;
           justify-content: center;
-          color: #E5B869;
+          color: #3B82F6;
           flex-shrink: 0;
-          border: 1px solid rgba(229, 184, 105, 0.3);
-          box-shadow: 0 4px 12px rgba(229, 184, 105, 0.15);
+          border: 1px solid rgba(59, 130, 246, 0.3);
+          box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
         }
 
         .advisory-master-container.is-light .advisory-icon-box {
-          background: rgba(148, 111, 35, 0.08);
-          border-color: rgba(148, 111, 35, 0.25);
-          color: #946F23;
+          background: rgba(37, 99, 235, 0.08);
+          border-color: rgba(37, 99, 235, 0.25);
+          color: #2563EB;
           box-shadow: none;
         }
 
@@ -369,9 +369,9 @@ export default function ExecutiveAdvisoryFeed({ advisories, adminLocale }: Execu
           gap: 6px;
           padding: 3px 9px;
           border-radius: 9999px;
-          background: rgba(229, 184, 105, 0.12);
-          border: 1px solid rgba(229, 184, 105, 0.3);
-          color: #E5B869;
+          background: rgba(59, 130, 246, 0.12);
+          border: 1px solid rgba(59, 130, 246, 0.3);
+          color: #3B82F6;
           font-size: 10px;
           font-weight: 800;
           letter-spacing: 0.04em;
@@ -379,23 +379,23 @@ export default function ExecutiveAdvisoryFeed({ advisories, adminLocale }: Execu
         }
 
         .advisory-master-container.is-light .live-ai-badge {
-          background: rgba(148, 111, 35, 0.08);
-          border: 1px solid rgba(148, 111, 35, 0.25);
-          color: #946F23;
+          background: rgba(37, 99, 235, 0.08);
+          border: 1px solid rgba(37, 99, 235, 0.25);
+          color: #2563EB;
         }
 
         .pulsing-dot {
           width: 6px;
           height: 6px;
           border-radius: 50%;
-          background: #E5B869;
-          box-shadow: 0 0 8px #E5B869;
+          background: #3B82F6;
+          box-shadow: 0 0 8px #3B82F6;
           animation: pulseGlow 1.8s infinite;
         }
 
         .advisory-master-container.is-light .pulsing-dot {
-          background: #946F23;
-          box-shadow: 0 0 8px #946F23;
+          background: #2563EB;
+          box-shadow: 0 0 8px #2563EB;
         }
 
         @keyframes pulseGlow {
@@ -540,10 +540,10 @@ export default function ExecutiveAdvisoryFeed({ advisories, adminLocale }: Execu
         }
 
         .advisory-action-btn:hover {
-          background: var(--btn-hover-bg, #E5B869) !important;
-          color: var(--btn-hover-color, #0A0C10) !important;
-          border-color: var(--btn-hover-bg, #E5B869) !important;
-          box-shadow: 0 4px 14px rgba(148, 111, 35, 0.25);
+          background: var(--btn-hover-bg, #3B82F6) !important;
+          color: var(--btn-hover-color, #FFFFFF) !important;
+          border-color: var(--btn-hover-bg, #3B82F6) !important;
+          box-shadow: 0 4px 14px rgba(37, 99, 235, 0.25);
           transform: translateX(2px);
         }
 
