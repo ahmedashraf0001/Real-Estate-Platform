@@ -425,7 +425,7 @@ export const CostAllocationDetailDrawer: React.FC<CostAllocationDetailDrawerProp
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <input
                 type="number"
-                step="100000"
+                step="any"
                 value={simulatedUnitValue}
                 onChange={(e) => setCustomValueByAlloc({ id: allocation.allocation_id, val: e.target.value })}
                 style={{

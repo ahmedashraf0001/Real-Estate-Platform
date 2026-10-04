@@ -819,7 +819,7 @@ export const PartnerReallocationModal: React.FC<PartnerReallocationModalProps> =
               <input
                 type="number"
                 min="0"
-                step="5000"
+                step="any"
                 placeholder="0.00"
                 value={transferValueEgp}
                 onChange={(e) => setTransferValueEgp(e.target.value)}

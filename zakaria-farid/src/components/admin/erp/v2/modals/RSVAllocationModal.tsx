@@ -520,7 +520,7 @@ export const RSVAllocationModal: React.FC<RSVAllocationModalProps> = ({
               </div>
               <input 
                 type="number"
-                step="100000"
+                step="any"
                 required
                 value={salesValue}
                 onChange={e => setSalesValue(e.target.value)}
@@ -549,7 +549,7 @@ export const RSVAllocationModal: React.FC<RSVAllocationModalProps> = ({
               </div>
               <input 
                 type="number"
-                step="100000"
+                step="any"
                 required
                 value={wipAmount}
                 onChange={e => setWipAmount(e.target.value)}

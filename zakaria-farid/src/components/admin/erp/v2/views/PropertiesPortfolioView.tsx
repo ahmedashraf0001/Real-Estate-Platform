@@ -932,7 +932,7 @@ export const PropertiesPortfolioView: React.FC<PropertiesPortfolioViewProps> = (
                 <input
                   type="number"
                   min="0"
-                  step="1000"
+                  step="any"
                   value={editingTaxUnit.taxAmount}
                   onChange={(e) => setEditingTaxUnit({ ...editingTaxUnit, taxAmount: e.target.value })}
                   className={styles.filterInput}

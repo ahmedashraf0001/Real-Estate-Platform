@@ -1791,7 +1791,7 @@ export function ERPWorkstationProvider({
                 <span>{isAr ? 'العميل:' : 'Client:'}</span>
                 <strong style={{ color: '#0f172a', fontWeight: 800 }}>{localizedBuyer}</strong>
                 <span style={{ color: '#cbd5e1' }}>•</span>
-                <span>{isAr ? 'تم توليد جدول الأقساط وقيد اليومية' : 'Schedules & GL generated'}</span>
+                <span>{isAr ? 'تم توليد جدول الأقساط — لا قيد حتى استلام المقدم' : 'Schedule created — no entry until the down payment is received'}</span>
               </div>
             </div>
           ),

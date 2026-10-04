@@ -606,7 +606,7 @@ export const ContractEscalationModal: React.FC<ContractEscalationModalProps> = (
                 <div style={{ position: 'relative' }}>
                   <input 
                     type="number"
-                    step="1000"
+                    step="any"
                     required
                     value={delta}
                     onChange={e => setDelta(e.target.value)}

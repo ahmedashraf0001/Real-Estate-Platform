@@ -346,7 +346,7 @@ export const PartnerPayoutModal: React.FC<PartnerPayoutModalProps> = ({
               <input
                 type="number"
                 min="1"
-                step="500"
+                step="any"
                 placeholder="0.00"
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}

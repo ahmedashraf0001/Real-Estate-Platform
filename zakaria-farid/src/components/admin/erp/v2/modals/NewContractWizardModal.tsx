@@ -1,5 +1,6 @@
 'use client';
 
+import { toLocalDateStr } from '@/lib/erp/treasuryLedger';
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Plus, 
@@ -137,11 +138,11 @@ export const NewContractWizardModal: React.FC<NewContractWizardModalProps> = ({
   const [downPaymentAmountInput, setDownPaymentAmountInput] = useState<string>('');
   const [numInstallments, setNumInstallments] = useState<string>('8');
   const [installmentFrequency, setInstallmentFrequency] = useState<'MONTHLY' | 'QUARTERLY' | 'SEMI_ANNUAL'>('QUARTERLY');
-  const [firstPaymentDate, setFirstPaymentDate] = useState<string>(() => new Date().toISOString().split('T')[0]);
+  const [firstPaymentDate, setFirstPaymentDate] = useState<string>(() => toLocalDateStr(new Date()));
   const [firstInstallmentDueDate, setFirstInstallmentDueDate] = useState<string>(() => {
     const d = new Date();
     d.setMonth(d.getMonth() + 3);
-    return d.toISOString().split('T')[0];
+    return toLocalDateStr(d);
   });
 
   // Step 3: Equity Splits
@@ -279,10 +280,10 @@ export const NewContractWizardModal: React.FC<NewContractWizardModalProps> = ({
         setDownPaymentInputPct('15');
         setDownPaymentAmountInput('');
         setInstallmentFrequency('QUARTERLY');
-        setFirstPaymentDate(new Date().toISOString().split('T')[0]);
+        setFirstPaymentDate(toLocalDateStr(new Date()));
         const d = new Date();
         d.setMonth(d.getMonth() + 3);
-        setFirstInstallmentDueDate(d.toISOString().split('T')[0]);
+        setFirstInstallmentDueDate(toLocalDateStr(d));
 
         if (curPropId) {
           curApplySelection(curPropId, curUnitId);
@@ -1070,7 +1071,7 @@ export const NewContractWizardModal: React.FC<NewContractWizardModalProps> = ({
                   </label>
                   <input
                     type="number"
-                    step="1000"
+                    step="any"
                     required
                     value={basePriceInput}
                     onChange={e => setBasePriceInput(e.target.value)}
@@ -1178,7 +1179,7 @@ export const NewContractWizardModal: React.FC<NewContractWizardModalProps> = ({
                     </label>
                     <input
                       type="number"
-                      step="1000"
+                      step="any"
                       value={modalDpAmount}
                       onChange={e => {
                         setDownPaymentAmountInput(e.target.value);
@@ -1199,7 +1200,7 @@ export const NewContractWizardModal: React.FC<NewContractWizardModalProps> = ({
                       }}
                     />
                     <span style={{ fontSize: '0.67rem', color: '#64748b', display: 'block', marginTop: '0.2rem' }}>
-                      {isAr ? '💡 Tranche 0 تعني دفعة الحجز والمقدم النقدي المسددة فوراً عند التعاقد' : 'Tranche 0 covers the upfront reservation & down payment'}
+                      {isAr ? '💡 الدفعة 0 هي المقدم. تبقى مستحقة ولا تُسجل في الخزينة إلا عند استلامها فعلياً.' : 'Tranche 0 is the down payment. It stays due and is recorded only when actually received.'}
                     </span>
                   </div>
 
@@ -1339,7 +1340,7 @@ export const NewContractWizardModal: React.FC<NewContractWizardModalProps> = ({
                           <td style={{ padding: '0.4rem 0.6rem', fontVariantNumeric: 'tabular-nums', color: '#0f172a' }}>{firstPaymentDate}</td>
                           <td style={{ padding: '0.4rem 0.6rem', fontWeight: 800, color: '#059669' }}>{D(modalDpAmount).formatEGP(isAr)}</td>
                           <td style={{ padding: '0.4rem 0.6rem', color: '#047857', fontWeight: 700 }}>
-                            {isAr ? 'دفعة الحجز والمقدم النقدي (Tranche 0 مسددة)' : 'Tranche 0: Reservation & Down Payment (Paid)'}
+                            {isAr ? 'دفعة الحجز والمقدم (مستحقة)' : 'Down payment (due)'}
                           </td>
                         </tr>
                         {previewSchedule.map(t => (
@@ -1693,7 +1694,7 @@ export const NewContractWizardModal: React.FC<NewContractWizardModalProps> = ({
                   }}
                 >
                   {isMutating ? <Loader2 size={15} className="animate-spin" /> : <CheckCircle2 size={15} />}
-                  <span>{isAr ? 'اعتماد العقد وترحيل الدفعة للخزينة' : 'Execute Real Contract & Post'}</span>
+                  <span>{isAr ? 'اعتماد العقد' : 'Create contract'}</span>
                 </button>
               </div>
             </div>

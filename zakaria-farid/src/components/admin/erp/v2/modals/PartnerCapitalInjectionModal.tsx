@@ -894,7 +894,7 @@ export const PartnerCapitalInjectionModal: React.FC<PartnerCapitalInjectionModal
                 <input
                   type="number"
                   min="1"
-                  step="5000"
+                  step="any"
                   placeholder="0.00"
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
