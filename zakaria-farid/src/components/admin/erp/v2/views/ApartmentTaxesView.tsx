@@ -40,7 +40,7 @@ export interface ApartmentTaxesViewProps {
   propertyCosts?: ERPPropertyCostItem[];
   isAr?: boolean;
   isMutating?: boolean;
-  onRemitTax: (taxId: string) => void;
+  onRemitTax: (taxId: string, paymentMethod?: '101000' | '102000') => void | Promise<void>;
   onInspectTax: (tax: ERPTaxRecord) => void;
   onOpenCostModal?: (propertyId?: string) => void;
   onRecordTax?: (taxData: {
@@ -98,6 +98,8 @@ export const ApartmentTaxesView: React.FC<ApartmentTaxesViewProps> = ({
   }, [contracts, erpContext?.data?.contracts]);
 
   const [isRecordModalOpen, setIsRecordModalOpen] = useState(false);
+  const [remitTarget, setRemitTarget] = useState<ERPTaxRecord | null>(null);
+  const [remitSource, setRemitSource] = useState<'101000' | '102000'>('101000');
   const [recordContractId, setRecordContractId] = useState('');
   const [recordTaxType, setRecordTaxType] = useState('Real estate disposal tax 2.5%');
   const [recordTaxableBase, setRecordTaxableBase] = useState('');
@@ -1595,7 +1597,7 @@ export const ApartmentTaxesView: React.FC<ApartmentTaxesViewProps> = ({
                               {!isRemitted && (
                                 <button
                                   type="button"
-                                  onClick={() => onRemitTax(t.tax_id)}
+                                  onClick={() => { setRemitSource('101000'); setRemitTarget(t); }}
                                   disabled={isMutating}
                                   className={styles.settleBtn}
                                   style={{ padding: '0.3rem 0.6rem', fontSize: '0.72rem' }}
@@ -1793,7 +1795,8 @@ export const ApartmentTaxesView: React.FC<ApartmentTaxesViewProps> = ({
                         type="button"
                         onClick={(e) => {
                           e.stopPropagation();
-                          onRemitTax(t.tax_id);
+                          setRemitSource('101000');
+                          setRemitTarget(t);
                         }}
                         disabled={isMutating}
                         className={styles.settleBtn}
@@ -1842,7 +1845,7 @@ export const ApartmentTaxesView: React.FC<ApartmentTaxesViewProps> = ({
         isOpen={isRecordModalOpen}
         onClose={() => setIsRecordModalOpen(false)}
         title={isAr ? 'تسجيل ضريبة أو رسم يدوي' : 'Record Manual Tax / Fee'}
-        subtitle={isAr ? 'إثبات التزام ضريبي على الوحدة (خارج الدفاتر حتى السداد الفعلي - أساس نقدي)' : 'Record unit tax liability (off-ledger cash basis until remitted)'}
+        subtitle={isAr ? 'إثبات التزام ضريبي على الوحدة واستحقاقه على حساب 204000' : 'Record a unit tax and accrue it to liability 204000'}
         icon={<Receipt size={18} color="var(--erp-accent, #2563eb)" />}
         maxWidth="560px"
         isAr={isAr}
@@ -2082,11 +2085,54 @@ export const ApartmentTaxesView: React.FC<ApartmentTaxesViewProps> = ({
             <ShieldCheck size={14} color="#15803d" />
             <span>
               {isAr 
-                ? 'أساس نقدي موحد: تسجيل الضريبة لا ينشئ قيد يومية. يرحل القيد إلى دفتر الأستاذ العام عند السداد الفعلي فقط.'
-                : 'Unified Cash Basis: Recording tax creates NO journal entry. Hits GL only when remitted.'}
+                ? 'تسجيل الضريبة ينشئ قيد استحقاق (مدين 604000 / دائن 204000)، ويُقفل الالتزام عند السداد الفعلي من الخزينة أو البنك.'
+                : 'Recording posts an accrual (Dr 604000 / Cr 204000); the liability is cleared when the tax is actually paid from Safe or Bank.'}
             </span>
           </div>
         </form>
+      </ZFModalShell>
+      {/* Tax Remittance Confirmation */}
+      <ZFModalShell
+        isOpen={!!remitTarget}
+        onClose={() => setRemitTarget(null)}
+        title={isAr ? 'تأكيد سداد الضريبة' : 'Confirm Tax Payment'}
+        subtitle={isAr ? 'يقفل التزام 204000 مقابل الخزينة أو البنك' : 'Clears liability 204000 against Safe or Bank'}
+        icon={<Receipt size={18} color="var(--erp-accent, #2563eb)" />}
+        maxWidth="440px"
+        footer={
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', width: '100%' }}>
+            <button type="button" onClick={() => setRemitTarget(null)} disabled={isMutating}
+              style={{ padding: '0.5rem 1.25rem', borderRadius: '8px', border: '1px solid #cbd5e1', background: '#ffffff', color: '#475569', fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer' }}>
+              {isAr ? 'إلغاء' : 'Cancel'}
+            </button>
+            <button type="button" disabled={isMutating || !remitTarget}
+              onClick={async () => { if (!remitTarget) return; await onRemitTax(remitTarget.tax_id, remitSource); setRemitTarget(null); }}
+              style={{ padding: '0.5rem 1.4rem', borderRadius: '8px', border: 'none', background: 'var(--erp-accent, #2563eb)', color: '#ffffff', fontSize: '0.85rem', fontWeight: 700, cursor: 'pointer' }}>
+              {isAr ? 'تأكيد السداد' : 'Confirm Payment'}
+            </button>
+          </div>
+        }
+      >
+        {remitTarget && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
+              <span style={{ color: '#64748b' }}>{isAr ? 'نوع الضريبة' : 'Tax type'}</span>
+              <strong style={{ color: '#0f172a' }}>{remitTarget.tax_type}</strong>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
+              <span style={{ color: '#64748b' }}>{isAr ? 'المبلغ' : 'Amount'}</span>
+              <strong style={{ color: '#0f172a', fontVariantNumeric: 'tabular-nums' }}><MoneyCell amount={remitTarget.tax_amount} isAr={isAr} /></strong>
+            </div>
+            <label style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', fontSize: '0.8rem', color: '#334155', fontWeight: 600 }}>
+              {isAr ? 'مصدر السداد' : 'Paid from'}
+              <select value={remitSource} onChange={(e) => setRemitSource(e.target.value as '101000' | '102000')}
+                style={{ height: '38px', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '0 0.6rem', fontSize: '0.85rem', background: '#ffffff', color: '#0f172a' }}>
+                <option value="101000">{isAr ? 'الخزينة الرئيسية (101000) — نقدي' : 'Main Safe (101000) — Cash'}</option>
+                <option value="102000">{isAr ? 'الحساب البنكي (102000) — إنستاباي/تحويل' : 'Bank (102000) — InstaPay / transfer'}</option>
+              </select>
+            </label>
+          </div>
+        )}
       </ZFModalShell>
     </div>
   );

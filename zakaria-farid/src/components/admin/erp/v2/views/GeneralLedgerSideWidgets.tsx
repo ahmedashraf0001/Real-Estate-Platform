@@ -55,6 +55,7 @@ export interface GeneralLedgerSideWidgetsProps {
   selectedAccountStats?: { debits: Decimal; credits: Decimal; count: number };
   lastMovementDate?: string;
   onTogglePeriodStatus: (targetPeriod?: ERPAccountingPeriod) => void | Promise<void>;
+  onCloseFiscalYear?: (year: number) => void | Promise<void>;
   onFilterPeriodInJournal?: (period: ERPAccountingPeriod) => void;
   onExportExcel?: () => void | Promise<void>;
   isExportingExcel?: boolean;
@@ -94,6 +95,7 @@ export const GeneralLedgerSideWidgets: React.FC<GeneralLedgerSideWidgetsProps> =
   onInspectAccount,
   onFilterPeriodInJournal,
   onTogglePeriodStatus,
+  onCloseFiscalYear,
   onExportExcel,
   isExportingExcel = false,
   onPrintTrialBalance,
@@ -432,6 +434,18 @@ export const GeneralLedgerSideWidgets: React.FC<GeneralLedgerSideWidgetsProps> =
                 </>
               )}
             </button>
+            {onCloseFiscalYear && effectivePeriod?.fiscal_year && (
+              <button
+                type="button"
+                className={css.sideWidgetOutlineBtn}
+                onClick={() => onCloseFiscalYear(effectivePeriod.fiscal_year)}
+                disabled={isMutating}
+                style={{ marginTop: '0.35rem' }}
+              >
+                <Lock size={14} />
+                <span>{isAr ? `إغلاق السنة المالية ${effectivePeriod.fiscal_year}` : `Close Fiscal Year ${effectivePeriod.fiscal_year}`}</span>
+              </button>
+            )}
           </div>
         </div>
 

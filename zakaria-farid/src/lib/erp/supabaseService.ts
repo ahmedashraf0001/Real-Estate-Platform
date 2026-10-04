@@ -1316,6 +1316,84 @@ export class ERPSupabaseService {
   }
 
   /**
+   * Ensure that accounting periods exist for the given calendar date.
+   * When no period covers the date, inserts all 12 calendar-month periods of that fiscal year
+   * (status OPEN, period_id `prd-YYYY-MM`, same shape as existing rows; on conflict do nothing),
+   * and returns the period.
+   */
+  static async ensurePeriodsForDate(
+    supabase: SupabaseClient,
+    date: string | Date
+  ): Promise<ERPAccountingPeriod> {
+    const dateStr = typeof date === 'string' ? date.slice(0, 10) : date.toISOString().slice(0, 10);
+    const parts = dateStr.split('-');
+    const year = parseInt(parts[0], 10) || new Date().getFullYear();
+    const month = parseInt(parts[1], 10) || 1;
+
+    // 1. Check if period exists for this date in Supabase
+    try {
+      const { data: existing, error } = await supabase
+        .from('erp_accounting_periods')
+        .select('*')
+        .lte('start_date', dateStr)
+        .gte('end_date', dateStr)
+        .order('period_number', { ascending: true })
+        .limit(1);
+
+      if (!error && existing && existing.length > 0) {
+        const p = existing[0];
+        return {
+          period_id: String(p.period_id),
+          fiscal_year: Number(p.fiscal_year),
+          period_number: Number(p.period_number),
+          start_date: String(p.start_date),
+          end_date: String(p.end_date),
+          status: p.status as 'OPEN' | 'LOCKED' | 'CLOSED',
+          locked_at: p.locked_at ? String(p.locked_at) : undefined,
+          locked_by: p.locked_by ? String(p.locked_by) : undefined
+        };
+      }
+    } catch (e) {
+      // Schema error or network issue; proceed to create/upsert
+    }
+
+    // 2. Generate all 12 calendar-month periods of that fiscal year
+    const periodsToInsert: ERPAccountingPeriod[] = Array.from({ length: 12 }, (_, i) => {
+      const m = i + 1;
+      const mPad = String(m).padStart(2, '0');
+      const lastDay = new Date(Date.UTC(year, m, 0)).getUTCDate();
+      return {
+        period_id: `prd-${year}-${mPad}`,
+        fiscal_year: year,
+        period_number: m,
+        start_date: `${year}-${mPad}-01`,
+        end_date: `${year}-${mPad}-${String(lastDay).padStart(2, '0')}`,
+        status: 'OPEN' as const
+      };
+    });
+
+    try {
+      const { error: upsertErr } = await supabase
+        .from('erp_accounting_periods')
+        .upsert(periodsToInsert, { onConflict: 'period_id', ignoreDuplicates: true });
+
+      if (upsertErr && (upsertErr.code === '23505' || upsertErr.message?.includes('conflict') || upsertErr.message?.includes('duplicate'))) {
+        await supabase
+          .from('erp_accounting_periods')
+          .upsert(periodsToInsert, { onConflict: 'fiscal_year,period_number', ignoreDuplicates: true });
+      }
+    } catch (insertErr) {
+      console.warn('Could not insert auto-generated fiscal periods into Supabase:', insertErr);
+    }
+
+    const matchedPeriod = periodsToInsert.find(p => p.start_date <= dateStr && dateStr <= p.end_date)
+      || periodsToInsert[month - 1]
+      || periodsToInsert[0];
+
+    return matchedPeriod;
+  }
+
+  /**
    * Post all unposted journal entries for a given fiscal period.
    * Sets is_locked = true for all entries belonging to the period, preserving the period's OPEN status.
    */

@@ -73,6 +73,7 @@ export interface GeneralLedgerViewProps {
   onExportExcel?: () => void | Promise<void>;
   onOpenProjectExpense: () => void;
   onTogglePeriodStatus: (periodId: string, newStatus: 'OPEN' | 'LOCKED') => void | Promise<void>;
+  onCloseFiscalYear?: (year: number) => void | Promise<void>;
 }
 
 type LedgerMainTab = 
@@ -112,7 +113,8 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
   dataset,
   onExportExcel,
   onOpenProjectExpense,
-  onTogglePeriodStatus
+  onTogglePeriodStatus,
+  onCloseFiscalYear
 }) => {
   // Available Fiscal Periods
   const availablePeriods = useMemo(() => {
@@ -211,6 +213,21 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
       toast.error(isAr ? 'حدث خطأ أثناء تعديل حالة الفترة المالية' : 'Failed to update period status');
     }
   }, [effectiveSelectedPeriod, activePeriod, onTogglePeriodStatus, isAr]);
+
+  const handleCloseFiscalYearSafe = useCallback(async (year: number) => {
+    if (!onCloseFiscalYear) return;
+    const msg = isAr
+      ? `سيتم إغلاق جميع الفترات الـ 12 للسنة المالية ${year} نهائياً ومنع أي قيود جديدة عليها. هل تريد المتابعة؟`
+      : `This will CLOSE all 12 periods of fiscal year ${year} and block any new postings. Continue?`;
+    if (!window.confirm(msg)) return;
+    if (year === new Date().getFullYear()) {
+      const msg2 = isAr
+        ? `تحذير: ${year} هي السنة الحالية. إغلاقها يوقف تسجيل التحصيلات والمصروفات لهذا العام. تأكيد نهائي؟`
+        : `Warning: ${year} is the CURRENT year. Closing it stops recording collections and expenses for this year. Final confirmation?`;
+      if (!window.confirm(msg2)) return;
+    }
+    await Promise.resolve(onCloseFiscalYear(year));
+  }, [onCloseFiscalYear, isAr]);
 
   const handleFilterPeriodInJournal = useCallback((period: ERPAccountingPeriod) => {
     if (period.start_date) {
@@ -1506,6 +1523,7 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
         lastMovementDate={selectedAccountForInspector ? accountLastMovementMap[selectedAccountForInspector.account_code] : undefined}
         onCloseInspector={() => setSelectedAccountForInspector(null)}
         onTogglePeriodStatus={handleTogglePeriodStatusSafe}
+        onCloseFiscalYear={onCloseFiscalYear ? handleCloseFiscalYearSafe : undefined}
         onFilterPeriodInJournal={handleFilterPeriodInJournal}
         onExportExcel={handleExportExcelClick}
         isExportingExcel={isExportingExcel}

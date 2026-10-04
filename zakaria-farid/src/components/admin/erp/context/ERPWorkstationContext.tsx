@@ -376,9 +376,10 @@ export interface ERPWorkstationContextValue {
   handleConfirmHandCollection: (item: ERPPDCRecord, receiptNo: string, date: string, amount: string, notes: string, method?: 'CASH' | 'INSTAPAY') => Promise<void>;
   handleConfirmBounceCheque: (item: ERPPDCRecord) => Promise<void>;
   handleTogglePeriodStatus: (periodId: string, newStatus: 'OPEN' | 'LOCKED' | 'CLOSED') => Promise<void>;
+  handleCloseFiscalYear: (year: number) => Promise<void>;
   handlePostMonthlyEntries: (periodId: string) => Promise<number>;
   handleCreateRSVAllocation: (e?: React.FormEvent, overrideData?: { projectName: string; salesValue: string; wipAmount: string }) => Promise<void>;
-  handleRemitTax: (taxId: string) => Promise<void>;
+  handleRemitTax: (taxId: string, paymentMethod?: '101000' | '102000') => Promise<void>;
   handleRecordTax: (params: {
     contract_id: string;
     tax_type: string;
@@ -739,6 +740,35 @@ export function ERPWorkstationProvider({
           dataset.purchaseOrders = Array.isArray(saved) ? saved.filter(order => order.order_id && order.property_id && order.status === 'DRAFT') : [];
         } catch { dataset.purchaseOrders = []; }
       }
+
+      // Requirement 2(a): Ensure current month period exists; if not, auto-insert all 12 periods of the year
+      const todayStr = new Date().toISOString().split('T')[0];
+      const hasCurrentPeriod = dataset.periods && dataset.periods.some(p => p.start_date <= todayStr && todayStr <= p.end_date);
+      if (!hasCurrentPeriod) {
+        try {
+          await ERPSupabaseService.ensurePeriodsForDate(supabase, todayStr);
+          const year = parseInt(todayStr.slice(0, 4), 10);
+          const generatedPeriods: ERPAccountingPeriod[] = Array.from({ length: 12 }, (_, i) => {
+            const m = i + 1;
+            const mPad = String(m).padStart(2, '0');
+            const lastDay = new Date(Date.UTC(year, m, 0)).getUTCDate();
+            return {
+              period_id: `prd-${year}-${mPad}`,
+              fiscal_year: year,
+              period_number: m,
+              start_date: `${year}-${mPad}-01`,
+              end_date: `${year}-${mPad}-${String(lastDay).padStart(2, '0')}`,
+              status: 'OPEN' as const
+            };
+          });
+          const existingIds = new Set((dataset.periods || []).map(p => p.period_id));
+          const missing = generatedPeriods.filter(p => !existingIds.has(p.period_id));
+          dataset.periods = [...(dataset.periods || []), ...missing].sort((a, b) => a.period_id.localeCompare(b.period_id));
+        } catch (periodErr) {
+          console.warn('Could not auto-ensure current month period in loadLiveData:', periodErr);
+        }
+      }
+
       setData(dataset);
       setPartnerProfiles(liveProfiles ?? []);
       setPartnerTransactions(liveTransactions ?? []);
@@ -754,6 +784,32 @@ export function ERPWorkstationProvider({
               ERPSupabaseService.loadPartnerProfiles(supabase),
               ERPSupabaseService.loadPartnerTransactions(supabase)
             ]);
+            const todayStr = new Date().toISOString().split('T')[0];
+            const hasRetryPeriod = retryDataset.periods && retryDataset.periods.some(p => p.start_date <= todayStr && todayStr <= p.end_date);
+            if (!hasRetryPeriod) {
+              try {
+                await ERPSupabaseService.ensurePeriodsForDate(supabase, todayStr);
+                const year = parseInt(todayStr.slice(0, 4), 10);
+                const generatedPeriods: ERPAccountingPeriod[] = Array.from({ length: 12 }, (_, i) => {
+                  const m = i + 1;
+                  const mPad = String(m).padStart(2, '0');
+                  const lastDay = new Date(Date.UTC(year, m, 0)).getUTCDate();
+                  return {
+                    period_id: `prd-${year}-${mPad}`,
+                    fiscal_year: year,
+                    period_number: m,
+                    start_date: `${year}-${mPad}-01`,
+                    end_date: `${year}-${mPad}-${String(lastDay).padStart(2, '0')}`,
+                    status: 'OPEN' as const
+                  };
+                });
+                const existingIds = new Set((retryDataset.periods || []).map(p => p.period_id));
+                const missing = generatedPeriods.filter(p => !existingIds.has(p.period_id));
+                retryDataset.periods = [...(retryDataset.periods || []), ...missing].sort((a, b) => a.period_id.localeCompare(b.period_id));
+              } catch (retryPeriodErr) {
+                console.warn('Could not auto-ensure period on retry:', retryPeriodErr);
+              }
+            }
             setData(retryDataset);
             setPartnerProfiles(retryProfiles ?? []);
             setPartnerTransactions(retryTransactions ?? []);
@@ -814,8 +870,9 @@ export function ERPWorkstationProvider({
   // Handler: Toggle Accounting Period Status
   const handleTogglePeriodStatus = useCallback(async (periodId: string, newStatus: 'OPEN' | 'LOCKED' | 'CLOSED') => {
     setIsMutating(true);
+    const actor = currentUser?.email || currentUser?.id || 'system';
     try {
-      await ERPSupabaseService.persistPeriodStatus(supabase, periodId, newStatus, 'CFO_FARID');
+      await ERPSupabaseService.persistPeriodStatus(supabase, periodId, newStatus, actor);
       
       setData(prev => ({
         ...prev,
@@ -823,7 +880,7 @@ export function ERPWorkstationProvider({
           ...p,
           status: newStatus,
           locked_at: newStatus !== 'OPEN' ? new Date().toISOString() : undefined,
-          locked_by: newStatus !== 'OPEN' ? 'CFO_FARID' : undefined
+          locked_by: newStatus !== 'OPEN' ? actor : undefined
         } : p)
       }));
 
@@ -832,7 +889,9 @@ export function ERPWorkstationProvider({
       toast.success(
         newStatus === 'OPEN'
           ? (isAr ? 'تم فتح الفترة المحاسبية لتسجيل القيود' : 'Accounting period opened')
-          : (isAr ? 'تم قفل الفترة المحاسبية وحمايتها بموجب Invariant 0.9' : 'Accounting period locked'),
+          : newStatus === 'CLOSED'
+            ? (isAr ? 'تم إغلاق الفترة المحاسبية نهائياً' : 'Accounting period closed')
+            : (isAr ? 'تم قفل الفترة المحاسبية وحمايتها بموجب Invariant 0.9' : 'Accounting period locked'),
         { duration: 4000 }
       );
     } catch (err: unknown) {
@@ -841,7 +900,43 @@ export function ERPWorkstationProvider({
     } finally {
       setIsMutating(false);
     }
-  }, [supabase, loadLiveData, isAr]);
+  }, [supabase, loadLiveData, isAr, currentUser]);
+
+  // Handler: Manual Fiscal-Year Close
+  const handleCloseFiscalYear = useCallback(async (year: number) => {
+    const actor = currentUser?.email || currentUser?.id || 'system';
+    const periodsToClose = data.periods.filter(p => p.fiscal_year === year);
+    if (periodsToClose.length === 0) {
+      toast.error(isAr ? `لا توجد فترات مالية مسجلة للسنة ${year}` : `No accounting periods found for fiscal year ${year}`);
+      return;
+    }
+    setIsMutating(true);
+    try {
+      const nowIso = new Date().toISOString();
+      for (const p of periodsToClose) {
+        await ERPSupabaseService.persistPeriodStatus(supabase, p.period_id, 'CLOSED', actor);
+      }
+      setData(prev => ({
+        ...prev,
+        periods: prev.periods.map(p => p.fiscal_year === year ? {
+          ...p,
+          status: 'CLOSED' as const,
+          locked_at: nowIso,
+          locked_by: actor
+        } : p)
+      }));
+      await loadLiveData(true);
+      toast.success(
+        isAr ? `تم إغلاق السنة المالية ${year} بنجاح وإقفال كافة فتراتها الـ 12` : `Fiscal year ${year} closed successfully (all 12 periods closed)`,
+        { duration: 5000 }
+      );
+    } catch (err: unknown) {
+      console.warn('Close fiscal year error:', err);
+      toast.error(isAr ? 'فشل إغلاق السنة المالية' : 'Failed to close fiscal year');
+    } finally {
+      setIsMutating(false);
+    }
+  }, [data.periods, currentUser, supabase, isAr, loadLiveData]);
 
   // Handler: Post Monthly Journal Entries for a Fiscal Period
   const handlePostMonthlyEntries = useCallback(async (periodId: string): Promise<number> => {
@@ -889,6 +984,42 @@ export function ERPWorkstationProvider({
     }
     return true;
   }, [activePeriod, isAr, handleTogglePeriodStatus]);
+
+  // Central Helper: Resolve or auto-generate periods for a date if not covered
+  const resolveAndEnsurePeriodForDate = useCallback(async (dateStr: string | undefined): Promise<ERPAccountingPeriod> => {
+    const cleanDate = (dateStr || new Date().toISOString().split('T')[0]).slice(0, 10);
+    const matched = data.periods.find(p => p.start_date <= cleanDate && cleanDate <= p.end_date);
+    if (matched) return matched;
+
+    // No matching period found -> auto-insert 12 periods in DB and update local data.periods
+    const targetPeriod = await ERPSupabaseService.ensurePeriodsForDate(supabase, cleanDate);
+    const year = parseInt(cleanDate.slice(0, 4), 10);
+    if (!isNaN(year)) {
+      const fullYearPeriods: ERPAccountingPeriod[] = Array.from({ length: 12 }, (_, i) => {
+        const m = i + 1;
+        const mStr = String(m).padStart(2, '0');
+        const lastDay = new Date(Date.UTC(year, m, 0)).getUTCDate();
+        return {
+          period_id: `prd-${year}-${mStr}`,
+          fiscal_year: year,
+          period_number: m,
+          start_date: `${year}-${mStr}-01`,
+          end_date: `${year}-${mStr}-${String(lastDay).padStart(2, '0')}`,
+          status: 'OPEN' as const
+        };
+      });
+      setData(prev => {
+        const existingIds = new Set(prev.periods.map(p => p.period_id));
+        const missing = fullYearPeriods.filter(p => !existingIds.has(p.period_id));
+        if (missing.length === 0) return prev;
+        return {
+          ...prev,
+          periods: [...prev.periods, ...missing].sort((a, b) => a.period_id.localeCompare(b.period_id))
+        };
+      });
+    }
+    return targetPeriod;
+  }, [data.periods, supabase]);
 
   // Urgent Dues Count for Dock Badge
   const urgentDuesCount = useMemo(() => {
@@ -1415,7 +1546,7 @@ export function ERPWorkstationProvider({
       }
     }
 
-    const targetPeriod = resolvePeriodForDate(targetFirstPaymentDate, data.periods, activePeriod);
+    const targetPeriod = await resolveAndEnsurePeriodForDate(targetFirstPaymentDate);
     if (!ensureActivePeriodOpen(isAr ? 'تحرير عقد بيع جديد' : 'New Contract', targetPeriod)) return;
 
     setIsMutating(true);
@@ -1658,7 +1789,7 @@ export function ERPWorkstationProvider({
     const reason = reasonParam ?? escalationReason;
 
     const todayStr = new Date().toISOString().split('T')[0];
-    const targetPeriod = resolvePeriodForDate(todayStr, data.periods, activePeriod);
+    const targetPeriod = await resolveAndEnsurePeriodForDate(todayStr);
 
     if (contract.handover_status === 'Delivered' && !ensureActivePeriodOpen(isAr ? 'تعديل أسعار العقد' : 'Price Escalation', targetPeriod)) {
       return;
@@ -1785,7 +1916,7 @@ export function ERPWorkstationProvider({
     const contract = overrideContract || showRescissionModal;
     if (!contract) return;
 
-    const targetPeriod = resolvePeriodForDate(rescissionDate, data.periods, activePeriod);
+    const targetPeriod = await resolveAndEnsurePeriodForDate(rescissionDate);
     if (!ensureActivePeriodOpen(isAr ? 'فسخ العقد' : 'Contract Rescission', targetPeriod)) {
       return;
     }
@@ -1999,7 +2130,7 @@ export function ERPWorkstationProvider({
   }) => {
     if (!showPayModal) return;
     const payDate = details?.receiptDate || new Date().toISOString().split('T')[0];
-    const targetPeriod = resolvePeriodForDate(payDate, data.periods, activePeriod);
+    const targetPeriod = await resolveAndEnsurePeriodForDate(payDate);
     if (!ensureActivePeriodOpen(isAr ? 'تحصيل قسط' : 'Collect Installment', targetPeriod)) return;
 
     setIsMutating(true);
@@ -2140,10 +2271,11 @@ export function ERPWorkstationProvider({
 
   // Handler: Confirm Handover
   const handleConfirmHandover = useCallback(async (contract: ERPContract, handoverDate: string, rsvWipCost: Decimal | string) => {
-    const targetPeriod = resolvePeriodForDate(handoverDate, data.periods, activePeriod);
+    const targetPeriod = await resolveAndEnsurePeriodForDate(handoverDate);
     if (!ensureActivePeriodOpen(isAr ? 'تسليم الوحدة' : 'Unit Handover', targetPeriod)) return;
     setIsMutating(true);
     try {
+      const actor = currentUser?.email || currentUser?.id || 'system';
       const entry = ContractsEngine.createHandoverModelBEntry(
         contract,
         targetPeriod,
@@ -2151,7 +2283,7 @@ export function ERPWorkstationProvider({
         rsvWipCost,
         '501000',
         '151000',
-        'CFO_FARID'
+        actor
       );
 
       await ERPSupabaseService.persistJournalEntry(supabase, entry);
@@ -2242,7 +2374,7 @@ export function ERPWorkstationProvider({
       return;
     }
     const today = new Date().toISOString().split('T')[0];
-    const targetPeriod = resolvePeriodForDate(today, data.periods, activePeriod);
+    const targetPeriod = await resolveAndEnsurePeriodForDate(today);
     if (!ensureActivePeriodOpen(isAr ? 'إثبات ارتداد الشيك' : 'Bounce Cheque', targetPeriod)) return;
     setIsMutating(true);
     try {
@@ -2396,7 +2528,7 @@ export function ERPWorkstationProvider({
   // Handler: PDC Status Change
   const handlePDCStatusChange = useCallback(async (chequeId: string, newStatus: 'In Safe' | 'Deposited' | 'Cleared' | 'Bounced') => {
     const todayStr = new Date().toISOString().split('T')[0];
-    const targetPeriod = resolvePeriodForDate(todayStr, data.periods, activePeriod);
+    const targetPeriod = await resolveAndEnsurePeriodForDate(todayStr);
     if (newStatus !== 'In Safe' && !ensureActivePeriodOpen(isAr ? 'تحديث حالة ورقة القبض' : 'PDC Status Change', targetPeriod)) return;
     setIsMutating(true);
     try {
@@ -2718,7 +2850,7 @@ export function ERPWorkstationProvider({
       return;
     }
 
-    const targetPeriod = resolvePeriodForDate(todayStr, data.periods, activePeriod);
+    const targetPeriod = await resolveAndEnsurePeriodForDate(todayStr);
     if (!ensureActivePeriodOpen(isAr ? 'التحصيل الجماعي للأقساط' : 'Bulk Collection', targetPeriod)) return;
 
     setIsMutating(true);
@@ -2850,7 +2982,7 @@ export function ERPWorkstationProvider({
       toast.error(msg);
       return;
     }
-    const targetPeriod = resolvePeriodForDate(date, data.periods, activePeriod);
+    const targetPeriod = await resolveAndEnsurePeriodForDate(date);
     if (!ensureActivePeriodOpen(isAr ? 'تحصيل قسط' : 'Collect Installment', targetPeriod)) return;
 
     // Reject collected amount <= 0
@@ -3113,34 +3245,45 @@ export function ERPWorkstationProvider({
   }, [rsvProjectName, rsvWipAmount, rsvSalesValue, supabase, handleInspectRSV, isAr]);
 
   // Handler: Settle Tax
-  const handleRemitTax = useCallback(async (taxId: string) => {
+  const handleRemitTax = useCallback(async (taxId: string, paymentMethod: '101000' | '102000' = '101000') => {
     const tax = data.taxRecords.find(t => t.tax_id === taxId);
     if (!tax) return;
     const todayStr = new Date().toISOString().split('T')[0];
-    const targetPeriod = resolvePeriodForDate(todayStr, data.periods, activePeriod);
+    const targetPeriod = await resolveAndEnsurePeriodForDate(todayStr);
     if (!ensureActivePeriodOpen(isAr ? 'سداد ضريبة ورسوم' : 'Remit Tax', targetPeriod)) return;
     setIsMutating(true);
     try {
+      const actor = currentUser?.email || currentUser?.id || 'system';
+      const isBank = paymentMethod === '102000';
+      const creditAccountCode = isBank ? '102000' : '101000';
+      const creditMemo = isBank
+        ? (isAr ? 'سداد / استيفاء ضريبة الوحدة عبر الحساب البنكي' : 'Unit tax remittance settled via Bank account')
+        : (isAr ? 'سداد / استيفاء ضريبة الوحدة نقداً باليد من الخزينة الرئيسية' : 'Unit tax remittance settled in cash from Main Safe');
+
       const entry = GeneralLedgerEngine.validateAndCreateEntry({
         entry_number: `JE-TAX-RMT-${tax.tax_id.slice(0, 8)}`,
         entry_date: todayStr,
         period: targetPeriod,
-        description: `استيفاء / سداد ضريبة ورسوم الوحدة (${tax.tax_type})`,
+        description: isAr
+          ? `استيفاء / سداد ضريبة ورسوم الوحدة (${tax.tax_type})`
+          : `Apartment tax remittance settlement (${tax.tax_type})`,
         source_module: 'TAX',
         source_entity_id: tax.tax_id,
-        created_by: 'CFO_FARID',
+        created_by: actor,
         lines: [
           {
-            account_code: '150000',
+            account_code: '204000',
             debit_amount: tax.tax_amount,
             credit_amount: '0.00',
-            memo: `استيفاء وتسوية رسوم وتراخيص المشروع - ${tax.tax_type}`
+            memo: isAr
+              ? `إقفال وتسوية التزام ضريبة التصرفات العقارية المستحقة - ${tax.tax_type}`
+              : `Clear accrued disposition tax liability - ${tax.tax_type}`
           },
           {
-            account_code: '101000',
+            account_code: creditAccountCode,
             debit_amount: '0.00',
             credit_amount: tax.tax_amount,
-            memo: `سداد / استيفاء ضريبة الوحدة نقداً باليد من الخزينة الرئيسية`
+            memo: creditMemo
           }
         ]
       });
@@ -3172,12 +3315,16 @@ export function ERPWorkstationProvider({
         return prev;
       });
 
+      const sourceLabel = isBank
+        ? (isAr ? 'من الحساب البنكي' : 'from Bank')
+        : (isAr ? 'نقداً من الخزينة' : 'from Safe');
+
       toast.success(
-        isAr ? `تم سداد واستيفاء ضريبة الوحدة (${tax.tax_type}) نقداً من الخزينة` : `Apartment tax (${tax.tax_type}) remitted from Safe`,
+        isAr ? `تم سداد واستيفاء ضريبة الوحدة (${tax.tax_type}) ${sourceLabel}` : `Apartment tax (${tax.tax_type}) remitted ${sourceLabel}`,
         {
           description: isAr
-            ? `المبلغ: ${D(tax.tax_amount).formatEGP(true)} • تم إثبات قيد اليومية`
-            : `Amount: ${D(tax.tax_amount).formatEGP(false)} • Journal entry posted`,
+            ? `المبلغ: ${D(tax.tax_amount).formatEGP(true)} • تم إثبات قيد اليومية وتسوية حساب 204000`
+            : `Amount: ${D(tax.tax_amount).formatEGP(false)} • Journal entry posted (204000 cleared)`,
           duration: 5000
         }
       );
@@ -3194,9 +3341,9 @@ export function ERPWorkstationProvider({
     } finally {
       setIsMutating(false);
     }
-  }, [data.taxRecords, data.periods, activePeriod, supabase, isAr, ensureActivePeriodOpen]);
+  }, [data.taxRecords, data.periods, activePeriod, supabase, isAr, ensureActivePeriodOpen, resolveAndEnsurePeriodForDate, currentUser]);
 
-  // Handler: Manual Tax Recording (Creates NO journal entry; cash-basis: hits GL only when remitted)
+  // Handler: Manual Tax Recording with Accrual JE (Dr 604000 / Cr 204000)
   const handleRecordTax = useCallback(async (params: {
     contract_id: string;
     tax_type: string;
@@ -3208,6 +3355,12 @@ export function ERPWorkstationProvider({
   }): Promise<ERPTaxRecord | null> => {
     setIsMutating(true);
     try {
+      const recordDate = params.date ? params.date.slice(0, 10) : new Date().toISOString().split('T')[0];
+      const targetPeriod = await resolveAndEnsurePeriodForDate(recordDate);
+      if (!ensureActivePeriodOpen(isAr ? 'تسجيل واستحقاق ضريبة' : 'Accrue Tax', targetPeriod)) {
+        return null;
+      }
+
       const newRecord = await ERPSupabaseService.recordTaxRecord(supabase, {
         contract_id: params.contract_id,
         tax_type: params.tax_type,
@@ -3218,17 +3371,60 @@ export function ERPWorkstationProvider({
         notes: params.notes
       });
 
+      const actor = currentUser?.email || currentUser?.id || 'system';
+      const linkedContract = data.contracts.find(c => c.contract_id === params.contract_id);
+      const contractNumber = linkedContract?.contract_number || params.contract_id;
+      const formattedAmount = D(params.tax_amount).toFixed(2);
+
+      const entry = GeneralLedgerEngine.validateAndCreateEntry({
+        entry_number: `JE-TAX-ACCR-${newRecord.tax_id.slice(0, 8)}`,
+        entry_date: recordDate,
+        period: targetPeriod,
+        description: isAr
+          ? `استحقاق ضريبة ${params.tax_type} - عقد ${contractNumber}`
+          : `Tax Accrual (${params.tax_type}) - Contract ${contractNumber}`,
+        source_module: 'TAX',
+        source_entity_id: newRecord.tax_id,
+        created_by: actor,
+        lines: [
+          {
+            account_code: '604000',
+            debit_amount: formattedAmount,
+            credit_amount: '0.00',
+            memo: isAr
+              ? `إثبات مصروف ضريبة ${params.tax_type} - عقد ${contractNumber}`
+              : `Real Estate Disposition Tax Expense (${params.tax_type}) - Contract ${contractNumber}`
+          },
+          {
+            account_code: '204000',
+            debit_amount: '0.00',
+            credit_amount: formattedAmount,
+            memo: isAr
+              ? `استحقاق التزام ضريبة التصرفات العقارية - عقد ${contractNumber}`
+              : `Accrued real estate disposition tax liability - Contract ${contractNumber}`
+          }
+        ]
+      });
+
+      try {
+        await ERPSupabaseService.persistJournalEntry(supabase, entry);
+      } catch (dbErr) {
+        console.error('Tax accrual journal entry failed to persist:', dbErr);
+        toast.error(isAr ? 'تم حفظ الضريبة لكن فشل ترحيل قيد الاستحقاق — راجع الدفتر العام' : 'Tax saved but the accrual journal entry failed to post — check the ledger');
+      }
+
       setData(prev => ({
         ...prev,
-        taxRecords: [newRecord, ...prev.taxRecords]
+        taxRecords: [newRecord, ...prev.taxRecords],
+        journalEntries: [entry, ...prev.journalEntries]
       }));
 
       toast.success(
-        isAr ? `تم تسجيل الضريبة/الرسم بنجاح (${params.tax_type})` : `Tax record registered successfully (${params.tax_type})`,
+        isAr ? `تم تسجيل واستحقاق الضريبة بنجاح (${params.tax_type})` : `Tax record registered and accrued successfully (${params.tax_type})`,
         {
           description: isAr
-            ? `المبلغ: ${D(params.tax_amount).formatEGP(true)} • الحالة: قيد السداد (خارج الدفاتر حتى السداد)`
-            : `Amount: ${D(params.tax_amount).formatEGP(false)} • Status: Pending (Off-ledger cash basis until remitted)`
+            ? `المبلغ: ${D(params.tax_amount).formatEGP(true)} • تم إثبات قيد الاستحقاق (حساب 204000)`
+            : `Amount: ${D(params.tax_amount).formatEGP(false)} • Accrued to liability account 204000`
         }
       );
       return newRecord;
@@ -3239,7 +3435,7 @@ export function ERPWorkstationProvider({
     } finally {
       setIsMutating(false);
     }
-  }, [supabase, isAr]);
+  }, [supabase, isAr, data.contracts, currentUser, ensureActivePeriodOpen, resolveAndEnsurePeriodForDate]);
 
   // Handler: Confirm Partner Payout
   const handleConfirmPartnerPayout = useCallback(async (details: {
@@ -3252,7 +3448,7 @@ export function ERPWorkstationProvider({
     receiptRef: string;
     memo: string;
   }) => {
-    const targetPeriod = resolvePeriodForDate(details.payoutDate, data.periods, activePeriod);
+    const targetPeriod = await resolveAndEnsurePeriodForDate(details.payoutDate);
     if (!ensureActivePeriodOpen(isAr ? 'صرف أرباح الشركاء' : 'Partner Dividend Payout', targetPeriod)) {
       return;
     }
@@ -3379,7 +3575,7 @@ export function ERPWorkstationProvider({
     nationalId?: string;
     projectSharePct?: number;
   }) => {
-    const targetPeriod = resolvePeriodForDate(details.injectionDate, data.periods, activePeriod);
+    const targetPeriod = await resolveAndEnsurePeriodForDate(details.injectionDate);
     if (!ensureActivePeriodOpen(isAr ? 'توريد رأس مال الشريك' : 'Partner Capital Injection', targetPeriod)) {
       return;
     }
@@ -3671,7 +3867,7 @@ export function ERPWorkstationProvider({
 
       if (profileData.initialDeposit && D(profileData.initialDeposit.amount || 0).gt(0)) {
         const depositDate = profileData.initialDeposit.date || new Date().toISOString().split('T')[0];
-        const targetPeriod = resolvePeriodForDate(depositDate, data.periods, activePeriod);
+        const targetPeriod = await resolveAndEnsurePeriodForDate(depositDate);
         if (!ensureActivePeriodOpen(isAr ? 'توريد رأس مال الشريك' : 'Partner Capital Injection', targetPeriod)) {
           return;
         }
@@ -4283,6 +4479,7 @@ export function ERPWorkstationProvider({
     handleConfirmHandCollection,
     handleConfirmBounceCheque,
     handleTogglePeriodStatus,
+    handleCloseFiscalYear,
     handlePostMonthlyEntries,
     handleCreateRSVAllocation,
     handleRemitTax,
