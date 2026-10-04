@@ -1176,11 +1176,21 @@ export function ERPWorkstationProvider({
   }, [data.costAllocations, data.propertyCosts, data.journalEntries]);
 
   const totalSafePDCs = useMemo(() => {
-    return data.pdcRecords
-      .filter(p => p.status === 'In Safe')
-      .reduce((acc, p) => acc.plus(p.nominal_value || '0'), D(0))
+    const rescindedIds = new Set(
+      data.contracts.filter(c => c.status === 'Rescinded').map(c => c.contract_id)
+    );
+    return data.schedules
+      .filter(s => 
+        (s.status === 'Pending' || s.status === 'Partially Paid') &&
+        !rescindedIds.has(s.contract_id)
+      )
+      .reduce((acc, s) => {
+        const nominal = D(s.nominal_value || '0');
+        const paid = D(s.amount_paid || '0');
+        return acc.plus(Decimal.max(0, nominal.minus(paid)));
+      }, D(0))
       .toFixed(2);
-  }, [data.pdcRecords]);
+  }, [data.schedules, data.contracts]);
 
   const totalInjectedCapital = useMemo(() => {
     return data.partnerCalls
@@ -1446,10 +1456,11 @@ export function ERPWorkstationProvider({
       const dpSchedule = schedules[0];
       const dpAmount = dpSchedule ? dpSchedule.nominal_value : '0.00';
 
-      if (dpSchedule && D(dpAmount).gt(0)) {
-        dpSchedule.status = 'Paid';
-        dpSchedule.amount_paid = dpAmount;
-        dpSchedule.paid_date = targetFirstPaymentDate;
+      // Tranche 0 (down payment) stays pending with amount_paid 0 until actually collected (user-confirmed 2026-10-04)
+      if (dpSchedule) {
+        dpSchedule.status = 'Pending';
+        dpSchedule.amount_paid = '0.00';
+        dpSchedule.paid_date = null as any;
       }
 
       let cumulativeSplitShare = D(0);
@@ -1458,21 +1469,18 @@ export function ERPWorkstationProvider({
         const isLast = idx === targetPartnerSplits.length - 1;
         const pct = D(p.sharePct || 0).div(100);
         let sAmount: Decimal;
-        let cAmount: Decimal;
+        let cAmount = D(0);
         if (isLast && targetPartnerSplits.length > 1) {
           sAmount = D(contractValue).minus(cumulativeSplitShare);
-          cAmount = D(dpAmount).minus(cumulativeCashShare);
         } else {
           sAmount = D(contractValue).times(pct);
-          cAmount = D(dpAmount).times(pct);
           cumulativeSplitShare = cumulativeSplitShare.plus(sAmount);
-          cumulativeCashShare = cumulativeCashShare.plus(cAmount);
         }
         return {
           partner_name: p.partnerName,
           share_percentage: `${p.sharePct}%`,
           share_amount: sAmount.toFixed(2),
-          cash_share: cAmount.toFixed(2)
+          cash_share: '0.00'
         };
       });
 
@@ -1493,8 +1501,6 @@ export function ERPWorkstationProvider({
         finalUnitId = `${finalUnitId} - ${targetBuildingUnitNumber}`;
       }
 
-      const isVaultCash = (targetDestinationTreasury === '101000' || targetDestinationTreasury === 'SAFE_101000');
-
       const contract: ERPContract = {
         contract_id: contractId,
         contract_number: contractNumber,
@@ -1512,7 +1518,7 @@ export function ERPWorkstationProvider({
         exchange_rate: '1.0000',
         contract_date: targetFirstPaymentDate,
         handover_status: (targetPaymentPlanType === 'FULL_CASH' && prop?.completion_status === 'ready') ? 'Delivered' : 'Pending',
-        total_cash_collected: D(dpAmount).gt(0) ? dpAmount : '0.00',
+        total_cash_collected: '0.00',
         status: 'Active',
         payment_plan_type: targetPaymentPlanType,
         partner_splits: calculatedSplits,
@@ -1521,17 +1527,8 @@ export function ERPWorkstationProvider({
         building_unit_number: isBuilding && !targetIsWholeBuildingContract ? targetBuildingUnitNumber : undefined
       };
 
-      const dpEntry = D(dpAmount).gt(0)
-        ? ContractsEngine.createAdvancePaymentEntry(
-            contract,
-            dpAmount,
-            targetPeriod,
-            targetFirstPaymentDate,
-            isVaultCash
-          )
-        : undefined;
-
-      await ERPSupabaseService.persistNewContract(supabase, contract, schedules, dpEntry);
+      // Contract creation: schedules only, total_cash_collected = 0, NO advance-payment JE, NO PDC rows
+      await ERPSupabaseService.persistNewContract(supabase, contract, schedules);
 
       if (isBuilding && !targetIsWholeBuildingContract && targetBuildingUnitId && prop?.id) {
         await ERPSupabaseService.updateBuildingUnitStatus(
@@ -2010,8 +2007,8 @@ export function ERPWorkstationProvider({
       const { contract, schedule } = showPayModal;
       const amount = schedule.nominal_value;
       const isInstaPay = details?.paymentMethod === 'INSTAPAY' || details?.destinationTreasury === 'BANK_102000';
-      // UNIFIED OPERATING TREASURY DESTINATION: Both Cash and InstaPay deposit into Account 101000
-      const targetAccount = '101000';
+      // User-confirmed 2026-10-04: Payments are direct cash (Main Safe 101000) or InstaPay transfer (102000)
+      const targetAccount = isInstaPay ? '102000' : '101000';
       const notes = details?.notes || '';
 
       const isDelivered = contract.handover_status === 'Delivered';
@@ -2620,24 +2617,11 @@ export function ERPWorkstationProvider({
         schedule_version: 1
       };
 
-      const newChequeId = generateUUID();
-      const newPdc: ERPPDCRecord = {
-        cheque_id: newChequeId,
-        contract_id: targetContract.contract_id,
-        schedule_id: newScheduleId,
-        cheque_number: supplementData.receiptNumber,
-        bank_name: isAr ? 'الخزينة الرئيسية (أمانات نقداً باليد - 101000)' : 'Main Safe (Cash by Hand - 101000)',
-        drawer_name: targetContract.buyer_name,
-        nominal_value: D(supplementData.amount).toFixed(2),
-        due_date: supplementData.dueDate,
-        status: 'In Safe'
-      };
-
+      // Supplements create schedule tranche only, NO PDC row (user-confirmed 2026-10-04)
       await ERPSupabaseService.addContractSupplement(supabase, {
         contractId: targetContract.contract_id,
         newGrossValue,
-        newSchedule,
-        newPdc
+        newSchedule
       });
 
       await loadLiveData();
@@ -2881,10 +2865,22 @@ export function ERPWorkstationProvider({
       c.contract_id === item.contract_id || 
       c.contract_number === item.contract_id
     );
+    const rawSchedId = (item as any).scheduleId || item.schedule_id;
+    const cleanSchedId = rawSchedId && String(rawSchedId).startsWith('SCH-')
+      ? String(rawSchedId).slice(4)
+      : rawSchedId;
+
     const schedule = data.schedules.find(s => 
+      (cleanSchedId && s.schedule_id === cleanSchedId) ||
       (item.schedule_id && s.schedule_id === item.schedule_id) ||
       (s.contract_id === item.contract_id && s.due_date === item.due_date && (s.status === 'Pending' || s.status === 'Partially Paid')) ||
       (s.contract_id === item.contract_id && (s.status === 'Pending' || s.status === 'Partially Paid'))
+    );
+
+    const isRealPDC = Boolean(
+      item.cheque_id && 
+      !String(item.cheque_id).startsWith('SCH-') && 
+      data.pdcRecords.some(p => p.cheque_id === item.cheque_id)
     );
 
     const nominal = schedule ? D(schedule.nominal_value || '0') : D(item.nominal_value || '0');
@@ -2903,8 +2899,8 @@ export function ERPWorkstationProvider({
     setIsMutating(true);
     try {
       const isInstaPay = method === 'INSTAPAY';
-      // UNIFIED OPERATING TREASURY DESTINATION: Both Cash and InstaPay deposit into Account 101000
-      const targetAccount = '101000';
+      // User-confirmed 2026-10-04: Direct cash -> Main Safe (101000), InstaPay -> Bank (102000)
+      const targetAccount = isInstaPay ? '102000' : '101000';
 
       const isDelivered = contract?.handover_status === 'Delivered';
       const isPreHandoverInstallment = !isDelivered && Boolean(schedule || item.schedule_id || contract);
@@ -2916,11 +2912,11 @@ export function ERPWorkstationProvider({
         period: targetPeriod,
         description: isAr 
           ? (isInstaPay
-              ? `تحصيل قسط عبر إنستاباي بالخزينة بموجب مرجع رقم ${receiptNo} من العميل: ${item.drawer_name}${notes ? ` - ${notes}` : ''}`
-              : `تحصيل قسط نقداً بالخزينة بموجب إيصال رقم ${receiptNo} من العميل: ${item.drawer_name}${notes ? ` - ${notes}` : ''}`)
-          : `Installment collected via ${isInstaPay ? 'InstaPay' : 'Cash'} into Treasury - Ref #${receiptNo} - Client: ${item.drawer_name}`,
-        source_module: 'PDC',
-        source_entity_id: item.cheque_id,
+              ? `تحصيل قسط عبر إنستاباي بموجب مرجع رقم ${receiptNo} من العميل: ${item.drawer_name}${notes ? ` - ${notes}` : ''}`
+              : `تحصيل قسط نقداً بموجب إيصال رقم ${receiptNo} من العميل: ${item.drawer_name}${notes ? ` - ${notes}` : ''}`)
+          : `Installment collected via ${isInstaPay ? 'InstaPay' : 'Cash'} - Ref #${receiptNo} - Client: ${item.drawer_name}`,
+        source_module: isRealPDC ? 'PDC' : 'SALES',
+        source_entity_id: schedule?.schedule_id || contract?.contract_id || item.cheque_id,
         created_by: 'CFO_FARID',
         lines: [
           {
@@ -2928,8 +2924,8 @@ export function ERPWorkstationProvider({
             debit_amount: D(amount).toFixed(2),
             credit_amount: '0.00',
             memo: isInstaPay
-              ? (isAr ? `تحويل فوري إنستاباي بالخزينة - مرجع #${receiptNo}` : `InstaPay transfer into Treasury - Ref #${receiptNo}`)
-              : (isAr ? `استلام نقدي بالخزينة - إيصال #${receiptNo}` : `Hand cash collection into Treasury - Receipt #${receiptNo}`)
+              ? (isAr ? `تحويل فوري إنستاباي - مرجع #${receiptNo}` : `InstaPay transfer - Ref #${receiptNo}`)
+              : (isAr ? `استلام نقدي بالخزينة - إيصال #${receiptNo}` : `Hand cash collection into Safe - Receipt #${receiptNo}`)
           },
           {
             account_code: creditAccount,
@@ -2947,7 +2943,7 @@ export function ERPWorkstationProvider({
       const newScheduleStatus: InstallmentStatus = isFullyPaid ? 'Paid' : 'Partially Paid';
       const newPaidDate = isFullyPaid ? date : (schedule?.paid_date || null);
 
-      if (isFullyPaid) {
+      if (isFullyPaid && isRealPDC) {
         await ERPSupabaseService.persistPDCStatus(supabase, item.cheque_id, 'Cleared');
       }
 
@@ -2984,11 +2980,13 @@ export function ERPWorkstationProvider({
             ? { ...s, status: newScheduleStatus, amount_paid: newPaid.toFixed(2), paid_date: newPaidDate || undefined }
             : s
         ),
-        pdcRecords: prev.pdcRecords.map(p => 
-          p.cheque_id === item.cheque_id 
-            ? (isFullyPaid ? { ...p, status: 'Cleared' as const, cleared_date: date } : p)
-            : p
-        ),
+        pdcRecords: isRealPDC
+          ? prev.pdcRecords.map(p => 
+              p.cheque_id === item.cheque_id 
+                ? (isFullyPaid ? { ...p, status: 'Cleared' as const, cleared_date: date } : p)
+                : p
+            )
+          : prev.pdcRecords,
         journalEntries: [entry, ...prev.journalEntries]
       }));
 

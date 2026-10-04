@@ -4,7 +4,6 @@ import React, { useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useERPWorkstation } from '../context/ERPWorkstationContext';
 import { HandInstallmentsVaultView } from '../v2/views/HandInstallmentsVaultView';
-import { toLocalDateStr } from '@/lib/erp/installmentsVaultProjection';
 
 export function HandInstallmentsVaultRouteView() {
   const erp = useERPWorkstation();
@@ -37,13 +36,6 @@ export function HandInstallmentsVaultRouteView() {
         erp.handleInspectCheque(found);
       }
     }
-    if (action === 'new') {
-      handledKeyRef.current = key;
-      erp.setNewPdcContractId(erp.data.contracts[0]?.contract_id || '');
-      erp.setNewPdcDrawer(erp.data.contracts[0]?.buyer_name || '');
-      erp.setNewPdcDueDate(toLocalDateStr(new Date(Date.now() + 30 * 86400000)));
-      erp.setShowNewPDCModal(true);
-    }
   }, [searchParams, erp]);
 
   return (
@@ -57,12 +49,6 @@ export function HandInstallmentsVaultRouteView() {
       isMutating={erp.isMutating}
       onCollectItem={(pdc) => erp.setCollectingPDCItem(pdc)}
       onCollectDueToday={erp.handleCollectDuePDCsToday}
-      onOpenNewCheque={() => {
-        erp.setNewPdcContractId(erp.data.contracts[0]?.contract_id || '');
-        erp.setNewPdcDrawer(erp.data.contracts[0]?.buyer_name || '');
-        erp.setNewPdcDueDate(toLocalDateStr(new Date(Date.now() + 30 * 86400000)));
-        erp.setShowNewPDCModal(true);
-      }}
       onInspectCheque={erp.handleInspectCheque}
       onBounceItem={erp.handleConfirmBounceCheque}
       onOpenNewSupplement={(contractId) => {

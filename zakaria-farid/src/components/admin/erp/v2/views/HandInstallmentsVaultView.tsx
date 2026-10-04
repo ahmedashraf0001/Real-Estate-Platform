@@ -3,7 +3,6 @@
 import React, { useState, useMemo } from 'react';
 import { 
   Wallet, 
-  Plus, 
   Eye, 
   CheckCircle2, 
   Clock, 
@@ -76,7 +75,7 @@ export interface HandInstallmentsVaultViewProps {
   isMutating?: boolean;
   onCollectItem: (item: ERPPDCRecord) => void;
   onCollectDueToday?: () => void;
-  onOpenNewCheque: () => void;
+  onOpenNewCheque?: () => void;
   onOpenNewSupplement?: (contractId?: string) => void;
   onInspectCheque: (item: ERPPDCRecord) => void;
   onBounceItem?: (item: ERPPDCRecord) => void | Promise<void>;
@@ -93,7 +92,7 @@ export const HandInstallmentsVaultView: React.FC<HandInstallmentsVaultViewProps>
   isAr = true,
   isMutating = false,
   onCollectItem,
-  onOpenNewCheque,
+  onOpenNewCheque: _onOpenNewCheque,
   onOpenNewSupplement,
   onBounceItem,
   onPDCStatusChange,
@@ -533,7 +532,7 @@ export const HandInstallmentsVaultView: React.FC<HandInstallmentsVaultViewProps>
         border: `1px solid ${isInstapay ? 'rgba(37, 99, 235, 0.2)' : '#e2e8f0'}`
       }}>
         {isInstapay ? <CreditCard size={11} /> : <Wallet size={11} />}
-        <span>{isInstapay ? (isAr ? 'إنستاباي' : 'InstaPay') : (isAr ? 'كاش بالخزينة' : 'Cash in Hand')}</span>
+        <span>{isInstapay ? (isAr ? 'إنستاباي' : 'InstaPay') : (isAr ? 'نقدي' : 'Cash')}</span>
       </span>
     );
   };
@@ -759,7 +758,7 @@ export const HandInstallmentsVaultView: React.FC<HandInstallmentsVaultViewProps>
             {printingDocType === 'receipt' ? (isAr ? 'مُسدد بالخزينة' : 'Receipt Settled') : (isAr ? 'واجب السداد' : 'Payment Required')}
           </span>
           <div style={{ fontSize: '0.74rem', color: '#64748b', marginTop: '0.4rem', fontWeight: 600 }}>
-            {printingItem.paymentMethod === 'INSTAPAY' ? (isAr ? 'قناة الدفع: إنستاباي' : 'Channel: InstaPay') : (isAr ? 'قناة الدفع: كاش بالخزينة' : 'Channel: Cash in Hand')}
+            {printingItem.paymentMethod === 'INSTAPAY' ? (isAr ? 'قناة الدفع: إنستاباي' : 'Channel: InstaPay') : (isAr ? 'قناة الدفع: نقدي' : 'Channel: Cash')}
           </div>
         </div>
       </div>
@@ -880,17 +879,6 @@ export const HandInstallmentsVaultView: React.FC<HandInstallmentsVaultViewProps>
           </p>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
-          <button
-            type="button"
-            className={styles.btnPrimary}
-            onClick={onOpenNewCheque}
-            style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
-          >
-            <Plus size={14} />
-            <span>{isAr ? 'تسجيل دفعة تعاقدية جديدة' : 'Add Contract Installment'}</span>
-          </button>
-        </div>
       </div>
 
       {/* 2. THE 4 DISCRETE FLOATING VAULT METRICS (With Wave Sparklines & Interactive Table Links) */}
@@ -2121,7 +2109,7 @@ export const HandInstallmentsVaultView: React.FC<HandInstallmentsVaultViewProps>
                     }}
                   >
                     <Wallet size={15} />
-                    <span>{isAr ? 'كاش بالخزينة' : 'Cash in Hand'}</span>
+                    <span>{isAr ? 'نقدي' : 'Cash'}</span>
                   </button>
 
                   <button

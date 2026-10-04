@@ -31,9 +31,6 @@ export function DailyOperationsRouteView() {
       }
     } else if (action === 'new_contract') {
       erp.handleOpenGenericNewContract();
-    } else if (action === 'new_cheque') {
-      erp.setSupplementInitialContractId(null);
-      erp.setShowNewPDCModal(true);
     }
   }, [searchParams, erp]);
 
@@ -57,10 +54,6 @@ export function DailyOperationsRouteView() {
       partnerSummaries={erp.partnerSummaries}
       onOpenProjectExpense={() => erp.setShowProjectExpenseModal(true)}
       onOpenNewContract={erp.handleOpenGenericNewContract}
-      onOpenNewCheque={() => {
-        erp.setSupplementInitialContractId(null);
-        erp.setShowNewPDCModal(true);
-      }}
       onCollectItem={erp.setCollectingPDCItem}
       onOpenCashReceipt={() => {
         const target = erp.data.pdcRecords.find(p => p.status !== 'Cleared' && p.status !== 'Void') || erp.data.pdcRecords[0];

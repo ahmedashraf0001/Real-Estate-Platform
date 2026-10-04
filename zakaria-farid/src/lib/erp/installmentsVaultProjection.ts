@@ -215,7 +215,7 @@ export function buildProjectedVaultItems(
   // Helper to format tranche description
   const formatTrancheDesc = (trancheNum: number | undefined, isDown: boolean): string => {
     if (isDown || trancheNum === 0) {
-      return isAr ? 'الدفعة المقدمة (تعاقد)' : 'Down Payment';
+      return isAr ? 'الدفعة المقدمة (تعاقد)' : 'Down payment';
     }
     if (trancheNum !== undefined && trancheNum > 0) {
       return isAr ? `قسط دوري رقم (${trancheNum})` : `Installment #${trancheNum}`;
@@ -332,7 +332,7 @@ export function buildProjectedVaultItems(
       const paidVal = isCleared ? D(nominalVal).toFixed(2) : D(s.amount_paid || '0').toFixed(2);
 
       const status = resolveStatus(isCleared, isBounced, false, s.due_date);
-      const syntheticCode = `SND-${s.contract_id.slice(-4)}-T${s.tranche_number}`;
+      const syntheticCode = isDownPayment ? `DP-${s.contract_id.slice(-4)}` : `SND-${s.contract_id.slice(-4)}-T${s.tranche_number}`;
 
       projectedItems.push({
         id: `SCH-${s.schedule_id}`,

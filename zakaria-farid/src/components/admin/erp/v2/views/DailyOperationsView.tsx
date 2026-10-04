@@ -128,7 +128,7 @@ interface DailyOperationsViewProps {
   partnerSummaries?: PartnerFinancialSummary[];
   onOpenProjectExpense: () => void;
   onOpenNewContract: () => void;
-  onOpenNewCheque: () => void;
+  onOpenNewCheque?: () => void;
   onCollectItem: (item: ERPPDCRecord) => void;
   onInspectContract: (contract: ERPContract) => void;
   onInspectCheque?: (cheque: ERPPDCRecord) => void;
@@ -907,7 +907,7 @@ export const DailyOperationsView: React.FC<DailyOperationsViewProps> = ({
         break;
       }
       case 'issue_cheque': {
-        onOpenNewCheque();
+        onOpenNewCheque?.();
         break;
       }
       case 'record_expense':

@@ -76,7 +76,7 @@ export interface NewContractWizardPayload {
   firstPaymentDate: string;
   firstInstallmentDueDate?: string;
   partnerSplits: PartnerShareItem[];
-  destinationTreasury: 'SAFE_101000' | 'BANK_102000' | '101000' | '102000';
+  destinationTreasury?: 'SAFE_101000' | 'BANK_102000' | '101000' | '102000';
 }
 
 interface NewContractWizardModalProps {
@@ -144,11 +144,10 @@ export const NewContractWizardModal: React.FC<NewContractWizardModalProps> = ({
     return d.toISOString().split('T')[0];
   });
 
-  // Step 3: Equity Splits & Destination
+  // Step 3: Equity Splits
   const [partnerSplits, setPartnerSplits] = useState<PartnerShareItem[]>(() => normalizePartnerSplits(null));
   const [selectedPartnerToAdd, setSelectedPartnerToAdd] = useState<string>('');
   const [customPartnerNameInput, setCustomPartnerNameInput] = useState<string>('');
-  const [destinationTreasury, setDestinationTreasury] = useState<'SAFE_101000' | 'BANK_102000'>('SAFE_101000');
 
   // Handle Property & Unit Selection logic
   const applyPropertySelection = React.useCallback((id: string, unitId?: string) => {
@@ -284,7 +283,6 @@ export const NewContractWizardModal: React.FC<NewContractWizardModalProps> = ({
         const d = new Date();
         d.setMonth(d.getMonth() + 3);
         setFirstInstallmentDueDate(d.toISOString().split('T')[0]);
-        setDestinationTreasury('SAFE_101000');
 
         if (curPropId) {
           curApplySelection(curPropId, curUnitId);
@@ -455,8 +453,7 @@ export const NewContractWizardModal: React.FC<NewContractWizardModalProps> = ({
       installmentFrequency,
       firstPaymentDate,
       firstInstallmentDueDate,
-      partnerSplits,
-      destinationTreasury
+      partnerSplits
     };
 
     await onContractCreated(payload);
@@ -1553,58 +1550,9 @@ export const NewContractWizardModal: React.FC<NewContractWizardModalProps> = ({
                   ))}
                 </div>
 
-                {/* Destination Treasury Selector */}
-                <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: '0.85rem' }}>
-                  <label style={{ fontSize: '0.74rem', fontWeight: 700, color: '#334155', marginBottom: '0.4rem', display: 'block' }}>
-                    {isAr ? 'خزينة استلام وتوريد الدفعة المقدمة:' : 'Down Payment Destination Treasury:'}
-                  </label>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
-                    <button
-                      type="button"
-                      onClick={() => setDestinationTreasury('SAFE_101000')}
-                      style={{
-                        padding: '0.55rem 0.85rem',
-                        borderRadius: '8px',
-                        border: destinationTreasury === 'SAFE_101000' ? '1.5px solid #059669' : '1px solid #cbd5e1',
-                        background: destinationTreasury === 'SAFE_101000' ? 'rgba(16, 185, 129, 0.08)' : '#ffffff',
-                        color: destinationTreasury === 'SAFE_101000' ? '#059669' : '#475569',
-                        fontSize: '0.76rem',
-                        fontWeight: 700,
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.4rem'
-                      }}
-                    >
-                      <Wallet size={14} />
-                      <span>{isAr ? 'خزينة المركز الرئيسي [101000]' : 'Main Safe [101000]'}</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setDestinationTreasury('BANK_102000')}
-                      style={{
-                        padding: '0.55rem 0.85rem',
-                        borderRadius: '8px',
-                        border: destinationTreasury === 'BANK_102000' ? '1.5px solid var(--erp-accent, #2563eb)' : '1px solid #cbd5e1',
-                        background: destinationTreasury === 'BANK_102000' ? 'var(--erp-accent-subtle, #eff6ff)' : '#ffffff',
-                        color: destinationTreasury === 'BANK_102000' ? 'var(--erp-accent, #2563eb)' : '#475569',
-                        fontSize: '0.76rem',
-                        fontWeight: 700,
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.4rem'
-                      }}
-                    >
-                      <Landmark size={14} />
-                      <span>{isAr ? 'الحساب البنكي التجاري [102000]' : 'Commercial Bank [102000]'}</span>
-                    </button>
-                  </div>
-                </div>
               </div>
 
-              {/* Deal Summary & Automated Posting Confirmation */}
+              {/* Deal Summary */}
               <div style={{
                 background: '#ffffff',
                 border: '1px solid var(--erp-border, #cbd5e1)',
@@ -1617,7 +1565,7 @@ export const NewContractWizardModal: React.FC<NewContractWizardModalProps> = ({
               }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <span style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--erp-accent, #2563eb)' }}>
-                    {isAr ? 'ملخص الصفقة والأثر الدفتري التلقائي بالدفاتر:' : 'Deal Summary & GL Impact:'}
+                    {isAr ? 'ملخص الصفقة:' : 'Deal Summary:'}
                   </span>
                   <ShieldCheck size={16} color="var(--erp-accent, #2563eb)" />
                 </div>
@@ -1659,10 +1607,10 @@ export const NewContractWizardModal: React.FC<NewContractWizardModalProps> = ({
                   </div>
                 </div>
 
-                <div style={{ fontSize: '0.72rem', color: '#065f46', background: 'rgba(16, 185, 129, 0.08)', padding: '0.5rem 0.75rem', borderRadius: '6px' }}>
+                <div style={{ fontSize: '0.72rem', color: '#475569', background: '#f8fafc', border: '1px solid #e2e8f0', padding: '0.5rem 0.75rem', borderRadius: '6px' }}>
                   {isAr 
-                    ? `التوجيه المحاسبي اللحظي: مدين [${destinationTreasury === 'SAFE_101000' ? '101000 خزينة' : '102000 بنك'}] بمبلغ ${D(modalDpAmount).formatEGP(isAr)} • دائن [203000 إيرادات مؤجلة] بمبلغ ${D(modalDpAmount).formatEGP(isAr)}.`
-                    : `Instant GL Posting: Dr [${destinationTreasury === 'SAFE_101000' ? '101000 Safe' : '102000 Bank'}] ${D(modalDpAmount).formatEGP(isAr)} • Cr [203000 Deferred Revenue] ${D(modalDpAmount).formatEGP(isAr)}.`}
+                    ? 'لا يتم تسجيل أي قيد دفتري حتى يتم تحصيل الدفعة المقدمة فعلياً وإثباتها.'
+                    : 'No ledger entry is posted until the down payment is actually received and recorded.'}
                 </div>
               </div>
 

@@ -330,8 +330,8 @@ export const HandCollectionModal: React.FC<HandCollectionModalProps> = ({
           contract_id: s.contract_id,
           schedule_id: s.schedule_id,
           drawer_name: linkedC?.buyer_name || (isAr ? 'عميل متعاقد' : 'Contracted Buyer'),
-          cheque_number: `SND-${s.contract_id.slice(-4)}-T${s.tranche_number}`,
-          bank_name: isAr ? 'سند استحقاق نقدي بالخزينة' : 'Cash Safe Note',
+          cheque_number: s.tranche_number === 0 ? `DP-${s.contract_id.slice(-4)}` : `SND-${s.contract_id.slice(-4)}-T${s.tranche_number}`,
+          bank_name: isAr ? 'نقدي / إنستاباي' : 'Cash / InstaPay',
           due_date: s.due_date,
           nominal_value: s.nominal_value,
           status: 'In Safe'
@@ -1037,7 +1037,7 @@ export const HandCollectionModal: React.FC<HandCollectionModalProps> = ({
       };
     }
     return {
-      label: isAr ? 'في الخزينة' : 'In Safe',
+      label: isAr ? 'قيد الانتظار' : 'Pending',
       bg: 'var(--erp-accent-subtle, #eff6ff)',
       color: 'var(--erp-accent, #2563eb)',
       border: 'var(--erp-accent-tint, rgba(37, 99, 235, 0.25))'
@@ -1975,7 +1975,7 @@ export const HandCollectionModal: React.FC<HandCollectionModalProps> = ({
                         }}
                       >
                         <Wallet size={16} color={paymentMethod === 'CASH' ? 'var(--erp-accent, #2563eb)' : '#64748b'} />
-                        <span>{isAr ? 'سداد نقدي بالخزينة' : 'Cash in Safe'}</span>
+                        <span>{isAr ? 'نقدي' : 'Cash'}</span>
                       </button>
 
                       <button
@@ -1999,7 +1999,7 @@ export const HandCollectionModal: React.FC<HandCollectionModalProps> = ({
                         }}
                       >
                         <Zap size={16} color={paymentMethod === 'INSTAPAY' ? '#0284c7' : '#64748b'} />
-                        <span>{isAr ? 'تحويل فوري إنستاباي' : 'Instant InstaPay Transfer'}</span>
+                        <span>{isAr ? 'إنستاباي' : 'InstaPay'}</span>
                       </button>
                     </div>
                   </div>
@@ -2172,7 +2172,7 @@ export const HandCollectionModal: React.FC<HandCollectionModalProps> = ({
                       disabled={isReadOnly}
                       value={collectionNotes}
                       onChange={e => setCollectionNotes(e.target.value)}
-                      placeholder={paymentMethod === 'INSTAPAY' ? (isAr ? 'تحويل إنستاباي' : 'InstaPay transfer') : (isAr ? 'سداد نقدي باليد بالخزينة' : 'Cash in safe')}
+                      placeholder={paymentMethod === 'INSTAPAY' ? (isAr ? 'إنستاباي' : 'InstaPay') : (isAr ? 'نقدي' : 'Cash')}
                       style={{
                         width: '100%',
                         padding: '0.5rem 0.75rem',

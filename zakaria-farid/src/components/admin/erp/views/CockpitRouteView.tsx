@@ -46,9 +46,6 @@ export function CockpitRouteView() {
       }
     } else if (action === 'new_contract') {
       erp.handleOpenGenericNewContract();
-    } else if (action === 'new_cheque') {
-      erp.setSupplementInitialContractId(null);
-      erp.setShowNewPDCModal(true);
     }
   }, [searchParams, erp]);
 
@@ -75,10 +72,6 @@ export function CockpitRouteView() {
       onInspectContract={erp.handleInspectContract}
       onInspectCheque={erp.handleInspectCheque}
       onCollectItem={erp.setCollectingPDCItem}
-      onOpenNewCheque={() => {
-        erp.setSupplementInitialContractId(null);
-        erp.setShowNewPDCModal(true);
-      }}
       onOpenNewContract={erp.handleOpenGenericNewContract}
       onNavigateTab={(tab) => erp.navigateToTab(tab)}
     />

@@ -606,7 +606,7 @@ export class ERPSupabaseService {
     supabase: SupabaseClient,
     contract: ERPContract,
     schedules: ERPInstallmentSchedule[],
-    advanceEntry?: ERPJournalEntry
+    _advanceEntry?: ERPJournalEntry
   ): Promise<void> {
     try {
       // Ensure contract_id is guaranteed to be a valid UUID
@@ -696,35 +696,7 @@ export class ERPSupabaseService {
         }
       }
 
-      // Insert Advance Journal Entry if provided
-      if (advanceEntry) {
-        advanceEntry.source_entity_id = contractId;
-        advanceEntry.lines.forEach(l => {
-          l.contract_id = contractId;
-        });
-        await this.persistJournalEntry(supabase, advanceEntry);
-      }
-
-      // Auto-generate Post-Dated Cheques (PDC) for all upcoming installment tranches
-      const upcomingTranches = schedules.filter(s => s.status === 'Pending' && s.tranche_number > 0);
-      if (upcomingTranches.length > 0) {
-        try {
-          const pdcRows = upcomingTranches.map((s, idx) => ({
-            cheque_id: generateUUID(),
-            contract_id: contractId,
-            schedule_id: s.schedule_id && isUUID(s.schedule_id) ? s.schedule_id : null,
-            cheque_number: `SND-${contract.contract_number.replace(/\D/g, '') || '789'}-${(idx + 1).toString().padStart(3, '0')}`,
-            bank_name: '',
-            drawer_name: contract.buyer_name || 'العميل المتعاقد',
-            nominal_value: s.nominal_value,
-            due_date: s.due_date,
-            status: 'In Safe'
-          }));
-          await supabase.from('erp_pdc_records').insert(pdcRows);
-        } catch (e) {
-          console.warn('Could not auto-generate PDCs on contract creation:', e);
-        }
-      }
+      // Contract creation: schedules only, NO advance-payment JE, NO PDC rows (user-confirmed 2026-10-04)
 
       // Save Manual Apartment Tax (Not static, added by hand per apartment, calculated in pricing)
       if (contract.tax_amount && D(contract.tax_amount).gt(0)) {
@@ -1102,35 +1074,7 @@ export class ERPSupabaseService {
 
     if (insertError) throw insertError;
 
-    // 3b. Generate replacement PDCs for version N+1 tranches
-    try {
-      const { data: contractData } = await supabase
-        .from('erp_contracts')
-        .select('contract_number, buyer_name')
-        .eq('contract_id', cleanContractId)
-        .single();
-
-      const contractDigits = (contractData?.contract_number || '').replace(/\D/g, '') || '789';
-      const drawerName = contractData?.buyer_name || 'العميل المتعاقد';
-
-      const replacementPdcRows = newSchedules.map((s, idx) => ({
-        cheque_id: generateUUID(),
-        contract_id: cleanContractId,
-        schedule_id: ensureUUID(s.schedule_id),
-        cheque_number: `SND-${contractDigits}-v${s.schedule_version || amendment.new_version || '2'}-T${s.tranche_number}`,
-        bank_name: '',
-        drawer_name: drawerName,
-        nominal_value: s.nominal_value,
-        due_date: s.due_date,
-        status: 'In Safe' as const
-      }));
-
-      if (replacementPdcRows.length > 0) {
-        await supabase.from('erp_pdc_records').insert(replacementPdcRows);
-      }
-    } catch (pdcInsertErr) {
-      console.warn('Notice while generating replacement PDCs during escalation:', pdcInsertErr);
-    }
+    // 3b. Replacement PDCs generation removed per user-confirmed zero-cheque architecture
 
     // 4. Update Contract Gross Value
     const { error: contractError } = await supabase
@@ -1145,7 +1089,6 @@ export class ERPSupabaseService {
    * Append a Contract Supplement / Extra Tranche (إضافة ملحق أو دفعة إضافية للعقد).
    * - Increments contract gross_contract_value with D()
    * - Inserts new installment schedule tranche (Pending)
-   * - Inserts new PDC record in safe (101000)
    */
   static async addContractSupplement(
     supabase: SupabaseClient,
@@ -1153,15 +1096,12 @@ export class ERPSupabaseService {
       contractId: string;
       newGrossValue: string;
       newSchedule: ERPInstallmentSchedule;
-      newPdc: ERPPDCRecord;
+      newPdc?: ERPPDCRecord;
     }
   ): Promise<void> {
     const cleanContractId = ensureUUID(params.contractId);
     params.newSchedule.schedule_id = ensureUUID(params.newSchedule.schedule_id);
     params.newSchedule.contract_id = cleanContractId;
-    params.newPdc.cheque_id = ensureUUID(params.newPdc.cheque_id);
-    params.newPdc.contract_id = cleanContractId;
-    params.newPdc.schedule_id = params.newSchedule.schedule_id;
 
     // 1. Update contract gross value
     const { error: contractErr } = await supabase
@@ -1187,24 +1127,6 @@ export class ERPSupabaseService {
       }]);
     if (schErr) {
       console.warn('Supabase schedule insert notice:', schErr.message);
-    }
-
-    // 3. Insert new PDC in safe
-    const { error: pdcErr } = await supabase
-      .from('erp_pdc_records')
-      .insert([{
-        cheque_id: params.newPdc.cheque_id,
-        contract_id: params.newPdc.contract_id,
-        schedule_id: params.newPdc.schedule_id,
-        cheque_number: params.newPdc.cheque_number,
-        bank_name: params.newPdc.bank_name,
-        drawer_name: params.newPdc.drawer_name,
-        nominal_value: params.newPdc.nominal_value,
-        due_date: params.newPdc.due_date,
-        status: params.newPdc.status
-      }]);
-    if (pdcErr) {
-      console.warn('Supabase PDC insert notice:', pdcErr.message);
     }
   }
 
