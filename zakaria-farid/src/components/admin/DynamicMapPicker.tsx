@@ -10,15 +10,15 @@ const MapPicker = dynamic(() => import('./MapPicker'), {
         height: '300px',
         width: '100%',
         borderRadius: '16px',
-        background: '#F8FAFC',
+        background: 'var(--admin-card-bg-subtle, #f8fafc)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        border: '1.5px solid #D8D2C4',
-        color: '#475569',
+        border: '1px solid var(--admin-card-border, #cbd5e1)',
+        color: 'var(--admin-text-muted, #64748b)',
         fontWeight: 600,
         fontSize: '0.9rem',
-        boxShadow: '0 4px 16px rgba(15, 23, 42, 0.04)',
+        boxShadow: 'none',
       }}
     >
       Loading map...

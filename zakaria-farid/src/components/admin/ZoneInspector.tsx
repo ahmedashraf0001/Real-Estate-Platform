@@ -621,8 +621,8 @@ function ZoneInspectorBody({
               <div
                 key={v.id || i}
                 style={{
-                  background: 'rgba(255, 255, 255, 0.04)',
-                  border: '1px solid rgba(221, 167, 82, 0.2)',
+                  background: 'var(--admin-card-bg-subtle, #f8fafc)',
+                  border: '1px solid var(--admin-card-border, #cbd5e1)',
                   borderRadius: 8,
                   padding: '8px 10px',
                   display: 'flex',
@@ -632,8 +632,8 @@ function ZoneInspectorBody({
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 1, minWidth: 0 }}>
-                  <Film size={13} color="#DDA752" />
-                  <span style={{ fontSize: '11.5px', fontWeight: 700, color: '#FFFDF5', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  <Film size={13} color="var(--admin-accent)" />
+                  <span style={{ fontSize: '11.5px', fontWeight: 700, color: 'var(--admin-text-title, #0f172a)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     {isAr ? (v.title_ar || v.title_en) : (v.title_en || v.title_ar)}
                   </span>
                 </div>
@@ -643,9 +643,9 @@ function ZoneInspectorBody({
                     type="button"
                     onClick={() => setActiveZoneVideoPreview(v)}
                     style={{
-                      background: 'rgba(221, 167, 82, 0.15)',
+                      background: 'var(--admin-accent-subtle, #eff6ff)',
                       border: 'none',
-                      color: '#DDA752',
+                      color: 'var(--admin-accent, #2563eb)',
                       borderRadius: 4,
                       padding: '3px 6px',
                       fontSize: '10px',
@@ -656,7 +656,7 @@ function ZoneInspectorBody({
                       gap: 3,
                     }}
                   >
-                    <Play size={9} fill="#DDA752" />
+                    <Play size={9} fill="currentColor" />
                     <span>{isAr ? 'مشاهدة' : 'Play'}</span>
                   </button>
 
@@ -675,7 +675,7 @@ function ZoneInspectorBody({
         )}
 
         {/* Add Video Form */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, background: 'rgba(0,0,0,0.2)', padding: 8, borderRadius: 8 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, background: 'var(--admin-input-bg, #ffffff)', border: '1px solid var(--admin-input-border, #cbd5e1)', padding: 8, borderRadius: 8 }}>
           <input
             type="url"
             className="zi-attr-val-input"
@@ -737,7 +737,7 @@ function ZoneInspectorBody({
             onClick={(e) => e.stopPropagation()}
           >
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span style={{ fontSize: '0.95rem', fontWeight: 800, color: '#FFFDF5' }}>
+              <span style={{ fontSize: '0.95rem', fontWeight: 800, color: '#ffffff' }}>
                 {isAr ? (activeZoneVideoPreview.title_ar || activeZoneVideoPreview.title_en) : (activeZoneVideoPreview.title_en || activeZoneVideoPreview.title_ar)}
               </span>
               <button
@@ -745,7 +745,7 @@ function ZoneInspectorBody({
                 onClick={() => setActiveZoneVideoPreview(null)}
                 style={{
                   background: 'rgba(255, 255, 255, 0.1)',
-                  border: '1px solid rgba(221, 167, 82, 0.3)',
+                  border: '1px solid var(--admin-accent-border, rgba(255, 255, 255, 0.2))',
                   color: '#FFF',
                   width: 32,
                   height: 32,
@@ -783,22 +783,22 @@ function InspectorStyles() {
         flex-direction: column;
         gap: 14px;
         padding: 16px 14px 24px;
-        background: #0D1220;
-        border-inline-start: 1px solid rgba(221,167,82,0.16);
-        border-bottom: 1px solid rgba(221,167,82,0.16);
-        box-shadow: -12px 0 32px rgba(0,0,0,0.35);
-        font-family: 'Plus Jakarta Sans', sans-serif;
-        color: #EDE8DD;
+        background: var(--admin-card-bg, #ffffff);
+        border-inline-start: 1px solid var(--admin-card-border, #cbd5e1);
+        border-bottom: 1px solid var(--admin-card-border, #cbd5e1);
+        box-shadow: -12px 0 32px var(--admin-card-shadow, rgba(0,0,0,0.06));
+        font-family: inherit;
+        color: var(--admin-text-body, #334155);
       }
 
       [dir="rtl"].zi-root {
-        box-shadow: 12px 0 32px rgba(0,0,0,0.35);
+        box-shadow: 12px 0 32px var(--admin-card-shadow, rgba(0,0,0,0.06));
       }
 
       .zi-root.zi-nested {
         inset-inline-end: 300px;
         z-index: 59;
-        border-inline-end: 1px solid rgba(221,167,82,0.16);
+        border-inline-end: 1px solid var(--admin-card-border, #cbd5e1);
         animation: ziSlideIn 0.18s cubic-bezier(0.2,0,0,1);
       }
 
@@ -826,13 +826,13 @@ function InspectorStyles() {
         font-size: 0.66rem;
         font-weight: 800;
         cursor: pointer;
-        background: rgba(217,107,107,0.08);
-        border: 1px solid rgba(217,107,107,0.3);
-        color: #D96B6B;
+        background: var(--admin-danger-bg, rgba(220, 38, 38, 0.08));
+        border: 1px solid var(--admin-danger-border, rgba(220, 38, 38, 0.25));
+        color: var(--admin-danger-text, #dc2626);
         transition: background-color 0.15s;
       }
 
-      .zi-delete-zone:hover { background: rgba(217,107,107,0.16); }
+      .zi-delete-zone:hover { background: var(--admin-danger-bg, rgba(220, 38, 38, 0.16)); }
 
       @media (max-width: 1023px) {
         .zi-root {
@@ -841,7 +841,7 @@ function InspectorStyles() {
           height: auto;
           max-height: none;
           border-radius: 14px;
-          border: 1px solid rgba(221,167,82,0.16);
+          border: 1px solid var(--admin-card-border, #cbd5e1);
           box-shadow: none;
           margin-top: 16px;
         }
@@ -855,9 +855,9 @@ function InspectorStyles() {
         gap: 6px;
         padding: 3rem 0.5rem;
       }
-      .zi-empty-icon { color: rgba(221,167,82,0.45); margin-bottom: 4px; }
-      .zi-empty-title { margin: 0; font-size: 0.875rem; font-weight: 700; }
-      .zi-empty-desc { margin: 0; font-size: 0.72rem; line-height: 1.5; color: rgba(237,232,221,0.55); }
+      .zi-empty-icon { color: var(--admin-accent-border, rgba(37, 99, 235, 0.35)); margin-bottom: 4px; }
+      .zi-empty-title { margin: 0; font-size: 0.875rem; font-weight: 700; color: var(--admin-text-title, #0f172a); }
+      .zi-empty-desc { margin: 0; font-size: 0.72rem; line-height: 1.5; color: var(--admin-text-muted, #64748b); }
 
       .zi-header { display: flex; align-items: flex-start; gap: 8px; }
       .zi-header-icon {
@@ -865,20 +865,20 @@ function InspectorStyles() {
         display: inline-flex;
         padding: 6px;
         border-radius: 8px;
-        color: #DDA752;
-        background: rgba(221,167,82,0.10);
+        color: var(--admin-accent, #2563eb);
+        background: var(--admin-accent-subtle, #eff6ff);
       }
       .zi-header-text { flex: 1; min-width: 0; }
-      .zi-title { margin: 0; font-size: 0.85rem; font-weight: 800; line-height: 1.25; overflow-wrap: break-word; }
+      .zi-title { margin: 0; font-size: 0.85rem; font-weight: 800; line-height: 1.25; overflow-wrap: break-word; color: var(--admin-text-title, #0f172a); }
       .zi-meta {
         display: flex; align-items: center; gap: 6px; margin-top: 3px;
         font-family: monospace; font-variant-numeric: tabular-nums;
-        font-size: 0.68rem; font-weight: 700; color: rgba(237,232,221,0.55);
+        font-size: 0.68rem; font-weight: 700; color: var(--admin-text-muted, #64748b);
       }
       .zi-level {
-        font-family: 'Plus Jakarta Sans', sans-serif;
+        font-family: inherit;
         padding: 1px 7px; border-radius: 999px;
-        background: rgba(221,167,82,0.10); color: #DDA752;
+        background: var(--admin-accent-subtle, #eff6ff); color: var(--admin-accent, #2563eb);
       }
       .zi-tier {
         flex-shrink: 0; font-size: 0.6rem; font-weight: 800;
@@ -888,61 +888,57 @@ function InspectorStyles() {
 
       .zi-section {
         display: flex; flex-direction: column; gap: 8px;
-        padding-top: 12px; border-top: 1px solid rgba(221,167,82,0.12);
+        padding-top: 12px; border-top: 1px solid var(--admin-divider, #e2e8f0);
       }
       .zi-section-head { display: flex; align-items: center; justify-content: space-between; }
       .zi-section-label {
         font-size: 0.6rem; font-weight: 800; letter-spacing: 0.1em;
-        color: rgba(237,232,221,0.5);
+        color: var(--admin-text-muted, #64748b);
       }
       .zi-count {
         font-family: monospace; font-size: 0.62rem; font-weight: 800;
         padding: 1px 7px; border-radius: 999px;
-        background: rgba(221,167,82,0.12); color: #DDA752;
+        background: var(--admin-accent-subtle, #eff6ff); color: var(--admin-accent, #2563eb);
       }
 
       .zi-dims { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
       .zi-dim { display: flex; flex-direction: column; gap: 3px; }
       .zi-dim > span, .zi-ceiling > span {
-        font-size: 0.62rem; font-weight: 700; color: rgba(237,232,221,0.55);
+        font-size: 0.62rem; font-weight: 700; color: var(--admin-text-muted, #64748b);
       }
       .zi-dim-field {
         display: flex; align-items: baseline; gap: 3px;
         padding: 5px 8px; border-radius: 8px;
-        background: rgba(255,255,255,0.04);
-        border: 1px solid rgba(221,167,82,0.16);
+        background: var(--admin-input-bg, #ffffff);
+        border: 1px solid var(--admin-input-border, #cbd5e1);
       }
       .zi-dim-field input {
         width: 100%; min-width: 0; background: transparent; border: none; outline: none;
-        color: #EDE8DD; font-family: monospace; font-size: 0.78rem; font-weight: 700;
+        color: var(--admin-text-title, #0f172a); font-family: monospace; font-size: 0.78rem; font-weight: 700;
       }
-      .zi-dim-field em { font-style: normal; font-family: monospace; font-size: 0.62rem; color: rgba(237,232,221,0.5); }
-      .zi-dim-field:focus-within { border-color: #DDA752; }
+      .zi-dim-field em { font-style: normal; font-family: monospace; font-size: 0.62rem; color: var(--admin-text-dim, #94a3b8); }
+      .zi-dim-field:focus-within { border-color: var(--admin-accent, #2563eb); }
 
       .zi-ceiling { display: flex; flex-direction: column; gap: 3px; }
       .zi-ceiling select, .zi-ceiling input, .zi-add-trade select, .zi-attr select {
         padding: 6px 8px; border-radius: 8px;
-        background: #0A0E18; border: 1px solid rgba(221,167,82,0.16);
-        color: #EDE8DD; font-family: inherit; font-size: 0.72rem; font-weight: 600;
+        background: var(--admin-input-bg, #ffffff); border: 1px solid var(--admin-input-border, #cbd5e1);
+        color: var(--admin-text-title, #0f172a); font-family: inherit; font-size: 0.72rem; font-weight: 600;
         outline: none; cursor: pointer; max-width: 100%;
       }
-      .zi-ceiling select:focus, .zi-ceiling input:focus, .zi-attr select:focus { border-color: #DDA752; }
+      .zi-ceiling select:focus, .zi-ceiling input:focus, .zi-attr select:focus { border-color: var(--admin-accent, #2563eb); }
 
       /* ── Modern Finishing System Trade Card ── */
       .zi-trade {
         display: flex; flex-direction: column; gap: 8px;
         padding: 12px; border-radius: 12px;
-        background: rgba(255, 255, 255, 0.025);
-        border: 1px solid rgba(221, 167, 82, 0.16);
+        background: var(--admin-card-bg-subtle, #f8fafc);
+        border: 1px solid var(--admin-card-border, #cbd5e1);
         transition: all 0.2s ease;
       }
       .zi-trade:hover {
-        border-color: rgba(221, 167, 82, 0.35);
-        background: rgba(255, 255, 255, 0.04);
-      }
-      [data-theme="light"] .zi-trade {
-        background: #F8FAFC;
-        border-color: rgba(184, 134, 11, 0.2);
+        border-color: var(--admin-accent-border, rgba(37, 99, 235, 0.25));
+        background: var(--admin-card-bg, #ffffff);
       }
 
       .zi-trade-head {
@@ -954,39 +950,36 @@ function InspectorStyles() {
       .zi-trade-icon-box {
         display: inline-flex; align-items: center; justify-content: center;
         width: 24px; height: 24px; border-radius: 6px;
-        background: rgba(221, 167, 82, 0.12);
-        color: #DDA752;
+        background: var(--admin-accent-subtle, #eff6ff);
+        color: var(--admin-accent, #2563eb);
       }
       .zi-trade-name {
-        font-size: 0.8rem; font-weight: 800; color: #EDE8DD;
-      }
-      [data-theme="light"] .zi-trade-name {
-        color: #0F172A;
+        font-size: 0.8rem; font-weight: 800; color: var(--admin-text-title, #0f172a);
       }
 
       .zi-icon-btn {
         flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center;
         width: 24px; height: 24px; border-radius: 6px;
-        background: transparent; border: 1px solid rgba(221, 167, 82, 0.14);
-        color: rgba(237, 232, 221, 0.4); cursor: pointer;
+        background: transparent; border: 1px solid var(--admin-card-border, #cbd5e1);
+        color: var(--admin-text-muted, #64748b); cursor: pointer;
         transition: all 0.15s ease;
       }
+      .zi-icon-btn:hover {
+        color: var(--admin-text-title, #0f172a); border-color: var(--admin-accent-border);
+      }
       .zi-icon-btn.danger:hover {
-        color: #EF4444; border-color: rgba(239, 68, 68, 0.4);
-        background: rgba(239, 68, 68, 0.1);
+        color: var(--admin-danger-text, #dc2626); border-color: var(--admin-danger-border, rgba(220, 38, 38, 0.25));
+        background: var(--admin-danger-bg, rgba(220, 38, 38, 0.08));
       }
 
       /* ── Luxury Segmented Status Track ── */
       .zi-status-segmented-track {
         display: flex;
-        background: rgba(10, 14, 24, 0.7);
-        border: 1px solid rgba(221, 167, 82, 0.18);
+        background: var(--admin-track-bg, #e2e8f0);
+        border: 1px solid var(--admin-card-border, #cbd5e1);
         border-radius: 8px;
         padding: 2px;
         gap: 2px;
-      }
-      [data-theme="light"] .zi-status-segmented-track {
-        background: #E2E8F0;
       }
       .zi-status-seg-btn {
         flex: 1;
@@ -997,106 +990,94 @@ function InspectorStyles() {
         cursor: pointer;
         background: transparent;
         border: none;
-        color: rgba(237, 232, 221, 0.6);
+        color: var(--admin-text-muted, #64748b);
         transition: all 0.15s cubic-bezier(0.2, 0, 0, 1);
         text-align: center;
         white-space: nowrap;
       }
-      [data-theme="light"] .zi-status-seg-btn {
-        color: #64748B;
-      }
       .zi-status-seg-btn:hover {
-        color: #EDE8DD;
-        background: rgba(255, 255, 255, 0.05);
+        color: var(--admin-text-title, #0f172a);
+        background: var(--admin-card-bg, #ffffff);
       }
       .zi-status-seg-btn.active {
-        background: linear-gradient(135deg, #DDA752, #B8860B);
-        color: #0A0E18;
+        background: var(--admin-accent, #2563eb);
+        color: #ffffff;
         font-weight: 800;
-        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
       }
 
       /* ── Trade Attributes & Custom Specifications ── */
       .zi-attrs {
         display: flex; flex-direction: column; gap: 6px;
-        padding-top: 8px; border-top: 1px solid rgba(221, 167, 82, 0.10);
+        padding-top: 8px; border-top: 1px solid var(--admin-divider, #e2e8f0);
       }
       .zi-attr-row {
         display: flex; align-items: center; justify-content: space-between; gap: 8px;
-        background: rgba(255, 255, 255, 0.02);
+        background: var(--admin-card-bg, #ffffff);
         padding: 4px 8px; border-radius: 7px;
-        border: 1px solid rgba(255, 255, 255, 0.03);
+        border: 1px solid var(--admin-card-border-subtle, #f1f5f9);
       }
       .zi-attr-label {
-        font-size: 0.68rem; font-weight: 700; color: rgba(237, 232, 221, 0.8);
+        font-size: 0.68rem; font-weight: 700; color: var(--admin-text-body, #334155);
         max-width: 48%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-      }
-      [data-theme="light"] .zi-attr-label {
-        color: #334155;
       }
       .zi-attr-input-group {
         display: flex; align-items: center; gap: 4px; flex: 1; justify-content: flex-end;
       }
       .zi-attr-val-input {
         width: 100%; max-width: 130px; padding: 4px 8px; border-radius: 6px;
-        background: #0A0E18; border: 1px solid rgba(221, 167, 82, 0.2);
-        color: #DDA752; font-size: 0.68rem; font-weight: 600; outline: none;
+        background: var(--admin-input-bg, #ffffff); border: 1px solid var(--admin-input-border, #cbd5e1);
+        color: var(--admin-accent, #2563eb); font-size: 0.68rem; font-weight: 600; outline: none;
         transition: border-color 0.15s ease;
       }
-      [data-theme="light"] .zi-attr-val-input {
-        background: #FFFFFF;
-      }
-      .zi-attr-val-input:focus { border-color: #DDA752; box-shadow: 0 0 0 2px rgba(221, 167, 82, 0.2); }
+      .zi-attr-val-input:focus { border-color: var(--admin-accent, #2563eb); box-shadow: 0 0 0 2px var(--admin-accent-tint, rgba(37, 99, 235, 0.08)); }
       .zi-attr-del-btn {
         width: 20px; height: 20px; display: inline-flex; align-items: center; justify-content: center;
         border-radius: 5px; background: transparent; border: none;
-        color: rgba(237, 232, 221, 0.35); cursor: pointer; transition: all 0.15s ease;
+        color: var(--admin-text-dim, #94a3b8); cursor: pointer; transition: all 0.15s ease;
         flex-shrink: 0;
       }
-      .zi-attr-del-btn:hover { color: #EF4444; background: rgba(239, 68, 68, 0.15); }
+      .zi-attr-del-btn:hover { color: var(--admin-danger-text, #dc2626); background: var(--admin-danger-bg, rgba(220, 38, 38, 0.08)); }
 
       .zi-add-attr-row {
         display: flex; align-items: center; gap: 6px;
         margin-top: 2px;
-        background: rgba(255, 255, 255, 0.015);
-        border: 1px dashed rgba(221, 167, 82, 0.22);
+        background: var(--admin-dropzone-bg, #f8fafc);
+        border: 1px dashed var(--admin-dropzone-border, #cbd5e1);
         border-radius: 7px;
         padding: 2px 8px;
         transition: all 0.15s ease;
       }
       .zi-add-attr-row:focus-within {
-        border-color: #DDA752;
-        background: rgba(221, 167, 82, 0.04);
+        border-color: var(--admin-accent, #2563eb);
+        background: var(--admin-accent-tint, rgba(37, 99, 235, 0.08));
       }
       .zi-add-attr-icon {
-        font-size: 0.8rem; font-weight: 800; color: #DDA752;
+        font-size: 0.8rem; font-weight: 800; color: var(--admin-accent, #2563eb);
       }
       .zi-add-attr-input {
         flex: 1; padding: 4px 0; background: transparent; border: none;
-        color: #EDE8DD; font-size: 0.68rem; outline: none;
-      }
-      [data-theme="light"] .zi-add-attr-input {
-        color: #0F172A;
+        color: var(--admin-text-title, #0f172a); font-size: 0.68rem; outline: none;
       }
       .zi-add-attr-input::placeholder {
-        color: rgba(237, 232, 221, 0.4);
+        color: var(--admin-text-dim, #94a3b8);
       }
 
       .zi-attr-chips {
         display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin-top: 4px;
       }
       .zi-attr-chips-label {
-        font-size: 0.6rem; font-weight: 700; color: rgba(237, 232, 221, 0.45);
+        font-size: 0.6rem; font-weight: 700; color: var(--admin-text-muted, #64748b);
       }
       .zi-attr-chip {
         display: inline-flex; align-items: center; gap: 3px;
         padding: 2px 8px; border-radius: 999px;
-        background: rgba(221, 167, 82, 0.08); border: 1px solid rgba(221, 167, 82, 0.25);
-        color: #DDA752; font-size: 0.62rem; font-weight: 700; cursor: pointer;
+        background: var(--admin-accent-tint, rgba(37, 99, 235, 0.08)); border: 1px solid var(--admin-accent-border, rgba(37, 99, 235, 0.25));
+        color: var(--admin-accent, #2563eb); font-size: 0.62rem; font-weight: 700; cursor: pointer;
         transition: all 0.15s ease;
       }
       .zi-attr-chip:hover {
-        background: rgba(221, 167, 82, 0.2); border-color: #DDA752;
+        background: var(--admin-accent-subtle, #eff6ff); border-color: var(--admin-accent, #2563eb);
       }
 
       .zi-add-trade select { width: 100%; }
@@ -1104,26 +1085,26 @@ function InspectorStyles() {
         display: inline-flex; align-items: center; justify-content: center; gap: 6px;
         width: 100%; min-height: 32px; padding: 6px 10px; border-radius: 8px;
         font-size: 0.66rem; font-weight: 800; cursor: pointer;
-        background: rgba(221,167,82,0.08);
-        border: 1px dashed rgba(221,167,82,0.35); color: #DDA752;
+        background: var(--admin-accent-tint, rgba(37, 99, 235, 0.08));
+        border: 1px dashed var(--admin-accent-border, rgba(37, 99, 235, 0.25)); color: var(--admin-accent, #2563eb);
         transition: background-color 0.15s;
       }
-      .zi-add-btn:hover:not(:disabled) { background: rgba(221,167,82,0.16); }
+      .zi-add-btn:hover:not(:disabled) { background: var(--admin-accent-subtle, #eff6ff); }
       .zi-add-btn:disabled { opacity: 0.6; cursor: default; }
 
       .zi-photos { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; }
       .zi-photo {
         position: relative; aspect-ratio: 1; border-radius: 8px; overflow: hidden;
-        border: 1px solid rgba(221,167,82,0.2);
+        border: 1px solid var(--admin-card-border, #cbd5e1);
       }
       .zi-photo img { width: 100%; height: 100%; object-fit: cover; }
       .zi-photo-x {
         position: absolute; top: 3px; inset-inline-end: 3px;
         display: inline-flex; align-items: center; justify-content: center;
         width: 16px; height: 16px; border-radius: 999px;
-        background: rgba(10,14,24,0.8); border: none; color: #EDE8DD; cursor: pointer;
+        background: var(--admin-input-bg, #ffffff); border: 1px solid var(--admin-card-border, #cbd5e1); color: var(--admin-text-muted, #64748b); cursor: pointer;
       }
-      .zi-photo-x:hover { color: #D96B6B; }
+      .zi-photo-x:hover { color: var(--admin-danger-text, #dc2626); }
 
       .zi-spin { animation: ziSpin 0.9s linear infinite; }
       @keyframes ziSpin { to { transform: rotate(360deg); } }
