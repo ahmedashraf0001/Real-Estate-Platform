@@ -6,7 +6,7 @@ import { toast } from 'sonner';
 
 import { createClient } from '@/lib/supabase/client';
 import { ERPSupabaseService, LiveERPDataset, isAuthError } from '@/lib/erp/supabaseService';
-import { GeneralLedgerEngine, resolvePeriodForDate } from '@/lib/erp/ledger';
+import { GeneralLedgerEngine, resolvePeriodForDate, buildCalendarMonthPeriod } from '@/lib/erp/ledger';
 import { ContractsEngine } from '@/lib/erp/contracts';
 import { EscalationEngine } from '@/lib/erp/escalation';
 import { RescissionEngine } from '@/lib/erp/rescission';
@@ -808,14 +808,7 @@ export function ERPWorkstationProvider({
     if (todayPeriod) return todayPeriod;
 
     // 4. Fallback to last period in list
-    return data.periods[data.periods.length - 1] || {
-      period_id: 'prd-2026-09',
-      fiscal_year: 2026,
-      period_number: 9,
-      start_date: '2026-09-01',
-      end_date: '2026-09-30',
-      status: 'OPEN'
-    };
+    return data.periods[data.periods.length - 1] || buildCalendarMonthPeriod();
   }, [data.periods]);
 
   // Handler: Toggle Accounting Period Status

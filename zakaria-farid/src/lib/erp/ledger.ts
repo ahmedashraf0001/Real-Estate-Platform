@@ -332,14 +332,7 @@ export function resolvePeriodForDate(
   fallbackPeriod?: ERPAccountingPeriod
 ): ERPAccountingPeriod {
   if (!dateStr || !periods || periods.length === 0) {
-    return fallbackPeriod || {
-      period_id: 'prd-2026-09',
-      fiscal_year: 2026,
-      period_number: 9,
-      start_date: '2026-09-01',
-      end_date: '2026-09-30',
-      status: 'OPEN'
-    };
+    return fallbackPeriod || buildCalendarMonthPeriod(dateStr);
   }
   const cleanDate = dateStr.slice(0, 10);
   const matched = periods.find(p => p.start_date <= cleanDate && cleanDate <= p.end_date);
@@ -557,4 +550,21 @@ export class GeneralLedgerEngine {
 
     return result;
   }
+}
+
+/** Builds an OPEN calendar-month period for the given date (defaults to today). Used only when no DB periods exist. */
+export function buildCalendarMonthPeriod(dateStr?: string): ERPAccountingPeriod {
+  const base = dateStr ? new Date(dateStr.slice(0, 10) + 'T00:00:00') : new Date();
+  const y = base.getFullYear();
+  const m = base.getMonth() + 1;
+  const mm = String(m).padStart(2, '0');
+  const lastDay = new Date(y, m, 0).getDate();
+  return {
+    period_id: `prd-${y}-${mm}`,
+    fiscal_year: y,
+    period_number: m,
+    start_date: `${y}-${mm}-01`,
+    end_date: `${y}-${mm}-${String(lastDay).padStart(2, '0')}`,
+    status: 'OPEN'
+  };
 }

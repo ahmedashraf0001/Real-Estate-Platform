@@ -198,7 +198,7 @@ export const CockpitView: React.FC<CockpitViewProps> = ({
   }, [activeTableTab, tableSearchQuery, tableStatusFilter, statProjectFilter, statPeriodFilter, pageSize]);
 
   // Mini Calendar Month View State (matches media_1790739647448.png)
-  const [calendarViewDate, setCalendarViewDate] = useState(() => new Date(2026, 8, 30));
+  const [calendarViewDate, setCalendarViewDate] = useState(() => new Date());
   const [selectedCalendarDay, setSelectedCalendarDay] = useState<number | null>(30);
   const [isGreetingProjectMenuOpen, setIsGreetingProjectMenuOpen] = useState(false);
   const [isNewActionMenuOpen, setIsNewActionMenuOpen] = useState(false);
@@ -2928,7 +2928,7 @@ export const CockpitView: React.FC<CockpitViewProps> = ({
                   type="button"
                   className={styles.miniCalendarTodayBtn}
                   onClick={() => {
-                    setCalendarViewDate(new Date(2026, 8, 30));
+                    setCalendarViewDate(new Date());
                     setSelectedCalendarDay(30);
                   }}
                 >
