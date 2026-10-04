@@ -437,6 +437,9 @@ export function ERPWorkstationProvider({
   const supabase = useMemo(() => createClient(), []);
 
   const [currentUser, setCurrentUser] = useState<any>(null);
+  // Read inside loadLiveData without making it re-create on every auth event
+  const currentUserRef = useRef<any>(null);
+  currentUserRef.current = currentUser;
 
   // Accent Palette Customization State & Runtime Injection
   const [activePreset, setActivePreset] = useState<ERPPalettePreset>(DEFAULT_PALETTE_PRESET);
@@ -562,7 +565,9 @@ export function ERPWorkstationProvider({
           window.location.href = '/admin/login';
         }
       } else if (session?.user) {
-        setCurrentUser(session.user);
+        // Supabase re-emits SIGNED_IN / TOKEN_REFRESHED on tab focus; only update when the user actually changes,
+        // otherwise loadLiveData re-runs non-silently and the loading screen unmounts open modals.
+        setCurrentUser((prev: any) => (prev?.id === session.user.id ? prev : session.user));
       }
     });
 
@@ -734,7 +739,7 @@ export function ERPWorkstationProvider({
         ERPSupabaseService.loadPartnerProfiles(supabase),
         ERPSupabaseService.loadPartnerTransactions(supabase)
       ]);
-      if (!currentUser && process.env.NODE_ENV === 'development' && typeof window !== 'undefined') {
+      if (!currentUserRef.current && process.env.NODE_ENV === 'development' && typeof window !== 'undefined') {
         try {
           const saved = JSON.parse(window.localStorage.getItem('fin_os_local_purchase_orders') || '[]');
           dataset.purchaseOrders = Array.isArray(saved) ? saved.filter(order => order.order_id && order.property_id && order.status === 'DRAFT') : [];
@@ -829,7 +834,7 @@ export function ERPWorkstationProvider({
     } finally {
       if (!isSilent) setIsLoading(false);
     }
-  }, [supabase, currentUser]);
+  }, [supabase]);
 
   // Real-Time WebSocket Sync Hook
   const {
