@@ -859,7 +859,6 @@ export function ERPWorkstationProvider({
         const msg = isAr
           ? `رصيد ${nameAr} غير كافٍ. المتاح: ${balance.formatEGP(true)}، المطلوب: ${outflow.formatEGP(true)}.`
           : `Insufficient balance in ${nameEn}. Available: ${balance.formatEGP(false)}, required: ${outflow.formatEGP(false)}.`;
-        toast.error(msg);
         throw new Error(msg);
       }
     }
@@ -1330,11 +1329,11 @@ export function ERPWorkstationProvider({
 
   // Financial Telemetry Derivations
   const totalGrossContractValue = useMemo(() => {
-    return data.contracts.reduce((acc, c) => acc.plus(c.gross_contract_value), D(0)).toFixed(2);
+    return data.contracts.filter(c => c.status !== 'Rescinded').reduce((acc, c) => acc.plus(c.gross_contract_value), D(0)).toFixed(2);
   }, [data.contracts]);
 
   const totalCollectedCash = useMemo(() => {
-    return data.contracts.reduce((acc, c) => acc.plus(c.total_cash_collected), D(0)).toFixed(2);
+    return data.contracts.filter(c => c.status !== 'Rescinded').reduce((acc, c) => acc.plus(c.total_cash_collected), D(0)).toFixed(2);
   }, [data.contracts]);
 
   const totalWipIncurred = useMemo(() => {
@@ -4027,12 +4026,9 @@ export function ERPWorkstationProvider({
       if (msg.includes('Invariant 0.9')) {
         const targetPeriod = resolvePeriodForDate(entry.entry_date, data.periods, activePeriod);
         ensureActivePeriodOpen(isAr ? 'تسجيل مصروف مشروع' : 'Project Expense', targetPeriod);
-      } else {
-        toast.error(
-          isAr ? 'فشل تسجيل وترحيل الحركة وتكلفة المشروع' : 'Failed to post transaction and cost record', 
-          { description: msg }
-        );
       }
+      // Rethrow so the calling modal stays open and reports the failure (it shows the message).
+      throw err;
     } finally {
       setIsMutating(false);
     }

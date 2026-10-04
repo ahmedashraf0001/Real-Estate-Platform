@@ -299,7 +299,7 @@ export const ZFDirectExpenseModal: React.FC<ZFDirectExpenseModalProps> = ({
 
     // Map strict payment method to accounting payment source
     const paymentSource: ConstructionExpensePaymentSource =
-      paymentMethod === 'DEFERRED_201000' ? '201000' : '101000';
+      paymentMethod === 'DEFERRED_201000' ? '201000' : paymentMethod === 'INSTAPAY_101000' ? '102000' : '101000';
 
     const property = properties.find(candidate => candidate.id === propertyId);
     const propertyTitle = property ? (isAr ? property.title_ar : property.title_en) : propertyId;
@@ -401,8 +401,8 @@ export const ZFDirectExpenseModal: React.FC<ZFDirectExpenseModalProps> = ({
         : `${categoryLabel} is debited to project WIP and credited to physical treasury cash (101000).`)
     : paymentMethod === 'INSTAPAY_101000'
       ? (isAr
-          ? `تُحمّل ${categoryLabel} على تكلفة المشروع (حساب 151000)، ويُسجل التحويل فورياً عبر إنستاباي لحساب الخزينة (حساب 101000).`
-          : `${categoryLabel} is debited to project WIP and settled instantly via InstaPay into treasury (101000).`)
+          ? `تُحمّل ${categoryLabel} على تكلفة المشروع (حساب 151000)، ويُسدد فورياً بتحويل إنستاباي من الحساب البنكي (حساب 102000).`
+          : `${categoryLabel} is debited to project WIP and paid instantly by InstaPay from the bank account (102000).`)
       : down.gt(0)
         ? (isAr
             ? `تُحمّل ${categoryLabel} على تكلفة المشروع؛ تُخصم الدفعة المقدمة من الخزينة الرئيسية (101000) ويُسجل الباقي كالتزام مستحق للمورد (201000).`
@@ -648,7 +648,7 @@ export const ZFDirectExpenseModal: React.FC<ZFDirectExpenseModalProps> = ({
                   <span className={styles.paymentOptionIcon}><Zap size={16} /></span>
                   <span>{isAr ? 'إنستاباي' : 'InstaPay'}</span>
                 </div>
-                <small>{isAr ? 'تحويل رقمي فوري إلى حساب الخزينة (حساب 101000)' : 'Instant digital transfer via Treasury (101000)'}</small>
+                <small>{isAr ? 'تحويل رقمي فوري من الحساب البنكي (حساب 102000)' : 'Instant digital transfer from Bank (102000)'}</small>
               </div>
 
               {/* Method 3: Deferred Payable (201000) */}

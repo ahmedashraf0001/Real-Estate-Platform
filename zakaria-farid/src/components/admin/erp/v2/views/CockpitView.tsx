@@ -385,7 +385,7 @@ export const CockpitView: React.FC<CockpitViewProps> = ({
 
   // 2. Gross Contract Value (Real aggregation from contracts signed in period and matching project)
   const { grossContractsNum, contractsDelta } = useMemo(() => {
-    const projectContracts = contracts.filter(c => isPropertyInProject(c.property_id, c.unit_id));
+    const projectContracts = contracts.filter(c => c.status !== 'Rescinded' && isPropertyInProject(c.property_id, c.unit_id));
 
     let currentPeriodSum = D(0);
     let priorPeriodSum = D(0);
@@ -501,7 +501,7 @@ export const CockpitView: React.FC<CockpitViewProps> = ({
     const current = sum(isInCurrentPeriod);
     const totalOutstanding = outstandingSchedules.reduce((total, s) =>
       total.plus(D(s.nominal_value || 0).minus(s.amount_paid || 0).max(0)), D(0));
-    const val = current.gt(0) ? current : (totalOutstanding.gt(0) ? totalOutstanding : D(kpis?.accountsReceivable || totalSafePDCs || 0));
+    const val = current.gt(0) ? current : totalOutstanding;
     return { safePdcNum: Math.round(val.toNumber()), pdcDelta: formatDelta(current, sum(isInPriorPeriod)) };
   }, [outstandingSchedules, isInCurrentPeriod, isInPriorPeriod, formatDelta, kpis?.accountsReceivable, totalSafePDCs]);
 
