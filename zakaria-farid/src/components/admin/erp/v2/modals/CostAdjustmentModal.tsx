@@ -50,11 +50,16 @@ export const CostAdjustmentModal: React.FC<CostAdjustmentModalProps> = ({
   const [paymentMethod, setPaymentMethod] = useState<'CASH_101000' | 'INSTAPAY_102000' | 'BANK_102000'>('CASH_101000');
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
-  if (!isOpen || !costItem) return null;
-
-  const currentTotals = calculateCostItemEffectiveTotals(costItem);
+  const currentTotals = costItem ? calculateCostItemEffectiveTotals(costItem) : null;
 
   const previewNewTotals = useMemo(() => {
+    if (!currentTotals) {
+      return {
+        delta: '0.00',
+        net: '0.00',
+        isReduction: false
+      };
+    }
     const numAmt = parseFloat(amount) || 0;
     const base = D(currentTotals.netEffectiveCost);
     if (adjustmentType === 'REFUND_OVERPAYMENT') {
@@ -77,7 +82,9 @@ export const CostAdjustmentModal: React.FC<CostAdjustmentModalProps> = ({
       net: base.toFixed(2),
       isReduction: false
     };
-  }, [amount, adjustmentType, currentTotals.netEffectiveCost]);
+  }, [amount, adjustmentType, currentTotals?.netEffectiveCost]);
+
+  if (!isOpen || !costItem || !currentTotals) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

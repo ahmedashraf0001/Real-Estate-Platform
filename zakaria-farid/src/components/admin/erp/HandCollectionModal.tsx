@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { 
   Wallet, 
   X, 
@@ -296,6 +296,30 @@ export const HandCollectionModal: React.FC<HandCollectionModalProps> = ({
     return combined;
   }, [allItems, item, schedules, contracts, isAr]);
 
+  // Resolve linked schedule and compute live remaining balance
+  const getScheduleForItem = useCallback((p?: ERPPDCRecord | null) => {
+    if (!p) return undefined;
+    return (schedules || []).find(s => 
+      (p.schedule_id && s.schedule_id === p.schedule_id) ||
+      (s.contract_id === p.contract_id && s.due_date === p.due_date && s.status !== 'SUPERSEDED' && s.status !== 'Void') ||
+      (s.contract_id === p.contract_id && s.status !== 'SUPERSEDED' && s.status !== 'Void' && s.status !== 'Paid')
+    );
+  }, [schedules]);
+
+  const getItemFinancials = useCallback((p?: ERPPDCRecord | null) => {
+    if (!p) return { nominal: D(0), paid: D(0), remaining: D(0), isPartial: false, sched: undefined };
+    const sched = getScheduleForItem(p);
+    const nominal = sched ? D(sched.nominal_value || '0') : D(p.nominal_value || '0');
+    const paid = sched ? D(sched.amount_paid || '0') : D(0);
+    const remaining = Decimal.max(0, nominal.minus(paid));
+    const isPartial = (sched?.status === 'Partially Paid') || (paid.gt(0) && paid.lt(nominal));
+    return { nominal, paid, remaining, isPartial, sched };
+  }, [getScheduleForItem]);
+
+  const selectedFinancials = useMemo(() => {
+    return getItemFinancials(selectedItem);
+  }, [getItemFinancials, selectedItem]);
+
   // Track open state and external item id to avoid resetting selectedItem during consecutive collections
   const prevIsOpenRef = useRef(false);
   const prevItemIdRef = useRef<string | null>(null);
@@ -350,7 +374,11 @@ export const HandCollectionModal: React.FC<HandCollectionModalProps> = ({
       const prefix = paymentMethod === 'INSTAPAY' ? 'IP' : 'RCP';
       setReceiptNo(`${prefix}-${new Date().getFullYear()}-${cleanCode}`);
       setCollectionDate(selectedItem.cleared_date || new Date().toISOString().split('T')[0]);
-      setCollectedAmount(D(selectedItem.nominal_value || '0').toFixed(2));
+
+      // Requirement 7: default "Amount Received" = remaining (nominal - amount_paid), not nominal
+      const { remaining, nominal } = getItemFinancials(selectedItem);
+      setCollectedAmount(remaining.gt(0) ? remaining.toFixed(2) : nominal.toFixed(2));
+
       setCollectionNotes(
         isItemCleared
           ? (isAr ? 'تم التحصيل والتوريد الفعلي مسبقاً' : 'Already collected and cleared')
@@ -360,7 +388,7 @@ export const HandCollectionModal: React.FC<HandCollectionModalProps> = ({
       );
       setError('');
     }
-  }, [selectedItem, paymentMethod, isAr]);
+  }, [selectedItem, paymentMethod, isAr, getItemFinancials]);
 
   // Contract linked to the currently selected item
   const currentContract = useMemo(() => {

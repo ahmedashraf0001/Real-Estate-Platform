@@ -131,9 +131,6 @@ export const HandoverExecutionModal: React.FC<HandoverExecutionModalProps> = ({
     }
   }, [contract, targetPeriod, handoverDate, rsvCostAmount]);
 
-  if (!isOpen || !contract) return null;
-
-  const isAlreadyDelivered = contract.handover_status === 'Delivered';
   const hasValidCost = useMemo(() => {
     try {
       return D(rsvCostAmount || '0').gt(0);
@@ -142,6 +139,9 @@ export const HandoverExecutionModal: React.FC<HandoverExecutionModalProps> = ({
     }
   }, [rsvCostAmount]);
 
+  if (!isOpen || !contract) return null;
+
+  const isAlreadyDelivered = contract.handover_status === 'Delivered';
   // Gate check: must have valid cost; if not ready, require assertion checkbox; must not be already delivered; preview entry must exist; target period must not be locked
   const canConfirm = !isMutating && !isAlreadyDelivered && hasValidCost && (isPropertyReady || certifiedCompletionAsserted) && grossValue.greaterThan(0) && previewEntry !== null && !isTargetPeriodLocked;
 

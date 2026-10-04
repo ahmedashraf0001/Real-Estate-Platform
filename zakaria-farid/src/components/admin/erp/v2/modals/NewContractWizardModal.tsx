@@ -30,6 +30,7 @@ import {
   ERPInstallmentSchedule, 
   ERPAccountingPeriod 
 } from '@/lib/erp/types';
+import { ContractsEngine } from '@/lib/erp/contracts';
 import { 
   PartnerShareItem, 
   PRIMARY_DEVELOPER_NAME, 
@@ -192,7 +193,7 @@ export const NewContractWizardModal: React.FC<NewContractWizardModalProps> = ({
       } else {
         setBasePriceInput((prop.price_egp || 0).toString());
       }
-      setNumInstallments(prop.completion_status === 'off_plan' ? '12' : '6');
+      setNumInstallments(prop.completion_status === 'off_plan' ? '12' : '8');
       if (prop.partner_splits && prop.partner_splits.length > 0) {
         setPartnerSplits(normalizePartnerSplits(prop.partner_splits));
       } else {
@@ -220,47 +221,85 @@ export const NewContractWizardModal: React.FC<NewContractWizardModalProps> = ({
   };
 
   const prevIsOpenRef = React.useRef(false);
+  const resetPropsRef = React.useRef({
+    initialPropertyId,
+    initialBuildingUnitId,
+    initialBuyerName,
+    initialBuyerPhone,
+    initialBuyerEmail,
+    initialLeadId,
+    applyPropertySelection,
+  });
+
+  useEffect(() => {
+    resetPropsRef.current = {
+      initialPropertyId,
+      initialBuildingUnitId,
+      initialBuyerName,
+      initialBuyerPhone,
+      initialBuyerEmail,
+      initialLeadId,
+      applyPropertySelection,
+    };
+  });
 
   // Reset state on modal open with pre-selected property/unit support
   // Uses prevIsOpenRef so background store sync while modal is open DOES NOT reset form draft state
   useEffect(() => {
-    if (isOpen && !prevIsOpenRef.current) {
-      setStep(1);
-      setContractErrors({});
-      if (initialLeadId) {
-        setLeadSelectionMode('EXISTING_LEAD');
-        setSelectedLeadId(initialLeadId);
-      } else {
-        setLeadSelectionMode('NEW_LEAD');
-        setSelectedLeadId('');
-      }
-      setBuyerName(initialBuyerName || '');
-      setBuyerNationalId('');
-      setBuyerPhone(initialBuyerPhone || '');
-      setBuyerEmail(initialBuyerEmail || '');
-      setPaymentPlanType('INSTALLMENTS');
-      setDownPaymentInputPct('15');
-      setDownPaymentAmountInput('');
-      setInstallmentFrequency('QUARTERLY');
-      setFirstPaymentDate(new Date().toISOString().split('T')[0]);
-      const d = new Date();
-      d.setMonth(d.getMonth() + 3);
-      setFirstInstallmentDueDate(d.toISOString().split('T')[0]);
-      setDestinationTreasury('SAFE_101000');
-
-      if (initialPropertyId) {
-        applyPropertySelection(initialPropertyId, initialBuildingUnitId);
-      } else {
-        setSelectedPropertyId('');
-        setSelectedBuildingUnitId('');
-        setCustomUnitName('');
-        setBasePriceInput('');
-        setNumInstallments('8');
-        setPartnerSplits(normalizePartnerSplits(null));
-      }
+    if (!isOpen) {
+      prevIsOpenRef.current = false;
+      return;
     }
-    prevIsOpenRef.current = isOpen;
-  }, [isOpen, initialPropertyId, initialBuildingUnitId, initialBuyerName, initialBuyerPhone, initialBuyerEmail, initialLeadId, applyPropertySelection]);
+    if (!prevIsOpenRef.current) {
+      const resetTimer = window.setTimeout(() => {
+        prevIsOpenRef.current = true;
+        const {
+          initialLeadId: curLeadId,
+          initialBuyerName: curBuyerName,
+          initialBuyerPhone: curBuyerPhone,
+          initialBuyerEmail: curBuyerEmail,
+          initialPropertyId: curPropId,
+          initialBuildingUnitId: curUnitId,
+          applyPropertySelection: curApplySelection,
+        } = resetPropsRef.current;
+
+        setStep(1);
+        setContractErrors({});
+        if (curLeadId) {
+          setLeadSelectionMode('EXISTING_LEAD');
+          setSelectedLeadId(curLeadId);
+        } else {
+          setLeadSelectionMode('NEW_LEAD');
+          setSelectedLeadId('');
+        }
+        setBuyerName(curBuyerName || '');
+        setBuyerNationalId('');
+        setBuyerPhone(curBuyerPhone || '');
+        setBuyerEmail(curBuyerEmail || '');
+        setPaymentPlanType('INSTALLMENTS');
+        setDownPaymentInputPct('15');
+        setDownPaymentAmountInput('');
+        setInstallmentFrequency('QUARTERLY');
+        setFirstPaymentDate(new Date().toISOString().split('T')[0]);
+        const d = new Date();
+        d.setMonth(d.getMonth() + 3);
+        setFirstInstallmentDueDate(d.toISOString().split('T')[0]);
+        setDestinationTreasury('SAFE_101000');
+
+        if (curPropId) {
+          curApplySelection(curPropId, curUnitId);
+        } else {
+          setSelectedPropertyId('');
+          setSelectedBuildingUnitId('');
+          setCustomUnitName('');
+          setBasePriceInput('');
+          setNumInstallments('8');
+          setPartnerSplits(normalizePartnerSplits(null));
+        }
+      }, 0);
+      return () => window.clearTimeout(resetTimer);
+    }
+  }, [isOpen]);
 
   // Derived Pricing
   const basePrice = parseFloat(basePriceInput) || 0;
@@ -313,26 +352,25 @@ export const NewContractWizardModal: React.FC<NewContractWizardModalProps> = ({
   // Generate Tranche Schedule Preview
   const previewSchedule = useMemo(() => {
     if (paymentPlanType === 'FULL_CASH') return [];
-    const count = parseInt(numInstallments) || 0;
+    const count = parseInt(numInstallments, 10) || 0;
     if (count <= 0) return [];
 
-    const remainingToFinance = Math.max(0, totalNominalValue - modalDpAmount);
-    const trancheVal = Math.round(remainingToFinance / count);
-    const intervalMonths = installmentFrequency === 'MONTHLY' ? 1 : installmentFrequency === 'QUARTERLY' ? 3 : 6;
+    const dpPct = totalNominalValue > 0 ? (modalDpAmount / totalNominalValue) : 0;
+    const generated = ContractsEngine.generateSchedule(
+      'preview',
+      D(totalNominalValue),
+      dpPct,
+      count,
+      firstPaymentDate,
+      installmentFrequency,
+      firstInstallmentDueDate
+    );
 
-    const tranches = [];
-    let currentDue = new Date(firstInstallmentDueDate || firstPaymentDate);
-
-    for (let i = 1; i <= count; i++) {
-      tranches.push({
-        index: i,
-        dueDate: currentDue.toISOString().split('T')[0],
-        amount: trancheVal
-      });
-      const nextMonth = currentDue.getMonth() + intervalMonths;
-      currentDue = new Date(currentDue.setMonth(nextMonth));
-    }
-    return tranches;
+    return generated.slice(1).map((s, idx) => ({
+      index: idx + 1,
+      dueDate: s.due_date,
+      amount: parseFloat(s.nominal_value) || 0
+    }));
   }, [paymentPlanType, numInstallments, totalNominalValue, modalDpAmount, installmentFrequency, firstInstallmentDueDate, firstPaymentDate]);
 
   // Equity Splits total %
@@ -1313,7 +1351,7 @@ export const NewContractWizardModal: React.FC<NewContractWizardModalProps> = ({
                             {isAr ? 'دفعة الحجز والمقدم النقدي (Tranche 0 مسددة)' : 'Tranche 0: Reservation & Down Payment (Paid)'}
                           </td>
                         </tr>
-                        {previewSchedule.slice(0, 10).map(t => (
+                        {previewSchedule.map(t => (
                           <tr key={t.index} style={{ borderTop: '1px solid #e2e8f0', background: '#ffffff' }}>
                             <td style={{ padding: '0.4rem 0.6rem', fontWeight: 700 }}>#{t.index}</td>
                             <td style={{ padding: '0.4rem 0.6rem', fontVariantNumeric: 'tabular-nums' }}>{t.dueDate}</td>

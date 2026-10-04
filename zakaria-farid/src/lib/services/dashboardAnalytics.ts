@@ -230,33 +230,7 @@ export function generateStrategicAdvisories(properties: any[], leads: any[], isA
     });
   }
 
-  // 2. High Demand Coastal Acquisition Opportunity
-  const coastalProperties = (properties || []).filter((p) => {
-    const loc = (p.location || '').toLowerCase();
-    return loc.includes('north coast') || loc.includes('ras el hekma') || loc.includes('ساحل') || loc.includes('حكمة');
-  });
-  const coastalLeads = (leads || []).filter((l) => {
-    const loc = (l.property?.location || '').toLowerCase();
-    return loc.includes('north coast') || loc.includes('ras el hekma') || loc.includes('ساحل');
-  });
-
-  if (coastalLeads.length >= 2 || coastalProperties.length <= 1) {
-    advisories.push({
-      id: 'coastal_expansion_opp',
-      type: 'opportunity',
-      severity: 'medium',
-      titleEn: 'Ras El Hekma & North Coast Expansion Opportunity',
-      titleAr: 'فرصة توسع واستحواذ في رأس الحكمة والساحل الشمالي',
-      messageEn: 'Coastal estates are experiencing accelerating buyer inquiry velocity driven by sovereign master developments. Consider onboarding additional ultra-prime coastal inventory.',
-      messageAr: 'تشهد الفيلات والقصور الساحلية تسارعاً كبيراً في طلبات المشترين. يُوصى بالاستحواذ وإدراج عقارات جديدة برأس الحكمة.',
-      metric: '+103.5% 5Yr Gain',
-      actionTextEn: 'List Coastal Asset',
-      actionTextAr: 'إدراج عقار ساحلي',
-      actionHref: `/admin/${isAr ? 'ar' : 'en'}/properties/new`,
-    });
-  }
-
-  // 3. Portfolio Typology Balance Check
+  // 2. Portfolio Typology Balance Check (Derived from passed properties)
   const villas = (properties || []).filter((p) => p.type === 'villa' || p.type === 'mansion');
   const penthouses = (properties || []).filter((p) => p.type === 'apartment' || p.type === 'penthouse');
 
@@ -273,20 +247,6 @@ export function generateStrategicAdvisories(properties: any[], leads: any[], isA
       actionTextEn: 'Add Penthouse',
       actionTextAr: 'إضافة بنتهاوس',
       actionHref: `/admin/${isAr ? 'ar' : 'en'}/properties/new`,
-    });
-  }
-
-  // 4. Default Sovereign Advisory if quiet
-  if (advisories.length === 0) {
-    advisories.push({
-      id: 'portfolio_health_optimal',
-      type: 'opportunity',
-      severity: 'info',
-      titleEn: 'Portfolio Valuation & Deal Flow are Optimal',
-      titleAr: 'كفاءة المحفظة ومعدل الاستجابة ممتاز',
-      messageEn: 'All active listings have healthy engagement parameters and client inquiry response SLAs are within the recommended <12h threshold.',
-      messageAr: 'جميع العقارات المعروضة تتمتع بمؤشرات تفاعل ممتازة وزمن الاستجابة للعملاء ضمن المعدل المثالي.',
-      metric: '100% SLA Health',
     });
   }
 

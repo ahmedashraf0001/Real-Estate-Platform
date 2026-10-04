@@ -16,6 +16,7 @@ import { D, Decimal, generateUUID, isUUID, ensureUUID } from '@/lib/erp/math';
 import { 
   ERPContract, 
   ERPInstallmentSchedule, 
+  InstallmentStatus,
   ERPJournalEntry,
   ERPPDCRecord,
   ERPRescissionRecord,
@@ -879,7 +880,7 @@ export function ERPWorkstationProvider({
     const todayStr = new Date().toISOString().split('T')[0];
     const pdcDues = data.pdcRecords.filter(p => p.status !== 'Cleared' && p.status !== 'Void' && p.due_date <= todayStr);
     const orphanSchedDues = data.schedules.filter(s => 
-      s.status === 'Pending' && 
+      (s.status === 'Pending' || s.status === 'Partially Paid') && 
       s.due_date <= todayStr && 
       !data.pdcRecords.some(p => p.schedule_id === s.schedule_id)
     );
@@ -1191,7 +1192,7 @@ export function ERPWorkstationProvider({
     let superseded = 0;
     let voidCount = 0;
     data.schedules.forEach(s => {
-      if (s.status === 'Pending') pending++;
+      if (s.status === 'Pending' || s.status === 'Partially Paid') pending++;
       else if (s.status === 'Paid') paid++;
       else if (s.status === 'SUPERSEDED') superseded++;
       else if (s.status === 'Void') voidCount++;
@@ -2744,21 +2745,43 @@ export function ERPWorkstationProvider({
     }
     const targetPeriod = resolvePeriodForDate(date, data.periods, activePeriod);
     if (!ensureActivePeriodOpen(isAr ? 'تحصيل قسط' : 'Collect Installment', targetPeriod)) return;
+
+    // Reject collected amount <= 0
+    const collected = D(amount || '0');
+    if (collected.lte(0)) {
+      const msg = isAr ? 'يجب أن يكون المبلغ المحصل أكبر من صفر' : 'Collected amount must be greater than zero';
+      toast.error(msg);
+      return;
+    }
+
+    const contract = data.contracts.find(c => 
+      c.contract_id === item.contract_id || 
+      c.contract_number === item.contract_id
+    );
+    const schedule = data.schedules.find(s => 
+      (item.schedule_id && s.schedule_id === item.schedule_id) ||
+      (s.contract_id === item.contract_id && s.due_date === item.due_date && (s.status === 'Pending' || s.status === 'Partially Paid')) ||
+      (s.contract_id === item.contract_id && (s.status === 'Pending' || s.status === 'Partially Paid'))
+    );
+
+    const nominal = schedule ? D(schedule.nominal_value || '0') : D(item.nominal_value || '0');
+    const prevPaid = schedule ? D(schedule.amount_paid || '0') : D(0);
+    const remaining = Decimal.max(0, nominal.minus(prevPaid));
+
+    // Reject collected amount > remaining
+    if (collected.gt(remaining)) {
+      const msg = isAr 
+        ? `المبلغ المدخل (${collected.toFixed(2)}) يتجاوز المتبقي من القسط (${remaining.toFixed(2)})`
+        : `Entered amount (${collected.toFixed(2)}) exceeds remaining installment balance (${remaining.toFixed(2)})`;
+      toast.error(msg);
+      return;
+    }
+
     setIsMutating(true);
     try {
       const isInstaPay = method === 'INSTAPAY';
       // UNIFIED OPERATING TREASURY DESTINATION: Both Cash and InstaPay deposit into Account 101000
       const targetAccount = '101000';
-
-      const contract = data.contracts.find(c => 
-        c.contract_id === item.contract_id || 
-        c.contract_number === item.contract_id
-      );
-      const schedule = data.schedules.find(s => 
-        (item.schedule_id && s.schedule_id === item.schedule_id) ||
-        (s.contract_id === item.contract_id && s.due_date === item.due_date && s.status === 'Pending') ||
-        (s.contract_id === item.contract_id && s.status === 'Pending')
-      );
 
       const isDelivered = contract?.handover_status === 'Delivered';
       const isPreHandoverInstallment = !isDelivered && Boolean(schedule || item.schedule_id || contract);
@@ -2796,15 +2819,22 @@ export function ERPWorkstationProvider({
         ]
       });
 
-      await ERPSupabaseService.persistPDCStatus(supabase, item.cheque_id, 'Cleared');
+      const newPaid = prevPaid.plus(collected);
+      const isFullyPaid = newPaid.gte(nominal);
+      const newScheduleStatus: InstallmentStatus = isFullyPaid ? 'Paid' : 'Partially Paid';
+      const newPaidDate = isFullyPaid ? date : (schedule?.paid_date || null);
+
+      if (isFullyPaid) {
+        await ERPSupabaseService.persistPDCStatus(supabase, item.cheque_id, 'Cleared');
+      }
 
       if (schedule) {
         await supabase
           .from('erp_installment_schedules')
           .update({
-            status: 'Paid',
-            amount_paid: D(amount).toFixed(2),
-            paid_date: date
+            status: newScheduleStatus,
+            amount_paid: newPaid.toFixed(2),
+            paid_date: newPaidDate
           })
           .eq('schedule_id', schedule.schedule_id);
       }
@@ -2822,16 +2852,20 @@ export function ERPWorkstationProvider({
       setData(prev => ({
         ...prev,
         contracts: prev.contracts.map(c => 
-          c.contract_id === item.contract_id 
+          (contract && c.contract_id === contract.contract_id) || c.contract_id === item.contract_id 
             ? { ...c, total_cash_collected: D(c.total_cash_collected || '0').plus(amount).toFixed(2) }
             : c
         ),
         schedules: prev.schedules.map(s => 
           (schedule && s.schedule_id === schedule.schedule_id)
-            ? { ...s, status: 'Paid', amount_paid: D(amount).toFixed(2), paid_date: date }
+            ? { ...s, status: newScheduleStatus, amount_paid: newPaid.toFixed(2), paid_date: newPaidDate || undefined }
             : s
         ),
-        pdcRecords: prev.pdcRecords.map(p => p.cheque_id === item.cheque_id ? { ...p, status: 'Cleared' as const, cleared_date: date } : p),
+        pdcRecords: prev.pdcRecords.map(p => 
+          p.cheque_id === item.cheque_id 
+            ? (isFullyPaid ? { ...p, status: 'Cleared' as const, cleared_date: date } : p)
+            : p
+        ),
         journalEntries: [entry, ...prev.journalEntries]
       }));
 
@@ -2840,9 +2874,13 @@ export function ERPWorkstationProvider({
       const localizedBuyer = isAr ? localizeBuyerName(item.drawer_name || 'عميل مباشر') : (item.drawer_name || 'Direct Client');
 
       toast.success(
-        isInstaPay
-          ? (isAr ? 'تم تحصيل القسط عبر إنستاباي' : 'Installment Collected via InstaPay')
-          : (isAr ? 'تم توريد القسط إلى الخزينة' : 'Installment Deposited into Safe'),
+        isFullyPaid
+          ? (isInstaPay
+              ? (isAr ? 'تم تحصيل القسط بالكامل عبر إنستاباي' : 'Installment Fully Collected via InstaPay')
+              : (isAr ? 'تم توريد القسط بالكامل إلى الخزينة' : 'Installment Fully Deposited into Safe'))
+          : (isInstaPay
+              ? (isAr ? 'تم تحصيل دفعة جزئية من القسط عبر إنستاباي' : 'Partial Installment Collected via InstaPay')
+              : (isAr ? 'تم توريد دفعة جزئية من القسط إلى الخزينة' : 'Partial Installment Deposited into Safe')),
         {
           description: (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem', marginTop: '0.35rem' }}>
@@ -2859,6 +2897,20 @@ export function ERPWorkstationProvider({
                 }}>
                   +{D(amount).formatEGP(isAr)}
                 </span>
+                {!isFullyPaid && (
+                  <span style={{
+                    background: 'rgba(245, 158, 11, 0.1)',
+                    color: '#d97706',
+                    border: '1px solid rgba(245, 158, 11, 0.25)',
+                    padding: '0.12rem 0.5rem',
+                    borderRadius: '6px',
+                    fontSize: '0.72rem',
+                    fontWeight: 700,
+                    fontVariantNumeric: 'tabular-nums'
+                  }}>
+                    {isAr ? `متبقي: ${nominal.minus(newPaid).formatEGP(isAr)}` : `Remaining: ${nominal.minus(newPaid).formatEGP(isAr)}`}
+                  </span>
+                )}
                 <span style={{
                   background: '#f8fafc',
                   color: '#475569',

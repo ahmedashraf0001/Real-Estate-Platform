@@ -57,9 +57,9 @@ import { ZFSearchBar } from '../common/ZFSearchBar';
 import { ZFKpiCard, ZFKpiGrid } from '../ZFKpiCard';
 import { ZFWorkstationSideWidgets, ZFWidgetCard } from '../common/ZFWorkstationSideWidgets';
 import { ZFModalShell } from '../common/ZFModalShell';
-import { CockpitDualCharts } from './CockpitDualCharts';
-import styles from '../ZFWorkstationShell.module.css';
+import { CockpitDualCharts, CashflowTimelineMonth } from './CockpitDualCharts';
 import { useERPWorkstation } from '../../context/ERPWorkstationContext';
+import styles from '../ZFWorkstationShell.module.css';
 
 interface CockpitViewProps {
   isAr: boolean;
@@ -759,14 +759,94 @@ export const CockpitView: React.FC<CockpitViewProps> = ({
     });
   }, [comparisonChartData]);
 
-  const cockpitDualChartTimeline = useMemo(() => {
-    return chartData.categories.map((month, i) => ({
-      month,
-      inflow: chartData.inflows[i] || 0,
-      outflow: chartData.outflows[i] || 0,
-      net: Math.max(0, (chartData.inflows[i] || 0) - (chartData.outflows[i] || 0))
-    }));
-  }, [chartData]);
+  const cockpitDualChartTimeline = useMemo<CashflowTimelineMonth[]>(() => {
+    const today = new Date();
+    const baseYear = today.getFullYear();
+    const baseMonth = today.getMonth();
+
+    const hasSchedules = (schedules || []).length > 0;
+    const hasCosts = (propertyCosts || []).length > 0;
+    if (!hasSchedules && !hasCosts) {
+      return [];
+    }
+
+    const months: CashflowTimelineMonth[] = [];
+
+    // Filter schedules: non-paid, non-void tranches, non-rescinded contracts, project-scoped
+    const validSchedules = (schedules || []).filter(s => {
+      const isUnpaid = s.status !== 'Paid' && s.status !== 'SUPERSEDED' && s.status !== 'Void';
+      if (!isUnpaid) return false;
+      const contract = contracts.find(c => c.contract_id === s.contract_id);
+      if (contract && contract.status === 'Rescinded') return false;
+      if (statProjectFilter !== 'all') {
+        if (!isPropertyInProject(contract?.property_id, contract?.unit_id)) return false;
+      }
+      return true;
+    });
+
+    // Filter costs: project-scoped
+    const validCosts = (propertyCosts || []).filter(c => {
+      if (statProjectFilter !== 'all') {
+        if (!isPropertyInProject(c.property_id)) return false;
+      }
+      return true;
+    });
+
+    for (let i = 0; i < 6; i++) {
+      const targetDate = new Date(baseYear, baseMonth + i, 1);
+      const tYear = targetDate.getFullYear();
+      const tMonth = targetDate.getMonth();
+      const monthLabel = targetDate.toLocaleDateString(isAr ? 'ar-EG' : 'en-US', { month: 'short' });
+
+      // Inflow: installment schedules due in target month
+      let monthInflow = 0;
+      validSchedules.forEach(s => {
+        if (!s.due_date) return;
+        const d = new Date(s.due_date);
+        if (d.getFullYear() === tYear && d.getMonth() === tMonth) {
+          const nominal = parseFloat(s.nominal_value || '0');
+          const paid = parseFloat(s.amount_paid || '0');
+          const remaining = Math.max(0, nominal - paid);
+          monthInflow += remaining;
+        }
+      });
+
+      // Outflow: pending property-cost / contractor payables due in target month
+      let monthOutflow = 0;
+      validCosts.forEach(c => {
+        if (c.payable_installments && c.payable_installments.length > 0) {
+          c.payable_installments.filter(inst => inst.status !== 'PAID').forEach(inst => {
+            if (!inst.due_date) return;
+            const d = new Date(inst.due_date);
+            if (d.getFullYear() === tYear && d.getMonth() === tMonth) {
+              const amount = parseFloat(inst.amount_egp || '0');
+              const paid = parseFloat(inst.paid_amount_egp || '0');
+              monthOutflow += Math.max(0, amount - paid);
+            }
+          });
+        } else if (c.due_date && c.status !== 'capitalized') {
+          const d = new Date(c.due_date);
+          if (d.getFullYear() === tYear && d.getMonth() === tMonth) {
+            const rem = parseFloat(String(c.remaining_amount_egp || c.total_cost_egp || '0'));
+            monthOutflow += Math.max(0, rem);
+          }
+        }
+      });
+
+      const inflowM = parseFloat((monthInflow / 1000000).toFixed(1));
+      const outflowM = parseFloat((monthOutflow / 1000000).toFixed(1));
+      const netM = parseFloat((inflowM - outflowM).toFixed(1));
+
+      months.push({
+        month: monthLabel,
+        inflow: inflowM,
+        outflow: outflowM,
+        net: netM
+      });
+    }
+
+    return months;
+  }, [schedules, contracts, propertyCosts, statProjectFilter, isPropertyInProject, isAr]);
 
   // ─── Unified Recent Transactions Dataset ───
   interface RecentTxItem {
@@ -835,12 +915,12 @@ export const CockpitView: React.FC<CockpitViewProps> = ({
 
       list.push({
         id: `pc_${cost.item_id || (cost as any).id}`,
-        date: cost.logged_date || '2026-09-14',
+        date: cost.logged_date || '',
         type: 'contractor',
         typeLabel: isAr ? 'دفع مقاول' : 'Contractor Payout',
         typeColor: '#d97706',
-        party: cost.supplier_contractor || (isAr ? 'شركة النيل للمقاولات' : 'Nile Contracting Co.'),
-        reference: cost.invoice_ref || (cost.building_unit_id ? `CON-${cost.building_unit_id}` : 'CON-114'),
+        party: cost.supplier_contractor || (isAr ? cost.item_name_ar : cost.item_name_en) || (isAr ? 'مقاول غير محدد' : 'Unspecified Contractor'),
+        reference: cost.invoice_ref || (cost.building_unit_id ? `CON-${cost.building_unit_id}` : (cost.item_id ? `#${cost.item_id.slice(0, 8)}` : '—')),
         amount: amt,
         formattedAmount: `${amt.toLocaleString('en-US')} ${isAr ? 'ج.م' : 'EGP'}`,
         statusLabel: isCap 
@@ -852,40 +932,6 @@ export const CockpitView: React.FC<CockpitViewProps> = ({
         onClick: () => onNavigateTab && onNavigateTab('construction'),
       });
     });
-
-    // Fallback contractor records if propertyCosts is empty
-    if ((propertyCosts || []).length === 0) {
-      list.push(
-        {
-          id: 'pc_mock_1',
-          date: '2026-09-14',
-          type: 'contractor',
-          typeLabel: isAr ? 'دفع مقاول' : 'Contractor Payout',
-          typeColor: '#d97706',
-          party: isAr ? 'شركة النيل للمقاولات' : 'Nile Contracting Co.',
-          reference: 'CON-114',
-          amount: 780000,
-          formattedAmount: `780,000 ${isAr ? 'ج.م' : 'EGP'}`,
-          statusLabel: isAr ? 'قيد الصرف' : 'Pending Payout',
-          statusClass: styles.statusPillAmber,
-          onClick: () => onNavigateTab && onNavigateTab('construction'),
-        },
-        {
-          id: 'pc_mock_2',
-          date: '2026-09-11',
-          type: 'contractor',
-          typeLabel: isAr ? 'دفع مقاول' : 'Contractor Payout',
-          typeColor: '#d97706',
-          party: isAr ? 'شركة الأهرام للمقاولات' : 'Al Ahram Contracting',
-          reference: 'CON-089',
-          amount: 1250000,
-          formattedAmount: `1,250,000 ${isAr ? 'ج.م' : 'EGP'}`,
-          statusLabel: isAr ? 'معتمد للصرف' : 'Approved',
-          statusClass: styles.statusPillBlue,
-          onClick: () => onNavigateTab && onNavigateTab('construction'),
-        }
-      );
-    }
 
     // 4. Cash journal entries
     journalEntries.filter(j => isInCurrentPeriod(j.entry_date) && (statProjectFilter === 'all' || isPropertyInProject(j.source_entity_id) || j.lines?.some(line => isPropertyInProject(undefined, line.unit_id) || isPropertyInProject(contracts.find(c => c.contract_id === line.contract_id)?.property_id)))).forEach((j) => {
@@ -1481,7 +1527,7 @@ export const CockpitView: React.FC<CockpitViewProps> = ({
     if (activeTableTab === 'collections') return contracts.length;
     if (activeTableTab === 'pdc') return pdcRecords.length;
     if (activeTableTab === 'ledger') return journalEntries.length;
-    if (activeTableTab === 'contractors') return (propertyCosts || []).length || 2;
+    if (activeTableTab === 'contractors') return (propertyCosts || []).length;
     return allRecentTransactions.length;
   }, [activeTableTab, contracts.length, pdcRecords.length, journalEntries.length, propertyCosts, allRecentTransactions.length]);
 

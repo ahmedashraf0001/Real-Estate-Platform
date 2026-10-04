@@ -128,17 +128,43 @@ export const ZFDirectExpenseModal: React.FC<ZFDirectExpenseModalProps> = ({
     return active.length > 0 ? active : properties;
   }, [properties]);
 
+  const prevIsOpenRef = useRef(false);
+  const resetPropsRef = useRef({
+    underConstructionProperties,
+    initialPropertyId,
+    initialPaymentSource
+  });
+
   useEffect(() => {
-    if (!isOpen) return;
-    const resetTimer = window.setTimeout(() => {
-      setPropertyId(initialPropertyId || underConstructionProperties[0]?.id || '');
-      setPaymentMethod(initialPaymentSource === '201000' ? 'DEFERRED_201000' : 'CASH_101000');
-      setScheduleNow(false);
-      setCurrentStep(1);
-      setSuccess(null);
-    }, 0);
-    return () => window.clearTimeout(resetTimer);
-  }, [initialPaymentSource, initialPropertyId, isOpen, underConstructionProperties]);
+    resetPropsRef.current = {
+      underConstructionProperties,
+      initialPropertyId,
+      initialPaymentSource
+    };
+  });
+
+  useEffect(() => {
+    if (!isOpen) {
+      prevIsOpenRef.current = false;
+      return;
+    }
+    if (!prevIsOpenRef.current) {
+      const resetTimer = window.setTimeout(() => {
+        prevIsOpenRef.current = true;
+        const {
+          underConstructionProperties: curProps,
+          initialPropertyId: curPropId,
+          initialPaymentSource: curSource
+        } = resetPropsRef.current;
+        setPropertyId(curPropId || curProps[0]?.id || '');
+        setPaymentMethod(curSource === '201000' ? 'DEFERRED_201000' : 'CASH_101000');
+        setScheduleNow(false);
+        setCurrentStep(1);
+        setSuccess(null);
+      }, 0);
+      return () => window.clearTimeout(resetTimer);
+    }
+  }, [isOpen]);
 
   const propertyItems: ZFCustomSelectItem[] = useMemo(() => underConstructionProperties.map(property => ({
     value: property.id,

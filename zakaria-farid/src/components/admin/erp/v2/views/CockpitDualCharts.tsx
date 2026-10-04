@@ -47,7 +47,7 @@ export const CockpitDualCharts: React.FC<CockpitDualChartsProps> = ({
   isAr,
   projects: initialProjects,
   timelineData: initialTimeline,
-  currentCashBalance = 339.2,
+  currentCashBalance = 0,
   onNavigateTab
 }) => {
   const [leftViewMode, setLeftViewMode] = useState<'comparison' | 'cad-chart'>('comparison');
@@ -74,59 +74,8 @@ export const CockpitDualCharts: React.FC<CockpitDualChartsProps> = ({
 
   // ─── 1. Canonical Project Comparison Data (Left Card) ───
   const comparisonProjects = useMemo(() => {
-    const canonicalFallback: (ProjectComparisonItem & { hasEnteredCost: boolean; isPositive: boolean })[] = [
-      {
-        name: isAr ? 'عمارة سكنية فاخرة مطلة على اللاجون' : 'Lagoon View Luxury Residential',
-        costs: 68.0,
-        sales: 95.0,
-        marginPct: '+28.4%',
-        hasEnteredCost: true,
-        isPositive: true
-      },
-      {
-        name: isAr ? 'عمارة تجارية وسكنية متكاملة - الشيخ زايد' : 'Integrated Commercial Complex - Zayed',
-        costs: 52.0,
-        sales: 69.5,
-        marginPct: '+25.2%',
-        hasEnteredCost: true,
-        isPositive: true
-      },
-      {
-        name: isAr ? 'شقة أرضي بحديقة خاصة - الشيخ زايد' : 'Ground Floor with Garden - Zayed',
-        costs: 16.5,
-        sales: 22.0,
-        marginPct: '+25.0%',
-        hasEnteredCost: true,
-        isPositive: true
-      },
-      {
-        name: isAr ? 'شقة فاخرة فيو الإنشاءات - هايسيندا واي' : 'Hacienda Waters Luxury Unit',
-        costs: 16.0,
-        sales: 21.5,
-        marginPct: '+25.6%',
-        hasEnteredCost: true,
-        isPositive: true
-      },
-      {
-        name: isAr ? 'شقة رووف كاملة مع السطح - مدينتي' : 'Full Penthouse & Roof - Madinaty',
-        costs: 12.5,
-        sales: 16.6,
-        marginPct: '+24.7%',
-        hasEnteredCost: true,
-        isPositive: true
-      },
-      {
-        name: isAr ? 'جراج تجاري واستثماري خاص - التجمع' : 'Commercial Garage - New Cairo',
-        costs: 10.5,
-        sales: 14.0,
-        marginPct: '+25.0%',
-        hasEnteredCost: true,
-        isPositive: true
-      }
-    ];
-
     if (!initialProjects || initialProjects.length === 0) {
-      return canonicalFallback;
+      return [];
     }
 
     // Invariant D2 (Honest Missing Data):
@@ -155,10 +104,6 @@ export const CockpitDualCharts: React.FC<CockpitDualChartsProps> = ({
         isPositive
       };
     });
-
-    if (mapped.length < 6) {
-      return [...mapped, ...canonicalFallback.slice(mapped.length, 6)];
-    }
 
     return mapped;
   }, [initialProjects, isAr]);
@@ -265,24 +210,15 @@ export const CockpitDualCharts: React.FC<CockpitDualChartsProps> = ({
 
   // ─── 2. Cash Flow Forecast Timeline Data (Right Card) ───
   const monthsTimeline = useMemo<CashflowTimelineMonth[]>(() => {
-    const fallbackMonths: CashflowTimelineMonth[] = [
-      { month: isAr ? 'سبتمبر' : 'Sep', inflow: 75.0, outflow: 48.0, net: 27.0 },
-      { month: isAr ? 'أكتوبر' : 'Oct', inflow: 56.0, outflow: 31.0, net: 25.0 },
-      { month: isAr ? 'نوفمبر' : 'Nov', inflow: 34.0, outflow: 20.0, net: 14.0 },
-      { month: isAr ? 'ديسمبر' : 'Dec', inflow: 25.0, outflow: 16.0, net: 9.0 },
-      { month: isAr ? 'يناير' : 'Jan', inflow: 18.0, outflow: 12.0, net: 6.0 },
-      { month: isAr ? 'فبراير' : 'Feb', inflow: 15.0, outflow: 8.0, net: 7.0 }
-    ];
-
-    if (initialTimeline && initialTimeline.length >= 6) {
+    if (initialTimeline && initialTimeline.length > 0) {
       return initialTimeline.slice(0, 6);
     }
-    return fallbackMonths;
-  }, [initialTimeline, isAr]);
+    return [];
+  }, [initialTimeline]);
 
   // Cumulative Liquidity trajectory for Liquidity Tab
   const liquidityTrajectory = useMemo(() => {
-    let balance = currentCashBalance > 0 ? currentCashBalance : 339.2;
+    let balance = currentCashBalance || 0;
     return monthsTimeline.map((m) => {
       const netDelta = m.inflow - m.outflow;
       balance += netDelta;
@@ -300,10 +236,10 @@ export const CockpitDualCharts: React.FC<CockpitDualChartsProps> = ({
   const kpiTotals = useMemo(() => {
     const sumInflow = monthsTimeline.reduce((acc, m) => acc + m.inflow, 0);
     const sumOutflow = monthsTimeline.reduce((acc, m) => acc + m.outflow, 0);
-    const totalInflow = initialTimeline ? sumInflow : 289.4;
-    const totalOutflow = initialTimeline ? sumOutflow : 162.7;
+    const totalInflow = sumInflow;
+    const totalOutflow = sumOutflow;
     const netFlow = totalInflow - totalOutflow;
-    const liquidity = currentCashBalance > 0 ? currentCashBalance : 339.2;
+    const liquidity = currentCashBalance || 0;
     return {
       totalInflow: totalInflow.toFixed(1),
       totalOutflow: totalOutflow.toFixed(1),
@@ -311,7 +247,7 @@ export const CockpitDualCharts: React.FC<CockpitDualChartsProps> = ({
       liquidity: liquidity.toFixed(1),
       isPositiveNet: netFlow >= 0
     };
-  }, [monthsTimeline, initialTimeline, currentCashBalance]);
+  }, [monthsTimeline, currentCashBalance]);
 
   // ─── Right Card ApexCharts Series & Options (CAD Cartesian Blueprint) ───
   const cashflowSeries = useMemo(() => {
@@ -605,115 +541,135 @@ export const CockpitDualCharts: React.FC<CockpitDualChartsProps> = ({
           </span>
         </div>
 
-        {/* Left View Mode 1: Executive Detailed Comparison List */}
-        {leftViewMode === 'comparison' && (
-          <div className={styles.projectListContainer}>
-            {comparisonProjects.map((proj, idx) => {
-              const salesPct = Math.min(100, Math.max(0, (proj.sales / maxProjectScale) * 100));
-              const costPct = proj.hasEnteredCost
-                ? Math.min(100, Math.max(0, (proj.costs / maxProjectScale) * 100))
-                : 0;
-              const formattedSales = formatProjectValue(proj.sales);
-              const formattedCost = formatProjectValue(proj.costs);
+        {comparisonProjects.length === 0 ? (
+          <div style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            minHeight: '200px',
+            color: '#94a3b8',
+            fontSize: '0.85rem',
+            textAlign: 'center',
+            padding: '1.5rem',
+            gap: '8px'
+          }}>
+            <Building2 size={24} style={{ opacity: 0.4 }} />
+            <span>{isAr ? 'لا توجد مشاريع بها بيانات مبيعات أو تكاليف بعد' : 'No projects with sales/cost data yet'}</span>
+          </div>
+        ) : (
+          <>
+            {/* Left View Mode 1: Executive Detailed Comparison List */}
+            {leftViewMode === 'comparison' && (
+              <div className={styles.projectListContainer}>
+                {comparisonProjects.map((proj, idx) => {
+                  const salesPct = Math.min(100, Math.max(0, (proj.sales / maxProjectScale) * 100));
+                  const costPct = proj.hasEnteredCost
+                    ? Math.min(100, Math.max(0, (proj.costs / maxProjectScale) * 100))
+                    : 0;
+                  const formattedSales = formatProjectValue(proj.sales);
+                  const formattedCost = formatProjectValue(proj.costs);
 
-              return (
-                <div
-                  key={idx}
-                  className={styles.projectRowItem}
-                  onClick={() => onNavigateTab?.('projects', { projectName: proj.name })}
-                  title={proj.name}
-                  role="button"
-                  tabIndex={0}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      onNavigateTab?.('projects', { projectName: proj.name });
-                    }
-                  }}
-                >
-                  {/* Project Title Line with Status Margin Pill */}
-                  <div className={styles.projectRowMeta}>
-                    <div className={styles.projectRowTitleArea}>
-                      <Building2 size={13} className={styles.projectRowIcon} />
-                      <span className={styles.projectRowTitle}>{proj.name}</span>
+                  return (
+                    <div
+                      key={idx}
+                      className={styles.projectRowItem}
+                      onClick={() => onNavigateTab?.('projects', { projectName: proj.name })}
+                      title={proj.name}
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          onNavigateTab?.('projects', { projectName: proj.name });
+                        }
+                      }}
+                    >
+                      {/* Project Title Line with Status Margin Pill */}
+                      <div className={styles.projectRowMeta}>
+                        <div className={styles.projectRowTitleArea}>
+                          <Building2 size={13} className={styles.projectRowIcon} />
+                          <span className={styles.projectRowTitle}>{proj.name}</span>
+                        </div>
+
+                        {/* Margin Soft Pastel Micro-Pill */}
+                        <div className={styles.projectRowPillArea}>
+                          {proj.hasEnteredCost ? (
+                            <span
+                              className={`${shellStyles.statusPill} ${proj.isPositive ? shellStyles.statusPillGreen : shellStyles.statusPillAmber}`}
+                              title={`${isAr ? 'هامش الربح على التكلفة' : 'Return on Capital Cost'}: ${proj.marginPct}`}
+                            >
+                              <bdi>{proj.marginPct}</bdi>
+                            </span>
+                          ) : (
+                            <span
+                              className={`${shellStyles.statusPill} ${shellStyles.statusPillNeutral}`}
+                              title={isAr ? 'لم تسجل تكاليف فعلية لهذا المشروع بعد' : 'No actual costs recorded yet'}
+                            >
+                              {isAr ? 'غير مُدخل' : 'N/A'}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Compact Dual Track: Paired Sales & Cost Rails + Tabular Values */}
+                      <div className={styles.projectCompactTrackRow}>
+                        <div className={styles.dualBarRail}>
+                          <div className={styles.barFillSales} style={{ width: `${salesPct}%` }} />
+                          {proj.hasEnteredCost ? (
+                            <div className={styles.barFillCost} style={{ width: `${costPct}%` }} />
+                          ) : (
+                            <div className={styles.barFillCostPlaceholder} />
+                          )}
+                        </div>
+
+                        <div className={styles.projectTrackValues}>
+                          <span className={styles.valSales}>
+                            <span className={styles.valLabel}>{isAr ? 'بيع:' : 'Sales:'}</span>
+                            <bdi>{formattedSales}</bdi>
+                          </span>
+                          <span className={styles.valDivider}>/</span>
+                          <span className={proj.hasEnteredCost ? styles.valCost : styles.valUnentered}>
+                            <span className={styles.valLabel}>{isAr ? 'تكلفة:' : 'Cost:'}</span>
+                            <bdi>{proj.hasEnteredCost ? formattedCost : (isAr ? 'غير مُدخل' : 'N/A')}</bdi>
+                          </span>
+                        </div>
+                      </div>
                     </div>
+                  );
+                })}
 
-                    {/* Margin Soft Pastel Micro-Pill */}
-                    <div className={styles.projectRowPillArea}>
-                      {proj.hasEnteredCost ? (
-                        <span
-                          className={`${shellStyles.statusPill} ${proj.isPositive ? shellStyles.statusPillGreen : shellStyles.statusPillAmber}`}
-                          title={`${isAr ? 'هامش الربح على التكلفة' : 'Return on Capital Cost'}: ${proj.marginPct}`}
-                        >
-                          <bdi>{proj.marginPct}</bdi>
-                        </span>
-                      ) : (
-                        <span
-                          className={`${shellStyles.statusPill} ${shellStyles.statusPillNeutral}`}
-                          title={isAr ? 'لم تسجل تكاليف فعلية لهذا المشروع بعد' : 'No actual costs recorded yet'}
-                        >
-                          {isAr ? 'غير مُدخل' : 'N/A'}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Compact Dual Track: Paired Sales & Cost Rails + Tabular Values */}
-                  <div className={styles.projectCompactTrackRow}>
-                    <div className={styles.dualBarRail}>
-                      <div className={styles.barFillSales} style={{ width: `${salesPct}%` }} />
-                      {proj.hasEnteredCost ? (
-                        <div className={styles.barFillCost} style={{ width: `${costPct}%` }} />
-                      ) : (
-                        <div className={styles.barFillCostPlaceholder} />
-                      )}
-                    </div>
-
-                    <div className={styles.projectTrackValues}>
-                      <span className={styles.valSales}>
-                        <span className={styles.valLabel}>{isAr ? 'بيع:' : 'Sales:'}</span>
-                        <bdi>{formattedSales}</bdi>
+                {/* Bottom Scale Axis */}
+                <div className={styles.blueprintScaleRow}>
+                  <div className={styles.blueprintScaleTicksTrack}>
+                    {[0, 25, 50, 75, 100].map((tick) => (
+                      <span
+                        key={tick}
+                        className={styles.blueprintTick}
+                        style={{ [isAr ? 'right' : 'left']: `${tick}%` }}
+                      >
+                        {tick}
                       </span>
-                      <span className={styles.valDivider}>/</span>
-                      <span className={proj.hasEnteredCost ? styles.valCost : styles.valUnentered}>
-                        <span className={styles.valLabel}>{isAr ? 'تكلفة:' : 'Cost:'}</span>
-                        <bdi>{proj.hasEnteredCost ? formattedCost : (isAr ? 'غير مُدخل' : 'N/A')}</bdi>
-                      </span>
-                    </div>
+                    ))}
                   </div>
+                  <span style={{ textAlign: 'end', fontSize: '0.64rem' }}>{unitDropdownLabel}</span>
                 </div>
-              );
-            })}
-
-            {/* Bottom Scale Axis */}
-            <div className={styles.blueprintScaleRow}>
-              <div className={styles.blueprintScaleTicksTrack}>
-                {[0, 25, 50, 75, 100].map((tick) => (
-                  <span
-                    key={tick}
-                    className={styles.blueprintTick}
-                    style={{ [isAr ? 'right' : 'left']: `${tick}%` }}
-                  >
-                    {tick}
-                  </span>
-                ))}
               </div>
-              <span style={{ textAlign: 'end', fontSize: '0.64rem' }}>{unitDropdownLabel}</span>
-            </div>
-          </div>
-        )}
+            )}
 
-        {/* Left View Mode 2: CAD Cartesian Horizontal Bar Chart */}
-        {leftViewMode === 'cad-chart' && (
-          <div className={styles.apexChartWrapper}>
-            <ERPApexChart
-              type="bar"
-              series={apexBarSeries}
-              options={apexBarOptions}
-              height={200}
-              isAr={isAr}
-            />
-          </div>
+            {/* Left View Mode 2: CAD Cartesian Horizontal Bar Chart */}
+            {leftViewMode === 'cad-chart' && (
+              <div className={styles.apexChartWrapper}>
+                <ERPApexChart
+                  type="bar"
+                  series={apexBarSeries}
+                  options={apexBarOptions}
+                  height={200}
+                  isAr={isAr}
+                />
+              </div>
+            )}
+          </>
         )}
       </div>
 
@@ -768,56 +724,76 @@ export const CockpitDualCharts: React.FC<CockpitDualChartsProps> = ({
           </div>
         </div>
 
-        {/* Legend Row */}
-        <div className={styles.chartLegendStrip}>
-          <div className={styles.chartLegendGroup}>
-            {activeRightTab === 'cashflow' ? (
-              <>
-                <span className={styles.legendItem}>
-                  <span className={styles.legendItemDot} style={{ background: '#16a34a' }} />
-                  <span>{isAr ? 'التدفق الداخل (م.ج)' : 'Inflow (M EGP)'}</span>
-                </span>
-                <span className={styles.legendItem}>
-                  <span className={styles.legendItemDot} style={{ background: '#dc2626' }} />
-                  <span>{isAr ? 'التدفق الخارج (م.ج)' : 'Outflow (M EGP)'}</span>
-                </span>
-                <span className={styles.legendItem}>
-                  <span className={styles.legendLineSample} style={{ background: 'var(--erp-accent, #2563eb)' }} />
-                  <span>{isAr ? 'صافي التدفق النقدي' : 'Net Flow'}</span>
-                </span>
-              </>
-            ) : (
-              <>
-                <span className={styles.legendItem}>
-                  <span className={styles.legendLineSample} style={{ background: 'var(--erp-accent, #2563eb)' }} />
-                  <span>{isAr ? 'السيولة التراكمية' : 'Cumulative Liquidity'}</span>
-                </span>
-                <span className={styles.legendItem}>
-                  <span className={styles.legendItemDot} style={{ background: '#0d9488' }} />
-                  <span>{isAr ? 'صافي الحركة الشهرية' : 'Monthly Delta'}</span>
-                </span>
-                <span className={styles.legendItem}>
-                  <span className={styles.legendLineSample} style={{ background: '#f59e0b', borderTop: '1px dashed #f59e0b' }} />
-                  <span>{isAr ? 'حد الأمان (50 م.ج)' : 'Safety Threshold (50M)'}</span>
-                </span>
-              </>
-            )}
+        {monthsTimeline.length === 0 ? (
+          <div style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            minHeight: '195px',
+            color: '#94a3b8',
+            fontSize: '0.85rem',
+            textAlign: 'center',
+            padding: '1.5rem',
+            gap: '8px'
+          }}>
+            <TrendingUp size={24} style={{ opacity: 0.4 }} />
+            <span>{isAr ? 'لا توجد بيانات تدفق نقدي أو توقعات سيولة بعد' : 'No cash flow or liquidity forecast data yet'}</span>
           </div>
-          <span style={{ fontSize: '0.70rem', color: '#94a3b8' }}>
-            {isAr ? 'مقياس شهري' : 'Monthly'}
-          </span>
-        </div>
+        ) : (
+          <>
+            {/* Legend Row */}
+            <div className={styles.chartLegendStrip}>
+              <div className={styles.chartLegendGroup}>
+                {activeRightTab === 'cashflow' ? (
+                  <>
+                    <span className={styles.legendItem}>
+                      <span className={styles.legendItemDot} style={{ background: '#16a34a' }} />
+                      <span>{isAr ? 'التدفق الداخل (م.ج)' : 'Inflow (M EGP)'}</span>
+                    </span>
+                    <span className={styles.legendItem}>
+                      <span className={styles.legendItemDot} style={{ background: '#dc2626' }} />
+                      <span>{isAr ? 'التدفق الخارج (م.ج)' : 'Outflow (M EGP)'}</span>
+                    </span>
+                    <span className={styles.legendItem}>
+                      <span className={styles.legendLineSample} style={{ background: 'var(--erp-accent, #2563eb)' }} />
+                      <span>{isAr ? 'صافي التدفق النقدي' : 'Net Flow'}</span>
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <span className={styles.legendItem}>
+                      <span className={styles.legendLineSample} style={{ background: 'var(--erp-accent, #2563eb)' }} />
+                      <span>{isAr ? 'السيولة التراكمية' : 'Cumulative Liquidity'}</span>
+                    </span>
+                    <span className={styles.legendItem}>
+                      <span className={styles.legendItemDot} style={{ background: '#0d9488' }} />
+                      <span>{isAr ? 'صافي الحركة الشهرية' : 'Monthly Delta'}</span>
+                    </span>
+                    <span className={styles.legendItem}>
+                      <span className={styles.legendLineSample} style={{ background: '#f59e0b', borderTop: '1px dashed #f59e0b' }} />
+                      <span>{isAr ? 'حد الأمان (50 م.ج)' : 'Safety Threshold (50M)'}</span>
+                    </span>
+                  </>
+                )}
+              </div>
+              <span style={{ fontSize: '0.70rem', color: '#94a3b8' }}>
+                {isAr ? 'مقياس شهري' : 'Monthly'}
+              </span>
+            </div>
 
-        {/* CAD Blueprint Cartesian ApexChart via ERPApexChart */}
-        <div className={styles.apexChartWrapper}>
-          <ERPApexChart
-            type="line"
-            series={cashflowSeries}
-            options={cashflowOptions}
-            height={195}
-            isAr={isAr}
-          />
-        </div>
+            {/* CAD Blueprint Cartesian ApexChart via ERPApexChart */}
+            <div className={styles.apexChartWrapper}>
+              <ERPApexChart
+                type="line"
+                series={cashflowSeries}
+                options={cashflowOptions}
+                height={195}
+                isAr={isAr}
+              />
+            </div>
+          </>
+        )}
 
         {/* ─── Refined Borderless Executive Telemetry Strip (Bottom) ─── */}
         <div className={styles.cockpitTelemetryStrip}>
