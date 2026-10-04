@@ -507,7 +507,7 @@ export function PropertyLifecycleAuditModal({
                           {isAr ? 'المنصرف الفعلي:' : 'WIP Incurred:'}
                         </span>
                         <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#946f23', fontVariantNumeric: 'tabular-nums' }}>
-                          {formatEGP(wipTotal)} ج.م
+                          {formatEGP(wipTotal)}
                         </span>
                       </div>
 
@@ -706,7 +706,7 @@ export function PropertyLifecycleAuditModal({
                         color: hasCosts ? phase.color : '#94a3b8',
                         fontVariantNumeric: 'tabular-nums'
                       }}>
-                        {hasCosts ? `${formatEGP(phaseData.total)} ج.م` : '—'}
+                        {hasCosts ? `${formatEGP(phaseData.total)}` : '—'}
                       </div>
 
                       {/* Item Count */}
@@ -745,7 +745,7 @@ export function PropertyLifecycleAuditModal({
                       </span>
                       <span>•</span>
                       <span style={{ fontVariantNumeric: 'tabular-nums' }}>
-                        {formatEGP(activeCategoryBreakdown.totalBase)} ج.م
+                        {formatEGP(activeCategoryBreakdown.totalBase)}
                       </span>
                     </span>
                   ) : (
@@ -852,7 +852,7 @@ export function PropertyLifecycleAuditModal({
                           color: hasCosts ? cat.color : '#94a3b8', 
                           fontVariantNumeric: 'tabular-nums' 
                         }}>
-                          {hasCosts ? `${formatEGP(catData.total)} ج.م` : '—'}
+                          {hasCosts ? `${formatEGP(catData.total)}` : '—'}
                         </span>
                         <span style={{ fontSize: '0.68rem', color: '#64748b' }}>
                           {catData?.count || 0} {isAr ? 'فواتير' : 'invoices'}
@@ -1214,12 +1214,12 @@ export function PropertyLifecycleAuditModal({
 
                               {/* Unit Cost */}
                               <td className={styles.td} style={{ color: '#64748b', whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>
-                                {formatEGP(item.unit_cost_egp)} ج.م
+                                {formatEGP(item.unit_cost_egp)}
                               </td>
 
                               {/* Total Cost */}
                               <td className={styles.td} style={{ fontWeight: 800, color: '#0f172a', whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>
-                                {formatEGP(item.total_cost_egp)} ج.م
+                                {formatEGP(item.total_cost_egp)}
                               </td>
 
                               {/* Status */}
@@ -1302,9 +1302,9 @@ export function PropertyLifecycleAuditModal({
         <div className={styles.modalFooter}>
           <div className={styles.footerSummary}>
             {isAr ? (
-              <>إجمالي المصاريف الموثقة للعمارة: <strong className={styles.footerSummaryHighlight}>{formatEGP(metrics.totalLoggedCost)} ج.م</strong> عبر {metrics.itemsCount} بنداً معتمداً</>
+              <>إجمالي المصاريف الموثقة للعمارة: <strong className={styles.footerSummaryHighlight}>{formatEGP(metrics.totalLoggedCost)}</strong> عبر {metrics.itemsCount} بنداً معتمداً</>
             ) : (
-              <>Total audited expenditure: <strong className={styles.footerSummaryHighlight}>{formatEGP(metrics.totalLoggedCost)} EGP</strong> across {metrics.itemsCount} items</>
+              <>Total audited expenditure: <strong className={styles.footerSummaryHighlight}>{formatEGP(metrics.totalLoggedCost)}</strong> across {metrics.itemsCount} items</>
             )}
           </div>
 

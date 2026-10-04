@@ -244,7 +244,7 @@ export const RSVAllocationModal: React.FC<RSVAllocationModalProps> = ({
                     {isAr ? 'إجمالي المبيعات المستهدفة للمشروع:' : 'Target Sales Value:'}
                   </span>
                   <strong style={{ color: '#0f172a', fontSize: '1.05rem', fontVariantNumeric: 'tabular-nums', display: 'block', marginTop: '0.15rem' }}>
-                    {formatEGP(saveSuccessData.salesValue)} ج.م
+                    {formatEGP(saveSuccessData.salesValue)}
                   </strong>
                 </div>
 
@@ -253,7 +253,7 @@ export const RSVAllocationModal: React.FC<RSVAllocationModalProps> = ({
                     {isAr ? 'مصاريف البناء المعتمدة (WIP):' : 'Incurred WIP / Construction:'}
                   </span>
                   <strong style={{ color: '#0f172a', fontSize: '1.05rem', fontVariantNumeric: 'tabular-nums', display: 'block', marginTop: '0.15rem' }}>
-                    {formatEGP(saveSuccessData.wipAmount)} ج.م
+                    {formatEGP(saveSuccessData.wipAmount)}
                   </strong>
                 </div>
 

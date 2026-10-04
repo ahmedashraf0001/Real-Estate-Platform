@@ -502,7 +502,7 @@ export const RescissionSettlementModal: React.FC<RescissionSettlementModalProps>
                         {isAr ? 'قيمة العقد الأصلية:' : 'Gross Contract Value:'}
                       </span>
                       <strong style={{ color: '#0f172a', fontSize: '0.95rem', fontVariantNumeric: 'tabular-nums' }}>
-                        {formatEGP(rescissionSuccess.grossContractValue)} ج.م
+                        {formatEGP(rescissionSuccess.grossContractValue)}
                       </strong>
                     </div>
 
@@ -511,7 +511,7 @@ export const RescissionSettlementModal: React.FC<RescissionSettlementModalProps>
                         {isAr ? 'إجمالي المحصل بالخزينة:' : 'Total Cash Collected:'}
                       </span>
                       <strong style={{ color: '#0f172a', fontSize: '0.95rem', fontVariantNumeric: 'tabular-nums' }}>
-                        {formatEGP(rescissionSuccess.totalCashCollected)} ج.م
+                        {formatEGP(rescissionSuccess.totalCashCollected)}
                       </strong>
                     </div>
 
@@ -520,7 +520,7 @@ export const RescissionSettlementModal: React.FC<RescissionSettlementModalProps>
                         {isAr ? 'غرامة الفسخ المحتجزة (حد حظر مطالبة العميل بعجز إضافي):' : 'Retained Penalty (Forfeiture Floor):'}
                       </span>
                       <strong style={{ color: '#946f23', fontSize: '1.05rem', fontWeight: 900, fontVariantNumeric: 'tabular-nums' }}>
-                        {formatEGP(rescissionSuccess.penaltyRetained)} ج.م
+                        {formatEGP(rescissionSuccess.penaltyRetained)}
                       </strong>
                       <span style={{ fontSize: '0.65rem', color: '#946f23', display: 'block', marginTop: '0.2rem' }}>
                         {isAr ? 'تم تطبيق حد حظر مطالبة العميل بعجز إضافي (Forfeiture Floor)' : 'Forfeiture Floor rule applied'}
@@ -532,7 +532,7 @@ export const RescissionSettlementModal: React.FC<RescissionSettlementModalProps>
                         {isAr ? 'صافي رد العميل المستحق (حساب 206200):' : 'Net Refund Liability (206200):'}
                       </span>
                       <strong style={{ color: '#059669', fontSize: '1.05rem', fontWeight: 900, fontVariantNumeric: 'tabular-nums' }}>
-                        {formatEGP(rescissionSuccess.netRefundLiability)} ج.م
+                        {formatEGP(rescissionSuccess.netRefundLiability)}
                       </strong>
                     </div>
                   </div>

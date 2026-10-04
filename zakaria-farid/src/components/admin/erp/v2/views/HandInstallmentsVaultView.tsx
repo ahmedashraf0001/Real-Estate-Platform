@@ -169,6 +169,14 @@ export const HandInstallmentsVaultView: React.FC<HandInstallmentsVaultViewProps>
     return calculateFinancialAgendaKPIs(projectedItems, projectedOutflows, todayStr);
   }, [projectedItems, projectedOutflows, todayStr]);
 
+  // Cash-basis projected liquidity: GL cash (101000 + 102000) + open scheduled collections − open payables
+  const erpCtx = useERPWorkstationContext();
+  const glJournalEntries = erpCtx?.data?.journalEntries;
+  const projectedLiquidity = useMemo(() => {
+    const glCash = getAvailableCash(glJournalEntries || []).totalCash;
+    return glCash.plus(agendaKPIs.netScheduledFlow);
+  }, [glJournalEntries, agendaKPIs.netScheduledFlow]);
+
   // 5. TODAY'S AGENDA REAL DUES
   const todayAgendaItems = useMemo(() => {
     return projectedItems
@@ -889,8 +897,8 @@ export const HandInstallmentsVaultView: React.FC<HandInstallmentsVaultViewProps>
       <ZFKpiGrid style={{ marginBottom: '1.25rem' }}>
         {/* Card 1: Inflows (Client Dues) */}
         <ZFKpiCard
-          title={isAr ? 'المقبوضات الواردة (أقساط العملاء)' : 'Inflow Receivables (Clients)'}
-          value={agendaKPIs.inflowsTotal}
+          title={isAr ? 'تحصيلات مجدولة (خارج الدفاتر)' : 'Scheduled collections (off-ledger)'}
+          value={agendaKPIs.inflowsRemaining}
           currency={isAr ? 'ج.م' : 'EGP'}
           icon={<Wallet size={16} />}
           accentColor="emerald"
@@ -935,19 +943,19 @@ export const HandInstallmentsVaultView: React.FC<HandInstallmentsVaultViewProps>
 
         {/* Card 3: Net Cashflow (Treasury Spread) */}
         <ZFKpiCard
-          title={isAr ? 'صافي التدفق المتوقع (السيولة)' : 'Net Projected Flow (Liquidity)'}
-          value={agendaKPIs.netProjectedCashflow}
+          title={isAr ? 'السيولة المتوقعة (نقدية + مجدول)' : 'Projected liquidity (cash + scheduled)'}
+          value={projectedLiquidity}
           currency={isAr ? 'ج.م' : 'EGP'}
           icon={<Layers size={16} />}
-          accentColor={agendaKPIs.netProjectedCashflow.gte(0) ? 'blue' : 'rose'}
+          accentColor={projectedLiquidity.gte(0) ? 'blue' : 'rose'}
           showSparkline={true}
           sparklineData={[25, 30, 24, 38, 45, 48, 52, 60]}
           delta={{
-            value: isAr ? (agendaKPIs.netProjectedCashflow.gte(0) ? 'فائض سيولة' : 'عجز سيولة') : (agendaKPIs.netProjectedCashflow.gte(0) ? 'Surplus' : 'Deficit'),
-            isPositive: agendaKPIs.netProjectedCashflow.gte(0)
+            value: isAr ? (projectedLiquidity.gte(0) ? 'فائض سيولة' : 'عجز سيولة') : (projectedLiquidity.gte(0) ? 'Surplus' : 'Deficit'),
+            isPositive: projectedLiquidity.gte(0)
           }}
-          subtitleLabel={isAr ? 'الفارق' : 'Net Spread'}
-          subtitleValue={`${agendaKPIs.netProjectedCashflow.formatEGP(isAr)} ج.م`}
+          subtitleLabel={isAr ? 'صافي المجدول' : 'Net scheduled'}
+          subtitleValue={agendaKPIs.netScheduledFlow.formatEGP(isAr)}
           onClick={() => {
             setTableSelection('both');
             setMaturityTab('all');
@@ -1013,8 +1021,8 @@ export const HandInstallmentsVaultView: React.FC<HandInstallmentsVaultViewProps>
               </div>
               <div style={{ fontSize: '0.74rem', color: '#64748b' }}>
                 {isAr 
-                  ? `إجمالي المبالغ العاجلة: ${agendaKPIs.urgentSum.formatEGP(isAr)} ج.م (متأخرات ومستحقات اليوم)` 
-                  : `Total urgent balance: ${agendaKPIs.urgentSum.formatEGP(isAr)} EGP`}
+                  ? `إجمالي المبالغ العاجلة: ${agendaKPIs.urgentSum.formatEGP(isAr)} (متأخرات ومستحقات اليوم)` 
+                  : `Total urgent balance: ${agendaKPIs.urgentSum.formatEGP(isAr)}`}
               </div>
             </div>
           </div>
@@ -1316,7 +1324,7 @@ export const HandInstallmentsVaultView: React.FC<HandInstallmentsVaultViewProps>
                   <span className={`${styles.statusPill} ${styles.statusPillGreen}`} style={{ fontSize: '0.72rem', padding: '0.2rem 0.65rem' }}>
                     {isAr ? 'إجمالي المحصل: ' : 'Cleared: '}
                     <strong style={{ fontVariantNumeric: 'tabular-nums', marginInlineStart: '0.25rem' }}>
-                      {agendaKPIs.inflowsCleared.formatEGP(isAr)} ج.م
+                      {agendaKPIs.inflowsCleared.formatEGP(isAr)}
                     </strong>
                   </span>
                   <span className={`${styles.statusPill} ${styles.statusPillNeutral}`} style={{ fontSize: '0.72rem', padding: '0.2rem 0.65rem' }}>
@@ -1602,7 +1610,7 @@ export const HandInstallmentsVaultView: React.FC<HandInstallmentsVaultViewProps>
                   <span className={`${styles.statusPill} ${styles.statusPillAmber}`} style={{ fontSize: '0.72rem', padding: '0.2rem 0.65rem' }}>
                     {isAr ? 'إجمالي المسدد: ' : 'Paid: '}
                     <strong style={{ fontVariantNumeric: 'tabular-nums', marginInlineStart: '0.25rem' }}>
-                      {agendaKPIs.outflowsPaid.formatEGP(isAr)} ج.م
+                      {agendaKPIs.outflowsPaid.formatEGP(isAr)}
                     </strong>
                   </span>
                   <span className={`${styles.statusPill} ${styles.statusPillNeutral}`} style={{ fontSize: '0.72rem', padding: '0.2rem 0.65rem' }}>
@@ -2054,12 +2062,12 @@ export const HandInstallmentsVaultView: React.FC<HandInstallmentsVaultViewProps>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.4rem' }}>
                   <span style={{ color: '#64748b' }}>{isAr ? 'القيمة الإجمالية:' : 'Total Amount:'}</span>
-                  <strong style={{ fontVariantNumeric: 'tabular-nums' }}>{D(settlingOutflowItem.totalAmount).formatEGP(isAr)} ج.م</strong>
+                  <strong style={{ fontVariantNumeric: 'tabular-nums' }}>{D(settlingOutflowItem.totalAmount).formatEGP(isAr)}</strong>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px dashed #cbd5e1', paddingTop: '0.4rem' }}>
                   <span style={{ color: '#64748b', fontWeight: 700 }}>{isAr ? 'المتبقي المستحق للسداد:' : 'Remaining Due:'}</span>
                   <strong style={{ color: '#d97706', fontVariantNumeric: 'tabular-nums', fontSize: '0.92rem' }}>
-                    {D(settlingOutflowItem.remainingAmount).formatEGP(isAr)} ج.م
+                    {D(settlingOutflowItem.remainingAmount).formatEGP(isAr)}
                   </strong>
                 </div>
               </div>
