@@ -1107,7 +1107,7 @@ export const ContractRescissionsView: React.FC<ContractRescissionsViewProps> = (
           title={isAr ? 'سداد مسترد الفسخ للعميل' : 'Pay Rescission Refund'}
           subtitle={
             isAr
-              ? `عقد #${contracts.find(c => c.contract_id === payRefundTarget.contract_id)?.contract_number || payRefundTarget.contract_id.slice(0, 8)} — العميل: ${localizeBuyerName(contracts.find(c => c.contract_id === payRefundTarget.contract_id)?.buyer_name, isAr)}`
+              ? `عقد #${contracts.find(c => c.contract_id === payRefundTarget.contract_id)?.contract_number || payRefundTarget.contract_id.slice(0, 8)} — العميل: ${localizeBuyerName(contracts.find(c => c.contract_id === payRefundTarget.contract_id)?.buyer_name || '')}`
               : `Contract #${contracts.find(c => c.contract_id === payRefundTarget.contract_id)?.contract_number || payRefundTarget.contract_id.slice(0, 8)} — Buyer: ${contracts.find(c => c.contract_id === payRefundTarget.contract_id)?.buyer_name || 'Client'}`
           }
           icon={<DollarSign size={20} color="#059669" />}
