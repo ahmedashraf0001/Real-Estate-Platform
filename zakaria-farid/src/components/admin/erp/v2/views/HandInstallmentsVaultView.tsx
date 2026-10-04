@@ -53,6 +53,8 @@ import {
 import { InstallmentDetailDrawer } from './installments/InstallmentDetailDrawer';
 import { InstallmentsCalendarStrip } from './installments/InstallmentsCalendarStrip';
 import { InstallmentsAnalyticsCharts } from './installments/InstallmentsAnalyticsCharts';
+import { useERPWorkstationContext } from '../../context/ERPWorkstationContext';
+import { getAvailableCash } from '@/lib/erp/canonicalMetrics';
 import styles from '../ZFWorkstationShell.module.css';
 
 // Format number with thousands commas

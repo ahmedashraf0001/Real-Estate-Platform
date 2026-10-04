@@ -60,7 +60,7 @@ export const PropertiesInventoryKpis: React.FC<PropertiesInventoryKpisProps> = (
     if (avgPriceNum > 0) {
       return avgPriceNum.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     }
-    return '47,888.84';
+    return '0.00';
   }, [avgPriceNum]);
 
   // Card 1 Gauge Needle Position
@@ -68,18 +68,15 @@ export const PropertiesInventoryKpis: React.FC<PropertiesInventoryKpisProps> = (
   const gaugeMin = 32000;
   const gaugeMax = 65000;
   const needlePct = useMemo(() => {
-    const val = avgPriceNum > 0 ? avgPriceNum : 47888.84;
-    const clamped = Math.max(gaugeMin, Math.min(gaugeMax, val));
+    if (avgPriceNum <= 0) return 0;
+    const clamped = Math.max(gaugeMin, Math.min(gaugeMax, avgPriceNum));
     return Math.round(((clamped - gaugeMin) / (gaugeMax - gaugeMin)) * 100);
   }, [avgPriceNum]);
 
   // Format Card 2 (Available Inventory)
   const availValNum = availableInventoryVal?.toNumber() || 0;
   const displayAvailVal = useMemo(() => {
-    if (availValNum > 0) {
-      return Math.round(availValNum).toLocaleString('en-US');
-    }
-    return '176,796,040';
+    return Math.round(availValNum).toLocaleString('en-US');
   }, [availValNum]);
 
   const availPct = useMemo(() => {
@@ -87,25 +84,19 @@ export const PropertiesInventoryKpis: React.FC<PropertiesInventoryKpisProps> = (
     if (total > 0 && availValNum > 0) {
       return Math.min(100, Math.max(0, Math.round((availValNum / total) * 100)));
     }
-    return 68;
+    return 0;
   }, [totalCatalogVal, availValNum]);
 
   // Format Card 3 (WIP Capital Invested)
   const wipNum = totalWipInvested?.toNumber() || 0;
   const displayWipVal = useMemo(() => {
-    if (wipNum > 0) {
-      return Math.round(wipNum).toLocaleString('en-US');
-    }
-    return '170,000';
+    return Math.round(wipNum).toLocaleString('en-US');
   }, [wipNum]);
 
   // Format Card 4 (Contracted Sales)
   const salesNum = contractedSalesVal?.toNumber() || 0;
   const displaySalesVal = useMemo(() => {
-    if (salesNum > 0) {
-      return Math.round(salesNum).toLocaleString('en-US');
-    }
-    return '141,999,998';
+    return Math.round(salesNum).toLocaleString('en-US');
   }, [salesNum]);
 
   const soldPct = useMemo(() => {
@@ -113,14 +104,14 @@ export const PropertiesInventoryKpis: React.FC<PropertiesInventoryKpisProps> = (
     if (total > 0 && salesNum > 0) {
       return Math.min(100, Math.max(0, Math.round((salesNum / total) * 100)));
     }
-    return 45;
+    return 0;
   }, [totalCatalogVal, salesNum]);
 
   const totalAreaNum = totalAreaSqm?.toNumber() || 0;
-  const displayArea = totalAreaNum > 0 ? Math.round(totalAreaNum).toLocaleString('en-US') : '6,657';
-  const displayUnits = totalUnitsCount > 0 ? totalUnitsCount : 25;
-  const displayAvailUnits = availableUnitsCount > 0 ? availableUnitsCount : 15;
-  const displayCostCount = costItemsCount > 0 ? costItemsCount : 3;
+  const displayArea = totalAreaNum > 0 ? Math.round(totalAreaNum).toLocaleString('en-US') : '0';
+  const displayUnits = totalUnitsCount;
+  const displayAvailUnits = availableUnitsCount;
+  const displayCostCount = costItemsCount !== undefined ? costItemsCount : 0;
 
   return (
     <div className={styles.outerPanel} dir={isAr ? 'rtl' : 'ltr'}>
@@ -379,8 +370,18 @@ export const PropertiesInventoryKpis: React.FC<PropertiesInventoryKpisProps> = (
             </div>
           </div>
 
-          {/* Clean empty bottom area to match height with Cards 1-3 */}
-          <div className={styles.card4BottomSpacer} />
+          {/* Sub-row: Real Contracted Units matching Cards 2 and 3 */}
+          <div className={styles.bottomMetaRow}>
+            <div className={styles.metaTextGroup}>
+              <span className={styles.metaSecondary}>
+                {isAr ? 'الوحدات المتعاقد عليها' : 'Contracted Units'}
+              </span>
+              <span className={styles.metaPrimary}>
+                {contractedUnitsCount} {isAr ? 'وحدة' : 'units'}
+              </span>
+            </div>
+            <FileText size={18} className={styles.metaIcon} />
+          </div>
         </div>
       </div>
     </div>

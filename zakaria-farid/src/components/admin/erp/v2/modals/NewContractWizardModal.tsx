@@ -470,10 +470,40 @@ export const NewContractWizardModal: React.FC<NewContractWizardModalProps> = ({
 
   // Sectioned Properties for Custom Dropdown (strictly filters out fully sold properties)
   const propertySections: ZFCustomSelectSection[] = useMemo(() => {
-    const zayedItems: ZFCustomSelectItem[] = [];
-    const cairoItems: ZFCustomSelectItem[] = [];
-    const coastItems: ZFCustomSelectItem[] = [];
-    const otherItems: ZFCustomSelectItem[] = [];
+    const sectionsMap = new Map<string, ZFCustomSelectSection>();
+
+    const getPropertySection = (p: Property): { id: string; titleAr: string; titleEn: string } => {
+      const rawLoc = (p.location || '').trim();
+      const districtAr = (p as any).district_ar?.trim();
+      const districtEn = (p as any).district?.trim();
+      const cityAr = (p as any).city_ar?.trim();
+      const cityEn = (p as any).city?.trim();
+
+      if (districtAr || districtEn) {
+        const titleAr = districtAr || districtEn || rawLoc;
+        const titleEn = districtEn || districtAr || rawLoc;
+        const id = (districtEn || districtAr || 'district').toLowerCase().replace(/\s+/g, '_');
+        return { id, titleAr, titleEn };
+      }
+
+      if (rawLoc) {
+        const id = rawLoc.toLowerCase().replace(/[^a-z0-9\u0600-\u06FF]/gi, '_');
+        return { id, titleAr: rawLoc, titleEn: rawLoc };
+      }
+
+      if (cityAr || cityEn) {
+        const titleAr = cityAr || cityEn;
+        const titleEn = cityEn || cityAr;
+        const id = (cityEn || cityAr).toLowerCase().replace(/\s+/g, '_');
+        return { id, titleAr, titleEn };
+      }
+
+      return {
+        id: 'general_portfolio',
+        titleAr: isAr ? 'محفظة المشروعات والأصول العقارية' : 'Properties Portfolio',
+        titleEn: 'Properties Portfolio'
+      };
+    };
 
     (properties || []).forEach(p => {
       // 1. Strictly filter out fully sold properties (Item 6 & 7)
@@ -483,9 +513,6 @@ export const NewContractWizardModal: React.FC<NewContractWizardModalProps> = ({
       }
 
       const summary = getPropertyInventorySummary(p, contracts);
-      const loc = (p.location || '').toLowerCase();
-      const title = ((p.title_ar || '') + ' ' + (p.title_en || '')).toLowerCase();
-
       let sublabelAr = `${p.location || (isAr ? 'الموقع مسجل' : 'Registered Location')}${p.area_sqm ? ` • ${p.area_sqm} م²` : ''}`;
       let sublabelEn = `${p.location || 'Location'}${p.area_sqm ? ` • ${p.area_sqm} m²` : ''}`;
       let badge = isAr ? 'متاح للتعاقد' : 'Available';
@@ -513,55 +540,22 @@ export const NewContractWizardModal: React.FC<NewContractWizardModalProps> = ({
         icon: Building2
       };
 
-      if (loc.includes('زايد') || loc.includes('أكتوبر') || loc.includes('zayed') || loc.includes('october') || title.includes('زايد')) {
-        zayedItems.push(item);
-      } else if (loc.includes('تجمع') || loc.includes('قاهرة') || loc.includes('cairo') || loc.includes('tagamoa') || title.includes('تجمع') || title.includes('نرجس') || title.includes('ياسمين')) {
-        cairoItems.push(item);
-      } else if (loc.includes('ساحل') || loc.includes('سخنة') || loc.includes('جونة') || loc.includes('coast') || loc.includes('sokhna') || loc.includes('red sea') || title.includes('ساحل') || title.includes('جونة') || title.includes('سخنة')) {
-        coastItems.push(item);
-      } else {
-        otherItems.push(item);
+      const secInfo = getPropertySection(p);
+      let section = sectionsMap.get(secInfo.id);
+      if (!section) {
+        section = {
+          sectionId: secInfo.id,
+          titleAr: secInfo.titleAr,
+          titleEn: secInfo.titleEn,
+          icon: Building2,
+          items: []
+        };
+        sectionsMap.set(secInfo.id, section);
       }
+      section.items.push(item);
     });
 
-    const res: ZFCustomSelectSection[] = [];
-    if (zayedItems.length > 0) {
-      res.push({
-        sectionId: 'zayed',
-        titleAr: 'مشروعات الشيخ زايد و 6 أكتوبر',
-        titleEn: 'Sheikh Zayed & 6th of October Projects',
-        icon: Building2,
-        items: zayedItems
-      });
-    }
-    if (cairoItems.length > 0) {
-      res.push({
-        sectionId: 'cairo',
-        titleAr: 'مشروعات التجمع الخامس والقاهرة الجديدة',
-        titleEn: 'New Cairo & Fifth Settlement Projects',
-        icon: Building2,
-        items: cairoItems
-      });
-    }
-    if (coastItems.length > 0) {
-      res.push({
-        sectionId: 'coast',
-        titleAr: 'مشروعات الساحل الشمالي والعين السخنة',
-        titleEn: 'North Coast & Red Sea Resort Units',
-        icon: Building2,
-        items: coastItems
-      });
-    }
-    if (otherItems.length > 0) {
-      res.push({
-        sectionId: 'other',
-        titleAr: 'محفظة المشروعات والأصول العقارية',
-        titleEn: 'Other Prime Properties Portfolio',
-        icon: Building2,
-        items: otherItems
-      });
-    }
-    return res;
+    return Array.from(sectionsMap.values());
   }, [properties, contracts, selectedPropertyId, isAr]);
 
   // Sectioned Leads for CRM Dropdown

@@ -325,6 +325,8 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
     let totalDebits = D(0);
     let totalCredits = D(0);
     let totalNetBalance = D(0);
+    let totalDebitNatureBalance = D(0);
+    let totalCreditNatureBalance = D(0);
     let totalAccountsWithActivity = 0;
     let mainAccountsCount = 0;
     let subAccountsCount = 0;
@@ -350,16 +352,23 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
       }
       if (acc.normal_balance === 'DEBIT') {
         debitNatureCount++;
+        totalDebitNatureBalance = totalDebitNatureBalance.plus(net);
       } else {
         creditNatureCount++;
+        totalCreditNatureBalance = totalCreditNatureBalance.plus(net);
       }
     });
+
+    const balanceDelta = totalDebitNatureBalance.minus(totalCreditNatureBalance);
 
     return {
       count: filteredCoaAccounts.length,
       totalDebits,
       totalCredits,
       totalNetBalance,
+      totalDebitNatureBalance,
+      totalCreditNatureBalance,
+      balanceDelta,
       totalAccountsWithActivity,
       mainAccountsCount,
       subAccountsCount,
@@ -657,15 +666,26 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
       const desc = (entry.description || '').toLowerCase();
       const codes = (entry.lines || []).map(l => l.account_code);
       const mod = (entry.source_module as string) || '';
-      const isSales = mod === 'SALES' || mod === 'COLLECTION' || codes.some(c => c.startsWith('4') || c === '103000') || /مبيع|إيراد|بيع|دفعة|تعاقد|حجز|قسط|تحصيل/.test(desc);
+      const num = (entry.entry_number || '').toUpperCase();
+
+      const isCollectionReceipt = 
+        num.startsWith('JE-RCP-') || 
+        num.startsWith('JE-IP-') || 
+        num.startsWith('JE-COL-') || 
+        mod === 'PDC' || 
+        mod === 'COLLECTION' || 
+        codes.some(c => c === '203000' || c === '103200') || 
+        /تحصيل|إيصال|إنستاباي|انستاباي|مقدم|مقدمة|receipt|collection|instapay/i.test(desc);
+
+      const isSales = isCollectionReceipt || mod === 'SALES' || codes.some(c => c.startsWith('4') || c === '103000') || /مبيع|إيراد|بيع|دفعة|تعاقد|حجز|قسط/.test(desc);
       const isExpenses = codes.some(c => c.startsWith('5') || c.startsWith('6')) || /مصروف|رواتب|أجور|صيانة|إيجار|كهرباء|تشغيل|إدارية/.test(desc);
-      const isPurchases = mod === 'PAYABLES' || codes.some(c => c.startsWith('201') || c.startsWith('202') || c.startsWith('204')) || /شراء|مشتريات|توريد|خامات|أصناف|مقاول/.test(desc);
+      const isPurchases = !isCollectionReceipt && (mod === 'PAYABLES' || codes.some(c => c.startsWith('201') || c.startsWith('202') || c.startsWith('204')) || /شراء|مشتريات|توريد|خامات|أصناف|مقاول/.test(desc));
       const isInvestment = mod === 'CAPITAL_CALL' || mod === 'PARTNER_EQUITY' || codes.some(c => c.startsWith('3') || c.startsWith('105')) || /رأس المال|استثمار|حصة|أرباح|تمويل|شريك/.test(desc);
 
-      if (isPurchases) {
-        purchasesCount++;
-      } else if (isSales) {
+      if (isSales) {
         salesCount++;
+      } else if (isPurchases) {
+        purchasesCount++;
       } else if (isExpenses) {
         expensesCount++;
       } else if (isInvestment) {
@@ -2307,8 +2327,8 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
 
                           {/* 7. Status pill */}
                           <td className={css.canonicalTd} style={{ textAlign: 'center' }}>
-                            <span className={`${css.statusPill} ${css.statusPillGreen}`}>
-                              {isAr ? 'نشط' : 'Active'}
+                            <span className={`${css.statusPill} ${acc.is_active !== false ? css.statusPillGreen : css.statusPillNeutral}`}>
+                              {acc.is_active !== false ? (isAr ? 'نشط' : 'Active') : (isAr ? 'معطّل' : 'Inactive')}
                             </span>
                           </td>
 
@@ -2355,7 +2375,28 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
                       {isAr ? `${coaFilteredTotals.debitNatureCount} مدين / ${coaFilteredTotals.creditNatureCount} دائن` : `${coaFilteredTotals.debitNatureCount} Dr / ${coaFilteredTotals.creditNatureCount} Cr`}
                     </td>
                     <td className={css.canonicalTd} style={{ textAlign: isAr ? 'left' : 'right' }}>
-                      <ERPLedgerAmount value={coaFilteredTotals.totalNetBalance} isAr={isAr} style={{ fontWeight: 800 }} />
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem', fontSize: '0.74rem' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.5rem', color: '#1e40af' }}>
+                          <span style={{ fontWeight: 600 }}>{isAr ? 'مدين:' : 'Dr:'}</span>
+                          <ERPLedgerAmount value={coaFilteredTotals.totalDebitNatureBalance} isAr={isAr} style={{ fontWeight: 700 }} />
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.5rem', color: '#b45309' }}>
+                          <span style={{ fontWeight: 600 }}>{isAr ? 'دائن:' : 'Cr:'}</span>
+                          <ERPLedgerAmount value={coaFilteredTotals.totalCreditNatureBalance} isAr={isAr} style={{ fontWeight: 700 }} />
+                        </div>
+                        <div style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          gap: '0.5rem',
+                          borderTop: '1px dashed #cbd5e1',
+                          paddingTop: '0.15rem',
+                          color: coaFilteredTotals.balanceDelta.isZero() ? '#15803d' : '#b91c1c',
+                          fontWeight: 800
+                        }}>
+                          <span>{isAr ? 'الفارق (Δ):' : 'Δ Check:'}</span>
+                          <span>{coaFilteredTotals.balanceDelta.isZero() ? (isAr ? '٠.٠٠ (متزن ✓)' : '0.00 (Balanced ✓)') : coaFilteredTotals.balanceDelta.formatEGP(isAr)}</span>
+                        </div>
+                      </div>
                     </td>
                     <td className={css.canonicalTd} style={{ textAlign: 'center', fontSize: '0.70rem', color: '#16a34a' }}>
                       {isAr ? `${coaFilteredTotals.totalAccountsWithActivity} بحركة` : `${coaFilteredTotals.totalAccountsWithActivity} active`}

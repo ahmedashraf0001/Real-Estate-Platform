@@ -221,10 +221,12 @@ export const OperationsSideWidgets: React.FC<OperationsSideWidgetsProps> = ({
               </h3>
               <div className={css.subtitleWithBadge}>
                 <span className={css.amberBadge}>
-                  {isAr ? `${upcomingDues.totalCount} مستحق` : `${upcomingDues.totalCount} Dues`}
+                  {upcomingDues.totalOut && !upcomingDues.totalOut.eq(0)
+                    ? (isAr ? `${upcomingDues.totalCount} مستحق والتزام` : `${upcomingDues.totalCount} Dues & Payables`)
+                    : (isAr ? `${upcomingDues.totalCount} مستحق` : `${upcomingDues.totalCount} Dues`)}
                 </span>
                 <span className={css.cardSubtitle}>
-                  {isAr ? 'مستحقات خلال 7 أيام قادمة' : 'Dues in next 7 days'}
+                  {isAr ? 'الاستحقاقات والتحصيلات خلال الفترة القادمة' : 'Dues & collections in upcoming period'}
                 </span>
               </div>
             </div>

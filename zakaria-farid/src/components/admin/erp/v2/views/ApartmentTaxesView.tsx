@@ -19,6 +19,7 @@ import {
   ArrowUpDown,
   RotateCcw
 } from 'lucide-react';
+import { toast } from 'sonner';
 import { ERPTaxRecord, ERPContract, ERPPropertyCostItem } from '@/lib/erp/types';
 import { Property } from '@/lib/supabase/types';
 import { D } from '@/lib/erp/math';
@@ -28,6 +29,8 @@ import { ZFPagination } from '../ZFPagination';
 import { ZFKpiCard } from '../ZFKpiCard';
 import { ZFFilterToolbar } from '../ZFFilterToolbar';
 import { ZFErpBreadcrumb } from '../common/ZFErpBreadcrumb';
+import { ZFModalShell } from '../common/ZFModalShell';
+import { useERPWorkstation } from '../../context/ERPWorkstationContext';
 import styles from '../ZFWorkstationShell.module.css';
 
 export interface ApartmentTaxesViewProps {
@@ -40,6 +43,15 @@ export interface ApartmentTaxesViewProps {
   onRemitTax: (taxId: string) => void;
   onInspectTax: (tax: ERPTaxRecord) => void;
   onOpenCostModal?: (propertyId?: string) => void;
+  onRecordTax?: (taxData: {
+    contract_id: string;
+    tax_type: string;
+    taxable_base: string | number;
+    tax_rate?: string | number;
+    tax_amount: string | number;
+    date?: string;
+    notes?: string;
+  }) => Promise<any> | void;
 }
 
 export const ApartmentTaxesView: React.FC<ApartmentTaxesViewProps> = ({
@@ -51,7 +63,8 @@ export const ApartmentTaxesView: React.FC<ApartmentTaxesViewProps> = ({
   isMutating = false,
   onRemitTax,
   onInspectTax,
-  onOpenCostModal
+  onOpenCostModal,
+  onRecordTax
 }) => {
   // Master Mode: Tab 1 (Project Statutory Costs) vs Tab 2 (Disposition Tax Archive)
   const [activeMode, setActiveMode] = useState<'capitalized_costs' | 'disposition_archive'>('capitalized_costs');
@@ -77,6 +90,99 @@ export const ApartmentTaxesView: React.FC<ApartmentTaxesViewProps> = ({
   const [archiveSearchQuery, setArchiveSearchQuery] = useState<string>('');
   const [archiveCurrentPage, setArchiveCurrentPage] = useState<number>(1);
   const [archivePageSize, setArchivePageSize] = useState<number>(10);
+
+  // Workstation context & manual tax recording state
+  const erpContext = useERPWorkstation();
+  const activeContracts = useMemo(() => {
+    return contracts.length > 0 ? contracts : (erpContext?.data?.contracts || []);
+  }, [contracts, erpContext?.data?.contracts]);
+
+  const [isRecordModalOpen, setIsRecordModalOpen] = useState(false);
+  const [recordContractId, setRecordContractId] = useState('');
+  const [recordTaxType, setRecordTaxType] = useState('Real estate disposal tax 2.5%');
+  const [recordTaxableBase, setRecordTaxableBase] = useState('');
+  const [recordTaxRate, setRecordTaxRate] = useState('2.5');
+  const [recordTaxAmount, setRecordTaxAmount] = useState('');
+  const [isAmountManuallyEdited, setIsAmountManuallyEdited] = useState(false);
+  const [recordDate, setRecordDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [recordNotes, setRecordNotes] = useState('');
+  const [isSubmittingRecord, setIsSubmittingRecord] = useState(false);
+
+  const handleContractChange = (contractId: string) => {
+    setRecordContractId(contractId);
+    const selected = activeContracts.find(c => c.contract_id === contractId);
+    if (selected) {
+      const base = selected.base_price || selected.gross_contract_value || '';
+      setRecordTaxableBase(base);
+      if (!isAmountManuallyEdited && base) {
+        const rate = parseFloat(recordTaxRate) || 0;
+        if (rate > 0) {
+          setRecordTaxAmount(D(base).times(rate).div(100).toFixed(2));
+        }
+      }
+    }
+  };
+
+  const handleBaseChange = (val: string) => {
+    setRecordTaxableBase(val);
+    if (!isAmountManuallyEdited && recordTaxRate) {
+      const rate = parseFloat(recordTaxRate) || 0;
+      if (rate > 0 && val) {
+        setRecordTaxAmount(D(val).times(rate).div(100).toFixed(2));
+      }
+    }
+  };
+
+  const handleRateChange = (val: string) => {
+    setRecordTaxRate(val);
+    if (!isAmountManuallyEdited && val && recordTaxableBase) {
+      const rate = parseFloat(val) || 0;
+      setRecordTaxAmount(D(recordTaxableBase).times(rate).div(100).toFixed(2));
+    }
+  };
+
+  const handleAmountChange = (val: string) => {
+    setRecordTaxAmount(val);
+    setIsAmountManuallyEdited(true);
+  };
+
+  const handleSubmitRecordTax = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!recordContractId) {
+      toast.error(isAr ? 'يرجى اختيار العقد' : 'Please select a contract');
+      return;
+    }
+    if (!recordTaxAmount || D(recordTaxAmount).isZero()) {
+      toast.error(isAr ? 'يرجى إدخال قيمة الضريبة أو الرسم' : 'Please enter the tax amount');
+      return;
+    }
+    setIsSubmittingRecord(true);
+    try {
+      const handler = onRecordTax || erpContext?.handleRecordTax;
+      if (handler) {
+        await handler({
+          contract_id: recordContractId,
+          tax_type: recordTaxType || (isAr ? 'ضريبة يدوية' : 'Manual tax'),
+          taxable_base: recordTaxableBase || 0,
+          tax_rate: recordTaxRate,
+          tax_amount: recordTaxAmount,
+          date: recordDate,
+          notes: recordNotes
+        });
+      }
+      setIsRecordModalOpen(false);
+      setRecordContractId('');
+      setRecordTaxableBase('');
+      setRecordTaxRate('2.5');
+      setRecordTaxAmount('');
+      setIsAmountManuallyEdited(false);
+      setRecordNotes('');
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsSubmittingRecord(false);
+    }
+  };
 
   // Properties map for quick lookup
   const propertyMap = useMemo(() => {
@@ -569,13 +675,37 @@ export const ApartmentTaxesView: React.FC<ApartmentTaxesViewProps> = ({
           </button>
         </div>
 
-        <div style={{ fontSize: '0.74rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-          <ShieldCheck size={14} color="#15803d" />
-          <span>
-            {activeMode === 'capitalized_costs' 
-              ? (isAr ? 'كل الرسوم الحكومية تضاف لرأس مال المبنى وتسترد تدريجياً عبر كشف حساب العقار' : 'Government fees capitalized into WIP ledger')
-              : (isAr ? 'أرشيف رسمي تاريخي لموقف ضريبة التصرفات والتحصيل' : 'Historical disposition tax ledger')}
-          </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', flexWrap: 'wrap' }}>
+          <div style={{ fontSize: '0.74rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+            <ShieldCheck size={14} color="#15803d" />
+            <span>
+              {activeMode === 'capitalized_costs' 
+                ? (isAr ? 'كل الرسوم الحكومية تضاف لرأس مال المبنى وتسترد تدريجياً عبر كشف حساب العقار' : 'Government fees capitalized into WIP ledger')
+                : (isAr ? 'أرشيف رسمي تاريخي لموقف ضريبة التصرفات والتحصيل' : 'Historical disposition tax ledger')}
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setIsRecordModalOpen(true)}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.45rem',
+              background: 'var(--erp-accent, #2563eb)',
+              color: '#ffffff',
+              border: 'none',
+              padding: '0.45rem 1rem',
+              borderRadius: '8px',
+              fontSize: '0.82rem',
+              fontWeight: 700,
+              cursor: 'pointer',
+              boxShadow: '0 1px 3px rgba(37, 99, 235, 0.25)',
+              transition: 'all 0.15s ease'
+            }}
+          >
+            <Plus size={15} />
+            <span>{isAr ? 'تسجيل ضريبة أو رسم' : 'Record Tax'}</span>
+          </button>
         </div>
       </div>
 
@@ -1212,6 +1342,28 @@ export const ApartmentTaxesView: React.FC<ApartmentTaxesViewProps> = ({
             onResetFilters={handleResetArchiveFilters}
             viewMode={archiveViewMode}
             onViewModeChange={(mode) => setArchiveViewMode(mode as any)}
+            customActions={
+              <button
+                type="button"
+                onClick={() => setIsRecordModalOpen(true)}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.4rem',
+                  background: 'var(--erp-accent, #2563eb)',
+                  color: '#ffffff',
+                  border: 'none',
+                  padding: '0.45rem 0.95rem',
+                  borderRadius: '8px',
+                  fontSize: '0.8rem',
+                  fontWeight: 700,
+                  cursor: 'pointer'
+                }}
+              >
+                <Plus size={14} />
+                <span>{isAr ? 'تسجيل ضريبة' : 'Record Tax'}</span>
+              </button>
+            }
             isAr={isAr}
           />
 
@@ -1684,6 +1836,258 @@ export const ApartmentTaxesView: React.FC<ApartmentTaxesViewProps> = ({
         />
         </>
       )}
+
+      {/* Manual Tax Recording Modal */}
+      <ZFModalShell
+        isOpen={isRecordModalOpen}
+        onClose={() => setIsRecordModalOpen(false)}
+        title={isAr ? 'تسجيل ضريبة أو رسم يدوي' : 'Record Manual Tax / Fee'}
+        subtitle={isAr ? 'إثبات التزام ضريبي على الوحدة (خارج الدفاتر حتى السداد الفعلي - أساس نقدي)' : 'Record unit tax liability (off-ledger cash basis until remitted)'}
+        icon={<Receipt size={18} color="var(--erp-accent, #2563eb)" />}
+        maxWidth="560px"
+        isAr={isAr}
+        footer={
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', width: '100%' }}>
+            <button
+              type="button"
+              onClick={() => setIsRecordModalOpen(false)}
+              disabled={isSubmittingRecord}
+              style={{
+                padding: '0.5rem 1.25rem',
+                borderRadius: '8px',
+                border: '1px solid #cbd5e1',
+                background: '#ffffff',
+                color: '#475569',
+                fontSize: '0.85rem',
+                fontWeight: 600,
+                cursor: 'pointer'
+              }}
+            >
+              {isAr ? 'إلغاء' : 'Cancel'}
+            </button>
+            <button
+              type="button"
+              onClick={handleSubmitRecordTax}
+              disabled={isSubmittingRecord || !recordContractId || !recordTaxAmount}
+              style={{
+                padding: '0.5rem 1.4rem',
+                borderRadius: '8px',
+                border: 'none',
+                background: 'var(--erp-accent, #2563eb)',
+                color: '#ffffff',
+                fontSize: '0.85rem',
+                fontWeight: 700,
+                cursor: isSubmittingRecord || !recordContractId || !recordTaxAmount ? 'not-allowed' : 'pointer',
+                opacity: isSubmittingRecord || !recordContractId || !recordTaxAmount ? 0.6 : 1,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.4rem'
+              }}
+            >
+              <CheckCircle2 size={15} />
+              <span>{isSubmittingRecord ? (isAr ? 'جاري الحفظ...' : 'Saving...') : (isAr ? 'حفظ الضريبة' : 'Save Tax')}</span>
+            </button>
+          </div>
+        }
+      >
+        <form onSubmit={handleSubmitRecordTax} style={{ display: 'flex', flexDirection: 'column', gap: '1rem', padding: '0.5rem 0' }}>
+          {/* Contract Selector */}
+          <div>
+            <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#334155', marginBottom: '0.35rem' }}>
+              {isAr ? 'العقد والوحدة *' : 'Contract & Unit *'}
+            </label>
+            <select
+              value={recordContractId}
+              onChange={(e) => handleContractChange(e.target.value)}
+              required
+              style={{
+                width: '100%',
+                padding: '0.55rem 0.75rem',
+                borderRadius: '8px',
+                border: '1px solid #cbd5e1',
+                background: '#ffffff',
+                fontSize: '0.85rem',
+                color: '#0f172a'
+              }}
+            >
+              <option value="">{isAr ? '-- اختر العقد --' : '-- Select Contract --'}</option>
+              {activeContracts.map(c => (
+                <option key={c.contract_id} value={c.contract_id}>
+                  {c.contract_number ? `#${c.contract_number} - ` : ''}{c.buyer_name} ({c.unit_id})
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Tax Type with Suggestions */}
+          <div>
+            <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#334155', marginBottom: '0.35rem' }}>
+              {isAr ? 'نوع الضريبة أو الرسم *' : 'Tax / Fee Type *'}
+            </label>
+            <input
+              type="text"
+              list="manual-tax-type-suggestions"
+              value={recordTaxType}
+              onChange={(e) => setRecordTaxType(e.target.value)}
+              placeholder={isAr ? 'مثال: ضريبة تصرفات عقارية ٢.٥٪، دمغة نسبية، أخرى...' : 'e.g. Real estate disposal tax 2.5%, Stamp duty, Other'}
+              required
+              style={{
+                width: '100%',
+                padding: '0.55rem 0.75rem',
+                borderRadius: '8px',
+                border: '1px solid #cbd5e1',
+                background: '#ffffff',
+                fontSize: '0.85rem',
+                color: '#0f172a'
+              }}
+            />
+            <datalist id="manual-tax-type-suggestions">
+              <option value={isAr ? 'ضريبة تصرفات عقارية ٢.٥٪' : 'Real estate disposal tax 2.5%'} />
+              <option value={isAr ? 'دمغة نسبية' : 'Stamp duty'} />
+              <option value={isAr ? 'رسوم تنمية وتطوير' : 'Municipal Development Fee'} />
+              <option value={isAr ? 'ضريبة عقارية (عوايد)' : 'Real Estate Property Tax'} />
+              <option value={isAr ? 'رسوم أخرى' : 'Other'} />
+            </datalist>
+          </div>
+
+          {/* Base & Rate in Grid */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+            <div>
+              <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#334155', marginBottom: '0.35rem' }}>
+                {isAr ? 'الوعاء الخاضع للضريبة (ج.م)' : 'Taxable Base (EGP)'}
+              </label>
+              <input
+                type="number"
+                step="any"
+                value={recordTaxableBase}
+                onChange={(e) => handleBaseChange(e.target.value)}
+                placeholder="0.00"
+                style={{
+                  width: '100%',
+                  padding: '0.55rem 0.75rem',
+                  borderRadius: '8px',
+                  border: '1px solid #cbd5e1',
+                  background: '#ffffff',
+                  fontSize: '0.85rem',
+                  color: '#0f172a',
+                  fontVariantNumeric: 'tabular-nums'
+                }}
+              />
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#334155', marginBottom: '0.35rem' }}>
+                {isAr ? 'نسبة الضريبة (%)' : 'Tax Rate (%)'}
+              </label>
+              <input
+                type="number"
+                step="any"
+                value={recordTaxRate}
+                onChange={(e) => handleRateChange(e.target.value)}
+                placeholder="2.5"
+                style={{
+                  width: '100%',
+                  padding: '0.55rem 0.75rem',
+                  borderRadius: '8px',
+                  border: '1px solid #cbd5e1',
+                  background: '#ffffff',
+                  fontSize: '0.85rem',
+                  color: '#0f172a',
+                  fontVariantNumeric: 'tabular-nums'
+                }}
+              />
+            </div>
+          </div>
+
+          {/* Amount & Date in Grid */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+            <div>
+              <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#334155', marginBottom: '0.35rem' }}>
+                {isAr ? 'قيمة الضريبة المطلوبة (ج.م) *' : 'Tax Amount (EGP) *'}
+              </label>
+              <input
+                type="number"
+                step="any"
+                value={recordTaxAmount}
+                onChange={(e) => handleAmountChange(e.target.value)}
+                placeholder="0.00"
+                required
+                style={{
+                  width: '100%',
+                  padding: '0.55rem 0.75rem',
+                  borderRadius: '8px',
+                  border: '1px solid #cbd5e1',
+                  background: '#ffffff',
+                  fontSize: '0.85rem',
+                  fontWeight: 700,
+                  color: '#0f172a',
+                  fontVariantNumeric: 'tabular-nums'
+                }}
+              />
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#334155', marginBottom: '0.35rem' }}>
+                {isAr ? 'تاريخ الاستحقاق/التسجيل' : 'Date'}
+              </label>
+              <input
+                type="date"
+                value={recordDate}
+                onChange={(e) => setRecordDate(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '0.55rem 0.75rem',
+                  borderRadius: '8px',
+                  border: '1px solid #cbd5e1',
+                  background: '#ffffff',
+                  fontSize: '0.85rem',
+                  color: '#0f172a'
+                }}
+              />
+            </div>
+          </div>
+
+          {/* Notes */}
+          <div>
+            <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#334155', marginBottom: '0.35rem' }}>
+              {isAr ? 'ملاحظات وتفاصيل' : 'Notes'}
+            </label>
+            <textarea
+              rows={2}
+              value={recordNotes}
+              onChange={(e) => setRecordNotes(e.target.value)}
+              placeholder={isAr ? 'ملاحظات إضافية بخصوص الرسم أو التسجيل...' : 'Additional notes regarding tax assessment...'}
+              style={{
+                width: '100%',
+                padding: '0.55rem 0.75rem',
+                borderRadius: '8px',
+                border: '1px solid #cbd5e1',
+                background: '#ffffff',
+                fontSize: '0.85rem',
+                color: '#0f172a',
+                resize: 'vertical'
+              }}
+            />
+          </div>
+
+          <div style={{
+            fontSize: '0.74rem',
+            color: '#64748b',
+            background: '#f8fafc',
+            border: '1px solid #e2e8f0',
+            borderRadius: '8px',
+            padding: '0.6rem 0.75rem',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem'
+          }}>
+            <ShieldCheck size={14} color="#15803d" />
+            <span>
+              {isAr 
+                ? 'أساس نقدي موحد: تسجيل الضريبة لا ينشئ قيد يومية. يرحل القيد إلى دفتر الأستاذ العام عند السداد الفعلي فقط.'
+                : 'Unified Cash Basis: Recording tax creates NO journal entry. Hits GL only when remitted.'}
+            </span>
+          </div>
+        </form>
+      </ZFModalShell>
     </div>
   );
 };

@@ -379,6 +379,15 @@ export interface ERPWorkstationContextValue {
   handlePostMonthlyEntries: (periodId: string) => Promise<number>;
   handleCreateRSVAllocation: (e?: React.FormEvent, overrideData?: { projectName: string; salesValue: string; wipAmount: string }) => Promise<void>;
   handleRemitTax: (taxId: string) => Promise<void>;
+  handleRecordTax: (params: {
+    contract_id: string;
+    tax_type: string;
+    taxable_base: string | number;
+    tax_rate?: string | number;
+    tax_amount: string | number;
+    date?: string;
+    notes?: string;
+  }) => Promise<ERPTaxRecord | null>;
   handleConfirmPartnerPayout: (details: { partnerName: string; amount: string; paymentMethod: 'CASH_101000' | 'INSTAPAY_102000' | 'BANK_102000'; propertyId?: string; propertyTitle?: string; payoutDate: string; receiptRef: string; memo: string }) => Promise<void>;
   handleConfirmPartnerInjection: (details: { partnerName: string; amount: string; paymentMethod: 'CASH_101000' | 'INSTAPAY_102000' | 'BANK_102000'; propertyId?: string; propertyTitle?: string; commitmentId?: string; injectionDate: string; receiptRef: string; memo: string; role?: 'equity_partner' | 'land_partner' | 'silent_financier'; phone?: string; nationalId?: string; projectSharePct?: number }) => Promise<void>;
   handleCreatePartnerCommitment: (payload: { propertyId: string; partnerName: string; milestoneName: string; milestonePhase?: string; committedAmount: string; dueDate: string; notes?: string }) => Promise<void>;
@@ -3196,6 +3205,51 @@ export function ERPWorkstationProvider({
     }
   }, [data.taxRecords, data.periods, activePeriod, supabase, isAr, ensureActivePeriodOpen]);
 
+  // Handler: Manual Tax Recording (Creates NO journal entry; cash-basis: hits GL only when remitted)
+  const handleRecordTax = useCallback(async (params: {
+    contract_id: string;
+    tax_type: string;
+    taxable_base: string | number;
+    tax_rate?: string | number;
+    tax_amount: string | number;
+    date?: string;
+    notes?: string;
+  }): Promise<ERPTaxRecord | null> => {
+    setIsMutating(true);
+    try {
+      const newRecord = await ERPSupabaseService.recordTaxRecord(supabase, {
+        contract_id: params.contract_id,
+        tax_type: params.tax_type,
+        taxable_base: params.taxable_base,
+        tax_rate: params.tax_rate,
+        tax_amount: params.tax_amount,
+        created_at: params.date ? new Date(params.date).toISOString() : new Date().toISOString(),
+        notes: params.notes
+      });
+
+      setData(prev => ({
+        ...prev,
+        taxRecords: [newRecord, ...prev.taxRecords]
+      }));
+
+      toast.success(
+        isAr ? `تم تسجيل الضريبة/الرسم بنجاح (${params.tax_type})` : `Tax record registered successfully (${params.tax_type})`,
+        {
+          description: isAr
+            ? `المبلغ: ${D(params.tax_amount).formatEGP(true)} • الحالة: قيد السداد (خارج الدفاتر حتى السداد)`
+            : `Amount: ${D(params.tax_amount).formatEGP(false)} • Status: Pending (Off-ledger cash basis until remitted)`
+        }
+      );
+      return newRecord;
+    } catch (err: unknown) {
+      console.warn('Record tax error:', err);
+      toast.error(isAr ? 'فشل تسجيل الضريبة' : 'Failed to record tax');
+      return null;
+    } finally {
+      setIsMutating(false);
+    }
+  }, [supabase, isAr]);
+
   // Handler: Confirm Partner Payout
   const handleConfirmPartnerPayout = useCallback(async (details: {
     partnerName: string;
@@ -4241,6 +4295,7 @@ export function ERPWorkstationProvider({
     handlePostMonthlyEntries,
     handleCreateRSVAllocation,
     handleRemitTax,
+    handleRecordTax,
     handleConfirmPartnerPayout,
     handleConfirmPartnerInjection,
     handleCreatePartnerCommitment,

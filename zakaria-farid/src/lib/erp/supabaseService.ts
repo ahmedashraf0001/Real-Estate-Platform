@@ -736,7 +736,7 @@ export class ERPSupabaseService {
           const taxRow = {
             tax_id: generateUUID(),
             contract_id: contractId,
-            tax_type: 'Disposal 2.5% Case A',
+            tax_type: contract.tax_description || 'Manual tax',
             taxable_base: basePrice,
             tax_rate: taxRate,
             tax_amount: manualTaxAmt,
@@ -2161,6 +2161,49 @@ export class ERPSupabaseService {
       console.warn('Failed to fetch unit estimates:', e);
       return [];
     }
+  }
+
+  /**
+   * Persist a manual tax record to erp_tax_records.
+   * Columns: tax_id, contract_id, tax_type, taxable_base, tax_rate, tax_amount, remittance_status 'Pending', created_at.
+   * Cash-basis invariant: Recording a tax creates NO journal entry. Tax hits GL only when remitted.
+   */
+  static async recordTaxRecord(
+    supabase: SupabaseClient,
+    payload: {
+      contract_id: string;
+      tax_type: string;
+      taxable_base: string | number;
+      tax_rate?: string | number;
+      tax_amount: string | number;
+      created_at?: string;
+      notes?: string;
+    }
+  ): Promise<ERPTaxRecord> {
+    const taxId = generateUUID();
+    const createdAt = payload.created_at || new Date().toISOString();
+    const baseAmt = D(payload.taxable_base || 0).toFixed(2);
+    const taxAmt = D(payload.tax_amount || 0).toFixed(2);
+    const rateVal = payload.tax_rate !== undefined && String(payload.tax_rate).trim() !== ''
+      ? D(payload.tax_rate).div(100).toFixed(4)
+      : (D(baseAmt).gt(0) ? D(taxAmt).div(baseAmt).toFixed(4) : '0.0000');
+
+    const taxRow: ERPTaxRecord = {
+      tax_id: taxId,
+      contract_id: payload.contract_id,
+      tax_type: payload.tax_type,
+      taxable_base: baseAmt,
+      tax_rate: rateVal,
+      tax_amount: taxAmt,
+      remittance_status: 'Pending',
+      created_at: createdAt
+    };
+
+    const { error } = await supabase.from('erp_tax_records').insert([taxRow]);
+    if (error) {
+      console.warn('Could not insert manual tax record into erp_tax_records:', error);
+    }
+    return taxRow;
   }
 }
 
