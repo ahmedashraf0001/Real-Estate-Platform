@@ -271,7 +271,7 @@ export const ContractRescissionsView: React.FC<ContractRescissionsViewProps> = (
               </h1>
               <span style={{
                 background: 'var(--erp-accent-tint, rgba(37, 99, 235, 0.08))',
-                border: '1px solid rgba(37, 99, 235, 0.25)',
+                border: '1px solid color-mix(in srgb, var(--erp-accent) 25%, transparent)',
                 color: 'var(--erp-accent, #2563eb)',
                 padding: '0.2rem 0.55rem',
                 borderRadius: '6px',
@@ -541,7 +541,7 @@ export const ContractRescissionsView: React.FC<ContractRescissionsViewProps> = (
                           fontWeight: 800,
                           color: 'var(--erp-accent, #2563eb)',
                           background: 'var(--erp-accent-tint, rgba(37, 99, 235, 0.06))',
-                          border: '1px solid rgba(37, 99, 235, 0.2)',
+                          border: '1px solid color-mix(in srgb, var(--erp-accent) 20%, transparent)',
                           borderRadius: '6px',
                           padding: '0.2rem 0.5rem',
                           display: 'inline-flex',
@@ -615,7 +615,7 @@ export const ContractRescissionsView: React.FC<ContractRescissionsViewProps> = (
                         <span style={{
                           fontSize: '0.74rem',
                           fontWeight: 800,
-                          color: r.branch === 'Pre-Delivery' ? '#1e40af' : '#b45309',
+                          color: r.branch === 'Pre-Delivery' ? 'var(--erp-accent-hover)' : '#b45309',
                           background: r.branch === 'Pre-Delivery' ? 'rgba(30, 64, 175, 0.08)' : 'rgba(180, 83, 9, 0.08)',
                           border: `1px solid ${r.branch === 'Pre-Delivery' ? 'rgba(30, 64, 175, 0.22)' : 'rgba(180, 83, 9, 0.22)'}`,
                           padding: '0.22rem 0.65rem',
@@ -624,7 +624,7 @@ export const ContractRescissionsView: React.FC<ContractRescissionsViewProps> = (
                           alignItems: 'center',
                           gap: '0.35rem'
                         }}>
-                          <span style={{ width: 6, height: 6, borderRadius: '50%', background: r.branch === 'Pre-Delivery' ? '#1e40af' : '#b45309' }} />
+                          <span style={{ width: 6, height: 6, borderRadius: '50%', background: r.branch === 'Pre-Delivery' ? 'var(--erp-accent-hover)' : '#b45309' }} />
                           <span>{r.branch === 'Pre-Delivery' ? (isAr ? 'قبل الاستلام (غرامة ١٠٪)' : 'Pre-Delivery (10% Floor)') : (isAr ? 'بعد الاستلام (تسوية شاملة)' : 'Post-Delivery (Full Audit)')}</span>
                         </span>
                       </td>
@@ -656,7 +656,7 @@ export const ContractRescissionsView: React.FC<ContractRescissionsViewProps> = (
                             background: 'var(--erp-accent-tint, rgba(37, 99, 235, 0.1))',
                             padding: '0.1rem 0.35rem',
                             borderRadius: '4px',
-                            border: '1px solid rgba(37, 99, 235, 0.25)'
+                            border: '1px solid color-mix(in srgb, var(--erp-accent) 25%, transparent)'
                           }}>
                             {isAr ? '١٠٪' : '10%'}
                           </span>
@@ -716,7 +716,7 @@ export const ContractRescissionsView: React.FC<ContractRescissionsViewProps> = (
                             onClick={() => onInspectRescission(r)}
                             style={{
                               background: 'var(--erp-accent-tint, rgba(37, 99, 235, 0.05))',
-                              border: '1px solid rgba(37, 99, 235, 0.28)',
+                              border: '1px solid color-mix(in srgb, var(--erp-accent) 28%, transparent)',
                               color: 'var(--erp-accent, #2563eb)',
                               borderRadius: '7px',
                               padding: '0.32rem 0.65rem',
@@ -726,7 +726,7 @@ export const ContractRescissionsView: React.FC<ContractRescissionsViewProps> = (
                               alignItems: 'center',
                               gap: '0.3rem',
                               cursor: 'pointer',
-                              boxShadow: '0 1px 2px rgba(37, 99, 235, 0.05)',
+                              boxShadow: '0 1px 2px color-mix(in srgb, var(--erp-accent) 5%, transparent)',
                               transition: 'all 0.15s ease'
                             }}
                             title={isAr ? 'عرض تفاصيل الفسخ وحساب المسترد' : 'Inspect Rescission Settlement'}
@@ -777,7 +777,7 @@ export const ContractRescissionsView: React.FC<ContractRescissionsViewProps> = (
                       fontWeight: 800,
                       color: 'var(--erp-accent, #2563eb)',
                       background: 'var(--erp-accent-tint, rgba(37, 99, 235, 0.06))',
-                      border: '1px solid rgba(37, 99, 235, 0.2)',
+                      border: '1px solid color-mix(in srgb, var(--erp-accent) 20%, transparent)',
                       borderRadius: '6px',
                       padding: '0.15rem 0.45rem',
                       display: 'inline-flex',
@@ -895,7 +895,7 @@ export const ContractRescissionsView: React.FC<ContractRescissionsViewProps> = (
                     style={{
                       flex: 1,
                       background: 'var(--erp-accent-tint, rgba(37, 99, 235, 0.05))',
-                      border: '1px solid rgba(37, 99, 235, 0.28)',
+                      border: '1px solid color-mix(in srgb, var(--erp-accent) 28%, transparent)',
                       color: 'var(--erp-accent, #2563eb)',
                       borderRadius: '8px',
                       padding: '0.5rem',
@@ -906,7 +906,7 @@ export const ContractRescissionsView: React.FC<ContractRescissionsViewProps> = (
                       justifyContent: 'center',
                       gap: '0.35rem',
                       cursor: 'pointer',
-                      boxShadow: '0 1px 2px rgba(37, 99, 235, 0.04)',
+                      boxShadow: '0 1px 2px color-mix(in srgb, var(--erp-accent) 4%, transparent)',
                       transition: 'all 0.15s ease'
                     }}
                   >

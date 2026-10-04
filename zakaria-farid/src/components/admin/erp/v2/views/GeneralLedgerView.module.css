@@ -590,7 +590,7 @@
 
 .entryNumPill {
   background: var(--erp-accent-subtle, #eff6ff);
-  border: 1px solid rgba(37, 99, 235, 0.18);
+  border: 1px solid color-mix(in srgb, var(--erp-accent) 18%, transparent);
   border-radius: 6px;
   padding: 2px 8px;
   font-variant-numeric: tabular-nums;
@@ -674,9 +674,9 @@
 }
 
 .flowTagCr {
-  background: #eff6ff;
-  color: #2563eb;
-  border: 1px solid rgba(37, 99, 235, 0.2);
+  background: var(--erp-accent-subtle);
+  color: var(--erp-accent);
+  border: 1px solid color-mix(in srgb, var(--erp-accent) 20%, transparent);
 }
 
 .accountFlowName {
@@ -749,9 +749,9 @@
 }
 
 .statusPillBlue {
-  background: #eff6ff;
-  color: #2563eb;
-  border: 1px solid rgba(37, 99, 235, 0.20);
+  background: var(--erp-accent-subtle);
+  color: var(--erp-accent);
+  border: 1px solid color-mix(in srgb, var(--erp-accent) 20%, transparent);
 }
 
 .statusPillNeutral {
@@ -2207,8 +2207,8 @@
 }
 
 .inspectorMovementDebit {
-  background: #eff6ff;
-  border: 1px solid rgba(37, 99, 235, 0.15);
+  background: var(--erp-accent-subtle);
+  border: 1px solid color-mix(in srgb, var(--erp-accent) 15%, transparent);
 }
 
 .inspectorMovementCredit {
@@ -2222,7 +2222,7 @@
 }
 
 .inspectorMovementDebit .inspectorMovementLabel {
-  color: #1d4ed8;
+  color: var(--erp-accent-hover);
 }
 
 .inspectorMovementCredit .inspectorMovementLabel {
@@ -2239,7 +2239,7 @@
 }
 
 .inspectorMovementDebit .inspectorMovementAmount {
-  color: #1e40af;
+  color: var(--erp-accent-hover);
 }
 
 .inspectorMovementCredit .inspectorMovementAmount {

@@ -563,7 +563,7 @@ export const AccountLedgerModal: React.FC<AccountLedgerModalProps> = ({
           label: isAr ? 'إنستاباي فوري' : 'InstaPay',
           bg: 'rgba(37, 99, 235, 0.08)',
           text: '#1d4ed8',
-          border: 'rgba(37, 99, 235, 0.25)',
+          border: 'color-mix(in srgb, var(--erp-accent) 25%, transparent)',
           icon: 'instapay'
         },
         headline: isAr ? 'تحصيل قسط بنكي فوري عبر إنستاباي' : 'Instant InstaPay Tranche Collection',
@@ -1454,9 +1454,9 @@ export const AccountLedgerModal: React.FC<AccountLedgerModalProps> = ({
                                         gap: '0.25rem',
                                         fontSize: '0.7rem',
                                         fontWeight: 800,
-                                        color: '#2563eb',
-                                        background: 'rgba(37, 99, 235, 0.08)',
-                                        border: '1px solid rgba(37, 99, 235, 0.22)',
+                                        color: 'var(--erp-accent)',
+                                        background: 'color-mix(in srgb, var(--erp-accent) 8%, transparent)',
+                                        border: '1px solid color-mix(in srgb, var(--erp-accent) 22%, transparent)',
                                         padding: '0.12rem 0.45rem',
                                         borderRadius: '6px',
                                         fontFamily: 'monospace, tabular-nums'
@@ -1474,9 +1474,9 @@ export const AccountLedgerModal: React.FC<AccountLedgerModalProps> = ({
                                         gap: '0.3rem',
                                         fontSize: '0.71rem',
                                         fontWeight: 700,
-                                        color: '#1e3a8a',
-                                        background: '#eff6ff',
-                                        border: '1px solid #dbeafe',
+                                        color: 'var(--erp-accent-hover)',
+                                        background: 'var(--erp-accent-subtle)',
+                                        border: '1px solid color-mix(in srgb, var(--erp-accent) 14%, transparent)',
                                         padding: '0.12rem 0.5rem',
                                         borderRadius: '6px'
                                       }}>

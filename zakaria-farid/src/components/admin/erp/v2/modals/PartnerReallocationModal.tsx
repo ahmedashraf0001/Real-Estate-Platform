@@ -375,12 +375,12 @@ export const PartnerReallocationModal: React.FC<PartnerReallocationModalProps> =
             display: 'inline-flex',
             alignItems: 'center',
             gap: '0.35rem',
-            background: '#eff6ff',
-            border: '1px solid #bfdbfe',
+            background: 'var(--erp-accent-subtle)',
+            border: '1px solid color-mix(in srgb, var(--erp-accent) 28%, transparent)',
             borderRadius: '8px',
             padding: '0.2rem 0.55rem'
           }}>
-            <Building2 size={13} color="#2563eb" />
+            <Building2 size={13} color="var(--erp-accent)" />
             <select
               value={selectedPropertyId}
               onChange={(e) => {
@@ -390,7 +390,7 @@ export const PartnerReallocationModal: React.FC<PartnerReallocationModalProps> =
               }}
               style={{
                 background: 'transparent',
-                color: '#1e40af',
+                color: 'var(--erp-accent-hover)',
                 border: 'none',
                 outline: 'none',
                 fontWeight: 800,
@@ -412,9 +412,9 @@ export const PartnerReallocationModal: React.FC<PartnerReallocationModalProps> =
             fontWeight: 800,
             padding: '0.18rem 0.55rem',
             borderRadius: '999px',
-            background: '#eff6ff',
-            color: '#2563eb',
-            border: '1px solid #bfdbfe'
+            background: 'var(--erp-accent-subtle)',
+            color: 'var(--erp-accent)',
+            border: '1px solid color-mix(in srgb, var(--erp-accent) 28%, transparent)'
           }}>
             {activeProperty.title_ar || activeProperty.title_en}
           </span>
@@ -442,9 +442,9 @@ export const PartnerReallocationModal: React.FC<PartnerReallocationModalProps> =
                 style={{
                   padding: '0.85rem 0.65rem',
                   borderRadius: '10px',
-                  border: mode === 'full_buyout' ? '2px solid #946f23' : '1px solid #e2e8f0',
+                  border: mode === 'full_buyout' ? '2px solid var(--erp-accent)' : '1px solid #e2e8f0',
                   background: mode === 'full_buyout' ? 'rgba(184, 144, 62, 0.08)' : '#f8fafc',
-                  color: mode === 'full_buyout' ? '#946f23' : '#475569',
+                  color: mode === 'full_buyout' ? 'var(--erp-accent)' : '#475569',
                   textAlign: 'center',
                   cursor: 'pointer',
                   display: 'flex',
@@ -458,7 +458,7 @@ export const PartnerReallocationModal: React.FC<PartnerReallocationModalProps> =
                   width: '32px',
                   height: '32px',
                   borderRadius: '8px',
-                  background: mode === 'full_buyout' ? '#946f23' : '#e2e8f0',
+                  background: mode === 'full_buyout' ? 'var(--erp-accent)' : '#e2e8f0',
                   color: mode === 'full_buyout' ? '#ffffff' : '#64748b',
                   display: 'flex',
                   alignItems: 'center',
@@ -481,9 +481,9 @@ export const PartnerReallocationModal: React.FC<PartnerReallocationModalProps> =
                 style={{
                   padding: '0.85rem 0.65rem',
                   borderRadius: '10px',
-                  border: mode === 'partial_sale' ? '2px solid #946f23' : '1px solid #e2e8f0',
+                  border: mode === 'partial_sale' ? '2px solid var(--erp-accent)' : '1px solid #e2e8f0',
                   background: mode === 'partial_sale' ? 'rgba(184, 144, 62, 0.08)' : '#f8fafc',
-                  color: mode === 'partial_sale' ? '#946f23' : '#475569',
+                  color: mode === 'partial_sale' ? 'var(--erp-accent)' : '#475569',
                   textAlign: 'center',
                   cursor: 'pointer',
                   display: 'flex',
@@ -497,7 +497,7 @@ export const PartnerReallocationModal: React.FC<PartnerReallocationModalProps> =
                   width: '32px',
                   height: '32px',
                   borderRadius: '8px',
-                  background: mode === 'partial_sale' ? '#946f23' : '#e2e8f0',
+                  background: mode === 'partial_sale' ? 'var(--erp-accent)' : '#e2e8f0',
                   color: mode === 'partial_sale' ? '#ffffff' : '#64748b',
                   display: 'flex',
                   alignItems: 'center',
@@ -520,9 +520,9 @@ export const PartnerReallocationModal: React.FC<PartnerReallocationModalProps> =
                 style={{
                   padding: '0.85rem 0.65rem',
                   borderRadius: '10px',
-                  border: mode === 'full_substitution' ? '2px solid #946f23' : '1px solid #e2e8f0',
+                  border: mode === 'full_substitution' ? '2px solid var(--erp-accent)' : '1px solid #e2e8f0',
                   background: mode === 'full_substitution' ? 'rgba(184, 144, 62, 0.08)' : '#f8fafc',
-                  color: mode === 'full_substitution' ? '#946f23' : '#475569',
+                  color: mode === 'full_substitution' ? 'var(--erp-accent)' : '#475569',
                   textAlign: 'center',
                   cursor: 'pointer',
                   display: 'flex',
@@ -536,7 +536,7 @@ export const PartnerReallocationModal: React.FC<PartnerReallocationModalProps> =
                   width: '32px',
                   height: '32px',
                   borderRadius: '8px',
-                  background: mode === 'full_substitution' ? '#946f23' : '#e2e8f0',
+                  background: mode === 'full_substitution' ? 'var(--erp-accent)' : '#e2e8f0',
                   color: mode === 'full_substitution' ? '#ffffff' : '#64748b',
                   display: 'flex',
                   alignItems: 'center',
@@ -739,12 +739,12 @@ export const PartnerReallocationModal: React.FC<PartnerReallocationModalProps> =
                   style={{
                     width: '140px',
                     background: '#ffffff',
-                    border: '1.5px solid #946f23',
+                    border: '1.5px solid var(--erp-accent)',
                     borderRadius: '8px',
                     padding: '0.55rem 0.75rem',
                     fontSize: '1rem',
                     fontWeight: 900,
-                    color: '#946f23'
+                    color: 'var(--erp-accent)'
                   }}
                   required
                 />
@@ -755,7 +755,7 @@ export const PartnerReallocationModal: React.FC<PartnerReallocationModalProps> =
                   step="1"
                   value={parseFloat(soldSharePct) || 1}
                   onChange={(e) => setSoldSharePct(e.target.value)}
-                  style={{ flex: 1, accentColor: '#946f23' }}
+                  style={{ flex: 1, accentColor: 'var(--erp-accent)' }}
                 />
                 <span style={{ fontSize: '0.85rem', fontWeight: 800, color: '#0f172a' }}>%</span>
               </div>
@@ -804,7 +804,7 @@ export const PartnerReallocationModal: React.FC<PartnerReallocationModalProps> =
                   type="checkbox"
                   checked={transferArrears}
                   onChange={(e) => setTransferArrears(e.target.checked)}
-                  style={{ width: '20px', height: '20px', accentColor: '#946f23', cursor: 'pointer' }}
+                  style={{ width: '20px', height: '20px', accentColor: 'var(--erp-accent)', cursor: 'pointer' }}
                 />
               </label>
             </div>
@@ -888,7 +888,7 @@ export const PartnerReallocationModal: React.FC<PartnerReallocationModalProps> =
           }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.65rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                <Scale size={16} color="#946f23" />
+                <Scale size={16} color="var(--erp-accent)" />
                 <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#0f172a' }}>
                   {isAr ? 'محاكاة بصرية فورية (قبل وبعد التنفيذ):' : 'Before & After Live Preview:'}
                 </span>
@@ -960,7 +960,7 @@ export const PartnerReallocationModal: React.FC<PartnerReallocationModalProps> =
                       <tr key={s.partner_name} style={{ borderBottom: '1px solid #f1f5f9' }}>
                         <td style={{ padding: '0.45rem 0', fontWeight: 800, color: '#0f172a' }}>
                           <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
-                            {isFounder && <Crown size={12} color="#946f23" />}
+                            {isFounder && <Crown size={12} color="var(--erp-accent)" />}
                             <span>{s.partner_name}</span>
                           </div>
                         </td>

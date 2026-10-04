@@ -150,7 +150,7 @@ export const AccountInspectorPanel: React.FC<AccountInspectorPanelProps> = ({
         {/* Compact Debits vs Credits */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.35rem' }}>
           <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '0.3rem 0.45rem' }}>
-            <span style={{ fontSize: '0.64rem', color: '#1e40af', fontWeight: 600, display: 'block' }}>
+            <span style={{ fontSize: '0.64rem', color: 'var(--erp-accent-hover)', fontWeight: 600, display: 'block' }}>
               {isAr ? 'إجمالي المدين' : 'Total Debits'}
             </span>
             <strong style={{ fontSize: '0.74rem', color: '#0f172a', fontVariantNumeric: 'tabular-nums' }}>

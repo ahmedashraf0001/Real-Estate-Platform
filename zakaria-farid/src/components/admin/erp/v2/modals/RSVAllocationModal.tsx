@@ -217,13 +217,13 @@ export const RSVAllocationModal: React.FC<RSVAllocationModalProps> = ({
             }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #f1f5f9', paddingBottom: '0.75rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <Building2 size={18} color="#2563eb" />
+                  <Building2 size={18} color="var(--erp-accent)" />
                   <strong style={{ fontSize: '1rem', color: '#0f172a' }}>{saveSuccessData.projectName}</strong>
                 </div>
                 <span style={{
-                  background: '#eff6ff',
-                  color: '#2563eb',
-                  border: '1px solid #bfdbfe',
+                  background: 'var(--erp-accent-subtle)',
+                  color: 'var(--erp-accent)',
+                  border: '1px solid color-mix(in srgb, var(--erp-accent) 28%, transparent)',
                   padding: '0.18rem 0.65rem',
                   borderRadius: '20px',
                   fontSize: '0.72rem',
@@ -257,11 +257,11 @@ export const RSVAllocationModal: React.FC<RSVAllocationModalProps> = ({
                   </strong>
                 </div>
 
-                <div style={{ background: '#eff6ff', padding: '0.85rem 1rem', borderRadius: '10px', border: '1px solid #bfdbfe' }}>
-                  <span style={{ color: '#2563eb', fontSize: '0.7rem', fontWeight: 800, display: 'block' }}>
+                <div style={{ background: 'var(--erp-accent-subtle)', padding: '0.85rem 1rem', borderRadius: '10px', border: '1px solid color-mix(in srgb, var(--erp-accent) 28%, transparent)' }}>
+                  <span style={{ color: 'var(--erp-accent)', fontSize: '0.7rem', fontWeight: 800, display: 'block' }}>
                     {isAr ? 'معامل التكلفة الإنشائية للشقة الفاخرة (RSV Factor):' : 'Luxury Unit Construction Cost Factor (RSV):'}
                   </span>
-                  <strong style={{ color: '#2563eb', fontSize: '1.3rem', fontWeight: 900, fontVariantNumeric: 'tabular-nums', display: 'block', marginTop: '0.15rem' }}>
+                  <strong style={{ color: 'var(--erp-accent)', fontSize: '1.3rem', fontWeight: 900, fontVariantNumeric: 'tabular-nums', display: 'block', marginTop: '0.15rem' }}>
                     {saveSuccessData.factorPct}%
                   </strong>
                 </div>
@@ -278,7 +278,7 @@ export const RSVAllocationModal: React.FC<RSVAllocationModalProps> = ({
 
               {/* Progress bar */}
               <div style={{ width: '100%', height: '8px', borderRadius: '999px', background: '#e2e8f0', overflow: 'hidden', display: 'flex' }}>
-                <div style={{ width: `${Math.min(parseFloat(saveSuccessData.factorPct) || 0, 100)}%`, background: '#2563eb', height: '100%' }} />
+                <div style={{ width: `${Math.min(parseFloat(saveSuccessData.factorPct) || 0, 100)}%`, background: 'var(--erp-accent)', height: '100%' }} />
                 <div style={{ flex: 1, background: '#059669', height: '100%' }} />
               </div>
 
@@ -427,7 +427,7 @@ export const RSVAllocationModal: React.FC<RSVAllocationModalProps> = ({
               gap: '0.5rem'
             }}>
               <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#334155', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                <Building2 size={14} color="#2563eb" />
+                <Building2 size={14} color="var(--erp-accent)" />
                 <span>{isAr ? 'العمارة أو المشروع المستهدف *' : 'Target Property / Project *'}</span>
               </label>
               <ZFCustomSelect<string>
@@ -483,7 +483,7 @@ export const RSVAllocationModal: React.FC<RSVAllocationModalProps> = ({
             /* Mode B: Custom Project Name Input */
             <div>
               <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#334155', marginBottom: '0.35rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                <FolderPlus size={14} color="#2563eb" />
+                <FolderPlus size={14} color="var(--erp-accent)" />
                 <span>{isAr ? 'اسم العمارة أو المشروع *' : 'Project Name / Phase *'}</span>
               </label>
               <input 
@@ -514,7 +514,7 @@ export const RSVAllocationModal: React.FC<RSVAllocationModalProps> = ({
                 <label style={{ fontSize: '0.74rem', fontWeight: 700, color: '#334155', margin: 0 }}>
                   {isAr ? 'إجمالي سعر بيع كل شقق العمارة (المبيعات المتوقعة) *' : 'Sales Value Ceiling *'}
                 </label>
-                <span style={{ fontSize: '0.72rem', color: '#2563eb', fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}>
+                <span style={{ fontSize: '0.72rem', color: 'var(--erp-accent)', fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}>
                   {D(salesValue || 0).formatEGP(isAr)}
                 </span>
               </div>
@@ -543,7 +543,7 @@ export const RSVAllocationModal: React.FC<RSVAllocationModalProps> = ({
                 <label style={{ fontSize: '0.74rem', fontWeight: 700, color: '#334155', margin: 0 }}>
                   {isAr ? 'إجمالي مصاريف المباني والخامات المتوقعة للعمارة *' : 'Incurred Construction WIP *'}
                 </label>
-                <span style={{ fontSize: '0.72rem', color: '#2563eb', fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}>
+                <span style={{ fontSize: '0.72rem', color: 'var(--erp-accent)', fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}>
                   {D(wipAmount || 0).formatEGP(isAr)}
                 </span>
               </div>
@@ -603,10 +603,10 @@ export const RSVAllocationModal: React.FC<RSVAllocationModalProps> = ({
                 <span style={{ fontSize: '0.7rem', color: '#64748b', display: 'block', fontWeight: 700 }}>
                   {isAr ? 'معامل التكلفة الإنشائية للشقة الفاخرة (RSV Factor):' : 'Calculated Construction Ratio (RSV):'}
                 </span>
-                <strong style={{ fontSize: '1.4rem', color: '#2563eb', fontVariantNumeric: 'tabular-nums', display: 'block', marginTop: '0.15rem' }}>
+                <strong style={{ fontSize: '1.4rem', color: 'var(--erp-accent)', fontVariantNumeric: 'tabular-nums', display: 'block', marginTop: '0.15rem' }}>
                   {factorPct}%
                 </strong>
-                <span style={{ fontSize: '0.72rem', color: '#2563eb', fontWeight: 700 }}>
+                <span style={{ fontSize: '0.72rem', color: 'var(--erp-accent)', fontWeight: 700 }}>
                   {isAr ? '(نسبة تكلفة خامات ومباني الشقة من ثمن البيع)' : '(cost of sales ratio)'}
                 </span>
               </div>
@@ -626,7 +626,7 @@ export const RSVAllocationModal: React.FC<RSVAllocationModalProps> = ({
 
             {/* Visual Progress Bar */}
             <div style={{ width: '100%', height: '8px', borderRadius: '999px', background: '#e2e8f0', overflow: 'hidden', display: 'flex' }}>
-              <div style={{ width: `${Math.min(parseFloat(factorPct) || 0, 100)}%`, background: '#2563eb', height: '100%' }} />
+              <div style={{ width: `${Math.min(parseFloat(factorPct) || 0, 100)}%`, background: 'var(--erp-accent)', height: '100%' }} />
               <div style={{ flex: 1, background: '#15803d', height: '100%' }} />
             </div>
 
@@ -669,7 +669,7 @@ export const RSVAllocationModal: React.FC<RSVAllocationModalProps> = ({
               type="submit"
               disabled={isMutating}
               style={{
-                background: isMutating ? '#94a3b8' : '#2563eb',
+                background: isMutating ? '#94a3b8' : 'var(--erp-accent)',
                 color: '#ffffff',
                 border: 'none',
                 padding: '0.55rem 1.35rem',
@@ -681,7 +681,7 @@ export const RSVAllocationModal: React.FC<RSVAllocationModalProps> = ({
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '0.45rem',
-                boxShadow: isMutating ? 'none' : '0 2px 8px rgba(37, 99, 235, 0.25)'
+                boxShadow: isMutating ? 'none' : '0 2px 8px color-mix(in srgb, var(--erp-accent) 25%, transparent)'
               }}
             >
               {isMutating ? <Loader2 size={14} className="animate-spin" /> : <Calculator size={14} />}

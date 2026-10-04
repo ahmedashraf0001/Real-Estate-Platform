@@ -62,10 +62,10 @@ const CHRONOLOGICAL_PHASES: {
   bgColor: string;
   borderColor: string;
 }[] = [
-  { key: 'planning_permits', stepNum: '١', nameAr: 'التراخيص والتخطيط', nameEn: 'Planning & Permits', icon: FileText, color: '#1e40af', bgColor: 'rgba(30, 64, 175, 0.08)', borderColor: 'rgba(30, 64, 175, 0.25)' },
+  { key: 'planning_permits', stepNum: '١', nameAr: 'التراخيص والتخطيط', nameEn: 'Planning & Permits', icon: FileText, color: 'var(--erp-accent-hover)', bgColor: 'rgba(30, 64, 175, 0.08)', borderColor: 'rgba(30, 64, 175, 0.25)' },
   { key: 'excavation_foundation', stepNum: '٢', nameAr: 'الأساسات والحفر', nameEn: 'Excavation & Footings', icon: Layers, color: '#b45309', bgColor: 'rgba(180, 83, 9, 0.08)', borderColor: 'rgba(180, 83, 9, 0.25)' },
   { key: 'structural_skeleton', stepNum: '٣', nameAr: 'الهيكل والخرسانات', nameEn: 'Structural Skeleton', icon: Building2, color: '#c2410c', bgColor: 'rgba(194, 65, 12, 0.08)', borderColor: 'rgba(194, 65, 12, 0.25)' },
-  { key: 'masonry_roughing', stepNum: '٤', nameAr: 'المباني والتأسيس', nameEn: 'Masonry & MEP', icon: Hammer, color: '#946f23', bgColor: 'rgba(184, 144, 62, 0.08)', borderColor: 'rgba(184, 144, 62, 0.25)' },
+  { key: 'masonry_roughing', stepNum: '٤', nameAr: 'المباني والتأسيس', nameEn: 'Masonry & MEP', icon: Hammer, color: 'var(--erp-accent)', bgColor: 'rgba(184, 144, 62, 0.08)', borderColor: 'rgba(184, 144, 62, 0.25)' },
   { key: 'finishing_interiors', stepNum: '٥', nameAr: 'التشطيبات والديكور', nameEn: 'Finishing & Cladding', icon: Paintbrush, color: '#701a75', bgColor: 'rgba(112, 26, 117, 0.08)', borderColor: 'rgba(112, 26, 117, 0.25)' },
   { key: 'final_inspection_handover', stepNum: '٦', nameAr: 'الجاهزية للتسليم', nameEn: 'Handover & Commissioning', icon: ShieldCheck, color: '#047857', bgColor: 'rgba(4, 120, 87, 0.08)', borderColor: 'rgba(4, 120, 87, 0.25)' },
 ];
@@ -477,7 +477,7 @@ export function PropertyLifecycleAuditModal({
                       {/* Top Row: Title & Completion Status */}
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', minWidth: 0 }}>
-                          <Building2 size={14} color="#946f23" style={{ flexShrink: 0 }} />
+                          <Building2 size={14} color="var(--erp-accent)" style={{ flexShrink: 0 }} />
                           <span style={{ fontWeight: 800, fontSize: '0.86rem', color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                             {isAr ? (p.title_ar || p.title_en) : (p.title_en || p.title_ar)}
                           </span>
@@ -506,7 +506,7 @@ export function PropertyLifecycleAuditModal({
                         <span style={{ fontSize: '0.7rem', color: '#94a3b8' }}>
                           {isAr ? 'المنصرف الفعلي:' : 'WIP Incurred:'}
                         </span>
-                        <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#946f23', fontVariantNumeric: 'tabular-nums' }}>
+                        <span style={{ fontSize: '0.82rem', fontWeight: 800, color: 'var(--erp-accent)', fontVariantNumeric: 'tabular-nums' }}>
                           {formatEGP(wipTotal)}
                         </span>
                       </div>
@@ -519,7 +519,7 @@ export function PropertyLifecycleAuditModal({
                           width: '18px',
                           height: '18px',
                           borderRadius: '50%',
-                          background: '#946f23',
+                          background: 'var(--erp-accent)',
                           color: '#ffffff',
                           display: 'flex',
                           alignItems: 'center',
@@ -544,14 +544,14 @@ export function PropertyLifecycleAuditModal({
             <div className={styles.kpiGrid}>
               {/* Total Incurred Capital */}
               <div className={`${styles.kpiCard} ${styles.kpiCardGold}`}>
-                <div className={styles.kpiLabel} style={{ color: '#946f23' }}>
-                  <div className={styles.kpiIconBadge} style={{ background: 'rgba(184, 144, 62, 0.12)', color: '#946f23' }}>
+                <div className={styles.kpiLabel} style={{ color: 'var(--erp-accent)' }}>
+                  <div className={styles.kpiIconBadge} style={{ background: 'rgba(184, 144, 62, 0.12)', color: 'var(--erp-accent)' }}>
                     <DollarSign size={14} />
                   </div>
                   <span>{isAr ? 'إجمالي اللي اتصرف ع العمارة' : 'Total Incurred Logged Cost'}</span>
                 </div>
                 <div className={styles.kpiValue} style={{ color: '#0f172a' }}>
-                  {formatEGP(metrics.totalLoggedCost)} <span className={styles.kpiValueUnit} style={{ color: '#946f23', fontWeight: 800 }}>ج.م</span>
+                  {formatEGP(metrics.totalLoggedCost)} <span className={styles.kpiValueUnit} style={{ color: 'var(--erp-accent)', fontWeight: 800 }}>ج.م</span>
                 </div>
                 <div className={styles.kpiSub}>
                   {isAr ? 'إجمالي الفلوس اللي ادفعت على العمارة دي' : 'Accumulated expenditure on property'}
@@ -560,14 +560,14 @@ export function PropertyLifecycleAuditModal({
 
               {/* Actual Cost per Sqm */}
               <div className={`${styles.kpiCard} ${styles.kpiCardNavy}`}>
-                <div className={styles.kpiLabel} style={{ color: '#1d4ed8' }}>
-                  <div className={styles.kpiIconBadge} style={{ background: 'rgba(29, 78, 216, 0.1)', color: '#1d4ed8' }}>
+                <div className={styles.kpiLabel} style={{ color: 'var(--erp-accent-hover)' }}>
+                  <div className={styles.kpiIconBadge} style={{ background: 'rgba(29, 78, 216, 0.1)', color: 'var(--erp-accent-hover)' }}>
                     <Building2 size={14} />
                   </div>
                   <span>{isAr ? 'تكلفة المتر الفعلي للمباني' : 'Actual Cost Per Sqm'}</span>
                 </div>
                 <div className={styles.kpiValue} style={{ color: '#0f172a' }}>
-                  {formatEGP(metrics.costPerSqm)} <span className={styles.kpiValueUnit} style={{ color: '#1d4ed8', fontWeight: 800 }}>ج.م/م²</span>
+                  {formatEGP(metrics.costPerSqm)} <span className={styles.kpiValueUnit} style={{ color: 'var(--erp-accent-hover)', fontWeight: 800 }}>ج.م/م²</span>
                 </div>
                 <div className={styles.kpiSub}>
                   {isAr ? `على مساحة إجمالية ${activeProperty.area_sqm} متر مربع` : `Based on ${activeProperty.area_sqm} m² built-up area`}
@@ -603,9 +603,9 @@ export function PropertyLifecycleAuditModal({
                 </div>
                 <div className={styles.kpiSub}>
                   {isAr ? (
-                    <>نسبة المصاريف من سعر البيع: <strong style={{ color: '#946f23', fontWeight: 800 }}>{D(metrics.totalLoggedCost).dividedBy(activeProperty.price_egp || 1).times(100).toFixed(1)}%</strong></>
+                    <>نسبة المصاريف من سعر البيع: <strong style={{ color: 'var(--erp-accent)', fontWeight: 800 }}>{D(metrics.totalLoggedCost).dividedBy(activeProperty.price_egp || 1).times(100).toFixed(1)}%</strong></>
                   ) : (
-                    <>Cost-to-List Ratio: <strong style={{ color: '#946f23', fontWeight: 800 }}>{D(metrics.totalLoggedCost).dividedBy(activeProperty.price_egp || 1).times(100).toFixed(1)}%</strong></>
+                    <>Cost-to-List Ratio: <strong style={{ color: 'var(--erp-accent)', fontWeight: 800 }}>{D(metrics.totalLoggedCost).dividedBy(activeProperty.price_egp || 1).times(100).toFixed(1)}%</strong></>
                   )}
                 </div>
               </div>
@@ -615,7 +615,7 @@ export function PropertyLifecycleAuditModal({
             <div className={styles.sectionBox}>
               <div className={styles.sectionHeader}>
                 <div className={styles.sectionTitle}>
-                  <HardHat size={16} color="#946f23" />
+                  <HardHat size={16} color="var(--erp-accent)" />
                   <span>{isAr ? 'مراحل البناء والتنفيذ' : 'Construction Lifecycle Pipeline'}</span>
                   <span className={styles.sectionSub}>
                     ({isAr ? 'دوس على أي مرحلة عشان تشوف بنودها وفواتيرها' : 'click stage to filter'})
@@ -723,7 +723,7 @@ export function PropertyLifecycleAuditModal({
             <div className={styles.sectionBox}>
               <div className={styles.sectionHeader}>
                 <div className={styles.sectionTitle}>
-                  <Layers size={16} color="#946f23" />
+                  <Layers size={16} color="var(--erp-accent)" />
                   <span>{isAr ? 'توزيع المصاريف حسب نوع الشغل والخامات' : 'Cost Breakdown by Material Category'}</span>
                   {selectedPhaseFilter !== 'all' ? (
                     <span style={{
@@ -732,7 +732,7 @@ export function PropertyLifecycleAuditModal({
                       padding: '0.15rem 0.55rem',
                       borderRadius: '6px',
                       background: CHRONOLOGICAL_PHASES.find(p => p.key === selectedPhaseFilter)?.bgColor || 'rgba(184, 144, 62, 0.08)',
-                      color: CHRONOLOGICAL_PHASES.find(p => p.key === selectedPhaseFilter)?.color || '#946f23',
+                      color: CHRONOLOGICAL_PHASES.find(p => p.key === selectedPhaseFilter)?.color || 'var(--erp-accent)',
                       border: `1px solid ${CHRONOLOGICAL_PHASES.find(p => p.key === selectedPhaseFilter)?.borderColor || 'rgba(184, 144, 62, 0.25)'}`,
                       display: 'inline-flex',
                       alignItems: 'center',

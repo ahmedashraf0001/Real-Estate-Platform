@@ -3782,8 +3782,8 @@ export const CockpitView: React.FC<CockpitViewProps> = ({
                               if (onNavigateTab) onNavigateTab('properties', { propertyId: proj.id });
                             }}
                             style={{
-                              background: '#eff6ff',
-                              border: '1px solid #bfdbfe',
+                              background: 'var(--erp-accent-subtle)',
+                              border: '1px solid color-mix(in srgb, var(--erp-accent) 28%, transparent)',
                               color: 'var(--erp-accent, #2563eb)',
                               borderRadius: '4px',
                               padding: '0.25rem 0.65rem',

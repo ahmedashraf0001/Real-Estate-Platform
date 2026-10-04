@@ -182,7 +182,7 @@ export const BalanceSheetAnalyticsView: React.FC<BalanceSheetAnalyticsViewProps>
     const cats = financialTotals.assetCategories;
     const totalAssets = cats.cash + cats.receivables + cats.installments + cats.wip;
     const items = [
-      { label: isAr ? 'النقدية والبنوك' : 'Cash & Banks', value: cats.cash, color: currentAccent || '#2563eb' },
+      { label: isAr ? 'النقدية والبنوك' : 'Cash & Banks', value: cats.cash, color: currentAccent || 'var(--erp-accent)' },
       { label: isAr ? 'العملاء والمدينون' : 'Buyers & Receivables', value: cats.receivables, color: '#0284c7' },
       { label: isAr ? 'الأقساط المجدولة' : 'Scheduled Installments', value: cats.installments, color: '#d97706' },
       { label: isAr ? 'المشروعات تحت التنفيذ' : 'WIP & Development', value: cats.wip, color: '#475569' },
@@ -204,7 +204,7 @@ export const BalanceSheetAnalyticsView: React.FC<BalanceSheetAnalyticsViewProps>
     const cats = financialTotals.liabEquityCategories;
     const total = cats.advances + cats.contractors + cats.rescissions + cats.capital;
     const items = [
-      { label: isAr ? 'مقدمات وأقساط العملاء' : 'Customer Advances', value: cats.advances, color: currentAccent || '#2563eb' },
+      { label: isAr ? 'مقدمات وأقساط العملاء' : 'Customer Advances', value: cats.advances, color: currentAccent || 'var(--erp-accent)' },
       { label: isAr ? 'مستحقات المقاولين' : 'Contractor Payables', value: cats.contractors, color: '#d97706' },
       { label: isAr ? 'مستحقات فسخ وتأمينات' : 'Rescissions & Retentions', value: cats.rescissions, color: '#dc2626' },
       { label: isAr ? 'رأس مال الشركاء' : 'Partners Capital', value: cats.capital, color: '#334155' },

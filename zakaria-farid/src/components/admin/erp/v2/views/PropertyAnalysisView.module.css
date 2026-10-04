@@ -50,7 +50,7 @@
   padding: 0.2rem 0.65rem;
   border-radius: 9999px;
   background: var(--erp-accent-subtle, #eff6ff);
-  border: 1px solid rgba(37, 99, 235, 0.2);
+  border: 1px solid color-mix(in srgb, var(--erp-accent) 20%, transparent);
   color: var(--erp-accent, #2563eb);
 }
 
@@ -1134,7 +1134,7 @@
   border-radius: 4px;
   background: var(--erp-accent-subtle, #eff6ff);
   color: var(--erp-accent, #2563eb);
-  border: 1px solid rgba(37, 99, 235, 0.2);
+  border: 1px solid color-mix(in srgb, var(--erp-accent) 20%, transparent);
   margin-inline-start: 0.4rem;
 }
 

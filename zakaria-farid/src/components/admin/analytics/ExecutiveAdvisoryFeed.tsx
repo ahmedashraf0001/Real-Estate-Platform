@@ -138,7 +138,7 @@ export default function ExecutiveAdvisoryFeed({ advisories, adminLocale }: Execu
         return {
           themeColor: '#3B82F6',
           bgGradient: 'linear-gradient(145deg, rgba(59, 130, 246, 0.12) 0%, rgba(16, 20, 29, 0.95) 100%)',
-          border: 'rgba(59, 130, 246, 0.3)',
+          border: 'color-mix(in srgb, var(--admin-accent) 30%, transparent)',
           topBorder: '#3B82F6',
           badgeBg: 'rgba(59, 130, 246, 0.15)',
           badgeColor: '#3B82F6',
@@ -327,20 +327,20 @@ export default function ExecutiveAdvisoryFeed({ advisories, adminLocale }: Execu
           width: 38px;
           height: 38px;
           border-radius: 10px;
-          background: rgba(59, 130, 246, 0.12);
+          background: color-mix(in srgb, var(--admin-accent) 12%, transparent);
           display: flex;
           align-items: center;
           justify-content: center;
-          color: #3B82F6;
+          color: var(--admin-accent);
           flex-shrink: 0;
-          border: 1px solid rgba(59, 130, 246, 0.3);
-          box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+          border: 1px solid color-mix(in srgb, var(--admin-accent) 30%, transparent);
+          box-shadow: 0 4px 12px color-mix(in srgb, var(--admin-accent) 15%, transparent);
         }
 
         .advisory-master-container.is-light .advisory-icon-box {
-          background: rgba(37, 99, 235, 0.08);
-          border-color: rgba(37, 99, 235, 0.25);
-          color: #2563EB;
+          background: color-mix(in srgb, var(--admin-accent) 8%, transparent);
+          border-color: color-mix(in srgb, var(--admin-accent) 25%, transparent);
+          color: var(--admin-accent);
           box-shadow: none;
         }
 
@@ -369,9 +369,9 @@ export default function ExecutiveAdvisoryFeed({ advisories, adminLocale }: Execu
           gap: 6px;
           padding: 3px 9px;
           border-radius: 9999px;
-          background: rgba(59, 130, 246, 0.12);
-          border: 1px solid rgba(59, 130, 246, 0.3);
-          color: #3B82F6;
+          background: color-mix(in srgb, var(--admin-accent) 12%, transparent);
+          border: 1px solid color-mix(in srgb, var(--admin-accent) 30%, transparent);
+          color: var(--admin-accent);
           font-size: 10px;
           font-weight: 800;
           letter-spacing: 0.04em;
@@ -379,23 +379,23 @@ export default function ExecutiveAdvisoryFeed({ advisories, adminLocale }: Execu
         }
 
         .advisory-master-container.is-light .live-ai-badge {
-          background: rgba(37, 99, 235, 0.08);
-          border: 1px solid rgba(37, 99, 235, 0.25);
-          color: #2563EB;
+          background: color-mix(in srgb, var(--admin-accent) 8%, transparent);
+          border: 1px solid color-mix(in srgb, var(--admin-accent) 25%, transparent);
+          color: var(--admin-accent);
         }
 
         .pulsing-dot {
           width: 6px;
           height: 6px;
           border-radius: 50%;
-          background: #3B82F6;
-          box-shadow: 0 0 8px #3B82F6;
+          background: var(--admin-accent);
+          box-shadow: 0 0 8px var(--admin-accent);
           animation: pulseGlow 1.8s infinite;
         }
 
         .advisory-master-container.is-light .pulsing-dot {
-          background: #2563EB;
-          box-shadow: 0 0 8px #2563EB;
+          background: var(--admin-accent);
+          box-shadow: 0 0 8px var(--admin-accent);
         }
 
         @keyframes pulseGlow {
@@ -543,7 +543,7 @@ export default function ExecutiveAdvisoryFeed({ advisories, adminLocale }: Execu
           background: var(--btn-hover-bg, #3B82F6) !important;
           color: var(--btn-hover-color, #FFFFFF) !important;
           border-color: var(--btn-hover-bg, #3B82F6) !important;
-          box-shadow: 0 4px 14px rgba(37, 99, 235, 0.25);
+          box-shadow: 0 4px 14px color-mix(in srgb, var(--admin-accent) 25%, transparent);
           transform: translateX(2px);
         }
 

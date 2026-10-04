@@ -219,8 +219,8 @@ export const CostAdjustmentModal: React.FC<CostAdjustmentModalProps> = ({
                 style={{
                   padding: '12px 14px',
                   borderRadius: '12px',
-                  border: adjustmentType === 'REFUND_OVERPAYMENT' ? '2px solid #2563eb' : '1px solid #e2e8f0',
-                  background: adjustmentType === 'REFUND_OVERPAYMENT' ? '#eff6ff' : '#FFFFFF',
+                  border: adjustmentType === 'REFUND_OVERPAYMENT' ? '2px solid var(--erp-accent)' : '1px solid #e2e8f0',
+                  background: adjustmentType === 'REFUND_OVERPAYMENT' ? 'var(--erp-accent-subtle)' : '#FFFFFF',
                   cursor: 'pointer',
                   textAlign: 'start',
                   display: 'flex',
@@ -232,7 +232,7 @@ export const CostAdjustmentModal: React.FC<CostAdjustmentModalProps> = ({
                   width: '32px',
                   height: '32px',
                   borderRadius: '8px',
-                  background: adjustmentType === 'REFUND_OVERPAYMENT' ? '#2563eb' : '#F1F5F9',
+                  background: adjustmentType === 'REFUND_OVERPAYMENT' ? 'var(--erp-accent)' : '#F1F5F9',
                   color: adjustmentType === 'REFUND_OVERPAYMENT' ? '#FFFFFF' : '#64748B',
                   display: 'flex',
                   alignItems: 'center',
@@ -256,8 +256,8 @@ export const CostAdjustmentModal: React.FC<CostAdjustmentModalProps> = ({
                 style={{
                   padding: '12px 14px',
                   borderRadius: '12px',
-                  border: adjustmentType === 'SUPPLEMENT_UNDERPAYMENT' ? '2px solid #2563eb' : '1px solid #e2e8f0',
-                  background: adjustmentType === 'SUPPLEMENT_UNDERPAYMENT' ? '#eff6ff' : '#FFFFFF',
+                  border: adjustmentType === 'SUPPLEMENT_UNDERPAYMENT' ? '2px solid var(--erp-accent)' : '1px solid #e2e8f0',
+                  background: adjustmentType === 'SUPPLEMENT_UNDERPAYMENT' ? 'var(--erp-accent-subtle)' : '#FFFFFF',
                   cursor: 'pointer',
                   textAlign: 'start',
                   display: 'flex',
@@ -269,7 +269,7 @@ export const CostAdjustmentModal: React.FC<CostAdjustmentModalProps> = ({
                   width: '32px',
                   height: '32px',
                   borderRadius: '8px',
-                  background: adjustmentType === 'SUPPLEMENT_UNDERPAYMENT' ? '#2563eb' : '#F1F5F9',
+                  background: adjustmentType === 'SUPPLEMENT_UNDERPAYMENT' ? 'var(--erp-accent)' : '#F1F5F9',
                   color: adjustmentType === 'SUPPLEMENT_UNDERPAYMENT' ? '#FFFFFF' : '#64748B',
                   display: 'flex',
                   alignItems: 'center',
@@ -329,7 +329,7 @@ export const CostAdjustmentModal: React.FC<CostAdjustmentModalProps> = ({
               </span>
             </div>
             {amount && parseFloat(amount) > 0 && (
-              <p style={{ margin: '6px 0 0', fontSize: '0.78rem', color: '#2563eb', fontWeight: 700 }}>
+              <p style={{ margin: '6px 0 0', fontSize: '0.78rem', color: 'var(--erp-accent)', fontWeight: 700 }}>
                 {tafqeetEGP(amount)}
               </p>
             )}
@@ -408,12 +408,12 @@ export const CostAdjustmentModal: React.FC<CostAdjustmentModalProps> = ({
           {/* Live Impact Preview Card */}
           <div style={{
             background: '#f8fafc',
-            border: '1.5px dashed #93c5fd',
+            border: '1.5px dashed color-mix(in srgb, var(--erp-accent) 45%, transparent)',
             borderRadius: '14px',
             padding: '16px 20px',
             marginBottom: '24px'
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px', color: '#2563eb' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px', color: 'var(--erp-accent)' }}>
               <ShieldCheck size={18} />
               <strong style={{ fontSize: '0.88rem' }}>
                 {isAr ? 'المعاينة المحاسبية اللحظية للصافي الفعلي' : 'Effective Impact Preview'}
@@ -428,7 +428,7 @@ export const CostAdjustmentModal: React.FC<CostAdjustmentModalProps> = ({
                   {D(currentTotals.netEffectiveCost).formatEGP(isAr)}
                 </strong>
               </div>
-              <ArrowRight size={18} style={{ color: '#2563eb', transform: isAr ? 'rotate(180deg)' : 'none' }} />
+              <ArrowRight size={18} style={{ color: 'var(--erp-accent)', transform: isAr ? 'rotate(180deg)' : 'none' }} />
               <div>
                 <span style={{ fontSize: '0.8rem', color: '#64748B', display: 'block' }}>
                   {isAr ? 'الصافي الفعلي الجديد بعد التسوية:' : 'New Effective Net:'}
@@ -470,12 +470,12 @@ export const CostAdjustmentModal: React.FC<CostAdjustmentModalProps> = ({
                 padding: '12px 24px',
                 borderRadius: '12px',
                 border: 'none',
-                background: '#2563eb',
+                background: 'var(--erp-accent)',
                 color: '#FFFFFF',
                 fontSize: '0.88rem',
                 fontWeight: 800,
                 cursor: isSubmitting ? 'not-allowed' : 'pointer',
-                boxShadow: '0 2px 8px rgba(37, 99, 235, 0.25)'
+                boxShadow: '0 2px 8px color-mix(in srgb, var(--erp-accent) 25%, transparent)'
               }}
             >
               {isSubmitting 

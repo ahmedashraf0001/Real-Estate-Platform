@@ -91,9 +91,9 @@ export default function PropertyEngagementLeaderboard({ metrics, adminLocale }: 
           return {
             label: isAr ? 'أصل سيادي نادر' : 'Trophy Sovereign Asset',
             icon: Crown,
-            color: '#2563EB',
+            color: 'var(--admin-accent)',
             bg: 'rgba(37, 99, 235, 0.08)',
-            border: 'rgba(37, 99, 235, 0.25)',
+            border: 'color-mix(in srgb, var(--admin-accent) 25%, transparent)',
           };
         case 'under_engaged':
         default:
@@ -129,9 +129,9 @@ export default function PropertyEngagementLeaderboard({ metrics, adminLocale }: 
         return {
           label: isAr ? 'أصل سيادي نادر' : 'Trophy Sovereign Asset',
           icon: Crown,
-          color: '#3B82F6',
+          color: 'var(--admin-accent)',
           bg: 'rgba(59, 130, 246, 0.12)',
-          border: 'rgba(59, 130, 246, 0.25)',
+          border: 'color-mix(in srgb, var(--admin-accent) 25%, transparent)',
         };
       case 'under_engaged':
       default:
@@ -153,9 +153,9 @@ export default function PropertyEngagementLeaderboard({ metrics, adminLocale }: 
     if (isLightMode) {
       if (rankIndex === 0) {
         return {
-          color: '#2563EB',
+          color: 'var(--admin-accent)',
           bg: 'rgba(37, 99, 235, 0.12)',
-          border: 'rgba(37, 99, 235, 0.35)',
+          border: 'color-mix(in srgb, var(--admin-accent) 35%, transparent)',
           label: formatted,
         };
       }
@@ -186,9 +186,9 @@ export default function PropertyEngagementLeaderboard({ metrics, adminLocale }: 
     // Dark mode
     if (rankIndex === 0) {
       return {
-        color: '#3B82F6',
+        color: 'var(--admin-accent)',
         bg: 'rgba(59, 130, 246, 0.15)',
-        border: 'rgba(59, 130, 246, 0.35)',
+        border: 'color-mix(in srgb, var(--admin-accent) 35%, transparent)',
         label: formatted,
       };
     }
@@ -594,19 +594,19 @@ export default function PropertyEngagementLeaderboard({ metrics, adminLocale }: 
           width: 40px;
           height: 40px;
           border-radius: 12px;
-          background: rgba(59, 130, 246, 0.12);
+          background: color-mix(in srgb, var(--admin-accent) 12%, transparent);
           display: flex;
           align-items: center;
           justify-content: center;
-          color: #3B82F6;
+          color: var(--admin-accent);
           flex-shrink: 0;
-          border: 1px solid rgba(59, 130, 246, 0.25);
+          border: 1px solid color-mix(in srgb, var(--admin-accent) 25%, transparent);
         }
 
         .leaderboard-card.is-light .leaderboard-icon-box {
-          background: rgba(37, 99, 235, 0.1);
-          border-color: rgba(37, 99, 235, 0.25);
-          color: #2563EB;
+          background: color-mix(in srgb, var(--admin-accent) 10%, transparent);
+          border-color: color-mix(in srgb, var(--admin-accent) 25%, transparent);
+          color: var(--admin-accent);
         }
 
         .leaderboard-title {
@@ -676,11 +676,11 @@ export default function PropertyEngagementLeaderboard({ metrics, adminLocale }: 
         }
 
         .ribbon-value.gold {
-          color: #3B82F6;
+          color: var(--admin-accent);
         }
 
         .leaderboard-card.is-light .ribbon-value.gold {
-          color: #2563EB;
+          color: var(--admin-accent);
         }
 
         .ribbon-value.emerald {
@@ -739,7 +739,7 @@ export default function PropertyEngagementLeaderboard({ metrics, adminLocale }: 
         }
 
         .tier-pill-btn.active {
-          background: #3B82F6;
+          background: var(--admin-accent);
           color: #FFFFFF;
           border-color: transparent;
           box-shadow: none;
@@ -757,7 +757,7 @@ export default function PropertyEngagementLeaderboard({ metrics, adminLocale }: 
         }
 
         .leaderboard-card.is-light .tier-pill-btn.active {
-          background: #2563EB;
+          background: var(--admin-accent);
           color: #FFFFFF;
           border-color: transparent;
           box-shadow: none;
@@ -807,8 +807,8 @@ export default function PropertyEngagementLeaderboard({ metrics, adminLocale }: 
         }
 
         .search-input:focus {
-          border-color: #3B82F6;
-          box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+          border-color: var(--admin-accent);
+          box-shadow: 0 0 0 3px color-mix(in srgb, var(--admin-accent) 15%, transparent);
         }
 
         .leaderboard-card.is-light .search-input {
@@ -822,8 +822,8 @@ export default function PropertyEngagementLeaderboard({ metrics, adminLocale }: 
         }
 
         .leaderboard-card.is-light .search-input:focus {
-          border-color: #2563EB;
-          box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+          border-color: var(--admin-accent);
+          box-shadow: 0 0 0 3px color-mix(in srgb, var(--admin-accent) 12%, transparent);
         }
 
         .search-clear-btn {
@@ -889,8 +889,8 @@ export default function PropertyEngagementLeaderboard({ metrics, adminLocale }: 
         }
 
         .sort-dropdown:focus {
-          border-color: #3B82F6;
-          box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+          border-color: var(--admin-accent);
+          box-shadow: 0 0 0 3px color-mix(in srgb, var(--admin-accent) 15%, transparent);
         }
 
         .leaderboard-card.is-light .sort-dropdown {
@@ -900,8 +900,8 @@ export default function PropertyEngagementLeaderboard({ metrics, adminLocale }: 
         }
 
         .leaderboard-card.is-light .sort-dropdown:focus {
-          border-color: #2563EB;
-          box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+          border-color: var(--admin-accent);
+          box-shadow: 0 0 0 3px color-mix(in srgb, var(--admin-accent) 12%, transparent);
         }
 
         .leaderboard-card.is-light .sort-dropdown option {
@@ -980,8 +980,8 @@ export default function PropertyEngagementLeaderboard({ metrics, adminLocale }: 
 
         .leaderboard-row:hover {
           background: rgba(255, 255, 255, 0.04);
-          border-color: rgba(59, 130, 246, 0.3);
-          border-inline-start-color: #3B82F6;
+          border-color: color-mix(in srgb, var(--admin-accent) 30%, transparent);
+          border-inline-start-color: var(--admin-accent);
           transform: translateY(-1px);
           box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
         }
@@ -994,8 +994,8 @@ export default function PropertyEngagementLeaderboard({ metrics, adminLocale }: 
 
         .leaderboard-card.is-light .leaderboard-row:hover {
           background: #F8FAFC;
-          border-color: rgba(37, 99, 235, 0.3);
-          border-inline-start-color: #2563EB;
+          border-color: color-mix(in srgb, var(--admin-accent) 30%, transparent);
+          border-inline-start-color: var(--admin-accent);
           box-shadow: 0 4px 14px rgba(15, 23, 42, 0.05);
         }
 
@@ -1226,17 +1226,17 @@ export default function PropertyEngagementLeaderboard({ metrics, adminLocale }: 
           gap: 4px;
           font-size: 10.5px;
           font-weight: 700;
-          color: #3B82F6;
-          background: rgba(59, 130, 246, 0.12);
-          border: 1px solid rgba(59, 130, 246, 0.25);
+          color: var(--admin-accent);
+          background: color-mix(in srgb, var(--admin-accent) 12%, transparent);
+          border: 1px solid color-mix(in srgb, var(--admin-accent) 25%, transparent);
           padding: 2px 7px;
           border-radius: 5px;
         }
 
         .leaderboard-card.is-light .won-stat-chip {
-          color: #2563EB;
-          background: rgba(37, 99, 235, 0.08);
-          border-color: rgba(37, 99, 235, 0.25);
+          color: var(--admin-accent);
+          background: color-mix(in srgb, var(--admin-accent) 8%, transparent);
+          border-color: color-mix(in srgb, var(--admin-accent) 25%, transparent);
         }
 
         /* Column 4: Listing Value */
@@ -1263,11 +1263,11 @@ export default function PropertyEngagementLeaderboard({ metrics, adminLocale }: 
         .price-curr {
           font-size: 12px;
           font-weight: 800;
-          color: #3B82F6;
+          color: var(--admin-accent);
         }
 
         .leaderboard-card.is-light .price-curr {
-          color: #2563EB;
+          color: var(--admin-accent);
         }
 
         /* Column 5: Actions */
@@ -1295,7 +1295,7 @@ export default function PropertyEngagementLeaderboard({ metrics, adminLocale }: 
         }
 
         .action-btn:hover {
-          background: #3B82F6;
+          background: var(--admin-accent);
           color: #FFFFFF;
           border-color: transparent;
           transform: translateY(-1px);
@@ -1308,7 +1308,7 @@ export default function PropertyEngagementLeaderboard({ metrics, adminLocale }: 
         }
 
         .leaderboard-card.is-light .action-btn:hover {
-          background: #2563EB;
+          background: var(--admin-accent);
           color: #FFFFFF;
           border-color: transparent;
         }
@@ -1336,16 +1336,16 @@ export default function PropertyEngagementLeaderboard({ metrics, adminLocale }: 
           width: 52px;
           height: 52px;
           border-radius: 50%;
-          background: rgba(59, 130, 246, 0.1);
-          color: #3B82F6;
+          background: color-mix(in srgb, var(--admin-accent) 10%, transparent);
+          color: var(--admin-accent);
           display: flex;
           align-items: center;
           justify-content: center;
         }
 
         .leaderboard-card.is-light .empty-icon-circle {
-          background: rgba(37, 99, 235, 0.1);
-          color: #2563EB;
+          background: color-mix(in srgb, var(--admin-accent) 10%, transparent);
+          color: var(--admin-accent);
         }
 
         .empty-title {
@@ -1394,8 +1394,8 @@ export default function PropertyEngagementLeaderboard({ metrics, adminLocale }: 
         }
 
         .leaderboard-card.is-light .empty-reset-btn:hover {
-          background: #2563EB;
-          border-color: #2563EB;
+          background: var(--admin-accent);
+          border-color: var(--admin-accent);
         }
 
         /* ─── Responsive Media Queries ─── */

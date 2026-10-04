@@ -392,7 +392,7 @@ export const InstallmentDetailDrawer: React.FC<InstallmentDetailDrawerProps> = (
               <span style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: 600 }}>
                 {isAr ? 'تاريخ الإيداع بالبنك' : 'Deposited Date'}
               </span>
-              <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#2563eb', fontVariantNumeric: 'tabular-nums' }}>
+              <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--erp-accent)', fontVariantNumeric: 'tabular-nums' }}>
                 {item.depositedDate}
               </span>
             </div>
@@ -462,7 +462,7 @@ export const InstallmentDetailDrawer: React.FC<InstallmentDetailDrawerProps> = (
               fontWeight: 700,
               padding: '0.1rem 0.45rem',
               borderRadius: '4px',
-              background: '#eff6ff',
+              background: 'var(--erp-accent-subtle)',
               color: 'var(--erp-accent, #2563eb)'
             }}>
               {isAr ? 'قيد يومية متزن 100%' : 'Balanced Entry'}

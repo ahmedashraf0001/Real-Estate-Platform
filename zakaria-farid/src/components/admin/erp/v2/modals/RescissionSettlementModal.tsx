@@ -314,7 +314,7 @@ export const RescissionSettlementModal: React.FC<RescissionSettlementModalProps>
                       style={{
                         padding: '0.85rem',
                         borderRadius: '12px',
-                        border: isSelected ? '1.5px solid #946f23' : '1px solid #e2e8f0',
+                        border: isSelected ? '1.5px solid var(--erp-accent)' : '1px solid #e2e8f0',
                         background: '#ffffff',
                         boxShadow: isSelected 
                           ? '0 4px 14px rgba(148, 111, 35, 0.12), 0 0 0 1px rgba(148, 111, 35, 0.22)' 
@@ -390,7 +390,7 @@ export const RescissionSettlementModal: React.FC<RescissionSettlementModalProps>
                           width: '18px',
                           height: '18px',
                           borderRadius: '50%',
-                          background: '#946f23',
+                          background: 'var(--erp-accent)',
                           color: '#ffffff',
                           display: 'flex',
                           alignItems: 'center',
@@ -469,7 +469,7 @@ export const RescissionSettlementModal: React.FC<RescissionSettlementModalProps>
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #f1f5f9', paddingBottom: '0.75rem', flexWrap: 'wrap', gap: '0.5rem' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <Building2 size={16} color="#946f23" />
+                      <Building2 size={16} color="var(--erp-accent)" />
                       <strong style={{ fontSize: '0.95rem', color: '#0f172a' }}>{rescissionSuccess.buyer}</strong>
                       <span style={{ fontSize: '0.76rem', color: '#64748b' }}>({rescissionSuccess.contractNumber})</span>
                     </div>
@@ -516,13 +516,13 @@ export const RescissionSettlementModal: React.FC<RescissionSettlementModalProps>
                     </div>
 
                     <div style={{ background: 'rgba(184, 144, 62, 0.08)', padding: '0.75rem 1rem', borderRadius: '10px', border: '1px solid rgba(184, 144, 62, 0.25)' }}>
-                      <span style={{ color: '#946f23', fontSize: '0.7rem', fontWeight: 800, display: 'block' }}>
+                      <span style={{ color: 'var(--erp-accent)', fontSize: '0.7rem', fontWeight: 800, display: 'block' }}>
                         {isAr ? 'غرامة الفسخ المحتجزة (حد حظر مطالبة العميل بعجز إضافي):' : 'Retained Penalty (Forfeiture Floor):'}
                       </span>
-                      <strong style={{ color: '#946f23', fontSize: '1.05rem', fontWeight: 900, fontVariantNumeric: 'tabular-nums' }}>
+                      <strong style={{ color: 'var(--erp-accent)', fontSize: '1.05rem', fontWeight: 900, fontVariantNumeric: 'tabular-nums' }}>
                         {formatEGP(rescissionSuccess.penaltyRetained)}
                       </strong>
-                      <span style={{ fontSize: '0.65rem', color: '#946f23', display: 'block', marginTop: '0.2rem' }}>
+                      <span style={{ fontSize: '0.65rem', color: 'var(--erp-accent)', display: 'block', marginTop: '0.2rem' }}>
                         {isAr ? 'تم تطبيق حد حظر مطالبة العميل بعجز إضافي (Forfeiture Floor)' : 'Forfeiture Floor rule applied'}
                       </span>
                     </div>
@@ -632,7 +632,7 @@ export const RescissionSettlementModal: React.FC<RescissionSettlementModalProps>
                 }}>
                   <div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <Building2 size={16} color="#946f23" />
+                      <Building2 size={16} color="var(--erp-accent)" />
                       <strong style={{ fontSize: '0.95rem', color: '#0f172a' }}>
                         {activeContract.buyer_name}
                       </strong>
@@ -778,15 +778,15 @@ export const RescissionSettlementModal: React.FC<RescissionSettlementModalProps>
                     padding: '0.75rem'
                   }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.2rem' }}>
-                      <span style={{ color: '#946f23', fontSize: '0.7rem', fontWeight: 800 }}>
+                      <span style={{ color: 'var(--erp-accent)', fontSize: '0.7rem', fontWeight: 800 }}>
                         {isAr ? 'غرامة الفسخ المحتجزة (حد حظر مطالبة العميل بعجز إضافي):' : 'Retained Penalty (Forfeiture Floor):'}
                       </span>
                       <LegalVerificationTag label={isAr ? `نسبة ${penaltyRatePercent}%` : `${penaltyRatePercent}% Floor`} isAr={isAr} />
                     </div>
-                    <strong style={{ color: '#946f23', fontSize: '1.1rem', fontWeight: 900 }}>
+                    <strong style={{ color: 'var(--erp-accent)', fontSize: '1.1rem', fontWeight: 900 }}>
                       <MoneyCell amount={preview.penaltyRetained} isAr={isAr} highlight />
                     </strong>
-                    <span style={{ fontSize: '0.66rem', color: '#946f23', display: 'block', marginTop: '0.3rem', lineHeight: 1.4 }}>
+                    <span style={{ fontSize: '0.66rem', color: 'var(--erp-accent)', display: 'block', marginTop: '0.3rem', lineHeight: 1.4 }}>
                       {isAr 
                         ? '🛡️ حد حظر مطالبة العميل بعجز إضافي (Forfeiture Floor): العميل لن يُطالب بأي مبالغ إضافية إذا كانت مدفوعاته أقل من الغرامة.'
                         : 'Forfeiture Floor: Client will never be asked to pay additional deficits if payments were less than the penalty.'}

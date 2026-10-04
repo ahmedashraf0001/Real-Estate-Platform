@@ -183,9 +183,9 @@ export const HandoverExecutionModal: React.FC<HandoverExecutionModalProps> = ({
           fontWeight: 800,
           padding: '0.15rem 0.5rem',
           borderRadius: '6px',
-          background: '#eff6ff',
-          color: '#1d4ed8',
-          border: '1px solid #dbeafe'
+          background: 'var(--erp-accent-subtle)',
+          color: 'var(--erp-accent-hover)',
+          border: '1px solid color-mix(in srgb, var(--erp-accent) 14%, transparent)'
         }}>
           IFRS 15 / §14.D.12
         </span>
@@ -217,21 +217,21 @@ export const HandoverExecutionModal: React.FC<HandoverExecutionModalProps> = ({
               {/* Delivered Warning Banner */}
               {isAlreadyDelivered && (
                 <div style={{
-                  background: '#eff6ff',
-                  border: '1.5px solid #93c5fd',
+                  background: 'var(--erp-accent-subtle)',
+                  border: '1.5px solid color-mix(in srgb, var(--erp-accent) 45%, transparent)',
                   borderRadius: '12px',
                   padding: '0.9rem 1rem',
                   display: 'flex',
                   alignItems: 'center',
                   gap: '0.75rem',
-                  color: '#1e40af'
+                  color: 'var(--erp-accent-hover)'
                 }}>
-                  <ShieldCheck size={20} color="#2563eb" style={{ flexShrink: 0 }} />
+                  <ShieldCheck size={20} color="var(--erp-accent)" style={{ flexShrink: 0 }} />
                   <div>
                     <strong style={{ fontSize: '0.82rem', display: 'block' }}>
                       {isAr ? 'تم تسليم هذه الوحدة رسمياً مسبقاً (Delivered)' : 'Unit already certified and delivered'}
                     </strong>
-                    <span style={{ fontSize: '0.73rem', color: '#2563eb' }}>
+                    <span style={{ fontSize: '0.73rem', color: 'var(--erp-accent)' }}>
                       {isAr 
                         ? `تاريخ التسليم المسجل: ${contract.handover_date || 'مسجل بالدفاتر'}. تم ترحيل قيود Model B مسبقاً.` 
                         : `Delivered on: ${contract.handover_date || 'Recorded'}. Model B journal entries already posted.`}
@@ -276,7 +276,7 @@ export const HandoverExecutionModal: React.FC<HandoverExecutionModalProps> = ({
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.85rem' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                    <Building2 size={16} color="#2563eb" />
+                    <Building2 size={16} color="var(--erp-accent)" />
                     <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                       {isAr ? 'بيانات الوحدة والعقد' : 'Contract & Asset Dossier'}
                     </span>
@@ -308,7 +308,7 @@ export const HandoverExecutionModal: React.FC<HandoverExecutionModalProps> = ({
 
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <span style={{ fontSize: '0.76rem', color: '#64748b' }}>{isAr ? 'رقم العقد:' : 'Contract Number:'}</span>
-                    <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#2563eb', fontFamily: 'monospace' }}>
+                    <span style={{ fontSize: '0.82rem', fontWeight: 800, color: 'var(--erp-accent)', fontFamily: 'monospace' }}>
                       #{contract.contract_number}
                     </span>
                   </div>
@@ -399,7 +399,7 @@ export const HandoverExecutionModal: React.FC<HandoverExecutionModalProps> = ({
                 {/* Date Picker */}
                 <div>
                   <label style={{ fontSize: '0.76rem', fontWeight: 700, color: '#334155', display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.35rem' }}>
-                    <Calendar size={14} color="#2563eb" />
+                    <Calendar size={14} color="var(--erp-accent)" />
                     <span>{isAr ? 'تاريخ محضر الاستلام والتسليم الرسمي:' : 'Certified Handover Date:'}</span>
                   </label>
                   <input
@@ -425,7 +425,7 @@ export const HandoverExecutionModal: React.FC<HandoverExecutionModalProps> = ({
                 <div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem' }}>
                     <label style={{ fontSize: '0.76rem', fontWeight: 700, color: '#334155', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                      <Layers size={14} color="#2563eb" />
+                      <Layers size={14} color="var(--erp-accent)" />
                       <span>{isAr ? 'تكلفة البناء المستنزفة (WIP Relief):' : 'Incurred WIP Relief (RSV):'}</span>
                     </label>
                     <span style={{ fontSize: '0.68rem', color: '#64748b' }}>
@@ -572,7 +572,7 @@ export const HandoverExecutionModal: React.FC<HandoverExecutionModalProps> = ({
                       type="checkbox"
                       checked={certifiedCompletionAsserted}
                       onChange={e => setCertifiedCompletionAsserted(e.target.checked)}
-                      style={{ marginTop: '0.15rem', accentColor: '#2563eb' }}
+                      style={{ marginTop: '0.15rem', accentColor: 'var(--erp-accent)' }}
                     />
                     <span style={{ fontSize: '0.73rem', fontWeight: 700, color: '#78350f', lineHeight: 1.45 }}>
                       {isAr 
@@ -603,7 +603,7 @@ export const HandoverExecutionModal: React.FC<HandoverExecutionModalProps> = ({
                 borderBottom: '1px solid #f1f5f9'
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <FileText size={17} color="#2563eb" />
+                  <FileText size={17} color="var(--erp-accent)" />
                   <span style={{ fontWeight: 800, fontSize: '0.88rem', color: '#0f172a' }}>
                     {isAr ? 'معاينة القيد المحاسبي المزدوج (Model B Posting)' : 'Model B Net Recognition Preview'}
                   </span>
@@ -722,7 +722,7 @@ export const HandoverExecutionModal: React.FC<HandoverExecutionModalProps> = ({
                 flexDirection: 'column',
                 gap: '0.4rem'
               }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 800, color: '#2563eb' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 800, color: 'var(--erp-accent)' }}>
                   <Building2 size={15} />
                   <span>{isAr ? 'توضيح أسطر القيد المركب لمبيعات الشقق وتكلفة المباني (لغير المحاسبين):' : 'Plain-Language Real Estate Breakdown of Compound Entry:'}</span>
                 </div>

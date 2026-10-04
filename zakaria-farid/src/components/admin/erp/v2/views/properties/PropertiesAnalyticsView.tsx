@@ -217,7 +217,7 @@ export const PropertiesAnalyticsView: React.FC<PropertiesAnalyticsViewProps> = (
             {/* Available */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#2563eb' }} />
+                <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--erp-accent)' }} />
                 <span style={{ fontSize: '0.72rem', color: '#475569', fontWeight: 600 }}>{isAr ? 'معروضة' : 'Available'}</span>
               </div>
               <strong style={{ fontSize: '0.85rem', color: '#0f172a', fontVariantNumeric: 'tabular-nums' }}>
@@ -278,7 +278,7 @@ export const PropertiesAnalyticsView: React.FC<PropertiesAnalyticsViewProps> = (
                 <span>{isAr ? 'مباعة' : 'Sold'}</span>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#2563eb' }} />
+                <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: 'var(--erp-accent)' }} />
                 <span>{isAr ? 'معروضة' : 'Available'}</span>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>

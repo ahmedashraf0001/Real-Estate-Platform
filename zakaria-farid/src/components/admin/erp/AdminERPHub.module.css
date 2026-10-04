@@ -32,7 +32,7 @@
 .headerCard {
   position: relative;
   background: linear-gradient(135deg, rgba(20, 24, 33, 0.95), rgba(12, 14, 20, 0.98));
-  border: 1px solid rgba(212, 175, 55, 0.25);
+  border: 1px solid color-mix(in srgb, var(--erp-accent) 25%, transparent);
   border-radius: 18px;
   padding: 2rem;
   box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.7);
@@ -46,7 +46,7 @@
   left: 0;
   right: 0;
   height: 2px;
-  background: linear-gradient(90deg, transparent, #d4af37, #f3e5ab, transparent);
+  background: linear-gradient(90deg, transparent, var(--erp-accent), #f3e5ab, transparent);
 }
 
 .headerTop {
@@ -71,9 +71,9 @@
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: #d4af37;
-  background: rgba(212, 175, 55, 0.1);
-  border: 1px solid rgba(212, 175, 55, 0.3);
+  color: var(--erp-accent);
+  background: color-mix(in srgb, var(--erp-accent) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--erp-accent) 30%, transparent);
   padding: 0.25rem 0.75rem;
   border-radius: 9999px;
   width: fit-content;
@@ -83,7 +83,7 @@
   font-size: 1.85rem;
   font-weight: 800;
   letter-spacing: -0.02em;
-  background: linear-gradient(135deg, #ffffff, #e5e7eb, #d4af37);
+  background: linear-gradient(135deg, #ffffff, #e5e7eb, var(--erp-accent));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   margin: 0;
@@ -106,7 +106,7 @@
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
-  background: linear-gradient(135deg, #d4af37, #b8860b);
+  background: linear-gradient(135deg, var(--erp-accent), var(--erp-accent));
   color: #0c0e14;
   font-weight: 700;
   font-size: 0.85rem;
@@ -115,12 +115,12 @@
   border: none;
   cursor: pointer;
   transition: all 0.2s ease;
-  box-shadow: 0 4px 15px rgba(212, 175, 55, 0.3);
+  box-shadow: 0 4px 15px color-mix(in srgb, var(--erp-accent) 30%, transparent);
 }
 
 .actionBtnGold:hover {
   transform: translateY(-1px);
-  box-shadow: 0 6px 20px rgba(212, 175, 55, 0.45);
+  box-shadow: 0 6px 20px color-mix(in srgb, var(--erp-accent) 45%, transparent);
 }
 
 .actionBtnGhost {
@@ -140,7 +140,7 @@
 
 .actionBtnGhost:hover {
   background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(212, 175, 55, 0.4);
+  border-color: color-mix(in srgb, var(--erp-accent) 40%, transparent);
 }
 
 /* Streamlined Navigation: 4 Intuitive Workspaces */
@@ -176,9 +176,9 @@
 
 .navTabBtnActive {
   color: #0c0e14;
-  background: linear-gradient(135deg, #d4af37, #f3e5ab);
+  background: linear-gradient(135deg, var(--erp-accent), #f3e5ab);
   font-weight: 700;
-  box-shadow: 0 4px 15px rgba(212, 175, 55, 0.35);
+  box-shadow: 0 4px 15px color-mix(in srgb, var(--erp-accent) 35%, transparent);
 }
 
 /* Invariant Health Banner - Calm, Expandable */
@@ -241,8 +241,8 @@
 
 .kpiCard:hover {
   transform: translateY(-3px);
-  border-color: rgba(212, 175, 55, 0.45);
-  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.7), 0 0 25px rgba(212, 175, 55, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  border-color: color-mix(in srgb, var(--erp-accent) 45%, transparent);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.7), 0 0 25px color-mix(in srgb, var(--erp-accent) 12%, transparent), inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 
 .kpiCardHighlight {
@@ -421,7 +421,7 @@
 }
 
 .contractVisualCard:hover {
-  border-color: rgba(212, 175, 55, 0.35);
+  border-color: color-mix(in srgb, var(--erp-accent) 35%, transparent);
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
 }
 
@@ -436,11 +436,11 @@
   font-family: monospace;
   font-size: 0.75rem;
   font-weight: 700;
-  color: #d4af37;
-  background: rgba(212, 175, 55, 0.1);
+  color: var(--erp-accent);
+  background: color-mix(in srgb, var(--erp-accent) 10%, transparent);
   padding: 0.2rem 0.5rem;
   border-radius: 6px;
-  border: 1px solid rgba(212, 175, 55, 0.25);
+  border: 1px solid color-mix(in srgb, var(--erp-accent) 25%, transparent);
 }
 
 .contractUnitTitle {
@@ -575,7 +575,7 @@
 .codeCell {
   font-variant-numeric: tabular-nums;
   font-weight: 800;
-  color: #946f23;
+  color: var(--erp-accent);
 }
 
 .statusPill {
@@ -680,9 +680,9 @@
 }
 
 .formInput:focus {
-  border-color: #946f23;
+  border-color: var(--erp-accent);
   background: #ffffff;
-  box-shadow: 0 0 0 2px rgba(148, 111, 35, 0.15);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--erp-accent) 15%, transparent);
 }
 
 /* Luxury styling for select dropdowns */
@@ -719,7 +719,7 @@ select.formInput option:hover,
 select.formInput option:focus,
 select.formInput option:checked {
   background-color: #f8fafc !important;
-  color: #946f23 !important;
+  color: var(--erp-accent) !important;
 }
 
 .modalFooter {

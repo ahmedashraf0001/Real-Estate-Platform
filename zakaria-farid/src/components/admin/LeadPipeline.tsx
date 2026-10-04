@@ -33,19 +33,19 @@ interface LeadPipelineProps {
 }
 
 const STAGE_CONFIG = [
-  { key: 'new',               en: 'New Inquiries',     ar: 'طلبات جديدة',        color: '#3B82F6', glow: 'rgba(59, 130, 246, 0.2)', step: 1 },
-  { key: 'contacted',         en: 'Contacted',         ar: 'تم التواصل',         color: '#60A5FA', glow: 'rgba(96, 165, 250, 0.2)', step: 2 },
-  { key: 'viewing_scheduled', en: 'Viewing Scheduled', ar: 'معاينة مجدولة',      color: '#2563EB', glow: 'rgba(37, 99, 235, 0.2)', step: 3 },
-  { key: 'negotiating',       en: 'Negotiating',       ar: 'جاري التفاوض',        color: '#1D4ED8', glow: 'rgba(29, 78, 216, 0.25)', step: 4 },
+  { key: 'new',               en: 'New Inquiries',     ar: 'طلبات جديدة',        color: 'var(--admin-accent)', glow: 'rgba(59, 130, 246, 0.2)', step: 1 },
+  { key: 'contacted',         en: 'Contacted',         ar: 'تم التواصل',         color: 'var(--admin-accent-hover)', glow: 'rgba(96, 165, 250, 0.2)', step: 2 },
+  { key: 'viewing_scheduled', en: 'Viewing Scheduled', ar: 'معاينة مجدولة',      color: 'var(--admin-accent)', glow: 'rgba(37, 99, 235, 0.2)', step: 3 },
+  { key: 'negotiating',       en: 'Negotiating',       ar: 'جاري التفاوض',        color: 'var(--admin-accent-hover)', glow: 'rgba(29, 78, 216, 0.25)', step: 4 },
   { key: 'closed_won',        en: 'Closed Won ✨',     ar: 'تم التعاقد ✨',        color: '#10B981', glow: 'rgba(16, 185, 129, 0.2)', step: 5 },
   { key: 'closed_lost',       en: 'Closed Lost',       ar: 'لم يتم التعاقد',      color: '#94A3B8', glow: 'rgba(148, 163, 184, 0.2)', step: 0 },
 ] as const;
 
 const PROGRESSION_STAGES = [
-  { key: 'new',               en: 'Inquiry',    ar: 'طلب جديد',   num: 1, color: '#3B82F6' },
-  { key: 'contacted',         en: 'Contacted',  ar: 'تواصل',      num: 2, color: '#60A5FA' },
-  { key: 'viewing_scheduled', en: 'Viewing',    ar: 'معاينة',     num: 3, color: '#2563EB' },
-  { key: 'negotiating',       en: 'Negotiate',  ar: 'تفاوض',      num: 4, color: '#1D4ED8' },
+  { key: 'new',               en: 'Inquiry',    ar: 'طلب جديد',   num: 1, color: 'var(--admin-accent)' },
+  { key: 'contacted',         en: 'Contacted',  ar: 'تواصل',      num: 2, color: 'var(--admin-accent-hover)' },
+  { key: 'viewing_scheduled', en: 'Viewing',    ar: 'معاينة',     num: 3, color: 'var(--admin-accent)' },
+  { key: 'negotiating',       en: 'Negotiate',  ar: 'تفاوض',      num: 4, color: 'var(--admin-accent-hover)' },
   { key: 'closed_won',        en: 'Won ✨',     ar: 'تعاقد ✨',    num: 5, color: '#10B981' },
 ] as const;
 
@@ -1359,9 +1359,9 @@ export default function LeadPipeline({ initialLeads, properties, adminLocale }: 
                     fontWeight: 800,
                     padding: '2px 7px',
                     borderRadius: '6px',
-                    background: `${stage.color}18`,
+                    background: `color-mix(in srgb, ${stage.color} 9%, transparent)`,
                     color: stage.color,
-                    border: `1px solid ${stage.color}35`
+                    border: `1px solid color-mix(in srgb, ${stage.color} 21%, transparent)`
                   }}>
                     {stage.items.length}
                   </span>
@@ -2021,17 +2021,17 @@ export default function LeadPipeline({ initialLeads, properties, adminLocale }: 
                   let circleColor = isLight ? '#64748B' : 'rgba(255, 255, 255, 0.5)';
 
                   if (isCurrent) {
-                    btnBg = isLight ? 'var(--admin-accent-tint)' : `${st.color}35`;
+                    btnBg = isLight ? 'var(--admin-accent-tint)' : `color-mix(in srgb, ${st.color} 21%, transparent)`;
                     btnBorder = isLight ? '1.5px solid var(--admin-accent)' : `1.5px solid ${st.color}`;
                     btnColor = isLight ? '#0F172A' : '#FFFFFF';
                     circleBg = isLight ? 'var(--admin-accent)' : st.color;
                     circleBorder = 'none';
                     circleColor = '#FFFFFF';
                   } else if (isPassed) {
-                    btnBg = isLight ? 'rgba(4, 120, 87, 0.08)' : `${st.color}15`;
+                    btnBg = isLight ? 'rgba(4, 120, 87, 0.08)' : `color-mix(in srgb, ${st.color} 8%, transparent)`;
                     btnBorder = isLight ? '1px solid rgba(4, 120, 87, 0.25)' : '1px solid transparent';
                     btnColor = isLight ? '#047857' : st.color;
-                    circleBg = isLight ? '#047857' : `${st.color}40`;
+                    circleBg = isLight ? '#047857' : `color-mix(in srgb, ${st.color} 25%, transparent)`;
                     circleBorder = 'none';
                     circleColor = '#FFFFFF';
                   }

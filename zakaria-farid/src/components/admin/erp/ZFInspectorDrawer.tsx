@@ -234,7 +234,7 @@ export const ZFInspectorDrawer: React.FC<ZFInspectorDrawerProps> = ({
                   onClick={() => onOpenEscalation(contract)}
                   disabled={isMutating}
                 >
-                  <TrendingUp size={14} color="#2563eb" />
+                  <TrendingUp size={14} color="var(--erp-accent)" />
                   <span>{isAr ? 'طلب زيادة سعر' : 'Escalation'}</span>
                 </button>
               )}
@@ -609,7 +609,7 @@ export const ZFInspectorDrawer: React.FC<ZFInspectorDrawerProps> = ({
                   className={styles.inspectBtnSecondary}
                   onClick={() => onInspectContract(payload.linkedContract!)}
                 >
-                  <FileText size={14} color="#2563eb" />
+                  <FileText size={14} color="var(--erp-accent)" />
                   <span>{isAr ? 'فتح ملف العقد' : 'View Contract'}</span>
                 </button>
               )}
@@ -796,12 +796,12 @@ export const ZFInspectorDrawer: React.FC<ZFInspectorDrawerProps> = ({
                 {/* Visual Lifecycle Stepper */}
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.6rem 0.75rem', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.2rem' }}>
-                    <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#2563eb' }} />
+                    <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--erp-accent)' }} />
                     <span style={{ fontSize: '0.65rem', color: '#475569', fontWeight: 700 }}>{isAr ? 'في الخزينة' : 'In Safe'}</span>
                   </div>
-                  <div style={{ flex: 1, height: 1, background: isDeposited || isCleared ? '#2563eb' : '#cbd5e1', margin: '0 0.4rem' }} />
+                  <div style={{ flex: 1, height: 1, background: isDeposited || isCleared ? 'var(--erp-accent)' : '#cbd5e1', margin: '0 0.4rem' }} />
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.2rem' }}>
-                    <span style={{ width: 8, height: 8, borderRadius: '50%', background: isDeposited || isCleared ? '#2563eb' : '#cbd5e1' }} />
+                    <span style={{ width: 8, height: 8, borderRadius: '50%', background: isDeposited || isCleared ? 'var(--erp-accent)' : '#cbd5e1' }} />
                     <span style={{ fontSize: '0.65rem', color: '#475569', fontWeight: 700 }}>{isAr ? 'مودع بالبنك' : 'Deposited'}</span>
                   </div>
                   <div style={{ flex: 1, height: 1, background: isCleared ? '#16a34a' : '#cbd5e1', margin: '0 0.4rem' }} />
@@ -885,7 +885,7 @@ export const ZFInspectorDrawer: React.FC<ZFInspectorDrawerProps> = ({
                   className={styles.inspectBtnSecondary}
                   onClick={() => onInspectContract(payload.linkedContract!)}
                 >
-                  <FileText size={14} color="#2563eb" />
+                  <FileText size={14} color="var(--erp-accent)" />
                   <span>{isAr ? 'فتح ملف العقد' : 'View Contract'}</span>
                 </button>
               )}
@@ -1238,7 +1238,7 @@ export const ZFInspectorDrawer: React.FC<ZFInspectorDrawerProps> = ({
               <span className={styles.inspectMetricLabel}>
                 {isAr ? 'معامل التكلفة (RSV Factor)' : 'RSV Cost Ratio'}
               </span>
-              <span className={styles.inspectMetricValue} style={{ color: '#2563eb' }}>
+              <span className={styles.inspectMetricValue} style={{ color: 'var(--erp-accent)' }}>
                 {rsvPct}%
               </span>
               <span className={styles.inspectMetricSub}>
@@ -1384,7 +1384,7 @@ export const ZFInspectorDrawer: React.FC<ZFInspectorDrawerProps> = ({
                                 <td style={{ padding: '0.35rem 0.45rem', textAlign: 'end', fontVariantNumeric: 'tabular-nums' }}>
                                   {formatEgp(c.gross_contract_value, isAr)}
                                 </td>
-                                <td style={{ padding: '0.35rem 0.45rem', textAlign: 'end', fontVariantNumeric: 'tabular-nums', color: '#2563eb', fontWeight: 700 }}>
+                                <td style={{ padding: '0.35rem 0.45rem', textAlign: 'end', fontVariantNumeric: 'tabular-nums', color: 'var(--erp-accent)', fontWeight: 700 }}>
                                   {formatEgp(unitCOGS, isAr)}
                                 </td>
                               </tr>
@@ -1874,7 +1874,7 @@ export const ZFInspectorDrawer: React.FC<ZFInspectorDrawerProps> = ({
                       const creditVal = Number(line?.credit_amount || (line as any)?.credit || 0);
                       return (
                         <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                          <td style={{ padding: '0.45rem 0.5rem', fontFamily: 'monospace', color: '#2563eb', fontWeight: 700 }}>
+                          <td style={{ padding: '0.45rem 0.5rem', fontFamily: 'monospace', color: 'var(--erp-accent)', fontWeight: 700 }}>
                             {line?.account_code || '—'}
                           </td>
                           <td style={{ padding: '0.45rem 0.5rem', color: '#0f172a', fontWeight: 600 }}>
@@ -1892,13 +1892,13 @@ export const ZFInspectorDrawer: React.FC<ZFInspectorDrawerProps> = ({
                   ) : (
                     <>
                       <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
-                        <td style={{ padding: '0.45rem 0.5rem', fontFamily: 'monospace', color: '#2563eb', fontWeight: 700 }}>101000</td>
+                        <td style={{ padding: '0.45rem 0.5rem', fontFamily: 'monospace', color: 'var(--erp-accent)', fontWeight: 700 }}>101000</td>
                         <td style={{ padding: '0.45rem 0.5rem', color: '#0f172a', fontWeight: 600 }}>{isAr ? 'الخزينة الرئيسية الموحدة' : 'Treasury Main Safe'}</td>
                         <td style={{ padding: '0.45rem 0.5rem', textAlign: 'end', fontVariantNumeric: 'tabular-nums', fontWeight: 700 }}>{formatEgp(totalDebit, isAr)}</td>
                         <td style={{ padding: '0.45rem 0.5rem', textAlign: 'end' }}>—</td>
                       </tr>
                       <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
-                        <td style={{ padding: '0.45rem 0.5rem', fontFamily: 'monospace', color: '#2563eb', fontWeight: 700 }}>401000</td>
+                        <td style={{ padding: '0.45rem 0.5rem', fontFamily: 'monospace', color: 'var(--erp-accent)', fontWeight: 700 }}>401000</td>
                         <td style={{ padding: '0.45rem 0.5rem', color: '#0f172a', fontWeight: 600 }}>{isAr ? 'حساب العمليات والإيرادات' : 'Operations Revenue'}</td>
                         <td style={{ padding: '0.45rem 0.5rem', textAlign: 'end' }}>—</td>
                         <td style={{ padding: '0.45rem 0.5rem', textAlign: 'end', fontVariantNumeric: 'tabular-nums', fontWeight: 700 }}>{formatEgp(totalCredit, isAr)}</td>

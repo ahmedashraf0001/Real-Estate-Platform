@@ -47,9 +47,9 @@ export default function DistrictDemandMatrix({ metrics, adminLocale }: DistrictD
         default:
           return {
             label: isAr ? 'سيولة متوازنة' : 'Balanced Liquidity',
-            color: '#2563EB',
+            color: 'var(--admin-accent)',
             bg: 'rgba(37, 99, 235, 0.08)',
-            border: 'rgba(37, 99, 235, 0.25)',
+            border: 'color-mix(in srgb, var(--admin-accent) 25%, transparent)',
           };
       }
     }
@@ -73,9 +73,9 @@ export default function DistrictDemandMatrix({ metrics, adminLocale }: DistrictD
       default:
         return {
           label: isAr ? 'سيولة متوازنة' : 'Balanced Liquidity',
-          color: '#3B82F6',
+          color: 'var(--admin-accent)',
           bg: 'rgba(59, 130, 246, 0.12)',
-          border: 'rgba(59, 130, 246, 0.25)',
+          border: 'color-mix(in srgb, var(--admin-accent) 25%, transparent)',
         };
     }
   };
@@ -151,7 +151,7 @@ export default function DistrictDemandMatrix({ metrics, adminLocale }: DistrictD
                 <div className="bar-row">
                   <div className="bar-label-group">
                     <span className="bar-tag">{isAr ? 'حصة المعروض بالمحفظة' : 'Active Listed Value Share'}</span>
-                    <strong className="bar-val" style={{ color: isLight ? '#2563EB' : '#3B82F6' }}>
+                    <strong className="bar-val" style={{ color: isLight ? 'var(--admin-accent)' : 'var(--admin-accent)' }}>
                       {dist.supplySharePct}% ({new Intl.NumberFormat(isAr ? 'ar-EG' : 'en-EG', { notation: 'compact' }).format(dist.listedSupplyValueEgp)} {isAr ? 'ج.م' : 'EGP'})
                     </strong>
                   </div>
@@ -221,19 +221,19 @@ export default function DistrictDemandMatrix({ metrics, adminLocale }: DistrictD
           width: 36px;
           height: 36px;
           border-radius: 10px;
-          background: rgba(59, 130, 246, 0.12);
+          background: color-mix(in srgb, var(--admin-accent) 12%, transparent);
           display: flex;
           align-items: center;
           justify-content: center;
-          color: #3B82F6;
+          color: var(--admin-accent);
           flex-shrink: 0;
-          border: 1px solid rgba(59, 130, 246, 0.25);
+          border: 1px solid color-mix(in srgb, var(--admin-accent) 25%, transparent);
         }
 
         .matrix-card.is-light .matrix-icon-box {
-          background: rgba(37, 99, 235, 0.08);
-          border-color: rgba(37, 99, 235, 0.25);
-          color: #2563EB;
+          background: color-mix(in srgb, var(--admin-accent) 8%, transparent);
+          border-color: color-mix(in srgb, var(--admin-accent) 25%, transparent);
+          color: var(--admin-accent);
         }
 
         .matrix-title {
@@ -282,12 +282,12 @@ export default function DistrictDemandMatrix({ metrics, adminLocale }: DistrictD
 
         .district-card:hover {
           background: rgba(255, 255, 255, 0.035);
-          border-color: rgba(59, 130, 246, 0.25);
+          border-color: color-mix(in srgb, var(--admin-accent) 25%, transparent);
         }
 
         .matrix-card.is-light .district-card:hover {
           background: #F1F5F9;
-          border-color: #2563EB;
+          border-color: var(--admin-accent);
         }
 
         .district-top {
@@ -305,12 +305,12 @@ export default function DistrictDemandMatrix({ metrics, adminLocale }: DistrictD
         }
 
         .dist-pin-icon {
-          color: #3B82F6;
+          color: var(--admin-accent);
           flex-shrink: 0;
         }
 
         .matrix-card.is-light .dist-pin-icon {
-          color: #2563EB;
+          color: var(--admin-accent);
         }
 
         .district-name {

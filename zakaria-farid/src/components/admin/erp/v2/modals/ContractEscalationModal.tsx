@@ -151,7 +151,7 @@ export const ContractEscalationModal: React.FC<ContractEscalationModalProps> = (
       headerExtra={
         <span style={{
           background: 'rgba(184, 144, 62, 0.12)',
-          color: '#946f23',
+          color: 'var(--erp-accent)',
           border: '1px solid rgba(184, 144, 62, 0.25)',
           padding: '0.18rem 0.65rem',
           borderRadius: '20px',
@@ -320,9 +320,9 @@ export const ContractEscalationModal: React.FC<ContractEscalationModalProps> = (
                           fontWeight: 700,
                           padding: '0.12rem 0.5rem',
                           borderRadius: '12px',
-                          background: c.handover_status !== 'Delivered' ? 'rgba(5, 150, 105, 0.1)' : 'rgba(37, 99, 235, 0.1)',
-                          color: c.handover_status !== 'Delivered' ? '#059669' : '#2563eb',
-                          border: `1px solid ${c.handover_status !== 'Delivered' ? 'rgba(5, 150, 105, 0.2)' : 'rgba(37, 99, 235, 0.2)'}`,
+                          background: c.handover_status !== 'Delivered' ? 'rgba(5, 150, 105, 0.1)' : 'color-mix(in srgb, var(--erp-accent) 10%, transparent)',
+                          color: c.handover_status !== 'Delivered' ? '#059669' : 'var(--erp-accent)',
+                          border: `1px solid ${c.handover_status !== 'Delivered' ? 'rgba(5, 150, 105, 0.2)' : 'color-mix(in srgb, var(--erp-accent) 20%, transparent)'}`,
                           flexShrink: 0
                         }}>
                           {c.handover_status !== 'Delivered' ? (isAr ? 'ساري' : 'Active') : (isAr ? 'تم التسليم' : 'Delivered')}
@@ -357,7 +357,7 @@ export const ContractEscalationModal: React.FC<ContractEscalationModalProps> = (
                           width: '18px',
                           height: '18px',
                           borderRadius: '50%',
-                          background: '#946f23',
+                          background: 'var(--erp-accent)',
                           color: '#ffffff',
                           display: 'flex',
                           alignItems: 'center',
@@ -432,7 +432,7 @@ export const ContractEscalationModal: React.FC<ContractEscalationModalProps> = (
                   flexDirection: 'column',
                   gap: '1.25rem'
                 }}>
-                  <div style={{ fontSize: '0.8rem', fontWeight: 800, color: '#946f23', display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                  <div style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--erp-accent)', display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
                     <TrendingUp size={16} />
                     <span>{isAr ? 'مقارنة القيمة وتوزيع الزيادة المحاسبية' : 'Escalation Value Breakdown'}</span>
                   </div>
@@ -456,7 +456,7 @@ export const ContractEscalationModal: React.FC<ContractEscalationModalProps> = (
                     </div>
 
                     <div style={{ borderRight: isAr ? '1px dashed #cbd5e1' : 'none', borderLeft: isAr ? 'none' : '1px dashed #cbd5e1', paddingRight: isAr ? '1rem' : 0, paddingLeft: isAr ? 0 : '1rem' }}>
-                      <span style={{ fontSize: '0.72rem', color: '#946f23', fontWeight: 700, display: 'block' }}>
+                      <span style={{ fontSize: '0.72rem', color: 'var(--erp-accent)', fontWeight: 700, display: 'block' }}>
                         {isAr ? 'الزيادة المعتمدة (+):' : 'Escalation Added (+):'}
                       </span>
                       <strong style={{ fontSize: '1.1rem', color: '#b45309', fontWeight: 900, fontVariantNumeric: 'tabular-nums', marginTop: '0.25rem', display: 'block' }}>
@@ -486,7 +486,7 @@ export const ContractEscalationModal: React.FC<ContractEscalationModalProps> = (
                     fontSize: '0.76rem',
                     color: '#785210'
                   }}>
-                    <ShieldCheck size={16} color="#946f23" style={{ flexShrink: 0 }} />
+                    <ShieldCheck size={16} color="var(--erp-accent)" style={{ flexShrink: 0 }} />
                     <span>
                       {isAr 
                         ? 'تنبيه نظامي: تم توزيع فرق الزيادة على الأقساط غير المسددة مع استيعاب كسور التقريب بالدفعة الأخيرة طبقاً للائحة §4.9.' 
@@ -600,7 +600,7 @@ export const ContractEscalationModal: React.FC<ContractEscalationModalProps> = (
               {/* Escalation Delta Input */}
               <div>
                 <label style={{ fontSize: '0.8rem', fontWeight: 800, color: '#334155', marginBottom: '0.4rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                  <TrendingUp size={15} color="#946f23" />
+                  <TrendingUp size={15} color="var(--erp-accent)" />
                   <span>{isAr ? 'قيمة الزيادة المعتمدة للعقد (Delta V بالجنيه المصري) *' : 'Escalation Amount (Delta V in EGP) *'}</span>
                 </label>
                 <div style={{ position: 'relative' }}>
@@ -615,9 +615,9 @@ export const ContractEscalationModal: React.FC<ContractEscalationModalProps> = (
                       width: '100%',
                       padding: '0.75rem 1rem',
                       borderRadius: '10px',
-                      border: '1.5px solid #946f23',
+                      border: '1.5px solid var(--erp-accent)',
                       background: '#fffdfa',
-                      color: '#946f23',
+                      color: 'var(--erp-accent)',
                       fontSize: '1.15rem',
                       fontWeight: 900,
                       outline: 'none',
@@ -632,7 +632,7 @@ export const ContractEscalationModal: React.FC<ContractEscalationModalProps> = (
                     transform: 'translateY(-50%)',
                     fontSize: '0.85rem',
                     fontWeight: 800,
-                    color: '#946f23'
+                    color: 'var(--erp-accent)'
                   }}>
                     ج.م
                   </span>
@@ -677,12 +677,12 @@ export const ContractEscalationModal: React.FC<ContractEscalationModalProps> = (
                 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                       <Sparkles size={16} color="#946f23" />
+                       <Sparkles size={16} color="var(--erp-accent)" />
                       <span style={{ color: '#475569', fontSize: '0.82rem', fontWeight: 700 }}>
                         {isAr ? 'القيمة الإجمالية الجديدة بعد التصعيد:' : 'New Gross Contract Value:'}
                       </span>
                     </div>
-                    <strong style={{ color: '#946f23', fontSize: '1.2rem', fontWeight: 900 }}>
+                    <strong style={{ color: 'var(--erp-accent)', fontSize: '1.2rem', fontWeight: 900 }}>
                       <MoneyCell amount={newGross.toString()} isAr={isAr} highlight />
                     </strong>
                   </div>
@@ -713,7 +713,7 @@ export const ContractEscalationModal: React.FC<ContractEscalationModalProps> = (
                 color: '#64748b',
                 lineHeight: 1.45
               }}>
-                <ShieldCheck size={16} color="#946f23" style={{ flexShrink: 0, marginTop: '0.1rem' }} />
+                <ShieldCheck size={16} color="var(--erp-accent)" style={{ flexShrink: 0, marginTop: '0.1rem' }} />
                 <span>
                   {isAr
                     ? 'حوكمة العقود المالية: تعديل العقد لا يحذف النسخة السابقة وإنما يسجل كملحق تعاقدي رسمي (Amendment v2) مثبت بالدفاتر المحاسبية ومتاح للطباعة والمراجعة القانونية.'
@@ -753,7 +753,7 @@ export const ContractEscalationModal: React.FC<ContractEscalationModalProps> = (
                   type="submit"
                   disabled={isMutating}
                   style={{
-                    background: 'linear-gradient(135deg, #c5a059 0%, #946f23 100%)',
+                    background: 'linear-gradient(135deg, var(--erp-accent) 0%, var(--erp-accent) 100%)',
                     color: '#ffffff',
                     border: 'none',
                     padding: '0.6rem 1.6rem',
@@ -764,7 +764,7 @@ export const ContractEscalationModal: React.FC<ContractEscalationModalProps> = (
                     display: 'inline-flex',
                     alignItems: 'center',
                     gap: '0.5rem',
-                    boxShadow: '0 4px 14px rgba(148, 111, 35, 0.3)'
+                    boxShadow: '0 4px 14px color-mix(in srgb, var(--erp-accent) 30%, transparent)'
                   }}
                 >
                   {isMutating ? <Loader2 size={15} className="animate-spin" /> : <TrendingUp size={15} />}

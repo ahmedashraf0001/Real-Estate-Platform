@@ -1379,7 +1379,7 @@ export default function AdminPlatformSettings({ adminLocale }: AdminPlatformSett
           min-width: 0;
           box-sizing: border-box;
           background: #11141D;
-          border: 1px solid rgba(212, 175, 55, 0.22);
+          border: 1px solid color-mix(in srgb, var(--admin-accent) 22%, transparent);
           border-radius: 12px;
           padding: 16px;
           display: flex;

@@ -133,10 +133,10 @@ export const ZFERPLoadingWorkstation: React.FC<ZFERPLoadingWorkstationProps> = (
       <style>{`
         @keyframes zfCrownPulse {
           0%, 100% {
-            box-shadow: 0 0 28px rgba(37, 99, 235, 0.25), 0 0 60px rgba(37, 99, 235, 0.1);
+            box-shadow: 0 0 28px color-mix(in srgb, var(--erp-accent) 25%, transparent), 0 0 60px color-mix(in srgb, var(--erp-accent) 10%, transparent);
           }
           50% {
-            box-shadow: 0 0 46px rgba(37, 99, 235, 0.4), 0 0 85px rgba(37, 99, 235, 0.18);
+            box-shadow: 0 0 46px color-mix(in srgb, var(--erp-accent) 40%, transparent), 0 0 85px color-mix(in srgb, var(--erp-accent) 18%, transparent);
           }
         }
 
@@ -175,7 +175,7 @@ export const ZFERPLoadingWorkstation: React.FC<ZFERPLoadingWorkstationProps> = (
           width: 68px;
           height: 68px;
           clip-path: polygon(30% 0%, 70% 0%, 100% 30%, 100% 70%, 70% 100%, 30% 100%, 0% 70%, 0% 30%);
-          background: #2563eb;
+          background: var(--erp-accent);
           display: flex;
           align-items: center;
           justify-content: center;
@@ -192,15 +192,15 @@ export const ZFERPLoadingWorkstation: React.FC<ZFERPLoadingWorkstationProps> = (
           display: flex;
           align-items: center;
           justify-content: center;
-          border: 1.5px solid #2563eb;
-          box-shadow: 0 4px 14px rgba(37, 99, 235, 0.15);
+          border: 1.5px solid var(--erp-accent);
+          box-shadow: 0 4px 14px color-mix(in srgb, var(--erp-accent) 15%, transparent);
         }
 
         .zf-monogram-zf {
           font-family: 'Cinzel', 'Playfair Display', 'ThmanyahSans', serif;
           font-size: 22px;
           font-weight: 900;
-          color: #2563eb;
+          color: var(--erp-accent);
           letter-spacing: 0.04em;
         }
 
@@ -208,14 +208,14 @@ export const ZFERPLoadingWorkstation: React.FC<ZFERPLoadingWorkstationProps> = (
         html[data-theme="dark"] .zf-octagonal-inner,
         .zf-erp-loading-screen.dark .zf-octagonal-inner {
           background: #1e293b;
-          border: 1px solid rgba(59, 130, 246, 0.4);
+          border: 1px solid color-mix(in srgb, var(--erp-accent) 40%, transparent);
           box-shadow: none;
         }
 
         [data-theme="dark"] .zf-monogram-zf,
         html[data-theme="dark"] .zf-monogram-zf,
         .zf-erp-loading-screen.dark .zf-monogram-zf {
-          color: #60a5fa;
+          color: var(--erp-accent-hover);
           text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
         }
 
@@ -231,7 +231,7 @@ export const ZFERPLoadingWorkstation: React.FC<ZFERPLoadingWorkstationProps> = (
         html[data-theme="dark"] .zf-capsule-glass,
         .zf-erp-loading-screen.dark .zf-capsule-glass {
           background: rgba(15, 20, 31, 0.94);
-          border-color: rgba(59, 130, 246, 0.25);
+          border-color: color-mix(in srgb, var(--erp-accent) 25%, transparent);
           box-shadow: 0 28px 70px -12px rgba(0, 0, 0, 0.65);
         }
       `}</style>
@@ -378,11 +378,11 @@ export const ZFERPLoadingWorkstation: React.FC<ZFERPLoadingWorkstationProps> = (
               gap: '6px',
               fontSize: '12.5px',
               fontWeight: 700,
-              color: '#2563eb',
+              color: 'var(--erp-accent)',
               letterSpacing: isAr ? 'normal' : '0.04em',
             }}
           >
-            <Sparkles size={13} style={{ color: '#2563eb' }} />
+            <Sparkles size={13} style={{ color: 'var(--erp-accent)' }} />
             <span>
               {isAr
                 ? 'منظومة FIN-OS v2.4 • بيئة الإدارة المالية والسيادية'
@@ -448,7 +448,7 @@ export const ZFERPLoadingWorkstation: React.FC<ZFERPLoadingWorkstationProps> = (
                 width: `${progress}%`,
                 height: '100%',
                 borderRadius: '9999px',
-                background: 'linear-gradient(90deg, #2563eb 0%, #16a34a 50%, #2563eb 100%)',
+                background: 'linear-gradient(90deg, var(--erp-accent) 0%, #16a34a 50%, var(--erp-accent) 100%)',
                 backgroundSize: '200% 100%',
                 animation: 'zfShimmerGlow 2s linear infinite',
                 transition: 'width 0.65s cubic-bezier(0.16, 1, 0.3, 1)',
@@ -481,7 +481,7 @@ export const ZFERPLoadingWorkstation: React.FC<ZFERPLoadingWorkstationProps> = (
               style={{
                 fontWeight: 800,
                 fontVariantNumeric: 'tabular-nums',
-                color: '#2563eb',
+                color: 'var(--erp-accent)',
                 flexShrink: 0,
               }}
             >
@@ -557,7 +557,7 @@ export const ZFERPLoadingWorkstation: React.FC<ZFERPLoadingWorkstationProps> = (
             color: 'var(--zf2-text-muted, #64748B)',
           }}
         >
-          <ShieldCheck size={13} style={{ color: '#2563eb' }} />
+          <ShieldCheck size={13} style={{ color: 'var(--erp-accent)' }} />
           <span>
             {isAr
               ? 'دقة حسابية معتمدة بالقرش (0.00 Delta) • تشفير سيادي محمي'

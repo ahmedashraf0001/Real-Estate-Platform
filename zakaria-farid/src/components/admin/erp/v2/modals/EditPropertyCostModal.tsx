@@ -131,11 +131,11 @@ export const EditPropertyCostModal: React.FC<EditPropertyCostModalProps> = ({
             gap: '4px',
             padding: '2px 8px',
             borderRadius: '6px',
-            background: '#eff6ff',
-            color: '#2563eb',
+            background: 'var(--erp-accent-subtle)',
+            color: 'var(--erp-accent)',
             fontSize: '0.74rem',
             fontWeight: 700,
-            border: '1px solid #dbeafe'
+            border: '1px solid color-mix(in srgb, var(--erp-accent) 14%, transparent)'
           }}>
             <Clock size={12} />
             <span>{isAr ? `متاح: ${remainingHours} ساعة` : `${remainingHours}h left`}</span>
@@ -406,12 +406,12 @@ export const EditPropertyCostModal: React.FC<EditPropertyCostModalProps> = ({
                 padding: '8px 20px',
                 borderRadius: '8px',
                 border: 'none',
-                background: isSubmitting ? '#94a3b8' : '#2563eb',
+                background: isSubmitting ? '#94a3b8' : 'var(--erp-accent)',
                 color: '#FFFFFF',
                 fontSize: '0.82rem',
                 fontWeight: 700,
                 cursor: isSubmitting ? 'not-allowed' : 'pointer',
-                boxShadow: '0 2px 8px rgba(37, 99, 235, 0.25)',
+                boxShadow: '0 2px 8px color-mix(in srgb, var(--erp-accent) 25%, transparent)',
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '6px'

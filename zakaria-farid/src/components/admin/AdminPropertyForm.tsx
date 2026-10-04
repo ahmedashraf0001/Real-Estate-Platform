@@ -152,7 +152,7 @@ function ReviewZoneCard({ zone, levelLabel, isAr }: { zone: ZoneInstance; levelL
 
   const badgeCfg = {
     red_brick:      { en: 'Red Brick',   ar: 'طوب أحمر',   color: '#D97706', bg: 'rgba(217, 119, 6, 0.12)',   border: 'rgba(217, 119, 6, 0.3)' },
-    semi_finished:  { en: 'Semi',        ar: 'نص تشطيب',   color: '#3B82F6', bg: 'rgba(59, 130, 246, 0.12)',  border: 'rgba(59, 130, 246, 0.3)' },
+    semi_finished:  { en: 'Semi',        ar: 'نص تشطيب',   color: 'var(--admin-accent)', bg: 'rgba(59, 130, 246, 0.12)',  border: 'color-mix(in srgb, var(--admin-accent) 30%, transparent)' },
     fully_finished: { en: 'Finished',    ar: 'تشطيب كامل', color: '#10B981', bg: 'rgba(16, 185, 129, 0.12)', border: 'rgba(16, 185, 129, 0.3)' },
     mixed:          { en: 'Mixed',       ar: 'مختلط',      color: 'var(--admin-accent)', bg: 'var(--admin-accent-tint)', border: 'var(--admin-accent-border)' },
     unknown:        null,
@@ -649,11 +649,11 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
           <style>
             @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap');
             body { font-family: 'Plus Jakarta Sans', system-ui, sans-serif; padding: 32px; color: #1E293B; background: #FFFFFF; line-height: 1.5; }
-            .header { border-bottom: 2px solid #2563eb; padding-bottom: 16px; margin-bottom: 24px; display: flex; justify-content: space-between; align-items: flex-start; }
-            .brand { font-size: 11px; font-weight: 800; color: #2563eb; text-transform: uppercase; letter-spacing: 1px; }
+            .header { border-bottom: 2px solid var(--admin-accent); padding-bottom: 16px; margin-bottom: 24px; display: flex; justify-content: space-between; align-items: flex-start; }
+            .brand { font-size: 11px; font-weight: 800; color: var(--admin-accent); text-transform: uppercase; letter-spacing: 1px; }
             .title { font-size: 24px; font-weight: 800; color: #0F172A; margin: 4px 0 0; }
             .kpiGrid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 12px; padding: 16px; margin-bottom: 24px; text-align: center; }
-            .kpiVal { font-size: 20px; font-weight: 800; color: #2563eb; display: block; }
+            .kpiVal { font-size: 20px; font-weight: 800; color: var(--admin-accent); display: block; }
             .kpiLabel { font-size: 11px; color: #64748B; font-weight: 600; }
             .catCard { border: 1px solid #E2E8F0; border-radius: 12px; padding: 16px; margin-bottom: 16px; page-break-inside: avoid; }
             .catHeader { font-size: 15px; font-weight: 800; color: #0F172A; border-bottom: 1px solid #F1F5F9; padding-bottom: 8px; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; }
@@ -661,7 +661,7 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
             .zoneCard { background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 10px 12px; }
             .zoneName { font-size: 12px; font-weight: 700; color: #1E293B; margin-bottom: 4px; display: block; }
             .tradeChip { font-size: 10px; background: #FFFFFF; border: 1px solid #CBD5E1; padding: 2px 6px; border-radius: 4px; display: inline-block; margin: 2px 2px 0 0; color: #475569; }
-            .footer { margin-top: 32px; border-top: 1px solid #E2E8F0; padding-top: 16px; font-size: 11px; color: #2563eb; text-align: center; }
+            .footer { margin-top: 32px; border-top: 1px solid #E2E8F0; padding-top: 16px; font-size: 11px; color: var(--admin-accent); text-align: center; }
           </style>
         </head>
         <body>
@@ -672,7 +672,7 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
               <div style="font-size: 12px; color: #64748B; margin-top: 4px;">${location} • ${selectedType}</div>
             </div>
             <div style="text-align: right;">
-              <span style="font-size: 20px; font-weight: 800; color: #2563eb;">${price} EGP</span>
+              <span style="font-size: 20px; font-weight: 800; color: var(--admin-accent);">${price} EGP</span>
               <div style="font-size: 11px; color: #64748B;">${area} sqm</div>
             </div>
           </div>

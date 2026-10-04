@@ -527,9 +527,9 @@ export const HandInstallmentsVaultView: React.FC<HandInstallmentsVaultViewProps>
         borderRadius: '6px',
         fontSize: '0.7rem',
         fontWeight: 700,
-        background: isInstapay ? 'rgba(37, 99, 235, 0.08)' : 'rgba(100, 116, 139, 0.08)',
+        background: isInstapay ? 'color-mix(in srgb, var(--erp-accent) 8%, transparent)' : 'rgba(100, 116, 139, 0.08)',
         color: isInstapay ? 'var(--erp-accent, #2563eb)' : '#334155',
-        border: `1px solid ${isInstapay ? 'rgba(37, 99, 235, 0.2)' : '#e2e8f0'}`
+        border: `1px solid ${isInstapay ? 'color-mix(in srgb, var(--erp-accent) 20%, transparent)' : '#e2e8f0'}`
       }}>
         {isInstapay ? <CreditCard size={11} /> : <Wallet size={11} />}
         <span>{isInstapay ? (isAr ? 'إنستاباي' : 'InstaPay') : (isAr ? 'نقدي' : 'Cash')}</span>
@@ -634,7 +634,7 @@ export const HandInstallmentsVaultView: React.FC<HandInstallmentsVaultViewProps>
                 fontWeight: 800,
                 color: 'var(--erp-accent, #2563eb)',
                 background: 'var(--erp-accent-subtle, #eff6ff)',
-                border: '1px solid rgba(37, 99, 235, 0.2)',
+                border: '1px solid color-mix(in srgb, var(--erp-accent) 20%, transparent)',
                 padding: '0.15rem 0.55rem',
                 borderRadius: '6px'
               }}>
@@ -662,7 +662,7 @@ export const HandInstallmentsVaultView: React.FC<HandInstallmentsVaultViewProps>
               alignItems: 'center',
               gap: '0.35rem',
               background: 'var(--erp-accent-subtle, #eff6ff)',
-              border: '1px solid rgba(37, 99, 235, 0.2)',
+              border: '1px solid color-mix(in srgb, var(--erp-accent) 20%, transparent)',
               padding: '0.15rem 0.55rem',
               borderRadius: '6px',
               fontSize: '0.74rem',
@@ -834,7 +834,7 @@ export const HandInstallmentsVaultView: React.FC<HandInstallmentsVaultViewProps>
             <span style={{
               background: 'var(--erp-accent-subtle, #eff6ff)',
               color: 'var(--erp-accent, #2563eb)',
-              border: '1px solid rgba(37, 99, 235, 0.2)',
+              border: '1px solid color-mix(in srgb, var(--erp-accent) 20%, transparent)',
               padding: '0.12rem 0.55rem',
               borderRadius: '12px',
               fontSize: '0.68rem',
@@ -948,7 +948,7 @@ export const HandInstallmentsVaultView: React.FC<HandInstallmentsVaultViewProps>
             setTableSelection('both');
             setMaturityTab('all');
           }}
-          style={tableSelection === 'both' ? { borderColor: '#2563eb', boxShadow: '0 0 0 2px rgba(37, 99, 235, 0.2)' } : undefined}
+          style={tableSelection === 'both' ? { borderColor: 'var(--erp-accent)', boxShadow: '0 0 0 2px color-mix(in srgb, var(--erp-accent) 20%, transparent)' } : undefined}
           tooltip={isAr ? 'انقر لعرض الجدولين معاً (المقبوضات + المدفوعات)' : 'Click to view dual stacked tables'}
         />
 
@@ -1044,7 +1044,7 @@ export const HandInstallmentsVaultView: React.FC<HandInstallmentsVaultViewProps>
           alignItems: 'center',
           justifyContent: 'space-between',
           background: 'var(--erp-accent-subtle, #eff6ff)',
-          border: '1px solid rgba(37, 99, 235, 0.25)',
+          border: '1px solid color-mix(in srgb, var(--erp-accent) 25%, transparent)',
           borderRadius: '8px',
           padding: '0.45rem 0.85rem',
           marginBottom: '1rem',
@@ -1392,7 +1392,7 @@ export const HandInstallmentsVaultView: React.FC<HandInstallmentsVaultViewProps>
                                 borderRadius: '5px',
                                 background: item.isDownPayment ? 'rgba(56, 189, 248, 0.08)' : 'var(--erp-accent-subtle, #eff6ff)',
                                 color: item.isDownPayment ? '#0284c7' : 'var(--erp-accent, #2563eb)',
-                                border: item.isDownPayment ? '1px solid rgba(56, 189, 248, 0.25)' : '1px solid rgba(37, 99, 235, 0.2)'
+                                border: item.isDownPayment ? '1px solid rgba(56, 189, 248, 0.25)' : '1px solid color-mix(in srgb, var(--erp-accent) 20%, transparent)'
                               }}>
                                 {item.description}
                               </span>
@@ -1459,7 +1459,7 @@ export const HandInstallmentsVaultView: React.FC<HandInstallmentsVaultViewProps>
                                     gap: '0.25rem',
                                     padding: '0.28rem 0.6rem',
                                     borderRadius: '6px',
-                                    border: '1px solid rgba(37, 99, 235, 0.25)',
+                                    border: '1px solid color-mix(in srgb, var(--erp-accent) 25%, transparent)',
                                     background: 'var(--erp-accent-subtle, #eff6ff)',
                                     color: 'var(--erp-accent, #2563eb)',
                                     fontSize: '0.72rem',
@@ -1943,7 +1943,7 @@ export const HandInstallmentsVaultView: React.FC<HandInstallmentsVaultViewProps>
                           gap: '0.3rem',
                           padding: '0.45rem 0.75rem',
                           borderRadius: '8px',
-                          border: '1px solid rgba(37, 99, 235, 0.25)',
+                          border: '1px solid color-mix(in srgb, var(--erp-accent) 25%, transparent)',
                           background: 'var(--erp-accent-subtle, #eff6ff)',
                           color: 'var(--erp-accent, #2563eb)',
                           fontSize: '0.76rem',

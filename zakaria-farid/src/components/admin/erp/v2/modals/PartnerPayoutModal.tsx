@@ -196,7 +196,7 @@ export const PartnerPayoutModal: React.FC<PartnerPayoutModalProps> = ({
               background: isOwner 
                 ? 'linear-gradient(135deg, rgba(212, 175, 55, 0.12) 0%, rgba(184, 144, 62, 0.04) 100%)' 
                 : 'linear-gradient(135deg, rgba(184, 144, 62, 0.08) 0%, rgba(184, 144, 62, 0.02) 100%)',
-              border: isOwner ? '1.5px solid rgba(212, 175, 55, 0.45)' : '1.5px solid rgba(184, 144, 62, 0.35)',
+              border: isOwner ? '1.5px solid color-mix(in srgb, var(--erp-accent) 45%, transparent)' : '1.5px solid rgba(184, 144, 62, 0.35)',
               borderRadius: '12px',
               padding: '0.85rem 1.15rem',
               display: 'flex',
@@ -212,13 +212,13 @@ export const PartnerPayoutModal: React.FC<PartnerPayoutModalProps> = ({
                   background: isOwner 
                     ? 'linear-gradient(135deg, rgba(212, 175, 55, 0.35), rgba(180, 130, 30, 0.15))' 
                     : 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
-                  color: isOwner ? '#b4821e' : '#d4af37',
+                  color: isOwner ? '#b4821e' : 'var(--erp-accent)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   fontWeight: 900,
                   fontSize: '1.1rem',
-                  border: isOwner ? '1px solid rgba(212, 175, 55, 0.5)' : '1px solid rgba(212, 175, 55, 0.3)'
+                  border: isOwner ? '1px solid color-mix(in srgb, var(--erp-accent) 50%, transparent)' : '1px solid color-mix(in srgb, var(--erp-accent) 30%, transparent)'
                 }}>
                   {isOwner ? (
                     <Crown size={20} color="#fbbf24" />
@@ -238,13 +238,13 @@ export const PartnerPayoutModal: React.FC<PartnerPayoutModalProps> = ({
                         padding: '0.15rem 0.5rem',
                         borderRadius: '4px',
                         background: 'rgba(184, 144, 62, 0.18)',
-                        color: '#946f23',
+                        color: 'var(--erp-accent)',
                         border: '1px solid rgba(184, 144, 62, 0.3)',
                         display: 'inline-flex',
                         alignItems: 'center',
                         gap: '0.25rem'
                       }}>
-                        <Crown size={11} color="#946f23" />
+                        <Crown size={11} color="var(--erp-accent)" />
                         {isAr ? 'المالك' : 'Owner'}
                       </span>
                     ) : (
@@ -314,7 +314,7 @@ export const PartnerPayoutModal: React.FC<PartnerPayoutModalProps> = ({
                 <span style={{ fontSize: '0.68rem', color: '#64748b', display: 'block' }}>
                   {isAr ? 'نصيبه من التحصيلات:' : 'Collections Share:'}
                 </span>
-                <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#1d4ed8' }}>
+                <span style={{ fontSize: '0.82rem', fontWeight: 800, color: 'var(--erp-accent-hover)' }}>
                   <MoneyCell amount={currentPartner.totalCollectionsShare} isAr={isAr} />
                 </span>
               </div>
@@ -386,7 +386,7 @@ export const PartnerPayoutModal: React.FC<PartnerPayoutModalProps> = ({
               <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#334155' }}>
                 {isAr ? 'طريقة الصرف والسداد:' : 'Disbursement Method:'}
               </label>
-              <span style={{ fontSize: '0.66rem', fontWeight: 700, color: '#946f23', background: 'rgba(184, 144, 62, 0.08)', padding: '0.12rem 0.45rem', borderRadius: '5px' }}>
+              <span style={{ fontSize: '0.66rem', fontWeight: 700, color: 'var(--erp-accent)', background: 'rgba(184, 144, 62, 0.08)', padding: '0.12rem 0.45rem', borderRadius: '5px' }}>
                 {isAr ? `الحساب: ${selectedAccountLabelAr}` : `Account: ${selectedAccountLabelEn}`}
               </span>
             </div>
@@ -423,7 +423,7 @@ export const PartnerPayoutModal: React.FC<PartnerPayoutModalProps> = ({
                 onClick={() => setPaymentMethod('CASH_101000')}
                 style={{
                   background: paymentMethod === 'CASH_101000' ? 'rgba(184, 144, 62, 0.08)' : '#ffffff',
-                  border: paymentMethod === 'CASH_101000' ? '1.5px solid #946f23' : '1px solid #cbd5e1',
+                  border: paymentMethod === 'CASH_101000' ? '1.5px solid var(--erp-accent)' : '1px solid #cbd5e1',
                   borderRadius: '9px',
                   padding: '0.7rem',
                   cursor: 'pointer',
@@ -436,7 +436,7 @@ export const PartnerPayoutModal: React.FC<PartnerPayoutModalProps> = ({
               >
                 <Wallet size={18} color={paymentMethod === 'CASH_101000' ? '#946f23' : '#64748b'} />
                 <div>
-                  <span style={{ display: 'block', fontSize: '0.78rem', fontWeight: 800, color: paymentMethod === 'CASH_101000' ? '#946f23' : '#0f172a' }}>
+                  <span style={{ display: 'block', fontSize: '0.78rem', fontWeight: 800, color: paymentMethod === 'CASH_101000' ? 'var(--erp-accent)' : '#0f172a' }}>
                     {isAr ? 'كاش نقدي باليد' : 'Cash in Hand'}
                   </span>
                   <span style={{ fontSize: '0.67rem', color: '#64748b' }}>
@@ -546,7 +546,7 @@ export const PartnerPayoutModal: React.FC<PartnerPayoutModalProps> = ({
           }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
               <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#334155', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                <Scale size={14} color="#946f23" />
+                <Scale size={14} color="var(--erp-accent)" />
                 <span>{isAr ? 'المعاينة اللحظية لقيد اليومية المتوازن (INV-4.1):' : 'Balanced Journal Entry Preview:'}</span>
               </span>
               <span style={{ fontSize: '0.67rem', color: '#15803d', fontWeight: 700 }}>

@@ -376,8 +376,8 @@ export const PartnerCapitalInjectionModal: React.FC<PartnerCapitalInjectionModal
     <div style={{ padding: '1rem', color: '#0f172a', direction: isAr ? 'rtl' : 'ltr' }}>
       {/* Voucher Header Banner */}
       <div style={{
-        background: '#eff6ff',
-        border: '1.5px solid #bfdbfe',
+        background: 'var(--erp-accent-subtle)',
+        border: '1.5px solid color-mix(in srgb, var(--erp-accent) 28%, transparent)',
         borderRadius: '12px',
         padding: '1.25rem 1.5rem',
         marginBottom: '1.25rem',
@@ -390,7 +390,7 @@ export const PartnerCapitalInjectionModal: React.FC<PartnerCapitalInjectionModal
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
             <span style={{
-              background: '#2563eb',
+              background: 'var(--erp-accent)',
               color: '#ffffff',
               fontSize: '0.75rem',
               fontWeight: 900,
@@ -442,7 +442,7 @@ export const PartnerCapitalInjectionModal: React.FC<PartnerCapitalInjectionModal
           <div style={{ fontSize: '2rem', fontWeight: 900, color: '#0f172a', fontVariantNumeric: 'tabular-nums', marginTop: '0.2rem' }}>
             {D(confirmedVoucher.amount).formatEGP(isAr)}
           </div>
-          <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#2563eb', marginTop: '0.4rem' }}>
+          <div style={{ fontSize: '0.88rem', fontWeight: 800, color: 'var(--erp-accent)', marginTop: '0.4rem' }}>
             {isAr ? `فقط وقدره: ${tafqeetEGP(confirmedVoucher.amount)} لا غير` : tafqeetEGP(confirmedVoucher.amount)}
           </div>
         </div>
@@ -499,7 +499,7 @@ export const PartnerCapitalInjectionModal: React.FC<PartnerCapitalInjectionModal
           <span style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 700, display: 'block' }}>
             {isAr ? 'مشروع العمارة المخصص له التمويل:' : 'Allocated Building Project:'}
           </span>
-          <strong style={{ fontSize: '0.95rem', color: '#2563eb', fontWeight: 800, marginTop: '0.2rem', display: 'block' }}>
+          <strong style={{ fontSize: '0.95rem', color: 'var(--erp-accent)', fontWeight: 800, marginTop: '0.2rem', display: 'block' }}>
             {confirmedVoucher.propertyTitle}
           </strong>
           <span style={{ fontSize: '0.72rem', color: '#64748b', display: 'block', marginTop: '0.15rem' }}>
@@ -526,7 +526,7 @@ export const PartnerCapitalInjectionModal: React.FC<PartnerCapitalInjectionModal
             {confirmedVoucher.memo}
           </div>
           {confirmedVoucher.commitmentMilestone && (
-            <div style={{ marginTop: '0.35rem', fontSize: '0.72rem', color: '#2563eb', fontWeight: 800 }}>
+            <div style={{ marginTop: '0.35rem', fontSize: '0.72rem', color: 'var(--erp-accent)', fontWeight: 800 }}>
               {isAr ? `✓ مرتبط بطلب مساهمة إنشائي: ${confirmedVoucher.commitmentMilestone}` : `✓ Linked to milestone call: ${confirmedVoucher.commitmentMilestone}`}
             </div>
           )}
@@ -542,7 +542,7 @@ export const PartnerCapitalInjectionModal: React.FC<PartnerCapitalInjectionModal
         marginBottom: '1.5rem'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', marginBottom: '0.55rem', fontWeight: 800, color: '#0f172a', fontSize: '0.82rem' }}>
-          <Scale size={16} color="#2563eb" />
+          <Scale size={16} color="var(--erp-accent)" />
           <span>{isAr ? 'شريط القيد المحاسبي المزدوج المعتمد (INV-4.1 Balanced Double-Entry):' : 'Balanced GL Journal Entry Ribbon:'}</span>
         </div>
 
@@ -555,7 +555,7 @@ export const PartnerCapitalInjectionModal: React.FC<PartnerCapitalInjectionModal
           <span>{D(confirmedVoucher.amount).formatEGP(true)} (مدين / Debit)</span>
         </div>
 
-        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.35rem 0', color: '#1d4ed8', fontWeight: 800, fontSize: '0.8rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.35rem 0', color: 'var(--erp-accent-hover)', fontWeight: 800, fontSize: '0.8rem' }}>
           <span>
             {isAr 
               ? `إلى حـ/ 301000 (رأس مال الشريك - ${confirmedVoucher.partnerName})` 
@@ -598,12 +598,12 @@ export const PartnerCapitalInjectionModal: React.FC<PartnerCapitalInjectionModal
           </span>
           <div style={{
             display: 'inline-block',
-            border: '2px dashed #2563eb',
+            border: '2px dashed var(--erp-accent)',
             borderRadius: '50%',
             width: '70px',
             height: '70px',
             padding: '8px',
-            color: '#2563eb',
+            color: 'var(--erp-accent)',
             fontSize: '0.62rem',
             fontWeight: 900,
             lineHeight: 1.2
@@ -631,9 +631,9 @@ export const PartnerCapitalInjectionModal: React.FC<PartnerCapitalInjectionModal
             fontWeight: 800,
             padding: '0.15rem 0.5rem',
             borderRadius: '999px',
-            background: '#eff6ff',
-            color: '#2563eb',
-            border: '1px solid #bfdbfe'
+            background: 'var(--erp-accent-subtle)',
+            color: 'var(--erp-accent)',
+            border: '1px solid color-mix(in srgb, var(--erp-accent) 28%, transparent)'
           }}>
             {isAr ? 'حـ/ 301000 رأس مال' : 'GL 301000 Equity'}
           </span>
@@ -653,7 +653,7 @@ export const PartnerCapitalInjectionModal: React.FC<PartnerCapitalInjectionModal
                 background: isOwner 
                   ? '#eff6ff' 
                   : '#f8fafc',
-                border: isOwner ? '1.5px solid #bfdbfe' : '1.5px solid #e2e8f0',
+                border: isOwner ? '1.5px solid color-mix(in srgb, var(--erp-accent) 28%, transparent)' : '1.5px solid #e2e8f0',
                 borderRadius: '12px',
                 padding: '0.85rem 1.15rem',
                 display: 'flex',
@@ -669,16 +669,16 @@ export const PartnerCapitalInjectionModal: React.FC<PartnerCapitalInjectionModal
                     background: isOwner 
                       ? '#dbeafe' 
                       : '#f1f5f9',
-                    color: isOwner ? '#2563eb' : '#475569',
+                    color: isOwner ? 'var(--erp-accent)' : '#475569',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     fontWeight: 900,
                     fontSize: '1.1rem',
-                    border: isOwner ? '1px solid #bfdbfe' : '1px solid #cbd5e1'
+                    border: isOwner ? '1px solid color-mix(in srgb, var(--erp-accent) 28%, transparent)' : '1px solid #cbd5e1'
                   }}>
                     {isOwner ? (
-                      <Crown size={20} color="#2563eb" />
+                      <Crown size={20} color="var(--erp-accent)" />
                     ) : (
                       (effectivePartnerName || '').charAt(0)
                     )}
@@ -694,14 +694,14 @@ export const PartnerCapitalInjectionModal: React.FC<PartnerCapitalInjectionModal
                           fontWeight: 800,
                           padding: '0.15rem 0.5rem',
                           borderRadius: '4px',
-                          background: '#eff6ff',
-                          color: '#2563eb',
-                          border: '1px solid #bfdbfe',
+                          background: 'var(--erp-accent-subtle)',
+                          color: 'var(--erp-accent)',
+                          border: '1px solid color-mix(in srgb, var(--erp-accent) 28%, transparent)',
                           display: 'inline-flex',
                           alignItems: 'center',
                           gap: '0.25rem'
                         }}>
-                          <Crown size={11} color="#2563eb" />
+                          <Crown size={11} color="var(--erp-accent)" />
                           {isAr ? 'المالك' : 'Owner'}
                         </span>
                       ) : (
@@ -748,7 +748,7 @@ export const PartnerCapitalInjectionModal: React.FC<PartnerCapitalInjectionModal
                       style={{
                         background: 'none',
                         border: 'none',
-                        color: '#2563eb',
+                        color: 'var(--erp-accent)',
                         fontSize: '0.74rem',
                         fontWeight: 800,
                         cursor: 'pointer',
@@ -807,8 +807,8 @@ export const PartnerCapitalInjectionModal: React.FC<PartnerCapitalInjectionModal
             {/* 1.5 MILESTONE CALL LINKAGE (OPTIONAL) */}
             {candidateCommitments.length > 0 && (
               <div style={{
-                background: selectedCommitment ? 'rgba(37, 99, 235, 0.03)' : '#f8fafc',
-                border: selectedCommitment ? '1.5px solid #bfdbfe' : '1px solid #e2e8f0',
+                background: selectedCommitment ? 'color-mix(in srgb, var(--erp-accent) 3%, transparent)' : '#f8fafc',
+                border: selectedCommitment ? '1.5px solid color-mix(in srgb, var(--erp-accent) 28%, transparent)' : '1px solid #e2e8f0',
                 borderRadius: '10px',
                 padding: '0.85rem 1rem',
                 display: 'flex',
@@ -817,7 +817,7 @@ export const PartnerCapitalInjectionModal: React.FC<PartnerCapitalInjectionModal
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.76rem', fontWeight: 800, color: '#1e293b' }}>
-                    <Target size={15} color="#2563eb" />
+                    <Target size={15} color="var(--erp-accent)" />
                     <span>{isAr ? 'ربط السداد بطلب مساهمة إنشائي مرحلي (اختياري):' : 'Link to Milestone Call (Optional):'}</span>
                   </label>
                   {selectedCommitment && (
@@ -826,9 +826,9 @@ export const PartnerCapitalInjectionModal: React.FC<PartnerCapitalInjectionModal
                       fontWeight: 800,
                       padding: '0.15rem 0.5rem',
                       borderRadius: '4px',
-                      background: '#eff6ff',
-                      color: '#2563eb',
-                      border: '1px solid #bfdbfe'
+                      background: 'var(--erp-accent-subtle)',
+                      color: 'var(--erp-accent)',
+                      border: '1px solid color-mix(in srgb, var(--erp-accent) 28%, transparent)'
                     }}>
                       {isAr ? '✓ تم الربط وتحديد القيمة' : '✓ Linked'}
                     </span>
@@ -901,7 +901,7 @@ export const PartnerCapitalInjectionModal: React.FC<PartnerCapitalInjectionModal
                   style={{
                     width: '100%',
                     background: '#ffffff',
-                    border: '1.5px solid #2563eb',
+                    border: '1.5px solid var(--erp-accent)',
                     borderRadius: '8px',
                     padding: '0.55rem 0.75rem',
                     fontSize: '0.95rem',
@@ -941,7 +941,7 @@ export const PartnerCapitalInjectionModal: React.FC<PartnerCapitalInjectionModal
               }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                    <Building2 size={16} color="#2563eb" />
+                    <Building2 size={16} color="var(--erp-accent)" />
                     <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#0f172a' }}>
                       {isAr ? `الموقف المالي لرأس مال: ${selectedBuilding.title_ar || selectedBuilding.title_en}` : 'Building Capital Position'}
                     </span>
@@ -1161,7 +1161,7 @@ export const PartnerCapitalInjectionModal: React.FC<PartnerCapitalInjectionModal
               fontSize: '0.74rem'
             }}>
               <div style={{ fontWeight: 800, color: '#334155', marginBottom: '0.35rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                <Scale size={14} color="#2563eb" />
+                <Scale size={14} color="var(--erp-accent)" />
                 <span>{isAr ? 'معاينة القيد المحاسبي المتوازن بالمليم:' : 'Balanced Double-Entry Preview:'}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', color: '#047857', fontWeight: 700, marginBottom: '0.2rem' }}>
@@ -1172,7 +1172,7 @@ export const PartnerCapitalInjectionModal: React.FC<PartnerCapitalInjectionModal
                 </span>
                 <span>{numAmount > 0 ? `${D(numAmount).formatEGP(true)} (مدين)` : '0.00'}</span>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', color: '#1d4ed8', fontWeight: 700 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--erp-accent-hover)', fontWeight: 700 }}>
                 <span>
                   {isAr ? `إلى حـ/ 301000 (رأس مال الشركاء - ${effectivePartnerName || 'الشريك'})` : `Cr 301000 Partner Capital (${effectivePartnerName})`}
                 </span>
@@ -1213,7 +1213,7 @@ export const PartnerCapitalInjectionModal: React.FC<PartnerCapitalInjectionModal
                   padding: '0.55rem 1.45rem',
                   borderRadius: '8px',
                   border: 'none',
-                  background: !isValid || isMutating || isTargetPeriodLocked ? '#94a3b8' : '#2563eb',
+                  background: !isValid || isMutating || isTargetPeriodLocked ? '#94a3b8' : 'var(--erp-accent)',
                   color: '#ffffff',
                   fontSize: '0.82rem',
                   fontWeight: 800,
@@ -1221,7 +1221,7 @@ export const PartnerCapitalInjectionModal: React.FC<PartnerCapitalInjectionModal
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: '0.45rem',
-                  boxShadow: !isValid || isMutating || isTargetPeriodLocked ? 'none' : '0 2px 8px rgba(37, 99, 235, 0.25)'
+                  boxShadow: !isValid || isMutating || isTargetPeriodLocked ? 'none' : '0 2px 8px color-mix(in srgb, var(--erp-accent) 25%, transparent)'
                 }}
               >
                 {isMutating ? (

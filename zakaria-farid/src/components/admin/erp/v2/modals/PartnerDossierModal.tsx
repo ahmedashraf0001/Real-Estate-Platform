@@ -96,7 +96,7 @@ export const PartnerDossierModal: React.FC<PartnerDossierModalProps> = ({
           <span style={{ fontSize: '0.72rem', color: '#64748b', display: 'block', fontWeight: 700 }}>
             {isAr ? 'نوع الشراكة' : 'Partnership Role'}
           </span>
-          <strong style={{ fontSize: '0.95rem', color: '#946f23' }}>{partner.roleTitleAr}</strong>
+          <strong style={{ fontSize: '0.95rem', color: 'var(--erp-accent)' }}>{partner.roleTitleAr}</strong>
         </div>
         <div>
           <span style={{ fontSize: '0.72rem', color: '#64748b', display: 'block', fontWeight: 700 }}>
@@ -137,7 +137,7 @@ export const PartnerDossierModal: React.FC<PartnerDossierModalProps> = ({
                 <tr key={i} style={{ borderBottom: '1px solid #e2e8f0', background: i % 2 === 1 ? '#f8fafc' : '#ffffff' }}>
                   <td style={{ padding: '0.5rem', textAlign: 'center', color: '#64748b' }}>{i + 1}</td>
                   <td style={{ padding: '0.5rem 0.75rem', fontWeight: 700, color: '#0f172a' }}>{h.propertyTitle}</td>
-                  <td style={{ padding: '0.5rem', textAlign: 'center', fontWeight: 800, color: '#946f23' }}>{h.sharePct}%</td>
+                  <td style={{ padding: '0.5rem', textAlign: 'center', fontWeight: 800, color: 'var(--erp-accent)' }}>{h.sharePct}%</td>
                   <td style={{ padding: '0.5rem 0.75rem', textAlign: 'right', fontWeight: 700, color: '#059669' }}>
                     {D(h.contractSalesShare).formatEGP(isAr)}
                   </td>
@@ -255,16 +255,16 @@ export const PartnerDossierModal: React.FC<PartnerDossierModalProps> = ({
                       width: '42px',
                       height: '42px',
                       borderRadius: '12px',
-                      background: isOwner ? 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)' : 'rgba(148, 111, 35, 0.1)',
-                      color: isOwner ? '#d4af37' : '#946f23',
+                      background: isOwner ? 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)' : 'color-mix(in srgb, var(--erp-accent) 10%, transparent)',
+                      color: isOwner ? 'var(--erp-accent)' : 'var(--erp-accent)',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      border: isOwner ? '1.5px solid rgba(212, 175, 55, 0.45)' : 'none',
+                      border: isOwner ? '1.5px solid color-mix(in srgb, var(--erp-accent) 45%, transparent)' : 'none',
                       boxShadow: isOwner ? '0 2px 8px rgba(184, 144, 62, 0.2)' : 'none'
                     }}
                   >
-                    {isOwner ? <Crown size={22} color="#d4af37" /> : <User size={22} />}
+                    {isOwner ? <Crown size={22} color="var(--erp-accent)" /> : <User size={22} />}
                   </div>
                   <div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
@@ -284,7 +284,7 @@ export const PartnerDossierModal: React.FC<PartnerDossierModalProps> = ({
                           alignItems: 'center',
                           gap: '0.25rem'
                         }}>
-                          <Crown size={11} color="#946f23" />
+                          <Crown size={11} color="var(--erp-accent)" />
                           <span>{isAr ? 'المالك والمطور الرئيسي' : 'Owner & Primary Developer'}</span>
                         </span>
                       ) : (
@@ -293,7 +293,7 @@ export const PartnerDossierModal: React.FC<PartnerDossierModalProps> = ({
                           padding: '0.15rem 0.5rem',
                           borderRadius: '6px',
                           background: 'rgba(29, 78, 216, 0.08)',
-                          color: '#1d4ed8',
+                          color: 'var(--erp-accent-hover)',
                           fontWeight: 700
                         }}>
                           {partner.roleTitleAr}
@@ -361,7 +361,7 @@ export const PartnerDossierModal: React.FC<PartnerDossierModalProps> = ({
               style={{
                 background: 'rgba(184, 144, 62, 0.08)',
                 border: '1px solid rgba(184, 144, 62, 0.25)',
-                color: '#946f23',
+                color: 'var(--erp-accent)',
                 borderRadius: '8px',
                 padding: '0.4rem 0.7rem',
                 fontSize: '0.74rem',
@@ -420,7 +420,7 @@ export const PartnerDossierModal: React.FC<PartnerDossierModalProps> = ({
             </div>
 
             <div style={{ background: 'rgba(29, 78, 216, 0.05)', border: '1px solid rgba(29, 78, 216, 0.2)', borderRadius: '10px', padding: '0.85rem' }}>
-              <span style={{ fontSize: '0.68rem', color: '#1d4ed8', display: 'block', fontWeight: 600 }}>
+              <span style={{ fontSize: '0.68rem', color: 'var(--erp-accent-hover)', display: 'block', fontWeight: 600 }}>
                 {isAr ? 'نصيبه من تحصيلات المبيعات:' : 'Share of Collections:'}
               </span>
               <div style={{ marginTop: '0.2rem' }}>
@@ -450,7 +450,7 @@ export const PartnerDossierModal: React.FC<PartnerDossierModalProps> = ({
           {/* PROJECT HOLDINGS SECTION */}
           <div>
             <div style={{ fontSize: '0.78rem', fontWeight: 800, color: '#0f172a', marginBottom: '0.55rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-              <Building2 size={15} color="#946f23" />
+              <Building2 size={15} color="var(--erp-accent)" />
               <span>{isAr ? 'مشاريع الشراكة وحصص العقارات:' : 'Project Partnership Holdings:'}</span>
             </div>
 
@@ -473,7 +473,7 @@ export const PartnerDossierModal: React.FC<PartnerDossierModalProps> = ({
                           {h.propertyTitle}
                         </td>
                         <td style={{ padding: '0.6rem 0.75rem', textAlign: 'center' }}>
-                          <span style={{ background: 'rgba(148, 111, 35, 0.1)', color: '#946f23', fontWeight: 800, padding: '0.15rem 0.45rem', borderRadius: '5px' }}>
+                          <span style={{ background: 'color-mix(in srgb, var(--erp-accent) 10%, transparent)', color: 'var(--erp-accent)', fontWeight: 800, padding: '0.15rem 0.45rem', borderRadius: '5px' }}>
                             {h.sharePct}%
                           </span>
                         </td>
@@ -526,7 +526,7 @@ export const PartnerDossierModal: React.FC<PartnerDossierModalProps> = ({
                         </td>
                         <td style={{ padding: '0.55rem 0.75rem' }}>
                           {t.type === 'CAPITAL_INJECTION' ? (
-                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.2rem', color: '#946f23', fontWeight: 800 }}>
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.2rem', color: 'var(--erp-accent)', fontWeight: 800 }}>
                               <ArrowDownLeft size={13} />
                               <span>{isAr ? 'ضخ رأس مال' : 'Injection'}</span>
                             </span>
@@ -543,12 +543,12 @@ export const PartnerDossierModal: React.FC<PartnerDossierModalProps> = ({
                         <td style={{ padding: '0.55rem 0.75rem', color: '#475569' }}>
                           {t.payment_method === 'CASH_101000' ? (
                             <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
-                              <Wallet size={12} color="#946f23" />
+                              <Wallet size={12} color="var(--erp-accent)" />
                               <span>{isAr ? 'خزينة كاش' : 'Cash'}</span>
                             </span>
                           ) : (
                             <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
-                              <Landmark size={12} color="#1d4ed8" />
+                              <Landmark size={12} color="var(--erp-accent-hover)" />
                               <span>{isAr ? 'بنك / إنستاباي' : 'Bank'}</span>
                             </span>
                           )}
@@ -608,8 +608,8 @@ export const PartnerDossierModal: React.FC<PartnerDossierModalProps> = ({
                 }}
                 style={{
                   background: '#ffffff',
-                  border: '1px solid rgba(148, 111, 35, 0.35)',
-                  color: '#946f23',
+                  border: '1px solid color-mix(in srgb, var(--erp-accent) 35%, transparent)',
+                  color: 'var(--erp-accent)',
                   borderRadius: '8px',
                   padding: '0.5rem 0.9rem',
                   fontSize: '0.78rem',

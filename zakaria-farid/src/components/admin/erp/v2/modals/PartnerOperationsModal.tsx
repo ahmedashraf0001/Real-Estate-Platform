@@ -363,7 +363,7 @@ export const PartnerOperationsModal: React.FC<PartnerOperationsModalProps> = ({
       headerExtra={
         <span style={{
           background: 'rgba(184, 144, 62, 0.12)',
-          color: '#946f23',
+          color: 'var(--erp-accent)',
           border: '1px solid rgba(184, 144, 62, 0.25)',
           padding: '0.18rem 0.65rem',
           borderRadius: '20px',
@@ -529,7 +529,7 @@ export const PartnerOperationsModal: React.FC<PartnerOperationsModalProps> = ({
                             left: isAr ? 'auto' : 0,
                             width: '4px',
                             borderRadius: isAr ? '0 14px 14px 0' : '14px 0 0 14px',
-                            background: isSelected ? '#946f23' : 'rgba(184, 144, 62, 0.8)'
+                            background: isSelected ? 'var(--erp-accent)' : 'rgba(184, 144, 62, 0.8)'
                           }}
                         />
                       )}
@@ -543,7 +543,7 @@ export const PartnerOperationsModal: React.FC<PartnerOperationsModalProps> = ({
                             background: isOwner 
                               ? 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)' 
                               : (isSelected ? '#0f172a' : '#f1f5f9'),
-                            color: isOwner ? '#d4af37' : (isSelected ? '#d4af37' : '#475569'),
+                            color: isOwner ? 'var(--erp-accent)' : (isSelected ? 'var(--erp-accent)' : '#475569'),
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
@@ -554,7 +554,7 @@ export const PartnerOperationsModal: React.FC<PartnerOperationsModalProps> = ({
                               : `1px solid ${isSelected ? 'rgba(212, 175, 55, 0.3)' : '#e2e8f0'}`,
                             boxShadow: isOwner ? '0 2px 6px rgba(0,0,0,0.12)' : 'none'
                           }}>
-                            {isOwner ? <Crown size={17} color="#d4af37" /> : p.partnerName.charAt(0)}
+                            {isOwner ? <Crown size={17} color="var(--erp-accent)" /> : p.partnerName.charAt(0)}
                           </div>
                           <div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
@@ -575,12 +575,12 @@ export const PartnerOperationsModal: React.FC<PartnerOperationsModalProps> = ({
                                   gap: '0.25rem',
                                   boxShadow: '0 1px 3px rgba(184, 144, 62, 0.12)'
                                 }}>
-                                  <Crown size={11} color="#946f23" />
+                                  <Crown size={11} color="var(--erp-accent)" />
                                   <span>{isAr ? 'المالك' : 'Owner'}</span>
                                 </span>
                               )}
                             </div>
-                            <div style={{ fontSize: '0.68rem', color: isOwner ? '#946f23' : '#64748b', fontWeight: isOwner ? 700 : 500 }}>
+                            <div style={{ fontSize: '0.68rem', color: isOwner ? 'var(--erp-accent)' : '#64748b', fontWeight: isOwner ? 700 : 500 }}>
                               {isOwner ? (isAr ? 'المطور الرئيسي • مالك المنظومة' : 'Owner & Primary Developer') : p.roleTitleAr}
                             </div>
                           </div>
@@ -591,8 +591,8 @@ export const PartnerOperationsModal: React.FC<PartnerOperationsModalProps> = ({
                             width: '8px',
                             height: '8px',
                             borderRadius: '50%',
-                            background: '#946f23',
-                            boxShadow: '0 0 8px #946f23'
+                            background: 'var(--erp-accent)',
+                            boxShadow: '0 0 8px var(--erp-accent)'
                           }} />
                         )}
                       </div>
@@ -679,7 +679,7 @@ export const PartnerOperationsModal: React.FC<PartnerOperationsModalProps> = ({
                     background: 'linear-gradient(135deg, rgba(184, 144, 62, 0.09) 0%, rgba(184, 144, 62, 0.03) 100%)',
                     border: '1.5px dashed rgba(184, 144, 62, 0.4)',
                     borderRadius: '12px',
-                    color: '#946f23',
+                    color: 'var(--erp-accent)',
                     fontSize: '0.8rem',
                     fontWeight: 800,
                     cursor: 'pointer',
@@ -728,16 +728,16 @@ export const PartnerOperationsModal: React.FC<PartnerOperationsModalProps> = ({
                       height: '46px',
                       borderRadius: '12px',
                       background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
-                      color: '#d4af37',
+                      color: 'var(--erp-accent)',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                       fontWeight: 900,
                       fontSize: '1.25rem',
-                      border: isActiveOwner ? '1.5px solid rgba(212, 175, 55, 0.55)' : '1px solid rgba(212, 175, 55, 0.3)',
+                      border: isActiveOwner ? '1.5px solid color-mix(in srgb, var(--erp-accent) 55%, transparent)' : '1px solid color-mix(in srgb, var(--erp-accent) 30%, transparent)',
                       boxShadow: isActiveOwner ? '0 4px 12px rgba(184, 144, 62, 0.25)' : 'none'
                     }}>
-                      {isActiveOwner ? <Crown size={24} color="#d4af37" /> : activePartner.partnerName.charAt(0)}
+                      {isActiveOwner ? <Crown size={24} color="var(--erp-accent)" /> : activePartner.partnerName.charAt(0)}
                     </div>
                     <div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'wrap' }}>
@@ -758,13 +758,13 @@ export const PartnerOperationsModal: React.FC<PartnerOperationsModalProps> = ({
                             gap: '0.35rem',
                             boxShadow: '0 1px 4px rgba(184, 144, 62, 0.15)'
                           }}>
-                            <Crown size={13} color="#946f23" />
+                            <Crown size={13} color="var(--erp-accent)" />
                             <span>{isAr ? 'المالك ومؤسس المنظومة' : 'Owner & Founder'}</span>
                           </span>
                         ) : (
                           <span style={{
                             background: 'rgba(184, 144, 62, 0.1)',
-                            color: '#946f23',
+                            color: 'var(--erp-accent)',
                             border: '1px solid rgba(184, 144, 62, 0.25)',
                             padding: '0.15rem 0.55rem',
                             borderRadius: '6px',
@@ -832,7 +832,7 @@ export const PartnerOperationsModal: React.FC<PartnerOperationsModalProps> = ({
                     flexDirection: 'column',
                     gap: '0.25rem'
                   }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: '#946f23' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: 'var(--erp-accent)' }}>
                       <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#64748b' }}>
                         {isActiveOwner ? (isAr ? 'رأس مال المالك (301000)' : 'Owner Capital (301000)') : (isAr ? 'رأس المال المساهم' : 'Capital Contributed')}
                       </span>
@@ -856,7 +856,7 @@ export const PartnerOperationsModal: React.FC<PartnerOperationsModalProps> = ({
                     flexDirection: 'column',
                     gap: '0.25rem'
                   }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: '#1d4ed8' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: 'var(--erp-accent-hover)' }}>
                       <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#64748b' }}>
                         {isAr ? 'نصيبه من التحصيلات' : 'Collections Share'}
                       </span>
@@ -932,7 +932,7 @@ export const PartnerOperationsModal: React.FC<PartnerOperationsModalProps> = ({
                     flexWrap: 'wrap'
                   }}>
                     <span style={{ fontSize: '0.73rem', fontWeight: 800, color: '#334155', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                      <Building2 size={15} style={{ color: '#946f23' }} />
+                      <Building2 size={15} style={{ color: 'var(--erp-accent)' }} />
                       {isAr ? 'مشاريع الشراكة والحصص:' : 'Project Holdings:'}
                     </span>
                     {activePartner.holdings.map((h, i) => (
@@ -951,7 +951,7 @@ export const PartnerOperationsModal: React.FC<PartnerOperationsModalProps> = ({
                         }}
                       >
                         <strong>{h.propertyTitle}</strong>
-                        <span style={{ color: '#946f23', fontWeight: 800 }}>{h.sharePct}%</span>
+                        <span style={{ color: 'var(--erp-accent)', fontWeight: 800 }}>{h.sharePct}%</span>
                         <span style={{ color: '#64748b', fontSize: '0.68rem' }}>
                           ({isAr ? 'مبيعات:' : 'sales:'} {formatEGP(h.contractSalesShare)})
                         </span>
@@ -999,7 +999,7 @@ export const PartnerOperationsModal: React.FC<PartnerOperationsModalProps> = ({
                         style={{
                           background: 'none',
                           border: 'none',
-                          borderBottom: isActive ? '3px solid #946f23' : '3px solid transparent',
+                          borderBottom: isActive ? '3px solid var(--erp-accent)' : '3px solid transparent',
                           padding: '0.65rem 0.25rem',
                           color: isActive ? '#0f172a' : '#64748b',
                           fontSize: '0.88rem',
@@ -1012,7 +1012,7 @@ export const PartnerOperationsModal: React.FC<PartnerOperationsModalProps> = ({
                           transition: 'all 0.15s ease'
                         }}
                       >
-                        <Icon size={17} style={{ color: isActive ? '#946f23' : '#94a3b8' }} />
+                        <Icon size={17} style={{ color: isActive ? 'var(--erp-accent)' : '#94a3b8' }} />
                         <span>{tab.label}</span>
                       </button>
                     );
@@ -1106,7 +1106,7 @@ export const PartnerOperationsModal: React.FC<PartnerOperationsModalProps> = ({
                           [isAr ? 'left' : 'right']: '1rem',
                           fontSize: '0.85rem',
                           fontWeight: 800,
-                          color: '#946f23'
+                          color: 'var(--erp-accent)'
                         }}>
                           {isAr ? 'جنيه مصري' : 'EGP'}
                         </span>
@@ -1124,7 +1124,7 @@ export const PartnerOperationsModal: React.FC<PartnerOperationsModalProps> = ({
                         <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 800, color: '#0f172a' }}>
                           {isAr ? 'طريقة الصرف والسداد *' : 'Payout Method *'}
                         </label>
-                        <span style={{ fontSize: '0.66rem', fontWeight: 700, color: '#946f23', background: 'rgba(184, 144, 62, 0.08)', padding: '0.12rem 0.45rem', borderRadius: '5px' }}>
+                        <span style={{ fontSize: '0.66rem', fontWeight: 700, color: 'var(--erp-accent)', background: 'rgba(184, 144, 62, 0.08)', padding: '0.12rem 0.45rem', borderRadius: '5px' }}>
                           {isAr ? `الحساب: ${payoutAccountLabelAr}` : `Account: ${payoutAccountLabelEn}`}
                         </span>
                       </div>
@@ -1140,7 +1140,7 @@ export const PartnerOperationsModal: React.FC<PartnerOperationsModalProps> = ({
                               key={m.id}
                               onClick={() => setPayoutMethod(m.id as any)}
                               style={{
-                                border: isSelected ? '1.5px solid #946f23' : '1px solid #cbd5e1',
+                                border: isSelected ? '1.5px solid var(--erp-accent)' : '1px solid #cbd5e1',
                                 background: isSelected ? 'rgba(184, 144, 62, 0.06)' : '#ffffff',
                                 borderRadius: '12px',
                                 padding: '0.75rem',
@@ -1149,7 +1149,7 @@ export const PartnerOperationsModal: React.FC<PartnerOperationsModalProps> = ({
                               }}
                             >
                               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.2rem' }}>
-                                <Icon size={16} style={{ color: isSelected ? '#946f23' : '#64748b' }} />
+                                <Icon size={16} style={{ color: isSelected ? 'var(--erp-accent)' : '#64748b' }} />
                                 <strong style={{ fontSize: '0.82rem', color: isSelected ? '#0f172a' : '#334155' }}>{m.title}</strong>
                               </div>
                               <div style={{ fontSize: '0.68rem', color: '#64748b' }}>{m.sub}</div>
@@ -1249,7 +1249,7 @@ export const PartnerOperationsModal: React.FC<PartnerOperationsModalProps> = ({
                         boxShadow: '0 4px 15px rgba(15, 23, 42, 0.15)'
                       }}>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '0.45rem' }}>
-                          <span style={{ fontSize: '0.78rem', fontWeight: 800, color: '#d4af37', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                          <span style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--erp-accent)', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
                             <Scale size={15} />
                             {isAr ? 'معاينة القيد المحاسبي المزدوج الآلي (INV-4.1)' : 'Audited Journal Entry Preview'}
                           </span>
@@ -1261,7 +1261,7 @@ export const PartnerOperationsModal: React.FC<PartnerOperationsModalProps> = ({
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem', fontSize: '0.78rem' }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', color: '#f8fafc' }}>
                             <span>{isActiveOwner ? (isAr ? 'من حـ/ 303000 أرباح ومسحوبات المالك (مدين)' : 'Dr 303000 Owner Drawings & Dividends') : (isAr ? 'من حـ/ 303000 أرباح موزعة للشركاء (مدين)' : 'Dr 303000 Partner Dividends')}</span>
-                            <strong style={{ color: '#d4af37' }}>{formatEGP(payoutNum)}</strong>
+                            <strong style={{ color: 'var(--erp-accent)' }}>{formatEGP(payoutNum)}</strong>
                           </div>
                           <div style={{ display: 'flex', justifyContent: 'space-between', color: '#94a3b8', paddingRight: isAr ? '1.5rem' : '0', paddingLeft: isAr ? '0' : '1.5rem' }}>
                             <span>إلى حـ/ {payoutAccountCode === '101000' ? (isAr ? '101000 الخزينة (101000)' : '101000 Safe (101000)') : (isAr ? '102000 إنستاباي (102000)' : '102000 InstaPay (102000)')} (دائن)</span>
@@ -1378,7 +1378,7 @@ export const PartnerOperationsModal: React.FC<PartnerOperationsModalProps> = ({
                           [isAr ? 'left' : 'right']: '1rem',
                           fontSize: '0.85rem',
                           fontWeight: 800,
-                          color: '#946f23'
+                          color: 'var(--erp-accent)'
                         }}>
                           {isAr ? 'جنيه مصري' : 'EGP'}
                         </span>
@@ -1412,7 +1412,7 @@ export const PartnerOperationsModal: React.FC<PartnerOperationsModalProps> = ({
                               key={m.id}
                               onClick={() => setInjectionMethod(m.id as any)}
                               style={{
-                                border: isSelected ? '1.5px solid #946f23' : '1px solid #cbd5e1',
+                                border: isSelected ? '1.5px solid var(--erp-accent)' : '1px solid #cbd5e1',
                                 background: isSelected ? 'rgba(184, 144, 62, 0.06)' : '#ffffff',
                                 borderRadius: '12px',
                                 padding: '0.75rem',
@@ -1421,7 +1421,7 @@ export const PartnerOperationsModal: React.FC<PartnerOperationsModalProps> = ({
                               }}
                             >
                               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.2rem' }}>
-                                <Icon size={16} style={{ color: isSelected ? '#946f23' : '#64748b' }} />
+                                <Icon size={16} style={{ color: isSelected ? 'var(--erp-accent)' : '#64748b' }} />
                                 <strong style={{ fontSize: '0.82rem', color: isSelected ? '#0f172a' : '#334155' }}>{m.title}</strong>
                               </div>
                               <div style={{ fontSize: '0.68rem', color: '#64748b' }}>{m.sub}</div>
@@ -1521,7 +1521,7 @@ export const PartnerOperationsModal: React.FC<PartnerOperationsModalProps> = ({
                         boxShadow: '0 4px 15px rgba(15, 23, 42, 0.15)'
                       }}>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '0.45rem' }}>
-                          <span style={{ fontSize: '0.78rem', fontWeight: 800, color: '#d4af37', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                          <span style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--erp-accent)', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
                             <Scale size={15} />
                             {isAr ? 'معاينة القيد المحاسبي المزدوج الآلي (INV-4.1)' : 'Audited Journal Entry Preview'}
                           </span>
@@ -1533,7 +1533,7 @@ export const PartnerOperationsModal: React.FC<PartnerOperationsModalProps> = ({
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem', fontSize: '0.78rem' }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', color: '#f8fafc' }}>
                             <span>من حـ/ {injectionAccountCode === '101000' ? (isAr ? '101000 الخزينة (101000)' : '101000 Safe (101000)') : (isAr ? '102000 إنستاباي (102000)' : '102000 InstaPay (102000)')} (مدين)</span>
-                            <strong style={{ color: '#d4af37' }}>{formatEGP(injectionNum)}</strong>
+                            <strong style={{ color: 'var(--erp-accent)' }}>{formatEGP(injectionNum)}</strong>
                           </div>
                           <div style={{ display: 'flex', justifyContent: 'space-between', color: '#94a3b8', paddingRight: isAr ? '1.5rem' : '0', paddingLeft: isAr ? '0' : '1.5rem' }}>
                             <span>{isActiveOwner ? (isAr ? 'إلى حـ/ 301000 رأس مال المالك والمؤسسين (دائن)' : 'Cr 301000 Owner Paid Capital') : (isAr ? 'إلى حـ/ 301000 رأس مال الشركاء والممولين (دائن)' : 'Cr 301000 Partner Capital')}</span>
@@ -1568,7 +1568,7 @@ export const PartnerOperationsModal: React.FC<PartnerOperationsModalProps> = ({
                           padding: '0.65rem 1.5rem',
                           borderRadius: '10px',
                           border: 'none',
-                          background: injectionNum > 0 && !isMutating ? 'linear-gradient(135deg, #946f23 0%, #785718 100%)' : '#cbd5e1',
+                          background: injectionNum > 0 && !isMutating ? 'linear-gradient(135deg, var(--erp-accent) 0%, #785718 100%)' : '#cbd5e1',
                           color: '#ffffff',
                           fontSize: '0.85rem',
                           fontWeight: 800,
@@ -1715,7 +1715,7 @@ export const PartnerOperationsModal: React.FC<PartnerOperationsModalProps> = ({
                                       fontSize: '0.7rem',
                                       fontWeight: 800,
                                       background: isInjection ? 'rgba(184, 144, 62, 0.1)' : 'rgba(4, 120, 87, 0.08)',
-                                      color: isInjection ? '#946f23' : '#047857',
+                                      color: isInjection ? 'var(--erp-accent)' : '#047857',
                                       border: `1px solid ${isInjection ? 'rgba(184, 144, 62, 0.25)' : 'rgba(4, 120, 87, 0.2)'}`
                                     }}>
                                       {isInjection ? <ArrowDownLeft size={12} /> : <ArrowUpRight size={12} />}
@@ -1745,7 +1745,7 @@ export const PartnerOperationsModal: React.FC<PartnerOperationsModalProps> = ({
                                   <td style={{ padding: '0.65rem 0.85rem', color: '#64748b', fontSize: '0.7rem' }}>
                                     <div>{tx.receipt_ref || '—'}</div>
                                     {tx.journal_entry_number && (
-                                      <div style={{ color: '#946f23', fontWeight: 700 }}>
+                                      <div style={{ color: 'var(--erp-accent)', fontWeight: 700 }}>
                                         #{tx.journal_entry_number}
                                       </div>
                                     )}

@@ -1280,11 +1280,11 @@ export const ZFQuickSearchModal: React.FC<ZFQuickSearchModalProps> = ({
           background: transparent;
         }
         .zf-search-scrollbar::-webkit-scrollbar-thumb {
-          background: ${isLight ? 'rgba(37, 99, 235, 0.25)' : 'rgba(255, 255, 255, 0.25)'};
+          background: ${isLight ? 'color-mix(in srgb, var(--erp-accent) 25%, transparent)' : 'rgba(255, 255, 255, 0.25)'};
           border-radius: 4px;
         }
         .zf-search-scrollbar::-webkit-scrollbar-thumb:hover {
-          background: ${isLight ? 'rgba(37, 99, 235, 0.45)' : 'rgba(255, 255, 255, 0.45)'};
+          background: ${isLight ? 'color-mix(in srgb, var(--erp-accent) 45%, transparent)' : 'rgba(255, 255, 255, 0.45)'};
         }
         .zf-chip-scrollbar::-webkit-scrollbar {
           display: none;
@@ -1525,8 +1525,8 @@ export const ZFQuickSearchModal: React.FC<ZFQuickSearchModalProps> = ({
                         width: '36px',
                         height: '36px',
                         borderRadius: '9px',
-                        background: isLight ? 'var(--erp-accent-subtle, #eff6ff)' : 'rgba(37, 99, 235, 0.12)',
-                        color: isLight ? 'var(--erp-accent, #2563eb)' : '#60a5fa',
+                        background: isLight ? 'var(--erp-accent-subtle, #eff6ff)' : 'color-mix(in srgb, var(--erp-accent) 12%, transparent)',
+                        color: isLight ? 'var(--erp-accent, #2563eb)' : 'var(--erp-accent-hover)',
                         border: isLight
                           ? '1px solid #bfdbfe'
                           : '1px solid rgba(37, 99, 235, 0.25)',
@@ -1576,8 +1576,8 @@ export const ZFQuickSearchModal: React.FC<ZFQuickSearchModalProps> = ({
                       style={{
                         fontSize: '0.68rem',
                         fontWeight: 700,
-                        color: isLight ? 'var(--erp-accent, #2563eb)' : '#60a5fa',
-                        background: isLight ? 'var(--erp-accent-subtle, #eff6ff)' : 'rgba(37, 99, 235, 0.1)',
+                        color: isLight ? 'var(--erp-accent, #2563eb)' : 'var(--erp-accent-hover)',
+                        background: isLight ? 'var(--erp-accent-subtle, #eff6ff)' : 'color-mix(in srgb, var(--erp-accent) 10%, transparent)',
                         border: isLight
                           ? '1px solid #bfdbfe'
                           : '1px solid rgba(37, 99, 235, 0.25)',
@@ -1592,7 +1592,7 @@ export const ZFQuickSearchModal: React.FC<ZFQuickSearchModalProps> = ({
                     {isSelected && (
                       <div
                         style={{
-                          color: isLight ? 'var(--erp-accent, #2563eb)' : '#60a5fa',
+                          color: isLight ? 'var(--erp-accent, #2563eb)' : 'var(--erp-accent-hover)',
                           display: 'flex',
                           alignItems: 'center',
                           opacity: 0.9
@@ -1644,7 +1644,7 @@ export const ZFQuickSearchModal: React.FC<ZFQuickSearchModalProps> = ({
               gap: '0.35rem',
               fontWeight: 700,
               fontSize: '0.68rem',
-              color: isLight ? 'var(--erp-accent, #2563eb)' : '#60a5fa'
+              color: isLight ? 'var(--erp-accent, #2563eb)' : 'var(--erp-accent-hover)'
             }}
           >
             <span>{effectiveIsAr ? 'محرك البحث الشامل' : 'Omni-Search'}</span>

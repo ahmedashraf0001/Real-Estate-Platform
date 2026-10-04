@@ -401,16 +401,16 @@ export const ERPPortfolioMapModal: React.FC<ERPPortfolioMapModalProps> = ({
           border-radius: 50%;
           background: var(--erp-accent, #2563eb);
           border: 2px solid #ffffff;
-          box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25), 0 0 10px rgba(37, 99, 235, 0.5);
+          box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25), 0 0 10px color-mix(in srgb, var(--erp-accent) 50%, transparent);
           z-index: 2;
           transition: all 0.2s ease;
         }
 
         .erp-map-pin:hover .erp-pin-core,
         .erp-map-pin.active .erp-pin-core {
-          background: #1d4ed8;
+          background: var(--erp-accent-hover);
           border-color: #ffffff;
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35), 0 0 16px rgba(37, 99, 235, 0.85);
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35), 0 0 16px color-mix(in srgb, var(--erp-accent) 85%, transparent);
           transform: scale(1.25);
         }
 
@@ -418,8 +418,8 @@ export const ERPPortfolioMapModal: React.FC<ERPPortfolioMapModalProps> = ({
           position: absolute;
           inset: 0;
           border-radius: 50%;
-          background: rgba(37, 99, 235, 0.2);
-          border: 1.5px solid rgba(37, 99, 235, 0.6);
+          background: color-mix(in srgb, var(--erp-accent) 20%, transparent);
+          border: 1.5px solid color-mix(in srgb, var(--erp-accent) 60%, transparent);
           animation: erpPinPulse 2.4s cubic-bezier(0.25, 1, 0.5, 1) infinite;
         }
 
@@ -464,7 +464,7 @@ export const ERPPortfolioMapModal: React.FC<ERPPortfolioMapModalProps> = ({
         .erp-map-pin:hover .erp-pin-label,
         .erp-map-pin.active .erp-pin-label {
           border-color: var(--erp-accent, #2563eb);
-          box-shadow: 0 6px 18px rgba(37, 99, 235, 0.25);
+          box-shadow: 0 6px 18px color-mix(in srgb, var(--erp-accent) 25%, transparent);
           transform: translateY(1px);
         }
 

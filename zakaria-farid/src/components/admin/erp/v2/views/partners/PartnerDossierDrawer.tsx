@@ -93,7 +93,7 @@ export const PartnerDossierDrawer: React.FC<PartnerDossierDrawerProps> = ({
             width: '34px',
             height: '34px',
             borderRadius: '9px',
-            background: isFounder ? 'rgba(217, 119, 6, 0.12)' : 'rgba(37, 99, 235, 0.12)',
+            background: isFounder ? 'rgba(217, 119, 6, 0.12)' : 'color-mix(in srgb, var(--erp-accent) 12%, transparent)',
             color: isFounder ? '#d97706' : 'var(--erp-accent, #2563eb)',
             display: 'flex',
             alignItems: 'center',
@@ -316,7 +316,7 @@ export const PartnerDossierDrawer: React.FC<PartnerDossierDrawerProps> = ({
               </span>
               <strong style={{
                 fontSize: '1.05rem',
-                color: D(partner.netCurrentBalance).isNegative() ? '#dc2626' : '#2563eb',
+                color: D(partner.netCurrentBalance).isNegative() ? '#dc2626' : 'var(--erp-accent)',
                 fontVariantNumeric: 'tabular-nums'
               }}>
                 {D(partner.netCurrentBalance).formatEGP(isAr)}

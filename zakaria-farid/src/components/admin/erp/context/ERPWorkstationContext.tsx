@@ -1764,7 +1764,7 @@ export function ERPWorkstationProvider({
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap' }}>
                 <span style={{
                   background: 'rgba(184, 144, 62, 0.1)',
-                  color: '#946f23',
+                  color: 'var(--erp-accent)',
                   border: '1px solid rgba(184, 144, 62, 0.22)',
                   padding: '0.12rem 0.55rem',
                   borderRadius: '6px',

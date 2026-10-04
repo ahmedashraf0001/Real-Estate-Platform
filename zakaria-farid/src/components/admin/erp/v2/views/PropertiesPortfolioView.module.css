@@ -53,7 +53,7 @@
   padding: 0.2rem 0.55rem;
   border-radius: 6px;
   background: var(--erp-accent-tint, rgba(37, 99, 235, 0.08));
-  border: 1px solid rgba(37, 99, 235, 0.25);
+  border: 1px solid color-mix(in srgb, var(--erp-accent) 25%, transparent);
   color: var(--erp-accent, #2563eb);
 }
 
@@ -391,7 +391,7 @@
 
 .projectCardSelected {
   border-color: var(--erp-accent, #2563eb) !important;
-  box-shadow: 0 0 0 1px var(--erp-accent, #2563eb), 0 4px 12px -2px rgba(37, 99, 235, 0.12) !important;
+  box-shadow: 0 0 0 1px var(--erp-accent, #2563eb), 0 4px 12px -2px color-mix(in srgb, var(--erp-accent) 12%, transparent) !important;
 }
 
 /* Project Card Top Image */
@@ -686,13 +686,13 @@
   border-radius: 999px;
   background: var(--erp-accent-subtle, #eff6ff);
   color: var(--erp-accent, #2563eb);
-  border: 1px solid rgba(37, 99, 235, 0.2);
+  border: 1px solid color-mix(in srgb, var(--erp-accent) 20%, transparent);
   font-variant-numeric: tabular-nums;
 }
 
 .clearProjectFilterBtn {
   background: var(--erp-accent-tint, rgba(37, 99, 235, 0.08));
-  border: 1px solid rgba(37, 99, 235, 0.25);
+  border: 1px solid color-mix(in srgb, var(--erp-accent) 25%, transparent);
   border-radius: 6px;
   padding: 0.18rem 0.55rem;
   font-size: 0.72rem;
@@ -874,7 +874,7 @@
   justify-content: center;
   gap: 0.45rem;
   transition: background 0.15s ease;
-  box-shadow: 0 1px 3px rgba(37, 99, 235, 0.2);
+  box-shadow: 0 1px 3px color-mix(in srgb, var(--erp-accent) 20%, transparent);
 }
 
 .newProjectBtn:hover {

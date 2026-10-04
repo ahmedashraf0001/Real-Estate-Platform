@@ -429,7 +429,7 @@ export const UnitsFloorMatrixTable: React.FC<UnitsFloorMatrixTableProps> = ({
                   color: 'var(--erp-accent, #2563eb)',
                   padding: '1px 4px',
                   borderRadius: '3px',
-                  border: '1px solid rgba(37, 99, 235, 0.2)',
+                  border: '1px solid color-mix(in srgb, var(--erp-accent) 20%, transparent)',
                 }}
                 title={unit.buildingUnit?.tax_description || (isAr ? 'ضريبة محددة يدوياً' : 'Manual Tax')}
               >

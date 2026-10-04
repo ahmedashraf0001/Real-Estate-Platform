@@ -360,7 +360,7 @@ export const NewPartnerProfileModal: React.FC<NewPartnerProfileModalProps> = ({
                 width: '42px',
                 height: '42px',
                 borderRadius: '10px',
-                background: 'linear-gradient(135deg, #b8903e 0%, #946f23 100%)',
+                background: 'linear-gradient(135deg, #b8903e 0%, var(--erp-accent) 100%)',
                 color: '#ffffff',
                 display: 'flex',
                 alignItems: 'center',
@@ -381,7 +381,7 @@ export const NewPartnerProfileModal: React.FC<NewPartnerProfileModalProps> = ({
                   padding: '0.15rem 0.5rem',
                   borderRadius: '999px',
                   background: 'rgba(184, 144, 62, 0.12)',
-                  color: '#946f23',
+                  color: 'var(--erp-accent)',
                   border: '1px solid rgba(184, 144, 62, 0.25)'
                 }}>
                   {isAr ? 'ملف استثماري موثق' : 'Verified Partner Profile'}
@@ -429,7 +429,7 @@ export const NewPartnerProfileModal: React.FC<NewPartnerProfileModalProps> = ({
             gap: '0.85rem'
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', color: '#0f172a', fontWeight: 800, fontSize: '0.85rem' }}>
-              <User size={16} color="#946f23" />
+              <User size={16} color="var(--erp-accent)" />
               <span>{isAr ? '1. البيانات الشخصية والتعريفية للشريك' : '1. Personal & Identity Details'}</span>
             </div>
 
@@ -482,7 +482,7 @@ export const NewPartnerProfileModal: React.FC<NewPartnerProfileModalProps> = ({
                       border: 'none',
                       padding: '0.1rem 0.35rem',
                       borderRadius: '4px',
-                      color: '#946f23',
+                      color: 'var(--erp-accent)',
                       fontSize: '0.68rem',
                       fontWeight: 700,
                       cursor: 'pointer',
@@ -507,7 +507,7 @@ export const NewPartnerProfileModal: React.FC<NewPartnerProfileModalProps> = ({
                         width: '320px',
                         maxWidth: '90vw',
                         background: '#ffffff',
-                        border: '1.5px solid #d4af37',
+                        border: '1.5px solid var(--erp-accent)',
                         borderRadius: '10px',
                         boxShadow: '0 10px 25px -5px rgba(15, 23, 42, 0.2)',
                         padding: '0.75rem',
@@ -607,7 +607,7 @@ export const NewPartnerProfileModal: React.FC<NewPartnerProfileModalProps> = ({
                               width: '24px',
                               height: '24px',
                               borderRadius: '6px',
-                              background: activeRoleItem.iconBg || 'rgba(148, 111, 35, 0.1)',
+                              background: activeRoleItem.iconBg || 'color-mix(in srgb, var(--erp-accent) 10%, transparent)',
                               display: 'flex',
                               alignItems: 'center',
                               justifyContent: 'center',
@@ -628,9 +628,9 @@ export const NewPartnerProfileModal: React.FC<NewPartnerProfileModalProps> = ({
                             fontWeight: 800,
                             padding: '0.15rem 0.45rem',
                             borderRadius: '4px',
-                            background: activeRoleItem.badgeBg || 'rgba(148, 111, 35, 0.08)',
-                            color: activeRoleItem.badgeTextColor || '#946f23',
-                            border: `1px solid ${activeRoleItem.badgeTextColor || '#946f23'}33`,
+                            background: activeRoleItem.badgeBg || 'color-mix(in srgb, var(--erp-accent) 8%, transparent)',
+                            color: activeRoleItem.badgeTextColor || 'var(--erp-accent)',
+                            border: `1px solid color-mix(in srgb, ${activeRoleItem.badgeTextColor || 'var(--erp-accent)'} 20%, transparent)`,
                             whiteSpace: 'nowrap'
                           }}
                         >
@@ -738,7 +738,7 @@ export const NewPartnerProfileModal: React.FC<NewPartnerProfileModalProps> = ({
             gap: '0.85rem'
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', color: '#0f172a', fontWeight: 800, fontSize: '0.85rem' }}>
-              <Landmark size={16} color="#1d4ed8" />
+              <Landmark size={16} color="var(--erp-accent-hover)" />
               <span>{isAr ? '2. بيانات تحويل وصرف الأرباح والمستحقات' : '2. Payout & Dividend Transfer Channels'}</span>
             </div>
 
@@ -772,7 +772,7 @@ export const NewPartnerProfileModal: React.FC<NewPartnerProfileModalProps> = ({
                     borderRadius: '8px',
                     border: payoutMethod === 'CASH' ? '1.5px solid #b8903e' : '1px solid #e2e8f0',
                     background: payoutMethod === 'CASH' ? 'rgba(184, 144, 62, 0.08)' : '#f8fafc',
-                    color: payoutMethod === 'CASH' ? '#946f23' : '#475569',
+                    color: payoutMethod === 'CASH' ? 'var(--erp-accent)' : '#475569',
                     fontSize: '0.78rem',
                     fontWeight: 800,
                     cursor: 'pointer'

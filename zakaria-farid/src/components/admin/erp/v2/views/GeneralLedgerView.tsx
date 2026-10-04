@@ -1375,7 +1375,7 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
                 <ERPLedgerAmount value={row.creditMovements} isAr={isAr} zeroAsDash />
               </td>
               <td style={{ padding: '0.55rem 0.65rem', textAlign: isAr ? 'left' : 'right' }}>
-                <ERPLedgerAmount value={row.endingDebit} isAr={isAr} zeroAsDash color="#1e3a8a" />
+                <ERPLedgerAmount value={row.endingDebit} isAr={isAr} zeroAsDash color="var(--erp-accent-hover)" />
               </td>
               <td style={{ padding: '0.55rem 0.65rem', textAlign: isAr ? 'left' : 'right' }}>
                 <ERPLedgerAmount value={row.endingCredit} isAr={isAr} zeroAsDash color="#b45309" />
@@ -1395,7 +1395,7 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
               <ERPLedgerAmount value={trialBalanceReport.sumCredits} isAr={isAr} />
             </td>
             <td style={{ padding: '0.65rem', textAlign: isAr ? 'left' : 'right' }}>
-              <ERPLedgerAmount value={trialBalanceReport.sumEndingDebitBalances} isAr={isAr} color="#1e3a8a" />
+              <ERPLedgerAmount value={trialBalanceReport.sumEndingDebitBalances} isAr={isAr} color="var(--erp-accent-hover)" />
             </td>
             <td style={{ padding: '0.65rem', textAlign: isAr ? 'left' : 'right' }}>
               <ERPLedgerAmount value={trialBalanceReport.sumEndingCreditBalances} isAr={isAr} color="#b45309" />
@@ -2394,7 +2394,7 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
                     </td>
                     <td className={css.canonicalTd} style={{ textAlign: isAr ? 'left' : 'right' }}>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem', fontSize: '0.74rem' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.5rem', color: '#1e40af' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.5rem', color: 'var(--erp-accent-hover)' }}>
                           <span style={{ fontWeight: 600 }}>{isAr ? 'مدين:' : 'Dr:'}</span>
                           <ERPLedgerAmount value={coaFilteredTotals.totalDebitNatureBalance} isAr={isAr} style={{ fontWeight: 700 }} />
                         </div>
@@ -2576,7 +2576,7 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
                           <ERPLedgerAmount value={row.creditMovements} isAr={isAr} zeroAsDash />
                         </td>
                         <td className={css.canonicalTd} style={{ textAlign: isAr ? 'left' : 'right' }}>
-                          <ERPLedgerAmount value={row.endingDebit} isAr={isAr} zeroAsDash color="#1e40af" />
+                          <ERPLedgerAmount value={row.endingDebit} isAr={isAr} zeroAsDash color="var(--erp-accent-hover)" />
                         </td>
                         <td className={css.canonicalTd} style={{ textAlign: isAr ? 'left' : 'right' }}>
                           <ERPLedgerAmount value={row.endingCredit} isAr={isAr} zeroAsDash color="#b45309" />
@@ -2594,7 +2594,7 @@ export const GeneralLedgerView: React.FC<GeneralLedgerViewProps> = ({
                         <ERPLedgerAmount value={trialBalanceReport.sumCredits} isAr={isAr} />
                       </td>
                       <td className={css.canonicalTd} style={{ textAlign: isAr ? 'left' : 'right' }}>
-                        <ERPLedgerAmount value={trialBalanceReport.sumEndingDebitBalances} isAr={isAr} color="#1e40af" />
+                        <ERPLedgerAmount value={trialBalanceReport.sumEndingDebitBalances} isAr={isAr} color="var(--erp-accent-hover)" />
                       </td>
                       <td className={css.canonicalTd} style={{ textAlign: isAr ? 'left' : 'right' }}>
                         <ERPLedgerAmount value={trialBalanceReport.sumEndingCreditBalances} isAr={isAr} color="#b45309" />

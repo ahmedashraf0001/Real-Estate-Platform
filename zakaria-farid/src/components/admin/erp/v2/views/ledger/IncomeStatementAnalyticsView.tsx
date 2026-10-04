@@ -155,7 +155,7 @@ export const IncomeStatementAnalyticsView: React.FC<IncomeStatementAnalyticsView
     const gross = Math.max(0, financialTotals.grossSales.toNumber());
     const other = Math.max(0, financialTotals.otherRevenue.toNumber());
     const items = [
-      { label: isAr ? 'مبيعات الشقق المحققة' : 'Delivered Apartment Sales', value: gross, color: currentAccent || '#2563eb' },
+      { label: isAr ? 'مبيعات الشقق المحققة' : 'Delivered Apartment Sales', value: gross, color: currentAccent || 'var(--erp-accent)' },
       { label: isAr ? 'إيرادات التنازلات والعقود' : 'Contract Fees & Adjustments', value: other, color: '#0284c7' },
       { label: isAr ? 'إيرادات تشغيلية أخرى' : 'Other Operating Revenue', value: 0, color: '#64748b' }
     ].filter(i => i.value > 0);

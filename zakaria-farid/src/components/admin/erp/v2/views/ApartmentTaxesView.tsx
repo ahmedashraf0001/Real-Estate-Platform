@@ -259,19 +259,19 @@ export const ApartmentTaxesView: React.FC<ApartmentTaxesViewProps> = ({
     if (text.includes('مرافق') || text.includes('مجلس') || text.includes('إشغال') || text.includes('مياه') || text.includes('كهرباء') || text.includes('mun-')) {
       return {
         label: isAr ? 'رسوم جهاز المدينة والمرافق' : 'Municipal & Utility',
-        color: '#1d4ed8',
+        color: 'var(--erp-accent-hover)',
         bg: 'rgba(29, 78, 216, 0.08)',
         border: 'rgba(29, 78, 216, 0.25)',
-        icon: <Landmark size={12} color="#1d4ed8" />
+        icon: <Landmark size={12} color="var(--erp-accent-hover)" />
       };
     }
     if (text.includes('ترخيص') || text.includes('رخصة') || text.includes('lic-')) {
       return {
         label: isAr ? 'ترخيص بناء هندسي معتمد' : 'Building Permit',
-        color: '#946f23',
+        color: 'var(--erp-accent)',
         bg: 'rgba(184, 144, 62, 0.08)',
         border: 'rgba(184, 144, 62, 0.25)',
-        icon: <FileText size={12} color="#946f23" />
+        icon: <FileText size={12} color="var(--erp-accent)" />
       };
     }
     if (text.includes('جسات') || text.includes('تربة') || text.includes('geo-') || text.includes('استشار')) {
@@ -287,10 +287,10 @@ export const ApartmentTaxesView: React.FC<ApartmentTaxesViewProps> = ({
       label: item.category === 'permits_engineering' 
         ? (isAr ? 'تراخيص وهندسة' : 'Permits') 
         : (isAr ? 'ضرائب ورسوم حكومية' : 'Gov Fees'),
-      color: '#946f23',
+      color: 'var(--erp-accent)',
       bg: 'rgba(184, 144, 62, 0.08)',
       border: 'rgba(184, 144, 62, 0.25)',
-      icon: <FileCheck size={12} color="#946f23" />
+      icon: <FileCheck size={12} color="var(--erp-accent)" />
     };
   };
 
@@ -410,19 +410,19 @@ export const ApartmentTaxesView: React.FC<ApartmentTaxesViewProps> = ({
     if (norm.includes('disposition') || norm.includes('تصرفات') || norm.includes('2.5')) {
       return {
         label: isAr ? 'ضريبة تصرفات عقارية (٢.٥٪)' : 'Disposition Tax (2.5%)',
-        color: '#946f23',
+        color: 'var(--erp-accent)',
         bg: 'rgba(184, 144, 62, 0.08)',
         border: 'rgba(184, 144, 62, 0.25)',
-        icon: <Receipt size={12} color="#946f23" />
+        icon: <Receipt size={12} color="var(--erp-accent)" />
       };
     }
     if (norm.includes('municipal') || norm.includes('development') || norm.includes('تنمية')) {
       return {
         label: isAr ? 'رسوم تنمية وتطوير' : 'Development Fee',
-        color: '#1e40af',
+        color: 'var(--erp-accent-hover)',
         bg: 'rgba(30, 64, 175, 0.08)',
         border: 'rgba(30, 64, 175, 0.25)',
-        icon: <Building2 size={12} color="#1e40af" />
+        icon: <Building2 size={12} color="var(--erp-accent-hover)" />
       };
     }
     if (norm.includes('estate') || norm.includes('عقارية') || norm.includes('عوايد')) {
@@ -436,10 +436,10 @@ export const ApartmentTaxesView: React.FC<ApartmentTaxesViewProps> = ({
     }
     return {
       label: isAr ? (taxType || 'رسوم وضريبة شقة') : (taxType || 'Apartment Fee'),
-      color: '#946f23',
+      color: 'var(--erp-accent)',
       bg: 'rgba(184, 144, 62, 0.08)',
       border: 'rgba(184, 144, 62, 0.25)',
-      icon: <ShieldCheck size={12} color="#946f23" />
+      icon: <ShieldCheck size={12} color="var(--erp-accent)" />
     };
   };
 
@@ -525,7 +525,7 @@ export const ApartmentTaxesView: React.FC<ApartmentTaxesViewProps> = ({
       {/* 1. Header & Stage Breadcrumb */}
       <div className={styles.stageHeader}>
         <div className={styles.stageTitleArea}>
-          <ZFErpBreadcrumb sectionTitle={isAr ? 'ضرائب وتراخيص المشاريع' : 'Project Statutory Taxes & Permits'} icon={<Receipt size={13} color="#946f23" />} />
+          <ZFErpBreadcrumb sectionTitle={isAr ? 'ضرائب وتراخيص المشاريع' : 'Project Statutory Taxes & Permits'} icon={<Receipt size={13} color="var(--erp-accent)" />} />
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
             <h1 className={styles.stageTitle}>
@@ -534,7 +534,7 @@ export const ApartmentTaxesView: React.FC<ApartmentTaxesViewProps> = ({
             <span style={{
               background: 'rgba(184, 144, 62, 0.08)',
               border: '1px solid rgba(184, 144, 62, 0.25)',
-              color: '#946f23',
+              color: 'var(--erp-accent)',
               padding: '0.2rem 0.55rem',
               borderRadius: '6px',
               fontSize: '0.72rem',
@@ -575,7 +575,7 @@ export const ApartmentTaxesView: React.FC<ApartmentTaxesViewProps> = ({
                 gap: '0.45rem',
                 padding: '0.6rem 1.15rem',
                 borderRadius: '10px',
-                background: 'linear-gradient(135deg, #d4af37 0%, #b8903e 100%)',
+                background: 'linear-gradient(135deg, var(--erp-accent) 0%, #b8903e 100%)',
                 color: '#ffffff',
                 fontWeight: 800,
                 fontSize: '0.82rem',
@@ -641,7 +641,7 @@ export const ApartmentTaxesView: React.FC<ApartmentTaxesViewProps> = ({
               padding: '0.1rem 0.45rem',
               borderRadius: '999px',
               background: activeMode === 'capitalized_costs' ? 'rgba(184, 144, 62, 0.12)' : '#e2e8f0',
-              color: activeMode === 'capitalized_costs' ? '#946f23' : '#64748b'
+              color: activeMode === 'capitalized_costs' ? 'var(--erp-accent)' : '#64748b'
             }}>
               {allStatutoryCosts.length}
             </span>
@@ -674,7 +674,7 @@ export const ApartmentTaxesView: React.FC<ApartmentTaxesViewProps> = ({
               padding: '0.1rem 0.45rem',
               borderRadius: '999px',
               background: activeMode === 'disposition_archive' ? 'rgba(184, 144, 62, 0.12)' : '#e2e8f0',
-              color: activeMode === 'disposition_archive' ? '#946f23' : '#64748b'
+              color: activeMode === 'disposition_archive' ? 'var(--erp-accent)' : '#64748b'
             }}>
               {taxRecords.length}
             </span>
@@ -705,7 +705,7 @@ export const ApartmentTaxesView: React.FC<ApartmentTaxesViewProps> = ({
               fontSize: '0.82rem',
               fontWeight: 700,
               cursor: 'pointer',
-              boxShadow: '0 1px 3px rgba(37, 99, 235, 0.25)',
+              boxShadow: '0 1px 3px color-mix(in srgb, var(--erp-accent) 25%, transparent)',
               transition: 'all 0.15s ease'
             }}
           >
@@ -803,7 +803,7 @@ export const ApartmentTaxesView: React.FC<ApartmentTaxesViewProps> = ({
                   setCostCurrentPage(1);
                 },
                 ariaLabel: isAr ? 'المشروع' : 'Project',
-                icon: <Building2 size={13} color="#946f23" />,
+                icon: <Building2 size={13} color="var(--erp-accent)" />,
                 options: [
                   { value: 'all', label: isAr ? 'كل المشاريع والعمارات' : 'All Projects' },
                   ...properties.map(p => ({
@@ -843,7 +843,7 @@ export const ApartmentTaxesView: React.FC<ApartmentTaxesViewProps> = ({
               textAlign: 'center',
               color: '#64748b'
             }}>
-              <Landmark size={40} color="#946f23" style={{ margin: '0 auto 0.85rem' }} />
+              <Landmark size={40} color="var(--erp-accent)" style={{ margin: '0 auto 0.85rem' }} />
               <h3 style={{ margin: 0, color: '#0f172a', fontSize: '1.05rem', fontWeight: 800 }}>
                 {isAr ? 'لا توجد تكاليف حكومية أو تراخيص مطابقة للبحث' : 'No matching statutory costs found'}
               </h3>
@@ -862,7 +862,7 @@ export const ApartmentTaxesView: React.FC<ApartmentTaxesViewProps> = ({
                     gap: '0.4rem',
                     padding: '0.5rem 1rem',
                     borderRadius: '8px',
-                    background: 'linear-gradient(135deg, #d4af37 0%, #b8903e 100%)',
+                    background: 'linear-gradient(135deg, var(--erp-accent) 0%, #b8903e 100%)',
                     color: '#ffffff',
                     fontWeight: 800,
                     fontSize: '0.8rem',
@@ -933,7 +933,7 @@ export const ApartmentTaxesView: React.FC<ApartmentTaxesViewProps> = ({
                         <td>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem', minWidth: '180px' }}>
                             <span style={{ fontWeight: 800, color: '#0f172a', fontSize: '0.84rem', lineHeight: 1.35, display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                              <Building2 size={13} color="#946f23" />
+                              <Building2 size={13} color="var(--erp-accent)" />
                               <span>{propTitle || (isAr ? 'مشروع عقاري' : 'Property')}</span>
                             </span>
                             {prop?.location && (
@@ -988,7 +988,7 @@ export const ApartmentTaxesView: React.FC<ApartmentTaxesViewProps> = ({
                             fontFamily: 'monospace',
                             fontSize: '0.75rem',
                             fontWeight: 800,
-                            color: '#946f23',
+                            color: 'var(--erp-accent)',
                             background: 'rgba(184, 144, 62, 0.08)',
                             border: '1px solid rgba(184, 144, 62, 0.25)',
                             padding: '0.2rem 0.5rem',
@@ -1073,7 +1073,7 @@ export const ApartmentTaxesView: React.FC<ApartmentTaxesViewProps> = ({
                             style={{
                               background: '#ffffff',
                               border: '1px solid #e2e8f0',
-                              color: '#946f23',
+                              color: 'var(--erp-accent)',
                               borderRadius: '7px',
                               padding: '0.3rem 0.65rem',
                               fontSize: '0.72rem',
@@ -1087,7 +1087,7 @@ export const ApartmentTaxesView: React.FC<ApartmentTaxesViewProps> = ({
                             }}
                             title={isAr ? 'عرض وتدقيق تكاليف العقار' : 'Audit Property Costs'}
                           >
-                            <Eye size={12} color="#946f23" />
+                            <Eye size={12} color="var(--erp-accent)" />
                             <span>{isAr ? 'تدقيق' : 'Audit'}</span>
                           </button>
                         </td>
@@ -1160,8 +1160,8 @@ export const ApartmentTaxesView: React.FC<ApartmentTaxesViewProps> = ({
 
                     {/* Building & Item Name */}
                     <div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.74rem', color: '#946f23', fontWeight: 800 }}>
-                        <Building2 size={13} color="#946f23" />
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.74rem', color: 'var(--erp-accent)', fontWeight: 800 }}>
+                        <Building2 size={13} color="var(--erp-accent)" />
                         <span>{propTitle || (isAr ? 'مشروع عقاري' : 'Project')}</span>
                         {prop?.location && (
                           <>
@@ -1222,9 +1222,9 @@ export const ApartmentTaxesView: React.FC<ApartmentTaxesViewProps> = ({
                       <span style={{ color: '#64748b', fontFamily: 'monospace' }}>
                         {item.invoice_ref ? `#${item.invoice_ref}` : item.logged_date}
                       </span>
-                      <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', color: '#946f23', fontWeight: 800 }}>
+                      <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', color: 'var(--erp-accent)', fontWeight: 800 }}>
                         <span>{isAr ? 'تدقيق تكاليف المبنى' : 'Audit Lifecycle'}</span>
-                        <ArrowUpRight size={13} color="#946f23" />
+                        <ArrowUpRight size={13} color="var(--erp-accent)" />
                       </div>
                     </div>
                   </div>
@@ -1383,7 +1383,7 @@ export const ApartmentTaxesView: React.FC<ApartmentTaxesViewProps> = ({
               textAlign: 'center',
               color: '#64748b'
             }}>
-              <Landmark size={36} color="#946f23" style={{ margin: '0 auto 0.75rem' }} />
+              <Landmark size={36} color="var(--erp-accent)" style={{ margin: '0 auto 0.75rem' }} />
               <h3 style={{ margin: 0, color: '#0f172a', fontSize: '1rem', fontWeight: 800 }}>
                 {isAr ? 'مفيش ضرائب أو رسوم مطابقة للبحث أو الفلتر' : 'No matching tax records found'}
               </h3>
@@ -1513,7 +1513,7 @@ export const ApartmentTaxesView: React.FC<ApartmentTaxesViewProps> = ({
                                 overflow: 'hidden',
                                 textOverflow: 'ellipsis'
                               }}>
-                                <Building2 size={12} color="#946f23" style={{ flexShrink: 0 }} />
+                                <Building2 size={12} color="var(--erp-accent)" style={{ flexShrink: 0 }} />
                                 <span 
                                   style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
                                   title={displayUnit}
@@ -1533,7 +1533,7 @@ export const ApartmentTaxesView: React.FC<ApartmentTaxesViewProps> = ({
                                 <div style={{ fontSize: '0.7rem', color: '#64748b', fontVariantNumeric: 'tabular-nums', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
                                   <FileText size={11} color="#94a3b8" />
                                   <span>{isAr ? 'عقد رقم: ' : 'Contract #'}</span>
-                                  <span style={{ fontWeight: 700, color: '#946f23' }}>
+                                  <span style={{ fontWeight: 700, color: 'var(--erp-accent)' }}>
                                     #{linkedContract.contract_number}
                                   </span>
                                 </div>
@@ -1558,7 +1558,7 @@ export const ApartmentTaxesView: React.FC<ApartmentTaxesViewProps> = ({
                                 fontVariantNumeric: 'tabular-nums',
                                 fontWeight: 800,
                                 fontSize: '0.68rem',
-                                color: '#946f23',
+                                color: 'var(--erp-accent)',
                                 background: 'rgba(184, 144, 62, 0.08)',
                                 border: '1px solid rgba(184, 144, 62, 0.25)',
                                 padding: '0.12rem 0.4rem',
@@ -1617,7 +1617,7 @@ export const ApartmentTaxesView: React.FC<ApartmentTaxesViewProps> = ({
                                 style={{
                                   background: '#ffffff',
                                   border: '1px solid #e2e8f0',
-                                  color: '#946f23',
+                                  color: 'var(--erp-accent)',
                                   borderRadius: '7px',
                                   padding: '0.3rem 0.65rem',
                                   fontSize: '0.72rem',
@@ -1631,7 +1631,7 @@ export const ApartmentTaxesView: React.FC<ApartmentTaxesViewProps> = ({
                                 }}
                                 title={isAr ? 'عرض التفاصيل والإشعار' : 'Inspect Assessment'}
                               >
-                                <Eye size={12} color="#946f23" />
+                                <Eye size={12} color="var(--erp-accent)" />
                                 <span>{isRemitted ? (isAr ? 'عرض الإيصال' : 'Receipt') : (isAr ? 'تفاصيل' : 'Inspect')}</span>
                               </button>
                             </div>
@@ -1727,7 +1727,7 @@ export const ApartmentTaxesView: React.FC<ApartmentTaxesViewProps> = ({
                       {buyerDisplayName}
                     </h3>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.74rem', color: '#64748b', marginTop: '0.3rem', flexWrap: 'wrap' }}>
-                      <Building2 size={12} color="#946f23" style={{ flexShrink: 0 }} />
+                      <Building2 size={12} color="var(--erp-accent)" style={{ flexShrink: 0 }} />
                       <span style={{ fontWeight: 700, color: '#334155' }}>
                         {displayUnit}
                       </span>
@@ -1742,7 +1742,7 @@ export const ApartmentTaxesView: React.FC<ApartmentTaxesViewProps> = ({
                           <span>•</span>
                           <span style={{
                             fontVariantNumeric: 'tabular-nums',
-                            color: '#946f23',
+                            color: 'var(--erp-accent)',
                             fontWeight: 700,
                             whiteSpace: 'nowrap',
                             direction: 'ltr',
@@ -1815,9 +1815,9 @@ export const ApartmentTaxesView: React.FC<ApartmentTaxesViewProps> = ({
                       </span>
                     )}
 
-                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', color: '#946f23', fontSize: '0.74rem', fontWeight: 800 }}>
+                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', color: 'var(--erp-accent)', fontSize: '0.74rem', fontWeight: 800 }}>
                       <span>{isAr ? 'عرض التفاصيل' : 'Inspect'}</span>
-                      <ArrowUpRight size={13} color="#946f23" />
+                      <ArrowUpRight size={13} color="var(--erp-accent)" />
                     </div>
                   </div>
                 </div>
