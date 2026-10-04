@@ -4095,7 +4095,7 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
 
                       {/* Center Elevator Penthouse Machine Room */}
                       <g transform={`translate(${bldX + bldW / 2 - 40}, ${roofY - 32})`}>
-                        <rect width="80" height="32" rx="2" fill="rgba(10, 14, 24, 0.95)" stroke="#2563eb" strokeWidth="1.5" />
+                        <rect width="80" height="32" rx="2" style={{ fill: 'var(--fp-surface)' }} stroke="#2563eb" strokeWidth="1.5" />
                         <line x1="20" y1="10" x2="60" y2="10" stroke="rgba(37, 99, 235, 0.4)" strokeWidth="1" />
                         <line x1="20" y1="16" x2="60" y2="16" stroke="rgba(37, 99, 235, 0.4)" strokeWidth="1" />
                         <line x1="20" y1="22" x2="60" y2="22" stroke="rgba(37, 99, 235, 0.4)" strokeWidth="1" />
@@ -4117,7 +4117,7 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
                       {/* Roof Info Card on the Right */}
                       <g transform={`translate(${bldRight + 16}, ${roofY - 20})`}>
                         <rect width="138" height="32" rx="6" fill="rgba(255, 255, 255, 0.03)" stroke="rgba(37, 99, 235, 0.25)" strokeWidth="1" className="fp-elev-card-border" />
-                        <text x="8" y="14" fontSize="9.5" fill="#FFFFFF" fontWeight="700" fontFamily="'Plus Jakarta Sans', sans-serif">
+                        <text x="8" y="14" fontSize="9.5" style={{ fill: 'var(--fp-text)' }} fontWeight="700" fontFamily="'Plus Jakarta Sans', sans-serif">
                           {isAr ? 'السطح والتراس' : 'Roof Terrace'}
                         </text>
                         <text x="8" y="25" fontSize="8" fill="#2563eb" fontFamily="monospace" fontWeight="700">
@@ -4190,7 +4190,7 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
 
                         {/* Center Architectural Spine (Staircase & Elevator Core Glazing) */}
                         <g transform={`translate(${bldX + bldW / 2 - 28}, ${floorY + 4})`}>
-                          <rect width="56" height={typFloorH - 8} fill="rgba(10, 14, 24, 0.8)" stroke="rgba(37, 99, 235, 0.4)" strokeWidth="1.2" />
+                          <rect width="56" height={typFloorH - 8} style={{ fill: 'var(--fp-surface)' }} stroke="rgba(37, 99, 235, 0.4)" strokeWidth="1.2" />
                           {/* Modern Vertical Architectural Mullions */}
                           <line x1="14" y1="0" x2="14" y2={typFloorH - 8} stroke="rgba(37, 99, 235, 0.3)" strokeWidth="1" />
                           <line x1="28" y1="0" x2="28" y2={typFloorH - 8} stroke="rgba(37, 99, 235, 0.3)" strokeWidth="1" />
@@ -4217,7 +4217,7 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
 
                         {/* Floor Badge on Building Facade */}
                         <g transform={`translate(${bldX + 10}, ${floorY + 12})`}>
-                          <rect width="52" height="15" rx="3" fill="rgba(10, 14, 24, 0.85)" stroke="rgba(37, 99, 235, 0.5)" strokeWidth="0.8" />
+                          <rect width="52" height="15" rx="3" style={{ fill: 'var(--fp-surface)' }} stroke="rgba(37, 99, 235, 0.5)" strokeWidth="0.8" />
                           <text x="26" y="11" fontSize="8" fill="#2563eb" textAnchor="middle" fontWeight="800" fontFamily="'Plus Jakarta Sans', sans-serif">
                             {floor.key}
                           </text>
@@ -4226,7 +4226,7 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
                         {/* Right Floor Info Card */}
                         <g transform={`translate(${bldRight + 16}, ${floorY + (typFloorH - 32) / 2})`}>
                           <rect width="138" height="32" rx="6" fill="rgba(255, 255, 255, 0.03)" stroke="rgba(37, 99, 235, 0.25)" strokeWidth="1" className="fp-elev-card-border" />
-                          <text x="8" y="14" fontSize="9.5" fill="#FFFFFF" fontWeight="700" fontFamily="'Plus Jakarta Sans', sans-serif">
+                          <text x="8" y="14" fontSize="9.5" style={{ fill: 'var(--fp-text)' }} fontWeight="700" fontFamily="'Plus Jakarta Sans', sans-serif">
                             {floor.key}
                           </text>
                           <text x="8" y="25" fontSize="8" fill="#2563eb" fontFamily="monospace" fontWeight="700">
@@ -4303,7 +4303,7 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
 
                       {/* Ground Floor Label */}
                       <g transform={`translate(${bldX + 10}, ${groundY + 12})`}>
-                        <rect width="66" height="15" rx="3" fill="rgba(10, 14, 24, 0.85)" stroke="rgba(37, 99, 235, 0.5)" strokeWidth="0.8" />
+                        <rect width="66" height="15" rx="3" style={{ fill: 'var(--fp-surface)' }} stroke="rgba(37, 99, 235, 0.5)" strokeWidth="0.8" />
                         <text x="33" y="11" fontSize="8" fill="#2563eb" textAnchor="middle" fontWeight="800" fontFamily="'Plus Jakarta Sans', sans-serif">
                           {isAr ? 'الأرضي' : 'GROUND'}
                         </text>
@@ -4312,7 +4312,7 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
                       {/* Right Ground Info Card */}
                       <g transform={`translate(${bldRight + 16}, ${groundY + (groundH - 32) / 2})`}>
                         <rect width="138" height="32" rx="6" fill="rgba(255, 255, 255, 0.03)" stroke="rgba(37, 99, 235, 0.25)" strokeWidth="1" className="fp-elev-card-border" />
-                        <text x="8" y="14" fontSize="9.5" fill="#FFFFFF" fontWeight="700" fontFamily="'Plus Jakarta Sans', sans-serif">
+                        <text x="8" y="14" fontSize="9.5" style={{ fill: 'var(--fp-text)' }} fontWeight="700" fontFamily="'Plus Jakarta Sans', sans-serif">
                           {isAr ? 'الدور الأرضي والمدخل' : 'Ground Floor & Lobby'}
                         </text>
                         <text x="8" y="25" fontSize="8" fill="#2563eb" fontFamily="monospace" fontWeight="700">
@@ -4350,7 +4350,7 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
                       }}
                     >
                       {/* Basement Retaining Walls & Box */}
-                      <rect x={bldX} y={groundBaseY} width={bldW} height={basementH} fill="rgba(10, 14, 24, 0.9)" stroke="rgba(37, 99, 235, 0.3)" strokeDasharray="4 2" className="fp-elev-floor-bg" />
+                      <rect x={bldX} y={groundBaseY} width={bldW} height={basementH} style={{ fill: 'var(--fp-canvas-bg)', opacity: 0.9 }} stroke="rgba(37, 99, 235, 0.3)" strokeDasharray="4 2" className="fp-elev-floor-bg" />
 
                       {/* Garage Vehicular Ramp Entrance */}
                       <g transform={`translate(${bldX + 24}, ${groundBaseY + 6})`}>
@@ -4369,7 +4369,7 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
 
                       {/* Basement Floor Label */}
                       <g transform={`translate(${bldX + 10}, ${groundBaseY + 12})`}>
-                        <rect width="66" height="15" rx="3" fill="rgba(10, 14, 24, 0.85)" stroke="rgba(37, 99, 235, 0.5)" strokeWidth="0.8" />
+                        <rect width="66" height="15" rx="3" style={{ fill: 'var(--fp-surface)' }} stroke="rgba(37, 99, 235, 0.5)" strokeWidth="0.8" />
                         <text x="33" y="11" fontSize="8" fill="#2563eb" textAnchor="middle" fontWeight="800" fontFamily="'Plus Jakarta Sans', sans-serif">
                           {isAr ? 'البدروم' : 'BASEMENT'}
                         </text>
@@ -4378,7 +4378,7 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
                       {/* Right Basement Info Card */}
                       <g transform={`translate(${bldRight + 16}, ${groundBaseY + (basementH - 32) / 2})`}>
                         <rect width="138" height="32" rx="6" fill="rgba(255, 255, 255, 0.03)" stroke="rgba(37, 99, 235, 0.25)" strokeWidth="1" className="fp-elev-card-border" />
-                        <text x="8" y="14" fontSize="9.5" fill="#FFFFFF" fontWeight="700" fontFamily="'Plus Jakarta Sans', sans-serif">
+                        <text x="8" y="14" fontSize="9.5" style={{ fill: 'var(--fp-text)' }} fontWeight="700" fontFamily="'Plus Jakarta Sans', sans-serif">
                           {isAr ? 'البدروم والجراج' : 'Basement / Garage'}
                         </text>
                         <text x="8" y="25" fontSize="8" fill="#2563eb" fontFamily="monospace" fontWeight="700">
@@ -4473,14 +4473,14 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
                     <line x1="64" y1="36" x2="676" y2="36" stroke="#2563eb" strokeWidth="1" />
                     <line x1="64" y1="30" x2="64" y2="46" stroke="#2563eb" strokeWidth="1.5" />
                     <line x1="676" y1="30" x2="676" y2="46" stroke="#2563eb" strokeWidth="1.5" />
-                    <rect x="320" y="26" width="100" height="18" rx="4" fill="rgba(10,14,24,0.85)" stroke="rgba(37, 99, 235, 0.3)" strokeWidth="0.8" />
+                    <rect x="320" y="26" width="100" height="18" rx="4" style={{ fill: 'var(--fp-surface)' }} stroke="rgba(37, 99, 235, 0.3)" strokeWidth="0.8" />
                     <text x="370" y="38" fontSize="8.5" fill="#2563eb" textAnchor="middle" fontFamily="monospace" fontWeight="700">24.00 m</text>
 
                     {/* Left Depth */}
                     <line x1="36" y1="56" x2="36" y2="424" stroke="#2563eb" strokeWidth="1" />
                     <line x1="30" y1="56" x2="46" y2="56" stroke="#2563eb" strokeWidth="1.5" />
                     <line x1="30" y1="424" x2="46" y2="424" stroke="#2563eb" strokeWidth="1.5" />
-                    <rect x="18" y="230" width="36" height="18" rx="4" fill="rgba(10,14,24,0.85)" stroke="rgba(37, 99, 235, 0.3)" strokeWidth="0.8" />
+                    <rect x="18" y="230" width="36" height="18" rx="4" style={{ fill: 'var(--fp-surface)' }} stroke="rgba(37, 99, 235, 0.3)" strokeWidth="0.8" />
                     <text x="36" y="242" fontSize="8" fill="#2563eb" textAnchor="middle" fontFamily="monospace" fontWeight="700">16.00m</text>
                   </g>
 
@@ -4505,7 +4505,7 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
 
                       {/* Main Revolving Double Entrance Doors & Gate */}
                       <g transform="translate(370, 424)">
-                        <circle cx="0" cy="0" r="22" fill="rgba(10,14,24,0.9)" stroke="#2563eb" strokeWidth="1.5" />
+                        <circle cx="0" cy="0" r="22" style={{ fill: 'var(--fp-surface)' }} stroke="#2563eb" strokeWidth="1.5" />
                         <line x1="-22" y1="0" x2="22" y2="0" stroke="#2563eb" strokeWidth="1.5" />
                         <line x1="0" y1="-22" x2="0" y2="22" stroke="#2563eb" strokeWidth="1.5" />
                         <text x="0" y="32" fontSize="8" fill="#2563eb" textAnchor="middle" fontWeight="700" fontFamily="'Plus Jakarta Sans', sans-serif">MAIN ENTRANCE GATE & FENCE</text>
@@ -4515,12 +4515,12 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
                       <g transform="translate(320, 310)">
                         <path d="M 0 0 C 30 -15, 70 -15, 100 0 L 90 24 C 65 14, 35 14, 10 24 Z" fill="rgba(37, 99, 235, 0.2)" stroke="#2563eb" strokeWidth="1.5" />
                         <circle cx="50" cy="8" r="4" fill="#2563eb" />
-                        <text x="50" y="40" fontSize="8.5" fill="#FFFFFF" textAnchor="middle" fontWeight="700" fontFamily="'Plus Jakarta Sans', sans-serif">GUARD & SECURITY BOOTH</text>
+                        <text x="50" y="40" fontSize="8.5" style={{ fill: 'var(--fp-text)' }} textAnchor="middle" fontWeight="700" fontFamily="'Plus Jakarta Sans', sans-serif">GUARD & SECURITY BOOTH</text>
                       </g>
 
                       {/* Central Elevator Bank */}
                       <g transform="translate(330, 80)">
-                        <rect width="80" height="74" fill="rgba(10,14,24,0.95)" stroke="#2563eb" strokeWidth="2" />
+                        <rect width="80" height="74" style={{ fill: 'var(--fp-surface)' }} stroke="#2563eb" strokeWidth="2" />
                         <line x1="0" y1="0" x2="80" y2="74" stroke="rgba(37, 99, 235, 0.4)" />
                         <line x1="80" y1="0" x2="0" y2="74" stroke="rgba(37, 99, 235, 0.4)" />
                         <rect x="10" y="10" width="60" height="54" rx="2" fill="rgba(37, 99, 235, 0.15)" stroke="#2563eb" strokeWidth="1" />
@@ -4529,7 +4529,7 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
 
                       {/* Main Building Staircase */}
                       <g transform="translate(330, 160)">
-                        <rect width="80" height="100" fill="rgba(13,18,32,0.95)" stroke="#2563eb" strokeWidth="2" />
+                        <rect width="80" height="100" style={{ fill: 'var(--fp-surface)' }} stroke="#2563eb" strokeWidth="2" />
                         {[10, 24, 38, 52, 66, 80, 94].map(ty => (
                           <line key={`gstair-${ty}`} x1="0" y1={ty} x2="80" y2={ty} stroke="rgba(37, 99, 235, 0.4)" strokeWidth="1" />
                         ))}
@@ -4541,8 +4541,8 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
                       <g transform="translate(80, 80)">
                         <rect width="220" height="160" fill="rgba(37, 99, 235, 0.04)" stroke="rgba(37, 99, 235, 0.4)" strokeWidth="1.5" />
                         <line x1="110" y1="0" x2="110" y2="160" stroke="rgba(37, 99, 235, 0.3)" strokeDasharray="4 3" />
-                        <text x="55" y="80" fontSize="9" fill="#FFFFFF" textAnchor="middle" fontWeight="700">BAY P-01</text>
-                        <text x="165" y="80" fontSize="9" fill="#FFFFFF" textAnchor="middle" fontWeight="700">BAY P-02</text>
+                        <text x="55" y="80" fontSize="9" style={{ fill: 'var(--fp-text)' }} textAnchor="middle" fontWeight="700">BAY P-01</text>
+                        <text x="165" y="80" fontSize="9" style={{ fill: 'var(--fp-text)' }} textAnchor="middle" fontWeight="700">BAY P-02</text>
                         <text x="110" y="140" fontSize="8.5" fill="#2563eb" textAnchor="middle" fontWeight="800" fontFamily="'Plus Jakarta Sans', sans-serif">GROUND GARAGE & PARKING</text>
                       </g>
 
@@ -4567,14 +4567,14 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
                         <rect width="220" height="200" fill="rgba(37, 99, 235, 0.05)" stroke="rgba(37, 99, 235, 0.4)" strokeWidth="1.5" />
                         <rect x="15" y="15" width="190" height="30" fill="rgba(37, 99, 235, 0.08)" stroke="#2563eb" strokeWidth="1" />
                         <text x="110" y="34" fontSize="8.5" fill="#2563eb" textAnchor="middle" fontWeight="800">STORE FRONT GLASS</text>
-                        <text x="110" y="110" fontSize="10" fill="#FFFFFF" textAnchor="middle" fontWeight="700">COMMERCIAL SHOP / RETAIL</text>
+                        <text x="110" y="110" fontSize="10" style={{ fill: 'var(--fp-text)' }} textAnchor="middle" fontWeight="700">COMMERCIAL SHOP / RETAIL</text>
                         <text x="110" y="126" fontSize="8.5" fill="#2563eb" textAnchor="middle" fontFamily="monospace">44.0 m²</text>
                       </g>
 
                       {/* Right Wing Bottom: Building Facility / Storage */}
                       <g transform="translate(440, 300)">
                         <rect width="220" height="110" fill="rgba(37, 99, 235, 0.03)" stroke="rgba(37, 99, 235, 0.3)" strokeWidth="1.5" />
-                        <text x="110" y="60" fontSize="9.5" fill="#FFFFFF" textAnchor="middle" fontWeight="700">BUILDING SERVICES & STORAGE</text>
+                        <text x="110" y="60" fontSize="9.5" style={{ fill: 'var(--fp-text)' }} textAnchor="middle" fontWeight="700">BUILDING SERVICES & STORAGE</text>
                         <text x="110" y="76" fontSize="8.5" fill="#2563eb" textAnchor="middle" fontFamily="monospace">24.0 m²</text>
                       </g>
                     </g>
@@ -4592,13 +4592,13 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
                         {[30, 60, 90, 120, 150, 180].map(px => (
                           <line key={`r-perg-${px}`} x1={px} y1="0" x2={px} y2="230" stroke="rgba(37, 99, 235, 0.3)" strokeWidth="1.5" />
                         ))}
-                        <text x="105" y="120" fontSize="10" fill="#FFFFFF" textAnchor="middle" fontWeight="700">PANORAMIC PERGOLA & LOUNGE</text>
+                        <text x="105" y="120" fontSize="10" style={{ fill: 'var(--fp-text)' }} textAnchor="middle" fontWeight="700">PANORAMIC PERGOLA & LOUNGE</text>
                         <text x="105" y="136" fontSize="8.5" fill="#2563eb" textAnchor="middle" fontFamily="monospace">84.0 m²</text>
                       </g>
 
                       {/* Center Elevator Penthouse & Stairwell */}
                       <g transform="translate(330, 80)">
-                        <rect width="80" height="110" rx="2" fill="rgba(10,14,24,0.95)" stroke="#2563eb" strokeWidth="2" />
+                        <rect width="80" height="110" rx="2" style={{ fill: 'var(--fp-surface)' }} stroke="#2563eb" strokeWidth="2" />
                         <text x="40" y="55" fontSize="8.5" fill="#2563eb" textAnchor="middle" fontWeight="800" fontFamily="'Plus Jakarta Sans', sans-serif">ELEVATOR PENTHOUSE</text>
                         <line x1="30" y1="110" x2="50" y2="110" stroke="#2563eb" strokeWidth="3" />
                       </g>
@@ -4609,7 +4609,7 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
                         <circle cx="60" cy="70" r="28" fill="rgba(127,180,216,0.15)" stroke="#7FB4D8" strokeWidth="1.5" />
                         <circle cx="150" cy="70" r="28" fill="rgba(127,180,216,0.15)" stroke="#7FB4D8" strokeWidth="1.5" />
                         <line x1="60" y1="70" x2="150" y2="70" stroke="#7FB4D8" strokeWidth="2" />
-                        <text x="105" y="130" fontSize="10" fill="#FFFFFF" textAnchor="middle" fontWeight="700">WATER TANKS & SOLAR ARRAY</text>
+                        <text x="105" y="130" fontSize="10" style={{ fill: 'var(--fp-text)' }} textAnchor="middle" fontWeight="700">WATER TANKS & SOLAR ARRAY</text>
                         <text x="105" y="146" fontSize="8.5" fill="#7FB4D8" textAnchor="middle" fontFamily="monospace">Dual 5000L Tanks</text>
                       </g>
 
@@ -4622,7 +4622,7 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
                   {isBasement && (
                     <g className="fp-basement-plate">
                       {/* Underground Floor */}
-                      <rect x="70" y="62" width="600" height="356" fill="rgba(10,14,24,0.6)" />
+                      <rect x="70" y="62" width="600" height="356" style={{ fill: 'var(--fp-canvas-bg)', opacity: 0.6 }} />
 
                       {/* Ramp Entry on Left */}
                       <g transform="translate(70, 70)">
@@ -4638,13 +4638,13 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
                       {[180, 260, 340, 420, 500, 580].map((bx, i) => (
                         <g key={`bay-top-${i}`}>
                           <rect x={bx} y="70" width="70" height="130" fill="rgba(255,255,255,0.02)" stroke="rgba(37, 99, 235, 0.4)" strokeWidth="1" strokeDasharray="4 2" />
-                          <text x={bx + 35} y="135" fontSize="10" fill="#FFFFFF" textAnchor="middle" fontWeight="800" fontFamily="monospace">{`P-0${i + 1}`}</text>
+                          <text x={bx + 35} y="135" fontSize="10" style={{ fill: 'var(--fp-text)' }} textAnchor="middle" fontWeight="800" fontFamily="monospace">{`P-0${i + 1}`}</text>
                         </g>
                       ))}
                       {[180, 260, 340, 420, 500, 580].map((bx, i) => (
                         <g key={`bay-bot-${i}`}>
                           <rect x={bx} y="280" width="70" height="130" fill="rgba(255,255,255,0.02)" stroke="rgba(37, 99, 235, 0.4)" strokeWidth="1" strokeDasharray="4 2" />
-                          <text x={bx + 35} y="345" fontSize="10" fill="#FFFFFF" textAnchor="middle" fontWeight="800" fontFamily="monospace">{`P-${i + 7 < 10 ? '0' : ''}${i + 7}`}</text>
+                          <text x={bx + 35} y="345" fontSize="10" style={{ fill: 'var(--fp-text)' }} textAnchor="middle" fontWeight="800" fontFamily="monospace">{`P-${i + 7 < 10 ? '0' : ''}${i + 7}`}</text>
                         </g>
                       ))}
                     </g>
@@ -4654,11 +4654,11 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
                   {!isGround && !isRoof && !isBasement && (
                     <g className="fp-typical-plate">
                       {/* ── CENTRAL BUILDING CORE (x = 320 to 420, y = 56 to 424) ── */}
-                      <rect x="320" y="56" width="100" height="368" fill="rgba(10,14,24,0.92)" stroke="#2563eb" strokeWidth="2.5" />
+                      <rect x="320" y="56" width="100" height="368" style={{ fill: 'var(--fp-surface)' }} stroke="#2563eb" strokeWidth="2.5" />
 
                       {/* Elevator Shaft */}
                       <g transform="translate(330, 68)">
-                        <rect width="80" height="74" fill="rgba(13,18,32,0.95)" stroke="#2563eb" strokeWidth="2" />
+                        <rect width="80" height="74" style={{ fill: 'var(--fp-surface)' }} stroke="#2563eb" strokeWidth="2" />
                         <line x1="0" y1="0" x2="80" y2="74" stroke="rgba(37, 99, 235, 0.4)" />
                         <line x1="80" y1="0" x2="0" y2="74" stroke="rgba(37, 99, 235, 0.4)" />
                         <rect x="10" y="10" width="60" height="54" rx="2" fill="rgba(37, 99, 235, 0.15)" stroke="#2563eb" strokeWidth="1" />
@@ -4669,7 +4669,7 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
 
                       {/* Fire Escape Stairwell */}
                       <g transform="translate(330, 154)">
-                        <rect width="80" height="110" fill="rgba(13,18,32,0.95)" stroke="#2563eb" strokeWidth="2" />
+                        <rect width="80" height="110" style={{ fill: 'var(--fp-surface)' }} stroke="#2563eb" strokeWidth="2" />
                         {[8, 20, 32, 44, 56, 68, 80, 92, 104].map(ty => (
                           <line key={`tread-${ty}`} x1="0" y1={ty} x2="80" y2={ty} stroke="rgba(37, 99, 235, 0.4)" strokeWidth="1" />
                         ))}
@@ -4688,7 +4688,7 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
                       {/* Central Distribution Lobby Corridor */}
                       <g transform="translate(320, 320)">
                         <rect width="100" height="104" fill="url(#adminElevLobbyGrad)" />
-                        <text x="50" y="58" fontSize="8" fill="#FFFFFF" textAnchor="middle" fontWeight="700" fontFamily="'Plus Jakarta Sans', sans-serif">CENTRAL CORRIDOR</text>
+                        <text x="50" y="58" fontSize="8" style={{ fill: 'var(--fp-text)' }} textAnchor="middle" fontWeight="700" fontFamily="'Plus Jakarta Sans', sans-serif">CENTRAL CORRIDOR</text>
                         {/* Door Leaf to Flat A */}
                         <path d="M 0 36 A 24 24 0 0 1 -24 60" fill="none" stroke="#2563eb" strokeWidth="1.5" strokeDasharray="3 2" />
                         <line x1="0" y1="36" x2="-24" y2="36" stroke="#2563eb" strokeWidth="2" />
@@ -4728,26 +4728,26 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
                         {/* Sofa Lounge outline */}
                         <rect x="190" y="340" width="70" height="24" rx="3" fill="rgba(37, 99, 235, 0.12)" stroke="rgba(37, 99, 235, 0.6)" strokeWidth="1" />
                         <circle cx="225" cy="315" r="10" fill="rgba(37, 99, 235, 0.15)" stroke="rgba(37, 99, 235, 0.6)" strokeWidth="1" />
-                        <text x="245" y="250" fontSize="9" fill="#FFFFFF" textAnchor="middle" fontWeight="700">Grand Reception</text>
+                        <text x="245" y="250" fontSize="9" style={{ fill: 'var(--fp-text)' }} textAnchor="middle" fontWeight="700">Grand Reception</text>
                         <text x="245" y="264" fontSize="8" fill="#2563eb" textAnchor="middle" fontFamily="monospace">68.0 m²</text>
 
                         {/* Master Bedroom Suite */}
                         <rect x="68" y="60" width="112" height="150" fill="url(#adminBedPattern)" stroke="#2563eb" strokeWidth="1.5" />
                         <rect x="90" y="74" width="46" height="50" rx="2" fill="rgba(37, 99, 235, 0.12)" stroke="rgba(37, 99, 235, 0.6)" strokeWidth="1" />
-                        <text x="124" y="145" fontSize="8.5" fill="#FFFFFF" textAnchor="middle" fontWeight="700">Master Suite</text>
+                        <text x="124" y="145" fontSize="8.5" style={{ fill: 'var(--fp-text)' }} textAnchor="middle" fontWeight="700">Master Suite</text>
 
                         {/* Standard Bedroom */}
                         <rect x="180" y="60" width="140" height="150" fill="url(#adminBedPattern)" stroke="#2563eb" strokeWidth="1.5" />
                         <rect x="230" y="74" width="40" height="46" rx="2" fill="rgba(37, 99, 235, 0.12)" stroke="rgba(37, 99, 235, 0.6)" strokeWidth="1" />
-                        <text x="250" y="145" fontSize="8.5" fill="#FFFFFF" textAnchor="middle" fontWeight="700">Guest Bedroom</text>
+                        <text x="250" y="145" fontSize="8.5" style={{ fill: 'var(--fp-text)' }} textAnchor="middle" fontWeight="700">Guest Bedroom</text>
 
                         {/* Designer Kitchen */}
                         <rect x="68" y="210" width="102" height="100" fill="url(#adminTilePattern)" stroke="#2563eb" strokeWidth="1.5" />
-                        <text x="119" y="260" fontSize="8.5" fill="#FFFFFF" textAnchor="middle" fontWeight="700">Kitchen</text>
+                        <text x="119" y="260" fontSize="8.5" style={{ fill: 'var(--fp-text)' }} textAnchor="middle" fontWeight="700">Kitchen</text>
 
                         {/* Main Bathroom */}
                         <rect x="68" y="310" width="102" height="110" fill="url(#adminTilePattern)" stroke="#2563eb" strokeWidth="1.5" />
-                        <text x="119" y="365" fontSize="8.5" fill="#FFFFFF" textAnchor="middle" fontWeight="700">Main Bath</text>
+                        <text x="119" y="365" fontSize="8.5" style={{ fill: 'var(--fp-text)' }} textAnchor="middle" fontWeight="700">Main Bath</text>
 
                         {/* Cantilevered Balcony (Projects out on Left) */}
                         <rect x="36" y="140" width="28" height="140" fill="url(#adminDeckPattern)" stroke="#7FB4D8" strokeWidth="1.5" />
@@ -4755,8 +4755,8 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
 
                         {/* Flat A Floating Action Card */}
                         <g transform="translate(80, 72)">
-                          <rect width="136" height="28" rx="6" fill="rgba(10,14,24,0.9)" stroke="#2563eb" strokeWidth="1.2" filter="url(#adminGoldGlow)" />
-                          <text x="8" y="14" fontSize="9" fill="#FFFFFF" fontWeight="800" fontFamily="'Plus Jakarta Sans', sans-serif">
+                          <rect width="136" height="28" rx="6" style={{ fill: 'var(--fp-surface)' }} stroke="#2563eb" strokeWidth="1.2" filter="url(#adminGoldGlow)" />
+                          <text x="8" y="14" fontSize="9" style={{ fill: 'var(--fp-text)' }} fontWeight="800" fontFamily="'Plus Jakarta Sans', sans-serif">
                             {flatA?.instance_label || 'Flat 1A'}
                           </text>
                           <text x="128" y="14" fontSize="8.5" fill="#2563eb" textAnchor="end" fontFamily="monospace" fontWeight="700">
@@ -4798,26 +4798,26 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
                         <rect x="420" y="210" width="150" height="210" fill="url(#adminParquetPattern)" stroke="#2563eb" strokeWidth="1.5" />
                         <rect x="480" y="340" width="70" height="24" rx="3" fill="rgba(37, 99, 235, 0.12)" stroke="rgba(37, 99, 235, 0.6)" strokeWidth="1" />
                         <circle cx="515" cy="315" r="10" fill="rgba(37, 99, 235, 0.15)" stroke="rgba(37, 99, 235, 0.6)" strokeWidth="1" />
-                        <text x="495" y="250" fontSize="9" fill="#FFFFFF" textAnchor="middle" fontWeight="700">Grand Reception</text>
+                        <text x="495" y="250" fontSize="9" style={{ fill: 'var(--fp-text)' }} textAnchor="middle" fontWeight="700">Grand Reception</text>
                         <text x="495" y="264" fontSize="8" fill="#2563eb" textAnchor="middle" fontFamily="monospace">68.0 m²</text>
 
                         {/* Master Bedroom Suite */}
                         <rect x="560" y="60" width="112" height="150" fill="url(#adminBedPattern)" stroke="#2563eb" strokeWidth="1.5" />
                         <rect x="604" y="74" width="46" height="50" rx="2" fill="rgba(37, 99, 235, 0.12)" stroke="rgba(37, 99, 235, 0.6)" strokeWidth="1" />
-                        <text x="616" y="145" fontSize="8.5" fill="#FFFFFF" textAnchor="middle" fontWeight="700">Master Suite</text>
+                        <text x="616" y="145" fontSize="8.5" style={{ fill: 'var(--fp-text)' }} textAnchor="middle" fontWeight="700">Master Suite</text>
 
                         {/* Standard Bedroom */}
                         <rect x="420" y="60" width="140" height="150" fill="url(#adminBedPattern)" stroke="#2563eb" strokeWidth="1.5" />
                         <rect x="470" y="74" width="40" height="46" rx="2" fill="rgba(37, 99, 235, 0.12)" stroke="rgba(37, 99, 235, 0.6)" strokeWidth="1" />
-                        <text x="490" y="145" fontSize="8.5" fill="#FFFFFF" textAnchor="middle" fontWeight="700">Guest Bedroom</text>
+                        <text x="490" y="145" fontSize="8.5" style={{ fill: 'var(--fp-text)' }} textAnchor="middle" fontWeight="700">Guest Bedroom</text>
 
                         {/* Designer Kitchen */}
                         <rect x="570" y="210" width="102" height="100" fill="url(#adminTilePattern)" stroke="#2563eb" strokeWidth="1.5" />
-                        <text x="621" y="260" fontSize="8.5" fill="#FFFFFF" textAnchor="middle" fontWeight="700">Kitchen</text>
+                        <text x="621" y="260" fontSize="8.5" style={{ fill: 'var(--fp-text)' }} textAnchor="middle" fontWeight="700">Kitchen</text>
 
                         {/* Main Bathroom */}
                         <rect x="570" y="310" width="102" height="110" fill="url(#adminTilePattern)" stroke="#2563eb" strokeWidth="1.5" />
-                        <text x="621" y="365" fontSize="8.5" fill="#FFFFFF" textAnchor="middle" fontWeight="700">Main Bath</text>
+                        <text x="621" y="365" fontSize="8.5" style={{ fill: 'var(--fp-text)' }} textAnchor="middle" fontWeight="700">Main Bath</text>
 
                         {/* Cantilevered Balcony (Projects out on Right) */}
                         <rect x="676" y="140" width="28" height="140" fill="url(#adminDeckPattern)" stroke="#7FB4D8" strokeWidth="1.5" />
@@ -4825,8 +4825,8 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
 
                         {/* Flat B Floating Action Card */}
                         <g transform="translate(524, 72)">
-                          <rect width="136" height="28" rx="6" fill="rgba(10,14,24,0.9)" stroke="#2563eb" strokeWidth="1.2" filter="url(#adminGoldGlow)" />
-                          <text x="8" y="14" fontSize="9" fill="#FFFFFF" fontWeight="800" fontFamily="'Plus Jakarta Sans', sans-serif">
+                          <rect width="136" height="28" rx="6" style={{ fill: 'var(--fp-surface)' }} stroke="#2563eb" strokeWidth="1.2" filter="url(#adminGoldGlow)" />
+                          <text x="8" y="14" fontSize="9" style={{ fill: 'var(--fp-text)' }} fontWeight="800" fontFamily="'Plus Jakarta Sans', sans-serif">
                             {flatB?.instance_label || 'Flat 1B'}
                           </text>
                           <text x="128" y="14" fontSize="8.5" fill="#2563eb" textAnchor="end" fontFamily="monospace" fontWeight="700">
@@ -4843,15 +4843,15 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
                   {/* ── ARCHITECTURAL TITLE BLOCK & NORTH ARROW ── */}
                   {/* North Arrow */}
                   <g transform="translate(696, 26)">
-                    <circle cx="16" cy="16" r="14" fill="rgba(10,14,24,0.8)" stroke="#2563eb" strokeWidth="1" />
+                    <circle cx="16" cy="16" r="14" style={{ fill: 'var(--fp-surface)' }} stroke="#2563eb" strokeWidth="1" />
                     <polygon points="16,5 21,24 16,20 11,24" fill="#2563eb" />
                     <text x="16" y="2" fontSize="8" fill="#2563eb" textAnchor="middle" fontWeight="900" fontFamily="'Plus Jakarta Sans', sans-serif">N</text>
                   </g>
 
                   {/* Title Block Stamp */}
                   <g transform="translate(420, 440)">
-                    <rect width="256" height="26" rx="4" fill="rgba(10,14,24,0.85)" stroke="rgba(37, 99, 235, 0.3)" strokeWidth="0.8" />
-                    <text x="8" y="12" fontSize="8" fill="#FFFFFF" fontWeight="700" fontFamily="'Plus Jakarta Sans', sans-serif">
+                    <rect width="256" height="26" rx="4" style={{ fill: 'var(--fp-surface)' }} stroke="rgba(37, 99, 235, 0.3)" strokeWidth="0.8" />
+                    <text x="8" y="12" fontSize="8" style={{ fill: 'var(--fp-text)' }} fontWeight="700" fontFamily="'Plus Jakarta Sans', sans-serif">
                       {floorTitle}
                     </text>
                     <text x="8" y="21" fontSize="7" fill="#2563eb" fontFamily="monospace">
@@ -5005,7 +5005,7 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
                             {/* Unit Header Badge */}
                             {env.label && (
                               <g transform={`translate(${(env.minX + env.maxX) / 2 - 60}, ${env.minY - 22})`}>
-                                <rect width="120" height="18" rx="4" fill="rgba(10,14,24,0.92)" stroke="#2563eb" strokeWidth="1.2" />
+                                <rect width="120" height="18" rx="4" style={{ fill: 'var(--fp-surface)' }} stroke="#2563eb" strokeWidth="1.2" />
                                 <text x="60" y="12" fontSize="9" fill="#2563eb" textAnchor="middle" fontWeight="800" fontFamily="'Plus Jakarta Sans', sans-serif">
                                   {env.label}
                                 </text>
@@ -5176,7 +5176,7 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
                               width="76"
                               height="12"
                               rx="3"
-                              fill="rgba(10, 14, 24, 0.9)"
+                              style={{ fill: 'var(--fp-surface)' }}
                               stroke="rgba(127, 180, 216, 0.6)"
                               strokeWidth="0.8"
                             />
@@ -5184,7 +5184,7 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
                               x={s.x + s.w / 2}
                               y={s.y + s.h - 8}
                               fontSize="6.5"
-                              fill="#7FB4D8"
+                              style={{ fill: 'var(--fp-gold)' }}
                               textAnchor="middle"
                               fontWeight="800"
                               fontFamily="monospace"
@@ -5217,7 +5217,7 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
                                   setSelectedZoneId(null);
                                 }}
                               >
-                                <rect width="110" height="18" rx="4" fill="rgba(10, 14, 24, 0.9)" stroke="#2563eb" strokeWidth="1" filter="url(#adminGoldGlow)" />
+                                <rect width="110" height="18" rx="4" style={{ fill: 'var(--fp-surface)' }} stroke="#2563eb" strokeWidth="1" filter="url(#adminGoldGlow)" />
                                 <text x="55" y="12" fontSize="7.5" fill="#2563eb" textAnchor="middle" fontWeight="800" fontFamily="'Plus Jakarta Sans', sans-serif">
                                   {isAr ? 'انقر لتعديل الشقة ‹' : 'Click to edit unit plan ›'}
                                 </text>
@@ -5250,7 +5250,7 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
                           <g pointerEvents="none" opacity="0.85">
                             <line x1={s.x + 4} y1={s.y + 4} x2={s.x + s.w - 4} y2={s.y + s.h - 4} stroke="rgba(37, 99, 235, 0.4)" />
                             <line x1={s.x + s.w - 4} y1={s.y + 4} x2={s.x + 4} y2={s.y + s.h - 4} stroke="rgba(37, 99, 235, 0.4)" />
-                            <rect x={s.x + s.w / 2 - 14} y={s.y + s.h / 2 - 10} width="28" height="20" rx="2" fill="rgba(10, 14, 24, 0.9)" stroke="#2563eb" strokeWidth="1" />
+                            <rect x={s.x + s.w / 2 - 14} y={s.y + s.h / 2 - 10} width="28" height="20" rx="2" style={{ fill: 'var(--fp-surface)' }} stroke="#2563eb" strokeWidth="1" />
                             <text x={s.x + s.w / 2} y={s.y + s.h / 2 + 3} fontSize="6.5" fill="#2563eb" textAnchor="middle" fontWeight="800" fontFamily="monospace">ELEV</text>
                           </g>
                         )}
@@ -5479,7 +5479,7 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
                           </text>
                         ) : (
                           <>
-                            <text x={s.pinX} y={s.pinY - 2} fontSize={full ? 10 : 8.5} fill="#FFFFFF" textAnchor="middle" fontWeight="700" fontFamily="'Plus Jakarta Sans', sans-serif" pointerEvents="none" style={{ userSelect: 'none', WebkitUserSelect: 'none' }}>
+                            <text x={s.pinX} y={s.pinY - 2} fontSize={full ? 10 : 8.5} textAnchor="middle" fontWeight="700" fontFamily="'Plus Jakarta Sans', sans-serif" pointerEvents="none" style={{ fill: 'var(--fp-text)', userSelect: 'none', WebkitUserSelect: 'none' }}>
                               {s.title}
                             </text>
                             <text x={s.pinX} y={s.pinY + (full ? 12 : 10)} fontSize={full ? 9 : 8} fill={isWarn ? '#E0A63A' : '#2563eb'} textAnchor="middle" fontWeight="800" fontFamily="monospace" pointerEvents="none" style={{ direction: 'ltr', unicodeBidi: 'isolate', userSelect: 'none', WebkitUserSelect: 'none' }}>
@@ -5901,7 +5901,7 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
                         filter="url(#adminElevHoverGlow)"
                       />
                       <g transform={`translate(${g.type === 'x' ? g.x1 + 6 : 24}, ${g.type === 'y' ? g.y1 - 6 : 28 + gi * 16})`}>
-                        <rect x="0" y="-10" width={g.label.length * 6 + 16} height="14" rx="3" fill="rgba(10, 14, 24, 0.92)" stroke="#2563eb" strokeWidth="0.8" />
+                        <rect x="0" y="-10" width={g.label.length * 6 + 16} height="14" rx="3" style={{ fill: 'var(--fp-surface)' }} stroke="#2563eb" strokeWidth="0.8" />
                         <text x="8" y="0" fontSize="7" fill="#2563eb" fontWeight="800" fontFamily="'Plus Jakarta Sans', sans-serif">
                           {`🧲 ${g.label}`}
                         </text>
@@ -5968,7 +5968,7 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
                           x={drawX + src.w / 2}
                           y={drawY + src.h / 2 + 3}
                           fontSize="9.5"
-                          fill="#FFFFFF"
+                          style={{ fill: 'var(--fp-text)' }}
                           textAnchor="middle"
                           fontWeight="700"
                           fontFamily="'Plus Jakarta Sans', sans-serif"
@@ -5982,15 +5982,15 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
 
                 {/* ── Dynamic Architectural Stamp & North Arrow ── */}
                 <g transform={`translate(${Math.min(646, Math.max(500, maxX - 20))}, ${Math.max(16, minY - 24)})`} opacity="0.85">
-                  <circle cx="16" cy="16" r="13" fill="rgba(10,14,24,0.8)" stroke="#2563eb" strokeWidth="1" />
+                  <circle cx="16" cy="16" r="13" style={{ fill: 'var(--fp-surface)' }} stroke="#2563eb" strokeWidth="1" />
                   <polygon points="16,6 20,23 16,19 12,23" fill="#2563eb" />
                   <text x="16" y="3" fontSize="7.5" fill="#2563eb" textAnchor="middle" fontWeight="900" fontFamily="'Plus Jakarta Sans', sans-serif">N</text>
                 </g>
 
                 {/* Dynamic Blueprint Title Block */}
                 <g transform={`translate(${Math.max(20, maxX - (isAr ? 260 : 248))}, ${Math.min(410, maxY + 14)})`} opacity="0.85" style={{ direction: 'ltr' }}>
-                  <rect width={isAr ? 260 : 248} height="24" rx="4" fill="rgba(10,14,24,0.85)" stroke="rgba(37, 99, 235, 0.3)" strokeWidth="0.8" />
-                  <text x="10" y="11" fontSize="7.5" fill="#FFFFFF" fontWeight="700" fontFamily="'Plus Jakarta Sans', sans-serif" textAnchor="start" dominantBaseline="middle" style={{ direction: 'ltr', unicodeBidi: 'plaintext' }}>
+                  <rect width={isAr ? 260 : 248} height="24" rx="4" style={{ fill: 'var(--fp-surface)' }} stroke="rgba(37, 99, 235, 0.3)" strokeWidth="0.8" />
+                  <text x="10" y="11" fontSize="7.5" fontWeight="700" fontFamily="'Plus Jakarta Sans', sans-serif" textAnchor="start" dominantBaseline="middle" style={{ fill: 'var(--fp-text)', direction: 'ltr', unicodeBidi: 'plaintext' }}>
                     {isAr ? 'مخطط معماري تفصيلي للمساحات' : 'ARCHITECTURAL CAD FLOOR PLAN'}
                   </text>
                   <text x="10" y="18.5" fontSize="6.5" fill="#2563eb" fontFamily="monospace" textAnchor="start" dominantBaseline="middle" style={{ direction: 'ltr', unicodeBidi: 'plaintext' }}>
@@ -7636,7 +7636,7 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
         .fp-wizard-label-text {
           font-size: 0.65rem;
           font-weight: 700;
-          color: rgba(237, 232, 221, 0.6);
+          color: var(--fp-text-dim);
           white-space: nowrap;
           overflow: hidden;
           text-overflow: ellipsis;
@@ -7677,7 +7677,7 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
           border-radius: 8px;
           background: rgba(255, 255, 255, 0.03);
           border: 1px solid rgba(37, 99, 235, 0.18);
-          color: rgba(237, 232, 221, 0.7);
+          color: var(--fp-text-dim);
           font-size: 0.72rem;
           font-weight: 700;
           cursor: pointer;
@@ -7720,7 +7720,7 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
           border-radius: 7px;
           background: transparent;
           border: none;
-          color: rgba(237, 232, 221, 0.6);
+          color: var(--fp-text-dim);
           font-size: 0.72rem;
           font-weight: 700;
           cursor: pointer;
@@ -7765,7 +7765,7 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
         .fp-wizard-footer-summary {
           font-size: 0.7rem;
           font-weight: 700;
-          color: rgba(237, 232, 221, 0.6);
+          color: var(--fp-text-dim);
           font-family: monospace;
         }
 
@@ -7784,7 +7784,7 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
           border-radius: 8px;
           background: transparent;
           border: 1px solid rgba(255, 255, 255, 0.12);
-          color: rgba(237, 232, 221, 0.7);
+          color: var(--fp-text-dim);
           font-size: 0.75rem;
           font-weight: 700;
           cursor: pointer;

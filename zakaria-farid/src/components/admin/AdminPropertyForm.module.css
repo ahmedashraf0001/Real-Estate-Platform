@@ -1158,7 +1158,7 @@
   align-items: center;
   gap: 6px;
   font-size: 12px;
-  color: var(--admin-text-dim);
+  color: var(--admin-text-muted);
 }
 
 .reviewStatCountBadge {
