@@ -51,6 +51,7 @@ export function DailyOperationsRouteView() {
       onOpenNewContract={erp.handleOpenGenericNewContract}
       onCollectItem={erp.setCollectingPDCItem}
       onOpenCashReceipt={() => erp.openCollect({})}
+      onOpenCashTransfer={() => erp.setShowCashTransferModal(true)}
       onInspectContract={erp.handleInspectContract}
       onInspectCheque={erp.handleInspectCheque}
       onInspectTransaction={(payload) => erp.setInspectorPayload(payload)}

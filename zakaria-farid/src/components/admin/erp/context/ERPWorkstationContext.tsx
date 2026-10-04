@@ -329,6 +329,8 @@ export interface ERPWorkstationContextValue {
 
   showProjectExpenseModal: boolean;
   setShowProjectExpenseModal: (val: boolean) => void;
+  showCashTransferModal: boolean;
+  setShowCashTransferModal: (val: boolean) => void;
   projectExpensePropertyId: string | undefined;
   setProjectExpensePropertyId: (id: string | undefined) => void;
 
@@ -414,6 +416,13 @@ export interface ERPWorkstationContextValue {
   handleCreateConstructionPurchaseOrder: (order: ERPConstructionPurchaseOrder) => Promise<void>;
   handleRecordCostPayablePayment: (updatedItem: ERPPropertyCostItem) => Promise<void>;
   handleUpdatePropertySellingPrice: (propertyId: string, newPriceEgp: number) => Promise<void>;
+  handleInternalTransfer: (details: {
+    from: '101000' | '102000';
+    to: '101000' | '102000';
+    amount: string;
+    date: string;
+    notes: string;
+  }) => Promise<void>;
 }
 
 const ERPWorkstationContext = createContext<ERPWorkstationContextValue | null>(null);
@@ -1310,6 +1319,7 @@ export function ERPWorkstationProvider({
 
   const [collectingPDCItem, setCollectingPDCItem] = useState<ERPPDCRecord | null>(null);
   const [showProjectExpenseModal, setShowProjectExpenseModal] = useState<boolean>(false);
+  const [showCashTransferModal, setShowCashTransferModal] = useState(false);
   const [projectExpensePropertyId, setProjectExpensePropertyId] = useState<string | undefined>(undefined);
 
   const [auditModalProperty, setAuditModalProperty] = useState<Property | null>(null);
@@ -4314,6 +4324,52 @@ export function ERPWorkstationProvider({
     }
   }, [supabase, isAr]);
 
+  const handleInternalTransfer = useCallback(async (details: {
+    from: '101000' | '102000';
+    to: '101000' | '102000';
+    amount: string;
+    date: string;
+    notes: string;
+  }): Promise<void> => {
+    if (details.from === details.to) throw new Error(isAr ? 'اختر حسابين مختلفين' : 'Choose two different accounts');
+    const amt = D(details.amount || '0');
+    if (!amt.gt(0)) throw new Error(isAr ? 'المبلغ يجب أن يكون أكبر من صفر' : 'Amount must be greater than zero');
+    const targetPeriod = await resolveAndEnsurePeriodForDate(details.date);
+    if (!ensureActivePeriodOpen(isAr ? 'تحويل نقدية' : 'Cash transfer', targetPeriod)) {
+      throw new Error(isAr ? 'الفترة المحاسبية مغلقة' : 'Accounting period is closed');
+    }
+    setIsMutating(true);
+    try {
+      const label = (c: string) => c === '101000' ? 'الخزينة 101000' : 'إنستاباي 102000';
+      const memo = `تحويل من ${label(details.from)} إلى ${label(details.to)}${details.notes.trim() ? ` • ${details.notes.trim()}` : ''}`;
+      const entry = GeneralLedgerEngine.validateAndCreateEntry({
+        entry_number: `TRF-${details.date.replace(/-/g, '')}-${generateUUID().slice(0, 6).toUpperCase()}`,
+        entry_date: details.date,
+        period: targetPeriod,
+        description: memo,
+        source_module: 'MANUAL_ADJUSTMENT',
+        created_by: currentUser?.id || 'FIN_OS',
+        lines: [
+          { account_code: details.to, debit_amount: amt.toFixed(2), credit_amount: '0.00', memo },
+          { account_code: details.from, debit_amount: '0.00', credit_amount: amt.toFixed(2), memo },
+        ],
+      });
+      await persistJournalEntryGuarded(entry);
+      setData(prev => ({
+        ...prev,
+        journalEntries: [entry, ...prev.journalEntries]
+      }));
+      toast.success(isAr ? 'تم تسجيل التحويل' : 'Transfer recorded');
+    } catch (err) {
+      toast.error(isAr ? 'تعذر تسجيل التحويل' : 'Transfer failed', {
+        description: err instanceof Error ? err.message : String(err)
+      });
+      throw err;
+    } finally {
+      setIsMutating(false);
+    }
+  }, [isAr, resolveAndEnsurePeriodForDate, ensureActivePeriodOpen, currentUser, persistJournalEntryGuarded]);
+
   const value: ERPWorkstationContextValue = {
     locale,
     isAr,
@@ -4505,6 +4561,8 @@ export function ERPWorkstationProvider({
     setCollectingPDCItem,
     showProjectExpenseModal,
     setShowProjectExpenseModal,
+    showCashTransferModal,
+    setShowCashTransferModal,
     projectExpensePropertyId,
     setProjectExpensePropertyId,
 
@@ -4575,6 +4633,7 @@ export function ERPWorkstationProvider({
     handleCreateConstructionPurchaseOrder,
     handleRecordCostPayablePayment,
     handleUpdatePropertySellingPrice,
+    handleInternalTransfer,
   };
 
   return (

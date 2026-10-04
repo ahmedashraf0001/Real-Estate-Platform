@@ -21,6 +21,7 @@ import {
   ArrowUp,
   ArrowDown,
   ArrowUpDown,
+  ArrowLeftRight,
   X,
   CalendarClock
 } from 'lucide-react';
@@ -124,6 +125,7 @@ export interface DailyOperationsViewProps {
   onOpenPartnerOperations?: () => void;
   onOpenPartnerPayout?: () => void;
   onOpenPartnerInjection?: () => void;
+  onOpenCashTransfer?: () => void;
   onExportExcel?: () => void;
   onNavigateToTab: (tab: any) => void;
 }
@@ -153,6 +155,7 @@ export const DailyOperationsView: React.FC<DailyOperationsViewProps> = ({
   onOpenPartnerOperations,
   onOpenPartnerPayout,
   onOpenPartnerInjection,
+  onOpenCashTransfer,
   onExportExcel,
   onNavigateToTab
 }) => {
@@ -351,7 +354,7 @@ export const DailyOperationsView: React.FC<DailyOperationsViewProps> = ({
     });
   };
 
-  const handleQuickAction = (key: 'cash_receipt' | 'partner_injection' | 'pay_contractor' | 'record_expense' | 'partner_payout') => {
+  const handleQuickAction = (key: 'cash_receipt' | 'partner_injection' | 'pay_contractor' | 'record_expense' | 'partner_payout' | 'transfer') => {
     switch (key) {
       case 'cash_receipt': {
         if (onOpenCashReceipt) onOpenCashReceipt();
@@ -382,11 +385,15 @@ export const DailyOperationsView: React.FC<DailyOperationsViewProps> = ({
         else if (onOpenPartnerOperations) onOpenPartnerOperations();
         break;
       }
+      case 'transfer': {
+        if (onOpenCashTransfer) onOpenCashTransfer();
+        break;
+      }
     }
   };
 
   const renderAction = (
-    key: 'cash_receipt' | 'partner_injection' | 'pay_contractor' | 'record_expense' | 'partner_payout',
+    key: 'cash_receipt' | 'partner_injection' | 'pay_contractor' | 'record_expense' | 'partner_payout' | 'transfer',
     icon: React.ReactNode,
     title: string,
     sub: string
@@ -798,6 +805,14 @@ export const DailyOperationsView: React.FC<DailyOperationsViewProps> = ({
               {renderAction('record_expense', <Receipt size={15} />, isAr ? 'مصروف مباشر' : 'Direct expense', isAr ? 'تكاليف موقع أو تشغيل' : 'Site or operating cost')}
               {renderAction('partner_payout', <HandCoins size={15} />, isAr ? 'توزيع على الشركاء' : 'Partner distribution', isAr ? 'أرباح أو مسحوبات' : 'Profit or drawings')}
             </div>
+            {onOpenCashTransfer && (
+              <>
+                <div className={ops.actionGroupLabel}>{isAr ? 'تحويل' : 'Transfer'}</div>
+                <div className={ops.actionList}>
+                  {renderAction('transfer', <ArrowLeftRight size={15} />, isAr ? 'تحويل بين الخزينة وإنستاباي' : 'Safe ⇄ InstaPay transfer', isAr ? 'إيداع نقدية أو سحب من إنستاباي' : 'Deposit cash or withdraw from InstaPay')}
+                </div>
+              </>
+            )}
           </div>
           <div className={ops.card}>
             <div className={ops.cardHeader}>

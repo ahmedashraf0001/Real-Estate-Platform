@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useRef, useEffect, useState, useCallback } from 'react';
+import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react';
 import { usePathname } from 'next/navigation';
 import { 
   AlertTriangle, 
@@ -18,8 +18,13 @@ import {
   HardHat,
   Calendar,
   Users,
-  Calculator 
+  Calculator,
+  Coins,
+  Receipt,
+  ArrowLeftRight,
+  FileSignature
 } from 'lucide-react';
+import { getAvailableCash } from '@/lib/erp/canonicalMetrics';
 
 import shellStyles from './v2/ZFWorkstationShell.module.css';
 import '@/components/erp/erpTokens.css';
@@ -44,6 +49,7 @@ import { RSVAllocationModal } from './v2/modals/RSVAllocationModal';
 import { HandoverExecutionModal } from './v2/modals/HandoverExecutionModal';
 import { NewChequeModal } from './NewChequeModal';
 import { ZFDirectExpenseModal } from './v2/modals/ZFDirectExpenseModal';
+import { ZFCashTransferModal } from './v2/modals/ZFCashTransferModal';
 import { PropertyLifecycleAuditModal } from './PropertyLifecycleAuditModal';
 import { PartnerPayoutModal } from './v2/modals/PartnerPayoutModal';
 import { NewPartnerProfileModal } from './v2/modals/NewPartnerProfileModal';
@@ -123,6 +129,7 @@ export function ERPWorkstationShell({ children }: { children: React.ReactNode })
   const erp = useERPWorkstation();
   const pathname = usePathname() || '';
   const stageRef = useRef<HTMLElement | null>(null);
+  const cash = useMemo(() => getAvailableCash(erp.data.journalEntries), [erp.data.journalEntries]);
 
   // Auto-scroll stage to top on pathname changes
   useEffect(() => {
@@ -720,7 +727,12 @@ export function ERPWorkstationShell({ children }: { children: React.ReactNode })
         isMobileOpen={erp.isMobileDockOpen}
         onCloseMobile={() => erp.setIsMobileDockOpen(false)}
         onToggleDock={erp.handleToggleDock}
-        onQuickRequest={() => erp.setShowProjectExpenseModal(true)}
+        quickMenu={[
+          { key: 'collect', labelAr: 'تحصيل قسط', labelEn: 'Collect installment', icon: <Coins size={15} />, onSelect: () => erp.openCollect({}) },
+          { key: 'expense', labelAr: 'مصروف أو فاتورة', labelEn: 'Expense or bill', icon: <Receipt size={15} />, onSelect: () => erp.setShowProjectExpenseModal(true) },
+          { key: 'transfer', labelAr: 'تحويل بين الخزينة وإنستاباي', labelEn: 'Safe ⇄ InstaPay transfer', icon: <ArrowLeftRight size={15} />, onSelect: () => erp.setShowCashTransferModal(true) },
+          { key: 'contract', labelAr: 'عقد بيع جديد', labelEn: 'New sales contract', icon: <FileSignature size={15} />, onSelect: () => erp.handleOpenGenericNewContract() }
+        ]}
         width={sidebarWidth}
         isResizing={!isHydrated || isDraggingSidebar}
       />
@@ -1218,6 +1230,17 @@ export function ERPWorkstationShell({ children }: { children: React.ReactNode })
         properties={erp.data.properties}
         onSaveEntry={erp.handleSaveProjectExpense}
         isAr={erp.isAr}
+      />
+
+      {/* CASH TRANSFER MODAL */}
+      <ZFCashTransferModal
+        isOpen={erp.showCashTransferModal}
+        onClose={() => erp.setShowCashTransferModal(false)}
+        isAr={erp.isAr}
+        isMutating={erp.isMutating}
+        safeBalance={cash.safeCash}
+        instapayBalance={cash.bankCash}
+        onConfirm={erp.handleInternalTransfer}
       />
 
       {/* PROPERTY LIFECYCLE AUDIT & MATERIAL LOGS MODAL */}

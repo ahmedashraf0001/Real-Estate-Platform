@@ -9253,4 +9253,12 @@
   border-color: var(--erp-accent, #946f23);
 }
 
+.quickMenuAnchor { position: relative; }
+.quickMenu { position: absolute; inset-inline: 0; top: calc(100% + 6px); z-index: 50; min-width: 220px; display: flex; flex-direction: column; padding: 4px; background: var(--erp-bg-panel); border: 1px solid var(--erp-border); border-radius: 10px; }
+.quickMenuItem { display: flex; align-items: center; gap: 0.6rem; width: 100%; padding: 0.55rem 0.6rem; border: 0; border-radius: 7px; background: transparent; font: inherit; font-size: 0.8rem; font-weight: 600; color: var(--erp-text-title); text-align: start; cursor: pointer; }
+.quickMenuItem:hover { background: var(--erp-border-subtle); }
+.quickMenuItem:focus-visible { outline: 2px solid var(--erp-accent); outline-offset: -2px; }
+.quickMenuItem svg { color: var(--erp-accent); flex-shrink: 0; }
+
+
 
