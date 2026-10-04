@@ -1134,10 +1134,10 @@ export function ERPWorkstationShell({ children }: { children: React.ReactNode })
         periods={erp.data.periods}
         isAr={erp.isAr}
         isMutating={erp.isMutating}
-        onConfirmRescission={async ({ selectedBranch, rescissionDate: rDate, targetContract }) => {
+        onConfirmRescission={async ({ selectedBranch, rescissionDate: rDate, targetContract, penaltyRate }) => {
           erp.setSelectedBranch(selectedBranch);
           erp.setRescissionDate(rDate);
-          await erp.handleExecuteRescission(targetContract);
+          await erp.handleExecuteRescission(targetContract, penaltyRate);
         }}
       />
 

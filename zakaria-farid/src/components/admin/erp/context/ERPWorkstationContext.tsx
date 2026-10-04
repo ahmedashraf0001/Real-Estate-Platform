@@ -836,6 +836,40 @@ export function ERPWorkstationProvider({
     }
   }, [supabase]);
 
+
+  // ERP Invariant 4.5 (generalised): cash accounts (Safe 101000 / Bank 102000) can never go negative.
+  // Checked against the GL before any entry that nets a credit to a cash account is persisted.
+  const journalEntriesRef = useRef<ERPJournalEntry[]>([]);
+  journalEntriesRef.current = data.journalEntries;
+  const assertCashOutflowAllowed = useCallback((lines: { account_code: string; debit_amount?: string; credit_amount?: string }[]) => {
+    for (const code of ['101000', '102000']) {
+      const outflow = lines
+        .filter(l => l.account_code === code)
+        .reduce((acc, l) => acc.plus(l.credit_amount || '0').minus(l.debit_amount || '0'), D(0));
+      if (outflow.lte(0)) continue;
+      let balance = D(0);
+      for (const je of journalEntriesRef.current) {
+        for (const l of je.lines || []) {
+          if (l.account_code === code) balance = balance.plus(l.debit_amount || '0').minus(l.credit_amount || '0');
+        }
+      }
+      if (balance.lt(outflow)) {
+        const nameAr = code === '101000' ? 'الخزينة الرئيسية (101000)' : 'الحساب البنكي (102000)';
+        const nameEn = code === '101000' ? 'Main Safe (101000)' : 'Bank (102000)';
+        const msg = isAr
+          ? `رصيد ${nameAr} غير كافٍ. المتاح: ${balance.formatEGP(true)}، المطلوب: ${outflow.formatEGP(true)}.`
+          : `Insufficient balance in ${nameEn}. Available: ${balance.formatEGP(false)}, required: ${outflow.formatEGP(false)}.`;
+        toast.error(msg);
+        throw new Error(msg);
+      }
+    }
+  }, [isAr]);
+
+  const persistJournalEntryGuarded = useCallback(async (entry: ERPJournalEntry) => {
+    assertCashOutflowAllowed(entry.lines || []);
+    return ERPSupabaseService.persistJournalEntry(supabase, entry);
+  }, [assertCashOutflowAllowed, supabase]);
+
   // Real-Time WebSocket Sync Hook
   const {
     status: realtimeStatus,
@@ -1855,7 +1889,7 @@ export function ERPWorkstationProvider({
             }
           ]
         });
-        await ERPSupabaseService.persistJournalEntry(supabase, adjustingEntry);
+        await persistJournalEntryGuarded(adjustingEntry);
       }
 
       setData(prev => ({
@@ -1920,6 +1954,13 @@ export function ERPWorkstationProvider({
   const handleExecuteRescission = useCallback(async (overrideContract?: ERPContract, penaltyRateOverride?: number | string) => {
     const contract = overrideContract || showRescissionModal;
     if (!contract) return;
+    // Guard: never rescind twice (stale modal, double click, or re-submit)
+    const latestContract = data.contracts.find(c => c.contract_id === contract.contract_id);
+    if ((latestContract?.status || contract.status) === 'Rescinded') {
+      toast.error(isAr ? 'هذا العقد مفسوخ بالفعل' : 'This contract is already rescinded');
+      setShowRescissionModal(null);
+      return;
+    }
 
     const targetPeriod = await resolveAndEnsurePeriodForDate(rescissionDate);
     if (!ensureActivePeriodOpen(isAr ? 'فسخ العقد' : 'Contract Rescission', targetPeriod)) {
@@ -1978,6 +2019,7 @@ export function ERPWorkstationProvider({
         }
       }
 
+      setShowRescissionModal(null);
       setData(prev => ({
         ...prev,
         contracts: prev.contracts.map(c => 
@@ -2038,7 +2080,7 @@ export function ERPWorkstationProvider({
     } finally {
       setIsMutating(false);
     }
-  }, [showRescissionModal, rescissionPenaltyRate, data.schedules, data.journalEntries, data.periods, activePeriod, rescissionDate, supabase, inspectorPayload, loadLiveData, navigateToTab, isAr, ensureActivePeriodOpen, handleTogglePeriodStatus]);
+  }, [showRescissionModal, rescissionPenaltyRate, data.contracts, data.schedules, data.journalEntries, data.periods, activePeriod, rescissionDate, supabase, inspectorPayload, loadLiveData, navigateToTab, isAr, ensureActivePeriodOpen, handleTogglePeriodStatus]);
 
   // Handler: Pay Rescission Refund
   const handlePayRefund = useCallback(async (params: {
@@ -2098,7 +2140,7 @@ export function ERPWorkstationProvider({
         ]
       });
 
-      await ERPSupabaseService.persistJournalEntry(supabase, journalEntry);
+      await persistJournalEntryGuarded(journalEntry);
 
       setData(prev => ({
         ...prev,
@@ -2291,7 +2333,7 @@ export function ERPWorkstationProvider({
         actor
       );
 
-      await ERPSupabaseService.persistJournalEntry(supabase, entry);
+      await persistJournalEntryGuarded(entry);
       await ERPSupabaseService.updateContractHandoverStatus(supabase, contract.contract_id, 'Delivered', handoverDate);
 
       const updatedDataset = await loadLiveData(true);
@@ -2462,7 +2504,7 @@ export function ERPWorkstationProvider({
 
       await ERPSupabaseService.persistPDCStatus(supabase, item.cheque_id, 'Bounced');
       if (bounceEntry) {
-        await ERPSupabaseService.persistJournalEntry(supabase, bounceEntry);
+        await persistJournalEntryGuarded(bounceEntry);
       }
 
       if (schedule) {
@@ -2575,7 +2617,7 @@ export function ERPWorkstationProvider({
         });
 
         await ERPSupabaseService.persistPDCStatus(supabase, chequeId, newStatus);
-        await ERPSupabaseService.persistJournalEntry(supabase, entry);
+        await persistJournalEntryGuarded(entry);
 
         setData(prev => ({
           ...prev,
@@ -2647,7 +2689,7 @@ export function ERPWorkstationProvider({
           await ERPSupabaseService.persistPDCStatus(supabase, chequeId, 'Cleared');
         } else {
           await ERPSupabaseService.persistPDCStatus(supabase, chequeId, newStatus);
-          await ERPSupabaseService.persistJournalEntry(supabase, entry);
+          await persistJournalEntryGuarded(entry);
         }
 
         setData(prev => ({
@@ -2924,7 +2966,7 @@ export function ERPWorkstationProvider({
           await ERPSupabaseService.persistPDCStatus(supabase, item.cheque_id, 'Cleared');
         } else {
           await ERPSupabaseService.persistPDCStatus(supabase, item.cheque_id, 'Cleared');
-          await ERPSupabaseService.persistJournalEntry(supabase, entry);
+          await persistJournalEntryGuarded(entry);
         }
         newEntries.push(entry);
       }
@@ -3103,7 +3145,7 @@ export function ERPWorkstationProvider({
           .eq('contract_id', contract.contract_id);
       }
 
-      await ERPSupabaseService.persistJournalEntry(supabase, entry);
+      await persistJournalEntryGuarded(entry);
 
       setData(prev => ({
         ...prev,
@@ -3223,7 +3265,8 @@ export function ERPWorkstationProvider({
       try {
         await supabase.from('erp_cost_allocations').insert([newAlloc]);
       } catch (dbErr) {
-        console.warn('Silent database sync for RSV allocation:', dbErr);
+        console.error('Journal entry failed to persist (RSV allocation):', dbErr);
+        throw dbErr;
       }
 
       setData(prev => ({
@@ -3293,12 +3336,10 @@ export function ERPWorkstationProvider({
         ]
       });
 
-      try {
-        await supabase.from('erp_tax_records').update({ remittance_status: 'Remitted to ETA' }).eq('tax_id', taxId);
-        await ERPSupabaseService.persistJournalEntry(supabase, entry);
-      } catch (dbErr) {
-        console.warn('Silent database sync for tax remittance:', dbErr);
-      }
+      // Outside the persistence try: an insufficient balance must abort the whole remittance.
+      assertCashOutflowAllowed(entry.lines || []);
+      await supabase.from('erp_tax_records').update({ remittance_status: 'Remitted to ETA' }).eq('tax_id', taxId);
+      await persistJournalEntryGuarded(entry);
 
       setData(prev => ({
         ...prev,
@@ -3412,7 +3453,7 @@ export function ERPWorkstationProvider({
       });
 
       try {
-        await ERPSupabaseService.persistJournalEntry(supabase, entry);
+        await persistJournalEntryGuarded(entry);
       } catch (dbErr) {
         console.error('Tax accrual journal entry failed to persist:', dbErr);
         toast.error(isAr ? 'تم حفظ الضريبة لكن فشل ترحيل قيد الاستحقاق — راجع الدفتر العام' : 'Tax saved but the accrual journal entry failed to post — check the ledger');
@@ -3493,9 +3534,10 @@ export function ERPWorkstationProvider({
       });
 
       try {
-        await ERPSupabaseService.persistJournalEntry(supabase, entry);
+        await persistJournalEntryGuarded(entry);
       } catch (dbErr) {
-        console.warn('Silent database sync for partner payout:', dbErr);
+        console.error('Journal entry failed to persist (partner payout):', dbErr);
+        throw dbErr;
       }
 
       const newTx: ERPPartnerTransaction = {
@@ -3528,7 +3570,8 @@ export function ERPWorkstationProvider({
           notes: newTx.memo
         });
       } catch (ptErr) {
-        console.warn('Silent database sync for partner transaction:', ptErr);
+        console.error('Secondary record failed to persist (partner transaction):', ptErr);
+        toast.error(isAr ? 'تم ترحيل القيد لكن فشل حفظ سجل مرتبط — راجع البيانات' : 'Entry posted but a related record failed to save — please review');
       }
 
       setPartnerTransactions(prev => [newTx, ...prev]);
@@ -3600,9 +3643,10 @@ export function ERPWorkstationProvider({
       });
 
       try {
-        await ERPSupabaseService.persistJournalEntry(supabase, entry);
+        await persistJournalEntryGuarded(entry);
       } catch (dbErr) {
-        console.warn('Silent database sync for partner injection:', dbErr);
+        console.error('Journal entry failed to persist (partner injection):', dbErr);
+        throw dbErr;
       }
       const newTx: ERPPartnerTransaction = {
         id: `pt-tx-${Date.now()}`,
@@ -3636,7 +3680,8 @@ export function ERPWorkstationProvider({
           notes: newTx.memo
         });
       } catch (ptErr) {
-        console.warn('Silent database sync for partner injection transaction:', ptErr);
+        console.error('Secondary record failed to persist (partner injection transaction):', ptErr);
+        toast.error(isAr ? 'تم ترحيل القيد لكن فشل حفظ سجل مرتبط — راجع البيانات' : 'Entry posted but a related record failed to save — please review');
       }
 
       const roleArMap: Record<string, string> = {
@@ -3656,7 +3701,8 @@ export function ERPWorkstationProvider({
           joined_date: details.injectionDate
         });
       } catch (profErr) {
-        console.warn('Silent database sync for partner profile:', profErr);
+        console.error('Secondary record failed to persist (partner profile):', profErr);
+        toast.error(isAr ? 'تم ترحيل القيد لكن فشل حفظ سجل مرتبط — راجع البيانات' : 'Entry posted but a related record failed to save — please review');
       }
 
       saveRegisteredPartner({
@@ -3837,7 +3883,8 @@ export function ERPWorkstationProvider({
           joined_date: newProfile.joined_date
         });
       } catch (profileErr) {
-        console.warn('Silent database sync for partner profile:', profileErr);
+        console.error('Secondary record failed to persist (partner profile):', profileErr);
+        toast.error(isAr ? 'تم ترحيل القيد لكن فشل حفظ سجل مرتبط — راجع البيانات' : 'Entry posted but a related record failed to save — please review');
       }
 
       if (profileData.propertyId && profileData.sharePercentage && profileData.sharePercentage > 0) {
@@ -3889,9 +3936,10 @@ export function ERPWorkstationProvider({
         });
 
         try {
-          await ERPSupabaseService.persistJournalEntry(supabase, entry);
+          await persistJournalEntryGuarded(entry);
         } catch (dbErr) {
-          console.warn('Silent database sync for initial deposit:', dbErr);
+          console.error('Journal entry failed to persist (initial deposit):', dbErr);
+        throw dbErr;
         }
 
         const newTx: ERPPartnerTransaction = {
@@ -3920,7 +3968,8 @@ export function ERPWorkstationProvider({
             notes: newTx.memo
           });
         } catch (txErr) {
-          console.warn('Silent database sync for initial deposit partner transaction:', txErr);
+          console.error('Secondary record failed to persist (initial deposit partner transaction):', txErr);
+        toast.error(isAr ? 'تم ترحيل القيد لكن فشل حفظ سجل مرتبط — راجع البيانات' : 'Entry posted but a related record failed to save — please review');
         }
 
         setPartnerTransactions(prev => [newTx, ...prev]);
@@ -3954,6 +4003,7 @@ export function ERPWorkstationProvider({
     if (!ensureActivePeriodOpen(isAr ? 'تسجيل مصروف مشروع' : 'Project Expense', targetPeriod)) return;
     setIsMutating(true);
     try {
+      assertCashOutflowAllowed(entry.lines || []);
       await ERPSupabaseService.persistExpenseWithCostItem(supabase, entry, costItem);
       setData(prev => ({
         ...prev,
@@ -4201,6 +4251,12 @@ export function ERPWorkstationProvider({
     try {
       const original = data.propertyCosts.find(item => item.item_id === updatedItem.item_id);
       if (!original) throw new Error('The payable is no longer available. Refresh and try again.');
+      // Settlement pays out of the Main Safe (101000): block if the Safe can't cover the new payment.
+      const sumPaid = (it: ERPPropertyCostItem) => (it.payable_installments || []).reduce((acc, i) => acc.plus(i.paid_amount_egp || '0'), D(0));
+      const paymentDelta = sumPaid(updatedItem).minus(sumPaid(original));
+      if (paymentDelta.gt(0)) {
+        assertCashOutflowAllowed([{ account_code: '101000', debit_amount: '0', credit_amount: paymentDelta.toFixed(2) }]);
+      }
       const paymentDate = updatedItem.payable_installments?.find(inst => D(inst.paid_amount_egp).gt(original.payable_installments?.find(prior => prior.installment_id === inst.installment_id)?.paid_amount_egp || 0) && !inst.installment_id.startsWith('inst-prior-'))?.payment_date || new Date().toISOString().slice(0, 10);
       const period = resolvePeriodForDate(paymentDate, data.periods, activePeriod);
       let result: { item: ERPPropertyCostItem; journal: ERPJournalEntry };
