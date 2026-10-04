@@ -4358,6 +4358,57 @@
   border-color: #cbd5e1 !important;
 }
 
+/* Standard button geometry (DESIGN_SYSTEM §3): 34px tall, 8px radius, 0.8rem/600.
+   Variants: btnPrimary (accent), btnSecondary (outlined), btnDanger (destructive), btnGhost (quiet). */
+.btnPrimary, .btnSecondary, .btnDanger, .btnGhost {
+  min-height: 34px;
+  justify-content: center;
+  white-space: nowrap;
+  font-family: inherit;
+  line-height: 1;
+}
+.btnPrimary:disabled, .btnSecondary:disabled, .btnDanger:disabled, .btnGhost:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.btnPrimary:focus-visible, .btnSecondary:focus-visible, .btnDanger:focus-visible, .btnGhost:focus-visible {
+  outline: 2px solid var(--erp-accent);
+  outline-offset: 2px;
+}
+.btnDanger {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  background: var(--erp-danger, #dc2626) !important;
+  color: #ffffff !important;
+  font-weight: 600;
+  font-size: 0.8rem;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  border: none !important;
+  cursor: pointer;
+  transition: background 0.15s ease;
+  box-shadow: none !important;
+}
+.btnDanger:hover { background: #b91c1c !important; }
+.btnGhost {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  background: transparent !important;
+  color: var(--erp-text-body, #334155) !important;
+  font-weight: 600;
+  font-size: 0.8rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+  border: none !important;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+  box-shadow: none !important;
+}
+.btnGhost:hover { background: var(--erp-border-subtle, #f1f5f9) !important; color: var(--erp-accent) !important; }
+.btnSm { min-height: 28px; padding: 0.3rem 0.65rem; font-size: 0.74rem; border-radius: 6px; }
+
 /* --------------------------------------------------------------------------
    4. ENFORCE MINIMAL ENTERPRISE THEME (NO DARK MODE OR GOLD BLEED)
    -------------------------------------------------------------------------- */
