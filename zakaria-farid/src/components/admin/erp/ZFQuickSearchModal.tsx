@@ -37,7 +37,6 @@ import { Property, Lead } from '@/lib/supabase/types';
 import { CANONICAL_COA } from '@/lib/erp/ledger';
 import { getStoredPlatformSettings, saveStoredPlatformSettings } from '@/lib/services/marketIntelligence';
 import { createClient } from '@/lib/supabase/client';
-import { FALLBACK_PROPERTIES } from '@/lib/data/fallbackProperties';
 import { TAB_REDIRECT_MAP } from '@/lib/erp/routing/tabRedirectMap';
 
 export type SearchCategoryKey = 
@@ -167,11 +166,11 @@ export const ZFQuickSearchModal: React.FC<ZFQuickSearchModalProps> = ({
           if (isMounted && data && !error && data.length > 0) {
             setInternalProperties(data as Property[]);
           } else if (isMounted && (!properties || properties.length === 0)) {
-            setInternalProperties(FALLBACK_PROPERTIES as Property[]);
+            setInternalProperties([]);
           }
         } catch {
           if (isMounted && (!properties || properties.length === 0)) {
-            setInternalProperties(FALLBACK_PROPERTIES as Property[]);
+            setInternalProperties([]);
           }
         }
       }

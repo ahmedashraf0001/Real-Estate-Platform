@@ -27,7 +27,6 @@ import {
   PartnerShareItem,
   SystemPartner,
   PRIMARY_DEVELOPER_NAME,
-  INITIAL_REGISTERED_PARTNERS,
   getRegisteredPartners,
   saveRegisteredPartner,
   normalizePartnerSplits,
@@ -265,7 +264,7 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
   const [selectedPartnerToAdd, setSelectedPartnerToAdd] = useState<string>('');
   const [customPartnerNameInput, setCustomPartnerNameInput] = useState<string>('');
   const [registeredPartners, setRegisteredPartners] = useState<SystemPartner[]>(() => {
-    return typeof window !== 'undefined' ? getRegisteredPartners() : INITIAL_REGISTERED_PARTNERS;
+    return typeof window !== 'undefined' ? getRegisteredPartners() : [];
   });
 
   useEffect(() => {

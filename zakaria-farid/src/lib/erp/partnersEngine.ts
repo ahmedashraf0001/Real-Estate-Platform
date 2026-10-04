@@ -628,10 +628,10 @@ export class PartnersEngine {
    * Calculates detailed partner financial metrics and summaries across all projects and contracts.
    */
   static calculatePartnerSummaries(
-    partners: ERPPartnerProfile[] = INITIAL_PARTNER_PROFILES,
+    partners: ERPPartnerProfile[] = [],
     properties: Property[] = [],
     contracts: ERPContract[] = [],
-    transactions: ERPPartnerTransaction[] = INITIAL_PARTNER_TRANSACTIONS,
+    transactions: ERPPartnerTransaction[] = [],
     partnerCalls: ERPPartnerCall[] = []
   ): PartnerFinancialSummary[] {
     const propertyMap = new Map<string, Property>();
@@ -831,7 +831,7 @@ export class PartnersEngine {
   static getProjectPartnershipCards(
     properties: Property[] = [],
     contracts: ERPContract[] = [],
-    transactions: ERPPartnerTransaction[] = INITIAL_PARTNER_TRANSACTIONS
+    transactions: ERPPartnerTransaction[] = []
   ): ProjectPartnershipCardData[] {
     const buildingProperties = properties.filter(p => p.type === 'building');
     return buildingProperties.map(prop => {

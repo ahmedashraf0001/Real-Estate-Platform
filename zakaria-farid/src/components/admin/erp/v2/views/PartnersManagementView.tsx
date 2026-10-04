@@ -12,9 +12,7 @@ import {
 import { Property } from '@/lib/supabase/types';
 import { 
   PartnersEngine, 
-  PartnerFinancialSummary, 
-  INITIAL_PARTNER_PROFILES,
-  INITIAL_PARTNER_TRANSACTIONS
+  PartnerFinancialSummary 
 } from '@/lib/erp/partnersEngine';
 import { D } from '@/lib/erp/math';
 import { getPartnerFinancing, getPartnerDrawings } from '@/lib/erp/canonicalMetrics';
@@ -55,8 +53,8 @@ export interface PartnersManagementViewProps {
 }
 
 export const PartnersManagementView: React.FC<PartnersManagementViewProps> = ({
-  partnerProfiles = INITIAL_PARTNER_PROFILES,
-  partnerTransactions = INITIAL_PARTNER_TRANSACTIONS,
+  partnerProfiles = [],
+  partnerTransactions = [],
   properties = [],
   contracts = [],
   partnerCalls = [],

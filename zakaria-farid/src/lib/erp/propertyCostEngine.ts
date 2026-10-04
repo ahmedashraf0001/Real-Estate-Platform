@@ -7,7 +7,6 @@ import {
   CostPaymentTerm
 } from './types';
 import { Property } from '@/lib/supabase/types';
-import { FALLBACK_PROPERTIES } from '@/lib/data/fallbackProperties';
 import { D, Decimal, generateUUID } from './math';
 
 export interface CategoryMeta {
@@ -260,7 +259,7 @@ export const PROPERTY_LIFECYCLE_PHASES: PhaseMeta[] = [
  * for a list of properties, proportional to their actual built-up area and catalog specs.
  */
 export function generateMockPropertyCosts(properties?: Property[]): ERPPropertyCostItem[] {
-  const activeProps = (properties && properties.length > 0) ? properties : (FALLBACK_PROPERTIES as Property[]);
+  const activeProps = properties || [];
   const allCosts: ERPPropertyCostItem[] = [];
 
   activeProps.forEach((prop, propIndex) => {

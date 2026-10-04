@@ -39,9 +39,7 @@ import { exportComprehensiveArabicExcel } from '@/lib/erp/excelExporter';
 import { localizeBuyerName } from '@/components/erp/JournalEntryPreview';
 import { 
   PartnersEngine, 
-  PartnerFinancialSummary, 
-  INITIAL_PARTNER_PROFILES, 
-  INITIAL_PARTNER_TRANSACTIONS 
+  PartnerFinancialSummary 
 } from '@/lib/erp/partnersEngine';
 import { Property, BuildingUnitItem } from '@/lib/supabase/types';
 import { useERPRealtimeSync } from '@/lib/erp/useERPRealtimeSync';
@@ -59,9 +57,7 @@ import {
 } from '@/lib/erp/notificationEngine';
 import { TAB_REDIRECT_MAP, TABS_WITH_SIDE_WIDGETS, isSideWidgetsTab } from '@/lib/erp/routing/tabRedirectMap';
 export { TABS_WITH_SIDE_WIDGETS, isSideWidgetsTab };
-import { createInitialERPState } from '@/lib/erp/store';
 import { prepareConstructionSettlement } from '@/lib/erp/constructionSettlement';
-import { FALLBACK_PROPERTIES } from '@/lib/data/fallbackProperties';
 import { 
   ERPPalettePreset, 
   ERP_PALETTE_PRESETS,
@@ -563,48 +559,24 @@ export function ERPWorkstationProvider({
   }, [supabase]);
 
   // Master Live Database State
-  const [data, setData] = useState<LiveERPDataset>(() => {
-    if (process.env.NODE_ENV === 'development') {
-      const init = createInitialERPState();
-      const fallbackProps = FALLBACK_PROPERTIES as Property[];
-      return {
-        periods: init.periods,
-        contracts: init.contracts,
-        schedules: init.schedules,
-        journalEntries: init.journalEntries,
-        pdcRecords: init.pdcRecords,
-        rescissions: init.rescissions,
-        amendments: init.amendments,
-        costAllocations: init.costAllocations,
-        taxRecords: init.taxRecords,
-        partnerCalls: init.partnerCalls,
-        partnerCommitments: init.partnerCommitments || [],
-        makerCheckerRequests: init.makerCheckerRequests,
-        properties: fallbackProps,
-        leads: [],
-        propertyCosts: [],
-        isSchemaMigrated: true
-      };
-    }
-    return {
-      periods: [],
-      contracts: [],
-      schedules: [],
-      journalEntries: [],
-      pdcRecords: [],
-      rescissions: [],
-      amendments: [],
-      costAllocations: [],
-      taxRecords: [],
-      partnerCalls: [],
-      partnerCommitments: [],
-      makerCheckerRequests: [],
-      properties: [],
-      leads: [],
-      propertyCosts: [],
-      isSchemaMigrated: true
-    };
-  });
+  const [data, setData] = useState<LiveERPDataset>(() => ({
+    periods: [],
+    contracts: [],
+    schedules: [],
+    journalEntries: [],
+    pdcRecords: [],
+    rescissions: [],
+    amendments: [],
+    costAllocations: [],
+    taxRecords: [],
+    partnerCalls: [],
+    partnerCommitments: [],
+    makerCheckerRequests: [],
+    properties: [],
+    leads: [],
+    propertyCosts: [],
+    isSchemaMigrated: true
+  }));
 
   const [isLoading, setIsLoading] = useState(true);
   const [isMutating, setIsMutating] = useState(false);
@@ -726,8 +698,8 @@ export function ERPWorkstationProvider({
   }, []);
 
   // Partner Profiles & Transactions State
-  const [partnerProfiles, setPartnerProfiles] = useState<ERPPartnerProfile[]>(INITIAL_PARTNER_PROFILES);
-  const [partnerTransactions, setPartnerTransactions] = useState<ERPPartnerTransaction[]>(INITIAL_PARTNER_TRANSACTIONS);
+  const [partnerProfiles, setPartnerProfiles] = useState<ERPPartnerProfile[]>([]);
+  const [partnerTransactions, setPartnerTransactions] = useState<ERPPartnerTransaction[]>([]);
 
   // Live Data Fetcher
   const loadLiveData = useCallback(async (isSilent = false) => {
@@ -745,12 +717,8 @@ export function ERPWorkstationProvider({
         } catch { dataset.purchaseOrders = []; }
       }
       setData(dataset);
-      if (liveProfiles && liveProfiles.length > 0) {
-        setPartnerProfiles(liveProfiles);
-      }
-      if (liveTransactions && liveTransactions.length > 0) {
-        setPartnerTransactions(liveTransactions);
-      }
+      setPartnerProfiles(liveProfiles ?? []);
+      setPartnerTransactions(liveTransactions ?? []);
       return dataset;
     } catch (err: any) {
       console.error('Failed to load ERP dataset from Supabase:', err);
@@ -764,12 +732,8 @@ export function ERPWorkstationProvider({
               ERPSupabaseService.loadPartnerTransactions(supabase)
             ]);
             setData(retryDataset);
-            if (retryProfiles && retryProfiles.length > 0) {
-              setPartnerProfiles(retryProfiles);
-            }
-            if (retryTransactions && retryTransactions.length > 0) {
-              setPartnerTransactions(retryTransactions);
-            }
+            setPartnerProfiles(retryProfiles ?? []);
+            setPartnerTransactions(retryTransactions ?? []);
             return retryDataset;
           }
         } catch (refreshErr) {

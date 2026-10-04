@@ -28,8 +28,7 @@ import {
 import { D } from '@/lib/erp/math';
 import { 
   PartnerFinancialSummary, 
-  computeDynamicBuildingCapital,
-  INITIAL_PARTNER_TRANSACTIONS 
+  computeDynamicBuildingCapital 
 } from '@/lib/erp/partnersEngine';
 import { Property } from '@/lib/supabase/types';
 import { ERPPartnerTransaction, ERPAccountingPeriod, ERPPartnerCommitment } from '@/lib/erp/types';
@@ -77,7 +76,7 @@ export const PartnerCapitalInjectionModal: React.FC<PartnerCapitalInjectionModal
   initialCommitmentId,
   partnerCommitments = [],
   properties = [],
-  transactions = INITIAL_PARTNER_TRANSACTIONS,
+  transactions = [],
   activePeriod,
   periods,
   isAr = true,
