@@ -26,8 +26,6 @@ import {
   ChevronRight,
   ShieldCheck
 } from 'lucide-react';
-import { FALLBACK_PROPERTIES } from '@/lib/data/fallbackProperties';
-import { adaptProperties } from '@/lib/utils/propertyAdapter';
 import { Property } from '@/types';
 import { createCachedTileLayer } from '@/lib/mapCache';
 
@@ -52,9 +50,7 @@ export const MapView: React.FC<MapViewProps> = ({
   const onOpenInquiry = propOnOpenInquiry || ((type?: string, propertyName?: string) => {
     window.location.href = 'https://wa.me/201009998888?text=' + encodeURIComponent('Hello, I am inquiring about ' + (propertyName || 'cartography acquisition'));
   });
-  // Use server-passed real DB properties, fall back to adapted FALLBACK_PROPERTIES
-  const adaptedFallback = useMemo(() => adaptProperties(FALLBACK_PROPERTIES, locale as 'en' | 'ar'), [locale]);
-  const allPropertiesList: Property[] = (propProperties && propProperties.length > 0) ? (propProperties as Property[]) : adaptedFallback;
+  const allPropertiesList: Property[] = (propProperties && propProperties.length > 0) ? (propProperties as Property[]) : [];
 
   // 1. Unselected by default as requested
   const [selectedPropertyId, setSelectedPropertyId] = useState<string | null>(null);
@@ -472,7 +468,14 @@ export const MapView: React.FC<MapViewProps> = ({
             data-lenis-prevent="true"
             onWheel={(e) => e.stopPropagation()}
           >
-            {filteredProperties.map((property: Property) => {
+            {filteredProperties.length === 0 ? (
+              <div style={{ padding: '2.5rem 1.5rem', textAlign: 'center', color: 'rgba(255, 255, 255, 0.6)' }}>
+                <p style={{ margin: 0, fontSize: '0.95rem', fontWeight: 500 }}>
+                  {locale === 'ar' ? 'لا توجد عقارات متاحة حالياً' : 'No properties available yet'}
+                </p>
+              </div>
+            ) : (
+              filteredProperties.map((property: Property) => {
               const isSelected = selectedPropertyId === property.id;
               const formattedPrice = new Intl.NumberFormat('en-US').format(property.price);
 
@@ -551,7 +554,8 @@ export const MapView: React.FC<MapViewProps> = ({
                   </div>
                 </div>
               );
-            })}
+            })
+          )}
           </div>
         </aside>
       )}

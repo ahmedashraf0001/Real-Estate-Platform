@@ -3,10 +3,6 @@ import { getPublicSupabase } from './public';
 import type { Property, Lead, SpecLayer, SpecLayerItem } from './types';
 import { buildZoneInstances, type PropertyTypeId, type GlobalFinishingState } from '@/lib/layering';
 import { parseSmartQuery } from '@/lib/utils/searchUtils';
-import { FALLBACK_PROPERTIES } from '@/lib/data/fallbackProperties';
-
-// ─── Properties ───────────────────────────────────────────────────
-
 export async function getFeaturedProperties(): Promise<Property[]> {
   try {
     const supabase = getPublicSupabase();
@@ -23,7 +19,7 @@ export async function getFeaturedProperties(): Promise<Property[]> {
   } catch (err) {
     // fallback below
   }
-  return FALLBACK_PROPERTIES.filter((p) => p.is_featured);
+  return [];
 }
 
 export async function getAllProperties(params?: {
@@ -89,21 +85,7 @@ export async function getAllProperties(params?: {
     // fallback below
   }
 
-  // Filter fallback properties
-  let fallback = [...FALLBACK_PROPERTIES];
-  if (params?.type) {
-    fallback = fallback.filter(p => p.type === params.type);
-  }
-  if (params?.bedrooms) {
-    fallback = fallback.filter(p => p.bedrooms === params.bedrooms);
-  }
-  if (params?.min_price) {
-    fallback = fallback.filter(p => p.price_egp >= params.min_price!);
-  }
-  if (params?.max_price) {
-    fallback = fallback.filter(p => p.price_egp <= params.max_price!);
-  }
-  return fallback;
+  return [];
 }
 
 export function ensureSpecLayers(property: Property): Property {
@@ -137,10 +119,6 @@ export async function getPropertyBySlug(slug: string): Promise<Property | null> 
     // fallback below
   }
 
-  const foundFallback = FALLBACK_PROPERTIES.find(p => p.slug === slug || p.id === slug);
-  if (foundFallback) {
-    return ensureSpecLayers(foundFallback);
-  }
   return null;
 }
 
@@ -154,7 +132,7 @@ export async function getAllPropertySlugs(): Promise<{ slug: string }[]> {
   } catch (err) {
     // fallback below
   }
-  return FALLBACK_PROPERTIES.map(p => ({ slug: p.slug }));
+  return [];
 }
 
 export async function getPropertiesByIds(ids: string[]): Promise<Property[]> {
@@ -173,8 +151,7 @@ export async function getPropertiesByIds(ids: string[]): Promise<Property[]> {
     // fallback below
   }
 
-  const map = new Map(FALLBACK_PROPERTIES.map((p) => [p.id, ensureSpecLayers(p)]));
-  return ids.map((id) => map.get(id) || FALLBACK_PROPERTIES.find(f => f.slug === id)).filter(Boolean) as Property[];
+  return [];
 }
 
 

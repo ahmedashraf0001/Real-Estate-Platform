@@ -357,12 +357,10 @@ export default function PropertiesAdminClient({ initialProperties, adminLocale }
               outline: 'none'
             }}
           >
-            <option value="all">{isAr ? 'جميع الأنواع المعمارية' : 'All Typologies'}</option>
-            <option value="villa">{isAr ? 'فيلات وقصور' : 'Villas & Mansions'}</option>
-            <option value="apartment">{isAr ? 'شقق فاخرة' : 'Apartments'}</option>
-            <option value="townhouse">{isAr ? 'تاون هاوس' : 'Townhouses'}</option>
-            <option value="duplex">{isAr ? 'دوبلكس' : 'Duplexes'}</option>
-            <option value="chalet">{isAr ? 'شاليهات' : 'Chalets'}</option>
+            <option value="all">{isAr ? 'جميع العقارات' : 'All'}</option>
+            <option value="apartment">{isAr ? 'شقق' : 'Apartments'}</option>
+            <option value="building">{isAr ? 'عمارات' : 'Buildings'}</option>
+            <option value="garage">{isAr ? 'جراجات' : 'Garages'}</option>
           </select>
         </div>
 

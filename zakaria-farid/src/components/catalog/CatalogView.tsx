@@ -6,8 +6,6 @@ import { createPortal } from 'react-dom';
 import { PropertyCard } from '@/components/property/PropertyCard';
 import { MarketChart } from '@/components/MarketChart';
 import { CompareDrawer } from '@/components/property/CompareDrawer';
-import { FALLBACK_PROPERTIES } from '@/lib/data/fallbackProperties';
-import { adaptProperties } from '@/lib/utils/propertyAdapter';
 import { Property } from '@/types';
 import { useFavorites } from '@/lib/context/FavoritesContext';
 import { usePlatformSettings } from '@/lib/hooks/usePlatformSettings';
@@ -129,9 +127,7 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
     window.location.href = 'https://wa.me/201009998888?text=' + encodeURIComponent('Hello, I am inquiring about ' + (title || 'sovereign acquisitions'));
   });
 
-  // Use server-passed real DB properties; fall back to adapted FALLBACK_PROPERTIES
-  const adaptedFallback = React.useMemo(() => adaptProperties(FALLBACK_PROPERTIES, locale as 'en' | 'ar'), [locale]);
-  const allPropertiesList: Property[] = (propProperties && propProperties.length > 0) ? (propProperties as Property[]) : adaptedFallback;
+  const allPropertiesList: Property[] = (propProperties && propProperties.length > 0) ? (propProperties as Property[]) : [];
 
   // Dynamically compute destination pills and filter options directly from active database properties
   const dynamicDestinationPills = useMemo(() => {
@@ -1185,14 +1181,18 @@ return true;
             ) : (
               <div className="no-results-box">
                 <Search size={40} className="no-results-icon" />
-                <h3>No architectural matches found</h3>
-                <p>Try broadening your filters or clearing price tier constraints.</p>
-                <button
-                  className="btn-gold-outline reset-filters-btn"
-                  onClick={resetAllFilters}
-                >
-                  Reset All Filters
-                </button>
+                <h3>{allPropertiesList.length === 0 ? (isAr ? 'لا توجد عقارات متاحة حالياً' : 'No properties available yet') : (isAr ? 'لم نتمكن من إيجاد عقارات متطابقة' : 'No architectural matches found')}</h3>
+                {allPropertiesList.length > 0 && (
+                  <>
+                    <p>{isAr ? 'حاول توسيع نطاق البحث أو إعادة ضبط خيارات التصفية.' : 'Try broadening your filters or clearing price tier constraints.'}</p>
+                    <button
+                      className="btn-gold-outline reset-filters-btn"
+                      onClick={resetAllFilters}
+                    >
+                      {isAr ? 'إعادة ضبط كافة الفلاتر' : 'Reset All Filters'}
+                    </button>
+                  </>
+                )}
               </div>
             )}
 

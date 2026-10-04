@@ -1,4 +1,5 @@
 import { getAllPropertiesAdmin, getAllLeads } from '@/lib/supabase/queries';
+import type { Lead } from '@/lib/supabase/types';
 import Link from 'next/link';
 import {
   Building2, Users, TrendingUp, Plus, Crown, AlertTriangle,
@@ -22,14 +23,48 @@ export async function generateMetadata({ params }: Props) {
   };
 }
 
-function isStale(lead: any) {
-  const stage = lead.stage || 'new';
-  if (stage !== 'new') return false;
-  const base = lead.stage_updated_at || lead.created_at;
-  if (!base) return false;
-  const then = new Date(base).getTime();
-  const diffHours = (Date.now() - then) / (1000 * 60 * 60);
-  return diffHours >= 24;
+interface LeadSlaMetrics {
+  slaPercent: number;
+  newLeadsCount: number;
+}
+
+function computeLeadSlaMetrics(leads: Lead[]): LeadSlaMetrics {
+  const now = Date.now();
+  const TWELVE_HOURS_MS = 12 * 60 * 60 * 1000;
+
+  const newLeads = leads.filter((l) => (l.stage || 'new') === 'new' && !l.stage_updated_at);
+  const newLeadsCount = newLeads.length;
+
+  let handledWithin12hCount = 0;
+  let slaEvaluatedCount = 0;
+
+  for (const lead of leads) {
+    const isHandled = (lead.stage && lead.stage !== 'new') || !!lead.stage_updated_at;
+    const createdAt = lead.created_at ? new Date(lead.created_at).getTime() : now;
+    const ageMs = now - createdAt;
+
+    if (isHandled) {
+      slaEvaluatedCount++;
+      if (lead.stage_updated_at) {
+        const responseMs = new Date(lead.stage_updated_at).getTime() - createdAt;
+        if (responseMs <= TWELVE_HOURS_MS) {
+          handledWithin12hCount++;
+        }
+      } else {
+        handledWithin12hCount++;
+      }
+    } else {
+      if (ageMs > TWELVE_HOURS_MS) {
+        slaEvaluatedCount++;
+      }
+    }
+  }
+
+  const slaPercent = slaEvaluatedCount > 0
+    ? Math.round((handledWithin12hCount / slaEvaluatedCount) * 100)
+    : 100;
+
+  return { slaPercent, newLeadsCount };
 }
 
 function formatTimeAgo(isoString?: string) {
@@ -70,8 +105,7 @@ export default async function AdminDashboard({ params }: Props) {
   const activeCount   = activeProperties.length;
   const featuredCount = properties.filter((p) => p.is_featured).length;
   
-  const staleLeads = leads.filter(isStale);
-  const staleLeadsCount = staleLeads.length;
+  const { slaPercent, newLeadsCount } = computeLeadSlaMetrics(leads);
   // Canonical Portfolio Valuation: active listings only
   const portfolioValue   = getPortfolioValuation(properties).toNumber();
   const avgPropertyPrice = activeCount > 0 ? Math.round(portfolioValue / activeCount) : 0;
@@ -343,7 +377,7 @@ export default async function AdminDashboard({ params }: Props) {
           backdropFilter: 'blur(16px)',
           borderRadius: '14px',
           padding: '16px 18px',
-          border: staleLeadsCount > 0 ? '1px solid rgba(244, 63, 94, 0.35)' : '1px solid var(--admin-card-border, #CBD5E1)',
+          border: slaPercent < 100 ? '1px solid rgba(244, 63, 94, 0.35)' : '1px solid var(--admin-card-border, #CBD5E1)',
           boxShadow: 'var(--admin-card-shadow, 0 1px 3px rgba(0, 0, 0, 0.05))',
           display: 'flex',
           flexDirection: 'column',
@@ -358,26 +392,28 @@ export default async function AdminDashboard({ params }: Props) {
               width: '28px',
               height: '28px',
               borderRadius: '8px',
-              background: staleLeadsCount > 0 ? 'rgba(244, 63, 94, 0.12)' : 'rgba(16, 185, 129, 0.12)',
-              color: staleLeadsCount > 0 ? '#FB7185' : '#34D399',
+              background: slaPercent < 100 ? 'rgba(244, 63, 94, 0.12)' : 'rgba(16, 185, 129, 0.12)',
+              color: slaPercent < 100 ? '#FB7185' : '#34D399',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center'
             }}>
-              {staleLeadsCount > 0 ? <AlertTriangle size={14} /> : <CheckCircle2 size={14} />}
+              {slaPercent < 100 ? <AlertTriangle size={14} /> : <CheckCircle2 size={14} />}
             </div>
           </div>
           <div>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
-              <span style={{ fontSize: '24px', fontWeight: 800, color: staleLeadsCount > 0 ? '#FB7185' : '#34D399' }}>
-                {staleLeadsCount > 0 ? `${staleLeadsCount}` : '100%'}
+              <span style={{ fontSize: '24px', fontWeight: 800, color: slaPercent < 100 ? '#FB7185' : '#34D399' }}>
+                {slaPercent}%
               </span>
               <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--admin-text-muted, #475569)' }}>
-                {staleLeadsCount > 0 ? (isAr ? 'تتطلب رد >24h' : 'Pending >24h') : (isAr ? 'استجابة ممتازة' : 'Optimal')}
+                {slaPercent === 100 ? (isAr ? 'استجابة ممتازة' : 'Optimal') : (isAr ? 'تتطلب تحسين' : 'Needs Attention')}
               </span>
             </div>
             <p style={{ fontSize: '11px', color: 'var(--admin-text-muted, #475569)', margin: '3px 0 0', fontWeight: 500 }}>
-              {staleLeadsCount > 0 ? (isAr ? 'يرجى التواصل مع العملاء المعلقين' : 'Follow up with pending leads') : (isAr ? 'زمن الاستجابة أقل من 12 ساعة' : 'All inquiries handled <12h')}
+              {newLeadsCount > 0
+                ? (isAr ? `${newLeadsCount} في انتظار أول رد` : `${newLeadsCount} awaiting first response`)
+                : (isAr ? 'زمن الاستجابة أقل من 12 ساعة' : 'All inquiries handled <12h')}
             </p>
           </div>
         </div>

@@ -8,8 +8,6 @@ import { InquiryModal } from '@/components/InquiryModal';
 import { LuxuryCursor } from '@/components/LuxuryCursor';
 import { NavigationProgress } from '@/components/NavigationProgress';
 import { SavedPortfolioDrawer } from '@/components/property/SavedPortfolioDrawer';
-import { FALLBACK_PROPERTIES } from '@/lib/data/fallbackProperties';
-import { adaptProperties } from '@/lib/utils/propertyAdapter';
 import { preloadPropertyMapSites } from '@/lib/mapCache';
 
 interface ClientAppShellProps {
@@ -159,7 +157,6 @@ export const ClientAppShell: React.FC<ClientAppShellProps> = ({ children, locale
 
       {/* Global Anonymous Saved Portfolio Shortlist Drawer */}
       <SavedPortfolioDrawer
-        properties={adaptProperties(FALLBACK_PROPERTIES as any, locale as any)}
         locale={locale}
       />
     </div>

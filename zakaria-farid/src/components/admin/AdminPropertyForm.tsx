@@ -12,7 +12,7 @@ import Placeholder from '@tiptap/extension-placeholder';
 import { useDropzone } from 'react-dropzone';
 import imageCompression from 'browser-image-compression';
 import { createClient } from '@/lib/supabase/client';
-import { Loader2, Save, Trash2, Upload, X, Layers, Image as ImageIcon, ChevronRight, ChevronLeft, Check, Eye, MapPin, Building2, Sparkles, FileText, PanelRightClose, PanelRightOpen, Sofa, Bed, Bath, Trees, Tag, DollarSign, Ruler, Compass, Film, Play, Plus, Users } from 'lucide-react';
+import { Loader2, Save, Trash2, Upload, X, Layers, Image as ImageIcon, ChevronRight, ChevronLeft, Check, Eye, MapPin, Building2, Sparkles, FileText, PanelRightClose, PanelRightOpen, Sofa, Bed, Bath, Trees, Tag, DollarSign, Ruler, Compass, Film, Play, Plus, Users, AlertCircle, AlertTriangle } from 'lucide-react';
 import CADBlueprintBuilder from './CADBlueprintBuilder';
 import ZoneInspector from './ZoneInspector';
 import DynamicMapPicker from './DynamicMapPicker';
@@ -279,6 +279,9 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
         const parsed = Number(s);
         if (parsed >= 1 && parsed <= 4) {
           setCurrentStep(parsed);
+        } else if (parsed === 5) {
+          setCurrentStep(4);
+          setIsSaved(true);
         }
       }
       if (sp.get('saved') === 'true') {
@@ -499,6 +502,10 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
   const selectedSubtype = watch('subtype');
   const totalFloorsRaw = watch('total_floors');
   const unitsPerFloorRaw = watch('units_per_floor');
+  const currentLat = watch('latitude');
+  const currentLng = watch('longitude');
+  const hasMapPin = typeof currentLat === 'number' && !isNaN(currentLat) && typeof currentLng === 'number' && !isNaN(currentLng) && currentLat !== 0 && currentLng !== 0;
+  const photoCount = previewUrls.length;
 
   const steps = [
     { 
@@ -723,6 +730,13 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
   };
 
   async function onSubmit(data: FormValues) {
+    if (isSaved) {
+      return;
+    }
+    if (!hasMapPin) {
+      toast.error(isAr ? 'يرجى تحديد موقع العقار على الخريطة في الخطوة 2 قبل النشر' : 'Map pin coordinates (latitude & longitude) are required before publishing.');
+      return;
+    }
     setSaving(true);
     try {
       const payloadBase = {
@@ -2509,6 +2523,74 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
             </div>
           </div>
 
+          {/* Missing Map Pin Blocking Notice */}
+          {!hasMapPin && (
+            <div style={{
+              background: 'rgba(239, 68, 68, 0.1)',
+              border: '1px solid rgba(239, 68, 68, 0.35)',
+              borderRadius: '12px',
+              padding: '16px 20px',
+              marginBottom: '16px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '12px'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <AlertCircle size={20} style={{ color: '#ef4444', flexShrink: 0 }} />
+                <div>
+                  <strong style={{ fontSize: '13.5px', color: '#ef4444', display: 'block' }}>
+                    {isAr ? 'موقع الخريطة مطلوب لنشر العقار' : 'Map Pin Location Required'}
+                  </strong>
+                  <span style={{ fontSize: '12px', color: 'var(--admin-text-muted)' }}>
+                    {isAr ? 'يجب تحديد إحداثيات العقار (خط العرض وخط الطول) على الخريطة في الخطوة 2 قبل النشر.' : 'Latitude and longitude coordinates must be pinned on the map in Step 2 before publishing.'}
+                  </span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => goToStep(2)}
+                style={{
+                  padding: '7px 14px',
+                  borderRadius: '8px',
+                  fontSize: '12px',
+                  fontWeight: 700,
+                  background: '#ef4444',
+                  color: '#ffffff',
+                  border: 'none',
+                  cursor: 'pointer',
+                  whiteSpace: 'nowrap'
+                }}
+              >
+                {isAr ? 'العودة للخطوة ٢ (تحديد الموقع) ➔' : 'Go to Step 2 (Set Map Pin) ➔'}
+              </button>
+            </div>
+          )}
+
+          {/* Zero Photos Non-Blocking Warning */}
+          {photoCount === 0 && (
+            <div style={{
+              background: 'rgba(245, 158, 11, 0.1)',
+              border: '1px solid rgba(245, 158, 11, 0.35)',
+              borderRadius: '12px',
+              padding: '14px 18px',
+              marginBottom: '16px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px'
+            }}>
+              <AlertTriangle size={18} style={{ color: '#f59e0b', flexShrink: 0 }} />
+              <div>
+                <strong style={{ fontSize: '13px', color: '#f59e0b', display: 'block' }}>
+                  {isAr ? 'تنبيه: لم يتم رفع أي صور للعقار' : 'Notice: 0 photos uploaded'}
+                </strong>
+                <span style={{ fontSize: '12px', color: 'var(--admin-text-muted)' }}>
+                  {isAr ? 'يمكنك النشر بدون صور، لكن يُنصح بإضافة صور لتعزيز جاذبية العرض.' : 'You can publish without photos, but uploading imagery is strongly recommended.'}
+                </span>
+              </div>
+            </div>
+          )}
+
           {/* Verification Callout Note */}
           <div className={styles.reviewVerifyNotice}>
             <div className={styles.reviewVerifyNoticeIcon}>
@@ -2568,45 +2650,67 @@ export default function AdminPropertyForm({ property, isAr = false }: AdminPrope
         </div>
 
         <div className={styles.saveBarControls}>
-          <button type="button" className={styles.btnPrev} onClick={() => router.back()}>
-            {isAr ? 'إلغاء' : 'Cancel'}
-          </button>
-
-          {currentStep > 1 && (
-            <button type="button" className={styles.btnPrev} onClick={handlePrevStep}>
-              {isAr ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
-              <span>{isAr ? 'الخطوة السابقة' : 'Previous'}</span>
-            </button>
-          )}
-
-          {currentStep < 4 ? (
-            <button type="button" className={styles.btnNext} onClick={handleNextStep}>
-              <span>{isAr ? 'الخطوة التالية' : 'Next Step'}</span>
-              {isAr ? <ChevronLeft size={16} /> : <ChevronRight size={16} />}
-            </button>
-          ) : (
-            <button
-              type="button"
-              className={styles.btnPublish}
-              disabled={saving}
-              id="admin-property-save"
-              onClick={handleSubmit(onSubmit)}
-            >
-              {saving ? (
-                <Loader2 size={16} className={styles.spinner} />
-              ) : isSaved ? (
-                <Check size={16} strokeWidth={2.5} />
-              ) : (
-                <Save size={16} strokeWidth={1.5} />
+          {isSaved ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              {savedSlug && (
+                <a
+                  href={`/${isAr ? 'ar' : 'en'}/properties/${savedSlug}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={styles.btnNext}
+                  style={{ textDecoration: 'none' }}
+                >
+                  <Eye size={16} />
+                  <span>{isAr ? 'معاينة العقار' : 'View live'}</span>
+                </a>
               )}
-              <span>
-                {isSaved
-                  ? (isAr ? 'تم النشر بنجاح ✓' : 'Published Successfully ✓')
-                  : isEditing 
-                    ? (isAr ? 'تأكيد وحفظ التعديلات ➔' : 'Confirm & Save Changes ➔') 
-                    : (isAr ? 'تأكيد ونشر العقار ➔' : 'Confirm & Publish Property ➔')}
-              </span>
-            </button>
+              <button
+                type="button"
+                className={styles.btnPrev}
+                onClick={() => router.push(`/admin/${isAr ? 'ar' : 'en'}/properties`)}
+              >
+                <span>{isAr ? 'العودة للقائمة' : 'Back to list'}</span>
+              </button>
+            </div>
+          ) : (
+            <>
+              <button type="button" className={styles.btnPrev} onClick={() => router.back()}>
+                {isAr ? 'إلغاء' : 'Cancel'}
+              </button>
+
+              {currentStep > 1 && (
+                <button type="button" className={styles.btnPrev} onClick={handlePrevStep}>
+                  {isAr ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
+                  <span>{isAr ? 'الخطوة السابقة' : 'Previous'}</span>
+                </button>
+              )}
+
+              {currentStep < 4 ? (
+                <button type="button" className={styles.btnNext} onClick={handleNextStep}>
+                  <span>{isAr ? 'الخطوة التالية' : 'Next Step'}</span>
+                  {isAr ? <ChevronLeft size={16} /> : <ChevronRight size={16} />}
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className={styles.btnPublish}
+                  disabled={saving || !hasMapPin}
+                  id="admin-property-save"
+                  onClick={handleSubmit(onSubmit)}
+                >
+                  {saving ? (
+                    <Loader2 size={16} className={styles.spinner} />
+                  ) : (
+                    <Save size={16} strokeWidth={1.5} />
+                  )}
+                  <span>
+                    {isEditing 
+                      ? (isAr ? 'تأكيد وحفظ التعديلات ➔' : 'Confirm & Save Changes ➔') 
+                      : (isAr ? 'تأكيد ونشر العقار ➔' : 'Confirm & Publish Property ➔')}
+                  </span>
+                </button>
+              )}
+            </>
           )}
         </div>
       </div>

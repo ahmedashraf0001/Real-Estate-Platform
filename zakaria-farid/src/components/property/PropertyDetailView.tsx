@@ -8,8 +8,7 @@ if (typeof window !== 'undefined') {
 import { Property } from '@/types';
 import { useRouter } from 'next/navigation';
 import { triggerNavigationStart } from '@/components/NavigationProgress';
-import { FALLBACK_PROPERTIES } from '@/lib/data/fallbackProperties';
-import { adaptProperties, cleanHtmlToPlainText, decodeHtmlEntities } from '@/lib/utils/propertyAdapter';
+import { cleanHtmlToPlainText, decodeHtmlEntities } from '@/lib/utils/propertyAdapter';
 import { PropertyCard } from './PropertyCard';
 import ArchitecturalBlueprintInspector from './ArchitecturalBlueprintInspector';
 import ViewingScheduler from './ViewingScheduler';
@@ -171,8 +170,10 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
   const router = useRouter();
   const isAr = locale === 'ar';
   const effectiveId = propertyId || propProperty?.slug || propProperty?.id;
-  const fallbackAdapted = adaptProperties(FALLBACK_PROPERTIES, locale as 'en' | 'ar');
-  const rawProperty = propProperty || fallbackAdapted.find((p: Property) => p.id === effectiveId || p.slug === effectiveId) || fallbackAdapted[0];
+  const rawProperty = propProperty || null;
+  const listingStatus = rawProperty?.listing_status;
+  const isSold = listingStatus === 'sold';
+  const isUnderOffer = listingStatus === 'under_offer';
 
   const onBack = propOnBack || (() => {
     triggerNavigationStart();
@@ -187,46 +188,35 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
   });
 
   const rawNarrative = isAr 
-    ? (rawProperty.description_ar || rawProperty.narrative || rawProperty.description_en || '')
-    : (rawProperty.description_en || rawProperty.narrative || rawProperty.description_ar || '');
+    ? (rawProperty?.description_ar || rawProperty?.narrative || rawProperty?.description_en || '')
+    : (rawProperty?.description_en || rawProperty?.narrative || rawProperty?.description_ar || '');
 
   // Strip raw HTML tags cleanly from narrative and decode all HTML entities
   const cleanNarrative = cleanHtmlToPlainText(rawNarrative) || (isAr ? 'تحفة معمارية استثنائية صُممت بأعلى معايير الفخامة والدقة الهندسية.' : 'An extraordinary architectural masterpiece crafted with the highest standards of luxury and precision.');
 
-  const property: Property = {
-    id: rawProperty.slug || rawProperty.id || 'the-obsidian-pavilion',
-    slug: rawProperty.slug || rawProperty.id || 'the-obsidian-pavilion',
-    title: decodeHtmlEntities(isAr ? (rawProperty.title_ar || rawProperty.title) : (rawProperty.title_en || rawProperty.title || 'The Obsidian Pavilion')),
-    location: decodeHtmlEntities(rawProperty.location || 'Sodic East Estate, New Cairo, Egypt'),
-    district: rawProperty.district || (rawProperty.location ? rawProperty.location.split(',')[0].trim() : 'New Cairo'),
-    estateName: rawProperty.estateName || (rawProperty.district ? rawProperty.district : 'Four Seasons Privado'),
-    price: rawProperty.price || rawProperty.price_egp || 42500000,
+  const property: Property = rawProperty ? {
+    id: rawProperty.slug || rawProperty.id || '',
+    slug: rawProperty.slug || rawProperty.id || '',
+    title: decodeHtmlEntities(isAr ? (rawProperty.title_ar || rawProperty.title) : (rawProperty.title_en || rawProperty.title || '')),
+    location: decodeHtmlEntities(rawProperty.location || ''),
+    district: rawProperty.district || (rawProperty.location ? rawProperty.location.split(',')[0].trim() : ''),
+    estateName: rawProperty.estateName || (rawProperty.district ? rawProperty.district : ''),
+    price: rawProperty.price || rawProperty.price_egp || 0,
     currency: rawProperty.currency || (isAr ? 'ج.م' : 'EGP'),
-    beds: rawProperty.beds || rawProperty.bedrooms || 5,
-    baths: rawProperty.baths || rawProperty.bathrooms || 6,
-    sqm: rawProperty.sqm || rawProperty.area_sqm || 720,
+    beds: rawProperty.beds || rawProperty.bedrooms || 0,
+    baths: rawProperty.baths || rawProperty.bathrooms || 0,
+    sqm: rawProperty.sqm || rawProperty.area_sqm || 0,
     propertyType: rawProperty.propertyType || rawProperty.type || 'Apartment',
     builtYear: rawProperty.builtYear || rawProperty.year_built || 2025,
     featured: rawProperty.featured ?? rawProperty.is_featured ?? true,
+    listing_status: rawProperty.listing_status,
     images: (rawProperty.images && rawProperty.images.length > 0) 
       ? rawProperty.images 
       : (rawProperty.property_images && rawProperty.property_images.length > 0)
         ? rawProperty.property_images.map((img: any) => typeof img === 'string' ? img : img.url)
-        : [
-            'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1600&q=85',
-            'https://images.unsplash.com/photo-1613977257363-707ba9348227?auto=format&fit=crop&w=1200&q=85',
-            'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=1200&q=85',
-            'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?auto=format&fit=crop&w=1200&q=85'
-          ],
+        : [],
     narrative: cleanNarrative,
-    amenities: rawProperty.amenities || [
-      { icon: 'waves', title: isAr ? 'مسبح لا متناهي مدفأ' : 'Heated Infinity Pool' },
-      { icon: 'flower-2', title: isAr ? 'حدائق نباتية منسقة' : 'Manicured Botanical Gardens' },
-      { icon: 'shield-check', title: isAr ? 'أمن وحراسة مشددة ٢٤/٧' : '24/7 Armed Security & Concierge' },
-      { icon: 'car', title: isAr ? 'جراج يتسع لـ ٤ سيارات' : '4-Car Integrated Garage' },
-      { icon: 'dumbbell', title: isAr ? 'صالة رياضية خاصة' : 'Private TechnoGym Studio' },
-      { icon: 'building', title: isAr ? 'مصعد هيدروليكي خاص' : 'Internal Hydraulic Elevator' }
-    ],
+    amenities: rawProperty.amenities || [],
     mapCoordinates: rawProperty.mapCoordinates || (rawProperty.latitude && rawProperty.longitude ? { x: 38, y: 44, lat: Number(rawProperty.latitude), lng: Number(rawProperty.longitude) } : { x: 38, y: 44, lat: 30.0131, lng: 31.4913 }),
     broker: rawProperty.broker || {
       name: isAr ? 'زكريا فريد' : 'Zakaria Farid',
@@ -237,6 +227,26 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
     },
     videos: (rawProperty as any)?.videos || ((rawProperty as any)?.video_url ? [{ id: 'v-1', url: (rawProperty as any).video_url, title_en: rawProperty.title_en || 'Property Video Tour', title_ar: rawProperty.title_ar || 'جولة فيديو داخل العقار', category: 'tour' }] : undefined),
     video_url: (rawProperty as any)?.video_url || ((rawProperty as any)?.videos && (rawProperty as any).videos[0]?.url) || undefined,
+  } : {
+    id: '',
+    slug: '',
+    title: '',
+    location: '',
+    district: '',
+    estateName: '',
+    price: 0,
+    currency: isAr ? 'ج.م' : 'EGP',
+    beds: 0,
+    baths: 0,
+    sqm: 0,
+    propertyType: 'Apartment',
+    builtYear: 2025,
+    featured: false,
+    images: [],
+    narrative: '',
+    amenities: [],
+    mapCoordinates: { x: 0, y: 0, lat: 0, lng: 0 },
+    broker: { name: '', role: '', phone: '', email: '', avatar: '' }
   };
 
   useEffect(() => {
@@ -462,7 +472,7 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
   }, []);
 
   const formattedPrice = new Intl.NumberFormat('en-US').format(property.price);
-  const similarProperties = propSimilar || fallbackAdapted.filter((p: Property) => p.id !== property.id).slice(0, 3);
+  const similarProperties = propSimilar || [];
 
   // Geolocation Detection
   const requestLocation = () => {
@@ -647,6 +657,16 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
     : null;
 
 
+  if (!rawProperty) {
+    return (
+      <div style={{ padding: '8rem 2rem', textAlign: 'center', minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <p style={{ fontSize: '1.25rem', color: 'var(--text-secondary, #94a3b8)', fontWeight: 500 }}>
+          {isAr ? 'لا توجد عقارات متاحة حالياً' : 'No properties available yet'}
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="property-detail-view">
       <div className="container">
@@ -710,13 +730,46 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
               </div>
 
               <div className="top-action-group">
-                <button 
-                  className="btn-gold top-inquire-btn"
-                  onClick={() => onOpenInquiry('Acquisition Inquiry', property.title)}
-                  type="button"
-                >
-                  <span>{isAr ? 'طلب الاستحواذ' : 'Inquire for Acquisition'}</span>
-                </button>
+                {isSold ? (
+                  <div style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    padding: '9px 18px',
+                    borderRadius: '8px',
+                    background: 'rgba(239, 68, 68, 0.15)',
+                    border: '1px solid rgba(239, 68, 68, 0.35)',
+                    color: '#ef4444',
+                    fontWeight: 700,
+                    fontSize: '13px'
+                  }}>
+                    <span>{isAr ? 'مباع' : 'Sold'}</span>
+                  </div>
+                ) : (
+                  <>
+                    {isUnderOffer && (
+                      <div style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        padding: '6px 14px',
+                        borderRadius: '8px',
+                        background: 'rgba(245, 158, 11, 0.15)',
+                        border: '1px solid rgba(245, 158, 11, 0.35)',
+                        color: '#f59e0b',
+                        fontWeight: 700,
+                        fontSize: '12px'
+                      }}>
+                        <span>{isAr ? 'تحت العرض' : 'Under offer'}</span>
+                      </div>
+                    )}
+                    <button 
+                      className="btn-gold top-inquire-btn"
+                      onClick={() => onOpenInquiry('Acquisition Inquiry', property.title)}
+                      type="button"
+                    >
+                      <span>{isAr ? 'طلب الاستحواذ' : 'Inquire for Acquisition'}</span>
+                    </button>
+                  </>
+                )}
 
                 <div className="header-icon-actions">
                   <button 
@@ -1285,20 +1338,51 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
 
               {/* All communication funnels through the Private Acquisition lead form */}
               <div className="broker-action-stack">
-                <button
-                  type="button"
-                  onClick={() => setIsInquiryModalOpen(true)}
-                  className="btn-gold broker-primary-btn"
-                  title={isAr ? 'تقديم طلب شراء رسمي وسري' : 'Submit Private Acquisition Inquiry'}
-                >
-                  <Send size={15} />
-                  <span>{isAr ? 'طلب استشارة أو شراء' : 'Private Acquisition Request'}</span>
-                </button>
-                <p className="broker-protocol-note">
-                  {isAr
-                    ? 'قدّم طلبك وحدد وسيلة التواصل المفضلة لديك، وسيتواصل معك زكريا فريد مباشرة.'
-                    : 'Submit your request with your preferred contact method. Zakaria Farid will reach out to you directly.'}
-                </p>
+                {isSold ? (
+                  <div style={{
+                    padding: '14px 16px',
+                    borderRadius: '10px',
+                    background: 'rgba(239, 68, 68, 0.1)',
+                    border: '1px solid rgba(239, 68, 68, 0.25)',
+                    color: '#ef4444',
+                    textAlign: 'center',
+                    fontWeight: 700,
+                    fontSize: '13.5px'
+                  }}>
+                    <span>{isAr ? 'تم بيع هذه الوحدة المعمارية (مباع)' : 'This unit has been sold (Sold)'}</span>
+                  </div>
+                ) : (
+                  <>
+                    {isUnderOffer && (
+                      <div style={{
+                        padding: '8px 12px',
+                        borderRadius: '8px',
+                        background: 'rgba(245, 158, 11, 0.1)',
+                        border: '1px solid rgba(245, 158, 11, 0.25)',
+                        color: '#f59e0b',
+                        textAlign: 'center',
+                        fontWeight: 600,
+                        fontSize: '12px'
+                      }}>
+                        <span>{isAr ? 'العقار قيد التفاوض / تحت العرض' : 'Under offer — Inquiries still open'}</span>
+                      </div>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => setIsInquiryModalOpen(true)}
+                      className="btn-gold broker-primary-btn"
+                      title={isAr ? 'تقديم طلب شراء رسمي وسري' : 'Submit Private Acquisition Inquiry'}
+                    >
+                      <Send size={15} />
+                      <span>{isAr ? 'طلب استشارة أو شراء' : 'Private Acquisition Request'}</span>
+                    </button>
+                    <p className="broker-protocol-note">
+                      {isAr
+                        ? 'قدّم طلبك وحدد وسيلة التواصل المفضلة لديك، وسيتواصل معك زكريا فريد مباشرة.'
+                        : 'Submit your request with your preferred contact method. Zakaria Farid will reach out to you directly.'}
+                    </p>
+                  </>
+                )}
               </div>
 
               {/* Optional Cal.com VIP Viewing Scheduler (Only shown if calendar is active) */}
@@ -1477,13 +1561,46 @@ export const PropertyDetailView: React.FC<PropertyDetailViewProps> = ({
           )}
         </div>
         <div className="top-action-group">
-          <button
-            className="btn-gold top-inquire-btn"
-            onClick={() => onOpenInquiry('Acquisition Inquiry', property.title)}
-            type="button"
-          >
-            <span>{isAr ? 'طلب الاستحواذ' : 'Inquire for Acquisition'}</span>
-          </button>
+          {isSold ? (
+            <div style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              padding: '9px 18px',
+              borderRadius: '8px',
+              background: 'rgba(239, 68, 68, 0.15)',
+              border: '1px solid rgba(239, 68, 68, 0.35)',
+              color: '#ef4444',
+              fontWeight: 700,
+              fontSize: '13px'
+            }}>
+              <span>{isAr ? 'مباع' : 'Sold'}</span>
+            </div>
+          ) : (
+            <>
+              {isUnderOffer && (
+                <div style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  padding: '6px 12px',
+                  borderRadius: '8px',
+                  background: 'rgba(245, 158, 11, 0.15)',
+                  border: '1px solid rgba(245, 158, 11, 0.35)',
+                  color: '#f59e0b',
+                  fontWeight: 700,
+                  fontSize: '12px'
+                }}>
+                  <span>{isAr ? 'تحت العرض' : 'Under offer'}</span>
+                </div>
+              )}
+              <button
+                className="btn-gold top-inquire-btn"
+                onClick={() => onOpenInquiry('Acquisition Inquiry', property.title)}
+                type="button"
+              >
+                <span>{isAr ? 'طلب الاستحواذ' : 'Inquire for Acquisition'}</span>
+              </button>
+            </>
+          )}
           <div className="header-icon-actions">
             <button
               className={`header-icon-btn ${isBookmarked ? 'active' : ''}`}

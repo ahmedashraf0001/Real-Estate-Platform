@@ -1692,6 +1692,43 @@ export const CADBlueprintBuilder: React.FC<CADBlueprintBuilderProps> = ({
     }
 
     // Apply global finishing level across all generated trades
+    // Scale generated room dimensions proportionally when declared area is available (±5%)
+    if (declaredArea && declaredArea > 0 && generated.length > 0 && propertyType !== 'building') {
+      const getLeaves = (list: ZoneInstance[]): ZoneInstance[] => {
+        return list.flatMap(z => (z.children && z.children.length > 0 ? getLeaves(z.children) : [z]));
+      };
+
+      const leaves = getLeaves(generated);
+      const currentTotalSqm = leaves.reduce((sum, z) => {
+        const sp = spatialOf(z);
+        return sum + (sp.sqm || round1(sp.l * sp.w));
+      }, 0);
+
+      if (currentTotalSqm > 0) {
+        const linearScale = Math.sqrt(declaredArea / currentTotalSqm);
+        const scaleZoneSpatial = (z: ZoneInstance): ZoneInstance => {
+          const updated = { ...z };
+          if (updated.spatial) {
+            const sp = spatialOf(updated);
+            const newL = Math.max(1.0, round1(sp.l * linearScale));
+            const newW = Math.max(1.0, round1(sp.w * linearScale));
+            updated.spatial = {
+              ...updated.spatial,
+              length_m: newL,
+              width_m: newW,
+              sqm: round1(newL * newW),
+            };
+          }
+          if (updated.children && updated.children.length > 0) {
+            updated.children = updated.children.map(scaleZoneSpatial);
+          }
+          return updated;
+        };
+
+        generated = generated.map(scaleZoneSpatial);
+      }
+    }
+
     const finalZones = generated.map(applyFinishing);
 
     pushHistory(zoneInstances);

@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { FALLBACK_PROPERTIES } from '@/lib/data/fallbackProperties';
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -59,18 +58,6 @@ export async function GET(request: Request) {
     }
   } catch (err) {
     console.error('Failed to query properties from Supabase for saved portfolio:', err);
-  }
-
-  // Check fallback properties for any remaining unfound IDs
-  for (const id of ids) {
-    if (!foundIds.has(id)) {
-      const match = FALLBACK_PROPERTIES.find(p => p.id === id || p.slug === id);
-      if (match) {
-        foundIds.add(match.id);
-        if (match.slug) foundIds.add(match.slug);
-        results.push(match);
-      }
-    }
   }
 
   return NextResponse.json({ properties: results });
@@ -133,17 +120,6 @@ export async function POST(request: Request) {
       }
     } catch (err) {
       console.error('Failed to query properties from Supabase:', err);
-    }
-
-    for (const id of ids) {
-      if (!foundIds.has(id)) {
-        const match = FALLBACK_PROPERTIES.find(p => p.id === id || p.slug === id);
-        if (match) {
-          foundIds.add(match.id);
-          if (match.slug) foundIds.add(match.slug);
-          results.push(match);
-        }
-      }
     }
 
     return NextResponse.json({ properties: results });
