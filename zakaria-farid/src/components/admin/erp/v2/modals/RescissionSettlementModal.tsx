@@ -27,6 +27,7 @@ import { LegalVerificationTag } from '@/components/erp/LegalVerificationTag';
 import { BranchDecisionCard } from '@/components/erp/BranchDecisionCard';
 import { JournalEntryPreview } from '@/components/erp/JournalEntryPreview';
 import { ZFModalShell } from '../common/ZFModalShell';
+import { useERPWorkstationContext } from '../../context/ERPWorkstationContext';
 
 export interface RescissionSettlementModalProps {
   isOpen: boolean;
@@ -40,6 +41,7 @@ export interface RescissionSettlementModalProps {
     selectedBranch: 'Branch1_PreDelivery' | 'Branch2_PostDelivery';
     rescissionDate: string;
     targetContract?: ERPContract;
+    penaltyRate?: number;
   }) => Promise<void>;
   isMutating?: boolean;
   isAr?: boolean;
@@ -57,10 +59,12 @@ export const RescissionSettlementModal: React.FC<RescissionSettlementModalProps>
   isMutating = false,
   isAr = true
 }) => {
+  const erp = useERPWorkstationContext?.();
   const [selectedContractId, setSelectedContractId] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [selectedBranch, setSelectedBranch] = useState<'Branch1_PreDelivery' | 'Branch2_PostDelivery'>('Branch1_PreDelivery');
   const [rescissionDate, setRescissionDate] = useState<string>(() => new Date().toISOString().split('T')[0]);
+  const [penaltyRatePercent, setPenaltyRatePercent] = useState<number>(10);
   const [rescissionSuccess, setRescissionSuccess] = useState<{
     contractNumber: string;
     buyer: string;
@@ -71,6 +75,7 @@ export const RescissionSettlementModal: React.FC<RescissionSettlementModalProps>
     grossContractValue: string;
     branch: 'Branch1_PreDelivery' | 'Branch2_PostDelivery';
     rescissionDate: string;
+    appliedPenaltyRate?: string;
   } | null>(null);
 
   useEffect(() => {
@@ -82,6 +87,7 @@ export const RescissionSettlementModal: React.FC<RescissionSettlementModalProps>
       }
       setSelectedBranch('Branch1_PreDelivery');
       setRescissionDate(new Date().toISOString().split('T')[0]);
+      setPenaltyRatePercent(10);
       setSearchQuery('');
       setRescissionSuccess(null);
     }
@@ -127,6 +133,13 @@ export const RescissionSettlementModal: React.FC<RescissionSettlementModalProps>
   }, [rescissionDate, periods, activePeriod]);
   const isTargetPeriodLocked = targetPeriod.status !== 'OPEN';
 
+  const penaltyRateFraction = useMemo(() => {
+    const val = Number(penaltyRatePercent);
+    if (isNaN(val) || val < 0) return D('0');
+    if (val > 100) return D('1');
+    return D(val).div(100);
+  }, [penaltyRatePercent]);
+
   // Compute rescission metrics
   const computed = useMemo(() => {
     if (!activeContract || !targetPeriod) return null;
@@ -142,13 +155,15 @@ export const RescissionSettlementModal: React.FC<RescissionSettlementModalProps>
         D(activeContract.gross_contract_value).times('0.45').toFixed(),
         '501000',
         '151000',
-        'CFO_FARID'
+        'CFO_FARID',
+        undefined,
+        penaltyRateFraction
       );
     } catch (err) {
       console.warn('Rescission preview computation error:', err);
       return null;
     }
-  }, [activeContract, contractSchedules, targetPeriod, rescissionDate]);
+  }, [activeContract, contractSchedules, targetPeriod, rescissionDate, penaltyRateFraction]);
 
   if (!isOpen || !activeContract || !computed) return null;
 
@@ -161,10 +176,13 @@ export const RescissionSettlementModal: React.FC<RescissionSettlementModalProps>
   };
 
   const handleSubmit = async () => {
+    const rateNum = penaltyRateFraction.toNumber();
+    erp?.setRescissionPenaltyRate?.(rateNum);
     await onConfirmRescission({
       selectedBranch,
       rescissionDate,
-      targetContract: activeContract
+      targetContract: activeContract,
+      penaltyRate: rateNum
     });
     setRescissionSuccess({
       contractNumber: activeContract.contract_number,
@@ -175,7 +193,8 @@ export const RescissionSettlementModal: React.FC<RescissionSettlementModalProps>
       totalCashCollected: computed.rescissionRecord.total_cash_collected,
       grossContractValue: computed.rescissionRecord.gross_contract_value,
       branch: selectedBranch,
-      rescissionDate
+      rescissionDate,
+      appliedPenaltyRate: `${penaltyRatePercent}%`
     });
   };
 
@@ -190,8 +209,8 @@ export const RescissionSettlementModal: React.FC<RescissionSettlementModalProps>
       onClose={handleModalClose}
       title={isAr ? 'معالج فسخ العقد وتطبيق حد حظر مطالبة العميل بعجز إضافي (Forfeiture Floor)' : 'Contract Rescission & Forfeiture Floor Settlement'}
       subtitle={isAr 
-        ? 'احتساب غرامة الفسخ القانونية (١٠٪) مع تطبيق حد حظر مطالبة العميل بعجز إضافي (العميل لن يُطالب بأي مبالغ إضافية إذا كانت مدفوعاته أقل من الغرامة)، ورد المستحق وإلغاء الأقساط المستقبلية تلقائياً.' 
-        : 'Calculate statutory penalty retention with Forfeiture Floor protection (client is never billed for deficits if payments were less than penalty).'}
+        ? `احتساب غرامة الفسخ (${penaltyRatePercent}%) مع تطبيق حد حظر مطالبة العميل بعجز إضافي (العميل لن يُطالب بأي مبالغ إضافية إذا كانت مدفوعاته أقل من الغرامة)، ورد المستحق وإلغاء الأقساط المستقبلية تلقائياً.` 
+        : `Calculate penalty retention (${penaltyRatePercent}%) with Forfeiture Floor protection (client is never billed for deficits if payments were less than penalty).`}
       icon={<RotateCcw size={18} />}
       headerExtra={
         <span style={{
@@ -623,27 +642,69 @@ export const RescissionSettlementModal: React.FC<RescissionSettlementModalProps>
                     </div>
                   </div>
 
-                  {/* Effective Rescission Date Input */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <label style={{ fontSize: '0.74rem', fontWeight: 700, color: '#475569', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                      <Calendar size={13} />
-                      <span>{isAr ? 'تاريخ الفسخ المعتمد:' : 'Effective Date:'}</span>
-                    </label>
-                    <input 
-                      type="date"
-                      value={rescissionDate}
-                      onChange={e => setRescissionDate(e.target.value)}
-                      style={{
-                        padding: '0.4rem 0.65rem',
-                        borderRadius: '8px',
-                        border: '1px solid #cbd5e1',
-                        background: '#ffffff',
-                        color: '#0f172a',
-                        fontSize: '0.78rem',
-                        outline: 'none'
-                      }}
-                      required
-                    />
+                  {/* Controls: Date & Penalty Rate % */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', flexWrap: 'wrap' }}>
+                    {/* Effective Rescission Date Input */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                      <label style={{ fontSize: '0.74rem', fontWeight: 700, color: '#475569', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                        <Calendar size={13} />
+                        <span>{isAr ? 'تاريخ الفسخ المعتمد:' : 'Effective Date:'}</span>
+                      </label>
+                      <input 
+                        type="date"
+                        value={rescissionDate}
+                        onChange={e => setRescissionDate(e.target.value)}
+                        style={{
+                          padding: '0.4rem 0.65rem',
+                          borderRadius: '8px',
+                          border: '1px solid #cbd5e1',
+                          background: '#ffffff',
+                          color: '#0f172a',
+                          fontSize: '0.78rem',
+                          outline: 'none'
+                        }}
+                        required
+                      />
+                    </div>
+
+                    {/* Penalty Rate % Numeric Input */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                      <label style={{ fontSize: '0.74rem', fontWeight: 700, color: '#475569', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                        <Scale size={13} />
+                        <span>{isAr ? 'نسبة غرامة الفسخ %:' : 'Penalty rate %:'}</span>
+                      </label>
+                      <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                        <input 
+                          type="number"
+                          min="0"
+                          max="100"
+                          step="0.5"
+                          value={penaltyRatePercent}
+                          onChange={e => {
+                            const val = parseFloat(e.target.value);
+                            if (isNaN(val)) {
+                              setPenaltyRatePercent(0);
+                            } else {
+                              setPenaltyRatePercent(Math.min(100, Math.max(0, val)));
+                            }
+                          }}
+                          style={{
+                            width: '70px',
+                            padding: '0.4rem 0.5rem',
+                            borderRadius: '8px',
+                            border: '1px solid #cbd5e1',
+                            background: '#ffffff',
+                            color: '#0f172a',
+                            fontSize: '0.78rem',
+                            fontWeight: 800,
+                            outline: 'none',
+                            textAlign: 'center'
+                          }}
+                          required
+                        />
+                        <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#64748b' }}>%</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
 
@@ -720,7 +781,7 @@ export const RescissionSettlementModal: React.FC<RescissionSettlementModalProps>
                       <span style={{ color: '#946f23', fontSize: '0.7rem', fontWeight: 800 }}>
                         {isAr ? 'غرامة الفسخ المحتجزة (حد حظر مطالبة العميل بعجز إضافي):' : 'Retained Penalty (Forfeiture Floor):'}
                       </span>
-                      <LegalVerificationTag label={isAr ? 'حد أقصى ١٠٪' : '10% Floor'} isAr={isAr} />
+                      <LegalVerificationTag label={isAr ? `نسبة ${penaltyRatePercent}%` : `${penaltyRatePercent}% Floor`} isAr={isAr} />
                     </div>
                     <strong style={{ color: '#946f23', fontSize: '1.1rem', fontWeight: 900 }}>
                       <MoneyCell amount={preview.penaltyRetained} isAr={isAr} highlight />

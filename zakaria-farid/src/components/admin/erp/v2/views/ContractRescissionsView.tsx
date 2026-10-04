@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { 
   RotateCcw, 
   FileText, 
@@ -17,11 +17,14 @@ import {
   Building2,
   Scale,
   Sparkles,
+  Calendar,
+  AlertCircle,
+  Loader2,
   X
 } from 'lucide-react';
-import { ERPRescissionRecord, ERPContract } from '@/lib/erp/types';
+import { ERPRescissionRecord, ERPContract, ERPJournalEntry } from '@/lib/erp/types';
 import { Property } from '@/lib/supabase/types';
-import { D } from '@/lib/erp/math';
+import { D, maxDecimal } from '@/lib/erp/math';
 import { MoneyCell } from '@/components/erp/MoneyCell';
 import { StatusBadge } from '@/components/erp/StatusBadge';
 import { localizeBuyerName } from '@/components/erp/JournalEntryPreview';
@@ -29,29 +32,50 @@ import { ZFPagination } from '../ZFPagination';
 import { ZFKpiCard, ZFKpiGrid } from '../ZFKpiCard';
 import { ZFFilterToolbar } from '../ZFFilterToolbar';
 import { ZFErpBreadcrumb } from '../common/ZFErpBreadcrumb';
+import { ZFModalShell } from '../common/ZFModalShell';
+import { useERPWorkstationContext } from '../../context/ERPWorkstationContext';
 import styles from '../ZFWorkstationShell.module.css';
 
 interface ContractRescissionsViewProps {
   rescissions: ERPRescissionRecord[];
   contracts: ERPContract[];
   properties?: Property[];
+  journalEntries?: ERPJournalEntry[];
   isAr?: boolean;
   hideHeader?: boolean;
+  isMutating?: boolean;
   onInspectRescission: (rescission: ERPRescissionRecord) => void;
   onNavigateToContracts: () => void;
   onOpenRescissionModal?: (contract: ERPContract) => void;
+  onPayRefund?: (params: {
+    rescission: ERPRescissionRecord;
+    amount: string;
+    sourceAccount: '101000' | '102000';
+    paymentDate: string;
+    notes?: string;
+  }) => Promise<void>;
 }
 
 export const ContractRescissionsView: React.FC<ContractRescissionsViewProps> = ({
   rescissions,
   contracts,
   properties = [],
+  journalEntries,
   isAr = true,
   hideHeader = false,
+  isMutating: isMutatingProp,
   onInspectRescission,
   onNavigateToContracts,
-  onOpenRescissionModal
+  onOpenRescissionModal,
+  onPayRefund
 }) => {
+  const erp = useERPWorkstationContext?.();
+  const effectiveJournalEntries = useMemo(() => {
+    return journalEntries || erp?.data?.journalEntries || [];
+  }, [journalEntries, erp?.data?.journalEntries]);
+  const effectiveOnPayRefund = onPayRefund || erp?.handlePayRefund;
+  const isMutating = isMutatingProp ?? erp?.isMutating ?? false;
+
   const [viewMode, setViewMode] = useState<'cards' | 'table'>('table');
   const [branchFilter, setBranchFilter] = useState<'all' | 'Pre-Delivery' | 'Post-Delivery'>('all');
   const [sortBy, setSortBy] = useState<'date_desc' | 'date_asc' | 'refund_desc' | 'refund_asc' | 'penalty_desc' | 'gross_desc'>('date_desc');
@@ -61,6 +85,14 @@ export const ContractRescissionsView: React.FC<ContractRescissionsViewProps> = (
   const [isContractPickerOpen, setIsContractPickerOpen] = useState(false);
   const [pickerSearchQuery, setPickerSearchQuery] = useState('');
 
+  // Refund payout modal state
+  const [payRefundTarget, setPayRefundTarget] = useState<ERPRescissionRecord | null>(null);
+  const [refundAmount, setRefundAmount] = useState<string>('');
+  const [refundSource, setRefundSource] = useState<'101000' | '102000'>('101000');
+  const [refundDate, setRefundDate] = useState<string>(() => new Date().toISOString().split('T')[0]);
+  const [refundNotes, setRefundNotes] = useState<string>('');
+  const [refundError, setRefundError] = useState<string>('');
+
   // Properties map for building title lookup
   const propertyMap = useMemo(() => {
     const map = new Map<string, Property>();
@@ -68,17 +100,83 @@ export const ContractRescissionsView: React.FC<ContractRescissionsViewProps> = (
     return map;
   }, [properties]);
 
-  // 4 Executive KPIs
+  // Helper to compute outstanding refund per rescission record
+  const getRescissionRefundInfo = useCallback((r: ERPRescissionRecord) => {
+    const originalRefund = D(r.net_refund_liability || '0');
+    let paidSum = D(0);
+    for (const j of effectiveJournalEntries) {
+      const isLinked = j.source_entity_id === r.contract_id || 
+                       j.source_entity_id === r.rescission_id ||
+                       j.lines.some(l => l.contract_id === r.contract_id);
+      if (!isLinked) continue;
+
+      for (const line of j.lines) {
+        if (line.account_code === '206200' && D(line.debit_amount || '0').gt(0)) {
+          paidSum = paidSum.plus(line.debit_amount);
+        }
+      }
+    }
+    const outstanding = maxDecimal(D(0), originalRefund.minus(paidSum));
+    return {
+      originalRefund,
+      paidSum,
+      outstandingRefund: outstanding
+    };
+  }, [effectiveJournalEntries]);
+
+  const handleOpenPayRefund = (r: ERPRescissionRecord) => {
+    const { outstandingRefund } = getRescissionRefundInfo(r);
+    setPayRefundTarget(r);
+    setRefundAmount(outstandingRefund.toFixed(2));
+    setRefundSource('101000');
+    setRefundDate(new Date().toISOString().split('T')[0]);
+    setRefundNotes('');
+    setRefundError('');
+  };
+
+  const handleConfirmPayRefund = async () => {
+    if (!payRefundTarget || !effectiveOnPayRefund) return;
+    const { outstandingRefund } = getRescissionRefundInfo(payRefundTarget);
+    const amt = D(refundAmount || '0');
+    if (amt.lte(0)) {
+      setRefundError(isAr ? 'المبلغ يجب أن يكون أكبر من 0' : 'Amount must be greater than 0');
+      return;
+    }
+    if (amt.gt(outstandingRefund)) {
+      setRefundError(
+        isAr
+          ? `المبلغ المدخل (${amt.formatEGP(true)}) يتجاوز رصيد المسترد المتبقي (${outstandingRefund.formatEGP(true)})`
+          : `Amount exceeds outstanding refund (${outstandingRefund.toFixed(2)})`
+      );
+      return;
+    }
+
+    try {
+      await effectiveOnPayRefund({
+        rescission: payRefundTarget,
+        amount: amt.toFixed(2),
+        sourceAccount: refundSource,
+        paymentDate: refundDate,
+        notes: refundNotes
+      });
+      setPayRefundTarget(null);
+    } catch (e) {
+      setRefundError((e as Error).message || String(e));
+    }
+  };
+
+  // 4 Executive KPIs (Customer Refund Liability shows outstanding, not original)
   const kpis = useMemo(() => {
     let totalPenalty = D(0);
-    let totalRefund = D(0);
+    let totalOutstandingRefund = D(0);
     let totalGrossVoid = D(0);
     let preDeliveryCount = 0;
     let postDeliveryCount = 0;
 
     rescissions.forEach(r => {
       totalPenalty = totalPenalty.plus(r.penalty_retained || '0');
-      totalRefund = totalRefund.plus(r.net_refund_liability || '0');
+      const { outstandingRefund } = getRescissionRefundInfo(r);
+      totalOutstandingRefund = totalOutstandingRefund.plus(outstandingRefund);
       totalGrossVoid = totalGrossVoid.plus(r.gross_contract_value || '0');
       if (r.branch === 'Pre-Delivery') preDeliveryCount++;
       if (r.branch === 'Post-Delivery') postDeliveryCount++;
@@ -86,13 +184,13 @@ export const ContractRescissionsView: React.FC<ContractRescissionsViewProps> = (
 
     return {
       totalPenalty,
-      totalRefund,
+      totalRefund: totalOutstandingRefund,
       totalGrossVoid,
       count: rescissions.length,
       preDeliveryCount,
       postDeliveryCount
     };
-  }, [rescissions]);
+  }, [rescissions, getRescissionRefundInfo]);
 
   // Filtered list
   const filteredRescissions = useMemo(() => {
@@ -271,13 +369,13 @@ export const ContractRescissionsView: React.FC<ContractRescissionsViewProps> = (
 
         {/* Card 2: Customer Refund Liability */}
         <ZFKpiCard
-          title={isAr ? 'صافي التزامات الرد للعميل' : 'Customer Refund Liability'}
+          title={isAr ? 'صافي التزامات الرد المتبقية' : 'Customer Refund Liability (Outstanding)'}
           value={splitAmount(kpis.totalRefund).num}
           unitLabel={splitAmount(kpis.totalRefund).cur}
           icon={<CheckCircle2 size={16} />}
           accentColor="amber"
           subtitleLabel={isAr ? 'موقف الفلوس' : 'Status'}
-          subtitleValue={isAr ? 'التزام رد نقدي (حساب 206200)' : 'Due for refund (GL 206200)'}
+          subtitleValue={isAr ? 'التزام رد نقدي متبقٍ (حساب 206200)' : 'Outstanding refund (GL 206200)'}
         />
 
         {/* Card 3: Voided Sales & Asset Recovery */}
@@ -405,6 +503,7 @@ export const ContractRescissionsView: React.FC<ContractRescissionsViewProps> = (
               ) : (
                 paginatedRescissions.map(r => {
                   const linked = contracts.find(ct => ct.contract_id === r.contract_id);
+                  const refundInfo = getRescissionRefundInfo(r);
                   const propertyTitle = linked?.property_id ? (propertyMap.get(linked.property_id)?.title_ar || propertyMap.get(linked.property_id)?.title_en) : '';
                   const buyerDisplayName = isAr ? localizeBuyerName(linked?.buyer_name || 'عميل مباشر') : (linked?.buyer_name || 'Direct Client');
 
@@ -564,11 +663,19 @@ export const ContractRescissionsView: React.FC<ContractRescissionsViewProps> = (
                         </div>
                       </td>
 
-                      {/* 8. Net Refund Liability */}
-                      <td style={{ whiteSpace: 'nowrap', minWidth: '125px', textAlign: isAr ? 'left' : 'right' }}>
-                        <strong style={{ color: '#047857', fontWeight: 800 }}>
-                          <MoneyCell amount={r.net_refund_liability} isAr={isAr} />
-                        </strong>
+                      {/* 8. Net Refund Liability & Outstanding */}
+                      <td style={{ whiteSpace: 'nowrap', minWidth: '135px', textAlign: isAr ? 'left' : 'right' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                          <strong style={{ color: '#047857', fontWeight: 800 }}>
+                            <MoneyCell amount={r.net_refund_liability} isAr={isAr} />
+                          </strong>
+                          {refundInfo.paidSum.gt(0) && (
+                            <span style={{ fontSize: '0.68rem', color: refundInfo.outstandingRefund.gt(0) ? '#b45309' : '#059669', fontWeight: 700 }}>
+                              {isAr ? 'المتبقي: ' : 'Rem: '}
+                              <MoneyCell amount={refundInfo.outstandingRefund.toFixed(2)} isAr={isAr} />
+                            </span>
+                          )}
+                        </div>
                       </td>
 
                       {/* 9. Unit State */}
@@ -577,30 +684,57 @@ export const ContractRescissionsView: React.FC<ContractRescissionsViewProps> = (
                       </td>
 
                       {/* 10. Action Button */}
-                      <td style={{ textAlign: 'center', whiteSpace: 'nowrap', width: '95px' }} onClick={(e) => e.stopPropagation()}>
-                        <button
-                          type="button"
-                          onClick={() => onInspectRescission(r)}
-                          style={{
-                            background: 'var(--erp-accent-tint, rgba(37, 99, 235, 0.05))',
-                            border: '1px solid rgba(37, 99, 235, 0.28)',
-                            color: 'var(--erp-accent, #2563eb)',
-                            borderRadius: '7px',
-                            padding: '0.32rem 0.75rem',
-                            fontSize: '0.72rem',
-                            fontWeight: 800,
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '0.35rem',
-                            cursor: 'pointer',
-                            boxShadow: '0 1px 2px rgba(37, 99, 235, 0.05)',
-                            transition: 'all 0.15s ease'
-                          }}
-                          title={isAr ? 'عرض تفاصيل الفسخ وحساب المسترد' : 'Inspect Rescission Settlement'}
-                        >
-                          <Eye size={12} color="var(--erp-accent, #2563eb)" />
-                          <span>{isAr ? 'عرض التسوية' : 'Inspect'}</span>
-                        </button>
+                      <td style={{ textAlign: 'center', whiteSpace: 'nowrap', minWidth: '145px' }} onClick={(e) => e.stopPropagation()}>
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', justifyContent: 'center' }}>
+                          {refundInfo.outstandingRefund.gt(0) && (
+                            <button
+                              type="button"
+                              onClick={() => handleOpenPayRefund(r)}
+                              style={{
+                                background: 'linear-gradient(135deg, #059669 0%, #047857 100%)',
+                                border: 'none',
+                                color: '#ffffff',
+                                borderRadius: '7px',
+                                padding: '0.32rem 0.65rem',
+                                fontSize: '0.72rem',
+                                fontWeight: 800,
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '0.3rem',
+                                cursor: 'pointer',
+                                boxShadow: '0 1px 3px rgba(5, 150, 105, 0.25)',
+                                transition: 'all 0.15s ease'
+                              }}
+                              title={isAr ? 'سداد المسترد للعميل' : 'Pay Refund'}
+                            >
+                              <DollarSign size={12} color="#ffffff" />
+                              <span>{isAr ? 'سداد المسترد' : 'Pay refund'}</span>
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => onInspectRescission(r)}
+                            style={{
+                              background: 'var(--erp-accent-tint, rgba(37, 99, 235, 0.05))',
+                              border: '1px solid rgba(37, 99, 235, 0.28)',
+                              color: 'var(--erp-accent, #2563eb)',
+                              borderRadius: '7px',
+                              padding: '0.32rem 0.65rem',
+                              fontSize: '0.72rem',
+                              fontWeight: 800,
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '0.3rem',
+                              cursor: 'pointer',
+                              boxShadow: '0 1px 2px rgba(37, 99, 235, 0.05)',
+                              transition: 'all 0.15s ease'
+                            }}
+                            title={isAr ? 'عرض تفاصيل الفسخ وحساب المسترد' : 'Inspect Rescission Settlement'}
+                          >
+                            <Eye size={12} color="var(--erp-accent, #2563eb)" />
+                            <span>{isAr ? 'عرض' : 'Inspect'}</span>
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -615,6 +749,7 @@ export const ContractRescissionsView: React.FC<ContractRescissionsViewProps> = (
             const linked = contracts.find(ct => ct.contract_id === r.contract_id);
             const propertyTitle = linked?.property_id ? (propertyMap.get(linked.property_id)?.title_ar || propertyMap.get(linked.property_id)?.title_en) : '';
             const buyerDisplayName = isAr ? localizeBuyerName(linked?.buyer_name || 'عميل مباشر') : (linked?.buyer_name || 'Direct Client');
+            const refundInfo = getRescissionRefundInfo(r);
 
             return (
               <div 
@@ -704,42 +839,81 @@ export const ContractRescissionsView: React.FC<ContractRescissionsViewProps> = (
                     <strong style={{ color: '#0f172a' }}><MoneyCell amount={r.total_cash_collected} isAr={isAr} /></strong>
                   </div>
                   <div>
-                    <span style={{ color: 'var(--erp-accent, #2563eb)', display: 'block', fontSize: '0.7rem', fontWeight: 700 }}>{isAr ? 'غرامة الفسخ (١٠٪):' : 'Penalty:'}</span>
+                    <span style={{ color: 'var(--erp-accent, #2563eb)', display: 'block', fontSize: '0.7rem', fontWeight: 700 }}>{isAr ? 'غرامة الفسخ:' : 'Penalty:'}</span>
                     <strong style={{ color: 'var(--erp-accent, #2563eb)', fontWeight: 800 }}><MoneyCell amount={r.penalty_retained} isAr={isAr} highlight /></strong>
                   </div>
                   <div>
-                    <span style={{ color: '#047857', display: 'block', fontSize: '0.7rem', fontWeight: 700 }}>{isAr ? 'المسترد للعميل:' : 'Refund:'}</span>
+                    <span style={{ color: '#047857', display: 'block', fontSize: '0.7rem', fontWeight: 700 }}>{isAr ? 'المسترد الأصلي:' : 'Original Refund:'}</span>
                     <strong style={{ color: '#047857', fontWeight: 800 }}><MoneyCell amount={r.net_refund_liability} isAr={isAr} /></strong>
+                  </div>
+                  <div>
+                    <span style={{ color: refundInfo.outstandingRefund.gt(0) ? '#dc2626' : '#64748b', display: 'block', fontSize: '0.7rem', fontWeight: 700 }}>
+                      {isAr ? 'المتبقي للرد:' : 'Outstanding:'}
+                    </span>
+                    <strong style={{ color: refundInfo.outstandingRefund.gt(0) ? '#dc2626' : '#64748b', fontWeight: 800 }}>
+                      <MoneyCell amount={refundInfo.outstandingRefund.toFixed(2)} isAr={isAr} />
+                    </strong>
                   </div>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onInspectRescission(r);
-                  }}
-                  style={{
-                    background: 'var(--erp-accent-tint, rgba(37, 99, 235, 0.05))',
-                    border: '1px solid rgba(37, 99, 235, 0.28)',
-                    color: 'var(--erp-accent, #2563eb)',
-                    borderRadius: '8px',
-                    padding: '0.5rem',
-                    fontSize: '0.76rem',
-                    fontWeight: 800,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '0.35rem',
-                    cursor: 'pointer',
-                    marginTop: 'auto',
-                    boxShadow: '0 1px 2px rgba(37, 99, 235, 0.04)',
-                    transition: 'all 0.15s ease'
-                  }}
-                >
-                  <Eye size={13} color="var(--erp-accent, #2563eb)" />
-                  <span>{isAr ? 'عرض تفاصيل الإلغاء والتسوية' : 'Inspect Rescission'}</span>
-                </button>
+                <div style={{ display: 'flex', gap: '0.45rem', marginTop: 'auto' }}>
+                  {refundInfo.outstandingRefund.gt(0) && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleOpenPayRefund(r);
+                      }}
+                      style={{
+                        flex: 1,
+                        background: 'linear-gradient(135deg, #059669 0%, #047857 100%)',
+                        border: 'none',
+                        color: '#ffffff',
+                        borderRadius: '8px',
+                        padding: '0.5rem',
+                        fontSize: '0.76rem',
+                        fontWeight: 800,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '0.35rem',
+                        cursor: 'pointer',
+                        boxShadow: '0 1px 3px rgba(5, 150, 105, 0.25)',
+                        transition: 'all 0.15s ease'
+                      }}
+                    >
+                      <DollarSign size={13} color="#ffffff" />
+                      <span>{isAr ? 'سداد المسترد' : 'Pay refund'}</span>
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onInspectRescission(r);
+                    }}
+                    style={{
+                      flex: 1,
+                      background: 'var(--erp-accent-tint, rgba(37, 99, 235, 0.05))',
+                      border: '1px solid rgba(37, 99, 235, 0.28)',
+                      color: 'var(--erp-accent, #2563eb)',
+                      borderRadius: '8px',
+                      padding: '0.5rem',
+                      fontSize: '0.76rem',
+                      fontWeight: 800,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '0.35rem',
+                      cursor: 'pointer',
+                      boxShadow: '0 1px 2px rgba(37, 99, 235, 0.04)',
+                      transition: 'all 0.15s ease'
+                    }}
+                  >
+                    <Eye size={13} color="var(--erp-accent, #2563eb)" />
+                    <span>{isAr ? 'عرض التفاصيل' : 'Inspect'}</span>
+                  </button>
+                </div>
               </div>
             );
           })}
@@ -923,6 +1097,276 @@ export const ContractRescissionsView: React.FC<ContractRescissionsViewProps> = (
             </div>
           </div>
         </div>
+      )}
+
+      {/* Pay Refund Confirm Modal */}
+      {payRefundTarget && (
+        <ZFModalShell
+          isOpen={!!payRefundTarget}
+          onClose={() => setPayRefundTarget(null)}
+          title={isAr ? 'سداد مسترد الفسخ للعميل' : 'Pay Rescission Refund'}
+          subtitle={
+            isAr
+              ? `عقد #${contracts.find(c => c.contract_id === payRefundTarget.contract_id)?.contract_number || payRefundTarget.contract_id.slice(0, 8)} — العميل: ${localizeBuyerName(contracts.find(c => c.contract_id === payRefundTarget.contract_id)?.buyer_name, isAr)}`
+              : `Contract #${contracts.find(c => c.contract_id === payRefundTarget.contract_id)?.contract_number || payRefundTarget.contract_id.slice(0, 8)} — Buyer: ${contracts.find(c => c.contract_id === payRefundTarget.contract_id)?.buyer_name || 'Client'}`
+          }
+          icon={<DollarSign size={20} color="#059669" />}
+          maxWidth="560px"
+          isAr={isAr}
+          footer={
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '0.65rem', width: '100%' }}>
+              <button
+                type="button"
+                onClick={() => setPayRefundTarget(null)}
+                disabled={isMutating}
+                style={{
+                  padding: '0.55rem 1rem',
+                  borderRadius: '8px',
+                  border: '1px solid #cbd5e1',
+                  background: '#ffffff',
+                  color: '#475569',
+                  fontSize: '0.82rem',
+                  fontWeight: 700,
+                  cursor: 'pointer'
+                }}
+              >
+                {isAr ? 'إلغاء' : 'Cancel'}
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmPayRefund}
+                disabled={isMutating || D(refundAmount || '0').lte(0)}
+                style={{
+                  padding: '0.55rem 1.25rem',
+                  borderRadius: '8px',
+                  border: 'none',
+                  background: 'linear-gradient(135deg, #059669 0%, #047857 100%)',
+                  color: '#ffffff',
+                  fontSize: '0.82rem',
+                  fontWeight: 800,
+                  cursor: isMutating || D(refundAmount || '0').lte(0) ? 'not-allowed' : 'pointer',
+                  opacity: isMutating || D(refundAmount || '0').lte(0) ? 0.6 : 1,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.4rem',
+                  boxShadow: '0 2px 4px rgba(5, 150, 105, 0.25)'
+                }}
+              >
+                {isMutating ? (
+                  <>
+                    <Loader2 size={15} className="animate-spin" />
+                    <span>{isAr ? 'جاري المعالجة والترحيل...' : 'Processing...'}</span>
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 size={15} />
+                    <span>{isAr ? 'تأكيد وترحيل السداد' : 'Confirm Payout'}</span>
+                  </>
+                )}
+              </button>
+            </div>
+          }
+        >
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            {/* Refund Balances Summary */}
+            {(() => {
+              const info = getRescissionRefundInfo(payRefundTarget);
+              return (
+                <div
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(3, 1fr)',
+                    gap: '0.65rem',
+                    background: '#f8fafc',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '10px',
+                    padding: '0.75rem 1rem'
+                  }}
+                >
+                  <div>
+                    <div style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: 600 }}>
+                      {isAr ? 'إجمالي المسترد الأصلي:' : 'Original Refund:'}
+                    </div>
+                    <div style={{ fontSize: '0.9rem', fontWeight: 800, color: '#0f172a', fontVariantNumeric: 'tabular-nums', marginTop: '0.15rem' }}>
+                      {info.originalRefund.formatEGP(isAr)}
+                    </div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: 600 }}>
+                      {isAr ? 'المسدد سابقاً:' : 'Already Paid:'}
+                    </div>
+                    <div style={{ fontSize: '0.9rem', fontWeight: 800, color: '#047857', fontVariantNumeric: 'tabular-nums', marginTop: '0.15rem' }}>
+                      {info.paidSum.formatEGP(isAr)}
+                    </div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '0.7rem', color: '#dc2626', fontWeight: 700 }}>
+                      {isAr ? 'المتبقي المستحق للرد:' : 'Outstanding Refund:'}
+                    </div>
+                    <div style={{ fontSize: '0.95rem', fontWeight: 900, color: '#dc2626', fontVariantNumeric: 'tabular-nums', marginTop: '0.15rem' }}>
+                      {info.outstandingRefund.formatEGP(isAr)}
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* Error banner if any */}
+            {refundError && (
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  padding: '0.65rem 0.85rem',
+                  borderRadius: '8px',
+                  background: '#fef2f2',
+                  border: '1px solid #fecaca',
+                  color: '#dc2626',
+                  fontSize: '0.78rem',
+                  fontWeight: 700
+                }}
+              >
+                <AlertCircle size={16} />
+                <span>{refundError}</span>
+              </div>
+            )}
+
+            {/* Inputs: Amount & Source */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.85rem' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 800, color: '#334155', marginBottom: '0.35rem' }}>
+                  {isAr ? 'مبلغ السداد (ج.م) *' : 'Payout Amount (EGP) *'}
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0.01"
+                  max={getRescissionRefundInfo(payRefundTarget).outstandingRefund.toString()}
+                  value={refundAmount}
+                  onChange={(e) => {
+                    setRefundAmount(e.target.value);
+                    setRefundError('');
+                  }}
+                  style={{
+                    width: '100%',
+                    padding: '0.55rem 0.75rem',
+                    borderRadius: '8px',
+                    border: '1px solid #cbd5e1',
+                    fontSize: '0.88rem',
+                    fontWeight: 800,
+                    fontVariantNumeric: 'tabular-nums',
+                    outline: 'none'
+                  }}
+                />
+                <span style={{ fontSize: '0.68rem', color: '#64748b', marginTop: '0.2rem', display: 'block' }}>
+                  {isAr ? 'يمكن تعديل المبلغ للسداد الجزئي بما لا يتجاوز المتبقي' : 'Editable for partial refund up to outstanding balance'}
+                </span>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 800, color: '#334155', marginBottom: '0.35rem' }}>
+                  {isAr ? 'مصدر الصرف (حساب السداد) *' : 'Payment Source Account *'}
+                </label>
+                <select
+                  value={refundSource}
+                  onChange={(e) => setRefundSource(e.target.value as '101000' | '102000')}
+                  style={{
+                    width: '100%',
+                    padding: '0.55rem 0.75rem',
+                    borderRadius: '8px',
+                    border: '1px solid #cbd5e1',
+                    fontSize: '0.82rem',
+                    fontWeight: 700,
+                    outline: 'none',
+                    background: '#ffffff'
+                  }}
+                >
+                  <option value="101000">{isAr ? '101000 - الخزينة الرئيسية (Main Safe)' : '101000 - Main Safe'}</option>
+                  <option value="102000">{isAr ? '102000 - الحساب البنكي (Bank Account)' : '102000 - Bank Account'}</option>
+                </select>
+                <span style={{ fontSize: '0.68rem', color: '#64748b', marginTop: '0.2rem', display: 'block' }}>
+                  {isAr ? 'الخصم من الخزينة أو البنك' : 'Disburse from Main Safe or Bank'}
+                </span>
+              </div>
+            </div>
+
+            {/* Inputs: Date & Notes */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.85rem' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 800, color: '#334155', marginBottom: '0.35rem' }}>
+                  {isAr ? 'تاريخ السداد *' : 'Payment Date *'}
+                </label>
+                <input
+                  type="date"
+                  value={refundDate}
+                  onChange={(e) => setRefundDate(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '0.55rem 0.75rem',
+                    borderRadius: '8px',
+                    border: '1px solid #cbd5e1',
+                    fontSize: '0.82rem',
+                    fontWeight: 700,
+                    outline: 'none'
+                  }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 800, color: '#334155', marginBottom: '0.35rem' }}>
+                  {isAr ? 'ملاحظات السداد (اختياري)' : 'Payment Notes (Optional)'}
+                </label>
+                <input
+                  type="text"
+                  placeholder={isAr ? 'مثال: شيك مصرفي رقم / تحويل...' : 'e.g. Cheque / wire ref...'}
+                  value={refundNotes}
+                  onChange={(e) => setRefundNotes(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '0.55rem 0.75rem',
+                    borderRadius: '8px',
+                    border: '1px solid #cbd5e1',
+                    fontSize: '0.82rem',
+                    outline: 'none'
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* Live Accounting Preview (Dr 206200 / Cr 101000|102000) */}
+            <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '0.85rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                <span style={{ fontSize: '0.74rem', fontWeight: 800, color: '#334155' }}>
+                  {isAr ? 'معاينة القيد المحاسبي المتوازن (Cash Disbursal):' : 'Balanced Journal Entry Preview:'}
+                </span>
+                <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#047857', background: '#d1fae5', padding: '0.15rem 0.45rem', borderRadius: '4px' }}>
+                  {isAr ? 'متزن Dr = Cr' : 'Balanced Dr = Cr'}
+                </span>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', fontSize: '0.74rem', fontVariantNumeric: 'tabular-nums' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.3rem 0.5rem', background: '#ffffff', borderRadius: '6px', border: '1px solid #f1f5f9' }}>
+                  <span style={{ color: '#0f172a', fontWeight: 700 }}>
+                    {isAr ? 'مدين (Dr) 206200 — أمانات ورد مستحقات عملاء الفسخ' : 'Dr 206200 — Customer Refund Liability'}
+                  </span>
+                  <strong style={{ color: '#047857' }}>
+                    {D(refundAmount || '0').formatEGP(isAr)}
+                  </strong>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.3rem 0.5rem', background: '#ffffff', borderRadius: '6px', border: '1px solid #f1f5f9' }}>
+                  <span style={{ color: '#0f172a', fontWeight: 700 }}>
+                    {refundSource === '101000'
+                      ? (isAr ? 'دائن (Cr) 101000 — الخزينة الرئيسية' : 'Cr 101000 — Main Safe')
+                      : (isAr ? 'دائن (Cr) 102000 — الحساب البنكي' : 'Cr 102000 — Bank Account')}
+                  </span>
+                  <strong style={{ color: '#dc2626' }}>
+                    {D(refundAmount || '0').formatEGP(isAr)}
+                  </strong>
+                </div>
+              </div>
+            </div>
+          </div>
+        </ZFModalShell>
       )}
     </div>
   );

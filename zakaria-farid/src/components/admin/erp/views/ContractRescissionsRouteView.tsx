@@ -49,8 +49,11 @@ export function ContractRescissionsRouteView() {
       rescissions={erp.data.rescissions}
       contracts={erp.data.contracts}
       properties={erp.data.properties}
+      journalEntries={erp.data.journalEntries}
       isAr={erp.isAr}
       onInspectRescission={erp.handleInspectRescission}
+      onPayRefund={erp.handlePayRefund}
+      isMutating={erp.isMutating}
       onOpenRescissionModal={(c) => {
         erp.setSelectedBranch(c.handover_status === 'Delivered' ? 'Branch2_PostDelivery' : 'Branch1_PreDelivery');
         erp.setRescissionStep(0);

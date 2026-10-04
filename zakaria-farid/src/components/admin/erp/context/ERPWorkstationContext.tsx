@@ -286,6 +286,8 @@ export interface ERPWorkstationContextValue {
   setRescissionStep: (step: 0 | 1) => void;
   rescissionDate: string;
   setRescissionDate: (val: string) => void;
+  rescissionPenaltyRate: number;
+  setRescissionPenaltyRate: (rate: number) => void;
 
   showRSVModal: boolean;
   setShowRSVModal: (val: boolean) => void;
@@ -356,7 +358,14 @@ export interface ERPWorkstationContextValue {
   // Mutation Handlers
   handleCreateRealContract: (e?: React.FormEvent, overridePayload?: NewContractWizardPayload) => Promise<void>;
   handleExecuteEscalation: (overrideContract?: ERPContract, deltaParam?: string, reasonParam?: string) => Promise<void>;
-  handleExecuteRescission: (overrideContract?: ERPContract) => Promise<void>;
+  handleExecuteRescission: (overrideContract?: ERPContract, penaltyRateOverride?: number | string) => Promise<void>;
+  handlePayRefund: (params: {
+    rescission: ERPRescissionRecord;
+    amount: string;
+    sourceAccount: '101000' | '102000';
+    paymentDate: string;
+    notes?: string;
+  }) => Promise<void>;
   handleCollectPayment: (details?: { receiptDate?: string; destinationTreasury?: 'SAFE_101000' | 'BANK_102000'; paymentMethod?: 'CASH' | 'INSTAPAY'; notes?: string }) => Promise<void>;
   handleConfirmHandover: (contract: ERPContract, handoverDate: string, rsvWipCost: Decimal | string) => Promise<void>;
   handleToggleContractHandover: (contract: ERPContract) => Promise<void>;
@@ -399,6 +408,10 @@ export function useERPWorkstation(): ERPWorkstationContextValue {
     throw new Error('useERPWorkstation must be used within an <ERPWorkstationProvider>');
   }
   return ctx;
+}
+
+export function useERPWorkstationContext(): ERPWorkstationContextValue | null {
+  return useContext(ERPWorkstationContext);
 }
 
 export function ERPWorkstationProvider({
@@ -1097,6 +1110,7 @@ export function ERPWorkstationProvider({
   const [selectedBranch, setSelectedBranch] = useState<'Branch1_PreDelivery' | 'Branch2_PostDelivery'>('Branch1_PreDelivery');
   const [rescissionStep, setRescissionStep] = useState<0 | 1>(0);
   const [rescissionDate, setRescissionDate] = useState(new Date().toISOString().split('T')[0]);
+  const [rescissionPenaltyRate, setRescissionPenaltyRate] = useState<number>(0.10);
 
   const [showRSVModal, setShowRSVModal] = useState<boolean>(false);
   const [rsvProjectName, setRsvProjectName] = useState<string>('مشروع بالاشيال فيلاز & نايل هورايزونز');
@@ -1768,7 +1782,7 @@ export function ERPWorkstationProvider({
   }, [showEscalationModal, escalationDelta, escalationReason, data.schedules, data.periods, supabase, activePeriod, loadLiveData, inspectorPayload, isAr, ensureActivePeriodOpen, handleTogglePeriodStatus]);
 
   // Handler: Execute Rescission
-  const handleExecuteRescission = useCallback(async (overrideContract?: ERPContract) => {
+  const handleExecuteRescission = useCallback(async (overrideContract?: ERPContract, penaltyRateOverride?: number | string) => {
     const contract = overrideContract || showRescissionModal;
     if (!contract) return;
 
@@ -1776,6 +1790,8 @@ export function ERPWorkstationProvider({
     if (!ensureActivePeriodOpen(isAr ? 'فسخ العقد' : 'Contract Rescission', targetPeriod)) {
       return;
     }
+
+    const effectiveRate = penaltyRateOverride !== undefined ? Number(penaltyRateOverride) : rescissionPenaltyRate;
 
     setIsMutating(true);
     try {
@@ -1795,7 +1811,8 @@ export function ERPWorkstationProvider({
         '501000',
         '151000',
         'CFO_FARID',
-        handoverEntry
+        handoverEntry,
+        effectiveRate
       );
 
       const voidIds = contractSchedules
@@ -1810,11 +1827,30 @@ export function ERPWorkstationProvider({
         voidIds
       );
 
+      // On successful rescission, set buyer's CRM lead stage to 'closed_lost' (skip silently if no lead_id)
+      if (contract.lead_id) {
+        try {
+          await supabase
+            .from('leads')
+            .update({
+              stage: 'closed_lost',
+              stage_updated_at: new Date().toISOString(),
+              notes: `تم فسخ العقد رقم ${contract.contract_number} وإلغاء المعاملة بالمنظومة`
+            })
+            .eq('id', contract.lead_id);
+        } catch (leadErr) {
+          console.warn('Notice while updating CRM lead stage to closed_lost on rescission:', leadErr);
+        }
+      }
+
       setData(prev => ({
         ...prev,
         contracts: prev.contracts.map(c => 
           c.contract_id === contract.contract_id ? { ...c, status: 'Rescinded' as const } : c
         ),
+        leads: contract.lead_id
+          ? prev.leads.map(l => l.id === contract.lead_id ? { ...l, stage: 'closed_lost' as const } : l)
+          : prev.leads,
         schedules: prev.schedules.map(s => {
           if (s.contract_id === contract.contract_id && (s.status === 'Pending' || s.status === 'SUPERSEDED')) {
             return { ...s, status: 'Void' as const };
@@ -1867,7 +1903,92 @@ export function ERPWorkstationProvider({
     } finally {
       setIsMutating(false);
     }
-  }, [showRescissionModal, data.schedules, data.journalEntries, data.periods, activePeriod, rescissionDate, supabase, inspectorPayload, loadLiveData, navigateToTab, isAr, ensureActivePeriodOpen, handleTogglePeriodStatus]);
+  }, [showRescissionModal, rescissionPenaltyRate, data.schedules, data.journalEntries, data.periods, activePeriod, rescissionDate, supabase, inspectorPayload, loadLiveData, navigateToTab, isAr, ensureActivePeriodOpen, handleTogglePeriodStatus]);
+
+  // Handler: Pay Rescission Refund
+  const handlePayRefund = useCallback(async (params: {
+    rescission: ERPRescissionRecord;
+    amount: string;
+    sourceAccount: '101000' | '102000';
+    paymentDate: string;
+    notes?: string;
+  }) => {
+    const { rescission, amount, sourceAccount, paymentDate, notes } = params;
+    const targetPeriod = resolvePeriodForDate(paymentDate, data.periods, activePeriod);
+    if (!ensureActivePeriodOpen(isAr ? 'سداد المسترد للعميل' : 'Customer Refund Payout', targetPeriod)) {
+      return;
+    }
+
+    const payAmount = D(amount);
+    if (payAmount.lte(0)) {
+      toast.error(isAr ? 'المبلغ المطلوب سداده يجب أن يكون أكبر من صفر' : 'Payout amount must be greater than zero');
+      return;
+    }
+
+    const contract = data.contracts.find(c => c.contract_id === rescission.contract_id);
+    const contractNo = contract?.contract_number || rescission.contract_id.slice(0, 8);
+    const buyerName = contract?.buyer_name || (isAr ? 'العميل المتعاقد' : 'Contracted Client');
+
+    setIsMutating(true);
+    try {
+      const entryNumber = `JE-REFUND-PAY-${contractNo}-${Date.now().toString(36).toUpperCase()}`;
+      const sourceNameAr = sourceAccount === '101000' ? 'الخزينة الرئيسية (101000)' : 'الحساب البنكي (102000)';
+      const sourceNameEn = sourceAccount === '101000' ? 'Main Safe (101000)' : 'Bank (102000)';
+
+      const journalEntry = GeneralLedgerEngine.validateAndCreateEntry({
+        entry_number: entryNumber,
+        entry_date: paymentDate,
+        period: targetPeriod,
+        description: isAr
+          ? `سداد مسترد مالي للعميل: ${buyerName} عن العقد المفسوخ رقم ${contractNo} من ${sourceNameAr}${notes ? ` - ${notes}` : ''}`
+          : `Refund payout to customer ${buyerName} for rescinded contract ${contractNo} from ${sourceNameEn}${notes ? ` - ${notes}` : ''}`,
+        source_module: 'RESCISSION',
+        source_entity_id: rescission.contract_id,
+        created_by: 'CFO_FARID',
+        lines: [
+          {
+            account_code: '206200',
+            debit_amount: payAmount.toFixed(2),
+            credit_amount: '0.00',
+            contract_id: rescission.contract_id,
+            memo: isAr ? `تسوية التزام الرد للعميل - عقد ${contractNo}` : `Clear refund liability for contract ${contractNo}`
+          },
+          {
+            account_code: sourceAccount,
+            debit_amount: '0.00',
+            credit_amount: payAmount.toFixed(2),
+            contract_id: rescission.contract_id,
+            memo: isAr ? `صرف نقدي من ${sourceNameAr}` : `Disbursement from ${sourceNameEn}`
+          }
+        ]
+      });
+
+      await ERPSupabaseService.persistJournalEntry(supabase, journalEntry);
+
+      setData(prev => ({
+        ...prev,
+        journalEntries: [journalEntry, ...prev.journalEntries]
+      }));
+
+      await loadLiveData();
+
+      toast.success(
+        isAr ? `تم تسجيل قيد سداد المسترد بقيمة ${payAmount.formatEGP(true)} بنجاح` : `Refund payout of ${payAmount.formatEGP(false)} posted successfully`,
+        {
+          description: isAr 
+            ? `قيد رقم: ${journalEntry.entry_number} • تم خصم المبلغ من ${sourceNameAr}`
+            : `Entry #${journalEntry.entry_number} posted`,
+          duration: 5000
+        }
+      );
+    } catch (err: unknown) {
+      console.error('Failed to post refund payout:', err);
+      const msg = (err as Error).message || String(err);
+      toast.error(isAr ? 'فشل تسجيل قيد سداد المسترد' : 'Failed to post refund payout', { description: msg });
+    } finally {
+      setIsMutating(false);
+    }
+  }, [data.contracts, data.periods, activePeriod, supabase, isAr, ensureActivePeriodOpen, loadLiveData]);
 
 
   // Handler: Collect Payment
@@ -4035,6 +4156,8 @@ export function ERPWorkstationProvider({
     setRescissionStep,
     rescissionDate,
     setRescissionDate,
+    rescissionPenaltyRate,
+    setRescissionPenaltyRate,
 
     showRSVModal,
     setShowRSVModal,
@@ -4104,6 +4227,7 @@ export function ERPWorkstationProvider({
     handleCreateRealContract,
     handleExecuteEscalation,
     handleExecuteRescission,
+    handlePayRefund,
     handleCollectPayment,
     handleConfirmHandover,
     handleToggleContractHandover,

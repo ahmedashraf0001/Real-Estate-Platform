@@ -4,14 +4,15 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Image from 'next/image';
 import {
   Building2, CalendarDays, CheckCircle2, CreditCard, FileText,
-  Home, MapPin, Maximize2, Phone, Printer, Receipt, User, Wallet, Coins
+  Home, MapPin, Maximize2, Phone, Printer, Receipt, User, Wallet, Coins, Mail
 } from 'lucide-react';
 import type { ERPContract, ERPInstallmentSchedule } from '@/lib/erp/types';
-import type { Property } from '@/lib/supabase/types';
+import type { Property, Lead } from '@/lib/supabase/types';
 import { D, Decimal } from '@/lib/erp/math';
 import { formatCompactNumber, getContractPaymentStatus } from '@/lib/erp/contractsPipeline';
 import { localizeBuyerName } from '@/components/erp/JournalEntryPreview';
 import { ZFModalShell } from '../common/ZFModalShell';
+import { useERPWorkstationContext } from '../../context/ERPWorkstationContext';
 import shellStyles from '../ZFWorkstationShell.module.css';
 import css from './ZFContractInspectionModal.module.css';
 
@@ -21,6 +22,7 @@ export interface ZFContractInspectionModalProps {
   contract: ERPContract | null;
   schedules: ERPInstallmentSchedule[];
   properties?: Property[];
+  leads?: Lead[];
   isAr?: boolean;
   initialTab?: 'details' | 'schedules';
   onOpenCollectionModal?: (contract: ERPContract, schedule?: ERPInstallmentSchedule) => void;
@@ -29,8 +31,13 @@ export interface ZFContractInspectionModalProps {
 
 export const ZFContractInspectionModal: React.FC<ZFContractInspectionModalProps> = ({
   isOpen, onClose, contract, schedules, properties = [], isAr = true,
-  initialTab = 'details', onOpenCollectionModal, onOpenHandoverModal
+  initialTab = 'details', onOpenCollectionModal, onOpenHandoverModal, leads
 }) => {
+  const erpContext = useERPWorkstationContext();
+  const effectiveLeads = useMemo(() => {
+    return leads || erpContext?.data?.leads || [];
+  }, [leads, erpContext?.data?.leads]);
+
   const schedulePaneRef = useRef<HTMLElement>(null);
   const [detailTab, setDetailTab] = useState<'data' | 'obligations' | 'notes'>('data');
 
@@ -48,6 +55,19 @@ export const ZFContractInspectionModal: React.FC<ZFContractInspectionModalProps>
   const contractSchedules = useMemo(() => schedules
     .filter(s => s.contract_id === contract?.contract_id && s.status !== 'SUPERSEDED' && s.status !== 'Void')
     .sort((a, b) => a.tranche_number - b.tranche_number || a.due_date.localeCompare(b.due_date)), [schedules, contract?.contract_id]);
+
+  const linkedLead = useMemo(() => {
+    if (!contract) return null;
+    if (contract.lead_id) {
+      return effectiveLeads.find(l => l.id === contract.lead_id) || null;
+    }
+    const buyerName = (contract.buyer_name || '').trim().toLowerCase();
+    if (!buyerName) return null;
+    return effectiveLeads.find(l => (l.name || '').trim().toLowerCase() === buyerName) || null;
+  }, [contract, effectiveLeads]);
+
+  const buyerPhone = contract?.buyer_phone || linkedLead?.phone || '—';
+  const buyerEmail = linkedLead?.email || '—';
 
   if (!contract) return null;
 
@@ -101,7 +121,10 @@ export const ZFContractInspectionModal: React.FC<ZFContractInspectionModalProps>
 
             <div className={css.clientCard}>
               <div><User size={15} /><span>{isAr ? 'العميل' : 'Client'}</span><strong>{isAr ? localizeBuyerName(contract.buyer_name) : contract.buyer_name}</strong></div>
-              <div><Phone size={15} /><span>{isAr ? 'رقم الهاتف' : 'Phone'}</span><strong dir="ltr" className={css.tabular}>{contract.buyer_phone || '—'}</strong></div>
+              <div><Phone size={15} /><span>{isAr ? 'رقم الهاتف' : 'Phone'}</span><strong dir="ltr" className={css.tabular}>{buyerPhone}</strong></div>
+              {buyerEmail !== '—' && (
+                <div><Mail size={15} /><span>{isAr ? 'البريد الإلكتروني' : 'Email'}</span><strong dir="ltr" className={css.tabular}>{buyerEmail}</strong></div>
+              )}
               <span className={`${shellStyles.statusPill} ${statusClass}`}>{statusText}</span>
             </div>
 

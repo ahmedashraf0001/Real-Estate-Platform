@@ -1285,7 +1285,7 @@ export class ERPSupabaseService {
     try {
       const { data: rescindedContract } = await supabase
         .from('erp_contracts')
-        .select('property_id, building_unit_id')
+        .select('property_id, building_unit_id, lead_id, contract_number')
         .eq('contract_id', cleanContractId)
         .single();
 
@@ -1302,6 +1302,22 @@ export class ERPSupabaseService {
             rescindedContract.building_unit_id,
             'available'
           );
+        }
+      }
+
+      // If contract has lead_id, update CRM Lead stage to 'closed_lost'
+      if (rescindedContract?.lead_id && isUUID(rescindedContract.lead_id)) {
+        try {
+          await supabase
+            .from('leads')
+            .update({
+              stage: 'closed_lost',
+              stage_updated_at: new Date().toISOString(),
+              notes: `تم فسخ العقد بالمنظومة المالية رقم: ${rescindedContract.contract_number || cleanContractId}`
+            })
+            .eq('id', rescindedContract.lead_id);
+        } catch (leadErr) {
+          console.warn('Notice while updating CRM lead stage to closed_lost on rescission:', leadErr);
         }
       }
     } catch (e) {

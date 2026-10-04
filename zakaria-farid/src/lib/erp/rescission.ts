@@ -3,7 +3,7 @@
  * Enforces Invariant 4.10 (Two-Branch Rescission arithmetic with Forfeiture Floor).
  */
 
-import { D, minDecimal, generateUUID } from './math';
+import { D, Decimal, minDecimal, generateUUID } from './math';
 import { 
   ERPAccountingPeriod, 
   ERPContract, 
@@ -18,13 +18,15 @@ export class RescissionEngine {
    * Execute Contract Rescission and Generate Exact Accounting Postings.
    * Enforces Invariant 4.10:
    * 
-   * Penalty_uncapped = 10% * Gross Contract Value (V)
+   * Penalty_uncapped = PenaltyRate * Gross Contract Value (V) [Default: 10%]
    * Penalty_retained = MIN(Penalty_uncapped, Total Cash Collected C)  [Forfeiture Floor]
    * Net Refund = C - Penalty_retained (always >= 0)
    * 
    * Precondition check:
    * - Branch 1 (Pre-Delivery): Handover has NOT occurred. Revenue unearned (203000).
    * - Branch 2 (Post-Delivery): Handover HAS occurred. Revenue recognized (401000).
+   * 
+   * @param penaltyRate Optional decimal fraction between 0.00 and 1.00 (e.g. 0.10 for 10%, 0.075 for 7.5%). Defaults to 0.10.
    */
   static processRescission(
     contract: ERPContract,
@@ -35,7 +37,8 @@ export class RescissionEngine {
     cogsAccountCode = '501000',
     wipAccountCode = '151000',
     actor = 'CHIEF_FINANCIAL_OFFICER',
-    originalHandoverEntry?: ERPJournalEntry
+    originalHandoverEntry?: ERPJournalEntry,
+    penaltyRate: number | string | Decimal = '0.10'
   ): {
     rescissionRecord: ERPRescissionRecord;
     journalEntry: ERPJournalEntry;
@@ -45,13 +48,26 @@ export class RescissionEngine {
     const V = D(contract.gross_contract_value);
     const C = D(contract.total_cash_collected);
 
-    // 10% statutory/contract penalty
-    const penaltyRate = D('0.10');
-    const penaltyUncapped = V.times(penaltyRate);
+    // Validate and parse adjustable penalty rate (0.00 <= rate <= 1.00)
+    if (typeof penaltyRate === 'number' && Number.isNaN(penaltyRate)) {
+      throw new Error(
+        `ERP Invariant 4.10 Violation: Invalid penalty rate NaN. Must be between 0.00 and 1.00 (0% - 100%).`
+      );
+    }
+    const rateDec = D(penaltyRate !== undefined && penaltyRate !== null ? penaltyRate : '0.10');
+    if (rateDec.lt(0) || rateDec.gt(1)) {
+      throw new Error(
+        `ERP Invariant 4.10 Violation: Invalid penalty rate ${rateDec.toString()}. Must be between 0.00 and 1.00 (0% - 100%).`
+      );
+    }
+    const penaltyRateEffective = rateDec;
+    const penaltyUncapped = V.times(penaltyRateEffective);
 
     // Forfeiture Floor: Retained penalty cannot exceed what customer actually paid
     const penaltyRetained = minDecimal(penaltyUncapped, C);
     const netRefund = C.minus(penaltyRetained);
+
+    const penaltyPercentStr = `${penaltyRateEffective.times(100).toString()}%`;
 
     // Invariant 4.10 Assertion: Refund liability cannot be negative
     if (netRefund.isNegative()) {
@@ -104,7 +120,7 @@ export class RescissionEngine {
         entry_number: `JE-RESC-PRE-${contract.contract_number}`,
         entry_date: rescissionDate,
         period,
-        description: `Contract Rescission & Cancellation (Branch 1 - Pre-Delivery) for ${contract.contract_number} (Forfeiture Floor Applied)`,
+        description: `Contract Rescission & Cancellation (Branch 1 - Pre-Delivery) for ${contract.contract_number} (penalty ${penaltyPercentStr}, Forfeiture Floor Applied)`,
         source_module: 'RESCISSION',
         source_entity_id: contract.contract_id,
         created_by: actor,
@@ -149,7 +165,7 @@ export class RescissionEngine {
         entry_number: `JE-RESC-POST-${contract.contract_number}`,
         entry_date: rescissionDate,
         period,
-        description: `Contract Rescission & Repossession (Branch 2 - Post-Delivery) for ${contract.contract_number} (Full Ledger Unwind)`,
+        description: `Contract Rescission & Repossession (Branch 2 - Post-Delivery) for ${contract.contract_number} (penalty ${penaltyPercentStr}, Full Ledger Unwind)`,
         source_module: 'RESCISSION',
         source_entity_id: contract.contract_id,
         created_by: actor,

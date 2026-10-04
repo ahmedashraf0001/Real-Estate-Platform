@@ -23,13 +23,55 @@ import {
   Layers,
   Image as ImageIcon
 } from 'lucide-react';
-import { ERPContract, ERPInstallmentSchedule, ERPPDCRecord } from '@/lib/erp/types';
+import { ERPContract, ERPInstallmentSchedule, ERPPDCRecord, ERPJournalEntry } from '@/lib/erp/types';
 import { Property } from '@/lib/supabase/types';
 import { D, Decimal } from '@/lib/erp/math';
 import { toast } from 'sonner';
 import { tafqeetEGP } from '@/lib/erp/tafqeet';
 import { ZFPrintDocumentLayout } from './v2/common/ZFPrintDocumentLayout';
 import { ZFModalShell } from './v2/common/ZFModalShell';
+import { useERPWorkstationContext } from './context/ERPWorkstationContext';
+
+/**
+ * Generates a unique, sequential receipt number for hand collections.
+ * next = (max numeric suffix among existing journal entries whose entry_number starts with
+ * `JE-RCP-RCP-{year}-` or `JE-IP-IP-{year}-`) + 1, formatted `RCP-{year}-{0001}` or `IP-{year}-{0001}`.
+ */
+export function getNextSequentialReceiptNo(
+  method: 'CASH' | 'INSTAPAY',
+  journalEntries: ERPJournalEntry[] = [],
+  year: number = new Date().getFullYear()
+): string {
+  const methodPrefix = method === 'INSTAPAY' ? 'IP' : 'RCP';
+  const targetPrefix = `JE-${methodPrefix}-${methodPrefix}-${year}-`;
+  const altTargetPrefix = `JE-${methodPrefix}-${year}-`;
+
+  let maxSuffix = 0;
+
+  for (const je of journalEntries) {
+    const entryNo = je?.entry_number || '';
+    let suffix = '';
+    if (entryNo.startsWith(targetPrefix)) {
+      suffix = entryNo.slice(targetPrefix.length);
+    } else if (entryNo.startsWith(altTargetPrefix)) {
+      suffix = entryNo.slice(altTargetPrefix.length);
+    }
+
+    if (suffix) {
+      const match = suffix.match(/^\d+/);
+      if (match) {
+        const num = parseInt(match[0], 10);
+        if (!isNaN(num) && num > maxSuffix) {
+          maxSuffix = num;
+        }
+      }
+    }
+  }
+
+  const nextNum = maxSuffix + 1;
+  const paddedSuffix = nextNum.toString().padStart(4, '0');
+  return `${methodPrefix}-${year}-${paddedSuffix}`;
+}
 
 // Format number with thousands commas separating digits
 function formatNumberWithCommas(val: Decimal | string | number | bigint | undefined | null): string {
@@ -197,6 +239,7 @@ interface HandCollectionModalProps {
   schedules?: ERPInstallmentSchedule[];
   properties?: Property[];
   linkedContract?: ERPContract;
+  journalEntries?: ERPJournalEntry[];
   onConfirmCollection: (
     item: ERPPDCRecord, 
     receiptNo: string, 
@@ -220,10 +263,16 @@ export const HandCollectionModal: React.FC<HandCollectionModalProps> = ({
   schedules = [],
   properties = [],
   linkedContract,
+  journalEntries,
   onConfirmCollection,
   isMutating = false,
   isAr = true
 }) => {
+  const erpContext = useERPWorkstationContext();
+  const effectiveJournalEntries = useMemo(() => {
+    return journalEntries || erpContext?.data?.journalEntries || [];
+  }, [journalEntries, erpContext?.data?.journalEntries]);
+
   // Currently active selected item in the modal
   const [selectedItem, setSelectedItem] = useState<ERPPDCRecord | null>(item);
 
@@ -353,9 +402,7 @@ export const HandCollectionModal: React.FC<HandCollectionModalProps> = ({
   const handlePaymentMethodChange = (newMethod: 'CASH' | 'INSTAPAY') => {
     setPaymentMethod(newMethod);
     if (!selectedItem) return;
-    const cleanCode = (selectedItem.cheque_number || '').replace(/[^0-9]/g, '').slice(-4) || '1001';
-    const prefix = newMethod === 'INSTAPAY' ? 'IP' : 'RCP';
-    setReceiptNo(`${prefix}-${new Date().getFullYear()}-${cleanCode}`);
+    setReceiptNo(getNextSequentialReceiptNo(newMethod, effectiveJournalEntries));
     if (selectedItem.status !== 'Cleared') {
       setCollectionNotes(
         newMethod === 'INSTAPAY'
@@ -369,10 +416,7 @@ export const HandCollectionModal: React.FC<HandCollectionModalProps> = ({
   useEffect(() => {
     if (selectedItem) {
       const isItemCleared = selectedItem.status === 'Cleared';
-      const randomSuffix = Math.floor(1000 + Math.random() * 9000);
-      const cleanCode = (selectedItem.cheque_number || '').replace(/[^0-9]/g, '').slice(-4) || randomSuffix.toString();
-      const prefix = paymentMethod === 'INSTAPAY' ? 'IP' : 'RCP';
-      setReceiptNo(`${prefix}-${new Date().getFullYear()}-${cleanCode}`);
+      setReceiptNo(getNextSequentialReceiptNo(paymentMethod, effectiveJournalEntries));
       setCollectionDate(selectedItem.cleared_date || new Date().toISOString().split('T')[0]);
 
       // Requirement 7: default "Amount Received" = remaining (nominal - amount_paid), not nominal
@@ -388,7 +432,7 @@ export const HandCollectionModal: React.FC<HandCollectionModalProps> = ({
       );
       setError('');
     }
-  }, [selectedItem, paymentMethod, isAr, getItemFinancials]);
+  }, [selectedItem, paymentMethod, isAr, getItemFinancials, effectiveJournalEntries]);
 
   // Contract linked to the currently selected item
   const currentContract = useMemo(() => {
