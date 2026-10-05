@@ -1,0 +1,495 @@
+/* FIN-OS Inspector Modal Custom Styles (Replacing Inline Styles) */
+
+.textGreen {
+  color: #16a34a !important;
+}
+
+.textAmber {
+  color: #d97706 !important;
+}
+
+.textRed {
+  color: #dc2626 !important;
+}
+
+.textMuted {
+  color: #64748b !important;
+}
+
+.textDark {
+  color: #0f172a !important;
+}
+
+.textAccent {
+  color: var(--erp-accent, #2563eb) !important;
+}
+
+.squircleGreen {
+  background: #f0fdf4 !important;
+  color: #16a34a !important;
+}
+
+.squircleRed {
+  background: #fef2f2 !important;
+  color: #dc2626 !important;
+}
+
+.btnFullWidth {
+  width: 100% !important;
+  justify-content: center !important;
+}
+
+.btnSm {
+  padding: 0.2rem 0.5rem !important;
+  font-size: 0.7rem !important;
+}
+
+.factItemMargin {
+  margin-top: 0.25rem;
+}
+
+.colHeaderExtra {
+  font-size: 0.72rem;
+  color: #64748b;
+  font-weight: 600;
+}
+
+.colHeaderStatus {
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.itemCardStack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.itemCardRow {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.itemCardTitle {
+  font-size: 0.78rem;
+  color: #0f172a;
+}
+
+.pillSm {
+  padding: 0.1rem 0.4rem !important;
+  font-size: 0.62rem !important;
+}
+
+.itemCardSub {
+  font-size: 0.68rem;
+  color: #64748b;
+  font-variant-numeric: tabular-nums;
+}
+
+.itemCardActions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.itemCardAmount {
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: #0f172a;
+  font-variant-numeric: tabular-nums;
+}
+
+.rowBetween {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.rowBetweenMargin {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 0.2rem;
+}
+
+.stackTight {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  font-size: 0.78rem;
+}
+
+.stepperRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.6rem 0.75rem;
+  background: #f8fafc;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+}
+
+.stepNode {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+}
+
+.stepPoint {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.stepPointActive {
+  background: var(--erp-accent, #2563eb);
+}
+
+.stepPointInactive {
+  background: #cbd5e1;
+}
+
+.stepPointSuccess {
+  background: #16a34a;
+}
+
+.stepPointDanger {
+  background: #dc2626;
+}
+
+.stepConnector {
+  flex: 1;
+  height: 1px;
+  margin: 0 0.4rem;
+}
+
+.stepConnectorActive {
+  background: var(--erp-accent, #2563eb);
+}
+
+.stepConnectorInactive {
+  background: #cbd5e1;
+}
+
+.stepConnectorSuccess {
+  background: #16a34a;
+}
+
+.stepLabel {
+  font-size: 0.65rem;
+  font-weight: 700;
+}
+
+.stepLabelMuted {
+  color: #475569;
+}
+
+.stepLabelSuccess {
+  color: #16a34a;
+}
+
+.stepLabelDanger {
+  color: #dc2626;
+}
+
+.infoCard {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 0.75rem 0.85rem;
+}
+
+.infoCardTitle {
+  font-weight: 700;
+  color: #0f172a;
+  margin-bottom: 0.35rem;
+}
+
+.infoCardRow {
+  display: flex;
+  justify-content: space-between;
+  font-variant-numeric: tabular-nums;
+  padding: 0.2rem 0;
+  color: #334155;
+}
+
+.infoCardRowMuted {
+  display: flex;
+  justify-content: space-between;
+  font-variant-numeric: tabular-nums;
+  padding: 0.2rem 0;
+  color: #64748b;
+}
+
+.infoCardHelp {
+  color: #64748b;
+  font-size: 0.72rem;
+  line-height: 1.4;
+}
+
+.tableWrap {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.74rem;
+}
+
+.th {
+  padding: 0.4rem 0.5rem;
+  color: #64748b;
+  font-weight: 700;
+  border-bottom: 1px solid #cbd5e1;
+  background: #f8fafc;
+  text-align: start;
+}
+
+.thNum {
+  padding: 0.4rem 0.5rem;
+  color: #64748b;
+  font-weight: 700;
+  border-bottom: 1px solid #cbd5e1;
+  background: #f8fafc;
+  text-align: end;
+}
+
+.tr {
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.td {
+  padding: 0.45rem 0.5rem;
+  color: #0f172a;
+  font-weight: 600;
+}
+
+.tdCode {
+  padding: 0.45rem 0.5rem;
+  font-family: monospace, tabular-nums;
+  color: var(--erp-accent, #2563eb);
+  font-weight: 700;
+}
+
+.tdNum {
+  padding: 0.45rem 0.5rem;
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.tfoot {
+  background: #f8fafc;
+  border-top: 2px solid #cbd5e1;
+  font-weight: 800;
+}
+
+.tfootTd {
+  padding: 0.45rem 0.5rem;
+  color: #0f172a;
+}
+
+.tfootTdNum {
+  padding: 0.45rem 0.5rem;
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+  color: #0f172a;
+}
+
+.simCard {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 0.75rem 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.simInput {
+  width: 100%;
+  padding: 0.4rem 0.6rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  font-size: 0.82rem;
+  font-variant-numeric: tabular-nums;
+  box-sizing: border-box;
+  font-family: inherit;
+  outline: none;
+}
+
+.simInput:focus {
+  border-color: var(--erp-accent, #2563eb);
+}
+
+.simRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.76rem;
+  padding: 0.15rem 0;
+}
+
+.simRowHighlight {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.82rem;
+  font-weight: 700;
+  padding-top: 0.35rem;
+  border-top: 1px dashed #cbd5e1;
+}
+
+.progressTrack {
+  height: 4px;
+  border-radius: 2px;
+  background: #f1f5f9;
+  overflow: hidden;
+  margin-top: 0.25rem;
+}
+
+.progressBar {
+  height: 100%;
+  border-radius: 2px;
+  background: var(--erp-accent, #2563eb);
+  transition: width 0.3s ease;
+}
+
+.formulaBox {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 0.75rem 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.formulaTitle {
+  font-weight: 700;
+  color: #0f172a;
+  margin-bottom: 0.2rem;
+}
+
+.formulaRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.74rem;
+}
+
+.formulaRowHighlight {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.8rem;
+  font-weight: 700;
+  padding-top: 0.3rem;
+  border-top: 1px dashed #cbd5e1;
+}
+
+.wipPoolTitle {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #334155;
+  margin-bottom: 0.4rem;
+}
+
+.wipPoolList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.wipPoolCard {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.4rem 0.6rem;
+  background: #f8fafc;
+  border-radius: 6px;
+  border: 1px solid #e2e8f0;
+  font-size: 0.72rem;
+}
+
+.wipPoolLeft {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.wipPoolDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--erp-accent, #2563eb);
+}
+
+.wipPoolName {
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.wipPoolRatio {
+  color: #64748b;
+  font-size: 0.66rem;
+}
+
+.wipPoolAmount {
+  font-weight: 700;
+  color: #0f172a;
+  font-variant-numeric: tabular-nums;
+}
+
+.wipScrollArea {
+  max-height: 160px;
+  overflow-y: auto;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+}
+
+.simStack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  border-top: 1px solid #f1f5f9;
+  padding-top: 0.5rem;
+}
+
+.simUnitValLabel {
+  color: #64748b;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.simBox {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 0.55rem 0.75rem;
+}
+
+.simLine {
+  display: flex;
+  justify-content: space-between;
+  color: #64748b;
+  font-variant-numeric: tabular-nums;
+  padding: 0.15rem 0;
+}
+
+.simLineSuccess {
+  display: flex;
+  justify-content: space-between;
+  color: #16a34a;
+  font-variant-numeric: tabular-nums;
+  padding: 0.15rem 0;
+}
+
+.fontLg {
+  font-size: 0.9rem;
+}

@@ -1,0 +1,427 @@
+/* FIN-OS Account Ledger Modal Styles */
+
+.tableHeaderRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+}
+
+.filterControls {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.sortWrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.sortSelect {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.72rem;
+  border-radius: 6px;
+  border: 1px solid var(--erp-border, #cbd5e1);
+  background: #ffffff;
+  color: var(--erp-text-body, #334155);
+  font-family: inherit;
+  outline: none;
+}
+
+.resetBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  border-radius: 6px;
+  border: 1px solid var(--erp-border, #cbd5e1);
+  background: #ffffff;
+  color: var(--erp-text-muted, #64748b);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.resetBtn:hover {
+  background: #f8fafc;
+  color: var(--erp-text-title, #0f172a);
+}
+
+.searchWrap {
+  position: relative;
+  min-width: 160px;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+}
+
+.searchIcon {
+  position: absolute;
+  inset-inline-start: 0.5rem;
+  color: #94a3b8;
+  pointer-events: none;
+}
+
+.searchInput {
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  padding-inline-start: 1.75rem;
+  padding-inline-end: 1.5rem;
+  font-size: 0.72rem;
+  border-radius: 6px;
+  border: 1px solid var(--erp-border, #cbd5e1);
+  background: #ffffff;
+  color: var(--erp-text-title, #0f172a);
+  font-family: inherit;
+  outline: none;
+}
+
+.searchInput:focus {
+  border-color: var(--erp-accent, #2563eb);
+}
+
+.clearSearchBtn {
+  position: absolute;
+  inset-inline-end: 0.4rem;
+  background: none;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  font-size: 0.7rem;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.countPill {
+  font-size: 0.72rem;
+  color: var(--erp-text-muted, #64748b);
+  background: #f8fafc;
+  border: 1px solid var(--erp-border, #cbd5e1);
+  padding: 0.2rem 0.55rem;
+  border-radius: 6px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.emptyState {
+  padding: 2.5rem 1.5rem;
+  text-align: center;
+  background: #ffffff;
+  border: 1px dashed var(--erp-border, #cbd5e1);
+  border-radius: 8px;
+  color: var(--erp-text-muted, #64748b);
+  font-size: 0.82rem;
+}
+
+.tableWrap {
+  border: 1px solid var(--erp-border, #cbd5e1);
+  border-radius: 8px;
+  overflow-x: auto;
+  background: #ffffff;
+}
+
+.table {
+  width: 100%;
+  min-width: 680px;
+  border-collapse: collapse;
+  font-size: 0.78rem;
+}
+
+.th {
+  padding: 0.65rem 0.85rem;
+  color: var(--erp-text-muted, #64748b);
+  background: #fafbfc;
+  border-bottom: 1px solid var(--erp-border, #cbd5e1);
+  font-weight: 700;
+  text-align: start;
+}
+
+.thNum {
+  padding: 0.65rem 0.85rem;
+  color: var(--erp-text-muted, #64748b);
+  background: #fafbfc;
+  border-bottom: 1px solid var(--erp-border, #cbd5e1);
+  font-weight: 700;
+  text-align: end;
+}
+
+.tr {
+  border-bottom: 1px solid #f1f5f9;
+  background: #ffffff;
+  transition: background 0.1s ease;
+}
+
+.tr:hover {
+  background: #f8fafc;
+}
+
+.tdDate {
+  padding: 0.75rem 0.85rem;
+  vertical-align: top;
+  width: 110px;
+}
+
+.dateText {
+  font-size: 0.72rem;
+  color: var(--erp-text-muted, #64748b);
+}
+
+.entryNum {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  color: var(--erp-text-title, #0f172a);
+  font-size: 0.76rem;
+  font-family: monospace, tabular-nums;
+  margin-top: 2px;
+}
+
+.tdDesc {
+  padding: 0.75rem 0.85rem;
+  vertical-align: top;
+  min-width: 320px;
+}
+
+.descStack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.headlineRow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.actionBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 0.12rem 0.45rem;
+  border-radius: 4px;
+  background: #f1f5f9;
+  color: var(--erp-text-body, #334155);
+  border: 1px solid var(--erp-border, #cbd5e1);
+  flex-shrink: 0;
+}
+
+.headline {
+  font-weight: 700;
+  color: var(--erp-text-title, #0f172a);
+  font-size: 0.82rem;
+}
+
+.tagsRow {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.tagPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--erp-text-body, #334155);
+  background: #f8fafc;
+  border: 1px solid var(--erp-border, #cbd5e1);
+  padding: 0.1rem 0.45rem;
+  border-radius: 4px;
+}
+
+.memoRow {
+  font-size: 0.71rem;
+  color: var(--erp-text-muted, #64748b);
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  line-height: 1.4;
+}
+
+.memoArrow {
+  color: #94a3b8;
+  font-size: 0.75rem;
+}
+
+.tdDebit {
+  padding: 0.75rem 0.85rem;
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  vertical-align: top;
+  color: var(--erp-text-title, #0f172a);
+  width: 130px;
+}
+
+.tdCredit {
+  padding: 0.75rem 0.85rem;
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  vertical-align: top;
+  color: var(--erp-text-title, #0f172a);
+  width: 130px;
+}
+
+.emptyAmount {
+  color: #94a3b8;
+}
+
+.paginationWrap {
+  margin-top: 0.75rem;
+}
+
+.guideDetails {
+  border: 1px solid var(--erp-border, #cbd5e1);
+  border-radius: 8px;
+  padding: 0.65rem 0.85rem;
+  background: #ffffff;
+}
+
+.guideSummary {
+  cursor: pointer;
+  color: var(--erp-text-title, #0f172a);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.guideContent {
+  padding-top: 0.65rem;
+}
+
+.footerCount {
+  color: var(--erp-text-muted, #64748b);
+  font-size: 0.74rem;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Printable preview elements without inline styles */
+.printOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100000;
+  background: rgba(15, 23, 42, 0.75);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  overflow-y: auto;
+}
+
+.printCard {
+  max-width: 900px;
+  width: 100%;
+  max-height: 94vh;
+  overflow-y: auto;
+  border-radius: 12px;
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.3);
+}
+
+.printableStack {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.printKpiGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.75rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 0.85rem;
+  background: #ffffff;
+}
+
+.printKpiLabel {
+  font-size: 0.72rem;
+  color: #64748b;
+  display: block;
+  font-weight: 700;
+}
+
+.printKpiValue {
+  font-size: 1rem;
+  color: #0f172a;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.printTable {
+  width: 100%;
+  border-collapse: collapse;
+  border: 1px solid #cbd5e1;
+  font-size: 0.76rem;
+}
+
+.printTh {
+  padding: 0.5rem;
+  background: #fafbfc;
+  color: #64748b;
+  border-bottom: 1px solid #cbd5e1;
+  font-weight: 700;
+  text-align: start;
+}
+
+.printThCenter {
+  padding: 0.5rem;
+  background: #fafbfc;
+  color: #64748b;
+  border-bottom: 1px solid #cbd5e1;
+  font-weight: 700;
+  text-align: center;
+}
+
+.printThNum {
+  padding: 0.5rem;
+  background: #fafbfc;
+  color: #64748b;
+  border-bottom: 1px solid #cbd5e1;
+  font-weight: 700;
+  text-align: end;
+}
+
+.printTr {
+  border-bottom: 1px solid #e2e8f0;
+  background: #ffffff;
+}
+
+.printTd {
+  padding: 0.5rem;
+  color: #0f172a;
+}
+
+.printTdCenter {
+  padding: 0.5rem;
+  text-align: center;
+  color: #334155;
+}
+
+.printTdNum {
+  padding: 0.5rem;
+  text-align: end;
+  font-weight: 700;
+  color: #0f172a;
+  font-variant-numeric: tabular-nums;
+}
+
+.printTfoot {
+  background: #ffffff;
+  border-top: 1px solid #cbd5e1;
+  font-weight: 800;
+}
