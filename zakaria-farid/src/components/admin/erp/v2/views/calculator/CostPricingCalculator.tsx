@@ -505,6 +505,16 @@ export function CostPricingCalculator({
                       bounds.max > bounds.min
                         ? clamp(((m.value - bounds.min) / (bounds.max - bounds.min)) * 100)
                         : 0;
+                    const edgeClass =
+                      pos <= 8
+                        ? ` ${s.markerLabelEdgeStart}`
+                        : pos >= 92
+                        ? ` ${s.markerLabelEdgeEnd}`
+                        : '';
+                    const labelStyle =
+                      pos >= 92
+                        ? { insetInlineEnd: `${100 - pos}%` }
+                        : { insetInlineStart: `${pos}%` };
                     return (
                       <React.Fragment key={m.id}>
                         <span
@@ -512,8 +522,8 @@ export function CostPricingCalculator({
                           style={{ insetInlineStart: `${pos}%` }}
                         />
                         <span
-                          className={`${s.markerLabel}${m.low ? ` ${s.markerLabelLow}` : ''}`}
-                          style={{ insetInlineStart: `${pos}%` }}
+                          className={`${s.markerLabel}${m.low ? ` ${s.markerLabelLow}` : ''}${edgeClass}`}
+                          style={labelStyle}
                         >
                           {m.label}
                           <span className={s.markerValue}>{fmt(m.value)}</span>
@@ -866,7 +876,7 @@ export function CostPricingCalculator({
             </div>
           </ZFPanel>
 
-          <ZFPanel icon={<BadgeDollarSign size={15} />} title={isAr ? 'النتيجة' : 'Result'}>
+          <ZFPanel icon={<BadgeDollarSign size={15} />} title={isAr ? 'تفصيل التكلفة' : 'Cost breakdown'}>
             <div className={s.result}>
               <div className={s.stack}>
                 <span
@@ -919,17 +929,9 @@ export function CostPricingCalculator({
                   <span className={s.rowLabel}>{isAr ? 'مصاريف إضافية' : 'Extras'}</span>
                   <span className={s.rowValue}>{fmt(feas.extraCosts)} <span className={s.muted}>{cur}</span></span>
                 </div>
-                <div className={s.row}>
+                <div className={`${s.row} ${s.rowTotal}`}>
                   <span className={s.rowLabel}>{isAr ? 'إجمالي التكلفة' : 'Total cost'}</span>
                   <span className={s.rowValue}>{fmt(feas.totalCost)} <span className={s.muted}>{cur}</span></span>
-                </div>
-                <div className={s.row}>
-                  <span className={s.rowLabel}>{isAr ? 'الإيرادات المتوقعة' : 'Expected revenue'}</span>
-                  <span className={s.rowValue}>{fmt(feas.revenue)} <span className={s.muted}>{cur}</span></span>
-                </div>
-                <div className={s.row}>
-                  <span className={s.rowLabel}>{isAr ? 'سعر التعادل للمتر' : 'Break-even per m²'}</span>
-                  <span className={s.rowValue}>{fmt(feas.breakEvenPricePerSqm)} <span className={s.muted}>{perSqm}</span></span>
                 </div>
               </div>
 
@@ -952,6 +954,8 @@ export function CostPricingCalculator({
       {mode === 'built' && property && (
         <ZFWorkstationSideWidgets>
           <ZFPanel
+            className={s.sidePanel}
+            bodyClassName={s.sidePanelBody}
             icon={<PieChart size={15} />}
             title={isAr ? 'توزيع التكاليف' : 'Cost breakdown'}
             hint={isAr ? property.title_ar : property.title_en || property.title_ar}

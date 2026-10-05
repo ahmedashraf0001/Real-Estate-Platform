@@ -17,14 +17,16 @@
 .grid { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); gap: 0.85rem; align-items: start; }
 
 /* Price ladder */
-.ladder { position: relative; padding: 2.4rem 0 2.6rem; }
+.ladder { position: relative; padding: 3.1rem 0 3.1rem; }
 .track { position: relative; height: 6px; border-radius: 9999px; background: var(--erp-border-subtle); }
 .lossZone { position: absolute; inset-block: 0; inset-inline-start: 0; border-radius: 9999px; background: color-mix(in srgb, var(--erp-danger) 22%, transparent); }
 .marker { position: absolute; top: 50%; width: 2px; height: 18px; transform: translate(50%, -50%); background: var(--erp-text-subtle); }
 [dir='ltr'] .marker { transform: translate(-50%, -50%); }
-.markerLabel { position: absolute; top: -2.1rem; transform: translateX(50%); display: flex; flex-direction: column; align-items: center; gap: 1px; white-space: nowrap; font-size: 0.68rem; color: var(--erp-text-muted); }
+.markerLabel { position: absolute; top: auto; bottom: calc(100% + 14px); transform: translateX(50%); display: flex; flex-direction: column; align-items: center; gap: 1px; white-space: nowrap; font-size: 0.68rem; color: var(--erp-text-muted); }
 [dir='ltr'] .markerLabel { transform: translateX(-50%); }
-.markerLabelLow { top: auto; bottom: -2.3rem; }
+.markerLabelLow { top: calc(100% + 14px); bottom: auto; }
+.markerLabel.markerLabelEdgeStart, [dir='ltr'] .markerLabel.markerLabelEdgeStart { transform: none; align-items: flex-start; }
+.markerLabel.markerLabelEdgeEnd, [dir='ltr'] .markerLabel.markerLabelEdgeEnd { transform: none; align-items: flex-end; }
 .markerValue { font-weight: 700; color: var(--erp-text-body); font-variant-numeric: tabular-nums; direction: ltr; unicode-bidi: isolate; }
 .markerCost { background: var(--erp-danger); }
 .markerList { background: var(--erp-text-muted); }
@@ -57,12 +59,14 @@
 .row:last-child { border-bottom: 0; }
 .rowLabel { color: var(--erp-text-body); }
 .rowValue { font-weight: 700; color: var(--erp-text-title); font-variant-numeric: tabular-nums; direction: ltr; unicode-bidi: isolate; }
+.rowTotal { border-top: 1px solid var(--erp-border); border-bottom: 0; margin-top: 0.15rem; padding-top: 0.6rem; }
+.rowTotal .rowLabel { font-weight: 700; color: var(--erp-text-title); }
 .pos { color: var(--erp-success); }
 .neg { color: var(--erp-danger); }
 .muted { color: var(--erp-text-muted); font-weight: 500; }
 .notice { display: flex; align-items: flex-start; gap: 0.5rem; padding: 0.6rem 0.75rem; border-radius: 8px; font-size: 0.75rem; line-height: 1.5; }
-.noticeDanger { background: color-mix(in srgb, var(--erp-danger) 8%, transparent); color: #b91c1c; }
-.noticeWarn { background: #fffbeb; color: #92400e; }
+.noticeDanger { background: color-mix(in srgb, var(--erp-danger) 8%, transparent); color: var(--erp-danger); }
+.noticeWarn { background: color-mix(in srgb, #f59e0b 12%, transparent); color: #b45309; }
 .noticeInfo { background: var(--erp-border-subtle); color: var(--erp-text-body); }
 
 /* Cost composition bar (feasibility) */
@@ -81,9 +85,14 @@
 .table td { padding: 0.6rem 0.75rem; color: var(--erp-text-body); border-bottom: 1px solid var(--erp-border-subtle); white-space: nowrap; }
 .table tbody tr:last-child td { border-bottom: 0; }
 .num { text-align: end; font-variant-numeric: tabular-nums; direction: ltr; unicode-bidi: isolate; }
+.table th.num, .table td.num { text-align: end; }
 .tableNote { padding: 0.6rem 1rem; border-top: 1px solid var(--erp-border-subtle); font-size: 0.7rem; color: var(--erp-text-muted); }
 
 /* Side widget: cost breakdown */
+/* Beats the shell's [class*="Header"] side-widget rule (0,2,0), which matches ZFPanel's module class names. */
+.sidePanel.sidePanel.sidePanel,
+.sidePanelBody.sidePanelBody.sidePanelBody { flex-direction: column; justify-content: flex-start; align-items: stretch; }
+.sidePanelBody > button { align-self: flex-start; }
 .breakdown { display: flex; flex-direction: column; gap: 0.6rem; }
 .bdRow { display: flex; flex-direction: column; gap: 0.25rem; }
 .bdHead { display: flex; justify-content: space-between; gap: 0.5rem; font-size: 0.75rem; }
