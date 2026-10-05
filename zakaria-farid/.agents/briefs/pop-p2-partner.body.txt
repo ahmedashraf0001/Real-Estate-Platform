@@ -1,0 +1,132 @@
+ROLE: LEAF — implementer. TRACK: SURFACE_UI. cwd = zakaria-farid. Execute exactly; no redesign beyond this spec.
+
+<execution_rules>
+- FOREGROUND commands only. Edits first, gates once at the end. Always finish with the report (`caveman` skill).
+- Do NOT git add/commit/stash/checkout/restore. Touch ONLY the files in <files>. Keep UTF-8 Arabic byte-exact.
+- KEEP all business logic: props, state that feeds onConfirm*/onSubmit, validation, period-lock checks, the payload sent
+  to the handlers, voucher/print logic. You REPLACE the rendered JSX (and delete state/helpers/imports that only the old
+  JSX used). No inline style objects in the new JSX.
+- READ FIRST: src/components/admin/erp/v2/common/ZFForm.tsx and ZFForm.module.css (the form kit you must use),
+  src/components/admin/erp/v2/common/ZFModalShell.tsx, src/components/admin/erp/v2/modals/ZFCashTransferModal.tsx (a
+  clean example of the target style).
+</execution_rules>
+
+<files>
+src/components/admin/erp/v2/modals/PartnerCapitalInjectionModal.tsx  (+ its .module.css if it has one: delete classes no longer used, or delete the file if nothing uses it)
+src/components/admin/erp/v2/modals/PartnerPayoutModal.tsx            (+ .module.css same rule)
+src/components/admin/erp/v2/modals/NewPartnerProfileModal.tsx        (+ .module.css same rule)
+tests under src/lib/erp/__tests__/ that read these files' source text: update ONLY assertions that pin removed text/markup; list each in the report.
+</files>
+
+<shared>
+Imports: { ZFField, ZFMoneyInput, ZFChoices, ZFFacts, ZFEffect, ZFJournalPeek, ZFFormFooter, ZFFormDone, zfForm } from '../common/ZFForm';
+shellStyles from '../ZFWorkstationShell.module.css' for buttons (btnPrimary / btnSecondary / btnGhost / btnSm).
+Layout primitives: wrap the body in <form id="…" className={zfForm.form} onSubmit={handleSubmit}>. Two fields side by side:
+<div className={zfForm.row}>. Selects / text / date inputs: className={zfForm.control}; reference-number inputs add zfForm.mono.
+Money format in text: Number(x).toLocaleString('en-US', { maximumFractionDigits: 2 }) + ' ج.م' (EN 'EGP').
+Payment methods shown to the user: ONLY cash and InstaPay. Remove any BANK_102000 / 'BANK' option from the UI (keep the
+type unions as they are so callers compile).
+Method choice options (reuse in all three):
+  { id: 'CASH_101000', label: isAr ? 'نقداً' : 'Cash', sub: <see each popup>, icon: <Wallet size={16} /> }
+  { id: 'INSTAPAY_102000', label: isAr ? 'إنستاباي' : 'InstaPay', sub: <see each popup>, icon: <Smartphone size={16} /> }
+Partner select (injection + payout): native <select className={zfForm.control}> of partners, option text = partnerName,
+  plus ' — المالك' / ' — owner' when the existing code treats the partner as owner. disabled when isLockedToPartner.
+Shell: ZFModalShell isOpen onClose isAr maxWidth="640px" icon title subtitle footer. NO headerExtra.
+While the post-save voucher/confirmation state is set, the body shows <ZFFormDone …> instead of the form (spec below)
+and the footer shows only the done-state buttons.
+Remove: emoji, badges, numbered section headings, account-code pills ('حـ/…', '(101000)'…), "شريك معتمد" strips,
+"Delta", "INV-…", "Invariant", "متوازن بالمليم" texts, gradients, colored card backgrounds.
+</shared>
+
+<popup id="injection" file="PartnerCapitalInjectionModal.tsx">
+title: isAr ? 'تمويل من شريك' : 'Partner funding'
+subtitle: isAr ? 'إيداع مبلغ من شريك في رأس مال الشركة أو في مشروع محدد.' : 'Record money a partner puts into the company or a specific project.'
+icon: <HandCoins size={18} />
+form id "zf-injection-form":
+ 1. ZFField label 'الشريك'/'Partner' required, aside = onOpenNewPartnerModal ? <button type="button" className={`${shellStyles.btnGhost} ${shellStyles.btnSm}`} onClick={onOpenNewPartnerModal}><Plus size={13} />{isAr ? 'شريك جديد' : 'New partner'}</button> : undefined
+    -> partner select.
+ 2. ZFFacts for the selected partner: 'رأس المال المودع'/'Capital paid in' = totalContributedCapital;
+    'أرباح مصروفة'/'Payouts made' = totalDistributionsPaid; 'الرصيد الحالي'/'Current balance' = netCurrentBalance (tone 'neg' if < 0, 'pos' if > 0).
+ 3. row: ZFField 'المبلغ'/'Amount' required -> <ZFMoneyInput value={amount} onChange… autoFocus /> | ZFField 'التاريخ'/'Date' required -> date input.
+ 4. ZFField 'المشروع'/'Project' hint (isAr ? 'اختر مشروعاً إذا كان التمويل لعمارة بعينها.' : 'Pick a project if the money is for a specific building.')
+    -> select: first option value '' text isAr ? 'رأس مال الشركة العام' : 'General company capital', then the building properties the code already filters.
+ 5. If the existing code supports commitments for the selected partner (selectedCommitmentId / handleCommitmentChange) and there
+    is at least one, ZFField 'الالتزام المرتبط'/'Linked commitment' (optional) -> select with '' 'بدون' / 'None' + the commitments
+    (use the label text the old JSX used for each commitment). Keep handleCommitmentChange as the onChange.
+ 6. ZFField 'طريقة الاستلام'/'Received by' -> ZFChoices value={paymentMethod} onChange={setPaymentMethod}; subs:
+    cash isAr ? 'يدخل الخزينة' : 'Into the safe'; instapay isAr ? 'يدخل حساب إنستاباي' : 'Into InstaPay'.
+ 7. row: ZFField 'رقم الإيصال'/'Receipt no.' -> mono input receiptRef | ZFField 'ملاحظات'/'Notes' -> input memo, placeholder isAr ? 'اختياري' : 'Optional'.
+ 8. Effect: period locked -> <ZFEffect tone="danger">{isAr ? 'الفترة المحاسبية لهذا التاريخ مقفلة. اختر تاريخاً آخر.' : 'The accounting period for this date is closed. Pick another date.'}</ZFEffect>
+    else amount > 0 -> <ZFEffect>{isAr ? <>سيُضاف <strong>{money}</strong> إلى {cash ? 'الخزينة' : 'حساب إنستاباي'} ويُسجل كمساهمة لـ <strong>{partner}</strong>{project ? <> في <strong>{projectTitle}</strong></> : null}.</> : <>…EN equivalent: "<money> goes into the safe/InstaPay and is recorded as <partner>'s contribution[ to <project>]."</>}</ZFEffect>
+    else <ZFEffect>{isAr ? 'أدخل المبلغ لمعرفة ما سيُسجل.' : 'Enter an amount to see what will be recorded.'}</ZFEffect>
+ 9. amount > 0 -> <ZFJournalPeek isAr lines={[debit line: cash/instapay account, credit line: the capital account]} />. Use EXACTLY
+    the account codes and Arabic names the old JE preview used (read them from the old JSX before deleting it).
+footer (form state): <ZFFormFooter><button type="button" className={shellStyles.btnSecondary} onClick={onClose}>{isAr ? 'إلغاء' : 'Cancel'}</button>
+  <button type="submit" form="zf-injection-form" className={shellStyles.btnPrimary} disabled={<same condition as the old submit>}>{isMutating ? (isAr ? 'جارٍ الحفظ…' : 'Saving…') : (isAr ? 'تأكيد التمويل' : 'Confirm funding')}</button></ZFFormFooter>
+done state (confirmedVoucher set): body <ZFFormDone title={isAr ? 'تم تسجيل التمويل' : 'Funding recorded'} text={`${money} — ${partnerName}`} />;
+  footer: btnSecondary 'طباعة الإيصال'/'Print receipt' -> existing print preview open; btnPrimary 'إغلاق'/'Close' -> existing close-entirely handler.
+  The print preview component/markup itself stays as it is.
+</popup>
+
+<popup id="payout" file="PartnerPayoutModal.tsx">
+title: isAr ? 'صرف أرباح لشريك' : 'Partner payout'
+subtitle: isAr ? 'صرف مبلغ لشريك من أرباحه أو رصيده المستحق.' : 'Pay a partner from their profit share or balance.'
+icon: <Banknote size={18} />
+form id "zf-payout-form":
+ 1. ZFField 'الشريك'/'Partner' required -> partner select.
+ 2. ZFFacts: 'نصيبه من التحصيلات'/'Share of collections' = totalCollectionsShare; 'أرباح مصروفة سابقاً'/'Paid before' = totalDistributionsPaid;
+    'المتاح للصرف'/'Available' = netCurrentBalance (tone neg if < 0, pos if > 0).
+ 3. row: amount (ZFMoneyInput, autoFocus) | date.
+ 4. ZFField 'المشروع'/'Project' (optional) -> select: '' isAr ? 'توزيع عام' : 'General payout', then properties.
+ 5. ZFField 'طريقة الصرف'/'Paid by' -> ZFChoices; subs: cash isAr ? 'من الخزينة' : 'From the safe'; instapay isAr ? 'من حساب إنستاباي' : 'From InstaPay'.
+ 6. row: receipt ref (mono) | notes (memo).
+ 7. Effects (render all that apply, in this order):
+    period locked -> danger (same text as injection);
+    amount > max(0, netCurrentBalance) -> <ZFEffect tone="warn">{isAr ? `المبلغ أكبر من المتاح للصرف (${available}). سيصبح رصيد الشريك بالسالب.` : `Amount is more than the available ${available}. The partner balance will go negative.`}</ZFEffect>
+    amount > 0 -> info: isAr ? <>سيُصرف <strong>{money}</strong> لـ <strong>{partner}</strong> من {cash ? 'الخزينة' : 'حساب إنستاباي'}.</> : EN equivalent.
+    amount = 0 -> info 'أدخل المبلغ لمعرفة ما سيُسجل.'
+ 8. amount > 0 -> ZFJournalPeek with the old preview's debit (distributions) and credit (cash/instapay) accounts and names.
+footer: Cancel + submit 'تأكيد الصرف'/'Confirm payout' (same disabled logic as before).
+If the old modal had a post-save voucher/print state, apply the same done-state pattern as injection ('تم صرف المبلغ'/'Payout recorded').
+</popup>
+
+<popup id="newPartner" file="NewPartnerProfileModal.tsx">
+title: isAr ? 'شريك جديد' : 'New partner'
+subtitle: isAr ? 'بيانات الشريك وطريقة صرف أرباحه. يمكنك تسجيل أول إيداع له الآن أو لاحقاً.' : 'Partner details and how profit is paid. Record a first deposit now or later.'
+icon: <UserPlus size={18} />
+form id "zf-partner-form":
+ Section 1 (<div className={zfForm.section}><h4 className={zfForm.sectionTitle}>{isAr ? 'البيانات' : 'Details'}</h4> …):
+   row: 'الاسم'/'Name' required (input name, placeholder isAr ? 'الاسم بالكامل' : 'Full name', autoFocus) | 'الهاتف'/'Phone' required (input phone, dir="ltr", placeholder '010XXXXXXXX')
+   row: 'الرقم القومي أو السجل التجاري'/'National ID or CR' (optional, mono, nationalId) | empty <div />
+   ZFField 'نوع الشراكة'/'Partnership type' -> ZFChoices value={role} onChange={setRole}:
+     equity_partner: label isAr ? 'شريك بحصة' : 'Equity partner', sub isAr ? 'يموّل ويأخذ نسبة من الربح' : 'Funds and takes a profit share'
+     land_partner: label isAr ? 'شريك بالأرض' : 'Land partner', sub isAr ? 'يقدم الأرض مقابل حصة' : 'Brings the land for a share'
+     silent_financier: label isAr ? 'ممول' : 'Financier', sub isAr ? 'يموّل بعائد دون إدارة' : 'Funds for a return, no management role'
+ Section 2 'المشروع والحصة'/'Project & share' — ONLY if the old modal let the user pick selectedPropertyId / sharePct:
+   row: 'المشروع'/'Project' select ('' 'بدون مشروع الآن'/'No project yet' + properties the old code offered) | 'نسبة الحصة'/'Share %'
+   input type number min 0 max 100 step "any" (sharePct).
+ Section 3 'صرف الأرباح'/'Profit payout':
+   ZFChoices value={payoutMethod} options INSTAPAY (label 'إنستاباي', sub isAr ? 'تحويل لحسابه' : 'Transfer to their account', Smartphone icon)
+   and CASH (label 'نقداً', sub isAr ? 'استلام من الخزينة' : 'Collected from the safe', Wallet icon). No BANK.
+   payoutMethod === 'INSTAPAY' -> ZFField 'عنوان إنستاباي أو رقم الموبايل'/'InstaPay address or mobile' required -> input instapayHandle dir="ltr" placeholder 'name@instapay'.
+ Section 4 'أول إيداع'/'First deposit':
+   <label> with checkbox includeInitialDeposit + text isAr ? 'تسجيل أول إيداع الآن' : 'Record a first deposit now'.
+   when checked: row amount (ZFMoneyInput depositAmount) | date (depositDate); ZFField 'طريقة الاستلام' -> ZFChoices (depositPaymentMethod, subs as injection);
+   ZFField 'رقم الإيصال' mono depositReceiptRef.
+ ZFField 'ملاحظات'/'Notes' (optional) -> <textarea className={zfForm.control} rows={2}> notes.
+ Delete: the role-comparison modal and its state/trigger, the role explainer box, '(؟ ما الفرق…)' link, 'ملف استثماري موثق' badge, numbered headings, emoji.
+ If the old code required bank fields when BANK was chosen, keep that validation path untouched (it simply can't be chosen anymore).
+footer: Cancel + submit 'حفظ الشريك'/'Save partner' (same disabled logic as before).
+</popup>
+
+<gates>
+npx tsc --noEmit
+npx eslint src/components/admin/erp/v2/modals/PartnerCapitalInjectionModal.tsx src/components/admin/erp/v2/modals/PartnerPayoutModal.tsx src/components/admin/erp/v2/modals/NewPartnerProfileModal.tsx
+npx tsx --test src/lib/erp/__tests__/*.test.ts 2>&1 | tail -5   (8 failures pre-exist; list any NEW failing test names and what you changed)
+grep -c "style={{" in the 3 files -> report (target 0)
+grep -nE "BANK_102000'|'BANK'" in the 3 files -> only type unions / untouched validation, list each.
+</gates>
+
+<structured_output_contract>
+STATUS | per popup: done/partial + what was removed | tests changed (file:assertion old->new) | GATES + first failing line | OPEN. Caveman, <=30 lines.
+</structured_output_contract>
