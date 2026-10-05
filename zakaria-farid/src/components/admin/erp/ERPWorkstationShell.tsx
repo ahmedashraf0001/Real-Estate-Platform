@@ -1168,6 +1168,7 @@ export function ERPWorkstationShell({ children }: { children: React.ReactNode })
         isOpen={erp.showRSVModal}
         onClose={() => erp.setShowRSVModal(false)}
         properties={erp.data.properties}
+        propertyCosts={erp.data.propertyCosts}
         isAr={erp.isAr}
         isMutating={erp.isMutating}
         onSaveAllocation={async ({ projectName, salesValue, wipAmount }) => {

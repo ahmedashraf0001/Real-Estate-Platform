@@ -84,7 +84,7 @@ describe('Construction modernization financial integrity', () => {
   });
   it('restricts settlement UI to two methods and canonical side chart geometry', () => {
     const modal = readFileSync('src/components/admin/erp/v2/modals/CostPayableSettlementModal.tsx', 'utf8');
-    assert.equal((modal.match(/<option value="(?:CASH_101000|INSTAPAY_102000)"/g) || []).length, 2);
+    assert.equal((modal.match(/id:\s*'(?:CASH_101000|INSTAPAY_102000)'/g) || []).length, 2);
     assert.ok(!/BANK_102000|شيك|Cheque/.test(modal));
     const view = readFileSync('src/components/admin/erp/v2/views/ConstructionPayablesView.tsx', 'utf8');
     assert.ok(view.includes("size: '76%'")); assert.ok(view.includes('customScale: 0.98')); assert.ok(view.includes('horizontal: true')); assert.ok(!view.includes('generateMockPropertyCosts'));
