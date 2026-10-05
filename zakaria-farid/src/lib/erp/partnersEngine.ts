@@ -270,68 +270,71 @@ export function normalizePropertySplits(property: Property): Array<{
 
 /**
  * Computes partner capital owed and arrears for a building (user-confirmed 2026-10-05).
- * Formula:
- * - recordedCost = costs actually recorded for this building so far
- * - For each partner:
- *     required = recordedCost * (sharePct / 100)
- *     paid = sum(transactions for this partner on this property with type === 'CAPITAL_INJECTION')
- *     arrears = required > paid ? required - paid : 0
- * `impliedTotalCapitalEgp` carries recordedCost.
+ * Rule: everyone matches the highest contributor, in proportion to their share.
+ * - paid_i = sum(CAPITAL_INJECTION transactions of partner i on this property)
+ * - totalCapital = max over active partners with share > 0 of (paid_i / (share_i / 100))
+ * - required_i = totalCapital * (share_i / 100); arrears_i = max(0, required_i - paid_i)
+ * Example: Zakaria 50% pays 1,000,000 -> total 2,000,000 -> a 50% partner owes 1,000,000.
+ * `impliedTotalCapitalEgp` carries totalCapital. `_propertyCosts` is kept for call-site compatibility.
  */
 export function computeDynamicBuildingCapital(
   property: Property,
   transactions: ERPPartnerTransaction[] = [],
-  propertyCosts: ERPPropertyCostItem[] = []
+  _propertyCosts: ERPPropertyCostItem[] = []
 ): DynamicBuildingCapitalInfo {
   const propTitle = property.title_ar || property.title_en || 'مشروع عقاري';
   const normalizedSplits = normalizePropertySplits(property);
   const activeSplits = normalizedSplits.filter(s => !s.is_archived);
+  const isFounderName = (name: string) => name === PRIMARY_DEVELOPER_NAME || name.includes(PRIMARY_DEVELOPER_NAME);
 
   // 1. Identify founder split
-  const founderSplit = activeSplits.find(s =>
-    s.partner_name === PRIMARY_DEVELOPER_NAME || s.partner_name.includes('زكريا فريد')
-  );
+  const founderSplit = activeSplits.find(s => isFounderName(s.partner_name));
   const founderSharePct = founderSplit ? founderSplit.share_percentage : 0;
 
-  // 2. Founder's total capital injected into this specific building
-  const founderInjected = transactions
+  // 2. Capital paid by each active partner into this building
+  const paidBy = (partnerName: string, isFounder: boolean) => transactions
     .filter(t =>
-      (t.partner_name === PRIMARY_DEVELOPER_NAME || t.partner_name.includes('زكريا فريد')) &&
+      (isFounder ? isFounderName(t.partner_name) : t.partner_name === partnerName) &&
       t.property_id === property.id &&
       t.type === 'CAPITAL_INJECTION'
     )
     .reduce((sum, t) => sum.plus(t.amount || 0), D(0));
 
-  // 3. Total building capital = costs actually recorded so far
-  const impliedTotalCapital = recordedPropertyCost(property, propertyCosts);
+  const rows = activeSplits.map(split => {
+    const isFounder = isFounderName(split.partner_name);
+    return { split, isFounder, paid: paidBy(split.partner_name, isFounder) };
+  });
+  const founderInjected = rows.find(r => r.isFounder)?.paid ?? D(0);
+
+  // 3. Total building capital implied by the highest contributor (paid / share)
+  let impliedTotalCapital = D(0);
+  let leaderIndex = -1;
+  rows.forEach((r, idx) => {
+    if (r.split.share_percentage <= 0 || !r.paid.isPositive()) return;
+    const implied = r.paid.timesRatio(100, r.split.share_percentage);
+    if (implied.gt(impliedTotalCapital)) {
+      impliedTotalCapital = implied;
+      leaderIndex = idx;
+    }
+  });
 
   // 4. Per-partner calculation
   const partnerStatuses: DynamicBuildingCapitalInfo['partnerStatuses'] = [];
 
-  activeSplits.forEach(split => {
-    const isFounder = split.partner_name === PRIMARY_DEVELOPER_NAME || split.partner_name.includes('زكريا فريد');
-    const sharePct = split.share_percentage;
-    const required = impliedTotalCapital.timesRatio(sharePct, 100);
-
-    // Calculate actual paid by this partner
-    const paid = transactions
-      .filter(t => 
-        (isFounder ? (t.partner_name === PRIMARY_DEVELOPER_NAME || t.partner_name.includes('زكريا فريد')) : t.partner_name === split.partner_name) &&
-        t.property_id === property.id &&
-        t.type === 'CAPITAL_INJECTION'
-      )
-      .reduce((sum, t) => sum.plus(t.amount || 0), D(0));
-
-    const arrears = required.gt(paid) ? required.minus(paid) : D(0);
+  rows.forEach((r, idx) => {
+    const sharePct = r.split.share_percentage;
+    // The leader's requirement is exactly what they paid (no piastre drift from rounding the total).
+    const required = idx === leaderIndex ? r.paid : impliedTotalCapital.timesRatio(sharePct, 100);
+    const arrears = required.gt(r.paid) ? required.minus(r.paid) : D(0);
 
     partnerStatuses.push({
-      partnerName: split.partner_name,
+      partnerName: r.split.partner_name,
       sharePct,
       requiredContributionEgp: required.toFixed(2),
-      paidContributionEgp: paid.toFixed(2),
+      paidContributionEgp: r.paid.toFixed(2),
       arrearsEgp: arrears.toFixed(2),
       hasArrears: arrears.gt(0),
-      isFounder
+      isFounder: r.isFounder
     });
   });
 
