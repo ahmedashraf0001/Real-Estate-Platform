@@ -11,7 +11,7 @@ import {
   PROPERTY_COST_CATEGORIES, 
   calculatePropertyAuditMetrics 
 } from '@/lib/erp/propertyCostEngine';
-import { D, formatEGP, generateUUID } from '@/lib/erp/math';
+import { D, generateUUID } from '@/lib/erp/math';
 import { 
   X, 
   Layers, 
@@ -80,6 +80,10 @@ export function PropertyLifecycleAuditModal({
   const [propSearchQuery, setPropSearchQuery] = useState('');
 
   // Master list of properties
+  // One currency label per amount (formatEGP adds 'EGP', which doubled the Arabic 'ج.م').
+  const fmtAmount = (v: string | number | undefined | null) => Number(v || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const fmtMoney = (v: string | number | undefined | null) => `${fmtAmount(v)} ${isAr ? 'ج.م' : 'EGP'}`;
+
   const propertyList = useMemo(() => {
     if (properties.length > 0) return properties;
     return property ? [property] : [];
@@ -320,9 +324,9 @@ export function PropertyLifecycleAuditModal({
         <div className={styles.modalFooter}>
           <div className={styles.footerSummary}>
             {isAr ? (
-              <>إجمالي المصاريف الموثقة للعمارة: <strong className={styles.footerSummaryHighlight}>{formatEGP(metrics.totalLoggedCost)}</strong> عبر {metrics.itemsCount} بنداً معتمداً</>
+              <>إجمالي المصاريف الموثقة للعمارة: <strong className={styles.footerSummaryHighlight}>{fmtMoney(metrics.totalLoggedCost)}</strong> عبر {metrics.itemsCount} بنداً معتمداً</>
             ) : (
-              <>Total audited expenditure: <strong className={styles.footerSummaryHighlight}>{formatEGP(metrics.totalLoggedCost)}</strong> across {metrics.itemsCount} items</>
+              <>Total audited expenditure: <strong className={styles.footerSummaryHighlight}>{fmtMoney(metrics.totalLoggedCost)}</strong> across {metrics.itemsCount} items</>
             )}
           </div>
 
@@ -416,7 +420,7 @@ export function PropertyLifecycleAuditModal({
                         {isAr ? 'المنصرف الفعلي:' : 'WIP Incurred:'}
                       </span>
                       <span className={styles.masterPropertyFootprintVal}>
-                        {formatEGP(wipTotal)}
+                        {fmtMoney(wipTotal)}
                       </span>
                     </div>
 
@@ -445,7 +449,7 @@ export function PropertyLifecycleAuditModal({
                 <span>{isAr ? 'إجمالي المنصرف الفعلي' : 'Total Incurred Logged Cost'}</span>
               </div>
               <div className={`${styles.kpiValue} ${styles.textDark}`}>
-                {formatEGP(metrics.totalLoggedCost)} <span className={`${styles.kpiValueUnit} ${styles.textAccent}`}>ج.م</span>
+                {fmtAmount(metrics.totalLoggedCost)} <span className={`${styles.kpiValueUnit} ${styles.textAccent}`}>ج.م</span>
               </div>
               <div className={styles.kpiSub}>
                 {isAr ? 'إجمالي المبالغ المنصرفة على هذا العقار' : 'Accumulated expenditure on property'}
@@ -461,7 +465,7 @@ export function PropertyLifecycleAuditModal({
                 <span>{isAr ? 'تكلفة المتر الفعلي للمباني' : 'Actual Cost Per Sqm'}</span>
               </div>
               <div className={`${styles.kpiValue} ${styles.textDark}`}>
-                {formatEGP(metrics.costPerSqm)} <span className={`${styles.kpiValueUnit} ${styles.textAccent}`}>ج.م/م²</span>
+                {fmtAmount(metrics.costPerSqm)} <span className={`${styles.kpiValueUnit} ${styles.textAccent}`}>ج.م/م²</span>
               </div>
               <div className={styles.kpiSub}>
                 {isAr ? `على مساحة إجمالية ${activeProperty.area_sqm} متر مربع` : `Based on ${activeProperty.area_sqm} m² built-up area`}
@@ -493,7 +497,7 @@ export function PropertyLifecycleAuditModal({
                 <span>{isAr ? 'إجمالي سعر بيع الشقق' : 'Catalog List Price'}</span>
               </div>
               <div className={`${styles.kpiValue} ${styles.textDark}`}>
-                {formatEGP(activeProperty.price_egp)} <span className={styles.kpiValueUnit}>ج.م</span>
+                {fmtAmount(activeProperty.price_egp)} <span className={styles.kpiValueUnit}>ج.م</span>
               </div>
               <div className={styles.kpiSub}>
                 {isAr ? (
@@ -557,7 +561,7 @@ export function PropertyLifecycleAuditModal({
 
                     {/* Spending Amount */}
                     <div className={`${styles.phaseAmount} ${hasCosts ? styles.textDark : styles.textMuted}`}>
-                      {hasCosts ? `${formatEGP(phaseData.total)}` : '—'}
+                      {hasCosts ? `${fmtMoney(phaseData.total)}` : '—'}
                     </div>
 
                     {/* Item Count */}
@@ -585,7 +589,7 @@ export function PropertyLifecycleAuditModal({
                     </span>
                     <span>•</span>
                     <span>
-                      {formatEGP(activeCategoryBreakdown.totalBase)}
+                      {fmtMoney(activeCategoryBreakdown.totalBase)}
                     </span>
                   </span>
                 ) : (
@@ -651,7 +655,7 @@ export function PropertyLifecycleAuditModal({
 
                     <div className={styles.flexBetween}>
                       <span className={styles.catAmount}>
-                        {hasCosts ? `${formatEGP(catData.total)}` : '—'}
+                        {hasCosts ? `${fmtMoney(catData.total)}` : '—'}
                       </span>
                       <span className={styles.catInvoicesCount}>
                         {catData?.count || 0} {isAr ? 'فواتير' : 'invoices'}
@@ -985,12 +989,12 @@ export function PropertyLifecycleAuditModal({
 
                             {/* Unit Cost */}
                             <td className={`${styles.td} ${styles.colPrice}`}>
-                              {formatEGP(item.unit_cost_egp)}
+                              {fmtMoney(item.unit_cost_egp)}
                             </td>
 
                             {/* Total Cost */}
                             <td className={`${styles.td} ${styles.colTotal}`}>
-                              {formatEGP(item.total_cost_egp)}
+                              {fmtMoney(item.total_cost_egp)}
                             </td>
 
                             {/* Status */}
