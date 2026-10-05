@@ -150,3 +150,7 @@ The platform combines a public-facing property showcase with a comprehensive bac
 - [user-confirmed] There are NO cheques. Payments are either direct cash or InstaPay transfer. Money is recorded only when actually received (no post-dated cheque records, no auto-generated PDCs).
 - [user-confirmed] The down payment is NOT auto-collected when a contract is created; it stays pending until actually received and recorded.
 - [user-confirmed 2026-10-05] InstaPay money is recorded in account 102000 (InstaPay) everywhere: collections, expenses, contractor settlements, partner funding and partner payouts. Cash is 101000 (Main Safe). Supersedes the older "unified treasury 101000" design.
+
+## Cost & pricing calculator (2026-10-05) [user-confirmed]
+- Built-property pricing = "cost floor vs market": show actual recorded cost per m² and the break-even price, the market price per m² (defaults to current list price / area, editable), and let the user pick a price per m² between them. Show total price, profit, margin on price, return on cost, and the change versus the current list price. Saving writes the whole-property price to the catalog (`price_egp`). The old cost-times-margin-only suggestion is removed.
+- Feasibility mode stays, simplified: land cost, built area, construction cost per m² (finish-tier presets, editable), extra costs %, expected sale price per m² → total cost, revenue, profit, margin, return on cost, break-even price per m². No steel/concrete quantity breakdown.
