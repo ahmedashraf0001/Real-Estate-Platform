@@ -9,7 +9,7 @@ export async function generateMetadata({ params }: Props) {
   const { locale } = await params;
   const isAr = locale === 'ar';
   return {
-    title: isAr ? 'رسملة التكاليف ومعامل RSV | FIN-OS' : 'Cost Allocation & RSV Factor | FIN-OS',
+    title: isAr ? 'توزيع تكاليف البناء' : 'Cost allocation',
   };
 }
 

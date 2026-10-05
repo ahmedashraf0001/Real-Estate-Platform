@@ -9,7 +9,7 @@ export async function generateMetadata({ params }: Props) {
   const { locale } = await params;
   const isAr = locale === 'ar';
   return {
-    title: isAr ? 'سجل عقود البيع والعملاء | FIN-OS' : 'Sales Contracts Registry | FIN-OS',
+    title: isAr ? 'عقود البيع' : 'Sales contracts',
   };
 }
 

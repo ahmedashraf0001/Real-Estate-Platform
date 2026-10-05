@@ -9,7 +9,7 @@ export async function generateMetadata({ params }: Props) {
   const { locale } = await params;
   const isAr = locale === 'ar';
   return {
-    title: isAr ? 'فسخ واسترداد العقود | FIN-OS' : 'Contract Rescissions & Settlements | FIN-OS',
+    title: isAr ? 'فسخ العقود والتسويات' : 'Contract rescissions',
   };
 }
 

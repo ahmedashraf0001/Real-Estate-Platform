@@ -58,37 +58,37 @@ import { PartnerDossierModal } from './v2/modals/PartnerDossierModal';
 import { PartnerOperationsModal } from './v2/modals/PartnerOperationsModal';
 
 const MODULE_TITLES_AR: Record<string, string> = {
-  dashboard: 'قمرة القيادة والعمليات المالية',
-  cockpit: 'قمرة القيادة والعمليات المالية',
-  operations: 'حركة الخزينة والعمليات اليومية',
-  properties: 'محفظة المشاريع والوحدات',
-  construction: 'مصاريف البناء ومستحقات المقاولين',
-  calculator: 'حاسبة وهيكلة التكاليف والجدوى',
-  contracts: 'سجل عقود البيع والعملاء',
-  pdc: 'أجندة الشيكات والتحصيلات',
-  rescissions: 'فسخ واسترداد العقود',
-  ledger: 'الدفتر العام واليومية المحاسبية',
-  'cost-allocation': 'رسملة التكاليف ومعامل RSV',
-  tax: 'الضرائب العقارية ورسوم الوحدات',
-  partners: 'الشركاء وممولو المشاريع',
-  analysis: 'تحليل العقارات ودورة الحياة والجدوى',
+  dashboard: 'لوحة القيادة',
+  cockpit: 'لوحة القيادة',
+  operations: 'الخزينة والعمليات اليومية',
+  properties: 'العقارات والوحدات',
+  construction: 'تكاليف البناء ومستحقات المقاولين',
+  calculator: 'حاسبة التكاليف والتسعير',
+  contracts: 'عقود البيع',
+  pdc: 'أجندة المستحقات',
+  rescissions: 'فسخ العقود والتسويات',
+  ledger: 'الحسابات ودفتر اليومية',
+  'cost-allocation': 'توزيع تكاليف البناء',
+  tax: 'الضرائب والرسوم والتراخيص',
+  partners: 'الشركاء ورؤوس الأموال',
+  analysis: 'تحليل العقارات',
 };
 
 const MODULE_TITLES_EN: Record<string, string> = {
-  dashboard: 'Executive Dashboard',
-  cockpit: 'Executive Dashboard',
-  operations: 'Daily Cashier & Operations',
-  properties: 'Properties & Units',
-  construction: 'Construction & Payables',
-  calculator: 'Feasibility Calculator',
-  contracts: 'Sales Contracts',
-  pdc: 'PDC & Due Cheques',
-  rescissions: 'Contract Rescissions',
-  ledger: 'General Ledger',
-  'cost-allocation': 'Cost Allocation & RSV',
-  tax: 'Property Taxes',
-  partners: 'Partners & Financiers',
-  analysis: 'Property Lifecycle & Feasibility Analysis',
+  dashboard: 'Dashboard',
+  cockpit: 'Dashboard',
+  operations: 'Treasury & daily operations',
+  properties: 'Properties & units',
+  construction: 'Construction costs & contractor dues',
+  calculator: 'Cost & pricing calculator',
+  contracts: 'Sales contracts',
+  pdc: 'Dues agenda',
+  rescissions: 'Contract rescissions',
+  ledger: 'Accounts & journal',
+  'cost-allocation': 'Cost allocation',
+  tax: 'Taxes, fees & permits',
+  partners: 'Partners & capital',
+  analysis: 'Property analysis',
 };
 
 const SIDE_WIDGETS_CONFIG_AR: Record<string, { title: string; badge?: string; icon: React.ComponentType<{ size?: number | string; strokeWidth?: number; className?: string }> }> = {
@@ -677,8 +677,8 @@ export function ERPWorkstationShell({ children }: { children: React.ReactNode })
   }
 
   const moduleTitle = erp.isAr
-    ? (MODULE_TITLES_AR[erp.activeTab] || 'قمرة القيادة والعمليات المالية')
-    : (MODULE_TITLES_EN[erp.activeTab] || 'Executive Dashboard');
+    ? (MODULE_TITLES_AR[erp.activeTab] || 'لوحة القيادة')
+    : (MODULE_TITLES_EN[erp.activeTab] || 'Dashboard');
 
   const sideWidgetsConfig = erp.isAr
     ? (SIDE_WIDGETS_CONFIG_AR[erp.activeTab] || { title: 'لوحة الأدوات والودجات', badge: '', icon: PanelRight })

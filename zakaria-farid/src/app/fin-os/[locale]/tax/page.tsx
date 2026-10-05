@@ -9,7 +9,7 @@ export async function generateMetadata({ params }: Props) {
   const { locale } = await params;
   const isAr = locale === 'ar';
   return {
-    title: isAr ? 'الضرائب العقارية ورسوم الوحدات | FIN-OS' : 'Apartment Property Taxes & Fees | FIN-OS',
+    title: isAr ? 'الضرائب والرسوم والتراخيص' : 'Taxes, fees & permits',
   };
 }
 

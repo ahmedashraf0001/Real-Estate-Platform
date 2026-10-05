@@ -9,7 +9,7 @@ export async function generateMetadata({ params }: Props) {
   const { locale } = await params;
   const isAr = locale === 'ar';
   return {
-    title: isAr ? 'حركة الخزينة والعمليات اليومية | FIN-OS' : 'Daily Cashier & Operations | FIN-OS',
+    title: isAr ? 'الخزينة والعمليات اليومية' : 'Treasury & daily operations',
   };
 }
 

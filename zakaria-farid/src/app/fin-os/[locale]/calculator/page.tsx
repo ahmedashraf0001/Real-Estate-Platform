@@ -9,7 +9,7 @@ export async function generateMetadata({ params }: Props) {
   const { locale } = await params;
   const isAr = locale === 'ar';
   return {
-    title: isAr ? 'حاسبة التكاليف والجدوى وهيكلة الأقساط | FIN-OS' : 'Feasibility & Cost Calculator | FIN-OS',
+    title: isAr ? 'حاسبة التكاليف والتسعير' : 'Cost & pricing calculator',
   };
 }
 

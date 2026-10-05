@@ -9,7 +9,7 @@ export async function generateMetadata({ params }: Props) {
   const { locale } = await params;
   const isAr = locale === 'ar';
   return {
-    title: isAr ? 'الشركاء وممولو المشاريع | FIN-OS' : 'Partners & Financiers Management | FIN-OS',
+    title: isAr ? 'الشركاء ورؤوس الأموال' : 'Partners & capital',
   };
 }
 
