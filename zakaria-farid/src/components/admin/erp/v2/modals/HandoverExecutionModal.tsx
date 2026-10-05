@@ -1,32 +1,25 @@
 'use client';
+/* eslint-disable react-hooks/set-state-in-effect */
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { 
-  KeyRound, 
-  X, 
-  Loader2, 
-  Building2, 
-  Calendar, 
-  CheckCircle2, 
-  AlertTriangle, 
-  ShieldCheck, 
-  FileText, 
-  Coins, 
-  Layers,
-  ArrowRight,
-  User,
-  Info
-} from 'lucide-react';
+import { KeyRound } from 'lucide-react';
 import { ERPContract, ERPAccountingPeriod, ERPJournalEntry, ERPCostAllocation } from '@/lib/erp/types';
 import { Property } from '@/lib/supabase/types';
-import { D, formatEGP, Decimal } from '@/lib/erp/math';
-import { MoneyCell } from '@/components/erp/MoneyCell';
-import { JournalEntryPreview } from '@/components/erp/JournalEntryPreview';
+import { D, Decimal } from '@/lib/erp/math';
 import { ContractsEngine } from '@/lib/erp/contracts';
-import { resolvePeriodForDate } from '@/lib/erp/ledger';
+import { resolvePeriodForDate, CANONICAL_COA } from '@/lib/erp/ledger';
 import { getHandoverCOGS } from '@/lib/erp/canonicalMetrics';
 import { ZFModalShell } from '../common/ZFModalShell';
-import styles from '../ZFWorkstationShell.module.css';
+import { 
+  ZFField, 
+  ZFMoneyInput, 
+  ZFFacts, 
+  ZFEffect, 
+  ZFJournalPeek, 
+  ZFFormFooter, 
+  zfForm 
+} from '../common/ZFForm';
+import shellStyles from '../ZFWorkstationShell.module.css';
 
 export interface HandoverExecutionModalProps {
   isOpen: boolean;
@@ -56,6 +49,7 @@ export const HandoverExecutionModal: React.FC<HandoverExecutionModalProps> = ({
   const [handoverDate, setHandoverDate] = useState<string>(() => new Date().toISOString().split('T')[0]);
   const [rsvCostAmount, setRsvCostAmount] = useState<string>('0.00');
   const [certifiedCompletionAsserted, setCertifiedCompletionAsserted] = useState<boolean>(false);
+  const [isCostAllocated, setIsCostAllocated] = useState<boolean>(false);
 
   // Identify matching property from portfolio
   const linkedProperty = useMemo(() => {
@@ -73,8 +67,6 @@ export const HandoverExecutionModal: React.FC<HandoverExecutionModalProps> = ({
     if (!linkedProperty) return false;
     return linkedProperty.completion_status === 'ready';
   }, [linkedProperty]);
-
-  const [isCostAllocated, setIsCostAllocated] = useState<boolean>(false);
 
   // Initialize values when contract changes or modal opens
   useEffect(() => {
@@ -142,7 +134,6 @@ export const HandoverExecutionModal: React.FC<HandoverExecutionModalProps> = ({
   if (!isOpen || !contract) return null;
 
   const isAlreadyDelivered = contract.handover_status === 'Delivered';
-  // Gate check: must have valid cost; if not ready, require assertion checkbox; must not be already delivered; preview entry must exist; target period must not be locked
   const canConfirm = !isMutating && !isAlreadyDelivered && hasValidCost && (isPropertyReady || certifiedCompletionAsserted) && grossValue.greaterThan(0) && previewEntry !== null && !isTargetPeriodLocked;
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -160,698 +151,141 @@ export const HandoverExecutionModal: React.FC<HandoverExecutionModalProps> = ({
 
     const finalRsv = D(rsvCostAmount || 0);
     await onConfirmHandover(contract, handoverDate, finalRsv.isNegative() ? '0.00' : finalRsv);
+    onClose();
   };
 
   const propertyTitle = linkedProperty
     ? (isAr ? (linkedProperty.title_ar || linkedProperty.title_en) : (linkedProperty.title_en || linkedProperty.title_ar))
     : contract.unit_id;
 
+  const footer = (
+    <ZFFormFooter>
+      <button
+        type="button"
+        className={shellStyles.btnSecondary}
+        onClick={onClose}
+      >
+        {isAr ? 'إلغاء' : 'Cancel'}
+      </button>
+      <button
+        type="submit"
+        form="zf-handover-form"
+        className={shellStyles.btnPrimary}
+        disabled={!canConfirm || isMutating}
+      >
+        {isMutating 
+          ? (isAr ? 'جارٍ التسليم…' : 'Saving…') 
+          : (isAr ? 'تأكيد التسليم والترحيل' : 'Confirm Handover')}
+      </button>
+    </ZFFormFooter>
+  );
+
   return (
     <ZFModalShell
       isOpen={isOpen}
       onClose={onClose}
       isAr={isAr}
-      maxWidth="1080px"
+      maxWidth="640px"
       icon={<KeyRound size={18} />}
-      title={isAr ? 'محضر استلام الشقة والاعتراف بالإيراد (Model B)' : 'Handover Protocol & Net Revenue Recognition'}
+      title={isAr ? 'تسليم وحدة' : 'Unit Handover'}
       subtitle={isAr 
-        ? 'إثبات التسليم الفعلي ونقل الإيراد المؤجل (٢٠٣٠٠٠) إلى إيراد مبيعات محقق (٤٠١٠٠٠) وإثبات باقي الأقساط كمدينين (١٠٣٠٠٠)' 
-        : 'Physical delivery protocol, clearing deferred contract liabilities & recognizing realized sales revenue'}
-      headerExtra={
-        <span style={{
-          fontSize: '0.68rem',
-          fontWeight: 800,
-          padding: '0.15rem 0.5rem',
-          borderRadius: '6px',
-          background: 'var(--erp-accent-subtle)',
-          color: 'var(--erp-accent-hover)',
-          border: '1px solid color-mix(in srgb, var(--erp-accent) 14%, transparent)'
-        }}>
-          IFRS 15 / §14.D.12
-        </span>
-      }
-      bodyStyle={{ padding: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
+        ? 'إثبات التسليم الفعلي ونقل الإيراد المؤجل إلى إيراد محقق.' 
+        : 'Record physical delivery and recognize realized sales revenue.'}
+      footer={footer}
     >
+      <form id="zf-handover-form" className={zfForm.form} onSubmit={handleSubmit}>
+        {/* Warnings */}
+        {isAlreadyDelivered && (
+          <ZFEffect tone="warn">
+            {isAr 
+              ? `تم تسليم هذه الوحدة رسمياً مسبقاً (${contract.handover_date || 'مسجل بالدفاتر'}).` 
+              : `Unit already certified and delivered on ${contract.handover_date || 'recorded date'}.`}
+          </ZFEffect>
+        )}
+        {isTargetPeriodLocked && (
+          <ZFEffect tone="danger">
+            {isAr
+              ? 'الفترة المحاسبية لهذا التاريخ مقفلة. اختر تاريخاً آخر.'
+              : 'The accounting period for this date is closed. Pick another date.'}
+          </ZFEffect>
+        )}
 
-        {/* Executive 2-Panel Content */}
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
-            flex: 1,
-            overflowY: 'auto'
-          }}>
-            {/* ─────────────────────────────────────────────────────────────
-                PANEL 1: CONTRACT & ASSET HEALTH + POC COMPLETION GATE
-                ───────────────────────────────────────────────────────────── */}
-            <div style={{
-              padding: 'clamp(1rem, 2.5vw, 1.5rem)',
-              borderRight: isAr ? 'none' : '1px solid #e2e8f0',
-              borderLeft: isAr ? '1px solid #e2e8f0' : 'none',
-              background: '#fafaf9',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '1.25rem',
-              overflowY: 'auto'
-            }}>
-              {/* Delivered Warning Banner */}
-              {isAlreadyDelivered && (
-                <div style={{
-                  background: 'var(--erp-accent-subtle)',
-                  border: '1.5px solid color-mix(in srgb, var(--erp-accent) 45%, transparent)',
-                  borderRadius: '12px',
-                  padding: '0.9rem 1rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.75rem',
-                  color: 'var(--erp-accent-hover)'
-                }}>
-                  <ShieldCheck size={20} color="var(--erp-accent)" style={{ flexShrink: 0 }} />
-                  <div>
-                    <strong style={{ fontSize: '0.82rem', display: 'block' }}>
-                      {isAr ? 'تم تسليم هذه الوحدة رسمياً مسبقاً (Delivered)' : 'Unit already certified and delivered'}
-                    </strong>
-                    <span style={{ fontSize: '0.73rem', color: 'var(--erp-accent)' }}>
-                      {isAr 
-                        ? `تاريخ التسليم المسجل: ${contract.handover_date || 'مسجل بالدفاتر'}. تم ترحيل قيود Model B مسبقاً.` 
-                        : `Delivered on: ${contract.handover_date || 'Recorded'}. Model B journal entries already posted.`}
-                    </span>
-                  </div>
-                </div>
-              )}
+        {/* Section: Contract & Property Facts */}
+        <div className={zfForm.section}>
+          <h4 className={zfForm.sectionTitle}>{isAr ? 'بيانات الوحدة والعقد' : 'Unit & Contract Details'}</h4>
+          <ZFFacts
+            items={[
+              { label: isAr ? 'الوحدة / المشروع' : 'Unit / Project', value: propertyTitle },
+              { label: isAr ? 'المشتري' : 'Buyer', value: contract.buyer_name },
+              { label: isAr ? 'القيمة التعاقدية' : 'Gross Value', value: `${Number(grossValue.toNumber()).toLocaleString('en-US', { maximumFractionDigits: 2 })} ${isAr ? 'ج.م' : 'EGP'}` },
+              { label: isAr ? 'المحصل بالخزينة' : 'Collected', value: `${Number(cashCollected.toNumber()).toLocaleString('en-US', { maximumFractionDigits: 2 })} ${isAr ? 'ج.م' : 'EGP'}`, tone: 'pos' },
+              { label: isAr ? 'الأقساط المتبقية' : 'Remaining Dues', value: `${Number(unpaidBalance.toNumber()).toLocaleString('en-US', { maximumFractionDigits: 2 })} ${isAr ? 'ج.م' : 'EGP'}` },
+              { label: isAr ? 'حالة البناء' : 'Building Status', value: isPropertyReady ? (isAr ? 'جاهز للتسليم' : 'Ready') : (isAr ? 'قيد التنفيذ' : 'Under Construction') }
+            ]}
+          />
+        </div>
 
-              {/* Fiscal Period Locked Warning Banner */}
-              {isTargetPeriodLocked && (
-                <div style={{
-                  background: '#fef2f2',
-                  border: '1.5px solid #fecaca',
-                  borderRadius: '12px',
-                  padding: '0.9rem 1rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.75rem',
-                  color: '#991b1b'
-                }}>
-                  <AlertTriangle size={20} color="#dc2626" style={{ flexShrink: 0 }} />
-                  <div>
-                    <strong style={{ fontSize: '0.82rem', display: 'block' }}>
-                      {isAr ? 'الفترة المحاسبية لتاريخ التسليم مقفلة' : 'Fiscal period is locked'}
-                    </strong>
-                    <span style={{ fontSize: '0.73rem', color: '#b91c1c' }}>
-                      {isAr
-                        ? `تاريخ التسليم يقع في الفترة (${targetPeriod.fiscal_year}-M${targetPeriod.period_number}) وهي مقفلة بموجب المعيار Invariant 0.9. يُحظر ترحيل قيود Model B داخل فترة مقفلة.`
-                        : `Handover date falls in period (${targetPeriod.fiscal_year}-M${targetPeriod.period_number}) which is locked per Invariant 0.9.`}
-                    </span>
-                  </div>
-                </div>
-              )}
-
-              {/* Asset Health Card */}
-              <div style={{
-                background: '#ffffff',
-                border: '1px solid #e2e8f0',
-                borderRadius: '14px',
-                padding: '1.25rem',
-                boxShadow: '0 2px 6px rgba(0, 0, 0, 0.02)'
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.85rem' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                    <Building2 size={16} color="var(--erp-accent)" />
-                    <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                      {isAr ? 'بيانات الوحدة والعقد' : 'Contract & Asset Dossier'}
-                    </span>
-                  </div>
-
-                  {/* Construction Milestone Badge */}
-                  <span style={{
-                    fontSize: '0.72rem',
-                    fontWeight: 800,
-                    padding: '0.2rem 0.6rem',
-                    borderRadius: '999px',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '0.3rem',
-                    background: isPropertyReady ? '#ecfdf5' : '#fffbeb',
-                    color: isPropertyReady ? '#047857' : '#b45309',
-                    border: `1px solid ${isPropertyReady ? '#a7f3d0' : '#fde68a'}`
-                  }}>
-                    {isPropertyReady ? <CheckCircle2 size={12} /> : <AlertTriangle size={12} />}
-                    <span>{isPropertyReady ? (isAr ? 'عقار جاهز للتسليم' : 'Ready for Delivery') : (isAr ? 'قيد التنفيذ والتشطيب' : 'Under Construction')}</span>
-                  </span>
-                </div>
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontSize: '0.76rem', color: '#64748b' }}>{isAr ? 'اسم العميل المشتري:' : 'Buyer Name:'}</span>
-                    <strong style={{ fontSize: '0.86rem', color: '#0f172a' }}>{contract.buyer_name}</strong>
-                  </div>
-
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontSize: '0.76rem', color: '#64748b' }}>{isAr ? 'رقم العقد:' : 'Contract Number:'}</span>
-                    <span style={{ fontSize: '0.82rem', fontWeight: 800, color: 'var(--erp-accent)', fontFamily: 'monospace' }}>
-                      #{contract.contract_number}
-                    </span>
-                  </div>
-
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontSize: '0.76rem', color: '#64748b' }}>{isAr ? 'العقار والمشروع:' : 'Property / Project:'}</span>
-                    <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#334155' }}>{propertyTitle}</span>
-                  </div>
-
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontSize: '0.76rem', color: '#64748b' }}>{isAr ? 'رقم الوحدة المتعاقد عليها:' : 'Unit ID:'}</span>
-                    <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#0f172a' }}>{contract.unit_id}</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* 3-Part Financial Health HUD */}
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(3, 1fr)',
-                gap: '0.75rem'
-              }}>
-                <div style={{
-                  background: '#ffffff',
-                  border: '1px solid #e2e8f0',
-                  borderRadius: '12px',
-                  padding: '0.9rem',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '0.2rem'
-                }}>
-                  <span style={{ fontSize: '0.68rem', fontWeight: 700, color: '#64748b' }}>
-                    {isAr ? 'قيمة العقد (V)' : 'Gross Value (V)'}
-                  </span>
-                  <strong style={{ fontSize: '0.96rem', color: '#0f172a' }}>
-                    <MoneyCell amount={grossValue} isAr={isAr} />
-                  </strong>
-                  <span style={{ fontSize: '0.65rem', color: '#94a3b8' }}>{isAr ? 'إجمالي ثمن الشقة' : 'Total Price'}</span>
-                </div>
-
-                <div style={{
-                  background: 'rgba(5, 150, 105, 0.04)',
-                  border: '1px solid rgba(5, 150, 105, 0.2)',
-                  borderRadius: '12px',
-                  padding: '0.9rem',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '0.2rem'
-                }}>
-                  <span style={{ fontSize: '0.68rem', fontWeight: 700, color: '#047857' }}>
-                    {isAr ? 'المحصل نقداً (C)' : 'Collected (C)'}
-                  </span>
-                  <strong style={{ fontSize: '0.96rem', color: '#059669' }}>
-                    <MoneyCell amount={cashCollected} isAr={isAr} />
-                  </strong>
-                  <span style={{ fontSize: '0.65rem', color: '#10b981' }}>{isAr ? 'رصيد دفعة الحجز (٢٠٣٠٠٠)' : 'Pre-handover'}</span>
-                </div>
-
-                <div style={{
-                  background: '#fffbeb',
-                  border: '1px solid #fde68a',
-                  borderRadius: '12px',
-                  padding: '0.9rem',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '0.2rem'
-                }}>
-                  <span style={{ fontSize: '0.68rem', fontWeight: 700, color: '#b45309' }}>
-                    {isAr ? 'المتبقي (V - C)' : 'Unpaid (V - C)'}
-                  </span>
-                  <strong style={{ fontSize: '0.96rem', color: '#b45309' }}>
-                    <MoneyCell amount={unpaidBalance} isAr={isAr} highlight />
-                  </strong>
-                  <span style={{ fontSize: '0.65rem', color: '#b45309' }}>{isAr ? 'يحول لمدينين (١٠٣٠٠٠)' : 'To Receivable'}</span>
-                </div>
-              </div>
-
-              {/* Handover Date & WIP Parameters Card */}
-              <div style={{
-                background: '#ffffff',
-                border: '1px solid #e2e8f0',
-                borderRadius: '14px',
-                padding: '1.15rem',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '0.95rem'
-              }}>
-                {/* Date Picker */}
-                <div>
-                  <label style={{ fontSize: '0.76rem', fontWeight: 700, color: '#334155', display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.35rem' }}>
-                    <Calendar size={14} color="var(--erp-accent)" />
-                    <span>{isAr ? 'تاريخ محضر الاستلام والتسليم الرسمي:' : 'Certified Handover Date:'}</span>
-                  </label>
-                  <input
-                    type="date"
-                    value={handoverDate}
-                    onChange={e => setHandoverDate(e.target.value)}
-                    required
-                    style={{
-                      width: '100%',
-                      padding: '0.55rem 0.75rem',
-                      borderRadius: '8px',
-                      border: '1px solid #cbd5e1',
-                      fontSize: '0.82rem',
-                      color: '#0f172a',
-                      background: '#f8fafc',
-                      outline: 'none',
-                      boxSizing: 'border-box'
-                    }}
-                  />
-                </div>
-
-                {/* Construction WIP Relief Input */}
-                <div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem' }}>
-                    <label style={{ fontSize: '0.76rem', fontWeight: 700, color: '#334155', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                      <Layers size={14} color="var(--erp-accent)" />
-                      <span>{isAr ? 'تكلفة البناء المستنزفة (WIP Relief):' : 'Incurred WIP Relief (RSV):'}</span>
-                    </label>
-                    <span style={{ fontSize: '0.68rem', color: '#64748b' }}>
-                      §14.C.7 Dr 501000 / Cr 151000
-                    </span>
-                  </div>
-
-                  {!isCostAllocated && (
-                    <div style={{
-                      background: '#fff1f2',
-                      border: '1px solid #fecdd3',
-                      borderRadius: '8px',
-                      padding: '0.6rem 0.75rem',
-                      display: 'flex',
-                      alignItems: 'flex-start',
-                      gap: '0.5rem',
-                      marginBottom: '0.5rem',
-                      color: '#9f1239'
-                    }}>
-                      <AlertTriangle size={15} color="#e11d48" style={{ flexShrink: 0, marginTop: '2px' }} />
-                      <div style={{ fontSize: '0.72rem', lineHeight: 1.4 }}>
-                        <strong>{isAr ? 'تنبيه مالي (لا يوجد تخصيص تكلفة معتمد):' : 'Notice (No Approved Cost Allocation):'}</strong>{' '}
-                        {isAr 
-                          ? 'تم إيقاف النسبة الافتراضية التلقائية (45%). يجب إدخال تكلفة البناء المستنزفة يدوياً وبدقة لإتمام التسليم.' 
-                          : 'The 45% default fallback is removed. You must explicitly input the actual construction WIP relief amount manually.'}
-                      </div>
-                    </div>
-                  )}
-
-                  {isCostAllocated && (
-                    <div style={{
-                      background: '#f0fdf4',
-                      border: '1px solid #bbf7d0',
-                      borderRadius: '8px',
-                      padding: '0.4rem 0.65rem',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.4rem',
-                      marginBottom: '0.5rem',
-                      color: '#166534',
-                      fontSize: '0.72rem'
-                    }}>
-                      <CheckCircle2 size={13} color="#16a34a" />
-                      <span>{isAr ? 'تم احتساب التكلفة تلقائياً وفق نسبة تخصيص التكلفة المعتمدة (RSV)' : 'Derived from approved relative sales value (RSV) allocation factor'}</span>
-                    </div>
-                  )}
-
-                  <div style={{ position: 'relative' }}>
-                    <input
-                      type="number"
-                      step="0.01"
-                      value={rsvCostAmount}
-                      onChange={e => setRsvCostAmount(e.target.value)}
-                      required
-                      style={{
-                        width: '100%',
-                        padding: '0.55rem 0.75rem',
-                        paddingLeft: isAr ? '0.75rem' : '3.5rem',
-                        paddingRight: isAr ? '3.5rem' : '0.75rem',
-                        borderRadius: '8px',
-                        border: '1px solid #cbd5e1',
-                        fontSize: '0.84rem',
-                        fontWeight: 700,
-                        color: '#0f172a',
-                        background: '#f8fafc',
-                        outline: 'none',
-                        boxSizing: 'border-box'
-                      }}
-                    />
-                    <span style={{
-                      position: 'absolute',
-                      [isAr ? 'right' : 'left']: '0.75rem',
-                      top: '50%',
-                      transform: 'translateY(-50%)',
-                      fontSize: '0.75rem',
-                      fontWeight: 700,
-                      color: '#64748b'
-                    }}>
-                      ج.م
-                    </span>
-                  </div>
-                  <span style={{ fontSize: '0.68rem', color: '#64748b', marginTop: '0.25rem', display: 'block' }}>
-                    {isAr 
-                      ? 'القيمة المحسوبة وفقاً لمعيار القيمة البيعية النسبية (RSV) لاستنزاف تكلفة الإنشاء من حساب ١٥١٠٠٠ إلى ٥٠١٠٠٠' 
-                      : 'Relieves construction work-in-progress to cost of goods sold based on relative sales value factor'}
-                  </span>
-                </div>
-              </div>
-
-              {/* POC Completion Gate (§4.14 / INV-4.14) */}
-              <div style={{
-                borderRadius: '14px',
-                padding: '1.15rem',
-                border: isPropertyReady ? '1.5px solid #a7f3d0' : '1.5px solid #fcd34d',
-                background: isPropertyReady ? '#f0fdf4' : '#fffbeb',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '0.75rem'
-              }}>
-                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.65rem' }}>
-                  <div style={{
-                    width: '32px',
-                    height: '32px',
-                    borderRadius: '8px',
-                    background: isPropertyReady ? '#dcfce7' : '#fef3c7',
-                    color: isPropertyReady ? '#15803d' : '#b45309',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    flexShrink: 0
-                  }}>
-                    {isPropertyReady ? <ShieldCheck size={18} /> : <AlertTriangle size={18} />}
-                  </div>
-
-                  <div>
-                    <h4 style={{ margin: 0, fontSize: '0.84rem', fontWeight: 800, color: isPropertyReady ? '#14532d' : '#78350f' }}>
-                      {isAr ? 'بوابة تدقيق نسبة الإنجاز والاعتماد الهندسي (§4.14 / INV-4.14)' : 'POC Completion Gate (§4.14 / INV-4.14)'}
-                    </h4>
-                    <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.74rem', lineHeight: 1.5, color: isPropertyReady ? '#166534' : '#92400e' }}>
-                      {isPropertyReady
-                        ? (isAr 
-                            ? 'العقار مسجل بحالة "جاهز للتسليم الفوري" (Ready)، وتتوفر شهادات المطابقة الهندسية للاعتراف بالإيراد.' 
-                            : 'Project status is ready for handover with certified structural completion.')
-                        : (isAr 
-                            ? 'تنبيه تدقيق: العقار مسجل بحالة قيد التطوير والإنشاء (off_plan). يُشترط اعتماد شهادة استشاري المشروع والمطابقة الإنشائية بنسبة ١٠٠٪ قبل تمكين تسليم الوحدة.' 
-                            : 'Warning: Project is marked off-plan. Certified engineering completion is strictly required before handover.')}
-                    </p>
-                  </div>
-                </div>
-
-                {!isPropertyReady && (
-                  <label style={{
-                    display: 'flex',
-                    alignItems: 'flex-start',
-                    gap: '0.65rem',
-                    padding: '0.65rem 0.85rem',
-                    borderRadius: '8px',
-                    background: '#ffffff',
-                    border: '1px solid #fde68a',
-                    cursor: 'pointer',
-                    userSelect: 'none'
-                  }}>
-                    <input
-                      type="checkbox"
-                      checked={certifiedCompletionAsserted}
-                      onChange={e => setCertifiedCompletionAsserted(e.target.checked)}
-                      style={{ marginTop: '0.15rem', accentColor: 'var(--erp-accent)' }}
-                    />
-                    <span style={{ fontSize: '0.73rem', fontWeight: 700, color: '#78350f', lineHeight: 1.45 }}>
-                      {isAr 
-                        ? 'أقر بصفتي المدير المالي باعتماد شهادة استشاري المشروع ومطابقة الإنجاز الفعلي للوحدة بنسبة 100% وإذن التسليم الرسمي (§4.14)' 
-                        : 'I hereby certify that engineering inspection confirmed 100% unit completion and approved handover (§4.14)'}
-                    </span>
-                  </label>
-                )}
-              </div>
-            </div>
-
-            {/* ─────────────────────────────────────────────────────────────
-                PANEL 2: MODEL B JOURNAL ENTRY PREVIEW (§14.D.12 & INV-4.17)
-                ───────────────────────────────────────────────────────────── */}
-            <div style={{
-              padding: '1.5rem',
-              background: '#ffffff',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '1.25rem',
-              overflowY: 'auto'
-            }}>
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                paddingBottom: '0.75rem',
-                borderBottom: '1px solid #f1f5f9'
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <FileText size={17} color="var(--erp-accent)" />
-                  <span style={{ fontWeight: 800, fontSize: '0.88rem', color: '#0f172a' }}>
-                    {isAr ? 'معاينة القيد المحاسبي المزدوج (Model B Posting)' : 'Model B Net Recognition Preview'}
-                  </span>
-                </div>
-
-                <span style={{
-                  fontSize: '0.72rem',
-                  fontWeight: 800,
-                  color: '#059669',
-                  background: '#ecfdf5',
-                  padding: '0.2rem 0.55rem',
-                  borderRadius: '6px',
-                  border: '1px solid #a7f3d0'
-                }}>
-                  INV-4.17 Verified
-                </span>
-              </div>
-
-              {/* 4-Box Visual Mapping of Accounts */}
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(2, 1fr)',
-                gap: '0.75rem'
-              }}>
-                <div style={{
-                  padding: '0.85rem',
-                  borderRadius: '10px',
-                  background: '#f8fafc',
-                  border: '1px solid #e2e8f0'
-                }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontSize: '0.7rem', fontWeight: 800, color: '#334155' }}>
-                      {isAr ? 'مدين: المقدم والأقساط المحصلة (حساب ٢٠٣٠٠٠)' : 'Dr 203000 Deferred Rev'}
-                    </span>
-                    <span style={{ fontSize: '0.65rem', color: '#64748b' }}>Dr = C</span>
-                  </div>
-                  <strong style={{ fontSize: '0.94rem', color: '#0f172a', display: 'block', marginTop: '0.25rem' }}>
-                    <MoneyCell amount={cashCollected} isAr={isAr} />
-                  </strong>
-                  <span style={{ fontSize: '0.65rem', color: '#059669' }}>
-                    {isAr ? 'المبالغ المحصلة قبل الاستلام تتحول لمبيعات رسمية' : 'Clears deferred revenue to 0.00'}
-                  </span>
-                </div>
-
-                <div style={{
-                  padding: '0.85rem',
-                  borderRadius: '10px',
-                  background: '#f8fafc',
-                  border: '1px solid #e2e8f0'
-                }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontSize: '0.7rem', fontWeight: 800, color: '#334155' }}>
-                      {isAr ? 'مدين: باقي ثمن الشقة على العميل (حساب ١٠٣٠٠٠)' : 'Dr 103000 A/R Receivables'}
-                    </span>
-                    <span style={{ fontSize: '0.65rem', color: '#64748b' }}>Dr = V - C</span>
-                  </div>
-                  <strong style={{ fontSize: '0.94rem', color: '#b45309', display: 'block', marginTop: '0.25rem' }}>
-                    <MoneyCell amount={unpaidBalance} isAr={isAr} />
-                  </strong>
-                  <span style={{ fontSize: '0.65rem', color: '#64748b' }}>
-                    {isAr ? 'باقي الأقساط غير المسددة تثبت كمديونية على المشتري' : 'Remaining installments booked to A/R'}
-                  </span>
-                </div>
-
-                <div style={{
-                  padding: '0.85rem',
-                  borderRadius: '10px',
-                  background: '#f8fafc',
-                  border: '1px solid #e2e8f0'
-                }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontSize: '0.7rem', fontWeight: 800, color: '#334155' }}>
-                      {isAr ? 'دائن: إجمالي إيراد بيع الشقة (حساب ٤٠١٠٠٠)' : 'Cr 401000 Realized Revenue'}
-                    </span>
-                    <span style={{ fontSize: '0.65rem', color: '#64748b' }}>Cr = V</span>
-                  </div>
-                  <strong style={{ fontSize: '0.94rem', color: '#047857', display: 'block', marginTop: '0.25rem' }}>
-                    <MoneyCell amount={grossValue} isAr={isAr} />
-                  </strong>
-                  <span style={{ fontSize: '0.65rem', color: '#059669' }}>
-                    {isAr ? 'اعتراف رسمي بكامل سعر بيع الشقة في قائمة الأرباح' : '100% recognized into P&L'}
-                  </span>
-                </div>
-
-                <div style={{
-                  padding: '0.85rem',
-                  borderRadius: '10px',
-                  background: '#f8fafc',
-                  border: '1px solid #e2e8f0'
-                }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontSize: '0.7rem', fontWeight: 800, color: '#334155' }}>
-                      {isAr ? 'تكلفة المباني والإنشاءات (مدين ٥٠١٠٠٠ / دائن ١٥١٠٠٠)' : 'WIP Relief: Dr 501000 / Cr 151000'}
-                    </span>
-                    <span style={{ fontSize: '0.65rem', color: '#64748b' }}>RSV COGS</span>
-                  </div>
-                  <strong style={{ fontSize: '0.94rem', color: '#4338ca', display: 'block', marginTop: '0.25rem' }}>
-                    <MoneyCell amount={D(rsvCostAmount || 0)} isAr={isAr} />
-                  </strong>
-                  <span style={{ fontSize: '0.65rem', color: '#6366f1' }}>
-                    {isAr ? 'استنزاف وتخفيض تكلفة مباني الشقة من مصاريف المشروع لإظهار صافي الربح' : 'Relieves WIP into COGS per RSV factor'}
-                  </span>
-                </div>
-              </div>
-
-              {/* Plain Real-Estate Explanation of Compound Entry */}
-              <div style={{
-                background: '#f8fafc',
-                border: '1px solid #e2e8f0',
-                borderRadius: '10px',
-                padding: '0.85rem 1rem',
-                fontSize: '0.74rem',
-                color: '#334155',
-                lineHeight: 1.6,
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '0.4rem'
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 800, color: 'var(--erp-accent)' }}>
-                  <Building2 size={15} />
-                  <span>{isAr ? 'توضيح أسطر القيد المركب لمبيعات الشقق وتكلفة المباني (لغير المحاسبين):' : 'Plain-Language Real Estate Breakdown of Compound Entry:'}</span>
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem', color: '#475569' }}>
-                  {isAr ? (
-                    <>
-                      <div>• <strong>سطر مبيعات الشقة (٤٠١٠٠٠):</strong> تسجيل كامل ثمن الشقة كإيراد بيع محقق في حسابات الشركة لحظة تسليم المفتاح.</div>
-                      <div>• <strong>سطر تسوية المقدمات والأقساط (٢٠٣٠٠٠ و ١٠٣٠٠٠):</strong> إقفال الدفعات المحصلة سابقاً، وإثبات باقي ثمن الشقة كمديونية على المشتري.</div>
-                      <div>• <strong>سطر تكلفة المباني والإنشاءات (٥٠١٠٠٠ مقابل ١٥١٠٠٠):</strong> خصم تكلفة خامات وصب وتشطيب الشقة من حساب المشروع وتحميلها على تكلفة البيع، لحساب صافي الربح الحقيقي للمكتب فوراً.</div>
-                    </>
-                  ) : (
-                    <>
-                      <div>• <strong>Revenue Recognition (401000):</strong> Recognizes 100% of apartment sales price into company P&L upon key delivery.</div>
-                      <div>• <strong>Cash & Receivables Settlement (203000 & 103000):</strong> Relieves collected advance cash, and records remaining balance as A/R.</div>
-                      <div>• <strong>Building Cost & WIP Relief (501000 vs 151000):</strong> Relieves structural construction expenses from WIP into COGS to derive true gross margin.</div>
-                    </>
-                  )}
-                </div>
-              </div>
-
-              {/* Complete Balanced Journal Entry Rendering */}
-              {previewEntry ? (
-                <JournalEntryPreview 
-                  entry={previewEntry} 
-                  isDraft={true} 
-                  isAr={isAr} 
-                />
-              ) : (
-                <div style={{
-                  padding: '1.5rem',
-                  borderRadius: '12px',
-                  background: '#fef2f2',
-                  border: '1px solid #fecaca',
-                  color: '#991b1b',
-                  fontSize: '0.8rem',
-                  textAlign: 'center'
-                }}>
-                  {isAr ? 'تعذر توليد معاينة القيد المحاسبي. تحقق من صحة قيم العقد.' : 'Could not generate preview. Please verify contract values.'}
-                </div>
-              )}
-            </div>
+        {/* Section: Execution Inputs */}
+        <div className={zfForm.section}>
+          <h4 className={zfForm.sectionTitle}>{isAr ? 'بيانات التسليم' : 'Handover Details'}</h4>
+          <div className={zfForm.row}>
+            <ZFField label={isAr ? 'تاريخ التسليم الفعلي' : 'Handover Date'} required>
+              <input
+                type="date"
+                className={zfForm.control}
+                value={handoverDate}
+                onChange={e => setHandoverDate(e.target.value)}
+                required
+              />
+            </ZFField>
+            <ZFField
+              label={isAr ? 'تكلفة البناء المستنزفة (WIP)' : 'Construction WIP Relief'}
+              required
+              hint={isCostAllocated ? (isAr ? 'محسوبة بنظام RSV المعتمد.' : 'Computed via RSV allocation.') : undefined}
+            >
+              <ZFMoneyInput
+                value={rsvCostAmount}
+                onChange={e => setRsvCostAmount(e.target.value)}
+                unit={isAr ? 'ج.م' : 'EGP'}
+                required
+              />
+            </ZFField>
           </div>
 
-          {/* Modal Actions Footer */}
-          <div style={{
-            padding: '1.15rem 1.75rem',
-            borderTop: '1px solid #e2e8f0',
-            background: '#ffffff',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: '1rem',
-            flexWrap: 'wrap'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <Info size={15} color="#64748b" />
-              <span style={{ fontSize: '0.74rem', color: '#64748b' }}>
-                {isAr
-                  ? 'سيتم تحديث حالة العقد إلى Delivered وترحيل القيود الخمسة آلياً بسجل القيود العامة.'
-                  : 'Contract handover status will change to Delivered and 5 journal lines will be permanently posted.'}
+          {!isPropertyReady && (
+            <label className={zfForm.labelRow}>
+              <span className={zfForm.label}>
+                <input
+                  type="checkbox"
+                  checked={certifiedCompletionAsserted}
+                  onChange={e => setCertifiedCompletionAsserted(e.target.checked)}
+                />{' '}
+                {isAr ? 'إقرار اكتمال الأعمال الإنشائية وجاهزية الوحدة للتسليم' : 'Certify structural completion & unit readiness'}
               </span>
-            </div>
+            </label>
+          )}
+        </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-              <button
-                type="button"
-                onClick={onClose}
-                disabled={isMutating}
-                style={{
-                  background: '#ffffff',
-                  border: '1px solid #cbd5e1',
-                  color: '#475569',
-                  padding: '0.6rem 1.25rem',
-                  minHeight: '44px',
-                  borderRadius: '10px',
-                  fontSize: '0.82rem',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
-                }}
-              >
-                {isAr ? 'إلغاء' : 'Cancel'}
-              </button>
+        {/* Section: Effect */}
+        <ZFEffect>
+          {isAr 
+            ? 'سيتم إثبات تسليم الوحدة ونقل الإيراد المؤجل إلى إيراد مبيعات محقق وترحيل تكلفة البناء للأستاذ العام.' 
+            : 'Unit delivery will be recorded, deferred revenue recognized as sales revenue, and construction cost relieved.'}
+        </ZFEffect>
 
-              <button
-                type="submit"
-                disabled={!canConfirm}
-                style={{
-                  background: canConfirm
-                    ? 'linear-gradient(135deg, #15803d 0%, #166534 100%)'
-                    : '#94a3b8',
-                  color: '#ffffff',
-                  border: 'none',
-                  padding: '0.65rem 1.6rem',
-                  minHeight: '44px',
-                  borderRadius: '10px',
-                  fontSize: '0.84rem',
-                  fontWeight: 800,
-                  cursor: canConfirm ? 'pointer' : 'not-allowed',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '0.5rem',
-                  boxShadow: canConfirm ? '0 4px 14px rgba(22, 101, 52, 0.3)' : 'none',
-                  transition: 'all 0.15s ease'
-                }}
-              >
-                {isMutating ? (
-                  <>
-                    <Loader2 size={16} className="animate-spin" />
-                    <span>{isAr ? 'جاري ترحيل القيود...' : 'Posting Journal Entries...'}</span>
-                  </>
-                ) : isTargetPeriodLocked ? (
-                  <>
-                    <AlertTriangle size={16} />
-                    <span>{isAr ? `الفترة المحاسبية مقفلة (M${targetPeriod.period_number})` : `Period Locked (M${targetPeriod.period_number})`}</span>
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle2 size={16} />
-                    <span>{isAr ? 'اعتماد محضر الاستلام وترحيل قيود الإيراد (Model B)' : 'Confirm Handover & Post Model B (IFRS 15)'}</span>
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-        </form>
+        {/* Section: Journal Peek */}
+        {previewEntry && previewEntry.lines && previewEntry.lines.length > 0 && (
+          <ZFJournalPeek
+            isAr={isAr}
+            lines={previewEntry.lines.map(l => ({
+              code: l.account_code,
+              name: (isAr ? CANONICAL_COA[l.account_code]?.account_name_ar : CANONICAL_COA[l.account_code]?.account_name_en) || l.memo || '',
+              debit: l.debit_amount,
+              credit: l.credit_amount
+            }))}
+          />
+        )}
+      </form>
     </ZFModalShell>
   );
 };

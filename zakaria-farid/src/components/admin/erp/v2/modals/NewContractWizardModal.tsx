@@ -1,36 +1,20 @@
 'use client';
+/* eslint-disable react-hooks/set-state-in-effect */
 
-import { toLocalDateStr } from '@/lib/erp/treasuryLedger';
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { 
   Plus, 
-  X, 
-  Loader2, 
-  Building2, 
-  User, 
-  Calendar, 
-  DollarSign, 
-  FileText, 
-  CheckCircle2, 
-  AlertCircle, 
-  Layers, 
-  ShieldCheck, 
-  Users, 
-  Trash2,
-  ArrowRight,
-  ArrowLeft,
-  Coins,
-  Percent,
-  Wallet,
-  Landmark,
-  DoorOpen
+  Trash2, 
+  Wallet, 
+  Smartphone, 
+  Scale
 } from 'lucide-react';
 import { Property } from '@/lib/supabase/types';
 import { 
   ERPContract, 
-  ERPInstallmentSchedule, 
   ERPAccountingPeriod 
 } from '@/lib/erp/types';
+import { toLocalDateStr } from '@/lib/erp/treasuryLedger';
 import { ContractsEngine } from '@/lib/erp/contracts';
 import { 
   PartnerShareItem, 
@@ -41,16 +25,22 @@ import {
   autoBalanceShares 
 } from '@/lib/erp/partnersDirectory';
 import { D } from '@/lib/erp/math';
-import { ZFCustomSelect, ZFCustomSelectSection, ZFCustomSelectItem } from '../common/ZFCustomSelect';
-import { MoneyCell } from '@/components/erp/MoneyCell';
+import { ZFCustomSelect, ZFCustomSelectSection } from '../common/ZFCustomSelect';
 import { ZFModalShell } from '../common/ZFModalShell';
+import { 
+  ZFField, 
+  ZFMoneyInput, 
+  ZFChoices, 
+  ZFFacts, 
+  ZFEffect, 
+  ZFFormFooter, 
+  zfForm 
+} from '../common/ZFForm';
 import { 
   isPropertyAvailableForContract,
   isUnitSold,
-  isBuildingFullySold,
   getAvailableUnitsForProperty,
   canSellWholeBuilding,
-  getPropertyInventorySummary,
 } from '@/lib/erp/propertiesPortfolioCalculations';
 import shellStyles from '../ZFWorkstationShell.module.css';
 
@@ -111,7 +101,6 @@ export const NewContractWizardModal: React.FC<NewContractWizardModalProps> = ({
   properties,
   contracts,
   leads = [],
-  activePeriod,
   unifiedPartners,
   isMutating = false,
   isAr = true,
@@ -145,12 +134,12 @@ export const NewContractWizardModal: React.FC<NewContractWizardModalProps> = ({
     return toLocalDateStr(d);
   });
 
-  // Step 3: Equity Splits
+  // Step 3: Equity Splits & Destination
   const [partnerSplits, setPartnerSplits] = useState<PartnerShareItem[]>(() => normalizePartnerSplits(null));
   const [selectedPartnerToAdd, setSelectedPartnerToAdd] = useState<string>('');
   const [customPartnerNameInput, setCustomPartnerNameInput] = useState<string>('');
+  const [destinationTreasury, setDestinationTreasury] = useState<'101000' | '102000'>('101000');
 
-  // Handle Property & Unit Selection logic
   const applyPropertySelection = React.useCallback((id: string, unitId?: string) => {
     setSelectedPropertyId(id);
     setContractErrors(prev => prev.property ? { ...prev, property: '' } : prev);
@@ -170,13 +159,10 @@ export const NewContractWizardModal: React.FC<NewContractWizardModalProps> = ({
       const availableUnits = getAvailableUnitsForProperty(prop, contracts);
       let targetUnitId = unitId || '';
 
-      // If requested unit is sold, do not keep it selected
       if (targetUnitId && !availableUnits.some(u => u.unit_id === targetUnitId)) {
         targetUnitId = '';
       }
 
-      // If whole building cannot be sold (constituent units already sold) and no specific unit is selected,
-      // default targetUnitId to first available unit
       if (!targetUnitId && !canSellWhole && availableUnits.length > 0) {
         targetUnitId = availableUnits[0].unit_id;
       }
@@ -220,8 +206,8 @@ export const NewContractWizardModal: React.FC<NewContractWizardModalProps> = ({
     }
   };
 
-  const prevIsOpenRef = React.useRef(false);
-  const resetPropsRef = React.useRef({
+  const prevIsOpenRef = useRef(false);
+  const resetPropsRef = useRef({
     initialPropertyId,
     initialBuildingUnitId,
     initialBuyerName,
@@ -243,8 +229,6 @@ export const NewContractWizardModal: React.FC<NewContractWizardModalProps> = ({
     };
   });
 
-  // Reset state on modal open with pre-selected property/unit support
-  // Uses prevIsOpenRef so background store sync while modal is open DOES NOT reset form draft state
   useEffect(() => {
     if (!isOpen) {
       prevIsOpenRef.current = false;
@@ -284,6 +268,7 @@ export const NewContractWizardModal: React.FC<NewContractWizardModalProps> = ({
         const d = new Date();
         d.setMonth(d.getMonth() + 3);
         setFirstInstallmentDueDate(toLocalDateStr(d));
+        setDestinationTreasury('101000');
 
         if (curPropId) {
           curApplySelection(curPropId, curUnitId);
@@ -300,11 +285,9 @@ export const NewContractWizardModal: React.FC<NewContractWizardModalProps> = ({
     }
   }, [isOpen]);
 
-  // Derived Pricing
   const basePrice = parseFloat(basePriceInput) || 0;
   const totalNominalValue = basePrice;
 
-  // Derived Down Payment
   const modalDpAmount = useMemo(() => {
     if (paymentPlanType === 'FULL_CASH') return totalNominalValue;
     if (downPaymentAmountInput !== '') {
@@ -314,30 +297,25 @@ export const NewContractWizardModal: React.FC<NewContractWizardModalProps> = ({
     return Math.round(totalNominalValue * pct);
   }, [paymentPlanType, totalNominalValue, downPaymentAmountInput, downPaymentInputPct]);
 
-  // Selected Property Object
   const selectedProperty = useMemo(() => {
     return properties.find(p => p.id === selectedPropertyId);
   }, [properties, selectedPropertyId]);
 
-  // Check if whole building can be sold (0 units sold)
   const canSellWhole = useMemo(() => {
     if (!selectedProperty) return false;
     return canSellWholeBuilding(selectedProperty, contracts);
   }, [selectedProperty, contracts]);
 
-  // Selected building unit (if specific apartment selected)
   const selectedBuildingUnit = useMemo(() => {
     if (!selectedProperty || !selectedBuildingUnitId) return null;
     return (selectedProperty.building_units || []).find(u => u.unit_id === selectedBuildingUnitId) || null;
   }, [selectedProperty, selectedBuildingUnitId]);
 
-  // Available building units (strictly exclude sold apartments)
   const availableBuildingUnits = useMemo(() => {
     if (!selectedProperty || selectedProperty.type !== 'building' || !selectedProperty.building_units) return [];
     return getAvailableUnitsForProperty(selectedProperty, contracts);
   }, [selectedProperty, contracts]);
 
-  // Handle Lead Selection
   const handleLeadChange = (leadId: string) => {
     setSelectedLeadId(leadId);
     const lead = leads.find(l => l.id === leadId);
@@ -348,7 +326,6 @@ export const NewContractWizardModal: React.FC<NewContractWizardModalProps> = ({
     }
   };
 
-  // Generate Tranche Schedule Preview
   const previewSchedule = useMemo(() => {
     if (paymentPlanType === 'FULL_CASH') return [];
     const count = parseInt(numInstallments, 10) || 0;
@@ -372,43 +349,40 @@ export const NewContractWizardModal: React.FC<NewContractWizardModalProps> = ({
     }));
   }, [paymentPlanType, numInstallments, totalNominalValue, modalDpAmount, installmentFrequency, firstInstallmentDueDate, firstPaymentDate]);
 
-  // Equity Splits total %
   const totalSplitsPct = useMemo(() => {
     return partnerSplits.reduce((sum, item) => sum + (parseFloat(item.sharePct.toString()) || 0), 0);
   }, [partnerSplits]);
 
-  // Step 1 Validation
   const validateStep1 = (): boolean => {
     const errs: Record<string, string> = {};
     if (!selectedPropertyId) {
       errs.property = isAr ? 'يرجى اختيار الوحدة العقارية' : 'Please select a property unit';
     } else if (selectedPropertyId === 'custom_unit' && !customUnitName.trim()) {
-      errs.property = isAr ? 'يرجى إدخال اسم المشروع / الوحدة المخصصة' : 'Custom unit name is required';
+      errs.property = isAr ? 'يرجى إدخال اسم المشروع أو الوحدة المخصصة' : 'Custom unit name is required';
     } else if (selectedProperty && !isPropertyAvailableForContract(selectedProperty, contracts)) {
-      errs.property = isAr ? 'هذا العقار مباع بالكامل وغير متاح للتعاقد' : 'This property is fully sold and unavailable for contract';
+      errs.property = isAr ? 'هذا العقار مباع بالكامل وغير متاح للتعاقد' : 'This property is fully sold and unavailable';
     } else if (selectedProperty && selectedProperty.type === 'building' && !selectedBuildingUnitId && !canSellWholeBuilding(selectedProperty, contracts)) {
-      errs.property = isAr ? 'يرجى اختيار شقة محددة، لا يمكن بيع العمارة بالكامل نظراً لوجود وحدات مباعة' : 'Please select an apartment; whole building sale is not allowed as units are sold';
+      errs.property = isAr ? 'يرجى اختيار شقة محددة، لا يمكن بيع العمارة بالكامل نظراً لوجود وحدات مباعة' : 'Please select an apartment; whole building sale is not allowed';
     } else if (selectedProperty && selectedProperty.type === 'building' && selectedBuildingUnitId) {
       const unitObj = selectedBuildingUnit || (selectedProperty.building_units || []).find(u => u.unit_id === selectedBuildingUnitId);
       if (unitObj && isUnitSold(selectedProperty, unitObj, contracts)) {
-        errs.property = isAr ? 'هذه الشقة تم بيعها مسبقاً، يرجى اختيار شقة متاحة' : 'This unit is already sold, please select an available unit';
+        errs.property = isAr ? 'هذه الشقة تم بيعها مسبقاً' : 'This unit is already sold';
       }
     }
     if (!buyerName.trim()) {
-      errs.buyerName = isAr ? 'يرجى إدخال اسم المشتري المثبت بالعقد' : 'Buyer name is required';
+      errs.buyerName = isAr ? 'يرجى إدخال اسم المشتري' : 'Buyer name is required';
     }
     if (!buyerNationalId.trim() || buyerNationalId.trim().length < 8) {
-      errs.buyerNationalId = isAr ? 'يرجى إدخال الرقم القومي / جواز السفر (٨ خانات على الأقل)' : 'Valid National ID required (min 8 digits)';
+      errs.buyerNationalId = isAr ? 'يرجى إدخال الرقم القومي أو جواز السفر (٨ خانات على الأقل)' : 'Valid National ID required (min 8 digits)';
     }
     setContractErrors(errs);
     return Object.keys(errs).length === 0;
   };
 
-  // Step 2 Validation
   const validateStep2 = (): boolean => {
     const errs: Record<string, string> = {};
     if (totalNominalValue <= 0) {
-      errs.price = isAr ? 'يرجى إدخال سعر تعاقدي صحيح أكبر من الصفر' : 'Valid contract price required';
+      errs.price = isAr ? 'يرجى إدخال سعر تعاقدي أكبر من الصفر' : 'Valid contract price required';
     }
     if (modalDpAmount <= 0) {
       errs.downPayment = isAr ? 'يرجى تحديد دفعة مقدمة صحيحة' : 'Down payment must be greater than zero';
@@ -417,7 +391,6 @@ export const NewContractWizardModal: React.FC<NewContractWizardModalProps> = ({
     return Object.keys(errs).length === 0;
   };
 
-  // Step 3 Validation & Submit
   const handleFinalSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (Math.abs(totalSplitsPct - 100) > 0.01) {
@@ -427,7 +400,7 @@ export const NewContractWizardModal: React.FC<NewContractWizardModalProps> = ({
 
     const isWholeBuilding = !selectedBuildingUnitId;
     if (isWholeBuilding && selectedProperty && selectedProperty.type === 'building' && !canSellWholeBuilding(selectedProperty, contracts)) {
-      setContractErrors({ property: isAr ? 'لا يمكن بيع العمارة بالكامل نظراً لوجود وحدات مباعة مسبقاً' : 'Cannot sell whole building because constituent units are already sold' });
+      setContractErrors({ property: isAr ? 'لا يمكن بيع العمارة بالكامل نظراً لوجود وحدات مباعة مسبقاً' : 'Cannot sell whole building because units are sold' });
       setStep(1);
       return;
     }
@@ -454,7 +427,8 @@ export const NewContractWizardModal: React.FC<NewContractWizardModalProps> = ({
       installmentFrequency,
       firstPaymentDate,
       firstInstallmentDueDate,
-      partnerSplits
+      partnerSplits,
+      destinationTreasury
     };
 
     await onContractCreated(payload);
@@ -466,7 +440,6 @@ export const NewContractWizardModal: React.FC<NewContractWizardModalProps> = ({
     onClose();
   };
 
-  // Sectioned Properties for Custom Dropdown (strictly filters out fully sold properties)
   const propertySections: ZFCustomSelectSection[] = useMemo(() => {
     const sectionsMap = new Map<string, ZFCustomSelectSection>();
 
@@ -498,1209 +471,675 @@ export const NewContractWizardModal: React.FC<NewContractWizardModalProps> = ({
 
       return {
         id: 'general_portfolio',
-        titleAr: isAr ? 'محفظة المشروعات والأصول العقارية' : 'Properties Portfolio',
-        titleEn: 'Properties Portfolio'
+        titleAr: 'محفظة العقارات العامة',
+        titleEn: 'General Portfolio'
       };
     };
 
-    (properties || []).forEach(p => {
-      // 1. Strictly filter out fully sold properties (Item 6 & 7)
-      const isAvailable = isPropertyAvailableForContract(p, contracts);
-      if (!isAvailable) {
-        return;
-      }
+    properties.forEach(p => {
+      if (!isPropertyAvailableForContract(p, contracts)) return;
 
-      const summary = getPropertyInventorySummary(p, contracts);
-      let sublabelAr = `${p.location || (isAr ? 'الموقع مسجل' : 'Registered Location')}${p.area_sqm ? ` • ${p.area_sqm} م²` : ''}`;
-      let sublabelEn = `${p.location || 'Location'}${p.area_sqm ? ` • ${p.area_sqm} m²` : ''}`;
-      let badge = isAr ? 'متاح للتعاقد' : 'Available';
-      let badgeBg = '#ecfdf5';
-      let badgeTextColor = '#059669';
-
-      if (summary.isMultiUnit) {
-        sublabelAr += ` • ${isAr ? `المتبقي: ${summary.availableUnits} من أصل ${summary.totalUnits} وحدة` : `${summary.availableUnits} of ${summary.totalUnits} units available`}`;
-        sublabelEn += ` • ${summary.availableUnits} of ${summary.totalUnits} units available`;
-        badge = isAr ? `المتبقي ${summary.availableUnits} من ${summary.totalUnits}` : `${summary.availableUnits}/${summary.totalUnits} avail`;
-        badgeBg = '#eff6ff';
-        badgeTextColor = 'var(--erp-accent, #2563eb)';
-      }
-
-      const item: ZFCustomSelectItem = {
-        value: p.id,
-        labelAr: p.title_ar,
-        labelEn: p.title_en,
-        sublabelAr,
-        sublabelEn,
-        price: p.price_egp,
-        badge,
-        badgeBg,
-        badgeTextColor,
-        icon: Building2
-      };
-
-      const secInfo = getPropertySection(p);
-      let section = sectionsMap.get(secInfo.id);
-      if (!section) {
-        section = {
-          sectionId: secInfo.id,
-          titleAr: secInfo.titleAr,
-          titleEn: secInfo.titleEn,
-          icon: Building2,
+      const secMeta = getPropertySection(p);
+      if (!sectionsMap.has(secMeta.id)) {
+        sectionsMap.set(secMeta.id, {
+          sectionId: secMeta.id,
+          titleAr: secMeta.titleAr,
+          titleEn: secMeta.titleEn,
           items: []
-        };
-        sectionsMap.set(secInfo.id, section);
+        });
       }
-      section.items.push(item);
+
+      const availableUnits = getAvailableUnitsForProperty(p, contracts);
+      const isBuilding = p.type === 'building';
+      const availableUnitsCount = isBuilding ? availableUnits.length : (p.listing_status === 'sold' ? 0 : 1);
+      const wholeBuildingSellable = canSellWholeBuilding(p, contracts);
+
+      let unitLabel = '';
+      if (isBuilding) {
+        if (wholeBuildingSellable) {
+          unitLabel = isAr ? ` (عمارة بالكامل - ${availableUnitsCount} شقة متاحة)` : ` (Whole Building - ${availableUnitsCount} units available)`;
+        } else {
+          unitLabel = isAr ? ` (${availableUnitsCount} شقة متاحة)` : ` (${availableUnitsCount} units available)`;
+        }
+      } else {
+        unitLabel = isAr ? ' (وحدة مستقلة متاحة)' : ' (Independent Unit)';
+      }
+
+      sectionsMap.get(secMeta.id)!.items.push({
+        value: p.id,
+        labelAr: `${p.title_ar || p.title_en}${unitLabel}`,
+        labelEn: `${p.title_en || p.title_ar}${unitLabel}`,
+        sublabelAr: `${Number(p.price_egp || 0).toLocaleString('en-US', { maximumFractionDigits: 2 })} ج.م`,
+        sublabelEn: `${Number(p.price_egp || 0).toLocaleString('en-US', { maximumFractionDigits: 2 })} EGP`
+      });
     });
 
     return Array.from(sectionsMap.values());
-  }, [properties, contracts, selectedPropertyId, isAr]);
-
-  // Sectioned Leads for CRM Dropdown
-  const leadItems: ZFCustomSelectItem[] = useMemo(() => {
-    return (leads || []).map(lead => ({
-      value: lead.id,
-      labelAr: lead.name,
-      labelEn: lead.name,
-      sublabelAr: lead.phone ? `هاتف: ${lead.phone}` : (lead.email || ''),
-      sublabelEn: lead.phone ? `Tel: ${lead.phone}` : (lead.email || ''),
-      badge: isAr ? 'عميل مسجل' : 'Lead',
-      icon: Users
-    }));
-  }, [leads, isAr]);
+  }, [properties, contracts, isAr]);
 
   if (!isOpen) return null;
+
+  const footer = (
+    <ZFFormFooter>
+      {step === 1 && (
+        <>
+          <button
+            type="button"
+            className={shellStyles.btnSecondary}
+            onClick={handleModalClose}
+          >
+            {isAr ? 'إلغاء' : 'Cancel'}
+          </button>
+          <button
+            type="button"
+            className={shellStyles.btnPrimary}
+            onClick={() => {
+              if (validateStep1()) setStep(2);
+            }}
+          >
+            {isAr ? 'التالي: شروط السداد' : 'Next: Payment Terms'}
+          </button>
+        </>
+      )}
+
+      {step === 2 && (
+        <>
+          <button
+            type="button"
+            className={shellStyles.btnSecondary}
+            onClick={() => setStep(1)}
+          >
+            {isAr ? 'السابق' : 'Back'}
+          </button>
+          <button
+            type="button"
+            className={shellStyles.btnGhost}
+            onClick={handleModalClose}
+          >
+            {isAr ? 'إلغاء' : 'Cancel'}
+          </button>
+          <button
+            type="button"
+            className={shellStyles.btnPrimary}
+            onClick={() => {
+              if (validateStep2()) setStep(3);
+            }}
+          >
+            {isAr ? 'التالي: حصص الشركاء' : 'Next: Partner Splits'}
+          </button>
+        </>
+      )}
+
+      {step === 3 && (
+        <>
+          <button
+            type="button"
+            className={shellStyles.btnSecondary}
+            onClick={() => setStep(2)}
+          >
+            {isAr ? 'السابق' : 'Back'}
+          </button>
+          <button
+            type="button"
+            className={shellStyles.btnGhost}
+            onClick={handleModalClose}
+          >
+            {isAr ? 'إلغاء' : 'Cancel'}
+          </button>
+          <button
+            type="submit"
+            form="zf-new-contract-form"
+            className={shellStyles.btnPrimary}
+            disabled={isMutating || Math.abs(totalSplitsPct - 100) > 0.01}
+          >
+            {isMutating 
+              ? (isAr ? 'جارٍ الاعتماد…' : 'Posting…') 
+              : (isAr ? 'اعتماد وتوثيق العقد' : 'Execute Contract')}
+          </button>
+        </>
+      )}
+    </ZFFormFooter>
+  );
 
   return (
     <ZFModalShell
       isOpen={isOpen}
       onClose={handleModalClose}
       isAr={isAr}
-      title={isAr ? 'تحرير وتوثيق عقد بيع عقاري جديد' : 'Execute Real Estate Sales Contract'}
-      subtitle={isAr ? 'معالج مالي متكامل: ربط الوحدة، جدولة السداد، حصص الشركاء، والترحيل للدفاتر' : 'Executive deal workflow: Property specs, tranches, partner splits & ledger posting'}
+      title={isAr ? 'عقد بيع جديد' : 'New Sales Contract'}
+      subtitle={isAr 
+        ? 'ربط الوحدة العقارية وجدولة أقساط السداد وتحديد حصص الشركاء.' 
+        : 'Link property unit, schedule installments, and set partner equity splits.'}
       icon={<Plus size={18} />}
-      maxWidth="900px"
+      maxWidth="min(1100px, 94vw)"
       maxHeight="92vh"
-      bodyStyle={{ padding: 0, overflow: 'hidden' }}
+      footer={footer}
     >
-      {/* 3-Step Wizard Navigation Ribbon */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-        gap: '0.5rem',
-        padding: '0.65rem clamp(0.75rem, 3vw, 1.75rem)',
-        background: '#f8fafc',
-        borderBottom: '1px solid #e2e8f0'
-      }}>
-        {[
-          { s: 1, titleAr: '١. أطراف التعاقد والوحدة', titleEn: '1. Unit & Buyer', descAr: 'الوحدة العقارية وهوية المشتري' },
-          { s: 2, titleAr: '٢. الشروط وجدولة السداد', titleEn: '2. Payment Terms', descAr: 'السعر والمقدم ونظام الأقساط' },
-          { s: 3, titleAr: '٣. الشركاء والاعتماد', titleEn: '3. Equity & Final Posting', descAr: 'حصص التمويل والتوجيه المالي' }
-        ].map(item => {
-          const isActive = step === item.s;
-          const isCompleted = step > item.s;
-          return (
-            <button
-              key={item.s}
-              type="button"
-              onClick={() => {
-                if (item.s === 2 && !validateStep1()) return;
-                if (item.s === 3) {
-                  if (!validateStep1()) { setStep(1); return; }
-                  if (!validateStep2()) { setStep(2); return; }
-                }
-                setStep(item.s as 1 | 2 | 3);
-              }}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.6rem',
-                padding: '0.6rem 0.85rem',
-                borderRadius: '10px',
-                background: isActive ? '#ffffff' : isCompleted ? '#f1f5f9' : 'transparent',
-                border: isActive ? '1.5px solid var(--erp-accent, #2563eb)' : isCompleted ? '1px solid #cbd5e1' : '1px solid transparent',
-                boxShadow: isActive ? '0 2px 6px var(--erp-accent-tint, rgba(37, 99, 235, 0.15))' : 'none',
-                cursor: 'pointer',
-                textAlign: isAr ? 'right' : 'left'
-              }}
-            >
-              <div style={{
-                width: '24px',
-                height: '24px',
-                borderRadius: '50%',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '0.72rem',
-                fontWeight: 800,
-                flexShrink: 0,
-                background: isActive ? 'var(--erp-accent, #2563eb)' : isCompleted ? '#059669' : '#e2e8f0',
-                color: isActive || isCompleted ? '#ffffff' : '#64748b'
-              }}>
-                {isCompleted ? '✓' : item.s}
-              </div>
-              <div style={{ overflow: 'hidden' }}>
-                <div style={{ fontSize: '0.78rem', fontWeight: 800, color: isActive ? 'var(--erp-accent, #2563eb)' : '#0f172a', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
-                  {isAr ? item.titleAr : item.titleEn}
-                </div>
-                <div style={{ fontSize: '0.66rem', color: '#64748b', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
-                  {item.descAr}
-                </div>
-              </div>
-            </button>
-          );
-        })}
-      </div>
+      <form id="zf-new-contract-form" className={zfForm.form} onSubmit={handleFinalSubmit}>
+        {/* Step Navigation Bar */}
+        <ZFChoices<'1' | '2' | '3'>
+          value={String(step) as '1' | '2' | '3'}
+          onChange={(val) => {
+            const s = Number(val) as 1 | 2 | 3;
+            if (s === 2 && !validateStep1()) return;
+            if (s === 3) {
+              if (!validateStep1()) { setStep(1); return; }
+              if (!validateStep2()) { setStep(2); return; }
+            }
+            setStep(s);
+          }}
+          options={[
+            { id: '1', label: isAr ? '١. أطراف التعاقد والوحدة' : '1. Unit & Buyer', sub: isAr ? 'الوحدة والمشتري' : 'Property & Buyer' },
+            { id: '2', label: isAr ? '٢. الشروط وجدولة السداد' : '2. Payment Terms', sub: isAr ? 'السعر والمقدم والأقساط' : 'Price & Tranches' },
+            { id: '3', label: isAr ? '٣. الشركاء والاعتماد' : '3. Equity & Posting', sub: isAr ? 'حصص التمويل والتوجيه' : 'Splits & Ledger' }
+          ]}
+        />
 
-        {/* Wizard Body Form */}
-        <form onSubmit={handleFinalSubmit} style={{ padding: 'clamp(1rem, 3vw, 1.75rem)', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '1.25rem', flex: 1 }}>
-          
-          {/* ═══════════════════════════════════════════════════════════ */}
-          {/* STEP 1: PROPERTY & BUYER                                   */}
-          {/* ═══════════════════════════════════════════════════════════ */}
-          {step === 1 && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
-              {/* Card 1: Property Unit Selection */}
-              <div style={{
-                background: '#ffffff',
-                border: '1px solid var(--erp-border, #cbd5e1)',
-                borderRadius: '12px',
-                padding: '1.15rem',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '0.85rem',
-                boxShadow: '0 1px 3px rgba(0,0,0,0.03)'
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <Building2 size={16} color="var(--erp-accent, #2563eb)" />
-                  <h4 style={{ margin: 0, fontSize: '0.88rem', fontWeight: 800, color: '#0f172a' }}>
-                    {isAr ? 'الوحدة العقارية موضوع التعاقد:' : 'Contract Target Property Unit:'}
-                  </h4>
-                </div>
+        {/* Global Error Banner */}
+        {Object.keys(contractErrors).length > 0 && (
+          <ZFEffect tone="danger">
+            {Object.values(contractErrors).filter(Boolean).join(' • ')}
+          </ZFEffect>
+        )}
 
+        {/* STEP 1: PROPERTY & BUYER */}
+        {step === 1 && (
+          <>
+            <div className={zfForm.section}>
+              <h4 className={zfForm.sectionTitle}>{isAr ? 'الوحدة العقارية موضوع التعاقد' : 'Target Property Unit'}</h4>
+              
+              <ZFField label={isAr ? 'العقار أو المشروع' : 'Property / Project'} required error={contractErrors.property}>
                 <ZFCustomSelect 
                   value={selectedPropertyId}
                   onChange={(val: string) => handlePropertyChange(val)}
                   sections={propertySections}
-                  placeholderAr="-- اختر الوحدة العقارية من الكتالوج المعتمد --"
+                  placeholderAr="-- اختر الوحدة العقارية من الكتالوج --"
                   placeholderEn="-- Choose Property Unit from Catalog --"
                   isAr={isAr}
                   hasError={!!contractErrors.property}
                   errorMessage={contractErrors.property}
                   customAction={{
-                    labelAr: '+ إدخال وحدة / مشروع مخصص لزكريا فريد',
+                    labelAr: '+ إدخال وحدة أو مشروع مخصص لزكريا فريد',
                     labelEn: '+ Custom Developer Project / Unit',
                     onClick: () => handlePropertyChange('custom_unit')
                   }}
                 />
+              </ZFField>
 
-                {/* Building Unit / Apartment Sub-Selector */}
-                {selectedProperty && selectedProperty.building_units && selectedProperty.building_units.length > 0 && (
-                  <div style={{
-                    background: '#f8fafc',
-                    border: '1px solid var(--erp-border, #cbd5e1)',
-                    borderRadius: '8px',
-                    padding: '0.85rem',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '0.45rem'
-                  }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <label style={{ fontSize: '0.76rem', fontWeight: 700, color: '#334155', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                        {isAr ? 'تحديد الشقة أو التعاقد على العمارة بالكامل:' : 'Select Apartment or Whole Building:'}
-                      </label>
-                      {selectedBuildingUnitId ? (
-                        <span className={`${shellStyles.statusPill} ${shellStyles.statusPillGreen}`}>
-                          {isAr ? `شقة رقم ${selectedBuildingUnit?.unit_number || ''}` : `Apt #${selectedBuildingUnit?.unit_number || ''}`}
-                        </span>
-                      ) : (
-                        <span className={`${shellStyles.statusPill} ${canSellWhole ? shellStyles.statusPillBlue : shellStyles.statusPillAmber}`}>
-                          {canSellWhole 
-                            ? (isAr ? 'عقد بيع عمارة شروة واحدة' : 'Whole Building Sale')
-                            : (isAr ? 'بيع العمارة بالكامل غير متاح' : 'Whole Building Sale Unavailable')}
-                        </span>
-                      )}
-                    </div>
-                    <select
-                      value={selectedBuildingUnitId || (canSellWhole ? 'whole' : '')}
-                      onChange={e => handleBuildingUnitChange(e.target.value === 'whole' ? '' : e.target.value)}
-                      style={{
-                        width: '100%',
-                        padding: '0.55rem 0.75rem',
-                        borderRadius: '8px',
-                        border: '1px solid var(--erp-border, #cbd5e1)',
-                        background: '#ffffff',
-                        color: '#0f172a',
-                        fontSize: '0.82rem',
-                        fontWeight: 600,
-                        outline: 'none',
-                        cursor: 'pointer'
-                      }}
-                    >
-                      {canSellWhole ? (
-                        <option value="whole">
-                          {isAr ? '🏢 بيع العمارة بالكامل شروة واحدة (متاح - 0 وحدات مباعة)' : '🏢 Whole Building Sale (Available - 0 units sold)'}
-                        </option>
-                      ) : (
-                        <option value="" disabled>
-                          {isAr ? '-- اختر الشقة المتاحة (بيع العمارة بالكامل غير متاح - توجد وحدات مباعة) --' : '-- Choose available apartment (Whole building sale not allowed) --'}
-                        </option>
-                      )}
-                      {availableBuildingUnits.map(u => (
-                        <option key={u.unit_id} value={u.unit_id}>
-                          {u.unit_number} ({isAr ? `الدور ${u.floor}` : `Floor ${u.floor}`} • {u.area_sqm} {isAr ? 'م²' : 'm²'} • {D(u.price_egp).formatEGP(isAr)})
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-
-                {/* Custom Unit Input */}
-                {selectedPropertyId === 'custom_unit' && (
-                  <div>
-                    <label style={{ fontSize: '0.74rem', fontWeight: 700, color: '#334155', marginBottom: '0.25rem', display: 'block' }}>
-                      {isAr ? 'اسم المشروع / الوحدة المخصصة *' : 'Custom Unit Name *'}
-                    </label>
-                    <input
-                      type="text"
-                      value={customUnitName}
-                      onChange={e => setCustomUnitName(e.target.value)}
-                      placeholder={isAr ? 'مثال: فيلا A12 - حي النرجس التجمع الخامس' : 'e.g. Villa A12 - New Cairo'}
-                      style={{
-                        width: '100%',
-                        padding: '0.55rem 0.75rem',
-                        borderRadius: '8px',
-                        border: '1px solid #cbd5e1',
-                        background: '#ffffff',
-                        color: '#0f172a',
-                        fontSize: '0.82rem',
-                        outline: 'none'
-                      }}
-                      required
-                    />
-                  </div>
-                )}
-
-                {/* Property Preview Card */}
-                {selectedProperty && (
-                  <div style={{
-                    background: '#f8fafc',
-                    border: '1px solid var(--erp-border, #cbd5e1)',
-                    borderRadius: '10px',
-                    padding: '0.85rem 1rem',
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(3, 1fr)',
-                    gap: '0.75rem',
-                    fontSize: '0.76rem'
-                  }}>
-                    <div>
-                      <span style={{ color: '#64748b', fontSize: '0.7rem', display: 'block' }}>{isAr ? 'الموضوع والنوع:' : 'Target & Type:'}</span>
-                      <strong style={{ color: '#0f172a' }}>
-                        {selectedBuildingUnit 
-                          ? `${isAr ? 'شقة منفصلة:' : 'Apartment:'} ${selectedBuildingUnit.unit_number}` 
-                          : selectedProperty.type === 'building' 
-                            ? (isAr ? 'عمارة بالكامل (شروة واحدة)' : 'Entire Building') 
-                            : selectedProperty.type}
-                      </strong>
-                    </div>
-                    <div>
-                      <span style={{ color: '#64748b', fontSize: '0.7rem', display: 'block' }}>{isAr ? 'المساحة الصافية:' : 'Net Area:'}</span>
-                      <strong style={{ color: '#0f172a' }}>
-                        {selectedBuildingUnit 
-                          ? `${selectedBuildingUnit.area_sqm} م² (${isAr ? 'الدور' : 'Floor'} ${selectedBuildingUnit.floor})` 
-                          : `${selectedProperty.area_sqm || '—'} م²`}
-                      </strong>
-                    </div>
-                    <div>
-                      <span style={{ color: '#64748b', fontSize: '0.7rem', display: 'block' }}>{isAr ? 'السعر المقترح بالكتالوج:' : 'Catalog Price:'}</span>
-                      <strong style={{ color: 'var(--erp-accent, #2563eb)' }}>
-                        {selectedBuildingUnit 
-                          ? D(selectedBuildingUnit.price_egp || 0).formatEGP(isAr) 
-                          : D(selectedProperty.price_egp || 0).formatEGP(isAr)}
-                      </strong>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Card 2: Buyer & CRM Sync */}
-              <div style={{
-                background: '#ffffff',
-                border: '1px solid var(--erp-border, #cbd5e1)',
-                borderRadius: '12px',
-                padding: '1.15rem',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '0.85rem',
-                boxShadow: '0 1px 3px rgba(0,0,0,0.03)'
-              }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <User size={16} color="var(--erp-accent, #2563eb)" />
-                    <h4 style={{ margin: 0, fontSize: '0.88rem', fontWeight: 800, color: '#0f172a' }}>
-                      {isAr ? 'بيانات المشتري وهوية التعاقد:' : 'Buyer Identity & CRM Sync:'}
-                    </h4>
-                  </div>
-
-                  {/* Toggle CRM lead vs new */}
-                  <div style={{ display: 'flex', gap: '0.35rem' }}>
-                    <button
-                      type="button"
-                      onClick={() => setLeadSelectionMode('NEW_LEAD')}
-                      style={{
-                        padding: '0.3rem 0.65rem',
-                        borderRadius: '6px',
-                        fontSize: '0.72rem',
-                        fontWeight: 700,
-                        cursor: 'pointer',
-                        background: leadSelectionMode === 'NEW_LEAD' ? 'var(--erp-accent-subtle, #eff6ff)' : '#f1f5f9',
-                        color: leadSelectionMode === 'NEW_LEAD' ? 'var(--erp-accent, #2563eb)' : '#64748b',
-                        border: leadSelectionMode === 'NEW_LEAD' ? '1px solid var(--erp-accent, #2563eb)' : '1px solid transparent'
-                      }}
-                    >
-                      {isAr ? 'عميل جديد' : 'New Buyer'}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setLeadSelectionMode('EXISTING_LEAD')}
-                      style={{
-                        padding: '0.3rem 0.65rem',
-                        borderRadius: '6px',
-                        fontSize: '0.72rem',
-                        fontWeight: 700,
-                        cursor: 'pointer',
-                        background: leadSelectionMode === 'EXISTING_LEAD' ? 'var(--erp-accent-subtle, #eff6ff)' : '#f1f5f9',
-                        color: leadSelectionMode === 'EXISTING_LEAD' ? 'var(--erp-accent, #2563eb)' : '#64748b',
-                        border: leadSelectionMode === 'EXISTING_LEAD' ? '1px solid var(--erp-accent, #2563eb)' : '1px solid transparent'
-                      }}
-                    >
-                      {isAr ? 'اختيار عميل مسجل' : 'Existing CRM Lead'}
-                    </button>
-                  </div>
-                </div>
-
-                {/* CRM Lead Selector */}
-                {leadSelectionMode === 'EXISTING_LEAD' && (
-                  <ZFCustomSelect 
-                    value={selectedLeadId}
-                    onChange={(val: string) => handleLeadChange(val)}
-                    items={leadItems}
-                    placeholderAr="-- اختر العميل من قاعدة بيانات العملاء المسجلين --"
-                    placeholderEn="-- Choose Registered CRM Lead --"
-                    isAr={isAr}
-                  />
-                )}
-
-                {/* Buyer Fields Grid */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.85rem' }}>
-                  <div>
-                    <label style={{ fontSize: '0.74rem', fontWeight: 700, color: '#334155', marginBottom: '0.25rem', display: 'block' }}>
-                      {isAr ? 'الاسم القانوني الثلاثي / الرباعي *' : 'Full Legal Name *'}
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={buyerName}
-                      onChange={e => setBuyerName(e.target.value)}
-                      placeholder={isAr ? 'مثال: م. أحمد عبد الرحمن الشرقاوي' : 'e.g. John Doe'}
-                      style={{
-                        width: '100%',
-                        padding: '0.55rem 0.75rem',
-                        borderRadius: '8px',
-                        border: contractErrors.buyerName ? '1.5px solid #dc2626' : '1px solid #cbd5e1',
-                        background: '#ffffff',
-                        color: '#0f172a',
-                        fontSize: '0.82rem',
-                        outline: 'none'
-                      }}
-                    />
-                    {contractErrors.buyerName && (
-                      <span style={{ fontSize: '0.7rem', color: '#dc2626', fontWeight: 700 }}>{contractErrors.buyerName}</span>
-                    )}
-                  </div>
-
-                  <div>
-                    <label style={{ fontSize: '0.74rem', fontWeight: 700, color: '#334155', marginBottom: '0.25rem', display: 'block' }}>
-                      {isAr ? 'الرقم القومي / جواز السفر *' : 'National ID / Passport *'}
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={buyerNationalId}
-                      onChange={e => setBuyerNationalId(e.target.value)}
-                      placeholder="29401010102555"
-                      style={{
-                        width: '100%',
-                        padding: '0.55rem 0.75rem',
-                        borderRadius: '8px',
-                        border: contractErrors.buyerNationalId ? '1.5px solid #dc2626' : '1px solid #cbd5e1',
-                        background: '#ffffff',
-                        color: '#0f172a',
-                        fontSize: '0.82rem',
-                        fontVariantNumeric: 'tabular-nums',
-                        outline: 'none'
-                      }}
-                    />
-                    {contractErrors.buyerNationalId && (
-                      <span style={{ fontSize: '0.7rem', color: '#dc2626', fontWeight: 700 }}>{contractErrors.buyerNationalId}</span>
-                    )}
-                  </div>
-
-                  <div>
-                    <label style={{ fontSize: '0.74rem', fontWeight: 700, color: '#334155', marginBottom: '0.25rem', display: 'block' }}>
-                      {isAr ? 'رقم الهاتف المحمول:' : 'Mobile Phone:'}
-                    </label>
-                    <input
-                      type="tel"
-                      value={buyerPhone}
-                      onChange={e => setBuyerPhone(e.target.value)}
-                      placeholder="010XXXXXXXX"
-                      style={{
-                        width: '100%',
-                        padding: '0.55rem 0.75rem',
-                        borderRadius: '8px',
-                        border: '1px solid #cbd5e1',
-                        background: '#ffffff',
-                        color: '#0f172a',
-                        fontSize: '0.82rem',
-                        outline: 'none'
-                      }}
-                    />
-                  </div>
-
-                  <div>
-                    <label style={{ fontSize: '0.74rem', fontWeight: 700, color: '#334155', marginBottom: '0.25rem', display: 'block' }}>
-                      {isAr ? 'البريد الإلكتروني:' : 'Email Address:'}
-                    </label>
-                    <input
-                      type="email"
-                      value={buyerEmail}
-                      onChange={e => setBuyerEmail(e.target.value)}
-                      placeholder="client@domain.com"
-                      style={{
-                        width: '100%',
-                        padding: '0.55rem 0.75rem',
-                        borderRadius: '8px',
-                        border: '1px solid #cbd5e1',
-                        background: '#ffffff',
-                        color: '#0f172a',
-                        fontSize: '0.82rem',
-                        outline: 'none'
-                      }}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Step 1 Navigation Buttons */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '0.5rem', flexWrap: 'wrap', gap: '0.5rem' }}>
-                <button
-                  type="button"
-                  onClick={handleModalClose}
-                  style={{
-                    background: '#ffffff',
-                    border: '1px solid #cbd5e1',
-                    color: '#64748b',
-                    padding: '0.6rem 1.25rem',
-                    minHeight: '44px',
-                    borderRadius: '8px',
-                    fontSize: '0.8rem',
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '0.35rem',
-                  }}
-                >
-                  <X size={15} />
-                  <span>{isAr ? 'إلغاء' : 'Cancel'}</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (validateStep1()) setStep(2);
-                  }}
-                  style={{
-                    background: 'var(--erp-accent, #2563eb)',
-                    color: '#ffffff',
-                    border: '1px solid var(--erp-accent, #2563eb)',
-                    padding: '0.65rem 1.45rem',
-                    minHeight: '44px',
-                    borderRadius: '8px',
-                    fontSize: '0.82rem',
-                    fontWeight: 800,
-                    cursor: 'pointer',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '0.45rem',
-                    boxShadow: '0 2px 8px var(--erp-accent-tint, rgba(37, 99, 235, 0.25))',
-                    transition: 'all 0.15s ease'
-                  }}
-                  onMouseEnter={e => e.currentTarget.style.background = 'var(--erp-accent-hover, #1d4ed8)'}
-                  onMouseLeave={e => e.currentTarget.style.background = 'var(--erp-accent, #2563eb)'}
-                >
-                  <span>{isAr ? 'المتابعة للشروط المالية وجدولة السداد' : 'Proceed to Payment Terms'}</span>
-                  <ArrowRight size={15} style={{ transform: isAr ? 'rotate(180deg)' : 'none' }} />
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* ═══════════════════════════════════════════════════════════ */}
-          {/* STEP 2: PAYMENT TERMS & SCHEDULE GENERATOR                 */}
-          {/* ═══════════════════════════════════════════════════════════ */}
-          {step === 2 && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
-              {/* Pricing breakdown */}
-              <div style={{
-                background: '#ffffff',
-                border: '1px solid var(--erp-border, #cbd5e1)',
-                borderRadius: '12px',
-                padding: '1.15rem',
-                display: 'grid',
-                gridTemplateColumns: 'repeat(3, 1fr)',
-                gap: '1rem',
-                boxShadow: '0 1px 3px rgba(0,0,0,0.03)'
-              }}>
-                <div>
-                  <label style={{ fontSize: '0.74rem', fontWeight: 700, color: '#334155', marginBottom: '0.25rem', display: 'block' }}>
-                    {isAr ? 'سعر الوحدة الأساسي (ج.م) *' : 'Base Unit Price (EGP) *'}
-                  </label>
+              {selectedPropertyId === 'custom_unit' && (
+                <ZFField label={isAr ? 'اسم المشروع أو الوحدة المخصصة' : 'Custom Project / Unit Name'} required>
                   <input
-                    type="number"
-                    step="any"
+                    type="text"
+                    className={zfForm.control}
+                    value={customUnitName}
+                    onChange={e => setCustomUnitName(e.target.value)}
+                    placeholder={isAr ? 'مثال: عمارة النرجس - شقة ٤' : 'e.g. Narjis Building - Apt 4'}
                     required
-                    value={basePriceInput}
-                    onChange={e => setBasePriceInput(e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '0.55rem 0.75rem',
-                      borderRadius: '8px',
-                      border: '1px solid #cbd5e1',
-                      background: '#ffffff',
-                      color: '#0f172a',
-                      fontSize: '0.95rem',
-                      fontWeight: 700,
-                      outline: 'none'
-                    }}
                   />
-                </div>
-
-                <div style={{
-                  background: 'var(--erp-accent-subtle, #eff6ff)',
-                  border: '1px solid var(--erp-accent-tint, rgba(37, 99, 235, 0.25))',
-                  borderRadius: '10px',
-                  padding: '0.75rem',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'center'
-                }}>
-                  <span style={{ fontSize: '0.7rem', color: 'var(--erp-accent, #2563eb)', fontWeight: 800 }}>
-                    {isAr ? 'إجمالي قيمة العقد الاسمية (V):' : 'Gross Contract Value (V):'}
-                  </span>
-                  <strong style={{ fontSize: '1.25rem', color: 'var(--erp-accent, #2563eb)', fontWeight: 900 }}>
-                    <MoneyCell amount={totalNominalValue.toString()} isAr={isAr} highlight />
-                  </strong>
-                </div>
-              </div>
-
-              {/* Down Payment & Tranche Count Controls */}
-              <div style={{
-                background: '#ffffff',
-                border: '1px solid var(--erp-border, #cbd5e1)',
-                borderRadius: '12px',
-                padding: '1.15rem',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '1rem',
-                boxShadow: '0 1px 3px rgba(0,0,0,0.03)'
-              }}>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem' }}>
-                  {/* Down payment % */}
-                  <div>
-                    <label style={{ fontSize: '0.74rem', fontWeight: 700, color: '#334155', marginBottom: '0.25rem', display: 'block' }}>
-                      {isAr ? 'نسبة المقدم (٪):' : 'Down Payment %:'}
-                    </label>
-                    <input
-                      type="number"
-                      min="5"
-                      max="100"
-                      value={downPaymentInputPct}
-                      onChange={e => {
-                        setDownPaymentInputPct(e.target.value);
-                        setDownPaymentAmountInput('');
-                      }}
-                      style={{
-                        width: '100%',
-                        padding: '0.55rem 0.75rem',
-                        borderRadius: '8px',
-                        border: '1px solid #cbd5e1',
-                        background: '#ffffff',
-                        color: '#0f172a',
-                        fontSize: '0.85rem',
-                        fontWeight: 700,
-                        outline: 'none'
-                      }}
-                    />
-                    {/* Quick Preset Chips */}
-                    <div style={{ display: 'flex', gap: '0.3rem', marginTop: '0.35rem', flexWrap: 'wrap' }}>
-                      {[10, 15, 20, 25, 30].map(p => (
-                        <button
-                          key={p}
-                          type="button"
-                          onClick={() => {
-                            setDownPaymentInputPct(p.toString());
-                            setDownPaymentAmountInput('');
-                          }}
-                          style={{
-                            padding: '0.15rem 0.45rem',
-                            borderRadius: '4px',
-                            border: downPaymentInputPct === p.toString() ? '1px solid var(--erp-accent, #2563eb)' : '1px solid #cbd5e1',
-                            background: downPaymentInputPct === p.toString() ? 'var(--erp-accent, #2563eb)' : '#ffffff',
-                            color: downPaymentInputPct === p.toString() ? '#ffffff' : '#334155',
-                            fontSize: '0.68rem',
-                            fontWeight: 700,
-                            cursor: 'pointer'
-                          }}
-                        >
-                          {p}%
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Down payment cash amount with plain-language Tranche 0 clarification */}
-                  <div>
-                    <label style={{ fontSize: '0.74rem', fontWeight: 700, color: '#334155', marginBottom: '0.25rem', display: 'block' }}>
-                      {isAr ? 'دفعة الحجز والمقدم النقدي (Tranche 0):' : 'Down Payment & Reservation (Tranche 0):'}
-                    </label>
-                    <input
-                      type="number"
-                      step="any"
-                      value={modalDpAmount}
-                      onChange={e => {
-                        setDownPaymentAmountInput(e.target.value);
-                        if (totalNominalValue > 0) {
-                          setDownPaymentInputPct(((parseFloat(e.target.value) || 0) / totalNominalValue * 100).toFixed(1));
-                        }
-                      }}
-                      style={{
-                        width: '100%',
-                        padding: '0.55rem 0.75rem',
-                        borderRadius: '8px',
-                        border: '1.5px solid #059669',
-                        background: '#ffffff',
-                        color: '#059669',
-                        fontSize: '0.95rem',
-                        fontWeight: 900,
-                        outline: 'none'
-                      }}
-                    />
-                    <span style={{ fontSize: '0.67rem', color: '#64748b', display: 'block', marginTop: '0.2rem' }}>
-                      {isAr ? '💡 الدفعة 0 هي المقدم. تبقى مستحقة ولا تُسجل في الخزينة إلا عند استلامها فعلياً.' : 'Tranche 0 is the down payment. It stays due and is recorded only when actually received.'}
-                    </span>
-                  </div>
-
-                  {/* Installment count */}
-                  <div>
-                    <label style={{ fontSize: '0.74rem', fontWeight: 700, color: '#334155', marginBottom: '0.25rem', display: 'block' }}>
-                      {isAr ? 'عدد الأقساط الدورية:' : 'Number of Installments:'}
-                    </label>
-                    <select
-                      value={numInstallments}
-                      onChange={e => setNumInstallments(e.target.value)}
-                      style={{
-                        width: '100%',
-                        padding: '0.55rem 0.75rem',
-                        borderRadius: '8px',
-                        border: '1px solid #cbd5e1',
-                        background: '#ffffff',
-                        color: '#0f172a',
-                        fontSize: '0.82rem',
-                        outline: 'none'
-                      }}
-                    >
-                      <option value="4">4 {isAr ? 'أقساط' : 'Tranches'}</option>
-                      <option value="8">8 {isAr ? 'أقساط (سنتان ربع سنوي)' : 'Tranches (2 Yrs)'}</option>
-                      <option value="12">12 {isAr ? 'قسطاً (٣ سنوات ربع سنوي)' : 'Tranches (3 Yrs)'}</option>
-                      <option value="16">16 {isAr ? 'قسطاً (٤ سنوات ربع سنوي)' : 'Tranches (4 Yrs)'}</option>
-                      <option value="20">20 {isAr ? 'قسطاً (٥ سنوات ربع سنوي)' : 'Tranches (5 Yrs)'}</option>
-                      <option value="24">24 {isAr ? 'قسطاً (سنتان شهرياً)' : 'Tranches (2 Yrs Monthly)'}</option>
-                    </select>
-                  </div>
-                </div>
-
-                {/* Dates & Frequency */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem' }}>
-                  <div>
-                    <label style={{ fontSize: '0.74rem', fontWeight: 700, color: '#334155', marginBottom: '0.25rem', display: 'block' }}>
-                      {isAr ? 'تكرار سداد القسط:' : 'Payment Frequency:'}
-                    </label>
-                    <select
-                      value={installmentFrequency}
-                      onChange={e => setInstallmentFrequency(e.target.value as any)}
-                      style={{
-                        width: '100%',
-                        padding: '0.55rem 0.75rem',
-                        borderRadius: '8px',
-                        border: '1px solid #cbd5e1',
-                        background: '#ffffff',
-                        color: '#0f172a',
-                        fontSize: '0.82rem',
-                        outline: 'none'
-                      }}
-                    >
-                      <option value="MONTHLY">{isAr ? 'شهري (كل شهر)' : 'Monthly'}</option>
-                      <option value="QUARTERLY">{isAr ? 'ربع سنوي (كل ٣ أشهر)' : 'Quarterly (Every 3 Mo)'}</option>
-                      <option value="SEMI_ANNUAL">{isAr ? 'نصف سنوي (كل ٦ أشهر)' : 'Semi-Annual (Every 6 Mo)'}</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label style={{ fontSize: '0.74rem', fontWeight: 700, color: '#334155', marginBottom: '0.25rem', display: 'block' }}>
-                      {isAr ? 'تاريخ سداد المقدم:' : 'Down Payment Date:'}
-                    </label>
-                    <input
-                      type="date"
-                      value={firstPaymentDate}
-                      onChange={e => setFirstPaymentDate(e.target.value)}
-                      style={{
-                        width: '100%',
-                        padding: '0.55rem 0.75rem',
-                        borderRadius: '8px',
-                        border: '1px solid #cbd5e1',
-                        background: '#ffffff',
-                        color: '#0f172a',
-                        fontSize: '0.82rem',
-                        outline: 'none'
-                      }}
-                    />
-                  </div>
-
-                  <div>
-                    <label style={{ fontSize: '0.74rem', fontWeight: 700, color: '#334155', marginBottom: '0.25rem', display: 'block' }}>
-                      {isAr ? 'تاريخ استحقاق أول قسط:' : 'First Tranche Due Date:'}
-                    </label>
-                    <input
-                      type="date"
-                      value={firstInstallmentDueDate}
-                      onChange={e => setFirstInstallmentDueDate(e.target.value)}
-                      style={{
-                        width: '100%',
-                        padding: '0.55rem 0.75rem',
-                        borderRadius: '8px',
-                        border: '1px solid #cbd5e1',
-                        background: '#ffffff',
-                        color: '#0f172a',
-                        fontSize: '0.82rem',
-                        outline: 'none'
-                      }}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Tranche Preview Schedule Table */}
-              {previewSchedule.length > 0 && (
-                <div style={{
-                  background: '#f8fafc',
-                  border: '1px solid var(--erp-border, #cbd5e1)',
-                  borderRadius: '12px',
-                  padding: '1rem',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '0.6rem'
-                }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontSize: '0.76rem', fontWeight: 800, color: '#0f172a' }}>
-                      {isAr ? `معاينة جدول الدفعات والأقساط (دفعة الحجز والمقدم النقدي + ${previewSchedule.length} أقساط):` : `Payment & Installments Schedule (Tranche 0 + ${previewSchedule.length} Tranches):`}
-                    </span>
-                    <span style={{ fontSize: '0.72rem', color: '#64748b' }}>
-                      {isAr ? `قيمة القسط الدوري: ${D(previewSchedule[0]?.amount || 0).formatEGP(isAr)}` : `Per Tranche: ${D(previewSchedule[0]?.amount || 0).formatEGP(isAr)}`}
-                    </span>
-                  </div>
-
-                  <div style={{ maxHeight: '150px', overflowY: 'auto', overflowX: 'auto', WebkitOverflowScrolling: 'touch', border: '1px solid var(--erp-border, #cbd5e1)', borderRadius: '8px' }}>
-                    <table style={{ width: '100%', minWidth: '460px', borderCollapse: 'collapse', fontSize: '0.74rem', textAlign: isAr ? 'right' : 'left' }}>
-                      <thead>
-                        <tr style={{ background: '#f1f5f9', color: '#475569' }}>
-                          <th style={{ padding: '0.4rem 0.6rem' }}>#</th>
-                          <th style={{ padding: '0.4rem 0.6rem' }}>{isAr ? 'تاريخ الاستحقاق' : 'Due Date'}</th>
-                          <th style={{ padding: '0.4rem 0.6rem' }}>{isAr ? 'قيمة الدفعة' : 'Amount'}</th>
-                          <th style={{ padding: '0.4rem 0.6rem' }}>{isAr ? 'البيان / الحالة الدفترية' : 'Description / Status'}</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {/* Tranche 0: Down payment / Reservation */}
-                        <tr style={{ borderTop: '1px solid #e2e8f0', background: 'rgba(5, 150, 105, 0.04)' }}>
-                          <td style={{ padding: '0.4rem 0.6rem', fontWeight: 800, color: '#059669' }}>#0</td>
-                          <td style={{ padding: '0.4rem 0.6rem', fontVariantNumeric: 'tabular-nums', color: '#0f172a' }}>{firstPaymentDate}</td>
-                          <td style={{ padding: '0.4rem 0.6rem', fontWeight: 800, color: '#059669' }}>{D(modalDpAmount).formatEGP(isAr)}</td>
-                          <td style={{ padding: '0.4rem 0.6rem', color: '#047857', fontWeight: 700 }}>
-                            {isAr ? 'دفعة الحجز والمقدم (مستحقة)' : 'Down payment (due)'}
-                          </td>
-                        </tr>
-                        {previewSchedule.map(t => (
-                          <tr key={t.index} style={{ borderTop: '1px solid #e2e8f0', background: '#ffffff' }}>
-                            <td style={{ padding: '0.4rem 0.6rem', fontWeight: 700 }}>#{t.index}</td>
-                            <td style={{ padding: '0.4rem 0.6rem', fontVariantNumeric: 'tabular-nums' }}>{t.dueDate}</td>
-                            <td style={{ padding: '0.4rem 0.6rem', fontWeight: 700, color: 'var(--erp-accent, #2563eb)' }}>{D(t.amount).formatEGP(isAr)}</td>
-                            <td style={{ padding: '0.4rem 0.6rem', color: '#64748b' }}>{isAr ? 'قسط دوري مجدول باليد' : 'Pending Hand'}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
+                </ZFField>
               )}
 
-              {/* Step 2 Footer Navigation */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '0.5rem', flexWrap: 'wrap', gap: '0.5rem' }}>
-                <div style={{ display: 'flex', gap: '0.5rem' }}>
-                  <button
-                    type="button"
-                    onClick={() => setStep(1)}
-                    style={{
-                      background: '#ffffff',
-                      border: '1px solid #cbd5e1',
-                      color: '#334155',
-                      padding: '0.6rem 1.25rem',
-                      minHeight: '44px',
-                      borderRadius: '8px',
-                      fontSize: '0.8rem',
-                      fontWeight: 700,
-                      cursor: 'pointer',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      justifyContent: 'center'
-                    }}
+              {selectedProperty && selectedProperty.building_units && selectedProperty.building_units.length > 0 && (
+                <ZFField label={isAr ? 'الشقة المحددة داخل العمارة' : 'Specific Apartment / Unit'} required={!canSellWhole}>
+                  <select
+                    className={zfForm.control}
+                    value={selectedBuildingUnitId}
+                    onChange={e => handleBuildingUnitChange(e.target.value)}
                   >
-                    {isAr ? 'السابق: الوحدة والمشتري →' : '← Back: Property & Buyer'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleModalClose}
-                    style={{
-                      background: '#ffffff',
-                      border: '1px solid #cbd5e1',
-                      color: '#64748b',
-                      padding: '0.6rem 1.25rem',
-                      minHeight: '44px',
-                      borderRadius: '8px',
-                      fontSize: '0.8rem',
-                      fontWeight: 700,
-                      cursor: 'pointer',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '0.35rem',
-                    }}
-                  >
-                    <X size={15} />
-                    <span>{isAr ? 'إلغاء' : 'Cancel'}</span>
-                  </button>
-                </div>
+                    {canSellWhole && (
+                      <option value="">{isAr ? 'بيع العمارة بالكامل (كافة الوحدات)' : 'Sell Whole Building (All Units)'}</option>
+                    )}
+                    {availableBuildingUnits.map(u => (
+                      <option key={u.unit_id} value={u.unit_id}>
+                        {`${u.unit_number} (الدور ${u.floor}) - ${Number(u.price_egp || 0).toLocaleString('en-US', { maximumFractionDigits: 2 })} ${isAr ? 'ج.م' : 'EGP'}`}
+                      </option>
+                    ))}
+                  </select>
+                </ZFField>
+              )}
 
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (validateStep2()) setStep(3);
-                  }}
-                  style={{
-                    background: 'var(--erp-accent, #2563eb)',
-                    color: '#ffffff',
-                    border: '1px solid var(--erp-accent, #2563eb)',
-                    padding: '0.65rem 1.45rem',
-                    minHeight: '44px',
-                    borderRadius: '8px',
-                    fontSize: '0.82rem',
-                    fontWeight: 800,
-                    cursor: 'pointer',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '0.45rem',
-                    boxShadow: '0 2px 8px var(--erp-accent-tint, rgba(37, 99, 235, 0.25))',
-                    transition: 'all 0.15s ease'
-                  }}
-                  onMouseEnter={e => e.currentTarget.style.background = 'var(--erp-accent-hover, #1d4ed8)'}
-                  onMouseLeave={e => e.currentTarget.style.background = 'var(--erp-accent, #2563eb)'}
-                >
-                  <span>{isAr ? 'المتابعة لتوزيع الشركاء والاعتماد' : 'Proceed to Partner Splits'}</span>
-                  <ArrowRight size={15} style={{ transform: isAr ? 'rotate(180deg)' : 'none' }} />
-                </button>
+              {selectedProperty && (
+                <ZFFacts
+                  items={[
+                    { label: isAr ? 'الموقع' : 'Location', value: selectedProperty.location || '—' },
+                    { label: isAr ? 'المساحة' : 'Area', value: `${selectedBuildingUnit?.area_sqm || selectedProperty.area_sqm || 0} م²` },
+                    { label: isAr ? 'السعر الاسترشادي' : 'Catalog Price', value: `${Number(selectedBuildingUnit?.price_egp || selectedProperty.price_egp || 0).toLocaleString('en-US', { maximumFractionDigits: 2 })} ${isAr ? 'ج.م' : 'EGP'}` },
+                    { label: isAr ? 'حالة البناء' : 'Status', value: selectedProperty.completion_status === 'ready' ? (isAr ? 'جاهز للتسليم' : 'Ready') : (isAr ? 'تحت الإنشاء' : 'Off-Plan') }
+                  ]}
+                />
+              )}
+            </div>
+
+            <div className={zfForm.section}>
+              <h4 className={zfForm.sectionTitle}>{isAr ? 'بيانات المشتري' : 'Buyer Details'}</h4>
+
+              {leads.length > 0 && (
+                <ZFChoices<'NEW_LEAD' | 'EXISTING_LEAD'>
+                  value={leadSelectionMode}
+                  onChange={setLeadSelectionMode}
+                  options={[
+                    { id: 'NEW_LEAD', label: isAr ? 'تسجيل عميل جديد' : 'New Client' },
+                    { id: 'EXISTING_LEAD', label: isAr ? 'اختيار من قائمة العملاء' : 'Existing Lead' }
+                  ]}
+                />
+              )}
+
+              {leadSelectionMode === 'EXISTING_LEAD' && leads.length > 0 && (
+                <ZFField label={isAr ? 'العميل المسجل' : 'Registered Client'}>
+                  <select
+                    className={zfForm.control}
+                    value={selectedLeadId}
+                    onChange={e => handleLeadChange(e.target.value)}
+                  >
+                    <option value="">{isAr ? '-- اختر العميل --' : '-- Choose Client --'}</option>
+                    {leads.map(l => (
+                      <option key={l.id} value={l.id}>
+                        {`${l.name} • ${l.phone || l.email || ''}`}
+                      </option>
+                    ))}
+                  </select>
+                </ZFField>
+              )}
+
+              <div className={zfForm.row}>
+                <ZFField label={isAr ? 'اسم المشتري' : 'Buyer Name'} required error={contractErrors.buyerName}>
+                  <input
+                    type="text"
+                    className={zfForm.control}
+                    placeholder={isAr ? 'الاسم بالكامل' : 'Full name'}
+                    value={buyerName}
+                    onChange={e => {
+                      setBuyerName(e.target.value);
+                      if (contractErrors.buyerName) setContractErrors(prev => ({ ...prev, buyerName: '' }));
+                    }}
+                    required
+                  />
+                </ZFField>
+                <ZFField label={isAr ? 'الرقم القومي / جواز السفر' : 'National ID / Passport'} required error={contractErrors.buyerNationalId}>
+                  <input
+                    type="text"
+                    className={`${zfForm.control} ${zfForm.mono}`}
+                    placeholder="289XXXXXXXXXXXXX"
+                    value={buyerNationalId}
+                    onChange={e => {
+                      setBuyerNationalId(e.target.value);
+                      if (contractErrors.buyerNationalId) setContractErrors(prev => ({ ...prev, buyerNationalId: '' }));
+                    }}
+                    required
+                  />
+                </ZFField>
+              </div>
+
+              <div className={zfForm.row}>
+                <ZFField label={isAr ? 'رقم الهاتف' : 'Phone'}>
+                  <input
+                    type="tel"
+                    dir="ltr"
+                    className={zfForm.control}
+                    placeholder="010XXXXXXXX"
+                    value={buyerPhone}
+                    onChange={e => setBuyerPhone(e.target.value)}
+                  />
+                </ZFField>
+                <ZFField label={isAr ? 'البريد الإلكتروني' : 'Email'}>
+                  <input
+                    type="email"
+                    dir="ltr"
+                    className={zfForm.control}
+                    placeholder="client@example.com"
+                    value={buyerEmail}
+                    onChange={e => setBuyerEmail(e.target.value)}
+                  />
+                </ZFField>
               </div>
             </div>
-          )}
+          </>
+        )}
 
-          {/* ═══════════════════════════════════════════════════════════ */}
-          {/* STEP 3: PARTNER SPLITS & FINAL COMMIT                       */}
-          {/* ═══════════════════════════════════════════════════════════ */}
-          {step === 3 && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
-              {/* Partner Equity Allocation */}
-              <div style={{
-                background: '#ffffff',
-                border: '1px solid var(--erp-border, #cbd5e1)',
-                borderRadius: '12px',
-                padding: '1.15rem',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '0.85rem',
-                boxShadow: '0 1px 3px rgba(0,0,0,0.03)'
-              }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <Users size={16} color="var(--erp-accent, #2563eb)" />
-                    <h4 style={{ margin: 0, fontSize: '0.88rem', fontWeight: 800, color: '#0f172a' }}>
-                      {isAr ? 'توزيع حصص التمويل ورأس المال بين الشركاء:' : 'Partner Equity & Capital Splits:'}
-                    </h4>
+        {/* STEP 2: PAYMENT TERMS */}
+        {step === 2 && (
+          <>
+            <div className={zfForm.section}>
+              <h4 className={zfForm.sectionTitle}>{isAr ? 'الشروط المالية ونظام السداد' : 'Payment Terms'}</h4>
+              
+              <div className={zfForm.row}>
+                <ZFField label={isAr ? 'سعر البيع التعاقدي الإجمالي' : 'Gross Contract Price'} required error={contractErrors.price}>
+                  <ZFMoneyInput
+                    value={basePriceInput}
+                    onChange={e => {
+                      setBasePriceInput(e.target.value);
+                      if (contractErrors.price) setContractErrors(prev => ({ ...prev, price: '' }));
+                    }}
+                    unit={isAr ? 'ج.م' : 'EGP'}
+                    required
+                  />
+                </ZFField>
+                <ZFField label={isAr ? 'نظام السداد' : 'Payment Plan Type'} required>
+                  <ZFChoices<'INSTALLMENTS' | 'FULL_CASH'>
+                    value={paymentPlanType}
+                    onChange={setPaymentPlanType}
+                    options={[
+                      { id: 'INSTALLMENTS', label: isAr ? 'أقساط مجدولة' : 'Installments' },
+                      { id: 'FULL_CASH', label: isAr ? 'سداد نقدي كامل' : 'Full Cash' }
+                    ]}
+                  />
+                </ZFField>
+              </div>
+
+              {paymentPlanType === 'INSTALLMENTS' && (
+                <>
+                  <div className={zfForm.row}>
+                    <ZFField label={isAr ? 'دفعة الحجز والمقدم' : 'Down Payment Amount'} required error={contractErrors.downPayment}>
+                      <ZFMoneyInput
+                        value={downPaymentAmountInput !== '' ? downPaymentAmountInput : modalDpAmount.toString()}
+                        onChange={e => setDownPaymentAmountInput(e.target.value)}
+                        unit={isAr ? 'ج.م' : 'EGP'}
+                        required
+                      />
+                    </ZFField>
+                    <ZFField label={isAr ? 'عدد الأقساط الدورية' : 'Number of Installments'} required>
+                      <input
+                        type="number"
+                        min={1}
+                        max={60}
+                        className={zfForm.control}
+                        value={numInstallments}
+                        onChange={e => setNumInstallments(e.target.value)}
+                        required
+                      />
+                    </ZFField>
                   </div>
 
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                    <span style={{ fontSize: '0.72rem', color: '#64748b' }}>{isAr ? 'إجمالي الحصص:' : 'Total Splits:'}</span>
-                    <strong style={{
-                      fontSize: '0.82rem',
-                      fontWeight: 800,
-                      color: Math.abs(totalSplitsPct - 100) < 0.01 ? '#059669' : '#dc2626'
-                    }}>
-                      {totalSplitsPct.toFixed(1)}% {Math.abs(totalSplitsPct - 100) < 0.01 ? '✓' : '⚠️'}
-                    </strong>
+                  <div className={zfForm.row}>
+                    <ZFField label={isAr ? 'دورية استحقاق الأقساط' : 'Installment Frequency'}>
+                      <ZFChoices<'QUARTERLY' | 'MONTHLY' | 'SEMI_ANNUAL'>
+                        value={installmentFrequency}
+                        onChange={setInstallmentFrequency}
+                        options={[
+                          { id: 'QUARTERLY', label: isAr ? 'ربع سنوي' : 'Quarterly' },
+                          { id: 'MONTHLY', label: isAr ? 'شهري' : 'Monthly' },
+                          { id: 'SEMI_ANNUAL', label: isAr ? 'نصف سنوي' : 'Semi-Annual' }
+                        ]}
+                      />
+                    </ZFField>
+                    <ZFField label={isAr ? 'تاريخ توقيع العقد والدفعة الأولى' : 'Contract Date & First Payment'} required>
+                      <input
+                        type="date"
+                        className={zfForm.control}
+                        value={firstPaymentDate}
+                        onChange={e => setFirstPaymentDate(e.target.value)}
+                        required
+                      />
+                    </ZFField>
                   </div>
-                </div>
 
-                {/* Progress Visual Bar */}
-                <div style={{ width: '100%', height: '8px', borderRadius: '999px', background: '#e2e8f0', overflow: 'hidden', display: 'flex' }}>
-                  {partnerSplits.map((p, idx) => (
-                    <div
-                      key={p.partnerName}
-                      style={{
-                        width: `${Math.max(0, p.sharePct)}%`,
-                        background: idx === 0 ? 'var(--erp-accent, #2563eb)' : idx === 1 ? '#0284c7' : '#15803d',
-                        height: '100%'
-                      }}
-                      title={`${p.partnerName}: ${p.sharePct}%`}
+                  <ZFField label={isAr ? 'تاريخ استحقاق أول قسط دوري' : 'First Installment Due Date'} required>
+                    <input
+                      type="date"
+                      className={zfForm.control}
+                      value={firstInstallmentDueDate}
+                      onChange={e => setFirstInstallmentDueDate(e.target.value)}
+                      required
                     />
-                  ))}
-                </div>
+                  </ZFField>
 
-                {/* Partner Rows */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  {/* Schedule preview */}
+                  {previewSchedule.length > 0 && (
+                    <div className={zfForm.section}>
+                      <h4 className={zfForm.sectionTitle}>
+                        {isAr 
+                          ? `جدول الدفعات والأقساط المتوقع (مقدم + ${previewSchedule.length} أقساط)` 
+                          : `Projected Schedule (Deposit + ${previewSchedule.length} Installments)`}
+                      </h4>
+                      <div className={zfForm.form}>
+                        <table className={zfForm.journalTable}>
+                          <thead>
+                            <tr>
+                              <th>#</th>
+                              <th>{isAr ? 'تاريخ الاستحقاق' : 'Due Date'}</th>
+                              <th className={zfForm.journalNum}>{isAr ? 'قيمة الدفعة' : 'Amount'}</th>
+                              <th>{isAr ? 'البيان' : 'Description'}</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <tr>
+                              <td>#0</td>
+                              <td>{firstPaymentDate}</td>
+                              <td className={zfForm.journalNum}>
+                                {Number(modalDpAmount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {isAr ? 'ج.م' : 'EGP'}
+                              </td>
+                              <td>{isAr ? 'دفعة الحجز والمقدم' : 'Down Payment'}</td>
+                            </tr>
+                            {previewSchedule.map(t => (
+                              <tr key={t.index}>
+                                <td>#{t.index}</td>
+                                <td>{t.dueDate}</td>
+                                <td className={zfForm.journalNum}>
+                                  {Number(t.amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {isAr ? 'ج.م' : 'EGP'}
+                                </td>
+                                <td>{isAr ? 'قسط دوري' : 'Installment'}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          </>
+        )}
+
+        {/* STEP 3: PARTNER SPLITS & DESTINATION */}
+        {step === 3 && (
+          <>
+            <div className={zfForm.section}>
+              <div className={zfForm.labelRow}>
+                <h4 className={zfForm.sectionTitle}>{isAr ? 'توزيع حصص الشركاء' : 'Partner Equity Splits'}</h4>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <button
+                    type="button"
+                    className={`${shellStyles.btnGhost} ${shellStyles.btnSm}`}
+                    onClick={() => setPartnerSplits(autoBalanceShares(partnerSplits))}
+                  >
+                    <Scale size={13} />
+                    {isAr ? 'موازنة النسب تلقائياً' : 'Auto Balance'}
+                  </button>
+                </div>
+              </div>
+
+              {/* Progress Visual Bar */}
+              <div style={{ width: '100%', height: '8px', borderRadius: '999px', background: '#e2e8f0', overflow: 'hidden', display: 'flex' }}>
+                {partnerSplits.map((p, idx) => (
+                  <div
+                    key={p.partnerName}
+                    style={{
+                      width: `${Math.max(0, p.sharePct)}%`,
+                      background: idx === 0 ? 'var(--erp-accent, #2563eb)' : idx === 1 ? '#0284c7' : '#15803d',
+                      height: '100%'
+                    }}
+                    title={`${p.partnerName}: ${p.sharePct}%`}
+                  />
+                ))}
+              </div>
+
+              {/* Partner Rows */}
+              <table className={zfForm.journalTable}>
+                <thead>
+                  <tr>
+                    <th>{isAr ? 'الشريك' : 'Partner'}</th>
+                    <th className={zfForm.journalNum}>{isAr ? 'الحصة %' : 'Share %'}</th>
+                    <th className={zfForm.journalNum}>{isAr ? 'القيمة المقابلة' : 'Share Amount'}</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
                   {partnerSplits.map((item, idx) => (
-                    <div
-                      key={item.partnerName}
-                      style={{
-                        display: 'grid',
-                        gridTemplateColumns: '2fr 1.5fr 1fr auto',
-                        gap: '0.6rem',
-                        alignItems: 'center',
-                        background: '#f8fafc',
-                        border: '1px solid var(--erp-border, #cbd5e1)',
-                        borderRadius: '8px',
-                        padding: '0.5rem 0.75rem'
-                      }}
-                    >
-                      <strong style={{ fontSize: '0.78rem', color: '#0f172a' }}>{item.partnerName}</strong>
-                      <span style={{ fontSize: '0.72rem', color: '#64748b' }}>
-                        {D(totalNominalValue * (item.sharePct / 100)).formatEGP(isAr)}
-                      </span>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.2rem' }}>
+                    <tr key={item.partnerName}>
+                      <td><strong>{item.partnerName}</strong></td>
+                      <td className={zfForm.journalNum}>
                         <input
                           type="number"
                           min="0"
                           max="100"
+                          step="any"
+                          className={`${zfForm.control} ${zfForm.mono}`}
+                          style={{ width: '80px', display: 'inline-block' }}
                           value={item.sharePct}
                           onChange={e => {
                             const val = parseFloat(e.target.value) || 0;
                             const updated = partnerSplits.map((p, i) => i === idx ? { ...p, sharePct: val } : p);
                             setPartnerSplits(updated);
                           }}
-                          style={{
-                            width: '55px',
-                            padding: '0.25rem 0.4rem',
-                            borderRadius: '6px',
-                            border: '1px solid #cbd5e1',
-                            background: '#ffffff',
-                            color: '#0f172a',
-                            fontSize: '0.78rem',
-                            fontWeight: 700,
-                            textAlign: 'center'
-                          }}
                         />
-                        <span style={{ fontSize: '0.72rem', color: '#64748b' }}>%</span>
-                      </div>
-                      {idx > 0 && (
-                        <button
-                          type="button"
-                          onClick={() => setPartnerSplits(smartRemovePartner(partnerSplits, idx))}
-                          style={{
-                            background: 'transparent',
-                            border: 'none',
-                            color: '#dc2626',
-                            cursor: 'pointer',
-                            padding: '0.2rem'
-                          }}
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      )}
-                    </div>
+                      </td>
+                      <td className={zfForm.journalNum}>
+                        {Number(totalNominalValue * (item.sharePct / 100)).toLocaleString('en-US', { maximumFractionDigits: 2 })} {isAr ? 'ج.م' : 'EGP'}
+                      </td>
+                      <td style={{ textAlign: 'center' }}>
+                        {idx > 0 && (
+                          <button
+                            type="button"
+                            className={shellStyles.btnGhost}
+                            onClick={() => setPartnerSplits(smartRemovePartner(partnerSplits, idx))}
+                          >
+                            <Trash2 size={14} color="#dc2626" />
+                          </button>
+                        )}
+                      </td>
+                    </tr>
                   ))}
-                </div>
+                </tbody>
+              </table>
 
+              {/* Add Partner Form Row */}
+              <div className={zfForm.row}>
+                <ZFField label={isAr ? 'إضافة شريك من المسجلين' : 'Add Registered Partner'}>
+                  <div style={{ display: 'flex', gap: '0.4rem' }}>
+                    <select
+                      className={zfForm.control}
+                      value={selectedPartnerToAdd}
+                      onChange={e => setSelectedPartnerToAdd(e.target.value)}
+                    >
+                      <option value="">{isAr ? '-- اختر شريكاً --' : '-- Select Partner --'}</option>
+                      {unifiedPartners
+                        .filter(p => !partnerSplits.some(ps => ps.partnerName === p.name))
+                        .map(p => (
+                          <option key={p.name} value={p.name}>
+                            {p.name}
+                          </option>
+                        ))}
+                    </select>
+                    <button
+                      type="button"
+                      className={shellStyles.btnSecondary}
+                      onClick={() => {
+                        if (selectedPartnerToAdd) {
+                          setPartnerSplits(smartAddPartner(partnerSplits, selectedPartnerToAdd, 10));
+                          setSelectedPartnerToAdd('');
+                        }
+                      }}
+                      disabled={!selectedPartnerToAdd}
+                    >
+                      {isAr ? 'إضافة' : 'Add'}
+                    </button>
+                  </div>
+                </ZFField>
+
+                <ZFField label={isAr ? 'أو إدخال اسم شريك جديد' : 'Or New Partner Name'}>
+                  <div style={{ display: 'flex', gap: '0.4rem' }}>
+                    <input
+                      type="text"
+                      className={zfForm.control}
+                      placeholder={isAr ? 'اسم الشريك' : 'Partner name'}
+                      value={customPartnerNameInput}
+                      onChange={e => setCustomPartnerNameInput(e.target.value)}
+                    />
+                    <button
+                      type="button"
+                      className={shellStyles.btnSecondary}
+                      onClick={() => {
+                        if (customPartnerNameInput.trim()) {
+                          setPartnerSplits(smartAddPartner(partnerSplits, customPartnerNameInput.trim(), 10));
+                          setCustomPartnerNameInput('');
+                        }
+                      }}
+                      disabled={!customPartnerNameInput.trim()}
+                    >
+                      {isAr ? 'إضافة' : 'Add'}
+                    </button>
+                  </div>
+                </ZFField>
               </div>
 
-              {/* Deal Summary */}
-              <div style={{
-                background: '#ffffff',
-                border: '1px solid var(--erp-border, #cbd5e1)',
-                borderRadius: '12px',
-                padding: '1rem',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '0.75rem',
-                boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
-              }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--erp-accent, #2563eb)' }}>
-                    {isAr ? 'ملخص الصفقة:' : 'Deal Summary:'}
-                  </span>
-                  <ShieldCheck size={16} color="var(--erp-accent, #2563eb)" />
-                </div>
-
-                <div style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(5, 1fr)',
-                  gap: '0.75rem',
-                  fontSize: '0.74rem',
-                  background: '#f8fafc',
-                  padding: '0.65rem 0.85rem',
-                  borderRadius: '8px'
-                }}>
-                  <div>
-                    <span style={{ color: '#64748b', display: 'block', fontSize: '0.68rem' }}>{isAr ? 'الوحدة / المشروع:' : 'Unit / Project:'}</span>
-                    <strong style={{ color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'block' }}>
-                      {selectedBuildingUnit 
-                        ? `${selectedProperty?.title_ar || selectedProperty?.title_en} - ${selectedBuildingUnit.unit_number}`
-                        : selectedProperty 
-                          ? (selectedProperty.title_ar || selectedProperty.title_en)
-                          : (customUnitName || '—')}
-                    </strong>
-                  </div>
-                  <div>
-                    <span style={{ color: '#64748b', display: 'block', fontSize: '0.68rem' }}>{isAr ? 'المشتري:' : 'Buyer:'}</span>
-                    <strong style={{ color: '#0f172a' }}>{buyerName || '—'}</strong>
-                  </div>
-                  <div>
-                    <span style={{ color: '#64748b', display: 'block', fontSize: '0.68rem' }}>{isAr ? 'القيمة التعاقدية:' : 'Gross Value:'}</span>
-                    <strong style={{ color: 'var(--erp-accent, #2563eb)' }}>{D(totalNominalValue).formatEGP(isAr)}</strong>
-                  </div>
-                  <div>
-                    <span style={{ color: '#64748b', display: 'block', fontSize: '0.68rem' }}>{isAr ? 'دفعة الحجز والمقدم النقدي:' : 'Down Payment & Reservation (Tranche 0):'}</span>
-                    <strong style={{ color: '#059669' }}>{D(modalDpAmount).formatEGP(isAr)}</strong>
-                  </div>
-                  <div>
-                    <span style={{ color: '#64748b', display: 'block', fontSize: '0.68rem' }}>{isAr ? 'تاريخ التوقيع:' : 'Contract Date:'}</span>
-                    <strong style={{ color: '#0f172a' }}>{firstPaymentDate}</strong>
-                  </div>
-                </div>
-
-                <div style={{ fontSize: '0.72rem', color: '#475569', background: '#f8fafc', border: '1px solid #e2e8f0', padding: '0.5rem 0.75rem', borderRadius: '6px' }}>
-                  {isAr 
-                    ? 'لا يتم تسجيل أي قيد دفتري حتى يتم تحصيل الدفعة المقدمة فعلياً وإثباتها.'
-                    : 'No ledger entry is posted until the down payment is actually received and recorded.'}
-                </div>
-              </div>
-
-              {/* Step 3 Footer Navigation */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '0.5rem', flexWrap: 'wrap', gap: '0.5rem' }}>
-                <div style={{ display: 'flex', gap: '0.5rem' }}>
-                  <button
-                    type="button"
-                    onClick={() => setStep(2)}
-                    style={{
-                      background: '#ffffff',
-                      border: '1px solid #cbd5e1',
-                      color: '#334155',
-                      padding: '0.6rem 1.25rem',
-                      minHeight: '44px',
-                      borderRadius: '8px',
-                      fontSize: '0.8rem',
-                      fontWeight: 700,
-                      cursor: 'pointer',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      justifyContent: 'center'
-                    }}
-                  >
-                    {isAr ? 'السابق: الشروط المالية →' : '← Back: Payment Terms'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleModalClose}
-                    style={{
-                      background: '#ffffff',
-                      border: '1px solid #cbd5e1',
-                      color: '#64748b',
-                      padding: '0.6rem 1.25rem',
-                      minHeight: '44px',
-                      borderRadius: '8px',
-                      fontSize: '0.8rem',
-                      fontWeight: 700,
-                      cursor: 'pointer',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '0.35rem',
-                    }}
-                  >
-                    <X size={15} />
-                    <span>{isAr ? 'إلغاء' : 'Cancel'}</span>
-                  </button>
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={isMutating || Math.abs(totalSplitsPct - 100) > 0.01}
-                  style={{
-                    background: 'var(--erp-accent, #2563eb)',
-                    color: '#ffffff',
-                    border: '1px solid var(--erp-accent, #2563eb)',
-                    padding: '0.65rem 1.65rem',
-                    minHeight: '44px',
-                    borderRadius: '8px',
-                    fontSize: '0.82rem',
-                    fontWeight: 800,
-                    cursor: isMutating ? 'not-allowed' : 'pointer',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '0.45rem',
-                    boxShadow: '0 2px 10px var(--erp-accent-tint, rgba(37, 99, 235, 0.3))',
-                    transition: 'all 0.15s ease'
-                  }}
-                  onMouseEnter={e => {
-                    if (!isMutating && Math.abs(totalSplitsPct - 100) <= 0.01) {
-                      e.currentTarget.style.background = 'var(--erp-accent-hover, #1d4ed8)';
-                    }
-                  }}
-                  onMouseLeave={e => {
-                    if (!isMutating) {
-                      e.currentTarget.style.background = 'var(--erp-accent, #2563eb)';
-                    }
-                  }}
-                >
-                  {isMutating ? <Loader2 size={15} className="animate-spin" /> : <CheckCircle2 size={15} />}
-                  <span>{isAr ? 'اعتماد العقد' : 'Create contract'}</span>
-                </button>
-              </div>
+              <ZFFacts
+                items={[
+                  {
+                    label: isAr ? 'إجمالي الحصص الموزعة' : 'Total Allocated',
+                    value: `${totalSplitsPct.toFixed(1)}%`,
+                    tone: Math.abs(totalSplitsPct - 100) < 0.01 ? 'pos' : 'neg'
+                  },
+                  {
+                    label: isAr ? 'المتبقي للتوزيع' : 'Remaining',
+                    value: `${(100 - totalSplitsPct).toFixed(1)}%`
+                  }
+                ]}
+              />
             </div>
-          )}
 
-        </form>
+            {/* Destination Treasury */}
+            <div className={zfForm.section}>
+              <h4 className={zfForm.sectionTitle}>{isAr ? 'الخزينة المستلمة للدفعة المقدمة' : 'Receiving Treasury'}</h4>
+              <ZFChoices<'101000' | '102000'>
+                value={destinationTreasury}
+                onChange={setDestinationTreasury}
+                options={[
+                  {
+                    id: '101000',
+                    label: isAr ? 'الخزينة النقدية' : 'Cash Safe',
+                    sub: isAr ? 'حساب الخزينة (١٠١٠٠٠)' : 'Safe (101000)',
+                    icon: <Wallet size={16} />
+                  },
+                  {
+                    id: '102000',
+                    label: isAr ? 'حساب إنستاباي' : 'InstaPay',
+                    sub: isAr ? 'حساب إنستاباي (١٠٢٠٠٠)' : 'InstaPay (102000)',
+                    icon: <Smartphone size={16} />
+                  }
+                ]}
+              />
+            </div>
+
+            {/* Deal Summary Facts */}
+            <div className={zfForm.section}>
+              <h4 className={zfForm.sectionTitle}>{isAr ? 'ملخص التعاقد النهائي' : 'Contract Summary'}</h4>
+              <ZFFacts
+                items={[
+                  {
+                    label: isAr ? 'الوحدة / المشروع' : 'Unit / Project',
+                    value: selectedBuildingUnit 
+                      ? `${selectedProperty?.title_ar || selectedProperty?.title_en} - ${selectedBuildingUnit.unit_number}`
+                      : selectedProperty 
+                        ? (selectedProperty.title_ar || selectedProperty.title_en)
+                        : (customUnitName || '—')
+                  },
+                  { label: isAr ? 'المشتري' : 'Buyer', value: buyerName || '—' },
+                  { label: isAr ? 'القيمة التعاقدية' : 'Gross Value', value: `${Number(totalNominalValue).toLocaleString('en-US', { maximumFractionDigits: 2 })} ${isAr ? 'ج.م' : 'EGP'}` },
+                  { label: isAr ? 'دفعة الحجز والمقدم' : 'Down Payment', value: `${Number(modalDpAmount).toLocaleString('en-US', { maximumFractionDigits: 2 })} ${isAr ? 'ج.م' : 'EGP'}`, tone: 'pos' },
+                  { label: isAr ? 'تاريخ التوقيع' : 'Contract Date', value: firstPaymentDate }
+                ]}
+              />
+            </div>
+
+            <ZFEffect>
+              {isAr 
+                ? 'لا يتم تسجيل أي قيد دفتري حتى يتم تحصيل الدفعة المقدمة فعلياً وإثباتها.'
+                : 'No ledger entry is posted until the down payment is actually received and recorded.'}
+            </ZFEffect>
+          </>
+        )}
+      </form>
     </ZFModalShell>
   );
 };

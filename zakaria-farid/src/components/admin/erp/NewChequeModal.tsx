@@ -1,39 +1,26 @@
 'use client';
+/* eslint-disable react-hooks/set-state-in-effect */
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { 
-  Wallet, 
-  X, 
-  Check, 
-  CheckCircle2,
-  FileText, 
-  ShieldCheck, 
-  Loader2,
-  Clock,
-  Search,
-  Building2,
-  Plus,
-  Calendar,
-  DollarSign,
-  Receipt,
-  Sparkles,
-  Hammer,
-  Compass,
-  ScrollText,
-  Zap,
-  ArrowRight,
-  Filter,
-  Lock,
-  AlertTriangle,
-  ExternalLink
-} from 'lucide-react';
+import { Wallet, Hammer, Compass, ScrollText, FileText, Zap } from 'lucide-react';
 import { ERPContract, ERPInstallmentSchedule } from '@/lib/erp/types';
 import { Property } from '@/lib/supabase/types';
-import { tafqeetEGP } from '@/lib/erp/tafqeet';
 import { D } from '@/lib/erp/math';
 import { toast } from 'sonner';
 import { localizeBuyerName } from '@/components/erp/JournalEntryPreview';
 import { ZFModalShell } from './v2/common/ZFModalShell';
+import { 
+  ZFField, 
+  ZFMoneyInput, 
+  ZFChoices, 
+  ZFFacts, 
+  ZFEffect, 
+  ZFJournalPeek, 
+  ZFFormFooter, 
+  ZFFormDone, 
+  zfForm 
+} from './v2/common/ZFForm';
+import shellStyles from './v2/ZFWorkstationShell.module.css';
 
 export type SupplementType = 
   | 'extra_finishing' 
@@ -80,56 +67,31 @@ const SUPPLEMENT_TYPES = [
     id: 'extra_finishing' as SupplementType,
     labelAr: 'تشطيبات وديكورات إضافية',
     labelEn: 'Extra Finishing & Decor',
-    descAr: 'أعمال تشطيب وديكور وتجهيزات خاصة متفق عليها لاحقاً',
-    descEn: 'Post-contract luxury interior & finishings upgrade',
-    icon: Hammer,
-    color: '#15803d',
-    bgColor: 'rgba(21, 128, 61, 0.05)',
-    borderColor: 'rgba(21, 128, 61, 0.22)'
+    icon: <Hammer size={16} />
   },
   {
     id: 'architectural_alterations' as SupplementType,
     labelAr: 'تعديلات معمارية وإنشائية',
     labelEn: 'Architectural Alterations',
-    descAr: 'تعديل حوائط داخلية، فتح مساحات، أو تعديل تمديدات',
-    descEn: 'Internal layout modification or MEP adjustments',
-    icon: Compass,
-    color: '#334155',
-    bgColor: 'rgba(51, 65, 85, 0.05)',
-    borderColor: 'rgba(51, 65, 85, 0.22)'
+    icon: <Compass size={16} />
   },
   {
     id: 'transfer_admin_fees' as SupplementType,
-    labelAr: 'رسوم تنازل ومصاريف إدارية',
-    labelEn: 'Assignment & Admin Fees',
-    descAr: 'رسوم نقل ملكية، توثيق ملحق، أو مصاريف إدارية معتمدة',
-    descEn: 'Unit assignment fee or legal documentation charges',
-    icon: ScrollText,
-    color: 'var(--erp-accent, #2563eb)',
-    bgColor: 'var(--erp-accent-subtle, rgba(37, 99, 235, 0.08))',
-    borderColor: 'var(--erp-accent-tint, rgba(37, 99, 235, 0.25))'
+    labelAr: 'رسوم ومصاريف إدارية',
+    labelEn: 'Admin Fees',
+    icon: <ScrollText size={16} />
   },
   {
     id: 'contract_annex' as SupplementType,
-    labelAr: 'ملحق تعاقدي / دفعة مكملة',
-    labelEn: 'Contract Annex / Tranche',
-    descAr: 'ملحق اتفاق مالي مكمل لأصل العقد لزيادة الدفعات',
-    descEn: 'Official contract addendum adding scheduled tranches',
-    icon: FileText,
-    color: '#854d0e',
-    bgColor: 'rgba(133, 77, 14, 0.05)',
-    borderColor: 'rgba(133, 77, 14, 0.22)'
+    labelAr: 'ملحق تعاقدي مكمل',
+    labelEn: 'Contract Annex',
+    icon: <FileText size={16} />
   },
   {
     id: 'emergency_due' as SupplementType,
-    labelAr: 'دفعة أو بند استحقاق طارئ',
-    labelEn: 'Emergency Due / Misc',
-    descAr: 'أي مستحق مالي إضافي أو تسوية خاصة متفق عليها',
-    descEn: 'Miscellaneous custom due agreed upon with client',
-    icon: Zap,
-    color: '#991b1b',
-    bgColor: 'rgba(153, 27, 27, 0.05)',
-    borderColor: 'rgba(153, 27, 27, 0.22)'
+    labelAr: 'بند استحقاق طارئ',
+    labelEn: 'Emergency Due',
+    icon: <Zap size={16} />
   }
 ];
 
@@ -138,15 +100,12 @@ export const NewChequeModal: React.FC<NewChequeModalProps> = ({
   onClose,
   contracts = [],
   schedules = [],
-  properties = [],
   initialContractId = null,
   onSaveSupplement,
   onSaveCheque,
-  onInspectContract,
   isMutating = false,
   isAr = true
 }) => {
-  // Check if contract has finished installments and is closed / delivered
   const isContractClosed = (c: ERPContract) => {
     if (c.status === 'Completed' || c.status === 'Rescinded') return true;
     if (c.handover_status === 'Delivered') return true;
@@ -161,12 +120,7 @@ export const NewChequeModal: React.FC<NewChequeModalProps> = ({
     return false;
   };
 
-  // Selected contract state (defaults to active contracts that are pending payment)
   const [selectedContractId, setSelectedContractId] = useState<string>('');
-  const [contractSearchQuery, setContractSearchQuery] = useState<string>('');
-  const [contractFilter, setContractFilter] = useState<'active' | 'closed' | 'all'>('active');
-
-  // Supplement Form state
   const [supplementType, setSupplementType] = useState<SupplementType>('extra_finishing');
   const [amount, setAmount] = useState<string>('150000');
   const [dueDate, setDueDate] = useState<string>(() => new Date().toISOString().split('T')[0]);
@@ -181,7 +135,6 @@ export const NewChequeModal: React.FC<NewChequeModalProps> = ({
     dueDate: string;
   } | null>(null);
 
-  // Auto-initialize selected contract when opening modal (prefer active contracts)
   useEffect(() => {
     if (isOpen) {
       setSupplementSuccess(null);
@@ -196,12 +149,10 @@ export const NewChequeModal: React.FC<NewChequeModalProps> = ({
     }
   }, [isOpen, initialContractId, contracts, schedules]);
 
-  // The active contract
   const activeContract = useMemo(() => {
     return contracts.find(c => c.contract_id === selectedContractId) || contracts[0] || null;
   }, [contracts, selectedContractId]);
 
-  // Existing tranches for active contract
   const activeContractSchedules = useMemo(() => {
     if (!activeContract) return [];
     return schedules
@@ -209,14 +160,12 @@ export const NewChequeModal: React.FC<NewChequeModalProps> = ({
       .sort((a, b) => a.tranche_number - b.tranche_number);
   }, [schedules, activeContract]);
 
-  // Next tranche number
   const nextTrancheNumber = useMemo(() => {
     if (activeContractSchedules.length === 0) return 1;
     const maxNum = Math.max(...activeContractSchedules.map(s => s.tranche_number));
     return maxNum + 1;
   }, [activeContractSchedules]);
 
-  // Auto-generate receipt/code when contract or supplement type changes
   useEffect(() => {
     if (activeContract) {
       const codeDigits = (activeContract.contract_number || '001').replace(/\D/g, '') || '101';
@@ -229,36 +178,6 @@ export const NewChequeModal: React.FC<NewChequeModalProps> = ({
     }
   }, [activeContract, supplementType, nextTrancheNumber]);
 
-  // Tafqeet in Arabic
-  const tafqeetText = useMemo(() => {
-    return tafqeetEGP(amount || '0');
-  }, [amount]);
-
-  // Financial impact calculation
-  const currentGross = activeContract ? D(activeContract.gross_contract_value || '0') : D(0);
-  const addAmount = useMemo(() => {
-    try {
-      const val = parseFloat(amount);
-      return isNaN(val) || val <= 0 ? D(0) : D(amount);
-    } catch {
-      return D(0);
-    }
-  }, [amount]);
-  const newGross = useMemo(() => currentGross.plus(addAmount), [currentGross, addAmount]);
-
-  // Active vs Closed contract counts
-  const contractCounts = useMemo(() => {
-    const valid = contracts.filter(c => c.status !== 'Rescinded');
-    const active = valid.filter(c => !isContractClosed(c)).length;
-    const closed = valid.filter(c => isContractClosed(c)).length;
-    return {
-      all: valid.length,
-      active,
-      closed
-    };
-  }, [contracts, schedules]);
-
-  // Active contract remaining balance to be collected
   const activeContractRemaining = useMemo(() => {
     if (!activeContract) return D(0);
     const gross = D(activeContract.gross_contract_value || '0');
@@ -267,33 +186,8 @@ export const NewChequeModal: React.FC<NewChequeModalProps> = ({
     return rem.gt(0) ? rem : D(0);
   }, [activeContract]);
 
-  // Whether active contract is closed / delivered
-  const activeContractIsClosed = useMemo(() => {
-    return activeContract ? isContractClosed(activeContract) : false;
-  }, [activeContract, schedules]);
+  const numAmount = parseFloat(amount) || 0;
 
-  // Filtered contracts list for Master Column
-  const filteredContracts = useMemo(() => {
-    let list = contracts.filter(c => c.status !== 'Rescinded');
-    if (contractFilter === 'active') {
-      list = list.filter(c => !isContractClosed(c));
-    } else if (contractFilter === 'closed') {
-      list = list.filter(c => isContractClosed(c));
-    }
-
-    if (contractSearchQuery.trim()) {
-      const q = contractSearchQuery.trim().toLowerCase();
-      list = list.filter(c => 
-        (c.buyer_name || '').toLowerCase().includes(q) ||
-        (c.contract_number || '').toLowerCase().includes(q) ||
-        (c.unit_id || '').toLowerCase().includes(q) ||
-        (c.buyer_national_id || '').toLowerCase().includes(q)
-      );
-    }
-    return list;
-  }, [contracts, contractFilter, contractSearchQuery, schedules]);
-
-  // Submit Handler
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!activeContract) {
@@ -301,11 +195,10 @@ export const NewChequeModal: React.FC<NewChequeModalProps> = ({
       return;
     }
     if (isContractClosed(activeContract)) {
-      toast.error(isAr ? 'عفوًا، لا يمكن إضافة التزامات أو ملاحق مالية لعقد مُسلَم ومقفل بالكامل' : 'Cannot add supplement to closed contract');
+      toast.error(isAr ? 'عفوًا، لا يمكن إضافة التزامات مالية لعقد مقفل بالكامل' : 'Cannot add supplement to closed contract');
       return;
     }
-    const val = parseFloat(amount);
-    if (isNaN(val) || val <= 0) {
+    if (numAmount <= 0) {
       toast.error(isAr ? 'يرجى إدخال مبلغ صحيح للدفعة الإضافية' : 'Invalid supplement amount');
       return;
     }
@@ -324,7 +217,7 @@ export const NewChequeModal: React.FC<NewChequeModalProps> = ({
       contractNumber: activeContract.contract_number,
       buyer: isAr ? localizeBuyerName(activeContract.buyer_name) : activeContract.buyer_name,
       unit: activeContract.unit_id,
-      amount: D(amount).toFixed(2),
+      amount: D(numAmount).toFixed(2),
       type: reasonTitle,
       dueDate
     };
@@ -334,7 +227,7 @@ export const NewChequeModal: React.FC<NewChequeModalProps> = ({
         contractId: activeContract.contract_id,
         supplementType,
         supplementReasonAr: reasonTitle,
-        amount: D(amount).toFixed(2),
+        amount: D(numAmount).toFixed(2),
         dueDate,
         receiptNumber: receiptNumber.trim() || `SUP-${Date.now().toString().slice(-4)}`,
         notes: fullNotes
@@ -345,7 +238,7 @@ export const NewChequeModal: React.FC<NewChequeModalProps> = ({
         chequeNumber: receiptNumber.trim() || `SUP-${Date.now().toString().slice(-4)}`,
         bankName: isAr ? 'الخزينة الرئيسية (أمانات نقداً باليد - 101000)' : 'Main Safe (Cash by Hand - 101000)',
         drawerName: activeContract.buyer_name,
-        nominalValue: D(amount).toFixed(2),
+        nominalValue: D(numAmount).toFixed(2),
         dueDate
       });
     }
@@ -358,1191 +251,189 @@ export const NewChequeModal: React.FC<NewChequeModalProps> = ({
     onClose();
   };
 
+  const footer = supplementSuccess ? (
+    <ZFFormFooter>
+      <button
+        type="button"
+        className={shellStyles.btnPrimary}
+        onClick={handleModalClose}
+      >
+        {isAr ? 'إغلاق' : 'Close'}
+      </button>
+    </ZFFormFooter>
+  ) : (
+    <ZFFormFooter>
+      <button
+        type="button"
+        className={shellStyles.btnSecondary}
+        onClick={handleModalClose}
+      >
+        {isAr ? 'إلغاء' : 'Cancel'}
+      </button>
+      <button
+        type="submit"
+        form="zf-cheque-form"
+        className={shellStyles.btnPrimary}
+        disabled={isMutating || numAmount <= 0 || !dueDate}
+      >
+        {isMutating 
+          ? (isAr ? 'جارٍ الحفظ…' : 'Saving…') 
+          : (isAr ? 'حفظ الملحق' : 'Save Supplement')}
+      </button>
+    </ZFFormFooter>
+  );
+
   return (
     <ZFModalShell
       isOpen={isOpen}
       onClose={handleModalClose}
-      title={isAr ? 'إضافة ملحق أو دفعة إضافية للعقد' : 'Add Contract Supplement / Extra Tranche'}
+      title={isAr ? 'ملحق تعاقدي جديد' : 'New Contract Supplement'}
       subtitle={isAr 
-        ? 'إثبات قسط أو التزام مالي جديد يضاف لأصل العقد وجدول السداد مع حوكمة الخزينة (١٠١٠٠٠) وبدون المساس بالأقساط المسددة.' 
-        : 'Append an extra tranche to contract gross value and installment schedule without altering cleared dues.'}
-      icon={<Plus size={18} />}
-      headerExtra={
-        <span style={{
-          background: 'var(--erp-accent-subtle, rgba(37, 99, 235, 0.08))',
-          color: 'var(--erp-accent, #2563eb)',
-          border: '1px solid var(--erp-accent-tint, rgba(37, 99, 235, 0.25))',
-          padding: '0.2rem 0.65rem',
-          borderRadius: '20px',
-          fontSize: '0.74rem',
-          fontWeight: 800,
-          whiteSpace: 'nowrap'
-        }}>
-          {isAr ? 'تشطيبات • تعديلات • مبالغ طارئة' : 'Finishing • Alterations • Annex'}
-        </span>
-      }
+        ? 'إضافة قسط أو التزام مالي جديد لأصل العقد وجدول السداد.' 
+        : 'Add an extra tranche or obligation to contract value and schedule.'}
+      icon={<Wallet size={18} />}
+      maxWidth="640px"
       isAr={isAr}
-      maxWidth="1200px"
-      maxHeight="min(880px, 94vh)"
-      bodyStyle={{ padding: 0, display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}
+      footer={footer}
     >
+      {supplementSuccess ? (
+        <ZFFormDone
+          title={isAr ? 'تم تسجيل الملحق بنجاح' : 'Supplement Recorded'}
+          text={`${Number(supplementSuccess.amount).toLocaleString('en-US', { maximumFractionDigits: 2 })} ${isAr ? 'ج.م' : 'EGP'} — عقد #${supplementSuccess.contractNumber}`}
+        >
+          <div className={zfForm.section}>
+            <ZFFacts
+              items={[
+                { label: isAr ? 'العميل' : 'Client', value: supplementSuccess.buyer },
+                { label: isAr ? 'الوحدة' : 'Unit', value: supplementSuccess.unit },
+                { label: isAr ? 'النوع' : 'Type', value: supplementSuccess.type },
+                { label: isAr ? 'تاريخ الاستحقاق' : 'Due Date', value: supplementSuccess.dueDate }
+              ]}
+            />
+          </div>
+        </ZFFormDone>
+      ) : (
+        <form id="zf-cheque-form" className={zfForm.form} onSubmit={handleSubmit}>
+          {/* 1. Contract selection */}
+          <ZFField label={isAr ? 'العقد المرتبط' : 'Linked Contract'} required>
+            <select
+              className={zfForm.control}
+              value={selectedContractId}
+              onChange={e => setSelectedContractId(e.target.value)}
+            >
+              {contracts.filter(c => c.status !== 'Rescinded').map(c => {
+                const closed = isContractClosed(c);
+                return (
+                  <option key={c.contract_id} value={c.contract_id}>
+                    {`${c.contract_number} • ${c.buyer_name} • ${c.unit_id}${closed ? (isAr ? ' (مغلق)' : ' (Closed)') : ''}`}
+                  </option>
+                );
+              })}
+            </select>
+          </ZFField>
 
-        {/* ══════════════════════════════════════════════════════════════════════════
-            2. TWO-SIDED MASTER-DETAIL GRID
-            ══════════════════════════════════════════════════════════════════════════ */}
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: '430px 1fr',
-          flex: 1,
-          minHeight: 0,
-          overflow: 'hidden'
-        }}>
+          {/* 2. Contract facts */}
+          {activeContract && (
+            <div className={zfForm.section}>
+              <h4 className={zfForm.sectionTitle}>{isAr ? 'بيانات العقد' : 'Contract Summary'}</h4>
+              <ZFFacts
+                items={[
+                  { label: isAr ? 'العميل' : 'Client', value: activeContract.buyer_name },
+                  { label: isAr ? 'الوحدة' : 'Unit', value: activeContract.unit_id },
+                  { label: isAr ? 'القيمة الحالية' : 'Current Gross Value', value: `${Number(activeContract.gross_contract_value || 0).toLocaleString('en-US', { maximumFractionDigits: 2 })} ${isAr ? 'ج.م' : 'EGP'}` },
+                  { label: isAr ? 'المتبقي تحصيله' : 'Remaining to Collect', value: `${Number(activeContractRemaining.toNumber()).toLocaleString('en-US', { maximumFractionDigits: 2 })} ${isAr ? 'ج.م' : 'EGP'}` }
+                ]}
+              />
+            </div>
+          )}
 
-          {/* ──────────────────────────────────────────────────────────────────
-              SIDE 1 (MASTER): SEARCHABLE LIST OF ACTIVE CONTRACTS
-              ────────────────────────────────────────────────────────────────── */}
-          <div style={{
-            background: '#f8fafc',
-            borderLeft: isAr ? '1px solid #e2e8f0' : 'none',
-            borderRight: isAr ? 'none' : '1px solid #e2e8f0',
-            display: 'flex',
-            flexDirection: 'column',
-            overflow: 'hidden'
-          }}>
-            {/* Search and Filters Header */}
-            <div style={{ padding: '1rem', borderBottom: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
-              <div style={{ position: 'relative' }}>
+          {/* 3. Supplement Type choices */}
+          <div className={zfForm.section}>
+            <h4 className={zfForm.sectionTitle}>{isAr ? 'نوع الملحق التعاقدي' : 'Supplement Type'}</h4>
+            <ZFChoices<SupplementType>
+              value={supplementType}
+              onChange={setSupplementType}
+              options={SUPPLEMENT_TYPES.map(t => ({
+                id: t.id,
+                label: isAr ? t.labelAr : t.labelEn,
+                icon: t.icon
+              }))}
+            />
+          </div>
+
+          {/* 4. Row: Amount & Due Date */}
+          <div className={zfForm.section}>
+            <h4 className={zfForm.sectionTitle}>{isAr ? 'القيمة والموعد' : 'Amount & Schedule'}</h4>
+            <div className={zfForm.row}>
+              <ZFField label={isAr ? 'مبلغ الدفعة الإضافية' : 'Supplement Amount'} required>
+                <ZFMoneyInput
+                  value={amount}
+                  onChange={e => setAmount(e.target.value)}
+                  unit={isAr ? 'ج.م' : 'EGP'}
+                  autoFocus
+                  required
+                />
+              </ZFField>
+              <ZFField label={isAr ? 'تاريخ الاستحقاق' : 'Due Date'} required>
+                <input
+                  type="date"
+                  className={zfForm.control}
+                  value={dueDate}
+                  onChange={e => setDueDate(e.target.value)}
+                  required
+                />
+              </ZFField>
+            </div>
+
+            {/* Row: Receipt number & Notes */}
+            <div className={zfForm.row}>
+              <ZFField label={isAr ? 'رقم السند / الإيصال' : 'Note / Receipt #'}>
                 <input
                   type="text"
-                  placeholder={isAr ? 'بحث بالعميل، كود العقد، أو الوحدة...' : 'Search client, contract or unit...'}
-                  value={contractSearchQuery}
-                  onChange={(e) => setContractSearchQuery(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: isAr ? '0.55rem 2.2rem 0.55rem 0.85rem' : '0.55rem 0.85rem 0.55rem 2.2rem',
-                    borderRadius: '10px',
-                    border: '1px solid #cbd5e1',
-                    background: '#ffffff',
-                    fontSize: '0.82rem',
-                    outline: 'none'
-                  }}
+                  className={`${zfForm.control} ${zfForm.mono}`}
+                  value={receiptNumber}
+                  onChange={e => setReceiptNumber(e.target.value)}
                 />
-                <Search size={15} style={{
-                  position: 'absolute',
-                  [isAr ? 'right' : 'left']: '0.75rem',
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  color: '#94a3b8'
-                }} />
-              </div>
-
-              {/* Status Tabs */}
-              <div style={{ display: 'flex', gap: '0.35rem', background: '#e2e8f0', padding: '0.25rem', borderRadius: '10px' }}>
-                <button
-                  type="button"
-                  onClick={() => setContractFilter('active')}
-                  style={{
-                    flex: 1,
-                    padding: '0.4rem 0.3rem',
-                    fontSize: '0.72rem',
-                    fontWeight: contractFilter === 'active' ? 800 : 600,
-                    border: 'none',
-                    borderRadius: '8px',
-                    cursor: 'pointer',
-                    background: contractFilter === 'active' ? '#ffffff' : 'transparent',
-                    color: contractFilter === 'active' ? '#0f172a' : '#64748b',
-                    boxShadow: contractFilter === 'active' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '0.25rem'
-                  }}
-                >
-                  <span>{isAr ? 'قيد السداد' : 'Active'}</span>
-                  <span style={{ 
-                    fontSize: '0.65rem', 
-                    padding: '0.05rem 0.35rem', 
-                    borderRadius: '999px', 
-                    background: contractFilter === 'active' ? '#f1f5f9' : '#cbd5e1',
-                    color: contractFilter === 'active' ? '#0f172a' : '#475569' 
-                  }}>
-                    {contractCounts.active}
-                  </span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setContractFilter('closed')}
-                  style={{
-                    flex: 1,
-                    padding: '0.4rem 0.3rem',
-                    fontSize: '0.72rem',
-                    fontWeight: contractFilter === 'closed' ? 800 : 600,
-                    border: 'none',
-                    borderRadius: '8px',
-                    cursor: 'pointer',
-                    background: contractFilter === 'closed' ? '#ffffff' : 'transparent',
-                    color: contractFilter === 'closed' ? '#0f172a' : '#64748b',
-                    boxShadow: contractFilter === 'closed' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '0.25rem'
-                  }}
-                >
-                  <span>{isAr ? 'خالص ومُسلَم' : 'Settled'}</span>
-                  <span style={{ 
-                    fontSize: '0.65rem', 
-                    padding: '0.05rem 0.35rem', 
-                    borderRadius: '999px', 
-                    background: contractFilter === 'closed' ? '#f1f5f9' : '#cbd5e1',
-                    color: contractFilter === 'closed' ? '#0f172a' : '#475569' 
-                  }}>
-                    {contractCounts.closed}
-                  </span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setContractFilter('all')}
-                  style={{
-                    flex: 1,
-                    padding: '0.4rem 0.3rem',
-                    fontSize: '0.72rem',
-                    fontWeight: contractFilter === 'all' ? 800 : 600,
-                    border: 'none',
-                    borderRadius: '8px',
-                    cursor: 'pointer',
-                    background: contractFilter === 'all' ? '#ffffff' : 'transparent',
-                    color: contractFilter === 'all' ? '#0f172a' : '#64748b',
-                    boxShadow: contractFilter === 'all' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '0.25rem'
-                  }}
-                >
-                  <span>{isAr ? 'الكل' : 'All'}</span>
-                  <span style={{ 
-                    fontSize: '0.65rem', 
-                    padding: '0.05rem 0.35rem', 
-                    borderRadius: '999px', 
-                    background: contractFilter === 'all' ? '#f1f5f9' : '#cbd5e1',
-                    color: contractFilter === 'all' ? '#0f172a' : '#475569' 
-                  }}>
-                    {contractCounts.all}
-                  </span>
-                </button>
-              </div>
-            </div>
-
-            {/* Contracts Scrollable List */}
-            <div style={{ flex: 1, overflowY: 'auto', padding: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
-              {filteredContracts.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '3rem 1rem', color: '#94a3b8', fontSize: '0.82rem' }}>
-                  {isAr ? 'لا توجد عقود مطابقة للبحث' : 'No contracts matched'}
-                </div>
-              ) : (
-                filteredContracts.map((c) => {
-                  const isSelected = c.contract_id === activeContract?.contract_id;
-                  const cSchedules = schedules.filter(s => s.contract_id === c.contract_id && (s.status === 'Pending' || s.status === 'Partially Paid' || s.status === 'Defaulted'));
-                  const isClosed = isContractClosed(c);
-                  const buyerDisplayName = isAr ? localizeBuyerName(c.buyer_name) : c.buyer_name;
-                  const prop = properties?.find(p => p.id === c.property_id || (c.unit_id && (p.title_ar === c.unit_id || p.title_en === c.unit_id)));
-                  const propertyDisplayTitle = prop ? (isAr ? prop.title_ar : prop.title_en) : (c.unit_id || (isAr ? 'وحدة سكنية' : 'Unit'));
-
-                  return (
-                    <div
-                      key={c.contract_id}
-                      onClick={() => setSelectedContractId(c.contract_id)}
-                      style={{
-                        padding: '0.9rem 1rem',
-                        borderRadius: '14px',
-                        border: isSelected 
-                          ? '1.5px solid var(--erp-accent, #2563eb)' 
-                          : '1px solid #e2e8f0',
-                        background: '#ffffff',
-                        cursor: 'pointer',
-                        transition: 'all 0.18s cubic-bezier(0.16, 1, 0.3, 1)',
-                        boxShadow: isSelected 
-                          ? '0 4px 14px -2px var(--erp-accent-tint, rgba(37, 99, 235, 0.15)), 0 0 0 1px var(--erp-accent, #2563eb)' 
-                          : '0 1px 3px rgba(15, 23, 42, 0.03)',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: '0.55rem',
-                        position: 'relative',
-                        opacity: isClosed && !isSelected ? 0.82 : 1
-                      }}
-                    >
-                      {/* 1. Header Row: Monospace Contract # badge + Status pill & Details Action */}
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', minWidth: 0, flexShrink: 0 }}>
-                          <span style={{
-                            fontFamily: 'monospace, tabular-nums',
-                            fontSize: '0.72rem',
-                            fontWeight: 800,
-                            color: isSelected ? 'var(--erp-accent, #2563eb)' : '#475569',
-                            background: isSelected ? 'var(--erp-accent-subtle, rgba(37, 99, 235, 0.08))' : '#f8fafc',
-                            border: `1px solid ${isSelected ? 'var(--erp-accent-tint, rgba(37, 99, 235, 0.25))' : '#e2e8f0'}`,
-                            padding: '0.15rem 0.5rem',
-                            borderRadius: '6px',
-                            whiteSpace: 'nowrap',
-                            direction: 'ltr'
-                          }}>
-                            #{c.contract_number}
-                          </span>
-                          {isSelected && (
-                            <span style={{
-                              fontSize: '0.64rem',
-                              fontWeight: 800,
-                              color: 'var(--erp-accent, #2563eb)',
-                              background: 'var(--erp-accent-subtle, rgba(37, 99, 235, 0.12))',
-                              padding: '0.12rem 0.45rem',
-                              borderRadius: '999px',
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '0.2rem',
-                              whiteSpace: 'nowrap'
-                            }}>
-                              <Check size={10} /> {isAr ? 'محدد' : 'Selected'}
-                            </span>
-                          )}
-                        </div>
-
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', flexShrink: 0 }}>
-                          {isClosed ? (
-                            <span style={{
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '0.2rem',
-                              fontSize: '0.66rem',
-                              color: '#64748b',
-                              fontWeight: 700,
-                              background: '#f1f5f9',
-                              border: '1px solid #e2e8f0',
-                              padding: '0.12rem 0.45rem',
-                              borderRadius: '5px',
-                              whiteSpace: 'nowrap'
-                            }}>
-                              <Lock size={10} /> {isAr ? 'خالص ومُسلَم' : 'Settled'}
-                            </span>
-                          ) : (
-                            <span style={{
-                              fontSize: '0.66rem',
-                              color: '#15803d',
-                              fontWeight: 700,
-                              background: '#f0fdf4',
-                              border: '1px solid #bbf7d0',
-                              padding: '0.12rem 0.45rem',
-                              borderRadius: '5px',
-                              whiteSpace: 'nowrap'
-                            }}>
-                              {isAr ? 'قيد السداد' : 'Active'}
-                            </span>
-                          )}
-
-                          {onInspectContract && (
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                onInspectContract(c);
-                              }}
-                              title={isAr ? 'عرض ملف وتفاصيل العقد في الشريط الجانبي' : 'View Contract Dossier'}
-                              style={{
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '0.25rem',
-                                padding: '0.15rem 0.5rem',
-                                borderRadius: '6px',
-                                border: '1px solid #cbd5e1',
-                                background: '#ffffff',
-                                color: '#334155',
-                                fontSize: '0.68rem',
-                                fontWeight: 700,
-                                cursor: 'pointer',
-                                transition: 'all 0.15s ease',
-                                whiteSpace: 'nowrap'
-                              }}
-                            >
-                              <ExternalLink size={10} color="var(--erp-accent, #2563eb)" />
-                              <span>{isAr ? 'تفاصيل' : 'Details'}</span>
-                            </button>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* 2. Middle Row: Buyer Legal Name & Property / Unit */}
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem', minWidth: 0 }}>
-                        <div style={{
-                          fontWeight: 800,
-                          fontSize: '0.94rem',
-                          color: '#0f172a',
-                          lineHeight: 1.3,
-                          whiteSpace: 'nowrap',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis'
-                        }}>
-                          {buyerDisplayName}
-                        </div>
-
-                        <div style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '0.35rem',
-                          fontSize: '0.74rem',
-                          color: '#64748b',
-                          overflow: 'hidden'
-                        }}>
-                          <Building2 size={12} color="var(--erp-accent, #2563eb)" style={{ flexShrink: 0 }} />
-                          <span style={{
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap'
-                          }}>
-                            {propertyDisplayTitle}
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* 3. Bottom Row: Gross Value & Remaining Tranches */}
-                      <div style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        fontSize: '0.72rem',
-                        color: '#64748b',
-                        borderTop: '1px dashed #f1f5f9',
-                        paddingTop: '0.45rem',
-                        marginTop: '0.1rem'
-                      }}>
-                        <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.3rem' }}>
-                          <span>{isAr ? 'إجمالي العقد:' : 'Gross:'}</span>
-                          <strong style={{
-                            color: '#0f172a',
-                            fontWeight: 800,
-                            fontSize: '0.84rem',
-                            fontVariantNumeric: 'tabular-nums'
-                          }}>
-                            {D(c.gross_contract_value).formatEGP(isAr)}
-                          </strong>
-                        </div>
-
-                        <div>
-                          {isClosed ? (
-                            <span style={{ color: '#64748b', fontWeight: 600, fontSize: '0.68rem' }}>
-                              {isAr ? 'مُسدد بالكامل' : 'Fully Settled'}
-                            </span>
-                          ) : (
-                            <span style={{
-                              background: '#f8fafc',
-                              border: '1px solid #e2e8f0',
-                              padding: '0.1rem 0.45rem',
-                              borderRadius: '5px',
-                              fontSize: '0.68rem',
-                              fontWeight: 700,
-                              color: '#334155',
-                              whiteSpace: 'nowrap'
-                            }}>
-                              {cSchedules.length} {isAr ? 'أقساط متبقية' : 'tranches left'}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })
-              )}
+              </ZFField>
+              <ZFField label={isAr ? 'ملاحظات' : 'Notes'}>
+                <input
+                  type="text"
+                  className={zfForm.control}
+                  value={customNotes}
+                  onChange={e => setCustomNotes(e.target.value)}
+                  placeholder={isAr ? 'اختياري' : 'Optional'}
+                />
+              </ZFField>
             </div>
           </div>
 
-          {/* ──────────────────────────────────────────────────────────────────
-              SIDE 2 (DETAIL): SUPPLEMENT ADDITION FORM & FINANCIAL IMPACT
-              ────────────────────────────────────────────────────────────────── */}
-          <div style={{
-            display: 'flex',
-            flexDirection: 'column',
-            overflowY: 'auto',
-            background: '#ffffff'
-          }}>
-            {supplementSuccess ? (
-              <div style={{ display: 'flex', flexDirection: 'column', flex: 1, padding: '2rem', gap: '1.5rem', justifyContent: 'center' }}>
-                {/* Success Card */}
-                <div style={{
-                  background: '#ffffff',
-                  border: '1px solid #cbd5e1',
-                  borderRadius: '16px',
-                  padding: '1.5rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '1.15rem',
-                  boxShadow: '0 1px 3px rgba(15, 23, 42, 0.04)'
-                }}>
-                  <div style={{
-                    width: '40px',
-                    height: '40px',
-                    borderRadius: '10px',
-                    background: '#f0fdf4',
-                    border: '1px solid #bbf7d0',
-                    color: '#16a34a',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    flexShrink: 0
-                  }}>
-                    <CheckCircle2 size={24} />
-                  </div>
-                  <div>
-                    <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 900, color: '#0f172a' }}>
-                      {isAr ? 'تمت إضافة الملحق المالي بنجاح وإدراجه في جدول الأقساط' : 'Supplement Added Successfully'}
-                    </h3>
-                    <p style={{ margin: '0.25rem 0 0', fontSize: '0.8rem', color: '#64748b', fontWeight: 500 }}>
-                      {isAr 
-                        ? 'تم تحديث القيمة الإجمالية للعقد وتوليد استحقاق حافظة الشيكات والأمانات' 
-                        : 'Contract gross value updated and installment tranche added to schedule'}
-                    </p>
-                  </div>
-                </div>
+          {/* 5. Effect */}
+          <ZFEffect>
+            {isAr 
+              ? 'سيُضاف قسط جديد إلى جدول سداد العقد ويزداد إجمالي قيمة العقد بمقدار المبلغ المحدد.' 
+              : 'A new tranche will be appended to the schedule and increase total contract gross value.'}
+          </ZFEffect>
 
-                {/* Details Summary Card */}
-                <div style={{
-                  background: '#ffffff',
-                  border: '1px solid #cbd5e1',
-                  borderRadius: '16px',
-                  padding: '1.5rem',
-                  boxShadow: '0 1px 3px rgba(15, 23, 42, 0.04)',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '1.25rem'
-                }}>
-                  {/* Amount Headline */}
-                  <div style={{
-                    background: '#f8fafc',
-                    border: '1px solid #e2e8f0',
-                    borderRadius: '12px',
-                    padding: '1rem 1.25rem',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between'
-                  }}>
-                    <div>
-                      <span style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 700, display: 'block' }}>
-                        {isAr ? 'قيمة الملحق المالي المضاف:' : 'Added Supplement Amount:'}
-                      </span>
-                      <div style={{ fontSize: '1.85rem', fontWeight: 900, color: '#0f172a', fontVariantNumeric: 'tabular-nums', marginTop: '0.2rem' }}>
-                        {D(supplementSuccess.amount).formatEGP(isAr)}
-                      </div>
-                      <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--erp-accent, #2563eb)', marginTop: '0.3rem' }}>
-                        {tafqeetEGP(supplementSuccess.amount)}
-                      </div>
-                    </div>
-                    <span style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '0.35rem',
-                      background: '#0f172a',
-                      color: '#ffffff',
-                      padding: '0.4rem 0.85rem',
-                      borderRadius: '8px',
-                      fontSize: '0.8rem',
-                      fontWeight: 800
-                    }}>
-                      <Check size={14} color="#10b981" />
-                      <span>{supplementSuccess.type}</span>
-                    </span>
-                  </div>
-
-                  {/* Summary Grid */}
-                  <div style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(2, 1fr)',
-                    gap: '0.85rem',
-                    background: '#f8fafc',
-                    border: '1px solid #e2e8f0',
-                    borderRadius: '12px',
-                    padding: '1rem'
-                  }}>
-                    <div>
-                      <span style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: 700, display: 'block' }}>
-                        {isAr ? 'العميل المستفيد:' : 'Client / Buyer:'}
-                      </span>
-                      <strong style={{ fontSize: '0.88rem', color: '#0f172a', fontWeight: 800, marginTop: '0.15rem', display: 'block' }}>
-                        {supplementSuccess.buyer}
-                      </strong>
-                    </div>
-
-                    <div>
-                      <span style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: 700, display: 'block' }}>
-                        {isAr ? 'رقم العقد والوحدة:' : 'Contract & Unit:'}
-                      </span>
-                      <strong style={{ fontSize: '0.88rem', color: '#0f172a', fontWeight: 800, marginTop: '0.15rem', display: 'block' }}>
-                        {supplementSuccess.unit} (#{supplementSuccess.contractNumber})
-                      </strong>
-                    </div>
-
-                    <div>
-                      <span style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: 700, display: 'block' }}>
-                        {isAr ? 'نوع وبند الملحق:' : 'Supplement Type:'}
-                      </span>
-                      <strong style={{ fontSize: '0.84rem', color: 'var(--erp-accent, #2563eb)', fontWeight: 800, marginTop: '0.15rem', display: 'block' }}>
-                        {supplementSuccess.type}
-                      </strong>
-                    </div>
-
-                    <div>
-                      <span style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: 700, display: 'block' }}>
-                        {isAr ? 'تاريخ الاستحقاق المعتمد:' : 'Due Date:'}
-                      </span>
-                      <strong style={{ fontSize: '0.84rem', color: '#059669', fontWeight: 800, marginTop: '0.15rem', display: 'block' }}>
-                        {supplementSuccess.dueDate}
-                      </strong>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Actions */}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '0.5rem' }}>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSupplementSuccess(null);
-                      setAmount('150000');
-                      setCustomNotes('');
-                      setReceiptNumber('');
-                    }}
-                    style={{
-                      background: '#ffffff',
-                      border: '1px solid #cbd5e1',
-                      color: '#475569',
-                      padding: '0.65rem 1.25rem',
-                      borderRadius: '8px',
-                      fontSize: '0.82rem',
-                      fontWeight: 700,
-                      cursor: 'pointer',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '0.45rem',
-                      boxShadow: '0 1px 2px rgba(0,0,0,0.03)'
-                    }}
-                  >
-                    <Plus size={15} />
-                    <span>{isAr ? '+ إضافة دفعة أو ملحق آخر لنفس العقد / عقد آخر' : '+ Add Another Supplement'}</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSupplementSuccess(null);
-                      onClose();
-                    }}
-                    style={{
-                      background: '#0f172a',
-                      color: '#ffffff',
-                      border: 'none',
-                      padding: '0.65rem 1.45rem',
-                      borderRadius: '8px',
-                      fontSize: '0.82rem',
-                      fontWeight: 800,
-                      cursor: 'pointer',
-                      boxShadow: '0 2px 6px rgba(15, 23, 42, 0.2)'
-                    }}
-                  >
-                    {isAr ? 'تم / إغلاق النافذة' : 'Done / Close'}
-                  </button>
-                </div>
-              </div>
-            ) : activeContract ? (
-              <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', flex: 1, padding: '1.5rem', gap: '1.25rem' }}>
-                
-                {/* 1. Active Contract Hero Strip */}
-                <div style={{
-                  padding: '1.25rem 1.5rem',
-                  borderRadius: '16px',
-                  background: '#ffffff',
-                  border: '1px solid #cbd5e1',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '1rem',
-                  boxShadow: '0 1px 3px rgba(0,0,0,0.03)'
-                }}>
-                  {/* Top Bar: Buyer + Unit + Dossier details button */}
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
-                      <div style={{
-                        width: '44px',
-                        height: '44px',
-                        borderRadius: '12px',
-                        background: '#f1f5f9',
-                        border: '1px solid #cbd5e1',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        color: '#0f172a',
-                        flexShrink: 0
-                      }}>
-                        <Building2 size={22} />
-                      </div>
-                      <div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
-                          <h4 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: '#0f172a' }}>
-                            {isAr ? localizeBuyerName(activeContract.buyer_name) : activeContract.buyer_name}
-                          </h4>
-                          <span style={{ fontSize: '0.74rem', padding: '0.15rem 0.5rem', borderRadius: '6px', background: '#e2e8f0', color: '#334155', fontWeight: 700 }}>
-                            {activeContract.unit_id}
-                          </span>
-                          {activeContractIsClosed ? (
-                            <span style={{
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '0.25rem',
-                              fontSize: '0.72rem',
-                              padding: '0.15rem 0.55rem',
-                              borderRadius: '6px',
-                              background: '#fef2f2',
-                              color: '#991b1b',
-                              border: '1px solid #fecaca',
-                              fontWeight: 700
-                            }}>
-                              <Lock size={11} /> {isAr ? 'خالص ومُسلَم' : 'Settled & Delivered'}
-                            </span>
-                          ) : (
-                            <span style={{
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '0.25rem',
-                              fontSize: '0.72rem',
-                              padding: '0.15rem 0.55rem',
-                              borderRadius: '6px',
-                              background: '#f0fdf4',
-                              color: '#15803d',
-                              border: '1px solid #bbf7d0',
-                              fontWeight: 700
-                            }}>
-                              <Check size={11} /> {isAr ? 'قيد السداد' : 'Active'}
-                            </span>
-                          )}
-                        </div>
-                        <div style={{ fontSize: '0.76rem', color: '#64748b', marginTop: '0.25rem' }}>
-                          {isAr ? 'عقد بيع رقم:' : 'Contract #:'} <strong style={{ color: '#0f172a' }}>{activeContract.contract_number}</strong>
-                          {activeContract.buyer_national_id && (
-                            <> • {isAr ? 'الرقم القومي:' : 'NID:'} {activeContract.buyer_national_id}</>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Prominent link to contract dossier */}
-                    {onInspectContract && (
-                      <button
-                        type="button"
-                        onClick={() => onInspectContract(activeContract)}
-                        style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '0.45rem',
-                          padding: '0.5rem 0.95rem',
-                          borderRadius: '10px',
-                          border: '1px solid #cbd5e1',
-                          background: '#ffffff',
-                          color: '#0f172a',
-                          fontSize: '0.78rem',
-                          fontWeight: 800,
-                          cursor: 'pointer',
-                          boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
-                          transition: 'all 0.15s ease'
-                        }}
-                      >
-                        <ExternalLink size={13} color="var(--erp-accent, #2563eb)" />
-                        <span>{isAr ? 'عرض ملف وتفاصيل العقد' : 'View Contract Details'}</span>
-                      </button>
-                    )}
-                  </div>
-
-                  {/* 3 Metrics Boxes */}
-                  <div style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
-                    gap: '0.75rem',
-                    background: '#f8fafc',
-                    padding: '0.75rem 1rem',
-                    borderRadius: '12px',
-                    border: '1px solid #e2e8f0'
-                  }}>
-                    <div>
-                      <div style={{ fontSize: '0.7rem', color: '#64748b' }}>{isAr ? 'إجمالي العقد الحالي' : 'Current Gross'}</div>
-                      <div style={{ fontSize: '1rem', fontWeight: 800, color: '#0f172a', marginTop: '0.1rem' }}>
-                        {D(activeContract.gross_contract_value).formatEGP(isAr)}
-                      </div>
-                    </div>
-
-                    <div>
-                      <div style={{ fontSize: '0.7rem', color: '#64748b' }}>{isAr ? 'المسدد بالخزينة' : 'Collected Cash'}</div>
-                      <div style={{ fontSize: '1rem', fontWeight: 800, color: '#15803d', marginTop: '0.1rem' }}>
-                        {D(activeContract.total_cash_collected || '0').formatEGP(isAr)}
-                      </div>
-                    </div>
-
-                    <div>
-                      <div style={{ fontSize: '0.7rem', color: '#64748b' }}>{isAr ? 'المتبقي بالأقساط' : 'Remaining Balance'}</div>
-                      <div style={{ fontSize: '1rem', fontWeight: 800, color: activeContractRemaining.gt(0) ? 'var(--erp-accent, #2563eb)' : '#64748b', marginTop: '0.1rem' }}>
-                        {activeContractRemaining.formatEGP(isAr)}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Closed Contract Governance Warning Banner */}
-                {activeContractIsClosed && (
-                  <div style={{
-                    padding: '1rem 1.25rem',
-                    borderRadius: '14px',
-                    background: '#fff1f2',
-                    border: '1.5px solid #fecdd3',
-                    display: 'flex',
-                    alignItems: 'flex-start',
-                    gap: '0.85rem'
-                  }}>
-                    <div style={{
-                      width: '36px',
-                      height: '36px',
-                      borderRadius: '10px',
-                      background: '#fee2e2',
-                      color: '#dc2626',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      flexShrink: 0,
-                      marginTop: '0.1rem'
-                    }}>
-                      <Lock size={18} />
-                    </div>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: '0.9rem', fontWeight: 800, color: '#991b1b' }}>
-                        {isAr ? 'هذا العقد خالص الأقساط ومقفل محاسبياً — لا يمكن إضافة دفعات إضافية' : 'Contract Fully Settled — Additions Blocked'}
-                      </div>
-                      <div style={{ fontSize: '0.78rem', color: '#b91c1c', marginTop: '0.25rem', lineHeight: 1.5 }}>
-                        {isAr 
-                          ? 'تم سداد كامل التزامات هذا العقد وتم تسليم الوحدة أو إقفال أقساطها بالكامل. وفقاً لقواعد الحوكمة المحاسبية بالشركة، لا يجوز إضافة أقساط أو ملاحق جديدة على عقد مقفل منعاً لتضارب الذمم والأرصدة. يمكنك الضغط على "عرض ملف وتفاصيل العقد" لمعاينة السجل بالكامل.'
-                          : 'All scheduled installments have been settled and the unit is handed over. Per ERP accounting governance, additions are locked.'}
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Disabled Fieldset when closed */}
-                <fieldset 
-                  disabled={activeContractIsClosed}
-                  style={{
-                    border: 'none',
-                    padding: 0,
-                    margin: 0,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '1.25rem',
-                    opacity: activeContractIsClosed ? 0.45 : 1,
-                    pointerEvents: activeContractIsClosed ? 'none' : 'auto'
-                  }}
-                >
-                  {/* 2. Supplement Type Selector */}
-                  <div>
-                    <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 800, color: '#0f172a', marginBottom: '0.55rem' }}>
-                      {isAr ? 'نوع الملحق أو سبب الدفعة الإضافية' : 'Supplement Category / Reason'}
-                    </label>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.6rem' }}>
-                      {SUPPLEMENT_TYPES.map((type) => {
-                        const isSelected = supplementType === type.id;
-                        const Icon = type.icon;
-                        return (
-                          <div
-                            key={type.id}
-                            onClick={() => setSupplementType(type.id)}
-                            style={{
-                              padding: '0.75rem 0.85rem',
-                              borderRadius: '12px',
-                              border: isSelected ? `2px solid ${type.color}` : '1px solid #e2e8f0',
-                              background: isSelected ? type.bgColor : '#ffffff',
-                              cursor: 'pointer',
-                              transition: 'all 0.15s ease',
-                              display: 'flex',
-                              flexDirection: 'column',
-                              gap: '0.3rem',
-                              boxShadow: isSelected ? '0 2px 8px rgba(0,0,0,0.04)' : 'none'
-                            }}
-                          >
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', color: type.color, fontWeight: 800, fontSize: '0.82rem' }}>
-                                <Icon size={16} />
-                                <span>{isAr ? type.labelAr : type.labelEn}</span>
-                              </div>
-                              {isSelected && <Check size={14} color={type.color} />}
-                            </div>
-                            <div style={{ fontSize: '0.68rem', color: '#64748b', lineHeight: 1.35 }}>
-                              {isAr ? type.descAr : type.descEn}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  {/* 3. Amount & Tafqeet */}
-                  <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '1rem' }}>
-                    <div>
-                      <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 800, color: '#0f172a', marginBottom: '0.4rem' }}>
-                        {isAr ? 'قيمة الدفعة أو الملحق (بالجنيه المصري)' : 'Supplement Value (EGP)'}
-                      </label>
-                      <div style={{ position: 'relative' }}>
-                        <input
-                          type="number"
-                          step="any"
-                          value={amount}
-                          onChange={(e) => setAmount(e.target.value)}
-                          placeholder="0.00"
-                          style={{
-                            width: '100%',
-                            padding: isAr ? '0.65rem 0.85rem 0.65rem 3.5rem' : '0.65rem 3.5rem 0.65rem 0.85rem',
-                            borderRadius: '10px',
-                            border: '1.5px solid #cbd5e1',
-                            fontSize: '1.15rem',
-                            fontWeight: 800,
-                            color: '#0f172a',
-                            outline: 'none',
-                            background: '#ffffff'
-                          }}
-                        />
-                        <span style={{
-                          position: 'absolute',
-                          [isAr ? 'left' : 'right']: '0.75rem',
-                          top: '50%',
-                          transform: 'translateY(-50%)',
-                          fontSize: '0.82rem',
-                          fontWeight: 700,
-                          color: '#64748b'
-                        }}>
-                          {isAr ? 'ج.م' : 'EGP'}
-                        </span>
-                      </div>
-
-                      {/* Tafqeet Pill */}
-                      <div style={{
-                        marginTop: '0.45rem',
-                        padding: '0.45rem 0.75rem',
-                        borderRadius: '8px',
-                        background: 'var(--erp-accent-subtle, rgba(37, 99, 235, 0.08))',
-                        border: '1px solid var(--erp-accent-tint, rgba(37, 99, 235, 0.25))',
-                        color: 'var(--erp-accent, #2563eb)',
-                        fontSize: '0.76rem',
-                        fontWeight: 700,
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.4rem'
-                      }}>
-                        <Sparkles size={13} style={{ flexShrink: 0 }} />
-                        <span>{tafqeetText}</span>
-                      </div>
-                    </div>
-
-                    {/* Due Date & Presets */}
-                    <div>
-                      <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 800, color: '#0f172a', marginBottom: '0.4rem' }}>
-                        {isAr ? 'تاريخ استحقاق القسط الإضافي' : 'Tranche Due Date'}
-                      </label>
-                      <input
-                        type="date"
-                        value={dueDate}
-                        onChange={(e) => setDueDate(e.target.value)}
-                        style={{
-                          width: '100%',
-                          padding: '0.65rem 0.85rem',
-                          borderRadius: '10px',
-                          border: '1.5px solid #cbd5e1',
-                          fontSize: '0.9rem',
-                          fontWeight: 700,
-                          color: '#0f172a',
-                          outline: 'none',
-                          background: '#ffffff'
-                        }}
-                      />
-
-                      {/* Quick Date Presets */}
-                      <div style={{ display: 'flex', gap: '0.35rem', marginTop: '0.45rem' }}>
-                        <button
-                          type="button"
-                          onClick={() => setDueDate(new Date().toISOString().split('T')[0])}
-                          style={{
-                            padding: '0.2rem 0.5rem',
-                            borderRadius: '6px',
-                            border: '1px solid #cbd5e1',
-                            background: '#f8fafc',
-                            fontSize: '0.68rem',
-                            fontWeight: 600,
-                            color: '#475569',
-                            cursor: 'pointer'
-                          }}
-                        >
-                          {isAr ? 'اليوم' : 'Today'}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const d = new Date();
-                            d.setDate(d.getDate() + 30);
-                            setDueDate(d.toISOString().split('T')[0]);
-                          }}
-                          style={{
-                            padding: '0.2rem 0.5rem',
-                            borderRadius: '6px',
-                            border: '1px solid #cbd5e1',
-                            background: '#f8fafc',
-                            fontSize: '0.68rem',
-                            fontWeight: 600,
-                            color: '#475569',
-                            cursor: 'pointer'
-                          }}
-                        >
-                          {isAr ? 'بعد شهر' : '+30 Days'}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const d = new Date();
-                            d.setDate(d.getDate() + 90);
-                            setDueDate(d.toISOString().split('T')[0]);
-                          }}
-                          style={{
-                            padding: '0.2rem 0.5rem',
-                            borderRadius: '6px',
-                            border: '1px solid #cbd5e1',
-                            background: '#f8fafc',
-                            fontSize: '0.68rem',
-                            fontWeight: 600,
-                            color: '#475569',
-                            cursor: 'pointer'
-                          }}
-                        >
-                          {isAr ? 'بعد ٣ أشهر' : '+90 Days'}
-                        </button>
-                        {activeContract.handover_date && (
-                          <button
-                            type="button"
-                            onClick={() => setDueDate(activeContract.handover_date!)}
-                            style={{
-                              padding: '0.2rem 0.5rem',
-                              borderRadius: '6px',
-                              border: '1px solid #bbf7d0',
-                              background: '#f0fdf4',
-                              fontSize: '0.68rem',
-                              fontWeight: 700,
-                              color: '#15803d',
-                              cursor: 'pointer'
-                            }}
-                          >
-                            {isAr ? 'مع الاستلام' : 'Handover'}
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* 4. Voucher Code & Statement Notes */}
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '1rem' }}>
-                    <div>
-                      <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 800, color: '#0f172a', marginBottom: '0.4rem' }}>
-                        {isAr ? 'رقم السند / إيصال الملحق' : 'Voucher / Receipt Code'}
-                      </label>
-                      <input
-                        type="text"
-                        value={receiptNumber}
-                        onChange={(e) => setReceiptNumber(e.target.value)}
-                        placeholder="SUP-001-01"
-                        style={{
-                          width: '100%',
-                          padding: '0.6rem 0.85rem',
-                          borderRadius: '10px',
-                          border: '1px solid #cbd5e1',
-                          fontSize: '0.86rem',
-                          fontWeight: 700,
-                          color: '#0f172a',
-                          outline: 'none',
-                          background: '#f8fafc'
-                        }}
-                      />
-                    </div>
-                    <div>
-                      <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 800, color: '#0f172a', marginBottom: '0.4rem' }}>
-                        {isAr ? 'تفاصيل وبنود الاتفاق (ملاحظات تدقيق)' : 'Detailed Statement / Audit Notes'}
-                      </label>
-                      <input
-                        type="text"
-                        value={customNotes}
-                        onChange={(e) => setCustomNotes(e.target.value)}
-                        placeholder={isAr ? 'مثال: بند رخام مستورد، تعديل إضافي للكهرباء والتكييف...' : 'e.g. Italian marble upgrade, additional HVAC piping...'}
-                        style={{
-                          width: '100%',
-                          padding: '0.6rem 0.85rem',
-                          borderRadius: '10px',
-                          border: '1px solid #cbd5e1',
-                          fontSize: '0.86rem',
-                          outline: 'none',
-                          background: '#ffffff'
-                        }}
-                      />
-                    </div>
-                  </div>
-
-                  {/* 5. Financial Impact Preview Card */}
-                  <div style={{
-                    padding: '1rem 1.25rem',
-                    borderRadius: '14px',
-                    background: '#ffffff',
-                    border: '1px solid var(--erp-border, #cbd5e1)',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '0.65rem'
-                  }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--erp-accent, #2563eb)', fontWeight: 800, fontSize: '0.84rem' }}>
-                        <ShieldCheck size={16} />
-                        <span>{isAr ? 'معاينة الأثر المالي على العقد والخزينة' : 'Financial Impact & Safe Portfolio Preview'}</span>
-                      </div>
-                      <span style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 700 }}>
-                        Zero-Float Verified
-                      </span>
-                    </div>
-
-                    <div style={{
-                      display: 'grid',
-                      gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-                      gap: '0.75rem',
-                      background: '#f8fafc',
-                      padding: '0.85rem',
-                      borderRadius: '10px',
-                      border: '1px solid #e2e8f0'
-                    }}>
-                      <div>
-                        <div style={{ fontSize: '0.68rem', color: '#64748b' }}>{isAr ? 'إجمالي العقد بعد الإضافة' : 'New Gross Contract'}</div>
-                        <div style={{ fontSize: '1rem', fontWeight: 800, color: '#0f172a', marginTop: '0.1rem' }}>
-                          {newGross.formatEGP(isAr)}
-                        </div>
-                        <div style={{ fontSize: '0.68rem', color: '#059669', fontWeight: 700 }}>
-                          +{addAmount.formatEGP(isAr)}
-                        </div>
-                      </div>
-
-                      <div>
-                        <div style={{ fontSize: '0.68rem', color: '#64748b' }}>{isAr ? 'القسط الجديد في الجدول' : 'New Schedule Tranche'}</div>
-                        <div style={{ fontSize: '0.92rem', fontWeight: 800, color: '#0f172a', marginTop: '0.1rem' }}>
-                          {isAr ? `قسط إضافي رقم #${nextTrancheNumber}` : `Extra Tranche #${nextTrancheNumber}`}
-                        </div>
-                        <div style={{ fontSize: '0.68rem', color: '#64748b' }}>
-                          {isAr ? 'استحقاق:' : 'Due:'} {dueDate}
-                        </div>
-                      </div>
-
-                      <div>
-                        <div style={{ fontSize: '0.68rem', color: '#64748b' }}>{isAr ? 'محفظة الأمانات بالخزينة' : 'Safe Portfolio Entry'}</div>
-                        <div style={{ fontSize: '0.92rem', fontWeight: 800, color: 'var(--erp-accent, #2563eb)', marginTop: '0.1rem' }}>
-                          {isAr ? 'أمانات نقدية [١٠١٠٠٠]' : 'In Safe [101000]'}
-                        </div>
-                        <div style={{ fontSize: '0.68rem', color: '#64748b' }}>
-                          {isAr ? 'جاهز للتحصيل باليد أو إنستاباي' : 'Ready for collection'}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </fieldset>
-
-                {/* 6. Form Actions */}
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'flex-end',
-                  gap: '0.75rem',
-                  marginTop: 'auto',
-                  paddingTop: '0.75rem',
-                  borderTop: '1px solid #e2e8f0'
-                }}>
-                  <button
-                    type="button"
-                    onClick={onClose}
-                    disabled={isMutating}
-                    style={{
-                      padding: '0.65rem 1.25rem',
-                      borderRadius: '10px',
-                      border: '1px solid #cbd5e1',
-                      background: '#ffffff',
-                      color: '#475569',
-                      fontSize: '0.84rem',
-                      fontWeight: 700,
-                      cursor: 'pointer'
-                    }}
-                  >
-                    {isAr ? 'إلغاء' : 'Cancel'}
-                  </button>
-
-                  <button
-                    type="submit"
-                    disabled={isMutating || addAmount.lte(0) || activeContractIsClosed}
-                    style={{
-                      padding: '0.65rem 1.6rem',
-                      borderRadius: '10px',
-                      border: 'none',
-                      background: activeContractIsClosed
-                        ? '#cbd5e1'
-                        : 'var(--erp-accent, #2563eb)',
-                      color: activeContractIsClosed ? '#64748b' : '#ffffff',
-                      fontSize: '0.86rem',
-                      fontWeight: 800,
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.5rem',
-                      cursor: isMutating || addAmount.lte(0) || activeContractIsClosed ? 'not-allowed' : 'pointer',
-                      opacity: isMutating || addAmount.lte(0) || activeContractIsClosed ? 0.65 : 1,
-                      boxShadow: activeContractIsClosed ? 'none' : '0 2px 8px var(--erp-accent-tint, rgba(37, 99, 235, 0.25))',
-                      transition: 'all 0.15s ease'
-                    }}
-                    onMouseEnter={e => {
-                      if (!isMutating && !activeContractIsClosed && addAmount.gt(0)) {
-                        e.currentTarget.style.background = 'var(--erp-accent-hover, #1d4ed8)';
-                      }
-                    }}
-                    onMouseLeave={e => {
-                      if (!isMutating && !activeContractIsClosed) {
-                        e.currentTarget.style.background = 'var(--erp-accent, #2563eb)';
-                      }
-                    }}
-                  >
-                    {activeContractIsClosed ? (
-                      <>
-                        <Lock size={16} />
-                        <span>{isAr ? 'غير متاح: العقد خالص ومقفل محاسبياً' : 'Locked: Contract Settled'}</span>
-                      </>
-                    ) : isMutating ? (
-                      <>
-                        <Loader2 size={16} className="animate-spin" />
-                        <span>{isAr ? 'جاري الحفظ والتسجيل...' : 'Saving...'}</span>
-                      </>
-                    ) : (
-                      <>
-                        <Check size={16} />
-                        <span>{isAr ? 'تثبيت وإضافة الملحق للعقد' : 'Append Supplement to Contract'}</span>
-                      </>
-                    )}
-                  </button>
-                </div>
-              </form>
-            ) : (
-              <div style={{ padding: '4rem 2rem', textAlign: 'center', color: '#94a3b8' }}>
-                <FileText size={42} style={{ margin: '0 auto 1rem', opacity: 0.5 }} />
-                <h4 style={{ margin: 0, fontSize: '1rem', color: '#475569' }}>
-                  {isAr ? 'يرجى اختيار عقد من القائمة لإضافة الملحق' : 'Please select a contract to add supplement'}
-                </h4>
-              </div>
-            )}
-          </div>
-
-        </div>
+          {/* 6. Journal Peek */}
+          {numAmount > 0 && activeContract && (
+            <ZFJournalPeek
+              isAr={isAr}
+              lines={[
+                {
+                  code: '103000',
+                  name: isAr ? `أقساط العملاء التعاقدية - ${activeContract.buyer_name}` : `Contract Receivables - ${activeContract.buyer_name}`,
+                  debit: numAmount
+                },
+                {
+                  code: '202000',
+                  name: isAr ? 'إيراد تعاقدي مؤجل للوحدات' : 'Deferred Unit Contract Revenue',
+                  credit: numAmount
+                }
+              ]}
+            />
+          )}
+        </form>
+      )}
     </ZFModalShell>
   );
 };
-
-// Also export as ContractSupplementModal for clean naming
-export const ContractSupplementModal = NewChequeModal;
